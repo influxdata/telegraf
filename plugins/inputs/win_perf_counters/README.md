@@ -1,15 +1,17 @@
 # Windows Performance Counters Input Plugin
 
-This document presents the input plugin to read Performance Counters on Windows operating systems.
+This document presents the input plugin to read Performance Counters on Windows
+operating systems.
 
 The configuration is parsed and then tested for validity, such as
 whether the Object, Instance and Counter exist on Telegraf startup.
 
-Counter paths are refreshed periodically, see the [CountersRefreshInterval](#countersrefreshinterval)
-configuration parameter for more info.
+Counter paths are refreshed periodically, see the
+[CountersRefreshInterval](#countersrefreshinterval) configuration parameter for
+more info.
 
-In case of query for all instances `["*"]`, the plugin does not return the instance `_Total`
-by default. See [IncludeTotal](#includetotal) for more info.
+In case of query for all instances `["*"]`, the plugin does not return the
+instance `_Total` by default. See [IncludeTotal](#includetotal) for more info.
 
 ## Basics
 
@@ -73,12 +75,14 @@ Example:
 #### CountersRefreshInterval
 
 Configured counters are matched against available counters at the interval
-specified by the `CountersRefreshInterval` parameter. The default value is `1m` (1 minute).
+specified by the `CountersRefreshInterval` parameter. The default value is `1m`
+(1 minute).
 
-If wildcards are used in instance or counter names, they are expanded at this point, if the `UseWildcardsExpansion` param is set to `true`.
+If wildcards are used in instance or counter names, they are expanded at this
+point, if the `UseWildcardsExpansion` param is set to `true`.
 
-Setting the `CountersRefreshInterval` too low (order of seconds) can cause Telegraf to create
-a high CPU load.
+Setting the `CountersRefreshInterval` too low (order of seconds) can cause
+Telegraf to create a high CPU load.
 
 Set it to `0s` to disable periodic refreshing.
 
@@ -87,11 +91,15 @@ Example:
 
 #### PreVistaSupport
 
-(Deprecated in 1.7; Necessary features on Windows Vista and newer are checked dynamically)
+(Deprecated in 1.7; Necessary features on Windows Vista and newer are checked
+dynamically)
 
-Bool, if set to `true`, the plugin will use the localized PerfCounter interface that has been present since before Vista for backwards compatibility.
+Bool, if set to `true`, the plugin will use the localized PerfCounter interface
+that has been present since before Vista for backwards compatibility.
 
-It is recommended NOT to use this on OSes starting with Vista and newer because it requires more configuration to use this than the newer interface present since Vista.
+It is recommended NOT to use this on OSes starting with Vista and newer because
+it requires more configuration to use this than the newer interface present
+since Vista.
 
 Example for Windows Server 2003, this would be set to true:
 `PreVistaSupport=true`
@@ -107,9 +115,11 @@ Example:
 
 #### IgnoredErrors
 
-IgnoredErrors accepts a list of PDH error codes which are defined in pdh.go, if this error is encountered it will be ignored.
-For example, you can provide "PDH_NO_DATA" to ignore performance counters with no instances, but by default no errors are ignored.
-You can find the list of possible errors here: [PDH errors](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.go)
+IgnoredErrors accepts a list of PDH error codes which are defined in pdh.go, if
+this error is encountered it will be ignored.  For example, you can provide
+"PDH_NO_DATA" to ignore performance counters with no instances, but by default
+no errors are ignored.  You can find the list of possible errors here: [PDH
+errors](pdh.go).
 
 Example:
 `IgnoredErrors=["PDH_NO_DATA"]`
@@ -125,13 +135,15 @@ A new configuration entry consists of the TOML header starting with,
 This must follow before other plugin configurations,
 beneath the main win_perf_counters entry, `[[inputs.win_perf_counters]]`.
 
-Following this are 3 required key/value pairs and three optional parameters and their usage.
+Following this are 3 required key/value pairs and three optional parameters and
+their usage.
 
 #### ObjectName
 
 (Required)
 
-ObjectName is the Object to query for, like Processor, DirectoryServices, LogicalDisk or similar.
+ObjectName is the Object to query for, like Processor, DirectoryServices,
+LogicalDisk or similar.
 
 Example: `ObjectName = "LogicalDisk"`
 
@@ -139,18 +151,18 @@ Example: `ObjectName = "LogicalDisk"`
 
 (Required)
 
-The instances key (this is an array) declares the instances of a counter you would like returned,
-it can be one or more values.
+The instances key (this is an array) declares the instances of a counter you
+would like returned, it can be one or more values.
 
 Example: `Instances = ["C:","D:","E:"]`
 
-This will return only for the instances
-C:, D: and E: where relevant. To get all instances of a Counter, use `["*"]` only.
-By default any results containing `_Total` are stripped,
-unless this is specified as the wanted instance.
+This will return only for the instances C:, D: and E: where relevant. To get all
+instances of a Counter, use `["*"]` only.  By default any results containing
+`_Total` are stripped, unless this is specified as the wanted instance.
 Alternatively see the option `IncludeTotal` below.
 
-It is also possible to set partial wildcards, eg. `["chrome*"]`, if the `UseWildcardsExpansion` param is set to `true`
+It is also possible to set partial wildcards, eg. `["chrome*"]`, if the
+`UseWildcardsExpansion` param is set to `true`
 
 Some Objects do not have instances to select from at all.
 Here only one option is valid if you want data back,
@@ -173,11 +185,10 @@ is set to `true`.
 
 (Optional)
 
-This key is optional. If it is not set it will be `win_perf_counters`.
-In InfluxDB this is the key underneath which the returned data is stored.
-So for ordering your data in a good manner,
-this is a good key to set with a value when you want your IIS and Disk results stored
-separately from Processor results.
+This key is optional. If it is not set it will be `win_perf_counters`.  In
+InfluxDB this is the key underneath which the returned data is stored.  So for
+ordering your data in a good manner, this is a good key to set with a value when
+you want your IIS and Disk results stored separately from Processor results.
 
 Example: `Measurement = "win_disk"`
 
@@ -185,11 +196,16 @@ Example: `Measurement = "win_disk"`
 
 (Optional)
 
-This key is optional. It is a simple bool.
-If set to `true`, counter values will be provided in the raw, integer, form. This is in contrast with the default behavior, where values are returned in a formatted, displayable, form
-as seen in the Windows Performance Monitor.  
-A field representing raw counter value has the `_Raw` suffix. Raw values should be further used in a calculation, e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
-Note: Time based counters (i.e. _% Processor Time_) are reported in hundredths of nanoseconds.
+This key is optional. It is a simple bool.  If set to `true`, counter values
+will be provided in the raw, integer, form. This is in contrast with the default
+behavior, where values are returned in a formatted, displayable, form
+as seen in the Windows Performance Monitor.
+
+A field representing raw counter value has the `_Raw` suffix. Raw values should
+be further used in a calculation,
+e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
+Note: Time based counters (i.e. _% Processor Time_) are reported in hundredths
+of nanoseconds.
 
 Example: `UseRawValues = true`
 
@@ -218,10 +234,10 @@ asked for that do not match. Useful when debugging new configurations.
 
 (Internal)
 
-This key should not be used. It is for testing purposes only.
-It is a simple bool. If it is not set to true or included this is treated as false.
-If this is set to true, the plugin will abort and end prematurely
-if any of the combinations of ObjectName/Instances/Counters are invalid.
+This key should not be used. It is for testing purposes only.  It is a simple
+bool. If it is not set to true or included this is treated as false.  If this is
+set to true, the plugin will abort and end prematurely if any of the
+combinations of ObjectName/Instances/Counters are invalid.
 
 ## Configuration
 
@@ -591,9 +607,9 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
 ## Troubleshooting
 
-If you are getting an error about an invalid counter, use the `typeperf` command to check the counter path
-on the command line.
-E.g. `typeperf "Process(chrome*)\% Processor Time"`
+If you are getting an error about an invalid counter, use the `typeperf` command
+to check the counter path on the command line.  E.g. `typeperf
+"Process(chrome*)\% Processor Time"`
 
 If no metrics are emitted even with the default config, you may need to repair
 your performance counters.

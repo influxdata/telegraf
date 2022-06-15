@@ -1,5 +1,10 @@
 # NSQ Input Plugin
 
+This plugin gathers metrics from [NSQ](https://nsq.io/).
+
+See the [NSQD API docs](https://nsq.io/components/nsqd.html) for endpoints that
+the plugin can read.
+
 ## Configuration
 
 ```toml @sample.conf

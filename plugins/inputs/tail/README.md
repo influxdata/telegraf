@@ -16,8 +16,8 @@ the `from_beginning` option is set).
 
 see <http://man7.org/linux/man-pages/man1/tail.1.html> for more details.
 
-The plugin expects messages in one of the
-[Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+The plugin expects messages in one of the [Telegraf Input Data
+Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
 ## Configuration
 
