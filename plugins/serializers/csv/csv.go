@@ -147,7 +147,7 @@ func (s *Serializer) writeData(metric telegraf.Metric) error {
 	case "unix_ns":
 		timestamp = strconv.FormatInt(metric.Time().UnixNano(), 10)
 	default:
-		timestamp = metric.Time().Format(s.TimestampFormat)
+		timestamp = metric.Time().UTC().Format(s.TimestampFormat)
 	}
 
 	columns := []string{
