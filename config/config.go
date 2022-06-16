@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
@@ -65,9 +66,10 @@ var (
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	toml         *toml.Config
-	errs         []error // config load errors.
-	UnusedFields map[string]bool
+	toml              *toml.Config
+	errs              []error // config load errors.
+	UnusedFields      map[string]bool
+	unusedFieldsMutex *sync.Mutex
 
 	Tags          map[string]string
 	InputFilters  []string
@@ -91,7 +93,8 @@ type Config struct {
 // once the configuration is parsed.
 func NewConfig() *Config {
 	c := &Config{
-		UnusedFields: map[string]bool{},
+		UnusedFields:      map[string]bool{},
+		unusedFieldsMutex: &sync.Mutex{},
 
 		// Agent defaults:
 		Agent: &AgentConfig{
@@ -1846,7 +1849,9 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 
 		// ignore fields that are common to all plugins.
 	default:
+		c.unusedFieldsMutex.Lock()
 		c.UnusedFields[key] = true
+		c.unusedFieldsMutex.Unlock()
 	}
 	return nil
 }
