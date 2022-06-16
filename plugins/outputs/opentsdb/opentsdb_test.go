@@ -165,6 +165,10 @@ func BenchmarkHttpSend(b *testing.B) {
 	}
 }
 func TestWriteIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	t.Skip("Skip as OpenTSDB not running")
 
 	o := &OpenTSDB{

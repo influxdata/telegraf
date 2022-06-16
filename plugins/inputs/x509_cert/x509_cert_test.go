@@ -287,7 +287,7 @@ func TestGatherChain(t *testing.T) {
 	}
 }
 
-func TestGatherUDPCert(t *testing.T) {
+func TestGatherUDPCertIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -336,7 +336,7 @@ func TestGatherCertIntegration(t *testing.T) {
 	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
-func TestGatherCertMustNotTimeout(t *testing.T) {
+func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

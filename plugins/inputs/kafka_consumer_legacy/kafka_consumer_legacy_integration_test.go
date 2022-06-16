@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestReadsMetricsFromKafka(t *testing.T) {
+func TestReadsMetricsFromKafkaIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
