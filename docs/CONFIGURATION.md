@@ -253,9 +253,7 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **ignore_error_inputs**:
   Together with plugin.ignore_init_error it forms a configuration: 
-
   If (plugin.ignore_init_error || ignore_error_inputs) is true, discard the input plugins that produce the error during initialization. Otherwise, the program will exit when an input plugin has an error occurred during the initialization.
-
   Default: false
 ## Plugins
 
@@ -308,10 +306,9 @@ Parameters that can be used with any input plugin:
 
 - **ignore_init_error**:
   Together with agent.ignore_error_inputs it forms a configuration: 
-
   If (ignore_init_error || agent.ignore_error_inputs) is true, discard the input plugin that produce the error during initialization. Otherwise, the program will exit when the input plugin has an error occurred during the initialization.
-
   Default: false
+  
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
 
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
