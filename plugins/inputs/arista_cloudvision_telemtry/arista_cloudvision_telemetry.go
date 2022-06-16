@@ -127,6 +127,13 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
+
+	if c.Cvptoken != "" {
+		tlscfg = &tls.Config{
+			Renegotiation:      tls.RenegotiateNever,
+			InsecureSkipVerify: true,
+		}
+	}
 	//Create a map of devices.  This should read device:target.  The target is the same as the serial number to CVP.
 	cvdevs := make(map[string]string)
 
@@ -277,17 +284,22 @@ func parsePath(origin string, pathToParse string, target []string) ([]*gnmiLib.P
 
 // SubscribeGNMI and extract telemetry data
 func (c *CVP) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
+	// Create a slice of grpc options for multiple different options.
 	var options []grpc.DialOption
-	//Add the outgoing RPC for CVP token
-	options = append(options, grpc.WithPerRPCCredentials((oauth.NewOauthAccess(&oauth2.Token{
-		AccessToken: c.Cvptoken,
-	}))))
+	if len(c.Cvptoken) > 0 {
+		options = append(options, grpc.WithPerRPCCredentials((oauth.NewOauthAccess(&oauth2.Token{
+			AccessToken: c.Cvptoken,
+		}))))
+	}
 	if tlscfg != nil {
+		//opt = grpc.WithTransportCredentials(credentials.NewTLS(tlscfg))
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
 	} else {
+		//opt = grpc.WithInsecure()
 		options = append(options, grpc.WithInsecure())
 	}
 
+	//client, err := grpc.DialContext(ctx, address, opt)
 	client, err := grpc.DialContext(ctx, address, options...)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %v", err)
