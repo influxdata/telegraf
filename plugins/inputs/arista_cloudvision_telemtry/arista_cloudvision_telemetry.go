@@ -38,9 +38,10 @@ type CVP struct {
 	Cvpaddress    string         `toml:"addresses"`
 	Subscriptions []Subscription `toml:"subscription"`
 
-	Encoding string
-	Origin   string //origin openconfig is supported today only.
-	Prefix   string
+	Encoding    string
+	Origin      string //origin openconfig is supported today only.
+	Prefix      string
+	UpdatesOnly bool `toml:"updates_only"`
 
 	Cvptoken string `toml:"cvptoken"`
 
@@ -147,14 +148,13 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 	for _, value := range cvdevs {
 		cvdevsslice = append(cvdevsslice, value)
 	}
-
-	for _, subscription := range c.Subscriptions {
-		gnmipath, err := parsePath(subscription.Origin, subscription.Path, cvdevsslice)
-		if err != nil {
-			c.Log.Info("Connect Parse: %v ", err)
-		}
-		fmt.Println(gnmipath)
+	// Validate configuration
+	if request, err = c.newSubscribeRequest(cvdevsslice); err != nil {
+		return err
+	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
+		return fmt.Errorf("redial duration must be positive")
 	}
+
 	c.wg.Add(1)
 	CvpAddr := c.Cvpaddress
 	go func(CvpAddr string) {
@@ -282,6 +282,50 @@ func parsePath(origin string, pathToParse string, target []string) ([]*gnmiLib.P
 	return gnmilibsslice, nil
 }
 
+func (c *CVP) newSubscribeRequest(targets []string) (*gnmiLib.SubscribeRequest, error) {
+	// Create subscription objects
+	subscriptions := make([]*gnmiLib.Subscription, len(c.Subscriptions))
+	for i, subscription := range c.Subscriptions {
+		gnmiPath, err := parsePath(subscription.Origin, subscription.Path, targets)
+		if err != nil {
+			return nil, err
+		}
+		mode, ok := gnmiLib.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]
+		if !ok {
+			return nil, fmt.Errorf("invalid subscription mode %s", subscription.SubscriptionMode)
+		}
+		subscriptions[i] = &gnmiLib.Subscription{
+			Path:              gnmiPath[0],
+			Mode:              gnmiLib.SubscriptionMode(mode),
+			SampleInterval:    uint64(time.Duration(subscription.SampleInterval).Nanoseconds()),
+			SuppressRedundant: subscription.SuppressRedundant,
+			HeartbeatInterval: uint64(time.Duration(subscription.HeartbeatInterval).Nanoseconds()),
+		}
+	}
+
+	// Construct subscribe request
+	gnmiPath, err := parsePath(c.Origin, c.Prefix, targets)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" && c.Encoding != "bytes" {
+		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
+	}
+
+	return &gnmiLib.SubscribeRequest{
+		Request: &gnmiLib.SubscribeRequest_Subscribe{
+			Subscribe: &gnmiLib.SubscriptionList{
+				Prefix:       gnmiPath[0],
+				Mode:         gnmiLib.SubscriptionList_STREAM,
+				Encoding:     gnmiLib.Encoding(gnmiLib.Encoding_value[strings.ToUpper(c.Encoding)]),
+				Subscription: subscriptions,
+				UpdatesOnly:  c.UpdatesOnly,
+			},
+		},
+	}, nil
+}
+
 // SubscribeGNMI and extract telemetry data
 func (c *CVP) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
 	// Create a slice of grpc options for multiple different options.
@@ -319,7 +363,7 @@ func (c *CVP) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Con
 		}
 	}
 
-	c.Log.Debugf("Connection to gNMI device %s established", address)
+	c.Log.Info("Connection to gNMI device established ", address)
 	defer c.Log.Debugf("Connection to gNMI device %s closed", address)
 	for ctx.Err() == nil {
 		var reply *gnmiLib.SubscribeResponse
