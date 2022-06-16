@@ -167,8 +167,7 @@ The config:
     topics = "/sensors/#"
     [[inputs.mqtt_consumer.topic_parsing]]
         measurement = "/measurement/_/_/_/_"
-        tags = "/_/site/version/device_name/_"
-        fields = "/_/_/_/_/field"
+        tags = "/_/site/version/device_name/field"
 [[processors.pivot]]
     tag_key = "field"
     value_key = "value"
