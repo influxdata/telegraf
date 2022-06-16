@@ -1,0 +1,156 @@
+## Classify telegraf data obtained from the syslog plugin according to
+## sets of regular expressions defined here.
+##
+## Inasmuch as almost every option for the classify plugin has no default
+## value, we don't show any option defaults in this sample configuration.
+## All settings here simply reflect an extended example showing how this
+## plugin might be configured for processing syslog messages.
+
+## The input data point field which discriminates which set of
+## regexes to attempt to match.
+selector_tag = 'host'
+
+## There are too many individual hosts sending messages our way
+## for us to specify corresponding sets of regexes at that level
+## of granularity.  That would be excessive administrative burden.
+## Instead, we map the hostnames to groups of regexes that reflect
+## the functionality of each kind of host.  That way, the desired
+## commonality of processing is reflected in the reduced setup.
+selector_mapping = [
+  { 'fire\d{3}' = 'firewall' },
+  { 'ora456'    = 'database' },
+  { 'pg789'     = 'database' },
+  { 'rout237'   = 'router'   },
+  { 'rout846'   = 'router'   },
+]
+
+## The regex group to use if selector item value matching does not
+## yield a match.  In this example setup, we just want to drop such
+## points, so we can either leave this option undefined or define it
+## as an empty string.
+# default_regex_group = ''
+
+## The Telegraf syslog input plugin documentation is remiss in
+## not clearly documenting that the syslog text message will
+## appear in the "message" field.  That field should be listed
+## in the "Metrics" section of that documentation.
+match_field = 'message'
+
+## This simple form of specifying a regex as a TOML literal string
+## can be used if you have only one regex to define in a particular
+## category.  An empty string used as a regex here would specify
+## that no matching is to be attempted for that category, while
+## documenting that fact explicitly.
+mapped_selector_regexes.database = [
+  { ignore   = 'DB client connected' },
+  { okay     = 'Database is starting up' },
+  { warning  = 'Tablespace \w+ free space is low' },
+  { critical = 'Database is shutting down' },
+  { unknown  = '.*' },
+]
+
+## If you specify regular expressions in the following form, each
+## regex occupies one line within a TOML multi-line literal string,
+## and all leading and trailing whitespace in each regex line will be
+## automatically trimmed and not be part of the regex.  If you need to
+## match some whitespace at the start or end of your regex, consider
+## using \040 or \o{040} or \x{20} or [ ] (all of which represent
+## a single space character), or \t (a single tab character) or \s
+## (generalized whitespace) or \h (horizontal whitespace), whatever
+## fits your needs.  Or switch to using the other form for specifying
+## multiple regular expressions in a single category, shown below.
+## You don't have to use the same form for all categories in a group.
+mapped_selector_regexes.firewall = [
+  { ignore = '''
+      snort.+Priority: 3
+      snort.+portscan.+192.168.3
+      snort.+portscan.+ff02
+      snort.+124:3:2.+smtp.+Attempted response buffer overflow:.+192.168.3.11
+      snort.+128:4:1.+spp_ssh.+192.168.3
+      snort.+136:1:1.+spp_reputation.+Priority: 2.+192.168.[37]
+      snort.+140:3:2.+spp_sip.+URI is too long
+      snort.+140:8:2.+spp_sip.+Classification: Potentially Bad Traffic.+192.168.7
+      snort.+1:49666:2.+SQL HTTP URI blind injection attempt.+192.168.3
+      snort.+1:21516.+SERVER-WEBAPP JBoss JMX console access attempt.+192.168.3
+  ''' },
+  { okay = '''
+  ''' },
+  { warning = '''
+      snort.+Priority: 2
+  ''' },
+  { critical = '''
+      snort.+Priority: 1
+  ''' },
+  { unknown = '''
+      .*
+  ''' },
+]
+
+## The following format must be used if a regex contains three
+## consecutive single-quote characters, since that construction
+## is not allowed in the TOML multi-line literal strings used in
+## the previous format.  We use single-quoted TOML literal strings
+## here because that way, all content between the single-quote
+## delimiters is interpreted as-is without modification.  That
+## eliminates the need to escape some characters in the regex
+## simply because the regex is being stored in a TOML-format file.
+## Also, the TOML processing won't try to itself interpret any
+## escape sequences that are part of your regex.  That said, there
+## is no way to write a single-quote character as part of a regex
+## expressed as a single-quoted string.  If you need that, use
+## the multi-line form shown above, or use a double-quoted
+## string instead, keeping in mind that you will then need to
+## backslash-escape all backslash and double-quote characters
+## in your regex, including backslashes used to specify a special
+## character such as \t (a tab character).
+mapped_selector_regexes.router = [
+  { ignore = [ 'SYS-5-CONFIG_I: Configured from console', ] },
+  { okay = [ 'TRACK-6-STATE: 100 ip sla 1 reachability Down -> Up', 'TRACK-6-STATE: 200 ip sla 2 reachability Down -> Up', ] },
+  { warning = [ ] },
+  { critical = [ 'TRACK-6-STATE: 100 ip sla 1 reachability Up -> Down', 'TRACK-6-STATE: 200 ip sla 2 reachability Up -> Down', ] },
+  { unknown = [ '.*' ] },
+]
+
+## For didactic purposes, all our regex groups below explicitly define
+## an all-inclusive match pattern for category "unknown" at the end of
+## the group, so setting this option is not required in this sample
+## configuration.  Without that, we would have wanted to set this
+## option here.
+# default_category = 'unknown'
+
+## The set of result categories that should be counted in the
+## aggregate statistics but otherwise have their input data points
+## dropped and not output from this plugin.  May be specified
+## either as a single 'string' (for a single such category) or as an
+## [ 'array', 'of', 'strings' ].  If all matched data points should
+## be passed through and no categories should be dropped, either
+## leave this option undefined, or define it as an empty array.
+drop_categories = 'ignore'
+
+## How to label the end result of the classification processing.
+result_field = 'status'
+
+## Define these options as desired, to enable corresponding types
+## of aggregated-statistics output.  If the full set of options
+## needed for a particular type of aggregation reporting is not
+## defined, or not defined with sufficient information, that
+## aggregation type will be suppressed.
+aggregation_period = '10m'
+aggregation_measurement = 'aggregated_status'
+aggregation_dropped_field = 'dropped'
+aggregation_total_field = 'total'
+aggregation_summary_tag = 'summary'
+aggregation_summary_value = 'full'
+aggregation_summary_fields = [
+  'ignore', 'okay', 'warning', 'critical', 'unknown',
+  'dropped', 'total'
+]
+aggregation_group_tag = 'host_type'
+aggregation_group_fields = [
+  'ignore', 'okay', 'warning', 'critical', 'unknown',
+]
+aggregation_selector_tag = 'host'
+aggregation_selector_fields = [
+  'ignore', 'okay', 'warning', 'critical', 'unknown',
+]
+aggregation_includes_zeroes = false
