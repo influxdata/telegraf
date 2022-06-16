@@ -1,0 +1,7 @@
+[[inputs.memcached]]
+  ignore_init_error=true
+
+[[inputs.ignore_init_error_test]]
+
+[[inputs.ignore_init_error_test]]
+  ignore_init_error=false

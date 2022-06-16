@@ -22,6 +22,33 @@ func TestAgent_OmitHostname(t *testing.T) {
 	assert.NotContains(t, c.Tags, "host")
 }
 
+func TestAgent_isIgnoreInput(t *testing.T) {
+	c := config.NewConfig()
+	assert.False(t, c.Agent.IgnoreErrorInputs)
+	a, err := NewAgent(c)
+	assert.NoError(t, err)
+	input := &models.RunningInput{
+		Config: &models.InputConfig{},
+	}
+	assert.False(t, a.Config.Agent.IgnoreErrorInputs)
+	assert.False(t, input.Config.IgnoreInitError)
+	// default: input.ignore_init_error=false and agent.ignore_error_inputs=false
+	assert.False(t, a.isIgnoreInput(input))
+
+	a.Config.Agent.IgnoreErrorInputs = true
+	// input.ignore_init_error=false and agent.ignore_error_inputs=true
+	assert.True(t, a.isIgnoreInput(input))
+
+	input.Config.IgnoreInitError = true
+	// input.ignore_init_error=true and agent.ignore_error_inputs=true
+	assert.True(t, a.isIgnoreInput(input))
+
+	a.Config.Agent.IgnoreErrorInputs = false
+	// input.ignore_init_error=false and agent.ignore_error_inputs=false
+	assert.True(t, a.isIgnoreInput(input))
+
+}
+
 type testIgnoreErrorInput struct {
 }
 

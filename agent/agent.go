@@ -184,6 +184,12 @@ func (a *Agent) Run(ctx context.Context) error {
 	return err
 }
 
+// determine whether to ignore the Input of the error
+// It has two option: input.ignore_init_error and agent.ignore_error_inputs
+func (a *Agent) isIgnoreInput(errInput *models.RunningInput) bool {
+	return errInput.Config.IgnoreInitError || a.Config.Agent.IgnoreErrorInputs
+}
+
 // initPlugins runs the Init function on plugins.
 func (a *Agent) initPlugins() error {
 	inputs := make([]*models.RunningInput, 0)
@@ -193,7 +199,7 @@ func (a *Agent) initPlugins() error {
 			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
 		}
 		err := input.Init()
-		if err != nil && a.Config.Agent.IgnoreErrorInputs {
+		if err != nil && a.isIgnoreInput(input) {
 			log.Printf("W! [agent] Ignore initialize error input %s: %v", input.LogName(), err)
 			continue
 		} else if err != nil {
