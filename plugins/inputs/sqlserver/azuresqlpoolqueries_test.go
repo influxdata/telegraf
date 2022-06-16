@@ -1,13 +1,14 @@
 package sqlserver
 
 import (
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
-func TestAzureSQL_ElasticPool_ResourceStats_Query(t *testing.T) {
+func TestAzureSQLIntegration_ElasticPool_ResourceStats_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -49,7 +50,7 @@ func TestAzureSQL_ElasticPool_ResourceStats_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_ElasticPool_ResourceGovernance_Query(t *testing.T) {
+func TestAzureSQLIntegration_ElasticPool_ResourceGovernance_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -112,7 +113,7 @@ func TestAzureSQL_ElasticPool_ResourceGovernance_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_ElasticPool_DatabaseIO_Query(t *testing.T) {
+func TestAzureSQLIntegration_ElasticPool_DatabaseIO_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -156,7 +157,7 @@ func TestAzureSQL_ElasticPool_DatabaseIO_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_ElasticPool_OsWaitStats_Query(t *testing.T) {
+func TestAzureSQLIntegration_ElasticPool_OsWaitStats_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -193,7 +194,7 @@ func TestAzureSQL_ElasticPool_OsWaitStats_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_ElasticPool_MemoryClerks_Query(t *testing.T) {
+func TestAzureSQLIntegration_ElasticPool_MemoryClerks_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -225,7 +226,7 @@ func TestAzureSQL_ElasticPool_MemoryClerks_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_ElasticPool_PerformanceCounters_Query(t *testing.T) {
+func TestAzureSQLIntegration_ElasticPool_PerformanceCounters_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -259,7 +260,7 @@ func TestAzureSQL_ElasticPool_PerformanceCounters_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_ElasticPool_Schedulers_Query(t *testing.T) {
+func TestAzureSQLIntegration_ElasticPool_Schedulers_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

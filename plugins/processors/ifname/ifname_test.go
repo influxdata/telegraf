@@ -14,7 +14,11 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestTable(t *testing.T) {
+func TestTableIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	t.Skip("Skipping test due to connect failures")
 
 	d := IfName{}
@@ -42,6 +46,10 @@ func TestTable(t *testing.T) {
 }
 
 func TestIfNameIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	t.Skip("Skipping test due to connect failures")
 
 	d := IfName{
