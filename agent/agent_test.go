@@ -46,7 +46,6 @@ func TestAgent_isIgnoreInput(t *testing.T) {
 	a.Config.Agent.IgnoreErrorInputs = false
 	// input.ignore_init_error=false and agent.ignore_error_inputs=false
 	assert.True(t, a.isIgnoreInput(input))
-
 }
 
 type testIgnoreErrorInput struct {

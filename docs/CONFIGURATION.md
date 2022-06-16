@@ -252,11 +252,8 @@ The agent table configures Telegraf and the defaults used across all plugins.
   or "gosmi" which translates using the built-in gosmi library.
 
 - **ignore_error_inputs**:
-  Together with plugin.ignore_init_error it forms a configuration: 
+  If set to true, discard the input plugins that produce an error during initialization. Otherwise, the program will exit when an input plugin has an error occurred during the initialization.
 
-  If (plugin.ignore_init_error || ignore_error_inputs) is true, discard the input plugins that produce the error during initialization. Otherwise, the program will exit when an input plugin has an error occurred during the initialization.
-
-  Default: false
 ## Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
@@ -307,11 +304,9 @@ Parameters that can be used with any input plugin:
   the name of the input).
 
 - **ignore_init_error**:
-  Together with agent.ignore_error_inputs it forms a configuration: 
-
-  If (ignore_init_error || agent.ignore_error_inputs) is true, discard the input plugin that produce the error during initialization. Otherwise, the program will exit when the input plugin has an error occurred during the initialization.
-
-  Default: false
+  Overrides the `ignore_error_inputs` setting of the [agent][Agent] for the plugin.
+  If set to true, discard the error during initialization. Otherwise, the program will exit when the plugin has an error occurred during the initialization.
+  
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
 
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
@@ -342,12 +337,12 @@ Use the name_override parameter to emit measurements with the name `foobar`:
 ```
 
 Use the ignore_init_error parameter to ignore the `docker` when it init fail:
+
 ```toml
 [[inputs.docker]]
   ignore_init_error = true
   servers = ["127.0.0.1:27017"]
 ```
-
 
 Emit measurements with two additional tags: `tag1=foo` and `tag2=bar`
 
