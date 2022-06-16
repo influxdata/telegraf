@@ -1,7 +1,7 @@
 [[inputs.memcached]]
   ignore_init_error=true
 
-[[inputs.ignore_init_error_test]]
+[[inputs.http_listener_v2]]
 
 [[inputs.ignore_init_error_test]]
   ignore_init_error=false

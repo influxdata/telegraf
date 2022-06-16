@@ -109,11 +109,22 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 
 func TestConfig_ignoreErrorInput(t *testing.T) {
 	c := NewConfig()
+	c.InputFilters = []string{"memcached"}
 	err := c.LoadConfig("./testdata/ignore_error_input.toml")
 	require.NoError(t, err)
 	require.True(t, c.Inputs[0].Config.IgnoreInitError)
-	require.False(t, c.Inputs[1].Config.IgnoreInitError)
-	require.False(t, c.Inputs[2].Config.IgnoreInitError)
+
+	c = NewConfig()
+	c.InputFilters = []string{"http_listener_v2"}
+	err = c.LoadConfig("./testdata/ignore_error_input.toml")
+	require.NoError(t, err)
+	require.False(t, c.Inputs[0].Config.IgnoreInitError)
+
+	c = NewConfig()
+	c.InputFilters = []string{"ignore_init_error_test"}
+	err = c.LoadConfig("./testdata/ignore_error_input.toml")
+	require.NoError(t, err)
+	require.False(t, c.Inputs[0].Config.IgnoreInitError)
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
