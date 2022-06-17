@@ -1,4 +1,4 @@
-package metric_streams_listener
+package cloudwatch_metric_streams
 
 import (
 	"bytes"
@@ -27,8 +27,8 @@ var (
 	pki = testutil.NewPKI("../../../testutil/pki")
 )
 
-func newTestMetricStreamsListener() *MetricStreamsListener {
-	metricStream := &MetricStreamsListener{
+func newTestCloudWatchMetricStreams() *CloudWatchMetricStreams {
+	metricStream := &CloudWatchMetricStreams{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:8080",
 		Paths:          []string{"/write"},
@@ -38,14 +38,14 @@ func newTestMetricStreamsListener() *MetricStreamsListener {
 	return metricStream
 }
 
-func newTestHTTPAuthListener() *MetricStreamsListener {
-	metricStream := newTestMetricStreamsListener()
+func newTestMetricStreamAuth() *CloudWatchMetricStreams {
+	metricStream := newTestCloudWatchMetricStreams()
 	metricStream.AccessKey = accessKey
 	return metricStream
 }
 
-func newTestHTTPSListener() *MetricStreamsListener {
-	metricStream := newTestMetricStreamsListener()
+func newTestMetricStreamHTTPS() *CloudWatchMetricStreams {
+	metricStream := newTestCloudWatchMetricStreams()
 	metricStream.ServerConfig = *pki.TLSServerConfig()
 
 	return metricStream
@@ -63,7 +63,7 @@ func getHTTPSClient() *http.Client {
 	}
 }
 
-func createURL(metricStream *MetricStreamsListener, scheme string, path string, rawquery string) string {
+func createURL(metricStream *CloudWatchMetricStreams, scheme string, path string, rawquery string) string {
 	u := url.URL{
 		Scheme:   scheme,
 		Host:     "localhost:8080",
@@ -74,7 +74,7 @@ func createURL(metricStream *MetricStreamsListener, scheme string, path string, 
 }
 
 func TestInvalidListenerConfig(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 	metricStream.ServiceAddress = "address_without_port"
 
 	acc := &testutil.Accumulator{}
@@ -85,7 +85,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 }
 
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
-	metricStream := newTestHTTPSListener()
+	metricStream := newTestMetricStreamHTTPS()
 	metricStream.TLSAllowedCACerts = nil
 
 	acc := &testutil.Accumulator{}
@@ -111,7 +111,7 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 }
 
 func TestWriteHTTPSWithClientAuth(t *testing.T) {
-	metricStream := newTestHTTPSListener()
+	metricStream := newTestMetricStreamHTTPS()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -126,7 +126,7 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 }
 
 func TestWriteHTTPSuccessfulAuth(t *testing.T) {
-	metricStream := newTestHTTPAuthListener()
+	metricStream := newTestMetricStreamAuth()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -147,7 +147,7 @@ func TestWriteHTTPSuccessfulAuth(t *testing.T) {
 }
 
 func TestWriteHTTPFailedAuth(t *testing.T) {
-	metricStream := newTestHTTPAuthListener()
+	metricStream := newTestMetricStreamAuth()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -168,7 +168,7 @@ func TestWriteHTTPFailedAuth(t *testing.T) {
 }
 
 func TestWriteHTTP(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -183,7 +183,7 @@ func TestWriteHTTP(t *testing.T) {
 }
 
 func TestWriteHTTPMultipleRecords(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -198,7 +198,7 @@ func TestWriteHTTPMultipleRecords(t *testing.T) {
 }
 
 func TestWriteHTTPExactMaxBodySize(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 	metricStream.MaxBodySize = config.Size(len(record))
 
 	acc := &testutil.Accumulator{}
@@ -214,7 +214,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 }
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 	metricStream.MaxBodySize = config.Size(512)
 
 	acc := &testutil.Accumulator{}
@@ -230,7 +230,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -245,7 +245,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 }
 
 func TestWriteHTTPInvalid(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -260,7 +260,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 }
 
 func TestWriteHTTPEmpty(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -275,7 +275,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 }
 
 func TestComposeMetrics(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -307,7 +307,7 @@ func TestComposeMetrics(t *testing.T) {
 
 // post GZIP encoded data to the metric stream listener
 func TestWriteHTTPGzippedData(t *testing.T) {
-	metricStream := newTestMetricStreamsListener()
+	metricStream := newTestCloudWatchMetricStreams()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())

@@ -1,4 +1,4 @@
-package metric_streams_listener
+package cloudwatch_metric_streams
 
 import (
 	"compress/gzip"
@@ -32,7 +32,7 @@ var sampleConfig string
 // 500 MB
 const defaultMaxBodySize = 500 * 1024 * 1024
 
-type MetricStreamsListener struct {
+type CloudWatchMetricStreams struct {
 	ServiceAddress string          `toml:"service_address"`
 	Paths          []string        `toml:"paths"`
 	MaxBodySize    config.Size     `toml:"max_body_size"`
@@ -84,7 +84,7 @@ type age struct {
 	min time.Duration
 }
 
-func (*MetricStreamsListener) SampleConfig() string {
+func (*CloudWatchMetricStreams) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -106,101 +106,101 @@ func (a *age) SubmitMin(stat selfstat.Stat) {
 	stat.Incr(a.min.Nanoseconds())
 }
 
-func (ms *MetricStreamsListener) Description() string {
+func (cms *CloudWatchMetricStreams) Description() string {
 	return "HTTP listener & parser for AWS Metric Streams"
 }
 
-func (ms *MetricStreamsListener) Gather(_ telegraf.Accumulator) error {
+func (cms *CloudWatchMetricStreams) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
 // Start starts the http listener service.
-func (ms *MetricStreamsListener) Start(acc telegraf.Accumulator) error {
-	ms.acc = acc
-	server := ms.createHTTPServer()
+func (cms *CloudWatchMetricStreams) Start(acc telegraf.Accumulator) error {
+	cms.acc = acc
+	server := cms.createHTTPServer()
 
 	var err error
-	server.TLSConfig, err = ms.ServerConfig.TLSConfig()
+	server.TLSConfig, err = cms.ServerConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
 	if server.TLSConfig != nil {
-		ms.listener, err = tls.Listen("tcp", ms.ServiceAddress, server.TLSConfig)
+		cms.listener, err = tls.Listen("tcp", cms.ServiceAddress, server.TLSConfig)
 	} else {
-		ms.listener, err = net.Listen("tcp", ms.ServiceAddress)
+		cms.listener, err = net.Listen("tcp", cms.ServiceAddress)
 	}
 	if err != nil {
 		return err
 	}
 
-	ms.wg.Add(1)
+	cms.wg.Add(1)
 	go func() {
-		defer ms.wg.Done()
-		if err := server.Serve(ms.listener); err != nil {
+		defer cms.wg.Done()
+		if err := server.Serve(cms.listener); err != nil {
 			if !errors.Is(err, net.ErrClosed) {
-				ms.Log.Errorf("Serve failed: %v", err)
+				cms.Log.Errorf("Serve failed: %v", err)
 			}
-			close(ms.close)
+			close(cms.close)
 		}
 	}()
 
-	ms.Log.Infof("Listening on %s", ms.listener.Addr().String())
+	cms.Log.Infof("Listening on %s", cms.listener.Addr().String())
 
 	return nil
 }
 
-func (ms *MetricStreamsListener) createHTTPServer() *http.Server {
+func (cms *CloudWatchMetricStreams) createHTTPServer() *http.Server {
 	return &http.Server{
-		Addr:         ms.ServiceAddress,
-		Handler:      ms,
-		ReadTimeout:  time.Duration(ms.ReadTimeout),
-		WriteTimeout: time.Duration(ms.WriteTimeout),
+		Addr:         cms.ServiceAddress,
+		Handler:      cms,
+		ReadTimeout:  time.Duration(cms.ReadTimeout),
+		WriteTimeout: time.Duration(cms.WriteTimeout),
 	}
 }
 
-func (ms *MetricStreamsListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	ms.requestsReceived.Incr(1)
+func (cms *CloudWatchMetricStreams) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	cms.requestsReceived.Incr(1)
 	start := time.Now()
-	defer ms.recordRequestTime(start)
+	defer cms.recordRequestTime(start)
 
-	handler := ms.serveWrite
+	handler := cms.serveWrite
 
-	if !choice.Contains(req.URL.Path, ms.Paths) {
+	if !choice.Contains(req.URL.Path, cms.Paths) {
 		handler = http.NotFound
 	}
 
-	ms.authenticateIfSet(handler, res, req)
+	cms.authenticateIfSet(handler, res, req)
 }
 
-func (ms *MetricStreamsListener) recordRequestTime(start time.Time) {
+func (cms *CloudWatchMetricStreams) recordRequestTime(start time.Time) {
 	elapsed := time.Since(start)
-	ms.requestTime.Incr(elapsed.Nanoseconds())
+	cms.requestTime.Incr(elapsed.Nanoseconds())
 }
 
-func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.Request) {
+func (cms *CloudWatchMetricStreams) serveWrite(res http.ResponseWriter, req *http.Request) {
 	select {
-	case <-ms.close:
+	case <-cms.close:
 		res.WriteHeader(http.StatusGone)
 		return
 	default:
 	}
 
-	defer ms.writesServed.Incr(1)
+	defer cms.writesServed.Incr(1)
 
 	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > int64(ms.MaxBodySize) {
-		ms.Log.Errorf("content length exceeded maximum body size")
+	if req.ContentLength > int64(cms.MaxBodySize) {
+		cms.Log.Errorf("content length exceeded maximum body size")
 		if err := tooLarge(res); err != nil {
-			ms.Log.Debugf("error in too-large: %v", err)
+			cms.Log.Debugf("error in too-large: %v", err)
 		}
 		return
 	}
 
 	// Check that the method is a POST
 	if req.Method != "POST" {
-		ms.Log.Errorf("incompatible request method")
+		cms.Log.Errorf("incompatible request method")
 		if err := methodNotAllowed(res); err != nil {
-			ms.Log.Debugf("error in method-not-allowed: %v", err)
+			cms.Log.Debugf("error in method-not-allowed: %v", err)
 		}
 		return
 	}
@@ -212,9 +212,9 @@ func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.R
 	if encoding == "gzip" {
 		reader, err := gzip.NewReader(req.Body)
 		if err != nil {
-			ms.Log.Errorf("unable to uncompress metric-streams data: %v", err)
+			cms.Log.Errorf("unable to uncompress metric-streams data: %v", err)
 			if err := badRequest(res); err != nil {
-				ms.Log.Debugf("error in bad-request: %v", err)
+				cms.Log.Debugf("error in bad-request: %v", err)
 			}
 			return
 		}
@@ -226,16 +226,16 @@ func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.R
 	var r Request
 	err := json.NewDecoder(body).Decode(&r)
 	if err != nil {
-		ms.Log.Errorf("unable to decode metric-streams request: %v", err)
+		cms.Log.Errorf("unable to decode metric-streams request: %v", err)
 		if err := badRequest(res); err != nil {
-			ms.Log.Debugf("error in bad-request: %v", err)
+			cms.Log.Debugf("error in bad-request: %v", err)
 		}
 		return
 	}
 
 	agesInRequest := &age{max: 0, min: math.MaxInt32}
-	defer agesInRequest.SubmitMax(ms.ageMax)
-	defer agesInRequest.SubmitMin(ms.ageMin)
+	defer agesInRequest.SubmitMax(cms.ageMax)
+	defer agesInRequest.SubmitMin(cms.ageMin)
 
 	// For each record, decode the base64 data and store it in a Data struct
 	// Metrics from Metric Streams are Base64 encoded JSON
@@ -243,9 +243,9 @@ func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.R
 	for _, record := range r.Records {
 		b, err := base64.StdEncoding.DecodeString(record.Data)
 		if err != nil {
-			ms.Log.Errorf("unable to base64 decode metric-streams data: %v", err)
+			cms.Log.Errorf("unable to base64 decode metric-streams data: %v", err)
 			if err := badRequest(res); err != nil {
-				ms.Log.Debugf("error in bad-request: %v", err)
+				cms.Log.Debugf("error in bad-request: %v", err)
 			}
 			return
 		}
@@ -263,13 +263,13 @@ func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.R
 			var d Data
 			err = json.Unmarshal([]byte(js), &d)
 			if err != nil {
-				ms.Log.Errorf("unable to unmarshal metric-streams data: %v", err)
+				cms.Log.Errorf("unable to unmarshal metric-streams data: %v", err)
 				if err := badRequest(res); err != nil {
-					ms.Log.Debugf("error in bad-request: %v", err)
+					cms.Log.Debugf("error in bad-request: %v", err)
 				}
 				return
 			}
-			ms.composeMetrics(d)
+			cms.composeMetrics(d)
 			agesInRequest.Record(time.Since(time.Unix(d.Timestamp/1000, 0)))
 		}
 	}
@@ -283,9 +283,9 @@ func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.R
 
 	marshalled, err := json.Marshal(response)
 	if err != nil {
-		ms.Log.Errorf("unable to compose response: %v", err)
+		cms.Log.Errorf("unable to compose response: %v", err)
 		if err := badRequest(res); err != nil {
-			ms.Log.Debugf("error in bad-request: %v", err)
+			cms.Log.Debugf("error in bad-request: %v", err)
 		}
 		return
 	}
@@ -294,12 +294,12 @@ func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.R
 	res.WriteHeader(http.StatusOK)
 	_, err = res.Write(marshalled)
 	if err != nil {
-		ms.Log.Debugf("Error writing response to AWS: %s", err.Error())
+		cms.Log.Debugf("Error writing response to AWS: %s", err.Error())
 		return
 	}
 }
 
-func (ms *MetricStreamsListener) composeMetrics(data Data) {
+func (cms *CloudWatchMetricStreams) composeMetrics(data Data) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	timestamp := time.Unix(data.Timestamp/1000, 0)
@@ -337,7 +337,7 @@ func (ms *MetricStreamsListener) composeMetrics(data Data) {
 		tags[dimension] = value
 	}
 
-	ms.acc.AddFields(measurement, fields, tags, timestamp)
+	cms.acc.AddFields(measurement, fields, tags, timestamp)
 }
 
 func tooLarge(res http.ResponseWriter) error {
@@ -373,10 +373,10 @@ func badRequest(res http.ResponseWriter) error {
 	return err
 }
 
-func (ms *MetricStreamsListener) authenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
-	if ms.AccessKey != "" {
+func (cms *CloudWatchMetricStreams) authenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+	if cms.AccessKey != "" {
 		auth := req.Header.Get("X-Amz-Firehose-Access-Key")
-		if auth == "" || auth != ms.AccessKey {
+		if auth == "" || auth != cms.AccessKey {
 			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
@@ -387,35 +387,35 @@ func (ms *MetricStreamsListener) authenticateIfSet(handler http.HandlerFunc, res
 }
 
 // Stop cleans up all resources
-func (ms *MetricStreamsListener) Stop() {
-	if ms.listener != nil {
+func (cms *CloudWatchMetricStreams) Stop() {
+	if cms.listener != nil {
 		// Ignore the returned error as we cannot do anything about it anyway
 		//nolint:errcheck,revive
-		ms.listener.Close()
+		cms.listener.Close()
 	}
-	ms.wg.Wait()
+	cms.wg.Wait()
 }
 
-func (ms *MetricStreamsListener) Init() error {
+func (cms *CloudWatchMetricStreams) Init() error {
 	tags := map[string]string{
-		"address": ms.ServiceAddress,
+		"address": cms.ServiceAddress,
 	}
-	ms.requestsReceived = selfstat.Register("metric_streams_listener", "requests_received", tags)
-	ms.writesServed = selfstat.Register("metric_streams_listener", "writes_served", tags)
-	ms.requestTime = selfstat.Register("metric_streams_listener", "request_time", tags)
-	ms.ageMax = selfstat.Register("metric_streams_listener", "age_max", tags)
-	ms.ageMin = selfstat.Register("metric_streams_listener", "age_min", tags)
+	cms.requestsReceived = selfstat.Register("metric_streams_listener", "requests_received", tags)
+	cms.writesServed = selfstat.Register("metric_streams_listener", "writes_served", tags)
+	cms.requestTime = selfstat.Register("metric_streams_listener", "request_time", tags)
+	cms.ageMax = selfstat.Register("metric_streams_listener", "age_max", tags)
+	cms.ageMin = selfstat.Register("metric_streams_listener", "age_min", tags)
 
-	if ms.MaxBodySize == 0 {
-		ms.MaxBodySize = config.Size(defaultMaxBodySize)
-	}
-
-	if ms.ReadTimeout < config.Duration(time.Second) {
-		ms.ReadTimeout = config.Duration(time.Second * 10)
+	if cms.MaxBodySize == 0 {
+		cms.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
-	if ms.WriteTimeout < config.Duration(time.Second) {
-		ms.WriteTimeout = config.Duration(time.Second * 10)
+	if cms.ReadTimeout < config.Duration(time.Second) {
+		cms.ReadTimeout = config.Duration(time.Second * 10)
+	}
+
+	if cms.WriteTimeout < config.Duration(time.Second) {
+		cms.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
 	return nil
@@ -423,7 +423,7 @@ func (ms *MetricStreamsListener) Init() error {
 
 func init() {
 	inputs.Add("metric_streams_listener", func() telegraf.Input {
-		return &MetricStreamsListener{
+		return &CloudWatchMetricStreams{
 			ServiceAddress: ":443",
 			Paths:          []string{"/telegraf"},
 		}

@@ -1,6 +1,6 @@
-# Metric Streams Input Plugin
+# CloudWatch Metric Streams Input Plugin
 
-The Metric Streams plugin is a service input plugin that
+The CloudWatch Metric Streams plugin is a service input plugin that
 listens for metrics sent via HTTP and performs the required
 processing for
 [Metric Streams from AWS](#troubleshooting-documentation).
@@ -75,6 +75,8 @@ The metric name is a combination of `namespace` and `metric_name`,
 separated by `_` and lowercased.
 
 The fields are each aggregate in the `value` list.
+These fields are renamed to match the CloudWatch API for
+easier transition from the API to Metric Streams.
 
 The timestamp applied is the timestamp from the metric,
 typically 3-5 minutes older than the time processed due
@@ -85,7 +87,7 @@ to CloudWatch delays.
 Example output based on the above JSON is:
 
 ```text
-aws_ec2_cpuutilization,accountId=541737779709,region=us-west-2,InstanceId=i-0efc7ghy09c123428 max=10.011666666666667,min=10.011666666666667,sum=10.011666666666667,count=1 1651679580000
+aws_ec2_cpuutilization,accountId=541737779709,region=us-west-2,InstanceId=i-0efc7ghy09c123428 maximum=10.011666666666667,minimum=10.011666666666667,sum=10.011666666666667,samplecount=1 1651679580000
 ```
 
 ## Troubleshooting
