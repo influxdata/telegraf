@@ -5,6 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/coreos/go-systemd/daemon"
+	
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -247,6 +249,27 @@ func (r *RunningOutput) write(metrics []telegraf.Metric) error {
 
 	if err == nil {
 		r.log.Debugf("Wrote batch of %d metrics in %s", len(metrics), elapsed)
+		// Notify systemd that telegraf is sending metrics
+		// TODO: Compare t with output interval to catch misconfiguration.
+		//       t is the systemd directive WatchdogSec=
+		//       https://www.freedesktop.org/software/systemd/man/systemd.service.html#WatchdogSec=
+		//       Watchdog should be notified each t/2.
+		//       https://github.com/coreos/go-systemd/blob/main/daemon/watchdog.go#L25
+		t, err := daemon.SdWatchdogEnabled(false)
+		if err == nil && t == 0 {
+			r.log.Debugf("Systemd Watchdog not enabled in systemd.")
+		} else if err != nil && t == 0 {
+			r.log.Errorf("Systemd Watchdog enabled but caught error: %s", err)
+		} else {
+			ok, err := daemon.SdNotify(false, daemon.SdWatchDogNotify)
+			if !ok && err == nil {
+				r.log.Errorf("Systemd Watchdog enabled but not enabled when notifying, confusing!")
+			} else if ok && err != nil {
+				r.log.Errorf("Systemd Watchdog enabled but there was an error notifying: %s", err)
+			} else {
+				r.log.Debugf("Systemd Watchdog notified")
+			}
+		}
 	}
 	return err
 }
