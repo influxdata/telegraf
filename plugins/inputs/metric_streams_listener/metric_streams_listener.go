@@ -238,6 +238,8 @@ func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.R
 	defer agesInRequest.SubmitMin(ms.ageMin)
 
 	// For each record, decode the base64 data and store it in a Data struct
+	// Metrics from Metric Streams are Base64 encoded JSON
+	// https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html
 	for _, record := range r.Records {
 		b, err := base64.StdEncoding.DecodeString(record.Data)
 		if err != nil {

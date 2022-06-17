@@ -5,14 +5,6 @@ listens for metrics sent via HTTP and performs the required
 processing for
 [Metric Streams from AWS](#troubleshooting-documentation).
 
-Metrics from Metric Streams are Base64 encoded JSON
-blocks that adhere to
-[AWS's request & response specifications](#troubleshooting-documentation).
-
-The Telegraf plugin must return the required response format
-as outlined in
-[the Firehose documentation](#troubleshooting-documentation).
-
 For cost, see the Metric Streams example in
 [CloudWatch pricing](#troubleshooting-documentation).
 
