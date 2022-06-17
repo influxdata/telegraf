@@ -11,7 +11,7 @@ For cost, see the Metric Streams example in
 ## Configuration
 
 ```toml @sample.conf
-[[inputs.metric_streams]]
+[[inputs.cloudwatch_metric_streams]]
   ## Address and port to host HTTP listener on
   service_address = ":443"
 
@@ -28,17 +28,29 @@ For cost, see the Metric Streams example in
   ## 0 means to use the default of 524,288,000 bytes (500 mebibytes)
   # max_body_size = "500MB"
 
-  ## Optional username and password to accept for HTTP basic authentication.
-  ## You probably want to make sure you have TLS configured above for this.
-  # basic_username = "foobar"
-  # basic_password = "barfoo"
+  ## Optional access key for Firehose security.
+  # access_key = "test-key"
+
+  ## An optional flag to keep Metric Streams metrics compatible with CloudWatch's API naming
+  # api_compatability = false
+
+  ## Set one or more allowed client CA certificate file names to
+  ## enable mutually authenticated TLS connections
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Add service certificate and key
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 ```
 
 ## Metrics
 
 Metrics sent by AWS are Base64 encoded blocks of JSON data.
+The JSON block below is the Base64 decoded data in the `data`
+field of a `record`.
 There can be multiple blocks of JSON for each `data` field
-in a `record` and there can be multiple `records`.
+in each `record` and there can be multiple `record` fields in
+a `record`.
 
 The metric when decoded may look like this:
 
