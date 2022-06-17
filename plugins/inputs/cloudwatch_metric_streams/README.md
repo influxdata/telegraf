@@ -87,8 +87,10 @@ The metric name is a combination of `namespace` and `metric_name`,
 separated by `_` and lowercased.
 
 The fields are each aggregate in the `value` list.
-These fields are renamed to match the CloudWatch API for
-easier transition from the API to Metric Streams.
+
+These fields are optionally renamed to match the CloudWatch API for
+easier transition from the API to Metric Streams. This relies on
+setting the `api_compatability` flag in the configuration.
 
 The timestamp applied is the timestamp from the metric,
 typically 3-5 minutes older than the time processed due
@@ -96,7 +98,15 @@ to CloudWatch delays.
 
 ## Example Output
 
-Example output based on the above JSON is:
+Example output based on the above JSON & compatability flag is:
+
+**Standard Metric Streams format:**
+
+```text
+aws_ec2_cpuutilization,accountId=541737779709,region=us-west-2,InstanceId=i-0efc7ghy09c123428 max=10.011666666666667,min=10.011666666666667,sum=10.011666666666667,count=1 1651679580000
+```
+
+**API Compatability format:**
 
 ```text
 aws_ec2_cpuutilization,accountId=541737779709,region=us-west-2,InstanceId=i-0efc7ghy09c123428 maximum=10.011666666666667,minimum=10.011666666666667,sum=10.011666666666667,samplecount=1 1651679580000
