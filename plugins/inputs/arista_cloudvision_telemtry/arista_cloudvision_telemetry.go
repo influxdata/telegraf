@@ -115,7 +115,6 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 	var err error
 	var ctx context.Context
 	var tlscfg *tls.Config
-	var request *gnmiLib.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
 	c.lookupMutex.Lock()
@@ -149,27 +148,33 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 		cvdevsslice = append(cvdevsslice, value)
 	}
 	// Validate configuration
+	var request []gnmiLib.SubscribeRequest
 	if request, err = c.newSubscribeRequest(cvdevsslice); err != nil {
 		return err
 	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
 
-	c.wg.Add(1)
+	c.wg.Add(len(cvdevsslice))
 	CvpAddr := c.Cvpaddress
-	go func(CvpAddr string) {
-		defer c.wg.Done()
-		for ctx.Err() == nil {
-			if err := c.subscribeGNMI(ctx, CvpAddr, tlscfg, request); err != nil && ctx.Err() == nil {
-				acc.AddError(err)
-			}
+	for i := range request {
+		thisReq := make([]gnmiLib.SubscribeRequest, 1)
+		copy(thisReq, request[i:(i+1)])
+		go func(CvpAddr string) {
+			defer c.wg.Done()
+			for ctx.Err() == nil {
+				if err := c.subscribeGNMI(ctx, CvpAddr, tlscfg, &thisReq[0]); err != nil && ctx.Err() == nil {
+					acc.AddError(err)
+				}
 
-			select {
-			case <-ctx.Done():
-			case <-time.After(time.Duration(c.Redial)):
+				select {
+				case <-ctx.Done():
+				case <-time.After(time.Duration(c.Redial)):
+				}
 			}
-		}
-	}(CvpAddr)
+		}(CvpAddr)
+	}
+
 	return nil
 }
 
@@ -282,9 +287,14 @@ func parsePath(origin string, pathToParse string, target []string) ([]*gnmiLib.P
 	return gnmilibsslice, nil
 }
 
-func (c *CVP) newSubscribeRequest(targets []string) (*gnmiLib.SubscribeRequest, error) {
+func (c *CVP) newSubscribeRequest(targets []string) ([]gnmiLib.SubscribeRequest, error) {
 	// Create subscription objects
-	subscriptions := make([]*gnmiLib.Subscription, len(c.Subscriptions))
+	targetLen := len(targets)
+	subLen := len(c.Subscriptions)
+
+	// Layout as [sub1Host1, sub2Host1, sub1Host2, sub2Host2]
+	subscriptions := make([]*gnmiLib.Subscription, subLen*targetLen)
+
 	for i, subscription := range c.Subscriptions {
 		gnmiPath, err := parsePath(subscription.Origin, subscription.Path, targets)
 		if err != nil {
@@ -294,12 +304,14 @@ func (c *CVP) newSubscribeRequest(targets []string) (*gnmiLib.SubscribeRequest, 
 		if !ok {
 			return nil, fmt.Errorf("invalid subscription mode %s", subscription.SubscriptionMode)
 		}
-		subscriptions[i] = &gnmiLib.Subscription{
-			Path:              gnmiPath[0],
-			Mode:              gnmiLib.SubscriptionMode(mode),
-			SampleInterval:    uint64(time.Duration(subscription.SampleInterval).Nanoseconds()),
-			SuppressRedundant: subscription.SuppressRedundant,
-			HeartbeatInterval: uint64(time.Duration(subscription.HeartbeatInterval).Nanoseconds()),
+		for j, path := range gnmiPath {
+			subscriptions[(j*subLen)+i] = &gnmiLib.Subscription{
+				Path:              path,
+				Mode:              gnmiLib.SubscriptionMode(mode),
+				SampleInterval:    uint64(time.Duration(subscription.SampleInterval).Nanoseconds()),
+				SuppressRedundant: subscription.SuppressRedundant,
+				HeartbeatInterval: uint64(time.Duration(subscription.HeartbeatInterval).Nanoseconds()),
+			}
 		}
 	}
 
@@ -313,17 +325,24 @@ func (c *CVP) newSubscribeRequest(targets []string) (*gnmiLib.SubscribeRequest, 
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
-	return &gnmiLib.SubscribeRequest{
-		Request: &gnmiLib.SubscribeRequest_Subscribe{
-			Subscribe: &gnmiLib.SubscriptionList{
-				Prefix:       gnmiPath[0],
-				Mode:         gnmiLib.SubscriptionList_STREAM,
-				Encoding:     gnmiLib.Encoding(gnmiLib.Encoding_value[strings.ToUpper(c.Encoding)]),
-				Subscription: subscriptions,
-				UpdatesOnly:  c.UpdatesOnly,
+	var subSlice []gnmiLib.SubscribeRequest
+
+	for j, path := range gnmiPath {
+		req := &gnmiLib.SubscribeRequest{
+			Request: &gnmiLib.SubscribeRequest_Subscribe{
+				Subscribe: &gnmiLib.SubscriptionList{
+					Prefix:   path,
+					Mode:     gnmiLib.SubscriptionList_STREAM,
+					Encoding: gnmiLib.Encoding(gnmiLib.Encoding_value[strings.ToUpper(c.Encoding)]),
+					// Remember the layout of subscriptions is [sub1Host1, sub2Host1, sub1Host2, sub2Host2]
+					Subscription: subscriptions[j*subLen : (j+1)*subLen],
+					UpdatesOnly:  c.UpdatesOnly,
+				},
 			},
-		},
-	}, nil
+		}
+		subSlice = append(subSlice, *req)
+	}
+	return subSlice, nil
 }
 
 // SubscribeGNMI and extract telemetry data
@@ -382,6 +401,7 @@ func (c *CVP) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Con
 func (c *CVP) handleSubscribeResponse(address string, reply *gnmiLib.SubscribeResponse) {
 	switch response := reply.Response.(type) {
 	case *gnmiLib.SubscribeResponse_Update:
+		fmt.Println(response)
 		c.handleSubscribeResponseUpdate(address, response)
 	case *gnmiLib.SubscribeResponse_Error:
 		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
