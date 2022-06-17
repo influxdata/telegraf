@@ -39,7 +39,7 @@ type CloudWatchMetricStreams struct {
 	ReadTimeout      config.Duration `toml:"read_timeout"`
 	WriteTimeout     config.Duration `toml:"write_timeout"`
 	AccessKey        string          `toml:"access_key"`
-	ApiCompatability bool            `toml:"api_compatability"`
+	APICompatability bool            `toml:"api_compatability"`
 
 	requestsReceived selfstat.Stat
 	writesServed     selfstat.Stat
@@ -313,7 +313,7 @@ func (cms *CloudWatchMetricStreams) composeMetrics(data Data) {
 	}
 
 	// Rename Statistics to match the CloudWatch API if in API Compatability mode
-	if cms.ApiCompatability {
+	if cms.APICompatability {
 		max, ok := fields["max"]
 		if ok {
 			fields["maximum"] = max

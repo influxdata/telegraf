@@ -53,7 +53,7 @@ func newTestMetricStreamHTTPS() *CloudWatchMetricStreams {
 
 func newTestCompatibleCloudWatchMetricStreams() *CloudWatchMetricStreams {
 	metricStream := newTestCloudWatchMetricStreams()
-	metricStream.ApiCompatability = true
+	metricStream.APICompatability = true
 	return metricStream
 }
 
