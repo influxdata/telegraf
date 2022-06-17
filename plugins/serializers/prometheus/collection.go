@@ -183,8 +183,8 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 	labels := c.createLabels(metric)
 	for _, field := range metric.FieldList() {
-		t := metric.Type();
-		untypedName := MetricName(metric.Name(), field.Key, telegraf.Untyped);
+		t := metric.Type()
+		untypedName := MetricName(metric.Name(), field.Key, telegraf.Untyped)
 
 		for _, tm := range c.config.TypeMappings {
 			if newType, ok := tm.InferValueType(untypedName); ok {

@@ -493,8 +493,8 @@ func TestTypeMappings(t *testing.T) {
 						"host": "example.org",
 					},
 					map[string]interface{}{
-						"time_idle": 42.0,
-						"ticks_count" : 1337,
+						"time_idle":   42.0,
+						"ticks_count": 1337,
 					},
 					time.Unix(0, 0),
 				),

@@ -43,17 +43,17 @@ type Collector interface {
 }
 
 type PrometheusClient struct {
-	Listen             string          `toml:"listen"`
-	MetricVersion      int             `toml:"metric_version"`
-	BasicUsername      string          `toml:"basic_username"`
-	BasicPassword      string          `toml:"basic_password"`
-	IPRange            []string        `toml:"ip_range"`
-	ExpirationInterval config.Duration `toml:"expiration_interval"`
-	Path               string          `toml:"path"`
-	CollectorsExclude  []string        `toml:"collectors_exclude"`
-	StringAsLabel      bool            `toml:"string_as_label"`
-	ExportTimestamp    bool            `toml:"export_timestamp"`
-	TypeMappings       []serializer.TypeMapping   `toml:"type_mapping"`
+	Listen             string                   `toml:"listen"`
+	MetricVersion      int                      `toml:"metric_version"`
+	BasicUsername      string                   `toml:"basic_username"`
+	BasicPassword      string                   `toml:"basic_password"`
+	IPRange            []string                 `toml:"ip_range"`
+	ExpirationInterval config.Duration          `toml:"expiration_interval"`
+	Path               string                   `toml:"path"`
+	CollectorsExclude  []string                 `toml:"collectors_exclude"`
+	StringAsLabel      bool                     `toml:"string_as_label"`
+	ExportTimestamp    bool                     `toml:"export_timestamp"`
+	TypeMappings       []serializer.TypeMapping `toml:"type_mapping"`
 
 	tlsint.ServerConfig
 

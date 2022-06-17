@@ -9,13 +9,13 @@ import (
 type PrometheusMetricType string
 
 const (
-	Gauge PrometheusMetricType = "gauge"
+	Gauge   PrometheusMetricType = "gauge"
 	Counter PrometheusMetricType = "counter"
 )
 
 type TypeMapping struct {
-	Suffixes []string `toml:"suffixes"`
-	Type PrometheusMetricType `toml:"type"`
+	Suffixes []string             `toml:"suffixes"`
+	Type     PrometheusMetricType `toml:"type"`
 }
 
 func (t *TypeMapping) anySuffixMatches(name string) bool {
@@ -29,7 +29,7 @@ func (t *TypeMapping) anySuffixMatches(name string) bool {
 }
 
 func (t *TypeMapping) telegrafValueType() telegraf.ValueType {
-	switch t.Type{
+	switch t.Type {
 	case Gauge:
 		return telegraf.Gauge
 	case Counter:
@@ -39,7 +39,7 @@ func (t *TypeMapping) telegrafValueType() telegraf.ValueType {
 	}
 }
 
-func (t TypeMapping) InferValueType(prometheusMetricName string) (telegraf.ValueType, bool){
+func (t TypeMapping) InferValueType(prometheusMetricName string) (telegraf.ValueType, bool) {
 	if t.anySuffixMatches(prometheusMetricName) {
 		return t.telegrafValueType(), true
 	}
