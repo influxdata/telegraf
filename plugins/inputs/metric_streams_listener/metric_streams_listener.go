@@ -309,9 +309,27 @@ func (ms *MetricStreamsListener) composeMetrics(data Data) {
 		fields[field] = value
 	}
 
+	// Rename Statistics to match the CloudWatch API
+	max, ok := fields["max"]
+	if ok {
+		fields["maximum"] = max
+		delete(fields, "max")
+	}
+
+	min, ok := fields["min"]
+	if ok {
+		fields["minimum"] = min
+		delete(fields, "min")
+	}
+
+	count, ok := fields["count"]
+	if ok {
+		fields["samplecount"] = count
+		delete(fields, "count")
+	}
+
 	tags["accountId"] = data.AccountID
 	tags["region"] = data.Region
-	tags["source"] = data.MetricStreamName
 
 	for dimension, value := range data.Dimensions {
 		tags[dimension] = value

@@ -300,8 +300,8 @@ func TestComposeMetrics(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "aws_ec2_cpuutilization",
-		map[string]interface{}{"max": 0.4366666666666666, "min": 0.3683333333333333, "sum": 1.9399999999999997, "count": 5.0},
-		map[string]string{"AutoScalingGroupName": "test-autoscaling-group", "accountId": "546734499701", "region": "us-west-2", "source": "cloudwatch-metric-stream"},
+		map[string]interface{}{"maximum": 0.4366666666666666, "minimum": 0.3683333333333333, "sum": 1.9399999999999997, "samplecount": 5.0},
+		map[string]string{"AutoScalingGroupName": "test-autoscaling-group", "accountId": "546734499701", "region": "us-west-2"},
 	)
 }
 
