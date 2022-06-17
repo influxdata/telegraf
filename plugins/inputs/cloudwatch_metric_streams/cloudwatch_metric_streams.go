@@ -33,12 +33,13 @@ var sampleConfig string
 const defaultMaxBodySize = 500 * 1024 * 1024
 
 type CloudWatchMetricStreams struct {
-	ServiceAddress string          `toml:"service_address"`
-	Paths          []string        `toml:"paths"`
-	MaxBodySize    config.Size     `toml:"max_body_size"`
-	ReadTimeout    config.Duration `toml:"read_timeout"`
-	WriteTimeout   config.Duration `toml:"write_timeout"`
-	AccessKey      string          `toml:"access_key"`
+	ServiceAddress   string          `toml:"service_address"`
+	Paths            []string        `toml:"paths"`
+	MaxBodySize      config.Size     `toml:"max_body_size"`
+	ReadTimeout      config.Duration `toml:"read_timeout"`
+	WriteTimeout     config.Duration `toml:"write_timeout"`
+	AccessKey        string          `toml:"access_key"`
+	ApiCompatability bool            `toml:"api_compatability"`
 
 	requestsReceived selfstat.Stat
 	writesServed     selfstat.Stat
@@ -311,23 +312,25 @@ func (cms *CloudWatchMetricStreams) composeMetrics(data Data) {
 		fields[field] = value
 	}
 
-	// Rename Statistics to match the CloudWatch API
-	max, ok := fields["max"]
-	if ok {
-		fields["maximum"] = max
-		delete(fields, "max")
-	}
+	// Rename Statistics to match the CloudWatch API if in API Compatability mode
+	if cms.ApiCompatability {
+		max, ok := fields["max"]
+		if ok {
+			fields["maximum"] = max
+			delete(fields, "max")
+		}
 
-	min, ok := fields["min"]
-	if ok {
-		fields["minimum"] = min
-		delete(fields, "min")
-	}
+		min, ok := fields["min"]
+		if ok {
+			fields["minimum"] = min
+			delete(fields, "min")
+		}
 
-	count, ok := fields["count"]
-	if ok {
-		fields["samplecount"] = count
-		delete(fields, "count")
+		count, ok := fields["count"]
+		if ok {
+			fields["samplecount"] = count
+			delete(fields, "count")
+		}
 	}
 
 	tags["accountId"] = data.AccountID

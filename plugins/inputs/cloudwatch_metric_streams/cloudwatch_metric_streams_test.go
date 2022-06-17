@@ -51,6 +51,12 @@ func newTestMetricStreamHTTPS() *CloudWatchMetricStreams {
 	return metricStream
 }
 
+func newTestCompatibleCloudWatchMetricStreams() *CloudWatchMetricStreams {
+	metricStream := newTestCloudWatchMetricStreams()
+	metricStream.ApiCompatability = true
+	return metricStream
+}
+
 func getHTTPSClient() *http.Client {
 	tlsConfig, err := pki.TLSClientConfig().TLSConfig()
 	if err != nil {
@@ -276,6 +282,37 @@ func TestWriteHTTPEmpty(t *testing.T) {
 
 func TestComposeMetrics(t *testing.T) {
 	metricStream := newTestCloudWatchMetricStreams()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, metricStream.Init())
+	require.NoError(t, metricStream.Start(acc))
+	defer metricStream.Stop()
+
+	// compose a Data object for writing
+	data := Data{
+		MetricStreamName: "cloudwatch-metric-stream",
+		AccountID:        "546734499701",
+		Region:           "us-west-2",
+		Namespace:        "AWS/EC2",
+		MetricName:       "CPUUtilization",
+		Dimensions:       map[string]string{"AutoScalingGroupName": "test-autoscaling-group"},
+		Timestamp:        1651679400000,
+		Value:            map[string]float64{"max": 0.4366666666666666, "min": 0.3683333333333333, "sum": 1.9399999999999997, "count": 5.0},
+		Unit:             "Percent",
+	}
+
+	// Compose the metrics from data
+	metricStream.composeMetrics(data)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "aws_ec2_cpuutilization",
+		map[string]interface{}{"max": 0.4366666666666666, "min": 0.3683333333333333, "sum": 1.9399999999999997, "count": 5.0},
+		map[string]string{"AutoScalingGroupName": "test-autoscaling-group", "accountId": "546734499701", "region": "us-west-2"},
+	)
+}
+
+func TestComposeAPICompatibleMetrics(t *testing.T) {
+	metricStream := newTestCompatibleCloudWatchMetricStreams()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
