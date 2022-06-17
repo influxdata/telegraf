@@ -118,9 +118,3 @@ in AWS's documentation:
 * [AWS HTTP Specifications](https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html)
 * [Firehose Troubleshooting](https://docs.aws.amazon.com/firehose/latest/dev/http_troubleshooting.html)
 * [CloudWatch Pricing](https://aws.amazon.com/cloudwatch/pricing/)
-
-### Example Query
-
-```bash
-curl -v -XPOST --data-binary {} localhost:8286/telegraf
-```
