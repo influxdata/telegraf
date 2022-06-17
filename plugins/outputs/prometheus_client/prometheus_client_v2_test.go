@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	inputs "github.com/influxdata/telegraf/plugins/inputs/prometheus"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -461,6 +462,109 @@ rpc_duration_seconds_count 2693
 			require.Equal(t,
 				strings.TrimSpace(string(tt.data)),
 				strings.TrimSpace(string(actual)))
+		})
+	}
+}
+
+func TestTypeMappings(t *testing.T) {
+	logger := testutil.Logger{Name: "outputs.prometheus_client"}
+	tests := []struct {
+		name     string
+		output   *PrometheusClient
+		metrics  []telegraf.Metric
+		expected []byte
+	}{
+		{
+			name: "counter telegraf metric",
+			output: &PrometheusClient{
+				TypeMappings: []prometheus.TypeMapping{
+					{Suffixes: []string{"_count"}, Type: prometheus.Counter},
+				},
+				Listen:            ":0",
+				MetricVersion:     2,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"time_idle": 42.0,
+						"ticks_count" : 1337,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu_ticks_count Telegraf collected metric
+# TYPE cpu_ticks_count counter
+cpu_ticks_count{host="example.org"} 1337
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle untyped
+cpu_time_idle{host="example.org"} 42
+`),
+		},
+		{
+			name: "gauge telegraf metric",
+			output: &PrometheusClient{
+				TypeMappings: []prometheus.TypeMapping{
+					{Suffixes: []string{"_rate"}, Type: prometheus.Gauge},
+				},
+				Listen:            ":0",
+				MetricVersion:     2,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"request",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"rate": 1.42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP request_rate Telegraf collected metric
+# TYPE request_rate gauge
+request_rate{host="example.org"} 1.42
+`),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.output.Init()
+			require.NoError(t, err)
+
+			err = tt.output.Connect()
+			require.NoError(t, err)
+
+			defer func() {
+				err := tt.output.Close()
+				require.NoError(t, err)
+			}()
+
+			err = tt.output.Write(tt.metrics)
+			require.NoError(t, err)
+
+			resp, err := http.Get(tt.output.URL())
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t,
+				strings.TrimSpace(string(tt.expected)),
+				strings.TrimSpace(string(body)))
 		})
 	}
 }

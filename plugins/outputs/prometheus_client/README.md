@@ -48,6 +48,12 @@ metrics on `/metrics` (default) to be polled by a Prometheus server.
 
   ## Export metric collection time.
   # export_timestamp = false
+
+  # # Add one or more type mappings to force a metric type for a specific field
+  # # NOTE: This is only supported by metric_verison = 2
+  # [[outputs.prometheus_client.type_mapping]]
+  #   suffixes = ["_count", "_sum"]
+  #   type   = "counter"
 ```
 
 ## Metrics

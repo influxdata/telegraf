@@ -36,6 +36,7 @@ type FormatConfig struct {
 	TimestampExport TimestampExport
 	MetricSortOrder MetricSortOrder
 	StringHandling  StringHandling
+	TypeMappings []TypeMapping
 }
 
 type Serializer struct {

@@ -23,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	v1 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
 	v2 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
+	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -52,6 +53,8 @@ type PrometheusClient struct {
 	CollectorsExclude  []string        `toml:"collectors_exclude"`
 	StringAsLabel      bool            `toml:"string_as_label"`
 	ExportTimestamp    bool            `toml:"export_timestamp"`
+	TypeMappings       []serializer.TypeMapping   `toml:"type_mapping"`
+
 	tlsint.ServerConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -103,7 +106,7 @@ func (p *PrometheusClient) Init() error {
 			return err
 		}
 	case 2:
-		p.collector = v2.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.ExportTimestamp)
+		p.collector = v2.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.ExportTimestamp, p.TypeMappings)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err

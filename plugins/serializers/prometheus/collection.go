@@ -183,7 +183,17 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 	labels := c.createLabels(metric)
 	for _, field := range metric.FieldList() {
-		metricName := MetricName(metric.Name(), field.Key, metric.Type())
+		t := metric.Type();
+		untypedName := MetricName(metric.Name(), field.Key, telegraf.Untyped);
+
+		for _, tm := range c.config.TypeMappings {
+			if newType, ok := tm.InferValueType(untypedName); ok {
+				t = newType
+				break
+			}
+		}
+
+		metricName := MetricName(metric.Name(), field.Key, t)
 		metricName, ok := SanitizeMetricName(metricName)
 		if !ok {
 			continue
@@ -191,7 +201,7 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 
 		family := MetricFamily{
 			Name: metricName,
-			Type: metric.Type(),
+			Type: t,
 		}
 
 		entry, ok := c.Entries[family]
@@ -215,7 +225,7 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 			}
 		}
 
-		switch metric.Type() {
+		switch t {
 		case telegraf.Counter:
 			fallthrough
 		case telegraf.Gauge:
