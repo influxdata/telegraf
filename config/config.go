@@ -32,6 +32,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
@@ -1786,6 +1787,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
 	c.getFieldBool(tbl, "prometheus_string_as_label", &sc.PrometheusStringAsLabel)
+	c.getFieldPrometheusTypeMappingsSlice(tbl, "prometheus_type_mapping", &sc.PrometheusTypeMappings)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1843,6 +1845,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
 		"prefix", "prometheus_export_timestamp", "prometheus_ignore_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
+		"prometheus_type_mapping",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
 		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "wavefront_disable_prefix_conversion":
@@ -1895,6 +1898,22 @@ func (c *Config) getFieldDuration(tbl *ast.Table, fieldName string, target inter
 				targetVal.Set(reflect.ValueOf(d))
 			}
 		}
+	}
+}
+
+func (c *Config) getFieldPrometheusTypeMappingsSlice(tbl *ast.Table, fieldName string, target *[]prometheus.TypeMapping) {
+	if fs, ok := tbl.Fields[fieldName].([]*ast.Table); ok {
+		res := make([]prometheus.TypeMapping, len(fs))
+		for i, f := range fs {
+			tm := &prometheus.TypeMapping{}
+			if err := toml.UnmarshalTable(f, tm); err != nil {
+				c.addError(f, err)
+				continue
+			}
+
+			res[i] = *tm
+		}
+		*target = res
 	}
 }
 

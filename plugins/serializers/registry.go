@@ -117,6 +117,10 @@ type Config struct {
 	// Output string fields as metric labels; when false string fields are
 	// discarded.
 	PrometheusStringAsLabel bool `toml:"prometheus_string_as_label"`
+
+	// Allows specifying the Prometheus type on field-level if the
+	// final Prometheus metric name matches a certain pattern
+	PrometheusTypeMappings []prometheus.TypeMapping `toml:"prometheus_type_mapping"`
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -187,6 +191,7 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 		TimestampExport: exportTimestamp,
 		MetricSortOrder: sortMetrics,
 		StringHandling:  stringAsLabels,
+		TypeMappings:    config.PrometheusTypeMappings,
 	})
 }
 
