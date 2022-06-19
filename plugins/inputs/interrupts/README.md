@@ -1,6 +1,7 @@
 # Interrupts Input Plugin
 
-The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and `/proc/softirqs`.
+The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and
+`/proc/softirqs`.
 
 ## Configuration
 

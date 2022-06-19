@@ -36,7 +36,8 @@ The plugin gathers the results of these commands and measurements:
 * `sentinel replicas` - `redis_replicas`
 * `info all` - `redis_sentinel`
 
-The `has_quorum` field in `redis_sentinel_masters` is from calling the command `sentinels ckquorum`.
+The `has_quorum` field in `redis_sentinel_masters` is from calling the command
+`sentinels ckquorum`.
 
 There are 5 remote network requests made for each server listed in the config.
 
@@ -172,7 +173,8 @@ There are 5 remote network requests made for each server listed in the config.
 
 ## Example Output
 
-An example of 2 Redis Sentinel instances monitoring a single master and replica. It produces:
+An example of 2 Redis Sentinel instances monitoring a single master and
+replica. It produces:
 
 ### redis_sentinel_masters
 

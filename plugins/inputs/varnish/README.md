@@ -45,10 +45,13 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
   # timeout = "1s"
 ```
 
-### Measurements & Fields (metric_version=1)
+## Metrics
 
-This is the full list of stats provided by varnish. Stats will be grouped by their capitalized prefix (eg MAIN, MEMPOOL,
-etc). In the output, the prefix will be used as a tag, and removed from field names.
+### metric_version=1
+
+This is the full list of stats provided by varnish. Stats will be grouped by
+their capitalized prefix (eg MAIN, MEMPOOL, etc). In the output, the prefix will
+be used as a tag, and removed from field names.
 
 - varnish
   - MAIN.uptime                                    (uint64, count, Child process uptime)
@@ -347,8 +350,8 @@ etc). In the output, the prefix will be used as a tag, and removed from field na
 
 ### Tags
 
-As indicated above, the prefix of a varnish stat will be used as it's 'section' tag. So section tag may have one of the
-following values:
+As indicated above, the prefix of a varnish stat will be used as it's 'section'
+tag. So section tag may have one of the following values:
 
 - section:
   - MAIN
@@ -358,18 +361,19 @@ following values:
   - VBE
   - LCK
 
-## Measurements & Fields (metric_version=2)
+### metric_version=2
 
-When `metric_version=2` is enabled, the plugin runs `varnishstat -j` command and parses the JSON output into metrics.
+When `metric_version=2` is enabled, the plugin runs `varnishstat -j` command and
+parses the JSON output into metrics.
 
-Plugin uses `varnishadm vcl.list -j` commandline to find the active VCL. Metrics that are related to the nonactive VCL
-are excluded from monitoring.
+Plugin uses `varnishadm vcl.list -j` commandline to find the active VCL. Metrics
+that are related to the nonactive VCL are excluded from monitoring.
 
-### Requirements
+## Requirements
 
 - Varnish 6.0.2+ is required (older versions do not support JSON output from CLI tools)
 
-#### Examples
+## Examples
 
 Varnish counter:
 
@@ -387,14 +391,17 @@ Varnish counter:
 Influx metric:
 `varnish,section=MAIN cache_hit=51i 1462765437090957980`
 
-### Advanced customizations using regexps
+## Advanced customizations using regexps
 
-Finding the VCL in a varnish measurement and parsing into tags can be adjusted by using GO regular expressions.
+Finding the VCL in a varnish measurement and parsing into tags can be adjusted
+by using GO regular expressions.
 
-Regexps use a special named group `(?P<_vcl>[\w\-]*)(\.)` to extract VCL name. `(?P<_field>[\w\-.+]*)\.val` regexp group
-extracts the field name. All other named regexp groups like `(?P<my_tag>[\w\-.+]*)` are tags.
+Regexps use a special named group `(?P<_vcl>[\w\-]*)(\.)` to extract VCL
+name. `(?P<_field>[\w\-.+]*)\.val` regexp group extracts the field name. All
+other named regexp groups like `(?P<my_tag>[\w\-.+]*)` are tags.
 
-_Tip: It is useful to verify regexps using online tools like <https://regoio.herokuapp.com/>._
+_Tip: It is useful to verify regexps using online tools like
+<https://regoio.herokuapp.com/>._
 
 By default, the plugin has a builtin list of regexps for following VMODs:
 
@@ -416,8 +423,9 @@ By default, the plugin has a builtin list of regexps for following VMODs:
   - regexp `([\w\-]*)\.(?P<_field>[\w\-.]*)`
     - `MSE_STORE.store-1-1.g_aio_running_bytes_write` -> `varnish,section=MSE_STORE store-1-1.g_aio_running_bytes_write=5i`
 
-The default regexps list can be extended in the telegraf config. The following example shows a config with a custom
-regexp for parsing of `accounting` VMOD metrics in `ACCG.<namespace>.<key>.<stat_name>` format. The namespace value will
+The default regexps list can be extended in the telegraf config. The following
+example shows a config with a custom regexp for parsing of `accounting` VMOD
+metrics in `ACCG.<namespace>.<key>.<stat_name>` format. The namespace value will
 be used as a tag.
 
 ```toml
@@ -425,15 +433,17 @@ be used as a tag.
     regexps = ['^ACCG.(?P<namespace>[\w-]*).(?P<_field>[\w-.]*)']
 ```
 
-### Custom arguments
+## Custom arguments
 
-You can change the default binary location and custom arguments for `varnishstat` and `varnishadm` command output. This
-is useful when running varnish in docker or executing using varnish by SSH on a different machine.
+You can change the default binary location and custom arguments for
+`varnishstat` and `varnishadm` command output. This is useful when running
+varnish in docker or executing using varnish by SSH on a different machine.
 
-It's important to note that `instance_name` parameter is not take into account when using custom `binary_args` or
-`adm_binary_args`. You have to add `"-n", "/instance_name"` manually into configuration.
+It's important to note that `instance_name` parameter is not take into account
+when using custom `binary_args` or `adm_binary_args`. You have to add `"-n",
+"/instance_name"` manually into configuration.
 
-#### Example for SSH
+### Example for SSH
 
 ```toml
 [[inputs.varnish]]
@@ -445,7 +455,7 @@ It's important to note that `instance_name` parameter is not take into account w
   stats = ["*"]
 ```
 
-#### Example for Docker
+### Example for Docker
 
 ```toml
 [[inputs.varnish]]
@@ -457,12 +467,14 @@ It's important to note that `instance_name` parameter is not take into account w
   stats = ["*"]
 ```
 
-### Permissions
+## Permissions
 
-It's important to note that this plugin references `varnishstat` and `varnishadm`, which may require additional permissions to execute successfully.
-Depending on the user/group permissions of the telegraf user executing this plugin, you may need to alter the group membership, set facls, or use sudo.
+It's important to note that this plugin references `varnishstat` and
+`varnishadm`, which may require additional permissions to execute successfully.
+Depending on the user/group permissions of the telegraf user executing this
+plugin, you may need to alter the group membership, set facls, or use sudo.
 
-#### Group membership (Recommended)
+### Group membership (Recommended)
 
 ```bash
 $ groups telegraf
@@ -474,7 +486,7 @@ $ groups telegraf
 telegraf : telegraf varnish
 ```
 
-#### Extended filesystem ACL's
+### Extended filesystem ACL's
 
 ```bash
 $ getfacl /var/lib/varnish/<hostname>/_.vsm
@@ -518,7 +530,9 @@ Defaults!VARNISHSTAT !logfile, !syslog, !pam_session
 
 Please use the solution you see as most appropriate.
 
-### Example Output
+## Example Output
+
+### metric_version = 1
 
 ```bash
  telegraf --config etc/telegraf.conf --input-filter varnish --test
@@ -526,7 +540,7 @@ Please use the solution you see as most appropriate.
 > varnish,host=rpercy-VirtualBox,section=MAIN cache_hit=0i,cache_miss=0i,uptime=8416i 1462765437090957980
 ```
 
-### Output (when metric_version = 2)
+### metric_version = 2
 
 ```bash
 telegraf --config etc/telegraf.conf --input-filter varnish --test

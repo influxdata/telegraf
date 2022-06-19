@@ -3,13 +3,16 @@
 This plugin collects details on how much memory each entry in Slab cache is
 consuming. For example, it collects the consumption of `kmalloc-1024` and
 `xfs_inode`. Since this information is obtained by parsing `/proc/slabinfo`
-file, only Linux is supported. The specification of `/proc/slabinfo` has
-not changed since [Linux v2.6.12 (April 2005)](https://github.com/torvalds/linux/blob/1da177e4/mm/slab.c#L2848-L2861),
-so it can be regarded as sufficiently stable. The memory usage is
-equivalent to the `CACHE_SIZE` column of `slabtop` command.
-If the HOST_PROC environment variable is set, Telegraf will use its value instead of `/proc`
+file, only Linux is supported. The specification of `/proc/slabinfo` has not
+changed since [Linux v2.6.12 (April 2005)][slab-c], so it can be regarded as
+sufficiently stable. The memory usage is equivalent to the `CACHE_SIZE` column
+of `slabtop` command.  If the HOST_PROC environment variable is set, Telegraf
+will use its value instead of `/proc`
 
-**Note: `/proc/slabinfo` is usually restricted to read as root user. Make sure telegraf can execute `sudo` without password.**
+**Note: `/proc/slabinfo` is usually restricted to read as root user. Make sure
+telegraf can execute `sudo` without password.**
+
+[slab-c]: https://github.com/torvalds/linux/blob/1da177e4/mm/slab.c#L2848-L2861
 
 ## Configuration
 
@@ -22,10 +25,13 @@ If the HOST_PROC environment variable is set, Telegraf will use its value instea
 
 ## Sudo configuration
 
-Since the slabinfo file is only readable by root, the plugin runs `sudo /bin/cat` to read the file.
+Since the slabinfo file is only readable by root, the plugin runs `sudo
+/bin/cat` to read the file.
 
-Sudo can be configured to allow telegraf to run just the command needed to read the slabinfo file. For example, if telegraf is running as the user 'telegraf' and HOST_PROC is not used, add this to the sudoers file:
-`telegraf ALL = (root) NOPASSWD: /bin/cat /proc/slabinfo`
+Sudo can be configured to allow telegraf to run just the command needed to read
+the slabinfo file. For example, if telegraf is running as the user 'telegraf'
+and HOST_PROC is not used, add this to the sudoers file: `telegraf ALL = (root)
+NOPASSWD: /bin/cat /proc/slabinfo`
 
 ## Metrics
 

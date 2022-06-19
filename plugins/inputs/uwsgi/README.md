@@ -1,6 +1,7 @@
 # uWSGI Input Plugin
 
-The uWSGI input plugin gathers metrics about uWSGI using its [Stats Server](https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html).
+The uWSGI input plugin gathers metrics about uWSGI using its [Stats
+Server](https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html).
 
 ## Configuration
 

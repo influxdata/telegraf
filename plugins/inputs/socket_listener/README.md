@@ -3,12 +3,10 @@
 The Socket Listener is a service input plugin that listens for messages from
 streaming (tcp, unix) or datagram (udp, unixgram) protocols.
 
-The plugin expects messages in the
-[Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+The plugin expects messages in the [Telegraf Input Data
+Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
 ## Configuration
-
-This is a sample configuration for the plugin.
 
 ```toml @sample.conf
 # Generic socket listener capable of handling multiple socket types.
@@ -74,18 +72,18 @@ This is a sample configuration for the plugin.
 
 ## A Note on UDP OS Buffer Sizes
 
-The `read_buffer_size` config option can be used to adjust the size of the socket
-buffer, but this number is limited by OS settings. On Linux, `read_buffer_size`
-will default to `rmem_default` and will be capped by `rmem_max`. On BSD systems,
-`read_buffer_size` is capped by `maxsockbuf`, and there is no OS default
-setting.
+The `read_buffer_size` config option can be used to adjust the size of the
+socket buffer, but this number is limited by OS settings. On Linux,
+`read_buffer_size` will default to `rmem_default` and will be capped by
+`rmem_max`. On BSD systems, `read_buffer_size` is capped by `maxsockbuf`, and
+there is no OS default setting.
 
 Instructions on how to adjust these OS settings are available below.
 
 Some OSes (most notably, Linux) place very restrictive limits on the performance
-of UDP protocols. It is _highly_ recommended that you increase these OS limits to
-at least 8MB before trying to run large amounts of UDP traffic to your instance.
-8MB is just a recommendation, and can be adjusted higher.
+of UDP protocols. It is _highly_ recommended that you increase these OS limits
+to at least 8MB before trying to run large amounts of UDP traffic to your
+instance.  8MB is just a recommendation, and can be adjusted higher.
 
 ### Linux
 
@@ -117,9 +115,8 @@ sysctl -w net.core.rmem_default=8388608
 
 On BSD/Darwin systems you need to add about a 15% padding to the kernel limit
 socket buffer. Meaning if you want an 8MB buffer (8388608 bytes) you need to set
-the kernel limit to `8388608*1.15 = 9646900`. This is not documented anywhere but
-happens
-[in the kernel here.](https://github.com/freebsd/freebsd/blob/master/sys/kern/uipc_sockbuf.c#L63-L64)
+the kernel limit to `8388608*1.15 = 9646900`. This is not documented anywhere
+but can be seen [in the kernel source code][1].
 
 Check the current UDP/IP buffer limit by typing the following command:
 
@@ -140,3 +137,5 @@ To update the values immediately, type the following command as root:
 ```sh
 sysctl -w kern.ipc.maxsockbuf=9646900
 ```
+
+[1]: https://github.com/freebsd/freebsd/blob/master/sys/kern/uipc_sockbuf.c#L63-L64

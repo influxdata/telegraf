@@ -1,9 +1,17 @@
 # Directory Monitor Input Plugin
 
-This plugin monitors a single directory (without looking at sub-directories), and takes in each file placed in the directory.
-The plugin will gather all files in the directory at a configurable interval (`monitor_interval`), and parse the ones that haven't been picked up yet.
+This plugin monitors a single directory (without looking at sub-directories),
+and takes in each file placed in the directory.  The plugin will gather all
+files in the directory at the configured interval, and parse the ones that
+haven't been picked up yet.
 
-This plugin is intended to read files that are moved or copied to the monitored directory, and thus files should also not be used by another process or else they may fail to be gathered. Please be advised that this plugin pulls files directly after they've been in the directory for the length of the configurable `directory_duration_threshold`, and thus files should not be written 'live' to the monitored directory. If you absolutely must write files directly, they must be guaranteed to finish writing before the `directory_duration_threshold`.
+This plugin is intended to read files that are moved or copied to the monitored
+directory, and thus files should also not be used by another process or else
+they may fail to be gathered. Please be advised that this plugin pulls files
+directly after they've been in the directory for the length of the configurable
+`directory_duration_threshold`, and thus files should not be written 'live' to
+the monitored directory. If you absolutely must write files directly, they must
+be guaranteed to finish writing before the `directory_duration_threshold`.
 
 ## Configuration
 
@@ -46,10 +54,18 @@ This plugin is intended to read files that are moved or copied to the monitored 
   ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
   # file_tag = ""
   #
+  ## Specify if the file can be read completely at once or if it needs to be read line by line (default).
+  ## Possible values: "line-by-line", "at-once"
+  # parse_method = "line-by-line" 
+  #
   ## The dataformat to be read from the files.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  ## NOTE: We currently only support parsing newline-delimited JSON. See the format here: https://github.com/ndjson/ndjson-spec
   data_format = "influx"
 ```
+
+## Metrics
+
+The format of metrics produced by this plugin depends on the content and data
+format of the file.

@@ -1,7 +1,9 @@
 # NATS Input Plugin
 
-The [NATS](http://www.nats.io/about/) monitoring plugin gathers metrics from
-the NATS [monitoring http server](https://www.nats.io/documentation/server/gnatsd-monitoring/).
+The [NATS](http://www.nats.io/about/) monitoring plugin gathers metrics from the
+NATS [monitoring http server][1].
+
+[1]: https://www.nats.io/documentation/server/gnatsd-monitoring/
 
 ## Configuration
 

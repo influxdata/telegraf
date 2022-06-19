@@ -4,7 +4,9 @@ This plugin gather services & hosts status using Icinga2 Remote API.
 
 The icinga2 plugin uses the icinga2 remote API to gather status on running
 services and hosts. You can read Icinga2's documentation for their remote API
-[here](https://docs.icinga.com/icinga2/latest/doc/module/icinga2/chapter/icinga2-api)
+[here][1].
+
+[1]: https://docs.icinga.com/icinga2/latest/doc/module/icinga2/chapter/icinga2-api
 
 ## Configuration
 

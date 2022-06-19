@@ -34,7 +34,7 @@ alternative method for collecting repository information.
   # additional_fields = []
 ```
 
-### Metrics
+## Metrics
 
 - github_repository
   - tags:
@@ -61,17 +61,18 @@ When the [internal][] input is enabled:
     - remaining - How many requests you have remaining (per hour)
     - blocks - How many requests have been blocked due to rate limit
 
-When specifying `additional_fields` the plugin will collect the specified properties.
-**NOTE:** Querying this additional fields might require to perform additional API-calls.
-Please make sure you don't exceed the query rate-limit by specifying too many additional fields.
-In the following we list the available options with the required API-calls and the resulting fields
+When specifying `additional_fields` the plugin will collect the specified
+properties.  **NOTE:** Querying this additional fields might require to perform
+additional API-calls.  Please make sure you don't exceed the query rate-limit by
+specifying too many additional fields.  In the following we list the available
+options with the required API-calls and the resulting fields
 
 - "pull-requests" (2 API-calls per repository)
   - fields:
     - open_pull_requests (int)
     - closed_pull_requests (int)
 
-### Example Output
+## Example Output
 
 ```shell
 github_repository,language=Go,license=MIT\ License,name=telegraf,owner=influxdata forks=2679i,networks=2679i,open_issues=794i,size=23263i,stars=7091i,subscribers=316i,watchers=7091i 1563901372000000000

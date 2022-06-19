@@ -1,5 +1,7 @@
 # Redis Input Plugin
 
+The Redis input plugin gathers metrics from one or many Redis servers.
+
 ## Configuration
 
 ```toml @sample.conf
@@ -38,12 +40,14 @@
   # insecure_skip_verify = true
 ```
 
-## Measurements & Fields
+## Metrics
 
-The plugin gathers the results of the [INFO](https://redis.io/commands/info) redis command.
-There are two separate measurements: _redis_ and _redis\_keyspace_, the latter is used for gathering database related statistics.
+The plugin gathers the results of the [INFO](https://redis.io/commands/info)
+redis command.  There are two separate measurements: _redis_ and
+_redis\_keyspace_, the latter is used for gathering database related statistics.
 
-Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
+Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate)
+and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
 
 - redis
   - keyspace_hitrate(float, number)
@@ -149,7 +153,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - lag(int, number)
     - offset(int, number)
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - port

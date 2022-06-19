@@ -1,7 +1,11 @@
 # JTI OpenConfig Telemetry Input Plugin
 
-This plugin reads Juniper Networks implementation of OpenConfig telemetry data from listed sensors using Junos Telemetry Interface. Refer to
-[openconfig.net](http://openconfig.net/) for more details about OpenConfig and [Junos Telemetry Interface (JTI)](https://www.juniper.net/documentation/en_US/junos/topics/concept/junos-telemetry-interface-oveview.html).
+This plugin reads Juniper Networks implementation of OpenConfig telemetry data
+from listed sensors using Junos Telemetry Interface. Refer to
+[openconfig.net](http://openconfig.net/) for more details about OpenConfig and
+[Junos Telemetry Interface (JTI)][1].
+
+[1]: https://www.juniper.net/documentation/en_US/junos/topics/concept/junos-telemetry-interface-oveview.html
 
 ## Configuration
 
