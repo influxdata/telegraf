@@ -36,6 +36,14 @@ reporting others every bucket/quantile will continue to exist.
   ## more about them here:
   ##   https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "prometheus"
+
+  ## Add one or more type mappings to force a metric type for a specific field
+  ## NOTE: This is only supported by metric_verison = 2
+  ## Supported Prometheus types are gauge and counter. If another value is
+  ## provided in the "type" field, the mapping will fallback to "untyped"
+  # [[outputs.prometheus_client.type_mapping]]
+  #   suffixes = ["_count", "_sum"]
+  #   type   = "counter"
 ```
 
 ### Metrics
