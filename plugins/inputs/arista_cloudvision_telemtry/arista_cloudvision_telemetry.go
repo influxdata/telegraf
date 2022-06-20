@@ -60,6 +60,9 @@ type CVP struct {
 	lookup      map[string]map[string]map[string]interface{}
 	lookupMutex sync.Mutex
 
+	// Device target -> name
+	devices map[string]string
+
 	Log telegraf.Logger
 }
 
@@ -118,6 +121,7 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 	ctx, c.cancel = context.WithCancel(context.Background())
 	c.lookupMutex.Lock()
 	c.lookup = make(map[string]map[string]map[string]interface{})
+	c.devices = make(map[string]string)
 	c.lookupMutex.Unlock()
 
 	// Parse TLS config
@@ -137,8 +141,8 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 	cvdevs := make(map[string]string)
 
 	for cvpdevice, devicetarget := range c.CvpDevices() {
-		c.Log.Info("Connect to CVP and using Device ", cvpdevice, " With target of ", devicetarget)
 		cvdevs[cvpdevice] = devicetarget
+		c.devices[devicetarget] = cvpdevice
 	}
 	//Create a slice of targets
 	cvdevsslice := make([]string, 0, len(cvdevs))
@@ -418,8 +422,8 @@ func (c *CVP) handleSubscribeResponseUpdate(address string, response *gnmiLib.Su
 			c.Log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
 		}
 	}
-
-	prefixTags["host"] = response.Update.Prefix.Target
+	prefixTags["host-id"] = response.Update.Prefix.Target
+	prefixTags["host"] = c.devices[prefixTags["host-id"]]
 
 	// Parse individual Update message and create measurements
 	var name, lastAliasPath string
