@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
-	"net"
 	"net/http"
 	"path"
 	"strings"
@@ -401,7 +400,6 @@ func (c *CVP) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Con
 func (c *CVP) handleSubscribeResponse(address string, reply *gnmiLib.SubscribeResponse) {
 	switch response := reply.Response.(type) {
 	case *gnmiLib.SubscribeResponse_Update:
-		fmt.Println(response)
 		c.handleSubscribeResponseUpdate(address, response)
 	case *gnmiLib.SubscribeResponse_Error:
 		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
@@ -414,15 +412,14 @@ func (c *CVP) handleSubscribeResponseUpdate(address string, response *gnmiLib.Su
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
-
 	if response.Update.Prefix != nil {
 		var err error
 		if prefix, prefixAliasPath, err = c.handlePath(response.Update.Prefix, prefixTags, ""); err != nil {
 			c.Log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
 		}
 	}
-	prefixTags["source"], _, _ = net.SplitHostPort(address)
-	prefixTags["path"] = prefix
+
+	prefixTags["host"] = response.Update.Prefix.Target
 
 	// Parse individual Update message and create measurements
 	var name, lastAliasPath string
@@ -495,7 +492,7 @@ func (c *CVP) handleSubscribeResponseUpdate(address string, response *gnmiLib.Su
 				}
 			}
 
-			if err := grouper.Add(name, tags, timestamp, key, v); err != nil {
+			if err := grouper.Add(key, tags, timestamp, key, v); err != nil {
 				c.Log.Errorf("cannot add to grouper: %v", err)
 			}
 		}
