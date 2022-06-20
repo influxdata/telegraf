@@ -41,7 +41,7 @@ reporting others every bucket/quantile will continue to exist.
   ## NOTE: This is only supported by metric_verison = 2
   ## Supported Prometheus types are gauge and counter. If another value is
   ## provided in the "type" field, the mapping will fallback to "untyped"
-  # [[outputs.prometheus_client.type_mapping]]
+  # [[outputs.file.prometheus_type_mapping]]
   #   suffixes = ["_count", "_sum"]
   #   type   = "counter"
 ```
