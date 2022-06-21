@@ -159,7 +159,7 @@ func reloadLoop(
 
 // configDirFiles returns a slice made up of filepaths corresponding
 // to config files defined in any of the config directories.
-func configDirFiles() ([]string) {
+func configDirFiles() []string {
 	configs := make([]string, 0)
 	for _, dir := range fConfigDirs {
 		walkfn := func(thispath string, info os.FileInfo, _ error) error {
