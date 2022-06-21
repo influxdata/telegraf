@@ -1,4 +1,4 @@
-# Mock Data
+# Mock Data Input Plugin
 
 The mock input plugin generates random data based on a selection of different
 algorithms. For example, it can produce random data between a set of values,
@@ -8,13 +8,6 @@ Additionally, users can set the measurement name and tags used to whatever is
 required to mock their situation.
 
 ## Configuration
-
-The mock plugin only requires that:
-
-1) Metric name is set
-2) One of the below data field algorithms is defined
-
-Below is a sample config to generate one of each of the four types:
 
 ```toml @sample.conf
 # Generate metrics for test and demonstration purposes
@@ -48,6 +41,11 @@ Below is a sample config to generate one of each of the four types:
   ##   price = 50.00
   ##   volatility = 0.2
 ```
+
+The mock plugin only requires that:
+
+1) Metric name is set
+2) One of the data field algorithms is defined
 
 ## Available Algorithms
 

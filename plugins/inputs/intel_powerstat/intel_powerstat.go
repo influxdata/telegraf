@@ -6,6 +6,7 @@ package intel_powerstat
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -33,6 +34,7 @@ const (
 	packageCurrentDramPowerConsumption = "current_dram_power_consumption"
 	packageThermalDesignPower          = "thermal_design_power"
 	packageTurboLimit                  = "max_turbo_frequency"
+	packageUncoreFrequency             = "uncore_frequency"
 	percentageMultiplier               = 100
 )
 
@@ -57,6 +59,7 @@ type PowerStat struct {
 	packageCurrentPowerConsumption     bool
 	packageCurrentDramPowerConsumption bool
 	packageThermalDesignPower          bool
+	packageUncoreFrequency             bool
 	cpuInfo                            map[string]*cpuInfo
 	skipFirstIteration                 bool
 	logOnce                            map[string]error
@@ -76,10 +79,10 @@ func (p *PowerStat) Init() error {
 	}
 	// Initialize MSR service only when there is at least one metric enabled
 	if p.cpuFrequency || p.cpuBusyFrequency || p.cpuTemperature || p.cpuC0StateResidency || p.cpuC1StateResidency ||
-		p.cpuC6StateResidency || p.cpuBusyCycles || p.packageTurboLimit {
+		p.cpuC6StateResidency || p.cpuBusyCycles || p.packageTurboLimit || p.packageUncoreFrequency {
 		p.msr = newMsrServiceWithFs(p.Log, p.fs)
 	}
-	if p.packageCurrentPowerConsumption || p.packageCurrentDramPowerConsumption || p.packageThermalDesignPower || p.packageTurboLimit {
+	if p.packageCurrentPowerConsumption || p.packageCurrentDramPowerConsumption || p.packageThermalDesignPower || p.packageTurboLimit || p.packageUncoreFrequency {
 		p.rapl = newRaplServiceWithFs(p.Log, p.fs)
 	}
 
@@ -97,7 +100,17 @@ func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if p.areCoreMetricsEnabled() {
-		p.addPerCoreMetrics(acc)
+		if p.msr.isMsrLoaded() {
+			p.logOnce["msr"] = nil
+			p.addPerCoreMetrics(acc)
+		} else {
+			err := errors.New("error while trying to read MSR (probably msr module was not loaded)")
+			if val := p.logOnce["msr"]; val == nil || val.Error() != err.Error() {
+				p.Log.Errorf("%v", err)
+				// Remember that specific error occurs to omit logging next time
+				p.logOnce["msr"] = err
+			}
+		}
 	}
 
 	// Gathering the first iteration of metrics was skipped for most of them because they are based on delta calculations
@@ -109,25 +122,31 @@ func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
 func (p *PowerStat) addGlobalMetrics(acc telegraf.Accumulator) {
 	// Prepare RAPL data each gather because there is a possibility to disable rapl kernel module
 	p.rapl.initializeRaplData()
-
 	for socketID := range p.rapl.getRaplData() {
 		if p.packageTurboLimit {
 			p.addTurboRatioLimit(socketID, acc)
 		}
 
+		if p.packageUncoreFrequency {
+			die := maxDiePerSocket(socketID)
+			for actualDie := 0; actualDie < die; actualDie++ {
+				p.addUncoreFreq(socketID, strconv.Itoa(actualDie), acc)
+			}
+		}
+
 		err := p.rapl.retrieveAndCalculateData(socketID)
 		if err != nil {
 			// In case of an error skip calculating metrics for this socket
-			if val := p.logOnce[socketID]; val == nil || val.Error() != err.Error() {
+			if val := p.logOnce[socketID+"rapl"]; val == nil || val.Error() != err.Error() {
 				p.Log.Errorf("error fetching rapl data for socket %s, err: %v", socketID, err)
 				// Remember that specific error occurs for socketID to omit logging next time
-				p.logOnce[socketID] = err
+				p.logOnce[socketID+"rapl"] = err
 			}
 			continue
 		}
 
 		// If error stops occurring, clear logOnce indicator
-		p.logOnce[socketID] = nil
+		p.logOnce[socketID+"rapl"] = nil
 		if p.packageThermalDesignPower {
 			p.addThermalDesignPowerMetric(socketID, acc)
 		}
@@ -142,6 +161,84 @@ func (p *PowerStat) addGlobalMetrics(acc telegraf.Accumulator) {
 			p.addCurrentDramPowerConsumption(socketID, acc)
 		}
 	}
+}
+func maxDiePerSocket(_ string) int {
+	/*
+		TODO:
+		At the moment, linux does not distinguish between more dies per socket.
+		This piece of code will need to be upgraded in the future.
+		https://github.com/torvalds/linux/blob/v5.17/arch/x86/include/asm/topology.h#L153
+	*/
+	return 1
+}
+
+func (p *PowerStat) addUncoreFreq(socketID string, die string, acc telegraf.Accumulator) {
+	err := checkFile("/sys/devices/system/cpu/intel_uncore_frequency")
+	if err != nil {
+		err := fmt.Errorf("error while checking existing intel_uncore_frequency (probably intel-uncore-frequency module was not loaded)")
+		if val := p.logOnce["intel_uncore_frequency"]; val == nil || val.Error() != err.Error() {
+			p.Log.Errorf("%v", err)
+			// Remember that specific error occurs to omit logging next time
+			p.logOnce["intel_uncore_frequency"] = err
+		}
+		return
+	}
+	p.logOnce["intel_uncore_frequency"] = nil
+	p.readUncoreFreq("initial", socketID, die, acc)
+	p.readUncoreFreq("current", socketID, die, acc)
+}
+
+func (p *PowerStat) readUncoreFreq(typeFreq string, socketID string, die string, acc telegraf.Accumulator) {
+	fields := map[string]interface{}{}
+	cpuID := ""
+	if typeFreq == "current" {
+		if p.areCoreMetricsEnabled() && p.msr.isMsrLoaded() {
+			p.logOnce[socketID+"msr"] = nil
+			for _, v := range p.cpuInfo {
+				if v.physicalID == socketID {
+					cpuID = v.cpuID
+				}
+			}
+			if cpuID == "" {
+				p.Log.Debugf("error while reading socket ID")
+				return
+			}
+			actualUncoreFreq, err := p.msr.readSingleMsr(cpuID, "MSR_UNCORE_PERF_STATUS")
+			if err != nil {
+				p.Log.Debugf("error while reading MSR_UNCORE_PERF_STATUS: %v", err)
+				return
+			}
+			actualUncoreFreq = (actualUncoreFreq & 0x3F) * 100
+			fields["uncore_frequency_mhz_cur"] = actualUncoreFreq
+		} else {
+			err := errors.New("error while trying to read MSR (probably msr module was not loaded), uncore_frequency_mhz_cur metric will not be collected")
+			if val := p.logOnce[socketID+"msr"]; val == nil || val.Error() != err.Error() {
+				p.Log.Errorf("%v", err)
+				// Remember that specific error occurs for socketID to omit logging next time
+				p.logOnce[socketID+"msr"] = err
+			}
+		}
+	}
+	initMinFreq, err := p.msr.retrieveUncoreFrequency(socketID, typeFreq, "min", die)
+	if err != nil {
+		p.Log.Errorf("error while retrieving minimum uncore frequency of the socket %s, err: %v", socketID, err)
+		return
+	}
+	initMaxFreq, err := p.msr.retrieveUncoreFrequency(socketID, typeFreq, "max", die)
+	if err != nil {
+		p.Log.Errorf("error while retrieving maximum uncore frequency of the socket %s, err: %v", socketID, err)
+		return
+	}
+
+	tags := map[string]string{
+		"package_id": socketID,
+		"type":       typeFreq,
+		"die":        die,
+	}
+	fields["uncore_frequency_limit_mhz_min"] = initMinFreq
+	fields["uncore_frequency_limit_mhz_max"] = initMaxFreq
+
+	acc.AddGauge("powerstat_package", fields, tags)
 }
 
 func (p *PowerStat) addThermalDesignPowerMetric(socketID string, acc telegraf.Accumulator) {
@@ -579,6 +676,9 @@ func (p *PowerStat) parsePackageMetricsConfig() {
 	if contains(p.PackageMetrics, packageThermalDesignPower) {
 		p.packageThermalDesignPower = true
 	}
+	if contains(p.PackageMetrics, packageUncoreFrequency) {
+		p.packageUncoreFrequency = true
+	}
 }
 
 func (p *PowerStat) parseCPUMetricsConfig() {
@@ -693,6 +793,7 @@ func newPowerStat(fs fileService) *PowerStat {
 		cpuTemperature:                     false,
 		cpuBusyFrequency:                   false,
 		packageTurboLimit:                  false,
+		packageUncoreFrequency:             false,
 		packageCurrentPowerConsumption:     false,
 		packageCurrentDramPowerConsumption: false,
 		packageThermalDesignPower:          false,

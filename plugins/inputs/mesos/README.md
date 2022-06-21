@@ -1,7 +1,9 @@
 # Mesos Input Plugin
 
-This input plugin gathers metrics from Mesos.
-For more information, please check the [Mesos Observability Metrics](http://mesos.apache.org/documentation/latest/monitoring/) page.
+This input plugin gathers metrics from Mesos.  For more information, please
+check the [Mesos Observability Metrics][1] page.
+
+[1]: http://mesos.apache.org/documentation/latest/monitoring/
 
 ## Configuration
 
@@ -50,10 +52,12 @@ For more information, please check the [Mesos Observability Metrics](http://meso
   # insecure_skip_verify = false
 ```
 
-By default this plugin is not configured to gather metrics from mesos. Since a mesos cluster can be deployed in numerous ways it does not provide any default
-values. User needs to specify master/slave nodes this plugin will gather metrics from.
+By default this plugin is not configured to gather metrics from mesos. Since a
+mesos cluster can be deployed in numerous ways it does not provide any default
+values. User needs to specify master/slave nodes this plugin will gather metrics
+from.
 
-## Measurements & Fields
+## Metrics
 
 Mesos master metric groups
 

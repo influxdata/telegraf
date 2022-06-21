@@ -183,7 +183,7 @@ func createTestFiles(dir string, st *SockTest) error {
 	writeFile := func(prefix string, i int) error {
 		f := sockFile(prefix, i)
 		fpath := filepath.Join(dir, f)
-		return os.WriteFile(fpath, []byte(""), 0777)
+		return os.WriteFile(fpath, []byte(""), 0644)
 	}
 	return tstFileApply(st, writeFile)
 }

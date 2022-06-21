@@ -37,14 +37,6 @@ commands:
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
-  rebase-on-master:
-    steps:
-      - run: |
-          git config --global user.email "telegraf@influxdb.com"
-          git config --global user.name "telegraf"
-          git remote add upstream https://github.com/influxdata/telegraf
-          git fetch upstream
-          git rebase upstream/master
   test-go:
     parameters:
       os:
@@ -62,7 +54,6 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
-      - rebase-on-master
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -87,7 +78,6 @@ commands:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
-      - run: mkdir -p test-results
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
@@ -95,9 +85,23 @@ commands:
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- ${RACE} -short ./...
-      - store_test_results:
-          path: test-results
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
+      - when:
+          condition:
+            and:
+              - equal: [ "master", << pipeline.git.branch >> ]
+              - equal: [ "linux", << parameters.os >> ]
+              - equal: [ "amd64", << parameters.arch >> ]
+          steps:
+            - run:
+                name: "Installing goveralls"
+                command: go install github.com/mattn/goveralls@latest
+            - run:
+                name: "Remove plugins/parsers/influx/machine.go from coverage"
+                command: sed -i '/github.com\/influxdata\/telegraf\/plugins\/parsers\/influx\/machine.go/d' coverage.out
+            - run:
+                name: "Create report"
+                command: /go/bin/goveralls -coverprofile=coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -140,7 +144,6 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
-      - rebase-on-master
       - attach_workspace:
           at: '/go'
       - when:
@@ -210,6 +213,7 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - run: 'sh ./scripts/installgo_linux.sh'
       - run: 'make deps'
       - run: 'make test-integration'
   test-go-mac:

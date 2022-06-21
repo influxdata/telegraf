@@ -15,8 +15,9 @@ Number of CPUs is obtained from the /proc/cpuinfo file.
 
 ### Permissions
 
-The `n_users` field requires read access to `/var/run/utmp`, and may require
-the `telegraf` user to be added to the `utmp` group on some systems. If this file does not exist `n_users` will be skipped.
+The `n_users` field requires read access to `/var/run/utmp`, and may require the
+`telegraf` user to be added to the `utmp` group on some systems. If this file
+does not exist `n_users` will be skipped.
 
 ## Metrics
 

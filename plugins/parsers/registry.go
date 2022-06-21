@@ -19,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
-	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
 // Creator is the function to create a new parser
@@ -184,12 +183,12 @@ type Config struct {
 	ValueFieldName string `toml:"value_field_name"`
 
 	// XPath configuration
-	XPathPrintDocument       bool     `toml:"xpath_print_document"`
-	XPathProtobufFile        string   `toml:"xpath_protobuf_file"`
-	XPathProtobufType        string   `toml:"xpath_protobuf_type"`
-	XPathProtobufImportPaths []string `toml:"xpath_protobuf_import_paths"`
-	XPathAllowEmptySelection bool     `toml:"xpath_allow_empty_selection"`
-	XPathConfig              []XPathConfig
+	XPathPrintDocument       bool          `toml:"xpath_print_document"`
+	XPathProtobufFile        string        `toml:"xpath_protobuf_file"`
+	XPathProtobufType        string        `toml:"xpath_protobuf_type"`
+	XPathProtobufImportPaths []string      `toml:"xpath_protobuf_import_paths"`
+	XPathAllowEmptySelection bool          `toml:"xpath_allow_empty_selection"`
+	XPathConfig              []XPathConfig `toml:"xpath"`
 
 	// JSONPath configuration
 	JSONV2Config []JSONV2Config `toml:"json_v2"`
@@ -201,7 +200,29 @@ type Config struct {
 	LogFmtTagKeys []string `toml:"logfmt_tag_keys"`
 }
 
-type XPathConfig xpath.Config
+// XPathConfig definition for backward compatibitlity ONLY.
+// We need this here to avoid cyclic dependencies. However, we need
+// to move this to plugins/parsers/xpath once we deprecate parser
+// construction via `NewParser()`.
+type XPathConfig struct {
+	MetricQuery  string            `toml:"metric_name"`
+	Selection    string            `toml:"metric_selection"`
+	Timestamp    string            `toml:"timestamp"`
+	TimestampFmt string            `toml:"timestamp_format"`
+	Tags         map[string]string `toml:"tags"`
+	Fields       map[string]string `toml:"fields"`
+	FieldsInt    map[string]string `toml:"fields_int"`
+
+	FieldSelection  string `toml:"field_selection"`
+	FieldNameQuery  string `toml:"field_name"`
+	FieldValueQuery string `toml:"field_value"`
+	FieldNameExpand bool   `toml:"field_name_expansion"`
+
+	TagSelection  string `toml:"tag_selection"`
+	TagNameQuery  string `toml:"tag_name"`
+	TagValueQuery string `toml:"tag_value"`
+	TagNameExpand bool   `toml:"tag_name_expansion"`
+}
 
 type JSONV2Config struct {
 	json_v2.Config
@@ -280,17 +301,6 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
-		parser = &xpath.Parser{
-			Format:              config.DataFormat,
-			ProtobufMessageDef:  config.XPathProtobufFile,
-			ProtobufMessageType: config.XPathProtobufType,
-			ProtobufImportPaths: config.XPathProtobufImportPaths,
-			PrintDocument:       config.XPathPrintDocument,
-			DefaultTags:         config.DefaultTags,
-			AllowEmptySelection: config.XPathAllowEmptySelection,
-			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
-		}
 	case "json_v2":
 		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
@@ -427,17 +437,6 @@ func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, erro
 	return &prometheusremotewrite.Parser{
 		DefaultTags: defaultTags,
 	}, nil
-}
-
-func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config {
-	// Convert the config formats which is a one-to-one copy
-	configs := make([]xpath.Config, 0, len(cfgs))
-	for _, cfg := range cfgs {
-		config := xpath.Config(cfg)
-		config.MetricDefaultName = metricName
-		configs = append(configs, config)
-	}
-	return configs
 }
 
 func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {

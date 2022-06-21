@@ -69,6 +69,10 @@ func TestInitAndWrite(t *testing.T) {
  */
 
 func TestInitAndWriteIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	if os.Getenv("EVENTHUB_CONNECTION_STRING") == "" {
 		t.Skip("Missing environment variable EVENTHUB_CONNECTION_STRING")
 	}

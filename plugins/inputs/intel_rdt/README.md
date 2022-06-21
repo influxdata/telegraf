@@ -1,8 +1,9 @@
 # Intel RDT Input Plugin
 
 The `intel_rdt` plugin collects information provided by monitoring features of
-the Intel Resource Director Technology (Intel(R) RDT). Intel RDT provides the hardware framework to monitor
-and control the utilization of shared resources (ex: last level cache, memory bandwidth).
+the Intel Resource Director Technology (Intel(R) RDT). Intel RDT provides the
+hardware framework to monitor and control the utilization of shared resources
+(ex: last level cache, memory bandwidth).
 
 ## About Intel RDT
 
@@ -13,27 +14,31 @@ Intel’s Resource Director Technology (RDT) framework consists of:
 - Cache Allocation Technology (CAT)
 - Code and Data Prioritization (CDP)
 
-As multithreaded and multicore platform architectures emerge, the last level cache and
-memory bandwidth are key resources to manage for running workloads in single-threaded,
-multithreaded, or complex virtual machine environments. Intel introduces CMT, MBM, CAT
-and CDP to manage these workloads across shared resources.
+As multithreaded and multicore platform architectures emerge, the last level
+cache and memory bandwidth are key resources to manage for running workloads in
+single-threaded, multithreaded, or complex virtual machine environments. Intel
+introduces CMT, MBM, CAT and CDP to manage these workloads across shared
+resources.
 
 ## Prerequsities - PQoS Tool
 
-To gather Intel RDT metrics, the `intel_rdt` plugin uses _pqos_ cli tool which is a
-part of [Intel(R) RDT Software Package](https://github.com/intel/intel-cmt-cat).
-Before using this plugin please be sure _pqos_ is properly installed and configured regarding that the plugin
-run _pqos_ to work with `OS Interface` mode. This plugin supports _pqos_ version 4.0.0 and above.
-Note: pqos tool needs root privileges to work properly.
+To gather Intel RDT metrics, the `intel_rdt` plugin uses _pqos_ cli tool which
+is a part of [Intel(R) RDT Software
+Package](https://github.com/intel/intel-cmt-cat).  Before using this plugin
+please be sure _pqos_ is properly installed and configured regarding that the
+plugin run _pqos_ to work with `OS Interface` mode. This plugin supports _pqos_
+version 4.0.0 and above.  Note: pqos tool needs root privileges to work
+properly.
 
-Metrics will be constantly reported from the following `pqos` commands within the given interval:
+Metrics will be constantly reported from the following `pqos` commands within
+the given interval:
 
 ### If telegraf does not run as the root user
 
-The `pqos` binary needs to run as root.  If telegraf is running as a non-root user, you may enable sudo
-to allow `pqos` to run correctly.
-The `pqos` command requires root level access to run.  There are two options to
-overcome this if you run telegraf as a non-root user.
+The `pqos` binary needs to run as root.  If telegraf is running as a non-root
+user, you may enable sudo to allow `pqos` to run correctly.  The `pqos` command
+requires root level access to run.  There are two options to overcome this if
+you run telegraf as a non-root user.
 
 It is possible to update the pqos binary with setuid using `chmod u+s
 /path/to/pqos`.  This approach is simple and requires no modification to the
@@ -42,7 +47,8 @@ security implications for making such a command setuid root.
 
 Alternately, you may enable sudo to allow `pqos` to run correctly, as follows:
 
-Add the following to your sudoers file (assumes telegraf runs as a user named `telegraf`):
+Add the following to your sudoers file (assumes telegraf runs as a user named
+`telegraf`):
 
 ```sh
 telegraf ALL=(ALL) NOPASSWD:/usr/sbin/pqos -r --iface-os --mon-file-type=csv --mon-interval=*
@@ -57,7 +63,8 @@ configuration (see below).
 pqos -r --iface-os --mon-file-type=csv --mon-interval=INTERVAL --mon-core=all:[CORES]\;mbt:[CORES]
 ```
 
-where `CORES` is equal to group of cores provided in config. User can provide many groups.
+where `CORES` is equal to group of cores provided in config. User can provide
+many groups.
 
 ### In case of process monitoring
 
@@ -65,22 +72,24 @@ where `CORES` is equal to group of cores provided in config. User can provide ma
 pqos -r --iface-os --mon-file-type=csv --mon-interval=INTERVAL --mon-pid=all:[PIDS]\;mbt:[PIDS]
 ```
 
-where `PIDS` is group of processes IDs which name are equal to provided process name in a config.
-User can provide many process names which lead to create many processes groups.
+where `PIDS` is group of processes IDs which name are equal to provided process
+name in a config.  User can provide many process names which lead to create many
+processes groups.
 
 In both cases `INTERVAL` is equal to sampling_interval from config.
 
-Because PIDs association within system could change in every moment, Intel RDT plugin provides a
-functionality to check on every interval if desired processes change their PIDs association.
-If some change is reported, plugin will restart _pqos_ tool with new arguments. If provided by user
-process name is not equal to any of available processes, will be omitted and plugin will constantly
-check for process availability.
+Because PIDs association within system could change in every moment, Intel RDT
+plugin provides a functionality to check on every interval if desired processes
+change their PIDs association.  If some change is reported, plugin will restart
+_pqos_ tool with new arguments. If provided by user process name is not equal to
+any of available processes, will be omitted and plugin will constantly check for
+process availability.
 
 ## Useful links
 
-Pqos installation process: <https://github.com/intel/intel-cmt-cat/blob/master/INSTALL>  
-Enabling OS interface: <https://github.com/intel/intel-cmt-cat/wiki>, <https://github.com/intel/intel-cmt-cat/wiki/resctrl>  
-More about Intel RDT: <https://www.intel.com/content/www/us/en/architecture-and-technology/resource-director-technology.html>
+- Pqos installation process: <https://github.com/intel/intel-cmt-cat/blob/master/INSTALL>
+- Enabling OS interface: <https://github.com/intel/intel-cmt-cat/wiki>, <https://github.com/intel/intel-cmt-cat/wiki/resctrl>
+- More about Intel RDT: <https://www.intel.com/content/www/us/en/architecture-and-technology/resource-director-technology.html>
 
 ## Configuration
 
@@ -130,14 +139,17 @@ More about Intel RDT: <https://www.intel.com/content/www/us/en/architecture-and-
 
 ## Troubleshooting
 
-Pointing to non-existing cores will lead to throwing an error by _pqos_ and the plugin will not work properly.
-Be sure to check provided core number exists within desired system.  
+Pointing to non-existing cores will lead to throwing an error by _pqos_ and the
+plugin will not work properly. Be sure to check provided core number exists
+within desired system.
 
-Be aware, reading Intel RDT metrics by _pqos_ cannot be done simultaneously on the same resource.
-Do not use any other _pqos_ instance that is monitoring the same cores or PIDs within the working system.
-It is not possible to monitor same cores or PIDs on different groups.
+Be aware, reading Intel RDT metrics by _pqos_ cannot be done simultaneously on
+the same resource.  Do not use any other _pqos_ instance that is monitoring the
+same cores or PIDs within the working system.  It is not possible to monitor
+same cores or PIDs on different groups.
 
-PIDs associated for the given process could be manually checked by `pidof` command. E.g:
+PIDs associated for the given process could be manually checked by `pidof`
+command. E.g:
 
 ```sh
 pidof PROCESS

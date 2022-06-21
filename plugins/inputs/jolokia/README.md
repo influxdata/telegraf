@@ -1,6 +1,6 @@
 # Jolokia Input Plugin
 
-## Deprecated in version 1.5: Please use the [jolokia2][] plugin
+**Deprecated in version 1.5: Please use the [jolokia2][] plugin**
 
 ## Configuration
 

@@ -3,8 +3,12 @@
 The docker plugin uses the Docker Engine API to gather metrics on running
 docker containers.
 
-The docker plugin uses the [Official Docker Client](https://github.com/moby/moby/tree/master/client)
-to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/).
+The docker plugin uses the [Official Docker Client][1] to gather stats from the
+[Engine API][2].
+
+[1]: https://github.com/moby/moby/tree/master/client
+
+[2]: https://docs.docker.com/engine/api/v1.24/
 
 ## Configuration
 
@@ -85,12 +89,18 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
 
 ### Environment Configuration
 
-When using the `"ENV"` endpoint, the connection is configured using the
-[cli Docker environment variables](https://godoc.org/github.com/moby/moby/client#NewEnvClient).
+When using the `"ENV"` endpoint, the connection is configured using the [cli
+Docker environment variables][3].
+
+[3]: https://godoc.org/github.com/moby/moby/client#NewEnvClient
 
 ### Security
 
-Giving telegraf access to the Docker daemon expands the [attack surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface) that could result in an attacker gaining root access to a machine. This is especially relevant if the telegraf configuration can be changed by untrusted users.
+Giving telegraf access to the Docker daemon expands the [attack surface][4] that
+could result in an attacker gaining root access to a machine. This is especially
+relevant if the telegraf configuration can be changed by untrusted users.
+
+[4]: https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface
 
 ### Docker Daemon Permissions
 
@@ -115,14 +125,17 @@ volumes:
 
 ### source tag
 
-Selecting the containers measurements can be tricky if you have many containers with the same name.
-To alleviate this issue you can set the below value to `true`
+Selecting the containers measurements can be tricky if you have many containers
+with the same name.  To alleviate this issue you can set the below value to
+`true`
 
 ```toml
 source_tag = true
 ```
 
-This will cause all measurements to have the `source` tag be set to the first 12 characters of the container id. The first 12 characters is the common hostname for containers that have no explicit hostname set, as defined by docker.
+This will cause all measurements to have the `source` tag be set to the first 12
+characters of the container id. The first 12 characters is the common hostname
+for containers that have no explicit hostname set, as defined by docker.
 
 ### Kubernetes Labels
 
@@ -135,7 +148,8 @@ may prefer to exclude them:
 
 ### Docker-compose Labels
 
-Docker-compose will add labels to your containers. You can limit restrict labels to selected ones, e.g.
+Docker-compose will add labels to your containers. You can limit restrict labels
+to selected ones, e.g.
 
 ```json
   docker_label_include = [
@@ -147,7 +161,7 @@ Docker-compose will add labels to your containers. You can limit restrict labels
   ]
 ```
 
-### Metrics
+## Metrics
 
 - docker
   - tags:
@@ -190,7 +204,8 @@ some storage drivers such as devicemapper.
     - total
     - used
 
-The above measurements for the devicemapper storage driver can now be found in the new `docker_devicemapper` measurement
+The above measurements for the devicemapper storage driver can now be found in
+the new `docker_devicemapper` measurement
 
 - docker_devicemapper
   - tags:
@@ -355,7 +370,7 @@ status if configured.
     - tasks_desired
     - tasks_running
 
-## Example
+## Example Output
 
 ```shell
 docker,engine_host=debian-stretch-docker,server_version=17.09.0-ce n_containers=6i,n_containers_paused=0i,n_containers_running=1i,n_containers_stopped=5i,n_cpus=2i,n_goroutines=41i,n_images=2i,n_listener_events=0i,n_used_file_descriptors=27i 1524002041000000000

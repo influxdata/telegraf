@@ -9,10 +9,27 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestCreator(t *testing.T) {
+	creator, found := inputs.Inputs["directory_monitor"]
+	require.True(t, found)
+
+	expected := &DirectoryMonitor{
+		FilesToMonitor:             defaultFilesToMonitor,
+		FilesToIgnore:              defaultFilesToIgnore,
+		MaxBufferedMetrics:         defaultMaxBufferedMetrics,
+		DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
+		FileQueueSize:              defaultFileQueueSize,
+		ParseMethod:                defaultParseMethod,
+	}
+
+	require.Equal(t, expected, creator())
+}
 
 func TestCSVGZImport(t *testing.T) {
 	acc := testutil.Accumulator{}
@@ -27,8 +44,9 @@ func TestCSVGZImport(t *testing.T) {
 	r := DirectoryMonitor{
 		Directory:          processDirectory,
 		FinishedDirectory:  finishedDirectory,
-		MaxBufferedMetrics: 1000,
-		FileQueueSize:      100000,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
 	}
 	err := r.Init()
 	require.NoError(t, err)
@@ -91,8 +109,9 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	r := DirectoryMonitor{
 		Directory:          processDirectory,
 		FinishedDirectory:  finishedDirectory,
-		MaxBufferedMetrics: 1000,
-		FileQueueSize:      1000,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
 	}
 	err := r.Init()
 	require.NoError(t, err)
@@ -140,8 +159,9 @@ func TestFileTag(t *testing.T) {
 		Directory:          processDirectory,
 		FinishedDirectory:  finishedDirectory,
 		FileTag:            "filename",
-		MaxBufferedMetrics: 1000,
-		FileQueueSize:      1000,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
 	}
 	err := r.Init()
 	require.NoError(t, err)
@@ -194,8 +214,9 @@ func TestCSVNoSkipRows(t *testing.T) {
 	r := DirectoryMonitor{
 		Directory:          processDirectory,
 		FinishedDirectory:  finishedDirectory,
-		MaxBufferedMetrics: 1000,
-		FileQueueSize:      100000,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
 	}
 	err := r.Init()
 	require.NoError(t, err)
@@ -262,8 +283,9 @@ func TestCSVSkipRows(t *testing.T) {
 	r := DirectoryMonitor{
 		Directory:          processDirectory,
 		FinishedDirectory:  finishedDirectory,
-		MaxBufferedMetrics: 1000,
-		FileQueueSize:      100000,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
 	}
 	err := r.Init()
 	require.NoError(t, err)
@@ -332,8 +354,9 @@ func TestCSVMultiHeader(t *testing.T) {
 	r := DirectoryMonitor{
 		Directory:          processDirectory,
 		FinishedDirectory:  finishedDirectory,
-		MaxBufferedMetrics: 1000,
-		FileQueueSize:      100000,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
 	}
 	err := r.Init()
 	require.NoError(t, err)
@@ -386,4 +409,56 @@ hello,80,test_name2`
 		}
 		require.Equal(t, expectedFields, m.Fields)
 	}
+}
+
+func TestParseCompleteFile(t *testing.T) {
+	acc := testutil.Accumulator{}
+
+	// Establish process directory and finished directory.
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
+
+	// Init plugin.
+	r := DirectoryMonitor{
+		Directory:          processDirectory,
+		FinishedDirectory:  finishedDirectory,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        "at-once",
+	}
+	err := r.Init()
+	require.NoError(t, err)
+	r.Log = testutil.Logger{}
+
+	parserConfig := parsers.Config{
+		DataFormat:  "json",
+		JSONNameKey: "name",
+		TagKeys:     []string{"tag1"},
+	}
+
+	r.SetParserFunc(func() (parsers.Parser, error) {
+		return parsers.NewParser(&parserConfig)
+	})
+
+	testJSON := `{
+		"name": "test1",
+		"value": 100.1,
+		"tag1": "value1"
+	}`
+
+	// Write json file to process into the 'process' directory.
+	f, _ := os.CreateTemp(processDirectory, "test.json")
+	_, _ = f.WriteString(testJSON)
+	_ = f.Close()
+
+	err = r.Start(&acc)
+	require.NoError(t, err)
+	err = r.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(1)
+	r.Stop()
+
+	require.NoError(t, acc.FirstError())
+	require.Len(t, acc.Metrics, 1)
+	testutil.RequireMetricEqual(t, testutil.TestMetric(100.1), acc.GetTelegrafMetrics()[0], testutil.IgnoreTime())
 }

@@ -71,7 +71,14 @@ The example below has two queries are specified, with the following parameters:
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-using postgresql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
+using postgresql extensions ([pg_stat_statements][1], [pg_proctab][2] or
+[powa][3])
+
+[1]: http://www.postgresql.org/docs/current/static/pgstatstatements.html
+
+[2]: https://github.com/markwkm/pg_proctab
+
+[3]: http://dalibo.github.io/powa/
 
 ## Sample Queries
 
