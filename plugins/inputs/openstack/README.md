@@ -103,7 +103,7 @@ your requirements. This will help with load and cardinality as well.
   # tag_prefix = "openstack_tag_"
   # tag_value = "true"
 
-  ## Timestamp format for timestamp data recieved from Openstack.
+  ## Timestamp format for timestamp data received from Openstack.
   ## If false format is unix nanoseconds.
   # human_readable_timestamps = false
 
