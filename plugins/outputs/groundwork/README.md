@@ -19,9 +19,6 @@ GW8+
   ## Username and password to access GroundWork API.
   username = ""
   password = ""
-  
-  ## Default application type to use in GroundWork client
-  # default_app_type = "TELEGRAF"
 
   ## Default display name for the host with services(metrics).
   # default_host = "telegraf"
@@ -57,5 +54,8 @@ GW8+
 The current version of GroundWork Monitor does not support metrics whose values
 are strings. Such metrics will be skipped and will not be added to the final
 payload. You can find more context in this pull request: [#10255][].
+
+[#10255]: https://github.com/influxdata/telegraf/pull/10255
+in this pull request: [#10255][].
 
 [#10255]: https://github.com/influxdata/telegraf/pull/10255

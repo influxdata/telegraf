@@ -31,6 +31,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1541,7 +1542,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 		if xpathOK {
 			if subtbls, ok := node.([]*ast.Table); ok {
-				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
+				pc.XPathConfig = make([]xpath.Config, len(subtbls))
 				for i, subtbl := range subtbls {
 					subcfg := pc.XPathConfig[i]
 					c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
