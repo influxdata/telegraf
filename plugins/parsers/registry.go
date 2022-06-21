@@ -11,11 +11,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
@@ -190,7 +190,7 @@ type Config struct {
 	XPathConfig              []XPathConfig `toml:"xpath"`
 
 	// JSONPath configuration
-	JSONV2Config []JSONV2Config `toml:"json_v2"`
+	JSONV2Config []json_v2.Config `toml:"json_v2"`
 
 	// Influx configuration
 	InfluxParserType string `toml:"influx_parser_type"`
@@ -199,7 +199,7 @@ type Config struct {
 	LogFmtTagKeys []string `toml:"logfmt_tag_keys"`
 }
 
-// XPathConfig definition for backward compatibitlity ONLY.
+// XPathConfig definition for backward compatibility ONLY.
 // We need this here to avoid cyclic dependencies. However, we need
 // to move this to plugins/parsers/xpath once we deprecate parser
 // construction via `NewParser()`.
@@ -221,10 +221,6 @@ type XPathConfig struct {
 	TagNameQuery  string `toml:"tag_name"`
 	TagValueQuery string `toml:"tag_value"`
 	TagNameExpand bool   `toml:"tag_name_expansion"`
-}
-
-type JSONV2Config struct {
-	json_v2.Config
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -285,8 +281,6 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-	case "json_v2":
-		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
 		creator, found := Parsers[config.DataFormat]
 		if !found {
@@ -420,25 +414,5 @@ func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (P
 func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
 	return &prometheusremotewrite.Parser{
 		DefaultTags: defaultTags,
-	}, nil
-}
-
-func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
-	configs := make([]json_v2.Config, len(jsonv2config))
-	for i, cfg := range jsonv2config {
-		configs[i].MeasurementName = cfg.MeasurementName
-		configs[i].MeasurementNamePath = cfg.MeasurementNamePath
-
-		configs[i].TimestampPath = cfg.TimestampPath
-		configs[i].TimestampFormat = cfg.TimestampFormat
-		configs[i].TimestampTimezone = cfg.TimestampTimezone
-
-		configs[i].Fields = cfg.Fields
-		configs[i].Tags = cfg.Tags
-
-		configs[i].JSONObjects = cfg.JSONObjects
-	}
-	return &json_v2.Parser{
-		Configs: configs,
 	}, nil
 }

@@ -30,7 +30,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1526,7 +1526,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	// for influx parser
 	c.getFieldString(tbl, "influx_parser_type", &pc.InfluxParserType)
 
-	//for XPath parser family
+	// for XPath parser family
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
 		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
@@ -1565,10 +1565,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 	}
 
-	//for JSONPath parser
+	// for JSON_v2 parser
 	if node, ok := tbl.Fields["json_v2"]; ok {
 		if metricConfigs, ok := node.([]*ast.Table); ok {
-			pc.JSONV2Config = make([]parsers.JSONV2Config, len(metricConfigs))
+			pc.JSONV2Config = make([]json_v2.Config, len(metricConfigs))
 			for i, metricConfig := range metricConfigs {
 				mc := pc.JSONV2Config[i]
 				c.getFieldString(metricConfig, "measurement_name", &mc.MeasurementName)
@@ -1586,7 +1586,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
 					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
 						for _, objectConfig := range objectconfigs {
-							var o json_v2.JSONObject
+							var o json_v2.Object
 							c.getFieldString(objectConfig, "path", &o.Path)
 							c.getFieldBool(objectConfig, "optional", &o.Optional)
 							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
