@@ -53,7 +53,7 @@ require (
 	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.3.0
 	github.com/eclipse/paho.mqtt.golang v1.3.5
-	github.com/fatih/color v1.10.0
+	github.com/fatih/color v1.13.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-ldap/ldap/v3 v3.4.1
 	github.com/go-logfmt/logfmt v0.5.1
@@ -291,9 +291,9 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/mattn/go-colorable v0.1.8 // indirect
+	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
-	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mdlayher/genetlink v1.1.0 // indirect
 	github.com/mdlayher/netlink v1.4.2 // indirect
 	github.com/mdlayher/socket v0.0.0-20211102153432-57e3fa563ecb // indirect
