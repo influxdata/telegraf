@@ -347,7 +347,7 @@ func tooLarge(res http.ResponseWriter) error {
 	tags := map[string]string{
 		"status_code": strconv.Itoa(http.StatusRequestEntityTooLarge),
 	}
-	selfstat.Register("metric_streams_listener", "bad_requests", tags).Incr(1)
+	selfstat.Register("cloudwatch_metric_streams", "bad_requests", tags).Incr(1)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
 	_, err := res.Write([]byte(`{"error":"http: request body too large"}`))
@@ -358,7 +358,7 @@ func methodNotAllowed(res http.ResponseWriter) error {
 	tags := map[string]string{
 		"status_code": strconv.Itoa(http.StatusMethodNotAllowed),
 	}
-	selfstat.Register("metric_streams_listener", "bad_requests", tags).Incr(1)
+	selfstat.Register("cloudwatch_metric_streams", "bad_requests", tags).Incr(1)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusMethodNotAllowed)
 	_, err := res.Write([]byte(`{"error":"http: method not allowed"}`))
@@ -369,7 +369,7 @@ func badRequest(res http.ResponseWriter) error {
 	tags := map[string]string{
 		"status_code": strconv.Itoa(http.StatusBadRequest),
 	}
-	selfstat.Register("metric_streams_listener", "bad_requests", tags).Incr(1)
+	selfstat.Register("cloudwatch_metric_streams", "bad_requests", tags).Incr(1)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)
 	_, err := res.Write([]byte(`{"error":"http: bad request"}`))
@@ -403,11 +403,11 @@ func (cms *CloudWatchMetricStreams) Init() error {
 	tags := map[string]string{
 		"address": cms.ServiceAddress,
 	}
-	cms.requestsReceived = selfstat.Register("metric_streams_listener", "requests_received", tags)
-	cms.writesServed = selfstat.Register("metric_streams_listener", "writes_served", tags)
-	cms.requestTime = selfstat.Register("metric_streams_listener", "request_time", tags)
-	cms.ageMax = selfstat.Register("metric_streams_listener", "age_max", tags)
-	cms.ageMin = selfstat.Register("metric_streams_listener", "age_min", tags)
+	cms.requestsReceived = selfstat.Register("cloudwatch_metric_streams", "requests_received", tags)
+	cms.writesServed = selfstat.Register("cloudwatch_metric_streams", "writes_served", tags)
+	cms.requestTime = selfstat.Register("cloudwatch_metric_streams", "request_time", tags)
+	cms.ageMax = selfstat.Register("cloudwatch_metric_streams", "age_max", tags)
+	cms.ageMin = selfstat.Register("cloudwatch_metric_streams", "age_min", tags)
 
 	if cms.MaxBodySize == 0 {
 		cms.MaxBodySize = config.Size(defaultMaxBodySize)
@@ -425,7 +425,7 @@ func (cms *CloudWatchMetricStreams) Init() error {
 }
 
 func init() {
-	inputs.Add("metric_streams_listener", func() telegraf.Input {
+	inputs.Add("cloudwatch_metric_streams", func() telegraf.Input {
 		return &CloudWatchMetricStreams{
 			ServiceAddress: ":443",
 			Paths:          []string{"/telegraf"},
