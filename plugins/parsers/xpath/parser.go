@@ -38,6 +38,12 @@ type Parser struct {
 	DefaultTags         map[string]string `toml:"-"`
 	Log                 telegraf.Logger   `toml:"-"`
 
+	// Required for backward compatibility
+	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsJSON    []Config `toml:"xpath_json"`
+	ConfigsMsgPack []Config `toml:"xpath_msgpack"`
+	ConfigsProto   []Config `toml:"xpath_protobuf"`
+
 	document dataDocument
 }
 
@@ -45,10 +51,19 @@ func (p *Parser) Init() error {
 	switch p.Format {
 	case "", "xml":
 		p.document = &xmlDocument{}
+
+		// Required for backward compatibility
+		p.Configs = append(p.Configs, p.ConfigsXML...)
 	case "xpath_json":
 		p.document = &jsonDocument{}
+
+		// Required for backward compatibility
+		p.Configs = append(p.Configs, p.ConfigsJSON...)
 	case "xpath_msgpack":
 		p.document = &msgpackDocument{}
+
+		// Required for backward compatibility
+		p.Configs = append(p.Configs, p.ConfigsMsgPack...)
 	case "xpath_protobuf":
 		pbdoc := protobufDocument{
 			MessageDefinition: p.ProtobufMessageDef,
@@ -60,6 +75,9 @@ func (p *Parser) Init() error {
 			return err
 		}
 		p.document = &pbdoc
+
+		// Required for backward compatibility
+		p.Configs = append(p.Configs, p.ConfigsProto...)
 	default:
 		return fmt.Errorf("unknown data-format %q for xpath parser", p.Format)
 	}
