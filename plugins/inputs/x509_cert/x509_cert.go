@@ -22,6 +22,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -38,6 +39,7 @@ type X509Cert struct {
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
 	tlsCfg           *tls.Config
 	_tls.ClientConfig
+	proxy.TCPProxy
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
@@ -126,7 +128,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		protocol = "tcp"
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
+		dialer, err := c.Proxy()
+		if err != nil {
+			return nil, err
+		}
+
+		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}
