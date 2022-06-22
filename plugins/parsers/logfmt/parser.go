@@ -17,18 +17,17 @@ var ErrNoMetric = errors.New("no metric in line")
 
 // Parser decodes logfmt formatted messages into metrics.
 type Parser struct {
-	TagKeys []string `toml:"logfmt_tag_keys"`
+	TagKeys     []string          `toml:"logfmt_tag_keys"`
+	DefaultTags map[string]string `toml:"-"`
 
-	MetricName  string
-	DefaultTags map[string]string
-
-	tagFilter filter.Filter
+	metricName string
+	tagFilter  filter.Filter
 }
 
 // NewParser creates a parser.
 func NewParser(metricName string, defaultTags map[string]string, tagKeys []string) *Parser {
 	return &Parser{
-		MetricName:  metricName,
+		metricName:  metricName,
 		DefaultTags: defaultTags,
 		TagKeys:     tagKeys,
 	}
@@ -73,7 +72,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			continue
 		}
 
-		m := metric.New(p.MetricName, tags, fields, time.Now())
+		m := metric.New(p.metricName, tags, fields, time.Now())
 
 		metrics = append(metrics, m)
 	}

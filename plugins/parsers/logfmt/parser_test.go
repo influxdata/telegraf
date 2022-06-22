@@ -127,7 +127,7 @@ func TestParse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			l := Parser{
-				MetricName: tt.measurement,
+				metricName: tt.measurement,
 			}
 			got, err := l.Parse(tt.bytes)
 			if (err != nil) != tt.wantErr {
@@ -189,7 +189,7 @@ func TestParseLine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			l := Parser{
-				MetricName: tt.measurement,
+				metricName: tt.measurement,
 			}
 			got, err := l.ParseLine(tt.s)
 			if (err != nil) != tt.wantErr {
