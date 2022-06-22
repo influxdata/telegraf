@@ -30,7 +30,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1526,7 +1527,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	// for influx parser
 	c.getFieldString(tbl, "influx_parser_type", &pc.InfluxParserType)
 
-	//for XPath parser family
+	// for XPath parser family
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
 		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
@@ -1541,7 +1542,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 		if xpathOK {
 			if subtbls, ok := node.([]*ast.Table); ok {
-				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
+				pc.XPathConfig = make([]xpath.Config, len(subtbls))
 				for i, subtbl := range subtbls {
 					subcfg := pc.XPathConfig[i]
 					c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
@@ -1565,10 +1566,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 	}
 
-	//for JSONPath parser
+	// for JSON_v2 parser
 	if node, ok := tbl.Fields["json_v2"]; ok {
 		if metricConfigs, ok := node.([]*ast.Table); ok {
-			pc.JSONV2Config = make([]parsers.JSONV2Config, len(metricConfigs))
+			pc.JSONV2Config = make([]json_v2.Config, len(metricConfigs))
 			for i, metricConfig := range metricConfigs {
 				mc := pc.JSONV2Config[i]
 				c.getFieldString(metricConfig, "measurement_name", &mc.MeasurementName)
@@ -1586,7 +1587,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
 					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
 						for _, objectConfig := range objectconfigs {
-							var o json_v2.JSONObject
+							var o json_v2.Object
 							c.getFieldString(objectConfig, "path", &o.Path)
 							c.getFieldBool(objectConfig, "optional", &o.Optional)
 							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
@@ -1744,25 +1745,43 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
-	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
-		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
-		"collection_offset",
-		"csv_separator", "csv_header", "csv_column_prefix", "csv_timestamp_format",
-		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
-		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
-		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
-		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
-		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
-		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_parser_type", "influx_sort_fields",
-		"influx_uint_support", "interval", "json_timestamp_units", "json_v2",
-		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
-		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
-		"prefix", "prometheus_export_timestamp", "prometheus_ignore_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
-		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
-		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "wavefront_disable_prefix_conversion":
+	// General options to ignore
+	case "alias",
+		"collection_jitter", "collection_offset",
+		"data_format", "delay", "drop", "drop_original",
+		"fielddrop", "fieldpass", "flush_interval", "flush_jitter",
+		"grace",
+		"interval",
+		"lvm", // What is this used for?
+		"metric_batch_size", "metric_buffer_limit",
+		"name_override", "name_prefix", "name_suffix", "namedrop", "namepass",
+		"order",
+		"pass", "period", "precision",
+		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
 
-		// ignore fields that are common to all plugins.
+	// Parser options to ignore
+	case "data_type", "separator", "tag_keys",
+		// "templates", // shared with serializers
+		"collectd_auth_file", "collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb",
+		"dropwizard_metric_registry_path", "dropwizard_tags_path", "dropwizard_tag_paths",
+		"dropwizard_time_format", "dropwizard_time_path",
+		"form_urlencoded_tag_keys",
+		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
+		"grok_timezone", "grok_unique_timestamp",
+		"influx_parser_type",
+		"prometheus_ignore_timestamp", // not used anymore?
+		"value_field_name":
+
+	// Serializer options to ignore
+	case "prefix", "template", "templates",
+		"carbon2_format", "carbon2_sanitize_replace_char",
+		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
+		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
+		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
+		"json_timestamp_format", "json_timestamp_units",
+		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
+		"splunkmetric_hec_routing", "splunkmetric_multimetric",
+		"wavefront_disable_prefix_conversion", "wavefront_source_override", "wavefront_use_strict":
 	default:
 		c.unusedFieldsMutex.Lock()
 		c.UnusedFields[key] = true
