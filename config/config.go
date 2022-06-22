@@ -1426,8 +1426,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	// Parser options to ignore
 	case "data_type", "separator", "tag_keys",
 		// "templates", // shared with serializers
-		"dropwizard_metric_registry_path", "dropwizard_tags_path", "dropwizard_tag_paths",
-		"dropwizard_time_format", "dropwizard_time_path",
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp",
 		"influx_parser_type",
