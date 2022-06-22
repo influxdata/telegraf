@@ -18,6 +18,7 @@ import (
 	httpplugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -39,10 +40,9 @@ func TestHTTPWithJSONFormat(t *testing.T) {
 	metricName := "metricName"
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -83,10 +83,9 @@ func TestHTTPHeaders(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -117,10 +116,9 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -141,10 +139,9 @@ func TestInvalidStatusCode(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -166,10 +163,9 @@ func TestSuccessStatusCodes(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -194,10 +190,9 @@ func TestMethod(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator

@@ -8,6 +8,9 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
+	//Blank import to register all new-style parsers
+	_ "github.com/influxdata/telegraf/plugins/parsers/all"
+
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
