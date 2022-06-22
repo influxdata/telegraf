@@ -2,19 +2,16 @@ package dropwizard
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/testutil"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
-
-var testTimeFunc = func() time.Time {
-	return time.Unix(0, 0)
-}
 
 // validEmptyJSON is a valid dropwizard json document, but without any metrics
 const validEmptyJSON = `
@@ -521,7 +518,7 @@ func TestDropWizard(t *testing.T) {
 					map[string]interface{}{
 						"value": 42.0,
 					},
-					testTimeFunc(),
+					time.Unix(0, 0),
 				),
 			},
 			errFunc: NoError,
@@ -538,7 +535,7 @@ func TestDropWizard(t *testing.T) {
 					map[string]interface{}{
 						"value": 42.0,
 					},
-					testTimeFunc(),
+					time.Unix(0, 0),
 				),
 			},
 			errFunc: NoError,
@@ -562,7 +559,7 @@ func TestDropWizard(t *testing.T) {
 					map[string]interface{}{
 						"value": 42.0,
 					},
-					testTimeFunc(),
+					time.Unix(0, 0),
 				),
 			},
 			errFunc: NoError,
@@ -572,17 +569,10 @@ func TestDropWizard(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := NewParser()
-			parser.SetTimeFunc(testTimeFunc)
 			metrics, err := parser.Parse(tt.input)
 			tt.errFunc(t, err)
 
-			require.Equal(t, len(tt.metrics), len(metrics))
-			for i, expected := range tt.metrics {
-				require.Equal(t, expected.Name(), metrics[i].Name())
-				require.Equal(t, expected.Tags(), metrics[i].Tags())
-				require.Equal(t, expected.Fields(), metrics[i].Fields())
-				require.Equal(t, expected.Time(), metrics[i].Time())
-			}
+			testutil.RequireMetricsEqual(t, tt.metrics, metrics, testutil.IgnoreTime())
 		})
 	}
 }

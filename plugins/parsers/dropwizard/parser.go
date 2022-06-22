@@ -13,8 +13,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
-type TimeFunc func() time.Time
-
 // Parser parses json inputs containing dropwizard metrics,
 // either top-level or embedded inside a json field.
 // This parser is using gjson for retrieving paths within the json file.
@@ -47,8 +45,6 @@ type parser struct {
 	separator      string
 	templateEngine *templating.Engine
 
-	timeFunc TimeFunc
-
 	// seriesParser parses line protocol measurement + tags
 	seriesParser *influx.Parser
 }
@@ -58,7 +54,6 @@ func NewParser() *parser {
 	seriesParser := influx.NewSeriesParser(handler)
 
 	parser := &parser{
-		timeFunc:     time.Now,
 		seriesParser: seriesParser,
 	}
 	return parser
@@ -175,17 +170,15 @@ func (p *parser) parseTime(buf []byte) (time.Time, error) {
 		}
 		timeString := gjson.GetBytes(buf, p.TimePath).String()
 		if timeString == "" {
-			err := fmt.Errorf("time not found in JSON path %s", p.TimePath)
-			return p.timeFunc(), err
+			return time.Time{}, fmt.Errorf("time not found in JSON path %s", p.TimePath)
 		}
 		t, err := time.Parse(timeFormat, timeString)
 		if err != nil {
-			err = fmt.Errorf("time %s cannot be parsed with format %s, %s", timeString, timeFormat, err)
-			return p.timeFunc(), err
+			return time.Time{}, fmt.Errorf("time %s cannot be parsed with format %s, %s", timeString, timeFormat, err)
 		}
 		return t.UTC(), nil
 	}
-	return p.timeFunc(), nil
+	return time.Now(), nil
 }
 
 func (p *parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
@@ -256,8 +249,4 @@ func (p *parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 	}
 
 	return metrics
-}
-
-func (p *parser) SetTimeFunc(f TimeFunc) {
-	p.timeFunc = f
 }
