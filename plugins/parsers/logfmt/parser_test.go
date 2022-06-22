@@ -6,7 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
@@ -261,15 +261,18 @@ func TestTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := NewParser(tt.measurement, map[string]string{}, tt.tagKeys)
-			assert.NoError(t, l.Init())
+			l := &Parser{
+				metricName:  tt.measurement,
+				DefaultTags: map[string]string{},
+				TagKeys:     tt.tagKeys,
+			}
+			require.NoError(t, l.Init())
 
 			got, err := l.ParseLine(tt.s)
-
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			testutil.RequireMetricEqual(t, tt.want, got, testutil.IgnoreTime())
 		})

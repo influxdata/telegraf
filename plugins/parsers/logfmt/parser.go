@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 var ErrNoMetric = errors.New("no metric in line")
@@ -22,15 +23,6 @@ type Parser struct {
 
 	metricName string
 	tagFilter  filter.Filter
-}
-
-// NewParser creates a parser.
-func NewParser(metricName string, defaultTags map[string]string, tagKeys []string) *Parser {
-	return &Parser{
-		metricName:  metricName,
-		DefaultTags: defaultTags,
-		TagKeys:     tagKeys,
-	}
 }
 
 // Parse converts a slice of bytes in logfmt format to metrics.
@@ -121,4 +113,22 @@ func (p *Parser) Init() error {
 	}
 
 	return nil
+}
+
+func init() {
+	// Register parser
+	parsers.Add("logfmt",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{metricName: defaultMetricName}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.metricName = config.MetricName
+	p.DefaultTags = config.DefaultTags
+	p.TagKeys = append(p.TagKeys, config.LogFmtTagKeys...)
+
+	return p.Init()
 }
