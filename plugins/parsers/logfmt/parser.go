@@ -2,6 +2,7 @@ package logfmt
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -12,9 +13,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-var (
-	ErrNoMetric = fmt.Errorf("no metric in line")
-)
+var ErrNoMetric = errors.New("no metric in line")
 
 // Parser decodes logfmt formatted messages into metrics.
 type Parser struct {
@@ -22,7 +21,6 @@ type Parser struct {
 
 	MetricName  string
 	DefaultTags map[string]string
-	Now         func() time.Time
 
 	tagFilter filter.Filter
 }
@@ -32,7 +30,6 @@ func NewParser(metricName string, defaultTags map[string]string, tagKeys []strin
 	return &Parser{
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
-		Now:         time.Now,
 		TagKeys:     tagKeys,
 	}
 }
@@ -76,7 +73,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			continue
 		}
 
-		m := metric.New(p.MetricName, tags, fields, p.Now())
+		m := metric.New(p.MetricName, tags, fields, time.Now())
 
 		metrics = append(metrics, m)
 	}
