@@ -3,6 +3,59 @@
 The Derivative Aggregator Plugin estimates the derivative for all fields of the
 aggregated metrics.
 
+## Configuration
+
+```toml @sample.conf
+# Calculates a derivative for every field.
+[[aggregators.derivative]]
+  ## The period in which to flush the aggregator.
+  period = "30s"
+  ##
+  ## Suffix to append for the resulting derivative field.
+  # suffix = "_rate"
+  ##
+  ## Field to use for the quotient when computing the derivative.
+  ## When using a field as the derivation parameter the name of that field will
+  ## be used for the resulting derivative, e.g. *fieldname_by_parameter*.
+  ## By default the timestamps of the metrics are used and the suffix is omitted.
+  # variable = ""
+  ##
+  ## Maximum number of roll-overs in case only one measurement is found during a period.
+  # max_roll_over = 10
+```
+
+This aggregator will estimate a derivative for each field of a metric, which is
+contained in both the first and last metric of the aggregation interval.
+Without further configuration the derivative will be calculated with respect to
+the time difference between these two measurements in seconds.
+The following formula is applied is for every field
+$$
+derivative = {{value}_{last} - {value}_{first} \over {{time}_{last} - {time}_{first}}}
+$$
+The resulting derivative will be named `<fieldname>_rate` if no `suffix` is
+configured.
+
+To calculate a derivative for every field use
+
+```toml
+[[aggregators.derivative]]
+  ## Specific Derivative Aggregator Arguments:
+
+  ## Configure a custom derivation variable. Timestamp is used if none is given.
+  # variable = ""
+
+  ## Suffix to add to the field name for the derivative name.
+  # suffix = "_rate"
+
+  ## Roll-Over last measurement to first measurement of next period
+  # max_roll_over = 10
+
+  ## General Aggregator Arguments:
+
+  ## calculate derivative every 30 seconds
+  period = "30s"
+```
+
 ## Time Derivatives
 
 In its default configuration it determines the first and last measurement of
@@ -10,11 +63,9 @@ the period. From these measurements the time difference in seconds is
 calculated. This time difference is than used to divide the difference of each
 field using the following formula:
 
-```text
-              field_last - field_first
-derivative = --------------------------
-                  time_difference
-```
+$$
+derivative = {{value}_{last} - {value}_{first} \over {{time}_{last} - {time}_{first}}}
+$$
 
 For each field the derivative is emitted with a naming pattern
 `<fieldname>_rate`.
@@ -25,11 +76,9 @@ The plugin supports to use a field of the aggregated measurements as derivation
 variable in the denominator. This variable is assumed to be a monotonically
 increasing value. In this feature the following formula is used:
 
-```text
-                 field_last - field_first
-derivative = --------------------------------
-              variable_last - variable_first
-```
+$$
+derivative = {{value}_{last} - {value}_{first} \over {{variable}_{last} - {variable}_{first}}}
+$$
 
 **Make sure the specified variable is not filtered and exists in the metrics
 passed to this aggregator!**
@@ -149,73 +198,6 @@ including the gap between the periods.  Using `max_roll_over` with a value
 greater 0 may be important, if you need to detect changes between periods,
 e.g. when you have very few measurements in a period or quasi-constant metrics
 with only occasional changes.
-
-## Configuration
-
-```toml @sample.conf
-# Calculates a derivative for every field.
-[[aggregators.derivative]]
-  ## The period in which to flush the aggregator.
-  period = "30s"
-  ##
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = false
-  ##
-  ## This aggregator will estimate a derivative for each field, which is
-  ## contained in both the first and last metric of the aggregation interval.
-  ## Without further configuration the derivative will be calculated with
-  ## respect to the time difference between these two measurements in seconds.
-  ## The formula applied is for every field:
-  ##
-  ##               value_last - value_first
-  ## derivative = --------------------------
-  ##              time_difference_in_seconds
-  ##
-  ## The resulting derivative will be named *fieldname_rate*. The suffix
-  ## "_rate" can be configured by the *suffix* parameter. When using a
-  ## derivation variable you can include its name for more clarity.
-  # suffix = "_rate"
-  ##
-  ## As an abstraction the derivative can be calculated not only by the time
-  ## difference but by the difference of a field, which is contained in the
-  ## measurement. This field is assumed to be monotonously increasing. This
-  ## feature is used by specifying a *variable*.
-  ## Make sure the specified variable is not filtered and exists in the metrics
-  ## passed to this aggregator!
-  # variable = ""
-  ##
-  ## When using a field as the derivation parameter the name of that field will
-  ## be used for the resulting derivative, e.g. *fieldname_by_parameter*.
-  ##
-  ## Note, that the calculation is based on the actual timestamp of the
-  ## measurements. When there is only one measurement during that period, the
-  ## measurement will be rolled over to the next period. The maximum number of
-  ## such roll-overs can be configured with a default of 10.
-  # max_roll_over = 10
-  ##
-```
-
-To calculate a derivative for every field use
-
-```toml
-[[aggregators.derivative]]
-  ## Specific Derivative Aggregator Arguments:
-
-  ## Configure a custom derivation variable. Timestamp is used if none is given.
-  # variable = ""
-
-  ## Suffix to add to the field name for the derivative name.
-  # suffix = "_rate"
-
-  ## Roll-Over last measurement to first measurement of next period
-  # max_roll_over = 10
-
-  ## General Aggregator Arguments:
-
-  ## calculate derivative every 30 seconds
-  period = "30s"
-```
 
 ### Tags
 
