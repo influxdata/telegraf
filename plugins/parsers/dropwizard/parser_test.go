@@ -26,7 +26,8 @@ const validEmptyJSON = `
 `
 
 func TestParseValidEmptyJSON(t *testing.T) {
-	parser := NewParser()
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validEmptyJSON))
@@ -51,7 +52,8 @@ const validCounterJSON = `
 `
 
 func TestParseValidCounterJSON(t *testing.T) {
-	parser := NewParser()
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validCounterJSON))
 	require.NoError(t, err)
@@ -89,10 +91,12 @@ const validEmbeddedCounterJSON = `
 func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	timeFormat := "2006-01-02T15:04:05Z07:00"
 	metricTime, _ := time.Parse(timeFormat, "2017-02-22T15:33:03.662+03:00")
-	parser := NewParser()
-	parser.MetricRegistryPath = "metrics"
-	parser.TagsPath = "tags"
-	parser.TimePath = "time"
+	parser := &Parser{
+		MetricRegistryPath: "metrics",
+		TagsPath:           "tags",
+		TimePath:           "time",
+	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validEmbeddedCounterJSON))
 	require.NoError(t, err)
@@ -110,10 +114,12 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	require.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))
 
 	// now test json tags through TagPathsMap
-	parser2 := NewParser()
-	parser2.MetricRegistryPath = "metrics"
-	parser2.TagPathsMap = map[string]string{"tag1": "tags.tag1"}
-	parser2.TimePath = "time"
+	parser2 := &Parser{
+		MetricRegistryPath: "metrics",
+		TagPathsMap:        map[string]string{"tag1": "tags.tag1"},
+		TimePath:           "time",
+	}
+	require.NoError(t, parser2.Init())
 	metrics2, err2 := parser2.Parse([]byte(validEmbeddedCounterJSON))
 	require.NoError(t, err2)
 	require.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
@@ -141,7 +147,8 @@ const validMeterJSON1 = `
 `
 
 func TestParseValidMeterJSON1(t *testing.T) {
-	parser := NewParser()
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validMeterJSON1))
 	require.NoError(t, err)
@@ -181,7 +188,8 @@ const validMeterJSON2 = `
 `
 
 func TestParseValidMeterJSON2(t *testing.T) {
-	parser := NewParser()
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validMeterJSON2))
 	require.NoError(t, err)
@@ -215,7 +223,8 @@ const validGaugeJSON = `
 `
 
 func TestParseValidGaugeJSON(t *testing.T) {
-	parser := NewParser()
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validGaugeJSON))
 	require.NoError(t, err)
@@ -254,7 +263,8 @@ const validHistogramJSON = `
 `
 
 func TestParseValidHistogramJSON(t *testing.T) {
-	parser := NewParser()
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validHistogramJSON))
 	require.NoError(t, err)
@@ -309,7 +319,8 @@ const validTimerJSON = `
 `
 
 func TestParseValidTimerJSON(t *testing.T) {
-	parser := NewParser()
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validTimerJSON))
 	require.NoError(t, err)
@@ -360,7 +371,8 @@ const validAllJSON = `
 `
 
 func TestParseValidAllJSON(t *testing.T) {
-	parser := NewParser()
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validAllJSON))
 	require.NoError(t, err)
@@ -369,21 +381,26 @@ func TestParseValidAllJSON(t *testing.T) {
 
 func TestTagParsingProblems(t *testing.T) {
 	// giving a wrong path results in empty tags
-	parser1 := NewParser()
-	parser1.MetricRegistryPath = "metrics"
-	parser1.TagsPath = "tags1"
-	parser1.Log = testutil.Logger{}
+	parser1 := &Parser{
+		MetricRegistryPath: "metrics",
+		TagsPath:           "tags1",
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, parser1.Init())
+
 	metrics1, err1 := parser1.Parse([]byte(validEmbeddedCounterJSON))
 	require.NoError(t, err1)
 	require.Len(t, metrics1, 1)
 	require.Equal(t, map[string]string{"metric_type": "counter"}, metrics1[0].Tags())
 
 	// giving a wrong TagsPath falls back to TagPathsMap
-	parser2 := NewParser()
-	parser2.MetricRegistryPath = "metrics"
-	parser2.TagsPath = "tags1"
-	parser2.TagPathsMap = map[string]string{"tag1": "tags.tag1"}
-	parser2.Log = testutil.Logger{}
+	parser2 := &Parser{
+		MetricRegistryPath: "metrics",
+		TagsPath:           "tags1",
+		TagPathsMap:        map[string]string{"tag1": "tags.tag1"},
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, parser2.Init())
 	metrics2, err2 := parser2.Parse([]byte(validEmbeddedCounterJSON))
 	require.NoError(t, err2)
 	require.Len(t, metrics2, 1)
@@ -428,12 +445,14 @@ const sampleTemplateJSON = `
 `
 
 func TestParseSampleTemplateJSON(t *testing.T) {
-	parser := NewParser()
-	err := parser.SetTemplates("_", []string{
-		"jenkins.* measurement.metric.metric.field",
-		"vm.* measurement.measurement.pool.field",
-	})
-	require.NoError(t, err)
+	parser := &Parser{
+		Separator: "_",
+		Templates: []string{
+			"jenkins.* measurement.metric.metric.field",
+			"vm.* measurement.measurement.pool.field",
+		},
+	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(sampleTemplateJSON))
 	require.NoError(t, err)
@@ -559,7 +578,8 @@ func TestDropWizard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := &Parser{}
+			require.NoError(t, parser.Init())
 			metrics, err := parser.Parse(tt.input)
 			if tt.expectError {
 				require.Error(t, err)
