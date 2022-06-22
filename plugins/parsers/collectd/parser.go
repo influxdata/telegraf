@@ -18,7 +18,6 @@ const (
 )
 
 type Parser struct {
-	MetricName  string            `toml:"metric_name"`
 	DefaultTags map[string]string `toml:"-"`
 
 	//whether or not to split multi value metric into multiple metrics
@@ -201,16 +200,14 @@ func LoadTypesDB(path string) (*api.TypesDB, error) {
 
 func init() {
 	parsers.Add("collectd",
-		func(defaultMetricName string) telegraf.Parser {
+		func(_ string) telegraf.Parser {
 			return &Parser{
-				MetricName: defaultMetricName,
-				AuthFile:   DefaultAuthFile,
+				AuthFile: DefaultAuthFile,
 			}
 		})
 }
 
 func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.MetricName = config.MetricName
 	p.AuthFile = config.CollectdAuthFile
 	p.SecurityLevel = config.CollectdSecurityLevel
 	p.TypesDB = config.CollectdTypesDB
