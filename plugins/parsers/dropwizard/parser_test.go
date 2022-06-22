@@ -495,10 +495,6 @@ func containsAll(t1 map[string]string, t2 map[string]string) bool {
 	return true
 }
 
-func NoError(t *testing.T, err error) {
-	require.NoError(t, err)
-}
-
 func TestDropWizard(t *testing.T) {
 	tests := []struct {
 		name        string
