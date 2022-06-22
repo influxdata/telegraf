@@ -29,9 +29,11 @@ contained in both the first and last metric of the aggregation interval.
 Without further configuration the derivative will be calculated with respect to
 the time difference between these two measurements in seconds.
 The following formula is applied is for every field
-$$
-derivative = {{value}_{last} - {value}_{first} \over {{time}_{last} - {time}_{first}}}
-$$
+
+```text
+derivative = (value_last - value_first) / (time_last - time_first)
+```
+
 The resulting derivative will be named `<fieldname>_rate` if no `suffix` is
 configured.
 
@@ -63,9 +65,9 @@ the period. From these measurements the time difference in seconds is
 calculated. This time difference is than used to divide the difference of each
 field using the following formula:
 
-$$
-derivative = {{value}_{last} - {value}_{first} \over {{time}_{last} - {time}_{first}}}
-$$
+```text
+derivative = (value_last - value_first) / (time_last - time_first)
+```
 
 For each field the derivative is emitted with a naming pattern
 `<fieldname>_rate`.
@@ -76,9 +78,9 @@ The plugin supports to use a field of the aggregated measurements as derivation
 variable in the denominator. This variable is assumed to be a monotonically
 increasing value. In this feature the following formula is used:
 
-$$
-derivative = {{value}_{last} - {value}_{first} \over {{variable}_{last} - {variable}_{first}}}
-$$
+```text
+derivative = (value_last - value_first) / (variable_last - variable_first)
+```
 
 **Make sure the specified variable is not filtered and exists in the metrics
 passed to this aggregator!**
