@@ -501,10 +501,10 @@ func NoError(t *testing.T, err error) {
 
 func TestDropWizard(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   []byte
-		metrics []telegraf.Metric
-		errFunc func(t *testing.T, err error)
+		name        string
+		input       []byte
+		metrics     []telegraf.Metric
+		expectError bool
 	}{
 		{
 			name:  "minimal",
@@ -521,7 +521,6 @@ func TestDropWizard(t *testing.T) {
 					time.Unix(0, 0),
 				),
 			},
-			errFunc: NoError,
 		},
 		{
 			name:  "name with space unescaped",
@@ -538,14 +537,11 @@ func TestDropWizard(t *testing.T) {
 					time.Unix(0, 0),
 				),
 			},
-			errFunc: NoError,
 		},
 		{
-			name:  "name with space single slash escaped is not valid JSON",
-			input: []byte(`{"version": "3.0.0", "counters": {"hello\ world": {"value": 42}}}`),
-			errFunc: func(t *testing.T, err error) {
-				require.Error(t, err)
-			},
+			name:        "name with space single slash escaped is not valid JSON",
+			input:       []byte(`{"version": "3.0.0", "counters": {"hello\ world": {"value": 42}}}`),
+			expectError: true,
 		},
 		{
 			name:  "name with space double slash escape",
@@ -562,7 +558,6 @@ func TestDropWizard(t *testing.T) {
 					time.Unix(0, 0),
 				),
 			},
-			errFunc: NoError,
 		},
 	}
 
@@ -570,8 +565,11 @@ func TestDropWizard(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := NewParser()
 			metrics, err := parser.Parse(tt.input)
-			tt.errFunc(t, err)
-
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 			testutil.RequireMetricsEqual(t, tt.metrics, metrics, testutil.IgnoreTime())
 		})
 	}
