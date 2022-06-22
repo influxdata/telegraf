@@ -757,8 +757,8 @@ github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:Htrtb
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
-github.com/dynatrace-oss/dynatrace-metric-utils-go v0.3.0 h1:q2Ayh9s6Cr75bS5URiOUAoyFXemgKQaBJphbhAaJHCY=
-github.com/dynatrace-oss/dynatrace-metric-utils-go v0.3.0/go.mod h1:qw0E9EJ0PnSlhWawDNuqE0zhc1hqOBUCFIAj3dd9DNw=
+github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0 h1:wHGPJSXvwKQVf/XfhjUPyrhpcPKWNy8F3ikH+eiwoBg=
+github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0/go.mod h1:PseHFo8Leko7J4A/TfZ6kkHdkzKBLUta6hRZR/OEbbc=
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-resiliency v1.2.0 h1:v7g92e/KSN71Rq7vSThKaWIq68fL4YHvWyiUKorFR1Q=
 github.com/eapache/go-resiliency v1.2.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
