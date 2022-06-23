@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -592,7 +593,11 @@ func TestWriteHTTPTransformHeaderValuesToTagsBulkWrite(t *testing.T) {
 }
 
 func TestWriteHTTPQueryParams(t *testing.T) {
-	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"})
+	parser := form_urlencoded.Parser{}
+	require.NoError(t, parser.Init())
+	parser.MetricName = "query_measurement"
+	parser.TagKeys = []string{"tagKey"}
+
 	listener := newTestHTTPListenerV2()
 	listener.DataSource = "query"
 	listener.Parser = parser
@@ -615,7 +620,11 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 }
 
 func TestWriteHTTPFormData(t *testing.T) {
-	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"})
+	parser := form_urlencoded.Parser{}
+	require.NoError(t, parser.Init())
+	parser.MetricName = "query_measurement"
+	parser.TagKeys = []string{"tagKey"}
+
 	listener := newTestHTTPListenerV2()
 	listener.Parser = parser
 

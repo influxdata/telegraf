@@ -9,19 +9,16 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-var (
-	// ErrNoMetric is returned when no metric is found in input line
-	ErrNoMetric = fmt.Errorf("no metric in line")
-)
+var ErrNoMetric = fmt.Errorf("no metric in line")
 
 // Parser decodes "application/x-www-form-urlencoded" data into metrics
 type Parser struct {
-	MetricName  string
-	DefaultTags map[string]string
-	TagKeys     []string
-	AllowedKeys []string
+	MetricName  string            `toml:"metric_name"`
+	TagKeys     []string          `toml:"form_urlencoded_tag_keys"`
+	DefaultTags map[string]string `toml:"-"`
 }
 
 // Parse converts a slice of bytes in "application/x-www-form-urlencoded" format into metrics
@@ -34,10 +31,6 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	values, err := url.ParseQuery(string(buf))
 	if err != nil {
 		return nil, err
-	}
-
-	if len(p.AllowedKeys) > 0 {
-		values = p.filterAllowedKeys(values)
 	}
 
 	tags := p.extractTags(values)
@@ -67,23 +60,8 @@ func (p Parser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 // SetDefaultTags sets the default tags for every metric
-func (p *Parser) SetDefaultTags(tags map[string]string) {
+func (p Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
-}
-
-func (p Parser) filterAllowedKeys(original url.Values) url.Values {
-	result := make(url.Values)
-
-	for _, key := range p.AllowedKeys {
-		value, exists := original[key]
-		if !exists {
-			continue
-		}
-
-		result[key] = value
-	}
-
-	return result
 }
 
 func (p Parser) extractTags(values url.Values) map[string]string {
@@ -119,4 +97,21 @@ func (p Parser) parseFields(values url.Values) map[string]interface{} {
 	}
 
 	return fields
+}
+
+func (p *Parser) Init() error {
+	return nil
+}
+
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.MetricName = config.MetricName
+	p.TagKeys = config.FormUrlencodedTagKeys
+	return p.Init()
+}
+
+func init() {
+	parsers.Add("form_urlencoded",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{MetricName: defaultMetricName}
+		})
 }
