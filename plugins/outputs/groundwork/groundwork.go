@@ -229,7 +229,13 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		status = value
 	}
 
-	message, _ := metric.GetTag("message")
+	message := ""
+	if m, ok := metric.GetTag("message"); ok {
+		message = m
+	}
+	if m, ok := metric.GetField("message"); ok {
+		message = m.(string)
+	}
 
 	unitType := string(transit.UnitCounter)
 	if value, present := metric.GetTag("unitType"); present {
