@@ -68,11 +68,9 @@ instances of telegraf can read from a NATS cluster in parallel.
 
 ## Metrics
 
-No metrics. 
 Which data you will get depends on the subjects you consume from nats
 
 ## Example Output
 
 Depends on the nats subject input
-
 nats_consumer,host=[] value=1.9 1655972309339341000
