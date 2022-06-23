@@ -3,7 +3,7 @@ module github.com/influxdata/telegraf
 go 1.18
 
 require (
-	cloud.google.com/go/bigquery v1.8.0
+	cloud.google.com/go/bigquery v1.33.0
 	cloud.google.com/go/monitoring v1.5.0
 	cloud.google.com/go/pubsub v1.22.2
 	collectd.org v0.5.0
