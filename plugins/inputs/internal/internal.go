@@ -2,13 +2,19 @@
 package internal
 
 import (
+	"crypto/tls"
 	_ "embed"
+	"net"
+	"net/http"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	inter "github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -18,6 +24,19 @@ var sampleConfig string
 
 type Self struct {
 	CollectMemstats bool
+	ServiceAddress  string `toml:"service_address"`
+	bytesRecv       selfstat.Stat
+	tlsint.ServerConfig
+	acc            telegraf.Accumulator
+	server         http.Server
+	listener       net.Listener
+	port           int
+	startTime      time.Time
+	timeFunc       influx.TimeFunc
+	Log            telegraf.Logger `toml:"-"`
+	requestsServed selfstat.Stat
+	requestsRecv   selfstat.Stat
+	mux            http.ServeMux
 }
 
 func NewSelf() telegraf.Input {
@@ -65,6 +84,63 @@ func (s *Self) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func (m *Self) Init() error {
+	tags := map[string]string{
+		"address": m.ServiceAddress,
+	}
+	m.bytesRecv = selfstat.Register("internal", "bytes_received", tags)
+	return nil
+}
+
+func (m *Self) Start(acc telegraf.Accumulator) error {
+	m.acc = acc
+
+	tlsConf, err := m.ServerConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	m.server = http.Server{
+		Addr:      m.ServiceAddress,
+		Handler:   m,
+		TLSConfig: tlsConf,
+	}
+
+	var listener net.Listener
+	if tlsConf != nil {
+		listener, err = tls.Listen("tcp", m.ServiceAddress, tlsConf)
+		if err != nil {
+			return err
+		}
+	} else {
+		listener, err = net.Listen("tcp", m.ServiceAddress)
+		if err != nil {
+			return err
+		}
+	}
+	m.listener = listener
+	m.port = listener.Addr().(*net.TCPAddr).Port
+
+	go func() {
+		err = m.server.Serve(m.listener)
+		if err != http.ErrServerClosed {
+			m.Log.Infof("Error serving HTTP on %s", m.ServiceAddress)
+		}
+	}()
+
+	m.startTime = m.timeFunc()
+
+	m.Log.Infof("Started HTTP listener service on %s", m.ServiceAddress)
+
+	return nil
+}
+
+func (m *Self) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	m.requestsRecv.Incr(1)
+	m.mux.ServeHTTP(res, req)
+	m.requestsServed.Incr(1)
 }
 
 func init() {
