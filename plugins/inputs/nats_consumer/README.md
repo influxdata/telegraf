@@ -65,3 +65,11 @@ instances of telegraf can read from a NATS cluster in parallel.
 [nats]: https://www.nats.io/about/
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
 [queue group]: https://www.nats.io/documentation/concepts/nats-queueing/
+
+## Metrics
+No metrics. Which data you will get depends on the subjects you consume from nats
+
+## Example Output
+Depends on the nats subject input
+
+nats_consumer,host=[] value=1.9 1655972309339341000

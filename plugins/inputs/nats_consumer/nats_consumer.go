@@ -170,7 +170,6 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 				n.jsSubs = append(n.jsSubs, sub)
 			}
 		}
-
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
