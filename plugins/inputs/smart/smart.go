@@ -92,6 +92,7 @@ var (
 	deviceFieldNames = map[string]string{
 		"Percent_Lifetime_Remain":   "endurance_remain_perc",
 		"Wear_Leveling_Count":   "endurance_remain_perc",
+		"Media_Wearout_Indicator": "endurance_remain_perc",
 	}	
 	
 	// to obtain metrics from smartctl
