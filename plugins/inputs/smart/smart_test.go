@@ -264,6 +264,23 @@ func TestGatherHtSAS(t *testing.T) {
 	testutil.RequireMetricsEqual(t, testHtsasAtributtes, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
+func TestGatherLongFormEnduranceAttrib(t *testing.T) {
+        runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+                return []byte(mockHGST), nil
+        }
+
+        var (
+                acc = &testutil.Accumulator{}
+                wg  = &sync.WaitGroup{}
+        )
+
+        wg.Add(1)
+
+        sampleSmart.gatherDisk(acc, "", wg)
+        assert.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
+        assert.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
+}
+
 func TestGatherSSD(t *testing.T) {
 	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdInfoData), nil
@@ -1810,6 +1827,52 @@ ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
                             |||____ S speed/performance
                             ||_____ O updated online
                             |______ P prefailure warning
+`
+
+    mockHGST = `
+smartctl 6.6 2016-05-31 r4324 [x86_64-linux-4.9.0-3-amd64] (local build)
+Copyright (C) 2002-16, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Vendor:               HGST
+Product:              HUSMM1640ASS200
+Revision:             A360
+Compliance:           SPC-4
+User Capacity:        400,088,457,216 bytes [400 GB]
+Logical block size:   512 bytes
+Physical block size:  4096 bytes
+LU is resource provisioned, LBPRZ=1
+Rotation Rate:        Solid State Device
+Form Factor:          2.5 inches
+Logical Unit id:      0x5000cca04ec26364
+Serial number:        ZZZZZZZZZ
+Device type:          disk
+Transport protocol:   SAS (SPL-3)
+Local Time is:        Mon Nov  6 10:20:33 2017 CET
+SMART support is:     Available - device has SMART capability.
+SMART support is:     Enabled
+Temperature Warning:  Enabled
+Read Cache is:        Enabled
+Writeback Cache is:   Enabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART Health Status: OK
+
+Percentage used endurance indicator: 0%
+Current Drive Temperature:     28 C
+Drive Trip Temperature:        70 C
+
+Manufactured in week 30 of year 2017
+Specified cycle count over device lifetime:  0
+Accumulated start-stop cycles:  0
+Specified load-unload count over device lifetime:  0
+Accumulated load-unload cycles:  0
+defect list format 6 unknown
+Elements in grown defect list: 0
+
+Vendor (Seagate) cache information
+  Blocks sent to initiator = 3400674574336
+
 `
 
 	htSASInfoData = `smartctl 6.6 2016-05-31 r4324 [x86_64-linux-4.15.18-12-pve] (local build)
