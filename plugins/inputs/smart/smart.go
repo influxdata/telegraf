@@ -837,7 +837,6 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					deviceFields[field] = val
 				}
 			}
-
 		} else {
 			// what was found is not a vendor attribute
 			if matches := sasNVMeAttr.FindStringSubmatch(line); len(matches) > 2 {
