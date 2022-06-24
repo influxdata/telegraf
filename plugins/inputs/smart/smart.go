@@ -91,8 +91,8 @@ var (
 	// so we need to be able to match on name instead
 	deviceFieldNames = map[string]string{
 		"Percent_Lifetime_Remain":   "endurance_remain_perc",
-		"Wear_Leveling_Count":   "endurance_remain_perc",
-		"Media_Wearout_Indicator": "endurance_remain_perc",
+		"Wear_Leveling_Count":   "endurance_wear_levelling",
+		"Media_Wearout_Indicator": "endurance_media_wearout",
 	}	
 	
 	// to obtain metrics from smartctl

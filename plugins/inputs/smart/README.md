@@ -179,7 +179,9 @@ execute this script.
     - wwn
   - fields:
     - exit_status
+    - endurance_media_wearout
     - endurance_remain_perc
+    - endurance_wear_levelling
     - health_ok
     - read_error_rate
     - seek_error
