@@ -52,7 +52,7 @@ func TestGatherAttributes(t *testing.T) {
 			err := s.Gather(&acc)
 
 			require.NoError(t, err)
-			assert.Equal(t, 65, acc.NFields(), "Wrong number of fields gathered")
+			assert.Equal(t, 66, acc.NFields(), "Wrong number of fields gathered")
 
 			for _, test := range testsAda0Attributes {
 				acc.AssertContainsTaggedFields(t, "smart_attribute", test.fields, test.tags)
@@ -171,7 +171,7 @@ func TestGatherNoAttributes(t *testing.T) {
 		err := s.Gather(&acc)
 
 		require.NoError(t, err)
-		assert.Equal(t, 8, acc.NFields(), "Wrong number of fields gathered")
+		assert.Equal(t, 9, acc.NFields(), "Wrong number of fields gathered")
 		acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
 
 		for _, test := range testsAda0Device {
@@ -293,7 +293,7 @@ func TestGatherSSD(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 106, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
@@ -309,7 +309,7 @@ func TestGatherSSDRaid(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 75, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
@@ -1416,6 +1416,7 @@ var (
 				"read_error_rate": int64(0),
 				"temp_c":          int64(34),
 				"udma_crc_errors": int64(0),
+				"endurance_wear_levelling": int64(185),
 			},
 			map[string]string{
 				"device":    "ada0",
