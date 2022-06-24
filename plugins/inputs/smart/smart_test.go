@@ -265,20 +265,20 @@ func TestGatherHtSAS(t *testing.T) {
 }
 
 func TestGatherLongFormEnduranceAttrib(t *testing.T) {
-        runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-                return []byte(mockHGST), nil
-        }
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(mockHGST), nil
+	}
 
-        var (
-                acc = &testutil.Accumulator{}
-                wg  = &sync.WaitGroup{}
-        )
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
 
-        wg.Add(1)
+	wg.Add(1)
 
-        sampleSmart.gatherDisk(acc, "", wg)
-        assert.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
-        assert.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
+	sampleSmart.gatherDisk(acc, "", wg)
+	assert.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSD(t *testing.T) {
@@ -1411,11 +1411,11 @@ var (
 	}{
 		{
 			map[string]interface{}{
-				"exit_status":     int(0),
-				"health_ok":       bool(true),
-				"read_error_rate": int64(0),
-				"temp_c":          int64(34),
-				"udma_crc_errors": int64(0),
+				"exit_status":              int(0),
+				"health_ok":                bool(true),
+				"read_error_rate":          int64(0),
+				"temp_c":                   int64(34),
+				"udma_crc_errors":          int64(0),
 				"endurance_wear_levelling": int64(185),
 			},
 			map[string]string{
@@ -1830,7 +1830,7 @@ ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
                             |______ P prefailure warning
 `
 
-    mockHGST = `
+	mockHGST = `
 smartctl 6.6 2016-05-31 r4324 [x86_64-linux-4.9.0-3-amd64] (local build)
 Copyright (C) 2002-16, Bruce Allen, Christian Franke, www.smartmontools.org
 
