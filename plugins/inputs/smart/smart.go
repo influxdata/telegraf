@@ -157,6 +157,10 @@ var (
 			Name:  "Percentage_Used",
 			Parse: parsePercentageInt,
 		},
+		"Percentage used endurance indicator": {
+			Name:  "Percentage_Used",
+			Parse: parsePercentageInt,
+		},     
 		"Data Units Read": {
 			Name:  "Data_Units_Read",
 			Parse: parseDataUnits,
