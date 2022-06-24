@@ -575,6 +575,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 }
 
 func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
+	t.Skip("Skipping test due to data race, will be re-visited")
 	const maxWriteRecordsCalls = 2
 	const maxRecordsInWriteRecordsCall = 100
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
@@ -768,14 +769,6 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 	}
 
 	localTime, _ = strconv.Atoi(time1Epoch)
-	var tsDimensions []types.Dimension
-
-	for k, v := range map[string]string{"tag1": "value1", testSingleTableDim: metricName1} {
-		tsDimensions = append(tsDimensions, types.Dimension{
-			Name:  aws.String(k),
-			Value: aws.String(v),
-		})
-	}
 
 	var recordsFirstReq []types.Record
 
@@ -821,7 +814,6 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 }
 
 func TestTransformMetricsDifferentDimensionsSameTimestampsAreWrittenSeparate(t *testing.T) {
-
 	input1 := testutil.MustMetric(
 		metricName1,
 		map[string]string{"tag1": "value1"},
