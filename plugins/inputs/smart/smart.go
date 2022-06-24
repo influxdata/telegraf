@@ -90,11 +90,11 @@ var (
 	// There are some fields we're interested in which use the vendor specific device ids
 	// so we need to be able to match on name instead
 	deviceFieldNames = map[string]string{
-		"Percent_Lifetime_Remain":   "endurance_remain_perc",
-		"Wear_Leveling_Count":   "endurance_wear_levelling",
+		"Percent_Lifetime_Remain": "endurance_remain_perc",
+		"Wear_Leveling_Count":     "endurance_wear_levelling",
 		"Media_Wearout_Indicator": "endurance_media_wearout",
-	}	
-	
+	}
+
 	// to obtain metrics from smartctl
 	sasNVMeAttributes = map[string]struct {
 		ID    string
@@ -161,7 +161,7 @@ var (
 		"Percentage used endurance indicator": {
 			Name:  "Percentage_Used",
 			Parse: parsePercentageInt,
-		},     
+		},
 		"Data Units Read": {
 			Name:  "Data_Units_Read",
 			Parse: parseDataUnits,
@@ -829,14 +829,14 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					deviceFields[field] = val
 				}
 			}
-			
+
 			// If the attribute name matches on in deviceFieldNames
 			// save the value to a field
 			if field, ok := deviceFieldNames[attr[2]]; ok {
 				if val, err := parseRawValue(attr[4]); err == nil {
 					deviceFields[field] = val
 				}
-			}			
+			}
 
 		} else {
 			// what was found is not a vendor attribute
