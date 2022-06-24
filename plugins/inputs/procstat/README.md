@@ -19,6 +19,8 @@ Processes can be selected for monitoring using one of several methods:
 ```toml @sample.conf
 # Monitor process cpu and memory usage
 [[inputs.procstat]]
+  ## Use sudo to get root-only metrics
+  # use_sudo = false
   ## PID file to monitor process
   pid_file = "/var/run/nginx.pid"
   ## executable name (ie, pgrep <exe>)
@@ -62,6 +64,22 @@ Processes can be selected for monitoring using one of several methods:
   ## the native finder performs the search directly in a manor dependent on the
   ## platform.  Default is 'pgrep'
   # pid_finder = "pgrep"
+```
+
+### Using sudo
+
+If your account does not already have the ability to run commands
+with passwordless sudo then updates to the sudoers file are required. Below
+is an example to allow the requires system commands:
+
+First, use the `visudo` command to start editing the sudoers file. Then add
+the following content, where `<username>` is the username of the user that
+needs this access:
+
+```text
+Cmnd_Alias PSTAT = [TOBECOMPLETED]
+<username>  ALL=(root) NOPASSWD: PSTAT
+Defaults!PSTAT !logfile, !syslog, !pam_session
 ```
 
 ### Windows support
