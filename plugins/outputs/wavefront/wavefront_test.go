@@ -243,6 +243,11 @@ func TestBuildTagsWithSource(t *testing.T) {
 			"r-@l\"Ho/st",
 			map[string]string{"something": "abc"},
 		},
+		{
+			map[string]string{"hostagent": "realHost", "env": "qa", "tag": "val"},
+			"realHost",
+			map[string]string{"env": "qa", "tag": "val"},
+		},
 	}
 
 	for _, tt := range tagtests {

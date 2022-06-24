@@ -11,11 +11,12 @@ path onto the global path variable
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Retrieves SNMP values from remote agents
 [[inputs.snmp]]
   ## Agent addresses to retrieve values from.
   ##   format:  agents = ["<scheme://><hostname>:<port>"]
-  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.  
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.
   ##            default is udp
   ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
@@ -30,6 +31,8 @@ path onto the global path variable
   # version = 2
 
   ## Path to mib files
+  ## Used by the gosmi translator.
+  ## To add paths when translating with netsnmp, use the MIBDIRS environment variable
   # path = ["/usr/share/snmp/mibs"]
 
   ## SNMP community string.
@@ -57,7 +60,7 @@ path onto the global path variable
   ## Context Name.
   # context_name = ""
   ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C", or "".
-  ### Protocols "AES192", "AES192", "AES256", and "AES256C" require the underlying net-snmp tools 
+  ### Protocols "AES192", "AES192", "AES256", and "AES256C" require the underlying net-snmp tools
   ### to be compiled with --enable-blumenthal-aes (http://www.net-snmp.org/docs/INSTALL.html)
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
@@ -129,7 +132,7 @@ option operate similar to the `snmpget` utility.
     ##                or hextoint:BigEndian:uint32. Valid options for the Endian are:
     ##                BigEndian and LittleEndian. For the bit size: uint16, uint32
     ##                and uint64.
-    ##                      
+    ##
     # conversion = ""
 ```
 
@@ -196,17 +199,17 @@ One [metric][] is created for each row of the SNMP table.
       ## Specifies if the value of given field should be snmptranslated
       ## by default no field values are translated
       # translate = true
-  
+
       ## Secondary index table allows to merge data from two tables with
       ## different index that this filed will be used to join them. There can
       ## be only one secondary index table.
       # secondary_index_table = false
-      
+
       ## This field is using secondary index, and will be later merged with
       ## primary index using SecondaryIndexTable. SecondaryIndexTable and
       ## SecondaryIndexUse are exclusive.
       # secondary_index_use = false
-      
+
       ## Controls if entries from secondary table should be added or not
       ## if joining index is present or not. I set to true, means that join
       ## is outer, and index is prepended with "Secondary." for missing values
@@ -217,9 +220,9 @@ One [metric][] is created for each row of the SNMP table.
 
 #### Two Table Join
 
-Snmp plugin can join two snmp tables that have different indexes. For this to work one table
-should have translation field that return index of second table as value. Examples
-of such fields are:
+Snmp plugin can join two snmp tables that have different indexes. For this to
+work one table should have translation field that return index of second table
+as value. Examples of such fields are:
 
 * Cisco portTable with translation field: `CISCO-STACK-MIB::portIfIndex`,
 which value is IfIndex from ifTable
@@ -228,11 +231,13 @@ which value is IfIndex from ifTable
 * Cisco cpeExtPsePortTable with translation field: `CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex`,
 which value is index from entPhysicalTable
 
-Such field can be used to translate index to secondary table with `secondary_index_table = true`
-and all fields from secondary table (with index pointed from translation field), should have added option
-`secondary_index_use = true`. Telegraf cannot duplicate entries during join so translation
-must be 1-to-1 (not 1-to-many). To add fields from secondary table with index that is not present
-in translation table (outer join), there is a second option for translation index `secondary_outer_join = true`.
+Such field can be used to translate index to secondary table with
+`secondary_index_table = true` and all fields from secondary table (with index
+pointed from translation field), should have added option `secondary_index_use =
+true`. Telegraf cannot duplicate entries during join so translation must be
+1-to-1 (not 1-to-many). To add fields from secondary table with index that is
+not present in translation table (outer join), there is a second option for
+translation index `secondary_outer_join = true`.
 
 ##### Example configuration for table joins
 
@@ -252,7 +257,8 @@ name = "EntPhyIndex"
 oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex"
 ```
 
-Partial result (removed agent_host and host columns from all following outputs in this section):
+Partial result (removed agent_host and host columns from all following outputs
+in this section):
 
 ```text
 > ciscoPower,index=1.2 EntPhyIndex=1002i,PortPwrConsumption=6643i 1621460628000000000
@@ -260,7 +266,8 @@ Partial result (removed agent_host and host columns from all following outputs i
 > ciscoPower,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621460628000000000
 ```
 
-Note here that EntPhyIndex column carries index from ENTITY-MIB table, config for it:
+Note here that EntPhyIndex column carries index from ENTITY-MIB table, config
+for it:
 
 ```toml
 [[inputs.snmp.table]]
@@ -280,9 +287,9 @@ Partial result:
 > entityTable,index=1005 EntPhysicalName="GigabitEthernet1/5" 1621460809000000000
 ```
 
-Now, lets attempt to join these results into one table. EntPhyIndex matches index
-from second table, and lets convert EntPhysicalName into tag, so second table will
-only provide tags into result. Configuration:
+Now, lets attempt to join these results into one table. EntPhyIndex matches
+index from second table, and lets convert EntPhysicalName into tag, so second
+table will only provide tags into result. Configuration:
 
 ```toml
 [[inputs.snmp.table]]

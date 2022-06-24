@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
@@ -5,6 +6,7 @@ package hugepages
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// path to root huge page control directory
@@ -26,14 +32,6 @@ const (
 	rootHugepages    = "root"
 	perNodeHugepages = "per_node"
 	meminfoHugepages = "meminfo"
-
-	hugepagesSampleConfig = `
-  ## Supported huge page types:
-  ##   - "root" - based on root huge page control directory: /sys/kernel/mm/hugepages
-  ##   - "per_node" - based on per NUMA node directories: /sys/devices/system/node/node[0-9]*/hugepages
-  ##   - "meminfo" - based on /proc/meminfo file
-  # types = ["root", "per_node"]
-`
 )
 
 var (
@@ -80,12 +78,8 @@ type Hugepages struct {
 	meminfoPath      string
 }
 
-func (h *Hugepages) Description() string {
-	return "Gathers huge pages measurements."
-}
-
-func (h *Hugepages) SampleConfig() string {
-	return hugepagesSampleConfig
+func (*Hugepages) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *Hugepages) Init() error {

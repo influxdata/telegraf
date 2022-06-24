@@ -11,15 +11,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
-	"github.com/influxdata/telegraf/plugins/parsers/json"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
-	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
 // Creator is the function to create a new parser
@@ -184,22 +183,21 @@ type Config struct {
 	ValueFieldName string `toml:"value_field_name"`
 
 	// XPath configuration
-	XPathPrintDocument bool   `toml:"xpath_print_document"`
-	XPathProtobufFile  string `toml:"xpath_protobuf_file"`
-	XPathProtobufType  string `toml:"xpath_protobuf_type"`
-	XPathConfig        []XPathConfig
+	XPathPrintDocument       bool           `toml:"xpath_print_document"`
+	XPathProtobufFile        string         `toml:"xpath_protobuf_file"`
+	XPathProtobufType        string         `toml:"xpath_protobuf_type"`
+	XPathProtobufImportPaths []string       `toml:"xpath_protobuf_import_paths"`
+	XPathAllowEmptySelection bool           `toml:"xpath_allow_empty_selection"`
+	XPathConfig              []xpath.Config `toml:"xpath"`
 
 	// JSONPath configuration
-	JSONV2Config []JSONV2Config `toml:"json_v2"`
+	JSONV2Config []json_v2.Config `toml:"json_v2"`
 
 	// Influx configuration
 	InfluxParserType string `toml:"influx_parser_type"`
-}
 
-type XPathConfig xpath.Config
-
-type JSONV2Config struct {
-	json_v2.Config
+	// LogFmt configuration
+	LogFmtTagKeys []string `toml:"logfmt_tag_keys"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -207,21 +205,6 @@ func NewParser(config *Config) (Parser, error) {
 	var err error
 	var parser Parser
 	switch config.DataFormat {
-	case "json":
-		parser, err = json.New(
-			&json.Config{
-				MetricName:   config.MetricName,
-				TagKeys:      config.TagKeys,
-				NameKey:      config.JSONNameKey,
-				StringFields: config.JSONStringFields,
-				Query:        config.JSONQuery,
-				TimeKey:      config.JSONTimeKey,
-				TimeFormat:   config.JSONTimeFormat,
-				Timezone:     config.JSONTimezone,
-				DefaultTags:  config.DefaultTags,
-				Strict:       config.JSONStrict,
-			},
-		)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.ValueFieldName, config.DefaultTags)
@@ -261,7 +244,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
 	case "logfmt":
-		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
+		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags, config.LogFmtTagKeys)
 	case "form_urlencoded":
 		parser, err = NewFormUrlencodedParser(
 			config.MetricName,
@@ -275,17 +258,6 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
-		parser = &xpath.Parser{
-			Format:              config.DataFormat,
-			ProtobufMessageDef:  config.XPathProtobufFile,
-			ProtobufMessageType: config.XPathProtobufType,
-			PrintDocument:       config.XPathPrintDocument,
-			DefaultTags:         config.DefaultTags,
-			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
-		}
-	case "json_v2":
-		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
 		creator, found := Parsers[config.DataFormat]
 		if !found {
@@ -387,8 +359,10 @@ func NewDropwizardParser(
 }
 
 // NewLogFmtParser returns a logfmt parser with the default options.
-func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, error) {
-	return logfmt.NewParser(metricName, defaultTags), nil
+func NewLogFmtParser(metricName string, defaultTags map[string]string, tagKeys []string) (Parser, error) {
+	parser := logfmt.NewParser(metricName, defaultTags, tagKeys)
+	err := parser.Init()
+	return parser, err
 }
 
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
@@ -417,36 +391,5 @@ func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (P
 func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
 	return &prometheusremotewrite.Parser{
 		DefaultTags: defaultTags,
-	}, nil
-}
-
-func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config {
-	// Convert the config formats which is a one-to-one copy
-	configs := make([]xpath.Config, 0, len(cfgs))
-	for _, cfg := range cfgs {
-		config := xpath.Config(cfg)
-		config.MetricDefaultName = metricName
-		configs = append(configs, config)
-	}
-	return configs
-}
-
-func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
-	configs := make([]json_v2.Config, len(jsonv2config))
-	for i, cfg := range jsonv2config {
-		configs[i].MeasurementName = cfg.MeasurementName
-		configs[i].MeasurementNamePath = cfg.MeasurementNamePath
-
-		configs[i].TimestampPath = cfg.TimestampPath
-		configs[i].TimestampFormat = cfg.TimestampFormat
-		configs[i].TimestampTimezone = cfg.TimestampTimezone
-
-		configs[i].Fields = cfg.Fields
-		configs[i].Tags = cfg.Tags
-
-		configs[i].JSONObjects = cfg.JSONObjects
-	}
-	return &json_v2.Parser{
-		Configs: configs,
 	}, nil
 }

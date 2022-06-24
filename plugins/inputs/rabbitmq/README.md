@@ -2,14 +2,16 @@
 
 Reads metrics from RabbitMQ servers via the [Management Plugin][management].
 
-For additional details reference the [RabbitMQ Management HTTP Stats][management-reference].
+For additional details reference the [RabbitMQ Management HTTP
+Stats][management-reference].
 
 [management]: https://www.rabbitmq.com/management.html
 [management-reference]: https://raw.githack.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_9/priv/www/api/index.html
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Reads metrics from RabbitMQ servers via the Management Plugin
 [[inputs.rabbitmq]]
   ## Management Plugin url. (default: http://localhost:15672)
   # url = "http://localhost:15672"
@@ -220,7 +222,9 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
 
 ## Sample Queries
 
-Message rates for the entire node can be calculated from total message counts. For instance, to get the rate of messages published per minute, use this query:
+Message rates for the entire node can be calculated from total message
+counts. For instance, to get the rate of messages published per minute, use this
+query:
 
 ```sql
 SELECT NON_NEGATIVE_DERIVATIVE(LAST("messages_published"), 1m) AS messages_published_rate FROM rabbitmq_overview WHERE time > now() - 10m GROUP BY time(1m)

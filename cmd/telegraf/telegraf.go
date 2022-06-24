@@ -84,6 +84,20 @@ var fProcessorFilters = flag.String("processor-filter", "",
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 
+// Initialize the subcommand `telegraf config`
+// This duplicates the above filters which are used for `telegraf --sample-config` and `telegraf --deprecation-list`
+var configCmd = flag.NewFlagSet("config", flag.ExitOnError)
+var fSubSectionFilters = configCmd.String("section-filter", "",
+	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
+var fSubInputFilters = configCmd.String("input-filter", "",
+	"filter the inputs to enable, separator is :")
+var fSubOutputFilters = configCmd.String("output-filter", "",
+	"filter the outputs to enable, separator is :")
+var fsubAggregatorFilters = configCmd.String("aggregator-filter", "",
+	"filter the aggregators to enable, separator is :")
+var fSubProcessorFilters = configCmd.String("processor-filter", "",
+	"filter the processors to enable, separator is :")
+
 //nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
@@ -232,7 +246,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	if !*fTest && len(c.Outputs) == 0 {
+	if !(*fTest || *fTestWait != 0) && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
 	if *fPlugins == "" && len(c.Inputs) == 0 {
@@ -356,6 +370,16 @@ func formatFullVersion() string {
 	return strings.Join(parts, " ")
 }
 
+func deleteEmpty(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
+}
+
 func main() {
 	flag.Var(&fConfigs, "config", "configuration file to load")
 	flag.Var(&fConfigDirs, "config-directory", "directory containing additional *.conf files")
@@ -421,6 +445,37 @@ func main() {
 			fmt.Println(formatFullVersion())
 			return
 		case "config":
+			err := configCmd.Parse(args[1:])
+			if err != nil {
+				log.Fatal("E! " + err.Error())
+			}
+
+			// The sub_Filters are populated when the filter flags are set after the subcommand config
+			// e.g. telegraf config --section-filter inputs
+			subSectionFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubSectionFilters)+":", ":"))
+			subInputFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubInputFilters)+":", ":"))
+			subOutputFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubOutputFilters)+":", ":"))
+			subAggregatorFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fsubAggregatorFilters)+":", ":"))
+			subProcessorFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubProcessorFilters)+":", ":"))
+
+			// Overwrite the global filters if the subfilters are defined, this allows for backwards compatibility
+			// Now you can still filter the sample config like so: telegraf --section-filter inputs config
+			if len(subSectionFilters) > 0 {
+				sectionFilters = subSectionFilters
+			}
+			if len(subInputFilters) > 0 {
+				inputFilters = subInputFilters
+			}
+			if len(subOutputFilters) > 0 {
+				outputFilters = subOutputFilters
+			}
+			if len(subAggregatorFilters) > 0 {
+				aggregatorFilters = subAggregatorFilters
+			}
+			if len(subProcessorFilters) > 0 {
+				processorFilters = subProcessorFilters
+			}
+
 			config.PrintSampleConfig(
 				sectionFilters,
 				inputFilters,

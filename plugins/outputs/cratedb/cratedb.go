@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cratedb
 
 import (
 	"context"
 	"crypto/sha512"
 	"database/sql"
+	_ "embed"
 	"encoding/binary"
 	"fmt"
 	"sort"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const MaxInt64 = int64(^uint64(0) >> 1)
 
 type CrateDB struct {
@@ -29,19 +35,9 @@ type CrateDB struct {
 	DB           *sql.DB
 }
 
-var sampleConfig = `
-  # A github.com/jackc/pgx/v4 connection string.
-  # See https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
-  url = "postgres://user:password@localhost/schema?sslmode=disable"
-  # Timeout for all CrateDB queries.
-  timeout = "5s"
-  # Name of the table to store metrics in.
-  table = "metrics"
-  # If true, and the metrics table does not exist, create it automatically.
-  table_create = true
-  # The character(s) to replace any '.' in an object key with
-  key_separator = "_"
-`
+func (*CrateDB) SampleConfig() string {
+	return sampleConfig
+}
 
 func (c *CrateDB) Connect() error {
 	db, err := sql.Open("pgx", c.URL)
@@ -197,7 +193,7 @@ func escapeObject(m map[string]interface{}, keyReplacement string) (string, erro
 // escapeString wraps s in the given quote string and replaces all occurrences
 // of it inside of s with a double quote.
 func escapeString(s string, quote string) string {
-	return quote + strings.Replace(s, quote, quote+quote, -1) + quote
+	return quote + strings.ReplaceAll(s, quote, quote+quote) + quote
 }
 
 // hashID returns a cryptographic hash int64 hash that includes the metric name
@@ -229,14 +225,6 @@ func hashID(m telegraf.Metric) int64 {
 	// INSERT INTO my_long(val) VALUES (14305102049502225714);
 	// -> ERROR:  SQLParseException: For input string: "14305102049502225714"
 	return int64(binary.LittleEndian.Uint64(sum))
-}
-
-func (c *CrateDB) SampleConfig() string {
-	return sampleConfig
-}
-
-func (c *CrateDB) Description() string {
-	return "Configuration for CrateDB to send metrics to."
 }
 
 func (c *CrateDB) Close() error {

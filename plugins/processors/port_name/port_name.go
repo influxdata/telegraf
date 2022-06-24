@@ -1,7 +1,9 @@
-package portname
+//go:generate ../../../tools/readme_config_includer/generator
+package port_name
 
 import (
 	"bufio"
+	_ "embed"
 	"io"
 	"os"
 	"strconv"
@@ -11,25 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-var sampleConfig = `
-[[processors.port_name]]
-  ## Name of tag holding the port number
-  # tag = "port"
-  ## Or name of the field holding the port number
-  # field = "port"
-
-  ## Name of output tag or field (depending on the source) where service name will be added
-  # dest = "service"
-
-  ## Default tcp or udp
-  # default_protocol = "tcp"
-
-  ## Tag containing the protocol (tcp or udp, case-insensitive)
-  # protocol_tag = "proto"
-
-  ## Field containing the protocol (tcp or udp, case-insensitive)
-  # protocol_field = "proto"
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type sMap map[string]map[int]string // "https" == services["tcp"][443]
 
@@ -44,14 +30,6 @@ type PortName struct {
 	ProtocolField   string `toml:"protocol_field"`
 
 	Log telegraf.Logger `toml:"-"`
-}
-
-func (pn *PortName) SampleConfig() string {
-	return sampleConfig
-}
-
-func (pn *PortName) Description() string {
-	return "Given a tag/field of a TCP or UDP port number, add a tag/field of the service name looked up in the system services file"
 }
 
 func readServicesFile() {
@@ -104,6 +82,10 @@ func readServices(r io.Reader) sMap {
 		protoMap[port] = service
 	}
 	return services
+}
+
+func (*PortName) SampleConfig() string {
+	return sampleConfig
 }
 
 func (pn *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {

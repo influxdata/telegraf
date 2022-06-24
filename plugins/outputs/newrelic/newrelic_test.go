@@ -19,9 +19,6 @@ func TestBasic(t *testing.T) {
 		InsightsKey:  "12345",
 		Timeout:      config.Duration(time.Second * 5),
 	}
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
 
 	err := nr.Connect()
 	require.NoError(t, err)

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package marklogic
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Marklogic configuration toml
 type Marklogic struct {
@@ -82,29 +88,9 @@ type MlHost struct {
 	} `json:"host-status"`
 }
 
-// Description of plugin returned
-func (c *Marklogic) Description() string {
-	return "Retrieves information on a specific host in a MarkLogic Cluster"
+func (*Marklogic) SampleConfig() string {
+	return sampleConfig
 }
-
-var sampleConfig = `
-  ## Base URL of the MarkLogic HTTP Server.
-  url = "http://localhost:8002"
-
-  ## List of specific hostnames to retrieve information. At least (1) required.
-  # hosts = ["hostname1", "hostname2"]
-
-  ## Using HTTP Basic Authentication. Management API requires 'manage-user' role privileges
-  # username = "myuser"
-  # password = "mypassword"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
 
 // Init parse all source URLs and place on the Marklogic struct
 func (c *Marklogic) Init() error {
@@ -126,11 +112,6 @@ func (c *Marklogic) Init() error {
 		c.Sources = append(c.Sources, u)
 	}
 	return nil
-}
-
-// SampleConfig to gather stats from localhost, default port.
-func (c *Marklogic) SampleConfig() string {
-	return sampleConfig
 }
 
 // Gather metrics from HTTP Server.

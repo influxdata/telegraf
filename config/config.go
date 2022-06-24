@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
@@ -28,7 +30,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -65,9 +68,10 @@ var (
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	toml         *toml.Config
-	errs         []error // config load errors.
-	UnusedFields map[string]bool
+	toml              *toml.Config
+	errs              []error // config load errors.
+	UnusedFields      map[string]bool
+	unusedFieldsMutex *sync.Mutex
 
 	Tags          map[string]string
 	InputFilters  []string
@@ -91,7 +95,8 @@ type Config struct {
 // once the configuration is parsed.
 func NewConfig() *Config {
 	c := &Config{
-		UnusedFields: map[string]bool{},
+		UnusedFields:      map[string]bool{},
+		unusedFieldsMutex: &sync.Mutex{},
 
 		// Agent defaults:
 		Agent: &AgentConfig{
@@ -225,6 +230,10 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
+
+	// Method for translating SNMP objects. 'netsnmp' to call external programs,
+	// 'gosmi' to use the built-in library.
+	SnmpTranslator string `toml:"snmp_translator"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -332,93 +341,9 @@ var globalTagsConfig = `
 
 `
 
-var agentConfig = `
-# Configuration for telegraf agent
-[agent]
-  ## Default data collection interval for all inputs
-  interval = "10s"
-  ## Rounds collection interval to 'interval'
-  ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
-  round_interval = true
-
-  ## Telegraf will send metrics to outputs in batches of at most
-  ## metric_batch_size metrics.
-  ## This controls the size of writes that Telegraf sends to output plugins.
-  metric_batch_size = 1000
-
-  ## Maximum number of unwritten metrics per output.  Increasing this value
-  ## allows for longer periods of output downtime without dropping metrics at the
-  ## cost of higher maximum memory usage.
-  metric_buffer_limit = 10000
-
-  ## Collection jitter is used to jitter the collection by a random amount.
-  ## Each plugin will sleep for a random time within jitter before collecting.
-  ## This can be used to avoid many plugins querying things like sysfs at the
-  ## same time, which can have a measurable effect on the system.
-  collection_jitter = "0s"
-
-  ## Collection offset is used to shift the collection by the given amount.
-  ## This can be be used to avoid many plugins querying constraint devices
-  ## at the same time by manually scheduling them in time.
-  # collection_offset = "0s"
-
-  ## Default flushing interval for all outputs. Maximum flush_interval will be
-  ## flush_interval + flush_jitter
-  flush_interval = "10s"
-  ## Jitter the flush interval by a random amount. This is primarily to avoid
-  ## large write spikes for users running a large number of telegraf instances.
-  ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
-  flush_jitter = "0s"
-
-  ## Collected metrics are rounded to the precision specified. Precision is
-  ## specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
-  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
-  ##
-  ## By default or when set to "0s", precision will be set to the same
-  ## timestamp order as the collection interval, with the maximum being 1s:
-  ##   ie, when interval = "10s", precision will be "1s"
-  ##       when interval = "250ms", precision will be "1ms"
-  ##
-  ## Precision will NOT be used for service inputs. It is up to each individual
-  ## service input to set the timestamp at the appropriate precision.
-  precision = "0s"
-
-  ## Log at debug level.
-  # debug = false
-  ## Log only error level messages.
-  # quiet = false
-
-  ## Log target controls the destination for logs and can be one of "file",
-  ## "stderr" or, on Windows, "eventlog".  When set to "file", the output file
-  ## is determined by the "logfile" setting.
-  # logtarget = "file"
-
-  ## Name of the file to be logged to when using the "file" logtarget.  If set to
-  ## the empty string then logs are written to stderr.
-  # logfile = ""
-
-  ## The logfile will be rotated after the time interval specified.  When set
-  ## to 0 no time based rotation is performed.  Logs are rotated only when
-  ## written to, if there is no log activity rotation may be delayed.
-  # logfile_rotation_interval = "0d"
-
-  ## The logfile will be rotated when it becomes larger than the specified
-  ## size.  When set to 0 no size based rotation is performed.
-  # logfile_rotation_max_size = "0MB"
-
-  ## Maximum number of rotated archives to keep, any older logs are deleted.
-  ## If set to -1, no archives are removed.
-  # logfile_rotation_max_archives = 5
-
-  ## Pick a timezone to use when logging or type 'local' for local time.
-  ## Example: America/Chicago
-  # log_with_timezone = ""
-
-  ## Override default hostname, if empty use os.Hostname()
-  hostname = ""
-  ## If set to true, do no set the "host" tag in the telegraf agent.
-  omit_hostname = false
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the agentConfig data.
+//go:embed agent.conf
+var agentConfig string
 
 var outputHeader = `
 ###############################################################################
@@ -606,10 +531,8 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	// Print Inputs
 	for _, pname := range pnames {
 		// Skip inputs that are registered twice for backward compatibility
-		if pname == "cisco_telemetry_gnmi" {
-			continue
-		}
-		if pname == "KNXListener" {
+		switch pname {
+		case "cisco_telemetry_gnmi", "io", "KNXListener":
 			continue
 		}
 		creator := inputs.Inputs[pname]
@@ -669,23 +592,24 @@ func printConfig(name string, p telegraf.PluginDescriber, op string, commented b
 	if commented {
 		comment = "# "
 	}
-	fmt.Printf("\n%s# %s\n%s[[%s.%s]]", comment, p.Description(), comment, op, name)
 
 	if di.Since != "" {
 		removalNote := ""
 		if di.RemovalIn != "" {
 			removalNote = " and will be removed in " + di.RemovalIn
 		}
-		fmt.Printf("\n%s  ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)
+		fmt.Printf("\n%s ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)
 	}
 
 	config := p.SampleConfig()
 	if config == "" {
+		fmt.Printf("\n#[[%s.%s]]", op, name)
 		fmt.Printf("\n%s  # no configuration\n\n", comment)
 	} else {
 		lines := strings.Split(config, "\n")
+		fmt.Print("\n")
 		for i, line := range lines {
-			if i == 0 || i == len(lines)-1 {
+			if i == len(lines)-1 {
 				fmt.Print("\n")
 				continue
 			}
@@ -853,6 +777,11 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 
 		c.Tags["host"] = c.Agent.Hostname
+	}
+
+	// Set snmp agent translator default
+	if c.Agent.SnmpTranslator == "" {
+		c.Agent.SnmpTranslator = "netsnmp"
 	}
 
 	if len(c.UnusedFields) > 0 {
@@ -1231,14 +1160,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return nil
 	}
 
-	// Legacy support renaming io input to diskio
-	if name == "io" {
-		if err := c.printUserDeprecation("inputs", name, nil); err != nil {
-			return err
-		}
-		name = "diskio"
-	}
-
 	// For inputs with parsers we need to compute the set of
 	// options that is not covered by both, the parser and the input.
 	// We achieve this by keeping a local book of missing entries
@@ -1606,10 +1527,11 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	// for influx parser
 	c.getFieldString(tbl, "influx_parser_type", &pc.InfluxParserType)
 
-	//for XPath parser family
+	// for XPath parser family
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
 		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
+		c.getFieldStringSlice(tbl, "xpath_protobuf_import_paths", &pc.XPathProtobufImportPaths)
 		c.getFieldBool(tbl, "xpath_print_document", &pc.XPathPrintDocument)
 
 		// Determine the actual xpath configuration tables
@@ -1620,7 +1542,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 		if xpathOK {
 			if subtbls, ok := node.([]*ast.Table); ok {
-				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
+				pc.XPathConfig = make([]xpath.Config, len(subtbls))
 				for i, subtbl := range subtbls {
 					subcfg := pc.XPathConfig[i]
 					c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
@@ -1644,10 +1566,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 	}
 
-	//for JSONPath parser
+	// for JSON_v2 parser
 	if node, ok := tbl.Fields["json_v2"]; ok {
 		if metricConfigs, ok := node.([]*ast.Table); ok {
-			pc.JSONV2Config = make([]parsers.JSONV2Config, len(metricConfigs))
+			pc.JSONV2Config = make([]json_v2.Config, len(metricConfigs))
 			for i, metricConfig := range metricConfigs {
 				mc := pc.JSONV2Config[i]
 				c.getFieldString(metricConfig, "measurement_name", &mc.MeasurementName)
@@ -1665,7 +1587,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
 					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
 						for _, objectConfig := range objectconfigs {
-							var o json_v2.JSONObject
+							var o json_v2.Object
 							c.getFieldString(objectConfig, "path", &o.Path)
 							c.getFieldBool(objectConfig, "optional", &o.Optional)
 							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
@@ -1755,8 +1677,11 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
 	c.getFieldString(tbl, "carbon2_format", &sc.Carbon2Format)
 	c.getFieldString(tbl, "carbon2_sanitize_replace_char", &sc.Carbon2SanitizeReplaceChar)
+	c.getFieldBool(tbl, "csv_column_prefix", &sc.CSVPrefix)
+	c.getFieldBool(tbl, "csv_header", &sc.CSVHeader)
+	c.getFieldString(tbl, "csv_separator", &sc.CSVSeparator)
+	c.getFieldString(tbl, "csv_timestamp_format", &sc.TimestampFormat)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
-
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
@@ -1820,29 +1745,47 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
-	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
-		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
-		"collection_offset",
-		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
-		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
-		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
-		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
-		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
-		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_parser_type", "influx_sort_fields",
-		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
-		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
-		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
-		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
-		"prefix", "prometheus_export_timestamp", "prometheus_ignore_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
-		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
-		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "wavefront_disable_prefix_conversion",
-		"xml", "xpath", "xpath_json", "xpath_msgpack", "xpath_protobuf", "xpath_print_document",
-		"xpath_protobuf_file", "xpath_protobuf_type":
+	// General options to ignore
+	case "alias",
+		"collection_jitter", "collection_offset",
+		"data_format", "delay", "drop", "drop_original",
+		"fielddrop", "fieldpass", "flush_interval", "flush_jitter",
+		"grace",
+		"interval",
+		"lvm", // What is this used for?
+		"metric_batch_size", "metric_buffer_limit",
+		"name_override", "name_prefix", "name_suffix", "namedrop", "namepass",
+		"order",
+		"pass", "period", "precision",
+		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
 
-		// ignore fields that are common to all plugins.
+	// Parser options to ignore
+	case "data_type", "separator", "tag_keys",
+		// "templates", // shared with serializers
+		"collectd_auth_file", "collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb",
+		"dropwizard_metric_registry_path", "dropwizard_tags_path", "dropwizard_tag_paths",
+		"dropwizard_time_format", "dropwizard_time_path",
+		"form_urlencoded_tag_keys",
+		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
+		"grok_timezone", "grok_unique_timestamp",
+		"influx_parser_type",
+		"prometheus_ignore_timestamp", // not used anymore?
+		"value_field_name":
+
+	// Serializer options to ignore
+	case "prefix", "template", "templates",
+		"carbon2_format", "carbon2_sanitize_replace_char",
+		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
+		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
+		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
+		"json_timestamp_format", "json_timestamp_units",
+		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
+		"splunkmetric_hec_routing", "splunkmetric_multimetric",
+		"wavefront_disable_prefix_conversion", "wavefront_source_override", "wavefront_use_strict":
 	default:
+		c.unusedFieldsMutex.Lock()
 		c.UnusedFields[key] = true
+		c.unusedFieldsMutex.Unlock()
 	}
 	return nil
 }

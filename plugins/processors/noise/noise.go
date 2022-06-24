@@ -1,15 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package noise
 
 import (
+	_ "embed"
 	"fmt"
 	"math"
 	"reflect"
 
+	"gonum.org/v1/gonum/stat/distuv"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"gonum.org/v1/gonum/stat/distuv"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultScale     = 1.0
@@ -18,28 +25,6 @@ const (
 	defaultMu        = 0.0
 	defaultNoiseType = "laplacian"
 )
-
-const sampleConfig = `
-    ## Specified the type of the random distribution.
-    ## Can be "laplacian", "gaussian" or "uniform".
-    # type = "laplacian
-
-    ## Center of the distribution.
-    ## Only used for Laplacian and Gaussian distributions.
-    # mu = 0.0
-
-    ## Scale parameter for the Laplacian or Gaussian distribution
-    # scale = 1.0
-
-    ## Upper and lower bound of the Uniform distribution
-    # min = -1.0
-    # max = 1.0
-
-    ## Apply the noise only to numeric fields matching the filter criteria below.
-    ## Excludes takes precedence over includes.
-    # include_fields = []
-    # exclude_fields = []
-`
 
 type Noise struct {
 	Scale         float64         `toml:"scale"`
@@ -52,14 +37,6 @@ type Noise struct {
 	Log           telegraf.Logger `toml:"-"`
 	generator     distuv.Rander
 	fieldFilter   filter.Filter
-}
-
-func (p *Noise) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Noise) Description() string {
-	return "Adds noise to numerical fields"
 }
 
 // generates a random noise value depending on the defined probability density
@@ -107,6 +84,10 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 		p.Log.Debugf("Value (%v) type invalid: [%v] is not an int, uint or float", v, reflect.TypeOf(value))
 	}
 	return value
+}
+
+func (*Noise) SampleConfig() string {
+	return sampleConfig
 }
 
 // Creates a filter for Include and Exclude fields and sets the desired noise

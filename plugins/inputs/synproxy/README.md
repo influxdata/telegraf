@@ -1,16 +1,18 @@
 # Synproxy Input Plugin
 
-The synproxy plugin gathers the synproxy counters. Synproxy is a Linux netfilter module used for SYN attack mitigation.
-The use of synproxy is documented in `man iptables-extensions` under the SYNPROXY section.
+The synproxy plugin gathers the synproxy counters. Synproxy is a Linux netfilter
+module used for SYN attack mitigation.  The use of synproxy is documented in
+`man iptables-extensions` under the SYNPROXY section.
 
 ## Configuration
 
-The synproxy plugin does not need any configuration
-
-```toml
+```toml @sample.conf
+# Get synproxy counter statistics from procfs
 [[inputs.synproxy]]
   # no configuration
 ```
+
+The synproxy plugin does not need any configuration
 
 ## Metrics
 
@@ -27,7 +29,8 @@ The following synproxy counters are gathered
 
 ## Sample Queries
 
-Get the number of packets per 5 minutes for the measurement in the last hour from InfluxDB:
+Get the number of packets per 5 minutes for the measurement in the last hour
+from InfluxDB:
 
 ```sql
 SELECT difference(last("cookie_invalid")) AS "cookie_invalid", difference(last("cookie_retrans")) AS "cookie_retrans", difference(last("cookie_valid")) AS "cookie_valid", difference(last("entries")) AS "entries", difference(last("syn_received")) AS "syn_received", difference(last("conn_reopened")) AS "conn_reopened" FROM synproxy WHERE time > NOW() - 1h GROUP BY time(5m) FILL(null);

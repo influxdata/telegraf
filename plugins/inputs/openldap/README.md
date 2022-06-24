@@ -4,9 +4,8 @@ This plugin gathers metrics from OpenLDAP's cn=Monitor backend.
 
 ## Configuration
 
-To use this plugin you must enable the [slapd monitoring](https://www.openldap.org/devel/admin/monitoringslapd.html) backend.
-
-```toml
+```toml @sample.conf
+# OpenLDAP cn=Monitor plugin
 [[inputs.openldap]]
   host = "localhost"
   port = 389
@@ -25,23 +24,31 @@ To use this plugin you must enable the [slapd monitoring](https://www.openldap.o
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""
   bind_password = ""
-  
+
   # reverse metric names so they sort more naturally
   # Defaults to false if unset, but is set to true when generating a new config
   reverse_metric_names = true
 ```
 
-## Measurements & Fields
+To use this plugin you must enable the [slapd
+monitoring](https://www.openldap.org/devel/admin/monitoringslapd.html) backend.
 
-All **monitorCounter**, **monitoredInfo**, **monitorOpInitiated**, and **monitorOpCompleted** attributes are gathered based on this LDAP query:
+## Metrics
+
+All **monitorCounter**, **monitoredInfo**, **monitorOpInitiated**, and
+**monitorOpCompleted** attributes are gathered based on this LDAP query:
 
 ```sh
 (|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))
 ```
 
-Metric names are based on their entry DN with the cn=Monitor base removed. If `reverse_metric_names` is not set, metrics are based on their DN. If `reverse_metric_names` is set to `true`, the names are reversed. This is recommended as it allows the names to sort more naturally.
+Metric names are based on their entry DN with the cn=Monitor base removed. If
+`reverse_metric_names` is not set, metrics are based on their DN. If
+`reverse_metric_names` is set to `true`, the names are reversed. This is
+recommended as it allows the names to sort more naturally.
 
-Metrics for the **monitorOp*** attributes have **_initiated** and **_completed** added to the base name as appropriate.
+Metrics for the **monitorOp*** attributes have **_initiated** and **_completed**
+added to the base name as appropriate.
 
 An OpenLDAP 2.4 server will provide these metrics:
 
@@ -84,7 +91,7 @@ An OpenLDAP 2.4 server will provide these metrics:
   - waiters_read
   - waiters_write
 
-## Tags
+### Tags
 
 - server= # value from config
 - port= # value from config

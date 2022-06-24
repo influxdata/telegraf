@@ -406,7 +406,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	}
 
 	override := map[string]struct {
-		cfg   *parsers.Config
 		param map[string]interface{}
 		mask  []string
 	}{
@@ -420,11 +419,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 			mask: []string{"Now"},
 		},
 		"xpath_protobuf": {
-			cfg: &parsers.Config{
-				MetricName:        "parser_test_new",
-				XPathProtobufFile: "testdata/addressbook.proto",
-				XPathProtobufType: "addressbook.AddressBook",
-			},
 			param: map[string]interface{}{
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
@@ -435,10 +429,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
 		formatCfg := &cfg
-		settings, hasOverride := override[format]
-		if hasOverride && settings.cfg != nil {
-			formatCfg = settings.cfg
-		}
 		formatCfg.DataFormat = format
 
 		logger := models.NewLogger("parsers", format, cfg.MetricName)
@@ -555,7 +545,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	}
 
 	override := map[string]struct {
-		cfg   *parsers.Config
 		param map[string]interface{}
 		mask  []string
 	}{
@@ -569,11 +558,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 			mask: []string{"Now"},
 		},
 		"xpath_protobuf": {
-			cfg: &parsers.Config{
-				MetricName:        "parser_test_new",
-				XPathProtobufFile: "testdata/addressbook.proto",
-				XPathProtobufType: "addressbook.AddressBook",
-			},
 			param: map[string]interface{}{
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
@@ -584,10 +568,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
 		formatCfg := &cfg
-		settings, hasOverride := override[format]
-		if hasOverride && settings.cfg != nil {
-			formatCfg = settings.cfg
-		}
 		formatCfg.DataFormat = format
 
 		logger := models.NewLogger("parsers", format, cfg.MetricName)
@@ -678,7 +658,6 @@ type MockupInputPluginParserOld struct {
 }
 
 func (m *MockupInputPluginParserOld) SampleConfig() string                  { return "Mockup old parser test plugin" }
-func (m *MockupInputPluginParserOld) Description() string                   { return "Mockup old parser test plugin" }
 func (m *MockupInputPluginParserOld) Gather(acc telegraf.Accumulator) error { return nil }
 func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser)       { m.Parser = parser }
 func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc)    { m.ParserFunc = f }
@@ -690,7 +669,6 @@ type MockupInputPluginParserNew struct {
 }
 
 func (m *MockupInputPluginParserNew) SampleConfig() string                  { return "Mockup old parser test plugin" }
-func (m *MockupInputPluginParserNew) Description() string                   { return "Mockup old parser test plugin" }
 func (m *MockupInputPluginParserNew) Gather(acc telegraf.Accumulator) error { return nil }
 func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser)      { m.Parser = parser }
 func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc)   { m.ParserFunc = f }
@@ -714,7 +692,6 @@ type MockupInputPlugin struct {
 }
 
 func (m *MockupInputPlugin) SampleConfig() string                  { return "Mockup test input plugin" }
-func (m *MockupInputPlugin) Description() string                   { return "Mockup test input plugin" }
 func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error { return nil }
 func (m *MockupInputPlugin) SetParser(parser telegraf.Parser)      { m.parser = parser }
 
@@ -730,7 +707,6 @@ type MockupOuputPlugin struct {
 
 func (m *MockupOuputPlugin) Connect() error                        { return nil }
 func (m *MockupOuputPlugin) Close() error                          { return nil }
-func (m *MockupOuputPlugin) Description() string                   { return "Mockup test output plugin" }
 func (m *MockupOuputPlugin) SampleConfig() string                  { return "Mockup test output plugin" }
 func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error { return nil }
 

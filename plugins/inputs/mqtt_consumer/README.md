@@ -5,7 +5,8 @@ and creates metrics using one of the supported [input data formats][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from MQTT topic(s)
 [[inputs.mqtt_consumer]]
   ## Broker URLs for the MQTT server or cluster.  To connect to multiple
   ## clusters or standalone servers, use a separate plugin instance.
@@ -75,7 +76,7 @@ and creates metrics using one of the supported [input data formats][].
   data_format = "influx"
 
   ## Enable extracting tag values from MQTT topics
-  ## _ denotes an ignored entry in the topic path 
+  ## _ denotes an ignored entry in the topic path
   # [[inputs.mqtt_consumer.topic_parsing]]
   #   topic = ""
   #   measurement = ""
@@ -88,11 +89,11 @@ and creates metrics using one of the supported [input data formats][].
 
 ## About Topic Parsing
 
-The MQTT topic as a whole is stored as a tag, but this can be far too coarse
-to be easily used when utilizing the data further down the line. This
-change allows tag values to be extracted from the MQTT topic letting you
-store the information provided in the topic in a meaningful way. An `_` denotes an
-ignored entry in the topic path. Please see the following example.
+The MQTT topic as a whole is stored as a tag, but this can be far too coarse to
+be easily used when utilizing the data further down the line. This change allows
+tag values to be extracted from the MQTT topic letting you store the information
+provided in the topic in a meaningful way. An `_` denotes an ignored entry in
+the topic path. Please see the following example.
 
 ## Example Configuration for topic parsing
 
@@ -126,13 +127,13 @@ ignored entry in the topic path. Please see the following example.
       test = "int"
 ```
 
-Result:
+## Example Output
 
 ```shell
 cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
 
-### Metrics
+## Metrics
 
 - All measurements are tagged with the incoming topic, ie
 `topic=telegraf/host01/cpu`

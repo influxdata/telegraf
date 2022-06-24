@@ -1,12 +1,14 @@
 # Proxmox Input Plugin
 
-The proxmox plugin gathers metrics about containers and VMs using the Proxmox API.
+The proxmox plugin gathers metrics about containers and VMs using the Proxmox
+API.
 
 Telegraf minimum version: Telegraf 1.16.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Provides metrics from Proxmox nodes (Proxmox Virtual Environment > 6.2).
 [[inputs.proxmox]]
   ## API connection configuration. The API token was introduced in Proxmox v6.2. Required permissions for user and token: PVEAuditor role on /.
   base_url = "https://localhost:8006/api2/json"
@@ -27,11 +29,11 @@ Telegraf minimum version: Telegraf 1.16.0
 
 ### Permissions
 
-The plugin will need to have access to the Proxmox API. An API token
-must be provided with the corresponding user being assigned at least the PVEAuditor
-role on /.
+The plugin will need to have access to the Proxmox API. An API token must be
+provided with the corresponding user being assigned at least the PVEAuditor role
+on /.
 
-## Measurements & Fields
+## Metrics
 
 - proxmox
   - status
@@ -50,7 +52,7 @@ role on /.
   - disk_free
   - disk_used_percentage
 
-## Tags
+### Tags
 
 - node_fqdn - FQDN of the node telegraf is running on
 - vm_name - Name of the VM/container

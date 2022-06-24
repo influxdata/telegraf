@@ -1,0 +1,23 @@
+name: Lint plugin readmes
+on:
+#  push:
+#    branches-ignore: master
+  pull_request:
+    branches: # Names of target branches, not source branches
+      - master
+jobs:
+  run-readme-linter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v18.7
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          files: plugins/**/README.md
+      - name: Run readme linter on changed files
+        run: go run ./tools/readme_linter ${{ steps.changed-files.outputs.all_changed_files }}

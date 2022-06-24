@@ -180,7 +180,7 @@ func SerializeBucketName(
 		default:
 			// This is a tag being applied
 			if tagvalue, ok := tagsCopy[templatePart]; ok {
-				out = append(out, strings.Replace(tagvalue, ".", "_", -1))
+				out = append(out, strings.ReplaceAll(tagvalue, ".", "_"))
 				delete(tagsCopy, templatePart)
 			}
 		}
@@ -307,7 +307,7 @@ func buildTags(tags map[string]string) string {
 
 	var tagStr string
 	for i, k := range keys {
-		tagValue := strings.Replace(tags[k], ".", "_", -1)
+		tagValue := strings.ReplaceAll(tags[k], ".", "_")
 		if i == 0 {
 			tagStr += tagValue
 		} else {

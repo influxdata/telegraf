@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package converter
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"math"
@@ -13,34 +15,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-var sampleConfig = `
-  ## Tags to convert
-  ##
-  ## The table key determines the target type, and the array of key-values
-  ## select the keys to convert.  The array may contain globs.
-  ##   <target-type> = [<tag-key>...]
-  [processors.converter.tags]
-    measurement = []
-    string = []
-    integer = []
-    unsigned = []
-    boolean = []
-    float = []
-
-  ## Fields to convert
-  ##
-  ## The table key determines the target type, and the array of key-values
-  ## select the keys to convert.  The array may contain globs.
-  ##   <target-type> = [<field-key>...]
-  [processors.converter.fields]
-    measurement = []
-    tag = []
-    string = []
-    integer = []
-    unsigned = []
-    boolean = []
-    float = []
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Conversion struct {
 	Measurement []string `toml:"measurement"`
@@ -71,12 +48,8 @@ type ConversionFilter struct {
 	Float       filter.Filter
 }
 
-func (p *Converter) SampleConfig() string {
+func (*Converter) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *Converter) Description() string {
-	return "Convert values to another metric value type"
 }
 
 func (p *Converter) Init() error {

@@ -24,10 +24,6 @@ func (sp *streamingProcessor) SampleConfig() string {
 	return sp.processor.SampleConfig()
 }
 
-func (sp *streamingProcessor) Description() string {
-	return sp.processor.Description()
-}
-
 func (sp *streamingProcessor) Start(acc telegraf.Accumulator) error {
 	sp.acc = acc
 	return nil

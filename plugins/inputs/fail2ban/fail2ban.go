@@ -1,16 +1,21 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package fail2ban
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
-	"strings"
-
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	execCommand = exec.Command // execCommand is used to mock commands in tests.
@@ -20,11 +25,6 @@ type Fail2ban struct {
 	path    string
 	UseSudo bool
 }
-
-var sampleConfig = `
-  ## Use sudo to run fail2ban-client
-  use_sudo = false
-`
 
 var metricsTargets = []struct {
 	target string
@@ -40,12 +40,28 @@ var metricsTargets = []struct {
 	},
 }
 
-func (f *Fail2ban) Description() string {
-	return "Read metrics from fail2ban."
+const cmd = "fail2ban-client"
+
+func (*Fail2ban) SampleConfig() string {
+	return sampleConfig
 }
 
-func (f *Fail2ban) SampleConfig() string {
-	return sampleConfig
+func (f *Fail2ban) Init() error {
+	// Set defaults
+	if f.path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		f.path = path
+	}
+
+	// Check parameters
+	if f.path == "" {
+		return fmt.Errorf("%q not found", cmd)
+	}
+
+	return nil
 }
 
 func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
@@ -119,13 +135,7 @@ func extractCount(line string) (string, int) {
 }
 
 func init() {
-	f := Fail2ban{}
-	path, _ := exec.LookPath("fail2ban-client")
-	if len(path) > 0 {
-		f.path = path
-	}
 	inputs.Add("fail2ban", func() telegraf.Input {
-		f := f
-		return &f
+		return &Fail2ban{}
 	})
 }

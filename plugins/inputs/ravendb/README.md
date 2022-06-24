@@ -6,9 +6,8 @@ Requires RavenDB Server 5.2+.
 
 ## Configuration
 
-The following is an example config for RavenDB. **Note:** The client certificate used should have `Operator` permissions on the cluster.
-
-```toml
+```toml @sample.conf
+# Reads metrics from RavenDB servers via the Monitoring Endpoints
 [[inputs.ravendb]]
   ## Node URL and port that RavenDB is listening on. By default,
   ## attempts to connect securely over HTTPS, however, if the user
@@ -17,20 +16,20 @@ The following is an example config for RavenDB. **Note:** The client certificate
   url = "https://localhost:4433"
 
   ## RavenDB X509 client certificate setup
-  tls_cert = "/etc/telegraf/raven.crt"
-  tls_key = "/etc/telegraf/raven.key"
+  # tls_cert = "/etc/telegraf/raven.crt"
+  # tls_key = "/etc/telegraf/raven.key"
 
   ## Optional request timeout
   ##
   ## Timeout, specifies the amount of time to wait
-  ## for a server's response headers after fully writing the request and 
+  ## for a server's response headers after fully writing the request and
   ## time limit for requests made by this client
   # timeout = "5s"
 
   ## List of statistics which are collected
   # At least one is required
   # Allowed values: server, databases, indexes, collections
-  #  
+  #
   # stats_include = ["server", "databases", "indexes", "collections"]
 
   ## List of db where database stats are collected
@@ -40,11 +39,14 @@ The following is an example config for RavenDB. **Note:** The client certificate
   ## List of db where index status are collected
   ## If empty, all indexes from all db are concerned
   # index_stats_dbs = []
-  
+
   ## List of db where collection status are collected
   ## If empty, all collections from all db are concerned
   # collection_stats_dbs = []
 ```
+
+**Note:** The client certificate used should have `Operator` permissions on the
+cluster.
 
 ## Metrics
 
@@ -53,7 +55,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - url
     - node_tag
     - cluster_id
-    - public_server_url (optional)  
+    - public_server_url (optional)
   - fields:
     - backup_current_number_of_running_backups
     - backup_max_number_of_concurrent_backups
@@ -87,7 +89,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - license_max_cores
     - license_type
     - license_utilized_cpu_cores
-    - memory_allocated_in_mb  
+    - memory_allocated_in_mb
     - memory_installed_in_mb
     - memory_low_memory_severity
       - 0 -> None
@@ -108,7 +110,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - server_process_id
     - server_version
     - uptime_in_sec
-  
+
 - ravendb_databases
   - tags:
     - url
@@ -204,7 +206,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - tombstones_size_in_bytes
     - total_size_in_bytes
 
-## Example output
+## Example Output
 
 ```text
 > ravendb_server,cluster_id=07aecc42-9194-4181-999c-1c42450692c9,host=DESKTOP-2OISR6D,node_tag=A,url=http://localhost:8080 backup_current_number_of_running_backups=0i,backup_max_number_of_concurrent_backups=4i,certificate_server_certificate_expiration_left_in_sec=-1,cluster_current_term=2i,cluster_index=10i,cluster_node_state=4i,config_server_urls="http://127.0.0.1:8080",cpu_assigned_processor_count=8i,cpu_machine_usage=19.09944089456869,cpu_process_usage=0.16977205323024872,cpu_processor_count=8i,cpu_thread_pool_available_completion_port_threads=1000i,cpu_thread_pool_available_worker_threads=32763i,databases_loaded_count=1i,databases_total_count=1i,disk_remaining_storage_space_percentage=18i,disk_system_store_total_data_file_size_in_mb=35184372088832i,disk_system_store_used_data_file_size_in_mb=31379031064576i,disk_total_free_space_in_mb=42931i,license_expiration_left_in_sec=24079222.8772186,license_max_cores=256i,license_type="Enterprise",license_utilized_cpu_cores=8i,memory_allocated_in_mb=205i,memory_installed_in_mb=16384i,memory_low_memory_severity=0i,memory_physical_in_mb=16250i,memory_total_dirty_in_mb=0i,memory_total_swap_size_in_mb=0i,memory_total_swap_usage_in_mb=0i,memory_working_set_swap_usage_in_mb=0i,network_concurrent_requests_count=1i,network_last_request_time_in_sec=0.0058717,network_requests_per_sec=0.09916543455308825,network_tcp_active_connections=128i,network_total_requests=10i,server_full_version="5.2.0-custom-52",server_process_id=31044i,server_version="5.2",uptime_in_sec=56i 1613027977000000000

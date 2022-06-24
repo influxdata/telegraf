@@ -4,6 +4,7 @@
 package zfs
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -321,6 +322,43 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
+}
+
+func TestGetTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		pools    []poolInfo
+		expected map[string]string
+	}{
+		{
+			"no pools",
+			[]poolInfo{},
+			map[string]string{"pools": ""},
+		},
+		{
+			"single pool",
+			[]poolInfo{
+				{"data", "/proc/spl/kstat/zfs/data/objset-0x9288", v2},
+			},
+			map[string]string{"pools": "data"},
+		},
+		{
+			"duplicate pool names",
+			[]poolInfo{
+				{"pool", "/proc/spl/kstat/zfs/pool/objset-0x23ce1", v2},
+				{"pool", "/proc/spl/kstat/zfs/pool/objset-0x2e", v2},
+				{"data", "/proc/spl/kstat/zfs/data/objset-0x9288", v2},
+			},
+			map[string]string{"pools": "pool::data"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+			tags := getTags(tc.pools)
+			require.Equal(t, tc.expected, tags)
+		})
+	}
 }
 
 func getKstatMetricsArcOnly() map[string]interface{} {

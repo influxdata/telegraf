@@ -32,7 +32,8 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -76,7 +77,8 @@ func Test_Logstash6GatherProcessStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -121,7 +123,8 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -218,7 +221,8 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -541,7 +545,8 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -604,7 +609,8 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -671,7 +677,8 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 	if err != nil {
 		test.Logf("Can't connect to: %s", logstashTest.URL)
 	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 

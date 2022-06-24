@@ -17,7 +17,7 @@ import (
 )
 
 func TestProcessorShim(t *testing.T) {
-	testSendAndRecieve(t, "f1", "fv1")
+	testSendAndReceive(t, "f1", "fv1")
 }
 
 func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
@@ -27,10 +27,10 @@ func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 
-	testSendAndRecieve(t, "f1", string(b))
+	testSendAndReceive(t, "f1", string(b))
 }
 
-func testSendAndRecieve(t *testing.T, fieldKey string, fieldValue string) {
+func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 	p := &testProcessor{"hi", "mom"}
 
 	stdinReader, stdinWriter := io.Pipe()

@@ -4,27 +4,19 @@ This plugin sends metrics to Logz.io over HTTPs.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can send metrics over HTTPs to Logz.io
 [[outputs.logzio]]
-  ## Set to true if Logz.io sender checks the disk space before adding metrics to the disk queue.
-  # check_disk_space = true
+  ## Connection timeout, defaults to "5s" if not set.
+  # timeout = "5s"
 
-  ## The percent of used file system space at which the sender will stop queueing.
-  ## When we will reach that percentage, the file system in which the queue is stored will drop
-  ## all new logs until the percentage of used space drops below that threshold.
-  # disk_threshold = 98
-
-  ## How often Logz.io sender should drain the queue.
-  ## Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-  # drain_duration = "3s"
-
-  ## Where Logz.io sender should store the queue
-  ## queue_dir = Sprintf("%s%s%s%s%d", os.TempDir(), string(os.PathSeparator),
-  ##                     "logzio-buffer", string(os.PathSeparator), time.Now().UnixNano())
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 
   ## Logz.io account token
-  token = "your Logz.io token" # required
+  token = "your logz.io token" # required
 
   ## Use your listener URL for your Logz.io account region.
   # url = "https://listener.logz.io:8071"

@@ -6,7 +6,8 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Add a tag of the network interface name looked up over SNMP by interface number
 [[processors.ifname]]
   ## Name of tag holding the interface number
   # tag = "ifIndex"

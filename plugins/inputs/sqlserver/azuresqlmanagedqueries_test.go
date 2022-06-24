@@ -1,13 +1,14 @@
 package sqlserver
 
 import (
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
-func TestAzureSQL_Managed_ResourceStats_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_ResourceStats_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -40,7 +41,7 @@ func TestAzureSQL_Managed_ResourceStats_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Managed_ResourceGovernance_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_ResourceGovernance_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -81,7 +82,7 @@ func TestAzureSQL_Managed_ResourceGovernance_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Managed_DatabaseIO_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_DatabaseIO_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -122,7 +123,7 @@ func TestAzureSQL_Managed_DatabaseIO_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Managed_ServerProperties_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_ServerProperties_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -169,7 +170,7 @@ func TestAzureSQL_Managed_ServerProperties_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Managed_OsWaitStats_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_OsWaitStats_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -206,7 +207,7 @@ func TestAzureSQL_Managed_OsWaitStats_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Managed_MemoryClerks_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_MemoryClerks_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -238,7 +239,7 @@ func TestAzureSQL_Managed_MemoryClerks_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Managed_PerformanceCounters_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_PerformanceCounters_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -273,7 +274,7 @@ func TestAzureSQL_Managed_PerformanceCounters_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Managed_Requests_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_Requests_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -331,7 +332,7 @@ func TestAzureSQL_Managed_Requests_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Managed_Schedulers_Query(t *testing.T) {
+func TestAzureSQLIntegration_Managed_Schedulers_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

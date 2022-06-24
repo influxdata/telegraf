@@ -1,13 +1,19 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nstat
 
 import (
 	"bytes"
+	_ "embed"
 	"os"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	zeroByte    = []byte("0")
@@ -38,22 +44,7 @@ type Nstat struct {
 	DumpZeros      bool   `toml:"dump_zeros"`
 }
 
-var sampleConfig = `
-  ## file paths for proc files. If empty default paths will be used:
-  ##    /proc/net/netstat, /proc/net/snmp, /proc/net/snmp6
-  ## These can also be overridden with env variables, see README.
-  proc_net_netstat = "/proc/net/netstat"
-  proc_net_snmp = "/proc/net/snmp"
-  proc_net_snmp6 = "/proc/net/snmp6"
-  ## dump metrics with 0 values too
-  dump_zeros       = true
-`
-
-func (ns *Nstat) Description() string {
-	return "Collect kernel snmp counters and network interface statistics"
-}
-
-func (ns *Nstat) SampleConfig() string {
+func (*Nstat) SampleConfig() string {
 	return sampleConfig
 }
 

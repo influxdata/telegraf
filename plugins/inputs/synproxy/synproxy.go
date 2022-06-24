@@ -1,12 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package synproxy
 
 import (
+	_ "embed"
 	"os"
 	"path"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Synproxy struct {
 	Log telegraf.Logger `toml:"-"`
@@ -15,12 +21,8 @@ type Synproxy struct {
 	statFile string
 }
 
-func (k *Synproxy) Description() string {
-	return "Get synproxy counter statistics from procfs"
-}
-
-func (k *Synproxy) SampleConfig() string {
-	return ""
+func (*Synproxy) SampleConfig() string {
+	return sampleConfig
 }
 
 func getHostProc() string {

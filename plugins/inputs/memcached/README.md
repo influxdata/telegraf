@@ -4,7 +4,7 @@ This plugin gathers statistics data from a Memcached server.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many memcached servers.
 [[inputs.memcached]]
   # An array of address to gather stats about. Specify an ip on hostname
@@ -22,7 +22,7 @@ This plugin gathers statistics data from a Memcached server.
   # insecure_skip_verify = true
 ```
 
-## Measurements & Fields
+## Metrics
 
 The fields from this plugin are gathered in the *memcached* measurement.
 
@@ -76,7 +76,9 @@ Fields:
 * touch_misses - Number of items that have been touched and not found
 * uptime - Number of secs since the server started
 
-Description of gathered fields taken from [here](https://github.com/memcached/memcached/blob/master/doc/protocol.txt).
+Description of gathered fields taken from [memcached protocol docs][protocol].
+
+[protocol]: https://github.com/memcached/memcached/blob/master/doc/protocol.txt
 
 ## Tags
 
@@ -85,7 +87,9 @@ Description of gathered fields taken from [here](https://github.com/memcached/me
 
 ## Sample Queries
 
-You can use the following query to get the average get hit and miss ratio, as well as the total average size of cached items, number of cached items and average connection counts per server.
+You can use the following query to get the average get hit and miss ratio, as
+well as the total average size of cached items, number of cached items and
+average connection counts per server.
 
 ```sql
 SELECT mean(get_hits) / mean(cmd_get) as get_ratio, mean(get_misses) / mean(cmd_get) as get_misses_ratio, mean(bytes), mean(curr_items), mean(curr_connections) FROM memcached WHERE time > now() - 1h GROUP BY server

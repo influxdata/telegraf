@@ -19,7 +19,7 @@ To generate a file with specific inputs and outputs, you can use the
 --input-filter and --output-filter flags:
 
 ```sh
-telegraf --input-filter cpu:mem:net:swap --output-filter influxdb:kafka config
+telegraf config --input-filter cpu:mem:net:swap --output-filter influxdb:kafka
 ```
 
 [View the full list][flags] of Telegraf commands and flags or by running `telegraf --help`.
@@ -242,8 +242,14 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **hostname**:
   Override default hostname, if empty use os.Hostname()
+
 - **omit_hostname**:
   If set to true, do no set the "host" tag in the telegraf agent.
+
+- **snmp_translator**:
+  Method of translating SNMP objects. Can be "netsnmp" which
+  translates by calling external programs snmptranslate and snmptable,
+  or "gosmi" which translates using the built-in gosmi library.
 
 ## Plugins
 
@@ -533,7 +539,7 @@ The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
 
 > NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
-defined at the *_end_* of the plugin definition, otherwise subsequent plugin config
+defined at the **end** of the plugin definition, otherwise subsequent plugin config
 options will be interpreted as part of the tagpass/tagdrop tables.
 
 ### Modifiers
