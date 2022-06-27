@@ -34,6 +34,7 @@ var sampleConfig string
 
 // Cloudvision struct
 type CVP struct {
+	// CVP information
 	Cvpaddress    string         `toml:"addresses"`
 	Subscriptions []Subscription `toml:"subscription"`
 
@@ -42,7 +43,7 @@ type CVP struct {
 	Prefix      string
 	UpdatesOnly bool `toml:"updates_only"`
 
-	Cvptoken string `toml:"cvptoken"`
+	Cvptoken string `toml:"cvptoken"` // JSON web toke for ClouVision
 
 	// Redial
 	Redial config.Duration
@@ -157,10 +158,11 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
-
+	// Start the request for gNMI interface on CVP.
 	c.wg.Add(len(cvdevsslice))
 	CvpAddr := c.Cvpaddress
 	for i := range request {
+		// Loop through the requests for targets.
 		thisReq := make([]gnmiLib.SubscribeRequest, 1)
 		copy(thisReq, request[i:(i+1)])
 		go func(CvpAddr string) {
@@ -216,7 +218,6 @@ func (c *CVP) CvpDevices() map[string]string {
 		if Dev.Result.Value.StreamingStatus == "STREAMING_STATUS_ACTIVE" {
 			devs[Dev.Result.Value.Fqdn] = Dev.Result.Value.Key.DeviceID
 		}
-
 	}
 	//Return devices.
 	return devs
@@ -358,14 +359,11 @@ func (c *CVP) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Con
 		}))))
 	}
 	if tlscfg != nil {
-		//opt = grpc.WithTransportCredentials(credentials.NewTLS(tlscfg))
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
 	} else {
-		//opt = grpc.WithInsecure()
 		options = append(options, grpc.WithInsecure())
 	}
 
-	//client, err := grpc.DialContext(ctx, address, opt)
 	client, err := grpc.DialContext(ctx, address, options...)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %v", err)
@@ -384,8 +382,8 @@ func (c *CVP) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Con
 			return fmt.Errorf("failed to send subscription request: %v", err)
 		}
 	}
+	c.Log.Info("Connection to gNMI device established for device target ")
 
-	c.Log.Info("Connection to gNMI device established ", address)
 	defer c.Log.Debugf("Connection to gNMI device %s closed", address)
 	for ctx.Err() == nil {
 		var reply *gnmiLib.SubscribeResponse
