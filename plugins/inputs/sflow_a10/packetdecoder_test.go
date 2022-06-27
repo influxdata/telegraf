@@ -91,7 +91,7 @@ func TestDecodeCounterSample(t *testing.T) {
 			SequenceNumber: uint32(5),
 			SourceID:       uint32(278808),
 			CounterRecords: []CounterRecord{
-				CounterRecord{
+				{
 					CounterFormat: CounterFormatType(217),
 					CounterData: &CounterData{
 						CounterFields: map[string]interface{}{
@@ -100,6 +100,7 @@ func TestDecodeCounterSample(t *testing.T) {
 							"testCounter2": uint64(29),
 						},
 					},
+					NeedsIpAndPort: true,
 				},
 			},
 		},
