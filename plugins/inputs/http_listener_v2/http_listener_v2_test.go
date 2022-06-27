@@ -594,8 +594,8 @@ func TestWriteHTTPTransformHeaderValuesToTagsBulkWrite(t *testing.T) {
 
 func TestWriteHTTPQueryParams(t *testing.T) {
 	parser := form_urlencoded.Parser{
-		MetricName: "query_measurement"
-		TagKeys: []string{"tagKey"}
+		MetricName: "query_measurement",
+		TagKeys:    []string{"tagKey"},
 	}
 	require.NoError(t, parser.Init())
 
@@ -621,10 +621,11 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 }
 
 func TestWriteHTTPFormData(t *testing.T) {
-	parser := form_urlencoded.Parser{}
+	parser := form_urlencoded.Parser{
+		MetricName: "query_measurement",
+		TagKeys:    []string{"tagKey"},
+	}
 	require.NoError(t, parser.Init())
-	parser.MetricName = "query_measurement"
-	parser.TagKeys = []string{"tagKey"}
 
 	listener := newTestHTTPListenerV2()
 	listener.Parser = parser
