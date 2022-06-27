@@ -18,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
-	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
 
 // Creator is the function to create a new parser
@@ -232,8 +231,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.Separator,
 			config.Templates)
-	case "wavefront":
-		parser, err = NewWavefrontParser(config.DefaultTags)
 	case "grok":
 		parser, err = newGrokParser(
 			config.MetricName,
@@ -363,10 +360,6 @@ func NewLogFmtParser(metricName string, defaultTags map[string]string, tagKeys [
 	parser := logfmt.NewParser(metricName, defaultTags, tagKeys)
 	err := parser.Init()
 	return parser, err
-}
-
-func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
-	return wavefront.NewWavefrontParser(defaultTags), nil
 }
 
 func NewFormUrlencodedParser(
