@@ -4,6 +4,38 @@ The Arista CloudVision Telemetry Input Plugin allows for a operator to use the [
 
 A valid [service token](https://www.arista.com/en/cg-cv/cv-service-accounts) is required for each CloudVision subscription.
 
+## EOS Switch Device configuration
+Every switch must be connected to cvp through terminattr and must leverage the new -cvgnmi flag for example
+
+```shell
+daemon TerminAttr
+   exec /usr/bin/TerminAttr -ingestgrpcurl=CVPIPADDRESS:9910 -cvcompression=gzip -ingestauth=key, -smashexcludes=ale,flexCounter,hardware,kni,pulse,strata -cvgnmi -ingestexclude=/Sysdb/cell/1/agent,/Sysdb/cell/2/agent -taillogs
+   no shutdown
+```
+
+Every switch need to have the gNMI interface running.
+
+
+```shell
+management api gnmi
+   transport grpc default
+```
+
+verification
+```shell
+switch1#show management api gnmi
+Transport: default
+Enabled: yes
+Server: running on port 6030, in default VRF
+SSL profile: none
+QoS DSCP: none
+Authorization required: no
+Accounting requests: no
+Certificate username authentication: no
+Notification timestamp: last change time
+Listen addresses: ::
+```
+
 ## Configuration
 ```toml @sample.conf
 [[inputs.arista_cloudvision_telemtry]]
