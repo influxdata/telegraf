@@ -38,19 +38,26 @@ GW8+
 
 ## List of tags used by the plugin
 
-* group - to define the name of the group you want to monitor, can be changed
-  with config.
-* host - to define the name of the host you want to monitor, can be changed with
-  config.
-* service - to define the name of the service you want to monitor.
-* status - to define the status of the service. Supported statuses:
+* __group__ - to define the name of the group you want to monitor,
+  can be changed with config.
+* __host__ - to define the name of the host you want to monitor,
+  can be changed with config.
+* __service__ - to define the name of the service you want to monitor.
+* __status__ - to define the status of the service. Supported statuses:
   "SERVICE_OK", "SERVICE_WARNING", "SERVICE_UNSCHEDULED_CRITICAL",
   "SERVICE_PENDING", "SERVICE_SCHEDULED_CRITICAL", "SERVICE_UNKNOWN".
-* message - to provide any message you want.
-* unitType - to use in monitoring contexts(subset of The Unified Code for Units
-  of Measure standard). Supported types: "1", "%cpu", "KB", "GB", "MB".
-* warning - to define warning threshold value.
-* critical - to define critical threshold value.
+* __message__ - to provide any message you want,
+  it overrides __message__ field value.
+* __unitType__ - to use in monitoring contexts (subset of The Unified Code for
+  Units of Measure standard). Supported types: "1", "%cpu", "KB", "GB", "MB".
+* __critical__ - to define the default critical threshold value,
+  it overrides value_cr field value.
+* __warning__ - to define the default warning threshold value,
+  it overrides value_wn field value.
+* __value_cr__ - to define critical threshold value,
+  it overrides __critical__ tag value and __value_cr__ field value.
+* __value_wn__ - to define warning threshold value,
+  it overrides __warning__ tag value and __value_wn__ field value.
 
 ## NOTE
 
