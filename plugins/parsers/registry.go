@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
@@ -218,9 +217,6 @@ func NewParser(config *Config) (Parser, error) {
 	case "graphite":
 		parser, err = NewGraphiteParser(config.Separator,
 			config.Templates, config.DefaultTags)
-	case "collectd":
-		parser, err = NewCollectdParser(config.CollectdAuthFile,
-			config.CollectdSecurityLevel, config.CollectdTypesDB, config.CollectdSplit)
 	case "dropwizard":
 		parser, err = NewDropwizardParser(
 			config.DropwizardMetricRegistryPath,
@@ -319,15 +315,6 @@ func NewValueParser(
 	defaultTags map[string]string,
 ) (Parser, error) {
 	return value.NewValueParser(metricName, dataType, fieldName, defaultTags), nil
-}
-
-func NewCollectdParser(
-	authFile string,
-	securityLevel string,
-	typesDB []string,
-	split string,
-) (Parser, error) {
-	return collectd.NewCollectdParser(authFile, securityLevel, typesDB, split)
 }
 
 func NewDropwizardParser(

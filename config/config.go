@@ -1762,7 +1762,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	// Parser options to ignore
 	case "data_type", "separator", "tag_keys",
 		// "templates", // shared with serializers
-		"collectd_auth_file", "collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb",
 		"dropwizard_metric_registry_path", "dropwizard_tags_path", "dropwizard_tag_paths",
 		"dropwizard_time_format", "dropwizard_time_path",
 		"form_urlencoded_tag_keys",
