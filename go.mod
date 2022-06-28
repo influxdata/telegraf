@@ -58,7 +58,6 @@ require (
 	github.com/go-ldap/ldap/v3 v3.4.1
 	github.com/go-logfmt/logfmt v0.5.1
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
-	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/goburrow/modbus v0.1.0 // indirect
@@ -168,6 +167,8 @@ require (
 	k8s.io/client-go v0.24.1
 	modernc.org/sqlite v1.17.3
 )
+
+require github.com/go-redis/redis/v7 v7.4.1
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect

@@ -2,6 +2,8 @@
 
 The RedisTimeSeries output plugin writes metrics to the RedisTimeSeries server.
 
+## Configuration
+
 ```toml
 [[outputs.redistimeseries]]
   ## The address of the RedisTimeSeries server.

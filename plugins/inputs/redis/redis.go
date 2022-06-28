@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-  
+
 	"github.com/go-redis/redis/v8"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
