@@ -180,7 +180,7 @@ following works:
 - github.com/jcmturner/rpc [Apache License 2.0](https://github.com/jcmturner/rpc/blob/master/LICENSE)
 - github.com/jhump/protoreflect [Apache License 2.0](https://github.com/jhump/protoreflect/blob/master/LICENSE)
 - github.com/jmespath/go-jmespath [Apache License 2.0](https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
-- github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/license.md)
+- github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/LICENSE.md)
 - github.com/josharian/native [MIT License](https://github.com/josharian/native/blob/main/license)
 - github.com/jpillora/backoff [MIT License](https://github.com/jpillora/backoff/blob/master/LICENSE)
 - github.com/json-iterator/go [MIT License](https://github.com/json-iterator/go/blob/master/LICENSE)
