@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,6 +75,7 @@ type MQTTConsumer struct {
 
 	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 	PersistentSession bool
+	bytesRecv         string
 	ClientID          string `toml:"client_id"`
 
 	tls.ClientConfig
@@ -246,6 +248,9 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	}
 
 	for _, metric := range metrics {
+		msgSize := len(msg.Payload())
+		stringMsgSize := strconv.FormatInt(int64(msgSize), 10)
+		os.Stderr.WriteString("Size: " + stringMsgSize)
 		if m.topicTagParse != "" {
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
@@ -258,6 +263,8 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 			if p.Measurement != "" {
 				metric.SetName(values[p.MeasurementIndex])
 			}
+			p.SplitTags = append(p.SplitTags, m.bytesRecv)
+			values = append(values, stringMsgSize)
 			if p.Tags != "" {
 				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
 				if err != nil {
