@@ -392,8 +392,5 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-// replaced due to https://github.com/satori/go.uuid/issues/73
-replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
-
 // replaced due to open PR updating protobuf https://github.com/cisco-ie/nx-telemetry-proto/pull/1
 replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemetry-proto v0.0.0-20210629125746-3c19a51b1abc
