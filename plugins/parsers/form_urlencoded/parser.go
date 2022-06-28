@@ -60,7 +60,7 @@ func (p Parser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 // SetDefaultTags sets the default tags for every metric
-func (p Parser) SetDefaultTags(tags map[string]string) {
+func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 

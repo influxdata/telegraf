@@ -628,7 +628,7 @@ func TestWriteHTTPFormData(t *testing.T) {
 	require.NoError(t, parser.Init())
 
 	listener := newTestHTTPListenerV2()
-	listener.Parser = parser
+	listener.Parser = &parser
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
