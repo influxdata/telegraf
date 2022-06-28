@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -90,12 +90,15 @@ func TestGrokParser(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	parserConfig := parsers.Config{
-		DataFormat:   "grok",
-		GrokPatterns: []string{"%{COMMON_LOG_FORMAT}"},
-	}
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &grok.Parser{
+			Patterns: []string{"%{COMMON_LOG_FORMAT}"},
+			Log:      testutil.Logger{},
+		}
+		err := parser.Init()
 
-	r.SetParserFunc(func() (telegraf.Parser, error) { return parsers.NewParser(&parserConfig) })
+		return parser, err
+	})
 
 	err = r.Gather(&acc)
 	require.NoError(t, err)

@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/grok"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -128,11 +129,12 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 		DataFormat:             "grok",
 	}
 
-	var err error
-	l.GrokParser, err = parsers.NewParser(config)
+	parser := grok.Parser{}
+	err := parser.InitFromConfig(config)
 	if err != nil {
 		return err
 	}
+	l.GrokParser = &parser
 	models.SetLoggerOnPlugin(l.GrokParser, l.Log)
 
 	l.wg.Add(1)
