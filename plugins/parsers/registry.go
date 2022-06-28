@@ -6,7 +6,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
-	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
@@ -203,8 +202,6 @@ func NewParser(config *Config) (Parser, error) {
 		} else {
 			parser, err = NewInfluxParser()
 		}
-	case "nagios":
-		parser, err = NewNagiosParser()
 	case "prometheus":
 		parser, err = NewPrometheusParser(
 			config.DefaultTags,
@@ -228,10 +225,6 @@ func NewParser(config *Config) (Parser, error) {
 		err = p.InitFromConfig(config)
 	}
 	return parser, err
-}
-
-func NewNagiosParser() (Parser, error) {
-	return &nagios.NagiosParser{}, nil
 }
 
 func NewInfluxParser() (Parser, error) {

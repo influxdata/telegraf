@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // unknownExitCode is the nagios unknown status code
@@ -85,10 +86,11 @@ func AddState(runErr error, errMessage []byte, metrics []telegraf.Metric) []tele
 	return append(metrics, m)
 }
 
-type NagiosParser struct {
-	MetricName  string
-	DefaultTags map[string]string
-	Log         telegraf.Logger `toml:"-"`
+type Parser struct {
+	DefaultTags map[string]string `toml:"-"`
+	Log         telegraf.Logger   `toml:"-"`
+
+	metricName string
 }
 
 // Got from Alignak
@@ -98,16 +100,16 @@ var (
 	nagiosRegExp    = regexp.MustCompile(`^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*);?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*`)
 )
 
-func (p *NagiosParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	return metrics[0], err
 }
 
-func (p *NagiosParser) SetDefaultTags(tags map[string]string) {
+func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	ts := time.Now().UTC()
 
 	s := bufio.NewScanner(bytes.NewReader(buf))
@@ -307,4 +309,24 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 	}
 
 	return min, max, err
+}
+
+func (p *Parser) Init() error {
+	return nil
+}
+
+func init() {
+	// Register parser
+	parsers.Add("nagios",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{metricName: defaultMetricName}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.metricName = config.MetricName
+	p.DefaultTags = config.DefaultTags
+	return p.Init()
 }
