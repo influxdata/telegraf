@@ -316,7 +316,7 @@ following works:
 - gopkg.in/tomb.v1 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v1/LICENSE)
 - gopkg.in/tomb.v2 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v2/LICENSE)
 - gopkg.in/yaml.v2 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v2.2.2/LICENSE)
-- gopkg.in/yaml.v3 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v3/LICENSE)
+- gopkg.in/yaml.v3 [MIT License](https://github.com/go-yaml/yaml/blob/v3/LICENSE)
 - k8s.io/api [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/apimachinery [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/client-go [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
