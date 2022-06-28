@@ -143,7 +143,7 @@ following works:
 - github.com/grid-x/serial [MIT License](https://github.com/grid-x/serial/blob/master/LICENSE)
 - github.com/gwos/tcg/sdk [MIT License](https://github.com/gwos/tcg/blob/master/LICENSE)
 - github.com/hailocab/go-hostpool [MIT License](https://github.com/hailocab/go-hostpool/blob/master/LICENSE)
-- github.com/harlow/kinesis-consumer [MIT License](https://github.com/harlow/kinesis-consumer/blob/master/MIT-LICENSE)
+- github.com/harlow/kinesis-consumer [MIT License](https://github.com/harlow/kinesis-consumer/blob/master/LICENSE)
 - github.com/hashicorp/consul/api [Mozilla Public License 2.0](https://github.com/hashicorp/consul/blob/master/LICENSE)
 - github.com/hashicorp/errwrap [Mozilla Public License 2.0](https://github.com/hashicorp/errwrap/blob/master/LICENSE)
 - github.com/hashicorp/go-cleanhttp [Mozilla Public License 2.0](https://github.com/hashicorp/go-cleanhttp/blob/master/LICENSE)
