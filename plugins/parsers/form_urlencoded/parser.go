@@ -16,7 +16,7 @@ var ErrNoMetric = fmt.Errorf("no metric in line")
 
 // Parser decodes "application/x-www-form-urlencoded" data into metrics
 type Parser struct {
-	MetricName  string            `toml:"metric_name"`
+	MetricName  string            `toml:"-"`
 	TagKeys     []string          `toml:"form_urlencoded_tag_keys"`
 	DefaultTags map[string]string `toml:"-"`
 }
