@@ -333,4 +333,4 @@ following works:
 
 ## Telegraf used and modified code from these projects
 
-- github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)
+- github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/blob/main/LICENSE)
