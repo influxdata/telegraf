@@ -36,7 +36,7 @@ func (pkg *packageInfo) Classify() (float64, error) {
 	}
 
 	// Download the license text
-	source, err := normalizeUrl(pkg.url)
+	source, err := normalizeURL(pkg.url)
 	if err != nil {
 		return 0.0, fmt.Errorf("%q is not a valid URL: %w", pkg.url, err)
 	}
@@ -79,7 +79,7 @@ func (pkg *packageInfo) Classify() (float64, error) {
 	return coverage.Percent, nil
 }
 
-func normalizeUrl(raw string) (string, error) {
+func normalizeURL(raw string) (string, error) {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return "", err

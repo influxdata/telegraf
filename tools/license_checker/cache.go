@@ -68,7 +68,6 @@ func (c *cache) Get(pkg *packageInfo) (string, float64, bool) {
 	now := time.Now()
 	deadline := entry.Update.Add(c.Expiry)
 	if c.Expiry > 0 && now.After(deadline) {
-
 		return entry.Spdx, entry.Confidence, false
 	}
 	return entry.Spdx, entry.Confidence, true

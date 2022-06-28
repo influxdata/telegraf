@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"log"
+	"log" //nolint:revive // We cannot use the Telegraf's logging here
 	"os"
 	"regexp"
 	"strings"
@@ -79,11 +79,7 @@ func (w *whitelist) Parse(filename string) error {
 		*w = append(*w, entry)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	return nil
+	return scanner.Err()
 }
 
 func (w *whitelist) Check(pkg, version, spdx string) (ok, found bool) {

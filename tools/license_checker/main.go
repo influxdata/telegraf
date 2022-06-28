@@ -6,7 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
+	"log" //nolint:revive // We cannot use the Telegraf's logging here
 	"os"
 	"path/filepath"
 	"sort"
@@ -21,7 +21,7 @@ import (
 )
 
 //go:embed data/spdx_mapping.json
-var spdx_mapping_file []byte
+var spdxMappingFile []byte
 
 var debug bool
 var spdxCache *cache
@@ -52,13 +52,14 @@ func main() {
 
 	fmt.Printf("help=%v    args=%d\n", help, flag.NArg())
 	if help || flag.NArg() != 1 {
+		//nolint:revive // We cannot do anything about possible failures here
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s [options] <markdown list file>\n", os.Args[0])
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	// Setup full-name to license SPDX identifier mapping
-	if err := json.Unmarshal(spdx_mapping_file, &nameToSPDX); err != nil {
+	if err := json.Unmarshal(spdxMappingFile, &nameToSPDX); err != nil {
 		log.Fatalf("Unmarshalling license name to SPDX mapping failed: %v", err)
 	}
 
