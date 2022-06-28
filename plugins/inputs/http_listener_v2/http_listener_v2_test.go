@@ -601,7 +601,7 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 
 	listener := newTestHTTPListenerV2()
 	listener.DataSource = "query"
-	listener.Parser = parser
+	listener.Parser = &parser
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
