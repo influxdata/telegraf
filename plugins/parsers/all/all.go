@@ -5,6 +5,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/parsers/collectd"
 	_ "github.com/influxdata/telegraf/plugins/parsers/csv"
 	_ "github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
+	_ "github.com/influxdata/telegraf/plugins/parsers/graphite"
 	_ "github.com/influxdata/telegraf/plugins/parsers/json"
 	_ "github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	_ "github.com/influxdata/telegraf/plugins/parsers/value"
