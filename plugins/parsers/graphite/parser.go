@@ -168,6 +168,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 // ApplyTemplate extracts the template fields from the given line and
 // returns the measurement name and tags.
+//nolint:revive // This function should be eliminated anyway
 func (p *Parser) ApplyTemplate(line string) (string, map[string]string, string, error) {
 	// Break line into fields (name, value, timestamp), only name is used
 	fields := strings.Fields(line)
