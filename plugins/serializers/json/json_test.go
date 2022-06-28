@@ -223,3 +223,20 @@ func TestSerializeBatchSkipInfAllFields(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []byte(`{"metrics":[{"fields":{},"name":"cpu","tags":{},"timestamp":0}]}`), buf)
 }
+
+func TestSerializeLogstashBatch(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m, m}
+	s, _ := NewSerializer(0, "", true)
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+	require.Equal(t, []byte(`[{"fields":{"value":42},"name":"cpu","tags":{},"timestamp":0},{"fields":{"value":42},"name":"cpu","tags":{},"timestamp":0}]`), buf)
+}
