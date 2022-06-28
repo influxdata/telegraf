@@ -7,7 +7,6 @@ The SNMP input plugin gathers metrics from SNMP agents
 ## Configuration
 
 ```toml @sample.conf
-# DEPRECATED! PLEASE USE inputs.snmp INSTEAD.
 [[inputs.snmp_legacy]]
   ## Use 'oids.txt' file to translate oids to names
   ## To generate 'oids.txt' you need to run:

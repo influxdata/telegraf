@@ -19,10 +19,10 @@ Compatibility information is available from the govmomi project
 
 ## Configuration
 
-```toml
-# Read metrics from one or many vCenters
+```toml @sample.conf
+-# Read metrics from one or many vCenters
 [[inputs.vsphere]]
-    ## List of vCenter URLs to be monitored. These three lines must be uncommented
+  ## List of vCenter URLs to be monitored. These three lines must be uncommented
   ## and edited for the plugin to work.
   vcenters = [ "https://vcenter.local/sdk" ]
   username = "user@corp.local"
@@ -144,7 +144,7 @@ Compatibility information is available from the govmomi project
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default
 
-    ## Datastores
+  ## Datastores
   # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
   # datastore_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
@@ -188,12 +188,6 @@ Compatibility information is available from the govmomi project
   ## preserve the full precision when averaging takes place.
   # use_int_samples = true
 
-  ## The number of vSphere 5 minute metric collection cycles to look back for non-realtime metrics. In 
-  ## some versions (6.7, 7.0 and possible more), certain metrics, such as cluster metrics, may be reported
-  ## with a significant delay (>30min). If this happens, try increasing this number. Please note that increasing
-  ## it too much may cause performance issues.
-  # metric_lookback = 3
-
   ## Custom attributes from vCenter can be very useful for queries in order to slice the
   ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
@@ -205,19 +199,29 @@ Compatibility information is available from the govmomi project
   # custom_attribute_include = []
   # custom_attribute_exclude = ["*"]
 
+  ## The number of vSphere 5 minute metric collection cycles to look back for non-realtime metrics. In
+  ## some versions (6.7, 7.0 and possible more), certain metrics, such as cluster metrics, may be reported
+  ## with a significant delay (>30min). If this happens, try increasing this number. Please note that increasing
+  ## it too much may cause performance issues.
+  # metric_lookback = 3
+
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
   # ssl_cert = "/path/to/certfile"
   # ssl_key = "/path/to/keyfile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## The Historical Interval value must match EXACTLY the interval in the daily
+  # "Interval Duration" found on the VCenter server under Configure > General > Statistics > Statistic intervals
+  # historical_interval = "5m"
 ```
 
 NOTE: To disable collection of a specific resource type, simply exclude all
 metrics using the XX_metric_exclude.  For example, to disable collection of VMs,
 add this:
 
-```toml @sample.conf
+```toml
 vm_metric_exclude = [ "*" ]
 ```
 

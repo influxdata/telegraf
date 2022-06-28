@@ -160,8 +160,8 @@ as it changes occasionally.
     - ops (int, count): Total operations of this type.
     - trans (int, count): Total transmissions of this type, including retransmissions: `OP_ops - OP_trans = total_retransmissions` (lower is better).
     - timeouts (int, count): Number of major timeouts.
-    - bytes_sent (int, count): Bytes received, including headers (should also be close to on-wire size).
-    - bytes_recv (int, count): Bytes sent, including headers (should be close to on-wire size).
+    - bytes_sent (int, count): Bytes sent, including headers (should also be close to on-wire size).
+    - bytes_recv (int, count): Bytes received, including headers (should be close to on-wire size).
     - queue_time (int, milliseconds): Cumulative time a request waited in the queue before sending this OP type.
     - response_time (int, milliseconds): Cumulative time waiting for a response for this OP type.
     - total_time (int, milliseconds): Cumulative time a request waited in the queue before sending.
