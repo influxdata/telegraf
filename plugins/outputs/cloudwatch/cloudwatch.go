@@ -175,7 +175,9 @@ func (c *CloudWatch) Connect() error {
 
 	cfg, err := c.CredentialConfig.Credentials()
 
-	//c.svc = cloudwatch.NewFromConfig(cfg)
+	if err != nil {
+		return err
+	}
 
 	c.svc = cloudwatch.NewFromConfig(cfg, func(options *cloudwatch.Options) {
 		// Disable logging
