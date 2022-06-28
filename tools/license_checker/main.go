@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "embed"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -18,8 +20,12 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
+//go:embed data/spdx_mapping.json
+var spdx_mapping_file []byte
+
 var debug bool
 var spdxCache *cache
+var nameToSPDX map[string]string
 
 func debugf(format string, v ...any) {
 	if !debug {
@@ -49,6 +55,11 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s [options] <markdown list file>\n", os.Args[0])
 		flag.PrintDefaults()
 		os.Exit(1)
+	}
+
+	// Setup full-name to license SPDX identifier mapping
+	if err := json.Unmarshal(spdx_mapping_file, &nameToSPDX); err != nil {
+		log.Fatalf("Unmarshalling license name to SPDX mapping failed: %v", err)
 	}
 
 	// Get required files

@@ -11,20 +11,6 @@ import (
 	"github.com/google/licensecheck"
 )
 
-var nameToSPDX = map[string]string{
-	`Apache License 2.0`:                      "Apache-2.0",
-	`BSD 2-Clause "Simplified" License`:       "BSD-2-Clause",
-	`BSD 3-Clause "New" or "Revised" License`: "BSD-3-Clause",
-	`BSD 3-Clause Clear License`:              "BSD-3-Clause",
-	`BSD 3-Clause License`:                    "BSD-3-Clause",
-	`Eclipse Public License - v 1.0`:          "EPL-1.0",
-	`ISC License`:                             "ISC",
-	`MIT License`:                             "MIT",
-	`Mozilla Public License 2.0`:              "MPL-2.0",
-	`The Unlicense`:                           "Unlicense",
-	`zlib License`:                            "Zlib",
-}
-
 type packageInfo struct {
 	name    string
 	version string
