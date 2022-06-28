@@ -2,13 +2,10 @@ package main
 
 import (
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"os"
 	"time"
 )
-
-var defaultTimeout = 1 * time.Hour
 
 type cacheEntry struct {
 	Spdx       string
@@ -18,35 +15,22 @@ type cacheEntry struct {
 
 type cache struct {
 	Entries map[string]cacheEntry
-	Timeout time.Duration
+	Expiry  time.Duration
 }
 
-func (c *cache) Add(pkg *packageInfo, spdx string, confidence float64) {
-	c.Entries[pkg.name+"@"+pkg.version] = cacheEntry{spdx, confidence, time.Now()}
-}
-
-func (c *cache) Get(pkg *packageInfo) (string, float64, bool) {
-	entry, found := c.Entries[pkg.name+"@"+pkg.version]
-	if !found {
-		return "", 0.0, false
-	}
-	if time.Now().After(entry.Update.Add(c.Timeout)) {
-		return entry.Spdx, entry.Confidence, false
-	}
-	return entry.Spdx, entry.Confidence, true
-}
-
-func Load(filename string) (*cache, error) {
+func NewCache(expiry time.Duration) *cache {
 	c := cache{
 		Entries: make(map[string]cacheEntry),
-		Timeout: defaultTimeout,
+		Expiry:  expiry,
 	}
+	return &c
+}
+
+func LoadCache(filename string) (*cache, error) {
+	var c cache
 
 	file, err := os.Open(filename)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return &c, nil
-		}
 		return nil, fmt.Errorf("reading file failed: %w", err)
 	}
 	defer file.Close()
@@ -70,4 +54,22 @@ func (c *cache) Save(filename string) error {
 		return fmt.Errorf("encoding failed: %w", err)
 	}
 	return nil
+}
+
+func (c *cache) Add(pkg *packageInfo, spdx string, confidence float64) {
+	c.Entries[pkg.name+"@"+pkg.version] = cacheEntry{spdx, confidence, time.Now()}
+}
+
+func (c *cache) Get(pkg *packageInfo) (string, float64, bool) {
+	entry, found := c.Entries[pkg.name+"@"+pkg.version]
+	if !found {
+		return "", 0.0, false
+	}
+	now := time.Now()
+	deadline := entry.Update.Add(c.Expiry)
+	if c.Expiry > 0 && now.After(deadline) {
+
+		return entry.Spdx, entry.Confidence, false
+	}
+	return entry.Spdx, entry.Confidence, true
 }

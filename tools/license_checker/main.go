@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"golang.org/x/mod/modfile"
 
@@ -30,6 +32,7 @@ func main() {
 	var help, verbose bool
 	var threshold float64
 	var cacheFn, whitelistFn, userpkg string
+	var expiry time.Duration
 
 	flag.BoolVar(&debug, "debug", false, "output debugging information")
 	flag.BoolVar(&help, "help", false, "output this help text")
@@ -38,8 +41,10 @@ func main() {
 	flag.StringVar(&cacheFn, "cache", "", "use the given cache file")
 	flag.StringVar(&whitelistFn, "whitelist", "", "use the given white-list file for comparison")
 	flag.StringVar(&userpkg, "package", "", "only test the given package (all by default)")
+	flag.DurationVar(&expiry, "expiry", 0, "time until a cache entry expires (never by default)")
 	flag.Parse()
 
+	fmt.Printf("help=%v    args=%d\n", help, flag.NArg())
 	if help || flag.NArg() != 1 {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s [options] <markdown list file>\n", os.Args[0])
 		flag.PrintDefaults()
@@ -63,10 +68,14 @@ func main() {
 		var err error
 
 		log.Printf("Reading cache file %q...", cacheFn)
-		spdxCache, err = Load(cacheFn)
+		spdxCache, err = LoadCache(cacheFn)
 		if err != nil {
-			log.Fatalf("Reading cache file failed: %v", err)
+			if !errors.Is(err, os.ErrNotExist) {
+				log.Fatalf("Reading cache file failed: %v", err)
+			}
+			spdxCache = NewCache(expiry)
 		}
+		spdxCache.Expiry = expiry
 	}
 
 	log.Printf("Reading module file %q...", moduleFilename)
