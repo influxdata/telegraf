@@ -122,25 +122,18 @@ func TestTemplateApply(t *testing.T) {
 
 	for _, test := range tests {
 		tmpl, err := templating.NewDefaultTemplateWithPattern(test.template)
-		if errstr(err) != test.err {
-			t.Fatalf("err does not match.  expected %v, got %v", test.err, err)
-		}
-		if err != nil {
-			// If we erred out,it was intended and the following tests won't work
+		if test.err == "" {
+			require.NoError(t, err)
+		} else {
+			require.EqualError(t, err, test.err)
 			continue
 		}
 
 		measurement, tags, _, _ := tmpl.Apply(test.input, DefaultSeparator)
-		if measurement != test.measurement {
-			t.Fatalf("name parse failer.  expected %v, got %v", test.measurement, measurement)
-		}
-		if len(tags) != len(test.tags) {
-			t.Fatalf("unexpected number of tags.  expected %v, got %v", test.tags, tags)
-		}
+		require.Equal(t, test.measurement, measurement)
+		require.Len(t, tags, len(test.tags))
 		for k, v := range test.tags {
-			if tags[k] != v {
-				t.Fatalf("unexpected tag value for tags[%s].  expected %q, got %q", k, v, tags[k])
-			}
+			require.Equal(t, v, tags[k])
 		}
 	}
 }
@@ -283,13 +276,13 @@ func TestParseLine(t *testing.T) {
 		require.NoError(t, p.Init())
 
 		m, err := p.ParseLine(test.input)
-		if errstr(err) != test.err {
-			t.Fatalf("err does not match.  expected %v, got %v", test.err, err)
-		}
-		if err != nil {
-			// If we erred out,it was intended and the following tests won't work
+		if test.err == "" {
+			require.NoError(t, err)
+		} else {
+			require.EqualError(t, err, test.err)
 			continue
 		}
+
 		if m.Name() != test.measurement {
 			t.Fatalf("name parse failer.  expected %v, got %v",
 				test.measurement, m.Name())
@@ -396,13 +389,13 @@ func TestParse(t *testing.T) {
 		require.NoError(t, p.Init())
 
 		metrics, err := p.Parse(test.input)
-		if errstr(err) != test.err {
-			t.Fatalf("err does not match.  expected [%v], got [%v]", test.err, err)
-		}
-		if err != nil {
-			// If we erred out,it was intended and the following tests won't work
+		if test.err == "" {
+			require.NoError(t, err)
+		} else {
+			require.EqualError(t, err, test.err)
 			continue
 		}
+
 		if metrics[0].Name() != test.measurement {
 			t.Fatalf("name parse failer.  expected %v, got %v",
 				test.measurement, metrics[0].Name())
@@ -901,12 +894,4 @@ func TestApplyTemplateMostSpecificTemplate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "net", measurement)
 	require.Equal(t, map[string]string{"host": "server001", "metric": "a.b"}, tags)
-}
-
-// Test Helpers
-func errstr(err error) string {
-	if err != nil {
-		return err.Error()
-	}
-	return ""
 }
