@@ -42,7 +42,7 @@ require (
 	github.com/benbjohnson/clock v1.3.0
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/caio/go-tdigest v3.1.0+incompatible
-	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
+	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20220628142927-f4160bcb943c
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/couchbase/go-couchbase v0.1.1
@@ -393,6 +393,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
-
-// replaced due to open PR updating protobuf https://github.com/cisco-ie/nx-telemetry-proto/pull/1
-replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemetry-proto v0.0.0-20210629125746-3c19a51b1abc
