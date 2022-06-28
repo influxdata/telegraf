@@ -74,6 +74,7 @@ require (
 	github.com/google/gnxi v0.0.0-20220411075422-cd6b043b7fd0
 	github.com/google/go-cmp v0.5.8
 	github.com/google/go-github/v32 v32.1.0
+	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.3.0
 	github.com/gopcua/opcua v0.3.3
 	github.com/gophercloud/gophercloud v0.25.0
@@ -155,6 +156,7 @@ require (
 	go.opentelemetry.io/otel/metric v0.30.0
 	go.opentelemetry.io/otel/sdk/metric v0.28.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
+	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 	golang.org/x/net v0.0.0-20220622184535-263ec571b305
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
@@ -174,11 +176,6 @@ require (
 	k8s.io/apimachinery v0.24.2
 	k8s.io/client-go v0.24.1
 	modernc.org/sqlite v1.17.3
-)
-
-require (
-	github.com/google/licensecheck v0.3.1
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 )
 
 require (
