@@ -148,7 +148,7 @@ following works:
 - github.com/hashicorp/errwrap [Mozilla Public License 2.0](https://github.com/hashicorp/errwrap/blob/master/LICENSE)
 - github.com/hashicorp/go-cleanhttp [Mozilla Public License 2.0](https://github.com/hashicorp/go-cleanhttp/blob/master/LICENSE)
 - github.com/hashicorp/go-hclog [MIT License](https://github.com/hashicorp/go-hclog/blob/main/LICENSE)
-- github.com/hashicorp/go-immutable-radix [Mozilla Public License 2.0](https://github.com/hashicorp/go-immutable-radix/LICENSE)
+- github.com/hashicorp/go-immutable-radix [Mozilla Public License 2.0](https://github.com/hashicorp/go-immutable-radix/blob/master/LICENSE)
 - github.com/hashicorp/go-multierror [Mozilla Public License 2.0](https://github.com/hashicorp/go-multierror/blob/master/LICENSE)
 - github.com/hashicorp/go-rootcerts [Mozilla Public License 2.0](https://github.com/hashicorp/go-rootcerts/blob/master/LICENSE)
 - github.com/hashicorp/go-uuid [Mozilla Public License 2.0](https://github.com/hashicorp/go-uuid/blob/master/LICENSE)
