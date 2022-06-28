@@ -244,7 +244,7 @@ following works:
 - github.com/prometheus/procfs [Apache License 2.0](https://github.com/prometheus/procfs/blob/master/LICENSE)
 - github.com/prometheus/prometheus [Apache License 2.0](https://github.com/prometheus/prometheus/blob/master/LICENSE)
 - github.com/rabbitmq/amqp091-go [BSD 2-Clause "Simplified" License](https://github.com/rabbitmq/amqp091-go/blob/main/LICENSE)
-- github.com/rcrowley/go-metrics [MIT License](https://github.com/rcrowley/go-metrics/blob/master/LICENSE)
+- github.com/rcrowley/go-metrics [BSD 2-Clause with views sentence](https://github.com/rcrowley/go-metrics/blob/master/LICENSE)
 - github.com/remyoudompheng/bigfft [BSD 3-Clause "New" or "Revised" License](https://github.com/remyoudompheng/bigfft/blob/master/LICENSE)
 - github.com/riemann/riemann-go-client [MIT License](https://github.com/riemann/riemann-go-client/blob/master/LICENSE)
 - github.com/robbiet480/go.nut [MIT License](https://github.com/robbiet480/go.nut/blob/master/LICENSE)
