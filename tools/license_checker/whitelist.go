@@ -41,6 +41,7 @@ func (w *whitelist) Parse(filename string) error {
 
 		groups := re.FindAllStringSubmatch(line, -1)
 		if len(groups) != 1 {
+			log.Printf("WARN: Ignoring not matching entry in line %d", lineno)
 			continue
 		}
 		group := groups[0]
