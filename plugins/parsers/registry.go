@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
-	"github.com/influxdata/telegraf/plugins/parsers/value"
 )
 
 // Creator is the function to create a new parser
@@ -203,9 +202,6 @@ func NewParser(config *Config) (Parser, error) {
 	var err error
 	var parser Parser
 	switch config.DataFormat {
-	case "value":
-		parser, err = NewValueParser(config.MetricName,
-			config.DataType, config.ValueFieldName, config.DefaultTags)
 	case "influx":
 		if config.InfluxParserType == "upstream" {
 			parser, err = NewInfluxUpstreamParser()
@@ -306,15 +302,6 @@ func NewGraphiteParser(
 	defaultTags map[string]string,
 ) (Parser, error) {
 	return graphite.NewGraphiteParser(separator, templates, defaultTags)
-}
-
-func NewValueParser(
-	metricName string,
-	dataType string,
-	fieldName string,
-	defaultTags map[string]string,
-) (Parser, error) {
-	return value.NewValueParser(metricName, dataType, fieldName, defaultTags), nil
 }
 
 func NewDropwizardParser(
