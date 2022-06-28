@@ -32,11 +32,6 @@ querying table metrics with a wildcard for the keyspace or table name.
 ```toml @sample.conf
 # Read Cassandra metrics through Jolokia
 [[inputs.cassandra]]
-  ## DEPRECATED: The cassandra plugin has been deprecated.  Please use the
-  ## jolokia2 plugin instead.
-  ##
-  ## see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2
-
   context = "/jolokia/read"
   ## List of cassandra servers exposing jolokia read service
   servers = ["myuser:mypassword@10.10.10.1:8778","10.10.10.2:8778",":8778"]

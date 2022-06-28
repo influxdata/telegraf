@@ -458,10 +458,9 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.PathTag = "customPathTagMyFile"
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return json.New(
-			&json.Config{
-				MetricName: "cpu",
-			})
+		p := &json.Parser{MetricName: "cpu"}
+		err := p.Init()
+		return p, err
 	})
 
 	err = plugin.Init()

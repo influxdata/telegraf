@@ -29,9 +29,6 @@ LC_ALL=C sort -u < "${tmpdir}/golist" | while IFS= read -r dep; do
 		# ignore ourselves
 		github.com/influxdata/telegraf) continue;;
 
-		# dependency is replaced in go.mod
-		github.com/satori/go.uuid) continue;;
-
 		# go-autorest has a single license for all sub modules
 		github.com/Azure/go-autorest/autorest)
 			dep=github.com/Azure/go-autorest;;
