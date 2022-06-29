@@ -6,7 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"os"
+	"io/ioutil"
 	"strconv"
 	"strings"
 	"sync"
@@ -248,9 +248,15 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	}
 
 	for _, metric := range metrics {
-		msgSize := len(msg.Payload())
-		stringMsgSize := strconv.FormatInt(int64(msgSize), 10)
-		os.Stderr.WriteString("Size: " + stringMsgSize)
+		// msgSize := len(msg.Payload())
+		// stringMsgSize := strconv.FormatInt(int64(msgSize), 10)
+		// m.Log.Infof("Size %v", stringMsgSize)
+		message := strings.NewReader(string(msg.Payload()))
+		count, err := ioutil.ReadAll(message)
+		if err != nil {
+			return err
+		}
+		m.Log.Infof("Size %v", count)
 		if m.topicTagParse != "" {
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
@@ -263,8 +269,10 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 			if p.Measurement != "" {
 				metric.SetName(values[p.MeasurementIndex])
 			}
-			p.SplitTags = append(p.SplitTags, m.bytesRecv)
-			values = append(values, stringMsgSize)
+
+			// p.SplitTags = append(p.SplitTags, m.bytesRecv)
+			// values = append(values, stringMsgSize)
+
 			if p.Tags != "" {
 				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
 				if err != nil {

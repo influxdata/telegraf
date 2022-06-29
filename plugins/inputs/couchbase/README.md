@@ -30,14 +30,6 @@ couchbase server.
   ## Use TLS but skip chain & host verification (defaults to false)
   ## If set to false, tls_cert and tls_key are required
   # insecure_skip_verify = false
-  
-  ## Whether to collect cluster-wide bucket statistics
-  ## It is recommended to disable this in favor of node_stats
-  ## to get a better view of the cluster.
-  cluster_bucket_stats = true
-  
-  ## Whether to collect bucket stats for each individual node
-  node_bucket_stats = false
 ```
 
 ## Metrics
