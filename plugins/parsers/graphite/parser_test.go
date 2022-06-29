@@ -387,7 +387,7 @@ func TestParse(t *testing.T) {
 		require.NoError(t, p.Init())
 
 		metrics, err := p.Parse(test.input)
-		if test.err != ""  {
+		if test.err != "" {
 			require.EqualError(t, err, test.err)
 			continue
 		}
