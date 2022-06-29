@@ -667,9 +667,9 @@ func TestBatchedUnbatched(t *testing.T) {
 				require.NoError(t, err)
 
 				if client.UseBatchFormat {
-					require.Equal(t, requests, 1, "batched")
+					require.Equal(t, 1, requests, "batched")
 				} else {
-					require.Equal(t, requests, 3, "unbatched")
+					require.Equal(t, 3, requests, "unbatched")
 				}
 			}
 		})
