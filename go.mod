@@ -134,7 +134,7 @@ require (
 	github.com/tinylib/msgp v1.1.6
 	github.com/vapourismo/knx-go v0.0.0-20211128234507-8198fa17db36
 	github.com/vjeantet/grok v1.0.1
-	github.com/vmware/govmomi v0.27.3
+	github.com/vmware/govmomi v0.28.0
 	github.com/wavefronthq/wavefront-sdk-go v0.9.11
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/xdg/scram v1.0.5
