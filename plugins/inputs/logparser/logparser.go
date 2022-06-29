@@ -118,19 +118,16 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Looks for fields which implement LogParser interface
-	config := &parsers.Config{
-		MetricName:             mName,
-		GrokPatterns:           l.GrokConfig.Patterns,
-		GrokNamedPatterns:      l.GrokConfig.NamedPatterns,
-		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
-		GrokCustomPatternFiles: l.GrokConfig.CustomPatternFiles,
-		GrokTimezone:           l.GrokConfig.Timezone,
-		GrokUniqueTimestamp:    l.GrokConfig.UniqueTimestamp,
-		DataFormat:             "grok",
+	parser := grok.Parser{
+		Measurement:        mName,
+		Patterns:           l.GrokConfig.Patterns,
+		NamedPatterns:      l.GrokConfig.NamedPatterns,
+		CustomPatterns:     l.GrokConfig.CustomPatterns,
+		CustomPatternFiles: l.GrokConfig.CustomPatternFiles,
+		Timezone:           l.GrokConfig.Timezone,
+		UniqueTimestamp:    l.GrokConfig.UniqueTimestamp,
 	}
-
-	parser := grok.Parser{}
-	err := parser.InitFromConfig(config)
+	err := parser.Init()
 	if err != nil {
 		return err
 	}
