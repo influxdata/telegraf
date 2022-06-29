@@ -311,10 +311,6 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 	return min, max, err
 }
 
-func (p *Parser) Init() error {
-	return nil
-}
-
 func init() {
 	// Register parser
 	parsers.Add("nagios",
@@ -328,5 +324,5 @@ func init() {
 func (p *Parser) InitFromConfig(config *parsers.Config) error {
 	p.metricName = config.MetricName
 	p.DefaultTags = config.DefaultTags
-	return p.Init()
+	return nil
 }
