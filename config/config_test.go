@@ -415,9 +415,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 			},
 			mask: []string{"TimeFunc"},
 		},
-		"logfmt": {
-			mask: []string{"Now"},
-		},
 		"xpath_protobuf": {
 			param: map[string]interface{}{
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
@@ -554,9 +551,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
 			mask: []string{"TimeFunc"},
-		},
-		"logfmt": {
-			mask: []string{"Now"},
 		},
 		"xpath_protobuf": {
 			param: map[string]interface{}{

@@ -8,7 +8,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
-	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
@@ -227,8 +226,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatternFiles,
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
-	case "logfmt":
-		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags, config.LogFmtTagKeys)
 	case "prometheus":
 		parser, err = NewPrometheusParser(
 			config.DefaultTags,
@@ -307,13 +304,6 @@ func NewDropwizardParser(
 	if err != nil {
 		return nil, err
 	}
-	return parser, err
-}
-
-// NewLogFmtParser returns a logfmt parser with the default options.
-func NewLogFmtParser(metricName string, defaultTags map[string]string, tagKeys []string) (Parser, error) {
-	parser := logfmt.NewParser(metricName, defaultTags, tagKeys)
-	err := parser.Init()
 	return parser, err
 }
 
