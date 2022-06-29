@@ -7,7 +7,11 @@ import (
 )
 
 func TestParseValidValues(t *testing.T) {
-	parser := NewValueParser("value_test", "integer", "", nil)
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err := parser.Parse([]byte("55"))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
@@ -17,7 +21,11 @@ func TestParseValidValues(t *testing.T) {
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
-	parser = NewValueParser("value_test", "float", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "float",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err = parser.Parse([]byte("64"))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
@@ -27,7 +35,11 @@ func TestParseValidValues(t *testing.T) {
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
-	parser = NewValueParser("value_test", "string", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err = parser.Parse([]byte("foobar"))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
@@ -37,7 +49,11 @@ func TestParseValidValues(t *testing.T) {
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
-	parser = NewValueParser("value_test", "boolean", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "boolean",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err = parser.Parse([]byte("true"))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
@@ -49,7 +65,11 @@ func TestParseValidValues(t *testing.T) {
 }
 
 func TestParseMultipleValues(t *testing.T) {
-	parser := NewValueParser("value_test", "integer", "", nil)
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err := parser.Parse([]byte(`55
 45
 223
@@ -66,7 +86,11 @@ func TestParseMultipleValues(t *testing.T) {
 }
 
 func TestParseCustomFieldName(t *testing.T) {
-	parser := NewValueParser("value_test", "integer", "", nil)
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	require.NoError(t, parser.Init())
 	parser.FieldName = "penguin"
 	metrics, err := parser.Parse([]byte(`55`))
 
@@ -77,7 +101,11 @@ func TestParseCustomFieldName(t *testing.T) {
 }
 
 func TestParseLineValidValues(t *testing.T) {
-	parser := NewValueParser("value_test", "integer", "", nil)
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	require.NoError(t, parser.Init())
 	metric, err := parser.ParseLine("55")
 	require.NoError(t, err)
 	require.Equal(t, "value_test", metric.Name())
@@ -86,7 +114,11 @@ func TestParseLineValidValues(t *testing.T) {
 	}, metric.Fields())
 	require.Equal(t, map[string]string{}, metric.Tags())
 
-	parser = NewValueParser("value_test", "float", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "float",
+	}
+	require.NoError(t, parser.Init())
 	metric, err = parser.ParseLine("64")
 	require.NoError(t, err)
 	require.Equal(t, "value_test", metric.Name())
@@ -95,7 +127,11 @@ func TestParseLineValidValues(t *testing.T) {
 	}, metric.Fields())
 	require.Equal(t, map[string]string{}, metric.Tags())
 
-	parser = NewValueParser("value_test", "string", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
 	metric, err = parser.ParseLine("foobar")
 	require.NoError(t, err)
 	require.Equal(t, "value_test", metric.Name())
@@ -104,7 +140,11 @@ func TestParseLineValidValues(t *testing.T) {
 	}, metric.Fields())
 	require.Equal(t, map[string]string{}, metric.Tags())
 
-	parser = NewValueParser("value_test", "boolean", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "boolean",
+	}
+	require.NoError(t, parser.Init())
 	metric, err = parser.ParseLine("true")
 	require.NoError(t, err)
 	require.Equal(t, "value_test", metric.Name())
@@ -115,38 +155,66 @@ func TestParseLineValidValues(t *testing.T) {
 }
 
 func TestParseInvalidValues(t *testing.T) {
-	parser := NewValueParser("value_test", "integer", "", nil)
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err := parser.Parse([]byte("55.0"))
 	require.Error(t, err)
 	require.Len(t, metrics, 0)
 
-	parser = NewValueParser("value_test", "float", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "float",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err = parser.Parse([]byte("foobar"))
 	require.Error(t, err)
 	require.Len(t, metrics, 0)
 
-	parser = NewValueParser("value_test", "boolean", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "boolean",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err = parser.Parse([]byte("213"))
 	require.Error(t, err)
 	require.Len(t, metrics, 0)
 }
 
 func TestParseLineInvalidValues(t *testing.T) {
-	parser := NewValueParser("value_test", "integer", "", nil)
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	require.NoError(t, parser.Init())
 	_, err := parser.ParseLine("55.0")
 	require.Error(t, err)
 
-	parser = NewValueParser("value_test", "float", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "float",
+	}
+	require.NoError(t, parser.Init())
 	_, err = parser.ParseLine("foobar")
 	require.Error(t, err)
 
-	parser = NewValueParser("value_test", "boolean", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "boolean",
+	}
+	require.NoError(t, parser.Init())
 	_, err = parser.ParseLine("213")
 	require.Error(t, err)
 }
 
 func TestParseValidValuesDefaultTags(t *testing.T) {
-	parser := NewValueParser("value_test", "integer", "", nil)
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	require.NoError(t, parser.Init())
 	parser.SetDefaultTags(map[string]string{"test": "tag"})
 	metrics, err := parser.Parse([]byte("55"))
 	require.NoError(t, err)
@@ -157,7 +225,11 @@ func TestParseValidValuesDefaultTags(t *testing.T) {
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{"test": "tag"}, metrics[0].Tags())
 
-	parser = NewValueParser("value_test", "float", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "float",
+	}
+	require.NoError(t, parser.Init())
 	parser.SetDefaultTags(map[string]string{"test": "tag"})
 	metrics, err = parser.Parse([]byte("64"))
 	require.NoError(t, err)
@@ -168,7 +240,11 @@ func TestParseValidValuesDefaultTags(t *testing.T) {
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{"test": "tag"}, metrics[0].Tags())
 
-	parser = NewValueParser("value_test", "string", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
 	parser.SetDefaultTags(map[string]string{"test": "tag"})
 	metrics, err = parser.Parse([]byte("foobar"))
 	require.NoError(t, err)
@@ -179,7 +255,11 @@ func TestParseValidValuesDefaultTags(t *testing.T) {
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{"test": "tag"}, metrics[0].Tags())
 
-	parser = NewValueParser("value_test", "boolean", "", nil)
+	parser = Parser{
+		MetricName: "value_test",
+		DataType:   "boolean",
+	}
+	require.NoError(t, parser.Init())
 	parser.SetDefaultTags(map[string]string{"test": "tag"})
 	metrics, err = parser.Parse([]byte("true"))
 	require.NoError(t, err)
@@ -192,7 +272,11 @@ func TestParseValidValuesDefaultTags(t *testing.T) {
 }
 
 func TestParseValuesWithNullCharacter(t *testing.T) {
-	parser := NewValueParser("value_test", "integer", "", nil)
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	require.NoError(t, parser.Init())
 	metrics, err := parser.Parse([]byte("55\x00"))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
