@@ -122,12 +122,11 @@ func TestTemplateApply(t *testing.T) {
 
 	for _, test := range tests {
 		tmpl, err := templating.NewDefaultTemplateWithPattern(test.template)
-		if test.err == "" {
-			require.NoError(t, err)
-		} else {
+		if test.err != "" {
 			require.EqualError(t, err, test.err)
 			continue
 		}
+		require.NoError(t, err)
 
 		measurement, tags, _, _ := tmpl.Apply(test.input, DefaultSeparator)
 		require.Equal(t, test.measurement, measurement)
