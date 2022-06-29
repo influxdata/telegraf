@@ -4,6 +4,7 @@ import (
 	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/parsers/collectd"
 	_ "github.com/influxdata/telegraf/plugins/parsers/csv"
+	_ "github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	_ "github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	_ "github.com/influxdata/telegraf/plugins/parsers/graphite"
 	_ "github.com/influxdata/telegraf/plugins/parsers/json"

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
@@ -207,16 +206,6 @@ func NewParser(config *Config) (Parser, error) {
 		}
 	case "nagios":
 		parser, err = NewNagiosParser()
-	case "dropwizard":
-		parser, err = NewDropwizardParser(
-			config.DropwizardMetricRegistryPath,
-			config.DropwizardTimePath,
-			config.DropwizardTimeFormat,
-			config.DropwizardTagsPath,
-			config.DropwizardTagPathsMap,
-			config.DefaultTags,
-			config.Separator,
-			config.Templates)
 	case "grok":
 		parser, err = newGrokParser(
 			config.MetricName,
@@ -280,31 +269,6 @@ func NewInfluxParser() (Parser, error) {
 
 func NewInfluxUpstreamParser() (Parser, error) {
 	return influx_upstream.NewParser(), nil
-}
-
-func NewDropwizardParser(
-	metricRegistryPath string,
-	timePath string,
-	timeFormat string,
-	tagsPath string,
-	tagPathsMap map[string]string,
-	defaultTags map[string]string,
-	separator string,
-	templates []string,
-
-) (Parser, error) {
-	parser := dropwizard.NewParser()
-	parser.MetricRegistryPath = metricRegistryPath
-	parser.TimePath = timePath
-	parser.TimeFormat = timeFormat
-	parser.TagsPath = tagsPath
-	parser.TagPathsMap = tagPathsMap
-	parser.DefaultTags = defaultTags
-	err := parser.SetTemplates(separator, templates)
-	if err != nil {
-		return nil, err
-	}
-	return parser, err
 }
 
 func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (Parser, error) {
