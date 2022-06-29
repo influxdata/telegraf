@@ -99,14 +99,10 @@ func (p Parser) parseFields(values url.Values) map[string]interface{} {
 	return fields
 }
 
-func (p *Parser) Init() error {
-	return nil
-}
-
 func (p *Parser) InitFromConfig(config *parsers.Config) error {
 	p.MetricName = config.MetricName
 	p.TagKeys = config.FormUrlencodedTagKeys
-	return p.Init()
+	return nil
 }
 
 func init() {

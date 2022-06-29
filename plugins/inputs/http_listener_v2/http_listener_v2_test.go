@@ -597,7 +597,6 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 		MetricName: "query_measurement",
 		TagKeys:    []string{"tagKey"},
 	}
-	require.NoError(t, parser.Init())
 
 	listener := newTestHTTPListenerV2()
 	listener.DataSource = "query"
@@ -625,7 +624,6 @@ func TestWriteHTTPFormData(t *testing.T) {
 		MetricName: "query_measurement",
 		TagKeys:    []string{"tagKey"},
 	}
-	require.NoError(t, parser.Init())
 
 	listener := newTestHTTPListenerV2()
 	listener.Parser = &parser
