@@ -50,11 +50,15 @@ func main() {
 	flag.DurationVar(&expiry, "expiry", 0, "time until a cache entry expires (never by default)")
 	flag.Parse()
 
-	fmt.Printf("help=%v    args=%d\n", help, flag.NArg())
-	if help || flag.NArg() != 1 {
+	if help || flag.NArg() > 1 {
 		//nolint:revive // We cannot do anything about possible failures here
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s [options] <markdown list file>\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s [options] [telegraf root dir]\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "Options:\n")
 		flag.PrintDefaults()
+		fmt.Fprintf(flag.CommandLine.Output(), "\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Arguments:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  telegraf root dir (optional)\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "		path to the root directory of telegraf (default: .)\n")
 		os.Exit(1)
 	}
 
@@ -64,7 +68,11 @@ func main() {
 	}
 
 	// Get required files
-	path := flag.Arg(0)
+	path := "."
+	if flag.NArg() == 1 {
+		path = flag.Arg(0)
+	}
+
 	moduleFilename := filepath.Join(path, "go.mod")
 	licenseFilename := filepath.Join(path, "docs", "LICENSE_OF_DEPENDENCIES.md")
 
