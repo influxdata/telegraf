@@ -387,12 +387,11 @@ func TestParse(t *testing.T) {
 		require.NoError(t, p.Init())
 
 		metrics, err := p.Parse(test.input)
-		if test.err == "" {
-			require.NoError(t, err)
-		} else {
+		if test.err != ""  {
 			require.EqualError(t, err, test.err)
 			continue
 		}
+		require.NoError(t, err)
 
 		if metrics[0].Name() != test.measurement {
 			t.Fatalf("name parse failer.  expected %v, got %v",
