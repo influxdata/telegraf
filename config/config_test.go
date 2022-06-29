@@ -492,10 +492,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	require.Len(t, actual, len(formats))
 
 	for i, format := range formats {
-		if format == "graphite" {
-			fmt.Printf("actual=%v\n", actual[i])
-			fmt.Printf("expected=%v\n", expected[i])
-		}
 		// Determine the underlying type of the parser
 		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
 		// Ignore all unexported fields and fields not relevant for functionality
