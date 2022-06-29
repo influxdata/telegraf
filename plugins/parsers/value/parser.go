@@ -20,10 +20,6 @@ type Parser struct {
 }
 
 func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	if v.FieldName == "" {
-		v.FieldName = "value"
-	}
-
 	vStr := string(bytes.TrimSpace(bytes.Trim(buf, "\x00")))
 
 	// unless it's a string, separate out any fields in the buffer,

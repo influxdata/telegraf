@@ -147,7 +147,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
-	e.parser = &parser
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(e.Gather))
@@ -167,7 +167,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 
 	e := NewExec()
 	e.Commands = []string{"/bin/echo metric_value"}
-	e.parser = &parser
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(e.Gather))
@@ -186,7 +186,7 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 	require.NoError(t, parser.Init())
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
-	e.parser = &parser
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(e.Gather))
@@ -206,7 +206,7 @@ func TestExecCommandWithEnv(t *testing.T) {
 	e := NewExec()
 	e.Commands = []string{"/bin/sh -c 'echo ${METRIC_NAME}'"}
 	e.Environment = []string{"METRIC_NAME=metric_value"}
-	e.parser = &parser
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(e.Gather))

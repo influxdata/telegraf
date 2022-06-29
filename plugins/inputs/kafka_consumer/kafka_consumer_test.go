@@ -275,6 +275,7 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 		MetricName: "cpu",
 		DataType:   "int",
 	}
+	require.NoError(t, parser.Init())
 	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -308,6 +309,7 @@ func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 		MetricName: "cpu",
 		DataType:   "int",
 	}
+	require.NoError(t, parser.Init())
 	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -425,6 +427,7 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 				MetricName: "cpu",
 				DataType:   "int",
 			}
+			require.NoError(t, parser.Init())
 			cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 			cg.MaxMessageLen = tt.maxMessageLen
 			cg.TopicTag = tt.topicTag
