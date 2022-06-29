@@ -5,7 +5,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
-	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -238,12 +237,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokUniqueTimestamp)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags, config.LogFmtTagKeys)
-	case "form_urlencoded":
-		parser, err = NewFormUrlencodedParser(
-			config.MetricName,
-			config.DefaultTags,
-			config.FormUrlencodedTagKeys,
-		)
 	case "prometheus":
 		parser, err = NewPrometheusParser(
 			config.DefaultTags,
@@ -347,18 +340,6 @@ func NewLogFmtParser(metricName string, defaultTags map[string]string, tagKeys [
 	parser := logfmt.NewParser(metricName, defaultTags, tagKeys)
 	err := parser.Init()
 	return parser, err
-}
-
-func NewFormUrlencodedParser(
-	metricName string,
-	defaultTags map[string]string,
-	tagKeys []string,
-) (Parser, error) {
-	return &form_urlencoded.Parser{
-		MetricName:  metricName,
-		DefaultTags: defaultTags,
-		TagKeys:     tagKeys,
-	}, nil
 }
 
 func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (Parser, error) {
