@@ -52,11 +52,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 			}
 
 			if len(counterFields) > 0 {
-				m, err := metric.New("sflow_a10", counterTags, counterFields, now)
-				if err != nil {
-					d.debug(fmt.Sprintf("  error sending new metric to telegraf %s", err))
-					return nil, err
-				}
+				m := metric.New("sflow_a10", counterTags, counterFields, now)
 
 				d.debug(fmt.Sprintf("  sending 293 or 294 metric to telegraf %s", m))
 				metrics = append(metrics, m)
@@ -101,11 +97,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 			}
 
 			if len(counterFields) > 0 {
-				m, err := metric.New("sflow_a10", counterTags, counterFields, now)
-				if err != nil {
-					d.debug(fmt.Sprintf("  error sending new metric to telegraf %s", err))
-					return nil, err
-				}
+				m := metric.New("sflow_a10", counterTags, counterFields, now)
 
 				metrics = append(metrics, m)
 			}
