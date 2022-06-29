@@ -275,12 +275,11 @@ func TestParseLine(t *testing.T) {
 		require.NoError(t, p.Init())
 
 		m, err := p.ParseLine(test.input)
-		if test.err == "" {
-			require.NoError(t, err)
-		} else {
+		if test.err != "" {
 			require.EqualError(t, err, test.err)
 			continue
 		}
+		require.NoError(t, err)
 
 		if m.Name() != test.measurement {
 			t.Fatalf("name parse failer.  expected %v, got %v",
