@@ -23,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/config/printer"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
@@ -476,7 +477,7 @@ func main() {
 				processorFilters = subProcessorFilters
 			}
 
-			config.PrintSampleConfig(
+			printer.PrintSampleConfig(
 				sectionFilters,
 				inputFilters,
 				outputFilters,
@@ -536,7 +537,7 @@ func main() {
 		fmt.Println(formatFullVersion())
 		return
 	case *fSampleConfig:
-		config.PrintSampleConfig(
+		printer.PrintSampleConfig(
 			sectionFilters,
 			inputFilters,
 			outputFilters,
@@ -545,8 +546,8 @@ func main() {
 		)
 		return
 	case *fUsage != "":
-		err := config.PrintInputConfig(*fUsage)
-		err2 := config.PrintOutputConfig(*fUsage)
+		err := printer.PrintInputConfig(*fUsage)
+		err2 := printer.PrintOutputConfig(*fUsage)
 		if err != nil && err2 != nil {
 			log.Fatalf("E! %s and %s", err, err2)
 		}
