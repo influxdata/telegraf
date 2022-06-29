@@ -2,18 +2,19 @@ package proxmox
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"net/http"
 	"net/url"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 type Proxmox struct {
-	BaseURL         string            `toml:"base_url"`
-	APIToken        string            `toml:"api_token"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
-	NodeName        string            `toml:"node_name"`
+	BaseURL         string          `toml:"base_url"`
+	APIToken        string          `toml:"api_token"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
+	NodeName        string          `toml:"node_name"`
 
 	tls.ClientConfig
 
@@ -31,16 +32,16 @@ var (
 	LXC  ResourceType = "lxc"
 )
 
-type VmStats struct {
-	Data []VmStat `json:"data"`
+type VMStats struct {
+	Data []VMStat `json:"data"`
 }
 
-type VmCurrentStats struct {
-	Data VmStat `json:"data"`
+type VMCurrentStats struct {
+	Data VMStat `json:"data"`
 }
 
-type VmStat struct {
-	ID        string      `json:"vmid"`
+type VMStat struct {
+	ID        json.Number `json:"vmid"`
 	Name      string      `json:"name"`
 	Status    string      `json:"status"`
 	UsedMem   json.Number `json:"mem"`
@@ -50,18 +51,26 @@ type VmStat struct {
 	UsedSwap  json.Number `json:"swap"`
 	TotalSwap json.Number `json:"maxswap"`
 	Uptime    json.Number `json:"uptime"`
-	CpuLoad   json.Number `json:"cpu"`
+	CPULoad   json.Number `json:"cpu"`
 }
 
-type VmConfig struct {
+type VMConfig struct {
 	Data struct {
 		Searchdomain string `json:"searchdomain"`
 		Hostname     string `json:"hostname"`
+		Template     int    `json:"template"`
 	} `json:"data"`
 }
 
-type NodeDns struct {
+type NodeDNS struct {
 	Data struct {
 		Searchdomain string `json:"search"`
 	} `json:"data"`
+}
+
+type metrics struct {
+	total          int64
+	used           int64
+	free           int64
+	usedPercentage float64
 }

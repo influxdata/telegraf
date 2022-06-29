@@ -1,7 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kafka
 
 import (
-	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"log"
 	"strings"
@@ -9,12 +10,17 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/gofrs/uuid"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var ValidTopicSuffixMethods = []string{
 	"",
@@ -25,20 +31,15 @@ var ValidTopicSuffixMethods = []string{
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
-	Brokers          []string    `toml:"brokers"`
-	Topic            string      `toml:"topic"`
-	TopicTag         string      `toml:"topic_tag"`
-	ExcludeTopicTag  bool        `toml:"exclude_topic_tag"`
-	ClientID         string      `toml:"client_id"`
-	TopicSuffix      TopicSuffix `toml:"topic_suffix"`
-	RoutingTag       string      `toml:"routing_tag"`
-	RoutingKey       string      `toml:"routing_key"`
-	CompressionCodec int         `toml:"compression_codec"`
-	RequiredAcks     int         `toml:"required_acks"`
-	MaxRetry         int         `toml:"max_retry"`
-	MaxMessageBytes  int         `toml:"max_message_bytes"`
+	Brokers         []string    `toml:"brokers"`
+	Topic           string      `toml:"topic"`
+	TopicTag        string      `toml:"topic_tag"`
+	ExcludeTopicTag bool        `toml:"exclude_topic_tag"`
+	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
+	RoutingTag      string      `toml:"routing_tag"`
+	RoutingKey      string      `toml:"routing_key"`
 
-	Version string `toml:"version"`
+	proxy.Socks5ProxyConfig
 
 	// Legacy TLS config options
 	// TLS client certificate
@@ -48,15 +49,11 @@ type Kafka struct {
 	// TLS certificate authority
 	CA string
 
-	EnableTLS *bool `toml:"enable_tls"`
-	tlsint.ClientConfig
-
-	kafka.SASLAuth
+	kafka.WriteConfig
 
 	Log telegraf.Logger `toml:"-"`
 
-	tlsConfig tls.Config
-
+	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
 
@@ -77,7 +74,6 @@ func (*DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
 	args = append(append(args, "D! [sarama] "), v...)
 	log.Print(args...)
-
 }
 
 func (*DebugLogger) Printf(format string, v ...interface{}) {
@@ -90,152 +86,17 @@ func (*DebugLogger) Println(v ...interface{}) {
 	log.Println(args...)
 }
 
-var sampleConfig = `
-  ## URLs of kafka brokers
-  brokers = ["localhost:9092"]
-  ## Kafka topic for producer messages
-  topic = "telegraf"
-
-  ## The value of this tag will be used as the topic.  If not set the 'topic'
-  ## option is used.
-  # topic_tag = ""
-
-  ## If true, the 'topic_tag' will be removed from to the metric.
-  # exclude_topic_tag = false
-
-  ## Optional Client id
-  # client_id = "Telegraf"
-
-  ## Set the minimal supported Kafka version.  Setting this enables the use of new
-  ## Kafka features and APIs.  Of particular interest, lz4 compression
-  ## requires at least version 0.10.0.0.
-  ##   ex: version = "1.1.0"
-  # version = ""
-
-  ## Optional topic suffix configuration.
-  ## If the section is omitted, no suffix is used.
-  ## Following topic suffix methods are supported:
-  ##   measurement - suffix equals to separator + measurement's name
-  ##   tags        - suffix equals to separator + specified tags' values
-  ##                 interleaved with separator
-
-  ## Suffix equals to "_" + measurement name
-  # [outputs.kafka.topic_suffix]
-  #   method = "measurement"
-  #   separator = "_"
-
-  ## Suffix equals to "__" + measurement's "foo" tag value.
-  ##   If there's no such a tag, suffix equals to an empty string
-  # [outputs.kafka.topic_suffix]
-  #   method = "tags"
-  #   keys = ["foo"]
-  #   separator = "__"
-
-  ## Suffix equals to "_" + measurement's "foo" and "bar"
-  ##   tag values, separated by "_". If there is no such tags,
-  ##   their values treated as empty strings.
-  # [outputs.kafka.topic_suffix]
-  #   method = "tags"
-  #   keys = ["foo", "bar"]
-  #   separator = "_"
-
-  ## The routing tag specifies a tagkey on the metric whose value is used as
-  ## the message key.  The message key is used to determine which partition to
-  ## send the message to.  This tag is prefered over the routing_key option.
-  routing_tag = "host"
-
-  ## The routing key is set as the message key and used to determine which
-  ## partition to send the message to.  This value is only used when no
-  ## routing_tag is set or as a fallback when the tag specified in routing tag
-  ## is not found.
-  ##
-  ## If set to "random", a random value will be generated for each message.
-  ##
-  ## When unset, no message key is added and each message is routed to a random
-  ## partition.
-  ##
-  ##   ex: routing_key = "random"
-  ##       routing_key = "telegraf"
-  # routing_key = ""
-
-  ## CompressionCodec represents the various compression codecs recognized by
-  ## Kafka in messages.
-  ##  0 : No compression
-  ##  1 : Gzip compression
-  ##  2 : Snappy compression
-  ##  3 : LZ4 compression
-  # compression_codec = 0
-
-  ##  RequiredAcks is used in Produce Requests to tell the broker how many
-  ##  replica acknowledgements it must see before responding
-  ##   0 : the producer never waits for an acknowledgement from the broker.
-  ##       This option provides the lowest latency but the weakest durability
-  ##       guarantees (some data will be lost when a server fails).
-  ##   1 : the producer gets an acknowledgement after the leader replica has
-  ##       received the data. This option provides better durability as the
-  ##       client waits until the server acknowledges the request as successful
-  ##       (only messages that were written to the now-dead leader but not yet
-  ##       replicated will be lost).
-  ##   -1: the producer gets an acknowledgement after all in-sync replicas have
-  ##       received the data. This option provides the best durability, we
-  ##       guarantee that no messages will be lost as long as at least one in
-  ##       sync replica remains.
-  # required_acks = -1
-
-  ## The maximum number of times to retry sending a metric before failing
-  ## until the next flush.
-  # max_retry = 3
-
-  ## The maximum permitted size of a message. Should be set equal to or
-  ## smaller than the broker's 'message.max.bytes'.
-  # max_message_bytes = 1000000
-
-  ## Optional TLS Config
-  # enable_tls = true
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Optional SASL Config
-  # sasl_username = "kafka"
-  # sasl_password = "secret"
-
-  ## Optional SASL:
-  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
-  ## (defaults to PLAIN)
-  # sasl_mechanism = ""
-
-  ## used if sasl_mechanism is GSSAPI (experimental)
-  # sasl_gssapi_service_name = ""
-  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
-  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
-  # sasl_gssapi_kerberos_config_path = "/"
-  # sasl_gssapi_realm = "realm"
-  # sasl_gssapi_key_tab_path = ""
-  # sasl_gssapi_disable_pafxfast = false
-
-  ## used if sasl_mechanism is OAUTHBEARER (experimental)
-  # sasl_access_token = ""
-
-  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
-  # sasl_version = 1
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "influx"
-`
-
 func ValidateTopicSuffixMethod(method string) error {
 	for _, validMethod := range ValidTopicSuffixMethods {
 		if method == validMethod {
 			return nil
 		}
 	}
-	return fmt.Errorf("Unknown topic suffix method provided: %s", method)
+	return fmt.Errorf("unknown topic suffix method provided: %s", method)
+}
+
+func (*Kafka) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
@@ -278,35 +139,18 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func (k *Kafka) Connect() error {
+func (k *Kafka) Init() error {
 	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
 	if err != nil {
 		return err
 	}
 	config := sarama.NewConfig()
 
-	if k.Version != "" {
-		version, err := sarama.ParseKafkaVersion(k.Version)
-		if err != nil {
-			return err
-		}
-		config.Version = version
+	if err := k.SetConfig(config); err != nil {
+		return err
 	}
 
-	if k.ClientID != "" {
-		config.ClientID = k.ClientID
-	} else {
-		config.ClientID = "Telegraf"
-	}
-
-	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
-	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
-	config.Producer.Retry.Max = k.MaxRetry
-	config.Producer.Return.Successes = true
-
-	if k.MaxMessageBytes > 0 {
-		config.Producer.MaxMessageBytes = k.MaxMessageBytes
-	}
+	k.saramaConfig = config
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
@@ -315,31 +159,21 @@ func (k *Kafka) Connect() error {
 		k.TLSKey = k.Key
 	}
 
-	if k.EnableTLS != nil && *k.EnableTLS {
-		config.Net.TLS.Enable = true
-	}
+	if k.Socks5ProxyEnabled {
+		config.Net.Proxy.Enable = true
 
-	tlsConfig, err := k.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-
-	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
-
-		// To maintain backwards compatibility, if the enable_tls option is not
-		// set TLS is enabled if a non-default TLS config is used.
-		if k.EnableTLS == nil {
-			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
-			config.Net.TLS.Enable = true
+		dialer, err := k.Socks5ProxyConfig.GetDialer()
+		if err != nil {
+			return fmt.Errorf("connecting to proxy server failed: %s", err)
 		}
+		config.Net.Proxy.Dialer = dialer
 	}
 
-	if err := k.SetSASLConfig(config); err != nil {
-		return err
-	}
+	return nil
+}
 
-	producer, err := k.producerFunc(k.Brokers, config)
+func (k *Kafka) Connect() error {
+	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
 	if err != nil {
 		return err
 	}
@@ -349,14 +183,6 @@ func (k *Kafka) Connect() error {
 
 func (k *Kafka) Close() error {
 	return k.producer.Close()
-}
-
-func (k *Kafka) SampleConfig() string {
-	return sampleConfig
-}
-
-func (k *Kafka) Description() string {
-	return "Configuration for the Kafka server to send metrics to"
 }
 
 func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
@@ -423,7 +249,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
 					return nil
 				}
-				return prodErr
+				return prodErr //nolint:staticcheck // Return first error encountered
 			}
 		}
 		return err
@@ -436,8 +262,10 @@ func init() {
 	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
-			MaxRetry:     3,
-			RequiredAcks: -1,
+			WriteConfig: kafka.WriteConfig{
+				MaxRetry:     3,
+				RequiredAcks: -1,
+			},
 			producerFunc: sarama.NewSyncProducer,
 		}
 	})

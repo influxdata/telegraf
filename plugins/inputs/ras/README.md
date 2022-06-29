@@ -1,21 +1,25 @@
 # RAS Daemon Input Plugin
 
-This plugin is only available on Linux (only for `386`, `amd64`, `arm` and `arm64` architectures).
+This plugin is only available on Linux (only for `386`, `amd64`, `arm` and
+`arm64` architectures).
 
-The `RAS` plugin gathers and counts errors provided by [RASDaemon](https://github.com/mchehab/rasdaemon).
+The `RAS` plugin gathers and counts errors provided by
+[RASDaemon](https://github.com/mchehab/rasdaemon).
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
+# RAS plugin exposes counter metrics for Machine Check Errors provided by RASDaemon (sqlite3 output is required).
 [[inputs.ras]]
   ## Optional path to RASDaemon sqlite3 database.
   ## Default: /var/lib/rasdaemon/ras-mc_event.db
   # db_path = ""
 ```
 
-In addition `RASDaemon` runs, by default, with `--enable-sqlite3` flag. In case of problems with SQLite3 database please verify this is still a default option.
+In addition `RASDaemon` runs, by default, with `--enable-sqlite3` flag. In case
+of problems with SQLite3 database please verify this is still a default option.
 
-### Metrics
+## Metrics
 
 - ras
   - tags:
@@ -39,7 +43,9 @@ In addition `RASDaemon` runs, by default, with `--enable-sqlite3` flag. In case 
     - microcode_rom_parity_errors
     - unclassified_mce_errors
 
-Please note that `processor_base_errors` is aggregate counter measuring the following MCE events:
+Please note that `processor_base_errors` is aggregate counter measuring the
+following MCE events:
+
 - internal_timer_errors
 - smm_handler_code_access_violation_errors
 - internal_parity_errors
@@ -48,13 +54,14 @@ Please note that `processor_base_errors` is aggregate counter measuring the foll
 - microcode_rom_parity_errors
 - unclassified_mce_errors
 
-### Permissions
+## Permissions
 
-This plugin requires access to SQLite3 database from `RASDaemon`. Please make sure that user has required permissions to this database.
+This plugin requires access to SQLite3 database from `RASDaemon`. Please make
+sure that user has required permissions to this database.
 
-### Example Output
+## Example Output
 
-```
+```shell
 ras,host=ubuntu,socket_id=0 external_mce_base_errors=1i,frc_errors=1i,instruction_tlb_errors=5i,internal_parity_errors=1i,internal_timer_errors=1i,l0_and_l1_cache_errors=7i,memory_read_corrected_errors=25i,memory_read_uncorrectable_errors=0i,memory_write_corrected_errors=5i,memory_write_uncorrectable_errors=0i,microcode_rom_parity_errors=1i,processor_base_errors=7i,processor_bus_errors=1i,smm_handler_code_access_violation_errors=1i,unclassified_mce_base_errors=1i 1598867393000000000
 ras,host=ubuntu level_2_cache_errors=0i,upi_errors=0i 1598867393000000000
 ```

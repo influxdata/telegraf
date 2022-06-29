@@ -1,15 +1,16 @@
 package kube_inventory
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPersistentVolumeClaim(t *testing.T) {
@@ -22,14 +23,14 @@ func TestPersistentVolumeClaim(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
 			name: "no pv claims",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{},
+					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{},
 				},
 			},
 			hasError: false,
@@ -38,14 +39,14 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			name: "collect pv claims",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{
-						Items: []*v1.PersistentVolumeClaim{
+					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
+						Items: []corev1.PersistentVolumeClaim{
 							{
-								Status: &v1.PersistentVolumeClaimStatus{
-									Phase: toStrPtr("bound"),
+								Status: corev1.PersistentVolumeClaimStatus{
+									Phase: "bound",
 								},
-								Spec: &v1.PersistentVolumeClaimSpec{
-									VolumeName:       toStrPtr("pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8"),
+								Spec: corev1.PersistentVolumeClaimSpec{
+									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
 									StorageClassName: toStrPtr("ebs-1"),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
@@ -54,36 +55,134 @@ func TestPersistentVolumeClaim(t *testing.T) {
 										},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Namespace: toStrPtr("ns1"),
-									Name:      toStrPtr("pc1"),
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Name:      "pc1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"phase_type": 0,
-						},
-						Tags: map[string]string{
-							"pvc_name":         "pc1",
-							"namespace":        "ns1",
-							"storageclass":     "ebs-1",
-							"phase":            "bound",
-							"selector_select1": "s1",
-							"selector_select2": "s2",
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_persistentvolumeclaim",
+					map[string]string{
+						"pvc_name":         "pc1",
+						"namespace":        "ns1",
+						"storageclass":     "ebs-1",
+						"phase":            "bound",
+						"selector_select1": "s1",
+						"selector_select2": "s2",
+					},
+					map[string]interface{}{
+						"phase_type": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			hasError: false,
+		},
+		{
+			name:     "no label selectors",
+			hasError: false,
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
+						Items: []corev1.PersistentVolumeClaim{
+							{
+								Status: corev1.PersistentVolumeClaimStatus{
+									Phase: "bound",
+								},
+								Spec: corev1.PersistentVolumeClaimSpec{
+									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
+									StorageClassName: toStrPtr("ebs-1"),
+									Selector:         nil,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Name:      "pc1",
+									Labels: map[string]string{
+										"lab1": "v1",
+										"lab2": "v2",
+									},
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
 						},
 					},
 				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_persistentvolumeclaim",
+					map[string]string{
+						"pvc_name":     "pc1",
+						"namespace":    "ns1",
+						"storageclass": "ebs-1",
+						"phase":        "bound",
+					},
+					map[string]interface{}{
+						"phase_type": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "no storage class name",
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
+						Items: []corev1.PersistentVolumeClaim{
+							{
+								Status: corev1.PersistentVolumeClaimStatus{
+									Phase: "bound",
+								},
+								Spec: corev1.PersistentVolumeClaimSpec{
+									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
+									StorageClassName: nil,
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"select1": "s1",
+											"select2": "s2",
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Name:      "pc1",
+									Labels: map[string]string{
+										"lab1": "v1",
+										"lab2": "v2",
+									},
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
+						},
+					},
+				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_persistentvolumeclaim",
+					map[string]string{
+						"pvc_name":         "pc1",
+						"namespace":        "ns1",
+						"phase":            "bound",
+						"selector_select1": "s1",
+						"selector_select2": "s2",
+					},
+					map[string]interface{}{
+						"phase_type": 0,
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -95,37 +194,23 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			SelectorInclude: selectInclude,
 			SelectorExclude: selectExclude,
 		}
-		ks.createSelectorFilters()
+		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
-			err := ks.gatherPersistentVolumeClaim(*pvc, acc)
-			if err != nil {
-				t.Errorf("Failed to gather pvc - %s", err.Error())
-			}
+		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*corev1.PersistentVolumeClaimList)).Items {
+			ks.gatherPersistentVolumeClaim(pvc, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", v.name, k, m, acc.Metrics[i].Tags[k])
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k])
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }
 
@@ -135,14 +220,14 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
 	responseMap := map[string]interface{}{
-		"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{
-			Items: []*v1.PersistentVolumeClaim{
+		"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
+			Items: []corev1.PersistentVolumeClaim{
 				{
-					Status: &v1.PersistentVolumeClaimStatus{
-						Phase: toStrPtr("bound"),
+					Status: corev1.PersistentVolumeClaimStatus{
+						Phase: "bound",
 					},
-					Spec: &v1.PersistentVolumeClaimSpec{
-						VolumeName:       toStrPtr("pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8"),
+					Spec: corev1.PersistentVolumeClaimSpec{
+						VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
 						StorageClassName: toStrPtr("ebs-1"),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -151,14 +236,14 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 							},
 						},
 					},
-					Metadata: &metav1.ObjectMeta{
-						Namespace: toStrPtr("ns1"),
-						Name:      toStrPtr("pc1"),
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "pc1",
 						Labels: map[string]string{
 							"lab1": "v1",
 							"lab2": "v2",
 						},
-						CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+						CreationTimestamp: metav1.Time{Time: now},
 					},
 				},
 			},
@@ -266,13 +351,10 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 		}
 		ks.SelectorInclude = v.include
 		ks.SelectorExclude = v.exclude
-		ks.createSelectorFilters()
+		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
-			err := ks.gatherPersistentVolumeClaim(*pvc, acc)
-			if err != nil {
-				t.Errorf("Failed to gather pvc - %s", err.Error())
-			}
+		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*corev1.PersistentVolumeClaimList)).Items {
+			ks.gatherPersistentVolumeClaim(pvc, acc)
 		}
 
 		// Grab selector tags
@@ -285,8 +367,7 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 			}
 		}
 
-		if !reflect.DeepEqual(v.expected, actual) {
-			t.Fatalf("actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
-		}
+		require.Equalf(t, v.expected, actual,
+			"actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
 	}
 }

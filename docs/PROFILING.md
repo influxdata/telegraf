@@ -6,7 +6,7 @@ By default, the profiling is turned off.
 
 To enable profiling you need to specify address to config parameter `pprof-addr`, for example:
 
-```
+```shell
 telegraf --config telegraf.conf --pprof-addr localhost:6060
 ```
 
@@ -21,4 +21,3 @@ or to look at a 30-second CPU profile:
 `go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30`
 
 To view all available profiles, open `http://localhost:6060/debug/pprof/` in your browser.
-

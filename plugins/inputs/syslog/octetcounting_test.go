@@ -3,18 +3,16 @@ package syslog
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"net"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func getTestCasesForOctetCounting() []testCaseStream {
@@ -335,7 +333,7 @@ func getTestCasesForOctetCounting() []testCaseStream {
 	return testCases
 }
 
-func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
 	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
@@ -357,12 +355,14 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 				require.NoError(t, e)
 				config.ServerName = "localhost"
 				conn, err = tls.Dial(protocol, address, config)
+				require.NotNil(t, conn)
+				require.NoError(t, err)
 			} else {
 				conn, err = net.Dial(protocol, address)
+				require.NotNil(t, conn)
+				require.NoError(t, err)
 				defer conn.Close()
 			}
-			require.NotNil(t, conn)
-			require.NoError(t, err)
 
 			// Clear
 			acc.ClearMetrics()
@@ -391,7 +391,8 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 	}
 }
 
-func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool) {
+	keepAlive := (*config.Duration)(nil)
 	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
@@ -444,7 +445,7 @@ func TestOctetCountingStrict_tcp(t *testing.T) {
 }
 
 func TestOctetCountingBestEffort_tcp(t *testing.T) {
-	testBestEffortOctetCounting(t, "tcp", address, false, nil)
+	testBestEffortOctetCounting(t, "tcp", address, false)
 }
 
 func TestOctetCountingStrict_tcp_tls(t *testing.T) {
@@ -452,45 +453,35 @@ func TestOctetCountingStrict_tcp_tls(t *testing.T) {
 }
 
 func TestOctetCountingBestEffort_tcp_tls(t *testing.T) {
-	testBestEffortOctetCounting(t, "tcp", address, true, nil)
+	testBestEffortOctetCounting(t, "tcp", address, true)
 }
 
 func TestOctetCountingStrictWithKeepAlive_tcp_tls(t *testing.T) {
-	testStrictOctetCounting(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
+	d := config.Duration(time.Minute)
+	testStrictOctetCounting(t, "tcp", address, true, &d)
 }
 
 func TestOctetCountingStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	testStrictOctetCounting(t, "tcp", address, true, &internal.Duration{Duration: 0})
+	d := config.Duration(0)
+	testStrictOctetCounting(t, "tcp", address, true, &d)
 }
 
 func TestOctetCountingStrict_unix(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix.sock")
+	sock := testutil.TempSocket(t)
 	testStrictOctetCounting(t, "unix", sock, false, nil)
 }
 
 func TestOctetCountingBestEffort_unix(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
-	testBestEffortOctetCounting(t, "unix", sock, false, nil)
+	sock := testutil.TempSocket(t)
+	testBestEffortOctetCounting(t, "unix", sock, false)
 }
 
 func TestOctetCountingStrict_unix_tls(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix_tls.sock")
+	sock := testutil.TempSocket(t)
 	testStrictOctetCounting(t, "unix", sock, true, nil)
 }
 
 func TestOctetCountingBestEffort_unix_tls(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
-	testBestEffortOctetCounting(t, "unix", sock, true, nil)
+	sock := testutil.TempSocket(t)
+	testBestEffortOctetCounting(t, "unix", sock, true)
 }

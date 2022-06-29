@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package disque
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"net"
@@ -15,30 +17,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Disque struct {
 	Servers []string
 
-	c   net.Conn
-	buf []byte
+	c net.Conn
 }
-
-var sampleConfig = `
-  ## An array of URI to gather stats about. Specify an ip or hostname
-  ## with optional port and password.
-  ## ie disque://localhost, disque://10.10.3.33:18832, 10.0.0.1:10000, etc.
-  ## If no servers are specified, then localhost is used as the host.
-  servers = ["localhost"]
-`
 
 var defaultTimeout = 5 * time.Second
-
-func (r *Disque) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Disque) Description() string {
-	return "Read metrics from one or many disque servers"
-}
 
 var Tracking = map[string]string{
 	"uptime_in_seconds":          "uptime",
@@ -62,23 +51,26 @@ var Tracking = map[string]string{
 
 var ErrProtocolError = errors.New("disque protocol error")
 
+func (*Disque) SampleConfig() string {
+	return sampleConfig
+}
+
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *Disque) Gather(acc telegraf.Accumulator) error {
-	if len(g.Servers) == 0 {
-		url := &url.URL{
+func (d *Disque) Gather(acc telegraf.Accumulator) error {
+	if len(d.Servers) == 0 {
+		address := &url.URL{
 			Host: ":7711",
 		}
-		g.gatherServer(url, acc)
-		return nil
+		return d.gatherServer(address, acc)
 	}
 
 	var wg sync.WaitGroup
 
-	for _, serv := range g.Servers {
+	for _, serv := range d.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse to address '%s': %s", serv, err))
+			acc.AddError(fmt.Errorf("unable to parse to address '%s': %s", serv, err))
 			continue
 		} else if u.Scheme == "" {
 			// fallback to simple string based address (i.e. "10.0.0.1:10000")
@@ -87,10 +79,10 @@ func (g *Disque) Gather(acc telegraf.Accumulator) error {
 			u.Path = ""
 		}
 		wg.Add(1)
-		go func(serv string) {
+		go func() {
 			defer wg.Done()
-			acc.AddError(g.gatherServer(u, acc))
-		}(serv)
+			acc.AddError(d.gatherServer(u, acc))
+		}()
 	}
 
 	wg.Wait()
@@ -100,9 +92,8 @@ func (g *Disque) Gather(acc telegraf.Accumulator) error {
 
 const defaultPort = "7711"
 
-func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
-	if g.c == nil {
-
+func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
+	if d.c == nil {
 		_, _, err := net.SplitHostPort(addr.Host)
 		if err != nil {
 			addr.Host = addr.Host + ":" + defaultPort
@@ -110,13 +101,15 @@ func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 
 		c, err := net.DialTimeout("tcp", addr.Host, defaultTimeout)
 		if err != nil {
-			return fmt.Errorf("Unable to connect to disque server '%s': %s", addr.Host, err)
+			return fmt.Errorf("unable to connect to disque server '%s': %s", addr.Host, err)
 		}
 
 		if addr.User != nil {
 			pwd, set := addr.User.Password()
 			if set && pwd != "" {
-				c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
+				if _, err := c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd))); err != nil {
+					return err
+				}
 
 				r := bufio.NewReader(c)
 
@@ -130,15 +123,19 @@ func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 			}
 		}
 
-		g.c = c
+		d.c = c
 	}
 
 	// Extend connection
-	g.c.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := d.c.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return err
+	}
 
-	g.c.Write([]byte("info\r\n"))
+	if _, err := d.c.Write([]byte("info\r\n")); err != nil {
+		return err
+	}
 
-	r := bufio.NewReader(g.c)
+	r := bufio.NewReader(d.c)
 
 	line, err := r.ReadString('\n')
 	if err != nil {
@@ -176,7 +173,7 @@ func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 
 		parts := strings.SplitN(line, ":", 2)
 
-		name := string(parts[0])
+		name := parts[0]
 
 		metric, ok := Tracking[name]
 		if !ok {

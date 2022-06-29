@@ -3,12 +3,13 @@
 The [Kafka][kafka] consumer plugin reads from Kafka
 and creates metrics using one of the supported [input data formats][].
 
-For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input plugin
-and use the old zookeeper connection method.
+For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input
+plugin and use the old zookeeper connection method.
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from Kafka topics
 [[inputs.kafka_consumer]]
   ## Kafka brokers.
   brokers = ["localhost:9092"]
@@ -35,7 +36,7 @@ and use the old zookeeper connection method.
   # insecure_skip_verify = false
 
   ## SASL authentication credentials.  These settings should typically be used
-  ## with TLS encryption enabled using the "enable_tls" option.
+  ## with TLS encryption enabled
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
@@ -59,9 +60,20 @@ and use the old zookeeper connection method.
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
 
+  ## Compression codec represents the various compression codecs recognized by
+  ## Kafka in messages.
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
+  # compression_codec = 0
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
 
@@ -81,6 +93,15 @@ and use the old zookeeper connection method.
   ## full batch is collected and the write is triggered immediately without
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
+
+  ## Maximum amount of time the consumer should take to process messages. If
+  ## the debug log prints messages from sarama about 'abandoning subscription
+  ## to [topic] because consuming was taking too long', increase this value to
+  ## longer than the time taken by the output plugin(s).
+  ##
+  ## Note that the effective timeout could be between 'max_processing_time' and
+  ## '2 * max_processing_time'.
+  # max_processing_time = "100ms"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

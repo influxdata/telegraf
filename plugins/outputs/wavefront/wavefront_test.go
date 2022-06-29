@@ -1,14 +1,16 @@
 package wavefront
 
 import (
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 // default config used by Tests
@@ -32,7 +34,7 @@ func TestBuildMetrics(t *testing.T) {
 
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 
-	testMetric1, _ := metric.New(
+	testMetric1 := metric.New(
 		"test.simple.metric",
 		map[string]string{"tag1": "value1", "host": "testHost"},
 		map[string]interface{}{"value": 123},
@@ -73,7 +75,6 @@ func TestBuildMetrics(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestBuildMetricsStrict(t *testing.T) {
@@ -113,7 +114,6 @@ func TestBuildMetricsStrict(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestBuildMetricsWithSimpleFields(t *testing.T) {
@@ -123,7 +123,7 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 
-	testMetric1, _ := metric.New(
+	testMetric1 := metric.New(
 		"test.simple.metric",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"value": 123},
@@ -152,11 +152,9 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestBuildTags(t *testing.T) {
-
 	w := defaultWavefront()
 
 	var tagtests = []struct {
@@ -246,6 +244,11 @@ func TestBuildTagsWithSource(t *testing.T) {
 			"r-@l\"Ho/st",
 			map[string]string{"something": "abc"},
 		},
+		{
+			map[string]string{"hostagent": "realHost", "env": "qa", "tag": "val"},
+			"realHost",
+			map[string]string{"env": "qa", "tag": "val"},
+		},
 	}
 
 	for _, tt := range tagtests {
@@ -284,7 +287,6 @@ func TestBuildValue(t *testing.T) {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", vt.out, value)
 		}
 	}
-
 }
 
 func TestBuildValueString(t *testing.T) {
@@ -315,7 +317,6 @@ func TestBuildValueString(t *testing.T) {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", vt.out, value)
 		}
 	}
-
 }
 
 func TestTagLimits(t *testing.T) {
@@ -352,6 +353,11 @@ func TestTagLimits(t *testing.T) {
 	_, tags = w.buildTags(template)
 	require.Contains(t, tags, longKey, "Should contain non truncated long key")
 	require.Equal(t, longKey, tags[longKey])
+}
+
+func TestDefaults(t *testing.T) {
+	defaultWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
+	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
 }
 
 // Benchmarks to test performance of string replacement via Regex and Replacer

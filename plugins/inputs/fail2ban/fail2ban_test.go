@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -50,10 +52,9 @@ func TestGather(t *testing.T) {
 	execCommand = fakeExecCommand
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
-	err := f.Gather(&acc)
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	require.NoError(t, f.Init())
+	require.NoError(t, f.Gather(&acc))
 
 	fields1 := map[string]interface{}{
 		"banned": 2,
@@ -92,7 +93,7 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func TestHelperProcess(t *testing.T) {
+func TestHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -101,25 +102,37 @@ func TestHelperProcess(t *testing.T) {
 	cmd, args := args[3], args[4:]
 
 	if !strings.HasSuffix(cmd, "fail2ban-client") {
+		//nolint:errcheck,revive // Test will fail anyway
 		fmt.Fprint(os.Stdout, "command not found")
+		//nolint:revive // os.Exit called intentionally
 		os.Exit(1)
 	}
 
 	if len(args) == 1 && args[0] == "status" {
+		//nolint:errcheck,revive // Test will fail anyway
 		fmt.Fprint(os.Stdout, execStatusOutput)
+		//nolint:revive // os.Exit called intentionally
 		os.Exit(0)
 	} else if len(args) == 2 && args[0] == "status" {
 		if args[1] == "sshd" {
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprint(os.Stdout, execStatusSshdOutput)
+			//nolint:revive // os.Exit called intentionally
 			os.Exit(0)
 		} else if args[1] == "postfix" {
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprint(os.Stdout, execStatusPostfixOutput)
+			//nolint:revive // os.Exit called intentionally
 			os.Exit(0)
 		} else if args[1] == "dovecot" {
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprint(os.Stdout, execStatusDovecotOutput)
+			//nolint:revive // os.Exit called intentionally
 			os.Exit(0)
 		}
 	}
+	//nolint:errcheck,revive // Test will fail anyway
 	fmt.Fprint(os.Stdout, "invalid argument")
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(1)
 }

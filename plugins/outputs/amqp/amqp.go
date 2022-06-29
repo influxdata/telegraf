@@ -1,19 +1,25 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amqp
 
 import (
 	"bytes"
-	"fmt"
-	"log"
+	_ "embed"
 	"strings"
 	"time"
 
+	amqp "github.com/rabbitmq/amqp091-go"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/streadway/amqp"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	DefaultURL             = "amqp://localhost:5672/influxdb"
@@ -30,11 +36,11 @@ func (a *externalAuth) Mechanism() string {
 }
 
 func (a *externalAuth) Response() string {
-	return fmt.Sprintf("\000")
+	return "\000"
 }
 
 type AMQP struct {
-	URL                string            `toml:"url"` // deprecated in 1.7; use brokers
+	URL                string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
 	Brokers            []string          `toml:"brokers"`
 	Exchange           string            `toml:"exchange"`
 	ExchangeType       string            `toml:"exchange_type"`
@@ -48,13 +54,14 @@ type AMQP struct {
 	RoutingTag         string            `toml:"routing_tag"`
 	RoutingKey         string            `toml:"routing_key"`
 	DeliveryMode       string            `toml:"delivery_mode"`
-	Database           string            `toml:"database"`         // deprecated in 1.7; use headers
-	RetentionPolicy    string            `toml:"retention_policy"` // deprecated in 1.7; use headers
-	Precision          string            `toml:"precision"`        // deprecated; has no effect
+	Database           string            `toml:"database" deprecated:"1.7.0;use 'headers' instead"`
+	RetentionPolicy    string            `toml:"retention_policy" deprecated:"1.7.0;use 'headers' instead"`
+	Precision          string            `toml:"precision" deprecated:"1.2.0;option is ignored"`
 	Headers            map[string]string `toml:"headers"`
-	Timeout            internal.Duration `toml:"timeout"`
+	Timeout            config.Duration   `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
 	ContentEncoding    string            `toml:"content_encoding"`
+	Log                telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 
 	serializer   serializers.Serializer
@@ -70,108 +77,8 @@ type Client interface {
 	Close() error
 }
 
-var sampleConfig = `
-  ## Broker to publish to.
-  ##   deprecated in 1.7; use the brokers option
-  # url = "amqp://localhost:5672/influxdb"
-
-  ## Brokers to publish to.  If multiple brokers are specified a random broker
-  ## will be selected anytime a connection is established.  This can be
-  ## helpful for load balancing when not using a dedicated load balancer.
-  brokers = ["amqp://localhost:5672/influxdb"]
-
-  ## Maximum messages to send over a connection.  Once this is reached, the
-  ## connection is closed and a new connection is made.  This can be helpful for
-  ## load balancing when not using a dedicated load balancer.
-  # max_messages = 0
-
-  ## Exchange to declare and publish to.
-  exchange = "telegraf"
-
-  ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
-  # exchange_type = "topic"
-
-  ## If true, exchange will be passively declared.
-  # exchange_passive = false
-
-  ## Exchange durability can be either "transient" or "durable".
-  # exchange_durability = "durable"
-
-  ## Additional exchange arguments.
-  # exchange_arguments = { }
-  # exchange_arguments = {"hash_property" = "timestamp"}
-
-  ## Authentication credentials for the PLAIN auth_method.
-  # username = ""
-  # password = ""
-
-  ## Auth method. PLAIN and EXTERNAL are supported
-  ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
-  ## described here: https://www.rabbitmq.com/plugins.html
-  # auth_method = "PLAIN"
-
-  ## Metric tag to use as a routing key.
-  ##   ie, if this tag exists, its value will be used as the routing key
-  # routing_tag = "host"
-
-  ## Static routing key.  Used when no routing_tag is set or as a fallback
-  ## when the tag specified in routing tag is not found.
-  # routing_key = ""
-  # routing_key = "telegraf"
-
-  ## Delivery Mode controls if a published message is persistent.
-  ##   One of "transient" or "persistent".
-  # delivery_mode = "transient"
-
-  ## InfluxDB database added as a message header.
-  ##   deprecated in 1.7; use the headers option
-  # database = "telegraf"
-
-  ## InfluxDB retention policy added as a message header
-  ##   deprecated in 1.7; use the headers option
-  # retention_policy = "default"
-
-  ## Static headers added to each published message.
-  # headers = { }
-  # headers = {"database" = "telegraf", "retention_policy" = "default"}
-
-  ## Connection timeout.  If not provided, will default to 5s.  0s means no
-  ## timeout (not recommended).
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## If true use batch serialization format instead of line based delimiting.
-  ## Only applies to data formats which are not line based such as JSON.
-  ## Recommended to set to true.
-  # use_batch_format = false
-
-  ## Content encoding for message payloads, can be set to "gzip" to or
-  ## "identity" to apply no encoding.
-  ##
-  ## Please note that when use_batch_format = false each amqp message contains only
-  ## a single metric, it is recommended to use compression with batch format
-  ## for best results.
-  # content_encoding = "identity"
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "influx"
-`
-
-func (q *AMQP) SampleConfig() string {
+func (*AMQP) SampleConfig() string {
 	return sampleConfig
-}
-
-func (q *AMQP) Description() string {
-	return "Publishes metrics to an AMQP broker"
 }
 
 func (q *AMQP) SetSerializer(serializer serializers.Serializer) {
@@ -180,11 +87,11 @@ func (q *AMQP) SetSerializer(serializer serializers.Serializer) {
 
 func (q *AMQP) Connect() error {
 	if q.config == nil {
-		config, err := q.makeClientConfig()
+		clientConfig, err := q.makeClientConfig()
 		if err != nil {
 			return err
 		}
-		q.config = config
+		q.config = clientConfig
 	}
 
 	var err error
@@ -251,14 +158,17 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			// If this is the first attempt to publish and the connection is
 			// closed, try to reconnect and retry once.
+			//nolint: revive // Simplifying if-else with early return will reduce clarity
 			if aerr, ok := err.(*amqp.Error); first && ok && aerr == amqp.ErrClosed {
-				first = false
 				q.client = nil
 				err := q.publish(key, body)
 				if err != nil {
 					return err
 				}
-			} else {
+			} else if q.client != nil {
+				if err := q.client.Close(); err != nil {
+					q.Log.Errorf("Closing connection failed: %v", err)
+				}
 				q.client = nil
 				return err
 			}
@@ -267,8 +177,10 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	}
 
 	if q.sentMessages >= q.MaxMessages && q.MaxMessages > 0 {
-		log.Printf("D! Output [amqp] sent MaxMessages; closing connection")
-		q.client.Close()
+		q.Log.Debug("Sent MaxMessages; closing connection")
+		if err := q.client.Close(); err != nil {
+			q.Log.Errorf("Closing connection failed: %v", err)
+		}
 		q.client = nil
 	}
 
@@ -296,71 +208,72 @@ func (q *AMQP) publish(key string, body []byte) error {
 func (q *AMQP) serialize(metrics []telegraf.Metric) ([]byte, error) {
 	if q.UseBatchFormat {
 		return q.serializer.SerializeBatch(metrics)
-	} else {
-		var buf bytes.Buffer
-		for _, metric := range metrics {
-			octets, err := q.serializer.Serialize(metric)
-			if err != nil {
-				log.Printf("D! [outputs.amqp] Could not serialize metric: %v", err)
-				continue
-			}
-			_, err = buf.Write(octets)
-			if err != nil {
-				return nil, err
-			}
-		}
-		body := buf.Bytes()
-		return body, nil
 	}
+
+	var buf bytes.Buffer
+	for _, metric := range metrics {
+		octets, err := q.serializer.Serialize(metric)
+		if err != nil {
+			q.Log.Debugf("Could not serialize metric: %v", err)
+			continue
+		}
+		_, err = buf.Write(octets)
+		if err != nil {
+			return nil, err
+		}
+	}
+	body := buf.Bytes()
+	return body, nil
 }
 
 func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
-	config := &ClientConfig{
+	clientConfig := &ClientConfig{
 		exchange:        q.Exchange,
 		exchangeType:    q.ExchangeType,
 		exchangePassive: q.ExchangePassive,
 		encoding:        q.ContentEncoding,
-		timeout:         q.Timeout.Duration,
+		timeout:         time.Duration(q.Timeout),
+		log:             q.Log,
 	}
 
 	switch q.ExchangeDurability {
 	case "transient":
-		config.exchangeDurable = false
+		clientConfig.exchangeDurable = false
 	default:
-		config.exchangeDurable = true
+		clientConfig.exchangeDurable = true
 	}
 
-	config.brokers = q.Brokers
-	if len(config.brokers) == 0 {
-		config.brokers = []string{q.URL}
+	clientConfig.brokers = q.Brokers
+	if len(clientConfig.brokers) == 0 {
+		clientConfig.brokers = []string{q.URL}
 	}
 
 	switch q.DeliveryMode {
 	case "transient":
-		config.deliveryMode = amqp.Transient
+		clientConfig.deliveryMode = amqp.Transient
 	case "persistent":
-		config.deliveryMode = amqp.Persistent
+		clientConfig.deliveryMode = amqp.Persistent
 	default:
-		config.deliveryMode = amqp.Transient
+		clientConfig.deliveryMode = amqp.Transient
 	}
 
 	if len(q.Headers) > 0 {
-		config.headers = make(amqp.Table, len(q.Headers))
+		clientConfig.headers = make(amqp.Table, len(q.Headers))
 		for k, v := range q.Headers {
-			config.headers[k] = v
+			clientConfig.headers[k] = v
 		}
 	} else {
 		// Copy deprecated fields into message header
-		config.headers = amqp.Table{
+		clientConfig.headers = amqp.Table{
 			"database":         q.Database,
 			"retention_policy": q.RetentionPolicy,
 		}
 	}
 
 	if len(q.ExchangeArguments) > 0 {
-		config.exchangeArguments = make(amqp.Table, len(q.ExchangeArguments))
+		clientConfig.exchangeArguments = make(amqp.Table, len(q.ExchangeArguments))
 		for k, v := range q.ExchangeArguments {
-			config.exchangeArguments[k] = v
+			clientConfig.exchangeArguments[k] = v
 		}
 	}
 
@@ -368,7 +281,7 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	config.tlsConfig = tlsConfig
+	clientConfig.tlsConfig = tlsConfig
 
 	var auth []amqp.Authentication
 	if strings.ToUpper(q.AuthMethod) == "EXTERNAL" {
@@ -381,13 +294,13 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 			},
 		}
 	}
-	config.auth = auth
+	clientConfig.auth = auth
 
-	return config, nil
+	return clientConfig, nil
 }
 
-func connect(config *ClientConfig) (Client, error) {
-	return Connect(config)
+func connect(clientConfig *ClientConfig) (Client, error) {
+	return Connect(clientConfig)
 }
 
 func init() {
@@ -398,7 +311,7 @@ func init() {
 			AuthMethod:      DefaultAuthMethod,
 			Database:        DefaultDatabase,
 			RetentionPolicy: DefaultRetentionPolicy,
-			Timeout:         internal.Duration{Duration: time.Second * 5},
+			Timeout:         config.Duration(time.Second * 5),
 			connect:         connect,
 		}
 	})

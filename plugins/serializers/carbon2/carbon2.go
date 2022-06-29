@@ -2,6 +2,7 @@ package carbon2
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -23,11 +24,23 @@ var formats = map[format]struct{}{
 	Carbon2FormatMetricIncludesField: {},
 }
 
+const (
+	DefaultSanitizeReplaceChar = ":"
+	sanitizedChars             = "!@#$%^&*()+`'\"[]{};<>,?/\\|="
+)
+
 type Serializer struct {
-	metricsFormat format
+	metricsFormat    format
+	sanitizeReplacer *strings.Replacer
 }
 
-func NewSerializer(metricsFormat string) (*Serializer, error) {
+func NewSerializer(metricsFormat string, sanitizeReplaceChar string) (*Serializer, error) {
+	if sanitizeReplaceChar == "" {
+		sanitizeReplaceChar = DefaultSanitizeReplaceChar
+	} else if len(sanitizeReplaceChar) > 1 {
+		return nil, errors.New("sanitize replace char has to be a singular character")
+	}
+
 	var f = format(metricsFormat)
 
 	if _, ok := formats[f]; !ok {
@@ -40,7 +53,8 @@ func NewSerializer(metricsFormat string) (*Serializer, error) {
 	}
 
 	return &Serializer{
-		metricsFormat: f,
+		metricsFormat:    f,
+		sanitizeReplacer: createSanitizeReplacer(sanitizedChars, rune(sanitizeReplaceChar[0])),
 	}, nil
 }
 
@@ -51,7 +65,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var batch bytes.Buffer
 	for _, metric := range metrics {
-		batch.Write(s.createObject(metric))
+		batch.Write(s.createObject(metric)) //nolint:revive // from buffer.go: "err is always nil"
 	}
 	return batch.Bytes(), nil
 }
@@ -65,33 +79,31 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 			continue
 		}
 
+		name := s.sanitizeReplacer.Replace(metric.Name())
+
 		switch metricsFormat {
 		case Carbon2FormatFieldSeparate:
-			m.WriteString(serializeMetricFieldSeparate(
-				metric.Name(), fieldName,
-			))
+			m.WriteString(serializeMetricFieldSeparate(name, fieldName)) //nolint:revive // from buffer.go: "err is always nil"
 
 		case Carbon2FormatMetricIncludesField:
-			m.WriteString(serializeMetricIncludeField(
-				metric.Name(), fieldName,
-			))
+			m.WriteString(serializeMetricIncludeField(name, fieldName)) //nolint:revive // from buffer.go: "err is always nil"
 		}
 
 		for _, tag := range metric.TagList() {
-			m.WriteString(strings.Replace(tag.Key, " ", "_", -1))
-			m.WriteString("=")
+			m.WriteString(strings.ReplaceAll(tag.Key, " ", "_")) //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString("=")                                   //nolint:revive // from buffer.go: "err is always nil"
 			value := tag.Value
 			if len(value) == 0 {
 				value = "null"
 			}
-			m.WriteString(strings.Replace(value, " ", "_", -1))
-			m.WriteString(" ")
+			m.WriteString(strings.ReplaceAll(value, " ", "_")) //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString(" ")                                 //nolint:revive // from buffer.go: "err is always nil"
 		}
-		m.WriteString(" ")
-		m.WriteString(formatValue(fieldValue))
-		m.WriteString(" ")
-		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10))
-		m.WriteString("\n")
+		m.WriteString(" ")                                         //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString(formatValue(fieldValue))                     //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString(" ")                                         //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10)) //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString("\n")                                        //nolint:revive // from buffer.go: "err is always nil"
 	}
 	return m.Bytes()
 }
@@ -110,15 +122,15 @@ func (s *Serializer) IsMetricsFormatUnset() bool {
 
 func serializeMetricFieldSeparate(name, fieldName string) string {
 	return fmt.Sprintf("metric=%s field=%s ",
-		strings.Replace(name, " ", "_", -1),
-		strings.Replace(fieldName, " ", "_", -1),
+		strings.ReplaceAll(name, " ", "_"),
+		strings.ReplaceAll(fieldName, " ", "_"),
 	)
 }
 
 func serializeMetricIncludeField(name, fieldName string) string {
 	return fmt.Sprintf("metric=%s_%s ",
-		strings.Replace(name, " ", "_", -1),
-		strings.Replace(fieldName, " ", "_", -1),
+		strings.ReplaceAll(name, " ", "_"),
+		strings.ReplaceAll(fieldName, " ", "_"),
 	)
 }
 
@@ -151,4 +163,14 @@ func bool2int(b bool) int {
 		i = 0
 	}
 	return i
+}
+
+// createSanitizeReplacer creates string replacer replacing all provided
+// characters with the replaceChar.
+func createSanitizeReplacer(sanitizedChars string, replaceChar rune) *strings.Replacer {
+	sanitizeCharPairs := make([]string, 0, 2*len(sanitizedChars))
+	for _, c := range sanitizedChars {
+		sanitizeCharPairs = append(sanitizeCharPairs, string(c), string(replaceChar))
+	}
+	return strings.NewReplacer(sanitizeCharPairs...)
 }

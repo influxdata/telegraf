@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amqp_consumer
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -9,13 +11,18 @@ import (
 	"sync"
 	"time"
 
+	amqp "github.com/rabbitmq/amqp091-go"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/streadway/amqp"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxUndeliveredMessages = 1000
@@ -26,7 +33,7 @@ type semaphore chan empty
 
 // AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
-	URL                    string            `toml:"url"` // deprecated in 1.7; use brokers
+	URL                    string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
 	Brokers                []string          `toml:"brokers"`
 	Username               string            `toml:"username"`
 	Password               string            `toml:"password"`
@@ -71,7 +78,7 @@ func (a *externalAuth) Mechanism() string {
 	return "EXTERNAL"
 }
 func (a *externalAuth) Response() string {
-	return fmt.Sprintf("\000")
+	return "\000"
 }
 
 const (
@@ -87,89 +94,8 @@ const (
 	DefaultPrefetchCount = 50
 )
 
-func (a *AMQPConsumer) SampleConfig() string {
-	return `
-  ## Broker to consume from.
-  ##   deprecated in 1.7; use the brokers option
-  # url = "amqp://localhost:5672/influxdb"
-
-  ## Brokers to consume from.  If multiple brokers are specified a random broker
-  ## will be selected anytime a connection is established.  This can be
-  ## helpful for load balancing when not using a dedicated load balancer.
-  brokers = ["amqp://localhost:5672/influxdb"]
-
-  ## Authentication credentials for the PLAIN auth_method.
-  # username = ""
-  # password = ""
-
-  ## Name of the exchange to declare.  If unset, no exchange will be declared.
-  exchange = "telegraf"
-
-  ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
-  # exchange_type = "topic"
-
-  ## If true, exchange will be passively declared.
-  # exchange_passive = false
-
-  ## Exchange durability can be either "transient" or "durable".
-  # exchange_durability = "durable"
-
-  ## Additional exchange arguments.
-  # exchange_arguments = { }
-  # exchange_arguments = {"hash_property" = "timestamp"}
-
-  ## AMQP queue name.
-  queue = "telegraf"
-
-  ## AMQP queue durability can be "transient" or "durable".
-  queue_durability = "durable"
-
-  ## If true, queue will be passively declared.
-  # queue_passive = false
-
-  ## A binding between the exchange and queue using this binding key is
-  ## created.  If unset, no binding is created.
-  binding_key = "#"
-
-  ## Maximum number of messages server should give to the worker.
-  # prefetch_count = 50
-
-  ## Maximum messages to read from the broker that have not been written by an
-  ## output.  For best throughput set based on the number of metrics within
-  ## each message and the size of the output's metric_batch_size.
-  ##
-  ## For example, if each message from the queue contains 10 metrics and the
-  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
-  ## full batch is collected and the write is triggered immediately without
-  ## waiting until the next flush_interval.
-  # max_undelivered_messages = 1000
-
-  ## Auth method. PLAIN and EXTERNAL are supported
-  ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
-  ## described here: https://www.rabbitmq.com/plugins.html
-  # auth_method = "PLAIN"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Content encoding for message payloads, can be set to "gzip" to or
-  ## "identity" to apply no encoding.
-  # content_encoding = "identity"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
-}
-
-func (a *AMQPConsumer) Description() string {
-	return "AMQP consumer plugin"
+func (*AMQPConsumer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (a *AMQPConsumer) SetParser(parser parsers.Parser) {
@@ -183,7 +109,7 @@ func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
 
 func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	// make new tls config
-	tls, err := a.ClientConfig.TLSConfig()
+	tlsCfg, err := a.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +127,7 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	}
 
 	config := amqp.Config{
-		TLSClientConfig: tls,
+		TLSClientConfig: tlsCfg,
 		SASL:            auth, // if nil, it will be PLAIN
 	}
 	return &config, nil
@@ -288,16 +214,13 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 
 	ch, err := a.conn.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to open a channel: %s", err.Error())
+		return nil, fmt.Errorf("failed to open a channel: %s", err.Error())
 	}
 
 	if a.Exchange != "" {
-		var exchangeDurable = true
-		switch a.ExchangeDurability {
-		case "transient":
+		exchangeDurable := true
+		if a.ExchangeDurability == "transient" {
 			exchangeDurable = false
-		default:
-			exchangeDurable = true
 		}
 
 		exchangeArgs := make(amqp.Table, len(a.ExchangeArguments))
@@ -305,11 +228,8 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 			exchangeArgs[k] = v
 		}
 
-		err = declareExchange(
+		err = a.declareExchange(
 			ch,
-			a.Exchange,
-			a.ExchangeType,
-			a.ExchangePassive,
 			exchangeDurable,
 			exchangeArgs)
 		if err != nil {
@@ -317,11 +237,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		}
 	}
 
-	q, err := declareQueue(
-		ch,
-		a.Queue,
-		a.QueueDurability,
-		a.QueuePassive)
+	q, err := a.declareQueue(ch)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +251,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 			nil,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to bind a queue: %s", err)
+			return nil, fmt.Errorf("failed to bind a queue: %s", err)
 		}
 	}
 
@@ -345,7 +261,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		false, // global
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to set QoS: %s", err)
+		return nil, fmt.Errorf("failed to set QoS: %s", err)
 	}
 
 	msgs, err := ch.Consume(
@@ -358,25 +274,22 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		nil,    // arguments
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed establishing connection to queue: %s", err)
+		return nil, fmt.Errorf("failed establishing connection to queue: %s", err)
 	}
 
 	return msgs, err
 }
 
-func declareExchange(
+func (a *AMQPConsumer) declareExchange(
 	channel *amqp.Channel,
-	exchangeName string,
-	exchangeType string,
-	exchangePassive bool,
 	exchangeDurable bool,
 	exchangeArguments amqp.Table,
 ) error {
 	var err error
-	if exchangePassive {
+	if a.ExchangePassive {
 		err = channel.ExchangeDeclarePassive(
-			exchangeName,
-			exchangeType,
+			a.Exchange,
+			a.ExchangeType,
 			exchangeDurable,
 			false, // delete when unused
 			false, // internal
@@ -385,8 +298,8 @@ func declareExchange(
 		)
 	} else {
 		err = channel.ExchangeDeclare(
-			exchangeName,
-			exchangeType,
+			a.Exchange,
+			a.ExchangeType,
 			exchangeDurable,
 			false, // delete when unused
 			false, // internal
@@ -395,31 +308,23 @@ func declareExchange(
 		)
 	}
 	if err != nil {
-		return fmt.Errorf("Error declaring exchange: %v", err)
+		return fmt.Errorf("error declaring exchange: %v", err)
 	}
 	return nil
 }
 
-func declareQueue(
-	channel *amqp.Channel,
-	queueName string,
-	queueDurability string,
-	queuePassive bool,
-) (*amqp.Queue, error) {
+func (a *AMQPConsumer) declareQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 	var queue amqp.Queue
 	var err error
 
-	var queueDurable = true
-	switch queueDurability {
-	case "transient":
+	queueDurable := true
+	if a.QueueDurability == "transient" {
 		queueDurable = false
-	default:
-		queueDurable = true
 	}
 
-	if queuePassive {
+	if a.QueuePassive {
 		queue, err = channel.QueueDeclarePassive(
-			queueName,    // queue
+			a.Queue,      // queue
 			queueDurable, // durable
 			false,        // delete when unused
 			false,        // exclusive
@@ -428,7 +333,7 @@ func declareQueue(
 		)
 	} else {
 		queue, err = channel.QueueDeclare(
-			queueName,    // queue
+			a.Queue,      // queue
 			queueDurable, // durable
 			false,        // delete when unused
 			false,        // exclusive
@@ -437,7 +342,7 @@ func declareQueue(
 		)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("Error declaring queue: %v", err)
+		return nil, fmt.Errorf("error declaring queue: %v", err)
 	}
 	return &queue, nil
 }

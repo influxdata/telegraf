@@ -1,0 +1,21 @@
+{
+    "timestamp": "2021-06-08T06:34:49.237367+0000",
+    "event_type": "stats",
+    "stats": {
+        "threads": {
+            "W#01-ens2f1": {
+                "detect": {
+                    "engines": [
+                        {
+                            "id": 0,
+                            "last_reload": "2021-06-08T06:33:05.084872+0000",
+                            "rules_loaded": 22712,
+                            "rules_failed": 0
+                        }
+                    ],
+                    "alert": 0
+                }
+            }
+        }
+    }
+}

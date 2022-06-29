@@ -54,41 +54,41 @@ func (f *Filter) Compile() error {
 	var err error
 	f.nameDrop, err = filter.Compile(f.NameDrop)
 	if err != nil {
-		return fmt.Errorf("Error compiling 'namedrop', %s", err)
+		return fmt.Errorf("error compiling 'namedrop', %s", err)
 	}
 	f.namePass, err = filter.Compile(f.NamePass)
 	if err != nil {
-		return fmt.Errorf("Error compiling 'namepass', %s", err)
+		return fmt.Errorf("error compiling 'namepass', %s", err)
 	}
 
 	f.fieldDrop, err = filter.Compile(f.FieldDrop)
 	if err != nil {
-		return fmt.Errorf("Error compiling 'fielddrop', %s", err)
+		return fmt.Errorf("error compiling 'fielddrop', %s", err)
 	}
 	f.fieldPass, err = filter.Compile(f.FieldPass)
 	if err != nil {
-		return fmt.Errorf("Error compiling 'fieldpass', %s", err)
+		return fmt.Errorf("error compiling 'fieldpass', %s", err)
 	}
 
 	f.tagExclude, err = filter.Compile(f.TagExclude)
 	if err != nil {
-		return fmt.Errorf("Error compiling 'tagexclude', %s", err)
+		return fmt.Errorf("error compiling 'tagexclude', %s", err)
 	}
 	f.tagInclude, err = filter.Compile(f.TagInclude)
 	if err != nil {
-		return fmt.Errorf("Error compiling 'taginclude', %s", err)
+		return fmt.Errorf("error compiling 'taginclude', %s", err)
 	}
 
 	for i := range f.TagDrop {
 		f.TagDrop[i].filter, err = filter.Compile(f.TagDrop[i].Filter)
 		if err != nil {
-			return fmt.Errorf("Error compiling 'tagdrop', %s", err)
+			return fmt.Errorf("error compiling 'tagdrop', %s", err)
 		}
 	}
 	for i := range f.TagPass {
 		f.TagPass[i].filter, err = filter.Compile(f.TagPass[i].Filter)
 		if err != nil {
-			return fmt.Errorf("Error compiling 'tagpass', %s", err)
+			return fmt.Errorf("error compiling 'tagpass', %s", err)
 		}
 	}
 	return nil
@@ -132,17 +132,11 @@ func (f *Filter) IsActive() bool {
 // based on the drop/pass filter parameters
 func (f *Filter) shouldNamePass(key string) bool {
 	pass := func(f *Filter) bool {
-		if f.namePass.Match(key) {
-			return true
-		}
-		return false
+		return f.namePass.Match(key)
 	}
 
 	drop := func(f *Filter) bool {
-		if f.nameDrop.Match(key) {
-			return false
-		}
-		return true
+		return !f.nameDrop.Match(key)
 	}
 
 	if f.namePass != nil && f.nameDrop != nil {

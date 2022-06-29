@@ -5,7 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/stretchr/testify/require"
 )
 
@@ -111,6 +111,7 @@ func TestDiskIO(t *testing.T) {
 				ps:      &mps,
 				Devices: tt.devices,
 			}
+			require.NoError(t, diskio.Init())
 			err := diskio.Gather(&acc)
 			require.Equal(t, tt.err, err)
 

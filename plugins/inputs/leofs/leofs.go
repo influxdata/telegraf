@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package leofs
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const oid = ".1.3.6.1.4.1.35450"
 
@@ -146,24 +152,13 @@ var serverTypeMapping = map[string]ServerType{
 	"4001": ServerTypeGateway,
 }
 
-var sampleConfig = `
-  ## An array of URLs of the form:
-  ##   host [ ":" port]
-  servers = ["127.0.0.1:4020"]
-`
-
-func (l *LeoFS) SampleConfig() string {
+func (*LeoFS) SampleConfig() string {
 	return sampleConfig
-}
-
-func (l *LeoFS) Description() string {
-	return "Read metrics from a LeoFS Server via SNMP"
 }
 
 func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 	if len(l.Servers) == 0 {
-		l.gatherServer(defaultEndpoint, ServerTypeManagerMaster, acc)
-		return nil
+		return l.gatherServer(defaultEndpoint, ServerTypeManagerMaster, acc)
 	}
 	var wg sync.WaitGroup
 	for _, endpoint := range l.Servers {
@@ -206,7 +201,11 @@ func (l *LeoFS) gatherServer(
 	if err != nil {
 		return err
 	}
-	cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	defer internal.WaitTimeout(cmd, time.Second*5)
 	scanner := bufio.NewScanner(stdout)
 	if !scanner.Scan() {

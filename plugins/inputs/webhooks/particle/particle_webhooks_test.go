@@ -44,7 +44,7 @@ func TestNewItem(t *testing.T) {
 		"location": "TravelingWilbury",
 	}
 
-	acc.AssertContainsTaggedFields(t, "temperature", fields, tags)
+	acc.AssertContainsTaggedFields(t, "mydata", fields, tags)
 }
 
 func TestUnknowItem(t *testing.T) {
@@ -55,6 +55,50 @@ func TestUnknowItem(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST unknown returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
+}
+
+func TestDefaultMeasurementName(t *testing.T) {
+	t.Parallel()
+	var acc testutil.Accumulator
+	rb := &ParticleWebhook{Path: "/particle", acc: &acc}
+	resp := postWebhooks(rb, BlankMeasurementJSON())
+	if resp.Code != http.StatusOK {
+		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
+	}
+
+	fields := map[string]interface{}{
+		"temp_c": 26.680000,
+	}
+
+	tags := map[string]string{
+		"id": "230035001147343438323536",
+	}
+
+	acc.AssertContainsTaggedFields(t, "eventName", fields, tags)
+}
+
+func BlankMeasurementJSON() string {
+	return `
+	{
+	  "event": "eventName",
+	  "data": {
+		  "tags": {
+			  "id": "230035001147343438323536"
+		  },
+		  "values": {
+			  "temp_c": 26.680000
+		  }
+	  },
+	  "ttl": 60,
+	  "published_at": "2017-09-28T21:54:10.897Z",
+	  "coreid": "123456789938323536",
+	  "userid": "1234ee123ac8e5ec1231a123d",
+	  "version": 10,
+	  "public": false,
+	  "productID": 1234,
+	  "name": "sensor",
+	  "measurement": ""
+  }`
 }
 
 func NewItemJSON() string {

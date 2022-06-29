@@ -1,25 +1,34 @@
 # TopK Processor Plugin
 
-The TopK processor plugin is a filter designed to get the top series over a period of time. It can be tweaked to do its top k computation over a period of time, so spikes can be smoothed out.
+The TopK processor plugin is a filter designed to get the top series over a
+period of time. It can be tweaked to calculate the top metrics via different
+aggregation functions.
 
 This processor goes through these steps when processing a batch of metrics:
 
-  1. Groups metrics in buckets using their tags and name as key
-  2. Aggregates each of the selected fields for each bucket by the selected aggregation function (sum, mean, etc)
-  3. Orders the buckets by one of the generated aggregations, returns all metrics in the top `K` buckets, then reorders the buckets by the next of the generated aggregations, returns all metrics in the top `K` buckets, etc, etc, etc, until it runs out of fields.
+1. Groups measurements in buckets based on their tags and name
+2. Every N seconds, for each bucket, for each selected field: aggregate all the measurements using a given aggregation function (min, sum, mean, etc) and the field.
+3. For each computed aggregation: order the buckets by the aggregation, then returns all measurements in the top `K` buckets
 
-The plugin makes sure not to duplicate metrics
+Notes:
 
-Note that depending on the amount of metrics on each computed bucket, more than `K` metrics may be returned
+* The deduplicates metrics
+* The name of the measurement is always used when grouping it
+* Depending on the amount of metrics on each  bucket, more than `K` series may be returned
+* If a measurement does not have one of the selected fields, it is dropped from the aggregation
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Print all metrics that pass through this filter.
 [[processors.topk]]
   ## How many seconds between aggregations
   # period = 10
 
-  ## How many top metrics to return
+  ## How many top buckets to return per field
+  ## Every field specified to aggregate over will return k number of results.
+  ## For example, 1 field with k of 10 will return 10 buckets. While 2 fields
+  ## with k of 3 will return 6 buckets.
   # k = 10
 
   ## Over which tags should the aggregation be done. Globs can be specified, in
@@ -27,10 +36,14 @@ Note that depending on the amount of metrics on each computed bucket, more than 
   ## empty list is no aggregation over tags is done
   # group_by = ['*']
 
-  ## Over which fields are the top k are calculated
+  ## The field(s) to aggregate
+  ## Each field defined is used to create an independent aggregation. Each
+  ## aggregation will return k buckets. If a metric does not have a defined
+  ## field the metric will be dropped from the aggregation. Considering using
+  ## the defaults processor plugin to ensure fields are set if required.
   # fields = ["value"]
 
-  ## What aggregation to use. Options: sum, mean, min, max
+  ## What aggregation function to use. Options: sum, mean, min, max
   # aggregation = "mean"
 
   ## Instead of the top k largest metrics, return the bottom k lowest metrics
@@ -64,18 +77,21 @@ Note that depending on the amount of metrics on each computed bucket, more than 
   # add_aggregate_fields = []
 ```
 
-### Tags:
+### Tags
 
-This processor does not add tags by default. But the setting `add_groupby_tag` will add a tag if set to anything other than ""
+This processor does not add tags by default. But the setting `add_groupby_tag`
+will add a tag if set to anything other than ""
 
+### Fields
 
-### Fields:
-
-This processor does not add fields by default. But the settings `add_rank_fields` and `add_aggregation_fields` will add one or several fields if set to anything other than ""
-
+This processor does not add fields by default. But the settings
+`add_rank_fields` and `add_aggregation_fields` will add one or several fields if
+set to anything other than ""
 
 ### Example
-**Config**
+
+Below is an example configuration:
+
 ```toml
 [[processors.topk]]
   period = 20
@@ -84,7 +100,8 @@ This processor does not add fields by default. But the settings `add_rank_fields
   fields = ["cpu_usage"]
 ```
 
-**Output difference with topk**
+Output difference with topk:
+
 ```diff
 < procstat,pid=2088,process_name=Xorg cpu_usage=7.296576662282613 1546473820000000000
 < procstat,pid=2780,process_name=ibus-engine-simple cpu_usage=0 1546473820000000000

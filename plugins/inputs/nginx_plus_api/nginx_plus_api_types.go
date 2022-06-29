@@ -11,6 +11,19 @@ type Connections struct {
 	Idle     int64 `json:"idle"`
 }
 
+type Slabs map[string]struct {
+	Pages struct {
+		Used int64 `json:"used"`
+		Free int64 `json:"free"`
+	} `json:"pages"`
+	Slots map[string]struct {
+		Used  int64 `json:"used"`
+		Free  int64 `json:"free"`
+		Reqs  int64 `json:"reqs"`
+		Fails int64 `json:"fails"`
+	} `json:"slots"`
+}
+
 type Ssl struct { // added in version 6
 	Handshakes       int64 `json:"handshakes"`
 	HandshakesFailed int64 `json:"handshakes_failed"`
@@ -35,7 +48,7 @@ type ResolverZones map[string]struct {
 	} `json:"responses"`
 }
 
-type HttpRequests struct {
+type HTTPRequests struct {
 	Total   int64 `json:"total"`
 	Current int64 `json:"current"`
 }
@@ -49,7 +62,7 @@ type ResponseStats struct {
 	Total        int64 `json:"total"`
 }
 
-type HttpServerZones map[string]struct {
+type HTTPServerZones map[string]struct {
 	Processing int           `json:"processing"`
 	Requests   int64         `json:"requests"`
 	Responses  ResponseStats `json:"responses"`
@@ -58,7 +71,7 @@ type HttpServerZones map[string]struct {
 	Sent       int64         `json:"sent"`
 }
 
-type HttpLocationZones map[string]struct {
+type HTTPLocationZones map[string]struct {
 	Requests  int64         `json:"requests"`
 	Responses ResponseStats `json:"responses"`
 	Discarded *int64        `json:"discarded"` // added in version 6
@@ -73,7 +86,7 @@ type HealthCheckStats struct {
 	LastPassed *bool `json:"last_passed"`
 }
 
-type HttpUpstreams map[string]struct {
+type HTTPUpstreams map[string]struct {
 	Peers []struct {
 		ID           *int             `json:"id"` // added in version 3
 		Server       string           `json:"server"`
@@ -145,7 +158,7 @@ type ExtendedHitStats struct {
 	BytesWritten     int64 `json:"bytes_written"`
 }
 
-type HttpCaches map[string]struct { // added in version 2
+type HTTPCaches map[string]struct { // added in version 2
 	Size        int64            `json:"size"`
 	MaxSize     int64            `json:"max_size"`
 	Cold        bool             `json:"cold"`

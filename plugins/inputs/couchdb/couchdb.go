@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package couchdb
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type (
 	metaData struct {
@@ -88,20 +94,8 @@ type (
 	}
 )
 
-func (*CouchDB) Description() string {
-	return "Read CouchDB Stats from one or more servers"
-}
-
 func (*CouchDB) SampleConfig() string {
-	return `
-  ## Works with CouchDB stats endpoints out of the box
-  ## Multiple Hosts from which to read CouchDB stats:
-  hosts = ["http://localhost:8086/_stats"]
-
-  ## Use HTTP Basic Authentication.
-  # basic_username = "telegraf"
-  # basic_password = "p@ssw0rd"
-`
+	return sampleConfig
 }
 
 func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
@@ -125,9 +119,9 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	if c.client == nil {
 		c.client = &http.Client{
 			Transport: &http.Transport{
-				ResponseHeaderTimeout: time.Duration(3 * time.Second),
+				ResponseHeaderTimeout: 3 * time.Second,
 			},
-			Timeout: time.Duration(4 * time.Second),
+			Timeout: 4 * time.Second,
 		}
 	}
 
@@ -140,19 +134,21 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		req.SetBasicAuth(c.BasicUsername, c.BasicPassword)
 	}
 
-	response, error := c.client.Do(req)
-	if error != nil {
-		return error
+	response, err := c.client.Do(req)
+	if err != nil {
+		return err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return fmt.Errorf("Failed to get stats from couchdb: HTTP responded %d", response.StatusCode)
+		return fmt.Errorf("failed to get stats from couchdb: HTTP responded %d", response.StatusCode)
 	}
 
 	stats := Stats{}
 	decoder := json.NewDecoder(response.Body)
-	decoder.Decode(&stats)
+	if err := decoder.Decode(&stats); err != nil {
+		return fmt.Errorf("failed to decode stats from couchdb: HTTP body %q", response.Body)
+	}
 
 	fields := map[string]interface{}{}
 
@@ -287,9 +283,9 @@ func init() {
 		return &CouchDB{
 			client: &http.Client{
 				Transport: &http.Transport{
-					ResponseHeaderTimeout: time.Duration(3 * time.Second),
+					ResponseHeaderTimeout: 3 * time.Second,
 				},
-				Timeout: time.Duration(4 * time.Second),
+				Timeout: 4 * time.Second,
 			},
 		}
 	})

@@ -1,15 +1,17 @@
+//go:build !windows
+// +build !windows
+
 package lustre2
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Set config file variables to point to fake directory structure instead of /proc?
@@ -45,7 +47,7 @@ const obdfilterJobStatsContents = `job_stats:
 - job_id:          cluster-testjob1
   snapshot_time:   1461772761
   read_bytes:      { samples:           1, unit: bytes, min:    4096, max:    4096, sum:            4096 }
-  write_bytes:     { samples:          25, unit: bytes, min: 1048576, max: 1048576, sum:        26214400 }
+  write_bytes:     { samples:          25, unit: bytes, min: 1048576, max:16777216, sum:        26214400 }
   getattr:         { samples:           0, unit:  reqs }
   setattr:         { samples:           0, unit:  reqs }
   punch:           { samples:           1, unit:  reqs }
@@ -131,35 +133,34 @@ const mdtJobStatsContents = `job_stats:
 `
 
 func TestLustre2GeneratesMetrics(t *testing.T) {
-
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
-	ost_name := "OST0001"
+	ostName := "OST0001"
 
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ost_name, 0755)
+	err := os.MkdirAll(mdtdir+"/"+ostName, 0755)
 	require.NoError(t, err)
 
 	osddir := tempdir + "/osd-ldiskfs/"
-	err = os.MkdirAll(osddir+"/"+ost_name, 0755)
+	err = os.MkdirAll(osddir+"/"+ostName, 0755)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
-	err = os.MkdirAll(obddir+"/"+ost_name, 0755)
+	err = os.MkdirAll(obddir+"/"+ostName, 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(mdtdir+"/"+ost_name+"/md_stats", []byte(mdtProcContents), 0644)
+	err = os.WriteFile(mdtdir+"/"+ostName+"/md_stats", []byte(mdtProcContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(osddir+"/"+ost_name+"/stats", []byte(osdldiskfsProcContents), 0644)
+	err = os.WriteFile(osddir+"/"+ostName+"/stats", []byte(osdldiskfsProcContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(obddir+"/"+ost_name+"/stats", []byte(obdfilterProcContents), 0644)
+	err = os.WriteFile(obddir+"/"+ostName+"/stats", []byte(obdfilterProcContents), 0644)
 	require.NoError(t, err)
 
 	// Begin by testing standard Lustre stats
 	m := &Lustre2{
-		Ost_procfiles: []string{obddir + "/*/stats", osddir + "/*/stats"},
-		Mds_procfiles: []string{mdtdir + "/*/md_stats"},
+		OstProcfiles: []string{obddir + "/*/stats", osddir + "/*/stats"},
+		MdsProcfiles: []string{mdtdir + "/*/md_stats"},
 	}
 
 	var acc testutil.Accumulator
@@ -168,7 +169,7 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{
-		"name": ost_name,
+		"name": ostName,
 	}
 
 	fields := map[string]interface{}{
@@ -203,30 +204,92 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
-
+func TestLustre2GeneratesClientMetrics(t *testing.T) {
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
-	ost_name := "OST0001"
-	job_names := []string{"cluster-testjob1", "testjob2"}
-
+	ostName := "OST0001"
+	clientName := "10.2.4.27@o2ib1"
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ost_name, 0755)
+	err := os.MkdirAll(mdtdir+"/"+ostName+"/exports/"+clientName, 0755)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
-	err = os.MkdirAll(obddir+"/"+ost_name, 0755)
+	err = os.MkdirAll(obddir+"/"+ostName+"/exports/"+clientName, 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(mdtdir+"/"+ost_name+"/job_stats", []byte(mdtJobStatsContents), 0644)
+	err = os.WriteFile(mdtdir+"/"+ostName+"/exports/"+clientName+"/stats", []byte(mdtProcContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(obddir+"/"+ost_name+"/job_stats", []byte(obdfilterJobStatsContents), 0644)
+	err = os.WriteFile(obddir+"/"+ostName+"/exports/"+clientName+"/stats", []byte(obdfilterProcContents), 0644)
+	require.NoError(t, err)
+
+	// Begin by testing standard Lustre stats
+	m := &Lustre2{
+		OstProcfiles: []string{obddir + "/*/exports/*/stats"},
+		MdsProcfiles: []string{mdtdir + "/*/exports/*/stats"},
+	}
+
+	var acc testutil.Accumulator
+
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	tags := map[string]string{
+		"name":   ostName,
+		"client": clientName,
+	}
+
+	fields := map[string]interface{}{
+		"close":           uint64(873243496),
+		"crossdir_rename": uint64(369571),
+		"getattr":         uint64(1503663097),
+		"getxattr":        uint64(6145349681),
+		"link":            uint64(445),
+		"mkdir":           uint64(705499),
+		"mknod":           uint64(349042),
+		"open":            uint64(1024577037),
+		"read_bytes":      uint64(78026117632000),
+		"read_calls":      uint64(203238095),
+		"rename":          uint64(629196),
+		"rmdir":           uint64(227434),
+		"samedir_rename":  uint64(259625),
+		"setattr":         uint64(1898364),
+		"setxattr":        uint64(83969),
+		"statfs":          uint64(2916320),
+		"sync":            uint64(434081),
+		"unlink":          uint64(3549417),
+		"write_bytes":     uint64(15201500833981),
+		"write_calls":     uint64(71893382),
+	}
+
+	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
+
+	err = os.RemoveAll(os.TempDir() + "/telegraf")
+	require.NoError(t, err)
+}
+
+func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
+	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	ostName := "OST0001"
+	jobNames := []string{"cluster-testjob1", "testjob2"}
+
+	mdtdir := tempdir + "/mdt/"
+	err := os.MkdirAll(mdtdir+"/"+ostName, 0755)
+	require.NoError(t, err)
+
+	obddir := tempdir + "/obdfilter/"
+	err = os.MkdirAll(obddir+"/"+ostName, 0755)
+	require.NoError(t, err)
+
+	err = os.WriteFile(mdtdir+"/"+ostName+"/job_stats", []byte(mdtJobStatsContents), 0644)
+	require.NoError(t, err)
+
+	err = os.WriteFile(obddir+"/"+ostName+"/job_stats", []byte(obdfilterJobStatsContents), 0644)
 	require.NoError(t, err)
 
 	// Test Lustre Jobstats
 	m := &Lustre2{
-		Ost_procfiles: []string{obddir + "/*/job_stats"},
-		Mds_procfiles: []string{mdtdir + "/*/job_stats"},
+		OstProcfiles: []string{obddir + "/*/job_stats"},
+		MdsProcfiles: []string{mdtdir + "/*/job_stats"},
 	}
 
 	var acc testutil.Accumulator
@@ -238,12 +301,12 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	// and even further make this dependent on summing per OST
 	tags := []map[string]string{
 		{
-			"name":  ost_name,
-			"jobid": job_names[0],
+			"name":  ostName,
+			"jobid": jobNames[0],
 		},
 		{
-			"name":  ost_name,
-			"jobid": job_names[1],
+			"name":  ostName,
+			"jobid": jobNames[1],
 		},
 	}
 
@@ -257,7 +320,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 		"jobstats_read_bytes":      uint64(4096),
 		"jobstats_write_calls":     uint64(25),
 		"jobstats_write_min_size":  uint64(1048576),
-		"jobstats_write_max_size":  uint64(1048576),
+		"jobstats_write_max_size":  uint64(16777216),
 		"jobstats_write_bytes":     uint64(26214400),
 		"jobstats_ost_getattr":     uint64(0),
 		"jobstats_ost_setattr":     uint64(0),
@@ -345,7 +408,7 @@ func TestLustre2CanParseConfiguration(t *testing.T) {
      "/proc/fs/lustre/mdt/*/md_stats",
    ]`)
 
-	table, err := toml.Parse([]byte(config))
+	table, err := toml.Parse(config)
 	require.NoError(t, err)
 
 	inputs, ok := table.Fields["inputs"]
@@ -358,12 +421,12 @@ func TestLustre2CanParseConfiguration(t *testing.T) {
 
 	require.NoError(t, toml.UnmarshalTable(lustre2.([]*ast.Table)[0], &plugin))
 
-	assert.Equal(t, Lustre2{
-		Ost_procfiles: []string{
+	require.Equal(t, Lustre2{
+		OstProcfiles: []string{
 			"/proc/fs/lustre/obdfilter/*/stats",
 			"/proc/fs/lustre/osd-ldiskfs/*/stats",
 		},
-		Mds_procfiles: []string{
+		MdsProcfiles: []string{
 			"/proc/fs/lustre/mdt/*/md_stats",
 		},
 	}, plugin)

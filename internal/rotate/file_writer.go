@@ -123,10 +123,7 @@ func (w *FileWriter) openCurrent() (err error) {
 		w.bytesWritten = fileInfo.Size()
 	}
 
-	if err = w.rotateIfNeeded(); err != nil {
-		return err
-	}
-	return nil
+	return w.rotateIfNeeded()
 }
 
 func (w *FileWriter) rotateIfNeeded() error {
@@ -153,11 +150,7 @@ func (w *FileWriter) rotate() (err error) {
 		return err
 	}
 
-	if err = w.purgeArchivesIfNeeded(); err != nil {
-		return err
-	}
-
-	return nil
+	return w.purgeArchivesIfNeeded()
 }
 
 func (w *FileWriter) purgeArchivesIfNeeded() (err error) {

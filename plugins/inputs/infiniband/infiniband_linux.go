@@ -1,18 +1,18 @@
+//go:build linux
 // +build linux
 
 package infiniband
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/Mellanox/rdmamap"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"strconv"
 )
 
 // Gather statistics from our infiniband cards
-func (_ *Infiniband) Gather(acc telegraf.Accumulator) error {
-
+func (i *Infiniband) Gather(acc telegraf.Accumulator) error {
 	rdmaDevices := rdmamap.GetRdmaDeviceList()
 
 	if len(rdmaDevices) == 0 {
@@ -41,7 +41,6 @@ func (_ *Infiniband) Gather(acc telegraf.Accumulator) error {
 
 // Add the statistics to the accumulator
 func addStats(dev string, port string, stats []rdmamap.RdmaStatEntry, acc telegraf.Accumulator) {
-
 	// Allow users to filter by card and port
 	tags := map[string]string{"device": dev, "port": port}
 	fields := make(map[string]interface{})
@@ -51,9 +50,4 @@ func addStats(dev string, port string, stats []rdmamap.RdmaStatEntry, acc telegr
 	}
 
 	acc.AddFields("infiniband", fields, tags)
-}
-
-// Initialise plugin
-func init() {
-	inputs.Add("infiniband", func() telegraf.Input { return &Infiniband{} })
 }
