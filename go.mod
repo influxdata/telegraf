@@ -33,7 +33,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.5
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.7.0
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.4
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.8
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.15.7
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.46.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.15.7
@@ -66,7 +66,7 @@ require (
 	github.com/goburrow/serial v0.1.0 // indirect
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid v4.2.0+incompatible
-	github.com/golang-jwt/jwt/v4 v4.4.1
+	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v0.0.4
 	github.com/google/gnxi v0.0.0-20220411075422-cd6b043b7fd0
