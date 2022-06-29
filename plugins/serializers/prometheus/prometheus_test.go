@@ -138,6 +138,29 @@ http_request_duration_seconds_count 0
 `),
 		},
 		{
+			name: "prometheus input histogram only bucket with compact encoding",
+			config: FormatConfig{
+				MetricEncoding: CompactEncoding,
+			},
+			metric: testutil.MustMetric(
+				"prometheus",
+				map[string]string{
+					"le": "0.5",
+				},
+				map[string]interface{}{
+					"http_request_duration_seconds_bucket": 129389.0,
+				},
+				time.Unix(0, 0),
+				telegraf.Histogram,
+			),
+			expected: []byte(`
+http_request_duration_seconds_bucket{le="0.5"} 129389
+http_request_duration_seconds_bucket{le="+Inf"} 0
+http_request_duration_seconds_sum 0
+http_request_duration_seconds_count 0
+`),
+		},
+		{
 			name: "simple with timestamp",
 			config: FormatConfig{
 				TimestampExport: ExportTimestamp,
@@ -158,6 +181,45 @@ http_request_duration_seconds_count 0
 cpu_time_idle{host="example.org"} 42 1574279268000
 `),
 		},
+		{
+			name: "simple with compact encoding",
+			config: FormatConfig{
+				MetricEncoding: CompactEncoding,
+			},
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"host": "example.org",
+				},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []byte(`
+cpu_time_idle{host="example.org"} 42
+`),
+		},
+		{
+			name: "simple with timestamp and compact encoding",
+			config: FormatConfig{
+				TimestampExport: ExportTimestamp,
+				MetricEncoding:  CompactEncoding,
+			},
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"host": "example.org",
+				},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(1574279268, 0),
+			),
+			expected: []byte(`
+cpu_time_idle{host="example.org"} 42 1574279268000
+`),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -165,6 +227,7 @@ cpu_time_idle{host="example.org"} 42 1574279268000
 				MetricSortOrder: SortMetrics,
 				TimestampExport: tt.config.TimestampExport,
 				StringHandling:  tt.config.StringHandling,
+				MetricEncoding:  tt.config.MetricEncoding,
 			})
 			require.NoError(t, err)
 			actual, err := s.Serialize(tt.metric)
@@ -309,6 +372,88 @@ cpu_time_idle{host="one.example.org"} 42
 			expected: []byte(`
 # HELP http_request_duration_seconds Telegraf collected metric
 # TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{le="0.05"} 24054
+http_request_duration_seconds_bucket{le="0.1"} 33444
+http_request_duration_seconds_bucket{le="0.2"} 100392
+http_request_duration_seconds_bucket{le="0.5"} 129389
+http_request_duration_seconds_bucket{le="1"} 133988
+http_request_duration_seconds_bucket{le="+Inf"} 144320
+http_request_duration_seconds_sum 53423
+http_request_duration_seconds_count 144320
+`),
+		},
+		{
+			name: "histogram with compact encoding",
+			config: FormatConfig{
+				MetricEncoding: CompactEncoding,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"http_request_duration_seconds_sum":   53423,
+						"http_request_duration_seconds_count": 144320,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "0.05"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 24054.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "0.1"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 33444.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "0.2"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 100392.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "0.5"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 129389.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "1.0"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 133988.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "+Inf"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 144320.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+			},
+			expected: []byte(`
 http_request_duration_seconds_bucket{le="0.05"} 24054
 http_request_duration_seconds_bucket{le="0.1"} 33444
 http_request_duration_seconds_bucket{le="0.2"} 100392
@@ -653,6 +798,76 @@ cpu_time_user{cpu="cpu3"} 94148
 `),
 		},
 		{
+			name: "multiple fields grouping with compact encoding",
+			config: FormatConfig{
+				MetricEncoding: CompactEncoding,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"cpu": "cpu0",
+					},
+					map[string]interface{}{
+						"time_guest":  8106.04,
+						"time_system": 26271.4,
+						"time_user":   92904.33,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"cpu": "cpu1",
+					},
+					map[string]interface{}{
+						"time_guest":  8181.63,
+						"time_system": 25351.49,
+						"time_user":   96912.57,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"cpu": "cpu2",
+					},
+					map[string]interface{}{
+						"time_guest":  7470.04,
+						"time_system": 24998.43,
+						"time_user":   96034.08,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"cpu": "cpu3",
+					},
+					map[string]interface{}{
+						"time_guest":  7517.95,
+						"time_system": 24970.82,
+						"time_user":   94148,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+cpu_time_guest{cpu="cpu0"} 8106.04
+cpu_time_guest{cpu="cpu1"} 8181.63
+cpu_time_guest{cpu="cpu2"} 7470.04
+cpu_time_guest{cpu="cpu3"} 7517.95
+cpu_time_system{cpu="cpu0"} 26271.4
+cpu_time_system{cpu="cpu1"} 25351.49
+cpu_time_system{cpu="cpu2"} 24998.43
+cpu_time_system{cpu="cpu3"} 24970.82
+cpu_time_user{cpu="cpu0"} 92904.33
+cpu_time_user{cpu="cpu1"} 96912.57
+cpu_time_user{cpu="cpu2"} 96034.08
+cpu_time_user{cpu="cpu3"} 94148
+`),
+		},
+		{
 			name: "summary with no quantile",
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -680,6 +895,7 @@ rpc_duration_seconds_count 2693
 				MetricSortOrder: SortMetrics,
 				TimestampExport: tt.config.TimestampExport,
 				StringHandling:  tt.config.StringHandling,
+				MetricEncoding:  tt.config.MetricEncoding,
 			})
 			require.NoError(t, err)
 			actual, err := s.SerializeBatch(tt.metrics)

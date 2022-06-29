@@ -32,10 +32,19 @@ const (
 	StringAsLabel
 )
 
+// MetricEncoding defines Prometheus exposition format mode: the standard metrics format or the compact without metadata.
+type MetricEncoding int
+
+const (
+	StandardEncoding MetricEncoding = iota
+	CompactEncoding
+)
+
 type FormatConfig struct {
 	TimestampExport TimestampExport
 	MetricSortOrder MetricSortOrder
 	StringHandling  StringHandling
+	MetricEncoding  MetricEncoding
 }
 
 type Serializer struct {
@@ -58,8 +67,17 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
+
 	for _, mf := range coll.GetProto() {
-		enc := expfmt.NewEncoder(&buf, expfmt.FmtText)
+
+		var enc expfmt.Encoder
+		switch s.config.MetricEncoding {
+		case StandardEncoding:
+			enc = expfmt.NewEncoder(&buf, expfmt.FmtText)
+		case CompactEncoding:
+			enc = NewCompactEncoder(&buf)
+		}
+
 		err := enc.Encode(mf)
 		if err != nil {
 			return nil, err

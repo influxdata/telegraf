@@ -23,6 +23,10 @@ reporting others every bucket/quantile will continue to exist.
   ## Include the metric timestamp on each sample.
   prometheus_export_timestamp = false
 
+  ## Encode metrics without TYPE and HELP metadata, i.e. compacted Prometheus exposition format;
+  ## when false the standard Prometheus exposition format is used.
+  prometheus_compact_encoding = false
+
   ## Sort prometheus metric families and metric samples.  Useful for
   ## debugging.
   prometheus_sort_metrics = false
