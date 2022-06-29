@@ -5,7 +5,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
-	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
@@ -209,9 +208,6 @@ func NewParser(config *Config) (Parser, error) {
 		}
 	case "nagios":
 		parser, err = NewNagiosParser()
-	case "graphite":
-		parser, err = NewGraphiteParser(config.Separator,
-			config.Templates, config.DefaultTags)
 	case "dropwizard":
 		parser, err = NewDropwizardParser(
 			config.DropwizardMetricRegistryPath,
@@ -287,14 +283,6 @@ func NewInfluxParser() (Parser, error) {
 
 func NewInfluxUpstreamParser() (Parser, error) {
 	return influx_upstream.NewParser(), nil
-}
-
-func NewGraphiteParser(
-	separator string,
-	templates []string,
-	defaultTags map[string]string,
-) (Parser, error) {
-	return graphite.NewGraphiteParser(separator, templates, defaultTags)
 }
 
 func NewDropwizardParser(
