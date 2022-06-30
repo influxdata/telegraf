@@ -7,6 +7,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	_ "github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	_ "github.com/influxdata/telegraf/plugins/parsers/graphite"
+	_ "github.com/influxdata/telegraf/plugins/parsers/grok"
 	_ "github.com/influxdata/telegraf/plugins/parsers/json"
 	_ "github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	_ "github.com/influxdata/telegraf/plugins/parsers/logfmt"

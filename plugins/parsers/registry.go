@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -206,15 +205,6 @@ func NewParser(config *Config) (Parser, error) {
 		}
 	case "nagios":
 		parser, err = NewNagiosParser()
-	case "grok":
-		parser, err = newGrokParser(
-			config.MetricName,
-			config.GrokPatterns,
-			config.GrokNamedPatterns,
-			config.GrokCustomPatterns,
-			config.GrokCustomPatternFiles,
-			config.GrokTimezone,
-			config.GrokUniqueTimestamp)
 	case "prometheus":
 		parser, err = NewPrometheusParser(
 			config.DefaultTags,
@@ -238,24 +228,6 @@ func NewParser(config *Config) (Parser, error) {
 		err = p.InitFromConfig(config)
 	}
 	return parser, err
-}
-
-func newGrokParser(metricName string,
-	patterns []string, nPatterns []string,
-	cPatterns string, cPatternFiles []string,
-	tZone string, uniqueTimestamp string) (Parser, error) {
-	parser := grok.Parser{
-		Measurement:        metricName,
-		Patterns:           patterns,
-		NamedPatterns:      nPatterns,
-		CustomPatterns:     cPatterns,
-		CustomPatternFiles: cPatternFiles,
-		Timezone:           tZone,
-		UniqueTimestamp:    uniqueTimestamp,
-	}
-
-	err := parser.Compile()
-	return &parser, err
 }
 
 func NewNagiosParser() (Parser, error) {
