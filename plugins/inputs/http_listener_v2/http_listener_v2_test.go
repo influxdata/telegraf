@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -46,7 +46,8 @@ var (
 )
 
 func newTestHTTPListenerV2() *HTTPListenerV2 {
-	parser, _ := parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	_ = parser.Init()
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -70,7 +71,8 @@ func newTestHTTPAuthListener() *HTTPListenerV2 {
 }
 
 func newTestHTTPSListenerV2() *HTTPListenerV2 {
-	parser, _ := parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	_ = parser.Init()
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -109,7 +111,8 @@ func createURL(listener *HTTPListenerV2, scheme string, path string, rawquery st
 }
 
 func TestInvalidListenerConfig(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -319,7 +322,8 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 }
 
 func TestWriteHTTPExactMaxBodySize(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -344,7 +348,8 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 }
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},

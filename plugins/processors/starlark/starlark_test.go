@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -3258,10 +3258,11 @@ func TestAllScriptTestData(t *testing.T) {
 	}
 }
 
-var parser, _ = parsers.NewInfluxParser() // literally never returns errors.
-
 // parses metric lines out of line protocol following a header, with a trailing blank line
 func parseMetricsFrom(t *testing.T, lines []string, header string) (metrics []telegraf.Metric) {
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
 	require.NotZero(t, len(lines), "Expected some lines to parse from .star file, found none")
 	startIdx := -1
 	endIdx := len(lines)
