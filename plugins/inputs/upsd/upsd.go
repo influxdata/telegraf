@@ -163,14 +163,19 @@ func (u *Upsd) fetchVariables(server string, port int) (map[string][]nut.Variabl
 		return nil, fmt.Errorf("getupslist: %w", err)
 	}
 
-	defer client.Disconnect()
+	defer func() {
+		_, disconnect_err := client.Disconnect()
+		if disconnect_err != nil {
+			err = fmt.Errorf("disconnect: %w", disconnect_err)
+		}
+	}()
 
 	result := make(map[string][]nut.Variable)
 	for _, ups := range upsList {
 		result[ups.Name] = ups.Variables
 	}
 
-	return result, nil
+	return result, err
 }
 
 func init() {
