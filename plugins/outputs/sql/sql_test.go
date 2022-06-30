@@ -1,7 +1,6 @@
 package sql
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -9,27 +8,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func TestSqlQuote(t *testing.T) {
+func TestSqlQuoteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 }
 
-func TestSqlCreateStatement(t *testing.T) {
+func TestSqlCreateStatementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 }
 
-func TestSqlInsertStatement(t *testing.T) {
+func TestSqlInsertStatementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -107,6 +106,14 @@ var (
 					Key:   "bool_two",
 					Value: false,
 				},
+				{
+					Key:   "uint64_one",
+					Value: uint64(1000000000),
+				},
+				{
+					Key:   "float64_one",
+					Value: float64(3.1415),
+				},
 			},
 			ts,
 		),
@@ -161,44 +168,33 @@ func TestMysqlIntegration(t *testing.T) {
 	const username = "root"
 
 	password := pwgen(32)
-	outDir, err := os.MkdirTemp("", "tg-mysql-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
-	ctx := context.Background()
-	req := testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image: "mariadb",
-			Env: map[string]string{
-				"MARIADB_ROOT_PASSWORD": password,
-			},
-			BindMounts: map[string]string{
-				initdb: "/docker-entrypoint-initdb.d",
-				outDir: "/out",
-			},
-			ExposedPorts: []string{"3306/tcp"},
-			WaitingFor:   wait.ForListeningPort("3306/tcp"),
+	servicePort := "3306"
+	container := testutil.Container{
+		Image: "mariadb",
+		Env: map[string]string{
+			"MARIADB_ROOT_PASSWORD": password,
 		},
-		Started: true,
+		BindMounts: map[string]string{
+			"/docker-entrypoint-initdb.d": initdb,
+			"/out":                        outDir,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("Buffer pool(s) load completed at"),
+		),
 	}
-	mariadbContainer, err := testcontainers.GenericContainer(ctx, req)
-	require.NoError(t, err, "starting container failed")
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
 	defer func() {
-		require.NoError(t, mariadbContainer.Terminate(ctx), "terminating container failed")
+		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
-
-	// Get the connection details from the container
-	host, err := mariadbContainer.Host(ctx)
-	require.NoError(t, err, "getting container host address failed")
-	require.NotEmpty(t, host)
-	natPort, err := mariadbContainer.MappedPort(ctx, "3306/tcp")
-	require.NoError(t, err, "getting container host port failed")
-	port := natPort.Port()
-	require.NotEmpty(t, port)
 
 	//use the plugin to write to the database
 	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
-		username, password, host, port, dbname,
+		username, password, container.Address, container.Ports[servicePort], dbname,
 	)
 	p := newSQL()
 	p.Log = testutil.Logger{}
@@ -214,7 +210,7 @@ func TestMysqlIntegration(t *testing.T) {
 
 	//dump the database
 	var rc int
-	rc, err = mariadbContainer.Exec(ctx, []string{
+	rc, err = container.Exec([]string{
 		"bash",
 		"-c",
 		"mariadb-dump --user=" + username +
@@ -251,50 +247,42 @@ func TestPostgresIntegration(t *testing.T) {
 	const username = "postgres"
 
 	password := pwgen(32)
-	outDir, err := os.MkdirTemp("", "tg-postgres-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
-	ctx := context.Background()
-	req := testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image: "postgres",
-			Env: map[string]string{
-				"POSTGRES_PASSWORD": password,
-			},
-			BindMounts: map[string]string{
-				initdb: "/docker-entrypoint-initdb.d",
-				outDir: "/out",
-			},
-			ExposedPorts: []string{"5432/tcp"},
-			WaitingFor:   wait.ForListeningPort("5432/tcp"),
+	servicePort := "5432"
+	container := testutil.Container{
+		Image: "postgres",
+		Env: map[string]string{
+			"POSTGRES_PASSWORD": password,
 		},
-		Started: true,
+		BindMounts: map[string]string{
+			"/docker-entrypoint-initdb.d": initdb,
+			"/out":                        outDir,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("database system is ready to accept connections"),
+		),
 	}
-	cont, err := testcontainers.GenericContainer(ctx, req)
-	require.NoError(t, err, "starting container failed")
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
 	defer func() {
-		require.NoError(t, cont.Terminate(ctx), "terminating container failed")
+		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
-
-	// Get the connection details from the container
-	host, err := cont.Host(ctx)
-	require.NoError(t, err, "getting container host address failed")
-	require.NotEmpty(t, host)
-	natPort, err := cont.MappedPort(ctx, "5432/tcp")
-	require.NoError(t, err, "getting container host port failed")
-	port := natPort.Port()
-	require.NotEmpty(t, port)
 
 	//use the plugin to write to the database
 	// host, port, username, password, dbname
 	address := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
-		username, password, host, port, dbname,
+		username, password, container.Address, container.Ports[servicePort], dbname,
 	)
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "pgx"
 	p.DataSourceName = address
+	p.Convert.Real = "double precision"
+	p.Convert.Unsigned = "bigint"
+	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(
@@ -304,7 +292,7 @@ func TestPostgresIntegration(t *testing.T) {
 	//dump the database
 	//psql -u postgres
 	var rc int
-	rc, err = cont.Exec(ctx, []string{
+	rc, err = container.Exec([]string{
 		"bash",
 		"-c",
 		"pg_dump" +
@@ -329,6 +317,94 @@ func TestPostgresIntegration(t *testing.T) {
 
 	//compare the dump to what we expected
 	expected, err := os.ReadFile("testdata/postgres/expected.sql")
+	require.NoError(t, err)
+	actual, err := os.ReadFile(dumpfile)
+	require.NoError(t, err)
+	require.Equal(t, string(expected), string(actual))
+}
+
+func TestClickHouseIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	initdb, err := filepath.Abs("testdata/clickhouse/initdb")
+	// confd, err := filepath.Abs("testdata/clickhouse/config.d")
+	require.NoError(t, err)
+
+	// initdb/init.sql creates this database
+	const dbname = "foo"
+
+	// default username for clickhouse is default
+	const username = "default"
+
+	outDir := t.TempDir()
+
+	servicePort := "9000"
+	container := testutil.Container{
+		Image:        "yandex/clickhouse-server",
+		ExposedPorts: []string{servicePort, "8123"},
+		BindMounts: map[string]string{
+			"/docker-entrypoint-initdb.d": initdb,
+			"/out":                        outDir,
+		},
+		WaitingFor: wait.ForAll(
+			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'"),
+		),
+	}
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	//use the plugin to write to the database
+	// host, port, username, password, dbname
+	address := fmt.Sprintf("tcp://%v:%v?username=%v&database=%v",
+		container.Address, container.Ports[servicePort], username, dbname)
+	p := newSQL()
+	p.Log = testutil.Logger{}
+	p.Driver = "clickhouse"
+	p.DataSourceName = address
+	p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ENGINE MergeTree() ORDER by timestamp"
+	p.Convert.Integer = "Int64"
+	p.Convert.Text = "String"
+	p.Convert.Timestamp = "DateTime"
+	p.Convert.Defaultvalue = "String"
+	p.Convert.Unsigned = "UInt64"
+	p.Convert.Bool = "UInt8"
+	p.Convert.ConversionStyle = "literal"
+
+	require.NoError(t, p.Connect())
+
+	require.NoError(t, p.Write(testMetrics))
+
+	// dump the database
+	var rc int
+	for _, testMetric := range testMetrics {
+		rc, err = container.Exec([]string{
+			"bash",
+			"-c",
+			"clickhouse-client" +
+				" --user=" + username +
+				" --database=" + dbname +
+				" --format=TabSeparatedRaw" +
+				" --multiquery --query=" +
+				"\"SELECT * FROM \\\"" + testMetric.Name() + "\\\";" +
+				"SHOW CREATE TABLE \\\"" + testMetric.Name() + "\\\"\"" +
+				" >> /out/dump 2>&1",
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, rc)
+	}
+
+	dumpfile := filepath.Join(outDir, "dump")
+	require.FileExists(t, dumpfile)
+
+	//compare the dump to what we expected
+	expected, err := os.ReadFile("testdata/clickhouse/expected.txt")
 	require.NoError(t, err)
 	actual, err := os.ReadFile(dumpfile)
 	require.NoError(t, err)

@@ -8,15 +8,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/stretchr/testify/require"
 )
 
 func TestProcessorShim(t *testing.T) {
-	testSendAndRecieve(t, "f1", "fv1")
+	testSendAndReceive(t, "f1", "fv1")
 }
 
 func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
@@ -26,10 +27,10 @@ func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 
-	testSendAndRecieve(t, "f1", string(b))
+	testSendAndReceive(t, "f1", string(b))
 }
 
-func testSendAndRecieve(t *testing.T, fieldKey string, fieldValue string) {
+func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 	p := &testProcessor{"hi", "mom"}
 
 	stdinReader, stdinWriter := io.Pipe()
@@ -95,8 +96,8 @@ type testProcessor struct {
 }
 
 func (p *testProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	for _, metric := range in {
-		metric.AddTag(p.tagName, p.tagValue)
+	for _, m := range in {
+		m.AddTag(p.tagName, p.tagValue)
 	}
 	return in
 }

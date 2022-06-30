@@ -1,6 +1,7 @@
 package sqlserver
 
 import (
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -32,8 +33,9 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 			QueryVersion: 2,
 			IncludeQuery: test["IncludeQuery"].([]string),
 			ExcludeQuery: test["ExcludeQuery"].([]string),
+			Log:          testutil.Logger{},
 		}
-		require.NoError(t, initQueries(&s))
+		require.NoError(t, s.initQueries())
 		require.Equal(t, len(s.queries), test["queriesTotal"].(int))
 		for _, query := range test["queries"].([]string) {
 			require.Contains(t, s.queries, query)
@@ -107,7 +109,7 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 	}
 }
 
-func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
+func TestSqlServerIntegration_MultipleInstance(t *testing.T) {
 	// Invoke Gather() from two separate configurations and
 	//  confirm they don't interfere with each other
 	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
@@ -116,10 +118,12 @@ func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	s := &SQLServer{
 		Servers:      []string{testServer},
 		ExcludeQuery: []string{"MemoryClerk"},
+		Log:          testutil.Logger{},
 	}
 	s2 := &SQLServer{
 		Servers:      []string{testServer},
 		ExcludeQuery: []string{"DatabaseSize"},
+		Log:          testutil.Logger{},
 	}
 
 	var acc, acc2 testutil.Accumulator
@@ -140,7 +144,7 @@ func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	require.False(t, acc2.HasMeasurement("Log size (bytes)"))
 }
 
-func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
+func TestSqlServerIntegration_MultipleInstanceWithHealthMetric(t *testing.T) {
 	// Invoke Gather() from two separate configurations and
 	// confirm they don't interfere with each other.
 	// This test is intentionally similar to TestSqlServer_MultipleInstanceIntegration.
@@ -151,11 +155,13 @@ func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
 	s := &SQLServer{
 		Servers:      []string{testServer},
 		ExcludeQuery: []string{"MemoryClerk"},
+		Log:          testutil.Logger{},
 	}
 	s2 := &SQLServer{
 		Servers:      []string{testServer},
 		ExcludeQuery: []string{"DatabaseSize"},
 		HealthMetric: true,
+		Log:          testutil.Logger{},
 	}
 
 	var acc, acc2 testutil.Accumulator
@@ -192,12 +198,14 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
 		HealthMetric: true,
 		AuthMethod:   "connection_string",
+		Log:          testutil.Logger{},
 	}
 
 	s2 := &SQLServer{
 		Servers:      []string{fakeServer1},
 		IncludeQuery: []string{"DatabaseSize"},
 		AuthMethod:   "connection_string",
+		Log:          testutil.Logger{},
 	}
 
 	// acc1 should have the health metric because it is specified in the config
@@ -225,16 +233,17 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 }
 
 func TestSqlServer_MultipleInit(t *testing.T) {
-	s := &SQLServer{}
+	s := &SQLServer{Log: testutil.Logger{}}
 	s2 := &SQLServer{
 		ExcludeQuery: []string{"DatabaseSize"},
+		Log:          testutil.Logger{},
 	}
 
-	require.NoError(t, initQueries(s))
+	require.NoError(t, s.initQueries())
 	_, ok := s.queries["DatabaseSize"]
 	require.True(t, ok)
 
-	require.NoError(t, initQueries(s2))
+	require.NoError(t, s.initQueries())
 	_, ok = s2.queries["DatabaseSize"]
 	require.False(t, ok)
 	s.Stop()
@@ -321,25 +330,30 @@ func TestSqlServer_ConnectionString(t *testing.T) {
 	require.Equal(t, emptyDatabaseName, database)
 }
 
-func TestSqlServer_AGQueriesApplicableForDatabaseTypeSQLServer(t *testing.T) {
+func TestSqlServerIntegration_AGQueriesApplicableForDatabaseTypeSQLServer(t *testing.T) {
 	// This test case checks where Availability Group (AG / HADR) queries return an output when included for processing for DatabaseType = SQLServer
 	// And they should not be processed when DatabaseType = AzureSQLDB
 
-	// Please change the connection string to connect to relevant database when executing the test case
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
-	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
-
-	testServer := "Server=127.0.0.1;Port=1433;Database=testdb1;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	if os.Getenv("AZURESQL_POOL_CONNECTION_STRING") == "" {
+		t.Skip("Missing environment variable AZURESQL_POOL_CONNECTION_STRING")
+	}
+	testServer := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
 
 	s := &SQLServer{
 		Servers:      []string{testServer},
 		DatabaseType: "SQLServer",
 		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+		Log:          testutil.Logger{},
 	}
 	s2 := &SQLServer{
 		Servers:      []string{testServer},
 		DatabaseType: "AzureSQLDB",
 		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+		Log:          testutil.Logger{},
 	}
 
 	var acc, acc2 testutil.Accumulator
@@ -362,25 +376,34 @@ func TestSqlServer_AGQueriesApplicableForDatabaseTypeSQLServer(t *testing.T) {
 	s2.Stop()
 }
 
-func TestSqlServer_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
+func TestSqlServerIntegration_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
 	// This test case checks where Availability Group (AG / HADR) queries return specific fields supported by corresponding SQL Server version database being connected to.
 
-	// Please change the connection strings to connect to relevant database when executing the test case
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
-	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+	if os.Getenv("AZURESQL_POOL_CONNECTION_STRING_2019") == "" {
+		t.Skip("Missing environment variable AZURESQL_POOL_CONNECTION_STRING_2019")
+	}
+	if os.Getenv("AZURESQL_POOL_CONNECTION_STRING_2012") == "" {
+		t.Skip("Missing environment variable AZURESQL_POOL_CONNECTION_STRING_2012")
+	}
 
-	testServer2019 := "Server=127.0.0.10;Port=1433;Database=testdb2019;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
-	testServer2012 := "Server=127.0.0.20;Port=1433;Database=testdb2012;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	testServer2019 := os.Getenv("AZURESQL_POOL_CONNECTION_STRING_2019")
+	testServer2012 := os.Getenv("AZURESQL_POOL_CONNECTION_STRING_2012")
 
 	s2019 := &SQLServer{
 		Servers:      []string{testServer2019},
 		DatabaseType: "SQLServer",
 		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+		Log:          testutil.Logger{},
 	}
 	s2012 := &SQLServer{
 		Servers:      []string{testServer2012},
 		DatabaseType: "SQLServer",
 		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+		Log:          testutil.Logger{},
 	}
 
 	var acc2019, acc2012 testutil.Accumulator

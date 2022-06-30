@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -6,6 +7,7 @@ package intel_rdt
 import (
 	"bufio"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -23,6 +25,10 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	timestampFormat           = "2006-01-02 15:04:05"
@@ -66,44 +72,19 @@ type processMeasurement struct {
 	measurement string
 }
 
+type splitCSVLine struct {
+	timeValue        string
+	metricsValues    []string
+	coreOrPIDsValues []string
+}
+
+func (*IntelRDT) SampleConfig() string {
+	return sampleConfig
+}
+
 // All gathering is done in the Start function
 func (r *IntelRDT) Gather(_ telegraf.Accumulator) error {
 	return nil
-}
-
-func (r *IntelRDT) Description() string {
-	return "Intel Resource Director Technology plugin"
-}
-
-func (r *IntelRDT) SampleConfig() string {
-	return `
-	## Optionally set sampling interval to Nx100ms. 
-	## This value is propagated to pqos tool. Interval format is defined by pqos itself.
-	## If not provided or provided 0, will be set to 10 = 10x100ms = 1s.
-	# sampling_interval = "10"
-	
-	## Optionally specify the path to pqos executable. 
-	## If not provided, auto discovery will be performed.
-	# pqos_path = "/usr/local/bin/pqos"
-
-	## Optionally specify if IPC and LLC_Misses metrics shouldn't be propagated.
-	## If not provided, default value is false.
-	# shortened_metrics = false
-	
-	## Specify the list of groups of CPU core(s) to be provided as pqos input. 
-	## Mandatory if processes aren't set and forbidden if processes are specified.
-	## e.g. ["0-3", "4,5,6"] or ["1-3,4"]
-	# cores = ["0-3"]
-	
-	## Specify the list of processes for which Metrics will be collected.
-	## Mandatory if cores aren't set and forbidden if cores are specified.
-	## e.g. ["qemu", "pmd"]
-	# processes = ["process"]
-
-	## Specify if the pqos process should be called with sudo.
-	## Mandatory if the telegraf process does not run as root.
-	# use_sudo = false
-`
 }
 
 func (r *IntelRDT) Start(acc telegraf.Accumulator) error {
@@ -230,8 +211,8 @@ func (r *IntelRDT) associateProcessesWithPIDs(providedProcesses []string) (map[s
 	}
 	for _, availableProcess := range availableProcesses {
 		if choice.Contains(availableProcess.Name, providedProcesses) {
-			PID := availableProcess.PID
-			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + fmt.Sprintf("%d", PID) + ","
+			pid := availableProcess.PID
+			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + fmt.Sprintf("%d", pid) + ","
 		}
 	}
 	for key := range mapProcessPIDs {
@@ -258,11 +239,11 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	cmd := exec.Command(r.PqosPath, append(args)...)
+	cmd := exec.Command(r.PqosPath, args...)
 
 	if r.UseSudo {
 		// run pqos with `/bin/sh -c "sudo /path/to/pqos ..."`
-		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.Replace(strings.Join(args, " "), ";", "\\;", -1))}
+		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.ReplaceAll(strings.Join(args, " "), ";", "\\;"))}
 		cmd = exec.Command("/bin/sh", args...)
 	}
 
@@ -327,13 +308,13 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 		if len(r.Processes) != 0 {
 			newMetric := processMeasurement{}
 
-			PIDs, err := findPIDsInMeasurement(out)
+			pids, err := findPIDsInMeasurement(out)
 			if err != nil {
 				r.errorChan <- err
 				break
 			}
 			for processName, PIDsProcess := range processesPIDsAssociation {
-				if PIDs == PIDsProcess {
+				if pids == PIDsProcess {
 					newMetric.name = processName
 					newMetric.measurement = out
 				}
@@ -482,29 +463,29 @@ func validateAndParseCores(coreStr string) ([]int, error) {
 func findPIDsInMeasurement(measurements string) (string, error) {
 	// to distinguish PIDs from Cores (PIDs should be in quotes)
 	var insideQuoteRegex = regexp.MustCompile(`"(.*?)"`)
-	PIDsMatch := insideQuoteRegex.FindStringSubmatch(measurements)
-	if len(PIDsMatch) < 2 {
+	pidsMatch := insideQuoteRegex.FindStringSubmatch(measurements)
+	if len(pidsMatch) < 2 {
 		return "", fmt.Errorf("cannot find PIDs in measurement line")
 	}
-	PIDs := PIDsMatch[1]
-	return PIDs, nil
+	pids := pidsMatch[1]
+	return pids, nil
 }
 
-func splitCSVLineIntoValues(line string) (timeValue string, metricsValues, coreOrPIDsValues []string, err error) {
+func splitCSVLineIntoValues(line string) (splitCSVLine, error) {
 	values, err := splitMeasurementLine(line)
 	if err != nil {
-		return "", nil, nil, err
+		return splitCSVLine{}, err
 	}
 
-	timeValue = values[0]
+	timeValue := values[0]
 	// Because pqos csv format is broken when many cores are involved in PID or
 	// group of PIDs, there is need to work around it. E.g.:
 	// Time,PID,Core,IPC,LLC Misses,LLC[KB],MBL[MB/s],MBR[MB/s],MBT[MB/s]
 	// 2020-08-12 13:34:36,"45417,29170,",37,44,0.00,0,0.0,0.0,0.0,0.0
-	metricsValues = values[len(values)-numberOfMetrics:]
-	coreOrPIDsValues = values[1 : len(values)-numberOfMetrics]
+	metricsValues := values[len(values)-numberOfMetrics:]
+	coreOrPIDsValues := values[1 : len(values)-numberOfMetrics]
 
-	return timeValue, metricsValues, coreOrPIDsValues, nil
+	return splitCSVLine{timeValue, metricsValues, coreOrPIDsValues}, nil
 }
 
 func validateInterval(interval int32) error {
@@ -523,7 +504,7 @@ func splitMeasurementLine(line string) ([]string, error) {
 }
 
 func parseTime(value string) (time.Time, error) {
-	timestamp, err := time.Parse(timestampFormat, value)
+	timestamp, err := time.ParseInLocation(timestampFormat, value, time.Local)
 	if err != nil {
 		return time.Time{}, err
 	}

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const validJSON = `
@@ -212,7 +212,7 @@ func TestHttpJson200(t *testing.T) {
 		var acc testutil.Accumulator
 		err := acc.GatherError(service.Gather)
 		require.NoError(t, err)
-		assert.Equal(t, 12, acc.NFields())
+		require.Equal(t, 12, acc.NFields())
 		// Set responsetime
 		for _, p := range acc.Metrics {
 			p.Fields["response_time"] = 1.0
@@ -231,7 +231,7 @@ func TestHttpJson200(t *testing.T) {
 func TestHttpJsonGET_URL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.FormValue("api_key")
-		assert.Equal(t, "mykey", key)
+		require.Equal(t, "mykey", key)
 		w.WriteHeader(http.StatusOK)
 		_, err := fmt.Fprintln(w, validJSON2)
 		require.NoError(t, err)
@@ -304,7 +304,7 @@ func TestHttpJsonGET(t *testing.T) {
 	}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.FormValue("api_key")
-		assert.Equal(t, "mykey", key)
+		require.Equal(t, "mykey", key)
 		w.WriteHeader(http.StatusOK)
 		_, err := fmt.Fprintln(w, validJSON2)
 		require.NoError(t, err)
@@ -378,8 +378,8 @@ func TestHttpJsonPOST(t *testing.T) {
 	}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
-		assert.NoError(t, err)
-		assert.Equal(t, "api_key=mykey", string(body))
+		require.NoError(t, err)
+		require.Equal(t, "api_key=mykey", string(body))
 		w.WriteHeader(http.StatusOK)
 		_, err = fmt.Fprintln(w, validJSON2)
 		require.NoError(t, err)
@@ -453,8 +453,8 @@ func TestHttpJson500(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }
 
 // Test response to HTTP 405
@@ -465,8 +465,8 @@ func TestHttpJsonBadMethod(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }
 
 // Test response to malformed JSON
@@ -476,8 +476,8 @@ func TestHttpJsonBadJson(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }
 
 // Test response to empty string as response object
@@ -486,7 +486,7 @@ func TestHttpJsonEmptyResponse(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // Test that the proper values are ignored or collected
@@ -502,7 +502,7 @@ func TestHttpJson200Tags(t *testing.T) {
 				p.Fields["response_time"] = 1.0
 			}
 			require.NoError(t, err)
-			assert.Equal(t, 4, acc.NFields())
+			require.Equal(t, 4, acc.NFields())
 			for _, srv := range service.Servers {
 				tags := map[string]string{"server": srv, "role": "master", "build": "123"}
 				fields := map[string]interface{}{"value": float64(15), "response_time": float64(1)}
@@ -540,22 +540,22 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 				p.Fields["response_time"] = 1.0
 			}
 			require.NoError(t, err)
-			assert.Equal(t, 8, acc.NFields())
-			assert.Equal(t, uint64(4), acc.NMetrics())
+			require.Equal(t, 8, acc.NFields())
+			require.Equal(t, uint64(4), acc.NMetrics())
 
 			for _, m := range acc.Metrics {
 				if m.Tags["role"] == "master" {
-					assert.Equal(t, "123", m.Tags["build"])
-					assert.Equal(t, float64(15), m.Fields["value"])
-					assert.Equal(t, float64(1), m.Fields["response_time"])
-					assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
+					require.Equal(t, "123", m.Tags["build"])
+					require.Equal(t, float64(15), m.Fields["value"])
+					require.Equal(t, float64(1), m.Fields["response_time"])
+					require.Equal(t, "httpjson_"+service.Name, m.Measurement)
 				} else if m.Tags["role"] == "slave" {
-					assert.Equal(t, "456", m.Tags["build"])
-					assert.Equal(t, float64(17), m.Fields["value"])
-					assert.Equal(t, float64(1), m.Fields["response_time"])
-					assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
+					require.Equal(t, "456", m.Tags["build"])
+					require.Equal(t, float64(17), m.Fields["value"])
+					require.Equal(t, float64(1), m.Fields["response_time"])
+					require.Equal(t, "httpjson_"+service.Name, m.Measurement)
 				} else {
-					assert.FailNow(t, "unknown metric")
+					require.FailNow(t, "unknown metric")
 				}
 			}
 		}

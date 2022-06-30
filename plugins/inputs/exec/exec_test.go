@@ -13,10 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/value"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const validJSON = `
@@ -75,15 +76,13 @@ func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(_ string, _ time.Duration) ([]byte, []byte, error) {
+func (r runnerMock) Run(_ string, _ []string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
 
 func TestExec(t *testing.T) {
-	parser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "exec",
-	})
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
 	e := &Exec{
 		Log:      testutil.Logger{},
 		runner:   newRunnerMock([]byte(validJSON), nil, nil),
@@ -94,7 +93,7 @@ func TestExec(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
-	assert.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
+	require.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
 
 	fields := map[string]interface{}{
 		"num_processes": float64(82),
@@ -110,10 +109,8 @@ func TestExec(t *testing.T) {
 }
 
 func TestExecMalformed(t *testing.T) {
-	parser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "exec",
-	})
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
 	e := &Exec{
 		Log:      testutil.Logger{},
 		runner:   newRunnerMock([]byte(malformedJSON), nil, nil),
@@ -123,14 +120,12 @@ func TestExecMalformed(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
 }
 
 func TestCommandError(t *testing.T) {
-	parser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "exec",
-	})
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
 	e := &Exec{
 		Log:      testutil.Logger{},
 		runner:   newRunnerMock(nil, nil, fmt.Errorf("exit status code 1")),
@@ -140,18 +135,22 @@ func TestCommandError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
+
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(e.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(e.Gather))
 
 	fields := map[string]interface{}{
 		"value": "metric_value",
@@ -160,14 +159,18 @@ func TestExecCommandWithGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
+
 	e := NewExec()
 	e.Commands = []string{"/bin/echo metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(e.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(e.Gather))
 
 	fields := map[string]interface{}{
 		"value": "metric_value",
@@ -176,14 +179,37 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlobAndPath(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(e.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(e.Gather))
+
+	fields := map[string]interface{}{
+		"value": "metric_value",
+	}
+	acc.AssertContainsFields(t, "metric", fields)
+}
+
+func TestExecCommandWithEnv(t *testing.T) {
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
+	e := NewExec()
+	e.Commands = []string{"/bin/sh -c 'echo ${METRIC_NAME}'"}
+	e.Environment = []string{"METRIC_NAME=metric_value"}
+	e.SetParser(&parser)
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(e.Gather))
 
 	fields := map[string]interface{}{
 		"value": "metric_value",
@@ -263,14 +289,14 @@ func TestRemoveCarriageReturns(t *testing.T) {
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
 			out := removeWindowsCarriageReturns(*b)
-			assert.True(t, bytes.Equal(test.output, out.Bytes()))
+			require.True(t, bytes.Equal(test.output, out.Bytes()))
 		}
 	} else {
 		// Test that the buffer is returned unaltered
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
 			out := removeWindowsCarriageReturns(*b)
-			assert.True(t, bytes.Equal(test.input, out.Bytes()))
+			require.True(t, bytes.Equal(test.input, out.Bytes()))
 		}
 	}
 }

@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSingleNTPQ(t *testing.T) {
@@ -20,7 +20,7 @@ func TestSingleNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -49,7 +49,7 @@ func TestBadIntNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, acc.GatherError(n.Gather))
+	require.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -77,7 +77,7 @@ func TestBadFloatNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, acc.GatherError(n.Gather))
+	require.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(2),
@@ -105,7 +105,7 @@ func TestDaysNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(172800),
@@ -134,7 +134,7 @@ func TestHoursNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(7200),
@@ -163,7 +163,7 @@ func TestMinutesNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(120),
@@ -192,7 +192,7 @@ func TestBadWhenNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, acc.GatherError(n.Gather))
+	require.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"poll":   int64(256),
@@ -222,7 +222,7 @@ func TestParserNTPQ(t *testing.T) {
 	n := newNTPQ()
 	n.runQ = tt.runqTest
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"poll":   int64(64),
@@ -285,7 +285,7 @@ func TestMultiNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"delay":  float64(54.033),
@@ -329,7 +329,7 @@ func TestBadHeaderNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -357,7 +357,7 @@ func TestMissingDelayColumnNTPQ(t *testing.T) {
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -375,16 +375,46 @@ func TestMissingDelayColumnNTPQ(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
 
-func TestFailedNTPQ(t *testing.T) {
+func TestLongPoll(t *testing.T) {
 	tt := tester{
-		ret: []byte(singleNTPQ),
-		err: fmt.Errorf("Test failure"),
+		ret: []byte(longPollTime),
+		err: nil,
 	}
 	n := newNTPQ()
 	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
+
+	fields := map[string]interface{}{
+		"when":   int64(617),
+		"poll":   int64(4080),
+		"reach":  int64(377),
+		"offset": float64(2.849),
+		"jitter": float64(1.192),
+		"delay":  float64(9.145),
+	}
+	tags := map[string]string{
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "-",
+		"refid":        "10.177.80.46",
+		"type":         "u",
+		"stratum":      "3",
+	}
+
+	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
+}
+
+func TestFailedNTPQ(t *testing.T) {
+	tt := tester{
+		ret: []byte(singleNTPQ),
+		err: fmt.Errorf("test failure"),
+	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
+
+	acc := testutil.Accumulator{}
+	require.Error(t, acc.GatherError(n.Gather))
 }
 
 // It is possible for the output of ntqp to be missing the refid column.  This
@@ -519,4 +549,9 @@ var noRefID = `     remote           refid      st t when poll reach   delay   o
  83.137.98.96    10.177.80.37     2 u  740 1024  377   54.033  243.426 449514.
  91.189.94.4                      2 u  673 1024  377  143.047  274.726 449445.
  131.188.3.221   10.177.80.37     2 u  783 1024  377  111.820  261.921 449528.
+`
+
+var longPollTime = `     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+-uschi5-ntp-002. 10.177.80.46     3 u  617 68m 377 9.145 +2.849 1.192
 `

@@ -1,0 +1,3 @@
+timestamp;measurement;flagname;host;key;platform;sdkver;value;count_sum
+1653643420;impression;F5;1cbbb3796fc2;12345;Java;4.9.1;false;5
+1653646789;expression;E42;klaus;67890;Golang;1.18.3;true;42

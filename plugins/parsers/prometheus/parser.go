@@ -11,13 +11,12 @@ import (
 	"time"
 
 	"github.com/matttproud/golang_protobuf_extensions/pbutil"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
-
-	dto "github.com/prometheus/client_model/go"
-	"github.com/prometheus/common/expfmt"
 )
 
 type Parser struct {
@@ -119,7 +118,7 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 	fields := make(map[string]interface{})
 
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
-	fields[metricName+"_sum"] = float64(m.GetSummary().GetSampleSum())
+	fields[metricName+"_sum"] = m.GetSummary().GetSampleSum()
 	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
 	metrics = append(metrics, met)
 
@@ -128,7 +127,7 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 		fields = make(map[string]interface{})
 
 		newTags["quantile"] = fmt.Sprint(q.GetQuantile())
-		fields[metricName] = float64(q.GetValue())
+		fields[metricName] = q.GetValue()
 
 		quantileMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
 		metrics = append(metrics, quantileMetric)
@@ -142,7 +141,7 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 	fields := make(map[string]interface{})
 
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
-	fields[metricName+"_sum"] = float64(m.GetHistogram().GetSampleSum())
+	fields[metricName+"_sum"] = m.GetHistogram().GetSampleSum()
 
 	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
 	metrics = append(metrics, met)
@@ -164,15 +163,15 @@ func getNameAndValue(m *dto.Metric, metricName string) map[string]interface{} {
 	fields := make(map[string]interface{})
 	if m.Gauge != nil {
 		if !math.IsNaN(m.GetGauge().GetValue()) {
-			fields[metricName] = float64(m.GetGauge().GetValue())
+			fields[metricName] = m.GetGauge().GetValue()
 		}
 	} else if m.Counter != nil {
 		if !math.IsNaN(m.GetCounter().GetValue()) {
-			fields[metricName] = float64(m.GetCounter().GetValue())
+			fields[metricName] = m.GetCounter().GetValue()
 		}
 	} else if m.Untyped != nil {
 		if !math.IsNaN(m.GetUntyped().GetValue()) {
-			fields[metricName] = float64(m.GetUntyped().GetValue())
+			fields[metricName] = m.GetUntyped().GetValue()
 		}
 	}
 	return fields

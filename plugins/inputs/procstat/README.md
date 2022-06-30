@@ -1,10 +1,11 @@
 # Procstat Input Plugin
 
-The procstat plugin can be used to monitor the system resource usage of one or more processes.
-The procstat_lookup metric displays the query information,
+The procstat plugin can be used to monitor the system resource usage of one or
+more processes.  The procstat_lookup metric displays the query information,
 specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
+
 - pidfile
 - exe
 - pattern
@@ -13,9 +14,9 @@ Processes can be selected for monitoring using one of several methods:
 - cgroup
 - win_service
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Monitor process cpu and memory usage
 [[inputs.procstat]]
   ## PID file to monitor process
@@ -29,7 +30,7 @@ Processes can be selected for monitoring using one of several methods:
   ## Systemd unit name, supports globs when include_systemd_children is set to true
   # systemd_unit = "nginx.service"
   # include_systemd_children = false
-  ## CGroup name or path
+  ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
 
   ## Windows service name
@@ -63,12 +64,12 @@ Processes can be selected for monitoring using one of several methods:
   # pid_finder = "pgrep"
 ```
 
-#### Windows support
+### Windows support
 
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
-### Metrics:
+## Metrics
 
 - procstat
   - tags:
@@ -161,9 +162,9 @@ the `win_perf_counters` input plugin as a more mature alternative.
 
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
-### Example Output:
+## Example Output
 
-```
+```shell
 procstat_lookup,host=prash-laptop,pattern=influxd,pid_finder=pgrep,result=success pid_count=1i,running=1i,result_code=0i 1582089700000000000
 procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root involuntary_context_switches=151496i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2564.81,cpu_time_idle=0,cpu_time_irq=0,cpu_time_guest=0,pid=32025i,major_faults=8609i,created_at=1580107536000000000i,voluntary_context_switches=1058996i,cpu_time_system=616.98,cpu_time_steal=0,cpu_time_guest_nice=0,memory_swap=0i,memory_locked=0i,memory_usage=1.7797634601593018,num_threads=18i,cpu_time_nice=0,cpu_time_iowait=0,cpu_time_soft_irq=0,memory_rss=148643840i,memory_vms=1435688960i,memory_data=0i,memory_stack=0i,minor_faults=1856550i 1582089700000000000
 ```

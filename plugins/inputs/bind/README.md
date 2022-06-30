@@ -2,19 +2,33 @@
 
 This plugin decodes the JSON or XML statistics provided by BIND 9 nameservers.
 
-### XML Statistics Channel
+## XML Statistics Channel
 
-Version 2 statistics (BIND 9.6 - 9.9) and version 3 statistics (BIND 9.9+) are supported. Note that
-for BIND 9.9 to support version 3 statistics, it must be built with the `--enable-newstats` compile
-flag, and it must be specifically requested via the correct URL. Version 3 statistics are the
-default (and only) XML format in BIND 9.10+.
+Version 2 statistics (BIND 9.6 - 9.9) and version 3 statistics (BIND 9.9+) are
+supported. Note that for BIND 9.9 to support version 3 statistics, it must be
+built with the `--enable-newstats` compile flag, and it must be specifically
+requested via the correct URL. Version 3 statistics are the default (and only)
+XML format in BIND 9.10+.
 
-### JSON Statistics Channel
+## JSON Statistics Channel
 
-JSON statistics schema version 1 (BIND 9.10+) is supported. As of writing, some distros still do
-not enable support for JSON statistics in their BIND packages.
+JSON statistics schema version 1 (BIND 9.10+) is supported. As of writing, some
+distros still do not enable support for JSON statistics in their BIND packages.
 
-### Configuration:
+## Configuration
+
+```toml @sample.conf
+# Read BIND nameserver XML statistics
+[[inputs.bind]]
+  ## An array of BIND XML statistics URI to gather stats.
+  ## Default is "http://localhost:8053/xml/v3".
+  # urls = ["http://localhost:8053/xml/v3"]
+  # gather_memory_contexts = false
+  # gather_views = false
+
+  ## Timeout for http requests made by bind nameserver
+  # timeout = "4s"
+```
 
 - **urls** []string: List of BIND statistics channel URLs to collect from. Do not include a
   trailing slash in the URL. Default is "http://localhost:8053/xml/v3".
@@ -22,31 +36,33 @@ not enable support for JSON statistics in their BIND packages.
 - **gather_views** bool: Report per-view query statistics.
 - **timeout** Timeout for http requests made by bind nameserver (example: "4s").
 
-The following table summarizes the URL formats which should be used, depending on your BIND
-version and configured statistics channel.
+The following table summarizes the URL formats which should be used, depending
+on your BIND version and configured statistics channel.
 
 | BIND Version | Statistics Format | Example URL                   |
 | ------------ | ----------------- | ----------------------------- |
-| 9.6 - 9.8    | XML v2            | http://localhost:8053         |
-| 9.9          | XML v2            | http://localhost:8053/xml/v2  |
-| 9.9+         | XML v3            | http://localhost:8053/xml/v3  |
-| 9.10+        | JSON v1           | http://localhost:8053/json/v1 |
+| 9.6 - 9.8    | XML v2            | `http://localhost:8053`         |
+| 9.9          | XML v2            | `http://localhost:8053/xml/v2`  |
+| 9.9+         | XML v3            | `http://localhost:8053/xml/v3`  |
+| 9.10+        | JSON v1           | `http://localhost:8053/json/v1` |
 
-#### Configuration of BIND Daemon
+### Configuration of BIND Daemon
 
-Add the following to your named.conf if running Telegraf on the same host as the BIND daemon:
-```
+Add the following to your named.conf if running Telegraf on the same host as the
+BIND daemon:
+
+```json
 statistics-channels {
     inet 127.0.0.1 port 8053;
 };
 ```
 
-Alternatively, specify a wildcard address (e.g., 0.0.0.0) or specific IP address of an interface to
-configure the BIND daemon to listen on that address. Note that you should secure the statistics
-channel with an ACL if it is publicly reachable. Consult the BIND Administrator Reference Manual
-for more information.
+Alternatively, specify a wildcard address (e.g., 0.0.0.0) or specific IP address
+of an interface to configure the BIND daemon to listen on that address. Note
+that you should secure the statistics channel with an ACL if it is publicly
+reachable. Consult the BIND Administrator Reference Manual for more information.
 
-### Measurements & Fields:
+## Metrics
 
 - bind_counter
   - name=value (multiple)
@@ -60,7 +76,7 @@ for more information.
   - total
   - in_use
 
-### Tags:
+## Tags
 
 - All measurements
   - url
@@ -73,10 +89,10 @@ for more information.
   - id
   - name
 
-### Sample Queries:
+## Sample Queries
 
-These are some useful queries (to generate dashboards or other) to run against data from this
-plugin:
+These are some useful queries (to generate dashboards or other) to run against
+data from this plugin:
 
 ```sql
 SELECT non_negative_derivative(mean(/^A$|^PTR$/), 5m) FROM bind_counter \
@@ -84,7 +100,7 @@ WHERE "url" = 'localhost:8053' AND "type" = 'qtype' AND time > now() - 1h \
 GROUP BY time(5m), "type"
 ```
 
-```
+```text
 name: bind_counter
 tags: type=qtype
 time                non_negative_derivative_A non_negative_derivative_PTR
@@ -104,11 +120,11 @@ time                non_negative_derivative_A non_negative_derivative_PTR
 1553865600000000000 280.6666666667443         1807.9071428570896
 ```
 
-### Example Output
+## Example Output
 
 Here is example output of this plugin:
 
-```
+```shell
 bind_memory,host=LAP,port=8053,source=localhost,url=localhost:8053 block_size=12058624i,context_size=4575056i,in_use=4113717i,lost=0i,total_use=16663252i 1554276619000000000
 bind_counter,host=LAP,port=8053,source=localhost,type=opcode,url=localhost:8053 IQUERY=0i,NOTIFY=0i,QUERY=9i,STATUS=0i,UPDATE=0i 1554276619000000000
 bind_counter,host=LAP,port=8053,source=localhost,type=rcode,url=localhost:8053 17=0i,18=0i,19=0i,20=0i,21=0i,22=0i,BADCOOKIE=0i,BADVERS=0i,FORMERR=0i,NOERROR=7i,NOTAUTH=0i,NOTIMP=0i,NOTZONE=0i,NXDOMAIN=0i,NXRRSET=0i,REFUSED=0i,RESERVED11=0i,RESERVED12=0i,RESERVED13=0i,RESERVED14=0i,RESERVED15=0i,SERVFAIL=2i,YXDOMAIN=0i,YXRRSET=0i 1554276619000000000

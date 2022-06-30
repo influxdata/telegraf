@@ -1,52 +1,35 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package openldap
 
 import (
+	_ "embed"
 	"fmt"
 	"strconv"
 	"strings"
 
+	ldap "github.com/go-ldap/ldap/v3"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"gopkg.in/ldap.v3"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Openldap struct {
 	Host               string
 	Port               int
-	SSL                string `toml:"ssl"` // Deprecated in 1.7; use TLS
+	SSL                string `toml:"ssl" deprecated:"1.7.0;use 'tls' instead"`
 	TLS                string `toml:"tls"`
 	InsecureSkipVerify bool
-	SSLCA              string `toml:"ssl_ca"` // Deprecated in 1.7; use TLSCA
+	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string
 	ReverseMetricNames bool
 }
-
-const sampleConfig string = `
-  host = "localhost"
-  port = 389
-
-  # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
-  # note that port will likely need to be changed to 636 for ldaps
-  # valid options: "" | "starttls" | "ldaps"
-  tls = ""
-
-  # skip peer certificate verification. Default is false.
-  insecure_skip_verify = false
-
-  # Path to PEM-encoded Root certificate to use to verify server certificate
-  tls_ca = "/etc/ssl/certs.pem"
-
-  # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
-  bind_dn = ""
-  bind_password = ""
-
-  # Reverse metric names so they sort more naturally. Recommended.
-  # This defaults to false if unset, but is set to true when generating a new config
-  reverse_metric_names = true
-`
 
 var searchBase = "cn=Monitor"
 var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))"
@@ -64,14 +47,6 @@ var attrTranslate = map[string]string{
 	"olmMDBEntries":      "_mdb_entries",
 }
 
-func (o *Openldap) SampleConfig() string {
-	return sampleConfig
-}
-
-func (o *Openldap) Description() string {
-	return "OpenLDAP cn=Monitor plugin"
-}
-
 // return an initialized Openldap
 func NewOpenldap() *Openldap {
 	return &Openldap{
@@ -86,6 +61,10 @@ func NewOpenldap() *Openldap {
 		BindPassword:       "",
 		ReverseMetricNames: false,
 	}
+}
+
+func (*Openldap) SampleConfig() string {
+	return sampleConfig
 }
 
 // gather metrics
@@ -110,13 +89,15 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(err)
 			return nil
 		}
-		if o.TLS == "ldaps" {
+
+		switch o.TLS {
+		case "ldaps":
 			l, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port), tlsConfig)
 			if err != nil {
 				acc.AddError(err)
 				return nil
 			}
-		} else if o.TLS == "starttls" {
+		case "starttls":
 			l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
 			if err != nil {
 				acc.AddError(err)
@@ -127,7 +108,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return nil
 			}
-		} else {
+		default:
 			acc.AddError(fmt.Errorf("invalid setting for ssl: %s", o.TLS))
 			return nil
 		}
@@ -199,8 +180,8 @@ func dnToMetric(dn string, o *Openldap) string {
 		var metricParts []string
 
 		dn = strings.Trim(dn, " ")
-		dn = strings.Replace(dn, " ", "_", -1)
-		dn = strings.Replace(dn, "cn=", "", -1)
+		dn = strings.ReplaceAll(dn, " ", "_")
+		dn = strings.ReplaceAll(dn, "cn=", "")
 		dn = strings.ToLower(dn)
 		metricParts = strings.Split(dn, ",")
 		for i, j := 0, len(metricParts)-1; i < j; i, j = i+1, j-1 {
@@ -210,12 +191,12 @@ func dnToMetric(dn string, o *Openldap) string {
 	}
 
 	metricName := strings.Trim(dn, " ")
-	metricName = strings.Replace(metricName, " ", "_", -1)
+	metricName = strings.ReplaceAll(metricName, " ", "_")
 	metricName = strings.ToLower(metricName)
 	metricName = strings.TrimPrefix(metricName, "cn=")
-	metricName = strings.Replace(metricName, strings.ToLower("cn=Monitor"), "", -1)
-	metricName = strings.Replace(metricName, "cn=", "_", -1)
-	return strings.Replace(metricName, ",", "", -1)
+	metricName = strings.ReplaceAll(metricName, strings.ToLower("cn=Monitor"), "")
+	metricName = strings.ReplaceAll(metricName, "cn=", "_")
+	return strings.ReplaceAll(metricName, ",", "")
 }
 
 func init() {

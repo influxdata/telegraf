@@ -1,11 +1,12 @@
 # BasicStats Aggregator Plugin
 
-The BasicStats aggregator plugin give us count,diff,max,min,mean,non_negative_diff,sum,s2(variance), stdev for a set of values,
-emitting the aggregate every `period` seconds.
+The BasicStats aggregator plugin give us count, diff, max, min, mean,
+non_negative_diff, sum, s2(variance), stdev for a set of values, emitting the
+aggregate every `period` seconds.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Keep the aggregate basicstats of each metric passing through.
 [[aggregators.basicstats]]
   ## The period on which to flush & clear the aggregator.
@@ -20,32 +21,32 @@ emitting the aggregate every `period` seconds.
 ```
 
 - stats
-    - If not specified, then `count`, `min`, `max`, `mean`, `stdev`, and `s2` are aggregated and pushed as fields.  `sum`, `diff` and `non_negative_diff` are not aggregated by default to maintain backwards compatibility.
-    - If empty array, no stats are aggregated
+  - If not specified, then `count`, `min`, `max`, `mean`, `stdev`, and `s2` are aggregated and pushed as fields.  `sum`, `diff` and `non_negative_diff` are not aggregated by default to maintain backwards compatibility.
+  - If empty array, no stats are aggregated
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - measurement1
-    - field1_count
-    - field1_diff (difference)
-    - field1_rate (rate per second)
-    - field1_max
-    - field1_min
-    - field1_mean
-    - field1_non_negative_diff (non-negative difference)
-    - field1_non_negative_rate (non-negative rate per second)
-    - field1_sum
-    - field1_s2 (variance)
-    - field1_stdev (standard deviation)
-    - field1_interval (interval in nanoseconds)
+  - field1_count
+  - field1_diff (difference)
+  - field1_rate (rate per second)
+  - field1_max
+  - field1_min
+  - field1_mean
+  - field1_non_negative_diff (non-negative difference)
+  - field1_non_negative_rate (non-negative rate per second)
+  - field1_sum
+  - field1_s2 (variance)
+  - field1_stdev (standard deviation)
+  - field1_interval (interval in nanoseconds)
 
-### Tags:
+## Tags
 
 No tags are applied by this aggregator.
 
-### Example Output:
+## Example Output
 
-```
+```shell
 $ telegraf --config telegraf.conf --quiet
 system,host=tars load1=1 1475583980000000000
 system,host=tars load1=1 1475583990000000000

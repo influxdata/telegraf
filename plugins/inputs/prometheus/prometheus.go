@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package prometheus
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -13,17 +15,22 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
+	parserV2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
-const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
+const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
 
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
@@ -83,107 +90,19 @@ type Prometheus struct {
 	podFieldSelector  fields.Selector
 	isNodeScrapeScope bool
 
+	// Only for monitor_kubernetes_pods=true
+	CacheRefreshInterval int `toml:"cache_refresh_interval"`
+
 	// List of consul services to scrape
 	consulServices map[string]URLAndAddress
 }
 
-var sampleConfig = `
-  ## An array of urls to scrape metrics from.
-  urls = ["http://localhost:9100/metrics"]
-
-  ## Metric version controls the mapping from Prometheus metrics into
-  ## Telegraf metrics.  When using the prometheus_client output, use the same
-  ## value in both plugins to ensure metrics are round-tripped without
-  ## modification.
-  ##
-  ##   example: metric_version = 1; 
-  ##            metric_version = 2; recommended version
-  # metric_version = 1
-
-  ## Url tag name (tag containing scrapped url. optional, default is "url")
-  # url_tag = "url"
-
-  ## Whether the timestamp of the scraped metrics will be ignored.
-  ## If set to true, the gather time will be used.
-  # ignore_timestamp = false
-
-  ## An array of Kubernetes services to scrape metrics from.
-  # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
-
-  ## Kubernetes config file to create client from.
-  # kube_config = "/path/to/kubernetes.config"
-
-  ## Scrape Kubernetes pods for the following prometheus annotations:
-  ## - prometheus.io/scrape: Enable scraping for this pod
-  ## - prometheus.io/scheme: If the metrics endpoint is secured then you will need to
-  ##     set this to 'https' & most likely set the tls config.
-  ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
-  ## - prometheus.io/port: If port is not 9102 use this annotation
-  # monitor_kubernetes_pods = true
-  ## Get the list of pods to scrape with either the scope of
-  ## - cluster: the kubernetes watch api (default, no need to specify)
-  ## - node: the local cadvisor api; for scalability. Note that the config node_ip or the environment variable NODE_IP must be set to the host IP.
-  # pod_scrape_scope = "cluster"
-  ## Only for node scrape scope: node IP of the node that telegraf is running on.
-  ## Either this config or the environment variable NODE_IP must be set.
-  # node_ip = "10.180.1.1"
-	## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping.
-	## Default is 60 seconds.
-	# pod_scrape_interval = 60
-  ## Restricts Kubernetes monitoring to a single namespace
-  ##   ex: monitor_kubernetes_pods_namespace = "default"
-  # monitor_kubernetes_pods_namespace = ""
-  # label selector to target pods which have the label
-  # kubernetes_label_selector = "env=dev,app=nginx"
-  # field selector to target pods
-  # eg. To scrape pods on a specific node
-  # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
-
-  ## Scrape Services available in Consul Catalog
-  # [inputs.prometheus.consul]
-  #   enabled = true
-  #   agent = "http://localhost:8500"
-  #   query_interval = "5m"
-
-  #   [[inputs.prometheus.consul.query]]
-  #     name = "a service name"
-  #     tag = "a service tag"
-  #     url = 'http://{{if ne .ServiceAddress ""}}{{.ServiceAddress}}{{else}}{{.Address}}{{end}}:{{.ServicePort}}/{{with .ServiceMeta.metrics_path}}{{.}}{{else}}metrics{{end}}'
-  #     [inputs.prometheus.consul.query.tags]
-  #       host = "{{.Node}}"
-
-  ## Use bearer token for authorization. ('bearer_token' takes priority)
-  # bearer_token = "/path/to/bearer/token"
-  ## OR
-  # bearer_token_string = "abc_123"
-
-  ## HTTP Basic Authentication username and password. ('bearer_token' and
-  ## 'bearer_token_string' take priority)
-  # username = ""
-  # password = ""
-
-  ## Specify timeout duration for slower prometheus clients (default is 3s)
-  # response_timeout = "3s"
-
-  ## Optional TLS Config
-  # tls_ca = /path/to/cafile
-  # tls_cert = /path/to/certfile
-  # tls_key = /path/to/keyfile
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (p *Prometheus) SampleConfig() string {
+func (*Prometheus) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Prometheus) Description() string {
-	return "Read metrics from one or many prometheus clients"
-}
-
 func (p *Prometheus) Init() error {
-
-	// Config proccessing for node scrape scope for monitor_kubernetes_pods
+	// Config processing for node scrape scope for monitor_kubernetes_pods
 	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")
 	if p.isNodeScrapeScope {
 		// Need node IP to make cAdvisor call for pod list. Check if set in config and valid IP address
@@ -222,8 +141,6 @@ func (p *Prometheus) Init() error {
 	return nil
 }
 
-var ErrProtocolError = errors.New("prometheus protocol error")
-
 func (p *Prometheus) AddressToURL(u *url.URL, address string) *url.URL {
 	host := address
 	if u.Port() != "" {
@@ -253,12 +170,12 @@ type URLAndAddress struct {
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 	allURLs := make(map[string]URLAndAddress)
 	for _, u := range p.URLs {
-		URL, err := url.Parse(u)
+		address, err := url.Parse(u)
 		if err != nil {
 			p.Log.Errorf("Could not parse %q, skipping it. Error: %s", u, err.Error())
 			continue
 		}
-		allURLs[URL.String()] = URLAndAddress{URL: URL, OriginalURL: URL}
+		allURLs[address.String()] = URLAndAddress{URL: address, OriginalURL: address}
 	}
 
 	p.lock.Lock()
@@ -273,22 +190,22 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 	}
 
 	for _, service := range p.KubernetesServices {
-		URL, err := url.Parse(service)
+		address, err := url.Parse(service)
 		if err != nil {
 			return nil, err
 		}
 
-		resolvedAddresses, err := net.LookupHost(URL.Hostname())
+		resolvedAddresses, err := net.LookupHost(address.Hostname())
 		if err != nil {
-			p.Log.Errorf("Could not resolve %q, skipping it. Error: %s", URL.Host, err.Error())
+			p.Log.Errorf("Could not resolve %q, skipping it. Error: %s", address.Host, err.Error())
 			continue
 		}
 		for _, resolved := range resolvedAddresses {
-			serviceURL := p.AddressToURL(URL, resolved)
+			serviceURL := p.AddressToURL(address, resolved)
 			allURLs[serviceURL.String()] = URLAndAddress{
 				URL:         serviceURL,
 				Address:     resolved,
-				OriginalURL: URL,
+				OriginalURL: address,
 			}
 		}
 	}
@@ -401,8 +318,10 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 	var resp *http.Response
 	if u.URL.Scheme != "unix" {
+		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		resp, err = p.client.Do(req)
 	} else {
+		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		resp, err = uClient.Do(req)
 	}
 	if err != nil {
@@ -420,7 +339,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{
+		parser := parserV2.Parser{
 			Header:          resp.Header,
 			IgnoreTimestamp: p.IgnoreTimestamp,
 		}

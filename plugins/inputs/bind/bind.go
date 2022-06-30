@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package bind
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Bind struct {
 	Urls                 []string
 	GatherMemoryContexts bool
@@ -21,22 +27,7 @@ type Bind struct {
 	client http.Client
 }
 
-var sampleConfig = `
-  ## An array of BIND XML statistics URI to gather stats.
-  ## Default is "http://localhost:8053/xml/v3".
-  # urls = ["http://localhost:8053/xml/v3"]
-  # gather_memory_contexts = false
-  # gather_views = false
-
-  ## Timeout for http requests made by bind nameserver
-  # timeout = "4s"
-`
-
-func (b *Bind) Description() string {
-	return "Read BIND nameserver XML statistics"
-}
-
-func (b *Bind) SampleConfig() string {
+func (*Bind) SampleConfig() string {
 	return sampleConfig
 }
 

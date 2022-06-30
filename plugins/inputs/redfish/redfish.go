@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redfish
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,28 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const description = "Read CPU, Fans, Powersupply and Voltage metrics of hardware server through redfish APIs"
-const sampleConfig = `
-  ## Server url
-  address = "https://127.0.0.1:5000"
-
-  ## Username, Password for hardware server
-  username = "root"
-  password = "password123456"
-
-  ## ComputerSystemId
-  computer_system_id="2M220100SL"
-
-  ## Amount of time allowed to complete the HTTP request
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Redfish struct {
 	Address          string          `toml:"address"`
@@ -133,11 +116,7 @@ type Status struct {
 	Health string
 }
 
-func (r *Redfish) Description() string {
-	return description
-}
-
-func (r *Redfish) SampleConfig() string {
+func (*Redfish) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -176,8 +155,8 @@ func (r *Redfish) Init() error {
 	return nil
 }
 
-func (r *Redfish) getData(url string, payload interface{}) error {
-	req, err := http.NewRequest("GET", url, nil)
+func (r *Redfish) getData(address string, payload interface{}) error {
+	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}

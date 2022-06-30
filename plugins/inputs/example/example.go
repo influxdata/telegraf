@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package example
 
 import (
+	_ "embed"
 	"fmt"
 	"math/rand"
 	"time"
@@ -9,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Example struct should be named the same as the Plugin
 type Example struct {
@@ -32,34 +38,7 @@ type Example struct {
 	count int64
 }
 
-// Usually the default (example) configuration is contained in this constant.
-// Please use '## '' to denote comments and '# ' to specify default settings and start each line with two spaces.
-const sampleConfig = `
-  ## Device name used as a tag
-  ## This is a mandatory option that needs to be set by the user, so we do not
-  ## comment it.
-  device_name = ""
-
-  ## Number of fields contained in the output
-  ## This should be greater than zero and less then ten.
-	## Here, two is the default, so we comment the option with the default value shown.
-  # number_fields = 2
-
-  ## Enable setting the field(s) to random values
-  ## By default, the field values are set to zero.
-  # enable_random = false
-
-  ## Specify a duration allowing time-unit suffixes ('ns','ms', 's', 'm', etc.)
-	# timeout = "100ms"
-`
-
-// Description will appear directly above the plugin definition in the config file
-func (m *Example) Description() string {
-	return `This is an example plugin`
-}
-
-// SampleConfig will populate the sample configuration portion of the plugin's configuration
-func (m *Example) SampleConfig() string {
+func (*Example) SampleConfig() string {
 	return sampleConfig
 }
 

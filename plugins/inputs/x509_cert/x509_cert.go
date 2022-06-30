@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // Package x509_cert reports metrics from an SSL certificate.
 package x509_cert
 
@@ -5,9 +6,11 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	_ "embed"
 	"encoding/pem"
 	"fmt"
 	"net"
+	"net/smtp"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -19,51 +22,27 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## List certificate sources
-  ## Prefix your entry with 'file://' if you intend to use relative paths
-  sources = ["tcp://example.org:443", "https://influxdata.com:443",
-            "udp://127.0.0.1:4433", "/etc/ssl/certs/ssl-cert-snakeoil.pem",
-            "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
-
-  ## Timeout for SSL connection
-  # timeout = "5s"
-
-  ## Pass a different name into the TLS request (Server Name Indication)
-  ##   example: server_name = "myhost.example.org"
-  # server_name = ""
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-`
-const description = "Reads metrics from a SSL certificate"
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources    []string        `toml:"sources"`
-	Timeout    config.Duration `toml:"timeout"`
-	ServerName string          `toml:"server_name"`
-	tlsCfg     *tls.Config
+	Sources          []string        `toml:"sources"`
+	Timeout          config.Duration `toml:"timeout"`
+	ServerName       string          `toml:"server_name"`
+	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
+	tlsCfg           *tls.Config
 	_tls.ClientConfig
+	proxy.TCPProxy
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
-}
-
-// Description returns description of the plugin.
-func (c *X509Cert) Description() string {
-	return description
-}
-
-// SampleConfig returns configuration sample for the plugin.
-func (c *X509Cert) SampleConfig() string {
-	return sampleConfig
 }
 
 func (c *X509Cert) sourcesToURLs() error {
@@ -149,7 +128,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		protocol = "tcp"
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
+		dialer, err := c.Proxy()
+		if err != nil {
+			return nil, err
+		}
+
+		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -200,6 +184,53 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			}
 			content = rest
 		}
+		return certs, nil
+	case "smtp":
+		ipConn, err := net.DialTimeout("tcp", u.Host, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer ipConn.Close()
+
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
+		}
+		c.tlsCfg.ServerName = serverName
+		c.tlsCfg.InsecureSkipVerify = true
+
+		smtpConn, err := smtp.NewClient(ipConn, u.Host)
+		if err != nil {
+			return nil, err
+		}
+
+		err = smtpConn.Hello(c.tlsCfg.ServerName)
+		if err != nil {
+			return nil, err
+		}
+
+		id, err := smtpConn.Text.Cmd("STARTTLS")
+		if err != nil {
+			return nil, err
+		}
+
+		smtpConn.Text.StartResponse(id)
+		defer smtpConn.Text.EndResponse(id)
+		_, _, err = smtpConn.Text.ReadResponse(220)
+		if err != nil {
+			return nil, fmt.Errorf("did not get 220 after STARTTLS: %s", err.Error())
+		}
+
+		tlsConn := tls.Client(ipConn, c.tlsCfg)
+		defer tlsConn.Close()
+
+		hsErr := tlsConn.Handshake()
+		if hsErr != nil {
+			return nil, hsErr
+		}
+
+		certs := tlsConn.ConnectionState().PeerCertificates
+
 		return certs, nil
 	default:
 		return nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())
@@ -284,6 +315,10 @@ func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 	return urls, nil
 }
 
+func (*X509Cert) SampleConfig() string {
+	return sampleConfig
+}
+
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
@@ -334,6 +369,9 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			}
 
 			acc.AddFields("x509_cert", fields, tags)
+			if c.ExcludeRootCerts {
+				break
+			}
 		}
 	}
 

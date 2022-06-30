@@ -1,7 +1,6 @@
 package syslog
 
 import (
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -45,9 +44,7 @@ func TestAddress(t *testing.T) {
 	require.EqualError(t, err, "unknown protocol 'unsupported' in 'example.com:6514'")
 	require.Error(t, err)
 
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestAddress.sock")
 
 	if runtime.GOOS != "windows" {

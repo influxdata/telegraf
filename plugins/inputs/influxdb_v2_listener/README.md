@@ -5,15 +5,16 @@ according to the [InfluxDB HTTP API][influxdb_http_api].  The intent of the
 plugin is to allow Telegraf to serve as a proxy/router for the `/api/v2/write`
 endpoint of the InfluxDB HTTP API.
 
-The `/api/v2/write` endpoint supports the `precision` query parameter and can be set
-to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and
-defer to the output plugins configuration.
+The `/api/v2/write` endpoint supports the `precision` query parameter and can be
+set to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and defer
+to the output plugins configuration.
 
 Telegraf minimum version: Telegraf 1.16.0
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Accept metrics over InfluxDB 2.x HTTP API
 [[inputs.influxdb_v2_listener]]
   ## Address and port to host InfluxDB listener on
   ## (Double check the port. Could be 9999 if using OSS Beta)
@@ -40,16 +41,22 @@ Telegraf minimum version: Telegraf 1.16.0
   ## Optional token to accept for HTTP authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # token = "some-long-shared-secret-token"
+
+  ## Influx line protocol parser
+  ## 'internal' is the default. 'upstream' is a newer parser that is faster
+  ## and more memory efficient.
+  # parser_type = "internal"
 ```
 
-### Metrics:
+## Metrics
 
 Metrics are created from InfluxDB Line Protocol in the request body.
 
-### Troubleshooting:
+## Troubleshooting
 
 **Example Query:**
-```
+
+```sh
 curl -i -XPOST 'http://localhost:8186/api/v2/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 

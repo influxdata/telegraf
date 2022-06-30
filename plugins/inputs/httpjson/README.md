@@ -1,12 +1,14 @@
 # HTTP JSON Input Plugin
 
-The httpjson plugin collects data from HTTP URLs which respond with JSON.  It flattens the JSON and finds all numeric values, treating them as floats.
+**DEPRECATED in Telegraf v1.6: Use [HTTP input plugin][] as replacement**
 
-Deprecated (1.6): use the [http](../http) input.
+The httpjson plugin collects data from HTTP URLs which respond with JSON.  It
+flattens the JSON and finds all numeric values, treating them as floats.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Read flattened metrics from one or more JSON HTTP endpoints
 [[inputs.httpjson]]
   ## NOTE This plugin only reads numerical measurements, strings and booleans
   ## will be ignored.
@@ -54,28 +56,33 @@ Deprecated (1.6): use the [http](../http) input.
   #   apiVersion = "v1"
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - httpjson
-	- response_time (float): Response time in seconds
+  - response_time (float): Response time in seconds
 
-Additional fields are dependant on the response of the remote service being polled.
+Additional fields are dependant on the response of the remote service being
+polled.
 
-### Tags:
+## Tags
 
 - All measurements have the following tags:
-	- server: HTTP origin as defined in configuration as `servers`.
+  - server: HTTP origin as defined in configuration as `servers`.
 
-Any top level keys listed under `tag_keys` in the configuration are added as tags.  Top level keys are defined as keys in the root level of the object in a single object response, or in the root level of each object within an array of objects.
+Any top level keys listed under `tag_keys` in the configuration are added as
+tags.  Top level keys are defined as keys in the root level of the object in a
+single object response, or in the root level of each object within an array of
+objects.
 
+## Examples Output
 
-### Examples Output:
-
-This plugin understands responses containing a single JSON object, or a JSON Array of Objects.
+This plugin understands responses containing a single JSON object, or a JSON
+Array of Objects.
 
 **Object Output:**
 
 Given the following response body:
+
 ```json
 {
     "a": 0.5,
@@ -87,9 +94,12 @@ Given the following response body:
     "service": "service01"
 }
 ```
+
 The following metric is produced:
 
-`httpjson,server=http://localhost:9999/stats/ b_d=0.1,a=0.5,b_e=5,response_time=0.001`
+```shell
+httpjson,server=http://localhost:9999/stats/ b_d=0.1,a=0.5,b_e=5,response_time=0.001
+```
 
 Note that only numerical values are extracted and the type is float.
 
@@ -102,11 +112,14 @@ If `tag_keys` is included in the configuration:
 
 Then the `service` tag will also be added:
 
-`httpjson,server=http://localhost:9999/stats/,service=service01 b_d=0.1,a=0.5,b_e=5,response_time=0.001`
+```shell
+httpjson,server=http://localhost:9999/stats/,service=service01 b_d=0.1,a=0.5,b_e=5,response_time=0.001
+```
 
 **Array Output:**
 
-If the service returns an array of objects, one metric is be created for each object:
+If the service returns an array of objects, one metric is be created for each
+object:
 
 ```json
 [
@@ -131,5 +144,9 @@ If the service returns an array of objects, one metric is be created for each ob
 ]
 ```
 
-`httpjson,server=http://localhost:9999/stats/,service=service01 a=0.5,b_d=0.1,b_e=5,response_time=0.003`
-`httpjson,server=http://localhost:9999/stats/,service=service02 a=0.6,b_d=0.2,b_e=6,response_time=0.003`
+```shell
+httpjson,server=http://localhost:9999/stats/,service=service01 a=0.5,b_d=0.1,b_e=5,response_time=0.003
+httpjson,server=http://localhost:9999/stats/,service=service02 a=0.6,b_d=0.2,b_e=6,response_time=0.003
+```
+
+[HTTP input plugin]: ../http/README.md

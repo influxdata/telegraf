@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -44,7 +43,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -81,7 +80,7 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -118,7 +117,7 @@ func TestSerializeWithSpaces(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -155,7 +154,7 @@ func TestSerializeMetricInt(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -192,7 +191,7 @@ func TestSerializeMetricString(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -248,7 +247,7 @@ func TestSerializeMetricBool(t *testing.T) {
 			buf, err := s.Serialize(tc.metric)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -291,7 +290,7 @@ metric=cpu_value  42 0
 			buf, err := s.SerializeBatch(metrics)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -400,7 +399,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }

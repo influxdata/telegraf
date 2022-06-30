@@ -92,6 +92,114 @@ func TestStatefulSet(t *testing.T) {
 			},
 			hasError: false,
 		},
+		{
+			name: "no label selector",
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/statefulsets/": &v1.StatefulSetList{
+						Items: []v1.StatefulSet{
+							{
+								Status: v1.StatefulSetStatus{
+									Replicas:           2,
+									CurrentReplicas:    4,
+									ReadyReplicas:      1,
+									UpdatedReplicas:    3,
+									ObservedGeneration: 119,
+								},
+								Spec: v1.StatefulSetSpec{
+									Replicas: toInt32Ptr(3),
+									Selector: nil,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        332,
+									Namespace:         "ns1",
+									Name:              "sts1",
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
+						},
+					},
+				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_statefulset",
+					map[string]string{
+						"namespace":        "ns1",
+						"statefulset_name": "sts1",
+					},
+					map[string]interface{}{
+						"generation":          int64(332),
+						"observed_generation": int64(119),
+						"created":             now.UnixNano(),
+						"spec_replicas":       int32(3),
+						"replicas":            int32(2),
+						"replicas_current":    int32(4),
+						"replicas_ready":      int32(1),
+						"replicas_updated":    int32(3),
+					},
+					time.Unix(0, 0),
+				),
+			},
+			hasError: false,
+		},
+		{
+			name: "no desired number of replicas",
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/statefulsets/": &v1.StatefulSetList{
+						Items: []v1.StatefulSet{
+							{
+								Status: v1.StatefulSetStatus{
+									Replicas:           2,
+									CurrentReplicas:    4,
+									ReadyReplicas:      1,
+									UpdatedReplicas:    3,
+									ObservedGeneration: 119,
+								},
+								Spec: v1.StatefulSetSpec{
+									Replicas: nil,
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"select1": "s1",
+											"select2": "s2",
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        332,
+									Namespace:         "ns1",
+									Name:              "sts1",
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
+						},
+					},
+				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_statefulset",
+					map[string]string{
+						"namespace":        "ns1",
+						"statefulset_name": "sts1",
+						"selector_select1": "s1",
+						"selector_select2": "s2",
+					},
+					map[string]interface{}{
+						"generation":          int64(332),
+						"observed_generation": int64(119),
+						"created":             now.UnixNano(),
+						"replicas":            int32(2),
+						"replicas_current":    int32(4),
+						"replicas_ready":      int32(1),
+						"replicas_updated":    int32(3),
+					},
+					time.Unix(0, 0),
+				),
+			},
+			hasError: false,
+		},
 	}
 
 	for _, v := range tests {

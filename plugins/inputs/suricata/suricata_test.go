@@ -11,18 +11,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var ex2 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"capture":{"kernel_packets":905344474,"kernel_drops":78355440,"kernel_packets_delta":2376742,"kernel_drops_delta":82049}}}`
 var ex3 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"threads": { "W#05-wlp4s0": { "capture":{"kernel_packets":905344474,"kernel_drops":78355440}}}}}`
 
 func TestSuricataLarge(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
 
 	s := Suricata{
@@ -60,9 +59,7 @@ func TestSuricataLarge(t *testing.T) {
 }
 
 func TestSuricataAlerts(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
 
 	s := Suricata{
@@ -115,9 +112,7 @@ func TestSuricataAlerts(t *testing.T) {
 }
 
 func TestSuricata(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
 
 	s := Suricata{
@@ -161,9 +156,7 @@ func TestSuricata(t *testing.T) {
 }
 
 func TestThreadStats(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
 
 	s := Suricata{
@@ -211,9 +204,7 @@ func TestThreadStats(t *testing.T) {
 }
 
 func TestSuricataInvalid(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
 
 	s := Suricata{
@@ -253,10 +244,7 @@ func TestSuricataInvalidPath(t *testing.T) {
 }
 
 func TestSuricataTooLongLine(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+	tmpfn := testutil.TempSocket(t)
 
 	s := Suricata{
 		Source: tmpfn,
@@ -281,10 +269,7 @@ func TestSuricataTooLongLine(t *testing.T) {
 }
 
 func TestSuricataEmptyJSON(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+	tmpfn := testutil.TempSocket(t)
 
 	s := Suricata{
 		Source: tmpfn,
@@ -308,10 +293,7 @@ func TestSuricataEmptyJSON(t *testing.T) {
 }
 
 func TestSuricataDisconnectSocket(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+	tmpfn := testutil.TempSocket(t)
 
 	s := Suricata{
 		Source: tmpfn,
@@ -344,10 +326,7 @@ func TestSuricataDisconnectSocket(t *testing.T) {
 }
 
 func TestSuricataStartStop(t *testing.T) {
-	dir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+	tmpfn := testutil.TempSocket(t)
 
 	s := Suricata{
 		Source: tmpfn,
@@ -388,11 +367,13 @@ func TestSuricataParse(t *testing.T) {
 	for _, tc := range tests {
 		data, err := os.ReadFile("testdata/" + tc.filename)
 		require.NoError(t, err)
+
 		s := Suricata{
 			Delimiter: "_",
 		}
 		acc := testutil.Accumulator{}
-		s.parse(&acc, data)
+		err = s.parse(&acc, data)
+		require.NoError(t, err)
 
 		testutil.RequireMetricsEqual(t, tc.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 	}

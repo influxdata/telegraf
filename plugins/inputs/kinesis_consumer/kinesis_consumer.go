@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kinesis_consumer
 
 import (
@@ -5,6 +6,7 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"math/big"
@@ -12,16 +14,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	consumer "github.com/harlow/kinesis-consumer"
-	"github.com/harlow/kinesis-consumer/checkpoint/ddb"
+	"github.com/harlow/kinesis-consumer/store/ddb"
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type (
 	DynamoDB struct {
@@ -44,7 +50,7 @@ type (
 		acc    telegraf.TrackingAccumulator
 		sem    chan struct{}
 
-		checkpoint    consumer.Checkpoint
+		checkpoint    consumer.Store
 		checkpoints   map[string]checkpoint
 		records       map[telegraf.TrackingID]string
 		checkpointTex sync.Mutex
@@ -73,79 +79,8 @@ type processContent func([]byte) ([]byte, error)
 // this is the largest sequence number allowed - https://docs.aws.amazon.com/kinesis/latest/APIReference/API_SequenceNumberRange.html
 var maxSeq = strToBint(strings.Repeat("9", 129))
 
-var sampleConfig = `
-  ## Amazon REGION of kinesis endpoint.
-  region = "ap-southeast-2"
-
-  ## Amazon Credentials
-  ## Credentials are loaded in the following order
-  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
-  ## 2) Assumed credentials via STS if role_arn is specified
-  ## 3) explicit credentials from 'access_key' and 'secret_key'
-  ## 4) shared profile from 'profile'
-  ## 5) environment variables
-  ## 6) shared credentials file
-  ## 7) EC2 Instance Profile
-  # access_key = ""
-  # secret_key = ""
-  # token = ""
-  # role_arn = ""
-  # web_identity_token_file = ""
-  # role_session_name = ""
-  # profile = ""
-  # shared_credential_file = ""
-
-  ## Endpoint to make request against, the correct endpoint is automatically
-  ## determined and this option should only be set if you wish to override the
-  ## default.
-  ##   ex: endpoint_url = "http://localhost:8000"
-  # endpoint_url = ""
-
-  ## Kinesis StreamName must exist prior to starting telegraf.
-  streamname = "StreamName"
-
-  ## Shard iterator type (only 'TRIM_HORIZON' and 'LATEST' currently supported)
-  # shard_iterator_type = "TRIM_HORIZON"
-
-  ## Maximum messages to read from the broker that have not been written by an
-  ## output.  For best throughput set based on the number of metrics within
-  ## each message and the size of the output's metric_batch_size.
-  ##
-  ## For example, if each message from the queue contains 10 metrics and the
-  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
-  ## full batch is collected and the write is triggered immediately without
-  ## waiting until the next flush_interval.
-  # max_undelivered_messages = 1000
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-
-  ##
-  ## The content encoding of the data from kinesis
-  ## If you are processing a cloudwatch logs kinesis stream then set this to "gzip"
-  ## as AWS compresses cloudwatch log data before it is sent to kinesis (aws
-  ## also base64 encodes the zip byte data before pushing to the stream.  The base64 decoding
-  ## is done automatically by the golang sdk, as data is read from kinesis)
-  ##
-  # content_encoding = "identity"
-
-  ## Optional
-  ## Configuration for a dynamodb checkpoint
-  [inputs.kinesis_consumer.checkpoint_dynamodb]
-	## unique name for this consumer
-	app_name = "default"
-	table_name = "default"
-`
-
-func (k *KinesisConsumer) SampleConfig() string {
+func (*KinesisConsumer) SampleConfig() string {
 	return sampleConfig
-}
-
-func (k *KinesisConsumer) Description() string {
-	return "Configuration for the AWS Kinesis input."
 }
 
 func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
@@ -153,31 +88,19 @@ func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
-	p, err := k.CredentialConfig.Credentials()
+	cfg, err := k.CredentialConfig.Credentials()
 	if err != nil {
 		return err
 	}
-	client := kinesis.New(p)
+	client := kinesis.NewFromConfig(cfg)
 
-	k.checkpoint = &noopCheckpoint{}
+	k.checkpoint = &noopStore{}
 	if k.DynamoDB != nil {
-		p, err := (&internalaws.CredentialConfig{
-			Region:      k.Region,
-			AccessKey:   k.AccessKey,
-			SecretKey:   k.SecretKey,
-			RoleARN:     k.RoleARN,
-			Profile:     k.Profile,
-			Filename:    k.Filename,
-			Token:       k.Token,
-			EndpointURL: k.EndpointURL,
-		}).Credentials()
-		if err != nil {
-			return err
-		}
+		var err error
 		k.checkpoint, err = ddb.New(
 			k.DynamoDB.AppName,
 			k.DynamoDB.TableName,
-			ddb.WithDynamoClient(dynamodb.New(p)),
+			ddb.WithDynamoClient(dynamodb.NewFromConfig(cfg)),
 			ddb.WithMaxInterval(time.Second*10),
 		)
 		if err != nil {
@@ -189,7 +112,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		k.StreamName,
 		consumer.WithClient(client),
 		consumer.WithShardIteratorType(k.ShardIteratorType),
-		consumer.WithCheckpoint(k),
+		consumer.WithStore(k),
 	)
 	if err != nil {
 		return err
@@ -214,10 +137,10 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	k.wg.Add(1)
 	go func() {
 		defer k.wg.Done()
-		err := k.cons.Scan(ctx, func(r *consumer.Record) consumer.ScanStatus {
+		err := k.cons.Scan(ctx, func(r *consumer.Record) error {
 			select {
 			case <-ctx.Done():
-				return consumer.ScanStatus{Error: ctx.Err()}
+				return ctx.Err()
 			case k.sem <- struct{}{}:
 				break
 			}
@@ -227,7 +150,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 				k.Log.Errorf("Scan parser error: %s", err.Error())
 			}
 
-			return consumer.ScanStatus{}
+			return nil
 		})
 		if err != nil {
 			k.cancel()
@@ -298,7 +221,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 				}
 
 				k.lastSeqNum = strToBint(sequenceNum)
-				if err := k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum); err != nil {
+				if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
 					k.Log.Debug("Setting checkpoint failed: %v", err)
 				}
 			} else {
@@ -332,13 +255,13 @@ func (k *KinesisConsumer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Get wraps the checkpoint's Get function (called by consumer library)
-func (k *KinesisConsumer) Get(streamName, shardID string) (string, error) {
-	return k.checkpoint.Get(streamName, shardID)
+// Get wraps the checkpoint's GetCheckpoint function (called by consumer library)
+func (k *KinesisConsumer) GetCheckpoint(streamName, shardID string) (string, error) {
+	return k.checkpoint.GetCheckpoint(streamName, shardID)
 }
 
-// Set wraps the checkpoint's Set function (called by consumer library)
-func (k *KinesisConsumer) Set(streamName, shardID, sequenceNumber string) error {
+// Set wraps the checkpoint's SetCheckpoint function (called by consumer library)
+func (k *KinesisConsumer) SetCheckpoint(streamName, shardID, sequenceNumber string) error {
 	if sequenceNumber == "" {
 		return fmt.Errorf("sequence number should not be empty")
 	}
@@ -390,10 +313,10 @@ func (k *KinesisConsumer) Init() error {
 	return k.configureProcessContentEncodingFunc()
 }
 
-type noopCheckpoint struct{}
+type noopStore struct{}
 
-func (n noopCheckpoint) Set(string, string, string) error   { return nil }
-func (n noopCheckpoint) Get(string, string) (string, error) { return "", nil }
+func (n noopStore) SetCheckpoint(string, string, string) error   { return nil }
+func (n noopStore) GetCheckpoint(string, string) (string, error) { return "", nil }
 
 func init() {
 	negOne, _ = new(big.Int).SetString("-1", 10)

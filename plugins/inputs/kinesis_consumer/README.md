@@ -3,10 +3,10 @@
 The [Kinesis][kinesis] consumer plugin reads from a Kinesis data stream
 and creates metrics using one of the supported [input data formats][].
 
+## Configuration
 
-### Configuration
-
-```toml
+```toml @sample.conf
+# Configuration for the AWS Kinesis input.
 [[inputs.kinesis_consumer]]
   ## Amazon REGION of kinesis endpoint.
   region = "ap-southeast-2"
@@ -74,29 +74,28 @@ and creates metrics using one of the supported [input data formats][].
     table_name = "default"
 ```
 
-
-#### Required AWS IAM permissions
+### Required AWS IAM permissions
 
 Kinesis:
- - DescribeStream
- - GetRecords
- - GetShardIterator
+
+- DescribeStream
+- GetRecords
+- GetShardIterator
 
 DynamoDB:
- - GetItem
- - PutItem
 
+- GetItem
+- PutItem
 
-#### DynamoDB Checkpoint
+### DynamoDB Checkpoint
 
-The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
-this functionality, create a table with the following string type keys:
+The DynamoDB checkpoint stores the last processed record in a DynamoDB. To
+leverage this functionality, create a table with the following string type keys:
 
-```
+```shell
 Partition key: namespace
 Sort key: shard_id
 ```
-
 
 [kinesis]: https://aws.amazon.com/kinesis/
 [input data formats]: /docs/DATA_FORMATS_INPUT.md

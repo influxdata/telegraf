@@ -1,31 +1,20 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package unpivot
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const (
-	description  = "Rotate multi field metric into several single field metrics"
-	sampleConfig = `
-  ## Tag to use for the name.
-  tag_key = "name"
-  ## Field to use for the name of the value.
-  value_key = "value"
-`
-)
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Unpivot struct {
 	TagKey   string `toml:"tag_key"`
 	ValueKey string `toml:"value_key"`
-}
-
-func (p *Unpivot) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Unpivot) Description() string {
-	return description
 }
 
 func copyWithoutFields(metric telegraf.Metric) telegraf.Metric {
@@ -41,6 +30,10 @@ func copyWithoutFields(metric telegraf.Metric) telegraf.Metric {
 	}
 
 	return m
+}
+
+func (*Unpivot) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Unpivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
