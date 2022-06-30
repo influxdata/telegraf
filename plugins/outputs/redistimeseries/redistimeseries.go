@@ -37,7 +37,7 @@ type RedisTimeSeries struct {
 
 func (r *RedisTimeSeries) Connect() error {
 	if r.Address == "" {
-		return fmt.Errorf("Redis address must be specified")
+		return errors.New("redis address must be specified")
 	}
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.Address,
