@@ -50,7 +50,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.12.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/djherbis/times v1.5.0
-	github.com/docker/docker v20.10.14+incompatible
+	github.com/docker/docker v20.10.17+incompatible
 	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0
 	github.com/eclipse/paho.mqtt.golang v1.3.5
@@ -118,7 +118,7 @@ require (
 	github.com/pborman/ansi v1.0.0
 	github.com/pion/dtls/v2 v2.0.13
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.12.1
+	github.com/prometheus/client_golang v1.12.2
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.32.1
 	github.com/prometheus/procfs v0.7.3
