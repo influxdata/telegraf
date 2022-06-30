@@ -146,7 +146,7 @@ func MetricFamilyToCompactText(out io.Writer, in *dto.MetricFamily) (written int
 				)
 				written += n
 				if err != nil {
-					return
+					return // nolint: revive
 				}
 			}
 			n, err = writeSample(
@@ -155,7 +155,7 @@ func MetricFamilyToCompactText(out io.Writer, in *dto.MetricFamily) (written int
 			)
 			written += n
 			if err != nil {
-				return
+				return // nolint: revive
 			}
 			n, err = writeSample(
 				w, name, "_count", metric, "", 0,
@@ -176,7 +176,7 @@ func MetricFamilyToCompactText(out io.Writer, in *dto.MetricFamily) (written int
 				)
 				written += n
 				if err != nil {
-					return
+					return // nolint: revive
 				}
 				if math.IsInf(b.GetUpperBound(), +1) {
 					infSeen = true
@@ -190,7 +190,7 @@ func MetricFamilyToCompactText(out io.Writer, in *dto.MetricFamily) (written int
 				)
 				written += n
 				if err != nil {
-					return
+					return // nolint: revive
 				}
 			}
 			n, err = writeSample(
@@ -199,7 +199,7 @@ func MetricFamilyToCompactText(out io.Writer, in *dto.MetricFamily) (written int
 			)
 			written += n
 			if err != nil {
-				return
+				return // nolint: revive
 			}
 			n, err = writeSample(
 				w, name, "_count", metric, "", 0,
@@ -212,10 +212,10 @@ func MetricFamilyToCompactText(out io.Writer, in *dto.MetricFamily) (written int
 		}
 		written += n
 		if err != nil {
-			return
+			return // nolint: revive
 		}
 	}
-	return
+	return // nolint: nakedret, revive
 }
 
 // writeSample writes a single sample in text format to w, given the metric
@@ -223,6 +223,7 @@ func MetricFamilyToCompactText(out io.Writer, in *dto.MetricFamily) (written int
 // with a float64 value (use empty string as label name if not required), and
 // the value. The function returns the number of bytes written and any error
 // encountered.
+// nolint: revive
 func writeSample(
 	w enhancedWriter,
 	name, suffix string,
