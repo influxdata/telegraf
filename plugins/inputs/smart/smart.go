@@ -830,11 +830,13 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 				}
 			}
 
-			// If the attribute name matches on in deviceFieldNames
-			// save the value to a field
-			if field, ok := deviceFieldNames[attr[2]]; ok {
-				if val, err := parseRawValue(attr[4]); err == nil {
-					deviceFields[field] = val
+			if len(attr) > 4 {
+				// If the attribute name matches on in deviceFieldNames
+				// save the value to a field
+				if field, ok := deviceFieldNames[attr[2]]; ok {
+					if val, err := parseRawValue(attr[4]); err == nil {
+						deviceFields[field] = val
+					}
 				}
 			}
 		} else {
