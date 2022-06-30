@@ -175,7 +175,7 @@ func (c *Container) configureYum() error {
 		return err
 	}
 
-	return c.client.Exec(c.Name, "yum", "update")
+	return c.client.Exec(c.Name, "yum", "check-update")
 }
 
 // Create config and update dnf
@@ -189,7 +189,7 @@ func (c *Container) configureDnf() error {
 		return err
 	}
 
-	return c.client.Exec(c.Name, "dnf", "update")
+	return c.client.Exec(c.Name, "dnf", "check-update")
 }
 
 // Create config and update zypper
