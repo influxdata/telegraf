@@ -189,8 +189,6 @@ github.com/Flaque/filet v0.0.0-20201012163910-45f684403088/go.mod h1:TK+jB3mBs+8
 github.com/HdrHistogram/hdrhistogram-go v0.9.0/go.mod h1:nxrse8/Tzg2tg3DZcZjm6qEclQKK70g0KxO61gFFZD4=
 github.com/HdrHistogram/hdrhistogram-go v1.0.1/go.mod h1:BWJ+nMSHY3L41Zj7CA3uXnloDp7xxV0YvstAE7nKTaM=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
-github.com/Malinskiy/go.nut v0.0.0-20211003085819-bb4669c66e1e h1:DlQ/fqxMcNOGdOra/TIQ0fJJKdwXoIyRTjo/PBS/+lw=
-github.com/Malinskiy/go.nut v0.0.0-20211003085819-bb4669c66e1e/go.mod h1:Dxp6sRBTHnLRN1ijgxNc23+GcNqyRxCYAOmhtAXb5qI=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Masterminds/semver/v3 v3.1.1 h1:hLg3sBzpNErnxhQtUy/mmLR2I9foDujNK030IGemrRc=
@@ -2068,6 +2066,8 @@ github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16 h1:bGX
 github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16/go.mod h1:4rS0vfmzOMwfFPhi6Zve4k/59TsBepqd6WESNULE0ho=
 github.com/rivo/tview v0.0.0-20200219210816-cd38d7432498/go.mod h1:6lkG1x+13OShEf0EaOCaTQYyB7d5nSbb181KtjlS+84=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
+github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1 h1:YmFqprZILGlF/X3tvMA4Rwn3ySxyE3hGUajBHkkaZbM=
+github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1/go.mod h1:pL1huxuIlWub46MsMVJg4p7OXkzbPp/APxh9IH0eJjQ=
 github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff h1:+6NUiITWwE5q1KO6SAfUX918c+Tab0+tGAM/mtdlUyA=
 github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff/go.mod h1:xvqspoSXJTIpemEonrMDFq6XzwHYYgToXWj5eRX1OtY=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=

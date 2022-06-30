@@ -11,7 +11,7 @@ import (
 )
 
 func TestUpsdGather(t *testing.T) {
-	nut := &Upsd{ConnectionTimeout: defaultConnectTimeout, OpTimeout: defaultOpTimeout}
+	nut := &Upsd{}
 
 	var (
 		tests = []struct {
@@ -61,7 +61,8 @@ func TestUpsdGather(t *testing.T) {
 			lAddr, err := listen(ctx, t, tt.out())
 			require.NoError(t, err)
 
-			nut.Server = lAddr
+			nut.Server = (lAddr.(*net.TCPAddr)).IP.String()
+			nut.Port = (lAddr.(*net.TCPAddr)).Port
 
 			err = nut.Gather(&acc)
 			if tt.err {
@@ -76,7 +77,7 @@ func TestUpsdGather(t *testing.T) {
 }
 
 func TestUpsdGatherFail(t *testing.T) {
-	nut := &Upsd{ConnectionTimeout: defaultConnectTimeout, OpTimeout: defaultOpTimeout}
+	nut := &Upsd{}
 
 	var (
 		tests = []struct {
@@ -103,7 +104,8 @@ func TestUpsdGatherFail(t *testing.T) {
 			lAddr, err := listen(ctx, t, tt.out())
 			require.NoError(t, err)
 
-			nut.Server = lAddr
+			nut.Server = (lAddr.(*net.TCPAddr)).IP.String()
+			nut.Port = (lAddr.(*net.TCPAddr)).Port
 
 			err = nut.Gather(&acc)
 			if tt.err {
@@ -117,11 +119,11 @@ func TestUpsdGatherFail(t *testing.T) {
 	}
 }
 
-func listen(ctx context.Context, t *testing.T, out []interaction) (string, error) {
+func listen(ctx context.Context, t *testing.T, out []interaction) (net.Addr, error) {
 	lc := net.ListenConfig{}
 	ln, err := lc.Listen(ctx, "tcp4", "127.0.0.1:0")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	go func() {
@@ -156,7 +158,7 @@ func listen(ctx context.Context, t *testing.T, out []interaction) (string, error
 		}
 	}()
 
-	return ln.Addr().String(), nil
+	return ln.Addr(), nil
 }
 
 type interaction struct {
@@ -166,6 +168,14 @@ type interaction struct {
 
 func genOutput() []interaction {
 	m := make([]interaction, 0)
+	m = append(m, interaction{
+		Expected: "VER\n",
+		Response: "1\n",
+	})
+	m = append(m, interaction{
+		Expected: "NETVER\n",
+		Response: "1\n",
+	})
 	m = append(m, interaction{
 		Expected: "LIST UPS\n",
 		Response: `BEGIN LIST UPS

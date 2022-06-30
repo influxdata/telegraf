@@ -2,30 +2,24 @@ package upsd
 
 import (
 	"fmt"
-	"strings"
-	"time"
-
-	nut "github.com/Malinskiy/go.nut"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	nut "github.com/robbiet480/go.nut"
+	"strings"
 )
 
 //See: https://networkupstools.org/docs/developer-guide.chunked/index.html
 
 const defaultAddress = "127.0.0.1"
-
-var defaultConnectTimeout = config.Duration(10 * time.Second)
-var defaultOpTimeout = config.Duration(10 * time.Second)
+const defaultPort = 3493
 
 type Upsd struct {
-	Server            string
-	Username          string
-	Password          string
-	OpTimeout         config.Duration
-	ConnectionTimeout config.Duration
-	Log               telegraf.Logger `toml:"-"`
+	Server   string
+	Port     int
+	Username string
+	Password string
+	Log      telegraf.Logger `toml:"-"`
 
 	batteryRuntimeTypeWarningIssued bool
 }
@@ -35,14 +29,11 @@ func (*Upsd) Description() string {
 }
 
 var sampleConfig = `
-  ## A running NUT server to connect to.
-  # server = "127.0.0.1"
-  # username = "user"
-  # password = "password"
-  ## Timeout for dialing server.
-  # connectionTimeout = "10s"
-  ## Read/write operation timeout.
-  # opTimeout = "10s"
+ ## A running NUT server to connect to.
+ # server = "127.0.0.1"
+ # port = 3493
+ # username = "user"
+ # password = "password"
 `
 
 func (*Upsd) SampleConfig() string {
@@ -50,7 +41,7 @@ func (*Upsd) SampleConfig() string {
 }
 
 func (u *Upsd) Gather(acc telegraf.Accumulator) error {
-	upsList, err := u.fetchVariables(u.Server)
+	upsList, err := u.fetchVariables(u.Server, u.Port)
 	if err != nil {
 		return err
 	}
@@ -154,8 +145,8 @@ func (u *Upsd) mapStatus(metrics map[string]interface{}, tags map[string]string)
 	return status
 }
 
-func (u *Upsd) fetchVariables(server string) (map[string][]nut.Variable, error) {
-	client, err := nut.Connect(server, time.Duration(u.ConnectionTimeout), time.Duration(u.OpTimeout))
+func (u *Upsd) fetchVariables(server string, port int) (map[string][]nut.Variable, error) {
+	client, err := nut.Connect(server, port)
 	if err != nil {
 		return nil, fmt.Errorf("connect: %w", err)
 	}
@@ -185,9 +176,8 @@ func (u *Upsd) fetchVariables(server string) (map[string][]nut.Variable, error) 
 func init() {
 	inputs.Add("upsd", func() telegraf.Input {
 		return &Upsd{
-			Server:            defaultAddress,
-			OpTimeout:         defaultOpTimeout,
-			ConnectionTimeout: defaultConnectTimeout,
+			Server: defaultAddress,
+			Port:   defaultPort,
 		}
 	})
 }
