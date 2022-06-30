@@ -164,9 +164,9 @@ func (u *Upsd) fetchVariables(server string, port int) (map[string][]nut.Variabl
 	}
 
 	defer func() {
-		_, disconnect_err := client.Disconnect()
-		if disconnect_err != nil {
-			err = fmt.Errorf("disconnect: %w", disconnect_err)
+		_, disconnectErr := client.Disconnect()
+		if disconnectErr != nil {
+			err = fmt.Errorf("disconnect: %w", disconnectErr)
 		}
 	}()
 
