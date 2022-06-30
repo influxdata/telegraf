@@ -6,11 +6,11 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
@@ -75,7 +75,6 @@ type MQTTConsumer struct {
 
 	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 	PersistentSession bool
-	bytesRecv         string
 	ClientID          string `toml:"client_id"`
 
 	tls.ClientConfig
@@ -248,15 +247,18 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	}
 
 	for _, metric := range metrics {
-		// msgSize := len(msg.Payload())
-		// stringMsgSize := strconv.FormatInt(int64(msgSize), 10)
-		// m.Log.Infof("Size %v", stringMsgSize)
-		message := strings.NewReader(string(msg.Payload()))
-		count, err := ioutil.ReadAll(message)
-		if err != nil {
-			return err
-		}
-		m.Log.Infof("Size %v", count)
+		totalSize := 0
+		payloadSize := len(msg.Payload())
+		topicSize := len(msg.Topic())
+		idSize := unsafe.Sizeof(msg.MessageID())
+		msgSize := unsafe.Sizeof(msg)
+		dupSize := unsafe.Sizeof(msg.Duplicate())
+		retainedSize := unsafe.Sizeof(msg.Retained())
+		qosSize := unsafe.Sizeof(msg.Qos())
+		totalSize = payloadSize + topicSize + int(idSize) + int(msgSize) + int(dupSize) + int(retainedSize) + int(qosSize)
+		m.Log.Infof("Total Size %v", totalSize)
+		metric.AddTag("bytesRecv", strconv.FormatInt(int64(totalSize), 10))
+
 		if m.topicTagParse != "" {
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
@@ -269,10 +271,6 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 			if p.Measurement != "" {
 				metric.SetName(values[p.MeasurementIndex])
 			}
-
-			// p.SplitTags = append(p.SplitTags, m.bytesRecv)
-			// values = append(values, stringMsgSize)
-
 			if p.Tags != "" {
 				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
 				if err != nil {
@@ -291,6 +289,7 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	m.messagesMutex.Lock()
 	m.messages[id] = true
 	m.messagesMutex.Unlock()
+	m.Log.Debug("Final metric here: ", metrics)
 	return nil
 }
 func (m *MQTTConsumer) Stop() {

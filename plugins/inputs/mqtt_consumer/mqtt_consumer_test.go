@@ -204,7 +204,8 @@ func TestTopicTag(t *testing.T) {
 				testutil.MustMetric(
 					"cpu",
 					map[string]string{
-						"topic": "telegraf",
+						"topic":     "telegraf",
+						"bytesRecv": "46",
 					},
 					map[string]interface{}{
 						"time_idle": 42,
@@ -225,6 +226,7 @@ func TestTopicTag(t *testing.T) {
 					"cpu",
 					map[string]string{
 						"topic_tag": "telegraf",
+						"bytesRecv": "46",
 					},
 					map[string]interface{}{
 						"time_idle": 42,
@@ -243,7 +245,9 @@ func TestTopicTag(t *testing.T) {
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					map[string]string{
+						"bytesRecv": "46",
+					},
 					map[string]interface{}{
 						"time_idle": 42,
 					},
@@ -273,7 +277,8 @@ func TestTopicTag(t *testing.T) {
 				testutil.MustMetric(
 					"test",
 					map[string]string{
-						"testTag": "telegraf",
+						"testTag":   "telegraf",
+						"bytesRecv": "55",
 					},
 					map[string]interface{}{
 						"testNumber": 123,
@@ -305,7 +310,8 @@ func TestTopicTag(t *testing.T) {
 				testutil.MustMetric(
 					"test",
 					map[string]string{
-						"testTag": "telegraf",
+						"testTag":   "telegraf",
+						"bytesRecv": "61",
 					},
 					map[string]interface{}{
 						"testNumber": 123,
@@ -371,7 +377,8 @@ func TestTopicTag(t *testing.T) {
 				testutil.MustMetric(
 					"test",
 					map[string]string{
-						"testTag": "telegraf",
+						"testTag":   "telegraf",
+						"bytesRecv": "61",
 					},
 					map[string]interface{}{
 						"time_idle": 42,
@@ -401,7 +408,8 @@ func TestTopicTag(t *testing.T) {
 				testutil.MustMetric(
 					"cpu",
 					map[string]string{
-						"testTag": "telegraf",
+						"testTag":   "telegraf",
+						"bytesRecv": "61",
 					},
 					map[string]interface{}{
 						"testNumber": 123,
