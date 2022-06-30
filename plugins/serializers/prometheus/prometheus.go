@@ -69,7 +69,6 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var buf bytes.Buffer
 
 	for _, mf := range coll.GetProto() {
-
 		var enc expfmt.Encoder
 		switch s.config.MetricEncoding {
 		case StandardEncoding:
