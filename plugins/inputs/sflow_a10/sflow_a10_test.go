@@ -34,11 +34,7 @@ func TestSFlow_A10(t *testing.T) {
 	client, err := net.Dial(sflow.Address().Network(), sflow.Address().String())
 	require.NoError(t, err)
 
-	// Create a rutine to wait for the packets
-	go acc.Wait(3)
-
 	// Add sleep times (100 ms) between the packets
-
 	time.Sleep(100 * time.Millisecond)
 
 	// 271 - hex 10f
@@ -83,6 +79,7 @@ func TestSFlow_A10(t *testing.T) {
 	require.NoError(t, err)
 
 	time.Sleep(100 * time.Millisecond)
+	acc.Wait(3)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
