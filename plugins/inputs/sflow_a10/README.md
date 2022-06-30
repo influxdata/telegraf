@@ -1,8 +1,8 @@
 # SFlowA10 Input Plugin
 
-The SFlow_A10 Input Plugin provides support for acting as an SFlow V5 collector for 
-[A10](https://www.a10networks.com/) appliances, in accordance with the specification 
-from [sflow.org](https://sflow.org/). 
+The SFlow_A10 Input Plugin provides support for acting as an SFlow V5 collector 
+for [A10](https://www.a10networks.com/) appliances, in accordance with the 
+specification from [sflow.org](https://sflow.org/). 
 
 It is heavily based (i.e. re-uses a lot of code and techniques) on the 
 [SFlow](../sflow/README.md) plugin. The main difference is that SFlow_A10
@@ -15,11 +15,12 @@ Plugin starts by reading the XML file with the counter record definitions.
 Counter records which definition is not included in the XML file are ignored 
 when they arrive at the plugin.
 
-The way that the plugin works is that it parses incoming counter records from A10. 
-When it discovers counter records tagged 260 (port information) or 271/272 (IPv4/IPv6 information) 
-it parses their sourceID and stores them in memory. When a counter record metric arrives, 
-plugin checks if there is port and ip information for it (i.e. we have gotten 260 and 271 
-or 272 for the same sourceID). If there is, the metric is sent to telegraf output. 
+The way that the plugin works is that it parses incoming counter records from 
+A10. When it discovers counter records tagged 260 (port information) or 271/272
+(IPv4/IPv6 information) it parses their sourceID and stores them in memory. 
+When a counter record metric arrives, plugin checks if there is port and ip 
+information for it (i.e. we have gotten 260 and 271 or 272 for the same 
+sourceID). If there is, the metric is sent to telegraf output. 
 If it is not, the metric is discarded.
 
 ## Configuration
