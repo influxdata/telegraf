@@ -1,7 +1,11 @@
 package processes
 
-func (p *Processes) Description() string {
-	return "Get the number of processes and group them by status"
-}
+import _ "embed"
 
-func (p *Processes) SampleConfig() string { return "" }
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
+func (*Processes) SampleConfig() string {
+	return sampleConfig
+}

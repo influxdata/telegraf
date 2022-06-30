@@ -8,7 +8,6 @@ type timingStat struct {
 	measurement string
 	field       string
 	tags        map[string]string
-	key         uint64
 	v           int64
 	prev        int64
 	count       int64

@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/templating"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // Minimum and maximum supported dates for timestamps.
@@ -20,46 +21,34 @@ var (
 	MaxDate = time.Date(2038, 1, 19, 0, 0, 0, 0, time.UTC)
 )
 
-// Parser encapsulates a Graphite Parser.
-type GraphiteParser struct {
-	Separator      string
-	Templates      []string
-	DefaultTags    map[string]string
+type Parser struct {
+	Separator   string            `toml:"separator"`
+	Templates   []string          `toml:"templates"`
+	DefaultTags map[string]string ` toml:"-"`
+
 	templateEngine *templating.Engine
 }
 
-func (p *GraphiteParser) SetDefaultTags(tags map[string]string) {
-	p.DefaultTags = tags
-}
-
-func NewGraphiteParser(
-	separator string,
-	templates []string,
-	defaultTags map[string]string,
-) (*GraphiteParser, error) {
-	var err error
-
-	if separator == "" {
-		separator = DefaultSeparator
-	}
-	p := &GraphiteParser{
-		Separator: separator,
-		Templates: templates,
+func (p *Parser) Init() error {
+	// Set defaults
+	if p.Separator == "" {
+		p.Separator = DefaultSeparator
 	}
 
-	if defaultTags != nil {
-		p.DefaultTags = defaultTags
-	}
-	defaultTemplate, _ := templating.NewDefaultTemplateWithPattern("measurement*")
-	p.templateEngine, err = templating.NewEngine(p.Separator, defaultTemplate, p.Templates)
-
+	defaultTemplate, err := templating.NewDefaultTemplateWithPattern("measurement*")
 	if err != nil {
-		return p, fmt.Errorf("exec input parser config is error: %s ", err.Error())
+		return fmt.Errorf("creating template failed: %w", err)
 	}
-	return p, nil
+
+	p.templateEngine, err = templating.NewEngine(p.Separator, defaultTemplate, p.Templates)
+	if err != nil {
+		return fmt.Errorf("creating template engine failed: %w ", err)
+	}
+
+	return nil
 }
 
-func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// parse even if the buffer begins with a newline
 	if len(buf) != 0 && buf[0] == '\n' {
 		buf = buf[1:]
@@ -77,9 +66,9 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			line = bytes.TrimSpace(buf) // last line
 		}
 		if len(line) != 0 {
-			metric, err := p.ParseLine(string(line))
+			m, err := p.ParseLine(string(line))
 			if err == nil {
-				metrics = append(metrics, metric)
+				metrics = append(metrics, m)
 			} else {
 				errs = append(errs, err.Error())
 			}
@@ -95,23 +84,25 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-// Parse performs Graphite parsing of a single line.
-func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
+// ParseLine performs Graphite parsing of a single line.
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	// Break into 3 fields (name, value, timestamp).
 	fields := strings.Fields(line)
 	if len(fields) != 2 && len(fields) != 3 {
 		return nil, fmt.Errorf("received %q which doesn't have required fields", line)
 	}
 
+	parts := strings.Split(fields[0], ";")
+
 	// decode the name and tags
-	measurement, tags, field, err := p.templateEngine.Apply(fields[0])
+	measurement, tags, field, err := p.templateEngine.Apply(parts[0])
 	if err != nil {
 		return nil, err
 	}
 
 	// Could not extract measurement, use the raw value
 	if measurement == "" {
-		measurement = fields[0]
+		measurement = parts[0]
 	}
 
 	// Parse value.
@@ -147,6 +138,24 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 			}
 		}
 	}
+
+	// Split name and tags
+	if len(parts) >= 2 {
+		for _, tag := range parts[1:] {
+			tagValue := strings.Split(tag, "=")
+			if len(tagValue) != 2 || len(tagValue[0]) == 0 || len(tagValue[1]) == 0 {
+				continue
+			}
+			if strings.ContainsAny(tagValue[0], "!^") {
+				continue
+			}
+			if strings.Index(tagValue[1], "~") == 0 {
+				continue
+			}
+			tags[tagValue[0]] = tagValue[1]
+		}
+	}
+
 	// Set the default tags on the point if they are not already set
 	for k, v := range p.DefaultTags {
 		if _, ok := tags[k]; !ok {
@@ -154,12 +163,13 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	return metric.New(measurement, tags, fieldValues, timestamp)
+	return metric.New(measurement, tags, fieldValues, timestamp), nil
 }
 
 // ApplyTemplate extracts the template fields from the given line and
 // returns the measurement name and tags.
-func (p *GraphiteParser) ApplyTemplate(line string) (string, map[string]string, string, error) {
+//nolint:revive // This function should be eliminated anyway
+func (p *Parser) ApplyTemplate(line string) (string, map[string]string, string, error) {
 	// Break line into fields (name, value, timestamp), only name is used
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
@@ -176,4 +186,20 @@ func (p *GraphiteParser) ApplyTemplate(line string) (string, map[string]string, 
 	}
 
 	return name, tags, field, err
+}
+
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}
+
+func init() {
+	parsers.Add("graphite", func(_ string) telegraf.Parser { return &Parser{} })
+}
+
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.Templates = append(p.Templates, config.Templates...)
+	p.Separator = config.Separator
+	p.DefaultTags = config.DefaultTags
+
+	return p.Init()
 }

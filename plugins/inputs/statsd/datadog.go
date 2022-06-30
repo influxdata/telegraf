@@ -38,29 +38,29 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	// tag is key:value
 	messageRaw := strings.SplitN(message, ":", 2)
 	if len(messageRaw) < 2 || len(messageRaw[0]) < 7 || len(messageRaw[1]) < 3 {
-		return fmt.Errorf("Invalid message format")
+		return fmt.Errorf("invalid message format")
 	}
 	header := messageRaw[0]
 	message = messageRaw[1]
 
 	rawLen := strings.SplitN(header[3:], ",", 2)
 	if len(rawLen) != 2 {
-		return fmt.Errorf("Invalid message format")
+		return fmt.Errorf("invalid message format")
 	}
 
 	titleLen, err := strconv.ParseInt(rawLen[0], 10, 64)
 	if err != nil {
-		return fmt.Errorf("Invalid message format, could not parse title.length: '%s'", rawLen[0])
+		return fmt.Errorf("invalid message format, could not parse title.length: '%s'", rawLen[0])
 	}
 	if len(rawLen[1]) < 1 {
-		return fmt.Errorf("Invalid message format, could not parse text.length: '%s'", rawLen[0])
+		return fmt.Errorf("invalid message format, could not parse text.length: '%s'", rawLen[0])
 	}
 	textLen, err := strconv.ParseInt(rawLen[1][:len(rawLen[1])-1], 10, 64)
 	if err != nil {
-		return fmt.Errorf("Invalid message format, could not parse text.length: '%s'", rawLen[0])
+		return fmt.Errorf("invalid message format, could not parse text.length: '%s'", rawLen[0])
 	}
 	if titleLen+textLen+1 > int64(len(message)) {
-		return fmt.Errorf("Invalid message format, title.length and text.length exceed total message length")
+		return fmt.Errorf("invalid message format, title.length and text.length exceed total message length")
 	}
 
 	rawTitle := message[:titleLen]
@@ -68,14 +68,14 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	message = message[titleLen+1+textLen:]
 
 	if len(rawTitle) == 0 || len(rawText) == 0 {
-		return fmt.Errorf("Invalid event message format: empty 'title' or 'text' field")
+		return fmt.Errorf("invalid event message format: empty 'title' or 'text' field")
 	}
 
 	name := rawTitle
 	tags := make(map[string]string, strings.Count(message, ",")+2) // allocate for the approximate number of tags
 	fields := make(map[string]interface{}, 9)
 	fields["alert_type"] = eventInfo // default event type
-	fields["text"] = uncommenter.Replace(string(rawText))
+	fields["text"] = uncommenter.Replace(rawText)
 	if defaultHostname != "" {
 		tags["source"] = defaultHostname
 	}
@@ -120,11 +120,10 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 		case "s:":
 			fields["source_type_name"] = rawMetadataFields[i][2:]
 		default:
-			if rawMetadataFields[i][0] == '#' {
-				parseDataDogTags(tags, rawMetadataFields[i][1:])
-			} else {
+			if rawMetadataFields[i][0] != '#' {
 				return fmt.Errorf("unknown metadata type: '%s'", rawMetadataFields[i])
 			}
+			parseDataDogTags(tags, rawMetadataFields[i][1:])
 		}
 	}
 	// Use source tag because host is reserved tag key in Telegraf.

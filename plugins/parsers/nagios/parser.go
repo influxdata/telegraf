@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
-	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -17,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+// unknownExitCode is the nagios unknown status code
+// the exit code should be used if an error occurs or something unexpected happens
+const unknownExitCode = 3
+
 // getExitCode get the exit code from an error value which is the result
 // of running a command through exec package api.
 func getExitCode(err error) (int, error) {
@@ -26,10 +28,7 @@ func getExitCode(err error) (int, error) {
 
 	ee, ok := err.(*exec.ExitError)
 	if !ok {
-		// If it is not an *exec.ExitError, then it must be
-		// an io error, but docs do not say anything about the
-		// exit code in this case.
-		return 0, errors.New("expected *exec.ExitError")
+		return unknownExitCode, err
 	}
 
 	ws, ok := ee.Sys().(syscall.WaitStatus)
@@ -40,19 +39,35 @@ func getExitCode(err error) (int, error) {
 	return ws.ExitStatus(), nil
 }
 
-// TryAddState attempts to add a state derived from the runErr.
-// If any error occurs, it is guaranteed to be returned along with
-// the initial metric slice.
-func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, error) {
-	state, err := getExitCode(runErr)
-	if err != nil {
-		return metrics, fmt.Errorf("exec: get exit code: %s", err)
+// AddState adds a state derived from the runErr. Unknown state will be set as fallback.
+// If any error occurs, it is guaranteed to be added to the service output.
+// An updated slice of metrics will be returned.
+func AddState(runErr error, errMessage []byte, metrics []telegraf.Metric) []telegraf.Metric {
+	state, exitErr := getExitCode(runErr)
+	// This will ensure that in every error case the valid nagios state 'unknown' will be returned.
+	// No error needs to be thrown because the output will contain the error information.
+	// Description found at 'Plugin Return Codes' https://nagios-plugins.org/doc/guidelines.html
+	if exitErr != nil || state < 0 || state > unknownExitCode {
+		state = unknownExitCode
 	}
 
 	for _, m := range metrics {
 		if m.Name() == "nagios_state" {
 			m.AddField("state", state)
-			return metrics, nil
+
+			if state == unknownExitCode {
+				errorMessage := string(errMessage)
+				if exitErr != nil && exitErr.Error() != "" {
+					errorMessage = exitErr.Error()
+				}
+				value, ok := m.GetField("service_output")
+				if !ok || value == "" {
+					// By adding the error message as output, the metric contains all needed information to understand
+					// the problem and fix it
+					m.AddField("service_output", errorMessage)
+				}
+			}
+			return metrics
 		}
 	}
 
@@ -65,17 +80,15 @@ func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, er
 	f := map[string]interface{}{
 		"state": state,
 	}
-	m, err := metric.New("nagios_state", nil, f, ts)
-	if err != nil {
-		return metrics, err
-	}
-	metrics = append(metrics, m)
-	return metrics, nil
+	m := metric.New("nagios_state", nil, f, ts)
+
+	return append(metrics, m)
 }
 
 type NagiosParser struct {
 	MetricName  string
 	DefaultTags map[string]string
+	Log         telegraf.Logger `toml:"-"`
 }
 
 // Got from Alignak
@@ -113,12 +126,12 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	case 2:
 		ms, err := parsePerfData(string(parts[1]), ts)
 		if err != nil {
-			log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
+			p.Log.Errorf("Failed to parse performance data: %s\n", err.Error())
 		}
 		metrics = append(metrics, ms...)
 		fallthrough
 	case 1:
-		msg.Write(bytes.TrimSpace(parts[0]))
+		msg.Write(bytes.TrimSpace(parts[0])) //nolint:revive // from buffer.go: "err is always nil"
 	default:
 		return nil, errors.New("illegal output format")
 	}
@@ -128,34 +141,34 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if bytes.Contains(s.Bytes(), []byte{'|'}) {
 			parts := bytes.Split(s.Bytes(), []byte{'|'})
 			if longmsg.Len() != 0 {
-				longmsg.WriteByte('\n')
+				longmsg.WriteByte('\n') //nolint:revive // from buffer.go: "err is always nil"
 			}
-			longmsg.Write(bytes.TrimSpace(parts[0]))
+			longmsg.Write(bytes.TrimSpace(parts[0])) //nolint:revive // from buffer.go: "err is always nil"
 
 			ms, err := parsePerfData(string(parts[1]), ts)
 			if err != nil {
-				log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
+				p.Log.Errorf("Failed to parse performance data: %s\n", err.Error())
 			}
 			metrics = append(metrics, ms...)
 			break
 		}
 		if longmsg.Len() != 0 {
-			longmsg.WriteByte('\n')
+			longmsg.WriteByte('\n') //nolint:revive // from buffer.go: "err is always nil"
 		}
-		longmsg.Write(bytes.TrimSpace((s.Bytes())))
+		longmsg.Write(bytes.TrimSpace(s.Bytes())) //nolint:revive // from buffer.go: "err is always nil"
 	}
 
 	// Parse extra performance data.
 	for s.Scan() {
 		ms, err := parsePerfData(s.Text(), ts)
 		if err != nil {
-			log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
+			p.Log.Errorf("Failed to parse performance data: %s\n", err.Error())
 		}
 		metrics = append(metrics, ms...)
 	}
 
 	if s.Err() != nil {
-		log.Printf("D! [parser.nagios] unexpected io error: %s\n", s.Err())
+		p.Log.Debugf("Unexpected io error: %s\n", s.Err())
 	}
 
 	// Create nagios state.
@@ -166,12 +179,8 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		fields["long_service_output"] = longmsg.String()
 	}
 
-	m, err := metric.New("nagios_state", nil, fields, ts)
-	if err == nil {
-		metrics = append(metrics, m)
-	} else {
-		log.Printf("E! [parser.nagios] failed to add nagios_state: %s\n", err)
-	}
+	m := metric.New("nagios_state", nil, fields, ts)
+	metrics = append(metrics, m)
 
 	return metrics, nil
 }
@@ -194,7 +203,7 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 		fieldName := strings.Trim(perf[1], "'")
 		tags := map[string]string{"perfdata": fieldName}
 		if perf[3] != "" {
-			str := string(perf[3])
+			str := perf[3]
 			if str != "" {
 				tags["unit"] = str
 			}
@@ -202,10 +211,10 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 
 		fields := make(map[string]interface{})
 		if perf[2] == "U" {
-			return nil, errors.New("Value undetermined")
+			return nil, errors.New("value undetermined")
 		}
 
-		f, err := strconv.ParseFloat(string(perf[2]), 64)
+		f, err := strconv.ParseFloat(perf[2], 64)
 		if err == nil {
 			fields["value"] = f
 		}
@@ -247,12 +256,10 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 		}
 
 		// Create metric
-		metric, err := metric.New("nagios", tags, fields, timestamp)
-		if err != nil {
-			return nil, err
-		}
+		m := metric.New("nagios", tags, fields, timestamp)
+
 		// Add Metric
-		metrics = append(metrics, metric)
+		metrics = append(metrics, m)
 	}
 
 	return metrics, nil
@@ -264,14 +271,14 @@ const (
 	MinFloat64 = 4.940656458412465441765687928682213723651e-324 // 1 / 2**(1023 - 1 + 52)
 )
 
-var ErrBadThresholdFormat = errors.New("Bad threshold format")
+var ErrBadThresholdFormat = errors.New("bad threshold format")
 
 // Handles all cases from https://nagios-plugins.org/doc/guidelines.html#THRESHOLDFORMAT
 func parseThreshold(threshold string) (min float64, max float64, err error) {
 	thresh := strings.Split(threshold, ":")
 	switch len(thresh) {
 	case 1:
-		max, err = strconv.ParseFloat(string(thresh[0]), 64)
+		max, err = strconv.ParseFloat(thresh[0], 64)
 		if err != nil {
 			return 0, 0, ErrBadThresholdFormat
 		}
@@ -281,7 +288,7 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 		if thresh[0] == "~" {
 			min = MinFloat64
 		} else {
-			min, err = strconv.ParseFloat(string(thresh[0]), 64)
+			min, err = strconv.ParseFloat(thresh[0], 64)
 			if err != nil {
 				min = 0
 			}
@@ -290,7 +297,7 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 		if thresh[1] == "" {
 			max = MaxFloat64
 		} else {
-			max, err = strconv.ParseFloat(string(thresh[1]), 64)
+			max, err = strconv.ParseFloat(thresh[1], 64)
 			if err != nil {
 				return 0, 0, ErrBadThresholdFormat
 			}
@@ -299,5 +306,5 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 		return 0, 0, ErrBadThresholdFormat
 	}
 
-	return
+	return min, max, err
 }

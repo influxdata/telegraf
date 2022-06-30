@@ -3,9 +3,9 @@
 The input plugin test UDP/TCP connections response time and can optional
 verify text in the response.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Collect response time of a TCP or UDP connection
 [[inputs.net_response]]
   ## Protocol, must be "tcp" or "udp"
@@ -33,7 +33,7 @@ verify text in the response.
   # fielddrop = ["result_type", "string_found"]
 ```
 
-### Metrics:
+## Metrics
 
 - net_response
   - tags:
@@ -47,9 +47,9 @@ verify text in the response.
     - result_type (string) **DEPRECATED in 1.7; use result tag**
     - string_found (boolean) **DEPRECATED in 1.4; use result tag**
 
-### Example Output:
+## Example Output
 
-```
+```shell
 net_response,port=8086,protocol=tcp,result=success,server=localhost response_time=0.000092948,result_code=0i,result_type="success" 1525820185000000000
 net_response,port=8080,protocol=tcp,result=connection_failed,server=localhost result_code=2i,result_type="connection_failed" 1525820088000000000
 net_response,port=8080,protocol=udp,result=read_failed,server=localhost result_code=3i,result_type="read_failed",string_found=false 1525820088000000000

@@ -1,21 +1,29 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redis
 
 import (
 	"bufio"
+	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type RedisCommand struct {
 	Command []interface{}
@@ -26,19 +34,21 @@ type RedisCommand struct {
 type Redis struct {
 	Commands []*RedisCommand
 	Servers  []string
+	Username string
 	Password string
 	tls.ClientConfig
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
-	clients     []Client
-	initialized bool
+	clients   []Client
+	connected bool
 }
 
 type Client interface {
 	Do(returnType string, args ...interface{}) (interface{}, error)
 	Info() *redis.StringCmd
 	BaseTags() map[string]string
+	Close() error
 }
 
 type RedisClient struct {
@@ -46,23 +56,134 @@ type RedisClient struct {
 	tags   map[string]string
 }
 
+// RedisFieldTypes defines the types expected for each of the fields redis reports on
+type RedisFieldTypes struct {
+	ActiveDefragHits            int64   `json:"active_defrag_hits"`
+	ActiveDefragKeyHits         int64   `json:"active_defrag_key_hits"`
+	ActiveDefragKeyMisses       int64   `json:"active_defrag_key_misses"`
+	ActiveDefragMisses          int64   `json:"active_defrag_misses"`
+	ActiveDefragRunning         int64   `json:"active_defrag_running"`
+	AllocatorActive             int64   `json:"allocator_active"`
+	AllocatorAllocated          int64   `json:"allocator_allocated"`
+	AllocatorFragBytes          float64 `json:"allocator_frag_bytes"` // for historical reasons this was left as float although redis reports it as an int
+	AllocatorFragRatio          float64 `json:"allocator_frag_ratio"`
+	AllocatorResident           int64   `json:"allocator_resident"`
+	AllocatorRssBytes           int64   `json:"allocator_rss_bytes"`
+	AllocatorRssRatio           float64 `json:"allocator_rss_ratio"`
+	AofCurrentRewriteTimeSec    int64   `json:"aof_current_rewrite_time_sec"`
+	AofEnabled                  int64   `json:"aof_enabled"`
+	AofLastBgrewriteStatus      string  `json:"aof_last_bgrewrite_status"`
+	AofLastCowSize              int64   `json:"aof_last_cow_size"`
+	AofLastRewriteTimeSec       int64   `json:"aof_last_rewrite_time_sec"`
+	AofLastWriteStatus          string  `json:"aof_last_write_status"`
+	AofRewriteInProgress        int64   `json:"aof_rewrite_in_progress"`
+	AofRewriteScheduled         int64   `json:"aof_rewrite_scheduled"`
+	BlockedClients              int64   `json:"blocked_clients"`
+	ClientRecentMaxInputBuffer  int64   `json:"client_recent_max_input_buffer"`
+	ClientRecentMaxOutputBuffer int64   `json:"client_recent_max_output_buffer"`
+	Clients                     int64   `json:"clients"`
+	ClientsInTimeoutTable       int64   `json:"clients_in_timeout_table"`
+	ClusterEnabled              int64   `json:"cluster_enabled"`
+	ConnectedSlaves             int64   `json:"connected_slaves"`
+	EvictedKeys                 int64   `json:"evicted_keys"`
+	ExpireCycleCPUMilliseconds  int64   `json:"expire_cycle_cpu_milliseconds"`
+	ExpiredKeys                 int64   `json:"expired_keys"`
+	ExpiredStalePerc            float64 `json:"expired_stale_perc"`
+	ExpiredTimeCapReachedCount  int64   `json:"expired_time_cap_reached_count"`
+	InstantaneousInputKbps      float64 `json:"instantaneous_input_kbps"`
+	InstantaneousOpsPerSec      int64   `json:"instantaneous_ops_per_sec"`
+	InstantaneousOutputKbps     float64 `json:"instantaneous_output_kbps"`
+	IoThreadedReadsProcessed    int64   `json:"io_threaded_reads_processed"`
+	IoThreadedWritesProcessed   int64   `json:"io_threaded_writes_processed"`
+	KeyspaceHits                int64   `json:"keyspace_hits"`
+	KeyspaceMisses              int64   `json:"keyspace_misses"`
+	LatestForkUsec              int64   `json:"latest_fork_usec"`
+	LazyfreePendingObjects      int64   `json:"lazyfree_pending_objects"`
+	Loading                     int64   `json:"loading"`
+	LruClock                    int64   `json:"lru_clock"`
+	MasterReplOffset            int64   `json:"master_repl_offset"`
+	MaxMemory                   int64   `json:"maxmemory"`
+	MaxMemoryPolicy             string  `json:"maxmemory_policy"`
+	MemAofBuffer                int64   `json:"mem_aof_buffer"`
+	MemClientsNormal            int64   `json:"mem_clients_normal"`
+	MemClientsSlaves            int64   `json:"mem_clients_slaves"`
+	MemFragmentationBytes       int64   `json:"mem_fragmentation_bytes"`
+	MemFragmentationRatio       float64 `json:"mem_fragmentation_ratio"`
+	MemNotCountedForEvict       int64   `json:"mem_not_counted_for_evict"`
+	MemReplicationBacklog       int64   `json:"mem_replication_backlog"`
+	MigrateCachedSockets        int64   `json:"migrate_cached_sockets"`
+	ModuleForkInProgress        int64   `json:"module_fork_in_progress"`
+	ModuleForkLastCowSize       int64   `json:"module_fork_last_cow_size"`
+	NumberOfCachedScripts       int64   `json:"number_of_cached_scripts"`
+	PubsubChannels              int64   `json:"pubsub_channels"`
+	PubsubPatterns              int64   `json:"pubsub_patterns"`
+	RdbBgsaveInProgress         int64   `json:"rdb_bgsave_in_progress"`
+	RdbChangesSinceLastSave     int64   `json:"rdb_changes_since_last_save"`
+	RdbCurrentBgsaveTimeSec     int64   `json:"rdb_current_bgsave_time_sec"`
+	RdbLastBgsaveStatus         string  `json:"rdb_last_bgsave_status"`
+	RdbLastBgsaveTimeSec        int64   `json:"rdb_last_bgsave_time_sec"`
+	RdbLastCowSize              int64   `json:"rdb_last_cow_size"`
+	RdbLastSaveTime             int64   `json:"rdb_last_save_time"`
+	RdbLastSaveTimeElapsed      int64   `json:"rdb_last_save_time_elapsed"`
+	RedisVersion                string  `json:"redis_version"`
+	RejectedConnections         int64   `json:"rejected_connections"`
+	ReplBacklogActive           int64   `json:"repl_backlog_active"`
+	ReplBacklogFirstByteOffset  int64   `json:"repl_backlog_first_byte_offset"`
+	ReplBacklogHistlen          int64   `json:"repl_backlog_histlen"`
+	ReplBacklogSize             int64   `json:"repl_backlog_size"`
+	RssOverheadBytes            int64   `json:"rss_overhead_bytes"`
+	RssOverheadRatio            float64 `json:"rss_overhead_ratio"`
+	SecondReplOffset            int64   `json:"second_repl_offset"`
+	SlaveExpiresTrackedKeys     int64   `json:"slave_expires_tracked_keys"`
+	SyncFull                    int64   `json:"sync_full"`
+	SyncPartialErr              int64   `json:"sync_partial_err"`
+	SyncPartialOk               int64   `json:"sync_partial_ok"`
+	TotalCommandsProcessed      int64   `json:"total_commands_processed"`
+	TotalConnectionsReceived    int64   `json:"total_connections_received"`
+	TotalNetInputBytes          int64   `json:"total_net_input_bytes"`
+	TotalNetOutputBytes         int64   `json:"total_net_output_bytes"`
+	TotalReadsProcessed         int64   `json:"total_reads_processed"`
+	TotalSystemMemory           int64   `json:"total_system_memory"`
+	TotalWritesProcessed        int64   `json:"total_writes_processed"`
+	TrackingClients             int64   `json:"tracking_clients"`
+	TrackingTotalItems          int64   `json:"tracking_total_items"`
+	TrackingTotalKeys           int64   `json:"tracking_total_keys"`
+	TrackingTotalPrefixes       int64   `json:"tracking_total_prefixes"`
+	UnexpectedErrorReplies      int64   `json:"unexpected_error_replies"`
+	Uptime                      int64   `json:"uptime"`
+	UsedCPUSys                  float64 `json:"used_cpu_sys"`
+	UsedCPUSysChildren          float64 `json:"used_cpu_sys_children"`
+	UsedCPUUser                 float64 `json:"used_cpu_user"`
+	UsedCPUUserChildren         float64 `json:"used_cpu_user_children"`
+	UsedMemory                  int64   `json:"used_memory"`
+	UsedMemoryDataset           int64   `json:"used_memory_dataset"`
+	UsedMemoryDatasetPerc       float64 `json:"used_memory_dataset_perc"`
+	UsedMemoryLua               int64   `json:"used_memory_lua"`
+	UsedMemoryOverhead          int64   `json:"used_memory_overhead"`
+	UsedMemoryPeak              int64   `json:"used_memory_peak"`
+	UsedMemoryPeakPerc          float64 `json:"used_memory_peak_perc"`
+	UsedMemoryRss               int64   `json:"used_memory_rss"`
+	UsedMemoryScripts           int64   `json:"used_memory_scripts"`
+	UsedMemoryStartup           int64   `json:"used_memory_startup"`
+}
+
 func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, error) {
-	rawVal := r.client.Do(args...)
+	rawVal := r.client.Do(context.Background(), args...)
 
 	switch returnType {
 	case "integer":
 		return rawVal.Int64()
 	case "string":
-		return rawVal.String()
+		return rawVal.Text()
 	case "float":
 		return rawVal.Float64()
 	default:
-		return rawVal.String()
+		return rawVal.Text()
 	}
 }
 
 func (r *RedisClient) Info() *redis.StringCmd {
-	return r.client.Info("ALL")
+	return r.client.Info(context.Background(), "ALL")
 }
 
 func (r *RedisClient) BaseTags() map[string]string {
@@ -73,44 +194,11 @@ func (r *RedisClient) BaseTags() map[string]string {
 	return tags
 }
 
+func (r *RedisClient) Close() error {
+	return r.client.Close()
+}
+
 var replicationSlaveMetricPrefix = regexp.MustCompile(`^slave\d+`)
-
-var sampleConfig = `
-  ## specify servers via a url matching:
-  ##  [protocol://][:password]@address[:port]
-  ##  e.g.
-  ##    tcp://localhost:6379
-  ##    tcp://:password@192.168.99.100
-  ##    unix:///var/run/redis.sock
-  ##
-  ## If no servers are specified, then localhost is used as the host.
-  ## If no port is specified, 6379 is used
-  servers = ["tcp://localhost:6379"]
-
-  ## Optional. Specify redis commands to retrieve values
-  # [[inputs.redis.commands]]
-  # command = ["get", "sample-key"]
-  # field = "sample-key-value"
-  # type = "string"
-
-  ## specify server password
-  # password = "s#cr@t%"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = true
-`
-
-func (r *Redis) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Redis) Description() string {
-	return "Read metrics from one or many redis servers"
-}
 
 var Tracking = map[string]string{
 	"uptime_in_seconds": "uptime",
@@ -118,8 +206,22 @@ var Tracking = map[string]string{
 	"role":              "replication_role",
 }
 
-func (r *Redis) init(acc telegraf.Accumulator) error {
-	if r.initialized {
+func (*Redis) SampleConfig() string {
+	return sampleConfig
+}
+
+func (r *Redis) Init() error {
+	for _, command := range r.Commands {
+		if command.Type != "string" && command.Type != "integer" && command.Type != "float" {
+			return fmt.Errorf(`unknown result type: expected one of "string", "integer", "float"; got %q`, command.Type)
+		}
+	}
+
+	return nil
+}
+
+func (r *Redis) connect() error {
+	if r.connected {
 		return nil
 	}
 
@@ -140,12 +242,17 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
 		}
 
+		username := ""
 		password := ""
 		if u.User != nil {
+			username = u.User.Username()
 			pw, ok := u.User.Password()
 			if ok {
 				password = pw
 			}
+		}
+		if len(r.Username) > 0 {
+			username = r.Username
 		}
 		if len(r.Password) > 0 {
 			password = r.Password
@@ -166,6 +273,7 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 		client := redis.NewClient(
 			&redis.Options{
 				Addr:      address,
+				Username:  username,
 				Password:  password,
 				Network:   u.Scheme,
 				PoolSize:  1,
@@ -187,15 +295,15 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 		}
 	}
 
-	r.initialized = true
+	r.connected = true
 	return nil
 }
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (r *Redis) Gather(acc telegraf.Accumulator) error {
-	if !r.initialized {
-		err := r.init(acc)
+	if !r.connected {
+		err := r.connect()
 		if err != nil {
 			return err
 		}
@@ -221,6 +329,10 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 	for _, command := range r.Commands {
 		val, err := client.Do(command.Type, command.Command...)
 		if err != nil {
+			if strings.Contains(err.Error(), "unexpected type=") {
+				return fmt.Errorf("could not get command result: %s", err)
+			}
+
 			return err
 		}
 
@@ -249,7 +361,7 @@ func gatherInfoOutput(
 	tags map[string]string,
 ) error {
 	var section string
-	var keyspace_hits, keyspace_misses int64
+	var keyspaceHits, keyspaceMisses int64
 
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]interface{})
@@ -271,7 +383,7 @@ func gatherInfoOutput(
 		if len(parts) < 2 {
 			continue
 		}
-		name := string(parts[0])
+		name := parts[0]
 
 		if section == "Server" {
 			if name != "lru_clock" && name != "uptime_in_seconds" && name != "redis_version" {
@@ -294,7 +406,7 @@ func gatherInfoOutput(
 		metric, ok := Tracking[name]
 		if !ok {
 			if section == "Keyspace" {
-				kline := strings.TrimSpace(string(parts[1]))
+				kline := strings.TrimSpace(parts[1])
 				gatherKeyspaceLine(name, kline, acc, tags)
 				continue
 			}
@@ -321,9 +433,9 @@ func gatherInfoOutput(
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			switch name {
 			case "keyspace_hits":
-				keyspace_hits = ival
+				keyspaceHits = ival
 			case "keyspace_misses":
-				keyspace_misses = ival
+				keyspaceMisses = ival
 			case "rdb_last_save_time":
 				// influxdb can't calculate this, so we have to do it
 				fields["rdb_last_save_time_elapsed"] = time.Now().Unix() - ival
@@ -347,11 +459,17 @@ func gatherInfoOutput(
 
 		fields[metric] = val
 	}
-	var keyspace_hitrate float64 = 0.0
-	if keyspace_hits != 0 || keyspace_misses != 0 {
-		keyspace_hitrate = float64(keyspace_hits) / float64(keyspace_hits+keyspace_misses)
+	var keyspaceHitrate float64
+	if keyspaceHits != 0 || keyspaceMisses != 0 {
+		keyspaceHitrate = float64(keyspaceHits) / float64(keyspaceHits+keyspaceMisses)
 	}
-	fields["keyspace_hitrate"] = keyspace_hitrate
+	fields["keyspace_hitrate"] = keyspaceHitrate
+
+	o := RedisFieldTypes{}
+
+	setStructFieldsFromObject(fields, &o)
+	setExistingFieldsFromStruct(fields, &o)
+
 	acc.AddFields("redis", fields, tags)
 	return nil
 }
@@ -364,12 +482,12 @@ func gatherKeyspaceLine(
 	name string,
 	line string,
 	acc telegraf.Accumulator,
-	global_tags map[string]string,
+	globalTags map[string]string,
 ) {
 	if strings.Contains(line, "keys=") {
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
-		for k, v := range global_tags {
+		for k, v := range globalTags {
 			tags[k] = v
 		}
 		tags["database"] = name
@@ -393,7 +511,7 @@ func gatherCommandstateLine(
 	name string,
 	line string,
 	acc telegraf.Accumulator,
-	global_tags map[string]string,
+	globalTags map[string]string,
 ) {
 	if !strings.HasPrefix(name, "cmdstat") {
 		return
@@ -401,7 +519,7 @@ func gatherCommandstateLine(
 
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
-	for k, v := range global_tags {
+	for k, v := range globalTags {
 		tags[k] = v
 	}
 	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
@@ -438,11 +556,11 @@ func gatherReplicationLine(
 	name string,
 	line string,
 	acc telegraf.Accumulator,
-	global_tags map[string]string,
+	globalTags map[string]string,
 ) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
-	for k, v := range global_tags {
+	for k, v := range globalTags {
 		tags[k] = v
 	}
 
@@ -478,4 +596,130 @@ func init() {
 	inputs.Add("redis", func() telegraf.Input {
 		return &Redis{}
 	})
+}
+
+func setExistingFieldsFromStruct(fields map[string]interface{}, o *RedisFieldTypes) {
+	val := reflect.ValueOf(o).Elem()
+	typ := val.Type()
+
+	for key := range fields {
+		if _, exists := fields[key]; exists {
+			for i := 0; i < typ.NumField(); i++ {
+				f := typ.Field(i)
+				jsonFieldName := f.Tag.Get("json")
+				if jsonFieldName == key {
+					fields[key] = val.Field(i).Interface()
+					break
+				}
+			}
+		}
+	}
+}
+
+func setStructFieldsFromObject(fields map[string]interface{}, o *RedisFieldTypes) {
+	val := reflect.ValueOf(o).Elem()
+	typ := val.Type()
+
+	for key, value := range fields {
+		if _, exists := fields[key]; exists {
+			for i := 0; i < typ.NumField(); i++ {
+				f := typ.Field(i)
+				jsonFieldName := f.Tag.Get("json")
+				if jsonFieldName == key {
+					structFieldValue := val.Field(i)
+					structFieldValue.Set(coerceType(value, structFieldValue.Type()))
+					break
+				}
+			}
+		}
+	}
+}
+
+func coerceType(value interface{}, typ reflect.Type) reflect.Value {
+	switch sourceType := value.(type) {
+	case bool:
+		switch typ.Kind() {
+		case reflect.String:
+			if sourceType {
+				value = "true"
+			} else {
+				value = "false"
+			}
+		case reflect.Int64:
+			if sourceType {
+				value = int64(1)
+			} else {
+				value = int64(0)
+			}
+		case reflect.Float64:
+			if sourceType {
+				value = float64(1)
+			} else {
+				value = float64(0)
+			}
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	case int, int8, int16, int32, int64:
+		switch typ.Kind() {
+		case reflect.String:
+			value = fmt.Sprintf("%d", value)
+		case reflect.Int64:
+			// types match
+		case reflect.Float64:
+			value = float64(reflect.ValueOf(sourceType).Int())
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	case uint, uint8, uint16, uint32, uint64:
+		switch typ.Kind() {
+		case reflect.String:
+			value = fmt.Sprintf("%d", value)
+		case reflect.Int64:
+			// types match
+		case reflect.Float64:
+			value = float64(reflect.ValueOf(sourceType).Uint())
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	case float32, float64:
+		switch typ.Kind() {
+		case reflect.String:
+			value = fmt.Sprintf("%f", value)
+		case reflect.Int64:
+			value = int64(reflect.ValueOf(sourceType).Float())
+		case reflect.Float64:
+			// types match
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	case string:
+		switch typ.Kind() {
+		case reflect.String:
+			// types match
+		case reflect.Int64:
+			value, _ = strconv.ParseInt(value.(string), 10, 64)
+		case reflect.Float64:
+			value, _ = strconv.ParseFloat(value.(string), 64)
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	default:
+		panic(fmt.Sprintf("unhandled source type %T", sourceType))
+	}
+	return reflect.ValueOf(value)
+}
+
+func (r *Redis) Start(telegraf.Accumulator) error {
+	return nil
+}
+
+//Stop close the client through ServiceInput interface Start/Stop methods impl.
+func (r *Redis) Stop() {
+	for _, c := range r.clients {
+		err := c.Close()
+		if err != nil {
+			r.Log.Errorf("error closing client: %v", err)
+		}
+	}
 }

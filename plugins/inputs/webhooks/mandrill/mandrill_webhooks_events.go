@@ -8,7 +8,7 @@ type Event interface {
 type MandrillEvent struct {
 	EventName string `json:"event"`
 	TimeStamp int64  `json:"ts"`
-	Id        string `json:"_id"`
+	ID        string `json:"_id"`
 }
 
 func (me *MandrillEvent) Tags() map[string]string {
@@ -19,6 +19,6 @@ func (me *MandrillEvent) Tags() map[string]string {
 
 func (me *MandrillEvent) Fields() map[string]interface{} {
 	return map[string]interface{}{
-		"id": me.Id,
+		"id": me.ID,
 	}
 }

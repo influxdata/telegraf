@@ -1,0 +1,22 @@
+{
+    "explicitstringtype": "Bilbo",
+    "defaultstringtype": "Baggins",
+    "convertbooltostring": true,
+    "convertinttostring": 1,
+    "convertfloattostring": 1.1,
+    "explicitinttype": 1,
+    "defaultinttype": 2,
+    "convertfloatoint": 3.1,
+    "convertstringtoint": "4",
+    "convertbooltoint": false,
+    "explicitfloattype": 1.1,
+    "defaultfloattype": 2.1,
+    "convertintotfloat": 3,
+    "convertstringtofloat": "4.1",
+    "explicitbooltype": true,
+    "defaultbooltype": false,
+    "convertinttobool": 1,
+    "convertstringtobool": "false",
+    "convertintstringtoboolTrue": "1",
+    "convertintstringtoboolFalse": "0"
+}

@@ -24,17 +24,17 @@ func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
 // This is not a real test. This is just a way of mocking out commands.
 //
 // Idea based on https://github.com/golang/go/blob/7c31043/src/os/exec/exec_test.go#L568
-func TestMockExecCommand(t *testing.T) {
+func TestMockExecCommand(_ *testing.T) {
 	var cmd []string
 	for _, arg := range os.Args {
-		if string(arg) == "--" {
+		if arg == "--" {
 			cmd = []string{}
 			continue
 		}
 		if cmd == nil {
 			continue
 		}
-		cmd = append(cmd, string(arg))
+		cmd = append(cmd, arg)
 	}
 	if cmd == nil {
 		return
@@ -44,14 +44,20 @@ func TestMockExecCommand(t *testing.T) {
 	mcr, ok := mockedCommandResults[cmd0]
 	if !ok {
 		cv := fmt.Sprintf("%#v", cmd)[8:] // trim `[]string` prefix
+		//nolint:errcheck,revive
 		fmt.Fprintf(os.Stderr, "Unmocked command. Please add the following to `mockedCommands` in snmp_mocks_generate.go, and then run `go generate`:\n\t%s,\n", cv)
+		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+	//nolint:errcheck,revive
 	fmt.Printf("%s", mcr.stdout)
+	//nolint:errcheck,revive
 	fmt.Fprintf(os.Stderr, "%s", mcr.stderr)
 	if mcr.exitError {
+		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }
 
@@ -69,6 +75,7 @@ var mockedCommandResults = map[string]mockedCommandResult{
 	"snmptranslate\x00-Td\x00-Ob\x00-m\x00all\x00.1.0.0.0.1.1.0":              {stdout: "TEST::server.0\nserver OBJECT-TYPE\n  -- FROM\tTEST\n  SYNTAX\tOCTET STRING\n  MAX-ACCESS\tread-only\n  STATUS\tcurrent\n::= { iso(1) 0 testOID(0) testTable(0) testTableEntry(1) server(1) 0 }\n", stderr: "", exitError: false},
 	"snmptranslate\x00-Td\x00-Ob\x00-m\x00all\x00.1.0.0.0.1.5":                {stdout: "TEST::testTableEntry.5\ntestTableEntry OBJECT-TYPE\n  -- FROM\tTEST\n  MAX-ACCESS\tnot-accessible\n  STATUS\tcurrent\n  INDEX\t\t{ server }\n::= { iso(1) 0 testOID(0) testTable(0) testTableEntry(1) 5 }\n", stderr: "", exitError: false},
 	"snmptranslate\x00-Td\x00-Ob\x00-m\x00all\x00.1.2.3":                      {stdout: "iso.2.3\niso OBJECT-TYPE\n  -- FROM\t#-1\n::= { iso(1) 2 3 }\n", stderr: "", exitError: false},
+	"snmptranslate\x00-Td\x00-Ob\x00-m\x00all\x00.1.0.0.0.1.7":                {stdout: "TEST::testTableEntry.7\ntestTableEntry OBJECT-TYPE\n  -- FROM\tTEST\n  MAX-ACCESS\tnot-accessible\n  STATUS\tcurrent\n  INDEX\t\t{ server }\n::= { iso(1) std(0) testOID(0) testTable(0) testTableEntry(1) 7 }\n", stderr: "", exitError: false},
 	"snmptranslate\x00-Td\x00-Ob\x00.iso.2.3":                                 {stdout: "iso.2.3\niso OBJECT-TYPE\n  -- FROM\t#-1\n::= { iso(1) 2 3 }\n", stderr: "", exitError: false},
 	"snmptranslate\x00-Td\x00-Ob\x00-m\x00all\x00.999":                        {stdout: ".999\n [TRUNCATED]\n", stderr: "", exitError: false},
 	"snmptranslate\x00-Td\x00-Ob\x00TEST::server":                             {stdout: "TEST::server\nserver OBJECT-TYPE\n  -- FROM\tTEST\n  SYNTAX\tOCTET STRING\n  MAX-ACCESS\tread-only\n  STATUS\tcurrent\n::= { iso(1) 0 testOID(0) testTable(0) testTableEntry(1) 1 }\n", stderr: "", exitError: false},

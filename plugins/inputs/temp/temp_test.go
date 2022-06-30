@@ -3,7 +3,7 @@ package temp
 import (
 	"testing"
 
-	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/v3/host"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/system"
@@ -34,5 +34,4 @@ func TestTemperature(t *testing.T) {
 		"sensor": "coretemp_sensor1_crit",
 	}
 	acc.AssertContainsTaggedFields(t, "temp", expectedFields, expectedTags)
-
 }

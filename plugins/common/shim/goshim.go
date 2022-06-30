@@ -84,13 +84,13 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 		if err != nil {
 			return fmt.Errorf("RunProcessor error: %w", err)
 		}
-	} else if s.Output != nil {
+	} else if s.Output != nil { //nolint:revive // Not simplifying here to stay in the structure for better understanding the code
 		err := s.RunOutput()
 		if err != nil {
 			return fmt.Errorf("RunOutput error: %w", err)
 		}
 	} else {
-		return fmt.Errorf("Nothing to run")
+		return fmt.Errorf("nothing to run")
 	}
 
 	return nil
@@ -102,7 +102,7 @@ func hasQuit(ctx context.Context) bool {
 
 func (s *Shim) writeProcessedMetrics() error {
 	serializer := influx.NewSerializer()
-	for {
+	for { //nolint:gosimple // for-select used on purpose
 		select {
 		case m, open := <-s.metricCh:
 			if !open {
@@ -113,7 +113,10 @@ func (s *Shim) writeProcessedMetrics() error {
 				return fmt.Errorf("failed to serialize metric: %s", err)
 			}
 			// Write this to stdout
-			fmt.Fprint(s.stdout, string(b))
+			_, err = fmt.Fprint(s.stdout, string(b))
+			if err != nil {
+				return fmt.Errorf("failed to write metric: %s", err)
+			}
 		}
 	}
 }

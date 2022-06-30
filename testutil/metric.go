@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	telegrafMetric "github.com/influxdata/telegraf/metric"
 )
 
 type metricDiff struct {
@@ -99,16 +99,12 @@ func newMetricDiff(metric telegraf.Metric) *metricDiff {
 	m := &metricDiff{}
 	m.Measurement = metric.Name()
 
-	for _, tag := range metric.TagList() {
-		m.Tags = append(m.Tags, tag)
-	}
+	m.Tags = append(m.Tags, metric.TagList()...)
 	sort.Slice(m.Tags, func(i, j int) bool {
 		return m.Tags[i].Key < m.Tags[j].Key
 	})
 
-	for _, field := range metric.FieldList() {
-		m.Fields = append(m.Fields, field)
-	}
+	m.Fields = append(m.Fields, metric.FieldList()...)
 	sort.Slice(m.Fields, func(i, j int) bool {
 		return m.Fields[i].Key < m.Fields[j].Key
 	})
@@ -181,7 +177,7 @@ func RequireMetricsEqual(t *testing.T, expected, actual []telegraf.Metric, opts 
 	}
 }
 
-// Metric creates a new metric or panics on error.
+// MustMetric creates a new metric.
 func MustMetric(
 	name string,
 	tags map[string]string,
@@ -189,17 +185,11 @@ func MustMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-	m, err := metric.New(name, tags, fields, tm, tp...)
-	if err != nil {
-		panic("MustMetric")
-	}
+	m := telegrafMetric.New(name, tags, fields, tm, tp...)
 	return m
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m, err := metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
-	if err != nil {
-		panic("MustMetric")
-	}
+	m := telegrafMetric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	return m
 }

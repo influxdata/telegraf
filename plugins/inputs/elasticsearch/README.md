@@ -1,28 +1,36 @@
 # Elasticsearch Input Plugin
 
 The [elasticsearch](https://www.elastic.co/) plugin queries endpoints to obtain
-[Node Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
-and optionally
-[Cluster-Health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
-metrics.
+[Node Stats][1] and optionally [Cluster-Health][2] metrics.
 
 In addition, the following optional queries are only made by the master node:
- [Cluster Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html)
- [Indices Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
- [Shard Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
+ [Cluster Stats][3] [Indices Stats][4] [Shard Stats][5]
 
 Specific Elasticsearch endpoints that are queried:
-- Node: either /_nodes/stats or /_nodes/_local/stats depending on 'local' configuration setting
-- Cluster Heath:  /_cluster/health?level=indices
-- Cluster Stats:  /_cluster/stats
-- Indices Stats:  /_all/_stats
-- Shard Stats:  /_all/_stats?level=shards
 
-Note that specific statistics information can change between Elasticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
+- Node: either /_nodes/stats or /_nodes/_local/stats depending on 'local'
+  configuration setting
+- Cluster Heath: /_cluster/health?level=indices
+- Cluster Stats: /_cluster/stats
+- Indices Stats: /_all/_stats
+- Shard Stats: /_all/_stats?level=shards
 
-### Configuration
+Note that specific statistics information can change between Elasticsearch
+versions. In general, this plugin attempts to stay as version-generic as
+possible by tagging high-level categories only and using a generic json parser
+to make unique field names of whatever statistics names are provided at the
+mid-low level.
 
-```toml
+[1]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html
+[2]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html
+[3]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html
+[4]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
+[5]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
+
+## Configuration
+
+```toml @sample.conf
+# Read stats from one or more Elasticsearch servers or clusters
 [[inputs.elasticsearch]]
   ## specify a list of one or more Elasticsearch servers
   ## you can add username and password to your url to use basic authentication:
@@ -53,6 +61,7 @@ Note that specific statistics information can change between Elasticsearch versi
   cluster_stats_only_from_master = true
 
   ## Indices to collect; can be one or more indices names or _all
+  ## Use of wildcards is allowed. Use a wildcard at the end to retrieve index names that end with a changing value, like a date.
   indices_include = ["_all"]
 
   ## One of "shards", "cluster", "indices"
@@ -74,9 +83,15 @@ Note that specific statistics information can change between Elasticsearch versi
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Sets the number of most recent indices to return for indices that are configured with a date-stamped suffix.
+  ## Each 'indices_include' entry ending with a wildcard (*) or glob matching pattern will group together all indices that match it, and 
+  ## sort them by the date or number after the wildcard. Metrics then are gathered for only the 'num_most_recent_indices' amount of most 
+  ## recent indices.
+  # num_most_recent_indices = 0
 ```
 
-### Metrics
+## Metrics
 
 Emitted when `cluster_health = true`:
 
@@ -164,7 +179,7 @@ Emitted when `cluster_stats = true`:
     - shards_total (float)
     - store_size_in_bytes (float)
 
-+ elasticsearch_clusterstats_nodes
+- elasticsearch_clusterstats_nodes
   - tags:
     - cluster_name
     - node_name
@@ -225,7 +240,7 @@ Emitted when the appropriate `node_stats` options are set.
     - tx_count (float)
     - tx_size_in_bytes (float)
 
-+ elasticsearch_breakers
+- elasticsearch_breakers
   - tags:
     - cluster_name
     - node_attribute_ml.enabled
@@ -286,7 +301,7 @@ Emitted when the appropriate `node_stats` options are set.
     - total_free_in_bytes (float)
     - total_total_in_bytes (float)
 
-+ elasticsearch_http
+- elasticsearch_http
   - tags:
     - cluster_name
     - node_attribute_ml.enabled
@@ -397,7 +412,7 @@ Emitted when the appropriate `node_stats` options are set.
     - warmer_total (float)
     - warmer_total_time_in_millis (float)
 
-+ elasticsearch_jvm
+- elasticsearch_jvm
   - tags:
     - cluster_name
     - node_attribute_ml.enabled
@@ -475,7 +490,7 @@ Emitted when the appropriate `node_stats` options are set.
     - swap_used_in_bytes (float)
     - timestamp (float)
 
-+ elasticsearch_process
+- elasticsearch_process
   - tags:
     - cluster_name
     - node_attribute_ml.enabled

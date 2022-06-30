@@ -3,7 +3,6 @@ package collectd
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 
 	"collectd.org/api"
@@ -11,77 +10,70 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const (
 	DefaultAuthFile = "/etc/collectd/auth_file"
 )
 
-type CollectdParser struct {
-	// DefaultTags will be added to every parsed metric
-	DefaultTags map[string]string
+type Parser struct {
+	DefaultTags map[string]string `toml:"-"`
 
 	//whether or not to split multi value metric into multiple metrics
 	//default value is split
-	ParseMultiValue string
-	popts           network.ParseOpts
+	ParseMultiValue string `toml:"collectd_parse_multivalue"`
+
+	popts         network.ParseOpts
+	AuthFile      string   `toml:"collectd_auth_file"`
+	SecurityLevel string   `toml:"collectd_security_level"`
+	TypesDB       []string `toml:"collectd_typesdb"`
+
+	Log telegraf.Logger `toml:"-"`
 }
 
-func (p *CollectdParser) SetParseOpts(popts *network.ParseOpts) {
-	p.popts = *popts
-}
-
-func NewCollectdParser(
-	authFile string,
-	securityLevel string,
-	typesDB []string,
-	split string,
-) (*CollectdParser, error) {
-	popts := network.ParseOpts{}
-
-	switch securityLevel {
+func (p *Parser) Init() error {
+	switch p.SecurityLevel {
 	case "none":
-		popts.SecurityLevel = network.None
+		p.popts.SecurityLevel = network.None
 	case "sign":
-		popts.SecurityLevel = network.Sign
+		p.popts.SecurityLevel = network.Sign
 	case "encrypt":
-		popts.SecurityLevel = network.Encrypt
+		p.popts.SecurityLevel = network.Encrypt
 	default:
-		popts.SecurityLevel = network.None
+		p.popts.SecurityLevel = network.None
 	}
 
-	if authFile == "" {
-		authFile = DefaultAuthFile
+	if p.AuthFile == "" {
+		p.AuthFile = DefaultAuthFile
 	}
-	popts.PasswordLookup = network.NewAuthFile(authFile)
+	p.popts.PasswordLookup = network.NewAuthFile(p.AuthFile)
 
-	for _, path := range typesDB {
+	for _, path := range p.TypesDB {
 		db, err := LoadTypesDB(path)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		if popts.TypesDB != nil {
-			popts.TypesDB.Merge(db)
+		if p.popts.TypesDB != nil {
+			p.popts.TypesDB.Merge(db)
 		} else {
-			popts.TypesDB = db
+			p.popts.TypesDB = db
 		}
 	}
 
-	parser := CollectdParser{popts: popts,
-		ParseMultiValue: split}
-	return &parser, nil
+	return nil
 }
 
-func (p *CollectdParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	valueLists, err := network.Parse(buf, p.popts)
 	if err != nil {
-		return nil, fmt.Errorf("Collectd parser error: %s", err)
+		return nil, fmt.Errorf("collectd parser error: %s", err)
 	}
 
 	metrics := []telegraf.Metric{}
 	for _, valueList := range valueLists {
-		metrics = append(metrics, UnmarshalValueList(valueList, p.ParseMultiValue)...)
+		metrics = append(metrics, p.unmarshalValueList(valueList)...)
 	}
 
 	if len(p.DefaultTags) > 0 {
@@ -98,29 +90,30 @@ func (p *CollectdParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func (p *CollectdParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	if err != nil {
 		return nil, err
 	}
 
 	if len(metrics) != 1 {
-		return nil, errors.New("Line contains multiple metrics")
+		return nil, errors.New("line contains multiple metrics")
 	}
 
 	return metrics[0], nil
 }
 
-func (p *CollectdParser) SetDefaultTags(tags map[string]string) {
+func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-// UnmarshalValueList translates a ValueList into a Telegraf metric.
-func UnmarshalValueList(vl *api.ValueList, multiValue string) []telegraf.Metric {
+// unmarshalValueList translates a ValueList into a Telegraf metric.
+func (p *Parser) unmarshalValueList(vl *api.ValueList) []telegraf.Metric {
 	timestamp := vl.Time.UTC()
 
 	var metrics []telegraf.Metric
 
+	var multiValue = p.ParseMultiValue
 	//set multiValue to default "split" if nothing is specified
 	if multiValue == "" {
 		multiValue = "split"
@@ -128,8 +121,7 @@ func UnmarshalValueList(vl *api.ValueList, multiValue string) []telegraf.Metric 
 	switch multiValue {
 	case "split":
 		for i := range vl.Values {
-			var name string
-			name = fmt.Sprintf("%s_%s", vl.Identifier.Plugin, vl.DSName(i))
+			name := fmt.Sprintf("%s_%s", vl.Identifier.Plugin, vl.DSName(i))
 			tags := make(map[string]string)
 			fields := make(map[string]interface{})
 
@@ -157,11 +149,7 @@ func UnmarshalValueList(vl *api.ValueList, multiValue string) []telegraf.Metric 
 			}
 
 			// Drop invalid points
-			m, err := metric.New(name, tags, fields, timestamp)
-			if err != nil {
-				log.Printf("E! Dropping metric %v: %v", name, err)
-				continue
-			}
+			m := metric.New(name, tags, fields, timestamp)
 
 			metrics = append(metrics, m)
 		}
@@ -193,14 +181,11 @@ func UnmarshalValueList(vl *api.ValueList, multiValue string) []telegraf.Metric 
 			}
 		}
 
-		m, err := metric.New(name, tags, fields, timestamp)
-		if err != nil {
-			log.Printf("E! Dropping metric %v: %v", name, err)
-		}
+		m := metric.New(name, tags, fields, timestamp)
 
 		metrics = append(metrics, m)
 	default:
-		log.Printf("parse-multi-value config can only be 'split' or 'join'")
+		p.Log.Info("parse-multi-value config can only be 'split' or 'join'")
 	}
 	return metrics
 }
@@ -211,4 +196,22 @@ func LoadTypesDB(path string) (*api.TypesDB, error) {
 		return nil, err
 	}
 	return api.NewTypesDB(reader)
+}
+
+func init() {
+	parsers.Add("collectd",
+		func(_ string) telegraf.Parser {
+			return &Parser{
+				AuthFile: DefaultAuthFile,
+			}
+		})
+}
+
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.AuthFile = config.CollectdAuthFile
+	p.SecurityLevel = config.CollectdSecurityLevel
+	p.TypesDB = config.CollectdTypesDB
+	p.ParseMultiValue = config.CollectdSplit
+
+	return p.Init()
 }

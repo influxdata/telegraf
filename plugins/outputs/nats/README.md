@@ -2,10 +2,17 @@
 
 This plugin writes to a (list of) specified NATS instance(s).
 
-```toml
+## Configuration
+
+```toml @sample.conf
+# Send telegraf measurements to NATS
 [[outputs.nats]]
   ## URLs of NATS servers
   servers = ["nats://localhost:4222"]
+
+  ## Optional client name
+  # name = ""
+
   ## Optional credentials
   # username = ""
   # password = ""

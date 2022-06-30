@@ -1,33 +1,33 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package system
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/load"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/load"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type SystemStats struct {
 	Log telegraf.Logger
 }
 
-func (*SystemStats) Description() string {
-	return "Read metrics about system load & uptime"
-}
-
 func (*SystemStats) SampleConfig() string {
-	return `
-  ## Uncomment to remove deprecated metrics.
-  # fielddrop = ["uptime_format"]
-`
+	return sampleConfig
 }
 
 func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
@@ -86,6 +86,8 @@ func formatUptime(uptime uint64) string {
 		if days > 1 {
 			s = "s"
 		}
+		// This will always succeed, so skip checking the error
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "%d day%s, ", days, s)
 	}
 
@@ -94,8 +96,12 @@ func formatUptime(uptime uint64) string {
 	hours %= 24
 	minutes %= 60
 
+	// This will always succeed, so skip checking the error
+	//nolint:errcheck,revive
 	fmt.Fprintf(w, "%2d:%02d", hours, minutes)
 
+	// This will always succeed, so skip checking the error
+	//nolint:errcheck,revive
 	w.Flush()
 	return buf.String()
 }

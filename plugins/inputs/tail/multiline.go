@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 )
 
 // Indicates relation to the multiline event: previous or next
@@ -23,7 +23,7 @@ type MultilineConfig struct {
 	Pattern        string
 	MatchWhichLine MultilineMatchWhichLine `toml:"match_which_line"`
 	InvertMatch    bool
-	Timeout        *internal.Duration
+	Timeout        *config.Duration
 }
 
 const (
@@ -43,8 +43,9 @@ func (m *MultilineConfig) NewMultiline() (*Multiline, error) {
 		if r, err = regexp.Compile(m.Pattern); err != nil {
 			return nil, err
 		}
-		if m.Timeout == nil || m.Timeout.Duration.Nanoseconds() == int64(0) {
-			m.Timeout = &internal.Duration{Duration: 5 * time.Second}
+		if m.Timeout == nil || time.Duration(*m.Timeout).Nanoseconds() == int64(0) {
+			d := config.Duration(5 * time.Second)
+			m.Timeout = &d
 		}
 	}
 
@@ -60,6 +61,8 @@ func (m *Multiline) IsEnabled() bool {
 
 func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
 	if m.matchString(text) {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		buffer.WriteString(text)
 		return ""
 	}
@@ -67,12 +70,16 @@ func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
 	if m.config.MatchWhichLine == Previous {
 		previousText := buffer.String()
 		buffer.Reset()
-		buffer.WriteString(text)
+		if _, err := buffer.WriteString(text); err != nil {
+			return ""
+		}
 		text = previousText
 	} else {
 		// Next
 		if buffer.Len() > 0 {
-			buffer.WriteString(text)
+			if _, err := buffer.WriteString(text); err != nil {
+				return ""
+			}
 			text = buffer.String()
 			buffer.Reset()
 		}
@@ -115,14 +122,14 @@ func (w *MultilineMatchWhichLine) UnmarshalText(data []byte) (err error) {
 	switch strings.ToUpper(s) {
 	case `PREVIOUS`, `"PREVIOUS"`, `'PREVIOUS'`:
 		*w = Previous
-		return
+		return nil
 
 	case `NEXT`, `"NEXT"`, `'NEXT'`:
 		*w = Next
-		return
+		return nil
 	}
 	*w = -1
-	return fmt.Errorf("E! [inputs.tail] unknown multiline MatchWhichLine")
+	return fmt.Errorf("unknown multiline MatchWhichLine")
 }
 
 // MarshalText implements encoding.TextMarshaler
@@ -131,5 +138,5 @@ func (w MultilineMatchWhichLine) MarshalText() ([]byte, error) {
 	if s != "" {
 		return []byte(s), nil
 	}
-	return nil, fmt.Errorf("E! [inputs.tail] unknown multiline MatchWhichLine")
+	return nil, fmt.Errorf("unknown multiline MatchWhichLine")
 }

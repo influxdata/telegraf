@@ -1,4 +1,4 @@
-// Helper functions copied from
+// Package docker contains few helper functions copied from
 // https://github.com/docker/cli/blob/master/cli/command/container/stats_helpers.go
 package docker
 
@@ -40,9 +40,28 @@ func calculateCPUPercentWindows(v *types.StatsJSON) float64 {
 }
 
 // CalculateMemUsageUnixNoCache calculate memory usage of the container.
-// Page cache is intentionally excluded to avoid misinterpretation of the output.
+// Cache is intentionally excluded to avoid misinterpretation of the output.
+//
+// On Docker 19.03 and older, the result is `mem.Usage - mem.Stats["cache"]`.
+// On new docker with cgroup v1 host, the result is `mem.Usage - mem.Stats["total_inactive_file"]`.
+// On new docker with cgroup v2 host, the result is `mem.Usage - mem.Stats["inactive_file"]`.
+//
+// This definition is designed to be consistent with past values and the latest docker CLI
+// * https://github.com/docker/cli/blob/6e2838e18645e06f3e4b6c5143898ccc44063e3b/cli/command/container/stats_helpers.go#L239
 func CalculateMemUsageUnixNoCache(mem types.MemoryStats) float64 {
-	return float64(mem.Usage - mem.Stats["cache"])
+	// Docker 19.03 and older
+	if v, isOldDocker := mem.Stats["cache"]; isOldDocker && v < mem.Usage {
+		return float64(mem.Usage - v)
+	}
+	// cgroup v1
+	if v, isCgroup1 := mem.Stats["total_inactive_file"]; isCgroup1 && v < mem.Usage {
+		return float64(mem.Usage - v)
+	}
+	// cgroup v2
+	if v := mem.Stats["inactive_file"]; v < mem.Usage {
+		return float64(mem.Usage - v)
+	}
+	return float64(mem.Usage)
 }
 
 func CalculateMemPercentUnixNoCache(limit float64, usedNoCache float64) float64 {

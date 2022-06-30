@@ -1,5 +1,3 @@
-// +build !windows
-
 package execd
 
 import (
@@ -11,23 +9,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSettingConfigWorks(t *testing.T) {
 	cfg := `
 	[[inputs.execd]]
 		command = ["a", "b", "c"]
+		environment = ["d=e", "f=1"]
 		restart_delay = "1m"
 		signal = "SIGHUP"
 	`
@@ -38,6 +36,7 @@ func TestSettingConfigWorks(t *testing.T) {
 	inp, ok := conf.Inputs[0].Input.(*Execd)
 	require.True(t, ok)
 	require.EqualValues(t, []string{"a", "b", "c"}, inp.Command)
+	require.EqualValues(t, []string{"d=e", "f=1"}, inp.Environment)
 	require.EqualValues(t, 1*time.Minute, inp.RestartDelay)
 	require.EqualValues(t, "SIGHUP", inp.Signal)
 }
@@ -51,6 +50,7 @@ func TestExternalInputWorks(t *testing.T) {
 
 	e := &Execd{
 		Command:      []string{exe, "-counter"},
+		Environment:  []string{"PLUGINS_INPUTS_EXECD_MODE=application", "METRIC_NAME=counter"},
 		RestartDelay: config.Duration(5 * time.Second),
 		parser:       influxParser,
 		Signal:       "STDIN",
@@ -142,8 +142,8 @@ func (tm *TestMetricMaker) LogName() string {
 	return tm.Name()
 }
 
-func (tm *TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
-	return metric
+func (tm *TestMetricMaker) MakeMetric(aMetric telegraf.Metric) telegraf.Metric {
+	return aMetric
 }
 
 func (tm *TestMetricMaker) Log() telegraf.Logger {
@@ -155,25 +155,30 @@ var counter = flag.Bool("counter", false,
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if *counter {
-		runCounterProgram()
+	runMode := os.Getenv("PLUGINS_INPUTS_EXECD_MODE")
+	if *counter && runMode == "application" {
+		if err := runCounterProgram(); err != nil {
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 	code := m.Run()
 	os.Exit(code)
 }
 
-func runCounterProgram() {
+func runCounterProgram() error {
+	envMetricName := os.Getenv("METRIC_NAME")
 	i := 0
 	serializer, err := serializers.NewInfluxSerializer()
 	if err != nil {
+		//nolint:errcheck,revive // Test will fail anyway
 		fmt.Fprintln(os.Stderr, "ERR InfluxSerializer failed to load")
-		os.Exit(1)
+		return err
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		metric, _ := metric.New("counter",
+		m := metric.New(envMetricName,
 			map[string]string{},
 			map[string]interface{}{
 				"count": i,
@@ -182,12 +187,15 @@ func runCounterProgram() {
 		)
 		i++
 
-		b, err := serializer.Serialize(metric)
+		b, err := serializer.Serialize(m)
 		if err != nil {
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
-			os.Exit(1)
+			return err
 		}
-		fmt.Fprint(os.Stdout, string(b))
+		if _, err := fmt.Fprint(os.Stdout, string(b)); err != nil {
+			return err
+		}
 	}
-
+	return nil
 }

@@ -2,13 +2,13 @@
 
 The printer processor plugin simple prints every metric passing through it.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Print all metrics that pass through this filter.
 [[processors.printer]]
 ```
 
-### Tags:
+## Tags
 
 No tags are applied by this processor.

@@ -1,6 +1,8 @@
 package all
 
 import (
+	//Blank imports for plugins to register themselves
+	_ "github.com/influxdata/telegraf/plugins/processors/aws/ec2"
 	_ "github.com/influxdata/telegraf/plugins/processors/clone"
 	_ "github.com/influxdata/telegraf/plugins/processors/converter"
 	_ "github.com/influxdata/telegraf/plugins/processors/date"
@@ -10,6 +12,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/execd"
 	_ "github.com/influxdata/telegraf/plugins/processors/filepath"
 	_ "github.com/influxdata/telegraf/plugins/processors/ifname"
+	_ "github.com/influxdata/telegraf/plugins/processors/noise"
 	_ "github.com/influxdata/telegraf/plugins/processors/override"
 	_ "github.com/influxdata/telegraf/plugins/processors/parser"
 	_ "github.com/influxdata/telegraf/plugins/processors/pivot"

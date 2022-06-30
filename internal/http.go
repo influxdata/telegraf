@@ -37,7 +37,6 @@ func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		if !ok ||
 			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.username)) != 1 ||
 			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.password)) != 1 {
-
 			rw.Header().Set("WWW-Authenticate", "Basic realm=\""+h.realm+"\"")
 			h.onError(rw)
 			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -73,7 +72,6 @@ func (h *genericAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		// Scheme checking
 		authorization := req.Header.Get("Authorization")
 		if subtle.ConstantTimeCompare([]byte(authorization), []byte(h.credentials)) != 1 {
-
 			h.onError(rw)
 			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
@@ -88,24 +86,24 @@ type ErrorFunc func(rw http.ResponseWriter, code int)
 
 // IPRangeHandler returns a http handler that requires the remote address to be
 // in the specified network.
-func IPRangeHandler(network []*net.IPNet, onError ErrorFunc) func(h http.Handler) http.Handler {
+func IPRangeHandler(networks []*net.IPNet, onError ErrorFunc) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return &ipRangeHandler{
-			network: network,
-			onError: onError,
-			next:    h,
+			networks: networks,
+			onError:  onError,
+			next:     h,
 		}
 	}
 }
 
 type ipRangeHandler struct {
-	network []*net.IPNet
-	onError ErrorFunc
-	next    http.Handler
+	networks []*net.IPNet
+	onError  ErrorFunc
+	next     http.Handler
 }
 
 func (h *ipRangeHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if len(h.network) == 0 {
+	if len(h.networks) == 0 {
 		h.next.ServeHTTP(rw, req)
 		return
 	}
@@ -122,8 +120,8 @@ func (h *ipRangeHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for _, net := range h.network {
-		if net.Contains(remoteIP) {
+	for _, network := range h.networks {
+		if network.Contains(remoteIP) {
 			h.next.ServeHTTP(rw, req)
 			return
 		}

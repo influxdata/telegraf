@@ -1,12 +1,13 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package docker
 
 import (
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,27 +17,35 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/docker"
+	"github.com/influxdata/telegraf/internal/choice"
+	dockerint "github.com/influxdata/telegraf/internal/docker"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // Docker object
 type Docker struct {
 	Endpoint       string
-	ContainerNames []string // deprecated in 1.4; use container_name_include
+	ContainerNames []string `toml:"container_names" deprecated:"1.4.0;use 'container_name_include' instead"`
 
 	GatherServices bool `toml:"gather_services"`
 
-	Timeout        internal.Duration
-	PerDevice      bool     `toml:"perdevice"`
-	Total          bool     `toml:"total"`
-	TagEnvironment []string `toml:"tag_env"`
-	LabelInclude   []string `toml:"docker_label_include"`
-	LabelExclude   []string `toml:"docker_label_exclude"`
+	Timeout          config.Duration
+	PerDevice        bool     `toml:"perdevice" deprecated:"1.18.0;use 'perdevice_include' instead"`
+	PerDeviceInclude []string `toml:"perdevice_include"`
+	Total            bool     `toml:"total" deprecated:"1.18.0;use 'total_include' instead"`
+	TotalInclude     []string `toml:"total_include"`
+	TagEnvironment   []string `toml:"tag_env"`
+	LabelInclude     []string `toml:"docker_label_include"`
+	LabelExclude     []string `toml:"docker_label_exclude"`
 
 	ContainerInclude []string `toml:"container_name_include"`
 	ContainerExclude []string `toml:"container_name_exclude"`
@@ -54,7 +63,6 @@ type Docker struct {
 	newClient    func(string, *tls.Config) (Client, error)
 
 	client          Client
-	httpClient      *http.Client
 	engineHost      string
 	serverVersion   string
 	filtersCreated  bool
@@ -75,70 +83,47 @@ const (
 )
 
 var (
-	sizeRegex       = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
-	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
-	now             = time.Now
+	sizeRegex              = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
+	containerStates        = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+	containerMetricClasses = []string{"cpu", "network", "blkio"}
+	now                    = time.Now
 )
 
-var sampleConfig = `
-  ## Docker Endpoint
-  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
-  endpoint = "unix:///var/run/docker.sock"
+func (*Docker) SampleConfig() string {
+	return sampleConfig
+}
 
-  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
-  gather_services = false
+func (d *Docker) Init() error {
+	err := choice.CheckSlice(d.PerDeviceInclude, containerMetricClasses)
+	if err != nil {
+		return fmt.Errorf("error validating 'perdevice_include' setting : %v", err)
+	}
 
-  ## Only collect metrics for these containers, collect all if empty
-  container_names = []
+	err = choice.CheckSlice(d.TotalInclude, containerMetricClasses)
+	if err != nil {
+		return fmt.Errorf("error validating 'total_include' setting : %v", err)
+	}
 
-  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
-  source_tag = false
+	// Temporary logic needed for backwards compatibility until 'perdevice' setting is removed.
+	if d.PerDevice {
+		if !choice.Contains("network", d.PerDeviceInclude) {
+			d.PerDeviceInclude = append(d.PerDeviceInclude, "network")
+		}
+		if !choice.Contains("blkio", d.PerDeviceInclude) {
+			d.PerDeviceInclude = append(d.PerDeviceInclude, "blkio")
+		}
+	}
 
-  ## Containers to include and exclude. Globs accepted.
-  ## Note that an empty array for both will include all containers
-  container_name_include = []
-  container_name_exclude = []
+	// Temporary logic needed for backwards compatibility until 'total' setting is removed.
+	if !d.Total {
+		if choice.Contains("cpu", d.TotalInclude) {
+			d.TotalInclude = []string{"cpu"}
+		} else {
+			d.TotalInclude = []string{}
+		}
+	}
 
-  ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "running" state will be captured.
-  ## example: container_state_include = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
-  ## example: container_state_exclude = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
-  # container_state_include = []
-  # container_state_exclude = []
-
-  ## Timeout for docker list, info, and stats commands
-  timeout = "5s"
-
-  ## Whether to report for each container per-device blkio (8:0, 8:1...) and
-  ## network (eth0, eth1, ...) stats or not
-  perdevice = true
-
-  ## Whether to report for each container total blkio and network stats or not
-  total = false
-
-  ## Which environment variables should we use as a tag
-  ##tag_env = ["JAVA_HOME", "HEAP_SIZE"]
-
-  ## docker labels to include and exclude as tags.  Globs accepted.
-  ## Note that an empty array for both will include all labels as tags
-  docker_label_include = []
-  docker_label_exclude = []
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-// SampleConfig returns the default Docker TOML configuration.
-func (d *Docker) SampleConfig() string { return sampleConfig }
-
-// Description the metrics returned.
-func (d *Docker) Description() string {
-	return "Read metrics about docker containers"
+	return nil
 }
 
 // Gather metrics from the docker server.
@@ -150,6 +135,9 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 		d.client = c
 	}
+
+	// Close any idle connections in the end of gathering
+	defer d.client.Close()
 
 	// Create label filters if not already created
 	if !d.filtersCreated {
@@ -197,7 +185,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	opts := types.ContainerListOptions{
 		Filters: filterArgs,
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	containers, err := d.client.ContainerList(ctx, opts)
@@ -225,7 +213,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
@@ -248,7 +236,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 		}
 
 		running := map[string]int{}
-		tasksNoShutdown := map[string]int{}
+		tasksNoShutdown := map[string]uint64{}
 
 		activeNodes := make(map[string]struct{})
 		for _, n := range nodes {
@@ -302,7 +290,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	// Get info from docker daemon
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	info, err := d.client.Info(ctx)
@@ -350,7 +338,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	)
 
 	for _, rawData := range info.DriverStatus {
-		name := strings.ToLower(strings.Replace(rawData[0], " ", "_", -1))
+		name := strings.ToLower(strings.ReplaceAll(rawData[0], " ", "_"))
 		if name == "pool_name" {
 			poolName = rawData[1]
 			continue
@@ -434,8 +422,7 @@ func (d *Docker) gatherContainer(
 	var cname string
 	for _, name := range container.Names {
 		trimmedName := strings.TrimPrefix(name, "/")
-		match := d.containerFilter.Match(trimmedName)
-		if match {
+		if !strings.Contains(trimmedName, "/") {
 			cname = trimmedName
 			break
 		}
@@ -445,7 +432,11 @@ func (d *Docker) gatherContainer(
 		return nil
 	}
 
-	imageName, imageVersion := docker.ParseImage(container.Image)
+	if !d.containerFilter.Match(cname) {
+		return nil
+	}
+
+	imageName, imageVersion := dockerint.ParseImage(container.Image)
 
 	tags := map[string]string{
 		"engine_host":       d.engineHost,
@@ -459,7 +450,7 @@ func (d *Docker) gatherContainer(
 		tags["source"] = hostnameFromID(container.ID)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	r, err := d.client.ContainerStats(ctx, container.ID, false)
@@ -480,11 +471,6 @@ func (d *Docker) gatherContainer(
 	}
 	daemonOSType := r.OSType
 
-	// use common (printed at `docker ps`) name for container
-	if v.Name != "" {
-		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
-	}
-
 	// Add labels to tags
 	for k, label := range container.Labels {
 		if d.labelFilter.Match(k) {
@@ -502,7 +488,7 @@ func (d *Docker) gatherContainerInspect(
 	daemonOSType string,
 	v *types.StatsJSON,
 ) error {
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	info, err := d.client.ContainerInspect(ctx, container.ID)
@@ -518,7 +504,7 @@ func (d *Docker) gatherContainerInspect(
 		for _, envvar := range info.Config.Env {
 			for _, configvar := range d.TagEnvironment {
 				dockEnv := strings.SplitN(envvar, "=", 2)
-				//check for presence of tag in whitelist
+				// check for presence of tag in whitelist
 				if len(dockEnv) == 2 && len(strings.TrimSpace(dockEnv[1])) != 0 && configvar == dockEnv[0] {
 					tags[dockEnv[0]] = dockEnv[1]
 				}
@@ -565,18 +551,16 @@ func (d *Docker) gatherContainerInspect(
 		}
 	}
 
-	parseContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
+	d.parseContainerStats(v, acc, tags, container.ID, daemonOSType)
 
 	return nil
 }
 
-func parseContainerStats(
+func (d *Docker) parseContainerStats(
 	stat *types.StatsJSON,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	id string,
-	perDevice bool,
-	total bool,
 	daemonOSType string,
 ) {
 	tm := stat.Read
@@ -645,48 +629,52 @@ func parseContainerStats(
 
 	acc.AddFields("docker_container_mem", memfields, tags, tm)
 
-	cpufields := map[string]interface{}{
-		"usage_total":                  stat.CPUStats.CPUUsage.TotalUsage,
-		"usage_in_usermode":            stat.CPUStats.CPUUsage.UsageInUsermode,
-		"usage_in_kernelmode":          stat.CPUStats.CPUUsage.UsageInKernelmode,
-		"usage_system":                 stat.CPUStats.SystemUsage,
-		"throttling_periods":           stat.CPUStats.ThrottlingData.Periods,
-		"throttling_throttled_periods": stat.CPUStats.ThrottlingData.ThrottledPeriods,
-		"throttling_throttled_time":    stat.CPUStats.ThrottlingData.ThrottledTime,
-		"container_id":                 id,
-	}
-
-	if daemonOSType != "windows" {
-		previousCPU := stat.PreCPUStats.CPUUsage.TotalUsage
-		previousSystem := stat.PreCPUStats.SystemUsage
-		cpuPercent := CalculateCPUPercentUnix(previousCPU, previousSystem, stat)
-		cpufields["usage_percent"] = cpuPercent
-	} else {
-		cpuPercent := calculateCPUPercentWindows(stat)
-		cpufields["usage_percent"] = cpuPercent
-	}
-
-	cputags := copyTags(tags)
-	cputags["cpu"] = "cpu-total"
-	acc.AddFields("docker_container_cpu", cpufields, cputags, tm)
-
-	// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
-	// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
-	var percpuusage []uint64
-	if stat.CPUStats.OnlineCPUs > 0 {
-		percpuusage = stat.CPUStats.CPUUsage.PercpuUsage[:stat.CPUStats.OnlineCPUs]
-	} else {
-		percpuusage = stat.CPUStats.CPUUsage.PercpuUsage
-	}
-
-	for i, percpu := range percpuusage {
-		percputags := copyTags(tags)
-		percputags["cpu"] = fmt.Sprintf("cpu%d", i)
-		fields := map[string]interface{}{
-			"usage_total":  percpu,
-			"container_id": id,
+	if choice.Contains("cpu", d.TotalInclude) {
+		cpufields := map[string]interface{}{
+			"usage_total":                  stat.CPUStats.CPUUsage.TotalUsage,
+			"usage_in_usermode":            stat.CPUStats.CPUUsage.UsageInUsermode,
+			"usage_in_kernelmode":          stat.CPUStats.CPUUsage.UsageInKernelmode,
+			"usage_system":                 stat.CPUStats.SystemUsage,
+			"throttling_periods":           stat.CPUStats.ThrottlingData.Periods,
+			"throttling_throttled_periods": stat.CPUStats.ThrottlingData.ThrottledPeriods,
+			"throttling_throttled_time":    stat.CPUStats.ThrottlingData.ThrottledTime,
+			"container_id":                 id,
 		}
-		acc.AddFields("docker_container_cpu", fields, percputags, tm)
+
+		if daemonOSType != "windows" {
+			previousCPU := stat.PreCPUStats.CPUUsage.TotalUsage
+			previousSystem := stat.PreCPUStats.SystemUsage
+			cpuPercent := CalculateCPUPercentUnix(previousCPU, previousSystem, stat)
+			cpufields["usage_percent"] = cpuPercent
+		} else {
+			cpuPercent := calculateCPUPercentWindows(stat)
+			cpufields["usage_percent"] = cpuPercent
+		}
+
+		cputags := copyTags(tags)
+		cputags["cpu"] = "cpu-total"
+		acc.AddFields("docker_container_cpu", cpufields, cputags, tm)
+	}
+
+	if choice.Contains("cpu", d.PerDeviceInclude) && len(stat.CPUStats.CPUUsage.PercpuUsage) > 0 {
+		// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
+		// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
+		var percpuusage []uint64
+		if stat.CPUStats.OnlineCPUs > 0 {
+			percpuusage = stat.CPUStats.CPUUsage.PercpuUsage[:stat.CPUStats.OnlineCPUs]
+		} else {
+			percpuusage = stat.CPUStats.CPUUsage.PercpuUsage
+		}
+
+		for i, percpu := range percpuusage {
+			percputags := copyTags(tags)
+			percputags["cpu"] = fmt.Sprintf("cpu%d", i)
+			fields := map[string]interface{}{
+				"usage_total":  percpu,
+				"container_id": id,
+			}
+			acc.AddFields("docker_container_cpu", fields, percputags, tm)
+		}
 	}
 
 	totalNetworkStatMap := make(map[string]interface{})
@@ -703,12 +691,12 @@ func parseContainerStats(
 			"container_id": id,
 		}
 		// Create a new network tag dictionary for the "network" tag
-		if perDevice {
+		if choice.Contains("network", d.PerDeviceInclude) {
 			nettags := copyTags(tags)
 			nettags["network"] = network
 			acc.AddFields("docker_container_net", netfields, nettags, tm)
 		}
-		if total {
+		if choice.Contains("network", d.TotalInclude) {
 			for field, value := range netfields {
 				if field == "container_id" {
 					continue
@@ -735,27 +723,18 @@ func parseContainerStats(
 	}
 
 	// totalNetworkStatMap could be empty if container is running with --net=host.
-	if total && len(totalNetworkStatMap) != 0 {
+	if choice.Contains("network", d.TotalInclude) && len(totalNetworkStatMap) != 0 {
 		nettags := copyTags(tags)
 		nettags["network"] = "total"
 		totalNetworkStatMap["container_id"] = id
 		acc.AddFields("docker_container_net", totalNetworkStatMap, nettags, tm)
 	}
 
-	gatherBlockIOMetrics(stat, acc, tags, tm, id, perDevice, total)
+	d.gatherBlockIOMetrics(acc, stat, tags, tm, id)
 }
 
-func gatherBlockIOMetrics(
-	stat *types.StatsJSON,
-	acc telegraf.Accumulator,
-	tags map[string]string,
-	tm time.Time,
-	id string,
-	perDevice bool,
-	total bool,
-) {
-	blkioStats := stat.BlkioStats
-	// Make a map of devices to their block io stats
+// Make a map of devices to their block io stats
+func getDeviceStatMap(blkioStats types.BlkioStats) map[string]map[string]interface{} {
 	deviceStatMap := make(map[string]map[string]interface{})
 
 	for _, metric := range blkioStats.IoServiceBytesRecursive {
@@ -813,16 +792,30 @@ func gatherBlockIOMetrics(
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
 		deviceStatMap[device]["sectors_recursive"] = metric.Value
 	}
+	return deviceStatMap
+}
+
+func (d *Docker) gatherBlockIOMetrics(
+	acc telegraf.Accumulator,
+	stat *types.StatsJSON,
+	tags map[string]string,
+	tm time.Time,
+	id string,
+) {
+	perDeviceBlkio := choice.Contains("blkio", d.PerDeviceInclude)
+	totalBlkio := choice.Contains("blkio", d.TotalInclude)
+	blkioStats := stat.BlkioStats
+	deviceStatMap := getDeviceStatMap(blkioStats)
 
 	totalStatMap := make(map[string]interface{})
 	for device, fields := range deviceStatMap {
 		fields["container_id"] = id
-		if perDevice {
+		if perDeviceBlkio {
 			iotags := copyTags(tags)
 			iotags["device"] = device
 			acc.AddFields("docker_container_blkio", fields, iotags, tm)
 		}
-		if total {
+		if totalBlkio {
 			for field, value := range fields {
 				if field == "container_id" {
 					continue
@@ -847,7 +840,7 @@ func gatherBlockIOMetrics(
 			}
 		}
 	}
-	if total {
+	if totalBlkio {
 		totalStatMap["container_id"] = id
 		iotags := copyTags(tags)
 		iotags["device"] = "total"
@@ -861,15 +854,6 @@ func copyTags(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
-}
-
-func sliceContains(in string, sl []string) bool {
-	for _, str := range sl {
-		if str == in {
-			return true
-		}
-	}
-	return false
 }
 
 // Parses the human-readable size string into the amount it represents.
@@ -899,20 +883,20 @@ func (d *Docker) createContainerFilters() error {
 		d.ContainerInclude = append(d.ContainerInclude, d.ContainerNames...)
 	}
 
-	filter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
+	containerFilter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
 	if err != nil {
 		return err
 	}
-	d.containerFilter = filter
+	d.containerFilter = containerFilter
 	return nil
 }
 
 func (d *Docker) createLabelFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
+	labelFilter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
 	if err != nil {
 		return err
 	}
-	d.labelFilter = filter
+	d.labelFilter = labelFilter
 	return nil
 }
 
@@ -920,11 +904,11 @@ func (d *Docker) createContainerStateFilters() error {
 	if len(d.ContainerStateInclude) == 0 && len(d.ContainerStateExclude) == 0 {
 		d.ContainerStateInclude = []string{"running"}
 	}
-	filter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
+	stateFilter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
 	if err != nil {
 		return err
 	}
-	d.stateFilter = filter
+	d.stateFilter = stateFilter
 	return nil
 }
 
@@ -944,12 +928,14 @@ func (d *Docker) getNewClient() (Client, error) {
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			PerDevice:      true,
-			Timeout:        internal.Duration{Duration: time.Second * 5},
-			Endpoint:       defaultEndpoint,
-			newEnvClient:   NewEnvClient,
-			newClient:      NewClient,
-			filtersCreated: false,
+			PerDevice:        true,
+			PerDeviceInclude: []string{"cpu"},
+			TotalInclude:     []string{"cpu", "blkio", "network"},
+			Timeout:          config.Duration(time.Second * 5),
+			Endpoint:         defaultEndpoint,
+			newEnvClient:     NewEnvClient,
+			newClient:        NewClient,
+			filtersCreated:   false,
 		}
 	})
 }

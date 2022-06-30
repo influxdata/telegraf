@@ -1,9 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tcp_listener
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
-	"log"
 	"net"
 	"sync"
 
@@ -14,7 +15,11 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
-type TcpListener struct {
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
+type TCPListener struct {
 	ServiceAddress         string
 	AllowedPendingMessages int
 	MaxTCPConnections      int `toml:"max_tcp_connections"`
@@ -59,36 +64,26 @@ var dropwarn = "tcp_listener message queue full. " +
 var malformedwarn = "tcp_listener has received %d malformed packets" +
 	" thus far."
 
-const sampleConfig = `
-  # DEPRECATED: the TCP listener plugin has been deprecated in favor of the
-  # socket_listener plugin
-  # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener
-`
-
-func (t *TcpListener) SampleConfig() string {
+func (*TCPListener) SampleConfig() string {
 	return sampleConfig
-}
-
-func (t *TcpListener) Description() string {
-	return "Generic TCP listener"
 }
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.
-func (t *TcpListener) Gather(_ telegraf.Accumulator) error {
+func (t *TCPListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *TcpListener) SetParser(parser parsers.Parser) {
+func (t *TCPListener) SetParser(parser parsers.Parser) {
 	t.parser = parser
 }
 
 // Start starts the tcp listener service.
-func (t *TcpListener) Start(acc telegraf.Accumulator) error {
+func (t *TCPListener) Start(acc telegraf.Accumulator) error {
 	t.Lock()
 	defer t.Unlock()
 
-	log.Println("W! DEPRECATED: the TCP listener plugin has been deprecated " +
+	t.Log.Warn("DEPRECATED: the TCP listener plugin has been deprecated " +
 		"in favor of the socket_listener plugin " +
 		"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener)")
 
@@ -129,10 +124,12 @@ func (t *TcpListener) Start(acc telegraf.Accumulator) error {
 }
 
 // Stop cleans up all resources
-func (t *TcpListener) Stop() {
+func (t *TCPListener) Stop() {
 	t.Lock()
 	defer t.Unlock()
 	close(t.done)
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	t.listener.Close()
 
 	// Close all open TCP connections
@@ -146,6 +143,8 @@ func (t *TcpListener) Stop() {
 	}
 	t.cleanup.Unlock()
 	for _, conn := range conns {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		conn.Close()
 	}
 
@@ -155,18 +154,19 @@ func (t *TcpListener) Stop() {
 }
 
 // tcpListen listens for incoming TCP connections.
-func (t *TcpListener) tcpListen() error {
+func (t *TCPListener) tcpListen() {
 	defer t.wg.Done()
 
 	for {
 		select {
 		case <-t.done:
-			return nil
+			return
 		default:
 			// Accept connection:
 			conn, err := t.listener.AcceptTCP()
 			if err != nil {
-				return err
+				t.Log.Errorf("accepting TCP connection failed: %v", err)
+				return
 			}
 
 			select {
@@ -186,24 +186,28 @@ func (t *TcpListener) tcpListen() error {
 }
 
 // refuser refuses a TCP connection
-func (t *TcpListener) refuser(conn *net.TCPConn) {
+func (t *TCPListener) refuser(conn *net.TCPConn) {
 	// Tell the connection why we are closing.
+	//nolint:errcheck,revive
 	fmt.Fprintf(conn, "Telegraf maximum concurrent TCP connections (%d)"+
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)
+	//nolint:errcheck,revive
 	conn.Close()
 	t.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	t.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
 
 // handler handles a single TCP Connection
-func (t *TcpListener) handler(conn *net.TCPConn, id string) {
+func (t *TCPListener) handler(conn *net.TCPConn, id string) {
 	t.CurrentConnections.Incr(1)
 	t.TotalConnections.Incr(1)
 	// connection cleanup function
 	defer func() {
 		t.wg.Done()
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			t.acc.AddError(err)
+		}
 		// Add one connection potential back to channel when this one closes
 		t.accept <- true
 		t.forget(id)
@@ -243,7 +247,7 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 }
 
 // tcpParser parses the incoming tcp byte packets
-func (t *TcpListener) tcpParser() error {
+func (t *TCPListener) tcpParser() {
 	defer t.wg.Done()
 
 	var packet []byte
@@ -254,7 +258,7 @@ func (t *TcpListener) tcpParser() error {
 		case <-t.done:
 			// drain input packets before finishing:
 			if len(t.in) == 0 {
-				return nil
+				return
 			}
 		case packet = <-t.in:
 			if len(packet) == 0 {
@@ -276,14 +280,14 @@ func (t *TcpListener) tcpParser() error {
 }
 
 // forget a TCP connection
-func (t *TcpListener) forget(id string) {
+func (t *TCPListener) forget(id string) {
 	t.cleanup.Lock()
 	defer t.cleanup.Unlock()
 	delete(t.conns, id)
 }
 
 // remember a TCP connection
-func (t *TcpListener) remember(id string, conn *net.TCPConn) {
+func (t *TCPListener) remember(id string, conn *net.TCPConn) {
 	t.cleanup.Lock()
 	defer t.cleanup.Unlock()
 	t.conns[id] = conn
@@ -291,7 +295,7 @@ func (t *TcpListener) remember(id string, conn *net.TCPConn) {
 
 func init() {
 	inputs.Add("tcp_listener", func() telegraf.Input {
-		return &TcpListener{
+		return &TCPListener{
 			ServiceAddress:         ":8094",
 			AllowedPendingMessages: 10000,
 			MaxTCPConnections:      250,

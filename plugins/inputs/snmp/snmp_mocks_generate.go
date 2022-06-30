@@ -1,3 +1,4 @@
+//go:build generate
 // +build generate
 
 package main
@@ -23,6 +24,7 @@ var mockedCommands = [][]string{
 	{"snmptranslate", "-Td", "-Ob", "-m", "all", ".1.0.0.0.1.1.0"},
 	{"snmptranslate", "-Td", "-Ob", "-m", "all", ".1.0.0.0.1.5"},
 	{"snmptranslate", "-Td", "-Ob", "-m", "all", ".1.2.3"},
+	{"snmptranslate", "-Td", "-Ob", "-m", "all", ".1.0.0.0.1.7"},
 	{"snmptranslate", "-Td", "-Ob", ".iso.2.3"},
 	{"snmptranslate", "-Td", "-Ob", "-m", "all", ".999"},
 	{"snmptranslate", "-Td", "-Ob", "TEST::server"},

@@ -1,16 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package webhooks
 
 import (
+	_ "embed"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"reflect"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/artifactory"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
@@ -19,8 +21,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Webhook interface {
-	Register(router *mux.Router, acc telegraf.Accumulator)
+	Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger)
 }
 
 func init() {
@@ -28,14 +34,17 @@ func init() {
 }
 
 type Webhooks struct {
-	ServiceAddress string
+	ServiceAddress string `toml:"service_address"`
 
-	Github     *github.GithubWebhook
-	Filestack  *filestack.FilestackWebhook
-	Mandrill   *mandrill.MandrillWebhook
-	Rollbar    *rollbar.RollbarWebhook
-	Papertrail *papertrail.PapertrailWebhook
-	Particle   *particle.ParticleWebhook
+	Github      *github.GithubWebhook           `toml:"github"`
+	Filestack   *filestack.FilestackWebhook     `toml:"filestack"`
+	Mandrill    *mandrill.MandrillWebhook       `toml:"mandrill"`
+	Rollbar     *rollbar.RollbarWebhook         `toml:"rollbar"`
+	Papertrail  *papertrail.PapertrailWebhook   `toml:"papertrail"`
+	Particle    *particle.ParticleWebhook       `toml:"particle"`
+	Artifactory *artifactory.ArtifactoryWebhook `toml:"artifactory"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	srv *http.Server
 }
@@ -44,41 +53,15 @@ func NewWebhooks() *Webhooks {
 	return &Webhooks{}
 }
 
-func (wb *Webhooks) SampleConfig() string {
-	return `
-  ## Address and port to host Webhook listener on
-  service_address = ":1619"
-
-  [inputs.webhooks.filestack]
-    path = "/filestack"
-
-  [inputs.webhooks.github]
-    path = "/github"
-    # secret = ""
-
-  [inputs.webhooks.mandrill]
-    path = "/mandrill"
-
-  [inputs.webhooks.rollbar]
-    path = "/rollbar"
-
-  [inputs.webhooks.papertrail]
-    path = "/papertrail"
-
-  [inputs.webhooks.particle]
-    path = "/particle"
-`
-}
-
-func (wb *Webhooks) Description() string {
-	return "A Webhooks Event collector"
+func (*Webhooks) SampleConfig() string {
+	return sampleConfig
 }
 
 func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-// Looks for fields which implement Webhook interface
+// AvailableWebhooks Looks for fields which implement Webhook interface
 func (wb *Webhooks) AvailableWebhooks() []Webhook {
 	webhooks := make([]Webhook, 0)
 	s := reflect.ValueOf(wb).Elem()
@@ -103,32 +86,32 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 	r := mux.NewRouter()
 
 	for _, webhook := range wb.AvailableWebhooks() {
-		webhook.Register(r, acc)
+		webhook.Register(r, acc, wb.Log)
 	}
 
 	wb.srv = &http.Server{Handler: r}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s", wb.ServiceAddress))
+	ln, err := net.Listen("tcp", wb.ServiceAddress)
 	if err != nil {
-		log.Fatalf("E! Error starting server: %v", err)
-		return err
-
+		return fmt.Errorf("error starting server: %v", err)
 	}
 
 	go func() {
 		if err := wb.srv.Serve(ln); err != nil {
 			if err != http.ErrServerClosed {
-				acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+				acc.AddError(fmt.Errorf("error listening: %v", err))
 			}
 		}
 	}()
 
-	log.Printf("I! Started the webhooks service on %s\n", wb.ServiceAddress)
+	wb.Log.Infof("Started the webhooks service on %s", wb.ServiceAddress)
 
 	return nil
 }
 
-func (rb *Webhooks) Stop() {
-	rb.srv.Close()
-	log.Println("I! Stopping the Webhooks service")
+func (wb *Webhooks) Stop() {
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
+	wb.srv.Close()
+	wb.Log.Infof("Stopping the Webhooks service")
 }

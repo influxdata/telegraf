@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package socket_listener
 
 import (
 	"bufio"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -13,11 +15,16 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type setReadBufferer interface {
 	SetReadBuffer(bytes int) error
@@ -47,9 +54,12 @@ func (ssl *streamSocketListener) listen() {
 			break
 		}
 
-		if ssl.ReadBufferSize.Size > 0 {
+		if ssl.ReadBufferSize > 0 {
 			if srb, ok := c.(setReadBufferer); ok {
-				srb.SetReadBuffer(int(ssl.ReadBufferSize.Size))
+				if err := srb.SetReadBuffer(int(ssl.ReadBufferSize)); err != nil {
+					ssl.Log.Error(err.Error())
+					break
+				}
 			} else {
 				ssl.Log.Warnf("Unable to set read buffer on a %s socket", ssl.sockType)
 			}
@@ -58,6 +68,8 @@ func (ssl *streamSocketListener) listen() {
 		ssl.connectionsMtx.Lock()
 		if ssl.MaxConnections > 0 && len(ssl.connections) >= ssl.MaxConnections {
 			ssl.connectionsMtx.Unlock()
+			// Ignore the returned error as we cannot do anything about it anyway
+			//nolint:errcheck,revive
 			c.Close()
 			continue
 		}
@@ -77,6 +89,8 @@ func (ssl *streamSocketListener) listen() {
 
 	ssl.connectionsMtx.Lock()
 	for _, c := range ssl.connections {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		c.Close()
 	}
 	ssl.connectionsMtx.Unlock()
@@ -92,13 +106,13 @@ func (ssl *streamSocketListener) setKeepAlive(c net.Conn) error {
 	if !ok {
 		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(ssl.ServiceAddress, "://", 2)[0])
 	}
-	if ssl.KeepAlivePeriod.Duration == 0 {
+	if *ssl.KeepAlivePeriod == 0 {
 		return tcpc.SetKeepAlive(false)
 	}
 	if err := tcpc.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpc.SetKeepAlivePeriod(ssl.KeepAlivePeriod.Duration)
+	return tcpc.SetKeepAlivePeriod(time.Duration(*ssl.KeepAlivePeriod))
 }
 
 func (ssl *streamSocketListener) removeConnection(c net.Conn) {
@@ -114,12 +128,16 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	decoder, err := internal.NewStreamContentDecoder(ssl.ContentEncoding, c)
 	if err != nil {
 		ssl.Log.Error("Read error: %v", err)
+		return
 	}
 
 	scnr := bufio.NewScanner(decoder)
 	for {
-		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
-			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
+		if ssl.ReadTimeout != nil && *ssl.ReadTimeout > 0 {
+			if err := c.SetReadDeadline(time.Now().Add(time.Duration(*ssl.ReadTimeout))); err != nil {
+				ssl.Log.Error("setting read deadline failed: %v", err)
+				return
+			}
 		}
 		if !scnr.Scan() {
 			break
@@ -182,13 +200,13 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress  string             `toml:"service_address"`
-	MaxConnections  int                `toml:"max_connections"`
-	ReadBufferSize  internal.Size      `toml:"read_buffer_size"`
-	ReadTimeout     *internal.Duration `toml:"read_timeout"`
-	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
-	SocketMode      string             `toml:"socket_mode"`
-	ContentEncoding string             `toml:"content_encoding"`
+	ServiceAddress  string           `toml:"service_address"`
+	MaxConnections  int              `toml:"max_connections"`
+	ReadBufferSize  config.Size      `toml:"read_buffer_size"`
+	ReadTimeout     *config.Duration `toml:"read_timeout"`
+	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
+	SocketMode      string           `toml:"socket_mode"`
+	ContentEncoding string           `toml:"content_encoding"`
 	tlsint.ServerConfig
 
 	wg sync.WaitGroup
@@ -200,70 +218,8 @@ type SocketListener struct {
 	io.Closer
 }
 
-func (sl *SocketListener) Description() string {
-	return "Generic socket listener capable of handling multiple socket types."
-}
-
-func (sl *SocketListener) SampleConfig() string {
-	return `
-  ## URL to listen on
-  # service_address = "tcp://:8094"
-  # service_address = "tcp://127.0.0.1:http"
-  # service_address = "tcp4://:8094"
-  # service_address = "tcp6://:8094"
-  # service_address = "tcp6://[2001:db8::1]:8094"
-  # service_address = "udp://:8094"
-  # service_address = "udp4://:8094"
-  # service_address = "udp6://:8094"
-  # service_address = "unix:///tmp/telegraf.sock"
-  # service_address = "unixgram:///tmp/telegraf.sock"
-
-  ## Change the file mode bits on unix sockets.  These permissions may not be
-  ## respected by some platforms, to safely restrict write permissions it is best
-  ## to place the socket into a directory that has previously been created
-  ## with the desired permissions.
-  ##   ex: socket_mode = "777"
-  # socket_mode = ""
-
-  ## Maximum number of concurrent connections.
-  ## Only applies to stream sockets (e.g. TCP).
-  ## 0 (default) is unlimited.
-  # max_connections = 1024
-
-  ## Read timeout.
-  ## Only applies to stream sockets (e.g. TCP).
-  ## 0 (default) is unlimited.
-  # read_timeout = "30s"
-
-  ## Optional TLS configuration.
-  ## Only applies to stream sockets (e.g. TCP).
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key  = "/etc/telegraf/key.pem"
-  ## Enables client authentication if set.
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
-  ## Maximum socket buffer size (in bytes when no unit specified).
-  ## For stream sockets, once the buffer fills up, the sender will start backing up.
-  ## For datagram sockets, once the buffer fills up, metrics will start dropping.
-  ## Defaults to the OS default.
-  # read_buffer_size = "64KiB"
-
-  ## Period between keep alive probes.
-  ## Only applies to TCP sockets.
-  ## 0 disables keep alive probes.
-  ## Defaults to the OS configuration.
-  # keep_alive_period = "5m"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  # data_format = "influx"
-
-  ## Content encoding for message payloads, can be set to "gzip" to or
-  ## "identity" to apply no encoding.
-  # content_encoding = "identity"
-`
+func (*SocketListener) SampleConfig() string {
+	return sampleConfig
 }
 
 func (sl *SocketListener) Gather(_ telegraf.Accumulator) error {
@@ -288,6 +244,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		// no good way of testing for "file does not exist".
 		// Instead just ignore error and blow up when we try to listen, which will
 		// indicate "address already in use" if file existed and we couldn't remove.
+		//nolint:errcheck,revive
 		os.Remove(addr)
 	}
 
@@ -318,7 +275,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			os.Chmod(spl[1], os.FileMode(uint32(i)))
+			if err := os.Chmod(spl[1], os.FileMode(uint32(i))); err != nil {
+				return err
+			}
 		}
 
 		ssl := &streamSocketListener{
@@ -353,12 +312,16 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			os.Chmod(spl[1], os.FileMode(uint32(i)))
+			if err := os.Chmod(spl[1], os.FileMode(uint32(i))); err != nil {
+				return err
+			}
 		}
 
-		if sl.ReadBufferSize.Size > 0 {
+		if sl.ReadBufferSize > 0 {
 			if srb, ok := pc.(setReadBufferer); ok {
-				srb.SetReadBuffer(int(sl.ReadBufferSize.Size))
+				if err := srb.SetReadBuffer(int(sl.ReadBufferSize)); err != nil {
+					sl.Log.Warnf("Setting read buffer on a %s socket failed: %v", protocol, err)
+				}
 			} else {
 				sl.Log.Warnf("Unable to set read buffer on a %s socket", protocol)
 			}
@@ -417,6 +380,8 @@ func udpListen(network string, address string) (net.PacketConn, error) {
 
 func (sl *SocketListener) Stop() {
 	if sl.Closer != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		sl.Close()
 		sl.Closer = nil
 	}
@@ -438,7 +403,9 @@ type unixCloser struct {
 
 func (uc unixCloser) Close() error {
 	err := uc.closer.Close()
-	os.Remove(uc.path) // ignore error
+	// Ignore the error if e.g. the file does not exist
+	//nolint:errcheck,revive
+	os.Remove(uc.path)
 	return err
 }
 

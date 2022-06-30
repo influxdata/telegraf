@@ -1,3 +1,4 @@
+//go:build freebsd
 // +build freebsd
 
 package zfs
@@ -87,6 +88,47 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 	return strings.Join(pools, "::"), nil
 }
 
+func (z *Zfs) gatherDatasetStats(acc telegraf.Accumulator) (string, error) {
+	properties := []string{"name", "avail", "used", "usedsnap", "usedds"}
+
+	lines, err := z.zdataset(properties)
+	if err != nil {
+		return "", err
+	}
+
+	datasets := []string{}
+	for _, line := range lines {
+		col := strings.Split(line, "\t")
+
+		datasets = append(datasets, col[0])
+	}
+
+	if z.DatasetMetrics {
+		for _, line := range lines {
+			col := strings.Split(line, "\t")
+			if len(col) != len(properties) {
+				z.Log.Warnf("Invalid number of columns for line: %s", line)
+				continue
+			}
+
+			tags := map[string]string{"dataset": col[0]}
+			fields := map[string]interface{}{}
+
+			for i, key := range properties[1:] {
+				value, err := strconv.ParseInt(col[i+1], 10, 64)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing %s %q: %s", key, col[i+1], err)
+				}
+				fields[key] = value
+			}
+
+			acc.AddFields("zfs_dataset", fields, tags)
+		}
+	}
+
+	return strings.Join(datasets, "::"), nil
+}
+
 func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	kstatMetrics := z.KstatMetrics
 	if len(kstatMetrics) == 0 {
@@ -99,6 +141,11 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	tags["pools"] = poolNames
+	datasetNames, err := z.gatherDatasetStats(acc)
+	if err != nil {
+		return err
+	}
+	tags["datasets"] = datasetNames
 
 	fields := make(map[string]interface{})
 	for _, metric := range kstatMetrics {
@@ -127,14 +174,21 @@ func run(command string, args ...string) ([]string, error) {
 	stdout := strings.TrimSpace(outbuf.String())
 	stderr := strings.TrimSpace(errbuf.String())
 
-	if _, ok := err.(*exec.ExitError); ok {
-		return nil, fmt.Errorf("%s error: %s", command, stderr)
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("%s error: %s", command, stderr)
+		}
+		return nil, fmt.Errorf("%s error: %s", command, err)
 	}
 	return strings.Split(stdout, "\n"), nil
 }
 
 func zpool() ([]string, error) {
 	return run("zpool", []string{"list", "-Hp", "-o", "name,health,size,alloc,free,fragmentation,capacity,dedupratio"}...)
+}
+
+func zdataset(properties []string) ([]string, error) {
+	return run("zfs", []string{"list", "-Hp", "-o", strings.Join(properties, ",")}...)
 }
 
 func sysctl(metric string) ([]string, error) {
@@ -144,8 +198,9 @@ func sysctl(metric string) ([]string, error) {
 func init() {
 	inputs.Add("zfs", func() telegraf.Input {
 		return &Zfs{
-			sysctl: sysctl,
-			zpool:  zpool,
+			sysctl:   sysctl,
+			zpool:    zpool,
+			zdataset: zdataset,
 		}
 	})
 }

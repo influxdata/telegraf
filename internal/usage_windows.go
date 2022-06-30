@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package internal
@@ -16,6 +17,9 @@ The commands & flags are:
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
   --config-directory <directory> directory containing additional *.conf files
+  --watch-config                 Telegraf will restart on local config changes. Monitor changes 
+                                 using either fs notifications or polling.  Valid values: 'inotify' or 'poll'. 
+                                 Monitoring is off by default.
   --debug                        turn on debug logging
   --input-filter <filter>        filter the inputs to enable, separator is :
   --input-list                   print available input plugins.
@@ -40,6 +44,8 @@ The commands & flags are:
   --service <service>            operate on the service (windows only)
   --service-name                 service name (windows only)
   --service-display-name         service display name (windows only)
+  --service-auto-restart         auto restart service on failure (windows only)
+  --service-restart-delay        delay before service auto restart, default is 5m (windows only)
 
 Examples:
 
@@ -69,4 +75,6 @@ Examples:
 
   # install telegraf service with custom name
   telegraf --service install --service-name=my-telegraf --service-display-name="My Telegraf"
-`
+
+  # install telegraf service with auto restart and restart delay of 3 minutes
+  telegraf --service install --service-auto-restart --service-restart-delay 3m`
