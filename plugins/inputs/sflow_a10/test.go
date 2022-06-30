@@ -9,7 +9,7 @@ import (
 
 // TestXMLUnMarshalSimple tests for a simple unmarshaling
 func TestXMLUnMarshalSimple(t *testing.T) {
-	sflow := SFlow_A10{
+	sflow := SFlowA10{
 		Log: tu.Logger{},
 	}
 
@@ -28,12 +28,11 @@ func TestXMLUnMarshalSimple(t *testing.T) {
 
 	require.Equal(t, 0, c[217].Counters[0].Offset)
 	require.Equal(t, 1, c[217].Counters[1].Offset)
-
 }
 
 // TestXMLUnMarshalSameTagReturnsError makes sure that if we have the same tag for two different counter blocks we will get an error
 func TestXMLUnMarshalSameTagReturnsError(t *testing.T) {
-	sflow := SFlow_A10{
+	sflow := SFlowA10{
 		Log: tu.Logger{},
 	}
 
@@ -43,7 +42,7 @@ func TestXMLUnMarshalSameTagReturnsError(t *testing.T) {
 
 // TestXMLUnMarshalWrongOrderReturnedInCorrectOrder checks that an XML with wrong order in the offset headers is returned in the correct order
 func TestXMLUnMarshalWrongOrderReturnedInCorrectOrder(t *testing.T) {
-	sflow := SFlow_A10{
+	sflow := SFlowA10{
 		Log: tu.Logger{},
 	}
 

@@ -229,21 +229,21 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 		}
 
 		// we're checking if the tag we got exists on our counter record definitions (that were loaded from the A10 xml file)
-		if _, exists := d.CounterBlocks[uint32(tag)]; !exists {
+		if _, exists := d.CounterBlocks[tag]; !exists {
 			d.debug(fmt.Sprintf("  tag %x for sourceID %x NOT found on xml file list. Ignoring counter record", tag, sourceID))
 			continue
 		}
 
 		// as per A10, each packet of either counter block 293 or 294 is one sample of 293 or 294
 		// plus, we are not getting any IP and PORT information
-		cr.NeedsIpAndPort = tag != 293 && tag != 294
+		cr.NeedsIPAndPort = tag != 293 && tag != 294
 
 		cr.IsEthernetCounters = tag == 294
 
-		d.debug(fmt.Sprintf("  tag %x for sourceID %x needs ip and and port: %t", tag, sourceID, cr.NeedsIpAndPort))
+		d.debug(fmt.Sprintf("  tag %x for sourceID %x needs ip and and port: %t", tag, sourceID, cr.NeedsIPAndPort))
 		d.debug(fmt.Sprintf("  tag %x for sourceID %x found on xml file list. Gonna decode counter record", tag, sourceID))
 
-		err := d.decodeCounterRecord(mr, cr, uint32(tag), sourceID)
+		err := d.decodeCounterRecord(mr, cr, tag, sourceID)
 		if err != nil {
 			return recs, err
 		}
@@ -259,8 +259,8 @@ func (d *PacketDecoder) decodeCounterRecord(r io.Reader, cr *CounterRecord, tag 
 	counterBlock := d.CounterBlocks[tag]
 
 	// reading the header values, we assume they are always 4 uint16
-	var counterOffset uint16 = 0
-	var totalCounterNum uint16 = 0
+	var counterOffset uint16
+	var totalCounterNum uint16
 	if len(counterBlock.OffsetHeaders) > 0 {
 		if err := read(r, &counterOffset, "counterOffset"); err != nil {
 			d.debug("    error reading counterOffset variable")
@@ -486,15 +486,6 @@ func fullIPv6(ip64 [16]byte) string {
 func read(r io.Reader, data interface{}, name string) error {
 	err := binary.Read(r, binary.BigEndian, data)
 	return errors.Wrapf(err, "failed to read %s", name)
-}
-
-func (d *PacketDecoder) skip(r io.Reader, recordsToSkip uint16) {
-	for i := uint16(0); i < recordsToSkip; i++ {
-		var temp uint64
-		if err := read(r, &temp, "temp"); err != nil {
-			d.debug(fmt.Sprintf("error skipping, at %d, error %s", i, err))
-		}
-	}
 }
 
 func createMapKey(sourceID uint32, addr string) string {

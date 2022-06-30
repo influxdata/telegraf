@@ -26,7 +26,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 
 		// this is for packets tagged 293 and 294
 		// as per A10, each packet that contains counter block tagged 293 or 294 is just a single sample
-		if !sample.SampleCounterData.NeedsIpAndPort() {
+		if !sample.SampleCounterData.NeedsIPAndPort() {
 			if len(sample.SampleCounterData.CounterRecords) != 1 {
 				d.Log.Error("  SampleCounterData.CounterRecords with false NeedsIpPort has length != 1")
 				continue

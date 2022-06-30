@@ -100,7 +100,7 @@ func TestDecodeCounterSample(t *testing.T) {
 							"testCounter2": uint64(29),
 						},
 					},
-					NeedsIpAndPort: true,
+					NeedsIPAndPort: true,
 				},
 			},
 		},
@@ -109,7 +109,6 @@ func TestDecodeCounterSample(t *testing.T) {
 	actual, err := dc.decodeSample(octets, "10.0.1.2")
 	require.NoError(t, err)
 	require.Equal(t, expected, actual)
-
 }
 
 func TestCounterSampleSimple(t *testing.T) {
@@ -167,11 +166,11 @@ func TestDecode271(t *testing.T) {
 
 	dc := NewDecoder()
 	expected := []IPDimension{
-		IPDimension{
+		{
 			IPAddress:  "10.0.1.3",
 			SubnetMask: 30,
 		},
-		IPDimension{
+		{
 			IPAddress:  "192.168.5.6",
 			SubnetMask: 15,
 		},
@@ -188,31 +187,31 @@ func TestDecode271(t *testing.T) {
 // read some counters with sourceID X
 // make sure metrics from sourceID X are emitted
 func TestDecodeA10EndToEnd(t *testing.T) {
-	sflow := SFlow_A10{
+	sflow := SFlowA10{
 		Log: tu.Logger{},
 	}
 
 	const sourceID = 269839
-	agent_ip := "10.0.9.1"
-	key := createMapKey(sourceID, agent_ip)
+	agentIP := "10.0.9.1"
+	key := createMapKey(sourceID, agentIP)
 
 	// start by reading the XML file with the metric definitions
 	c, err := sflow.readA10XMLData([]byte(testXMLStringEndToEnd))
 	require.NoError(t, err)
 	expected := map[uint32]CounterBlock{
-		217: CounterBlock{
+		217: {
 			Tag: 217,
 			OffsetHeaders: []HeaderDefinition{
-				HeaderDefinition{
+				{
 					FieldName: "Counter Offset",
 				},
-				HeaderDefinition{
+				{
 					FieldName: "Total Counter Num",
 				},
-				HeaderDefinition{
+				{
 					FieldName: "Reserved1",
 				},
-				HeaderDefinition{
+				{
 					FieldName: "Reserved2",
 				},
 			},
@@ -298,7 +297,7 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x3E, 0xFB, // port range end uint16
 	})
 
-	_, err = dc.decodeSample(octets, agent_ip)
+	_, err = dc.decodeSample(octets, agentIP)
 	require.NoError(t, err)
 
 	portValue, portExists := dc.PortMap.Get(key)
@@ -336,15 +335,15 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x0F, // subnet 1
 	})
 
-	_, err = dc.decodeSample(octets, agent_ip)
+	_, err = dc.decodeSample(octets, agentIP)
 	require.NoError(t, err)
 
 	expectedIPAddresses := []IPDimension{
-		IPDimension{
+		{
 			IPAddress:  "10.0.1.3",
 			SubnetMask: 30,
 		},
-		IPDimension{
+		{
 			IPAddress:  "192.168.5.6",
 			SubnetMask: 15,
 		},
@@ -418,7 +417,7 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA1, // counter metric 1 uint64
 	})
 
-	s, err := dc.decodeSample(octets, agent_ip)
+	s, err := dc.decodeSample(octets, agentIP)
 	require.NoError(t, err)
 
 	require.Equal(t, 2, len(s.SampleCounterData.CounterRecords))

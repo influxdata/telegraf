@@ -2,7 +2,6 @@ package sflow_a10
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -42,10 +41,10 @@ const (
 	defaultAllowPendingMessage = 100000
 	// UDP_MAX_PACKET_SIZE is the UDP packet limit, see
 	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
-	UDP_MAX_PACKET_SIZE int = 64 * 1024
+	UDPMaxPacketSize int = 64 * 1024
 )
 
-type SFlow_A10 struct {
+type SFlowA10 struct {
 	ServiceAddress     string      `toml:"service_address"`
 	ReadBufferSize     config.Size `toml:"read_buffer_size"`
 	A10DefinitionsFile string      `toml:"a10_definitions_file"`
@@ -57,7 +56,6 @@ type SFlow_A10 struct {
 
 	addr    net.Addr
 	decoder *PacketDecoder
-	cancel  context.CancelFunc
 	wg      sync.WaitGroup
 
 	acc telegraf.Accumulator
@@ -91,16 +89,16 @@ type input struct {
 }
 
 // Description answers a description of this input plugin
-func (s *SFlow_A10) Description() string {
+func (s *SFlowA10) Description() string {
 	return "SFlow_A10 V5 Protocol Listener"
 }
 
 // SampleConfig answers a sample configuration
-func (s *SFlow_A10) SampleConfig() string {
+func (s *SFlowA10) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *SFlow_A10) Init() error {
+func (s *SFlowA10) Init() error {
 	if s.A10DefinitionsFile == "" {
 		return errors.New("XML DefinitionsFile cannot be empty")
 	}
@@ -112,7 +110,7 @@ func (s *SFlow_A10) Init() error {
 	return s.initInternal(data)
 }
 
-func (s *SFlow_A10) initInternal(xmlData []byte) error {
+func (s *SFlowA10) initInternal(xmlData []byte) error {
 	s.decoder = NewDecoder()
 	s.decoder.Log = s.Log
 	counterBlocks, err := s.readA10XMLData(xmlData)
@@ -126,7 +124,7 @@ func (s *SFlow_A10) initInternal(xmlData []byte) error {
 }
 
 // Start starts this sFlow_A10 listener listening on the configured network for sFlow packets
-func (s *SFlow_A10) Start(acc telegraf.Accumulator) error {
+func (s *SFlowA10) Start(acc telegraf.Accumulator) error {
 	s.decoder.OnPacket(func(p *V5Format) {
 		metrics, err := makeMetricsForCounters(p, s.decoder)
 		if err != nil {
@@ -201,16 +199,19 @@ func (s *SFlow_A10) Start(acc telegraf.Accumulator) error {
 }
 
 // Gather is a NOOP for sFlow as it receives, asynchronously, sFlow network packets
-func (s *SFlow_A10) Gather(_ telegraf.Accumulator) error {
+func (s *SFlowA10) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *SFlow_A10) Stop() {
+func (s *SFlowA10) Stop() {
 	s.Log.Infof("Stopping the sflow_a10 service")
 	close(s.done)
 	s.Lock()
 	if s.UDPlistener != nil {
-		s.UDPlistener.Close()
+		err := s.UDPlistener.Close()
+		if err != nil {
+			s.acc.AddError(err)
+		}
 	}
 	s.Unlock()
 	s.wg.Wait()
@@ -221,12 +222,12 @@ func (s *SFlow_A10) Stop() {
 	s.Unlock()
 }
 
-func (s *SFlow_A10) Address() net.Addr {
+func (s *SFlowA10) Address() net.Addr {
 	return s.addr
 }
 
-func (s *SFlow_A10) udpListen(conn *net.UDPConn) {
-	buf := make([]byte, UDP_MAX_PACKET_SIZE)
+func (s *SFlowA10) udpListen(conn *net.UDPConn) {
+	buf := make([]byte, UDPMaxPacketSize)
 	for {
 		select {
 		case <-s.done:
@@ -244,7 +245,11 @@ func (s *SFlow_A10) udpListen(conn *net.UDPConn) {
 			s.SflowUDPBytesRecv.Incr(int64(n))
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
-			b.Write(buf[:n])
+			_, err = b.Write(buf[:n])
+			if err != nil {
+				s.acc.AddError(err)
+			}
+
 			select {
 			case s.in <- input{
 				Buffer: b,
@@ -260,15 +265,14 @@ func (s *SFlow_A10) udpListen(conn *net.UDPConn) {
 				}
 			}
 		}
-
 	}
 }
 
-func (s *SFlow_A10) parse() error {
+func (s *SFlowA10) parse() {
 	for {
 		select {
 		case <-s.done:
-			return nil
+			return
 		case in := <-s.in:
 			start := time.Now()
 			if err := s.decoder.Decode(in.Buffer); err != nil {
@@ -296,7 +300,7 @@ func listenUDP(network string, address string) (*net.UDPConn, error) {
 // init registers this SFlow_A10 input plug in with the Telegraf framework
 func init() {
 	inputs.Add("sflow_a10", func() telegraf.Input {
-		return &SFlow_A10{
+		return &SFlowA10{
 			AllowedPendingMessages: defaultAllowPendingMessage,
 		}
 	})
