@@ -1,6 +1,7 @@
 # UPSD Input Plugin
 
-This plugin reads data of one or more Uninterruptible Power Supplies from an upsd daemon using its NUT network protocol.
+This plugin reads data of one or more Uninterruptible Power Supplies 
+from an upsd daemon using its NUT network protocol.
 
 ### Requirements
 
@@ -21,7 +22,7 @@ upsd should be installed and it's daemon should be running.
   # opTimeout = "10s"
 ```
 
-### Metrics
+## Metrics
 This implementation tries to maintain compatibility with the apcupsd metrics:
 
 - upsd
@@ -51,7 +52,7 @@ With the exception of:
 - fields:
   - time_on_battery_ns
 
-### Example output
+## Example Output
 
 ```
 upsd,serial=AS1231515,ups_name=name1 load_percent=9.7,time_left_ns=9800000,output_voltage=230.4,internal_temp=32.4,battery_voltage=27.4,input_frequency=50.2,input_voltage=230.4,battery_charge_percent=100,status_flags=8i 1490035922000000000
