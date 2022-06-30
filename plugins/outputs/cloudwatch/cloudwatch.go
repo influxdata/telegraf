@@ -5,8 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"math"
-	"net"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -16,9 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	internalaws "github.com/influxdata/telegraf/config/aws"
-	internalProxy "github.com/influxdata/telegraf/plugins/common/proxy"
+
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -38,8 +36,7 @@ type CloudWatch struct {
 
 	internalaws.CredentialConfig
 
-	internalProxy.HTTPProxy
-	Timeout config.Duration `toml:"timeout"`
+	httpconfig.HTTPClientConfig
 }
 
 type statisticType int
@@ -167,13 +164,15 @@ func (*CloudWatch) SampleConfig() string {
 }
 
 func (c *CloudWatch) Connect() error {
-	proxy, err := c.HTTPProxy.Proxy()
+
+	cfg, err := c.CredentialConfig.Credentials()
 
 	if err != nil {
 		return err
 	}
 
-	cfg, err := c.CredentialConfig.Credentials()
+	ctx := context.Background()
+	client, err := c.HTTPClientConfig.CreateClient(ctx, c.Log)
 
 	if err != nil {
 		return err
@@ -182,23 +181,7 @@ func (c *CloudWatch) Connect() error {
 	c.svc = cloudwatch.NewFromConfig(cfg, func(options *cloudwatch.Options) {
 		// Disable logging
 		options.ClientLogMode = 0
-
-		options.HTTPClient = &http.Client{
-			// use values from DefaultTransport
-			Transport: &http.Transport{
-				Proxy: proxy,
-				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-					DualStack: true,
-				}).DialContext,
-				MaxIdleConns:          100,
-				IdleConnTimeout:       90 * time.Second,
-				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 1 * time.Second,
-			},
-			Timeout: time.Duration(c.Timeout),
-		}
+		options.HTTPClient = client
 	})
 
 	return nil
