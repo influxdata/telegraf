@@ -94,7 +94,7 @@ func (g *Graphite) checkEOF(conn net.Conn) {
 	b := make([]byte, 1024)
 
 	if err := conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond)); err != nil {
-		g.Log.Errorf("Couldn't set read deadline for connection %s. closing conn explicitly", conn)
+		g.Log.Errorf("Couldn't set read deadline for connection due to error %v with remote address %s. closing conn explicitly", err, conn.RemoteAddr().String())
 		_ = conn.Close()
 		return
 	}
