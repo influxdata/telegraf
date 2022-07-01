@@ -94,7 +94,13 @@ func (g *Gatherer) generatePoints(metric Metric, responses []ReadResponse) ([]po
 		}
 
 		pb := NewPointBuilder(metric, response.RequestAttributes, response.RequestPath)
-		for _, point := range pb.Build(metric.Mbean, response.Value) {
+		ps, err := pb.Build(metric.Mbean, response.Value)
+		if err != nil {
+			errors = append(errors, err)
+			continue
+		}
+
+		for _, point := range ps {
 			if response.RequestTarget != "" {
 				point.Tags["jolokia_agent_url"] = response.RequestTarget
 			}
