@@ -153,21 +153,24 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 				return connErr
 			}
 
-			for _, jsSub := range n.JsSubjects {
-				sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
-					n.in <- m
-				})
-				if err != nil {
-					return err
-				}
+			if n.jsConn == nil {
 
-				// set the subscription pending limits
-				err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
-				if err != nil {
-					return err
-				}
+				for _, jsSub := range n.JsSubjects {
+					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
+						n.in <- m
+					})
+					if err != nil {
+						return err
+					}
 
-				n.jsSubs = append(n.jsSubs, sub)
+					// set the subscription pending limits
+					err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+					if err != nil {
+						return err
+					}
+
+					n.jsSubs = append(n.jsSubs, sub)
+				}
 			}
 		}
 	}
@@ -229,14 +232,14 @@ func (n *natsConsumer) clean() {
 	for _, sub := range n.subs {
 		if err := sub.Unsubscribe(); err != nil {
 			n.Log.Errorf("Error unsubscribing from subject %s in queue %s: %s",
-				sub.Subject, sub.Queue, err.Error())
+				sub.Subject, sub.Queue, err)
 		}
 	}
 
 	for _, sub := range n.jsSubs {
 		if err := sub.Unsubscribe(); err != nil {
 			n.Log.Errorf("Error unsubscribing from subject %s in queue %s: %s",
-				sub.Subject, sub.Queue, err.Error())
+				sub.Subject, sub.Queue, err)
 		}
 	}
 
