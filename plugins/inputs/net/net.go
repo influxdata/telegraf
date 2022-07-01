@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package net
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"strings"
@@ -11,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type NetIOStats struct {
 	filter filter.Filter
 	ps     system.PS
@@ -20,36 +26,18 @@ type NetIOStats struct {
 	Interfaces          []string
 }
 
-func (_ *NetIOStats) Description() string {
-	return "Read metrics about network interface usage"
+func (*NetIOStats) SampleConfig() string {
+	return sampleConfig
 }
 
-var netSampleConfig = `
-  ## By default, telegraf gathers stats from any up interface (excluding loopback)
-  ## Setting interfaces will tell it to gather these explicit interfaces,
-  ## regardless of status.
-  ##
-  # interfaces = ["eth0"]
-  ##
-  ## On linux systems telegraf also collects protocol stats.
-  ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
-  ##
-  # ignore_protocol_stats = false
-  ##
-`
-
-func (_ *NetIOStats) SampleConfig() string {
-	return netSampleConfig
-}
-
-func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
-	netio, err := s.ps.NetIO()
+func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
+	netio, err := n.ps.NetIO()
 	if err != nil {
 		return fmt.Errorf("error getting net io info: %s", err)
 	}
 
-	if s.filter == nil {
-		if s.filter, err = filter.Compile(s.Interfaces); err != nil {
+	if n.filter == nil {
+		if n.filter, err = filter.Compile(n.Interfaces); err != nil {
 			return fmt.Errorf("error compiling filter: %s", err)
 		}
 	}
@@ -64,17 +52,17 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, io := range netio {
-		if len(s.Interfaces) != 0 {
+		if len(n.Interfaces) != 0 {
 			var found bool
 
-			if s.filter.Match(io.Name) {
+			if n.filter.Match(io.Name) {
 				found = true
 			}
 
 			if !found {
 				continue
 			}
-		} else if !s.skipChecks {
+		} else if !n.skipChecks {
 			iface, ok := interfacesByName[io.Name]
 			if !ok {
 				continue
@@ -108,8 +96,8 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 
 	// Get system wide stats for different network protocols
 	// (ignore these stats if the call fails)
-	if !s.IgnoreProtocolStats {
-		netprotos, _ := s.ps.NetProto()
+	if !n.IgnoreProtocolStats {
+		netprotos, _ := n.ps.NetProto()
 		fields := make(map[string]interface{})
 		for _, proto := range netprotos {
 			for stat, value := range proto.Stats {

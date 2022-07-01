@@ -10,11 +10,11 @@ func ParseCiphers(ciphers []string) ([]uint16, error) {
 	suites := []uint16{}
 
 	for _, cipher := range ciphers {
-		if v, ok := tlsCipherMap[cipher]; ok {
-			suites = append(suites, v)
-		} else {
+		v, ok := tlsCipherMap[cipher]
+		if !ok {
 			return nil, fmt.Errorf("unsupported cipher %q", cipher)
 		}
+		suites = append(suites, v)
 	}
 
 	return suites, nil

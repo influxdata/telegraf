@@ -42,11 +42,11 @@ type CounterSample struct {
 	CounterRecords []CounterRecord
 }
 
-func (c *CounterSample) NeedsIpAndPort() bool {
+func (c *CounterSample) NeedsIPAndPort() bool {
 	if c.CounterRecords == nil || len(c.CounterRecords) == 0 {
 		return false
 	}
-	return c.CounterRecords[0].NeedsIpAndPort
+	return c.CounterRecords[0].NeedsIPAndPort
 }
 
 type CounterFormatType uint32
@@ -54,7 +54,7 @@ type CounterFormatType uint32
 type CounterRecord struct {
 	CounterFormat      CounterFormatType
 	CounterData        *CounterData
-	NeedsIpAndPort     bool
+	NeedsIPAndPort     bool
 	IsEthernetCounters bool
 }
 
@@ -224,9 +224,9 @@ func portTypeIntToString(portType uint8) string {
 
 // readA10XMLData parses the A10 XML definitions file and returns a map with tag as key and counter information as value
 // moreover, it does some processing on the FieldName strings so they are compatible with different timeseries storage backends
-func (s *SFlow_A10) readA10XMLData(data []byte) (map[uint32]CounterBlock, error) {
+func (s *SFlowA10) readA10XMLData(data []byte) (map[uint32]CounterBlock, error) {
 	var allCounterBlocks Allctrblocks
-	if err := xml.Unmarshal([]byte(data), &allCounterBlocks); err != nil {
+	if err := xml.Unmarshal(data, &allCounterBlocks); err != nil {
 		return nil, err
 	}
 

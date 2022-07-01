@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var logstashTest = NewLogstash()
@@ -16,6 +17,7 @@ var logstashTest = NewLogstash()
 var (
 	logstash5accPipelineStats  testutil.Accumulator
 	logstash6accPipelinesStats testutil.Accumulator
+	logstash7accPipelinesStats testutil.Accumulator
 	logstash5accProcessStats   testutil.Accumulator
 	logstash6accProcessStats   testutil.Accumulator
 	logstash5accJVMStats       testutil.Accumulator
@@ -25,28 +27,24 @@ var (
 func Test_Logstash5GatherProcessStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash5ProcessJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash5ProcessJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
-
-		if err != nil {
-			test.Logf("Can't createHttpClient")
-		}
+		client, err := logstashTest.createHTTPClient()
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash5accProcessStats); err != nil {
-		test.Logf("Can't gather Process stats")
-	}
+	err = logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash5accProcessStats)
+	require.NoError(test, err, "Can't gather Process stats")
 
 	logstash5accProcessStats.AssertContainsTaggedFields(
 		test,
@@ -74,28 +72,24 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 func Test_Logstash6GatherProcessStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash6ProcessJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash6ProcessJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
-
-		if err != nil {
-			test.Logf("Can't createHttpClient")
-		}
+		client, err := logstashTest.createHTTPClient()
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash6accProcessStats); err != nil {
-		test.Logf("Can't gather Process stats")
-	}
+	err = logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash6accProcessStats)
+	require.NoError(test, err, "Can't gather Process stats")
 
 	logstash6accProcessStats.AssertContainsTaggedFields(
 		test,
@@ -124,28 +118,24 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	//logstash5accPipelineStats.SetDebug(true)
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash5PipelineJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash5PipelineJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
-
-		if err != nil {
-			test.Logf("Can't createHttpClient")
-		}
+		client, err := logstashTest.createHTTPClient()
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherPipelineStats(logstashTest.URL+pipelineStats, &logstash5accPipelineStats); err != nil {
-		test.Logf("Can't gather Pipeline stats")
-	}
+	err = logstashTest.gatherPipelineStats(logstashTest.URL+pipelineStats, &logstash5accPipelineStats)
+	require.NoError(test, err, "Can't gather Pipeline stats")
 
 	logstash5accPipelineStats.AssertContainsTaggedFields(
 		test,
@@ -226,28 +216,24 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	//logstash6accPipelinesStats.SetDebug(true)
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash6PipelinesJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash6PipelinesJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
-
-		if err != nil {
-			test.Logf("Can't createHttpClient")
-		}
+		client, err := logstashTest.createHTTPClient()
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStats, &logstash6accPipelinesStats); err != nil {
-		test.Logf("Can't gather Pipeline stats")
-	}
+	err = logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStats, &logstash6accPipelinesStats)
+	require.NoError(test, err, "Can't gather Pipeline stats")
 
 	fields := make(map[string]interface{})
 	fields["duration_in_millis"] = float64(8540751.0)
@@ -549,34 +535,29 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 			"queue_type":   string("persisted"),
 		},
 	)
-
 }
 
 func Test_Logstash5GatherJVMStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash5JvmJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash5JvmJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
-
-		if err != nil {
-			test.Logf("Can't createHttpClient")
-		}
+		client, err := logstashTest.createHTTPClient()
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash5accJVMStats); err != nil {
-		test.Logf("Can't gather JVM stats")
-	}
+	err = logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash5accJVMStats)
+	require.NoError(test, err, "Can't gather JVM stats")
 
 	logstash5accJVMStats.AssertContainsTaggedFields(
 		test,
@@ -618,34 +599,29 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 			"node_version": string("5.3.0"),
 		},
 	)
-
 }
 
 func Test_Logstash6GatherJVMStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash6JvmJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash6JvmJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
-
-		if err != nil {
-			test.Logf("Can't createHttpClient")
-		}
+		client, err := logstashTest.createHTTPClient()
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash6accJVMStats); err != nil {
-		test.Logf("Can't gather JVM stats")
-	}
+	err = logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash6accJVMStats)
+	require.NoError(test, err, "Can't gather JVM stats")
 
 	logstash6accJVMStats.AssertContainsTaggedFields(
 		test,
@@ -687,5 +663,131 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 			"node_version": string("6.4.2"),
 		},
 	)
+}
 
+func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, err := fmt.Fprintf(writer, "%s", string(logstash7PipelinesJSON))
+		if err != nil {
+			test.Logf("Can't print test json")
+		}
+	}))
+	requestURL, err := url.Parse(logstashTest.URL)
+	if err != nil {
+		test.Logf("Can't connect to: %s", logstashTest.URL)
+	}
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
+	fakeServer.Start()
+	defer fakeServer.Close()
+
+	if logstashTest.client == nil {
+		client, err := logstashTest.createHTTPClient()
+
+		if err != nil {
+			test.Logf("Can't createHTTPClient")
+		}
+		logstashTest.client = client
+	}
+
+	if err := logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStats, &logstash7accPipelinesStats); err != nil {
+		test.Logf("Can't gather Pipeline stats")
+	}
+
+	fields := make(map[string]interface{})
+	fields["duration_in_millis"] = float64(3032875.0)
+	fields["queue_push_duration_in_millis"] = float64(13300.0)
+	fields["in"] = float64(2665549.0)
+	fields["filtered"] = float64(2665549.0)
+	fields["out"] = float64(2665549.0)
+
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_events",
+		fields,
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+		},
+	)
+
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"duration_in_millis": float64(2802177.0),
+			"in":                 float64(2665549.0),
+			"out":                float64(2665549.0),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
+		},
+	)
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"bulk_requests_successes":     float64(2870),
+			"bulk_requests_responses_200": float64(2870),
+			"bulk_requests_failures":      float64(262),
+			"bulk_requests_with_errors":   float64(9089),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
+		},
+	)
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"documents_successes":          float64(2665549),
+			"documents_retryable_failures": float64(13733),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
+		},
+	)
+
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_queue",
+		map[string]interface{}{
+			"events":                  float64(0),
+			"max_queue_size_in_bytes": float64(4294967296),
+			"queue_size_in_bytes":     float64(32028566),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"queue_type":   string("persisted"),
+		},
+	)
 }

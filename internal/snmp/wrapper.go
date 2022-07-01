@@ -5,8 +5,9 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
 )
 
 // GosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
@@ -15,54 +16,23 @@ type GosnmpWrapper struct {
 }
 
 // Host returns the value of GoSNMP.Target.
-func (gsw GosnmpWrapper) Host() string {
-	return gsw.Target
+func (gs GosnmpWrapper) Host() string {
+	return gs.Target
 }
 
 // Walk wraps GoSNMP.Walk() or GoSNMP.BulkWalk(), depending on whether the
 // connection is using SNMPv1 or newer.
-// Also, if any error is encountered, it will just once reconnect and try again.
-func (gsw GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
-	var err error
-	// On error, retry once.
-	// Unfortunately we can't distinguish between an error returned by gosnmp, and one returned by the walk function.
-	for i := 0; i < 2; i++ {
-		if gsw.Version == gosnmp.Version1 {
-			err = gsw.GoSNMP.Walk(oid, fn)
-		} else {
-			err = gsw.GoSNMP.BulkWalk(oid, fn)
-		}
-		if err == nil {
-			return nil
-		}
-		if err := gsw.GoSNMP.Connect(); err != nil {
-			return fmt.Errorf("reconnecting: %w", err)
-		}
+func (gs GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
+	if gs.Version == gosnmp.Version1 {
+		return gs.GoSNMP.Walk(oid, fn)
 	}
-	return err
-}
-
-// Get wraps GoSNMP.GET().
-// If any error is encountered, it will just once reconnect and try again.
-func (gsw GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
-	var err error
-	var pkt *gosnmp.SnmpPacket
-	for i := 0; i < 2; i++ {
-		pkt, err = gsw.GoSNMP.Get(oids)
-		if err == nil {
-			return pkt, nil
-		}
-		if err := gsw.GoSNMP.Connect(); err != nil {
-			return nil, fmt.Errorf("reconnecting: %w", err)
-		}
-	}
-	return nil, err
+	return gs.GoSNMP.BulkWalk(oid, fn)
 }
 
 func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	gs := GosnmpWrapper{&gosnmp.GoSNMP{}}
 
-	gs.Timeout = s.Timeout.Duration
+	gs.Timeout = time.Duration(s.Timeout)
 
 	gs.Retries = s.Retries
 
@@ -112,6 +82,14 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 			sp.AuthenticationProtocol = gosnmp.MD5
 		case "sha":
 			sp.AuthenticationProtocol = gosnmp.SHA
+		case "sha224":
+			sp.AuthenticationProtocol = gosnmp.SHA224
+		case "sha256":
+			sp.AuthenticationProtocol = gosnmp.SHA256
+		case "sha384":
+			sp.AuthenticationProtocol = gosnmp.SHA384
+		case "sha512":
+			sp.AuthenticationProtocol = gosnmp.SHA512
 		case "":
 			sp.AuthenticationProtocol = gosnmp.NoAuth
 		default:
@@ -125,6 +103,14 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 			sp.PrivacyProtocol = gosnmp.DES
 		case "aes":
 			sp.PrivacyProtocol = gosnmp.AES
+		case "aes192":
+			sp.PrivacyProtocol = gosnmp.AES192
+		case "aes192c":
+			sp.PrivacyProtocol = gosnmp.AES192C
+		case "aes256":
+			sp.PrivacyProtocol = gosnmp.AES256
+		case "aes256c":
+			sp.PrivacyProtocol = gosnmp.AES256C
 		case "":
 			sp.PrivacyProtocol = gosnmp.NoPriv
 		default:
@@ -156,11 +142,14 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 		return err
 	}
 
+	// Only allow udp{4,6} and tcp{4,6}.
+	// Allowing ip{4,6} does not make sense as specifying a port
+	// requires the specification of a protocol.
+	// gosnmp does not handle these errors well, which is why
+	// they can result in cryptic errors by net.Dial.
 	switch u.Scheme {
-	case "tcp":
-		gs.Transport = "tcp"
-	case "", "udp":
-		gs.Transport = "udp"
+	case "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6":
+		gs.Transport = u.Scheme
 	default:
 		return fmt.Errorf("unsupported scheme: %v", u.Scheme)
 	}
@@ -176,5 +165,13 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 		return fmt.Errorf("parsing port: %w", err)
 	}
 	gs.Port = uint16(port)
+	return nil
+}
+
+func (gs GosnmpWrapper) Reconnect() error {
+	if gs.Conn == nil {
+		return gs.Connect()
+	}
+
 	return nil
 }

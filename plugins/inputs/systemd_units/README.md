@@ -1,19 +1,22 @@
 # systemd Units Input Plugin
 
 The systemd_units plugin gathers systemd unit status on Linux. It relies on
-`systemctl list-units --all --type=service` to collect data on service status.
+`systemctl list-units [PATTERN] --all --plain --type=service` to collect data on
+service status.
 
 The results are tagged with the unit name and provide enumerated fields for
 loaded, active and running fields, indicating the unit health.
 
-This plugin is related to the [win_services module](/plugins/inputs/win_services/), which
-fulfills the same purpose on windows.
+This plugin is related to the [win_services module](../win_services/README.md),
+which fulfills the same purpose on windows.
 
 In addition to services, this plugin can gather other unit types as well,
 see `systemctl list-units --all --type help` for possible options.
 
-### Configuration
-```toml
+## Configuration
+
+```toml @sample.conf
+# Gather systemd units state
 [[inputs.systemd_units]]
   ## Set timeout for systemctl execution
   # timeout = "1s"
@@ -22,9 +25,17 @@ see `systemctl list-units --all --type help` for possible options.
   ## values are "socket", "target", "device", "mount", "automount", "swap",
   ## "timer", "path", "slice" and "scope ":
   # unittype = "service"
+  #
+  ## Filter for a specific pattern, default is "" (i.e. all), other possible
+  ## values are valid pattern for systemctl, e.g. "a*" for all units with
+  ## names starting with "a"
+  # pattern = ""
+  ## pattern = "telegraf* influxdb*"
+  ## pattern = "a*"
 ```
 
-### Metrics
+## Metrics
+
 - systemd_units:
   - tags:
     - name (string, unit name)
@@ -36,9 +47,9 @@ see `systemctl list-units --all --type help` for possible options.
     - active_code (int, see below)
     - sub_code (int, see below)
 
-#### Load
+### Load
 
-enumeration of [unit_load_state_table](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L87)
+enumeration of [unit_load_state_table][1]
 
 | Value | Meaning     | Description                     |
 | ----- | -------     | -----------                     |
@@ -50,9 +61,11 @@ enumeration of [unit_load_state_table](https://github.com/systemd/systemd/blob/c
 | 5     | merged      | unit is ~                       |
 | 6     | masked      | unit is ~                       |
 
-#### Active
+[1]: https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L87
 
-enumeration of [unit_active_state_table](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L99)
+### Active
+
+enumeration of [unit_active_state_table][2]
 
 | Value | Meaning   | Description                        |
 | ----- | -------   | -----------                        |
@@ -63,11 +76,12 @@ enumeration of [unit_active_state_table](https://github.com/systemd/systemd/blob
 | 4     | activating   | unit is ~                       |
 | 5     | deactivating | unit is ~                       |
 
-#### Sub
+[2]: https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L99
 
-enumeration of sub states, see various [unittype_state_tables](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163);
-duplicates were removed, tables are hex aligned to keep some space for future
-values
+### Sub
+
+enumeration of sub states, see various [unittype_state_tables][3]; duplicates
+were removed, tables are hex aligned to keep some space for future values
 
 | Value  | Meaning               | Description                         |
 | -----  | -------               | -----------                         |
@@ -125,9 +139,11 @@ values
 | 0x00a0 | elapsed               | unit is ~                           |
 |        |                       |                                     |
 
-### Example Output
+[3]: https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163
 
-```
+## Example Output
+
+```shell
 systemd_units,host=host1.example.com,name=dbus.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
 systemd_units,host=host1.example.com,name=networking.service,load=loaded,active=failed,sub=failed load_code=0i,active_code=3i,sub_code=12i 1533730725000000000
 systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000

@@ -2,7 +2,7 @@ package shim
 
 import (
 	"fmt"
-	"log"
+	"log" //nolint:revive // Allow exceptional but valid use of log here.
 	"os"
 	"reflect"
 
@@ -66,7 +66,7 @@ func (l *Logger) Info(args ...interface{}) {
 // setLoggerOnPlugin injects the logger into the plugin,
 // if it defines Log telegraf.Logger. This is sort of like SetLogger but using
 // reflection instead of forcing the plugin author to define the function for it
-func setLoggerOnPlugin(i interface{}, log telegraf.Logger) {
+func setLoggerOnPlugin(i interface{}, logger telegraf.Logger) {
 	valI := reflect.ValueOf(i)
 
 	if valI.Type().Kind() != reflect.Ptr {
@@ -78,12 +78,9 @@ func setLoggerOnPlugin(i interface{}, log telegraf.Logger) {
 		return
 	}
 
-	switch field.Type().String() {
-	case "telegraf.Logger":
+	if field.Type().String() == "telegraf.Logger" {
 		if field.CanSet() {
-			field.Set(reflect.ValueOf(log))
+			field.Set(reflect.ValueOf(logger))
 		}
 	}
-
-	return
 }

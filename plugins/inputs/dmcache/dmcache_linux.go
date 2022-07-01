@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package dmcache
@@ -61,7 +62,7 @@ func (c *DMCache) Gather(acc telegraf.Accumulator) error {
 
 func parseDMSetupStatus(line string) (cacheStatus, error) {
 	var err error
-	parseError := errors.New("Output from dmsetup could not be parsed")
+	parseError := errors.New("output from dmsetup could not be parsed")
 	status := cacheStatus{}
 	values := strings.Fields(line)
 	if len(values) < 15 {

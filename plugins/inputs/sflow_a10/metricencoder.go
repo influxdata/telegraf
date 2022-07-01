@@ -26,7 +26,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 
 		// this is for packets tagged 293 and 294
 		// as per A10, each packet that contains counter block tagged 293 or 294 is just a single sample
-		if !sample.SampleCounterData.NeedsIpAndPort() {
+		if !sample.SampleCounterData.NeedsIPAndPort() {
 			if len(sample.SampleCounterData.CounterRecords) != 1 {
 				d.Log.Error("  SampleCounterData.CounterRecords with false NeedsIpPort has length != 1")
 				continue
@@ -52,11 +52,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 			}
 
 			if len(counterFields) > 0 {
-				m, err := metric.New("sflow_a10", counterTags, counterFields, now)
-				if err != nil {
-					d.debug(fmt.Sprintf("  error sending new metric to telegraf %s", err))
-					return nil, err
-				}
+				m := metric.New("sflow_a10", counterTags, counterFields, now)
 
 				d.debug(fmt.Sprintf("  sending 293 or 294 metric to telegraf %s", m))
 				metrics = append(metrics, m)
@@ -101,11 +97,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 			}
 
 			if len(counterFields) > 0 {
-				m, err := metric.New("sflow_a10", counterTags, counterFields, now)
-				if err != nil {
-					d.debug(fmt.Sprintf("  error sending new metric to telegraf %s", err))
-					return nil, err
-				}
+				m := metric.New("sflow_a10", counterTags, counterFields, now)
 
 				metrics = append(metrics, m)
 			}

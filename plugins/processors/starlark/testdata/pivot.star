@@ -4,10 +4,10 @@ In this example it pivots the value of key `sensor`
 to be the key of the value in key `value`
 
 Example Input:
-temperature sensor="001A0",value=111.48
+temperature sensor="001A0",value=111.48 1618488000000000999
 
 Example Output:
-temperature 001A0=111.48
+temperature 001A0=111.48 1618488000000000999
 '''
 
 def apply(metric):

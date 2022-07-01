@@ -1,21 +1,17 @@
 package tcp_listener
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
-	"os"
-	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/graphite"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
@@ -30,9 +26,9 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 `
 )
 
-func newTestTcpListener() (*TcpListener, chan []byte) {
+func newTestTCPListener() (*TCPListener, chan []byte) {
 	in := make(chan []byte, 1500)
-	listener := &TcpListener{
+	listener := &TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8194",
 		AllowedPendingMessages: 10000,
@@ -45,73 +41,77 @@ func newTestTcpListener() (*TcpListener, chan []byte) {
 
 // benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkTCP(b *testing.B) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8198",
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(b, err)
 	acc := &testutil.Accumulator{Discard: true}
 
 	// send multiple messages to socket
 	for n := 0; n < b.N; n++ {
-		err := listener.Start(acc)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(b, listener.Start(acc))
 
 		conn, err := net.Dial("tcp", "127.0.0.1:8198")
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(b, err)
 		for i := 0; i < 100000; i++ {
-			fmt.Fprintf(conn, testMsg)
+			_, err := fmt.Fprint(conn, testMsg)
+			require.NoError(b, err)
 		}
-		conn.(*net.TCPConn).CloseWrite()
+		require.NoError(b, conn.(*net.TCPConn).CloseWrite())
 		// wait for all 100,000 metrics to be processed
 		buf := []byte{0}
-		conn.Read(buf) // will EOF when completed
+		// will EOF when completed
+		_, err = conn.Read(buf)
+		require.NoError(b, err)
 		listener.Stop()
 	}
 }
 
 func TestHighTrafficTCP(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8199",
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
 
 	// send multiple messages to socket
-	err := listener.Start(acc)
-	require.NoError(t, err)
+	require.NoError(t, listener.Start(acc))
 
 	conn, err := net.Dial("tcp", "127.0.0.1:8199")
 	require.NoError(t, err)
 	for i := 0; i < 100000; i++ {
-		fmt.Fprintf(conn, testMsg)
+		_, err := fmt.Fprint(conn, testMsg)
+		require.NoError(t, err)
 	}
-	conn.(*net.TCPConn).CloseWrite()
+	require.NoError(t, conn.(*net.TCPConn).CloseWrite())
 	buf := []byte{0}
 	_, err = conn.Read(buf)
-	assert.Equal(t, err, io.EOF)
+	require.Equal(t, err, io.EOF)
 	listener.Stop()
 
-	assert.Equal(t, 100000, int(acc.NMetrics()))
+	require.Equal(t, 100000, int(acc.NMetrics()))
 }
 
 func TestConnectTCP(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8194",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -121,7 +121,8 @@ func TestConnectTCP(t *testing.T) {
 	require.NoError(t, err)
 
 	// send single message to socket
-	fmt.Fprintf(conn, testMsg)
+	_, err = fmt.Fprint(conn, testMsg)
+	require.NoError(t, err)
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
@@ -129,7 +130,8 @@ func TestConnectTCP(t *testing.T) {
 	)
 
 	// send multiple messages to socket
-	fmt.Fprintf(conn, testMsgs)
+	_, err = fmt.Fprint(conn, testMsgs)
+	require.NoError(t, err)
 	acc.Wait(6)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
@@ -143,91 +145,99 @@ func TestConnectTCP(t *testing.T) {
 
 // Test that MaxTCPConnections is respected
 func TestConcurrentConns(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8195",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	_, err := net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8195")
+	require.NoError(t, err)
 
 	// Connection over the limit:
 	conn, err := net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
-	net.Dial("tcp", "127.0.0.1:8195")
+	require.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8195")
+	require.NoError(t, err)
 	buf := make([]byte, 1500)
 	n, err := conn.Read(buf)
-	assert.NoError(t, err)
-	assert.Equal(t,
+	require.NoError(t, err)
+	require.Equal(t,
 		"Telegraf maximum concurrent TCP connections (2) reached, closing.\n"+
 			"You may want to increase max_tcp_connections in"+
 			" the Telegraf tcp listener configuration.\n",
 		string(buf[:n]))
 
 	_, err = conn.Read(buf)
-	assert.Equal(t, io.EOF, err)
+	require.Equal(t, io.EOF, err)
 }
 
 // Test that MaxTCPConnections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8196",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      1,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	_, err := net.Dial("tcp", "127.0.0.1:8196")
-	assert.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8196")
+	require.NoError(t, err)
 
 	// Connection over the limit:
 	conn, err := net.Dial("tcp", "127.0.0.1:8196")
-	assert.NoError(t, err)
-	net.Dial("tcp", "127.0.0.1:8196")
+	require.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8196")
+	require.NoError(t, err)
 	buf := make([]byte, 1500)
 	n, err := conn.Read(buf)
-	assert.NoError(t, err)
-	assert.Equal(t,
+	require.NoError(t, err)
+	require.Equal(t,
 		"Telegraf maximum concurrent TCP connections (1) reached, closing.\n"+
 			"You may want to increase max_tcp_connections in"+
 			" the Telegraf tcp listener configuration.\n",
 		string(buf[:n]))
 
 	_, err = conn.Read(buf)
-	assert.Equal(t, io.EOF, err)
+	require.Equal(t, io.EOF, err)
 }
 
 // Test that MaxTCPConnections is respected
 func TestCloseConcurrentConns(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8195",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 
-	_, err := net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8195")
+	require.NoError(t, err)
 
 	listener.Stop()
 }
@@ -235,17 +245,19 @@ func TestCloseConcurrentConns(t *testing.T) {
 func TestRunParser(t *testing.T) {
 	var testmsg = []byte(testMsg)
 
-	listener, in := newTestTcpListener()
+	listener, in := newTestTCPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -257,43 +269,39 @@ func TestRunParser(t *testing.T) {
 func TestRunParserInvalidMsg(t *testing.T) {
 	var testmsg = []byte("cpu_load_short")
 
-	listener, in := newTestTcpListener()
-	acc := testutil.Accumulator{}
-	listener.acc = &acc
-	defer close(listener.done)
+	listener, in := newTestTCPListener()
+	listener.Log = &testutil.CaptureLogger{}
+	listener.acc = &testutil.Accumulator{}
 
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 	listener.wg.Add(1)
-
-	buf := bytes.NewBuffer(nil)
-	log.SetOutput(buf)
-	defer log.SetOutput(os.Stderr)
 
 	go listener.tcpParser()
 	in <- testmsg
 
-	scnr := bufio.NewScanner(buf)
-	for scnr.Scan() {
-		if strings.Contains(scnr.Text(), fmt.Sprintf(malformedwarn, 1)) {
-			break
-		}
-	}
+	listener.Stop()
+	errmsg := listener.Log.(*testutil.CaptureLogger).LastError
+	require.Contains(t, errmsg, "tcp_listener has received 1 malformed packets thus far.")
 }
 
 func TestRunParserGraphiteMsg(t *testing.T) {
 	var testmsg = []byte("cpu.load.graphite 12 1454780029")
 
-	listener, in := newTestTcpListener()
+	listener, in := newTestTCPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewGraphiteParser("_", []string{}, nil)
+	p := graphite.Parser{Separator: "_", Templates: []string{}}
+	require.NoError(t, p.Init())
+	listener.parser = &p
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_graphite",
@@ -303,20 +311,20 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 func TestRunParserJSONMsg(t *testing.T) {
 	var testmsg = []byte("{\"a\": 5, \"b\": {\"c\": 6}}\n")
 
-	listener, in := newTestTcpListener()
+	listener, in := newTestTCPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "udp_json_test",
-	})
+	parser := &json.Parser{MetricName: "udp_json_test"}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
+
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "udp_json_test",

@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package gnmi
 
 import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,17 +16,23 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gnxi/utils/xpath"
+	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
-	"github.com/openconfig/gnmi/proto/gnmi"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // gNMI plugin instance
 type GNMI struct {
@@ -44,17 +52,20 @@ type GNMI struct {
 	Password string
 
 	// Redial
-	Redial internal.Duration
+	Redial config.Duration
 
 	// GRPC TLS settings
 	EnableTLS bool `toml:"enable_tls"`
 	internaltls.ClientConfig
 
 	// Internal state
-	aliases map[string]string
-	acc     telegraf.Accumulator
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
+	internalAliases map[string]string
+	acc             telegraf.Accumulator
+	cancel          context.CancelFunc
+	wg              sync.WaitGroup
+	// Lookup/device+name/key/value
+	lookup      map[string]map[string]map[string]interface{}
+	lookupMutex sync.Mutex
 
 	Log telegraf.Logger
 }
@@ -66,12 +77,19 @@ type Subscription struct {
 	Path   string
 
 	// Subscription mode and interval
-	SubscriptionMode string            `toml:"subscription_mode"`
-	SampleInterval   internal.Duration `toml:"sample_interval"`
+	SubscriptionMode string          `toml:"subscription_mode"`
+	SampleInterval   config.Duration `toml:"sample_interval"`
 
 	// Duplicate suppression
-	SuppressRedundant bool              `toml:"suppress_redundant"`
-	HeartbeatInterval internal.Duration `toml:"heartbeat_interval"`
+	SuppressRedundant bool            `toml:"suppress_redundant"`
+	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
+
+	// Mark this subscription as a tag-only lookup source, not emitting any metric
+	TagOnly bool `toml:"tag_only"`
+}
+
+func (*GNMI) SampleConfig() string {
+	return sampleConfig
 }
 
 // Start the http listener service
@@ -79,14 +97,17 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	var err error
 	var ctx context.Context
 	var tlscfg *tls.Config
-	var request *gnmi.SubscribeRequest
+	var request *gnmiLib.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
+	c.lookupMutex.Lock()
+	c.lookup = make(map[string]map[string]map[string]interface{})
+	c.lookupMutex.Unlock()
 
 	// Validate configuration
 	if request, err = c.newSubscribeRequest(); err != nil {
 		return err
-	} else if c.Redial.Duration.Nanoseconds() <= 0 {
+	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
 
@@ -102,9 +123,9 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Invert explicit alias list and prefill subscription names
-	c.aliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases))
+	c.internalAliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases))
 	for _, subscription := range c.Subscriptions {
-		var gnmiLongPath, gnmiShortPath *gnmi.Path
+		var gnmiLongPath, gnmiShortPath *gnmiLib.Path
 
 		// Build the subscription path without keys
 		if gnmiLongPath, err = parsePath(subscription.Origin, subscription.Path, ""); err != nil {
@@ -114,8 +135,14 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		longPath, _ := c.handlePath(gnmiLongPath, nil, "")
-		shortPath, _ := c.handlePath(gnmiShortPath, nil, "")
+		longPath, _, err := c.handlePath(gnmiLongPath, nil, "")
+		if err != nil {
+			return fmt.Errorf("handling long-path failed: %v", err)
+		}
+		shortPath, _, err := c.handlePath(gnmiShortPath, nil, "")
+		if err != nil {
+			return fmt.Errorf("handling short-path failed: %v", err)
+		}
 		name := subscription.Name
 
 		// If the user didn't provide a measurement name, use last path element
@@ -123,12 +150,19 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			name = path.Base(shortPath)
 		}
 		if len(name) > 0 {
-			c.aliases[longPath] = name
-			c.aliases[shortPath] = name
+			c.internalAliases[longPath] = name
+			c.internalAliases[shortPath] = name
+		}
+
+		if subscription.TagOnly {
+			// Create the top-level lookup for this tag
+			c.lookupMutex.Lock()
+			c.lookup[name] = make(map[string]map[string]interface{})
+			c.lookupMutex.Unlock()
 		}
 	}
-	for alias, path := range c.Aliases {
-		c.aliases[path] = alias
+	for alias, encodingPath := range c.Aliases {
+		c.internalAliases[encodingPath] = alias
 	}
 
 	// Create a goroutine for each device, dial and subscribe
@@ -143,7 +177,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 
 				select {
 				case <-ctx.Done():
-				case <-time.After(c.Redial.Duration):
+				case <-time.After(time.Duration(c.Redial)):
 				}
 			}
 		}(addr)
@@ -152,24 +186,24 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 }
 
 // Create a new gNMI SubscribeRequest
-func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
+func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 	// Create subscription objects
-	subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
+	subscriptions := make([]*gnmiLib.Subscription, len(c.Subscriptions))
 	for i, subscription := range c.Subscriptions {
 		gnmiPath, err := parsePath(subscription.Origin, subscription.Path, "")
 		if err != nil {
 			return nil, err
 		}
-		mode, ok := gnmi.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]
+		mode, ok := gnmiLib.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]
 		if !ok {
 			return nil, fmt.Errorf("invalid subscription mode %s", subscription.SubscriptionMode)
 		}
-		subscriptions[i] = &gnmi.Subscription{
+		subscriptions[i] = &gnmiLib.Subscription{
 			Path:              gnmiPath,
-			Mode:              gnmi.SubscriptionMode(mode),
-			SampleInterval:    uint64(subscription.SampleInterval.Duration.Nanoseconds()),
+			Mode:              gnmiLib.SubscriptionMode(mode),
+			SampleInterval:    uint64(time.Duration(subscription.SampleInterval).Nanoseconds()),
 			SuppressRedundant: subscription.SuppressRedundant,
-			HeartbeatInterval: uint64(subscription.HeartbeatInterval.Duration.Nanoseconds()),
+			HeartbeatInterval: uint64(time.Duration(subscription.HeartbeatInterval).Nanoseconds()),
 		}
 	}
 
@@ -183,12 +217,12 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
-	return &gnmi.SubscribeRequest{
-		Request: &gnmi.SubscribeRequest_Subscribe{
-			Subscribe: &gnmi.SubscriptionList{
+	return &gnmiLib.SubscribeRequest{
+		Request: &gnmiLib.SubscribeRequest_Subscribe{
+			Subscribe: &gnmiLib.SubscriptionList{
 				Prefix:       gnmiPath,
-				Mode:         gnmi.SubscriptionList_STREAM,
-				Encoding:     gnmi.Encoding(gnmi.Encoding_value[strings.ToUpper(c.Encoding)]),
+				Mode:         gnmiLib.SubscriptionList_STREAM,
+				Encoding:     gnmiLib.Encoding(gnmiLib.Encoding_value[strings.ToUpper(c.Encoding)]),
 				Subscription: subscriptions,
 				UpdatesOnly:  c.UpdatesOnly,
 			},
@@ -197,7 +231,7 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 }
 
 // SubscribeGNMI and extract telemetry data
-func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmi.SubscribeRequest) error {
+func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
 	var opt grpc.DialOption
 	if tlscfg != nil {
 		opt = grpc.WithTransportCredentials(credentials.NewTLS(tlscfg))
@@ -211,7 +245,7 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	}
 	defer client.Close()
 
-	subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
+	subscribeClient, err := gnmiLib.NewGNMIClient(client).Subscribe(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to setup subscription: %v", err)
 	}
@@ -227,7 +261,7 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	c.Log.Debugf("Connection to gNMI device %s established", address)
 	defer c.Log.Debugf("Connection to gNMI device %s closed", address)
 	for ctx.Err() == nil {
-		var reply *gnmi.SubscribeResponse
+		var reply *gnmiLib.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
 			if err != io.EOF && ctx.Err() == nil {
 				return fmt.Errorf("aborted gNMI subscription: %v", err)
@@ -240,21 +274,27 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	return nil
 }
 
-// HandleSubscribeResponse message from gNMI and parse contained telemetry data
-func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResponse) {
-	// Check if response is a gNMI Update and if we have a prefix to derive the measurement name
-	response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
-	if !ok {
-		return
+func (c *GNMI) handleSubscribeResponse(address string, reply *gnmiLib.SubscribeResponse) {
+	switch response := reply.Response.(type) {
+	case *gnmiLib.SubscribeResponse_Update:
+		c.handleSubscribeResponseUpdate(address, response)
+	case *gnmiLib.SubscribeResponse_Error:
+		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
 	}
+}
 
+// Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
+func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.SubscribeResponse_Update) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
 
 	if response.Update.Prefix != nil {
-		prefix, prefixAliasPath = c.handlePath(response.Update.Prefix, prefixTags, "")
+		var err error
+		if prefix, prefixAliasPath, err = c.handlePath(response.Update.Prefix, prefixTags, ""); err != nil {
+			c.Log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
+		}
 	}
 	prefixTags["source"], _, _ = net.SplitHostPort(address)
 	prefixTags["path"] = prefix
@@ -277,21 +317,47 @@ func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResp
 		// Lookup alias if alias-path has changed
 		if aliasPath != lastAliasPath {
 			name = prefix
-			if alias, ok := c.aliases[aliasPath]; ok {
+			if alias, ok := c.internalAliases[aliasPath]; ok {
 				name = alias
 			} else {
 				c.Log.Debugf("No measurement alias for gNMI path: %s", name)
 			}
 		}
 
+		// Update tag lookups and discard rest of update
+		subscriptionKey := tags["source"] + "/" + tags["name"]
+		c.lookupMutex.Lock()
+		if _, ok := c.lookup[name]; ok {
+			// We are subscribed to this, so add the fields to the lookup-table
+			if _, ok := c.lookup[name][subscriptionKey]; !ok {
+				c.lookup[name][subscriptionKey] = make(map[string]interface{})
+			}
+			for k, v := range fields {
+				c.lookup[name][subscriptionKey][path.Base(k)] = v
+			}
+			c.lookupMutex.Unlock()
+			// Do not process the data further as we only subscribed here for the lookup table
+			continue
+		}
+
+		// Apply lookups if present
+		for subscriptionName, values := range c.lookup {
+			if annotations, ok := values[subscriptionKey]; ok {
+				for k, v := range annotations {
+					tags[subscriptionName+"/"+k] = fmt.Sprint(v)
+				}
+			}
+		}
+		c.lookupMutex.Unlock()
+
 		// Group metrics
 		for k, v := range fields {
 			key := k
-			if len(aliasPath) < len(key) {
+			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 				// This may not be an exact prefix, due to naming style
 				// conversion on the key.
 				key = key[len(aliasPath)+1:]
-			} else {
+			} else if len(aliasPath) >= len(key) {
 				// Otherwise use the last path element as the field key.
 				key = path.Base(key)
 
@@ -304,55 +370,60 @@ func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResp
 				}
 			}
 
-			grouper.Add(name, tags, timestamp, key, v)
+			if err := grouper.Add(name, tags, timestamp, key, v); err != nil {
+				c.Log.Errorf("cannot add to grouper: %v", err)
+			}
 		}
 
 		lastAliasPath = aliasPath
 	}
 
 	// Add grouped measurements
-	for _, metric := range grouper.Metrics() {
-		c.acc.AddMetric(metric)
+	for _, metricToAdd := range grouper.Metrics() {
+		c.acc.AddMetric(metricToAdd)
 	}
 }
 
 // HandleTelemetryField and add it to a measurement
-func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
-	path, aliasPath := c.handlePath(update.Path, tags, prefix)
+func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
+	gpath, aliasPath, err := c.handlePath(update.Path, tags, prefix)
+	if err != nil {
+		c.Log.Errorf("handling path %q failed: %v", update.Path, err)
+	}
 
 	var value interface{}
 	var jsondata []byte
 
 	// Make sure a value is actually set
 	if update.Val == nil || update.Val.Value == nil {
-		c.Log.Infof("Discarded empty or legacy type value with path: %q", path)
+		c.Log.Infof("Discarded empty or legacy type value with path: %q", gpath)
 		return aliasPath, nil
 	}
 
 	switch val := update.Val.Value.(type) {
-	case *gnmi.TypedValue_AsciiVal:
+	case *gnmiLib.TypedValue_AsciiVal:
 		value = val.AsciiVal
-	case *gnmi.TypedValue_BoolVal:
+	case *gnmiLib.TypedValue_BoolVal:
 		value = val.BoolVal
-	case *gnmi.TypedValue_BytesVal:
+	case *gnmiLib.TypedValue_BytesVal:
 		value = val.BytesVal
-	case *gnmi.TypedValue_DecimalVal:
+	case *gnmiLib.TypedValue_DecimalVal:
 		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
-	case *gnmi.TypedValue_FloatVal:
+	case *gnmiLib.TypedValue_FloatVal:
 		value = val.FloatVal
-	case *gnmi.TypedValue_IntVal:
+	case *gnmiLib.TypedValue_IntVal:
 		value = val.IntVal
-	case *gnmi.TypedValue_StringVal:
+	case *gnmiLib.TypedValue_StringVal:
 		value = val.StringVal
-	case *gnmi.TypedValue_UintVal:
+	case *gnmiLib.TypedValue_UintVal:
 		value = val.UintVal
-	case *gnmi.TypedValue_JsonIetfVal:
+	case *gnmiLib.TypedValue_JsonIetfVal:
 		jsondata = val.JsonIetfVal
-	case *gnmi.TypedValue_JsonVal:
+	case *gnmiLib.TypedValue_JsonVal:
 		jsondata = val.JsonVal
 	}
 
-	name := strings.Replace(path, "-", "_", -1)
+	name := strings.ReplaceAll(gpath, "-", "_")
 	fields := make(map[string]interface{})
 	if value != nil {
 		fields[name] = value
@@ -361,38 +432,47 @@ func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string,
 			c.acc.AddError(fmt.Errorf("failed to parse JSON value: %v", err))
 		} else {
 			flattener := jsonparser.JSONFlattener{Fields: fields}
-			flattener.FullFlattenJSON(name, value, true, true)
+			if err := flattener.FullFlattenJSON(name, value, true, true); err != nil {
+				c.acc.AddError(fmt.Errorf("failed to flatten JSON: %v", err))
+			}
 		}
 	}
 	return aliasPath, fields
 }
 
 // Parse path to path-buffer and tag-field
-func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) (string, string) {
-	var aliasPath string
+func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix string) (pathBuffer string, aliasPath string, err error) {
 	builder := bytes.NewBufferString(prefix)
 
 	// Prefix with origin
-	if len(path.Origin) > 0 {
-		builder.WriteString(path.Origin)
-		builder.WriteRune(':')
+	if len(gnmiPath.Origin) > 0 {
+		if _, err := builder.WriteString(gnmiPath.Origin); err != nil {
+			return "", "", err
+		}
+		if _, err := builder.WriteRune(':'); err != nil {
+			return "", "", err
+		}
 	}
 
 	// Parse generic keys from prefix
-	for _, elem := range path.Elem {
+	for _, elem := range gnmiPath.Elem {
 		if len(elem.Name) > 0 {
-			builder.WriteRune('/')
-			builder.WriteString(elem.Name)
+			if _, err := builder.WriteRune('/'); err != nil {
+				return "", "", err
+			}
+			if _, err := builder.WriteString(elem.Name); err != nil {
+				return "", "", err
+			}
 		}
 		name := builder.String()
 
-		if _, exists := c.aliases[name]; exists {
+		if _, exists := c.internalAliases[name]; exists {
 			aliasPath = name
 		}
 
 		if tags != nil {
 			for key, val := range elem.Key {
-				key = strings.Replace(key, "-", "_", -1)
+				key = strings.ReplaceAll(key, "-", "_")
 
 				// Use short-form of key if possible
 				if _, exists := tags[key]; exists {
@@ -400,149 +480,28 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 				} else {
 					tags[key] = val
 				}
-
 			}
 		}
 	}
 
-	return builder.String(), aliasPath
+	return builder.String(), aliasPath, nil
 }
 
 //ParsePath from XPath-like string to gNMI path structure
-func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
-	var err error
-	gnmiPath := gnmi.Path{Origin: origin, Target: target}
-
-	if len(path) > 0 && path[0] != '/' {
-		return nil, fmt.Errorf("path does not start with a '/': %s", path)
-	}
-
-	elem := &gnmi.PathElem{}
-	start, name, value, end := 0, -1, -1, -1
-
-	path = path + "/"
-
-	for i := 0; i < len(path); i++ {
-		if path[i] == '[' {
-			if name >= 0 {
-				break
-			}
-			if end < 0 {
-				end = i
-				elem.Key = make(map[string]string)
-			}
-			name = i + 1
-		} else if path[i] == '=' {
-			if name <= 0 || value >= 0 {
-				break
-			}
-			value = i + 1
-		} else if path[i] == ']' {
-			if name <= 0 || value <= name {
-				break
-			}
-			elem.Key[path[name:value-1]] = strings.Trim(path[value:i], "'\"")
-			name, value = -1, -1
-		} else if path[i] == '/' {
-			if name < 0 {
-				if end < 0 {
-					end = i
-				}
-
-				if end > start {
-					elem.Name = path[start:end]
-					gnmiPath.Elem = append(gnmiPath.Elem, elem)
-					gnmiPath.Element = append(gnmiPath.Element, path[start:i])
-				}
-
-				start, name, value, end = i+1, -1, -1, -1
-				elem = &gnmi.PathElem{}
-			}
-		}
-	}
-
-	if name >= 0 || value >= 0 {
-		err = fmt.Errorf("Invalid gNMI path: %s", path)
-	}
-
+func parsePath(origin string, pathToParse string, target string) (*gnmiLib.Path, error) {
+	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
 	if err != nil {
 		return nil, err
 	}
-
-	return &gnmiPath, nil
+	gnmiPath.Origin = origin
+	gnmiPath.Target = target
+	return gnmiPath, err
 }
 
 // Stop listener and cleanup
 func (c *GNMI) Stop() {
 	c.cancel()
 	c.wg.Wait()
-}
-
-const sampleConfig = `
- ## Address and port of the gNMI GRPC server
- addresses = ["10.49.234.114:57777"]
-
- ## define credentials
- username = "cisco"
- password = "cisco"
-
- ## gNMI encoding requested (one of: "proto", "json", "json_ietf", "bytes")
- # encoding = "proto"
-
- ## redial in case of failures after
- redial = "10s"
-
- ## enable client-side TLS and define CA to authenticate the device
- # enable_tls = true
- # tls_ca = "/etc/telegraf/ca.pem"
- # insecure_skip_verify = true
-
- ## define client-side TLS certificate & key to authenticate to the device
- # tls_cert = "/etc/telegraf/cert.pem"
- # tls_key = "/etc/telegraf/key.pem"
-
- ## gNMI subscription prefix (optional, can usually be left empty)
- ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
- # origin = ""
- # prefix = ""
- # target = ""
-
- ## Define additional aliases to map telemetry encoding paths to simple measurement names
- #[inputs.gnmi.aliases]
- #  ifcounters = "openconfig:/interfaces/interface/state/counters"
-
- [[inputs.gnmi.subscription]]
-  ## Name of the measurement that will be emitted
-  name = "ifcounters"
-
-  ## Origin and path of the subscription
-  ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
-  ##
-  ## origin usually refers to a (YANG) data model implemented by the device
-  ## and path to a specific substructure inside it that should be subscribed to (similar to an XPath)
-  ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
-  origin = "openconfig-interfaces"
-  path = "/interfaces/interface/state/counters"
-
-  # Subscription mode (one of: "target_defined", "sample", "on_change") and interval
-  subscription_mode = "sample"
-  sample_interval = "10s"
-
-  ## Suppress redundant transmissions when measured values are unchanged
-  # suppress_redundant = false
-
-  ## If suppression is enabled, send updates at least every X seconds anyway
-  # heartbeat_interval = "60s"
-`
-
-// SampleConfig of plugin
-func (c *GNMI) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description of plugin
-func (c *GNMI) Description() string {
-	return "gNMI telemetry input plugin"
 }
 
 // Gather plugin measurements (unused)
@@ -553,7 +512,7 @@ func (c *GNMI) Gather(_ telegraf.Accumulator) error {
 func New() telegraf.Input {
 	return &GNMI{
 		Encoding: "proto",
-		Redial:   internal.Duration{Duration: 10 * time.Second},
+		Redial:   config.Duration(10 * time.Second),
 	}
 }
 

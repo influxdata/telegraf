@@ -1,8 +1,10 @@
-package prometheus
+//go:generate ../../../tools/readme_config_includer/generator
+package prometheus_client
 
 import (
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,67 +12,28 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
-	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	v1 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
+	v2 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultListen             = ":9273"
 	defaultPath               = "/metrics"
-	defaultExpirationInterval = internal.Duration{Duration: 60 * time.Second}
+	defaultExpirationInterval = config.Duration(60 * time.Second)
 )
-
-var sampleConfig = `
-  ## Address to listen on
-  listen = ":9273"
-
-  ## Metric version controls the mapping from Telegraf metrics into
-  ## Prometheus format.  When using the prometheus input, use the same value in
-  ## both plugins to ensure metrics are round-tripped without modification.
-  ##
-  ##   example: metric_version = 1; deprecated in 1.13
-  ##            metric_version = 2; recommended version
-  # metric_version = 1
-
-  ## Use HTTP Basic Authentication.
-  # basic_username = "Foo"
-  # basic_password = "Bar"
-
-  ## If set, the IP Ranges which are allowed to access metrics.
-  ##   ex: ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
-  # ip_range = []
-
-  ## Path to publish the metrics on.
-  # path = "/metrics"
-
-  ## Expiration interval for each metric. 0 == no expiration
-  # expiration_interval = "60s"
-
-  ## Collectors to enable, valid entries are "gocollector" and "process".
-  ## If unset, both are enabled.
-  # collectors_exclude = ["gocollector", "process"]
-
-  ## Send string metrics as Prometheus labels.
-  ## Unless set to false all string metrics will be sent as labels.
-  # string_as_label = true
-
-  ## If set, enable TLS with the given certificate.
-  # tls_cert = "/etc/ssl/telegraf.crt"
-  # tls_key = "/etc/ssl/telegraf.key"
-
-  ## Set one or more allowed client CA certificate file names to
-  ## enable mutually authenticated TLS connections
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
-  ## Export metric collection time.
-  # export_timestamp = false
-`
 
 type Collector interface {
 	Describe(ch chan<- *prometheus.Desc)
@@ -79,16 +42,16 @@ type Collector interface {
 }
 
 type PrometheusClient struct {
-	Listen             string            `toml:"listen"`
-	MetricVersion      int               `toml:"metric_version"`
-	BasicUsername      string            `toml:"basic_username"`
-	BasicPassword      string            `toml:"basic_password"`
-	IPRange            []string          `toml:"ip_range"`
-	ExpirationInterval internal.Duration `toml:"expiration_interval"`
-	Path               string            `toml:"path"`
-	CollectorsExclude  []string          `toml:"collectors_exclude"`
-	StringAsLabel      bool              `toml:"string_as_label"`
-	ExportTimestamp    bool              `toml:"export_timestamp"`
+	Listen             string          `toml:"listen"`
+	MetricVersion      int             `toml:"metric_version"`
+	BasicUsername      string          `toml:"basic_username"`
+	BasicPassword      string          `toml:"basic_password"`
+	IPRange            []string        `toml:"ip_range"`
+	ExpirationInterval config.Duration `toml:"expiration_interval"`
+	Path               string          `toml:"path"`
+	CollectorsExclude  []string        `toml:"collectors_exclude"`
+	StringAsLabel      bool            `toml:"string_as_label"`
+	ExportTimestamp    bool            `toml:"export_timestamp"`
 	tlsint.ServerConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -99,11 +62,7 @@ type PrometheusClient struct {
 	wg        sync.WaitGroup
 }
 
-func (p *PrometheusClient) Description() string {
-	return "Configuration for the Prometheus client to spawn"
-}
-
-func (p *PrometheusClient) SampleConfig() string {
+func (*PrometheusClient) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -120,9 +79,15 @@ func (p *PrometheusClient) Init() error {
 	for collector := range defaultCollectors {
 		switch collector {
 		case "gocollector":
-			registry.Register(prometheus.NewGoCollector())
+			err := registry.Register(collectors.NewGoCollector())
+			if err != nil {
+				return err
+			}
 		case "process":
-			registry.Register(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+			err := registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+			if err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unrecognized collector %s", collector)
 		}
@@ -132,14 +97,13 @@ func (p *PrometheusClient) Init() error {
 	default:
 		fallthrough
 	case 1:
-		p.Log.Warnf("Use of deprecated configuration: metric_version = 1; please update to metric_version = 2")
-		p.collector = v1.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.Log)
+		p.collector = v1.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.Log)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
 		}
 	case 2:
-		p.collector = v2.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.ExportTimestamp)
+		p.collector = v2.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.ExportTimestamp)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
@@ -159,12 +123,19 @@ func (p *PrometheusClient) Init() error {
 	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
+	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte("Telegraf Output Plugin: Prometheus Client "))
+		if err != nil {
+			p.Log.Errorf("Error occurred when writing HTTP reply: %v", err)
+		}
+	})
 
 	mux := http.NewServeMux()
 	if p.Path == "" {
-		p.Path = "/"
+		p.Path = "/metrics"
 	}
 	mux.Handle(p.Path, authHandler(rangeHandler(promHandler)))
+	mux.Handle("/", authHandler(rangeHandler(landingPageHandler)))
 
 	tlsConfig, err := p.TLSConfig()
 	if err != nil {
@@ -183,9 +154,8 @@ func (p *PrometheusClient) Init() error {
 func (p *PrometheusClient) listen() (net.Listener, error) {
 	if p.server.TLSConfig != nil {
 		return tls.Listen("tcp", p.Listen, p.server.TLSConfig)
-	} else {
-		return net.Listen("tcp", p.Listen)
 	}
+	return net.Listen("tcp", p.Listen)
 }
 
 func (p *PrometheusClient) Connect() error {
@@ -226,7 +196,7 @@ func onError(rw http.ResponseWriter, code int) {
 	http.Error(rw, http.StatusText(code), code)
 }
 
-// Address returns the address the plugin is listening on.  If not listening
+// URL returns the address the plugin is listening on.  If not listening
 // an empty string is returned.
 func (p *PrometheusClient) URL() string {
 	if p.url != nil {

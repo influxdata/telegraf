@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package openweathermap
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,72 +15,41 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// https://openweathermap.org/current#severalid
 	// Call for several city IDs
 	// The limit of locations is 20.
-	owmRequestSeveralCityId int = 20
+	owmRequestSeveralCityID int = 20
 
-	defaultBaseUrl                       = "https://api.openweathermap.org/"
-	defaultResponseTimeout time.Duration = time.Second * 5
-	defaultUnits           string        = "metric"
-	defaultLang            string        = "en"
+	defaultBaseURL         = "https://api.openweathermap.org/"
+	defaultResponseTimeout = time.Second * 5
+	defaultUnits           = "metric"
+	defaultLang            = "en"
 )
 
 type OpenWeatherMap struct {
-	AppId           string            `toml:"app_id"`
-	CityId          []string          `toml:"city_id"`
-	Lang            string            `toml:"lang"`
-	Fetch           []string          `toml:"fetch"`
-	BaseUrl         string            `toml:"base_url"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
-	Units           string            `toml:"units"`
+	AppID           string          `toml:"app_id"`
+	CityID          []string        `toml:"city_id"`
+	Lang            string          `toml:"lang"`
+	Fetch           []string        `toml:"fetch"`
+	BaseURL         string          `toml:"base_url"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
+	Units           string          `toml:"units"`
 
-	client  *http.Client
-	baseUrl *url.URL
+	client        *http.Client
+	baseParsedURL *url.URL
 }
 
-var sampleConfig = `
-  ## OpenWeatherMap API key.
-  app_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-  ## City ID's to collect weather data from.
-  city_id = ["5391959"]
-
-  ## Language of the description field. Can be one of "ar", "bg",
-  ## "ca", "cz", "de", "el", "en", "fa", "fi", "fr", "gl", "hr", "hu",
-  ## "it", "ja", "kr", "la", "lt", "mk", "nl", "pl", "pt", "ro", "ru",
-  ## "se", "sk", "sl", "es", "tr", "ua", "vi", "zh_cn", "zh_tw"
-  # lang = "en"
-
-  ## APIs to fetch; can contain "weather" or "forecast".
-  fetch = ["weather", "forecast"]
-
-  ## OpenWeatherMap base URL
-  # base_url = "https://api.openweathermap.org/"
-
-  ## Timeout for HTTP response.
-  # response_timeout = "5s"
-
-  ## Preferred unit system for temperature and wind speed. Can be one of
-  ## "metric", "imperial", or "standard".
-  # units = "metric"
-
-  ## Query interval; OpenWeatherMap updates their weather data every 10
-  ## minutes.
-  interval = "10m"
-`
-
-func (n *OpenWeatherMap) SampleConfig() string {
+func (*OpenWeatherMap) SampleConfig() string {
 	return sampleConfig
-}
-
-func (n *OpenWeatherMap) Description() string {
-	return "Read current weather and forecasts data from openweathermap.org"
 }
 
 func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
@@ -87,12 +58,12 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 
 	for _, fetch := range n.Fetch {
 		if fetch == "forecast" {
-			for _, city := range n.CityId {
+			for _, city := range n.CityID {
 				addr := n.formatURL("/data/2.5/forecast", city)
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					status, err := n.gatherUrl(addr)
+					status, err := n.gatherURL(addr)
 					if err != nil {
 						acc.AddError(err)
 						return
@@ -103,10 +74,10 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 			}
 		} else if fetch == "weather" {
 			j := 0
-			for j < len(n.CityId) {
+			for j < len(n.CityID) {
 				strs = make([]string, 0)
-				for i := 0; j < len(n.CityId) && i < owmRequestSeveralCityId; i++ {
-					strs = append(strs, n.CityId[j])
+				for i := 0; j < len(n.CityID) && i < owmRequestSeveralCityID; i++ {
+					strs = append(strs, n.CityID[j])
 					j++
 				}
 				cities := strings.Join(strs, ",")
@@ -115,7 +86,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					status, err := n.gatherUrl(addr)
+					status, err := n.gatherURL(addr)
 					if err != nil {
 						acc.AddError(err)
 						return
@@ -124,7 +95,6 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 					gatherWeather(acc, status)
 				}()
 			}
-
 		}
 	}
 
@@ -132,20 +102,20 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *OpenWeatherMap) createHttpClient() (*http.Client, error) {
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = defaultResponseTimeout
+func (n *OpenWeatherMap) createHTTPClient() *http.Client {
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(defaultResponseTimeout)
 	}
 
 	client := &http.Client{
 		Transport: &http.Transport{},
-		Timeout:   n.ResponseTimeout.Duration,
+		Timeout:   time.Duration(n.ResponseTimeout),
 	}
 
-	return client, nil
+	return client
 }
 
-func (n *OpenWeatherMap) gatherUrl(addr string) (*Status, error) {
+func (n *OpenWeatherMap) gatherURL(addr string) (*Status, error) {
 	resp, err := n.client.Get(addr)
 	if err != nil {
 		return nil, fmt.Errorf("error making HTTP request to %s: %s", addr, err)
@@ -165,7 +135,7 @@ func (n *OpenWeatherMap) gatherUrl(addr string) (*Status, error) {
 		return nil, fmt.Errorf("%s returned unexpected content type %s", addr, mediaType)
 	}
 
-	return gatherWeatherUrl(resp.Body)
+	return gatherWeatherURL(resp.Body)
 }
 
 type WeatherEntry struct {
@@ -177,6 +147,7 @@ type WeatherEntry struct {
 		Humidity int64   `json:"humidity"`
 		Pressure float64 `json:"pressure"`
 		Temp     float64 `json:"temp"`
+		Feels    float64 `json:"feels_like"`
 	} `json:"main"`
 	Rain struct {
 		Rain1 float64 `json:"1h"`
@@ -191,7 +162,7 @@ type WeatherEntry struct {
 		Deg   float64 `json:"deg"`
 		Speed float64 `json:"speed"`
 	} `json:"wind"`
-	Id    int64  `json:"id"`
+	ID    int64  `json:"id"`
 	Name  string `json:"name"`
 	Coord struct {
 		Lat float64 `json:"lat"`
@@ -213,13 +184,13 @@ type Status struct {
 			Lon float64 `json:"lon"`
 		} `json:"coord"`
 		Country string `json:"country"`
-		Id      int64  `json:"id"`
+		ID      int64  `json:"id"`
 		Name    string `json:"name"`
 	} `json:"city"`
 	List []WeatherEntry `json:"list"`
 }
 
-func gatherWeatherUrl(r io.Reader) (*Status, error) {
+func gatherWeatherURL(r io.Reader) (*Status, error) {
 	dec := json.NewDecoder(r)
 	status := &Status{}
 	if err := dec.Decode(status); err != nil {
@@ -247,13 +218,14 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
 			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"visibility":   e.Visibility,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
 		}
 		tags := map[string]string{
 			"city":     e.Name,
-			"city_id":  strconv.FormatInt(e.Id, 10),
+			"city_id":  strconv.FormatInt(e.ID, 10),
 			"country":  e.Sys.Country,
 			"forecast": "*",
 		}
@@ -271,7 +243,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 
 func gatherForecast(acc telegraf.Accumulator, status *Status) {
 	tags := map[string]string{
-		"city_id":  strconv.FormatInt(status.City.Id, 10),
+		"city_id":  strconv.FormatInt(status.City.ID, 10),
 		"forecast": "*",
 		"city":     status.City.Name,
 		"country":  status.City.Country,
@@ -284,6 +256,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			"pressure":     e.Main.Pressure,
 			"rain":         gatherRain(e),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
 		}
@@ -300,29 +273,24 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 
 func init() {
 	inputs.Add("openweathermap", func() telegraf.Input {
-		tmout := internal.Duration{
-			Duration: defaultResponseTimeout,
-		}
+		tmout := config.Duration(defaultResponseTimeout)
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
-			BaseUrl:         defaultBaseUrl,
+			BaseURL:         defaultBaseURL,
 		}
 	})
 }
 
 func (n *OpenWeatherMap) Init() error {
 	var err error
-	n.baseUrl, err = url.Parse(n.BaseUrl)
+	n.baseParsedURL, err = url.Parse(n.BaseURL)
 	if err != nil {
 		return err
 	}
 
 	// Create an HTTP client that is re-used for each
 	// collection interval
-	n.client, err = n.createHttpClient()
-	if err != nil {
-		return err
-	}
+	n.client = n.createHTTPClient()
 
 	switch n.Units {
 	case "imperial", "standard", "metric":
@@ -349,7 +317,7 @@ func (n *OpenWeatherMap) Init() error {
 func (n *OpenWeatherMap) formatURL(path string, city string) string {
 	v := url.Values{
 		"id":    []string{city},
-		"APPID": []string{n.AppId},
+		"APPID": []string{n.AppID},
 		"lang":  []string{n.Lang},
 		"units": []string{n.Units},
 	}
@@ -359,5 +327,5 @@ func (n *OpenWeatherMap) formatURL(path string, city string) string {
 		RawQuery: v.Encode(),
 	}
 
-	return n.baseUrl.ResolveReference(relative).String()
+	return n.baseParsedURL.ResolveReference(relative).String()
 }

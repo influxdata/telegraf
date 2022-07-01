@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package fireboard
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,25 +10,29 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // Fireboard gathers statistics from the fireboard.io servers
 type Fireboard struct {
-	AuthToken   string            `toml:"auth_token"`
-	URL         string            `toml:"url"`
-	HTTPTimeout internal.Duration `toml:"http_timeout"`
+	AuthToken   string          `toml:"auth_token"`
+	URL         string          `toml:"url"`
+	HTTPTimeout config.Duration `toml:"http_timeout"`
 
 	client *http.Client
 }
 
 // NewFireboard return a new instance of Fireboard with a default http client
 func NewFireboard() *Fireboard {
-	tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+	tr := &http.Transport{ResponseHeaderTimeout: 3 * time.Second}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout:   4 * time.Second,
 	}
 	return &Fireboard{client: client}
 }
@@ -45,50 +51,30 @@ type fireboardStats struct {
 	Latesttemps []RTT  `json:"latest_temps"`
 }
 
-// A sample configuration to only gather stats from localhost, default port.
-const sampleConfig = `
-  ## Specify auth token for your account
-  auth_token = "invalidAuthToken"
-  ## You can override the fireboard server URL if necessary
-  # url = https://fireboard.io/api/v1/devices.json
-  ## You can set a different http_timeout if you need to
-  ## You should set a string using an number and time indicator
-  ## for example "12s" for 12 seconds.
-  # http_timeout = "4s"
-`
-
-// SampleConfig Returns a sample configuration for the plugin
-func (r *Fireboard) SampleConfig() string {
+func (*Fireboard) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description Returns a description of the plugin
-func (r *Fireboard) Description() string {
-	return "Read real time temps from fireboard.io servers"
 }
 
 // Init the things
 func (r *Fireboard) Init() error {
-
 	if len(r.AuthToken) == 0 {
-		return fmt.Errorf("You must specify an authToken")
+		return fmt.Errorf("you must specify an authToken")
 	}
 	if len(r.URL) == 0 {
 		r.URL = "https://fireboard.io/api/v1/devices.json"
 	}
 	// Have a default timeout of 4s
-	if r.HTTPTimeout.Duration == 0 {
-		r.HTTPTimeout.Duration = time.Second * 4
+	if r.HTTPTimeout == 0 {
+		r.HTTPTimeout = config.Duration(time.Second * 4)
 	}
 
-	r.client.Timeout = r.HTTPTimeout.Duration
+	r.client.Timeout = time.Duration(r.HTTPTimeout)
 
 	return nil
 }
 
 // Gather Reads stats from all configured servers.
 func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
-
 	// Perform the GET request to the fireboard servers
 	req, err := http.NewRequest("GET", r.URL, nil)
 	if err != nil {

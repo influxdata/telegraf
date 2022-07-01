@@ -1,4 +1,5 @@
-//+build windows
+//go:build windows
+// +build windows
 
 package logger
 
@@ -10,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kardianos/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 type Levels int
@@ -30,7 +31,8 @@ type Event struct {
 
 func getEventLog(t *testing.T, since time.Time) []Event {
 	timeStr := since.UTC().Format(time.RFC3339)
-	cmd := exec.Command("wevtutil", "qe", "Application", "/rd:true", "/q:Event[System[TimeCreated[@SystemTime >= '"+timeStr+"'] and Provider[@Name='Telegraf']]]")
+	timeStr = timeStr[:19]
+	cmd := exec.Command("wevtutil", "qe", "Application", "/rd:true", "/q:Event[System[TimeCreated[@SystemTime >= '"+timeStr+"'] and Provider[@Name='telegraf']]]")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -44,7 +46,7 @@ func getEventLog(t *testing.T, since time.Time) []Event {
 	return events.Events
 }
 
-func TestEventLog(t *testing.T) {
+func TestEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -67,7 +69,7 @@ func TestEventLog(t *testing.T) {
 	assert.Contains(t, events, Event{Message: "Err message", Level: Error})
 }
 
-func TestRestrictedEventLog(t *testing.T) {
+func TestRestrictedEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in  short mode")
 	}
@@ -91,10 +93,8 @@ func TestRestrictedEventLog(t *testing.T) {
 }
 
 func prepareLogger(t *testing.T) {
-	svc, err := service.New(nil, &service.Config{Name: "Telegraf"})
+	eventLog, err := eventlog.Open("telegraf")
 	require.NoError(t, err)
-	svcLogger, err := svc.SystemLogger(nil)
-	require.NoError(t, err)
-	require.NotNil(t, svcLogger)
-	registerLogger(LogTargetEventlog, &eventLoggerCreator{serviceLogger: svcLogger})
+	require.NotNil(t, eventLog)
+	registerLogger(LogTargetEventlog, &eventLoggerCreator{logger: eventLog})
 }

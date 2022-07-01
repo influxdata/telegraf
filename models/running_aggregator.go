@@ -108,18 +108,14 @@ func (r *RunningAggregator) UpdateWindow(start, until time.Time) {
 	r.log.Debugf("Updated aggregation range [%s, %s]", start, until)
 }
 
-func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
+func (r *RunningAggregator) MakeMetric(telegrafMetric telegraf.Metric) telegraf.Metric {
 	m := makemetric(
-		metric,
+		telegrafMetric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
 		nil)
-
-	if m != nil {
-		m.SetAggregate(true)
-	}
 
 	r.MetricsPushed.Incr(1)
 

@@ -1,4 +1,4 @@
-# Template Processor
+# Template Processor Plugin
 
 The `template` processor applies a Go template to metrics to generate a new
 tag.  The primary use case of this plugin is to create a tag that can be used
@@ -10,9 +10,10 @@ timestamp using the [interface in `/template_metric.go`](template_metric.go).
 
 Read the full [Go Template Documentation][].
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
+# Uses a Go template to create a new tag
 [[processors.template]]
   ## Tag to set with the output of the template.
   tag = "topic"
@@ -23,9 +24,10 @@ Read the full [Go Template Documentation][].
   template = '{{ .Tag "hostname" }}.{{ .Tag "level" }}'
 ```
 
-### Example
+## Examples
 
-Combine multiple tags to create a single tag:
+### Combine multiple tags to create a single tag
+
 ```toml
 [[processors.template]]
   tag = "topic"
@@ -37,7 +39,8 @@ Combine multiple tags to create a single tag:
 + cpu,level=debug,hostname=localhost,topic=localhost.debug time_idle=42
 ```
 
-Add measurement name as a tag:
+### Add measurement name as a tag
+
 ```toml
 [[processors.template]]
   tag = "measurement"
@@ -49,11 +52,58 @@ Add measurement name as a tag:
 + cpu,hostname=localhost,measurement=cpu time_idle=42
 ```
 
-Add the year as a tag, similar to the date processor:
+### Add the year as a tag, similar to the date processor
+
 ```toml
 [[processors.template]]
   tag = "year"
   template = '{{.Time.UTC.Year}}'
+```
+
+### Add all fields as a tag
+
+Sometimes it is usefull to pass all fields with their values into a single
+message for sending it to a monitoring system (e.g. Syslog, GroundWork), then
+you can use `.FieldList` or `.TagList`:
+
+```toml
+[[processors.template]]
+  tag = "message"
+  template = 'Message about {{.Name}} fields: {{.FieldList}}'
+```
+
+```diff
+- cpu,hostname=localhost time_idle=42
++ cpu,hostname=localhost,message=Message\ about\ cpu\ fields:\ map[time_idle:42] time_idle=42
+```
+
+More advanced example, which might make more sense:
+
+```toml
+[[processors.template]]
+  tag = "message"
+  template = '''Message about {{.Name}} fields:
+{{ range $field, $value := .FieldList -}}
+{{$field}}:{{$value}}
+{{ end }}'''
+```
+
+```diff
+- cpu,hostname=localhost time_idle=42
++ cpu,hostname=localhost,message=Message\ about\ cpu\ fields:\ntime_idle:42\n time_idle=42
+```
+
+### Just add the current metric as a tag
+
+```toml
+[[processors.template]]
+  tag = "metric"
+  template = '{{.}}'
+```
+
+```diff
+- cpu,hostname=localhost time_idle=42
++ cpu,hostname=localhost,metric=cpu\ map[hostname:localhost]\ map[time_idle:42]\ 1257894000000000000 time_idle=42
 ```
 
 [Go Template Documentation]: https://golang.org/pkg/text/template/

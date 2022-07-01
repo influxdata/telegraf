@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const tengineSampleResponse = `127.0.0.1,784,1511,2,2,1,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0`
@@ -22,15 +22,14 @@ func TestTengineTags(t *testing.T) {
 	for _, url1 := range urls {
 		addr, _ = url.Parse(url1)
 		tagMap := getTags(addr, "127.0.0.1")
-		assert.Contains(t, tagMap["server"], "localhost")
+		require.Contains(t, tagMap["server"], "localhost")
 	}
 }
 
 func TestTengineGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var rsp string
-		rsp = tengineSampleResponse
-		fmt.Fprintln(w, rsp)
+		_, err := fmt.Fprintln(w, tengineSampleResponse)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -38,13 +37,13 @@ func TestTengineGeneratesMetrics(t *testing.T) {
 		Urls: []string{fmt.Sprintf("%s/us", ts.URL)},
 	}
 
-	var acc_tengine testutil.Accumulator
+	var accTengine testutil.Accumulator
 
-	err_tengine := acc_tengine.GatherError(n.Gather)
+	errTengine := accTengine.GatherError(n.Gather)
 
-	require.NoError(t, err_tengine)
+	require.NoError(t, errTengine)
 
-	fields_tengine := map[string]interface{}{
+	fieldsTengine := map[string]interface{}{
 		"bytes_in":                 uint64(784),
 		"bytes_out":                uint64(1511),
 		"conn_total":               uint64(2),
@@ -93,5 +92,5 @@ func TestTengineGeneratesMetrics(t *testing.T) {
 		}
 	}
 	tags := map[string]string{"server": host, "port": port, "server_name": "127.0.0.1"}
-	acc_tengine.AssertContainsTaggedFields(t, "tengine", fields_tengine, tags)
+	accTengine.AssertContainsTaggedFields(t, "tengine", fieldsTengine, tags)
 }

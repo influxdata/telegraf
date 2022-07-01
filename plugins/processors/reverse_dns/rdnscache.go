@@ -104,14 +104,11 @@ func (d *ReverseDNSCache) Lookup(ip string) ([]string, error) {
 	if len(ip) == 0 {
 		return nil, nil
 	}
-	return d.lookup(ip)
-}
 
-func (d *ReverseDNSCache) lookup(ip string) ([]string, error) {
 	// check if the value is cached
 	d.rwLock.RLock()
 	result, found := d.lockedGetFromCache(ip)
-	if found && result.completed && result.expiresAt.After(time.Now()) {
+	if found && result.completed && !result.expiresAt.Before(time.Now()) {
 		defer d.rwLock.RUnlock()
 		atomic.AddUint64(&d.stats.CacheHit, 1)
 		// cache is valid
@@ -176,7 +173,7 @@ func (d *ReverseDNSCache) subscribeTo(ip string) callbackChannelType {
 // the dnslookup that is returned until you clone it.
 func (d *ReverseDNSCache) lockedGetFromCache(ip string) (lookup *dnslookup, found bool) {
 	lookup, found = d.cache[ip]
-	if found && lookup.expiresAt.Before(time.Now()) {
+	if found && !lookup.expiresAt.After(time.Now()) {
 		return nil, false
 	}
 	return lookup, found
@@ -185,7 +182,7 @@ func (d *ReverseDNSCache) lockedGetFromCache(ip string) (lookup *dnslookup, foun
 // lockedSaveToCache stores a lookup in the correct internal ip cache.
 // you MUST first do a write lock before calling it.
 func (d *ReverseDNSCache) lockedSaveToCache(lookup *dnslookup) {
-	if lookup.expiresAt.Before(time.Now()) {
+	if !lookup.expiresAt.After(time.Now()) {
 		return // don't cache.
 	}
 	d.cache[lookup.ip] = lookup
@@ -277,7 +274,7 @@ func (d *ReverseDNSCache) cleanup() {
 	}
 	ipsToDelete := []string{}
 	for i := 0; i < len(d.expireList); i++ {
-		if d.expireList[i].expiresAt.After(now) {
+		if !d.expireList[i].expiresAt.Before(now) {
 			break // done. Nothing after this point is expired.
 		}
 		ipsToDelete = append(ipsToDelete, d.expireList[i].ip)
@@ -296,12 +293,6 @@ func (d *ReverseDNSCache) cleanup() {
 	for _, ip := range ipsToDelete {
 		delete(d.cache, ip)
 	}
-}
-
-// blockAllWorkers is a test function that eats up all the worker pool space to
-// make sure workers are done running and there's no room to acquire a new worker.
-func (d *ReverseDNSCache) blockAllWorkers() {
-	d.sem.Acquire(context.Background(), int64(d.maxWorkers))
 }
 
 func (d *ReverseDNSCache) Stats() RDNSCacheStats {

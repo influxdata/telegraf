@@ -8,7 +8,7 @@ import (
 )
 
 func TestXMLFileNegative(t *testing.T) {
-	sflow := SFlow_A10{
+	sflow := SFlowA10{
 		Log: tu.Logger{},
 	}
 	_, err := sflow.readA10XMLData([]byte(testXMLStringNegativeTag))

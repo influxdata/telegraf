@@ -1,0 +1,42 @@
+{
+	"Timestamp": "2021-12-11 10:35:30 +0000 UTC",
+	"Gauges": [
+	  {
+		"Name": "consul.consul.members.clients",
+		"Value": 0,
+		"Labels": {
+		  "datacenter": "dc1"
+		}
+	  }
+	],
+	"Points": [],
+	"Counters": [
+	  {
+		"Name": "consul.rpc.request",
+		"Count": 5,
+		"Rate": 0.5,
+		"Sum": 5,
+		"Min": 1,
+		"Max": 1,
+		"Mean": 1,
+		"Stddev": 0,
+		"Labels": {}
+	  }
+	],
+	"Samples": [
+	  {
+		"Name": "consul.api.http",
+		"Count": 1,
+		"Rate": 0.414815616607666,
+		"Sum": 4.14815616607666,
+		"Min": 4.14815616607666,
+		"Max": 4.14815616607666,
+		"Mean": 4.14815616607666,
+		"Stddev": 0,
+		"Labels": {
+		  "method": "GET",
+		  "path": "v1_agent_self"
+		}
+	  }
+	]
+  }

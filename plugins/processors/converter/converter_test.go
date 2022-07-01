@@ -432,6 +432,38 @@ func TestConverter(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "from string field hexidecimal",
+			converter: &Converter{
+				Fields: &Conversion{
+					Integer:  []string{"a"},
+					Unsigned: []string{"b"},
+					Float:    []string{"c"},
+				},
+			},
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a": "0x11826c",
+					"b": "0x11826c",
+					"c": "0x2139d19bb1c580ebe0",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"a": int64(1147500),
+						"b": uint64(1147500),
+						"c": float64(612908836750534700000),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

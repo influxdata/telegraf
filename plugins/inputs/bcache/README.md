@@ -2,7 +2,7 @@
 
 Get bcache stat from stats_total directory and dirty_data file.
 
-# Measurements
+## Metrics
 
 Meta:
 
@@ -20,9 +20,9 @@ Measurement names:
 - cache_misses
 - cache_readaheads
 
-### Description
+## Description
 
-```
+```text
 dirty_data
   Amount of dirty data for this backing device in the cache. Continuously
   updated unlike the cache set's version, but may be slightly off.
@@ -51,31 +51,28 @@ cache_readaheads
   Count of times readahead occurred.
 ```
 
-# Example output
+## Configuration
 
-Using this configuration:
+```toml @sample.conf
+# Read metrics of bcache from stats_total and dirty_data
+[[inputs.bcache]]
+  ## Bcache sets path
+  ## If not specified, then default is:
+  bcachePath = "/sys/fs/bcache"
 
-```toml
-[bcache]
-  # Bcache sets path
-  # If not specified, then default is:
-  # bcachePath = "/sys/fs/bcache"
-  #
-  # By default, telegraf gather stats for all bcache devices
-  # Setting devices will restrict the stats to the specified
-  # bcache devices.
-  # bcacheDevs = ["bcache0", ...]
+  ## By default, Telegraf gather stats for all bcache devices
+  ## Setting devices will restrict the stats to the specified
+  ## bcache devices.
+  bcacheDevs = ["bcache0"]
 ```
 
-When run with:
+## Example Output
 
-```
+```shell
 ./telegraf --config telegraf.conf --input-filter bcache --test
 ```
 
-It produces:
-
-```
+```shell
 * Plugin: bcache, Collection 1
 > [backing_dev="md10" bcache_dev="bcache0"] bcache_dirty_data value=11639194
 > [backing_dev="md10" bcache_dev="bcache0"] bcache_bypassed value=5167704440832

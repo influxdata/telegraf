@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const nginxSampleResponse = `
@@ -33,7 +33,7 @@ func TestNginxTags(t *testing.T) {
 	for _, url1 := range urls {
 		addr, _ = url.Parse(url1)
 		tagMap := getTags(addr)
-		assert.Contains(t, tagMap["server"], "localhost")
+		require.Contains(t, tagMap["server"], "localhost")
 	}
 }
 
@@ -46,10 +46,11 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		} else if r.URL.Path == "/tengine_status" {
 			rsp = tengineSampleResponse
 		} else {
-			panic("Cannot handle request")
+			require.Fail(t, "Cannot handle request")
 		}
 
-		fmt.Fprintln(w, rsp)
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -61,16 +62,13 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		Urls: []string{fmt.Sprintf("%s/tengine_status", ts.URL)},
 	}
 
-	var acc_nginx testutil.Accumulator
-	var acc_tengine testutil.Accumulator
+	var accNginx testutil.Accumulator
+	var accTengine testutil.Accumulator
 
-	err_nginx := acc_nginx.GatherError(n.Gather)
-	err_tengine := acc_tengine.GatherError(nt.Gather)
+	require.NoError(t, accNginx.GatherError(n.Gather))
+	require.NoError(t, accTengine.GatherError(nt.Gather))
 
-	require.NoError(t, err_nginx)
-	require.NoError(t, err_tengine)
-
-	fields_nginx := map[string]interface{}{
+	fieldsNginx := map[string]interface{}{
 		"active":   uint64(585),
 		"accepts":  uint64(85340),
 		"handled":  uint64(85340),
@@ -80,7 +78,7 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		"waiting":  uint64(446),
 	}
 
-	fields_tengine := map[string]interface{}{
+	fieldsTengine := map[string]interface{}{
 		"active":   uint64(403),
 		"accepts":  uint64(853),
 		"handled":  uint64(8533),
@@ -91,9 +89,7 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	}
 
 	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 
 	host, port, err := net.SplitHostPort(addr.Host)
 	if err != nil {
@@ -108,6 +104,6 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	}
 
 	tags := map[string]string{"server": host, "port": port}
-	acc_nginx.AssertContainsTaggedFields(t, "nginx", fields_nginx, tags)
-	acc_tengine.AssertContainsTaggedFields(t, "nginx", fields_tengine, tags)
+	accNginx.AssertContainsTaggedFields(t, "nginx", fieldsNginx, tags)
+	accTengine.AssertContainsTaggedFields(t, "nginx", fieldsTengine, tags)
 }

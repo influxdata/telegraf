@@ -1,15 +1,16 @@
 package kube_inventory
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+	v1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDaemonSet(t *testing.T) {
@@ -21,7 +22,7 @@ func TestDaemonSet(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
@@ -38,28 +39,28 @@ func TestDaemonSet(t *testing.T) {
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
 					"/daemonsets/": &v1.DaemonSetList{
-						Items: []*v1.DaemonSet{
+						Items: []v1.DaemonSet{
 							{
-								Status: &v1.DaemonSetStatus{
-									CurrentNumberScheduled: toInt32Ptr(3),
-									DesiredNumberScheduled: toInt32Ptr(5),
-									NumberAvailable:        toInt32Ptr(2),
-									NumberMisscheduled:     toInt32Ptr(2),
-									NumberReady:            toInt32Ptr(1),
-									NumberUnavailable:      toInt32Ptr(1),
-									UpdatedNumberScheduled: toInt32Ptr(2),
+								Status: v1.DaemonSetStatus{
+									CurrentNumberScheduled: 3,
+									DesiredNumberScheduled: 5,
+									NumberAvailable:        2,
+									NumberMisscheduled:     2,
+									NumberReady:            1,
+									NumberUnavailable:      1,
+									UpdatedNumberScheduled: 2,
 								},
-								Metadata: &metav1.ObjectMeta{
-									Generation: toInt64Ptr(11221),
-									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("daemon1"),
+								ObjectMeta: metav1.ObjectMeta{
+									Generation: 11221,
+									Namespace:  "ns1",
+									Name:       "daemon1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
-								Spec: &v1.DaemonSetSpec{
+								Spec: v1.DaemonSetSpec{
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"select1": "s1",
@@ -72,28 +73,28 @@ func TestDaemonSet(t *testing.T) {
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"generation":               int64(11221),
-							"current_number_scheduled": int32(3),
-							"desired_number_scheduled": int32(5),
-							"number_available":         int32(2),
-							"number_misscheduled":      int32(2),
-							"number_ready":             int32(1),
-							"number_unavailable":       int32(1),
-							"updated_number_scheduled": int32(2),
-							"created":                  now.UnixNano(),
-						},
-						Tags: map[string]string{
-							"daemonset_name":   "daemon1",
-							"namespace":        "ns1",
-							"selector_select1": "s1",
-							"selector_select2": "s2",
-						},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_daemonset",
+					map[string]string{
+						"daemonset_name":   "daemon1",
+						"namespace":        "ns1",
+						"selector_select1": "s1",
+						"selector_select2": "s2",
 					},
-				},
+					map[string]interface{}{
+						"generation":               int64(11221),
+						"current_number_scheduled": int32(3),
+						"desired_number_scheduled": int32(5),
+						"number_available":         int32(2),
+						"number_misscheduled":      int32(2),
+						"number_ready":             int32(1),
+						"number_unavailable":       int32(1),
+						"updated_number_scheduled": int32(2),
+						"created":                  now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -105,37 +106,23 @@ func TestDaemonSet(t *testing.T) {
 			SelectorInclude: selectInclude,
 			SelectorExclude: selectExclude,
 		}
-		ks.createSelectorFilters()
+		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
 		for _, dset := range ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items {
-			err := ks.gatherDaemonSet(*dset, acc)
-			if err != nil {
-				t.Errorf("Failed to gather daemonset - %s", err.Error())
-			}
+			ks.gatherDaemonSet(dset, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", v.name, k, m, acc.Metrics[i].Tags[k])
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k])
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }
 
@@ -146,28 +133,28 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 
 	responseMap := map[string]interface{}{
 		"/daemonsets/": &v1.DaemonSetList{
-			Items: []*v1.DaemonSet{
+			Items: []v1.DaemonSet{
 				{
-					Status: &v1.DaemonSetStatus{
-						CurrentNumberScheduled: toInt32Ptr(3),
-						DesiredNumberScheduled: toInt32Ptr(5),
-						NumberAvailable:        toInt32Ptr(2),
-						NumberMisscheduled:     toInt32Ptr(2),
-						NumberReady:            toInt32Ptr(1),
-						NumberUnavailable:      toInt32Ptr(1),
-						UpdatedNumberScheduled: toInt32Ptr(2),
+					Status: v1.DaemonSetStatus{
+						CurrentNumberScheduled: 3,
+						DesiredNumberScheduled: 5,
+						NumberAvailable:        2,
+						NumberMisscheduled:     2,
+						NumberReady:            1,
+						NumberUnavailable:      1,
+						UpdatedNumberScheduled: 2,
 					},
-					Metadata: &metav1.ObjectMeta{
-						Generation: toInt64Ptr(11221),
-						Namespace:  toStrPtr("ns1"),
-						Name:       toStrPtr("daemon1"),
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 11221,
+						Namespace:  "ns1",
+						Name:       "daemon1",
 						Labels: map[string]string{
 							"lab1": "v1",
 							"lab2": "v2",
 						},
-						CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+						CreationTimestamp: metav1.Time{Time: time.Now()},
 					},
-					Spec: &v1.DaemonSetSpec{
+					Spec: v1.DaemonSetSpec{
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"select1": "s1",
@@ -281,13 +268,10 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 		}
 		ks.SelectorInclude = v.include
 		ks.SelectorExclude = v.exclude
-		ks.createSelectorFilters()
+		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
 		for _, dset := range ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items {
-			err := ks.gatherDaemonSet(*dset, acc)
-			if err != nil {
-				t.Errorf("Failed to gather daemonset - %s", err.Error())
-			}
+			ks.gatherDaemonSet(dset, acc)
 		}
 
 		// Grab selector tags
@@ -300,8 +284,7 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 			}
 		}
 
-		if !reflect.DeepEqual(v.expected, actual) {
-			t.Fatalf("actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
-		}
+		require.Equalf(t, v.expected, actual,
+			"actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
 	}
 }

@@ -1,9 +1,10 @@
 package vsphere
 
 import (
-	"log"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
 )
 
 // TSCache is a cache of timestamps used to determine the validity of datapoints
@@ -11,13 +12,15 @@ type TSCache struct {
 	ttl   time.Duration
 	table map[string]time.Time
 	mux   sync.RWMutex
+	log   telegraf.Logger
 }
 
 // NewTSCache creates a new TSCache with a specified time-to-live after which timestamps are discarded.
-func NewTSCache(ttl time.Duration) *TSCache {
+func NewTSCache(ttl time.Duration, log telegraf.Logger) *TSCache {
 	return &TSCache{
 		ttl:   ttl,
 		table: make(map[string]time.Time),
+		log:   log,
 	}
 }
 
@@ -27,12 +30,12 @@ func (t *TSCache) Purge() {
 	defer t.mux.Unlock()
 	n := 0
 	for k, v := range t.table {
-		if time.Now().Sub(v) > t.ttl {
+		if time.Since(v) > t.ttl {
 			delete(t.table, k)
 			n++
 		}
 	}
-	log.Printf("D! [inputs.vsphere] purged timestamp cache. %d deleted with %d remaining", n, len(t.table))
+	t.log.Debugf("purged timestamp cache. %d deleted with %d remaining", n, len(t.table))
 }
 
 // IsNew returns true if the supplied timestamp for the supplied key is more recent than the
@@ -56,10 +59,10 @@ func (t *TSCache) Get(key string, metricName string) (time.Time, bool) {
 }
 
 // Put updates the latest timestamp for the supplied key.
-func (t *TSCache) Put(key string, metricName string, time time.Time) {
+func (t *TSCache) Put(key string, metricName string, timestamp time.Time) {
 	t.mux.Lock()
 	defer t.mux.Unlock()
-	t.table[makeKey(key, metricName)] = time
+	t.table[makeKey(key, metricName)] = timestamp
 }
 
 func makeKey(resource string, metric string) string {

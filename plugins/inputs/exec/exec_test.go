@@ -1,3 +1,9 @@
+//go:build !windows
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package exec
 
 import (
@@ -7,16 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/value"
+	"github.com/influxdata/telegraf/testutil"
 )
 
-// Midnight 9/22/2015
-const baseTimeSeconds = 1442905200
-
-const validJson = `
+const validJSON = `
 {
     "status": "green",
     "num_processes": 82,
@@ -30,23 +34,9 @@ const validJson = `
     "users": [0, 1, 2, 3]
 }`
 
-const malformedJson = `
+const malformedJSON = `
 {
     "status": "green",
-`
-
-const lineProtocol = "cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1\n"
-const lineProtocolEmpty = ""
-const lineProtocolShort = "ab"
-
-const lineProtocolMulti = `
-cpu,cpu=cpu0,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu1,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu2,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu3,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu4,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu5,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu6,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 `
 
 type CarriageReturnTest struct {
@@ -86,18 +76,16 @@ func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(command string, _ time.Duration) ([]byte, []byte, error) {
+func (r runnerMock) Run(_ string, _ []string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
 
 func TestExec(t *testing.T) {
-	parser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "exec",
-	})
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
 	e := &Exec{
 		Log:      testutil.Logger{},
-		runner:   newRunnerMock([]byte(validJson), nil, nil),
+		runner:   newRunnerMock([]byte(validJSON), nil, nil),
 		Commands: []string{"testcommand arg1"},
 		parser:   parser,
 	}
@@ -105,7 +93,7 @@ func TestExec(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
-	assert.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
+	require.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
 
 	fields := map[string]interface{}{
 		"num_processes": float64(82),
@@ -121,27 +109,23 @@ func TestExec(t *testing.T) {
 }
 
 func TestExecMalformed(t *testing.T) {
-	parser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "exec",
-	})
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
 	e := &Exec{
 		Log:      testutil.Logger{},
-		runner:   newRunnerMock([]byte(malformedJson), nil, nil),
+		runner:   newRunnerMock([]byte(malformedJSON), nil, nil),
 		Commands: []string{"badcommand arg1"},
 		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
 }
 
 func TestCommandError(t *testing.T) {
-	parser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "exec",
-	})
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
 	e := &Exec{
 		Log:      testutil.Logger{},
 		runner:   newRunnerMock(nil, nil, fmt.Errorf("exit status code 1")),
@@ -151,18 +135,22 @@ func TestCommandError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
+
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(e.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(e.Gather))
 
 	fields := map[string]interface{}{
 		"value": "metric_value",
@@ -171,14 +159,18 @@ func TestExecCommandWithGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
+
 	e := NewExec()
 	e.Commands = []string{"/bin/echo metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(e.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(e.Gather))
 
 	fields := map[string]interface{}{
 		"value": "metric_value",
@@ -187,14 +179,37 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlobAndPath(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(e.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(e.Gather))
+
+	fields := map[string]interface{}{
+		"value": "metric_value",
+	}
+	acc.AssertContainsFields(t, "metric", fields)
+}
+
+func TestExecCommandWithEnv(t *testing.T) {
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
+	e := NewExec()
+	e.Commands = []string{"/bin/sh -c 'echo ${METRIC_NAME}'"}
+	e.Environment = []string{"METRIC_NAME=metric_value"}
+	e.SetParser(&parser)
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(e.Gather))
 
 	fields := map[string]interface{}{
 		"value": "metric_value",
@@ -212,12 +227,14 @@ func TestTruncate(t *testing.T) {
 			name: "should not truncate",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world")
+				_, err := b.WriteString("hello world")
+				require.NoError(t, err)
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world")
+				_, err := b.WriteString("hello world")
+				require.NoError(t, err)
 				return &b
 			},
 		},
@@ -225,12 +242,14 @@ func TestTruncate(t *testing.T) {
 			name: "should truncate up to the new line",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world\nand all the people")
+				_, err := b.WriteString("hello world\nand all the people")
+				require.NoError(t, err)
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world...")
+				_, err := b.WriteString("hello world...")
+				require.NoError(t, err)
 				return &b
 			},
 		},
@@ -239,24 +258,26 @@ func TestTruncate(t *testing.T) {
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < 2*MaxStderrBytes; i++ {
-					b.WriteByte('b')
+					require.NoError(t, b.WriteByte('b'))
 				}
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < MaxStderrBytes; i++ {
-					b.WriteByte('b')
+					require.NoError(t, b.WriteByte('b'))
 				}
-				b.WriteString("...")
+				_, err := b.WriteString("...")
+				require.NoError(t, err)
 				return &b
 			},
 		},
 	}
 
+	c := CommandRunner{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := truncate(*tt.bufF())
+			res := c.truncate(*tt.bufF())
 			require.Equal(t, tt.expF().Bytes(), res.Bytes())
 		})
 	}
@@ -267,15 +288,15 @@ func TestRemoveCarriageReturns(t *testing.T) {
 		// Test that all carriage returns are removed
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
-			out := removeCarriageReturns(*b)
-			assert.True(t, bytes.Equal(test.output, out.Bytes()))
+			out := removeWindowsCarriageReturns(*b)
+			require.True(t, bytes.Equal(test.output, out.Bytes()))
 		}
 	} else {
 		// Test that the buffer is returned unaltered
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
-			out := removeCarriageReturns(*b)
-			assert.True(t, bytes.Equal(test.input, out.Bytes()))
+			out := removeWindowsCarriageReturns(*b)
+			require.True(t, bytes.Equal(test.input, out.Bytes()))
 		}
 	}
 }

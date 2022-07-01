@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDisqueGeneratesMetrics(t *testing.T) {
+func TestDisqueGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -38,8 +38,12 @@ func TestDisqueGeneratesMetrics(t *testing.T) {
 				return
 			}
 
-			fmt.Fprintf(c, "$%d\n", len(testOutput))
-			c.Write([]byte(testOutput))
+			if _, err := fmt.Fprintf(c, "$%d\n", len(testOutput)); err != nil {
+				return
+			}
+			if _, err := c.Write([]byte(testOutput)); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -76,7 +80,7 @@ func TestDisqueGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsFields(t, "disque", fields)
 }
 
-func TestDisqueCanPullStatsFromMultipleServers(t *testing.T) {
+func TestDisqueCanPullStatsFromMultipleServersIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -104,8 +108,12 @@ func TestDisqueCanPullStatsFromMultipleServers(t *testing.T) {
 				return
 			}
 
-			fmt.Fprintf(c, "$%d\n", len(testOutput))
-			c.Write([]byte(testOutput))
+			if _, err := fmt.Fprintf(c, "$%d\n", len(testOutput)); err != nil {
+				return
+			}
+			if _, err := c.Write([]byte(testOutput)); err != nil {
+				return
+			}
 		}
 	}()
 

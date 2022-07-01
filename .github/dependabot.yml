@@ -1,0 +1,9 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Dependabot isn't able to update this packages that do not match the source, so anything with a version
+      - dependency-name: "*.v*"

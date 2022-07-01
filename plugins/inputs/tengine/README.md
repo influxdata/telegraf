@@ -4,9 +4,9 @@ The tengine plugin gathers metrics from the
 [Tengine Web Server](http://tengine.taobao.org/) via the
 [reqstat](http://tengine.taobao.org/document/http_reqstat.html) module.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Read Tengine's basic status information (ngx_http_reqstat_module)
 [[inputs.tengine]]
   ## An array of Tengine reqstat module URI to gather stats.
@@ -23,7 +23,7 @@ The tengine plugin gathers metrics from the
   # insecure_skip_verify = false
 ```
 
-### Metrics:
+## Metrics
 
 - Measurement
   - tags:
@@ -60,9 +60,9 @@ The tengine plugin gathers metrics from the
     - http_other_detail_status (integer, total number of requests of other status codes*http_ups_4xx total number of requests of upstream 4xx)
     - http_ups_5xx (integer, total number of requests of upstream 5xx)
 
-### Example Output:
+## Example Output
 
-```
+```shell
 tengine,host=gcp-thz-api-5,port=80,server=localhost,server_name=localhost bytes_in=9129i,bytes_out=56334i,conn_total=14i,http_200=90i,http_206=0i,http_2xx=90i,http_302=0i,http_304=0i,http_3xx=0i,http_403=0i,http_404=0i,http_416=0i,http_499=0i,http_4xx=0i,http_500=0i,http_502=0i,http_503=0i,http_504=0i,http_508=0i,http_5xx=0i,http_other_detail_status=0i,http_other_status=0i,http_ups_4xx=0i,http_ups_5xx=0i,req_total=90i,rt=0i,ups_req=0i,ups_rt=0i,ups_tries=0i 1526546308000000000
 tengine,host=gcp-thz-api-5,port=80,server=localhost,server_name=28.79.190.35.bc.googleusercontent.com bytes_in=1500i,bytes_out=3009i,conn_total=4i,http_200=1i,http_206=0i,http_2xx=1i,http_302=0i,http_304=0i,http_3xx=0i,http_403=0i,http_404=1i,http_416=0i,http_499=0i,http_4xx=3i,http_500=0i,http_502=0i,http_503=0i,http_504=0i,http_508=0i,http_5xx=0i,http_other_detail_status=0i,http_other_status=0i,http_ups_4xx=0i,http_ups_5xx=0i,req_total=4i,rt=0i,ups_req=0i,ups_rt=0i,ups_tries=0i 1526546308000000000
 tengine,host=gcp-thz-api-5,port=80,server=localhost,server_name=www.google.com bytes_in=372i,bytes_out=786i,conn_total=1i,http_200=1i,http_206=0i,http_2xx=1i,http_302=0i,http_304=0i,http_3xx=0i,http_403=0i,http_404=0i,http_416=0i,http_499=0i,http_4xx=0i,http_500=0i,http_502=0i,http_503=0i,http_504=0i,http_508=0i,http_5xx=0i,http_other_detail_status=0i,http_other_status=0i,http_ups_4xx=0i,http_ups_5xx=0i,req_total=1i,rt=0i,ups_req=0i,ups_rt=0i,ups_tries=0i 1526546308000000000

@@ -2,33 +2,27 @@ package logfmt
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/go-logfmt/logfmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-var (
-	ErrNoMetric = fmt.Errorf("no metric in line")
-)
+var ErrNoMetric = errors.New("no metric in line")
 
 // Parser decodes logfmt formatted messages into metrics.
 type Parser struct {
-	MetricName  string
-	DefaultTags map[string]string
-	Now         func() time.Time
-}
+	TagKeys     []string          `toml:"logfmt_tag_keys"`
+	DefaultTags map[string]string `toml:"-"`
 
-// NewParser creates a parser.
-func NewParser(metricName string, defaultTags map[string]string) *Parser {
-	return &Parser{
-		MetricName:  metricName,
-		DefaultTags: defaultTags,
-		Now:         time.Now,
-	}
+	metricName string
+	tagFilter  filter.Filter
 }
 
 // Parse converts a slice of bytes in logfmt format to metrics.
@@ -46,6 +40,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			break
 		}
 		fields := make(map[string]interface{})
+		tags := make(map[string]string)
 		for decoder.ScanKeyval() {
 			if string(decoder.Value()) == "" {
 				continue
@@ -53,7 +48,9 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 			//type conversions
 			value := string(decoder.Value())
-			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+			if p.tagFilter != nil && p.tagFilter.Match(string(decoder.Key())) {
+				tags[string(decoder.Key())] = value
+			} else if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 				fields[string(decoder.Key())] = iValue
 			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
 				fields[string(decoder.Key())] = fValue
@@ -63,14 +60,11 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 				fields[string(decoder.Key())] = value
 			}
 		}
-		if len(fields) == 0 {
+		if len(fields) == 0 && len(tags) == 0 {
 			continue
 		}
 
-		m, err := metric.New(p.MetricName, map[string]string{}, fields, p.Now())
-		if err != nil {
-			return nil, err
-		}
+		m := metric.New(p.metricName, tags, fields, time.Now())
 
 		metrics = append(metrics, m)
 	}
@@ -108,4 +102,33 @@ func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
 			}
 		}
 	}
+}
+
+func (p *Parser) Init() error {
+	var err error
+
+	// Compile tag key patterns
+	if p.tagFilter, err = filter.Compile(p.TagKeys); err != nil {
+		return fmt.Errorf("error compiling tag pattern: %w", err)
+	}
+
+	return nil
+}
+
+func init() {
+	// Register parser
+	parsers.Add("logfmt",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{metricName: defaultMetricName}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.metricName = config.MetricName
+	p.DefaultTags = config.DefaultTags
+	p.TagKeys = append(p.TagKeys, config.LogFmtTagKeys...)
+
+	return p.Init()
 }

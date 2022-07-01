@@ -1,8 +1,14 @@
 # Nginx Input Plugin
 
-### Configuration:
+This plugin gathers basic status from the open source web server Nginx. Nginx
+Plus is a commercial version. For more information about the differences between
+Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
 
-```toml
+[diff-doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
+
+## Configuration
+
+```toml @sample.conf
 # Read Nginx's basic status information (ngx_http_stub_status_module)
 [[inputs.nginx]]
   ## An array of Nginx stub_status URI to gather stats.
@@ -19,26 +25,27 @@
   response_timeout = "5s"
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - Measurement
-    - accepts
-    - active
-    - handled
-    - reading
-    - requests
-    - waiting
-    - writing
+  - accepts
+  - active
+  - handled
+  - reading
+  - requests
+  - waiting
+  - writing
 
-### Tags:
+## Tags
 
 - All measurements have the following tags:
-    - port
-    - server
+  - port
+  - server
 
-### Example Output:
+## Example Output
 
 Using this configuration:
+
 ```toml
 [[inputs.nginx]]
   ## An array of Nginx stub_status URI to gather stats.
@@ -46,12 +53,14 @@ Using this configuration:
 ```
 
 When run with:
+
 ```sh
 ./telegraf --config telegraf.conf --input-filter nginx --test
 ```
 
 It produces:
-```
+
+```shell
 * Plugin: nginx, Collection 1
 > nginx,port=80,server=localhost accepts=605i,active=2i,handled=605i,reading=0i,requests=12132i,waiting=1i,writing=1i 1456690994701784331
 ```
