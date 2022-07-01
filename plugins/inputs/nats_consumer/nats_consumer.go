@@ -46,7 +46,7 @@ type natsConsumer struct {
 	Username    string   `toml:"username"`
 	Password    string   `toml:"password"`
 	Credentials string   `toml:"credentials"`
-	JsSubjects  []string `toml:"js_subjects"`
+	JsSubjects  []string `toml:"jetstream_subjects"`
 
 	tls.ClientConfig
 
