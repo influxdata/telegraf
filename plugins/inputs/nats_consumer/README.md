@@ -18,7 +18,7 @@ instances of telegraf can read from a NATS cluster in parallel.
   subjects = ["telegraf"]
 
   ## jetstream subjects
-  js_subjects = ["js_telegraf"]
+  jetstream_subjects = ["js_telegraf"]
 
   ## name a queue group
   queue_group = "telegraf_consumers"
