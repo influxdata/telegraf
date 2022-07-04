@@ -55,6 +55,10 @@ and creates metrics using one of the supported [input data formats][].
   ## publishing.
   # persistent_session = false
 
+  ## If set, will calculate the size in bytes of the incoming message and put it in
+  ## selfstat to be retreived and aggregated by the internal plugin
+  # collect_bytes_received = true
+
   ## If unset, a random client ID will be generated.
   # client_id = ""
 

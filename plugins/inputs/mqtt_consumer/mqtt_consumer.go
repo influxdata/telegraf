@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -75,6 +76,7 @@ type MQTTConsumer struct {
 
 	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 	PersistentSession bool
+	collectBytes      bool   `toml:"collect_bytes_received"`
 	ClientID          string `toml:"client_id"`
 
 	tls.ClientConfig
@@ -91,6 +93,7 @@ type MQTTConsumer struct {
 	topicTagParse string
 	ctx           context.Context
 	cancel        context.CancelFunc
+	bytesRecv     selfstat.Stat
 }
 
 func (*MQTTConsumer) SampleConfig() string {
@@ -147,6 +150,10 @@ func (m *MQTTConsumer) Init() error {
 		}
 	}
 
+	tags := map[string]string{
+		"address": m.Servers[0],
+	}
+	m.bytesRecv = selfstat.Register("mqtt_consumer", "bytes_received", tags)
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
@@ -241,24 +248,25 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
+	m.bytesRecv.Set(0)
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
 		return err
 	}
 
-	for _, metric := range metrics {
-		totalSize := 0
-		payloadSize := len(msg.Payload())
-		topicSize := len(msg.Topic())
-		idSize := unsafe.Sizeof(msg.MessageID())
-		msgSize := unsafe.Sizeof(msg)
-		dupSize := unsafe.Sizeof(msg.Duplicate())
-		retainedSize := unsafe.Sizeof(msg.Retained())
-		qosSize := unsafe.Sizeof(msg.Qos())
-		totalSize = payloadSize + topicSize + int(idSize) + int(msgSize) + int(dupSize) + int(retainedSize) + int(qosSize)
-		m.Log.Infof("Total Size %v", totalSize)
-		metric.AddTag("bytesRecv", strconv.FormatInt(int64(totalSize), 10))
+	if m.collectBytes {
+		byteCount := unsafe.Sizeof(msg) +
+			unsafe.Sizeof(msg.Payload()) +
+			unsafe.Sizeof(msg.MessageID()) +
+			unsafe.Sizeof(msg.Duplicate()) +
+			unsafe.Sizeof(msg.Qos()) +
+			unsafe.Sizeof(msg.Topic()) +
+			unsafe.Sizeof(msg.Retained())
+		byteCount64 := int64(byteCount)
+		m.bytesRecv.Incr(byteCount64)
+	}
 
+	for _, metric := range metrics {
 		if m.topicTagParse != "" {
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
@@ -289,7 +297,6 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	m.messagesMutex.Lock()
 	m.messages[id] = true
 	m.messagesMutex.Unlock()
-	m.Log.Debug("Final metric here: ", metrics)
 	return nil
 }
 func (m *MQTTConsumer) Stop() {
