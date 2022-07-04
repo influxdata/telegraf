@@ -842,8 +842,8 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			printHistoricPluginDeprecationNotice("inputs", name, di)
 			return fmt.Errorf("plugin deprecated")
 		}
-
-		return fmt.Errorf("Undefined but requested input: %s", name)
+		log.Printf("W! Skipping undefined but requested input: %s", name)
+		return nil
 	}
 	input := creator()
 
@@ -1176,7 +1176,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldString(tbl, "dropwizard_tags_path", &pc.DropwizardTagsPath)
 	c.getFieldStringMap(tbl, "dropwizard_tag_paths", &pc.DropwizardTagPathsMap)
 
-	//for grok data_format
+	// for grok data_format
 	c.getFieldStringSlice(tbl, "grok_named_patterns", &pc.GrokNamedPatterns)
 	c.getFieldStringSlice(tbl, "grok_patterns", &pc.GrokPatterns)
 	c.getFieldString(tbl, "grok_custom_patterns", &pc.GrokCustomPatterns)
