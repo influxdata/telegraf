@@ -6,27 +6,24 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
 	tests := []struct {
 		name        string
 		measurement string
-		now         func() time.Time
 		bytes       []byte
 		want        []telegraf.Metric
 		wantErr     bool
 	}{
 		{
 			name: "no bytes returns no metrics",
-			now:  func() time.Time { return time.Unix(0, 0) },
 			want: []telegraf.Metric{},
 		},
 		{
 			name:        "test without trailing end",
 			bytes:       []byte("foo=\"bar\""),
-			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			want: []telegraf.Metric{
 				testutil.MustMetric(
@@ -42,7 +39,6 @@ func TestParse(t *testing.T) {
 		{
 			name:        "test with trailing end",
 			bytes:       []byte("foo=\"bar\"\n"),
-			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			want: []telegraf.Metric{
 				testutil.MustMetric(
@@ -58,7 +54,6 @@ func TestParse(t *testing.T) {
 		{
 			name:        "logfmt parser returns all the fields",
 			bytes:       []byte(`ts=2018-07-24T19:43:40.275Z lvl=info msg="http request" method=POST`),
-			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			want: []telegraf.Metric{
 				testutil.MustMetric(
@@ -77,7 +72,6 @@ func TestParse(t *testing.T) {
 		{
 			name:        "logfmt parser parses every line",
 			bytes:       []byte("ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST\nparent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000"),
-			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			want: []telegraf.Metric{
 				testutil.MustMetric(
@@ -105,21 +99,18 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:    "keys without = or values are ignored",
-			now:     func() time.Time { return time.Unix(0, 0) },
 			bytes:   []byte(`i am no data.`),
 			want:    []telegraf.Metric{},
 			wantErr: false,
 		},
 		{
 			name:    "keys without values are ignored",
-			now:     func() time.Time { return time.Unix(0, 0) },
 			bytes:   []byte(`foo="" bar=`),
 			want:    []telegraf.Metric{},
 			wantErr: false,
 		},
 		{
 			name:        "unterminated quote produces error",
-			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			bytes:       []byte(`bar=baz foo="bar`),
 			want:        []telegraf.Metric{},
@@ -127,7 +118,6 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:        "malformed key",
-			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			bytes:       []byte(`"foo=" bar=baz`),
 			want:        []telegraf.Metric{},
@@ -137,8 +127,7 @@ func TestParse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			l := Parser{
-				MetricName: tt.measurement,
-				Now:        tt.now,
+				metricName: tt.measurement,
 			}
 			got, err := l.Parse(tt.bytes)
 			if (err != nil) != tt.wantErr {
@@ -146,7 +135,7 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			testutil.RequireMetricsEqual(t, tt.want, got)
+			testutil.RequireMetricsEqual(t, tt.want, got, testutil.IgnoreTime())
 		})
 	}
 }
@@ -156,19 +145,16 @@ func TestParseLine(t *testing.T) {
 		name        string
 		s           string
 		measurement string
-		now         func() time.Time
 		want        telegraf.Metric
 		wantErr     bool
 	}{
 		{
 			name:    "No Metric In line",
-			now:     func() time.Time { return time.Unix(0, 0) },
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:        "Log parser fmt returns all fields",
-			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			s:           `ts=2018-07-24T19:43:35.207268Z lvl=5 msg="Write failed" log_id=09R4e4Rl000`,
 			want: testutil.MustMetric(
@@ -185,7 +171,6 @@ func TestParseLine(t *testing.T) {
 		},
 		{
 			name:        "ParseLine only returns metrics from first string",
-			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			s:           "ts=2018-07-24T19:43:35.207268Z lvl=5 msg=\"Write failed\" log_id=09R4e4Rl000\nmethod=POST parent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000",
 			want: testutil.MustMetric(
@@ -204,14 +189,13 @@ func TestParseLine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			l := Parser{
-				MetricName: tt.measurement,
-				Now:        tt.now,
+				metricName: tt.measurement,
 			}
 			got, err := l.ParseLine(tt.s)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
 			}
-			testutil.RequireMetricEqual(t, tt.want, got)
+			testutil.RequireMetricEqual(t, tt.want, got, testutil.IgnoreTime())
 		})
 	}
 }
@@ -277,15 +261,18 @@ func TestTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := NewParser(tt.measurement, map[string]string{}, tt.tagKeys)
-			assert.NoError(t, l.Init())
+			l := &Parser{
+				metricName:  tt.measurement,
+				DefaultTags: map[string]string{},
+				TagKeys:     tt.tagKeys,
+			}
+			require.NoError(t, l.Init())
 
 			got, err := l.ParseLine(tt.s)
-
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			testutil.RequireMetricEqual(t, tt.want, got, testutil.IgnoreTime())
 		})

@@ -225,6 +225,8 @@ clean:
 	rm -rf build
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
+	rm -rf tools/package_lxd_test/package_lxd_test
+	rm -rf tools/package_lxd_test/package_lxd_test.exe
 
 .PHONY: docker-image
 docker-image:

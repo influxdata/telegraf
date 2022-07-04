@@ -7,6 +7,7 @@ import (
 	"github.com/Shopify/sarama"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -115,9 +116,9 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	k.acc = &acc
 	defer close(k.done)
 
-	var err error
-	k.parser, err = parsers.NewGraphiteParser("_", []string{}, nil)
-	require.NoError(t, err)
+	p := graphite.Parser{Separator: "_", Templates: []string{}}
+	require.NoError(t, p.Init())
+	k.parser = &p
 	go k.receiver()
 	in <- saramaMsg(testMsgGraphite)
 	acc.Wait(1)

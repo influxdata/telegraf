@@ -15,8 +15,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -139,11 +139,15 @@ func TestCommandError(t *testing.T) {
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
-	parser, err := parsers.NewValueParser("metric", "string", "", nil)
-	require.NoError(t, err)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
+
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(e.Gather))
@@ -155,12 +159,15 @@ func TestExecCommandWithGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlob(t *testing.T) {
-	parser, err := parsers.NewValueParser("metric", "string", "", nil)
-	require.NoError(t, err)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
 
 	e := NewExec()
 	e.Commands = []string{"/bin/echo metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(e.Gather))
@@ -172,11 +179,14 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlobAndPath(t *testing.T) {
-	parser, err := parsers.NewValueParser("metric", "string", "", nil)
-	require.NoError(t, err)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(e.Gather))
@@ -188,12 +198,15 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 }
 
 func TestExecCommandWithEnv(t *testing.T) {
-	parser, err := parsers.NewValueParser("metric", "string", "", nil)
-	require.NoError(t, err)
+	parser := value.Parser{
+		MetricName: "metric",
+		DataType:   "string",
+	}
+	require.NoError(t, parser.Init())
 	e := NewExec()
 	e.Commands = []string{"/bin/sh -c 'echo ${METRIC_NAME}'"}
 	e.Environment = []string{"METRIC_NAME=metric_value"}
-	e.SetParser(parser)
+	e.SetParser(&parser)
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(e.Gather))
