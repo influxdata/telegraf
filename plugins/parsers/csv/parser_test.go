@@ -1046,3 +1046,424 @@ func TestOverwriteDefaultTagsAndMetaDataTags(t *testing.T) {
 	require.Equal(t, expectedFields[0], m.Fields())
 	require.Equal(t, expectedTags[0], m.Tags())
 }
+
+func TestParseCSVResetModeInvalid(t *testing.T) {
+	p := &Parser{
+		HeaderRowCount: 1,
+		ResetMode:      "garbage",
+	}
+	require.Error(t, p.Init(), `unknown reset mode "garbage"`)
+}
+
+func TestParseCSVResetModeNone(t *testing.T) {
+	testCSV := `garbage nonsense that needs be skipped
+
+# version= 1.0
+
+    invalid meta data that can be ignored.
+file created: 2021-10-08T12:34:18+10:00
+timestamp,type,name,status
+2020-11-23T08:19:27+00:00,Reader,R002,1
+#2020-11-04T13:23:04+00:00,Reader,R031,0
+2020-11-04T13:29:47+00:00,Coordinator,C001,0`
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Reader",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "R002",
+				"status": int64(1),
+			},
+			time.Date(2020, 11, 23, 8, 19, 27, 0, time.UTC),
+		),
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Coordinator",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "C001",
+				"status": int64(0),
+			},
+			time.Date(2020, 11, 4, 13, 29, 47, 0, time.UTC),
+		),
+	}
+
+	p := &Parser{
+		HeaderRowCount:     1,
+		SkipRows:           2,
+		MetadataRows:       4,
+		Comment:            "#",
+		TagColumns:         []string{"type"},
+		MetadataSeparators: []string{":", "="},
+		MetadataTrimSet:    " #",
+		TimestampColumn:    "timestamp",
+		TimestampFormat:    "2006-01-02T15:04:05Z07:00",
+		ResetMode:          "none",
+	}
+	require.NoError(t, p.Init())
+	// Set default Tags
+	p.SetDefaultTags(map[string]string{"test": "tag"})
+
+	// Do the parsing the first time
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
+
+	// Parsing another data line should work when not resetting
+	additionalCSV := "2021-12-01T19:01:00+00:00,Reader,R009,5\r\n"
+	additionalExpected := []telegraf.Metric{
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Reader",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "R009",
+				"status": int64(5),
+			},
+			time.Date(2021, 12, 1, 19, 1, 0, 0, time.UTC),
+		),
+	}
+	metrics, err = p.Parse([]byte(additionalCSV))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, additionalExpected, metrics)
+
+	// This should fail when not resetting but reading again due to the header etc
+	_, err = p.Parse([]byte(testCSV))
+	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+}
+
+func TestParseCSVLinewiseResetModeNone(t *testing.T) {
+	testCSV := []string{
+		"garbage nonsense that needs be skipped",
+		"",
+		"# version= 1.0\r\n",
+		"",
+		"    invalid meta data that can be ignored.\r\n",
+		"file created: 2021-10-08T12:34:18+10:00",
+		"timestamp,type,name,status\n",
+		"2020-11-23T08:19:27+00:00,Reader,R002,1\r\n",
+		"#2020-11-04T13:23:04+00:00,Reader,R031,0\n",
+		"2020-11-04T13:29:47+00:00,Coordinator,C001,0",
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Reader",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "R002",
+				"status": int64(1),
+			},
+			time.Date(2020, 11, 23, 8, 19, 27, 0, time.UTC),
+		),
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Coordinator",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "C001",
+				"status": int64(0),
+			},
+			time.Date(2020, 11, 4, 13, 29, 47, 0, time.UTC),
+		),
+	}
+
+	p := &Parser{
+		HeaderRowCount:     1,
+		SkipRows:           2,
+		MetadataRows:       4,
+		Comment:            "#",
+		TagColumns:         []string{"type"},
+		MetadataSeparators: []string{":", "="},
+		MetadataTrimSet:    " #",
+		TimestampColumn:    "timestamp",
+		TimestampFormat:    "2006-01-02T15:04:05Z07:00",
+		ResetMode:          "none",
+	}
+	require.NoError(t, p.Init())
+
+	// Set default Tags
+	p.SetDefaultTags(map[string]string{"test": "tag"})
+
+	// Do the parsing the first time
+	var metrics []telegraf.Metric
+	for i, r := range testCSV {
+		m, err := p.ParseLine(r)
+		// Header lines should return EOF
+		if m == nil {
+			require.Error(t, io.EOF, err)
+			continue
+		}
+		require.NoErrorf(t, err, "failed in row %d", i)
+		metrics = append(metrics, m)
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics)
+
+	// Parsing another data line should work when not resetting
+	additionalCSV := "2021-12-01T19:01:00+00:00,Reader,R009,5\r\n"
+	additionalExpected := metric.New(
+		"",
+		map[string]string{
+			"file created": "2021-10-08T12:34:18+10:00",
+			"test":         "tag",
+			"type":         "Reader",
+			"version":      "1.0",
+		},
+		map[string]interface{}{
+			"name":   "R009",
+			"status": int64(5),
+		},
+		time.Date(2021, 12, 1, 19, 1, 0, 0, time.UTC),
+	)
+	m, err := p.ParseLine(additionalCSV)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t, additionalExpected, m)
+
+	// This should fail when not resetting but reading again due to the header etc
+	_, err = p.ParseLine(testCSV[0])
+	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+}
+
+func TestParseCSVResetModeAlways(t *testing.T) {
+	testCSV := `garbage nonsense that needs be skipped
+
+# version= 1.0
+
+    invalid meta data that can be ignored.
+file created: 2021-10-08T12:34:18+10:00
+timestamp,type,name,status
+2020-11-23T08:19:27+00:00,Reader,R002,1
+#2020-11-04T13:23:04+00:00,Reader,R031,0
+2020-11-04T13:29:47+00:00,Coordinator,C001,0`
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Reader",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "R002",
+				"status": int64(1),
+			},
+			time.Date(2020, 11, 23, 8, 19, 27, 0, time.UTC),
+		),
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Coordinator",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "C001",
+				"status": int64(0),
+			},
+			time.Date(2020, 11, 4, 13, 29, 47, 0, time.UTC),
+		),
+	}
+
+	p := &Parser{
+		HeaderRowCount:     1,
+		SkipRows:           2,
+		MetadataRows:       4,
+		Comment:            "#",
+		TagColumns:         []string{"type", "category"},
+		MetadataSeparators: []string{":", "="},
+		MetadataTrimSet:    " #",
+		TimestampColumn:    "timestamp",
+		TimestampFormat:    "2006-01-02T15:04:05Z07:00",
+		ResetMode:          "always",
+	}
+	require.NoError(t, p.Init())
+	// Set default Tags
+	p.SetDefaultTags(map[string]string{"test": "tag"})
+
+	// Do the parsing the first time
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
+
+	// Parsing another data line should fail as it is interpreted as header
+	additionalCSV := "2021-12-01T19:01:00+00:00,Reader,R009,5\r\n"
+	metrics, err = p.Parse([]byte(additionalCSV))
+	require.Nil(t, metrics)
+	require.Error(t, io.EOF, err)
+
+	// Prepare a second CSV with different column names
+	testCSV = `garbage nonsense that needs be skipped
+
+# version= 1.0
+
+    invalid meta data that can be ignored.
+file created: 2021-10-08T12:34:18+10:00
+timestamp,category,id,flag
+2020-11-23T08:19:27+00:00,Reader,R002,1
+#2020-11-04T13:23:04+00:00,Reader,R031,0
+2020-11-04T13:29:47+00:00,Coordinator,C001,0`
+
+	expected = []telegraf.Metric{
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"category":     "Reader",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"id":   "R002",
+				"flag": int64(1),
+			},
+			time.Date(2020, 11, 23, 8, 19, 27, 0, time.UTC),
+		),
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"category":     "Coordinator",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"id":   "C001",
+				"flag": int64(0),
+			},
+			time.Date(2020, 11, 4, 13, 29, 47, 0, time.UTC),
+		),
+	}
+
+	// This should work as the parser is reset
+	metrics, err = p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
+}
+
+func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
+	testCSV := []string{
+		"garbage nonsense that needs be skipped",
+		"",
+		"# version= 1.0\r\n",
+		"",
+		"    invalid meta data that can be ignored.\r\n",
+		"file created: 2021-10-08T12:34:18+10:00",
+		"timestamp,type,name,status\n",
+		"2020-11-23T08:19:27+00:00,Reader,R002,1\r\n",
+		"#2020-11-04T13:23:04+00:00,Reader,R031,0\n",
+		"2020-11-04T13:29:47+00:00,Coordinator,C001,0",
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Reader",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "R002",
+				"status": int64(1),
+			},
+			time.Date(2020, 11, 23, 8, 19, 27, 0, time.UTC),
+		),
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"type":         "Coordinator",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"name":   "C001",
+				"status": int64(0),
+			},
+			time.Date(2020, 11, 4, 13, 29, 47, 0, time.UTC),
+		),
+	}
+
+	p := &Parser{
+		HeaderRowCount:     1,
+		SkipRows:           2,
+		MetadataRows:       4,
+		Comment:            "#",
+		TagColumns:         []string{"type"},
+		MetadataSeparators: []string{":", "="},
+		MetadataTrimSet:    " #",
+		TimestampColumn:    "timestamp",
+		TimestampFormat:    "2006-01-02T15:04:05Z07:00",
+		ResetMode:          "always",
+	}
+	require.NoError(t, p.Init())
+
+	// Set default Tags
+	p.SetDefaultTags(map[string]string{"test": "tag"})
+
+	// Do the parsing the first time
+	var metrics []telegraf.Metric
+	for i, r := range testCSV {
+		m, err := p.ParseLine(r)
+		// Header lines should return EOF
+		if m == nil {
+			require.Error(t, io.EOF, err)
+			continue
+		}
+		require.NoErrorf(t, err, "failed in row %d", i)
+		metrics = append(metrics, m)
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics)
+
+	// Parsing another data line should work in line-wise parsing as
+	// reset-mode "always" is ignored.
+	additionalCSV := "2021-12-01T19:01:00+00:00,Reader,R009,5\r\n"
+	additionalExpected := metric.New(
+		"",
+		map[string]string{
+			"file created": "2021-10-08T12:34:18+10:00",
+			"test":         "tag",
+			"type":         "Reader",
+			"version":      "1.0",
+		},
+		map[string]interface{}{
+			"name":   "R009",
+			"status": int64(5),
+		},
+		time.Date(2021, 12, 1, 19, 1, 0, 0, time.UTC),
+	)
+	m, err := p.ParseLine(additionalCSV)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t, additionalExpected, m)
+
+	// This should fail as reset-mode "always" is ignored in line-wise parsing
+	_, err = p.ParseLine(testCSV[0])
+	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+}

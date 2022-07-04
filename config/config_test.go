@@ -413,10 +413,7 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
-			mask: []string{"TimeFunc"},
-		},
-		"logfmt": {
-			mask: []string{"Now"},
+			mask: []string{"TimeFunc", "ResetMode"},
 		},
 		"xpath_protobuf": {
 			param: map[string]interface{}{
@@ -475,6 +472,7 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 		require.True(t, ok)
 		// Get the parser set with 'SetParser()'
 		if p, ok := input.Parser.(*models.RunningParser); ok {
+			require.NoError(t, p.Init())
 			actual = append(actual, p.Parser)
 		} else {
 			actual = append(actual, input.Parser)
@@ -552,10 +550,7 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
-			mask: []string{"TimeFunc"},
-		},
-		"logfmt": {
-			mask: []string{"Now"},
+			mask: []string{"TimeFunc", "ResetMode"},
 		},
 		"xpath_protobuf": {
 			param: map[string]interface{}{
@@ -614,6 +609,7 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 		require.True(t, ok)
 		// Get the parser set with 'SetParser()'
 		if p, ok := input.Parser.(*models.RunningParser); ok {
+			require.NoError(t, p.Init())
 			actual = append(actual, p.Parser)
 		} else {
 			actual = append(actual, input.Parser)
@@ -642,7 +638,7 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected[i], actual[i], options...)
 		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)

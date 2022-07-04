@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -293,9 +294,9 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	var err error
-	listener.parser, err = parsers.NewGraphiteParser("_", []string{}, nil)
-	require.NoError(t, err)
+	p := graphite.Parser{Separator: "_", Templates: []string{}}
+	require.NoError(t, p.Init())
+	listener.parser = &p
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
