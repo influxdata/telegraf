@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
@@ -246,6 +247,18 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	}
 
 	for _, metric := range metrics {
+		totalSize := 0
+		payloadSize := len(msg.Payload())
+		topicSize := len(msg.Topic())
+		idSize := unsafe.Sizeof(msg.MessageID())
+		msgSize := unsafe.Sizeof(msg)
+		dupSize := unsafe.Sizeof(msg.Duplicate())
+		retainedSize := unsafe.Sizeof(msg.Retained())
+		qosSize := unsafe.Sizeof(msg.Qos())
+		totalSize = payloadSize + topicSize + int(idSize) + int(msgSize) + int(dupSize) + int(retainedSize) + int(qosSize)
+		m.Log.Infof("Total Size %v", totalSize)
+		metric.AddTag("bytesRecv", strconv.FormatInt(int64(totalSize), 10))
+
 		if m.topicTagParse != "" {
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
@@ -276,6 +289,7 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	m.messagesMutex.Lock()
 	m.messages[id] = true
 	m.messagesMutex.Unlock()
+	m.Log.Debug("Final metric here: ", metrics)
 	return nil
 }
 func (m *MQTTConsumer) Stop() {
