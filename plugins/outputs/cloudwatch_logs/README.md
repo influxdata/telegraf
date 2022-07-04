@@ -33,7 +33,7 @@ The IAM user needs the following permissions (see this [reference][4] for more):
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for AWS CloudWatchLogs output.
 [[outputs.cloudwatch_logs]]
   ## The region is the Amazon region that you wish to connect to.

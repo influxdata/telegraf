@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package timestream
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"reflect"
@@ -18,6 +20,10 @@ import (
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type (
 	Timestream struct {
@@ -68,6 +74,10 @@ var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteCl
 		return &timestreamwrite.Client{}, err
 	}
 	return timestreamwrite.NewFromConfig(cfg), nil
+}
+
+func (*Timestream) SampleConfig() string {
+	return sampleConfig
 }
 
 func (t *Timestream) Connect() error {

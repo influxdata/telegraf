@@ -1,19 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
 package conntrack
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-
-	"path/filepath"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Conntrack struct {
 	Path  string
@@ -45,6 +50,10 @@ func (c *Conntrack) setDefaults() {
 	if len(c.Files) == 0 {
 		c.Files = dfltFiles
 	}
+}
+
+func (*Conntrack) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *Conntrack) Gather(acc telegraf.Accumulator) error {

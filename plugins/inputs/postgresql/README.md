@@ -1,6 +1,9 @@
 # PostgreSQL Input Plugin
 
-This postgresql plugin provides metrics for your postgres database. It currently works with postgres versions 8.1+. It uses data from the built in _pg_stat_database_ and pg_stat_bgwriter views. The metrics recorded depend on your version of postgres. See table:
+This postgresql plugin provides metrics for your postgres database. It currently
+works with postgres versions 8.1+. It uses data from the built in
+_pg_stat_database_ and pg_stat_bgwriter views. The metrics recorded depend on
+your version of postgres. See table:
 
 ```sh
 pg version      9.2+   9.1   8.3-9.0   8.1-8.2   7.4-8.0(unsupported)
@@ -28,11 +31,14 @@ stats_reset*     x      x
 
 _* value ignored and therefore not recorded._
 
-More information about the meaning of these metrics can be found in the [PostgreSQL Documentation](http://www.postgresql.org/docs/9.2/static/monitoring-stats.html#PG-STAT-DATABASE-VIEW)
+More information about the meaning of these metrics can be found in the
+[PostgreSQL Documentation][1].
+
+[1]: http://www.postgresql.org/docs/9.2/static/monitoring-stats.html#PG-STAT-DATABASE-VIEW
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many postgresql servers
 [[inputs.postgresql]]
   ## specify address via a url matching:
@@ -74,21 +80,34 @@ More information about the meaning of these metrics can be found in the [Postgre
 
 Specify address via a postgresql connection string:
 
-  `host=localhost port=5432 user=telegraf database=telegraf`
+```text
+host=localhost port=5432 user=telegraf database=telegraf
+```
 
 Or via an url matching:
 
-  `postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]`
+```text
+postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]
+```
 
-All connection parameters are optional. Without the dbname parameter, the driver will default to a database with the same name as the user. This dbname is just for instantiating a connection with the server and doesn't restrict the databases we are trying to grab metrics for.
+All connection parameters are optional. Without the dbname parameter, the driver
+will default to a database with the same name as the user. This dbname is just
+for instantiating a connection with the server and doesn't restrict the
+databases we are trying to grab metrics for.
 
-A  list of databases to explicitly ignore.  If not specified, metrics for all databases are gathered.  Do NOT use with the 'databases' option.
+A list of databases to explicitly ignore.  If not specified, metrics for all
+databases are gathered.  Do NOT use with the 'databases' option.
 
-  `ignored_databases = ["postgres", "template0", "template1"]`
+```text
+ignored_databases = ["postgres", "template0", "template1"]`
+```
 
-A list of databases to pull metrics about. If not specified, metrics for all databases are gathered.  Do NOT use with the 'ignored_databases' option.
+A list of databases to pull metrics about. If not specified, metrics for all
+databases are gathered.  Do NOT use with the 'ignored_databases' option.
 
-  `databases = ["app_production", "testing"]`
+```text
+databases = ["app_production", "testing"]`
+```
 
 ### TLS Configuration
 

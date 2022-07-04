@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package apache
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Apache struct {
 	Urls            []string
 	Username        string
@@ -25,6 +31,10 @@ type Apache struct {
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+func (*Apache) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *Apache) Gather(acc telegraf.Accumulator) error {
@@ -107,7 +117,7 @@ func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 		line := sc.Text()
 		if strings.Contains(line, ":") {
 			parts := strings.SplitN(line, ":", 2)
-			key, part := strings.Replace(parts[0], " ", "", -1), strings.TrimSpace(parts[1])
+			key, part := strings.ReplaceAll(parts[0], " ", ""), strings.TrimSpace(parts[1])
 
 			switch key {
 			case "Scoreboard":

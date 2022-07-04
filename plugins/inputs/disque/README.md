@@ -1,10 +1,11 @@
 # Disque Input Plugin
 
-[Disque](https://github.com/antirez/disque) is an ongoing experiment to build a distributed, in-memory, message broker.
+[Disque](https://github.com/antirez/disque) is an ongoing experiment to build a
+distributed, in-memory, message broker.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many disque servers
 [[inputs.disque]]
   ## An array of URI to gather stats about. Specify an ip or hostname

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kibana
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const statusPath = "/api/status"
 
@@ -108,6 +114,10 @@ func mapHealthStatusToCode(s string) int {
 		return 3
 	}
 	return 0
+}
+
+func (*Kibana) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *Kibana) Gather(acc telegraf.Accumulator) error {

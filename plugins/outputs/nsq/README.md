@@ -5,7 +5,7 @@ producer. It requires a `server` name and a `topic` name.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf measurements to NSQD
 [[outputs.nsq]]
   ## Location of nsqd instance listening on TCP

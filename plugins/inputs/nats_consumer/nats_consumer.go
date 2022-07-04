@@ -1,17 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nats_consumer
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/nats-io/nats.go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/nats-io/nats.go"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultMaxUndeliveredMessages = 1000
@@ -62,6 +69,10 @@ type natsConsumer struct {
 	acc    telegraf.TrackingAccumulator
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
+}
+
+func (*natsConsumer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *natsConsumer) SetParser(parser parsers.Parser) {

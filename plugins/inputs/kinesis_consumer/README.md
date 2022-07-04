@@ -5,7 +5,7 @@ and creates metrics using one of the supported [input data formats][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the AWS Kinesis input.
 [[inputs.kinesis_consumer]]
   ## Amazon REGION of kinesis endpoint.
@@ -89,8 +89,8 @@ DynamoDB:
 
 ### DynamoDB Checkpoint
 
-The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
-this functionality, create a table with the following string type keys:
+The DynamoDB checkpoint stores the last processed record in a DynamoDB. To
+leverage this functionality, create a table with the following string type keys:
 
 ```shell
 Partition key: namespace

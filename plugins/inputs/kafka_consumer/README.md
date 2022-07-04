@@ -3,12 +3,12 @@
 The [Kafka][kafka] consumer plugin reads from Kafka
 and creates metrics using one of the supported [input data formats][].
 
-For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input plugin
-and use the old zookeeper connection method.
+For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input
+plugin and use the old zookeeper connection method.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from Kafka topics
 [[inputs.kafka_consumer]]
   ## Kafka brokers.

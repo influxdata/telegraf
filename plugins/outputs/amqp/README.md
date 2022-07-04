@@ -12,7 +12,7 @@ For an introduction to AMQP see:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Publishes metrics to an AMQP broker
 [[outputs.amqp]]
   ## Broker to publish to.

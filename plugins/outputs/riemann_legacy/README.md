@@ -7,7 +7,7 @@ instead.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the Riemann server to send metrics to
 [[outputs.riemann_legacy]]
   ## URL of server

@@ -1,10 +1,13 @@
 # Kernel VMStat Input Plugin
 
-The kernel_vmstat plugin gathers virtual memory statistics
-by reading /proc/vmstat. For a full list of available fields see the
-/proc/vmstat section of the [proc man page](http://man7.org/linux/man-pages/man5/proc.5.html).
-For a better idea of what each field represents, see the
-[vmstat man page](http://linux.die.net/man/8/vmstat).
+The kernel_vmstat plugin gathers virtual memory statistics by reading
+/proc/vmstat. For a full list of available fields see the /proc/vmstat section
+of the [proc man page][man-proc].  For a better idea of what each field
+represents, see the [vmstat man page][man-vmstat].
+
+[man-proc]: http://man7.org/linux/man-pages/man5/proc.5.html
+
+[man-vmstat]: http://linux.die.net/man/8/vmstat
 
 ```text
 /proc/vmstat
@@ -110,7 +113,7 @@ nr_bounce 0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get kernel statistics from /proc/vmstat
 [[inputs.kernel_vmstat]]
   # no configuration

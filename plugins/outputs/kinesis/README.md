@@ -36,7 +36,7 @@ will be used.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the AWS Kinesis output.
 [[outputs.kinesis]]
   ## Amazon REGION of kinesis endpoint.

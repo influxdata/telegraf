@@ -5,7 +5,7 @@ as one of the supported [output data formats][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Publish Telegraf metrics to a Google Cloud PubSub topic
 [[outputs.cloud_pubsub]]
   ## Required. Name of Google Cloud Platform (GCP) Project that owns

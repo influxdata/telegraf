@@ -1,12 +1,14 @@
 # Jenkins Input Plugin
 
-The jenkins plugin gathers information about the nodes and jobs running in a jenkins instance.
+The jenkins plugin gathers information about the nodes and jobs running in a
+jenkins instance.
 
-This plugin does not require a plugin on jenkins and it makes use of Jenkins API to retrieve all the information needed.
+This plugin does not require a plugin on jenkins and it makes use of Jenkins API
+to retrieve all the information needed.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read jobs and cluster metrics from Jenkins instances
 [[inputs.jenkins]]
   ## The Jenkins URL in the format "schema://host:port"

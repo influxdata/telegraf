@@ -1,13 +1,15 @@
 # Alibaba (Aliyun) CloudMonitor Service Statistics Input Plugin
 
-Here and after we use `Aliyun` instead `Alibaba` as it is default naming across web console and docs.
+Here and after we use `Aliyun` instead `Alibaba` as it is default naming across
+web console and docs.
 
 This plugin will pull Metric Statistics from Aliyun CMS.
 
 ## Aliyun Authentication
 
-This plugin uses an [AccessKey](https://www.alibabacloud.com/help/doc-detail/53045.htm?spm=a2c63.p38356.b99.127.5cba21fdt5MJKr&parentId=28572) credential for Authentication with the Aliyun OpenAPI endpoint.
-In the following order the plugin will attempt to authenticate.
+This plugin uses an [AccessKey][1] credential for Authentication with the Aliyun
+OpenAPI endpoint.  In the following order the plugin will attempt to
+authenticate.
 
 1. Ram RoleARN credential if `access_key_id`, `access_key_secret`, `role_arn`, `role_session_name` is specified
 2. AccessKey STS token credential if `access_key_id`, `access_key_secret`, `access_key_sts_token` is specified
@@ -17,9 +19,11 @@ In the following order the plugin will attempt to authenticate.
 6. Environment variables credential
 7. Instance metadata credential
 
+[1]: https://www.alibabacloud.com/help/doc-detail/53045.htm?spm=a2c63.p38356.b99.127.5cba21fdt5MJKr&parentId=28572
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Pull Metric Statistics from Aliyun CMS
 [[inputs.aliyuncms]]
   ## Aliyun Credentials
@@ -124,7 +128,7 @@ In the following order the plugin will attempt to authenticate.
 
 ### Requirements and Terminology
 
-Plugin Configuration utilizes [preset metric items references](https://www.alibabacloud.com/help/doc-detail/28619.htm?spm=a2c63.p38356.a3.2.389f233d0kPJn0)
+Plugin Configuration utilizes [preset metric items references][2]
 
 - `discovery_region` must be a valid Aliyun [Region](https://www.alibabacloud.com/help/doc-detail/40654.htm) value
 - `period` must be a valid duration value
@@ -132,10 +136,13 @@ Plugin Configuration utilizes [preset metric items references](https://www.aliba
 - `names` must be preset metric names
 - `dimensions` must be preset dimension values
 
-## Measurements & Fields
+[2]: https://www.alibabacloud.com/help/doc-detail/28619.htm?spm=a2c63.p38356.a3.2.389f233d0kPJn0
 
-Each Aliyun CMS Project monitored records a measurement with fields for each available Metric Statistic
-Project and Metrics are represented in [snake case](https://en.wikipedia.org/wiki/Snake_case)
+## Metrics
+
+Each Aliyun CMS Project monitored records a measurement with fields for each
+available Metric Statistic Project and Metrics are represented in [snake
+case](https://en.wikipedia.org/wiki/Snake_case)
 
 - aliyuncms_{project}
   - {metric}_average     (metric Average value)

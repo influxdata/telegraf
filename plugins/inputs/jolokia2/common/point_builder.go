@@ -27,15 +27,15 @@ func NewPointBuilder(metric Metric, attributes []string, path string) *pointBuil
 }
 
 // Build generates a point for a given mbean name/pattern and value object.
-func (pb *pointBuilder) Build(mbean string, value interface{}) []point {
+func (pb *pointBuilder) Build(mbean string, value interface{}) ([]point, error) {
 	hasPattern := strings.Contains(mbean, "*")
-	if !hasPattern {
+	if !hasPattern || value == nil {
 		value = map[string]interface{}{mbean: value}
 	}
 
 	valueMap, ok := value.(map[string]interface{})
-	if !ok { // FIXME: log it and move on.
-		panic(fmt.Sprintf("There should be a map here for %s!\n", mbean))
+	if !ok {
+		return nil, fmt.Errorf("the response of %s's value should be a map", mbean)
 	}
 
 	points := make([]point, 0)
@@ -46,7 +46,7 @@ func (pb *pointBuilder) Build(mbean string, value interface{}) []point {
 		})
 	}
 
-	return compactPoints(points)
+	return compactPoints(points), nil
 }
 
 // extractTags generates the map of tags for a given mbean name/pattern.
@@ -143,7 +143,7 @@ func (pb *pointBuilder) formatFieldName(attribute, path string) string {
 	}
 
 	if path != "" {
-		fieldName = fieldName + fieldSeparator + strings.Replace(path, "/", fieldSeparator, -1)
+		fieldName = fieldName + fieldSeparator + strings.ReplaceAll(path, "/", fieldSeparator)
 	}
 
 	return fieldName
@@ -200,7 +200,7 @@ func (pb *pointBuilder) applySubstitutions(mbean string, fieldMap map[string]int
 		substitution := properties[subKey]
 
 		for fieldName, fieldValue := range fieldMap {
-			newFieldName := strings.Replace(fieldName, symbol, substitution, -1)
+			newFieldName := strings.ReplaceAll(fieldName, symbol, substitution)
 			if fieldName != newFieldName {
 				fieldMap[newFieldName] = fieldValue
 				delete(fieldMap, fieldName)

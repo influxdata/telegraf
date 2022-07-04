@@ -1,6 +1,8 @@
+//go:generate ../../../../tools/readme_config_includer/generator
 package jolokia2_proxy
 
 import (
+	_ "embed"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -8,6 +10,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type JolokiaProxy struct {
 	DefaultFieldPrefix    string
@@ -33,6 +39,10 @@ type JolokiaProxyTargetConfig struct {
 	URL      string `toml:"url"`
 	Username string
 	Password string
+}
+
+func (*JolokiaProxy) SampleConfig() string {
+	return sampleConfig
 }
 
 func (jp *JolokiaProxy) Gather(acc telegraf.Accumulator) error {

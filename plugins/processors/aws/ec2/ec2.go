@@ -1,7 +1,9 @@
+//go:generate ../../../../tools/readme_config_includer/generator
 package ec2
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -19,6 +21,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type AwsEc2Processor struct {
 	ImdsTags         []string        `toml:"imds_tags"`
@@ -55,6 +61,10 @@ var allowedImdsTags = map[string]struct{}{
 	"ramdiskId":        {},
 	"region":           {},
 	"version":          {},
+}
+
+func (*AwsEc2Processor) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
@@ -107,7 +117,7 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 
 		// Chceck if instance is allowed to call DescribeTags.
 		_, err = r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
-			DryRun: true,
+			DryRun: aws.Bool(true),
 		})
 		var ae smithy.APIError
 		if errors.As(err, &ae) {

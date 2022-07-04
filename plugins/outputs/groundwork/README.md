@@ -7,7 +7,7 @@ GW8+
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf metrics to GroundWork Monitor
 [[outputs.groundwork]]
   ## URL of your groundwork instance.
@@ -19,6 +19,9 @@ GW8+
   ## Username and password to access GroundWork API.
   username = ""
   password = ""
+
+  ## Default application type to use in GroundWork client
+  # default_app_type = "TELEGRAF"
 
   ## Default display name for the host with services(metrics).
   # default_host = "telegraf"

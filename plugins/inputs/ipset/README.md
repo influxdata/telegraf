@@ -46,7 +46,7 @@ Defaults!IPSETSAVE !logfile, !syslog, !pam_session
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather packets and bytes counters from Linux ipsets
   [[inputs.ipset]]
     ## By default, we only show sets which have already matched at least 1 packet.

@@ -5,19 +5,15 @@ in Prometheus format.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many prometheus clients
 [[inputs.prometheus]]
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
   
-  ## Metric version controls the mapping from Prometheus metrics into
-  ## Telegraf metrics.  When using the prometheus_client output, use the same
-  ## value in both plugins to ensure metrics are round-tripped without
-  ## modification.
-  ##
-  ##   example: metric_version = 1; 
-  ##            metric_version = 2; recommended version
+  ## Metric version controls the mapping from Prometheus metrics into Telegraf metrics.
+  ## See "Metric Format Configuration" in plugins/inputs/prometheus/README.md for details.
+  ## Valid options: 1, 2
   # metric_version = 1
   
   ## Url tag name (tag containing scrapped url. optional, default is "url")
@@ -102,32 +98,73 @@ in Prometheus format.
   # insecure_skip_verify = false
 ```
 
-`urls` can contain a unix socket as well. If a different path is required (default is `/metrics` for both http[s] and unix) for a unix socket, add `path` as a query parameter as follows: `unix:///var/run/prometheus.sock?path=/custom/metrics`
+`urls` can contain a unix socket as well. If a different path is required
+(default is `/metrics` for both http[s] and unix) for a unix socket, add `path`
+as a query parameter as follows:
+`unix:///var/run/prometheus.sock?path=/custom/metrics`
+
+### Metric Format Configuration
+
+The `metric_version` setting controls how telegraf translates prometheus format
+metrics to telegraf metrics. There are two options.
+
+With `metric_version = 1`, the prometheus metric name becomes the telegraf
+metric name. Prometheus labels become telegraf tags. Prometheus values become
+telegraf field values. The fields have generic keys based on the type of the
+prometheus metric. This option produces metrics that are dense (not
+sparse). Denseness is a useful property for some outputs, including those that
+are more efficient with row-oriented data.
+
+`metric_version = 2` differs in a few ways. The prometheus metric name becomes a
+telegraf field key. Metrics hold more than one value and the field keys aren't
+generic. The resulting metrics are sparse, but for some outputs they may be
+easier to process or query, including those that are more efficient with
+column-oriented data. The telegraf metric name is the same for all metrics in
+the input instance. It can be set with the `name_override` setting and defaults
+to "prometheus". To have multiple metric names, you can use multiple instances
+of the plugin, each with its own `name_override`.
+
+`metric_version = 2` uses the same histogram format as the [histogram
+aggregator](../../aggregators/histogram/README.md)
+
+The Example Outputs sections shows examples for both options.
+
+When using this plugin along with the prometheus_client output, use the same
+option in both to ensure metrics are round-tripped without modification.
 
 ### Kubernetes Service Discovery
 
-URLs listed in the `kubernetes_services` parameter will be expanded
-by looking up all A records assigned to the hostname as described in
-[Kubernetes DNS service discovery](https://kubernetes.io/docs/concepts/services-networking/service/#dns).
+URLs listed in the `kubernetes_services` parameter will be expanded by looking
+up all A records assigned to the hostname as described in [Kubernetes DNS
+service discovery][serv-disc].
 
-This method can be used to locate all
-[Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services).
+This method can be used to locate all [Kubernetes headless services][headless].
+
+[serv-disc]: https://kubernetes.io/docs/concepts/services-networking/service/#dns
+
+[headless]: https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
 
 ### Kubernetes scraping
 
-Enabling this option will allow the plugin to scrape for prometheus annotation on Kubernetes
-pods. Currently, you can run this plugin in your kubernetes cluster, or we use the kubeconfig
-file to determine where to monitor.
-Currently the following annotation are supported:
+Enabling this option will allow the plugin to scrape for prometheus annotation
+on Kubernetes pods. Currently, you can run this plugin in your kubernetes
+cluster, or we use the kubeconfig file to determine where to monitor.  Currently
+the following annotation are supported:
 
 * `prometheus.io/scrape` Enable scraping for this pod.
 * `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
 * `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
 * `prometheus.io/port` Used to override the port. (default 9102)
 
-Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
+Using the `monitor_kubernetes_pods_namespace` option allows you to limit which
+pods you are scraping.
 
-Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that either `node_ip` must be specified in the config or the environment variable `NODE_IP` must be set to the host IP. ThisThe latter can be done in the yaml of the pod running telegraf:
+Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which
+will scrape pods only in the node that telegraf is running. It will fetch the
+pod list locally from the node's kubelet. This will require running Telegraf in
+every node of the cluster. Note that either `node_ip` must be specified in the
+config or the environment variable `NODE_IP` must be set to the host IP. ThisThe
+latter can be done in the yaml of the pod running telegraf:
 
 ```sh
 env:
@@ -137,11 +174,15 @@ env:
         fieldPath: status.hostIP
  ```
 
-If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated. If not specified, the default is 60 seconds.
+If using node level scrape scope, `pod_scrape_interval` specifies how often (in
+seconds) the pod list for scraping should updated. If not specified, the default
+is 60 seconds.
 
-The pod running telegraf will need to have the proper rbac configuration in order to be allowed to call the k8s api to discover and watch pods in the cluster.
-A typical configuration will create a service account, a cluster role with the appropriate rules and a cluster role binding to tie the cluster role to the service account.
-Example of configuration for cluster level discovery:
+The pod running telegraf will need to have the proper rbac configuration in
+order to be allowed to call the k8s api to discover and watch pods in the
+cluster.  A typical configuration will create a service account, a cluster role
+with the appropriate rules and a cluster role binding to tie the cluster role to
+the service account.  Example of configuration for cluster level discovery:
 
 ```yaml
 ---
@@ -181,10 +222,11 @@ metadata:
 
 ### Consul Service Discovery
 
-Enabling this option and configuring consul `agent` url will allow the plugin to query
-consul catalog for available services. Using `query_interval` the plugin will periodically
-query the consul catalog for services with `name` and `tag` and refresh the list of scraped urls.
-It can use the information from the catalog to build the scraped url and additional tags from a template.
+Enabling this option and configuring consul `agent` url will allow the plugin to
+query consul catalog for available services. Using `query_interval` the plugin
+will periodically query the consul catalog for services with `name` and `tag`
+and refresh the list of scraped urls.  It can use the information from the
+catalog to build the scraped url and additional tags from a template.
 
 Multiple consul queries can be configured, each for different service.
 The following example fields can be used in url or tag templates:

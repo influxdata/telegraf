@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package disk
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 
@@ -9,16 +11,24 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type DiskStats struct {
 	ps system.PS
 
-	// Legacy support
-	LegacyMountPoints []string `toml:"mountpoints"`
+	LegacyMountPoints []string `toml:"mountpoints" deprecated:"0.10.2;2.0.0;use 'mount_points' instead"`
 
-	MountPoints []string `toml:"mount_points"`
-	IgnoreFS    []string `toml:"ignore_fs"`
+	MountPoints     []string `toml:"mount_points"`
+	IgnoreFS        []string `toml:"ignore_fs"`
+	IgnoreMountOpts []string `toml:"ignore_mount_opts"`
 
 	Log telegraf.Logger `toml:"-"`
+}
+
+func (*DiskStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ds *DiskStats) Init() error {
@@ -35,7 +45,7 @@ func (ds *DiskStats) Init() error {
 }
 
 func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
-	disks, partitions, err := ds.ps.DiskUsage(ds.MountPoints, ds.IgnoreFS)
+	disks, partitions, err := ds.ps.DiskUsage(ds.MountPoints, ds.IgnoreMountOpts, ds.IgnoreFS)
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
@@ -47,7 +57,7 @@ func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
 		mountOpts := MountOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,
-			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
+			"device": strings.ReplaceAll(partitions[i].Device, "/dev/", ""),
 			"fstype": du.Fstype,
 			"mode":   mountOpts.Mode(),
 		}

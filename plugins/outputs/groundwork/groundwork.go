@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package groundwork
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type metricMeta struct {
 	group    string
 	resource string
@@ -27,12 +33,17 @@ type Groundwork struct {
 	AgentID             string          `toml:"agent_id"`
 	Username            string          `toml:"username"`
 	Password            string          `toml:"password"`
+	DefaultAppType      string          `toml:"default_app_type"`
 	DefaultHost         string          `toml:"default_host"`
 	DefaultServiceState string          `toml:"default_service_state"`
 	GroupTag            string          `toml:"group_tag"`
 	ResourceTag         string          `toml:"resource_tag"`
 	Log                 telegraf.Logger `toml:"-"`
 	client              clients.GWClient
+}
+
+func (*Groundwork) SampleConfig() string {
+	return sampleConfig
 }
 
 func (g *Groundwork) Init() error {
@@ -48,6 +59,9 @@ func (g *Groundwork) Init() error {
 	if g.Password == "" {
 		return errors.New("no 'password' provided")
 	}
+	if g.DefaultAppType == "" {
+		return errors.New("no 'default_app_type' provided")
+	}
 	if g.DefaultHost == "" {
 		return errors.New("no 'default_host' provided")
 	}
@@ -60,7 +74,7 @@ func (g *Groundwork) Init() error {
 
 	g.client = clients.GWClient{
 		AppName: "telegraf",
-		AppType: "TELEGRAF",
+		AppType: g.DefaultAppType,
 		GWConnection: &clients.GWConnection{
 			HostName:           g.Server,
 			UserName:           g.Username,
@@ -162,7 +176,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	}
 	requestJSON, err := json.Marshal(transit.ResourcesWithServicesRequest{
 		Context: &transit.TracerContext{
-			AppType:    "TELEGRAF",
+			AppType:    g.DefaultAppType,
 			AgentID:    g.AgentID,
 			TraceToken: traceToken,
 			TimeStamp:  transit.NewTimestamp(),
@@ -190,6 +204,7 @@ func init() {
 			GroupTag:            "group",
 			ResourceTag:         "host",
 			DefaultHost:         "telegraf",
+			DefaultAppType:      "TELEGRAF",
 			DefaultServiceState: string(transit.ServiceOk),
 		}
 	})

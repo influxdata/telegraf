@@ -14,7 +14,7 @@ The docker plugin uses the [Official Docker Client][] to gather logs from the
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read logging output from the Docker engine
 [[inputs.docker_log]]
   ## Docker Endpoint
@@ -64,14 +64,16 @@ When using the `"ENV"` endpoint, the connection is configured using the
 
 ## source tag
 
-Selecting the containers can be tricky if you have many containers with the same name.
-To alleviate this issue you can set the below value to `true`
+Selecting the containers can be tricky if you have many containers with the same
+name.  To alleviate this issue you can set the below value to `true`
 
 ```toml
 source_tag = true
 ```
 
-This will cause all data points to have the `source` tag be set to the first 12 characters of the container id. The first 12 characters is the common hostname for containers that have no explicit hostname set, as defined by docker.
+This will cause all data points to have the `source` tag be set to the first 12
+characters of the container id. The first 12 characters is the common hostname
+for containers that have no explicit hostname set, as defined by docker.
 
 ## Metrics
 

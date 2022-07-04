@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package multifile
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"math"
 	"os"
@@ -13,12 +15,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type MultiFile struct {
 	BaseDir   string
 	FailEarly bool
 	Files     []File `toml:"file"`
-
-	initialized bool
 }
 
 type File struct {
@@ -27,11 +31,11 @@ type File struct {
 	Conversion string
 }
 
-func (m *MultiFile) init() {
-	if m.initialized {
-		return
-	}
+func (*MultiFile) SampleConfig() string {
+	return sampleConfig
+}
 
+func (m *MultiFile) Init() error {
 	for i, file := range m.Files {
 		if m.BaseDir != "" {
 			m.Files[i].Name = path.Join(m.BaseDir, file.Name)
@@ -40,12 +44,10 @@ func (m *MultiFile) init() {
 			m.Files[i].Dest = path.Base(file.Name)
 		}
 	}
-
-	m.initialized = true
+	return nil
 }
 
 func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
-	m.init()
 	now := time.Now()
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)

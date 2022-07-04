@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package prometheus
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -24,7 +26,11 @@ import (
 	parserV2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
-const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
+const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
 
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
@@ -89,6 +95,10 @@ type Prometheus struct {
 
 	// List of consul services to scrape
 	consulServices map[string]URLAndAddress
+}
+
+func (*Prometheus) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Prometheus) Init() error {

@@ -4,7 +4,7 @@ This input plugin checks HTTP/HTTPS connections.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # HTTP/HTTPS request given an address a method and a timeout
 [[inputs.http_response]]
   ## List of urls to query.
@@ -96,9 +96,12 @@ This input plugin checks HTTP/HTTPS connections.
 
 ### `result` / `result_code`
 
-Upon finishing polling the target server, the plugin registers the result of the operation in the `result` tag, and adds a numeric field called `result_code` corresponding with that tag value.
+Upon finishing polling the target server, the plugin registers the result of the
+operation in the `result` tag, and adds a numeric field called `result_code`
+corresponding with that tag value.
 
-This tag is used to expose network and plugin errors. HTTP errors are considered a successful connection.
+This tag is used to expose network and plugin errors. HTTP errors are considered
+a successful connection.
 
 |Tag value                     |Corresponding field value|Description|
 -------------------------------|-------------------------|-----------|

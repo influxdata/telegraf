@@ -1,10 +1,10 @@
-# Grok
+# Grok Parser Plugin
 
 The grok data format parses line delimited data using a regular expression like
 language.
 
 The best way to get acquainted with grok patterns is to read the logstash docs,
-which are available [here](https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html).
+which are available [here][1].
 
 The grok parser uses a slightly modified version of logstash "grok"
 patterns, with the format:
@@ -54,13 +54,16 @@ You must capture at least one field per line.
   - ts-"CUSTOM"
 
 CUSTOM time layouts must be within quotes and be the representation of the
-"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.
-To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match `"2018-01-02 15:04:05,000"`
-To match a comma decimal point you can use a period in the pattern string.
-See [Goloang Time docs](https://golang.org/pkg/time/#Parse) for more details.
+"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.  To match a
+comma decimal point you can use a period.  For example
+`%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match
+`"2018-01-02 15:04:05,000"` To match a comma decimal point you can use a period
+in the pattern string.  See [Goloang Time
+docs](https://golang.org/pkg/time/#Parse) for more details.
 
 Telegraf has many of its own [built-in patterns][] as well as support for most
-of the Logstash builtin patterns using [these Go compatible patterns][grok-patterns].
+of the Logstash builtin patterns using [these Go compatible
+patterns][grok-patterns].
 
 **Note:** Golang regular expressions do not support lookahead or lookbehind.
 Logstash patterns that use these features may not be supported, or may use a Go
@@ -69,8 +72,10 @@ friendly pattern that is not fully compatible with the Logstash pattern.
 [built-in patterns]: /plugins/parsers/grok/influx_patterns.go
 [grok-patterns]: https://github.com/vjeantet/grok/blob/master/patterns/grok-patterns
 
-If you need help building patterns to match your logs,
-you will find the [Grok Debug](https://grokdebug.herokuapp.com) application quite useful!
+If you need help building patterns to match your logs, you will find the [Grok
+Debug](https://grokdebug.herokuapp.com) application quite useful!
+
+[1]: https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
 
 ## Configuration
 
@@ -160,7 +165,8 @@ Wed Apr 12 13:10:34 PST 2017 value=42
   '''
 ```
 
-This example input and config parses a file using a custom timestamp conversion that doesn't match any specific standard:
+This example input and config parses a file using a custom timestamp conversion
+that doesn't match any specific standard:
 
 ```text
 21/02/2017 13:10:34 value=42
@@ -175,12 +181,14 @@ This example input and config parses a file using a custom timestamp conversion 
   '''
 ```
 
-For cases where the timestamp itself is without offset, the `timezone` config var is available
-to denote an offset. By default (with `timezone` either omit, blank or set to `"UTC"`), the times
-are processed as if in the UTC timezone. If specified as `timezone = "Local"`, the timestamp
-will be processed based on the current machine timezone configuration. Lastly, if using a
-timezone from the list of Unix [timezones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
-grok will offset the timestamp accordingly.
+For cases where the timestamp itself is without offset, the `timezone` config
+var is available to denote an offset. By default (with `timezone` either omit,
+blank or set to `"UTC"`), the times are processed as if in the UTC timezone. If
+specified as `timezone = "Local"`, the timestamp will be processed based on the
+current machine timezone configuration. Lastly, if using a timezone from the
+list of Unix
+[timezones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), grok
+will offset the timestamp accordingly.
 
 #### TOML Escaping
 
@@ -227,8 +235,9 @@ A multi-line literal string allows us to encode the pattern:
 
 #### Tips for creating patterns
 
-Writing complex patterns can be difficult, here is some advice for writing a
-new pattern or testing a pattern developed [online](https://grokdebug.herokuapp.com).
+Writing complex patterns can be difficult, here is some advice for writing a new
+pattern or testing a pattern developed
+[online](https://grokdebug.herokuapp.com).
 
 Create a file output that writes to stdout, and disable other outputs while
 testing.  This will allow you to see the captured metrics.  Keep in mind that

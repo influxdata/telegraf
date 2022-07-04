@@ -1,16 +1,19 @@
 # Windows Eventlog Input Plugin
 
+Telegraf's win_eventlog input plugin gathers metrics from the windows event log.
+
 ## Collect Windows Event Log messages
 
 Supports Windows Vista and higher.
 
-Telegraf should have Administrator permissions to subscribe for some of the Windows Events Channels, like System Log.
+Telegraf should have Administrator permissions to subscribe for some of the
+Windows Events Channels, like System Log.
 
 Telegraf minimum version: Telegraf 1.16.0
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
 # Input plugin to collect Windows Event Log messages
 [[inputs.win_eventlog]]
   ## Telegraf should have Administrator permissions to subscribe for some Windows Events channels
@@ -92,7 +95,8 @@ Telegraf minimum version: Telegraf 1.16.0
 
 ### Filtering
 
-There are three types of filtering: **Event Log** name, **XPath Query** and **XML Query**.
+There are three types of filtering: **Event Log** name, **XPath Query** and
+**XML Query**.
 
 **Event Log** name filtering is simple:
 
@@ -101,26 +105,39 @@ There are three types of filtering: **Event Log** name, **XPath Query** and **XM
   xpath_query = '''
 ```
 
-For **XPath Query** filtering set the `xpath_query` value, and `eventlog_name` will be ignored:
+For **XPath Query** filtering set the `xpath_query` value, and `eventlog_name`
+will be ignored:
 
 ```toml
   eventlog_name = ""
   xpath_query = "Event/System[EventID=999]"
 ```
 
-**XML Query** is the most flexible: you can Select or Suppress any values, and give ranges for other values. XML query is the recommended form, because it is most flexible. You can create or debug XML Query by creating Custom View in Windows Event Viewer and then copying resulting XML in config file.
+**XML Query** is the most flexible: you can Select or Suppress any values, and
+give ranges for other values. XML query is the recommended form, because it is
+most flexible. You can create or debug XML Query by creating Custom View in
+Windows Event Viewer and then copying resulting XML in config file.
 
 XML Query documentation:
 
 <https://docs.microsoft.com/en-us/windows/win32/wes/consuming-events>
 
-### Metrics
+## Metrics
 
-You can send any field, *System*, *Computed* or *XML* as tag field. List of those fields is in the `event_tags` config array. Globbing is supported in this array, i.e. `Level*` for all fields beginning with `Level`, or `L?vel` for all fields where the name is `Level`, `L3vel`, `L@vel` and so on. Tag fields are converted to strings automatically.
+You can send any field, *System*, *Computed* or *XML* as tag field. List of
+those fields is in the `event_tags` config array. Globbing is supported in this
+array, i.e. `Level*` for all fields beginning with `Level`, or `L?vel` for all
+fields where the name is `Level`, `L3vel`, `L@vel` and so on. Tag fields are
+converted to strings automatically.
 
-By default, all other fields are sent, but you can limit that either by listing it in `event_fields` config array with globbing, or by adding some field name masks in the `exclude_fields` config array.
+By default, all other fields are sent, but you can limit that either by listing
+it in `event_fields` config array with globbing, or by adding some field name
+masks in the `exclude_fields` config array.
 
-You can limit sending fields with empty values by adding masks of names of such fields in the `exclude_empty` config array. Value considered empty, if the System field of type `int` or `uint32` is equal to zero, or if any field of type `string` is an empty string.
+You can limit sending fields with empty values by adding masks of names of such
+fields in the `exclude_empty` config array. Value considered empty, if the
+System field of type `int` or `uint32` is equal to zero, or if any field of type
+`string` is an empty string.
 
 List of System fields:
 
@@ -149,25 +166,42 @@ List of System fields:
 
 ### Computed fields
 
-Fields `Level`, `Opcode` and `Task` are converted to text and saved as computed `*Text` fields.
+Fields `Level`, `Opcode` and `Task` are converted to text and saved as computed
+`*Text` fields.
 
-`Keywords` field is converted from hex uint64 value by the `_EvtFormatMessage` WINAPI function. There can be more than one value, in that case they will be comma-separated. If keywords can't be converted (bad device driver or forwarded from another computer with unknown Event Channel), hex uint64 is saved as is.
+`Keywords` field is converted from hex uint64 value by the `_EvtFormatMessage`
+WINAPI function. There can be more than one value, in that case they will be
+comma-separated. If keywords can't be converted (bad device driver or forwarded
+from another computer with unknown Event Channel), hex uint64 is saved as is.
 
-`ProcessName` field is found by looking up ProcessID. Can be empty if telegraf doesn't have enough permissions.
+`ProcessName` field is found by looking up ProcessID. Can be empty if telegraf
+doesn't have enough permissions.
 
 `Username` field is found by looking up SID from UserID.
 
-`Message` field is rendered from the event data, and can be several kilobytes of text with line breaks. For most events the first line of this text is more then enough, and additional info is more useful to be parsed as XML fields. So, for brevity, plugin takes only the first line. You can set `only_first_line_of_message` parameter to `false` to take full message text.
+`Message` field is rendered from the event data, and can be several kilobytes of
+text with line breaks. For most events the first line of this text is more then
+enough, and additional info is more useful to be parsed as XML fields. So, for
+brevity, plugin takes only the first line. You can set
+`only_first_line_of_message` parameter to `false` to take full message text.
 
-`TimeCreated` field is a string in RFC3339Nano format. By default Telegraf parses it as an event timestamp. If there is a field parse error or `timestamp_from_event` configration parameter is set to `false`, then event timestamp will be set to the exact time when Telegraf has parsed this event, so it will be rounded to the nearest minute.
+`TimeCreated` field is a string in RFC3339Nano format. By default Telegraf
+parses it as an event timestamp. If there is a field parse error or
+`timestamp_from_event` configration parameter is set to `false`, then event
+timestamp will be set to the exact time when Telegraf has parsed this event, so
+it will be rounded to the nearest minute.
 
 ### Additional Fields
 
-The content of **Event Data** and **User Data** XML Nodes can be added as additional fields, and is added by default. You can disable that by setting `process_userdata` or `process_eventdata` parameters to `false`.
+The content of **Event Data** and **User Data** XML Nodes can be added as
+additional fields, and is added by default. You can disable that by setting
+`process_userdata` or `process_eventdata` parameters to `false`.
 
-For the fields from additional XML Nodes the `Name` attribute is taken as the name, and inner text is the value. Type of those fields is always string.
+For the fields from additional XML Nodes the `Name` attribute is taken as the
+name, and inner text is the value. Type of those fields is always string.
 
-Name of the field is formed from XML Path by adding _ inbetween levels. For example, if UserData XML looks like this:
+Name of the field is formed from XML Path by adding _ inbetween levels. For
+example, if UserData XML looks like this:
 
 ```xml
 <UserData>
@@ -191,19 +225,27 @@ CbsPackageChangeState_ErrorCode = "0x0"
 CbsPackageChangeState_Client = "UpdateAgentLCU"
 ```
 
-If there are more than one field with the same name, all those fields are given suffix with number: `_1`, `_2` and so on.
+If there are more than one field with the same name, all those fields are given
+suffix with number: `_1`, `_2` and so on.
 
-### Localization
+## Localization
 
-Human readable Event Description is in the Message field. But it is better to be skipped in favour of the Event XML values, because they are more machine-readable.
+Human readable Event Description is in the Message field. But it is better to be
+skipped in favour of the Event XML values, because they are more
+machine-readable.
 
-Keywords, LevelText, TaskText, OpcodeText and Message are saved with the current Windows locale by default. You can override this, for example, to English locale by setting `locale` config parameter to `1033`. Unfortunately, **Event Data** and **User Data** XML Nodes are in default Windows locale only.
+Keywords, LevelText, TaskText, OpcodeText and Message are saved with the current
+Windows locale by default. You can override this, for example, to English locale
+by setting `locale` config parameter to `1033`. Unfortunately, **Event Data**
+and **User Data** XML Nodes are in default Windows locale only.
 
-Locale should be present on the computer. English locale is usually available on all localized versions of modern Windows. List of locales:
+Locale should be present on the computer. English locale is usually available on
+all localized versions of modern Windows. A list of all locales is available
+from Microsoft's [Open Specifications][1].
 
-<https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a>
+[1]: https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a
 
-### Example Output
+## Example Output
 
 Some values are changed for anonymity.
 

@@ -1,4 +1,5 @@
 #!/bin/sh
+set -eux
 
 mkdir certs certs_by_serial private &&
 chmod 700 private &&
@@ -30,7 +31,7 @@ commonName = supplied
 basicConstraints = CA:false
 
 [ req ]
-default_bits = 1024
+default_bits = 2048
 default_keyfile = ./private/cakey.pem
 default_md = sha256
 prompt = yes
@@ -70,7 +71,7 @@ openssl req -x509 -config ./openssl.conf -days 3650 -newkey rsa:2048 -out ./cert
 openssl genrsa -out ./private/serverkey.pem 2048 &&
 openssl req -new -key ./private/serverkey.pem -out ./certs/servercsr.pem -outform PEM -subj "/CN=$(cat /proc/sys/kernel/hostname)/O=server/" &&
 openssl ca -config ./openssl.conf -in ./certs/servercsr.pem -out ./certs/servercert.pem -notext -batch -extensions server_ca_extensions &&
-openssl ca -config ./openssl.conf -in ./certs/servercsr.pem -out ./certs/servercertexp.pem -startdate $(date +%y%m%d%H%M00 --date='-5 minutes')'Z' -enddate $(date +%y%m%d%H%M00 --date='5 minutes')'Z' -notext -batch -extensions server_ca_extensions &&
+openssl ca -config ./openssl.conf -in ./certs/servercsr.pem -out ./certs/servercertexp.pem -startdate "$(date +%y%m%d%H%M00 --date='-5 minutes')Z" -enddate "$(date +%y%m%d%H%M00 --date='5 minutes')Z" -notext -batch -extensions server_ca_extensions &&
 
 # Create client and client encrypted keypair
 openssl genrsa -out ./private/clientkey.pem 2048 &&

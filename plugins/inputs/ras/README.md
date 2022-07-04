@@ -1,12 +1,14 @@
 # RAS Daemon Input Plugin
 
-This plugin is only available on Linux (only for `386`, `amd64`, `arm` and `arm64` architectures).
+This plugin is only available on Linux (only for `386`, `amd64`, `arm` and
+`arm64` architectures).
 
-The `RAS` plugin gathers and counts errors provided by [RASDaemon](https://github.com/mchehab/rasdaemon).
+The `RAS` plugin gathers and counts errors provided by
+[RASDaemon](https://github.com/mchehab/rasdaemon).
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # RAS plugin exposes counter metrics for Machine Check Errors provided by RASDaemon (sqlite3 output is required).
 [[inputs.ras]]
   ## Optional path to RASDaemon sqlite3 database.
@@ -14,7 +16,8 @@ The `RAS` plugin gathers and counts errors provided by [RASDaemon](https://githu
   # db_path = ""
 ```
 
-In addition `RASDaemon` runs, by default, with `--enable-sqlite3` flag. In case of problems with SQLite3 database please verify this is still a default option.
+In addition `RASDaemon` runs, by default, with `--enable-sqlite3` flag. In case
+of problems with SQLite3 database please verify this is still a default option.
 
 ## Metrics
 
@@ -40,7 +43,8 @@ In addition `RASDaemon` runs, by default, with `--enable-sqlite3` flag. In case 
     - microcode_rom_parity_errors
     - unclassified_mce_errors
 
-Please note that `processor_base_errors` is aggregate counter measuring the following MCE events:
+Please note that `processor_base_errors` is aggregate counter measuring the
+following MCE events:
 
 - internal_timer_errors
 - smm_handler_code_access_violation_errors
@@ -52,7 +56,8 @@ Please note that `processor_base_errors` is aggregate counter measuring the foll
 
 ## Permissions
 
-This plugin requires access to SQLite3 database from `RASDaemon`. Please make sure that user has required permissions to this database.
+This plugin requires access to SQLite3 database from `RASDaemon`. Please make
+sure that user has required permissions to this database.
 
 ## Example Output
 

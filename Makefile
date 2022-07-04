@@ -70,15 +70,14 @@ localstatedir ?= $(prefix)/var
 pkgdir ?= build/dist
 
 .PHONY: all
-all:
-	@$(MAKE) deps
-	@$(MAKE) telegraf
+all: deps docs telegraf
 
 .PHONY: help
 help:
 	@echo 'Targets:'
 	@echo '  all          - download dependencies and compile telegraf binary'
 	@echo '  deps         - download dependencies'
+	@echo '  docs         - embed sample-configurations into READMEs'
 	@echo '  telegraf     - compile telegraf binary'
 	@echo '  test         - run short unit tests'
 	@echo '  fmt          - format source files'
@@ -115,20 +114,21 @@ versioninfo:
 	go run scripts/generate_versioninfo/main.go; \
 	go generate cmd/telegraf/telegraf_windows.go; \
 
-.PHONY: generate
-generate:
-	go generate -run="plugindata/main.go$$" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+build_tools:
+	$(HOSTGO) build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
 
-.PHONY: generate-clean
-generate-clean:
-	go generate -run="plugindata/main.go --clean" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+embed_readme_%:
+	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+
+.PHONY: docs
+docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators
 
 .PHONY: build
 build:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
-telegraf: generate build generate-clean
+telegraf: build
 
 # Used by dockerfile builds
 .PHONY: go-install
@@ -170,7 +170,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -223,6 +223,10 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf tools/readme_config_includer/generator
+	rm -rf tools/readme_config_includer/generator.exe
+	rm -rf tools/package_lxd_test/package_lxd_test
+	rm -rf tools/package_lxd_test/package_lxd_test.exe
 
 .PHONY: docker-image
 docker-image:
@@ -231,15 +235,10 @@ docker-image:
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
-.PHONY: plugin-%
-plugin-%:
-	@echo "Starting dev environment for $${$(@)} input plugin..."
-	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
-
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.18.1 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.18.1
+	docker build -t quay.io/influxdb/telegraf-ci:1.18.3 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.18.3
 
 .PHONY: install
 install: $(buildbin)
@@ -329,7 +328,7 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: generate $(include_packages) generate-clean
+package: docs $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):

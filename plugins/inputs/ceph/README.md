@@ -1,16 +1,22 @@
 # Ceph Storage Input Plugin
 
-Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
+Collects performance metrics from the MON and OSD nodes in a Ceph storage
+cluster.
 
-Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The Telegraf module sends to a Telegraf configured with a socket_listener. [Learn more in their docs](https://docs.ceph.com/en/latest/mgr/telegraf/)
+Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The
+Telegraf module sends to a Telegraf configured with a socket_listener. [Learn
+more in their docs](https://docs.ceph.com/en/latest/mgr/telegraf/)
 
 ## Admin Socket Stats
 
-This gatherer works by scanning the configured SocketDir for OSD, MON, MDS and RGW socket files.  When it finds
-a MON socket, it runs **ceph --admin-daemon $file perfcounters_dump**. For OSDs it runs **ceph --admin-daemon $file perf dump**
+This gatherer works by scanning the configured SocketDir for OSD, MON, MDS and
+RGW socket files.  When it finds a MON socket, it runs **ceph --admin-daemon
+$file perfcounters_dump**. For OSDs it runs **ceph --admin-daemon $file perf
+dump**
 
-The resulting JSON is parsed and grouped into collections, based on top-level key.  Top-level keys are
-used as collection tags, and all sub-keys are flattened. For example:
+The resulting JSON is parsed and grouped into collections, based on top-level
+key.  Top-level keys are used as collection tags, and all sub-keys are
+flattened. For example:
 
 ```json
  {
@@ -24,7 +30,8 @@ used as collection tags, and all sub-keys are flattened. For example:
  }
 ```
 
-Would be parsed into the following metrics, all of which would be tagged with collection=paxos:
+Would be parsed into the following metrics, all of which would be tagged with
+collection=paxos:
 
 - refresh = 9363435
 - refresh_latency.avgcount: 9363435
@@ -32,10 +39,11 @@ Would be parsed into the following metrics, all of which would be tagged with co
 
 ## Cluster Stats
 
-This gatherer works by invoking ceph commands against the cluster thus only requires the ceph client, valid
-ceph configuration and an access key to function (the ceph_config and ceph_user configuration variables work
-in conjunction to specify these prerequisites). It may be run on any server you wish which has access to
-the cluster.  The currently supported commands are:
+This gatherer works by invoking ceph commands against the cluster thus only
+requires the ceph client, valid ceph configuration and an access key to function
+(the ceph_config and ceph_user configuration variables work in conjunction to
+specify these prerequisites). It may be run on any server you wish which has
+access to the cluster.  The currently supported commands are:
 
 - ceph status
 - ceph df
@@ -43,7 +51,7 @@ the cluster.  The currently supported commands are:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collects performance metrics from the MON, OSD, MDS and RGW nodes in a Ceph storage cluster.
 [[inputs.ceph]]
   ## This is the recommended interval to poll.  Too frequent and you will lose
@@ -92,7 +100,8 @@ the cluster.  The currently supported commands are:
 
 ### Admin Socket
 
-All fields are collected under the **ceph** measurement and stored as float64s. For a full list of fields, see the sample perf dumps in ceph_test.go.
+All fields are collected under the **ceph** measurement and stored as
+float64s. For a full list of fields, see the sample perf dumps in ceph_test.go.
 
 All admin measurements will have the following tags:
 
@@ -235,7 +244,7 @@ All admin measurements will have the following tags:
     - recovering_bytes_per_sec (float)
     - recovering_keys_per_sec (float)
 
-## Example
+## Example Output
 
 Below is an example of a custer stats:
 

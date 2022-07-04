@@ -1,10 +1,13 @@
 # AMQP Consumer Input Plugin
 
-This plugin provides a consumer for use with AMQP 0-9-1, a prominent implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
+This plugin provides a consumer for use with AMQP 0-9-1, a prominent
+implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
 
-Metrics are read from a topic exchange using the configured queue and binding_key.
+Metrics are read from a topic exchange using the configured queue and
+binding_key.
 
-Message payload should be formatted in one of the [Telegraf Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+Message payload should be formatted in one of the [Telegraf Data
+Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
 For an introduction to AMQP see:
 
@@ -13,9 +16,7 @@ For an introduction to AMQP see:
 
 ## Configuration
 
-The following defaults are known to work with RabbitMQ:
-
-```toml
+```toml @sample.conf
 # AMQP consumer plugin
 [[inputs.amqp_consumer]]
   ## Brokers to consume from.  If multiple brokers are specified a random broker

@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package gnmi
 
 import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,6 +29,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // gNMI plugin instance
 type GNMI struct {
@@ -80,6 +86,10 @@ type Subscription struct {
 
 	// Mark this subscription as a tag-only lookup source, not emitting any metric
 	TagOnly bool `toml:"tag_only"`
+}
+
+func (*GNMI) SampleConfig() string {
+	return sampleConfig
 }
 
 // Start the http listener service
@@ -413,7 +423,7 @@ func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]stri
 		jsondata = val.JsonVal
 	}
 
-	name := strings.Replace(gpath, "-", "_", -1)
+	name := strings.ReplaceAll(gpath, "-", "_")
 	fields := make(map[string]interface{})
 	if value != nil {
 		fields[name] = value
@@ -462,7 +472,7 @@ func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix
 
 		if tags != nil {
 			for key, val := range elem.Key {
-				key = strings.Replace(key, "-", "_", -1)
+				key = strings.ReplaceAll(key, "-", "_")
 
 				// Use short-form of key if possible
 				if _, exists := tags[key]; exists {

@@ -4,7 +4,7 @@ This plugin gathers statistics data from a Mcrouter server.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many mcrouter servers.
 [[inputs.mcrouter]]
   ## An array of address to gather stats about. Specify an ip or hostname
@@ -15,11 +15,12 @@ This plugin gathers statistics data from a Mcrouter server.
   # timeout = "5s"
 ```
 
-## Measurements & Fields
+## Metrics
 
 The fields from this plugin are gathered in the *mcrouter* measurement.
 
-Description of gathered fields can be found [here](https://github.com/facebook/mcrouter/wiki/Stats-list).
+Description of gathered fields can be found
+[here](https://github.com/facebook/mcrouter/wiki/Stats-list).
 
 Fields:
 

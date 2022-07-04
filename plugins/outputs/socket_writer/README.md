@@ -8,7 +8,7 @@ It can output data in any of the [supported output formats][formats].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Generic socket writer capable of handling multiple socket types.
 [[outputs.socket_writer]]
   ## URL to connect to
@@ -44,6 +44,6 @@ It can output data in any of the [supported output formats][formats].
   ## Data format to generate.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 ```

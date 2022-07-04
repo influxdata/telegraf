@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -6,6 +7,7 @@ package intel_rdt
 import (
 	"bufio"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -23,6 +25,10 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	timestampFormat           = "2006-01-02 15:04:05"
@@ -70,6 +76,10 @@ type splitCSVLine struct {
 	timeValue        string
 	metricsValues    []string
 	coreOrPIDsValues []string
+}
+
+func (*IntelRDT) SampleConfig() string {
+	return sampleConfig
 }
 
 // All gathering is done in the Start function
@@ -233,7 +243,7 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 
 	if r.UseSudo {
 		// run pqos with `/bin/sh -c "sudo /path/to/pqos ..."`
-		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.Replace(strings.Join(args, " "), ";", "\\;", -1))}
+		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.ReplaceAll(strings.Join(args, " "), ";", "\\;"))}
 		cmd = exec.Command("/bin/sh", args...)
 	}
 

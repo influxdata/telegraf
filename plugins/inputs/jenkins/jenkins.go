@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package jenkins
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Jenkins plugin gathers information about the nodes and jobs running in a jenkins instance.
 type Jenkins struct {
@@ -53,6 +59,10 @@ const (
 	measurementNode    = "jenkins_node"
 	measurementJob     = "jenkins_job"
 )
+
+func (*Jenkins) SampleConfig() string {
+	return sampleConfig
+}
 
 // Gather implements telegraf.Input interface
 func (j *Jenkins) Gather(acc telegraf.Accumulator) error {

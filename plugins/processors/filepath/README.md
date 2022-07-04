@@ -1,9 +1,8 @@
-<!-- markdownlint-disable MD024 -->
-
 # Filepath Processor Plugin
 
-The `filepath` processor plugin maps certain go functions from [path/filepath](https://golang.org/pkg/path/filepath/)
-onto tag and field values. Values can be modified in place or stored in another key.
+The `filepath` processor plugin maps certain go functions from
+[path/filepath](https://golang.org/pkg/path/filepath/) onto tag and field
+values. Values can be modified in place or stored in another key.
 
 Implemented functions are:
 
@@ -13,22 +12,25 @@ Implemented functions are:
 * [Clean](https://golang.org/pkg/path/filepath/#Clean) (accessible through `[[processors.filepath.clean]]`)
 * [ToSlash](https://golang.org/pkg/path/filepath/#ToSlash) (accessible through `[[processors.filepath.toslash]]`)
 
- On top of that, the plugin provides an extra function to retrieve the final path component without its extension. This
- function is accessible through the `[[processors.filepath.stem]]` configuration item.
+On top of that, the plugin provides an extra function to retrieve the final path
+component without its extension. This function is accessible through the
+`[[processors.filepath.stem]]` configuration item.
 
-Please note that, in this implementation, these functions are processed in the order that they appear above( except for
-`stem` that is applied in the first place).
+Please note that, in this implementation, these functions are processed in the
+order that they appear above( except for `stem` that is applied in the first
+place).
 
-Specify the `tag` and/or `field` that you want processed in each section and optionally a `dest` if you want the result
-stored in a new tag or field.
+Specify the `tag` and/or `field` that you want processed in each section and
+optionally a `dest` if you want the result stored in a new tag or field.
 
-If you plan to apply multiple transformations to the same `tag`/`field`, bear in mind the processing order stated above.
+If you plan to apply multiple transformations to the same `tag`/`field`, bear in
+mind the processing order stated above.
 
 Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Performs file path manipulations on tags and fields
 [[processors.filepath]]
   ## Treat the tag value as a path and convert it to its last element, storing the result in a new tag
@@ -63,10 +65,11 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Considerations
 
-### Clean
+### Clean Automatic Invocation
 
-Even though `clean` is provided a standalone function, it is also invoked when using the `rel` and `dirname` functions,
-so there is no need to use it along with them.
+Even though `clean` is provided a standalone function, it is also invoked when
+using the `rel` and `dirname` functions, so there is no need to use it along
+with them.
 
 That is:
 
@@ -86,9 +89,10 @@ Is equivalent to:
      tag = "path"
  ```
 
-### ToSlash
+### ToSlash Platform-specific Behavior
 
-The effects of this function are only noticeable on Windows platforms, because of the underlying golang implementation.
+The effects of this function are only noticeable on Windows platforms, because
+of the underlying golang implementation.
 
 ## Examples
 
@@ -174,9 +178,9 @@ The effects of this function are only noticeable on Windows platforms, because o
 
 ## Processing paths from tail plugin
 
-This plugin can be used together with the
-[tail input plugn](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail) to make modifications
-to the `path` tag injected for every file.
+This plugin can be used together with the [tail input
+plugin](../../inputs/tail/README.md) to make modifications to the `path` tag
+injected for every file.
 
 Scenario:
 
@@ -189,7 +193,8 @@ tag
   * Just in case, we don't want to override the original path (if for some reason we end up having duplicates we might
     want this information)
 
-For this purpose, we will use the `tail` input plugin, the `grok` parser plugin and the `filepath` processor.
+For this purpose, we will use the `tail` input plugin, the `grok` parser plugin
+and the `filepath` processor.
 
 ```toml
 # Performs file path manipulations on tags and fields
@@ -205,7 +210,8 @@ For this purpose, we will use the `tail` input plugin, the `grok` parser plugin 
      dest = "stempath"
 ```
 
-The resulting output for a job taking 70 seconds for the mentioned log file would look like:
+The resulting output for a job taking 70 seconds for the mentioned log file
+would look like:
 
 ```text
 myjobs_duration_seconds,host="my-host",path="/var/log/myjobs/mysql_backup.log",stempath="mysql_backup" 70 1587920425000000000

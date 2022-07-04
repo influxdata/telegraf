@@ -1,9 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package exec
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
+	"os"
 	osExec "os/exec"
 	"path/filepath"
 	"runtime"
@@ -21,12 +24,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const MaxStderrBytes int = 512
 
 type Exec struct {
-	Commands []string        `toml:"commands"`
-	Command  string          `toml:"command"`
-	Timeout  config.Duration `toml:"timeout"`
+	Commands    []string        `toml:"commands"`
+	Command     string          `toml:"command"`
+	Environment []string        `toml:"environment"`
+	Timeout     config.Duration `toml:"timeout"`
 
 	parser parsers.Parser
 
@@ -42,13 +50,14 @@ func NewExec() *Exec {
 }
 
 type Runner interface {
-	Run(string, time.Duration) ([]byte, []byte, error)
+	Run(string, []string, time.Duration) ([]byte, []byte, error)
 }
 
 type CommandRunner struct{}
 
 func (c CommandRunner) Run(
 	command string,
+	environments []string,
 	timeout time.Duration,
 ) ([]byte, []byte, error) {
 	splitCmd, err := shellquote.Split(command)
@@ -57,6 +66,10 @@ func (c CommandRunner) Run(
 	}
 
 	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
+
+	if len(environments) > 0 {
+		cmd.Env = append(os.Environ(), environments...)
+	}
 
 	var (
 		out    bytes.Buffer
@@ -116,13 +129,17 @@ func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 	return b
 }
 
+func (*Exec) SampleConfig() string {
+	return sampleConfig
+}
+
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
-	_, isNagios := e.parser.(*nagios.NagiosParser)
+	_, isNagios := e.parser.(*nagios.Parser)
 
-	out, errbuf, runErr := e.runner.Run(command, time.Duration(e.Timeout))
+	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {
-		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
+		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
 	}
@@ -134,10 +151,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	}
 
 	if isNagios {
-		metrics, err = nagios.TryAddState(runErr, metrics)
-		if err != nil {
-			e.Log.Errorf("Failed to add nagios state: %s", err)
-		}
+		metrics = nagios.AddState(runErr, errBuf, metrics)
 	}
 
 	for _, m := range metrics {

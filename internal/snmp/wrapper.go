@@ -167,3 +167,11 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 	gs.Port = uint16(port)
 	return nil
 }
+
+func (gs GosnmpWrapper) Reconnect() error {
+	if gs.Conn == nil {
+		return gs.Connect()
+	}
+
+	return nil
+}

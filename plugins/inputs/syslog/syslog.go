@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package syslog
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -18,12 +20,17 @@ import (
 	"github.com/influxdata/go-syslog/v3/octetcounting"
 	"github.com/influxdata/go-syslog/v3/rfc3164"
 	"github.com/influxdata/go-syslog/v3/rfc5424"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type syslogRFC string
 
@@ -59,6 +66,10 @@ type Syslog struct {
 	connectionsMu sync.Mutex
 
 	udpListener net.PacketConn
+}
+
+func (*Syslog) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather ...

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package interrupts
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Interrupts struct {
 	CPUAsTag bool `toml:"cpu_as_tag"`
@@ -84,6 +90,10 @@ func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
 		fields[cpu] = irq.Cpus[i]
 	}
 	return tags, fields
+}
+
+func (*Interrupts) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Interrupts) Gather(acc telegraf.Accumulator) error {

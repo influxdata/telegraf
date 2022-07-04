@@ -1,14 +1,13 @@
 package opcua
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/gopcua/opcua/ua"
@@ -24,33 +23,23 @@ type OPCTags struct {
 	Want           interface{}
 }
 
+const servicePort = "4840"
+
 func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Spin-up the container
-	ctx := context.Background()
-	req := testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "open62541/open62541:1.0",
-			ExposedPorts: []string{"4840/tcp"},
-			WaitingFor:   wait.ForListeningPort("4840/tcp"),
-		},
-		Started: true,
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
-	container, err := testcontainers.GenericContainer(ctx, req)
-	require.NoError(t, err, "starting container failed")
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
 	defer func() {
-		require.NoError(t, container.Terminate(ctx), "terminating container failed")
+		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
-
-	// Get the connection details from the container
-	addr, err := container.Host(ctx)
-	require.NoError(t, err, "getting container host address failed")
-	p, err := container.MappedPort(ctx, "4840/tcp")
-	require.NoError(t, err, "getting container host port failed")
-	port := p.Port()
 
 	var testopctags = []OPCTags{
 		{"ProductName", "1", "i", "2261", "open62541 OPC UA Server"},
@@ -60,7 +49,7 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 
 	var o OpcUA
 	o.MetricName = "testing"
-	o.Endpoint = fmt.Sprintf("opc.tcp://%s:%s", addr, port)
+	o.Endpoint = fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort])
 	fmt.Println(o.Endpoint)
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
@@ -94,6 +83,17 @@ func TestClient1Integration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	var testopctags = []OPCTags{
 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
 		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
@@ -103,10 +103,8 @@ func TestClient1Integration(t *testing.T) {
 	}
 
 	var o OpcUA
-	var err error
-
 	o.MetricName = "testing"
-	o.Endpoint = "opc.tcp://localhost:4840"
+	o.Endpoint = fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort])
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
 	o.RequestTimeout = config.Duration(1 * time.Second)

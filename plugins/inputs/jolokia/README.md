@@ -1,10 +1,10 @@
 # Jolokia Input Plugin
 
-## Deprecated in version 1.5: Please use the [jolokia2][] plugin
+**Deprecated in version 1.5: Please use the [jolokia2][] plugin**
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read JMX metrics through Jolokia
 [[inputs.jolokia]]
   ## This is the context root used to compose the jolokia url

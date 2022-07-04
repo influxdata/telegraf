@@ -7,13 +7,15 @@ Plugin currently support two type of end points:-
 - multiple  (e.g. `http://[graylog-server-ip]:9000/api/system/metrics/multiple`)
 - namespace (e.g. `http://[graylog-server-ip]:9000/api/system/metrics/namespace/{namespace}`)
 
-End Point can be a mix of one  multiple end point  and several namespaces end points
+End Point can be a mix of one multiple end point and several namespaces end
+points
 
-Note: if namespace end point specified metrics array will be ignored for that call.
+Note: if namespace end point specified metrics array will be ignored for that
+call.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read flattened metrics from one or more GrayLog HTTP endpoints
 [[inputs.graylog]]
   ## API endpoint, currently supported API:

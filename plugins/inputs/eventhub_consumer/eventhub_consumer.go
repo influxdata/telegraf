@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package eventhub_consumer
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"sync"
 	"time"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxUndeliveredMessages = 1000
@@ -61,6 +67,10 @@ type EventHub struct {
 
 	parser parsers.Parser
 	in     chan []telegraf.Metric
+}
+
+func (*EventHub) SampleConfig() string {
+	return sampleConfig
 }
 
 // SetParser sets the parser

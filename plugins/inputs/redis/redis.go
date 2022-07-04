@@ -1,7 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redis
 
 import (
 	"bufio"
+	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/url"
@@ -12,11 +15,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type RedisCommand struct {
 	Command []interface{}
@@ -27,10 +34,11 @@ type RedisCommand struct {
 type Redis struct {
 	Commands []*RedisCommand
 	Servers  []string
+	Username string
 	Password string
 	tls.ClientConfig
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	clients   []Client
 	connected bool
@@ -40,6 +48,7 @@ type Client interface {
 	Do(returnType string, args ...interface{}) (interface{}, error)
 	Info() *redis.StringCmd
 	BaseTags() map[string]string
+	Close() error
 }
 
 type RedisClient struct {
@@ -159,22 +168,22 @@ type RedisFieldTypes struct {
 }
 
 func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, error) {
-	rawVal := r.client.Do(args...)
+	rawVal := r.client.Do(context.Background(), args...)
 
 	switch returnType {
 	case "integer":
 		return rawVal.Int64()
 	case "string":
-		return rawVal.String()
+		return rawVal.Text()
 	case "float":
 		return rawVal.Float64()
 	default:
-		return rawVal.String()
+		return rawVal.Text()
 	}
 }
 
 func (r *RedisClient) Info() *redis.StringCmd {
-	return r.client.Info("ALL")
+	return r.client.Info(context.Background(), "ALL")
 }
 
 func (r *RedisClient) BaseTags() map[string]string {
@@ -185,12 +194,20 @@ func (r *RedisClient) BaseTags() map[string]string {
 	return tags
 }
 
+func (r *RedisClient) Close() error {
+	return r.client.Close()
+}
+
 var replicationSlaveMetricPrefix = regexp.MustCompile(`^slave\d+`)
 
 var Tracking = map[string]string{
 	"uptime_in_seconds": "uptime",
 	"connected_clients": "clients",
 	"role":              "replication_role",
+}
+
+func (*Redis) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *Redis) Init() error {
@@ -225,12 +242,17 @@ func (r *Redis) connect() error {
 			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
 		}
 
+		username := ""
 		password := ""
 		if u.User != nil {
+			username = u.User.Username()
 			pw, ok := u.User.Password()
 			if ok {
 				password = pw
 			}
+		}
+		if len(r.Username) > 0 {
+			username = r.Username
 		}
 		if len(r.Password) > 0 {
 			password = r.Password
@@ -251,6 +273,7 @@ func (r *Redis) connect() error {
 		client := redis.NewClient(
 			&redis.Options{
 				Addr:      address,
+				Username:  username,
 				Password:  password,
 				Network:   u.Scheme,
 				PoolSize:  1,
@@ -685,4 +708,18 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		panic(fmt.Sprintf("unhandled source type %T", sourceType))
 	}
 	return reflect.ValueOf(value)
+}
+
+func (r *Redis) Start(telegraf.Accumulator) error {
+	return nil
+}
+
+//Stop close the client through ServiceInput interface Start/Stop methods impl.
+func (r *Redis) Stop() {
+	for _, c := range r.clients {
+		err := c.Close()
+		if err != nil {
+			r.Log.Errorf("error closing client: %v", err)
+		}
+	}
 }

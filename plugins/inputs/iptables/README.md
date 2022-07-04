@@ -1,18 +1,27 @@
 # Iptables Input Plugin
 
-The iptables plugin gathers packets and bytes counters for rules within a set of table and chain from the Linux's iptables firewall.
+The iptables plugin gathers packets and bytes counters for rules within a set of
+table and chain from the Linux's iptables firewall.
 
-Rules are identified through associated comment. **Rules without comment are ignored**.
-Indeed we need a unique ID for the rule and the rule number is not a constant: it may vary when rules are inserted/deleted at start-up or by automatic tools (interactive firewalls, fail2ban, ...).
-Also when the rule set is becoming big (hundreds of lines) most people are interested in monitoring only a small part of the rule set.
+Rules are identified through associated comment. **Rules without comment are
+ignored**.  Indeed we need a unique ID for the rule and the rule number is not a
+constant: it may vary when rules are inserted/deleted at start-up or by
+automatic tools (interactive firewalls, fail2ban, ...).  Also when the rule set
+is becoming big (hundreds of lines) most people are interested in monitoring
+only a small part of the rule set.
 
-Before using this plugin **you must ensure that the rules you want to monitor are named with a unique comment**. Comments are added using the `-m comment --comment "my comment"` iptables options.
+Before using this plugin **you must ensure that the rules you want to monitor
+are named with a unique comment**. Comments are added using the `-m comment
+--comment "my comment"` iptables options.
 
-The iptables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities. You have several options to grant telegraf to run iptables:
+The iptables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities. You
+have several options to grant telegraf to run iptables:
 
 * Run telegraf as root. This is strongly discouraged.
-* Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW. This is the simplest and recommended option.
-* Configure sudo to grant telegraf to run iptables. This is the most restrictive option, but require sudo setup.
+* Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW. This is
+  the simplest and recommended option.
+* Configure sudo to grant telegraf to run iptables. This is the most restrictive
+  option, but require sudo setup.
 
 ## Using systemd capabilities
 
@@ -47,11 +56,15 @@ Defaults!IPTABLESSHOW !logfile, !syslog, !pam_session
 
 ## Using IPtables lock feature
 
-Defining multiple instances of this plugin in telegraf.conf can lead to concurrent IPtables access resulting in "ERROR in input [inputs.iptables]: exit status 4" messages in telegraf.log and missing metrics. Setting 'use_lock = true' in the plugin configuration will run IPtables with the '-w' switch, allowing a lock usage to prevent this error.
+Defining multiple instances of this plugin in telegraf.conf can lead to
+concurrent IPtables access resulting in "ERROR in input [inputs.iptables]: exit
+status 4" messages in telegraf.log and missing metrics. Setting 'use_lock =
+true' in the plugin configuration will run IPtables with the '-w' switch,
+allowing a lock usage to prevent this error.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather packets and bytes throughput from iptables
 [[inputs.iptables]]
   ## iptables require root access on most systems.

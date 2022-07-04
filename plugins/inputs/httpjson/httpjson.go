@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package httpjson
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,8 +16,12 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	utf8BOM = []byte("\xef\xbb\xbf")
@@ -64,6 +70,10 @@ func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
 
 func (c *RealHTTPClient) HTTPClient() *http.Client {
 	return c.client
+}
+
+func (*HTTPJSON) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gathers data for all servers.
@@ -126,13 +136,12 @@ func (h *HTTPJSON) gatherServer(
 		"server": serverURL,
 	}
 
-	parser, err := parsers.NewParser(&parsers.Config{
-		DataFormat:  "json",
+	parser := &json.Parser{
 		MetricName:  msrmntName,
 		TagKeys:     h.TagKeys,
 		DefaultTags: tags,
-	})
-	if err != nil {
+	}
+	if err := parser.Init(); err != nil {
 		return err
 	}
 

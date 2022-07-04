@@ -1,9 +1,9 @@
 # Execd Processor Plugin
 
 The `execd` processor plugin runs an external program as a separate process and
-pipes metrics in to the process's STDIN and reads processed metrics from its STDOUT.
-The programs must accept influx line protocol on standard in (STDIN) and output
-metrics in influx line protocol to standard output (STDOUT).
+pipes metrics in to the process's STDIN and reads processed metrics from its
+STDOUT.  The programs must accept influx line protocol on standard in (STDIN)
+and output metrics in influx line protocol to standard output (STDOUT).
 
 Program output on standard error is mirrored to the telegraf log.
 
@@ -22,13 +22,19 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Run executable as long-running processor plugin
 [[processors.execd]]
   ## One program to run as daemon.
   ## NOTE: process and each argument should each be their own string
   ## eg: command = ["/path/to/your_program", "arg1", "arg2"]
   command = ["cat"]
+
+  ## Environment variables
+  ## Array of "key=value" pairs to pass as environment variables
+  ## e.g. "KEY=value", "USERNAME=John Doe",
+  ## "LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs"
+  # environment = []
 
   ## Delay before the process is restarted after an unexpected termination
   # restart_delay = "10s"
@@ -97,7 +103,8 @@ func main() {
 }
 ```
 
-to run it, you'd build the binary using go, eg `go build -o multiplier.exe main.go`
+to run it, you'd build the binary using go, eg `go build -o multiplier.exe
+main.go`
 
 ```toml
 [[processors.execd]]

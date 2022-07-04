@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ipmi_sensor
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	execCommand          = exec.Command // execCommand is used to mock commands in tests.
@@ -40,6 +46,33 @@ type Ipmi struct {
 	CachePath     string
 
 	Log telegraf.Logger `toml:"-"`
+}
+
+const cmd = "ipmitool"
+
+func (*Ipmi) SampleConfig() string {
+	return sampleConfig
+}
+
+func (m *Ipmi) Init() error {
+	// Set defaults
+	if m.Path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		m.Path = path
+	}
+	if m.CachePath == "" {
+		m.CachePath = os.TempDir()
+	}
+
+	// Check parameters
+	if m.Path == "" {
+		return fmt.Errorf("no path for %q specified", cmd)
+	}
+
+	return nil
 }
 
 // Gather is the main execution function for the plugin
@@ -278,20 +311,11 @@ func trim(s string) string {
 func transform(s string) string {
 	s = trim(s)
 	s = strings.ToLower(s)
-	return strings.Replace(s, " ", "_", -1)
+	return strings.ReplaceAll(s, " ", "_")
 }
 
 func init() {
-	m := Ipmi{}
-	path, _ := exec.LookPath("ipmitool")
-	if len(path) > 0 {
-		m.Path = path
-	}
-	m.Timeout = config.Duration(time.Second * 20)
-	m.UseCache = false
-	m.CachePath = os.TempDir()
 	inputs.Add("ipmi_sensor", func() telegraf.Input {
-		m := m
-		return &m
+		return &Ipmi{Timeout: config.Duration(20 * time.Second)}
 	})
 }

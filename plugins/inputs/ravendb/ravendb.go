@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ravendb
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // defaultURL will set a default value that corresponds to the default value
 // used by RavenDB
@@ -44,6 +50,10 @@ type RavenDB struct {
 	requestURLDatabases  string
 	requestURLIndexes    string
 	requestURLCollection string
+}
+
+func (*RavenDB) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *RavenDB) Gather(acc telegraf.Accumulator) error {

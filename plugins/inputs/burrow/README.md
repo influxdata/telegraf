@@ -1,13 +1,14 @@
 # Burrow Kafka Consumer Lag Checking Input Plugin
 
-Collect Kafka topic, consumer and partition status
-via [Burrow](https://github.com/linkedin/Burrow) HTTP [API](https://github.com/linkedin/Burrow/wiki/HTTP-Endpoint).
+Collect Kafka topic, consumer and partition status via
+[Burrow](https://github.com/linkedin/Burrow) HTTP
+[API](https://github.com/linkedin/Burrow/wiki/HTTP-Endpoint).
 
 Supported Burrow version: `1.x`
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collect Kafka topics and consumers status from Burrow HTTP API.
 [[inputs.burrow]]
   ## Burrow API endpoints in format "schema://host:port".
@@ -62,7 +63,9 @@ Supported Burrow version: `1.x`
 
 > unknown value will be mapped to 0
 
-## Fields
+## Metrics
+
+### Fields
 
 * `burrow_group` (one event per each consumer group)
   * status (string, see Partition Status mappings)
@@ -83,7 +86,7 @@ Supported Burrow version: `1.x`
 * `burrow_topic` (one event per topic offset)
   * offset (int64)
 
-## Tags
+### Tags
 
 * `burrow_group`
   * cluster (string)

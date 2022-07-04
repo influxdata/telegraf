@@ -26,14 +26,14 @@ server (RMS of difference of multiple time samples, milliseconds);
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get standard NTP query metrics, requires ntpq executable.
 [[inputs.ntpq]]
   ## If false, set the -n ntpq flag. Can reduce metric gather time.
   dns_lookup = true
 ```
 
-## Measurements & Fields
+## Metrics
 
 - ntpq
   - delay (float, milliseconds)
@@ -43,7 +43,7 @@ server (RMS of difference of multiple time samples, milliseconds);
   - reach (int)
   - when (int, seconds)
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - refid

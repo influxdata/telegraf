@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package dovecot
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Dovecot struct {
 	Type    string
 	Filters []string
@@ -24,6 +30,10 @@ var defaultTimeout = time.Second * time.Duration(5)
 
 var validQuery = map[string]bool{
 	"user": true, "domain": true, "global": true, "ip": true,
+}
+
+func (*Dovecot) SampleConfig() string {
+	return sampleConfig
 }
 
 // Reads stats from all configured servers.
