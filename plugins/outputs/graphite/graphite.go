@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"net"
@@ -90,29 +91,32 @@ func (g *Graphite) Close() error {
 // We can detect that by finding an eof
 // if not for this, we can happily write and flush without getting errors (in Go) but getting RST tcp packets back (!)
 // props to Tv via the authors of carbon-relay-ng` for this trick.
-func (g *Graphite) checkEOF(conn net.Conn) {
+func (g *Graphite) checkEOF(conn net.Conn) error {
 	b := make([]byte, 1024)
 
 	if err := conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond)); err != nil {
 		g.Log.Errorf("Couldn't set read deadline for connection due to error %v with remote address %s. closing conn explicitly", err, conn.RemoteAddr().String())
 		_ = conn.Close()
-		return
+		return err
 	}
 	num, err := conn.Read(b)
 	if err == io.EOF {
-		g.Log.Errorf("Conn %s is closed. closing conn explicitly", conn)
+		g.Log.Errorf("Conn %s is closed. closing conn explicitly", conn.RemoteAddr().String())
 		_ = conn.Close()
-		return
+		return err
 	}
 	// just in case i misunderstand something or the remote behaves badly
 	if num != 0 {
 		g.Log.Infof("conn %s .conn.Read data? did not expect that. data: %s", conn, b[:num])
 	}
-	// Log non-timeout errors or close.
+	// Log non-timeout errors and close.
 	if e, ok := err.(net.Error); !(ok && e.Timeout()) {
 		g.Log.Errorf("conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s", conn, err)
 		_ = conn.Close()
+		return err
 	}
+
+	return nil
 }
 
 // Choose a random server in the cluster to write to until a successful write
@@ -137,8 +141,11 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 	// try to reconnect and retry to send
 	if err != nil {
-		g.Log.Error("Graphite: Reconnecting and retrying...")
-		_ = g.Connect()
+		g.Log.Error("Graphite: Reconnecting and retrying after receiving error: %v", err)
+		err = g.Connect()
+		if err != nil {
+			return fmt.Errorf("Failed to reconnect: %v", err)
+		}
 		err = g.send(batch)
 	}
 
@@ -153,9 +160,15 @@ func (g *Graphite) send(batch []byte) error {
 	p := rand.Perm(len(g.conns))
 	for _, n := range p {
 		if g.Timeout > 0 {
-			_ = g.conns[n].SetWriteDeadline(time.Now().Add(time.Duration(g.Timeout) * time.Second))
+			err = g.conns[n].SetWriteDeadline(time.Now().Add(time.Duration(g.Timeout) * time.Second))
+			if err != nil {
+				return err
+			}
 		}
-		g.checkEOF(g.conns[n])
+		err = g.checkEOF(g.conns[n])
+		if err != nil {
+			return err
+		}
 		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
 			g.Log.Errorf("Graphite Error: " + e.Error())
