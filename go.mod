@@ -105,7 +105,6 @@ require (
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/miekg/dns v1.1.50
 	github.com/moby/ipvs v1.0.2
-	github.com/pebbe/zmq4 v1.2.7
 	github.com/multiplay/go-ts3 v1.0.1
 	github.com/nats-io/nats-server/v2 v2.8.4
 	github.com/nats-io/nats.go v1.16.0
@@ -117,6 +116,7 @@ require (
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/pborman/ansi v1.0.0
+	github.com/pebbe/zmq4 v1.2.7
 	github.com/pion/dtls/v2 v2.0.13
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.2
