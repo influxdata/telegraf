@@ -15,9 +15,17 @@ instances of telegraf can read from a NATS cluster in parallel.
   servers = ["nats://localhost:4222"]
 
   ## subject(s) to consume
+  ## If you use jetstream you need to set the subjects
+  ## in jetstream_subjects
   subjects = ["telegraf"]
 
   ## jetstream subjects
+  ## jetstream is a streaming technology inside of nats.
+  ## With jetstream the nats-server persists messages and 
+  ## a consumer can consume historical messages. This is
+  ## useful when telegraf needs to restart it don't miss a 
+  ## message. You need to configure the nats-server:
+  ## https://docs.nats.io/nats-concepts/jetstream.
   jetstream_subjects = ["js_telegraf"]
 
   ## name a queue group
