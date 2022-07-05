@@ -18,8 +18,11 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	_ "github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
+
+	// This test uses parsers.NewParser to initialize the influx parser from a config
+	// Importing influx with a blank identifier in order for the parser `init` function to be called
+	_ "github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
 func TestServeHTTP(t *testing.T) {

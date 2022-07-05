@@ -180,14 +180,9 @@ func (p *Parser) applyDefaultTagsSingle(m telegraf.Metric) {
 }
 
 func (p *Parser) Init() error {
-	if p.Type == "series" {
-		p.defaultTime = time.Now
-		p.precision = lineprotocol.Nanosecond
-		p.allowPartial = true
-	} else {
-		p.defaultTime = time.Now
-		p.precision = lineprotocol.Nanosecond
-	}
+	p.defaultTime = time.Now
+	p.precision = lineprotocol.Nanosecond
+	p.allowPartial = p.Type == "series"
 
 	return nil
 }
