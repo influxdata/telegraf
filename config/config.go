@@ -1429,7 +1429,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp",
 		"influx_parser_type",
-		"prometheus_ignore_timestamp", // not used anymore?
 		"value_field_name":
 
 	// Serializer options to ignore
