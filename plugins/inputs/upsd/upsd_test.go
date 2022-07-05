@@ -32,7 +32,7 @@ func TestUpsdGather(t *testing.T) {
 				},
 				fields: map[string]interface{}{
 					"status_flags":            uint64(8),
-					"ups.status":              "OL",
+					"ups_status":              "OL",
 					"battery_charge_percent":  float64(100),
 					"battery_voltage":         float64(13.4),
 					"input_frequency":         nil,

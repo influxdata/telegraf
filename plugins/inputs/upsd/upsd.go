@@ -77,7 +77,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 
 	fields := map[string]interface{}{
 		"status_flags":            status,
-		"ups.status":              metrics["ups.status"],
+		"ups_status":              metrics["ups.status"],
 		"input_voltage":           metrics["input.voltage"],
 		"load_percent":            metrics["ups.load"],
 		"battery_charge_percent":  metrics["battery.charge"],
