@@ -39,10 +39,10 @@ type Parser struct {
 	Log                 telegraf.Logger   `toml:"-"`
 
 	// Required for backward compatibility
-	ConfigsXML     []xpath.Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsJSON    []xpath.Config `toml:"xpath_json"`
-	ConfigsMsgPack []xpath.Config `toml:"xpath_msgpack"`
-	ConfigsProto   []xpath.Config `toml:"xpath_protobuf"`
+	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsJSON    []Config `toml:"xpath_json"`
+	ConfigsMsgPack []Config `toml:"xpath_msgpack"`
+	ConfigsProto   []Config `toml:"xpath_protobuf"`
 
 	document dataDocument
 }
