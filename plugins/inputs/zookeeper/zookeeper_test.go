@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -15,13 +16,17 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	servicePort := "2181"
 	container := testutil.Container{
 		Image:        "zookeeper",
-		ExposedPorts: []string{"2181"},
+		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"ZOO_4LW_COMMANDS_WHITELIST": "mntr",
 		},
-		WaitingFor: wait.ForListeningPort("2181"),
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("ZooKeeper audit is disabled."),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -31,7 +36,7 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 
 	z := &Zookeeper{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", container.Address, container.Port),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 	}
 

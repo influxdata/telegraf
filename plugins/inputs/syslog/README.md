@@ -1,10 +1,10 @@
 # Syslog Input Plugin
 
-The syslog plugin listens for syslog messages transmitted over
-a Unix Domain socket,
-[UDP](https://tools.ietf.org/html/rfc5426),
+The syslog plugin listens for syslog messages transmitted over a Unix Domain
+socket, [UDP](https://tools.ietf.org/html/rfc5426),
 [TCP](https://tools.ietf.org/html/rfc6587), or
-[TLS](https://tools.ietf.org/html/rfc5425); with or without the octet counting framing.
+[TLS](https://tools.ietf.org/html/rfc5425); with or without the octet counting
+framing.
 
 Syslog messages should be formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424).
@@ -70,10 +70,17 @@ Syslog messages should be formatted according to
 
 ### Message transport
 
-The `framing` option only applies to streams. It governs the way we expect to receive messages within the stream.
-Namely, with the [`"octet counting"`](https://tools.ietf.org/html/rfc5425#section-4.3) technique (default) or with the [`"non-transparent"`](https://tools.ietf.org/html/rfc6587#section-3.4.2) framing.
+The `framing` option only applies to streams. It governs the way we expect to
+receive messages within the stream.  Namely, with the [`"octet counting"`][1]
+technique (default) or with the [`"non-transparent"`][2] framing.
 
-The `trailer` option only applies when `framing` option is `"non-transparent"`. It must have one of the following values: `"LF"` (default), or `"NUL"`.
+The `trailer` option only applies when `framing` option is
+`"non-transparent"`. It must have one of the following values: `"LF"` (default),
+or `"NUL"`.
+
+[1]: https://tools.ietf.org/html/rfc5425#section-4.3
+
+[2]: https://tools.ietf.org/html/rfc6587#section-3.4.2
 
 ### Best effort
 
@@ -84,7 +91,7 @@ messages. If unset only full messages will be collected.
 ### Rsyslog Integration
 
 Rsyslog can be configured to forward logging messages to Telegraf by configuring
-[remote logging](https://www.rsyslog.com/doc/v8-stable/configuration/actions.html#remote-machine).
+[remote logging][3].
 
 Most system are setup with a configuration split between `/etc/rsyslog.conf`
 and the files in the `/etc/rsyslog.d/` directory, it is recommended to add the
@@ -117,7 +124,11 @@ action(type="omfwd" Protocol="tcp" TCP_Framing="octet-counted" Target="127.0.0.1
 #action(type="omfwd" Protocol="udp" Target="127.0.0.1" Port="6514" Template="RSYSLOG_SyslogProtocol23Format")
 ```
 
-To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html).
+To complete TLS setup please refer to [rsyslog docs][4].
+
+[3]: https://www.rsyslog.com/doc/v8-stable/configuration/actions.html#remote-machine
+
+[4]: https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html
 
 ## Metrics
 
@@ -140,7 +151,8 @@ To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc
 
 ### Structured Data
 
-Structured data produces field keys by combining the `SD_ID` with the `PARAM_NAME` combined using the `sdparam_separator` as in the following example:
+Structured data produces field keys by combining the `SD_ID` with the
+`PARAM_NAME` combined using the `sdparam_separator` as in the following example:
 
 ```shell
 170 <165>1 2018-10-01:14:15.000Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"] An application event log entry...
@@ -164,7 +176,8 @@ echo "<13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc -u 127.0.0.
 
 ### RFC3164
 
-RFC3164 encoded messages are supported for UDP only, but not all vendors output valid RFC3164 messages by default
+RFC3164 encoded messages are supported for UDP only, but not all vendors output
+valid RFC3164 messages by default
 
 - E.g. Cisco IOS
 

@@ -170,7 +170,7 @@ SELECT
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 	,DB_NAME(vfs.[database_id]) AS [database_name]
 	,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-	,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
+	,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
 	,mf.[type_desc] AS [file_type]
 	,vfs.[io_stall_read_ms] AS [read_latency_ms]
 	,vfs.[num_of_reads] AS [reads]
@@ -333,6 +333,7 @@ SELECT DISTINCT
 			,'Logins/sec'
 			,'Processes blocked'
 			,'Latch Waits/sec'
+			,'Average Latch Wait Time (ms)'
 			,'Full Scans/sec'
 			,'Index Searches/sec'
 			,'Page Splits/sec'
@@ -414,6 +415,9 @@ SELECT DISTINCT
 			,'Distributed Query'
 			,'DTC calls'
 			,'Query Store CPU usage'
+			,'Query Store physical reads'
+			,'Query Store logical reads'
+			,'Query Store logical writes'
 		) OR (
 			spi.[object_name] LIKE '%User Settable%'
 			OR spi.[object_name] LIKE '%SQL Errors%'
@@ -1131,7 +1135,7 @@ END
 
 DECLARE
 	@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
-	
+
 IF @MajorMinorVersion >= 1050 BEGIN
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
@@ -1344,7 +1348,7 @@ END;
 
 WITH MostRecentBackups AS
 (
-	SELECT 
+	SELECT
 		database_name AS [Database],
 		MAX(bus.backup_finish_date) AS LastBackupTime,
 		CASE bus.type
@@ -1364,7 +1368,7 @@ BackupsWithSize AS
 
 SELECT
 	'sqlserver_recentbackup' AS [measurement],
-	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance], 
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 	d.name AS [database_name],
 	d.database_id as [database_id],
 	d.state_desc AS [state],

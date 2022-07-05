@@ -119,6 +119,7 @@ func TestGather(t *testing.T) {
 		On("retrieveAndCalculateData", mock.Anything).Return(nil).Times(len(raplDataMap)).
 		On("getConstraintMaxPowerWatts", mock.Anything).Return(546783852.3, nil)
 	mockServices.msr.On("getCPUCoresData").Return(preparedCPUData).
+		On("isMsrLoaded", mock.Anything).Return(true).
 		On("openAndReadMsr", mock.Anything).Return(nil).
 		On("retrieveCPUFrequencyForCore", mock.Anything).Return(1200000.2, nil)
 
@@ -225,6 +226,43 @@ func TestAddCPUFrequencyMetric(t *testing.T) {
 	expectedFrequency := roundFloatToNearestTwoDecimalPlaces(frequency)
 	expectedMetric := getPowerCoreMetric("cpu_frequency_mhz", expectedFrequency, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
+}
+
+func TestReadUncoreFreq(t *testing.T) {
+	var acc testutil.Accumulator
+	cpuID := "0"
+	coreID := "0"
+	packageID := "0"
+	die := "0"
+	power, mockServices := getPowerWithMockedServices()
+	prepareCPUInfoForSingleCPU(power, cpuID, coreID, packageID)
+	preparedData := getPreparedCPUData([]string{cpuID})
+
+	mockServices.msr.On("getCPUCoresData").Return(preparedData)
+
+	mockServices.msr.On("isMsrLoaded").Return(true)
+
+	mockServices.msr.On("readSingleMsr", "0", "MSR_UNCORE_PERF_STATUS").Return(uint64(10), nil)
+
+	mockServices.msr.On("retrieveUncoreFrequency", "0", "initial", "min", "0").
+		Return(float64(500), nil)
+	mockServices.msr.On("retrieveUncoreFrequency", "0", "initial", "max", "0").
+		Return(float64(1200), nil)
+	mockServices.msr.On("retrieveUncoreFrequency", "0", "current", "min", "0").
+		Return(float64(600), nil)
+	mockServices.msr.On("retrieveUncoreFrequency", "0", "current", "max", "0").
+		Return(float64(1100), nil)
+
+	power.readUncoreFreq("current", packageID, die, &acc)
+	power.readUncoreFreq("initial", packageID, die, &acc)
+
+	require.Equal(t, 2, len(acc.GetTelegrafMetrics()))
+
+	expectedMetric := getPowerUncoreFreqMetric("initial", float64(500), float64(1200), nil, packageID, die)
+	acc.AssertContainsTaggedFields(t, "powerstat_package", expectedMetric.fields, expectedMetric.tags)
+
+	expectedMetric = getPowerUncoreFreqMetric("current", float64(600), float64(1100), uint64(1000), packageID, die)
+	acc.AssertContainsTaggedFields(t, "powerstat_package", expectedMetric.fields, expectedMetric.tags)
 }
 
 func TestAddCoreCPUTemperatureMetric(t *testing.T) {
@@ -494,6 +532,27 @@ func getPowerGlobalMetric(name string, value interface{}, socketID string) struc
 	tags   map[string]string
 } {
 	return getPowerMetric(name, value, map[string]string{"package_id": socketID})
+}
+
+func getPowerUncoreFreqMetric(typeFreq string, limitMin interface{}, limitMax interface{}, current interface{}, socketID string, die string) struct {
+	fields map[string]interface{}
+	tags   map[string]string
+} {
+	var ret struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}
+	ret.tags = make(map[string]string)
+	ret.fields = make(map[string]interface{})
+	ret.tags["package_id"] = socketID
+	ret.tags["die"] = die
+	ret.tags["type"] = typeFreq
+	ret.fields["uncore_frequency_limit_mhz_min"] = limitMin
+	ret.fields["uncore_frequency_limit_mhz_max"] = limitMax
+	if typeFreq == "current" {
+		ret.fields["uncore_frequency_mhz_cur"] = current
+	}
+	return ret
 }
 
 func getPowerMetric(name string, value interface{}, tags map[string]string) struct {

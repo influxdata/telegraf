@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
@@ -15,20 +16,25 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func createTestContainer(t *testing.T) testutil.Container {
+const servicePort = "5432"
+
+func createTestContainer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
 		Image:        "crate",
-		ExposedPorts: []string{"5432"},
+		ExposedPorts: []string{servicePort},
 		Entrypoint: []string{
 			"/docker-entrypoint.sh",
 			"-Cdiscovery.type=single-node",
 		},
-		WaitingFor: wait.ForListeningPort("5432/tcp"),
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("recovered [0] indices into cluster_state"),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
 
-	return container
+	return &container
 }
 
 func TestConnectAndWriteIntegration(t *testing.T) {
@@ -40,8 +46,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	defer func() {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
-	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Port)
+	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Ports[servicePort])
 
+	fmt.Println(url)
 	table := "testing"
 	db, err := sql.Open("pgx", url)
 	require.NoError(t, err)
@@ -151,7 +158,7 @@ func Test_escapeValueIntegration(t *testing.T) {
 	defer func() {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
-	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Port)
+	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Ports[servicePort])
 
 	db, err := sql.Open("pgx", url)
 	require.NoError(t, err)

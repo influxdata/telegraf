@@ -1,4 +1,4 @@
-# CSV
+# CSV Parser Plugin
 
 The `csv` parser creates metrics from a document containing comma separated
 values.
@@ -98,6 +98,14 @@ values.
   ## If set to true, the parser will skip csv lines that cannot be parsed.
   ## By default, this is false
   csv_skip_errors = false
+
+  ## Reset the parser on given conditions.
+  ## This option can be used to reset the parser's state e.g. when always reading a
+  ## full CSV structure including header etc. Available modes are
+  ##    "none"   -- do not reset the parser (default)
+  ##    "always" -- reset the parser with each call (ignored in line-wise parsing)
+  ##                Helpful when e.g. reading whole files in each gather-cycle.
+  # csv_reset_mode = "none"
   ```
 
 ### csv_timestamp_column, csv_timestamp_format
@@ -107,10 +115,10 @@ time using the JSON document you can use the `csv_timestamp_column` and
 `csv_timestamp_format` options together to set the time to a value in the parsed
 document.
 
-The `csv_timestamp_column` option specifies the key containing the time value and
-`csv_timestamp_format` must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`,
-or a format string in using the Go "reference time" which is defined to be the
-**specific time**: `Mon Jan 2 15:04:05 MST 2006`.
+The `csv_timestamp_column` option specifies the key containing the time value
+and `csv_timestamp_format` must be set to `unix`, `unix_ms`, `unix_us`,
+`unix_ns`, or a format string in using the Go "reference time" which is defined
+to be the **specific time**: `Mon Jan 2 15:04:05 MST 2006`.
 
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.

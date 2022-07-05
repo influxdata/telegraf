@@ -1,4 +1,3 @@
-
 # OpenStack Input Plugin
 
 Collects the metrics from following services of OpenStack:
@@ -22,13 +21,21 @@ At present this plugin requires the following APIs:
 
 ### Recommendations
 
-Due to the large number of unique tags that this plugin generates, in order to keep the cardinality down it is **highly recommended** to use [modifiers](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#modifiers) like `tagexclude` to discard unwanted tags.
+Due to the large number of unique tags that this plugin generates, in order to
+keep the cardinality down it is **highly recommended** to use
+[modifiers](../../../docs/CONFIGURATION.md#modifiers) like `tagexclude` to
+discard unwanted tags.
 
-For deployments with only a small number of VMs and hosts, a small polling interval (e.g. seconds-minutes) is acceptable. For larger deployments, polling a large number of systems will impact performance. Use the `interval` option to change how often the plugin is run:
+For deployments with only a small number of VMs and hosts, a small polling
+interval (e.g. seconds-minutes) is acceptable. For larger deployments, polling a
+large number of systems will impact performance. Use the `interval` option to
+change how often the plugin is run:
 
-`interval`: How often a metric is gathered. Setting this value at the plugin level overrides the global agent interval setting.
+`interval`: How often a metric is gathered. Setting this value at the plugin
+level overrides the global agent interval setting.
 
-Also, consider polling OpenStack services at different intervals depending on your requirements. This will help with load and cardinality as well.
+Also, consider polling OpenStack services at different intervals depending on
+your requirements. This will help with load and cardinality as well.
 
 ```toml
 [[inputs.openstack]]
@@ -96,7 +103,7 @@ Also, consider polling OpenStack services at different intervals depending on yo
   # tag_prefix = "openstack_tag_"
   # tag_value = "true"
 
-  ## Timestamp format for timestamp data recieved from Openstack.
+  ## Timestamp format for timestamp data received from Openstack.
   ## If false format is unix nanoseconds.
   # human_readable_timestamps = false
 
@@ -104,7 +111,7 @@ Also, consider polling OpenStack services at different intervals depending on yo
   # measure_openstack_requests = false
 ```
 
-### Measurements, Tags & Fields
+## Metrics
 
 * openstack_aggregate
   * name
@@ -343,7 +350,7 @@ Also, consider polling OpenStack services at different intervals depending on yo
   * total_attachments  [integer]
   * updated_at  [string]
 
-### Example Output
+## Example Output
 
 ```text
 > openstack_neutron_agent,agent_host=vim2,agent_type=DHCP\ agent,availability_zone=nova,binary=neutron-dhcp-agent,host=telegraf_host,topic=dhcp_agent admin_state_up=true,alive=true,created_at="2021-01-07T03:40:53Z",heartbeat_timestamp="2021-10-14T07:46:40Z",id="17e1e446-d7da-4656-9e32-67d3690a306f",resources_synced=false,started_at="2021-07-02T21:47:42Z" 1634197616000000000

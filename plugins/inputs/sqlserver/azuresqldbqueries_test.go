@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAzureSQL_Database_ResourceStats_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_ResourceStats_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -53,7 +53,7 @@ func TestAzureSQL_Database_ResourceStats_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_ResourceGovernance_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_ResourceGovernance_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -114,7 +114,7 @@ func TestAzureSQL_Database_ResourceGovernance_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_WaitStats_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_WaitStats_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -151,7 +151,7 @@ func TestAzureSQL_Database_WaitStats_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_DatabaseIO_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_DatabaseIO_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -197,7 +197,7 @@ func TestAzureSQL_Database_DatabaseIO_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_ServerProperties_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_ServerProperties_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -238,7 +238,7 @@ func TestAzureSQL_Database_ServerProperties_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_OsWaitstats_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_OsWaitstats_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -276,7 +276,7 @@ func TestAzureSQL_Database_OsWaitstats_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_MemoryClerks_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_MemoryClerks_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -309,7 +309,7 @@ func TestAzureSQL_Database_MemoryClerks_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_PerformanceCounters_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_PerformanceCounters_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -345,7 +345,7 @@ func TestAzureSQL_Database_PerformanceCounters_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_Requests_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_Requests_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -403,7 +403,7 @@ func TestAzureSQL_Database_Requests_Query(t *testing.T) {
 	server.Stop()
 }
 
-func TestAzureSQL_Database_Schedulers_Query(t *testing.T) {
+func TestAzureSQLIntegration_Database_Schedulers_Query(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

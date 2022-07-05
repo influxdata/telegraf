@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -22,6 +23,8 @@ type OPCTags struct {
 	Want           interface{}
 }
 
+const servicePort = "4840"
+
 func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -29,8 +32,8 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "open62541/open62541",
-		ExposedPorts: []string{"4840"},
-		WaitingFor:   wait.ForListeningPort("4840/tcp"),
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -46,7 +49,7 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 
 	var o OpcUA
 	o.MetricName = "testing"
-	o.Endpoint = fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Port)
+	o.Endpoint = fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort])
 	fmt.Println(o.Endpoint)
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
@@ -82,8 +85,8 @@ func TestClient1Integration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "open62541/open62541",
-		ExposedPorts: []string{"4840"},
-		WaitingFor:   wait.ForListeningPort("4840/tcp"),
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -101,7 +104,7 @@ func TestClient1Integration(t *testing.T) {
 
 	var o OpcUA
 	o.MetricName = "testing"
-	o.Endpoint = fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Port)
+	o.Endpoint = fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort])
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
 	o.RequestTimeout = config.Duration(1 * time.Second)

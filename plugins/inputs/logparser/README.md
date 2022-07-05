@@ -1,6 +1,7 @@
 # Logparser Input Plugin
 
-## Deprecated in Telegraf 1.15: Please use the [tail][] plugin along with the [`grok` data format][grok parser]
+**Deprecated in Telegraf 1.15: Please use the [tail][] plugin along with the
+[`grok` data format][grok parser]**
 
 The `logparser` plugin streams and parses the given logfiles. Currently it
 has the capability of parsing "grok" patterns from logfiles, which also supports
@@ -48,7 +49,6 @@ Migration Example:
 ## Configuration
 
 ```toml @sample.conf
-## DEPRECATED: The 'logparser' plugin is deprecated in version 1.15.0, use 'inputs.tail' with 'grok' data format instead.
 # Read metrics off Arista LANZ, via socket
 [[inputs.logparser]]
   ## Log files to parse.

@@ -5,11 +5,17 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/go-ldap/ldap/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/testutil"
+)
+
+const (
+	servicePort       = "1389"
+	servicePortSecure = "1636"
 )
 
 func TestOpenldapMockResult(t *testing.T) {
@@ -59,12 +65,15 @@ func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "bitnami/openldap",
-		ExposedPorts: []string{"1389"},
+		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
 			"LDAP_ADMIN_PASSWORD": "secret",
 		},
-		WaitingFor: wait.ForLog("Starting slapd"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("slapd starting"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -72,7 +81,7 @@ func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	port, err := strconv.Atoi(container.Port)
+	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
 	o := &Openldap{
@@ -104,7 +113,7 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "bitnami/openldap",
-		ExposedPorts: []string{"1389", "1636"},
+		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
 			"LDAP_ADMIN_PASSWORD": "secret",
@@ -118,7 +127,10 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 			"/server.crt": tlsCert,
 			"/server.key": tlsKey,
 		},
-		WaitingFor: wait.ForListeningPort("1389/tcp"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("slapd starting"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -126,7 +138,7 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	port, err := strconv.Atoi(container.Port)
+	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
 	cert, err := filepath.Abs(pki.ClientCertPath())
@@ -164,7 +176,7 @@ func TestOpenldapLDAPSIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "bitnami/openldap",
-		ExposedPorts: []string{"1636"},
+		ExposedPorts: []string{servicePortSecure},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
 			"LDAP_ADMIN_PASSWORD": "secret",
@@ -178,7 +190,10 @@ func TestOpenldapLDAPSIntegration(t *testing.T) {
 			"/server.crt": tlsCert,
 			"/server.key": tlsKey,
 		},
-		WaitingFor: wait.ForListeningPort("1636/tcp"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("slapd starting"),
+			wait.ForListeningPort(nat.Port(servicePortSecure)),
+		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -186,7 +201,7 @@ func TestOpenldapLDAPSIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	port, err := strconv.Atoi(container.Port)
+	port, err := strconv.Atoi(container.Ports[servicePortSecure])
 	require.NoError(t, err)
 
 	o := &Openldap{
@@ -219,7 +234,7 @@ func TestOpenldapInvalidSSLIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "bitnami/openldap",
-		ExposedPorts: []string{"1636"},
+		ExposedPorts: []string{servicePortSecure},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
 			"LDAP_ADMIN_PASSWORD": "secret",
@@ -233,7 +248,10 @@ func TestOpenldapInvalidSSLIntegration(t *testing.T) {
 			"/server.crt": tlsCert,
 			"/server.key": tlsKey,
 		},
-		WaitingFor: wait.ForListeningPort("1636/tcp"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("slapd starting"),
+			wait.ForListeningPort(nat.Port(servicePortSecure)),
+		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -241,7 +259,7 @@ func TestOpenldapInvalidSSLIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	port, err := strconv.Atoi(container.Port)
+	port, err := strconv.Atoi(container.Ports[servicePortSecure])
 	require.NoError(t, err)
 
 	o := &Openldap{
@@ -265,12 +283,15 @@ func TestOpenldapBindIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "bitnami/openldap",
-		ExposedPorts: []string{"1389"},
+		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
 			"LDAP_ADMIN_PASSWORD": "secret",
 		},
-		WaitingFor: wait.ForListeningPort("1389/tcp"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("slapd starting"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -278,7 +299,7 @@ func TestOpenldapBindIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	port, err := strconv.Atoi(container.Port)
+	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
 	o := &Openldap{
@@ -314,12 +335,15 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "bitnami/openldap",
-		ExposedPorts: []string{"1389"},
+		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
 			"LDAP_ADMIN_PASSWORD": "secret",
 		},
-		WaitingFor: wait.ForListeningPort("1389/tcp"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("slapd starting"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -327,7 +351,7 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	port, err := strconv.Atoi(container.Port)
+	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
 	o := &Openldap{

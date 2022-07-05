@@ -1,10 +1,10 @@
 # Execd Input Plugin
 
-The `execd` plugin runs an external program as a long-running daemon.
-The programs must output metrics in any one of the accepted
-[Input Data Formats][] on the process's STDOUT, and is expected to
-stay running. If you'd instead like the process to collect metrics and then exit,
-check out the [inputs.exec][] plugin.
+The `execd` plugin runs an external program as a long-running daemon.  The
+programs must output metrics in any one of the accepted [Input Data Formats][]
+on the process's STDOUT, and is expected to stay running. If you'd instead like
+the process to collect metrics and then exit, check out the [inputs.exec][]
+plugin.
 
 The `signal` can be configured to send a signal the running daemon on each
 collection interval. This is used for when you want to have Telegraf notify the
@@ -125,5 +125,5 @@ end
   signal = "none"
 ```
 
-[Input Data Formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-[inputs.exec]: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/exec/README.md
+[Input Data Formats]: ../../../docs/DATA_FORMATS_INPUT.md
+[inputs.exec]: ../exec/README.md

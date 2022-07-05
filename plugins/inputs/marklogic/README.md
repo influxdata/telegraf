@@ -1,6 +1,7 @@
 # MarkLogic Input Plugin
 
-The MarkLogic Telegraf plugin gathers health status metrics from one or more host.
+The MarkLogic Telegraf plugin gathers health status metrics from one or more
+host.
 
 ## Configuration
 

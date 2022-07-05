@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
+	"net/smtp"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -21,11 +22,12 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -37,6 +39,7 @@ type X509Cert struct {
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
 	tlsCfg           *tls.Config
 	_tls.ClientConfig
+	proxy.TCPProxy
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
@@ -125,7 +128,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		protocol = "tcp"
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
+		dialer, err := c.Proxy()
+		if err != nil {
+			return nil, err
+		}
+
+		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -176,6 +184,53 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			}
 			content = rest
 		}
+		return certs, nil
+	case "smtp":
+		ipConn, err := net.DialTimeout("tcp", u.Host, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer ipConn.Close()
+
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
+		}
+		c.tlsCfg.ServerName = serverName
+		c.tlsCfg.InsecureSkipVerify = true
+
+		smtpConn, err := smtp.NewClient(ipConn, u.Host)
+		if err != nil {
+			return nil, err
+		}
+
+		err = smtpConn.Hello(c.tlsCfg.ServerName)
+		if err != nil {
+			return nil, err
+		}
+
+		id, err := smtpConn.Text.Cmd("STARTTLS")
+		if err != nil {
+			return nil, err
+		}
+
+		smtpConn.Text.StartResponse(id)
+		defer smtpConn.Text.EndResponse(id)
+		_, _, err = smtpConn.Text.ReadResponse(220)
+		if err != nil {
+			return nil, fmt.Errorf("did not get 220 after STARTTLS: %s", err.Error())
+		}
+
+		tlsConn := tls.Client(ipConn, c.tlsCfg)
+		defer tlsConn.Close()
+
+		hsErr := tlsConn.Handshake()
+		if hsErr != nil {
+			return nil, hsErr
+		}
+
+		certs := tlsConn.ConnectionState().PeerCertificates
+
 		return certs, nil
 	default:
 		return nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())

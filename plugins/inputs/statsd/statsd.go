@@ -24,7 +24,7 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -150,7 +150,7 @@ type Statsd struct {
 	// Max duration for each metric to stay cached without being updated.
 	MaxTTL config.Duration `toml:"max_ttl"`
 
-	graphiteParser *graphite.GraphiteParser
+	graphiteParser *graphite.Parser
 
 	acc telegraf.Accumulator
 
@@ -713,7 +713,8 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 	var err error
 
 	if p == nil || s.graphiteParser.Separator != s.MetricSeparator {
-		p, err = graphite.NewGraphiteParser(s.MetricSeparator, s.Templates, nil)
+		p = &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
+		err = p.Init()
 		s.graphiteParser = p
 	}
 

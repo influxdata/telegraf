@@ -1,9 +1,9 @@
 # Execd Processor Plugin
 
 The `execd` processor plugin runs an external program as a separate process and
-pipes metrics in to the process's STDIN and reads processed metrics from its STDOUT.
-The programs must accept influx line protocol on standard in (STDIN) and output
-metrics in influx line protocol to standard output (STDOUT).
+pipes metrics in to the process's STDIN and reads processed metrics from its
+STDOUT.  The programs must accept influx line protocol on standard in (STDIN)
+and output metrics in influx line protocol to standard output (STDOUT).
 
 Program output on standard error is mirrored to the telegraf log.
 
@@ -103,7 +103,8 @@ func main() {
 }
 ```
 
-to run it, you'd build the binary using go, eg `go build -o multiplier.exe main.go`
+to run it, you'd build the binary using go, eg `go build -o multiplier.exe
+main.go`
 
 ```toml
 [[processors.execd]]

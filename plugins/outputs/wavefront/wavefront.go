@@ -13,28 +13,29 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
 const maxTagLength = 254
 
 type Wavefront struct {
-	URL             string                          `toml:"url"`
-	Token           string                          `toml:"token"`
-	Host            string                          `toml:"host"`
-	Port            int                             `toml:"port"`
-	Prefix          string                          `toml:"prefix"`
-	SimpleFields    bool                            `toml:"simple_fields"`
-	MetricSeparator string                          `toml:"metric_separator"`
-	ConvertPaths    bool                            `toml:"convert_paths"`
-	ConvertBool     bool                            `toml:"convert_bool"`
-	UseRegex        bool                            `toml:"use_regex"`
-	UseStrict       bool                            `toml:"use_strict"`
-	TruncateTags    bool                            `toml:"truncate_tags"`
-	ImmediateFlush  bool                            `toml:"immediate_flush"`
-	SourceOverride  []string                        `toml:"source_override"`
-	StringToNumber  map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
+	URL                  string                          `toml:"url"`
+	Token                string                          `toml:"token"`
+	Host                 string                          `toml:"host"`
+	Port                 int                             `toml:"port"`
+	Prefix               string                          `toml:"prefix"`
+	SimpleFields         bool                            `toml:"simple_fields"`
+	MetricSeparator      string                          `toml:"metric_separator"`
+	ConvertPaths         bool                            `toml:"convert_paths"`
+	ConvertBool          bool                            `toml:"convert_bool"`
+	HTTPMaximumBatchSize int                             `toml:"http_maximum_batch_size"`
+	UseRegex             bool                            `toml:"use_regex"`
+	UseStrict            bool                            `toml:"use_strict"`
+	TruncateTags         bool                            `toml:"truncate_tags"`
+	ImmediateFlush       bool                            `toml:"immediate_flush"`
+	SourceOverride       []string                        `toml:"source_override"`
+	StringToNumber       map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
@@ -87,6 +88,7 @@ func (w *Wavefront) Connect() error {
 			Server:               w.URL,
 			Token:                w.Token,
 			FlushIntervalSeconds: flushSeconds,
+			BatchSize:            w.HTTPMaximumBatchSize,
 		})
 		if err != nil {
 			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.URL)
@@ -292,12 +294,13 @@ func (w *Wavefront) Close() error {
 func init() {
 	outputs.Add("wavefront", func() telegraf.Output {
 		return &Wavefront{
-			Token:           "DUMMY_TOKEN",
-			MetricSeparator: ".",
-			ConvertPaths:    true,
-			ConvertBool:     true,
-			TruncateTags:    false,
-			ImmediateFlush:  true,
+			Token:                "DUMMY_TOKEN",
+			MetricSeparator:      ".",
+			ConvertPaths:         true,
+			ConvertBool:          true,
+			TruncateTags:         false,
+			ImmediateFlush:       true,
+			HTTPMaximumBatchSize: 10000,
 		}
 	})
 }

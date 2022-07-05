@@ -1,6 +1,7 @@
 # ClickHouse Input Plugin
 
-This plugin gathers the statistic data from [ClickHouse](https://github.com/ClickHouse/ClickHouse) server.
+This plugin gathers the statistic data from
+[ClickHouse](https://github.com/ClickHouse/ClickHouse) server.
 
 ## Configuration
 
@@ -184,7 +185,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
   - fields:
     - messages_last_10_min - gauge which show how many messages collected
 
-### Examples
+## Example Output
 
 ```text
 clickhouse_events,cluster=test_cluster_two_shards_localhost,host=kshvakov,source=localhost,shard_num=1 read_compressed_bytes=212i,arena_alloc_chunks=35i,function_execute=85i,merge_tree_data_writer_rows=3i,rw_lock_acquired_read_locks=421i,file_open=46i,io_buffer_alloc_bytes=86451985i,inserted_bytes=196i,regexp_created=3i,real_time_microseconds=116832i,query=23i,network_receive_elapsed_microseconds=268i,merge_tree_data_writer_compressed_bytes=1080i,arena_alloc_bytes=212992i,disk_write_elapsed_microseconds=556i,inserted_rows=3i,compressed_read_buffer_bytes=81i,read_buffer_from_file_descriptor_read_bytes=148i,write_buffer_from_file_descriptor_write=47i,merge_tree_data_writer_blocks=3i,soft_page_faults=896i,hard_page_faults=7i,select_query=21i,merge_tree_data_writer_uncompressed_bytes=196i,merge_tree_data_writer_blocks_already_sorted=3i,user_time_microseconds=40196i,compressed_read_buffer_blocks=5i,write_buffer_from_file_descriptor_write_bytes=3246i,io_buffer_allocs=296i,created_write_buffer_ordinary=12i,disk_read_elapsed_microseconds=59347044i,network_send_elapsed_microseconds=1538i,context_lock=1040i,insert_query=1i,system_time_microseconds=14582i,read_buffer_from_file_descriptor_read=3i 1569421000000000000

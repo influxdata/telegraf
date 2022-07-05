@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEmptyContainer(t *testing.T) {
+func TestEmptyContainerIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -22,7 +22,44 @@ func TestEmptyContainer(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestBadImageName(t *testing.T) {
+func TestMappedPortLookupIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	cases := []struct {
+		name     string
+		port     string
+		expected string
+	}{
+		{"random", "80", "80"},
+		{"only 80", "80:80", "80"},
+		{"only 80", "80:80/tcp", "80"},
+		{"only 8080", "8080:80", "8080"},
+		{"only 8080", "8080:80/tcp", "8080"},
+	}
+
+	for _, tc := range cases {
+		container := Container{
+			Image:        "nginx:stable-alpine",
+			ExposedPorts: []string{tc.port},
+		}
+
+		err := container.Start()
+		require.NoError(t, err)
+
+		if tc.name == "random" {
+			require.NotEqual(t, tc.expected, container.Ports["80"])
+		} else {
+			require.Equal(t, tc.expected, container.Ports["80"])
+		}
+
+		err = container.Terminate()
+		require.NoError(t, err)
+	}
+}
+
+func TestBadImageNameIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

@@ -96,12 +96,11 @@ mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=100i 16535791531473956
 
 ## About Topic Parsing
 
-The MQTT topic as a whole is stored as a tag, but this can be far too coarse
-to be easily used when utilizing the data further down the line. This
-change allows tag values to be extracted from the MQTT topic letting you
-store the information provided in the topic in a meaningful way.
-An `_` denotes an ignored entry in the topic path.
-Please see the following example.
+The MQTT topic as a whole is stored as a tag, but this can be far too coarse to
+be easily used when utilizing the data further down the line. This change allows
+tag values to be extracted from the MQTT topic letting you store the information
+provided in the topic in a meaningful way. An `_` denotes an ignored entry in
+the topic path. Please see the following example.
 
 ### Topic Parsing Example
 
@@ -135,7 +134,7 @@ Please see the following example.
       test = "int"
 ```
 
-Result:
+## Example Output
 
 ```shell
 cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291

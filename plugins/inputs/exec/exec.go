@@ -24,7 +24,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -135,7 +135,7 @@ func (*Exec) SampleConfig() string {
 
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
-	_, isNagios := e.parser.(*nagios.NagiosParser)
+	_, isNagios := e.parser.(*nagios.Parser)
 
 	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {

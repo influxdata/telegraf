@@ -3,6 +3,7 @@ package redis
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"fmt"
 	"io"
@@ -14,14 +15,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
-
+	"github.com/go-redis/redis/v8"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -34,6 +34,7 @@ type RedisCommand struct {
 type Redis struct {
 	Commands []*RedisCommand
 	Servers  []string
+	Username string
 	Password string
 	tls.ClientConfig
 
@@ -167,22 +168,22 @@ type RedisFieldTypes struct {
 }
 
 func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, error) {
-	rawVal := r.client.Do(args...)
+	rawVal := r.client.Do(context.Background(), args...)
 
 	switch returnType {
 	case "integer":
 		return rawVal.Int64()
 	case "string":
-		return rawVal.String()
+		return rawVal.Text()
 	case "float":
 		return rawVal.Float64()
 	default:
-		return rawVal.String()
+		return rawVal.Text()
 	}
 }
 
 func (r *RedisClient) Info() *redis.StringCmd {
-	return r.client.Info("ALL")
+	return r.client.Info(context.Background(), "ALL")
 }
 
 func (r *RedisClient) BaseTags() map[string]string {
@@ -241,12 +242,17 @@ func (r *Redis) connect() error {
 			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
 		}
 
+		username := ""
 		password := ""
 		if u.User != nil {
+			username = u.User.Username()
 			pw, ok := u.User.Password()
 			if ok {
 				password = pw
 			}
+		}
+		if len(r.Username) > 0 {
+			username = r.Username
 		}
 		if len(r.Password) > 0 {
 			password = r.Password
@@ -267,6 +273,7 @@ func (r *Redis) connect() error {
 		client := redis.NewClient(
 			&redis.Options{
 				Addr:      address,
+				Username:  username,
 				Password:  password,
 				Network:   u.Scheme,
 				PoolSize:  1,
