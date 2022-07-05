@@ -778,3 +778,26 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
 }
+
+func TestGRPCDialoutKeepalive(t *testing.T) {
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0", PermitKeepaliveWithoutCalls: true}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	require.NoError(t, err)
+
+	addr := c.Address()
+	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure())
+	require.NoError(t, err)
+	client := dialout.NewGRPCMdtDialoutClient(conn)
+	stream, err := client.MdtDialout(context.Background())
+	require.NoError(t, err)
+
+	telemetry := mockTelemetryMessage()
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
+	args := &dialout.MdtDialoutArgs{Data: data, ReqId: 456}
+	require.NoError(t, stream.Send(args))
+
+	c.Stop()
+	require.NoError(t, conn.Close())
+}

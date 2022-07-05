@@ -27,6 +27,12 @@ later.
  ## Grpc Maximum Message Size, default is 4MB, increase the size.
  max_msg_size = 4000000
 
+ ## GRPC permit keepalives without calls, set to true if your clients are sending pings without calls in-flight.
+ # permit_keepalive_without_calls = false
+
+ ## GRPC minimum timeout between successive pings, decreasing this value may help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
+ # keepalive_minimum_time = "5m"
+
  ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
  # tls_key = "/etc/telegraf/key.pem"
