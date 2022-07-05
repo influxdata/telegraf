@@ -250,12 +250,6 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
-	m.bytesRecv.Set(0)
-	metrics, err := m.parser.Parse(msg.Payload())
-	if err != nil {
-		return err
-	}
-
 	if m.collectBytes {
 		byteCount := unsafe.Sizeof(msg) +
 			unsafe.Sizeof(msg.Payload()) +
@@ -264,9 +258,13 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 			unsafe.Sizeof(msg.Qos()) +
 			unsafe.Sizeof(msg.Topic()) +
 			unsafe.Sizeof(msg.Retained())
-		byteCount64 := int64(byteCount)
-		m.bytesRecv.Incr(byteCount64)
+		m.bytesRecv.Incr(int64(byteCount))
 		m.messagesRecv.Incr(1)
+	}
+
+	metrics, err := m.parser.Parse(msg.Payload())
+	if err != nil {
+		return err
 	}
 
 	for _, metric := range metrics {
