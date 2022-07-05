@@ -94,6 +94,7 @@ type MQTTConsumer struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	bytesRecv     selfstat.Stat
+	messagesRecv  selfstat.Stat
 }
 
 func (*MQTTConsumer) SampleConfig() string {
@@ -154,6 +155,7 @@ func (m *MQTTConsumer) Init() error {
 		"address": m.Servers[0],
 	}
 	m.bytesRecv = selfstat.Register("mqtt_consumer", "bytes_received", tags)
+	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", tags)
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
@@ -264,6 +266,7 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 			unsafe.Sizeof(msg.Retained())
 		byteCount64 := int64(byteCount)
 		m.bytesRecv.Incr(byteCount64)
+		m.messagesRecv.Incr(1)
 	}
 
 	for _, metric := range metrics {
