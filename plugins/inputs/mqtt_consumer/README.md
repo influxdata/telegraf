@@ -87,6 +87,13 @@ and creates metrics using one of the supported [input data formats][].
   #      key = type
 ```
 
+## Example Output
+
+```text
+mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=45i 1653579140440951943
+mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=100i 1653579153147395661
+```
+
 ## About Topic Parsing
 
 The MQTT topic as a whole is stored as a tag, but this can be far too coarse
@@ -180,13 +187,6 @@ sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 ```
 
 [1]: <https://github.com/influxdata/telegraf/tree/master/plugins/processors/pivot> "Pivot Processor"
-
-## Example Output
-
-```text
-mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=45i 1653579140440951943
-mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=100i 1653579153147395661
-```
 
 ## Metrics
 
