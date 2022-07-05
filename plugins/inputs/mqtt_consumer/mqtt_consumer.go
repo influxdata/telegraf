@@ -76,7 +76,6 @@ type MQTTConsumer struct {
 
 	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 	PersistentSession bool
-	collectBytes      bool   `toml:"collect_bytes_received"`
 	ClientID          string `toml:"client_id"`
 
 	tls.ClientConfig
@@ -250,17 +249,15 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
-	if m.collectBytes {
-		byteCount := unsafe.Sizeof(msg) +
-			unsafe.Sizeof(msg.Payload()) +
-			unsafe.Sizeof(msg.MessageID()) +
-			unsafe.Sizeof(msg.Duplicate()) +
-			unsafe.Sizeof(msg.Qos()) +
-			unsafe.Sizeof(msg.Topic()) +
-			unsafe.Sizeof(msg.Retained())
-		m.bytesRecv.Incr(int64(byteCount))
-		m.messagesRecv.Incr(1)
-	}
+	byteCount := unsafe.Sizeof(msg) +
+		unsafe.Sizeof(msg.Payload()) +
+		unsafe.Sizeof(msg.MessageID()) +
+		unsafe.Sizeof(msg.Duplicate()) +
+		unsafe.Sizeof(msg.Qos()) +
+		unsafe.Sizeof(msg.Topic()) +
+		unsafe.Sizeof(msg.Retained())
+	m.bytesRecv.Incr(int64(byteCount))
+	m.messagesRecv.Incr(1)
 
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
