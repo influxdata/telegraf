@@ -533,9 +533,6 @@ workflows:
           requires:
             - 'test-go-mac'
           filters:
-            branches:
-              ignore:
-                - master
             tags:
               only: /.*/
       - 'darwin-arm64-package':
