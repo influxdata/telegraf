@@ -6,7 +6,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
@@ -202,11 +201,6 @@ func NewParser(config *Config) (Parser, error) {
 		} else {
 			parser, err = NewInfluxParser()
 		}
-	case "prometheus":
-		parser, err = NewPrometheusParser(
-			config.DefaultTags,
-			config.PrometheusIgnoreTimestamp,
-		)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	default:
@@ -234,13 +228,6 @@ func NewInfluxParser() (Parser, error) {
 
 func NewInfluxUpstreamParser() (Parser, error) {
 	return influx_upstream.NewParser(), nil
-}
-
-func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (Parser, error) {
-	return &prometheus.Parser{
-		DefaultTags:     defaultTags,
-		IgnoreTimestamp: ignoreTimestamp,
-	}, nil
 }
 
 func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
