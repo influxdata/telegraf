@@ -63,6 +63,18 @@ later.
 #    dnpath3 = '{"Name": "show processes memory physical","prop": [{"Key": "processname","Value": "string"}]}'
 ```
 
+## Metrics
+
+Metrics are named by the encoding path that generated the data, or by the alias if the `inputs.cisco_telemetry_mdt.aliases` config section is defined.
+Metric fields are dependent on the device type and path.
+
+Tags included in all metrics:
+- source
+- path
+- subscription
+
+Additional tags (such as interface_name) may be included depending on the path.
+
 ## Example Output
 
 ```shell
