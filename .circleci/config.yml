@@ -755,6 +755,7 @@ workflows:
             - 'test-go-linux'
       - 'mips-package':
           name: 'mips-package-nightly'
+          nightly: true
           requires:
             - 'test-go-linux'
       - 'package-sign-windows':
