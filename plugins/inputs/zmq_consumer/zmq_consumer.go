@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	defaultMethod                 = "bind"
 	defaultHighWaterMark          = 1000
 	defaultReceiveBufferSize      = -1
 	defaultTcpKeepAlive           = -1
@@ -23,10 +24,16 @@ const (
 	channelBufferSize             = 1000
 )
 
+const (
+	bind  string = "bind"
+	connect      = "connect"
+)
+
 type empty struct{}
 type semaphore chan empty
 
 type zmqConsumer struct {
+	Method               string   `toml:"method"`
 	Endpoints            []string `toml:"endpoints"`
 	Subscriptions        []string `toml:"subscriptions"`
 	HighWaterMark        int      `toml:"high_water_mark"`
@@ -50,6 +57,9 @@ type zmqConsumer struct {
 }
 
 var sampleConfig = `
+  ## ZeroMQ PUB/SUB connection type (either bind or connect, defaults to bind)
+  # method = bind
+
   ## ZeroMQ publisher endpoint urls.
   # endpoints = ["tcp://localhost:6001", "tcp://localhost:6002"]
 
@@ -135,6 +145,14 @@ func (z *zmqConsumer) Gather(_ telegraf.Accumulator) error {
 }
 
 func (z *zmqConsumer) Init() error {
+	if len(z.Method) == 0 {
+		z.Method = bind;
+	}
+
+	if z.Method != bind && z.Method != connect {
+		return fmt.Errorf("unknown endpoint connection method: %s", z.Method)
+	}
+
 	if len(z.Endpoints) == 0 {
 		return fmt.Errorf("missing publisher endpoints")
 	}
@@ -233,13 +251,18 @@ func (z *zmqConsumer) connect() (*zmq.Socket, error) {
 		return nil, err
 	}
 
+	// connect to endpoints
+	for _, endpoint := range z.Endpoints {
+		if z.Method == bind{
+			err = socket.Bind(endpoint)
+		} else {
+			err = socket.Connect(endpoint)
+		}
+
 		if err != nil {
 			return nil, err
 		}
 	}
-	// connect to endpoints
-	for _, endpoint := range z.Endpoints {
-		err = socket.Connect(endpoint)
 
 	// set subscription filters
 	for _, filter := range z.Subscriptions {
