@@ -175,9 +175,22 @@ func (z *zmqConsumer) Init() error {
 	if z.MaxUndeliveredMessages == 0 {
 		z.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
 	}
+
+	z.Log.Infof("%sing to endpoints %s", z.Method, z.Endpoints)
 	if len(z.Subscriptions) == 0 {
+		z.Log.Infof("no subscriptions specified: subscribing to empty string (wildcard)")
 		z.Subscriptions = append(z.Subscriptions, "")
+	}else{
+		z.Log.Infof("subscriptions: %s", z.Subscriptions)
 	}
+
+	z.Log.Debugf("hwm: %d",z.HighWaterMark)
+	z.Log.Debugf("recv buf: %d",z.ReceiveBufferSize)
+	z.Log.Debugf("keep-alive: %d",z.TcpKeepAlive)
+	z.Log.Debugf("keep-alive idle: %d", z.TcpKeepAliveIdle)
+	z.Log.Debugf("keep-alive interval: %d", z.TcpKeepAliveInterval)
+	z.Log.Debugf("max undelivered: %d", z.MaxUndeliveredMessages)
+
 	return nil
 }
 
