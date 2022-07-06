@@ -20,7 +20,6 @@ const (
 	defaultTcpKeepAliveIdle       = -1
 	defaultTcpKeepAliveInterval   = -1
 	defaultMaxUndeliveredMessages = 1000
-	defaultSubscription           = ""
 	channelBufferSize             = 1000
 )
 
@@ -139,9 +138,7 @@ func (z *zmqConsumer) Init() error {
 	if len(z.Endpoints) == 0 {
 		return fmt.Errorf("missing publisher endpoints")
 	}
-	if len(z.Subscriptions) == 0 {
-		z.Subscriptions = append(z.Subscriptions, defaultSubscription)
-	}
+
 	if z.HighWaterMark == 0 {
 		z.HighWaterMark = defaultHighWaterMark
 	}
@@ -159,6 +156,9 @@ func (z *zmqConsumer) Init() error {
 	}
 	if z.MaxUndeliveredMessages == 0 {
 		z.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
+	}
+	if len(z.Subscriptions) == 0 {
+		z.Subscriptions = append(z.Subscriptions, "")
 	}
 	return nil
 }
