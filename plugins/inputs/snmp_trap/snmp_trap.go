@@ -27,7 +27,7 @@ type translator interface {
 
 type SnmpTrap struct {
 	ServiceAddress          string          `toml:"service_address"`
-	UseUnconnectedUDPSocket bool            `toml: use_unconnected_udp_socket`
+	UseUnconnectedUDPSocket bool            `toml: "use_unconnected_udp_socket"`
 	Timeout                 config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
 	Version                 string          `toml:"version"`
 	Translator              string          `toml:"-"`
