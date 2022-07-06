@@ -755,9 +755,15 @@ workflows:
             - 'test-go-linux'
       - 'mips-package':
           name: 'mips-package-nightly'
-          nightly: true
           requires:
             - 'test-go-linux'
+      - 'package-sign-windows':
+          requires:
+            - 'windows-package-nightly'
+      - 'package-sign-mac':
+           requires:
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
       - nightly:
           requires:
             - 'amd64-package-test-nightly'
