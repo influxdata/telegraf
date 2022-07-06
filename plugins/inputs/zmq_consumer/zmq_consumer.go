@@ -233,9 +233,6 @@ func (z *zmqConsumer) connect() (*zmq.Socket, error) {
 		return nil, err
 	}
 
-	// set subscription filters
-	for _, filter := range z.Subscriptions {
-		err = socket.SetSubscribe(filter)
 		if err != nil {
 			return nil, err
 		}
@@ -243,6 +240,10 @@ func (z *zmqConsumer) connect() (*zmq.Socket, error) {
 	// connect to endpoints
 	for _, endpoint := range z.Endpoints {
 		err = socket.Connect(endpoint)
+
+	// set subscription filters
+	for _, filter := range z.Subscriptions {
+		err = socket.SetSubscribe(filter)
 		if err != nil {
 			return nil, err
 		}
