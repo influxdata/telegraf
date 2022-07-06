@@ -151,8 +151,11 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 	case "tcp", "tcp4", "tcp6":
 		gs.Transport = u.Scheme
 	case "udp", "udp4", "udp6":
-		gs.Transport = u.Scheme
-		gs.UseUnconnectedUDPSocket = true
+		if gs.UseUnconnectedUDPSocket {
+			gs.Transport = u.Scheme
+			gs.UseUnconnectedUDPSocket = true
+		}
+
 	default:
 		return fmt.Errorf("unsupported scheme: %v", u.Scheme)
 	}

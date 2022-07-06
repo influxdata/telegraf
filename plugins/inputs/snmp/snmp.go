@@ -761,12 +761,13 @@ func init() {
 		return &Snmp{
 			Name: "snmp",
 			ClientConfig: snmp.ClientConfig{
-				Retries:        3,
-				MaxRepetitions: 10,
-				Timeout:        config.Duration(5 * time.Second),
-				Version:        2,
-				Path:           []string{"/usr/share/snmp/mibs"},
-				Community:      "public",
+				Retries:                 3,
+				UseUnconnectedUDPSocket: false,
+				MaxRepetitions:          10,
+				Timeout:                 config.Duration(5 * time.Second),
+				Version:                 2,
+				Path:                    []string{"/usr/share/snmp/mibs"},
+				Community:               "public",
 			},
 		}
 	})
