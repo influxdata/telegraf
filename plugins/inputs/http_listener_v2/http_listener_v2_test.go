@@ -75,9 +75,11 @@ func newTestHTTPAuthListener() (*HTTPListenerV2, error) {
 	return listener, nil
 }
 
-func newTestHTTPSListenerV2() *HTTPListenerV2 {
+func newTestHTTPSListenerV2() (*HTTPListenerV2, error) {
 	parser := &influx.Parser{}
-	_ = parser.Init()
+	if err := parser.Init(); err != nil {
+		return nil, err
+	}
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -90,7 +92,7 @@ func newTestHTTPSListenerV2() *HTTPListenerV2 {
 		close:          make(chan struct{}),
 	}
 
-	return listener
+	return listener, nil
 }
 
 func getHTTPSClient() *http.Client {
@@ -138,7 +140,8 @@ func TestInvalidListenerConfig(t *testing.T) {
 }
 
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
-	listener := newTestHTTPSListenerV2()
+	listener, err := newTestHTTPSListenerV2()
+	require.NoError(t, err)
 	listener.TLSAllowedCACerts = nil
 
 	acc := &testutil.Accumulator{}
@@ -164,7 +167,8 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 }
 
 func TestWriteHTTPSWithClientAuth(t *testing.T) {
-	listener := newTestHTTPSListenerV2()
+	listener, err := newTestHTTPSListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
