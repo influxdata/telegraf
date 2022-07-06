@@ -1302,7 +1302,8 @@ func TestTestCases(t *testing.T) {
 		},
 	}
 
-	parser := influx.NewParser(influx.NewMetricHandler())
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

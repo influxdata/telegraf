@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
@@ -195,12 +193,6 @@ func NewParser(config *Config) (Parser, error) {
 	var err error
 	var parser Parser
 	switch config.DataFormat {
-	case "influx":
-		if config.InfluxParserType == "upstream" {
-			parser, err = NewInfluxUpstreamParser()
-		} else {
-			parser, err = NewInfluxParser()
-		}
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	default:
@@ -219,15 +211,6 @@ func NewParser(config *Config) (Parser, error) {
 		err = p.InitFromConfig(config)
 	}
 	return parser, err
-}
-
-func NewInfluxParser() (Parser, error) {
-	handler := influx.NewMetricHandler()
-	return influx.NewParser(handler), nil
-}
-
-func NewInfluxUpstreamParser() (Parser, error) {
-	return influx_upstream.NewParser(), nil
 }
 
 func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
