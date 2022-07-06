@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -135,10 +135,8 @@ func TestServeHTTP(t *testing.T) {
 			pubPush.sem <- struct{}{}
 		}
 
-		p, _ := parsers.NewParser(&parsers.Config{
-			MetricName: "cloud_pubsub_push",
-			DataFormat: "influx",
-		})
+		p := &influx.Parser{}
+		require.NoError(t, p.Init())
 		pubPush.SetParser(p)
 
 		dst := make(chan telegraf.Metric, 1)

@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -42,8 +42,8 @@ func TestSettingConfigWorks(t *testing.T) {
 }
 
 func TestExternalInputWorks(t *testing.T) {
-	influxParser, err := parsers.NewInfluxParser()
-	require.NoError(t, err)
+	influxParser := &influx.Parser{}
+	require.NoError(t, influxParser.Init())
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -76,8 +76,8 @@ func TestExternalInputWorks(t *testing.T) {
 }
 
 func TestParsesLinesContainingNewline(t *testing.T) {
-	parser, err := parsers.NewInfluxParser()
-	require.NoError(t, err)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	metrics := make(chan telegraf.Metric, 10)
 	defer close(metrics)

@@ -244,6 +244,7 @@ following works:
 - github.com/rcrowley/go-metrics [MIT License](https://github.com/rcrowley/go-metrics/blob/master/LICENSE)
 - github.com/remyoudompheng/bigfft [BSD 3-Clause "New" or "Revised" License](https://github.com/remyoudompheng/bigfft/blob/master/LICENSE)
 - github.com/riemann/riemann-go-client [MIT License](https://github.com/riemann/riemann-go-client/blob/master/LICENSE)
+- github.com/robbiet480/go.nut [MIT License](https://github.com/robbiet480/go.nut/blob/master/LICENSE)
 - github.com/safchain/ethtool [Apache License 2.0](https://github.com/safchain/ethtool/blob/master/LICENSE)
 - github.com/samuel/go-zookeeper [BSD 3-Clause Clear License](https://github.com/samuel/go-zookeeper/blob/master/LICENSE)
 - github.com/shirou/gopsutil [BSD 3-Clause Clear License](https://github.com/shirou/gopsutil/blob/master/LICENSE)
