@@ -103,6 +103,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
 	s.listener.Params = gosnmp.Default
+	s.listener.Params.UseUnconnectedUDPSocket = true
 
 	switch s.Version {
 	case "3":
