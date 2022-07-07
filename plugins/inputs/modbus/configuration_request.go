@@ -2,6 +2,7 @@ package modbus
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"hash/maphash"
 )
@@ -63,6 +64,12 @@ func (c *ConfigurationPerRequest) Check() error {
 		// Set the default for measurement if required
 		if def.Measurement == "" {
 			def.Measurement = "modbus"
+		}
+
+		// Reject any configuration without fields as it
+		// makes no sense to not define anything but a request.
+		if len(def.Fields) == 0 {
+			return errors.New("found request section without fields")
 		}
 
 		// Check the fields
