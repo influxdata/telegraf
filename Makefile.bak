@@ -45,7 +45,7 @@ endif
 MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
-HOSTGO := go
+HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 
 LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
@@ -115,7 +115,7 @@ versioninfo:
 	go generate cmd/telegraf/telegraf_windows.go; \
 
 build_tools:
-	$(HOSTGO) build -o ./tools/readme_config_includer/generator.exe ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
 
 embed_readme_%:
 	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
