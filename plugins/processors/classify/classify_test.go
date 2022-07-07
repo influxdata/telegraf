@@ -72,7 +72,7 @@ func RunClassifyTest(t *testing.T, cl *Classify, metrics []telegraf.Metric, wait
 	err = cl.Start(acc)
 	if err != nil {
 		// This particular case, along with any later error return from
-		// RunClassifyTest(), risks the cl.wait_group being left with a
+		// RunClassifyTest(), risks the cl.syncWaitGroup being left with a
 		// non-zero count, which (because we have no way to clear that count
 		// in a future call to cl.Reset()) will then make it impossible for
 		// this particular *Classify object to successfully wait for the
