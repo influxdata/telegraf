@@ -270,3 +270,4 @@ It produces:
 ### Reference material
 
 [api documentation](http://demo.nginx.com/swagger-ui/#/)
+[nginx_api_module documentation](http://nginx.org/en/docs/http/ngx_http_api_module.html)
