@@ -29,11 +29,10 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 
-	// "github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var log_separator = "----------------------------------------------------------------"
+var logSeparator = "----------------------------------------------------------------"
 
 // Routine to be called whenever there is a proposed test or part of a test
 // that is not yet implemented, so we don't lose track of the fact that the
@@ -54,7 +53,7 @@ func NotImplemented(t *testing.T, s ...string) {
 
 // It would be absurd for us to define a large number of tests and not
 // factor out their basic commonality.  Here is that boilerplate.
-func RunClassifyTest(t *testing.T, cl *Classify, metrics []telegraf.Metric, wait_time ...time.Duration) (acc *testutil.Accumulator, err error) {
+func RunClassifyTest(t *testing.T, cl *Classify, metrics []telegraf.Metric, waitTime ...time.Duration) (acc *testutil.Accumulator, err error) {
 	// If the test panics, let's get the word out to where we can see it,
 	// with full details displayed, so we can easily debug the problem.
 	defer func() {
@@ -82,15 +81,15 @@ func RunClassifyTest(t *testing.T, cl *Classify, metrics []telegraf.Metric, wait
 		err = fmt.Errorf("the classify plugin could not be started:\n%v", err)
 		return acc, err
 	}
-	for _, metric := range metrics {
-		err = cl.Add(metric, acc)
+	for _, oneMetric := range metrics {
+		err = cl.Add(oneMetric, acc)
 		if err != nil {
 			err = fmt.Errorf("a metric could not be added to the accumulator:\n%v", err)
 			return acc, err
 		}
 	}
-	if len(wait_time) > 0 {
-		time.Sleep(wait_time[0])
+	if len(waitTime) > 0 {
+		time.Sleep(waitTime[0])
 	}
 	err = cl.Stop()
 	if err != nil {
@@ -146,9 +145,9 @@ func TestParseFullConfig(t *testing.T) {
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 
 	processedMetric := acc.GetTelegrafMetrics()[0]
-	result_tag, ok := processedMetric.GetTag(cl.ResultTag)
+	resultTag, ok := processedMetric.GetTag(cl.ResultTag)
 	require.Truef(t, ok, "could not find result tag %q in the returned metric", cl.ResultTag)
-	require.EqualValuesf(t, "warning", result_tag, "result tag %q value was not %q; output metric is:\n%v\n",
+	require.EqualValuesf(t, "warning", resultTag, "result tag %q value was not %q; output metric is:\n%v\n",
 		cl.ResultTag, "warning", processedMetric)
 }
 
@@ -333,9 +332,8 @@ func TestParseResultItem(t *testing.T) {
 // Test the ability of the plugin to output a sample configuration file.
 func TestReturnSampleConfig(t *testing.T) {
 	cl := &Classify{}
-	sample_config := cl.SampleConfig()
-	require.Len(t, sample_config, 275, "length of the sample configuration is not as expected")
-	require.Contains(t, sample_config, "detailed configuration data for the classify plugin",
+	sampleConfig := cl.SampleConfig()
+	require.Contains(t, sampleConfig, "detailed configuration data for the classify plugin",
 		"content of sample configuration is not as expected")
 }
 
@@ -442,7 +440,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  no selector_mapping at all is provided, and no default_regex_group is defined")
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * no selector_mapping at all is provided, and a default_regex_group is provided
@@ -456,7 +454,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  no selector_mapping at all is provided, and default_regex_group does not name an existing group")
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * no selector_mapping at all is provided, and a default_regex_group is provided
@@ -468,7 +466,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  no selector_mapping at all is provided, and default_regex_group names an existing group")
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector item value matches a selector_mapping entry, and no default_regex_group is provided
@@ -480,7 +478,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  selector item value matches a selector_mapping entry")
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector item value does not match any selector_mapping entry, and no default_regex_group is provided
@@ -492,7 +490,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  selector item value does not match any selector_mapping entry")
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector item value does not match any selector_mapping entry, and a default_regex_group
@@ -505,7 +503,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  selector item value does not match any selector_mapping entry")
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector item maps to an empty string
@@ -516,7 +514,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  selector item maps to an empty string")
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector item maps to '*', and there is no default regex group in play
@@ -529,7 +527,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  selector item maps to '*', and there is no default regex group in play")
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector item maps to '*', and there is a valid default regex group in play
@@ -552,7 +550,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  selector item maps to '*', and there is a valid default regex group in play")
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector item maps to some value which is not one of the mapped_selector_regexes groups
@@ -564,7 +562,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  selector item maps to some value which is not one of the mapped_selector_regexes groups")
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector map uses a valid regex for matching
@@ -575,7 +573,7 @@ func TestSelectorMapping(t *testing.T) {
 	require.NoError(t, err, "subtest:  selector map uses a valid regex for matching")
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	// * selector map uses Listed Order (with multiple mapping elements)
@@ -734,9 +732,9 @@ func TestBadCategoryRegexType(t *testing.T) {
 	err = cl.Stop()
 	require.NoError(t, err, "the classify plugin could not be stopped")
 
-	my_string := "IGNORE"
+	myString := "IGNORE"
 	cl.MappedSelectorRegexes["test-group"] = []map[string]interface{}{
-		{"ignore": &my_string},
+		{"ignore": &myString},
 	}
 	err = cl.Reset()
 	require.NoError(t, err, "the Classify object could not be reset")
@@ -846,7 +844,7 @@ func TestDefaultCategory(t *testing.T) {
 	require.NoError(t, err, "subtest:  default_category is not supplied")
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	if cl.logger != nil {
-		cl.logger.Info(log_separator)
+		cl.logger.Info(logSeparator)
 	}
 
 	cl.DefaultCategory = "unmatched"
@@ -854,9 +852,9 @@ func TestDefaultCategory(t *testing.T) {
 	require.NoError(t, err, "subtest:  default_category is supplied as a non-empty string")
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 	processedMetric := acc.GetTelegrafMetrics()[0]
-	result_tag, ok := processedMetric.GetTag(cl.ResultTag)
+	resultTag, ok := processedMetric.GetTag(cl.ResultTag)
 	require.Truef(t, ok, "could not find result tag %q in the returned metric", cl.ResultTag)
-	require.EqualValuesf(t, cl.DefaultCategory, result_tag, "result tag %q value was not %q", cl.ResultTag, cl.DefaultCategory)
+	require.EqualValuesf(t, cl.DefaultCategory, resultTag, "result tag %q value was not %q", cl.ResultTag, cl.DefaultCategory)
 }
 
 /*
@@ -932,9 +930,9 @@ func TestAggregationSummary(t *testing.T) {
 	// aggregation thread to shut down early and flush its data, we
 	// will only get back the input data point, not the aggregation-data
 	// metric as well.
-	wait_duration, err := time.ParseDuration("10s")
+	waitDuration, err := time.ParseDuration("10s")
 	require.NoError(t, err)
-	acc, err := RunClassifyTest(t, cl, metrics, wait_duration)
+	acc, err := RunClassifyTest(t, cl, metrics, waitDuration)
 	require.NoError(t, err)
 
 	// The original input data point should be dropped.
@@ -944,40 +942,40 @@ func TestAggregationSummary(t *testing.T) {
 	// items one by one on separate lines into a more descriptive error
 	// message, not all in one run-on sentence that is hard to read.
 	//
-	all_metrics := acc.GetTelegrafMetrics()
-	err_msg := "output metrics are:\n"
-	for _, output_metric := range all_metrics {
-		err_msg += fmt.Sprintf("%v\n", output_metric)
+	allMetrics := acc.GetTelegrafMetrics()
+	errMsg := "output metrics are:\n"
+	for _, outputMetric := range allMetrics {
+		errMsg += fmt.Sprintf("%v\n", outputMetric)
 	}
-	require.Equal(t, 1, len(all_metrics), err_msg)
+	require.Equal(t, 1, len(allMetrics), errMsg)
 
 	// At this point, we should have (except for a different timestamp value, of course):
 	// status map[summary:full] map[dropped:1 total:1 unknown:1] 1655615640000241981
-	processedMetric := all_metrics[0]
+	processedMetric := allMetrics[0]
 
 	measurement := processedMetric.Name()
-	require.Equal(t, "status", measurement, err_msg)
+	require.Equal(t, "status", measurement, errMsg)
 
-	tag_count := len(processedMetric.TagList())
-	require.EqualValuesf(t, 1, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
-	field_count := len(processedMetric.FieldList())
-	require.EqualValuesf(t, 3, field_count, "measurement %q has %d fields; %s", measurement, field_count, err_msg)
+	tagCount := len(processedMetric.TagList())
+	require.EqualValuesf(t, 1, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
+	fieldCount := len(processedMetric.FieldList())
+	require.EqualValuesf(t, 3, fieldCount, "measurement %q has %d fields; %s", measurement, fieldCount, errMsg)
 
-	summary_tag, ok := processedMetric.GetTag("summary")
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", "summary", err_msg)
-	require.EqualValuesf(t, "full", summary_tag, "tag %q value was not %q; %s", "summary", "full", err_msg)
+	summaryTag, ok := processedMetric.GetTag("summary")
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", "summary", errMsg)
+	require.EqualValuesf(t, "full", summaryTag, "tag %q value was not %q; %s", "summary", "full", errMsg)
 
-	dropped_field, ok := processedMetric.GetField("dropped")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "dropped", err_msg)
-	require.EqualValuesf(t, 1, dropped_field, "field %q value was not %q: %s", "dropped", 1, err_msg)
+	droppedField, ok := processedMetric.GetField("dropped")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "dropped", errMsg)
+	require.EqualValuesf(t, 1, droppedField, "field %q value was not %q: %s", "dropped", 1, errMsg)
 
-	total_field, ok := processedMetric.GetField("total")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "total", err_msg)
-	require.EqualValuesf(t, 1, total_field, "field %q value was not %q; %s", "total", 1, err_msg)
+	totalField, ok := processedMetric.GetField("total")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "total", errMsg)
+	require.EqualValuesf(t, 1, totalField, "field %q value was not %q; %s", "total", 1, errMsg)
 
-	unknown_field, ok := processedMetric.GetField("unknown")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", err_msg)
-	require.EqualValuesf(t, 1, unknown_field, "field %q value was not %q; %s", "unknown", 1, err_msg)
+	unknownField, ok := processedMetric.GetField("unknown")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", errMsg)
+	require.EqualValuesf(t, 1, unknownField, "field %q value was not %q; %s", "unknown", 1, errMsg)
 }
 
 // Make sure that aggregation counters get cleared when an aggregation period
@@ -1037,7 +1035,7 @@ func TestAggregationSummaryCycles(t *testing.T) {
 	// aggregation thread to shut down early and flush its data, we
 	// will only get back the input data point, not the aggregation-data
 	// metric as well.
-	wait_duration, err := time.ParseDuration("7s")
+	waitDuration, err := time.ParseDuration("7s")
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
@@ -1049,7 +1047,7 @@ func TestAggregationSummaryCycles(t *testing.T) {
 	err = cl.Add(m1, acc)
 	require.NoError(t, err, "a metric could not be added to the accumulator")
 
-	time.Sleep(wait_duration)
+	time.Sleep(waitDuration)
 
 	err = cl.Add(m2, acc)
 	require.NoError(t, err, "a metric could not be added to the accumulator")
@@ -1073,88 +1071,88 @@ func TestAggregationSummaryCycles(t *testing.T) {
 	// items one by one on separate lines into a more descriptive error
 	// message, not all in one run-on sentence that is hard to read.
 	//
-	all_metrics := acc.GetTelegrafMetrics()
-	err_msg := "output metrics are:\n"
-	for _, output_metric := range all_metrics {
-		err_msg += fmt.Sprintf("%v\n", output_metric)
+	allMetrics := acc.GetTelegrafMetrics()
+	errMsg := "output metrics are:\n"
+	for _, outputMetric := range allMetrics {
+		errMsg += fmt.Sprintf("%v\n", outputMetric)
 	}
-	require.Equal(t, 3, len(all_metrics), err_msg)
+	require.Equal(t, 3, len(allMetrics), errMsg)
 
 	// At this point, we should have (except for different timestamp values, of course):
 	// status map[summary:full] map[dropped:1 total:1 unknown:1] 1655617150000240511
 	// datapoint map[host:pg123 severity:critical] map[message:CRITICAL:  second message from the same host] 1655617149411068742
 	// status map[summary:full] map[critical:1 total:1] 1655617156413777891
 
-	processedMetric := all_metrics[0]
+	processedMetric := allMetrics[0]
 
 	measurement := processedMetric.Name()
-	require.Equal(t, "status", measurement, err_msg)
+	require.Equal(t, "status", measurement, errMsg)
 
-	tag_count := len(processedMetric.TagList())
-	require.EqualValuesf(t, 1, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
-	field_count := len(processedMetric.FieldList())
-	require.EqualValuesf(t, 3, field_count, "measurement %q has %d fields; %s", measurement, field_count, err_msg)
+	tagCount := len(processedMetric.TagList())
+	require.EqualValuesf(t, 1, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
+	fieldCount := len(processedMetric.FieldList())
+	require.EqualValuesf(t, 3, fieldCount, "measurement %q has %d fields; %s", measurement, fieldCount, errMsg)
 
-	summary_tag, ok := processedMetric.GetTag("summary")
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", "summary", err_msg)
-	require.EqualValuesf(t, "full", summary_tag, "tag %q value was not %q; %s", "summary", "full", err_msg)
+	summaryTag, ok := processedMetric.GetTag("summary")
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", "summary", errMsg)
+	require.EqualValuesf(t, "full", summaryTag, "tag %q value was not %q; %s", "summary", "full", errMsg)
 
-	dropped_field, ok := processedMetric.GetField("dropped")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "dropped", err_msg)
-	require.EqualValuesf(t, 1, dropped_field, "field %q value was not %q: %s", "dropped", 1, err_msg)
+	droppedField, ok := processedMetric.GetField("dropped")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "dropped", errMsg)
+	require.EqualValuesf(t, 1, droppedField, "field %q value was not %q: %s", "dropped", 1, errMsg)
 
-	total_field, ok := processedMetric.GetField("total")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "total", err_msg)
-	require.EqualValuesf(t, 1, total_field, "field %q value was not %q; %s", "total", 1, err_msg)
+	totalField, ok := processedMetric.GetField("total")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "total", errMsg)
+	require.EqualValuesf(t, 1, totalField, "field %q value was not %q; %s", "total", 1, errMsg)
 
-	unknown_field, ok := processedMetric.GetField("unknown")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", err_msg)
-	require.EqualValuesf(t, 1, unknown_field, "field %q value was not %q; %s", "unknown", 1, err_msg)
+	unknownField, ok := processedMetric.GetField("unknown")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", errMsg)
+	require.EqualValuesf(t, 1, unknownField, "field %q value was not %q; %s", "unknown", 1, errMsg)
 
-	processedMetric = all_metrics[1]
-
-	measurement = processedMetric.Name()
-	require.Equal(t, "datapoint", measurement, err_msg)
-
-	tag_count = len(processedMetric.TagList())
-	require.EqualValuesf(t, 2, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
-	field_count = len(processedMetric.FieldList())
-	require.EqualValuesf(t, 1, field_count, "measurement %q has %d fields; %s", measurement, field_count, err_msg)
-
-	host_tag, ok := processedMetric.GetTag("host")
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", "host", err_msg)
-	require.EqualValuesf(t, "pg123", host_tag, "tag %q value was not %q; %s", "host", "pg123", err_msg)
-
-	result_tag, ok := processedMetric.GetTag(cl.ResultTag)
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.ResultTag, err_msg)
-	require.EqualValuesf(t, "critical", result_tag, "tag %q value was not %q; %s", cl.ResultTag, "critical", err_msg)
-
-	match_field, ok := processedMetric.GetField(cl.MatchField)
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.MatchField, err_msg)
-	require.EqualValuesf(t, "CRITICAL:  second message from the same host", match_field, "field %q value was not %q; %s",
-		cl.MatchField, "CRITICAL:  second message from the same host", err_msg)
-
-	processedMetric = all_metrics[2]
+	processedMetric = allMetrics[1]
 
 	measurement = processedMetric.Name()
-	require.Equal(t, "status", measurement, err_msg)
+	require.Equal(t, "datapoint", measurement, errMsg)
 
-	tag_count = len(processedMetric.TagList())
-	require.EqualValuesf(t, 1, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
-	field_count = len(processedMetric.FieldList())
-	require.EqualValuesf(t, 2, field_count, "measurement %q has %d fields; %s", measurement, field_count, err_msg)
+	tagCount = len(processedMetric.TagList())
+	require.EqualValuesf(t, 2, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
+	fieldCount = len(processedMetric.FieldList())
+	require.EqualValuesf(t, 1, fieldCount, "measurement %q has %d fields; %s", measurement, fieldCount, errMsg)
 
-	summary_tag, ok = processedMetric.GetTag("summary")
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", "summary", err_msg)
-	require.EqualValuesf(t, "full", summary_tag, "tag %q value was not %q; %s", "summary", "full", err_msg)
+	hostTag, ok := processedMetric.GetTag("host")
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", "host", errMsg)
+	require.EqualValuesf(t, "pg123", hostTag, "tag %q value was not %q; %s", "host", "pg123", errMsg)
 
-	critical_field, ok := processedMetric.GetField("critical")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "critical", err_msg)
-	require.EqualValuesf(t, 1, critical_field, "field %q value was not %q: %s", "critical", 1, err_msg)
+	resultTag, ok := processedMetric.GetTag(cl.ResultTag)
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.ResultTag, errMsg)
+	require.EqualValuesf(t, "critical", resultTag, "tag %q value was not %q; %s", cl.ResultTag, "critical", errMsg)
 
-	total_field, ok = processedMetric.GetField("total")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "total", err_msg)
-	require.EqualValuesf(t, 1, total_field, "field %q value was not %q; %s", "total", 1, err_msg)
+	matchField, ok := processedMetric.GetField(cl.MatchField)
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.MatchField, errMsg)
+	require.EqualValuesf(t, "CRITICAL:  second message from the same host", matchField, "field %q value was not %q; %s",
+		cl.MatchField, "CRITICAL:  second message from the same host", errMsg)
+
+	processedMetric = allMetrics[2]
+
+	measurement = processedMetric.Name()
+	require.Equal(t, "status", measurement, errMsg)
+
+	tagCount = len(processedMetric.TagList())
+	require.EqualValuesf(t, 1, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
+	fieldCount = len(processedMetric.FieldList())
+	require.EqualValuesf(t, 2, fieldCount, "measurement %q has %d fields; %s", measurement, fieldCount, errMsg)
+
+	summaryTag, ok = processedMetric.GetTag("summary")
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", "summary", errMsg)
+	require.EqualValuesf(t, "full", summaryTag, "tag %q value was not %q; %s", "summary", "full", errMsg)
+
+	criticalField, ok := processedMetric.GetField("critical")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "critical", errMsg)
+	require.EqualValuesf(t, 1, criticalField, "field %q value was not %q: %s", "critical", 1, errMsg)
+
+	totalField, ok = processedMetric.GetField("total")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "total", errMsg)
+	require.EqualValuesf(t, 1, totalField, "field %q value was not %q; %s", "total", 1, errMsg)
 }
 
 // Test essential operation of aggregating statistics by regex group.  Vary
@@ -1228,9 +1226,9 @@ func TestAggregationByGroup(t *testing.T) {
 	// aggregation thread to shut down early and flush its data, we
 	// will only get back the input data point, not the aggregation-data
 	// metric as well.
-	wait_duration, err := time.ParseDuration("10s")
+	waitDuration, err := time.ParseDuration("10s")
 	require.NoError(t, err)
-	acc, err := RunClassifyTest(t, cl, metrics, wait_duration)
+	acc, err := RunClassifyTest(t, cl, metrics, waitDuration)
 	require.NoError(t, err)
 
 	// The original input data point should be dropped.
@@ -1240,12 +1238,12 @@ func TestAggregationByGroup(t *testing.T) {
 	// items one by one on separate lines into a more descriptive error
 	// message, not all in one run-on sentence that is hard to read.
 	//
-	all_metrics := acc.GetTelegrafMetrics()
-	err_msg := "output metrics are:\n"
-	for _, output_metric := range all_metrics {
-		err_msg += fmt.Sprintf("%v\n", output_metric)
+	allMetrics := acc.GetTelegrafMetrics()
+	errMsg := "output metrics are:\n"
+	for _, outputMetric := range allMetrics {
+		errMsg += fmt.Sprintf("%v\n", outputMetric)
 	}
-	require.Equal(t, 4, len(all_metrics), err_msg)
+	require.Equal(t, 4, len(allMetrics), errMsg)
 
 	// At this point, we should have (except for different timestamp values, of course):
 	// datapoint map[host:pg123 severity:warning] map[message:WARNING:  situation is crazy] 1655659203578691212
@@ -1254,97 +1252,97 @@ func TestAggregationByGroup(t *testing.T) {
 	// status map[by_machine_type:firewall] map[critical:1 total:1] 1655659205001563076
 
 	// The input-data items may appear in either order, so we have to deal with that in the logic here.
-	distinct_selector := make(map[string]int)
+	distinctSelector := make(map[string]int)
 	for index := 0; index <= 1; index++ {
-		processedMetric := all_metrics[index]
+		processedMetric := allMetrics[index]
 
 		measurement := processedMetric.Name()
-		require.Equal(t, "datapoint", measurement, err_msg)
+		require.Equal(t, "datapoint", measurement, errMsg)
 
-		tag_count := len(processedMetric.TagList())
-		require.EqualValuesf(t, 2, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
+		tagCount := len(processedMetric.TagList())
+		require.EqualValuesf(t, 2, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
 
-		selector_tag, ok := processedMetric.GetTag(cl.SelectorTag)
-		require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.SelectorTag, err_msg)
+		selectorTag, ok := processedMetric.GetTag(cl.SelectorTag)
+		require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.SelectorTag, errMsg)
 
-		result_tag, ok := processedMetric.GetTag(cl.ResultTag)
-		require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.ResultTag, err_msg)
+		resultTag, ok := processedMetric.GetTag(cl.ResultTag)
+		require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.ResultTag, errMsg)
 
-		field_count := len(processedMetric.FieldList())
-		require.EqualValuesf(t, 1, field_count, "measurement %q has %d fields; %s", measurement, field_count, err_msg)
+		fieldCount := len(processedMetric.FieldList())
+		require.EqualValuesf(t, 1, fieldCount, "measurement %q has %d fields; %s", measurement, fieldCount, errMsg)
 
-		match_field, ok := processedMetric.GetField(cl.MatchField)
-		require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.MatchField, err_msg)
+		matchField, ok := processedMetric.GetField(cl.MatchField)
+		require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.MatchField, errMsg)
 
-		distinct_selector[selector_tag]++
-		switch selector_tag {
+		distinctSelector[selectorTag]++
+		switch selectorTag {
 		case "pg123":
-			require.EqualValuesf(t, "warning", result_tag, "tag %q value was not %q; %s", cl.ResultTag, "warning", err_msg)
-			require.EqualValuesf(t, "WARNING:  situation is crazy", match_field, "field %q value was not %q; %s",
-				cl.MatchField, "WARNING:  situation is crazy", err_msg)
+			require.EqualValuesf(t, "warning", resultTag, "tag %q value was not %q; %s", cl.ResultTag, "warning", errMsg)
+			require.EqualValuesf(t, "WARNING:  situation is crazy", matchField, "field %q value was not %q; %s",
+				cl.MatchField, "WARNING:  situation is crazy", errMsg)
 		case "fire567":
-			require.EqualValuesf(t, "critical", result_tag, "tag %q value was not %q; %s", cl.ResultTag, "critical", err_msg)
-			require.EqualValuesf(t, "INTRUSION:  assets at risk", match_field, "field %q value was not %q; %s",
-				cl.MatchField, "INTRUSION:  assets at risk", err_msg)
+			require.EqualValuesf(t, "critical", resultTag, "tag %q value was not %q; %s", cl.ResultTag, "critical", errMsg)
+			require.EqualValuesf(t, "INTRUSION:  assets at risk", matchField, "field %q value was not %q; %s",
+				cl.MatchField, "INTRUSION:  assets at risk", errMsg)
 		default:
 			require.FailNowf(t, "an unexpected selector tag value appears", "%q tag value %q is unexpected; %s",
-				cl.AggregationSelectorTag, selector_tag, err_msg)
+				cl.AggregationSelectorTag, selectorTag, errMsg)
 		}
 	}
-	require.EqualValuesf(t, 2, len(distinct_selector), "have not seen the expected set of selectors in agggregation data points; %s", err_msg)
+	require.EqualValuesf(t, 2, len(distinctSelector), "have not seen the expected set of selectors in agggregation data points; %s", errMsg)
 
 	// The aggregation-data items may appear in either order, so we have to deal with that in the logic here.
-	distinct_group := make(map[string]int)
+	distinctGroup := make(map[string]int)
 	for index := 2; index <= 3; index++ {
-		processedMetric := all_metrics[index]
+		processedMetric := allMetrics[index]
 
 		measurement := processedMetric.Name()
-		require.Equal(t, cl.AggregationMeasurement, measurement, err_msg)
+		require.Equal(t, cl.AggregationMeasurement, measurement, errMsg)
 
-		tag_count := len(processedMetric.TagList())
-		require.EqualValuesf(t, 1, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
+		tagCount := len(processedMetric.TagList())
+		require.EqualValuesf(t, 1, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
 
-		group_tag, ok := processedMetric.GetTag(cl.AggregationGroupTag)
-		require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.AggregationGroupTag, err_msg)
+		groupTag, ok := processedMetric.GetTag(cl.AggregationGroupTag)
+		require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.AggregationGroupTag, errMsg)
 
-		distinct_group[group_tag]++
-		switch group_tag {
+		distinctGroup[groupTag]++
+		switch groupTag {
 		case "database":
-			field_count := len(processedMetric.FieldList())
-			require.EqualValuesf(t, 4, field_count, "measurement %q selector %q has %d fields; %s", measurement, group_tag, field_count, err_msg)
+			fieldCount := len(processedMetric.FieldList())
+			require.EqualValuesf(t, 4, fieldCount, "measurement %q selector %q has %d fields; %s", measurement, groupTag, fieldCount, errMsg)
 
-			dropped_field, ok := processedMetric.GetField(cl.AggregationDroppedField)
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationDroppedField, err_msg)
-			require.EqualValuesf(t, 1, dropped_field, "field %q value was not %q: %s", cl.AggregationDroppedField, 1, err_msg)
+			droppedField, ok := processedMetric.GetField(cl.AggregationDroppedField)
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationDroppedField, errMsg)
+			require.EqualValuesf(t, 1, droppedField, "field %q value was not %q: %s", cl.AggregationDroppedField, 1, errMsg)
 
-			total_field, ok := processedMetric.GetField(cl.AggregationTotalField)
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, err_msg)
-			require.EqualValuesf(t, 2, total_field, "field %q value was not %q; %s", cl.AggregationTotalField, 2, err_msg)
+			totalField, ok := processedMetric.GetField(cl.AggregationTotalField)
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, errMsg)
+			require.EqualValuesf(t, 2, totalField, "field %q value was not %q; %s", cl.AggregationTotalField, 2, errMsg)
 
-			unknown_field, ok := processedMetric.GetField("unknown")
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", err_msg)
-			require.EqualValuesf(t, 1, unknown_field, "field %q value was not %q; %s", "unknown", 1, err_msg)
+			unknownField, ok := processedMetric.GetField("unknown")
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", errMsg)
+			require.EqualValuesf(t, 1, unknownField, "field %q value was not %q; %s", "unknown", 1, errMsg)
 
-			warning_field, ok := processedMetric.GetField("warning")
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "warning", err_msg)
-			require.EqualValuesf(t, 1, warning_field, "field %q value was not %q; %s", "warning", 1, err_msg)
+			warningField, ok := processedMetric.GetField("warning")
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "warning", errMsg)
+			require.EqualValuesf(t, 1, warningField, "field %q value was not %q; %s", "warning", 1, errMsg)
 		case "firewall":
-			field_count := len(processedMetric.FieldList())
-			require.EqualValuesf(t, 2, field_count, "measurement %q selector %q has %d fields; %s", measurement, group_tag, field_count, err_msg)
+			fieldCount := len(processedMetric.FieldList())
+			require.EqualValuesf(t, 2, fieldCount, "measurement %q selector %q has %d fields; %s", measurement, groupTag, fieldCount, errMsg)
 
-			critical_field, ok := processedMetric.GetField("critical")
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "critical", err_msg)
-			require.EqualValuesf(t, 1, critical_field, "field %q value was not %q; %s", "critical", 1, err_msg)
+			criticalField, ok := processedMetric.GetField("critical")
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "critical", errMsg)
+			require.EqualValuesf(t, 1, criticalField, "field %q value was not %q; %s", "critical", 1, errMsg)
 
-			total_field, ok := processedMetric.GetField(cl.AggregationTotalField)
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, err_msg)
-			require.EqualValuesf(t, 1, total_field, "field %q value was not %q; %s", cl.AggregationTotalField, 1, err_msg)
+			totalField, ok := processedMetric.GetField(cl.AggregationTotalField)
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, errMsg)
+			require.EqualValuesf(t, 1, totalField, "field %q value was not %q; %s", cl.AggregationTotalField, 1, errMsg)
 		default:
 			require.FailNowf(t, "an unexpected group tag value appears", "%q tag value %q is unexpected; %s",
-				cl.AggregationGroupTag, group_tag, err_msg)
+				cl.AggregationGroupTag, groupTag, errMsg)
 		}
 	}
-	require.EqualValuesf(t, 2, len(distinct_group), "have not seen the expected set of groups in agggregation data points; %s", err_msg)
+	require.EqualValuesf(t, 2, len(distinctGroup), "have not seen the expected set of groups in agggregation data points; %s", errMsg)
 }
 
 // Test essential operation of aggregating statistics by selector value.  Vary
@@ -1408,9 +1406,9 @@ func TestAggregationBySelector(t *testing.T) {
 	// aggregation thread to shut down early and flush its data, we
 	// will only get back the input data point, not the aggregation-data
 	// metric as well.
-	wait_duration, err := time.ParseDuration("10s")
+	waitDuration, err := time.ParseDuration("10s")
 	require.NoError(t, err)
-	acc, err := RunClassifyTest(t, cl, metrics, wait_duration)
+	acc, err := RunClassifyTest(t, cl, metrics, waitDuration)
 	require.NoError(t, err)
 
 	// The original input data point should be dropped.
@@ -1420,102 +1418,102 @@ func TestAggregationBySelector(t *testing.T) {
 	// items one by one on separate lines into a more descriptive error
 	// message, not all in one run-on sentence that is hard to read.
 	//
-	all_metrics := acc.GetTelegrafMetrics()
-	err_msg := "output metrics are:\n"
-	for _, output_metric := range all_metrics {
-		err_msg += fmt.Sprintf("%v\n", output_metric)
+	allMetrics := acc.GetTelegrafMetrics()
+	errMsg := "output metrics are:\n"
+	for _, outputMetric := range allMetrics {
+		errMsg += fmt.Sprintf("%v\n", outputMetric)
 	}
-	require.Equal(t, 3, len(all_metrics), err_msg)
+	require.Equal(t, 3, len(allMetrics), errMsg)
 
 	// At this point, we should have (except for different timestamp values, of course):
 	// datapoint map[host:pg123 severity:warning] map[message:WARNING:  situation is crazy] 1655627120351552490
 	// status map[by_host:pg123] map[dropped:1 total:2 unknown:1 warning:1] 1655627125003105632
 	// status map[by_host:pg124] map[dropped:1 total:1 unknown:1] 1655627125003105632
 
-	processedMetric := all_metrics[0]
+	processedMetric := allMetrics[0]
 
 	measurement := processedMetric.Name()
-	require.Equal(t, "datapoint", measurement, err_msg)
+	require.Equal(t, "datapoint", measurement, errMsg)
 
-	tag_count := len(processedMetric.TagList())
-	require.EqualValuesf(t, 2, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
-	field_count := len(processedMetric.FieldList())
-	require.EqualValuesf(t, 1, field_count, "measurement %q has %d fields; %s", measurement, field_count, err_msg)
+	tagCount := len(processedMetric.TagList())
+	require.EqualValuesf(t, 2, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
+	fieldCount := len(processedMetric.FieldList())
+	require.EqualValuesf(t, 1, fieldCount, "measurement %q has %d fields; %s", measurement, fieldCount, errMsg)
 
-	selector_tag, ok := processedMetric.GetTag(cl.SelectorTag)
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.SelectorTag, err_msg)
-	require.EqualValuesf(t, "pg123", selector_tag, "tag %q value was not %q; %s", cl.SelectorTag, "pg123", err_msg)
+	selectorTag, ok := processedMetric.GetTag(cl.SelectorTag)
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.SelectorTag, errMsg)
+	require.EqualValuesf(t, "pg123", selectorTag, "tag %q value was not %q; %s", cl.SelectorTag, "pg123", errMsg)
 
-	result_tag, ok := processedMetric.GetTag(cl.ResultTag)
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.ResultTag, err_msg)
-	require.EqualValuesf(t, "warning", result_tag, "tag %q value was not %q; %s", cl.ResultTag, "warning", err_msg)
+	resultTag, ok := processedMetric.GetTag(cl.ResultTag)
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.ResultTag, errMsg)
+	require.EqualValuesf(t, "warning", resultTag, "tag %q value was not %q; %s", cl.ResultTag, "warning", errMsg)
 
-	match_field, ok := processedMetric.GetField(cl.MatchField)
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.MatchField, err_msg)
-	require.EqualValuesf(t, "WARNING:  situation is crazy", match_field, "field %q value was not %q; %s",
-		cl.MatchField, "WARNING:  situation is crazy", err_msg)
+	matchField, ok := processedMetric.GetField(cl.MatchField)
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.MatchField, errMsg)
+	require.EqualValuesf(t, "WARNING:  situation is crazy", matchField, "field %q value was not %q; %s",
+		cl.MatchField, "WARNING:  situation is crazy", errMsg)
 
 	// The aggregation-data items may appear in either order, so we have to deal with that in the logic here.
-	distinct_selector := make(map[string]int)
+	distinctSelector := make(map[string]int)
 	for index := 1; index <= 2; index++ {
-		processedMetric = all_metrics[index]
+		processedMetric = allMetrics[index]
 
 		measurement = processedMetric.Name()
-		require.Equal(t, cl.AggregationMeasurement, measurement, err_msg)
+		require.Equal(t, cl.AggregationMeasurement, measurement, errMsg)
 
-		tag_count = len(processedMetric.TagList())
-		require.EqualValuesf(t, 1, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
+		tagCount = len(processedMetric.TagList())
+		require.EqualValuesf(t, 1, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
 
-		selector_tag, ok := processedMetric.GetTag(cl.AggregationSelectorTag)
-		require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.AggregationSelectorTag, err_msg)
+		selectorTag, ok := processedMetric.GetTag(cl.AggregationSelectorTag)
+		require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.AggregationSelectorTag, errMsg)
 
-		distinct_selector[selector_tag]++
-		switch selector_tag {
+		distinctSelector[selectorTag]++
+		switch selectorTag {
 		case "pg123":
-			field_count = len(processedMetric.FieldList())
-			require.EqualValuesf(t, 4, field_count, "measurement %q selector %q has %d fields; %s", measurement, selector_tag, field_count, err_msg)
+			fieldCount = len(processedMetric.FieldList())
+			require.EqualValuesf(t, 4, fieldCount, "measurement %q selector %q has %d fields; %s", measurement, selectorTag, fieldCount, errMsg)
 
-			dropped_field, ok := processedMetric.GetField(cl.AggregationDroppedField)
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationDroppedField, err_msg)
-			require.EqualValuesf(t, 1, dropped_field, "field %q value was not %q: %s", cl.AggregationDroppedField, 1, err_msg)
+			droppedField, ok := processedMetric.GetField(cl.AggregationDroppedField)
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationDroppedField, errMsg)
+			require.EqualValuesf(t, 1, droppedField, "field %q value was not %q: %s", cl.AggregationDroppedField, 1, errMsg)
 
-			total_field, ok := processedMetric.GetField(cl.AggregationTotalField)
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, err_msg)
-			require.EqualValuesf(t, 2, total_field, "field %q value was not %q; %s", cl.AggregationTotalField, 2, err_msg)
+			totalField, ok := processedMetric.GetField(cl.AggregationTotalField)
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, errMsg)
+			require.EqualValuesf(t, 2, totalField, "field %q value was not %q; %s", cl.AggregationTotalField, 2, errMsg)
 
-			unknown_field, ok := processedMetric.GetField("unknown")
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", err_msg)
-			require.EqualValuesf(t, 1, unknown_field, "field %q value was not %q; %s", "unknown", 1, err_msg)
+			unknownField, ok := processedMetric.GetField("unknown")
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", errMsg)
+			require.EqualValuesf(t, 1, unknownField, "field %q value was not %q; %s", "unknown", 1, errMsg)
 
-			warning_field, ok := processedMetric.GetField("warning")
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "warning", err_msg)
-			require.EqualValuesf(t, 1, warning_field, "field %q value was not %q; %s", "warning", 1, err_msg)
+			warningField, ok := processedMetric.GetField("warning")
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "warning", errMsg)
+			require.EqualValuesf(t, 1, warningField, "field %q value was not %q; %s", "warning", 1, errMsg)
 		case "pg124":
-			field_count = len(processedMetric.FieldList())
-			require.EqualValuesf(t, 3, field_count, "measurement %q selector %q has %d fields; %s", measurement, selector_tag, field_count, err_msg)
+			fieldCount = len(processedMetric.FieldList())
+			require.EqualValuesf(t, 3, fieldCount, "measurement %q selector %q has %d fields; %s", measurement, selectorTag, fieldCount, errMsg)
 
-			dropped_field, ok := processedMetric.GetField(cl.AggregationDroppedField)
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationDroppedField, err_msg)
-			require.EqualValuesf(t, 1, dropped_field, "field %q value was not %q: %s", cl.AggregationDroppedField, 1, err_msg)
+			droppedField, ok := processedMetric.GetField(cl.AggregationDroppedField)
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationDroppedField, errMsg)
+			require.EqualValuesf(t, 1, droppedField, "field %q value was not %q: %s", cl.AggregationDroppedField, 1, errMsg)
 
-			total_field, ok := processedMetric.GetField(cl.AggregationTotalField)
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, err_msg)
-			require.EqualValuesf(t, 1, total_field, "field %q value was not %q; %s", cl.AggregationTotalField, 1, err_msg)
+			totalField, ok := processedMetric.GetField(cl.AggregationTotalField)
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, errMsg)
+			require.EqualValuesf(t, 1, totalField, "field %q value was not %q; %s", cl.AggregationTotalField, 1, errMsg)
 
-			unknown_field, ok := processedMetric.GetField("unknown")
-			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", err_msg)
-			require.EqualValuesf(t, 1, unknown_field, "field %q value was not %q; %s", "unknown", 1, err_msg)
+			unknownField, ok := processedMetric.GetField("unknown")
+			require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", errMsg)
+			require.EqualValuesf(t, 1, unknownField, "field %q value was not %q; %s", "unknown", 1, errMsg)
 		default:
 			require.FailNowf(t, "an unexpected selector tag value appears", "%q tag value %q is unexpected; %s",
-				cl.AggregationSelectorTag, selector_tag, err_msg)
+				cl.AggregationSelectorTag, selectorTag, errMsg)
 		}
 	}
-	require.EqualValuesf(t, 2, len(distinct_selector), "have not seen the expected set of selectors in agggregation data points; %s", err_msg)
+	require.EqualValuesf(t, 2, len(distinctSelector), "have not seen the expected set of selectors in agggregation data points; %s", errMsg)
 }
 
 // Test the counting of dropped items and the total total number of processed
 // items (whether dropped or not), along with the category names specified by
-// the aggregation_dropped_field and aggregation_total_field options.
+// the aggregationDroppedField and aggregationTotalField options.
 func TestAggregationDroppedAndTotalFields(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aggregation test in short mode")
@@ -1576,9 +1574,9 @@ func TestAggregationDroppedAndTotalFields(t *testing.T) {
 	// aggregation thread to shut down early and flush its data, we
 	// will only get back the input data point, not the aggregation-data
 	// metric as well.
-	wait_duration, err := time.ParseDuration("10s")
+	waitDuration, err := time.ParseDuration("10s")
 	require.NoError(t, err)
-	acc, err := RunClassifyTest(t, cl, metrics, wait_duration)
+	acc, err := RunClassifyTest(t, cl, metrics, waitDuration)
 	require.NoError(t, err)
 
 	// The original input data point should be dropped.
@@ -1588,68 +1586,68 @@ func TestAggregationDroppedAndTotalFields(t *testing.T) {
 	// items one by one on separate lines into a more descriptive error
 	// message, not all in one run-on sentence that is hard to read.
 	//
-	all_metrics := acc.GetTelegrafMetrics()
-	err_msg := "output metrics are:\n"
-	for _, output_metric := range all_metrics {
-		err_msg += fmt.Sprintf("%v\n", output_metric)
+	allMetrics := acc.GetTelegrafMetrics()
+	errMsg := "output metrics are:\n"
+	for _, outputMetric := range allMetrics {
+		errMsg += fmt.Sprintf("%v\n", outputMetric)
 	}
-	require.Equal(t, 2, len(all_metrics), err_msg)
+	require.Equal(t, 2, len(allMetrics), errMsg)
 
 	// At this point, we should have (except for different timestamp values, of course):
 	// datapoint map[host:pg123 severity:warning] map[message:WARNING:  situation is crazy] 1655624937598389523
 	// status map[summary:full] map[dropped:2 total:3 unknown:2 warning:1] 1655624940002217562
 
-	processedMetric := all_metrics[0]
+	processedMetric := allMetrics[0]
 
 	measurement := processedMetric.Name()
-	require.Equal(t, "datapoint", measurement, err_msg)
+	require.Equal(t, "datapoint", measurement, errMsg)
 
-	tag_count := len(processedMetric.TagList())
-	require.EqualValuesf(t, 2, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
-	field_count := len(processedMetric.FieldList())
-	require.EqualValuesf(t, 1, field_count, "measurement %q has %d fields; %s", measurement, field_count, err_msg)
+	tagCount := len(processedMetric.TagList())
+	require.EqualValuesf(t, 2, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
+	fieldCount := len(processedMetric.FieldList())
+	require.EqualValuesf(t, 1, fieldCount, "measurement %q has %d fields; %s", measurement, fieldCount, errMsg)
 
-	selector_tag, ok := processedMetric.GetTag(cl.SelectorTag)
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.SelectorTag, err_msg)
-	require.EqualValuesf(t, "pg123", selector_tag, "tag %q value was not %q; %s", cl.SelectorTag, "pg123", err_msg)
+	selectorTag, ok := processedMetric.GetTag(cl.SelectorTag)
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.SelectorTag, errMsg)
+	require.EqualValuesf(t, "pg123", selectorTag, "tag %q value was not %q; %s", cl.SelectorTag, "pg123", errMsg)
 
-	result_tag, ok := processedMetric.GetTag(cl.ResultTag)
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.ResultTag, err_msg)
-	require.EqualValuesf(t, "warning", result_tag, "tag %q value was not %q; %s", cl.ResultTag, "warning", err_msg)
+	resultTag, ok := processedMetric.GetTag(cl.ResultTag)
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.ResultTag, errMsg)
+	require.EqualValuesf(t, "warning", resultTag, "tag %q value was not %q; %s", cl.ResultTag, "warning", errMsg)
 
-	match_field, ok := processedMetric.GetField(cl.MatchField)
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.MatchField, err_msg)
-	require.EqualValuesf(t, "WARNING:  situation is crazy", match_field, "field %q value was not %q; %s",
-		cl.MatchField, "WARNING:  situation is crazy", err_msg)
+	matchField, ok := processedMetric.GetField(cl.MatchField)
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.MatchField, errMsg)
+	require.EqualValuesf(t, "WARNING:  situation is crazy", matchField, "field %q value was not %q; %s",
+		cl.MatchField, "WARNING:  situation is crazy", errMsg)
 
-	processedMetric = all_metrics[1]
+	processedMetric = allMetrics[1]
 
 	measurement = processedMetric.Name()
-	require.Equal(t, cl.AggregationMeasurement, measurement, err_msg)
+	require.Equal(t, cl.AggregationMeasurement, measurement, errMsg)
 
-	tag_count = len(processedMetric.TagList())
-	require.EqualValuesf(t, 1, tag_count, "measurement %q has %d tags; %s", measurement, tag_count, err_msg)
-	field_count = len(processedMetric.FieldList())
-	require.EqualValuesf(t, 4, field_count, "measurement %q has %d fields; %s", measurement, field_count, err_msg)
+	tagCount = len(processedMetric.TagList())
+	require.EqualValuesf(t, 1, tagCount, "measurement %q has %d tags; %s", measurement, tagCount, errMsg)
+	fieldCount = len(processedMetric.FieldList())
+	require.EqualValuesf(t, 4, fieldCount, "measurement %q has %d fields; %s", measurement, fieldCount, errMsg)
 
-	summary_tag, ok := processedMetric.GetTag(cl.AggregationSummaryTag)
-	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.AggregationSummaryTag, err_msg)
-	require.EqualValuesf(t, cl.AggregationSummaryValue, summary_tag, "tag %q value was not %q; %s",
-		cl.AggregationSummaryTag, cl.AggregationSummaryValue, err_msg)
+	summaryTag, ok := processedMetric.GetTag(cl.AggregationSummaryTag)
+	require.Truef(t, ok, "could not find %q tag in the returned metric; %s", cl.AggregationSummaryTag, errMsg)
+	require.EqualValuesf(t, cl.AggregationSummaryValue, summaryTag, "tag %q value was not %q; %s",
+		cl.AggregationSummaryTag, cl.AggregationSummaryValue, errMsg)
 
-	dropped_field, ok := processedMetric.GetField(cl.AggregationDroppedField)
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationDroppedField, err_msg)
-	require.EqualValuesf(t, 2, dropped_field, "field %q value was not %q: %s", cl.AggregationDroppedField, 2, err_msg)
+	droppedField, ok := processedMetric.GetField(cl.AggregationDroppedField)
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationDroppedField, errMsg)
+	require.EqualValuesf(t, 2, droppedField, "field %q value was not %q: %s", cl.AggregationDroppedField, 2, errMsg)
 
-	total_field, ok := processedMetric.GetField(cl.AggregationTotalField)
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, err_msg)
-	require.EqualValuesf(t, 3, total_field, "field %q value was not %q; %s", cl.AggregationTotalField, 3, err_msg)
+	totalField, ok := processedMetric.GetField(cl.AggregationTotalField)
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", cl.AggregationTotalField, errMsg)
+	require.EqualValuesf(t, 3, totalField, "field %q value was not %q; %s", cl.AggregationTotalField, 3, errMsg)
 
-	unknown_field, ok := processedMetric.GetField("unknown")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", err_msg)
-	require.EqualValuesf(t, 2, unknown_field, "field %q value was not %q; %s", "unknown", 2, err_msg)
+	unknownField, ok := processedMetric.GetField("unknown")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "unknown", errMsg)
+	require.EqualValuesf(t, 2, unknownField, "field %q value was not %q; %s", "unknown", 2, errMsg)
 
-	warning_field, ok := processedMetric.GetField("warning")
-	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "warning", err_msg)
-	require.EqualValuesf(t, 1, warning_field, "field %q value was not %q; %s", "warning", 1, err_msg)
+	warningField, ok := processedMetric.GetField("warning")
+	require.Truef(t, ok, "could not find %q field in the returned metric; %s", "warning", errMsg)
+	require.EqualValuesf(t, 1, warningField, "field %q value was not %q; %s", "warning", 1, errMsg)
 }

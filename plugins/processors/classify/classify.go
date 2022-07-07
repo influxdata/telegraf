@@ -254,25 +254,25 @@ type Classify struct {
 	// compile those again for every incoming data point.  Elements in
 	// this array will be matched in order against the match item value.
 	//
-	//                 regex          map_value (regex group name)
-	selector_map []map[*regexp.Regexp]string
+	//                 regex         map_value (regex group name)
+	selectorMap []map[*regexp.Regexp]string
 
 	// A convenience hash, used to look up a given matched category
 	// for each input data point rather than walking the entire array
 	// of such categories.
-	drop_categories map[string]bool
+	dropThisCategory map[string]bool
 
 	// The MappedSelectorRegexes data structure is so complex that what
 	// we really need is a multi-index container, similar to what the
 	// C++ Boost library provides.  Lacking that in Go, it is easiest
 	// to use an ancillary internal data structure, not used during the
-	// matching process, as we incrementally build up the mapped_regexes
+	// matching process, as we incrementally build up the mappedRegexes
 	// data structure with which we will access the MappedSelectorRegexes
 	// config data while processing.  Then we can properly validate what
 	// the user provides, detecting a duplicate category in the same group.
 	//
-	//                        group    category seen?
-	group_categories_seen map[string]map[string]bool
+	//                      group    category seen?
+	groupCategoriesSeen map[string]map[string]bool
 
 	// We need a well-controlled data structure holding the regexes to
 	// use during matching, and this is it.
@@ -285,56 +285,56 @@ type Classify struct {
 	// to just one category per map.  With that construction, we end
 	// up with a well-defined ordering of categories.
 	//
-	//                 group  seq  category array_of_regexes
-	mapped_regexes map[string][]map[string][]*regexp.Regexp
+	//                group  seq  category array_of_regexes
+	mappedRegexes map[string][]map[string][]*regexp.Regexp
 
 	// All distinct categories found in the MappedSelectorRegexes, put
 	// together in a hash for quick lookup.  This does not include the
 	// value of DefaultCategory if that is a distinct category.
-	all_regex_categories map[string]bool
+	allRegexCategories map[string]bool
 
 	// How often the aggregation statistics should be emitted, translated
 	// into an internal form that we can use for clocking that activity.
-	aggregation_period time.Duration
+	aggregationTimePeriod time.Duration
 
 	// Some of these fields are shared betwixt threads, but only after
 	// their values have been set permanently, and that happens before
 	// the extra threads have even been spawned.  So we don't need any
 	// mutex protection for them.
-	do_aggregation          bool
-	do_summary_aggregation  bool
-	do_group_aggregation    bool
-	do_selector_aggregation bool
+	doAggregation         bool
+	doSummaryAggregation  bool
+	doGroupAggregation    bool
+	doSelectorAggregation bool
 
 	// The guarded fields here are shared dynamically between the main
 	// thread, which increments counters, and the aggregation thread,
 	// which reports and resets those counters.  So in this case we need
 	// mutex protection.
-	shared_data struct {
+	sharedData struct {
 		// A guard to synchronize classification and aggregation threads
 		// so they do not concurrently access shared data.
-		aggregation_mutex sync.Mutex
+		aggregationMutex sync.Mutex
 
 		// Where to collect summary-level counts.
-		//                     category
-		aggregation_summary map[string]int
+		//                    category
+		aggregationSummary map[string]int
 
 		// Where to collect regex-group-level counts.
-		//                       group     category
-		aggregation_by_group map[string]map[string]int
+		//                     group     category
+		aggregationByGroup map[string]map[string]int
 
 		// Where to collect selector-level counts.
-		//                         selector   category
-		aggregation_by_selector map[string]map[string]int
+		//                       selector   category
+		aggregationBySelector map[string]map[string]int
 	}
 
 	// A synchronization point provided so shutdown of the plugin
 	// can be managed cleanly, by waiting for the aggregation
 	// thread to exit before the plugin as a whole exits.
-	wait_group sync.WaitGroup
+	syncWaitGroup sync.WaitGroup
 
 	// A channel used to signal the aggregation thread that it should stop.
-	stop_requested chan bool
+	stopRequested chan bool
 
 	// A copy of the Log member of the parent wrapper, for reference
 	// when all we have in hand is the Classify data structure and we
@@ -384,40 +384,39 @@ type ClassifyWrapper struct {
 // the same object but with tweaks in between tests.
 func (cl *Classify) Reset() error {
 	cl.acc = nil
-	cl.selector_map = nil
-	cl.drop_categories = nil
-	cl.group_categories_seen = nil
-	cl.mapped_regexes = nil
-	cl.all_regex_categories = nil
+	cl.selectorMap = nil
+	cl.dropThisCategory = nil
+	cl.groupCategoriesSeen = nil
+	cl.mappedRegexes = nil
+	cl.allRegexCategories = nil
 
-	cl.aggregation_period = 0
+	cl.aggregationTimePeriod = 0
 
-	cl.do_aggregation = false
-	cl.do_summary_aggregation = false
-	cl.do_group_aggregation = false
-	cl.do_selector_aggregation = false
+	cl.doAggregation = false
+	cl.doSummaryAggregation = false
+	cl.doGroupAggregation = false
+	cl.doSelectorAggregation = false
 
 	// The zero value for a sync.Mutex is an unlocked mutex.
-	// Given that we have declared cl.shared_data.aggregation_mutex to
+	// Given that we have declared cl.sharedData.aggregationMutex to
 	// be a fixed copy of such an object instead of a nillable pointer
 	// to such an object, we cannot reset this variable directly.  So
 	// we use indirection here to establish that we have the desired
 	// state in hand when we finish resetting.
-	if cl.shared_data.aggregation_mutex.TryLock() {
-		cl.shared_data.aggregation_mutex.Unlock()
-	} else {
+	if !cl.sharedData.aggregationMutex.TryLock() {
 		// It should be impossible to get here.  If we do, some part of
 		// the code has left the mutex locked, so we could not obtain
 		// the lock.  If and when companion code later tries to unlock
 		// the mutex, that will cause a run-time error.  Hence we raise
 		// an error immediately instead of unlocking the mutex, so the
 		// root cause of the potential later problem is identified.
-		return fmt.Errorf("the cl.shared_data.aggregation_mutex was found locked")
+		return fmt.Errorf("the cl.sharedData.aggregationMutex was found locked")
 	}
+	cl.sharedData.aggregationMutex.Unlock()
 
-	cl.shared_data.aggregation_summary = nil
-	cl.shared_data.aggregation_by_group = nil
-	cl.shared_data.aggregation_by_selector = nil
+	cl.sharedData.aggregationSummary = nil
+	cl.sharedData.aggregationByGroup = nil
+	cl.sharedData.aggregationBySelector = nil
 
 	// The zero value for a sync.WaitGroup is obviously such an object
 	// with a current wait count of zero.  However, the sync package
@@ -441,13 +440,13 @@ func (cl *Classify) Reset() error {
 	// routine be equipped to return the new wait count after the delta
 	// has been added, and that it be permissible to add a zero delta.
 	//
-	// With no clear way to reset cl.wait_group (except perhaps to define
+	// With no clear way to reset cl.syncWaitGroup (except perhaps to define
 	// it as a nillable pointer to a sync.WaitGroup instead of a fixed
 	// copy of such an object), we must leave it untouched in this Reset()
 	// action, and depend on the rest of this package to never leave it in
 	// an undesirable state.
 
-	cl.stop_requested = nil
+	cl.stopRequested = nil
 
 	return nil
 }
@@ -474,8 +473,9 @@ func (clw *ClassifyWrapper) ParseDetailedConfig() error {
 	// make the error message be as descriptive as possible. to simplify the
 	// process of debugging problems in the user-supplied classify.toml file.
 	//
-	if md, err := toml.DecodeFile(clw.ClassifyConfigFile, &clw.Classify); err != nil {
-		if parse_error, ok := err.(toml.ParseError); ok {
+	switch md, err := toml.DecodeFile(clw.ClassifyConfigFile, &clw.Classify); err {
+	default:
+		if parseError, ok := err.(toml.ParseError); ok {
 			// As of this writing, Telegraf seems to be bundling in only the
 			// BurntSushi/toml v0.4.1 release, which does not yet include
 			// support for the ErrorWithPosition() and ErrorWithUsage()
@@ -483,24 +483,24 @@ func (clw *ClassifyWrapper) ParseDetailedConfig() error {
 			// time being, we make do with what is readily available.  This
 			// call should be switched to ErrorWithUsage() as soon as possible.
 			return fmt.Errorf("parsing of the %q file failed:\n%s",
-				clw.ClassifyConfigFile, parse_error.Error())
+				clw.ClassifyConfigFile, parseError.Error())
 		}
 		return fmt.Errorf("parsing of the %q file failed:\n%v", clw.ClassifyConfigFile, err)
-	} else {
+	case nil:
 		// It's possible that the TOML decoding "succeeded" but some of the
 		// items in the config file never made it into our structure.  That
 		// could be evidence of a typo or other mistake in the config file,
 		// so we check that here and flag the issue to the user.  We would
 		// like to catch problems of that sort early on, independent of the
 		// individual checks later on for items that were in fact decoded.
-		extra_keys := ""
-		undecoded_keys := md.Undecoded()
-		for _, key := range undecoded_keys {
-			extra_keys += fmt.Sprintf("\nfound undecoded key %q", key.String())
+		extraKeys := ""
+		undecodedKeys := md.Undecoded()
+		for _, key := range undecodedKeys {
+			extraKeys += fmt.Sprintf("\nfound undecoded key %q", key.String())
 		}
-		if extra_keys != "" {
+		if extraKeys != "" {
 			return fmt.Errorf("parsing of the %q file failed:%s",
-				clw.ClassifyConfigFile, extra_keys)
+				clw.ClassifyConfigFile, extraKeys)
 		}
 	}
 
@@ -520,7 +520,7 @@ func (clw *ClassifyWrapper) ParseDetailedConfig() error {
 // can choose to save it in the plugin, or use the one received from Add().
 //
 func (clw *ClassifyWrapper) Start(acc telegraf.Accumulator) error {
-	var err error = nil
+	var err error = nil //nolint:revive // sometimes, explicit initialization is clearer
 	if err == nil {
 		err = clw.ParseDetailedConfig()
 	}
@@ -535,7 +535,7 @@ func (clw *ClassifyWrapper) Start(acc telegraf.Accumulator) error {
 // testing, wherein we do not parse an external config file to
 // obtain all the detailed config data.
 func (cl *Classify) Start(acc telegraf.Accumulator) error {
-	var err error = nil
+	var err error = nil //nolint:revive // sometimes, explicit initialization is clearer
 	if err == nil {
 		err = cl.InitClassification(acc)
 	}
@@ -572,135 +572,138 @@ func (cl *Classify) Start(acc telegraf.Accumulator) error {
 // call to metric.Drop() is supposed to accomplish.
 //
 func (cl *Classify) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
-	drop_point := false
+	dropPoint := false
 
-	selector_item_value := ""
-	regex_group := ""
-	have_regex_group := false
-	if cl.SelectorTag != "" {
+	selectorItemValue := ""
+	regexGroup := ""
+	haveRegexGroup := false
+	switch {
+	case cl.SelectorTag != "":
 		if value, ok := metric.GetTag(cl.SelectorTag); ok {
-			selector_item_value = value
+			selectorItemValue = value
 		} else {
 			if cl.logger != nil {
 				cl.logger.Infof("dropping point (selector tag %q is missing)", cl.SelectorTag)
 			}
-			drop_point = true
+			dropPoint = true
 		}
-	} else if cl.SelectorField != "" {
+	case cl.SelectorField != "":
 		if value, ok := metric.GetField(cl.SelectorField); ok {
 			if v, ok := value.(string); ok {
-				selector_item_value = v
+				selectorItemValue = v
 			} else {
 				// We don't have any conversions from other data types to strings in place,
 				// nor any plans to put conversions in place.
 				if cl.logger != nil {
 					cl.logger.Infof("dropping point (selector field %q is not a string)", cl.SelectorField)
 				}
-				drop_point = true
+				dropPoint = true
 			}
 		} else {
 			if cl.logger != nil {
 				cl.logger.Infof("dropping point (selector field %q is missing)", cl.SelectorField)
 			}
-			drop_point = true
+			dropPoint = true
 		}
-	} else {
+	default:
 		// This is a legitimate case.  Neither cl.SelectorTag nor cl.SelectorField was
 		// defined in the configuration, so we default to using the cl.DefaultRegexGroup
 		// value as the result of the selector mapping.  But we must also make sure that
 		// the rest of the logic for this data point correctly skips trying to do anything
 		// more with the selector mapping, even if cl.DefaultRegexGroup is an empty string
-		// and it doesn't look like assignment to regex_group took place here, and that
-		// all later validation of the chosen regex_group still happens.
-		regex_group = cl.DefaultRegexGroup
-		have_regex_group = true
+		// and it doesn't look like assignment to regexGroup took place here, and that
+		// all later validation of the chosen regexGroup still happens.
+		regexGroup = cl.DefaultRegexGroup
+		haveRegexGroup = true
 	}
 
-	if !drop_point && !have_regex_group {
+	if !dropPoint && !haveRegexGroup {
 		// Iterate over the selector mapping and attempt to map the selector to a regex group name.
-		var matched_regex *regexp.Regexp = nil
-		for _, mapping := range cl.selector_map {
+		var matchedRegex *regexp.Regexp = nil //nolint:revive // sometimes, explicit initialization is clearer
+		for _, mapping := range cl.selectorMap {
 			for regex, group := range mapping {
-				if regex.MatchString(selector_item_value) {
-					matched_regex = regex
+				if regex.MatchString(selectorItemValue) {
+					matchedRegex = regex
 					if group == "*" {
-						regex_group = selector_item_value
+						regexGroup = selectorItemValue
 					} else {
-						regex_group = group
+						regexGroup = group
 					}
 					break
 				}
 			}
 		}
-		if matched_regex == nil {
+		if matchedRegex == nil {
 			// The selector did not match any mapping regex.  In this case, we use cl.DefaultRegexGroup
 			// as the desired regex group, though that might itself be an empty string or not be the
 			// name of any configured regex group.  We will check those conditions just below.
 			if cl.logger != nil {
-				cl.logger.Infof("selector item value %q does not match anything in the selector_mapping", selector_item_value)
-				// cl.logger.Debugf("selector_map = %v", cl.selector_map);
+				cl.logger.Infof("selector item value %q does not match anything in the selector_mapping", selectorItemValue)
+				// cl.logger.Debugf("selectorMap = %v", cl.selectorMap);
 			}
-			regex_group = cl.DefaultRegexGroup
+			regexGroup = cl.DefaultRegexGroup
 		}
 	}
 
-	if !drop_point {
-		if regex_group == "" {
+	if !dropPoint {
+		if regexGroup == "" {
 			// The selector effectively maps to an empty string, however that was calculated.
 			// There is no further recourse in thie case; count this as a dropped data point.
 			if cl.logger != nil {
-				cl.logger.Infof("dropping point (selector item value %q effectively maps to an empty string)", selector_item_value)
+				cl.logger.Infof("dropping point (selector item value %q effectively maps to an empty string)", selectorItemValue)
 			}
-			drop_point = true
-		} else if _, ok := cl.mapped_regexes[regex_group]; !ok {
+			dropPoint = true
+		} else if _, ok := cl.mappedRegexes[regexGroup]; !ok {
 			// The selector effectively mapped to a non-empty string, but that is not the name of any configured regex group.
 			if cl.DefaultRegexGroup == "" {
 				if cl.logger != nil {
 					cl.logger.Infof("dropping point (selector item value %q maps to %q, which does not match any mapped_selector_regexes group)",
-						selector_item_value, regex_group)
+						selectorItemValue, regexGroup)
 				}
-				drop_point = true
-			} else if _, ok := cl.mapped_regexes[cl.DefaultRegexGroup]; !ok {
+				dropPoint = true
+			} else if _, ok := cl.mappedRegexes[cl.DefaultRegexGroup]; !ok {
 				if cl.logger != nil {
 					cl.logger.Infof("dropping point (selector item value %q maps to %q, and neither that nor the default regex group %q matchs any mapped_selector_regexes group)",
-						selector_item_value, regex_group, cl.DefaultRegexGroup)
+						selectorItemValue, regexGroup, cl.DefaultRegexGroup)
 				}
-				drop_point = true
+				dropPoint = true
 			} else {
-				regex_group = cl.DefaultRegexGroup
+				regexGroup = cl.DefaultRegexGroup
 			}
 		}
 	}
 
-	match_item_value := ""
-	if !drop_point {
-		if cl.MatchTag != "" {
+	matchItemValue := ""
+	if !dropPoint {
+		switch {
+		case cl.MatchTag != "":
 			if value, ok := metric.GetTag(cl.MatchTag); ok {
-				match_item_value = value
+				matchItemValue = value
 			} else {
 				if cl.logger != nil {
 					cl.logger.Infof("dropping point (match tag %q is missing)", cl.MatchTag)
 				}
-				drop_point = true
+				dropPoint = true
 			}
-		} else if cl.MatchField != "" {
+		case cl.MatchField != "":
 			if value, ok := metric.GetField(cl.MatchField); ok {
 				if v, ok := value.(string); ok {
-					match_item_value = v
+					matchItemValue = v
 				} else {
 					// We don't have any conversions from other data types to strings in place,
 					// nor any plans to put conversions in place.
 					if cl.logger != nil {
 						cl.logger.Infof("dropping point (match field %q is not a string)", cl.MatchField)
 					}
-					drop_point = true
+					dropPoint = true
 				}
 			} else {
 				if cl.logger != nil {
 					cl.logger.Infof("dropping point (match field %q is missing)", cl.MatchField)
 				}
+				dropPoint = true
 			}
-		} else {
+		default:
 			// PROGRAMMING ERROR:  THIS SHOULD NEVER HAPPEN.
 			// Neither cl.MatchTag nor cl.MatchField was defined in the configuration,
 			// but this should have been caught during initialization and processing
@@ -708,18 +711,18 @@ func (cl *Classify) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 			if cl.logger != nil {
 				cl.logger.Error("dropping point (internal programming error when both match_tag and match_field are missing)")
 			}
-			drop_point = true
+			dropPoint = true //nolint:ineffassign // dead assignment, but here for consistency when logging "dropping point"
 			// We are not told what will happen if Add() returns an error,
 			// but if ever there is a time to do that, it is now.
 			return fmt.Errorf("internal programming error when both match_tag and match_field are missing")
 		}
 	}
 
-	// Note that we do not do any checking to see if match_item_value is an empty string.
+	// Note that we do not do any checking to see if matchItemValue is an empty string.
 	// There is no special-case handling in that situation; it is up to the user's regexes
 	// to match or not match that value as the user sees fit.
-	matched_category := ""
-	if !drop_point {
+	matchedCategory := ""
+	if !dropPoint {
 		// Iterate through all the categories in the chosen regex group.
 		if cl.logger != nil {
 			cl.logger.Debug("attempting category regex matches")
@@ -727,96 +730,97 @@ func (cl *Classify) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 		// These loops for regex matching are complicated to decipher.  The intent is to perform
 		// this iteration through the group's categories in order as defined in the config file.
 		//
-		//                    group  seq  category array_of_regexes
-		// mapped_regexes map[string][]map[string][]*regexp.Regexp
+		//                   group  seq  category array_of_regexes
+		// mappedRegexes map[string][]map[string][]*regexp.Regexp
 		//
-		if category_list, ok := cl.mapped_regexes[regex_group]; ok {
-			if cl.logger != nil {
-				cl.logger.Debugf("selector item value %q mapped to regex group %q, which has %d categories",
-					selector_item_value, regex_group, len(category_list))
-			}
-		regex_match_loop:
-			// Each category_definition only contains one category => array_of_regexes mapping,
-			// and each such category buried within the regex_group is only allowed to belong
-			// to one category_definition within that regex_group.
-			for _, category_definition := range category_list {
-				for category, category_regexes := range category_definition {
-					if cl.logger != nil {
-						cl.logger.Debugf("matching category %q, which has %d regexes", category, len(category_regexes))
-					}
-					// iterate through all the regexes in each category
-					for _, regex := range category_regexes {
-						if cl.logger != nil {
-							cl.logger.Debugf("matching against regex %q", regex)
-						}
-						if regex.MatchString(match_item_value) {
-							if cl.logger != nil {
-								cl.logger.Debug("found match")
-							}
-							// upon finding a match of the match_item_value to a regex, set the result item
-							// into the output data point and exit all match-search looping
-							matched_category = category
-							break regex_match_loop
-						}
-					}
-				}
-			}
-		} else {
+		switch categoryList, ok := cl.mappedRegexes[regexGroup]; ok {
+		default:
 			// There is no such regex group; count this as a dropped data point.
 			// PROGRAMMING ERROR:  THIS SHOULD NEVER HAPPEN.
 			// Earlier checks in processing this data point should have ruled out
 			// our reaching this branch.
 			if cl.logger != nil {
-				cl.logger.Errorf("dropping point (internal programming error:  selector item mapped value %q does not match any mapped_selector_regexes group)", regex_group)
+				cl.logger.Errorf("dropping point (internal programming error:  selector item mapped value %q does not match any mapped_selector_regexes group)", regexGroup)
 			}
-			drop_point = true
+			dropPoint = true //nolint:ineffassign // dead assignment, but here for consistency when logging "dropping point"
 			// We are not told what will happen if Add() returns an error,
 			// but if ever there is a time to do that, it is now.
-			return fmt.Errorf("internal programming error:  selector item mapped value %q does not match any mapped_selector_regexes group", regex_group)
+			return fmt.Errorf("internal programming error:  selector item mapped value %q does not match any mapped_selector_regexes group", regexGroup)
+		case true:
+			if cl.logger != nil {
+				cl.logger.Debugf("selector item value %q mapped to regex group %q, which has %d categories",
+					selectorItemValue, regexGroup, len(categoryList))
+			}
+		regex_match_loop:
+			// Each categoryDefinition only contains one category => array_of_regexes mapping,
+			// and each such category buried within the regexGroup is only allowed to belong
+			// to one categoryDefinition within that regexGroup.
+			for _, categoryDefinition := range categoryList {
+				for category, categoryRegexes := range categoryDefinition {
+					if cl.logger != nil {
+						cl.logger.Debugf("matching category %q, which has %d regexes", category, len(categoryRegexes))
+					}
+					// iterate through all the regexes in each category
+					for _, regex := range categoryRegexes {
+						if cl.logger != nil {
+							cl.logger.Debugf("matching against regex %q", regex)
+						}
+						if regex.MatchString(matchItemValue) {
+							if cl.logger != nil {
+								cl.logger.Debug("found match")
+							}
+							// upon finding a match of the matchItemValue to a regex, set the result item
+							// into the output data point and exit all match-search looping
+							matchedCategory = category
+							break regex_match_loop
+						}
+					}
+				}
+			}
 		}
 	}
-	if !drop_point {
-		if matched_category == "" {
+	if !dropPoint {
+		if matchedCategory == "" {
 			if cl.logger != nil {
 				cl.logger.Debugf("no match was found; default category %q is to be applied", cl.DefaultCategory)
 			}
 			// No match was found.  Apply the default category.
-			matched_category = cl.DefaultCategory
+			matchedCategory = cl.DefaultCategory
 		} else {
 			if cl.logger != nil {
-				cl.logger.Debugf("matched category %q", matched_category)
+				cl.logger.Debugf("matched category %q", matchedCategory)
 			}
 		}
-		if matched_category == "" {
+		if matchedCategory == "" {
 			// Applying the default category didn't help us determine a valid (non-empty-string)
 			// result item value.  The only sensible thing we can do is to drop this data point.
 			if cl.logger != nil {
 				cl.logger.Debug("dropping point (no match category was found, and default_category is not defined)")
 			}
-			drop_point = true
-		} else if cl.drop_categories[matched_category] {
+			dropPoint = true
+		} else if cl.dropThisCategory[matchedCategory] {
 			if cl.logger != nil {
-				cl.logger.Debugf("dropping point (category %q is configured in drop_categories)", matched_category)
+				cl.logger.Debugf("dropping point (category %q is configured in drop_categories)", matchedCategory)
 			}
 			// This case is special.  We have gone all the way to the point where we found a match
 			// category (or used the default category), but then we decided to drop the data point
 			// anyway.  In this case, we will want to count this data point in the aggregation
 			// statistics both as an effectively matched point (in that respective category) and
 			// as a dropped point as well.
-			drop_point = true
+			dropPoint = true
 		}
 	}
-	if !drop_point {
+	if !dropPoint {
 		if cl.ResultTag != "" {
 			if cl.logger != nil {
-				cl.logger.Debugf("setting result tag %q to %q", cl.ResultTag, matched_category)
+				cl.logger.Debugf("setting result tag %q to %q", cl.ResultTag, matchedCategory)
 			}
-			metric.AddTag(cl.ResultTag, matched_category)
+			metric.AddTag(cl.ResultTag, matchedCategory)
 		} else if cl.ResultField != "" {
 			if cl.logger != nil {
-				cl.logger.Debugf("setting result field %q to %q", cl.ResultField, matched_category)
+				cl.logger.Debugf("setting result field %q to %q", cl.ResultField, matchedCategory)
 			}
-			metric.AddField(cl.ResultField, matched_category)
+			metric.AddField(cl.ResultField, matchedCategory)
 		}
 		// Add this data point to the accumulator so it will be seen by downstream plugins.
 		cl.acc.AddMetric(metric)
@@ -826,7 +830,7 @@ func (cl *Classify) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 		metric.Drop()
 	}
 
-	if cl.do_aggregation {
+	if cl.doAggregation {
 		// I would prefer to bracket the code in this block with the Lock/Unlock actions,
 		// as that would be clearer and there are no early exits from this block that might
 		// bypass the Unlock.  But this block is at the end of the function anyway, and
@@ -836,80 +840,80 @@ func (cl *Classify) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 		// there, but it seems like a pointless exercise to invoke the extra overhead of
 		// such a subroutine call.
 		//
-		cl.shared_data.aggregation_mutex.Lock()
-		defer cl.shared_data.aggregation_mutex.Unlock()
+		cl.sharedData.aggregationMutex.Lock()
+		defer cl.sharedData.aggregationMutex.Unlock()
 
-		if cl.do_summary_aggregation {
-			//                        category
-			// aggregation_summary map[string]int
+		if cl.doSummaryAggregation {
+			//                       category
+			// aggregationSummary map[string]int
 			//
-			if matched_category != "" {
-				cl.shared_data.aggregation_summary[matched_category]++
+			if matchedCategory != "" {
+				cl.sharedData.aggregationSummary[matchedCategory]++
 			}
-			if drop_point && cl.AggregationDroppedField != "" {
-				cl.shared_data.aggregation_summary[cl.AggregationDroppedField]++
+			if dropPoint && cl.AggregationDroppedField != "" {
+				cl.sharedData.aggregationSummary[cl.AggregationDroppedField]++
 			}
 			if cl.AggregationTotalField != "" {
-				cl.shared_data.aggregation_summary[cl.AggregationTotalField]++
+				cl.sharedData.aggregationSummary[cl.AggregationTotalField]++
 			}
 		}
 
 		// For regex-group-level and selector-level statistics, we don't create any counters
 		// in advance, because we would prefer that they be dynamically allocated only
-		// for those aggegation species (regex groups and selectors, respectively) that
+		// for those aggregation species (regex groups and selectors, respectively) that
 		// actually show up as a consequence of processing input data points.  That dynamic
 		// allocation saves us from extra work in walking the aggregation counters to see
 		// which sets contain some non-zero values, when outputting the values of those
 		// counters.  But it does mean that we must do some allocation here, when counting.
 
-		if cl.do_group_aggregation {
-			//                          group     category
-			// aggregation_by_group map[string]map[string]int
+		if cl.doGroupAggregation {
+			//                        group     category
+			// aggregationByGroup map[string]map[string]int
 			//
-			if regex_group != "" {
-				if matched_category != "" {
-					if cl.shared_data.aggregation_by_group[regex_group] == nil {
-						cl.shared_data.aggregation_by_group[regex_group] = make(map[string]int)
+			if regexGroup != "" {
+				if matchedCategory != "" {
+					if cl.sharedData.aggregationByGroup[regexGroup] == nil {
+						cl.sharedData.aggregationByGroup[regexGroup] = make(map[string]int)
 					}
-					cl.shared_data.aggregation_by_group[regex_group][matched_category]++
+					cl.sharedData.aggregationByGroup[regexGroup][matchedCategory]++
 				}
-				if drop_point && cl.AggregationDroppedField != "" {
-					if cl.shared_data.aggregation_by_group[regex_group] == nil {
-						cl.shared_data.aggregation_by_group[regex_group] = make(map[string]int)
+				if dropPoint && cl.AggregationDroppedField != "" {
+					if cl.sharedData.aggregationByGroup[regexGroup] == nil {
+						cl.sharedData.aggregationByGroup[regexGroup] = make(map[string]int)
 					}
-					cl.shared_data.aggregation_by_group[regex_group][cl.AggregationDroppedField]++
+					cl.sharedData.aggregationByGroup[regexGroup][cl.AggregationDroppedField]++
 				}
 				if cl.AggregationTotalField != "" {
-					if cl.shared_data.aggregation_by_group[regex_group] == nil {
-						cl.shared_data.aggregation_by_group[regex_group] = make(map[string]int)
+					if cl.sharedData.aggregationByGroup[regexGroup] == nil {
+						cl.sharedData.aggregationByGroup[regexGroup] = make(map[string]int)
 					}
-					cl.shared_data.aggregation_by_group[regex_group][cl.AggregationTotalField]++
+					cl.sharedData.aggregationByGroup[regexGroup][cl.AggregationTotalField]++
 				}
 			}
 		}
 
-		if cl.do_selector_aggregation {
-			//                            selector   category
-			// aggregation_by_selector map[string]map[string]int
+		if cl.doSelectorAggregation {
+			//                          selector   category
+			// aggregationBySelector map[string]map[string]int
 			//
-			if selector_item_value != "" {
-				if matched_category != "" {
-					if cl.shared_data.aggregation_by_selector[selector_item_value] == nil {
-						cl.shared_data.aggregation_by_selector[selector_item_value] = make(map[string]int)
+			if selectorItemValue != "" {
+				if matchedCategory != "" {
+					if cl.sharedData.aggregationBySelector[selectorItemValue] == nil {
+						cl.sharedData.aggregationBySelector[selectorItemValue] = make(map[string]int)
 					}
-					cl.shared_data.aggregation_by_selector[selector_item_value][matched_category]++
+					cl.sharedData.aggregationBySelector[selectorItemValue][matchedCategory]++
 				}
-				if drop_point && cl.AggregationDroppedField != "" {
-					if cl.shared_data.aggregation_by_selector[selector_item_value] == nil {
-						cl.shared_data.aggregation_by_selector[selector_item_value] = make(map[string]int)
+				if dropPoint && cl.AggregationDroppedField != "" {
+					if cl.sharedData.aggregationBySelector[selectorItemValue] == nil {
+						cl.sharedData.aggregationBySelector[selectorItemValue] = make(map[string]int)
 					}
-					cl.shared_data.aggregation_by_selector[selector_item_value][cl.AggregationDroppedField]++
+					cl.sharedData.aggregationBySelector[selectorItemValue][cl.AggregationDroppedField]++
 				}
 				if cl.AggregationTotalField != "" {
-					if cl.shared_data.aggregation_by_selector[selector_item_value] == nil {
-						cl.shared_data.aggregation_by_selector[selector_item_value] = make(map[string]int)
+					if cl.sharedData.aggregationBySelector[selectorItemValue] == nil {
+						cl.sharedData.aggregationBySelector[selectorItemValue] = make(map[string]int)
 					}
-					cl.shared_data.aggregation_by_selector[selector_item_value][cl.AggregationTotalField]++
+					cl.sharedData.aggregationBySelector[selectorItemValue][cl.AggregationTotalField]++
 				}
 			}
 		}
@@ -934,8 +938,8 @@ func (cl *Classify) Stop() error {
 	// We stop both sides regardless, but prefer reporting a problem with stopping
 	// the classifier, if any.
 	err := cl.StopClassification()
-	if agg_err := cl.StopAggregation(); err == nil {
-		err = agg_err
+	if aggErr := cl.StopAggregation(); err == nil {
+		err = aggErr
 	}
 	return err
 }
@@ -950,41 +954,41 @@ func (cl *Classify) Stop() error {
 // same category multiple times under the same group, which is something we must
 // rule out because it would be overall too confusing.
 //
-func (cl *Classify) SaveRegexes(group string, category string, all_regexes []string) error {
-	if cl.group_categories_seen == nil {
-		cl.group_categories_seen = make(map[string]map[string]bool)
+func (cl *Classify) SaveRegexes(group string, category string, allRegexes []string) error {
+	if cl.groupCategoriesSeen == nil {
+		cl.groupCategoriesSeen = make(map[string]map[string]bool)
 	}
-	if cl.group_categories_seen[group] == nil {
-		cl.group_categories_seen[group] = make(map[string]bool)
+	if cl.groupCategoriesSeen[group] == nil {
+		cl.groupCategoriesSeen[group] = make(map[string]bool)
 	}
-	if cl.group_categories_seen[group][category] {
+	if cl.groupCategoriesSeen[group][category] {
 		return fmt.Errorf("found a second instance of category %q for mapped_selector_regexes group %q", category, group)
-	} else {
-		cl.group_categories_seen[group][category] = true
 	}
-	all_regex_ptrs := make([]*regexp.Regexp, 0)
-	for _, regex := range all_regexes {
+	cl.groupCategoriesSeen[group][category] = true
+	allRegexPtrs := make([]*regexp.Regexp, 0)
+	for _, regex := range allRegexes {
 		if regex == "" {
 			return fmt.Errorf("found an empty mapped_selector_regexes regex for group %q category %q", group, category)
 		}
-		if regex_ptr, err := regexp.Compile(regex); err != nil {
+		switch regexPtr, err := regexp.Compile(regex); err {
+		default:
 			return fmt.Errorf("invalid mapped_selector_regexes regular expression %q for group %q, category %q:\n%v",
 				regex, group, category, err)
-		} else {
-			all_regex_ptrs = append(all_regex_ptrs, regex_ptr)
+		case nil:
+			allRegexPtrs = append(allRegexPtrs, regexPtr)
 		}
 	}
-	if len(all_regex_ptrs) > 0 {
+	if len(allRegexPtrs) > 0 {
 		// If we never call SaveRegexes(), this map never gets initialized.  But we
 		// check for that condition after running all loops that call SaveRegexes(),
 		// to ensure that if that happens, the configuration is rejected.
-		if cl.mapped_regexes == nil {
-			cl.mapped_regexes = make(map[string][]map[string][]*regexp.Regexp)
+		if cl.mappedRegexes == nil {
+			cl.mappedRegexes = make(map[string][]map[string][]*regexp.Regexp)
 		}
-		if cl.mapped_regexes[group] == nil {
-			cl.mapped_regexes[group] = make([]map[string][]*regexp.Regexp, 0)
+		if cl.mappedRegexes[group] == nil {
+			cl.mappedRegexes[group] = make([]map[string][]*regexp.Regexp, 0)
 		}
-		cl.mapped_regexes[group] = append(cl.mapped_regexes[group], map[string][]*regexp.Regexp{category: all_regex_ptrs})
+		cl.mappedRegexes[group] = append(cl.mappedRegexes[group], map[string][]*regexp.Regexp{category: allRegexPtrs})
 	}
 
 	return nil
@@ -996,8 +1000,8 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 	cl.acc = acc
 
 	// It's okay not to define either selector_tag or selector_field.  In that case,
-	// default_regex_group will come into play.  (If default_regex_group is also
-	// not defined, or defined as an empty string, all input data points will be
+	// default_regex_group will come into play.  (If default_regex_group is also not
+	// defined, or it is defined as an empty string, all input data points will be
 	// dropped.  But at least for now, we consider that to be a valid [if unuseful]
 	// configuration, and we don't err out on that here.  Perhaps in the future we
 	// might decide to reject such a configuration.)
@@ -1017,8 +1021,8 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 		return fmt.Errorf("result_tag and result_field cannot both be defined")
 	}
 
-	have_seen_selector_regex := make(map[string]bool)
-	cl.selector_map = make([]map[*regexp.Regexp]string, 0)
+	haveSeenSelectorRegex := make(map[string]bool)
+	cl.selectorMap = make([]map[*regexp.Regexp]string, 0)
 	if cl.SelectorMapping != nil {
 		for _, mapping := range cl.SelectorMapping {
 			if len(mapping) > 1 {
@@ -1028,10 +1032,10 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 				if regex == "" {
 					return fmt.Errorf("found an empty selector_mapping regex for selector group %q", group)
 				}
-				if have_seen_selector_regex[regex] {
+				if haveSeenSelectorRegex[regex] {
 					return fmt.Errorf("found duplicate selector_mapping regex %q", regex)
 				}
-				have_seen_selector_regex[regex] = true
+				haveSeenSelectorRegex[regex] = true
 
 				// In theory, we would want to validate the selector mapping "group" as best we can.
 				// It should be one of:
@@ -1048,11 +1052,12 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 				// In practice, that covers the waterfront, so there is not much we can due to
 				// perform validation here.
 
-				if regex_ptr, err := regexp.Compile(regex); err != nil {
+				switch regexPtr, err := regexp.Compile(regex); err {
+				default:
 					return fmt.Errorf("invalid selector_mapping regular expression %q for group %q:\n%v",
 						regex, group, err)
-				} else {
-					cl.selector_map = append(cl.selector_map, map[*regexp.Regexp]string{regex_ptr: group})
+				case nil:
+					cl.selectorMap = append(cl.selectorMap, map[*regexp.Regexp]string{regexPtr: group})
 				}
 			}
 		}
@@ -1061,10 +1066,10 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 	// When making calls to SaveRegexes(), we purposely do not check whether the set of regexes we are passing
 	// is empty, before we make that call, in a possible attempt to skip that call.  That allows us to centralize
 	// the logic that validates that we do not see the same category multiple times within a given regex group.
-	for group, category_hashes := range cl.MappedSelectorRegexes {
-		for _, category_regexes := range category_hashes {
-			for category, regexes := range category_regexes {
-				if regex_string, ok := regexes.(string); ok {
+	for group, categoryHashes := range cl.MappedSelectorRegexes {
+		for _, categoryRegexes := range categoryHashes {
+			for category, regexes := range categoryRegexes {
+				if regexString, ok := regexes.(string); ok {
 					// This test is not quite accurate for what we want to accomplish, but there might be no good
 					// way to make it totally accurate.  Suppose we just have a single regex, on a line terminated
 					// with the closing three single-quote characters of a multi-line literal instead of having
@@ -1072,12 +1077,12 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 					// literal, and trim the leading whitespace.  But in that one special corner case, we probably
 					// have no information on whether the string we see inside the code was presented as a simple
 					// literal string or as a multi-line literal string in the config file.
-					// if (regex_string is a multi-line string) ...
-					is_multiline := newlineRegex.MatchString(regex_string)
-					if is_multiline {
-						// split regex_string into individual lines, to be processed separately
-						all_regexes := make([]string, 0)
-						for _, regex := range strings.Split(regex_string, "\n") {
+					// if (regexString is a multi-line string) ...
+					isMultiline := newlineRegex.MatchString(regexString)
+					if isMultiline {
+						// split regexString into individual lines, to be processed separately
+						allRegexes := make([]string, 0)
+						for _, regex := range strings.Split(regexString, "\n") {
 							regex = strings.TrimSpace(regex)
 							//
 							// We adopt a convention here that blank lines within the multi-line format will be ignored.
@@ -1093,24 +1098,24 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 							//     empty regex because of that next line.
 							//
 							if regex != "" {
-								all_regexes = append(all_regexes, regex)
+								allRegexes = append(allRegexes, regex)
 							}
 						}
-						if err := cl.SaveRegexes(group, category, all_regexes); err != nil {
+						if err := cl.SaveRegexes(group, category, allRegexes); err != nil {
 							return err
 						}
 					} else {
-						if err := cl.SaveRegexes(group, category, []string{regex_string}); err != nil {
+						if err := cl.SaveRegexes(group, category, []string{regexString}); err != nil {
 							return err
 						}
 					}
-				} else if regex_array, ok := regexes.([]string); ok {
+				} else if regexArray, ok := regexes.([]string); ok {
 					// We might be provided an array of strings, typically during a unit test which forces
 					// the value to be in that precise format.
-					if err := cl.SaveRegexes(group, category, regex_array); err != nil {
+					if err := cl.SaveRegexes(group, category, regexArray); err != nil {
 						return err
 					}
-				} else if interface_array, ok := regexes.([]interface{}); ok {
+				} else if interfaceArray, ok := regexes.([]interface{}); ok { //nolint:revive // linter is simply wrong about its analysis and advice
 					// We might be provided an array of interface{}s, typically by the BurntSushi/toml parser
 					// when it encounters an array of strings.  (Exactly why it does not declare the elements
 					// to be strings, when it ought to know that from the value format in the config file, is
@@ -1120,16 +1125,17 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 					// be of mixed types within the same array].)  Regardless of the reason, we must adapt to
 					// what we see from the parser as compared to what we are expecting the user to provide.
 					// We do at least check our assumptions before accepting the parser output.
-					regex_array := make([]string, 0)
-					for _, interface_element := range interface_array {
-						if regex, ok := interface_element.(string); ok {
-							regex_array = append(regex_array, regex)
-						} else {
+					regexArray := make([]string, 0)
+					for _, interfaceElement := range interfaceArray {
+						switch regex, ok := interfaceElement.(string); ok {
+						default:
 							return fmt.Errorf("invalid mapped_selector_regexes regular expression construction for group %q, category %q:\n"+
-								"one of the array values is not a string: %v", group, category, interface_element)
+								"one of the array values is not a string: %v", group, category, interfaceElement)
+						case true:
+							regexArray = append(regexArray, regex)
 						}
 					}
-					if err := cl.SaveRegexes(group, category, regex_array); err != nil {
+					if err := cl.SaveRegexes(group, category, regexArray); err != nil {
 						return err
 					}
 				} else {
@@ -1141,20 +1147,20 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 	}
 
 	// We had to wait until now to do the following work, because only now will
-	// cl.mapped_regexes be defined and populated, in calls to cl.SaveRegexes() in
+	// cl.mappedRegexes be defined and populated, in calls to cl.SaveRegexes() in
 	// the loop just above.
 
-	if cl.mapped_regexes == nil {
-		// There are no regex groups configured (cl.mapped_regexes is an empty map).
+	if cl.mappedRegexes == nil {
+		// There are no regex groups configured (cl.mappedRegexes is an empty map).
 		// Return an error because this is an invalid configuration.
 		return fmt.Errorf("invalid configuration:  there are no mapped_selector_regexes groups defined that contain category regexes")
 	}
 
-	cl.all_regex_categories = make(map[string]bool)
-	for _, category_list := range cl.mapped_regexes {
-		for _, category_definition := range category_list {
-			for category := range category_definition {
-				cl.all_regex_categories[category] = true
+	cl.allRegexCategories = make(map[string]bool)
+	for _, categoryList := range cl.mappedRegexes {
+		for _, categoryDefinition := range categoryList {
+			for category := range categoryDefinition {
+				cl.allRegexCategories[category] = true
 			}
 		}
 	}
@@ -1171,13 +1177,13 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 	// in play.
 	//
 	// We also might have checked to see whether cl.DefaultCategory matches one of the
-	// categories listed in the mapped_regexes, and declare the configuration invalid
+	// categories listed in the mappedRegexes, and declare the configuration invalid
 	// if that is not the case.  We choose not to do that, because it seems like the
 	// user ought to be able to declare an "unknown" or "out-of-bounds" category via
 	// the default_category mechanism, not associating it with any regexes.  After
 	// all, that might be a reasonable interpretation of "default".
 
-	cl.drop_categories = make(map[string]bool)
+	cl.dropThisCategory = make(map[string]bool)
 	if cl.DropCategories != nil {
 		// Before we copy the data to an internal data structure for validation and use in
 		// operation, we normalize its structure, which can be polymorphic in the config file.
@@ -1190,12 +1196,12 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 			if category == "" {
 				return fmt.Errorf("found an empty string for a category in drop_categories")
 			}
-			if !cl.all_regex_categories[category] && category != cl.DefaultCategory {
+			if !cl.allRegexCategories[category] && category != cl.DefaultCategory {
 				return fmt.Errorf("%q is named in drop_categories but is not\n"+
 					"used as a category in any mapped_selector_regexes group\n"+
 					" or as the value of default_category", category)
 			}
-			cl.drop_categories[category] = true
+			cl.dropThisCategory[category] = true
 		}
 	}
 
@@ -1205,26 +1211,26 @@ func (cl *Classify) InitClassification(acc telegraf.Accumulator) error {
 // This is where we do the work of translating the exernally-specified config data
 // into an internal form used for the aggregator side of this plugin.
 func (cl *Classify) InitAggregation() error {
-	var err error = nil
+	var err error
 	if cl.AggregationPeriod != "" {
-		if cl.aggregation_period, err = time.ParseDuration(cl.AggregationPeriod); err != nil {
+		if cl.aggregationTimePeriod, err = time.ParseDuration(cl.AggregationPeriod); err != nil {
 			return fmt.Errorf("invalid aggregation_period: %v", err)
 		}
-		if cl.aggregation_period < time.Second {
+		if cl.aggregationTimePeriod < time.Second {
 			return fmt.Errorf("you cannot specify an aggregation_period shorter than a second")
 		}
 	} else {
-		cl.aggregation_period = 0
+		cl.aggregationTimePeriod = 0
 	}
 
 	// All distinct categories found in the MappedSelectorRegexes, plus AggregationDroppedField
 	// and AggregationTotalField, put together in a hash for quick lookup.
-	all_legal_categories := make(map[string]bool)
+	allLegalCategories := make(map[string]bool)
 
-	// We make a separate copy of the all_legal_categories map so as not to
+	// We make a separate copy of the allLegalCategories map so as not to
 	// change the original copy of that map when we add more entries to it.
-	for category, flag := range cl.all_regex_categories {
-		all_legal_categories[category] = flag
+	for category, flag := range cl.allRegexCategories {
+		allLegalCategories[category] = flag
 	}
 
 	// We validate that the cl.AggregationDroppedField and cl.AggregationTotalField do not match
@@ -1232,16 +1238,16 @@ func (cl *Classify) InitAggregation() error {
 	// in aggregation statistics.
 	//
 	if cl.AggregationDroppedField != "" {
-		if _, ok := cl.all_regex_categories[cl.AggregationDroppedField]; ok {
+		if _, ok := cl.allRegexCategories[cl.AggregationDroppedField]; ok {
 			return fmt.Errorf("invalid aggregation_dropped_field %q (matches a category in mapped_selector_regexes)", cl.AggregationDroppedField)
 		}
 		if cl.AggregationDroppedField == cl.DefaultCategory {
 			return fmt.Errorf("invalid aggregation_dropped_field %q (matches the default_category)", cl.AggregationDroppedField)
 		}
-		all_legal_categories[cl.AggregationDroppedField] = true
+		allLegalCategories[cl.AggregationDroppedField] = true
 	}
 	if cl.AggregationTotalField != "" {
-		if _, ok := cl.all_regex_categories[cl.AggregationTotalField]; ok {
+		if _, ok := cl.allRegexCategories[cl.AggregationTotalField]; ok {
 			return fmt.Errorf("invalid aggregation_total_field %q (matches a category in mapped_selector_regexes)", cl.AggregationTotalField)
 		}
 		if cl.AggregationTotalField == cl.AggregationDroppedField {
@@ -1250,7 +1256,7 @@ func (cl *Classify) InitAggregation() error {
 		if cl.AggregationTotalField == cl.DefaultCategory {
 			return fmt.Errorf("invalid aggregation_total_field %q (matches the default_category)", cl.AggregationTotalField)
 		}
-		all_legal_categories[cl.AggregationTotalField] = true
+		allLegalCategories[cl.AggregationTotalField] = true
 	}
 
 	if (cl.AggregationSummaryTag == "") != (cl.AggregationSummaryValue == "") {
@@ -1261,7 +1267,7 @@ func (cl *Classify) InitAggregation() error {
 		if field == "" {
 			return fmt.Errorf("aggregation_summary_fields cannot contain any empty strings")
 		}
-		if !all_legal_categories[field] {
+		if !allLegalCategories[field] {
 			return fmt.Errorf("%q is listed in aggregation_summary_fields\n"+
 				"    but is not either a defined regex category or equal to the value\n"+
 				"    of aggregation_dropped_field or aggregation_total_field", field)
@@ -1271,7 +1277,7 @@ func (cl *Classify) InitAggregation() error {
 		if field == "" {
 			return fmt.Errorf("aggregation_group_fields cannot contain any empty strings")
 		}
-		if !all_legal_categories[field] {
+		if !allLegalCategories[field] {
 			return fmt.Errorf("%q is listed in aggregation_group_fields\n"+
 				"    but is not either a defined regex category or equal to the value\n"+
 				"    of aggregation_dropped_field or aggregation_total_field", field)
@@ -1281,31 +1287,31 @@ func (cl *Classify) InitAggregation() error {
 		if field == "" {
 			return fmt.Errorf("aggregation_selector_fields cannot contain any empty strings")
 		}
-		if !all_legal_categories[field] {
+		if !allLegalCategories[field] {
 			return fmt.Errorf("%q is listed in aggregation_selector_fields\n"+
 				"    but is not either a defined regex category or equal to the value\n"+
 				"    of aggregation_dropped_field or aggregation_total_field", field)
 		}
 	}
 
-	cl.do_aggregation = false
-	cl.do_summary_aggregation = false
-	cl.do_group_aggregation = false
-	cl.do_selector_aggregation = false
-	if cl.aggregation_period != 0 && cl.AggregationMeasurement != "" {
+	cl.doAggregation = false
+	cl.doSummaryAggregation = false
+	cl.doGroupAggregation = false
+	cl.doSelectorAggregation = false
+	if cl.aggregationTimePeriod != 0 && cl.AggregationMeasurement != "" {
 		if cl.AggregationSummaryTag != "" && cl.AggregationSummaryValue != "" && len(cl.AggregationSummaryFields) != 0 {
-			cl.do_summary_aggregation = true
+			cl.doSummaryAggregation = true
 		}
 		if cl.AggregationGroupTag != "" && len(cl.AggregationGroupFields) != 0 {
-			cl.do_group_aggregation = true
+			cl.doGroupAggregation = true
 		}
 		if cl.AggregationSelectorTag != "" && len(cl.AggregationSelectorFields) != 0 {
-			cl.do_selector_aggregation = true
+			cl.doSelectorAggregation = true
 		}
-		cl.do_aggregation = cl.do_summary_aggregation || cl.do_group_aggregation || cl.do_selector_aggregation
+		cl.doAggregation = cl.doSummaryAggregation || cl.doGroupAggregation || cl.doSelectorAggregation
 	}
 
-	if cl.do_aggregation {
+	if cl.doAggregation {
 		// * create some corresponding aggregation counters (others will depend on details
 		//   of the input data points, and be dynamically created as data is processed)
 		// * set the created counters to zero
@@ -1324,17 +1330,17 @@ func (cl *Classify) InitAggregation() error {
 		// counters.  So the only allocation we need to do here is for the base maps, not
 		// the second-level maps.
 
-		if cl.do_summary_aggregation {
-			cl.shared_data.aggregation_summary = make(map[string]int)
+		if cl.doSummaryAggregation {
+			cl.sharedData.aggregationSummary = make(map[string]int)
 			for _, category := range cl.AggregationSummaryFields {
-				cl.shared_data.aggregation_summary[category] = 0
+				cl.sharedData.aggregationSummary[category] = 0
 			}
 		}
-		if cl.do_group_aggregation {
-			cl.shared_data.aggregation_by_group = make(map[string]map[string]int)
+		if cl.doGroupAggregation {
+			cl.sharedData.aggregationByGroup = make(map[string]map[string]int)
 		}
-		if cl.do_selector_aggregation {
-			cl.shared_data.aggregation_by_selector = make(map[string]map[string]int)
+		if cl.doSelectorAggregation {
+			cl.sharedData.aggregationBySelector = make(map[string]map[string]int)
 		}
 	}
 
@@ -1342,13 +1348,12 @@ func (cl *Classify) InitAggregation() error {
 }
 
 func (cl *Classify) InitSynchronization() error {
-	//lint:ignore SA9003 we leave this empty block in place to show the intent here
-	if cl.do_aggregation {
-		// There is no need to initialize the required thread-synchronization object
-		// (aggregation_mutex).  Its initial zero value is already an unlocked mutex,
-		// and we have no way to force that state if it is not already in place (see
-		// the Reset() function).
-	}
+	// if cl.doAggregation {
+	// // There is no need to initialize the required thread-synchronization object
+	// // (aggregationMutex).  Its initial zero value is already an unlocked mutex,
+	// // and we have no way to force that state if it is not already in place (see
+	// // the Reset() function).
+	// }
 	return nil
 }
 
@@ -1365,24 +1370,25 @@ func (cl *Classify) StopClassification() error {
 }
 
 func (cl *Classify) StartAggregation() error {
-	if cl.do_aggregation {
-		cl.stop_requested = make(chan bool)
-		cl.wait_group.Add(1)
+	if cl.doAggregation {
+		cl.stopRequested = make(chan bool)
+		cl.syncWaitGroup.Add(1)
 		go cl.RunAggregation()
 	}
 	return nil
 }
 
 func (cl *Classify) StopAggregation() error {
-	if cl.do_aggregation {
-		cl.stop_requested <- true
+	if cl.doAggregation {
+		cl.stopRequested <- true
 		// Block, waiting for cl.RunAggregation() to stop.
-		cl.wait_group.Wait()
+		cl.syncWaitGroup.Wait()
 	}
 	return nil
 }
 
-func (cl *Classify) RunAggregation() error {
+// This function is designed to run as a goroutine, so it doesn't return any value.
+func (cl *Classify) RunAggregation() {
 	// This should never be invoked in practice, because we should not have any
 	// bugs that panic the code.  It is here only because the ordinary data that
 	// is printed out when an actual panic occurs seems to be wanting.  We need
@@ -1399,15 +1405,15 @@ func (cl *Classify) RunAggregation() error {
 		}
 	}()
 
-	// When RunAggregation() exits, flag that fact so the cl.wait_group.Wait()
+	// When RunAggregation() exits, flag that fact so the cl.syncWaitGroup.Wait()
 	// call in StopAggregation() can return.
-	defer cl.wait_group.Done()
+	defer cl.syncWaitGroup.Done()
 
 	// We prefer the aggregation-cycle ticker to not have an uncontrolled phase within
 	// its period.  Instead, we generally wish the initial wait period to be shorter
-	// than a full cl.aggregation_period, so ticker period endpoints align naturally
+	// than a full cl.aggregationTimePeriod, so ticker period endpoints align naturally
 	// with the obvious nominal clock points (e.g.,  00:05:00, 00:10:00, and so forth,
-	// for a 300-second cl.aggregation_period).
+	// for a 300-second cl.aggregationTimePeriod).
 	//
 	// It would be more convenient if time.NewTicker() supported an optional second
 	// argument to specify the initial ticker duration, after which the standard
@@ -1421,7 +1427,7 @@ func (cl *Classify) RunAggregation() error {
 	// synchronized with wall-clock time.
 	//
 	now := time.Now()
-	timer := time.NewTimer(now.Add(cl.aggregation_period).Truncate(cl.aggregation_period).Sub(now))
+	timer := time.NewTimer(now.Add(cl.aggregationTimePeriod).Truncate(cl.aggregationTimePeriod).Sub(now))
 	ticker := time.NewTicker(1_000_000 * time.Hour)
 	var t time.Time
 	for quit := false; !quit; {
@@ -1433,9 +1439,9 @@ func (cl *Classify) RunAggregation() error {
 		select {
 		case t = <-timer.C:
 			ticker.Stop()
-			ticker = time.NewTicker(cl.aggregation_period)
+			ticker = time.NewTicker(cl.aggregationTimePeriod)
 		case t = <-ticker.C:
-		case quit = <-cl.stop_requested:
+		case quit = <-cl.stopRequested:
 			t = time.Now()
 		}
 		// Carry out one iteration of aggregation, whether it be the initial cycle
@@ -1447,14 +1453,12 @@ func (cl *Classify) RunAggregation() error {
 	}
 	timer.Stop()
 	ticker.Stop()
-
-	return nil
 }
 
 // Helper function for OutputAggregationData(), to factor out common code.
-func (cl *Classify) GenerateMetric(tag_name string, tag_value string, counters map[string]int, timestamp time.Time) {
+func (cl *Classify) GenerateMetric(tagName string, tagValue string, counters map[string]int, timestamp time.Time) {
 	fields := make(map[string]interface{})
-	have_nonzero_counter := false
+	haveNonzeroCounter := false
 	for category, count := range counters {
 		// If all the counters for this aggregation data point are zero, the entire data
 		// point will be suppressed, to reduce noise in the system.  If at least one counter
@@ -1465,13 +1469,13 @@ func (cl *Classify) GenerateMetric(tag_name string, tag_value string, counters m
 		// those zero values to be present in the aggregated-data output data point, you can
 		// use the aggregation_includes_zeroes config option to enable that behavior
 		if count > 0 {
-			have_nonzero_counter = true
+			haveNonzeroCounter = true
 			fields[category] = count
 		} else if cl.AggregationIncludesZeroes {
 			fields[category] = count
 		}
 	}
-	if have_nonzero_counter {
+	if haveNonzeroCounter {
 		// We could have added the aggregated statistics as untyped metrics, but
 		// somewhat arbitrarily we chose to instead label them as counters.
 		//
@@ -1491,11 +1495,11 @@ func (cl *Classify) GenerateMetric(tag_name string, tag_value string, counters m
 		// https://pkg.go.dev/github.com/influxdata/telegraf#Accumulator
 		//
 		cl.acc.AddCounter(cl.AggregationMeasurement, fields,
-			map[string]string{tag_name: tag_value}, timestamp)
+			map[string]string{tagName: tagValue}, timestamp)
 	}
 }
 
-func (cl *Classify) OutputAggregationData(timestamp time.Time) error {
+func (cl *Classify) OutputAggregationData(timestamp time.Time) {
 	// Run one cycle of outputting accumulated statistics-aggregation counts
 	// as data points separate from the input data points being processed by
 	// the main thread of this plugin.  Synchronize access to the relevant
@@ -1504,38 +1508,36 @@ func (cl *Classify) OutputAggregationData(timestamp time.Time) error {
 	// (for static counters) or destroy the counters (for counters which are
 	// dynamically auto-vivified during each aggregation cycle).
 
-	cl.shared_data.aggregation_mutex.Lock()
-	defer cl.shared_data.aggregation_mutex.Unlock()
+	cl.sharedData.aggregationMutex.Lock()
+	defer cl.sharedData.aggregationMutex.Unlock()
 
-	if cl.do_summary_aggregation {
+	if cl.doSummaryAggregation {
 		cl.GenerateMetric(cl.AggregationSummaryTag, cl.AggregationSummaryValue,
-			cl.shared_data.aggregation_summary, timestamp)
+			cl.sharedData.aggregationSummary, timestamp)
 
 		// Now that we have possibly output the single summary line that is
 		// appropriate in this context, we reset all the associated counters
 		// so they will be freshly initialized for the next aggregation period.
-		for category := range cl.shared_data.aggregation_summary {
-			cl.shared_data.aggregation_summary[category] = 0
+		for category := range cl.sharedData.aggregationSummary {
+			cl.sharedData.aggregationSummary[category] = 0
 		}
 	}
-	if cl.do_group_aggregation {
-		for group, category_counts := range cl.shared_data.aggregation_by_group {
-			cl.GenerateMetric(cl.AggregationGroupTag, group, category_counts, timestamp)
+	if cl.doGroupAggregation {
+		for group, categoryCounts := range cl.sharedData.aggregationByGroup {
+			cl.GenerateMetric(cl.AggregationGroupTag, group, categoryCounts, timestamp)
 		}
 
 		// Destroy all the group-level counters.
-		cl.shared_data.aggregation_by_group = make(map[string]map[string]int)
+		cl.sharedData.aggregationByGroup = make(map[string]map[string]int)
 	}
-	if cl.do_selector_aggregation {
-		for selector, category_counts := range cl.shared_data.aggregation_by_selector {
-			cl.GenerateMetric(cl.AggregationSelectorTag, selector, category_counts, timestamp)
+	if cl.doSelectorAggregation {
+		for selector, categoryCounts := range cl.sharedData.aggregationBySelector {
+			cl.GenerateMetric(cl.AggregationSelectorTag, selector, categoryCounts, timestamp)
 		}
 
 		// Destroy all the selector-level counters.
-		cl.shared_data.aggregation_by_selector = make(map[string]map[string]int)
+		cl.sharedData.aggregationBySelector = make(map[string]map[string]int)
 	}
-
-	return nil
 }
 
 // This function is called by Telegraf to add this plugin into the running configuration.

@@ -1,4 +1,4 @@
-# Makefile for the Telegraf classify processor plugin 
+# Makefile for the Telegraf classify processor plugin
 
 # Where I have loaded Go temporarily for development work, because the OS copy is out of date.
 # Set this as necessary to get this plugin built in your own development environment.
@@ -14,6 +14,13 @@ format	:
 
 lint	:
 	env PATH="${GOPATH}/bin:$$PATH" GOPATH="${GOPATH}" staticcheck
+
+# More aggressive linting.  Hopefully not enough to make a whole sweater.
+# That said, not all recommendations made by the golangci-lint tool make
+# sense, so we treat some of them like a yarn (fanciful story), and we
+# disable a few specific checks in the code.
+yarn	:
+	env PATH="${GOPATH}/bin:$$PATH" GOPATH="${GOPATH}" golangci-lint run
 
 build	:
 	env PATH="${GOPATH}/bin:$$PATH" GOPATH="${GOPATH}" go build classify.go
