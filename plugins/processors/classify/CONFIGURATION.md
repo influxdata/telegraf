@@ -80,30 +80,30 @@ aggregation statistics).
   an empty string as its value, you should consider what you want to do
   in that situation.
 
-    * You can explicitly declare that input data points with an empty
-    string as the selector item value should be dropped silently (except
-    for being counted as such in aggregation statistics).  This would
-    probably be the most common choice.
+  * You can explicitly declare that input data points with an empty
+  string as the selector item value should be dropped silently (except
+  for being counted as such in aggregation statistics).  This would
+  probably be the most common choice.
 
-      ```toml
-      selector_mapping = [
-        { '^$' = '' },
-      ]
-      ```
+    ```toml
+    selector_mapping = [
+      { '^$' = '' },
+    ]
+    ```
 
-    * You can explicitly declare that empty selector item values should
-    map to some particular non-empty regex-group name:
+  * You can explicitly declare that empty selector item values should
+  map to some particular non-empty regex-group name:
 
-      ```toml
-      selector_mapping = [
-        { '^$' = 'my_regex_group' },
-      ]
-      ```
+    ```toml
+    selector_mapping = [
+      { '^$' = 'my_regex_group' },
+    ]
+    ```
 
-    * You can allow such an input data point to be defaulted as not
-    matching any key in the `selector_mapping`, and have the later rule
-    kick in that will use the value of the `default_regex_group` option
-    as the selector mapping value.
+  * You can allow such an input data point to be defaulted as not
+  matching any key in the `selector_mapping`, and have the later rule
+  kick in that will use the value of the `default_regex_group` option
+  as the selector mapping value.
 
 * If this mapping is defined, the selector item's value matches a key
 in the mapping, and the mapped value is present in the configuration as

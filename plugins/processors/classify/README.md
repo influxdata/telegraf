@@ -56,7 +56,7 @@ a variety of different messages that might appear from a given source,
 classifying them into just a few result categories.  So the overall
 logical structure of the regular expressions that can be configured is:
 
-```
+```markdown
 regex_group_name
     category_name
         regex
@@ -144,7 +144,7 @@ is processed)
 
 _Processing thread, executed once for each input data point:_
 
-```
+```markdown
 read data point
 regex_group_name = {map selector value}
 foreach regex_category in regexes[regex_group_name] {
@@ -283,7 +283,7 @@ show here).
 
 _What is the total volume of messages across my infrastructure?_
 
-```
+```markdown
 ## Show the overall distribution of classification states and plugin
 ## activity.  Bin the counts of data points reported here by {category}
 ## only, without discriminating by {group} or {selector}.
@@ -293,7 +293,7 @@ status,summary=full ignore=5,okay=3,warning=8,critical=2,unknown=1,dropped=5,tot
 _What kinds of machines/devices are generating lots of messages I might
 care about?_
 
-```
+```markdown
 ## Show a coarse distribution of incoming data, based on the mapping
 ## of {selector} values to {group} values.  Bin the counts reported
 ## here by {group} and {category} only, ignoring the particular
@@ -308,7 +308,7 @@ status,host_type=router warning=1,critical=1,total=7
 
 _What kinds of services in my infrastructure are in good or bad shape?_
 
-```
+```markdown
 ## Show a coarse distribution of incoming data, based on the mapping
 ## of {selector} values to {group} values.  Bin the counts reported
 ## here by {group} and {category} only, ignoring the particular
@@ -325,7 +325,7 @@ status,host_type=router ignore=4,okay=0,warning=1,critical=1,unknown=1
 
 _What is the bird's-eye view of how my infrastructure is running?_
 
-```
+```markdown
 ## Show a coarse distribution of incoming data, based on the mapping
 ## of {selector} values to {group} values.  Bin the counts reported
 ## here by {group} and {category} only.  For this example, we not only
@@ -344,7 +344,7 @@ status,host_type=router ignore=4,okay=0,warning=1,critical=1,unknown=1,total=7
 _What particular machines are generating lots of messages, regardless
 of severity?_
 
-```
+```markdown
 ## Show just the volume of incoming data across selector values,
 ## regardless of utility or classification.  This might be useful,
 ## for instance, if we have set up upstream filtering so only
@@ -362,7 +362,7 @@ status,host=rout237 total=7
 _What were the overall states of particular machines during each
 reporting period?_
 
-```
+```markdown
 ## Show detailed counts of classifications on a per-selector-value basis.
 ## Bin the counts by the combination of {selector} and {category}.  We
 ## don't care about the other available data (dropped-data-point and
@@ -381,7 +381,7 @@ status,host=rout237 ignore=4,okay=0,warning=1,critical=1,unknown=1
 _How healthy are my servers, in the eyes of everyone who cares in one
 way or another?_
 
-```
+```markdown
 ## Show detailed counts of classifications on a per-selector-value basis,
 ## and also capture the total-traffic count for each host.  The latter
 ## will be used not for the NOC operators, but for a management report to
