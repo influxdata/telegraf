@@ -27,10 +27,14 @@ later.
  ## Grpc Maximum Message Size, default is 4MB, increase the size.
  max_msg_size = 4000000
 
- ## GRPC permit keepalives without calls, set to true if your clients are sending pings without calls in-flight.
+ ## GRPC permit keepalives without calls, set to true if your clients are
+ ## sending pings without calls in-flight. This can sometimes happen on IOS-XE
+ ## devices where the GRPC connection is left open but subscriptions have been
+ ## removed, and adding subsequent subscriptions does not keep a stable session.
  # permit_keepalive_without_calls = false
 
- ## GRPC minimum timeout between successive pings, decreasing this value may help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
+ ## GRPC minimum timeout between successive pings, decreasing this value may 
+ ## help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
  # keepalive_minimum_time = "5m"
 
  ## Enable TLS; grpc transport only.
@@ -65,11 +69,12 @@ later.
 
 ## Metrics
 
-Metrics are named by the encoding path that generated the data, or by the alias if the
-`inputs.cisco_telemetry_mdt.aliases` config section is defined.
+Metrics are named by the encoding path that generated the data, or by the alias
+if the `inputs.cisco_telemetry_mdt.aliases` config section is defined.
 Metric fields are dependent on the device type and path.
 
 Tags included in all metrics:
+
 - source
 - path
 - subscription
