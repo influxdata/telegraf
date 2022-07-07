@@ -209,6 +209,3 @@ func NewParser(config *Config) (Parser, error) {
 	}
 	return parser, err
 }
-
-	}, nil
-}
