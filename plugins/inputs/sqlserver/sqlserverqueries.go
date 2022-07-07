@@ -1362,7 +1362,7 @@ WITH MostRecentBackups AS
 ),
 BackupsWithSize AS
 (
-	SELECT mrb.*, CAST((SELECT TOP 1 b.backup_size FROM msdb.dbo.backupset b WHERE [Database] = b.database_name AND LastBackupTime = b.backup_finish_date) AS int) AS [backup_size]
+	SELECT mrb.*, CAST((SELECT TOP 1 b.backup_size FROM msdb.dbo.backupset b WHERE [Database] = b.database_name AND LastBackupTime = b.backup_finish_date) AS bigint) AS [backup_size]
 	FROM MostRecentBackups mrb
 )
 
