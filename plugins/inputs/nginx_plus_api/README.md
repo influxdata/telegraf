@@ -64,7 +64,7 @@ between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
 | nginx_plus_api_resolver_zones        | >= 5                      |
 | nginx_plus_api_http_limit_reqs       | >= 6                      |
 
-## Measurements & Fields
+## Metrics
 
 - nginx_plus_api_processes
   - respawned
@@ -202,7 +202,7 @@ between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
   - delayed_dry_run
   - rejected_dry_run
 
-## Tags
+### Tags
 
 - nginx_plus_api_processes, nginx_plus_api_connections, nginx_plus_api_ssl, nginx_plus_api_http_requests
   - source
