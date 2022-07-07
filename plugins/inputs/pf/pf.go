@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package pf
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -11,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const measurement = "pf"
 const pfctlCommand = "pfctl"
@@ -23,18 +29,8 @@ type PF struct {
 	infoFunc     func() (string, error)
 }
 
-func (pf *PF) Description() string {
-	return "Gather counters from PF"
-}
-
-func (pf *PF) SampleConfig() string {
-	return `
-  ## PF require root access on most systems.
-  ## Setting 'use_sudo' to true will make use of sudo to run pfctl.
-  ## Users must configure sudo to allow telegraf user to run pfctl with no password.
-  ## pfctl can be restricted to only list command "pfctl -s info".
-  use_sudo = false
-`
+func (*PF) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather is the entrypoint for the plugin.
@@ -222,7 +218,7 @@ func (pf *PF) buildPfctlCmd() (string, []string, error) {
 
 func init() {
 	inputs.Add("pf", func() telegraf.Input {
-		pf := new(PF)
+		pf := &PF{}
 		pf.infoFunc = pf.callPfctl
 		return pf
 	})

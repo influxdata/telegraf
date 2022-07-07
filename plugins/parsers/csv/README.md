@@ -1,4 +1,4 @@
-# CSV
+# CSV Parser Plugin
 
 The `csv` parser creates metrics from a document containing comma separated
 values.
@@ -36,12 +36,11 @@ values.
   ## Indicates the number of rows to skip before looking for metadata and header information.
   csv_skip_rows = 0
   
-  
   ## Indicates the number of rows to parse as metadata before looking for header information. 
   ## By default, the parser assumes there are no metadata rows to parse. 
   ## If set, the parser would use the provided separators in the csv_metadata_separators to look for metadata.
-  ## Please note that by default, the (key, value) pairs will be added as fields. 
-  ## Use the tag_columns to convert the metadata into tags.
+  ## Please note that by default, the (key, value) pairs will be added as tags. 
+  ## If fields are required, use the converter processor.
   csv_metadata_rows = 0
   
   ## A list of metadata separators. If csv_metadata_rows is set,
@@ -50,7 +49,7 @@ values.
   csv_metadata_separators = [":", "="]
   
   ## A set of metadata trim characters. 
-  ## If csv_metadata_trim_cutset is not set, no trimming is performed.
+  ## If csv_metadata_trim_set is not set, no trimming is performed.
   ## Please note that the trim cutset is case sensitive.
   csv_metadata_trim_set = ""
 
@@ -99,6 +98,14 @@ values.
   ## If set to true, the parser will skip csv lines that cannot be parsed.
   ## By default, this is false
   csv_skip_errors = false
+
+  ## Reset the parser on given conditions.
+  ## This option can be used to reset the parser's state e.g. when always reading a
+  ## full CSV structure including header etc. Available modes are
+  ##    "none"   -- do not reset the parser (default)
+  ##    "always" -- reset the parser with each call (ignored in line-wise parsing)
+  ##                Helpful when e.g. reading whole files in each gather-cycle.
+  # csv_reset_mode = "none"
   ```
 
 ### csv_timestamp_column, csv_timestamp_format
@@ -108,10 +115,10 @@ time using the JSON document you can use the `csv_timestamp_column` and
 `csv_timestamp_format` options together to set the time to a value in the parsed
 document.
 
-The `csv_timestamp_column` option specifies the key containing the time value and
-`csv_timestamp_format` must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`,
-or a format string in using the Go "reference time" which is defined to be the
-**specific time**: `Mon Jan 2 15:04:05 MST 2006`.
+The `csv_timestamp_column` option specifies the key containing the time value
+and `csv_timestamp_format` must be set to `unix`, `unix_ms`, `unix_us`,
+`unix_ns`, or a format string in using the Go "reference time" which is defined
+to be the **specific time**: `Mon Jan 2 15:04:05 MST 2006`.
 
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.

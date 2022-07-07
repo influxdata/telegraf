@@ -386,7 +386,7 @@ func TestEstimateCoresFd(t *testing.T) {
 			{parsedEvents: makeEvents(2, 1), parsedCores: makeIDs(20)},
 		}, 715},
 		{"1024 events", []*CoreEventEntity{{parsedEvents: makeEvents(1024, 1), parsedCores: makeIDs(12)}}, 12288},
-		{"big number", []*CoreEventEntity{{parsedEvents: makeEvents(1048576, 1), parsedCores: makeIDs(1024)}}, 1073741824},
+		{"big number", []*CoreEventEntity{{parsedEvents: makeEvents(1024, 1), parsedCores: makeIDs(1048576)}}, 1073741824},
 	}
 
 	for _, test := range tests {

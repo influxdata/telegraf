@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // Package openstack implements an OpenStack input plugin for Telegraf
 //
 // The OpenStack input plug is a simple two phase metric collector.  In the first
@@ -10,6 +11,7 @@ package openstack
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"regexp"
 	"sort"
@@ -35,11 +37,16 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/openstack/orchestration/v1/stacks"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	typePort    = regexp.MustCompile(`_rx$|_rx_drop$|_rx_errors$|_rx_packets$|_tx$|_tx_drop$|_tx_errors$|_tx_packets$`)
@@ -105,68 +112,7 @@ func (o *OpenStack) convertTimeFormat(t time.Time) interface{} {
 	return t.UnixNano()
 }
 
-// Description returns a description string of the input plugin and implements
-// the Input interface.
-func (o *OpenStack) Description() string {
-	return "Collects performance metrics from OpenStack services"
-}
-
-// sampleConfig is a sample configuration file entry.
-var sampleConfig = `
-  ## The recommended interval to poll is '30m'
-
-  ## The identity endpoint to authenticate against and get the service catalog from.
-  authentication_endpoint = "https://my.openstack.cloud:5000"
-
-  ## The domain to authenticate against when using a V3 identity endpoint.
-  # domain = "default"
-
-  ## The project to authenticate as.
-  # project = "admin"
-
-  ## User authentication credentials. Must have admin rights.
-  username = "admin"
-  password = "password"
-
-  ## Available services are:
-  ## "agents", "aggregates", "flavors", "hypervisors", "networks", "nova_services",
-  ## "ports", "projects", "servers", "services", "stacks", "storage_pools", "subnets", "volumes"
-  # enabled_services = ["services", "projects", "hypervisors", "flavors", "networks", "volumes"]
-
-  ## Collect Server Diagnostics
-  # server_diagnotics = false
-
-  ## output secrets (such as adminPass(for server) and UserID(for volume)).
-  # output_secrets = false
-
-  ## Amount of time allowed to complete the HTTP(s) request.
-  # timeout = "5s"
-
-  ## HTTP Proxy support
-  # http_proxy_url = ""
-
-  ## Optional TLS Config
-  # tls_ca = /path/to/cafile
-  # tls_cert = /path/to/certfile
-  # tls_key = /path/to/keyfile
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Options for tags received from Openstack
-  # tag_prefix = "openstack_tag_"
-  # tag_value = "true"
-
-  ## Timestamp format for timestamp data recieved from Openstack.
-  ## If false format is unix nanoseconds.
-  # human_readable_timestamps = false
-
-  ## Measure Openstack call duration
-  # measure_openstack_requests = false
-`
-
-// SampleConfig return a sample configuration file for auto-generation and
-// implements the Input interface.
-func (o *OpenStack) SampleConfig() string {
+func (*OpenStack) SampleConfig() string {
 	return sampleConfig
 }
 

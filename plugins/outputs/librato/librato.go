@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package librato
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Librato structure for configuration and client
 type Librato struct {
@@ -31,24 +37,6 @@ type Librato struct {
 
 // https://www.librato.com/docs/kb/faq/best_practices/naming_convention_metrics_sources.html#naming-limitations-for-sources-and-metrics
 var reUnacceptedChar = regexp.MustCompile("[^.a-zA-Z0-9_-]")
-
-var sampleConfig = `
-  ## Librato API Docs
-  ## http://dev.librato.com/v1/metrics-authentication
-  ## Librato API user
-  api_user = "telegraf@influxdb.com" # required.
-  ## Librato API token
-  api_token = "my-secret-token" # required.
-  ## Debug
-  # debug = false
-  ## Connection timeout.
-  # timeout = "5s"
-  ## Output source Template (same as graphite buckets)
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  ## This template is used in librato's source (not metric's name)
-  template = "host"
-
-`
 
 // LMetrics is the default struct for Librato's API fromat
 type LMetrics struct {
@@ -71,6 +59,10 @@ func NewLibrato(apiURL string) *Librato {
 		APIUrl:   apiURL,
 		Template: "host",
 	}
+}
+
+func (*Librato) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect is the default output plugin connection function who make sure it
@@ -174,17 +166,6 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 		l.Log.Debugf("Librato response: %v", string(htmlData))
 	}
 	return nil
-}
-
-// SampleConfig is function who return the default configuration for this
-// output
-func (l *Librato) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description is function who return the Description of this output
-func (l *Librato) Description() string {
-	return "Configuration for Librato API to send metrics to."
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {

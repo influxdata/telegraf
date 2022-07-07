@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package twemproxy
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,24 +13,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Twemproxy struct {
 	Addr  string
 	Pools []string
 }
 
-var sampleConfig = `
-  ## Twemproxy stats address and port (no scheme)
-  addr = "localhost:22222"
-  ## Monitor pool name
-  pools = ["redis_pool", "mc_pool"]
-`
-
-func (t *Twemproxy) SampleConfig() string {
+func (*Twemproxy) SampleConfig() string {
 	return sampleConfig
-}
-
-func (t *Twemproxy) Description() string {
-	return "Read Twemproxy stats data"
 }
 
 // Gather data from all Twemproxy instances

@@ -1,4 +1,4 @@
-# Pivot Processor
+# Pivot Processor Plugin
 
 You can use the `pivot` processor to rotate single valued metrics into a multi
 field metric.  This transformation often results in data that is more easily
@@ -10,7 +10,8 @@ To perform the reverse operation use the [unpivot] processor.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Rotate a single valued metric into a multi field metric
 [[processors.pivot]]
   ## Tag to use for naming the new field.
   tag_key = "name"

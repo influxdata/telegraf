@@ -1,7 +1,7 @@
 # Procstat Input Plugin
 
-The procstat plugin can be used to monitor the system resource usage of one or more processes.
-The procstat_lookup metric displays the query information,
+The procstat plugin can be used to monitor the system resource usage of one or
+more processes.  The procstat_lookup metric displays the query information,
 specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
@@ -16,7 +16,7 @@ Processes can be selected for monitoring using one of several methods:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Monitor process cpu and memory usage
 [[inputs.procstat]]
   ## PID file to monitor process
@@ -30,7 +30,7 @@ Processes can be selected for monitoring using one of several methods:
   ## Systemd unit name, supports globs when include_systemd_children is set to true
   # systemd_unit = "nginx.service"
   # include_systemd_children = false
-  ## CGroup name or path
+  ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
 
   ## Windows service name

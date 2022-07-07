@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
@@ -28,7 +30,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -36,17 +39,6 @@ import (
 )
 
 var (
-	// Default sections
-	sectionDefaults = []string{"global_tags", "agent", "outputs",
-		"processors", "aggregators", "inputs"}
-
-	// Default input plugins
-	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
-		"processes", "disk", "diskio"}
-
-	// Default output plugins
-	outputDefaults = []string{"influxdb"}
-
 	// envVarRe is a regex to find environment variables in the config file
 	envVarRe = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
 
@@ -65,9 +57,10 @@ var (
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	toml         *toml.Config
-	errs         []error // config load errors.
-	UnusedFields map[string]bool
+	toml              *toml.Config
+	errs              []error // config load errors.
+	UnusedFields      map[string]bool
+	unusedFieldsMutex *sync.Mutex
 
 	Tags          map[string]string
 	InputFilters  []string
@@ -91,7 +84,8 @@ type Config struct {
 // once the configuration is parsed.
 func NewConfig() *Config {
 	c := &Config{
-		UnusedFields: map[string]bool{},
+		UnusedFields:      map[string]bool{},
+		unusedFieldsMutex: &sync.Mutex{},
 
 		// Agent defaults:
 		Agent: &AgentConfig{
@@ -226,7 +220,9 @@ type AgentConfig struct {
 	Hostname     string
 	OmitHostname bool
 
-	Translator string `toml:"translator"`
+	// Method for translating SNMP objects. 'netsnmp' to call external programs,
+	// 'gosmi' to use the built-in library.
+	SnmpTranslator string `toml:"snmp_translator"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -308,399 +304,6 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
-var header = `# Telegraf Configuration
-#
-# Telegraf is entirely plugin driven. All metrics are gathered from the
-# declared inputs, and sent to the declared outputs.
-#
-# Plugins must be declared in here to be active.
-# To deactivate a plugin, comment out the name and any variables.
-#
-# Use 'telegraf -config telegraf.conf -test' to see what metrics a config
-# file would generate.
-#
-# Environment variables can be used anywhere in this config file, simply surround
-# them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
-# for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
-
-`
-var globalTagsConfig = `
-# Global tags can be specified here in key="value" format.
-[global_tags]
-  # dc = "us-east-1" # will tag all metrics with dc=us-east-1
-  # rack = "1a"
-  ## Environment variables can be used as tags, and throughout the config file
-  # user = "$USER"
-
-`
-
-var agentConfig = `
-# Configuration for telegraf agent
-[agent]
-  ## Default data collection interval for all inputs
-  interval = "10s"
-  ## Rounds collection interval to 'interval'
-  ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
-  round_interval = true
-
-  ## Telegraf will send metrics to outputs in batches of at most
-  ## metric_batch_size metrics.
-  ## This controls the size of writes that Telegraf sends to output plugins.
-  metric_batch_size = 1000
-
-  ## Maximum number of unwritten metrics per output.  Increasing this value
-  ## allows for longer periods of output downtime without dropping metrics at the
-  ## cost of higher maximum memory usage.
-  metric_buffer_limit = 10000
-
-  ## Collection jitter is used to jitter the collection by a random amount.
-  ## Each plugin will sleep for a random time within jitter before collecting.
-  ## This can be used to avoid many plugins querying things like sysfs at the
-  ## same time, which can have a measurable effect on the system.
-  collection_jitter = "0s"
-
-  ## Collection offset is used to shift the collection by the given amount.
-  ## This can be be used to avoid many plugins querying constraint devices
-  ## at the same time by manually scheduling them in time.
-  # collection_offset = "0s"
-
-  ## Default flushing interval for all outputs. Maximum flush_interval will be
-  ## flush_interval + flush_jitter
-  flush_interval = "10s"
-  ## Jitter the flush interval by a random amount. This is primarily to avoid
-  ## large write spikes for users running a large number of telegraf instances.
-  ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
-  flush_jitter = "0s"
-
-  ## Collected metrics are rounded to the precision specified. Precision is
-  ## specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
-  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
-  ##
-  ## By default or when set to "0s", precision will be set to the same
-  ## timestamp order as the collection interval, with the maximum being 1s:
-  ##   ie, when interval = "10s", precision will be "1s"
-  ##       when interval = "250ms", precision will be "1ms"
-  ##
-  ## Precision will NOT be used for service inputs. It is up to each individual
-  ## service input to set the timestamp at the appropriate precision.
-  precision = "0s"
-
-  ## Log at debug level.
-  # debug = false
-  ## Log only error level messages.
-  # quiet = false
-
-  ## Log target controls the destination for logs and can be one of "file",
-  ## "stderr" or, on Windows, "eventlog".  When set to "file", the output file
-  ## is determined by the "logfile" setting.
-  # logtarget = "file"
-
-  ## Name of the file to be logged to when using the "file" logtarget.  If set to
-  ## the empty string then logs are written to stderr.
-  # logfile = ""
-
-  ## The logfile will be rotated after the time interval specified.  When set
-  ## to 0 no time based rotation is performed.  Logs are rotated only when
-  ## written to, if there is no log activity rotation may be delayed.
-  # logfile_rotation_interval = "0d"
-
-  ## The logfile will be rotated when it becomes larger than the specified
-  ## size.  When set to 0 no size based rotation is performed.
-  # logfile_rotation_max_size = "0MB"
-
-  ## Maximum number of rotated archives to keep, any older logs are deleted.
-  ## If set to -1, no archives are removed.
-  # logfile_rotation_max_archives = 5
-
-  ## Pick a timezone to use when logging or type 'local' for local time.
-  ## Example: America/Chicago
-  # log_with_timezone = ""
-
-  ## Override default hostname, if empty use os.Hostname()
-  hostname = ""
-  ## If set to true, do no set the "host" tag in the telegraf agent.
-  omit_hostname = false
-
-  ## Translator for SNMP OIDs
-  ## Valid values are "netsnmp" which runs snmptranslate and snmptable,
-  ## and "gosmi" which uses the gosmi library.
-  # translator = "netsnmp"
-`
-
-var outputHeader = `
-###############################################################################
-#                            OUTPUT PLUGINS                                   #
-###############################################################################
-
-`
-
-var processorHeader = `
-###############################################################################
-#                            PROCESSOR PLUGINS                                #
-###############################################################################
-
-`
-
-var aggregatorHeader = `
-###############################################################################
-#                            AGGREGATOR PLUGINS                               #
-###############################################################################
-
-`
-
-var inputHeader = `
-###############################################################################
-#                            INPUT PLUGINS                                    #
-###############################################################################
-
-`
-
-var serviceInputHeader = `
-###############################################################################
-#                            SERVICE INPUT PLUGINS                            #
-###############################################################################
-
-`
-
-// PrintSampleConfig prints the sample config
-func PrintSampleConfig(
-	sectionFilters []string,
-	inputFilters []string,
-	outputFilters []string,
-	aggregatorFilters []string,
-	processorFilters []string,
-) {
-	// print headers
-	fmt.Print(header)
-
-	if len(sectionFilters) == 0 {
-		sectionFilters = sectionDefaults
-	}
-	printFilteredGlobalSections(sectionFilters)
-
-	// print output plugins
-	if sliceContains("outputs", sectionFilters) {
-		if len(outputFilters) != 0 {
-			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
-				fmt.Print(outputHeader)
-			}
-			printFilteredOutputs(outputFilters, false)
-		} else {
-			fmt.Print(outputHeader)
-			printFilteredOutputs(outputDefaults, false)
-			// Print non-default outputs, commented
-			var pnames []string
-			for pname := range outputs.Outputs {
-				if !sliceContains(pname, outputDefaults) {
-					pnames = append(pnames, pname)
-				}
-			}
-			sort.Strings(pnames)
-			printFilteredOutputs(pnames, true)
-		}
-	}
-
-	// print processor plugins
-	if sliceContains("processors", sectionFilters) {
-		if len(processorFilters) != 0 {
-			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
-				fmt.Print(processorHeader)
-			}
-			printFilteredProcessors(processorFilters, false)
-		} else {
-			fmt.Print(processorHeader)
-			pnames := []string{}
-			for pname := range processors.Processors {
-				pnames = append(pnames, pname)
-			}
-			sort.Strings(pnames)
-			printFilteredProcessors(pnames, true)
-		}
-	}
-
-	// print aggregator plugins
-	if sliceContains("aggregators", sectionFilters) {
-		if len(aggregatorFilters) != 0 {
-			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
-				fmt.Print(aggregatorHeader)
-			}
-			printFilteredAggregators(aggregatorFilters, false)
-		} else {
-			fmt.Print(aggregatorHeader)
-			pnames := []string{}
-			for pname := range aggregators.Aggregators {
-				pnames = append(pnames, pname)
-			}
-			sort.Strings(pnames)
-			printFilteredAggregators(pnames, true)
-		}
-	}
-
-	// print input plugins
-	if sliceContains("inputs", sectionFilters) {
-		if len(inputFilters) != 0 {
-			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
-				fmt.Print(inputHeader)
-			}
-			printFilteredInputs(inputFilters, false)
-		} else {
-			fmt.Print(inputHeader)
-			printFilteredInputs(inputDefaults, false)
-			// Print non-default inputs, commented
-			var pnames []string
-			for pname := range inputs.Inputs {
-				if !sliceContains(pname, inputDefaults) {
-					pnames = append(pnames, pname)
-				}
-			}
-			sort.Strings(pnames)
-			printFilteredInputs(pnames, true)
-		}
-	}
-}
-
-func printFilteredProcessors(processorFilters []string, commented bool) {
-	// Filter processors
-	var pnames []string
-	for pname := range processors.Processors {
-		if sliceContains(pname, processorFilters) {
-			pnames = append(pnames, pname)
-		}
-	}
-	sort.Strings(pnames)
-
-	// Print Outputs
-	for _, pname := range pnames {
-		creator := processors.Processors[pname]
-		output := creator()
-		printConfig(pname, output, "processors", commented, processors.Deprecations[pname])
-	}
-}
-
-func printFilteredAggregators(aggregatorFilters []string, commented bool) {
-	// Filter outputs
-	var anames []string
-	for aname := range aggregators.Aggregators {
-		if sliceContains(aname, aggregatorFilters) {
-			anames = append(anames, aname)
-		}
-	}
-	sort.Strings(anames)
-
-	// Print Outputs
-	for _, aname := range anames {
-		creator := aggregators.Aggregators[aname]
-		output := creator()
-		printConfig(aname, output, "aggregators", commented, aggregators.Deprecations[aname])
-	}
-}
-
-func printFilteredInputs(inputFilters []string, commented bool) {
-	// Filter inputs
-	var pnames []string
-	for pname := range inputs.Inputs {
-		if sliceContains(pname, inputFilters) {
-			pnames = append(pnames, pname)
-		}
-	}
-	sort.Strings(pnames)
-
-	// cache service inputs to print them at the end
-	servInputs := make(map[string]telegraf.ServiceInput)
-	// for alphabetical looping:
-	servInputNames := []string{}
-
-	// Print Inputs
-	for _, pname := range pnames {
-		// Skip inputs that are registered twice for backward compatibility
-		if pname == "cisco_telemetry_gnmi" {
-			continue
-		}
-		if pname == "KNXListener" {
-			continue
-		}
-		creator := inputs.Inputs[pname]
-		input := creator()
-
-		if p, ok := input.(telegraf.ServiceInput); ok {
-			servInputs[pname] = p
-			servInputNames = append(servInputNames, pname)
-			continue
-		}
-
-		printConfig(pname, input, "inputs", commented, inputs.Deprecations[pname])
-	}
-
-	// Print Service Inputs
-	if len(servInputs) == 0 {
-		return
-	}
-	sort.Strings(servInputNames)
-
-	fmt.Print(serviceInputHeader)
-	for _, name := range servInputNames {
-		printConfig(name, servInputs[name], "inputs", commented, inputs.Deprecations[name])
-	}
-}
-
-func printFilteredOutputs(outputFilters []string, commented bool) {
-	// Filter outputs
-	var onames []string
-	for oname := range outputs.Outputs {
-		if sliceContains(oname, outputFilters) {
-			onames = append(onames, oname)
-		}
-	}
-	sort.Strings(onames)
-
-	// Print Outputs
-	for _, oname := range onames {
-		creator := outputs.Outputs[oname]
-		output := creator()
-		printConfig(oname, output, "outputs", commented, outputs.Deprecations[oname])
-	}
-}
-
-func printFilteredGlobalSections(sectionFilters []string) {
-	if sliceContains("global_tags", sectionFilters) {
-		fmt.Print(globalTagsConfig)
-	}
-
-	if sliceContains("agent", sectionFilters) {
-		fmt.Print(agentConfig)
-	}
-}
-
-func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool, di telegraf.DeprecationInfo) {
-	comment := ""
-	if commented {
-		comment = "# "
-	}
-	fmt.Printf("\n%s# %s\n%s[[%s.%s]]", comment, p.Description(), comment, op, name)
-
-	if di.Since != "" {
-		removalNote := ""
-		if di.RemovalIn != "" {
-			removalNote = " and will be removed in " + di.RemovalIn
-		}
-		fmt.Printf("\n%s  ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)
-	}
-
-	config := p.SampleConfig()
-	if config == "" {
-		fmt.Printf("\n%s  # no configuration\n\n", comment)
-	} else {
-		lines := strings.Split(config, "\n")
-		for i, line := range lines {
-			if i == 0 || i == len(lines)-1 {
-				fmt.Print("\n")
-				continue
-			}
-			fmt.Print(strings.TrimRight(comment+line, " ") + "\n")
-		}
-	}
-}
-
 func sliceContains(name string, list []string) bool {
 	for _, b := range list {
 		if b == name {
@@ -708,28 +311,6 @@ func sliceContains(name string, list []string) bool {
 		}
 	}
 	return false
-}
-
-// PrintInputConfig prints the config usage of a single input.
-func PrintInputConfig(name string) error {
-	creator, ok := inputs.Inputs[name]
-	if !ok {
-		return fmt.Errorf("input %s not found", name)
-	}
-
-	printConfig(name, creator(), "inputs", false, inputs.Deprecations[name])
-	return nil
-}
-
-// PrintOutputConfig prints the config usage of a single output.
-func PrintOutputConfig(name string) error {
-	creator, ok := outputs.Outputs[name]
-	if !ok {
-		return fmt.Errorf("output %s not found", name)
-	}
-
-	printConfig(name, creator(), "outputs", false, outputs.Deprecations[name])
-	return nil
 }
 
 // LoadDirectory loads all toml config files found in the specified path, recursively.
@@ -863,8 +444,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 	}
 
 	// Set snmp agent translator default
-	if c.Agent.Translator == "" {
-		c.Agent.Translator = "netsnmp"
+	if c.Agent.SnmpTranslator == "" {
+		c.Agent.SnmpTranslator = "netsnmp"
 	}
 
 	if len(c.UnusedFields) > 0 {
@@ -1243,14 +824,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return nil
 	}
 
-	// Legacy support renaming io input to diskio
-	if name == "io" {
-		if err := c.printUserDeprecation("inputs", name, nil); err != nil {
-			return err
-		}
-		name = "diskio"
-	}
-
 	// For inputs with parsers we need to compute the set of
 	// options that is not covered by both, the parser and the input.
 	// We achieve this by keeping a local book of missing entries
@@ -1618,10 +1191,11 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	// for influx parser
 	c.getFieldString(tbl, "influx_parser_type", &pc.InfluxParserType)
 
-	//for XPath parser family
+	// for XPath parser family
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
 		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
+		c.getFieldStringSlice(tbl, "xpath_protobuf_import_paths", &pc.XPathProtobufImportPaths)
 		c.getFieldBool(tbl, "xpath_print_document", &pc.XPathPrintDocument)
 
 		// Determine the actual xpath configuration tables
@@ -1632,7 +1206,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 		if xpathOK {
 			if subtbls, ok := node.([]*ast.Table); ok {
-				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
+				pc.XPathConfig = make([]xpath.Config, len(subtbls))
 				for i, subtbl := range subtbls {
 					subcfg := pc.XPathConfig[i]
 					c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
@@ -1656,10 +1230,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 	}
 
-	//for JSONPath parser
+	// for JSON_v2 parser
 	if node, ok := tbl.Fields["json_v2"]; ok {
 		if metricConfigs, ok := node.([]*ast.Table); ok {
-			pc.JSONV2Config = make([]parsers.JSONV2Config, len(metricConfigs))
+			pc.JSONV2Config = make([]json_v2.Config, len(metricConfigs))
 			for i, metricConfig := range metricConfigs {
 				mc := pc.JSONV2Config[i]
 				c.getFieldString(metricConfig, "measurement_name", &mc.MeasurementName)
@@ -1677,7 +1251,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
 					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
 						for _, objectConfig := range objectconfigs {
-							var o json_v2.JSONObject
+							var o json_v2.Object
 							c.getFieldString(objectConfig, "path", &o.Path)
 							c.getFieldBool(objectConfig, "optional", &o.Optional)
 							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
@@ -1767,8 +1341,11 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
 	c.getFieldString(tbl, "carbon2_format", &sc.Carbon2Format)
 	c.getFieldString(tbl, "carbon2_sanitize_replace_char", &sc.Carbon2SanitizeReplaceChar)
+	c.getFieldBool(tbl, "csv_column_prefix", &sc.CSVPrefix)
+	c.getFieldBool(tbl, "csv_header", &sc.CSVHeader)
+	c.getFieldString(tbl, "csv_separator", &sc.CSVSeparator)
+	c.getFieldString(tbl, "csv_timestamp_format", &sc.TimestampFormat)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
-
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
@@ -1832,29 +1409,42 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
-	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
-		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
-		"collection_offset",
-		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
-		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
-		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
-		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
-		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
-		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_parser_type", "influx_sort_fields",
-		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
-		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
-		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
-		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
-		"prefix", "prometheus_export_timestamp", "prometheus_ignore_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
-		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
-		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "wavefront_disable_prefix_conversion",
-		"xml", "xpath", "xpath_json", "xpath_msgpack", "xpath_protobuf", "xpath_print_document",
-		"xpath_protobuf_file", "xpath_protobuf_type":
+	// General options to ignore
+	case "alias",
+		"collection_jitter", "collection_offset",
+		"data_format", "delay", "drop", "drop_original",
+		"fielddrop", "fieldpass", "flush_interval", "flush_jitter",
+		"grace",
+		"interval",
+		"lvm", // What is this used for?
+		"metric_batch_size", "metric_buffer_limit",
+		"name_override", "name_prefix", "name_suffix", "namedrop", "namepass",
+		"order",
+		"pass", "period", "precision",
+		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
 
-		// ignore fields that are common to all plugins.
+	// Parser options to ignore
+	case "data_type", "separator", "tag_keys",
+		// "templates", // shared with serializers
+		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
+		"grok_timezone", "grok_unique_timestamp",
+		"influx_parser_type",
+		"value_field_name":
+
+	// Serializer options to ignore
+	case "prefix", "template", "templates",
+		"carbon2_format", "carbon2_sanitize_replace_char",
+		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
+		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
+		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
+		"json_timestamp_format", "json_timestamp_units",
+		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
+		"splunkmetric_hec_routing", "splunkmetric_multimetric",
+		"wavefront_disable_prefix_conversion", "wavefront_source_override", "wavefront_use_strict":
 	default:
+		c.unusedFieldsMutex.Lock()
 		c.UnusedFields[key] = true
+		c.unusedFieldsMutex.Unlock()
 	}
 	return nil
 }

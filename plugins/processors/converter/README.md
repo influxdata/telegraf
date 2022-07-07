@@ -1,19 +1,22 @@
-# Converter Processor
+# Converter Processor Plugin
 
 The converter processor is used to change the type of tag or field values.  In
 addition to changing field types it can convert between fields and tags.
 
 Values that cannot be converted are dropped.
 
-**Note:** When converting tags to fields, take care to ensure the series is still
-uniquely identifiable.  Fields with the same series key (measurement + tags)
-will overwrite one another.
+**Note:** When converting tags to fields, take care to ensure the series is
+still uniquely identifiable.  Fields with the same series key (measurement +
+tags) will overwrite one another.
 
-**Note on large strings being converted to numeric types:** When converting a string value to a numeric type, precision may be lost if the number is too large. The largest numeric type this plugin supports is `float64`, and if a string 'number' exceeds its size limit, accuracy may be lost.
+**Note on large strings being converted to numeric types:** When converting a
+string value to a numeric type, precision may be lost if the number is too
+large. The largest numeric type this plugin supports is `float64`, and if a
+string 'number' exceeds its size limit, accuracy may be lost.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Convert values to another metric value type
 [[processors.converter]]
   ## Tags to convert

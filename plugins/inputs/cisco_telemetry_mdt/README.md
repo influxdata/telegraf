@@ -1,17 +1,21 @@
 # Cisco Model-Driven Telemetry (MDT) Input Plugin
 
-Cisco model-driven telemetry (MDT) is an input plugin that consumes
-telemetry data from Cisco IOS XR, IOS XE and NX-OS platforms. It supports TCP & GRPC dialout transports.
-RPC-based transport can utilize TLS for authentication and encryption.
-Telemetry data is expected to be GPB-KV (self-describing-gpb) encoded.
+Cisco model-driven telemetry (MDT) is an input plugin that consumes telemetry
+data from Cisco IOS XR, IOS XE and NX-OS platforms. It supports TCP & GRPC
+dialout transports.  RPC-based transport can utilize TLS for authentication and
+encryption.  Telemetry data is expected to be GPB-KV (self-describing-gpb)
+encoded.
 
-The GRPC dialout transport is supported on various IOS XR (64-bit) 6.1.x and later, IOS XE 16.10 and later, as well as NX-OS 7.x and later platforms.
+The GRPC dialout transport is supported on various IOS XR (64-bit) 6.1.x and
+later, IOS XE 16.10 and later, as well as NX-OS 7.x and later platforms.
 
-The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and later.
+The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and
+later.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Cisco model-driven telemetry (MDT) input plugin for IOS XR, IOS XE and NX-OS platforms
 [[inputs.cisco_telemetry_mdt]]
  ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
  ## using the grpc transport.
@@ -21,7 +25,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  service_address = ":57000"
 
  ## Grpc Maximum Message Size, default is 4MB, increase the size.
- max_msg_size = 20000000
+ max_msg_size = 4000000
 
  ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
@@ -37,6 +41,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
+ ## Define Property Xformation, please refer README and https://pubhub.devnetcloud.com/media/dme-docs-9-3-3/docs/appendix/ for Model details.
  [inputs.cisco_telemetry_mdt.dmes]
 #    Global Property Xformation.
 #    prop1 = "uint64 to int"

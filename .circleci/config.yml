@@ -4,11 +4,11 @@ orbs:
   aws-cli: circleci/aws-cli@1.4.0
 
 executors:
-  go-1_17:
+  telegraf-ci:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.17.7'
+      - image: 'quay.io/influxdb/telegraf-ci:1.18.3'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -78,7 +78,6 @@ commands:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
-      - run: mkdir -p test-results
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
@@ -86,10 +85,23 @@ commands:
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
-          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- ${RACE} -short $PACKAGE_NAMES
-      - store_test_results:
-          path: test-results
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
+      - when:
+          condition:
+            and:
+              - equal: [ "master", << pipeline.git.branch >> ]
+              - equal: [ "linux", << parameters.os >> ]
+              - equal: [ "amd64", << parameters.arch >> ]
+          steps:
+            - run:
+                name: "Installing goveralls"
+                command: go install github.com/mattn/goveralls@latest
+            - run:
+                name: "Remove plugins/parsers/influx/machine.go from coverage"
+                command: sed -i '/github.com\/influxdata\/telegraf\/plugins\/parsers\/influx\/machine.go/d' coverage.out
+            - run:
+                name: "Create report"
+                command: /go/bin/goveralls -coverprofile=coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -121,7 +133,6 @@ commands:
                 paths:
                   - 'C:\Go'
                   - 'C:\Users\circleci\project\gotestsum.exe'
-
   package-build:
     parameters:
       type:
@@ -143,13 +154,17 @@ commands:
       - when:
           condition: << parameters.nightly >>
           steps:
-            - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
+            - run:
+                command: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
+                no_output_timeout: 30m
       - unless:
           condition:
             or:
               - << parameters.nightly >>
           steps:
-            - run: 'make package include_packages="$(make << parameters.type >>)"'
+            - run:
+                command: 'make package include_packages="$(make << parameters.type >>)"'
+                no_output_timeout: 30m
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -159,8 +174,7 @@ commands:
             - 'dist'
 jobs:
   test-go-linux:
-    executor: go-1_17
-    parallelism: 4
+    executor: telegraf-ci
     steps:
       - checkout
       - restore_cache:
@@ -181,8 +195,7 @@ jobs:
           paths:
             - '*'
   test-go-linux-386:
-    executor: go-1_17
-    parallelism: 4
+    executor: telegraf-ci
     steps:
       - checkout
       - restore_cache:
@@ -193,28 +206,37 @@ jobs:
       - run: 'GOARCH=386 make check'
       - test-go:
           arch: "386"
+  test-integration:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: 'sh ./scripts/installgo_linux.sh'
+      - run: 'make deps'
+      - run: 'make test-integration'
   test-go-mac:
     executor: mac
     steps:
       - test-go:
           os: darwin
-    parallelism: 4
   test-go-windows:
     executor:
         name: win/default
         shell: bash.exe
+        size: xlarge
     steps:
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
-    parallelism: 4
 
   windows-package:
     parameters:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: windows
@@ -224,7 +246,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: darwin-amd64
@@ -234,7 +256,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: darwin-arm64
@@ -244,7 +266,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: i386
@@ -254,7 +276,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: ppc64le
@@ -264,7 +286,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: riscv64
@@ -274,7 +296,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: s390x
@@ -284,7 +306,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: armel
@@ -294,7 +316,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: amd64
@@ -304,7 +326,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: arm64
@@ -314,7 +336,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: mipsel
@@ -324,7 +346,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: mips
@@ -334,7 +356,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: static
@@ -344,13 +366,13 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: armhf
           nightly: << parameters.nightly >>
   nightly:
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - attach_workspace:
           at: '/build'
@@ -363,6 +385,46 @@ jobs:
               --include "*.rpm" \
               --include "*.zip" \
               --acl public-read
+  docker-nightly:
+    machine:
+      image: ubuntu-2004:current
+    steps:
+      - run:
+          name: login to quay.io
+          command: docker login --username="${QUAY_USER}" --password="${QUAY_PASS}" quay.io
+      - run:
+          name: clone influxdata/influxdata-docker
+          command: git clone https://github.com/influxdata/influxdata-docker
+      - run:
+          name: build and push telegraf:nightly
+          command: |
+            cd influxdata-docker/telegraf/nightly
+            docker build -t telegraf .
+            docker tag telegraf quay.io/influxdb/telegraf-nightly:latest
+            docker image ls
+            docker push quay.io/influxdb/telegraf-nightly:latest
+      - run:
+          name: build and push telegraf:nightly-alpine
+          command: |
+            cd influxdata-docker/telegraf/nightly/alpine
+            docker build -t telegraf-alpine .
+            docker tag telegraf-alpine quay.io/influxdb/telegraf-nightly:alpine
+            docker image ls
+            docker push quay.io/influxdb/telegraf-nightly:alpine
+  amd64-package-test-nightly:
+    machine:
+      image: ubuntu-2004:current
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '.'
+      - run: sudo apt update && sudo apt install -y snapd
+      - run: sudo snap install lxd
+      - run: sudo lxd init --auto
+      - run: sudo usermod -a -G lxd $(whoami)
+      - run: cd tools/package_lxd_test && go build
+      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*_amd64.deb")
+      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*.x86_64.rpm")
   package-sign-windows:
     executor:
         name: win/default
@@ -426,7 +488,7 @@ jobs:
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
   generate-config:
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - generate-config
   generate-config-win:
@@ -454,6 +516,10 @@ workflows:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-integration':
           filters:
             tags:
               only: /.*/
@@ -694,20 +760,26 @@ workflows:
             - 'test-go-linux'
       - nightly:
           requires:
+            - 'amd64-package-test-nightly'
+            - 'arm64-package-nightly'
+            - 'armel-package-nightly'
+            - 'armhf-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
             - 'i386-package-nightly'
+            - 'mips-package-nightly'
+            - 'mipsel-package-nightly'
             - 'ppc64le-package-nightly'
             - 'riscv64-package-nightly'
             - 's390x-package-nightly'
-            - 'armel-package-nightly'
-            - 'amd64-package-nightly'
-            - 'mipsel-package-nightly'
-            - 'mips-package-nightly'
-            - 'darwin-amd64-package-nightly'
-            - 'darwin-arm64-package-nightly'
-            - 'windows-package-nightly'
             - 'static-package-nightly'
-            - 'arm64-package-nightly'
-            - 'armhf-package-nightly'
+            - 'windows-package-nightly'
+      - docker-nightly:
+          requires:
+            - 'nightly'
+      - amd64-package-test-nightly:
+          requires:
+            - 'amd64-package-nightly'
     triggers:
       - schedule:
           cron: "0 7 * * *"

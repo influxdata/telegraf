@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -8,6 +9,7 @@ package socketstat
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -20,6 +22,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const measurement = "socketstat"
 
@@ -37,20 +43,8 @@ type Socketstat struct {
 
 type socketLister func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
 
-// Description returns a short description of the plugin
-func (ss *Socketstat) Description() string {
-	return "Gather indicators from established connections, using iproute2's `ss` command."
-}
-
-// SampleConfig returns sample configuration options
-func (ss *Socketstat) SampleConfig() string {
-	return `
-  ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
-  ## List of protocol types to collect
-  # protocols = [ "tcp", "udp" ]
-  ## The default timeout of 1s for ss execution can be overridden here:
-  # timeout = "1s"
-`
+func (*Socketstat) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather gathers indicators from established connections

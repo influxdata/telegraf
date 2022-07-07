@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kibana
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const statusPath = "/api/status"
 
@@ -80,25 +86,6 @@ type heap struct {
 	SizeLimit    int64 `json:"size_limit"`
 }
 
-const sampleConfig = `
-  ## Specify a list of one or more Kibana servers
-  servers = ["http://localhost:5601"]
-
-  ## Timeout for HTTP requests
-  timeout = "5s"
-
-  ## HTTP Basic Auth credentials
-  # username = "username"
-  # password = "pa$$word"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
 type Kibana struct {
 	Local    bool
 	Servers  []string
@@ -129,14 +116,8 @@ func mapHealthStatusToCode(s string) int {
 	return 0
 }
 
-// SampleConfig returns sample configuration for this plugin.
-func (k *Kibana) SampleConfig() string {
+func (*Kibana) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns the plugin description.
-func (k *Kibana) Description() string {
-	return "Read status information from one or more Kibana servers"
 }
 
 func (k *Kibana) Gather(acc telegraf.Accumulator) error {

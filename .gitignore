@@ -3,6 +3,8 @@
 /telegraf
 /telegraf.exe
 /telegraf.gz
+/tools/package_lxd_test/package_lxd_test
+/tools/readme_config_includer/generator
 /vendor
 .DS_Store
 process.yml

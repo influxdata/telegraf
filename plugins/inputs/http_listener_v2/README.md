@@ -1,26 +1,23 @@
 # HTTP Listener v2 Input Plugin
 
 HTTP Listener v2 is a service input plugin that listens for metrics sent via
-HTTP. Metrics may be sent in any supported [data format][data_format]. For metrics in
-[InfluxDB Line Protocol][line_protocol] it's recommended to use the [`influxdb_listener`][influxdb_listener]
-or [`influxdb_v2_listener`][influxdb_v2_listener] instead.
+HTTP. Metrics may be sent in any supported [data format][data_format]. For
+metrics in [InfluxDB Line Protocol][line_protocol] it's recommended to use the
+[`influxdb_listener`][influxdb_listener] or
+[`influxdb_v2_listener`][influxdb_v2_listener] instead.
 
 **Note:** The plugin previously known as `http_listener` has been renamed
 `influxdb_listener`.  If you would like Telegraf to act as a proxy/relay for
-InfluxDB it is recommended to use [`influxdb_listener`][influxdb_listener] or [`influxdb_v2_listener`][influxdb_v2_listener].
+InfluxDB it is recommended to use [`influxdb_listener`][influxdb_listener] or
+[`influxdb_v2_listener`][influxdb_v2_listener].
 
 ## Configuration
 
-This is a sample configuration for the plugin.
-
-```toml
+```toml @sample.conf
+# Generic HTTP write listener
 [[inputs.http_listener_v2]]
   ## Address and port to host HTTP listener on
   service_address = ":8080"
-
-  ## Path to listen to.
-  ## This option is deprecated and only available for backward-compatibility. Please use paths instead.
-  # path = ""
 
   ## Paths to listen to.
   # paths = ["/telegraf"]
@@ -71,7 +68,8 @@ This is a sample configuration for the plugin.
 
 ## Metrics
 
-Metrics are collected from the part of the request specified by the `data_source` param and are parsed depending on the value of `data_format`.
+Metrics are collected from the part of the request specified by the
+`data_source` param and are parsed depending on the value of `data_format`.
 
 ## Troubleshooting
 

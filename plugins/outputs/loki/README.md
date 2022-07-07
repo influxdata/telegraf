@@ -1,13 +1,14 @@
 # Loki Output Plugin
 
-This plugin sends logs to Loki, using metric name and tags as labels,
-log line will content all fields in `key="value"` format which is easily parsable with `logfmt` parser in Loki.
+This plugin sends logs to Loki, using metric name and tags as labels, log line
+will content all fields in `key="value"` format which is easily parsable with
+`logfmt` parser in Loki.
 
 Logs within each stream are sorted by timestamp before being sent to Loki.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can transmit logs to Loki
 [[outputs.loki]]
   ## The domain of Loki

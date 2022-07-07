@@ -2,7 +2,7 @@
 
 Building the packages for Telegraf is automated using [Make](https://en.wikipedia.org/wiki/Make_(software)). Just running `make` will build a Telegraf binary for the operating system and architecture you are using (if it is supported). If you need to build a different package then you can run `make package` which will build all the supported packages. You will most likely only want a subset, you can define a subset of packages to be built by overriding the `include_packages` variable like so `make package include_packages="amd64.deb"`. You can also build all packages for a specific architecture like so `make package include_packages="$(make amd64)"`.
 
-The packaging steps require certain tools to be setup before hand to work. These dependencies are listed in the ci-1.17.docker file which you can find in the scripts directory. Therefore it is recommended to use Docker to build the artifacts, see more details below.
+The packaging steps require certain tools to be setup before hand to work. These dependencies are listed in the ci.docker file which you can find in the scripts directory. Therefore it is recommended to use Docker to build the artifacts, see more details below.
 
 ## Go Version
 
@@ -13,8 +13,8 @@ Telegraf will be built using the latest version of Go whenever possible.
 Incrementing the version is maintained by the core Telegraf team because it requires access to an internal docker repository that hosts the docker CI images. When a new version is released, the following process is followed:
 
 1. Within the `Makefile` and `.circleci\config.yml` update the Go versions to the new version number
-2. Run `make ci-<latest version>` where `<latest version>` refers to the new Go version number (this requires internal permissions)
-3. The files `scripts\installgo_mac.sh` and `scripts\installgo_windows.sh` need to be updated as well with the new Go version and SHA
+2. Run `make ci`, this requires quay.io internal permissions
+3. The files `scripts\installgo_linux.sh`, `scripts\installgo_mac.sh`, and `scripts\installgo_windows.sh` need to be updated as well with the new Go version and SHA
 4. Create a pull request with these new changes, and verify the CI passes and uses the new docker image
 
 See the [previous PRs](https://github.com/influxdata/telegraf/search?q=chore+update+go&type=commits) as examples.

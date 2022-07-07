@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package docker
 
 import (
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,6 +26,10 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Docker object
 type Docker struct {
@@ -83,66 +89,8 @@ var (
 	now                    = time.Now
 )
 
-var sampleConfig = `
-  ## Docker Endpoint
-  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
-  endpoint = "unix:///var/run/docker.sock"
-
-  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
-  gather_services = false
-
-  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
-  source_tag = false
-
-  ## Containers to include and exclude. Globs accepted.
-  ## Note that an empty array for both will include all containers
-  container_name_include = []
-  container_name_exclude = []
-
-  ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "running" state will be captured.
-  ## example: container_state_include = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
-  ## example: container_state_exclude = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
-  # container_state_include = []
-  # container_state_exclude = []
-
-  ## Timeout for docker list, info, and stats commands
-  timeout = "5s"
-
-  ## Specifies for which classes a per-device metric should be issued
-  ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
-  ## Please note that this setting has no effect if 'perdevice' is set to 'true'
-  # perdevice_include = ["cpu"]
-
-  ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice' values.
-  ## Possible values are 'cpu', 'blkio' and 'network'
-  ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
-  ## Please note that this setting has no effect if 'total' is set to 'false'
-  # total_include = ["cpu", "blkio", "network"]
-
-  ## Which environment variables should we use as a tag
-  ##tag_env = ["JAVA_HOME", "HEAP_SIZE"]
-
-  ## docker labels to include and exclude as tags.  Globs accepted.
-  ## Note that an empty array for both will include all labels as tags
-  docker_label_include = []
-  docker_label_exclude = []
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-// SampleConfig returns the default Docker TOML configuration.
-func (d *Docker) SampleConfig() string { return sampleConfig }
-
-// Description the metrics returned.
-func (d *Docker) Description() string {
-	return "Read metrics about docker containers"
+func (*Docker) SampleConfig() string {
+	return sampleConfig
 }
 
 func (d *Docker) Init() error {
@@ -390,7 +338,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	)
 
 	for _, rawData := range info.DriverStatus {
-		name := strings.ToLower(strings.Replace(rawData[0], " ", "_", -1))
+		name := strings.ToLower(strings.ReplaceAll(rawData[0], " ", "_"))
 		if name == "pool_name" {
 			poolName = rawData[1]
 			continue

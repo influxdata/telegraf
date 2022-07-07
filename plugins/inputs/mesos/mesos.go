@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mesos
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Role string
 
@@ -44,59 +50,6 @@ type Mesos struct {
 var allMetrics = map[Role][]string{
 	MASTER: {"resources", "master", "system", "agents", "frameworks", "framework_offers", "tasks", "messages", "evqueue", "registrar", "allocator"},
 	SLAVE:  {"resources", "agent", "system", "executors", "tasks", "messages"},
-}
-
-var sampleConfig = `
-  ## Timeout, in ms.
-  timeout = 100
-
-  ## A list of Mesos masters.
-  masters = ["http://localhost:5050"]
-
-  ## Master metrics groups to be collected, by default, all enabled.
-  master_collections = [
-    "resources",
-    "master",
-    "system",
-    "agents",
-    "frameworks",
-    "framework_offers",
-    "tasks",
-    "messages",
-    "evqueue",
-    "registrar",
-    "allocator",
-  ]
-
-  ## A list of Mesos slaves, default is []
-  # slaves = []
-
-  ## Slave metrics groups to be collected, by default, all enabled.
-  # slave_collections = [
-  #   "resources",
-  #   "agent",
-  #   "system",
-  #   "executors",
-  #   "tasks",
-  #   "messages",
-  # ]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-// SampleConfig returns a sample configuration block
-func (m *Mesos) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description just returns a short description of the Mesos plugin
-func (m *Mesos) Description() string {
-	return "Telegraf plugin for gathering metrics from N Mesos masters"
 }
 
 func (m *Mesos) parseURL(s string, role Role) (*url.URL, error) {
@@ -165,6 +118,10 @@ func (m *Mesos) initialize() error {
 	m.client = client
 
 	return nil
+}
+
+func (*Mesos) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather() metrics from given list of Mesos Masters

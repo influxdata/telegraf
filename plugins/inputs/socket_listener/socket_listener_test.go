@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/wlog"
 )
@@ -49,7 +49,10 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
 
-	sl := newSocketListener()
+	sl := &SocketListener{}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	sl.SetParser(parser)
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
 	sl.ServerConfig = *pki.TLSServerConfig()
@@ -69,18 +72,18 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 }
 
 func TestSocketListener_unix_tls(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix_tls.sock")
+	sock := testutil.TempSocket(t)
 
-	sl := newSocketListener()
+	sl := &SocketListener{}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	sl.SetParser(parser)
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unix://" + sock
 	sl.ServerConfig = *pki.TLSServerConfig()
 
 	acc := &testutil.Accumulator{}
-	err = sl.Start(acc)
+	err := sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
@@ -98,7 +101,10 @@ func TestSocketListener_tcp(t *testing.T) {
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
 
-	sl := newSocketListener()
+	sl := &SocketListener{}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	sl.SetParser(parser)
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
 	sl.ReadBufferSize = config.Size(1024)
@@ -118,7 +124,10 @@ func TestSocketListener_udp(t *testing.T) {
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
 
-	sl := newSocketListener()
+	sl := &SocketListener{}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	sl.SetParser(parser)
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "udp://127.0.0.1:0"
 	sl.ReadBufferSize = config.Size(1024)
@@ -135,23 +144,23 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix.sock")
+	sock := testutil.TempSocket(t)
 
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
 
 	f, _ := os.Create(sock)
 	require.NoError(t, f.Close())
-	sl := newSocketListener()
+	sl := &SocketListener{}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	sl.SetParser(parser)
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unix://" + sock
 	sl.ReadBufferSize = config.Size(1024)
 
 	acc := &testutil.Accumulator{}
-	err = sl.Start(acc)
+	err := sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
@@ -166,17 +175,19 @@ func TestSocketListener_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unixgram.sock")
+	sock := testutil.TempSocket(t)
 
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
 
-	_, err = os.Create(sock)
+	f, err := os.Create(sock)
 	require.NoError(t, err)
-	sl := newSocketListener()
+	t.Cleanup(func() { require.NoError(t, f.Close()) })
+
+	sl := &SocketListener{}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	sl.SetParser(parser)
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unixgram://" + sock
 	sl.ReadBufferSize = config.Size(1024)
@@ -196,7 +207,10 @@ func TestSocketListenerDecode_tcp(t *testing.T) {
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
 
-	sl := newSocketListener()
+	sl := &SocketListener{}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	sl.SetParser(parser)
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
 	sl.ReadBufferSize = config.Size(1024)
@@ -217,7 +231,10 @@ func TestSocketListenerDecode_udp(t *testing.T) {
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
 
-	sl := newSocketListener()
+	sl := &SocketListener{}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	sl.SetParser(parser)
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "udp://127.0.0.1:0"
 	sl.ReadBufferSize = config.Size(1024)

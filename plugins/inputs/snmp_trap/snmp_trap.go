@@ -1,19 +1,25 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package snmp_trap
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/gosnmp/gosnmp"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type translator interface {
 	lookup(oid string) (snmp.MibEntry, error)
@@ -49,43 +55,8 @@ type SnmpTrap struct {
 	translator translator //nolint:revive
 }
 
-var sampleConfig = `
-  ## Transport, local address, and port to listen on.  Transport must
-  ## be "udp://".  Omit local address to listen on all interfaces.
-  ##   example: "udp://127.0.0.1:1234"
-  ##
-  ## Special permissions may be required to listen on a port less than
-  ## 1024.  See README.md for details
-  ##
-  # service_address = "udp://:162"
-  ##
-  ## Path to mib files
-  # path = ["/usr/share/snmp/mibs"]
-  ##
-  ## Snmp version, defaults to 2c
-  # version = "2c"
-  ## SNMPv3 authentication and encryption options.
-  ##
-  ## Security Name.
-  # sec_name = "myuser"
-  ## Authentication protocol; one of "MD5", "SHA" or "".
-  # auth_protocol = "MD5"
-  ## Authentication password.
-  # auth_password = "pass"
-  ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
-  # sec_level = "authNoPriv"
-  ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C" or "".
-  # priv_protocol = ""
-  ## Privacy password used for encrypted messages.
-  # priv_password = ""
-`
-
-func (s *SnmpTrap) SampleConfig() string {
+func (*SnmpTrap) SampleConfig() string {
 	return sampleConfig
-}
-
-func (s *SnmpTrap) Description() string {
-	return "Receive SNMP traps"
 }
 
 func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {
