@@ -35,6 +35,9 @@ func (n *NginxPlusAPI) gatherMetrics(addr *url.URL, acc telegraf.Accumulator) {
 		addError(acc, n.gatherHTTPLocationZonesMetrics(addr, acc))
 		addError(acc, n.gatherResolverZonesMetrics(addr, acc))
 	}
+	if n.APIVersion >= 6 {
+		addError(acc, n.gatherHTTPLimitReqsMetrics(addr, acc))
+	}
 }
 
 func addError(acc telegraf.Accumulator, err error) {
@@ -608,6 +611,43 @@ func (n *NginxPlusAPI) gatherStreamUpstreamsMetrics(addr *url.URL, acc telegraf.
 
 			acc.AddFields("nginx_plus_api_stream_upstream_peers", peerFields, peerTags)
 		}
+	}
+
+	return nil
+}
+
+// Added in 6 API version
+func (n *NginxPlusAPI) gatherHTTPLimitReqsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, httpLimitReqsPath)
+	if err != nil {
+		return err
+	}
+
+	var httpLimitReqs HTTPLimitReqs
+
+	if err := json.Unmarshal(body, &httpLimitReqs); err != nil {
+		return err
+	}
+
+	tags := getTags(addr)
+
+	for limitReqName, limit := range httpLimitReqs {
+		limitReqsTags := map[string]string{}
+		for k, v := range tags {
+			limitReqsTags[k] = v
+		}
+		limitReqsTags["limit"] = limitReqName
+		acc.AddFields(
+			"nginx_plus_api_http_limit_reqs",
+			map[string]interface{}{
+				"passed":           limit.Passed,
+				"delayed":          limit.Delayed,
+				"rejected":         limit.Rejected,
+				"delayed_dry_run":  limit.DelayedDryRun,
+				"rejected_dry_run": limit.RejectedDryRun,
+			},
+			limitReqsTags,
+		)
 	}
 
 	return nil
