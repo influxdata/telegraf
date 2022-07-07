@@ -150,8 +150,8 @@ func (m *MQTTConsumer) Init() error {
 		}
 	}
 
-	m.bytesRecv = selfstat.Register("mqtt_consumer", "bytes_received", nil)
-	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", nil)
+	m.bytesRecv = selfstat.Register("mqtt_consumer", "bytes_received", map[string]string{})
+	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", map[string]string{})
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
