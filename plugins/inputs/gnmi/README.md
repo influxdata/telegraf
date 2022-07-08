@@ -58,7 +58,7 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
     ## origin usually refers to a (YANG) data model implemented by the device
     ## and path to a specific substructure inside it that should be subscribed to (similar to an XPath)
     ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
-    origin = "openconfig-interfaces"
+    origin = "openconfig"
     path = "/interfaces/interface/state/counters"
 
     # Subscription mode (one of: "target_defined", "sample", "on_change") and interval
@@ -71,18 +71,26 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
     ## If suppression is enabled, send updates at least every X seconds anyway
     # heartbeat_interval = "60s"
 
-  #[[inputs.gnmi.subscription]]
-    # name = "descr"
-    # origin = "openconfig-interfaces"
-    # path = "/interfaces/interface/state/description"
-    # subscription_mode = "on_change"
+  ## Tag subscriptions are subscriptions to paths intended to be applied as tags to other subscriptions
+  [[inputs.gnmi.tag_subscription]]
+    # When applying this value as a tag to other metrics, use this tag name
+    name = "descr"
+    # All other subscription fields are as normal
+    origin = "openconfig"
+    path = "/interfaces/interface/state/description"
+    subscription_mode = "on_change"
+    # At least one path element name must be supplied that contains at least one key to match on
+    # Multiple element names can be specified in any order - all element names must be present and contain
+    # to be stored as an in-memory tag
+    elements = ["interface"]
 
-    ## If tag_only is set, the subscription in question will be utilized to maintain a map of
-    ## tags to apply to other measurements emitted by the plugin, by matching path keys
-    ## All fields from the tag-only subscription will be applied as tags to other readings,
-    ## in the format <name>_<fieldBase>.
-    # tag_only = true
 ```
+
+## Metrics
+
+Each configured subscription will emit a different measurement.  Each leaf in a
+GNMI SubscribeResponse Update message will produce a field reading in the
+measurement. GNMI PathElement keys for leaves will attach tags to the field(s).
 
 ## Example Output
 

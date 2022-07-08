@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -116,13 +117,10 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	parserConfig := parsers.Config{
-		DataFormat:  "json",
-		JSONNameKey: "Name",
-	}
-
 	r.SetParserFunc(func() (parsers.Parser, error) {
-		return parsers.NewParser(&parserConfig)
+		p := &json.Parser{NameKey: "Name"}
+		err := p.Init()
+		return p, err
 	})
 
 	// Let's drop a 5-line LINE-DELIMITED json.
@@ -166,13 +164,10 @@ func TestFileTag(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	parserConfig := parsers.Config{
-		DataFormat:  "json",
-		JSONNameKey: "Name",
-	}
-
 	r.SetParserFunc(func() (parsers.Parser, error) {
-		return parsers.NewParser(&parserConfig)
+		p := &json.Parser{NameKey: "Name"}
+		err := p.Init()
+		return p, err
 	})
 
 	// Let's drop a 1-line LINE-DELIMITED json.

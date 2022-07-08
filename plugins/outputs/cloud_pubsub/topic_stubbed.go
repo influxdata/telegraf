@@ -15,7 +15,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/api/support/bundler"
 )
 
@@ -178,7 +180,9 @@ func (t *stubTopic) sendBundle() func(items interface{}) {
 }
 
 func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
-	p, _ := parsers.NewInfluxParser()
+	p := influx.Parser{}
+	err := p.Init()
+	require.NoError(t, err)
 	metrics, err := p.Parse(msg.Data)
 	if err != nil {
 		// Just attempt to base64-decode first before returning error.

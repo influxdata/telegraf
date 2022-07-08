@@ -16,13 +16,14 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 )
 
 type Parser struct {
-	DefaultTags     map[string]string
-	Header          http.Header
-	IgnoreTimestamp bool
+	DefaultTags     map[string]string `toml:"-"`
+	Header          http.Header       `toml:"-"` // set by the prometheus input
+	IgnoreTimestamp bool              `toml:"prometheus_ignore_timestamp"`
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -185,4 +186,16 @@ func (p *Parser) GetTimestamp(m *dto.Metric, now time.Time) time.Time {
 		t = now
 	}
 	return t
+}
+
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.IgnoreTimestamp = config.PrometheusIgnoreTimestamp
+	return nil
+}
+
+func init() {
+	parsers.Add("prometheus",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{}
+		})
 }

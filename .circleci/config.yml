@@ -411,6 +411,20 @@ jobs:
             docker tag telegraf-alpine quay.io/influxdb/telegraf-nightly:alpine
             docker image ls
             docker push quay.io/influxdb/telegraf-nightly:alpine
+  amd64-package-test-nightly:
+    machine:
+      image: ubuntu-2004:current
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '.'
+      - run: sudo apt update && sudo apt install -y snapd
+      - run: sudo snap install lxd
+      - run: sudo lxd init --auto
+      - run: sudo usermod -a -G lxd $(whoami)
+      - run: cd tools/package_lxd_test && go build
+      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*_amd64.deb")
+      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*.x86_64.rpm")
   package-sign-windows:
     executor:
         name: win/default
@@ -744,25 +758,35 @@ workflows:
           nightly: true
           requires:
             - 'test-go-linux'
+      - 'package-sign-windows':
+          requires:
+            - 'windows-package-nightly'
+      - 'package-sign-mac':
+           requires:
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
       - nightly:
           requires:
+            - 'amd64-package-test-nightly'
+            - 'arm64-package-nightly'
+            - 'armel-package-nightly'
+            - 'armhf-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
             - 'i386-package-nightly'
+            - 'mips-package-nightly'
+            - 'mipsel-package-nightly'
             - 'ppc64le-package-nightly'
             - 'riscv64-package-nightly'
             - 's390x-package-nightly'
-            - 'armel-package-nightly'
-            - 'amd64-package-nightly'
-            - 'mipsel-package-nightly'
-            - 'mips-package-nightly'
-            - 'darwin-amd64-package-nightly'
-            - 'darwin-arm64-package-nightly'
-            - 'windows-package-nightly'
             - 'static-package-nightly'
-            - 'arm64-package-nightly'
-            - 'armhf-package-nightly'
+            - 'windows-package-nightly'
       - docker-nightly:
           requires:
             - 'nightly'
+      - amd64-package-test-nightly:
+          requires:
+            - 'amd64-package-nightly'
     triggers:
       - schedule:
           cron: "0 7 * * *"

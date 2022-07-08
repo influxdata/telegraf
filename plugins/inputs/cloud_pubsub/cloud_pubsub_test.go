@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -19,7 +19,8 @@ const (
 func TestRunParse(t *testing.T) {
 	subID := "sub-run-parse"
 
-	testParser, _ := parsers.NewInfluxParser()
+	testParser := &influx.Parser{}
+	require.NoError(t, testParser.Init())
 
 	sub := &stubSub{
 		id:       subID,
@@ -63,7 +64,8 @@ func TestRunParse(t *testing.T) {
 func TestRunBase64(t *testing.T) {
 	subID := "sub-run-base64"
 
-	testParser, _ := parsers.NewInfluxParser()
+	testParser := &influx.Parser{}
+	require.NoError(t, testParser.Init())
 
 	sub := &stubSub{
 		id:       subID,
@@ -107,7 +109,8 @@ func TestRunBase64(t *testing.T) {
 func TestRunInvalidMessages(t *testing.T) {
 	subID := "sub-invalid-messages"
 
-	testParser, _ := parsers.NewInfluxParser()
+	testParser := &influx.Parser{}
+	require.NoError(t, testParser.Init())
 
 	sub := &stubSub{
 		id:       subID,
@@ -154,7 +157,8 @@ func TestRunOverlongMessages(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	testParser, _ := parsers.NewInfluxParser()
+	testParser := &influx.Parser{}
+	require.NoError(t, testParser.Init())
 
 	sub := &stubSub{
 		id:       subID,
@@ -201,7 +205,8 @@ func TestRunErrorInSubscriber(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	testParser, _ := parsers.NewInfluxParser()
+	testParser := &influx.Parser{}
+	require.NoError(t, testParser.Init())
 
 	sub := &stubSub{
 		id:       subID,

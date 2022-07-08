@@ -19,7 +19,7 @@ GW8+
   ## Username and password to access GroundWork API.
   username = ""
   password = ""
-  
+
   ## Default application type to use in GroundWork client
   # default_app_type = "TELEGRAF"
 
