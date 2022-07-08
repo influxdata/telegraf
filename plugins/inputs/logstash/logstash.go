@@ -261,10 +261,9 @@ func (logstash *Logstash) gatherPluginsStats(
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
 		if plugin.Failures != nil {
-			failuresFields := map[string]interface{}{
-				"failures": *plugin.Failures,
-			}
-		accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
+			failuresFields := map[string]interface{} {"failures": *plugin.Failures}
+			accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
+		}
 		/*
 			The elasticsearch output produces additional stats around
 			bulk requests and document writes (that are elasticsearch specific).
