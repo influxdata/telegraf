@@ -145,6 +145,7 @@ cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014
   - messages_received (int): count of the number of messages that have been received from mqtt
 
 ## Example Output with [[inputs.internal]] set
+
 ```shell
 internal_mqtt_consumer,host=pop-os,version=1.24.0-2a266e53 messages_received=622i,bytes_received=37942i 1657282270000000000
 ```
