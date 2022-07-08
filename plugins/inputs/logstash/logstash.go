@@ -89,10 +89,10 @@ type Pipeline struct {
 }
 
 type Plugin struct {
-	ID       string      `json:"id"`
-	Events   interface{} `json:"events"`
-	Name     string      `json:"name"`
-	Failures *int64      `json:"failures,omitempty"`
+	ID           string                 `json:"id"`
+	Events       interface{}            `json:"events"`
+	Name         string                 `json:"name"`
+	Failures     *int64                 `json:"failures,omitempty"`
 	BulkRequests map[string]interface{} `json:"bulk_requests"`
 	Documents    map[string]interface{} `json:"documents"`
 }
@@ -261,7 +261,7 @@ func (logstash *Logstash) gatherPluginsStats(
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
 		if plugin.Failures != nil {
-			failuresFields := map[string]interface{} {"failures": *plugin.Failures}
+			failuresFields := map[string]interface{}{"failures": *plugin.Failures}
 			accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
 		}
 		/*
