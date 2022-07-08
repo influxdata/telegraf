@@ -35,6 +35,7 @@ type AzureDataExplorer struct {
 	MetricsGrouping string          `toml:"metrics_grouping_type"`
 	TableName       string          `toml:"table_name"`
 	CreateTables    bool            `toml:"create_tables"`
+	IngestionType   string          `toml:"ingestion_type"`
 	client          localClient
 	ingesters       map[string]localIngestor
 	serializer      serializers.Serializer
@@ -57,7 +58,7 @@ type localClient interface {
 	Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error)
 }
 
-type ingestorFactory func(localClient, string, string) (localIngestor, error)
+type ingestorFactory func(localClient, string, string, string) (localIngestor, error)
 
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
@@ -173,7 +174,7 @@ func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string)
 			return nil, fmt.Errorf("creating table for %q failed: %v", tableName, err)
 		}
 		//create a new ingestor client for the table
-		tempIngestor, err := adx.createIngestor(adx.client, adx.Database, tableName)
+		tempIngestor, err := adx.createIngestor(adx.client, adx.Database, tableName, adx.IngestionType)
 		if err != nil {
 			return nil, fmt.Errorf("creating ingestor for %q failed: %v", tableName, err)
 		}
@@ -237,9 +238,18 @@ func init() {
 	})
 }
 
-func createRealIngestor(client localClient, database string, tableName string) (localIngestor, error) {
-	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
+func createRealIngestor(client localClient, database string, tableName string, ingestionType string) (localIngestor, error) {
+	var ingestor localIngestor
+	var err error
+	if strings.ToLower(ingestionType) == "managed" {
+		ingestor, err = ingest.NewManaged(client.(*kusto.Client), database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
+	} else {
+		ingestor, err = ingest.New(client.(*kusto.Client), database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
+	}
+
 	if ingestor != nil {
+		//fmt.Println(ingestor)
+		//adx.createIngestor = ingestor
 		return ingestor, nil
 	}
 	return nil, err

@@ -138,9 +138,10 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, err)
 
 			plugin := AzureDataExplorer{
-				Endpoint:        "someendpoint",
-				Database:        "databasename",
-				Log:             testutil.Logger{},
+				Endpoint: "someendpoint",
+				Database: "databasename",
+				Log:      testutil.Logger{},
+				//IngestionType	 "managed"
 				MetricsGrouping: tC.metricsGrouping,
 				TableName:       tC.tableName,
 				CreateTables:    tC.createTables,
@@ -206,6 +207,36 @@ func TestInitBlankEndpoint(t *testing.T) {
 	require.Equal(t, "Endpoint configuration cannot be empty", errorInit.Error())
 }
 
+func TestConnect(t *testing.T) {
+	plugin := AzureDataExplorer{
+		Log:            testutil.Logger{},
+		Endpoint:       "someendpoint",
+		Database:       "databasename",
+		client:         &fakeClient{},
+		ingesters:      map[string]localIngestor{},
+		createIngestor: createFakeIngestor,
+	}
+
+	connection := plugin.Connect()
+	require.Error(t, connection)
+	require.Equal(t, "MSI not available", connection.Error())
+}
+
+func TestInit(t *testing.T) {
+	plugin := AzureDataExplorer{
+		Log:            testutil.Logger{},
+		Endpoint:       "someendpoint",
+		Database:       "databasename",
+		client:         &fakeClient{},
+		ingesters:      map[string]localIngestor{},
+		createIngestor: createFakeIngestor,
+	}
+
+	initResponse := plugin.Init()
+	require.Equal(t, initResponse, nil)
+	//require.Equal(t, "MSI not available", connection.Error())
+}
+
 type fakeClient struct {
 	queries      []string
 	internalMgmt func(client *fakeClient, ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error)
@@ -219,7 +250,7 @@ type fakeIngestor struct {
 	actualOutputMetric map[string]interface{}
 }
 
-func createFakeIngestor(localClient, string, string) (localIngestor, error) {
+func createFakeIngestor(localClient, string, string, string) (localIngestor, error) {
 	return &fakeIngestor{}, nil
 }
 func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...ingest.FileOption) (*ingest.Result, error) {
