@@ -36,7 +36,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 
 	gs.Retries = s.Retries
 
-	gs.UseUnconnectedUDPSocket = s.UseUnconnectedUDPSocket
+	gs.UseUnconnectedUDPSocket = s.UnconnectedUDPSocket
 
 	switch s.Version {
 	case 3:
@@ -152,7 +152,6 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 	switch u.Scheme {
 	case "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6":
 		gs.Transport = u.Scheme
-
 	default:
 		return fmt.Errorf("unsupported scheme: %v", u.Scheme)
 	}

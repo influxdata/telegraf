@@ -34,7 +34,7 @@ path onto the global path variable
   ## When true, SNMP reponses are accepted from any address not just
   ## the requested address. This can be useful when gathering from
   ## redundant/failover systems.
-  # use_unconnected_udp_socket = false 
+  # unconnected_udp_socket = false 
 
   ## Path to mib files
   ## Used by the gosmi translator.
