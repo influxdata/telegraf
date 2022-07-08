@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 )
@@ -193,8 +192,6 @@ func NewParser(config *Config) (Parser, error) {
 	var err error
 	var parser Parser
 	switch config.DataFormat {
-	case "prometheusremotewrite":
-		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	default:
 		creator, found := Parsers[config.DataFormat]
 		if !found {
@@ -211,10 +208,4 @@ func NewParser(config *Config) (Parser, error) {
 		err = p.InitFromConfig(config)
 	}
 	return parser, err
-}
-
-func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
-	return &prometheusremotewrite.Parser{
-		DefaultTags: defaultTags,
-	}, nil
 }
