@@ -25,12 +25,6 @@ path onto the global path variable
   ##
   # service_address = "udp://:162"
   ##
-  ## If set to true changes to be an unconnected UDP socket
-  ## This is used when network gear isn't smart enough to send SNMP
-  ## reponses from the address it recieved the request on. 
-  ## This opens a unconnected UDP socket and use sendto/recvfrom
-  # use_unconnected_udp_socket = false 
-  ##
   ## Path to mib files
   ## Used by the gosmi translator.
   ## To add paths when translating with netsnmp, use the MIBDIRS environment variable

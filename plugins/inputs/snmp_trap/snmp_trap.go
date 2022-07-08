@@ -26,12 +26,11 @@ type translator interface {
 }
 
 type SnmpTrap struct {
-	ServiceAddress          string          `toml:"service_address"`
-	UseUnconnectedUDPSocket bool            `toml:"use_unconnected_udp_socket"`
-	Timeout                 config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
-	Version                 string          `toml:"version"`
-	Translator              string          `toml:"-"`
-	Path                    []string        `toml:"path"`
+	ServiceAddress string          `toml:"service_address"`
+	Timeout        config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
+	Version        string          `toml:"version"`
+	Translator     string          `toml:"-"`
+	Path           []string        `toml:"path"`
 
 	// Settings for version 3
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
@@ -67,11 +66,10 @@ func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {
 func init() {
 	inputs.Add("snmp_trap", func() telegraf.Input {
 		return &SnmpTrap{
-			timeFunc:                time.Now,
-			ServiceAddress:          "udp://:162",
-			UseUnconnectedUDPSocket: false,
-			Path:                    []string{"/usr/share/snmp/mibs"},
-			Version:                 "2c",
+			timeFunc:       time.Now,
+			ServiceAddress: "udp://:162",
+			Path:           []string{"/usr/share/snmp/mibs"},
+			Version:        "2c",
 		}
 	})
 }
@@ -105,9 +103,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
 	s.listener.Params = gosnmp.Default
-	if s.UseUnconnectedUDPSocket {
-		s.listener.Params.UseUnconnectedUDPSocket = true
-	}
 
 	switch s.Version {
 	case "3":

@@ -36,6 +36,8 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 
 	gs.Retries = s.Retries
 
+	gs.UseUnconnectedUDPSocket = s.UseUnconnectedUDPSocket
+
 	switch s.Version {
 	case 3:
 		gs.Version = gosnmp.Version3
@@ -148,13 +150,8 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 	// gosnmp does not handle these errors well, which is why
 	// they can result in cryptic errors by net.Dial.
 	switch u.Scheme {
-	case "tcp", "tcp4", "tcp6":
+	case "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6":
 		gs.Transport = u.Scheme
-	case "udp", "udp4", "udp6":
-		gs.Transport = u.Scheme
-		// if gs.UseUnconnectedUDPSocket {
-		// 	gs.UseUnconnectedUDPSocket = true
-		// }
 
 	default:
 		return fmt.Errorf("unsupported scheme: %v", u.Scheme)
