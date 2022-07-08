@@ -355,6 +355,10 @@ needed:
 sudo tcpdump -s 0 -i eth0 -w telegraf-snmp.pcap host 127.0.0.1 and port 161
 ```
 
+## Metrics
+
+The field and tags will depend on the table and fields configured
+
 ## Example Output
 
 ```shell
