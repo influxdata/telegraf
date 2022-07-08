@@ -30,10 +30,10 @@ path onto the global path variable
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
-  ## If set to true changes to be an unconnected UDP socket
-  ## This is used when network gear isn't smart enough to send SNMP
-  ## reponses from the address it recieved the request on. 
-  ## This opens a unconnected UDP socket and use sendto/recvfrom
+  ## Unconnected UDP socket
+  ## When true, SNMP reponses are accepted from any address not just
+  ## the requested address. This can be useful when gathering from
+  ## redundant/failover systems.
   # use_unconnected_udp_socket = false 
 
   ## Path to mib files
