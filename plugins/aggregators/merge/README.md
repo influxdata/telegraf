@@ -1,4 +1,4 @@
-# Merge Aggregator
+# Merge Aggregator Plugin
 
 Merge metrics together into a metric with multiple fields into the most memory
 and network transfer efficient form.
@@ -9,7 +9,8 @@ be handled more efficiently by the output.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Merge metrics into multifield metrics by series key
 [[aggregators.merge]]
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.

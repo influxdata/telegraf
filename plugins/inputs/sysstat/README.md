@@ -1,20 +1,22 @@
 # sysstat Input Plugin
 
-Collect [sysstat](https://github.com/sysstat/sysstat) metrics - requires the sysstat
-package installed.
+Collect [sysstat](https://github.com/sysstat/sysstat) metrics - requires the
+sysstat package installed.
 
-This plugin collects system metrics with the sysstat collector utility `sadc` and parses
-the created binary data file with the `sadf` utility.
+This plugin collects system metrics with the sysstat collector utility `sadc`
+and parses the created binary data file with the `sadf` utility.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Sysstat metrics collector
 [[inputs.sysstat]]
   ## Path to the sadc command.
   #
-  ## On Debian and Arch Linux the default path is /usr/lib/sa/sadc whereas
-  ## on RHEL and CentOS the default path is /usr/lib64/sa/sadc
+  ## Common Defaults:
+  ##   Debian/Ubuntu: /usr/lib/sysstat/sadc
+  ##   Arch:          /usr/lib/sa/sadc
+  ##   RHEL/CentOS:   /usr/lib64/sa/sadc
   sadc_path = "/usr/lib/sa/sadc" # required
 
   ## Path to the sadf command, if it is not in PATH
@@ -38,20 +40,20 @@ the created binary data file with the `sadf` utility.
   ##
   ## Run 'sar -h' or 'man sar' to find out the supported options for your sysstat version.
   [inputs.sysstat.options]
- -C = "cpu"
- -B = "paging"
- -b = "io"
- -d = "disk"             # requires DISK activity
- "-n ALL" = "network"
- "-P ALL" = "per_cpu"
- -q = "queue"
- -R = "mem"
- -r = "mem_util"
- -S = "swap_util"
- -u = "cpu_util"
- -v = "inode"
- -W = "swap"
- -w = "task"
+    -C = "cpu"
+    -B = "paging"
+    -b = "io"
+    -d = "disk"             # requires DISK activity
+    "-n ALL" = "network"
+    "-P ALL" = "per_cpu"
+    -q = "queue"
+    -R = "mem"
+    -r = "mem_util"
+    -S = "swap_util"
+    -u = "cpu_util"
+    -v = "inode"
+    -W = "swap"
+    -w = "task"
   # -H = "hugepages"        # only available for newer linux distributions
   # "-I ALL" = "interrupts" # requires INT activity
 
@@ -61,7 +63,7 @@ the created binary data file with the `sadf` utility.
   #  vg = "rootvg"
 ```
 
-## Measurements & Fields
+## Metrics
 
 ### If group=true
 
@@ -115,7 +117,7 @@ And much more, depending on the options you configure.
 
 And much more, depending on the options you configure.
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - device

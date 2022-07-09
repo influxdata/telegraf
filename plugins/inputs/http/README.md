@@ -1,10 +1,14 @@
 # HTTP Input Plugin
 
-The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The endpoint should have metrics formatted in one of the supported [input data formats](../../../docs/DATA_FORMATS_INPUT.md).  Each data format has its own unique set of configuration options which can be added to the input configuration.
+The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The
+endpoint should have metrics formatted in one of the supported [input data
+formats](../../../docs/DATA_FORMATS_INPUT.md).  Each data format has its own
+unique set of configuration options which can be added to the input
+configuration.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read formatted metrics from one or more HTTP endpoints
 [[inputs.http]]
   ## One or more URLs from which to read formatted metrics
@@ -54,6 +58,7 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
   # cookie_auth_method = "POST"
   # cookie_auth_username = "username"
   # cookie_auth_password = "pa$$word"
+  # cookie_auth_headers = { Content-Type = "application/json", X-MY-HEADER = "hello" }
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
   ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
   # cookie_auth_renewal = "5m"
@@ -74,7 +79,8 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
 
 ## Metrics
 
-The metrics collected by this input plugin will depend on the configured `data_format` and the payload returned by the HTTP endpoint(s).
+The metrics collected by this input plugin will depend on the configured
+`data_format` and the payload returned by the HTTP endpoint(s).
 
 The default values below are added if the input format does not specify a value:
 
@@ -84,4 +90,11 @@ The default values below are added if the input format does not specify a value:
 
 ## Optional Cookie Authentication Settings
 
-The optional Cookie Authentication Settings will retrieve a cookie from the given authorization endpoint, and use it in subsequent API requests.  This is useful for services that do not provide OAuth or Basic Auth authentication, e.g. the [Tesla Powerwall API](https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network), which uses a Cookie Auth Body to retrieve an authorization cookie.  The Cookie Auth Renewal interval will renew the authorization by retrieving a new cookie at the given interval.
+The optional Cookie Authentication Settings will retrieve a cookie from the
+given authorization endpoint, and use it in subsequent API requests.  This is
+useful for services that do not provide OAuth or Basic Auth authentication,
+e.g. the [Tesla Powerwall API][tesla], which uses a Cookie Auth Body to retrieve
+an authorization cookie.  The Cookie Auth Renewal interval will renew the
+authorization by retrieving a new cookie at the given interval.
+
+[tesla]: https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network

@@ -8,6 +8,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -438,11 +439,11 @@ func TestTopicTag(t *testing.T) {
 			plugin.TopicTag = tt.topicTag()
 			plugin.TopicParsing = tt.topicParsing
 
-			parser, err := parsers.NewInfluxParser()
-			require.NoError(t, err)
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
 			plugin.SetParser(parser)
 
-			err = plugin.Init()
+			err := plugin.Init()
 			require.Equal(t, tt.expectedError, err)
 			if tt.expectedError != nil {
 				return

@@ -197,3 +197,15 @@ func TestSameTimestamp(t *testing.T) {
 	out = dedup.Apply(in)
 	require.Equal(t, []telegraf.Metric{}, out) // drop
 }
+
+func TestSuppressMultipleRepeatedValue(t *testing.T) {
+	deduplicate := createDedup(time.Now())
+	// Create metric in the past
+	source := createMetric(1, time.Now().Add(-1*time.Second))
+	_ = deduplicate.Apply(source)
+	source = createMetric(1, time.Now())
+	target := deduplicate.Apply(source, source, source, source)
+
+	assertCacheHit(t, &deduplicate, source)
+	assertMetricSuppressed(t, target)
+}

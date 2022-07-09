@@ -1,22 +1,29 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mongodb
 
 import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	_ "embed"
 	"fmt"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+
+	"github.com/influxdata/telegraf"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type MongoDB struct {
 	Servers             []string
@@ -34,51 +41,12 @@ type MongoDB struct {
 }
 
 type Ssl struct {
-	Enabled bool
-	CaCerts []string `toml:"cacerts"`
+	Enabled bool     `toml:"ssl_enabled" deprecated:"1.3.0;use 'tls_*' options instead"`
+	CaCerts []string `toml:"cacerts" deprecated:"1.3.0;use 'tls_ca' instead"`
 }
 
-var sampleConfig = `
-  ## An array of URLs of the form:
-  ##   "mongodb://" [user ":" pass "@"] host [ ":" port]
-  ## For example:
-  ##   mongodb://user:auth_key@10.10.3.30:27017,
-  ##   mongodb://10.10.3.33:18832,
-  servers = ["mongodb://127.0.0.1:27017?connect=direct"]
-
-  ## When true, collect cluster status
-  ## Note that the query that counts jumbo chunks triggers a COLLSCAN, which
-  ## may have an impact on performance.
-  # gather_cluster_status = true
-
-  ## When true, collect per database stats
-  # gather_perdb_stats = false
-
-  ## When true, collect per collection stats
-  # gather_col_stats = false
-
-  ## When true, collect usage statistics for each collection
-  ## (insert, update, queries, remove, getmore, commands etc...).
-  # gather_top_stat = false
-
-  ## List of db where collections stats are collected
-  ## If empty, all db are concerned
-  # col_stats_dbs = ["local"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (m *MongoDB) SampleConfig() string {
+func (*MongoDB) SampleConfig() string {
 	return sampleConfig
-}
-
-func (*MongoDB) Description() string {
-	return "Read metrics from one or many MongoDB servers"
 }
 
 func (m *MongoDB) Init() error {

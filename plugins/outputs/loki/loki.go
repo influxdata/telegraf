@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package loki
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,36 +23,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	defaultEndpoint      = "/loki/api/v1/push"
 	defaultClientTimeout = 5 * time.Second
 )
-
-var sampleConfig = `
-  ## The domain of Loki
-  domain = "https://loki.domain.tld"
-
-  ## Endpoint to write api
-  # endpoint = "/loki/api/v1/push"
-
-  ## Connection timeout, defaults to "5s" if not set.
-  # timeout = "5s"
-
-  ## Basic auth credential
-  # username = "loki"
-  # password = "pass"
-
-  ## Additional HTTP headers
-  # http_headers = {"X-Scope-OrgID" = "1"}
-
-  ## If the request must be gzip encoded
-  # gzip_request = false
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-`
 
 type Loki struct {
 	Domain       string            `toml:"domain"`
@@ -68,14 +48,6 @@ type Loki struct {
 	url    string
 	client *http.Client
 	tls.ClientConfig
-}
-
-func (l *Loki) SampleConfig() string {
-	return sampleConfig
-}
-
-func (l *Loki) Description() string {
-	return "Send logs to Loki"
 }
 
 func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
@@ -104,6 +76,10 @@ func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (*Loki) SampleConfig() string {
+	return sampleConfig
 }
 
 func (l *Loki) Connect() (err error) {

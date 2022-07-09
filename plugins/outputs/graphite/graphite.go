@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package graphite
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"errors"
 	"io"
 	"math/rand"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Graphite struct {
 	GraphiteTagSupport      bool   `toml:"graphite_tag_support"`
@@ -30,48 +36,9 @@ type Graphite struct {
 	tlsint.ClientConfig
 }
 
-var sampleConfig = `
-  ## TCP endpoint for your graphite instance.
-  ## If multiple endpoints are configured, output will be load balanced.
-  ## Only one of the endpoints will be written to with each iteration.
-  servers = ["localhost:2003"]
-  ## Prefix metrics name
-  prefix = ""
-  ## Graphite output template
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  template = "host.tags.measurement.field"
-
-  ## Enable Graphite tags support
-  # graphite_tag_support = false
-
-  ## Define how metric names and tags are sanitized; options are "strict", or "compatible"
-  ## strict - Default method, and backwards compatible with previous versionf of Telegraf
-  ## compatible - More relaxed sanitizing when using tags, and compatible with the graphite spec
-  # graphite_tag_sanitize_mode = "strict"
-
-  ## Character for separating metric name and field for Graphite tags
-  # graphite_separator = "."
-
-  ## Graphite templates patterns
-  ## 1. Template for cpu
-  ## 2. Template for disk*
-  ## 3. Default template
-  # templates = [
-  #  "cpu tags.measurement.host.field",
-  #  "disk* measurement.field",
-  #  "host.measurement.tags.field"
-  #]
-
-  ## timeout in seconds for the write connection to graphite
-  timeout = 2
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
+func (*Graphite) SampleConfig() string {
+	return sampleConfig
+}
 
 func (g *Graphite) Connect() error {
 	// Set default values
@@ -116,14 +83,6 @@ func (g *Graphite) Close() error {
 		_ = conn.Close()
 	}
 	return nil
-}
-
-func (g *Graphite) SampleConfig() string {
-	return sampleConfig
-}
-
-func (g *Graphite) Description() string {
-	return "Configuration for Graphite server to send metrics to"
 }
 
 // We need check eof as we can write to nothing without noticing anything is wrong

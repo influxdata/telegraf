@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package powerdns
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -13,26 +15,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Powerdns struct {
 	UnixSockets []string
 
 	Log telegraf.Logger `toml:"-"`
 }
 
-var sampleConfig = `
-  ## An array of sockets to gather stats about.
-  ## Specify a path to unix socket.
-  unix_sockets = ["/var/run/pdns.controlsocket"]
-`
-
 var defaultTimeout = 5 * time.Second
 
-func (p *Powerdns) SampleConfig() string {
+func (*Powerdns) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *Powerdns) Description() string {
-	return "Read metrics from one or many PowerDNS servers"
 }
 
 func (p *Powerdns) Gather(acc telegraf.Accumulator) error {

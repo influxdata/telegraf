@@ -216,6 +216,14 @@ var wiredTigerExtStats = map[string]string{
 	"wtcache_unmodified_pages_evicted":     "UnmodifiedPagesEvicted",
 }
 
+var wiredTigerConnectionStats = map[string]string{
+	"wt_connection_files_currently_open": "FilesCurrentlyOpen",
+}
+
+var wiredTigerDataHandleStats = map[string]string{
+	"wt_data_handles_currently_active": "DataHandlesCurrentlyActive",
+}
+
 var defaultTCMallocStats = map[string]string{
 	"tcmalloc_current_allocated_bytes":          "TCMallocCurrentAllocatedBytes",
 	"tcmalloc_heap_size":                        "TCMallocHeapSize",
@@ -245,15 +253,17 @@ var defaultStorageStats = map[string]string{
 }
 
 var dbDataStats = map[string]string{
-	"collections":  "Collections",
-	"objects":      "Objects",
-	"avg_obj_size": "AvgObjSize",
-	"data_size":    "DataSize",
-	"storage_size": "StorageSize",
-	"num_extents":  "NumExtents",
-	"indexes":      "Indexes",
-	"index_size":   "IndexSize",
-	"ok":           "Ok",
+	"collections":   "Collections",
+	"objects":       "Objects",
+	"avg_obj_size":  "AvgObjSize",
+	"data_size":     "DataSize",
+	"storage_size":  "StorageSize",
+	"num_extents":   "NumExtents",
+	"indexes":       "Indexes",
+	"index_size":    "IndexSize",
+	"ok":            "Ok",
+	"fs_used_size":  "FsUsedSize",
+	"fs_total_size": "FsTotalSize",
 }
 
 var colDataStats = map[string]string{
@@ -392,6 +402,8 @@ func (d *MongodbData) AddDefaultStats() {
 			d.add(key, floatVal)
 		}
 		d.addStat(statLine, wiredTigerExtStats)
+		d.addStat(statLine, wiredTigerConnectionStats)
+		d.addStat(statLine, wiredTigerDataHandleStats)
 		d.add("page_faults", d.StatLine.FaultsCnt)
 	}
 }

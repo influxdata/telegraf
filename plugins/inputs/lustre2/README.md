@@ -1,13 +1,14 @@
 # Lustre Input Plugin
 
-The [Lustre][]® file system is an open-source, parallel file system that supports
-many requirements of leadership class HPC simulation environments.
+The [Lustre][]® file system is an open-source, parallel file system that
+supports many requirements of leadership class HPC simulation environments.
 
-This plugin monitors the Lustre file system using its entries in the proc filesystem.
+This plugin monitors the Lustre file system using its entries in the proc
+filesystem.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from local Lustre service on OST, MDS
 [[inputs.lustre2]]
   ## An array of /proc globs to search for Lustre stats
@@ -17,16 +18,19 @@ This plugin monitors the Lustre file system using its entries in the proc filesy
   #   "/proc/fs/lustre/obdfilter/*/stats",
   #   "/proc/fs/lustre/osd-ldiskfs/*/stats",
   #   "/proc/fs/lustre/obdfilter/*/job_stats",
+  #   "/proc/fs/lustre/obdfilter/*/exports/*/stats",
   # ]
   # mds_procfiles = [
   #   "/proc/fs/lustre/mdt/*/md_stats",
   #   "/proc/fs/lustre/mdt/*/job_stats",
+  #   "/proc/fs/lustre/mdt/*/exports/*/stats",
   # ]
 ```
 
 ## Metrics
 
-From `/proc/fs/lustre/obdfilter/*/stats` and `/proc/fs/lustre/osd-ldiskfs/*/stats`:
+From `/proc/fs/lustre/obdfilter/*/stats` and
+`/proc/fs/lustre/osd-ldiskfs/*/stats`:
 
 - lustre2
   - tags:
@@ -39,6 +43,18 @@ From `/proc/fs/lustre/obdfilter/*/stats` and `/proc/fs/lustre/osd-ldiskfs/*/stat
     - cache_hit
     - cache_miss
     - cache_access
+
+From `/proc/fs/lustre/obdfilter/*/exports/*/stats`:
+
+- lustre2
+  - tags:
+    - name
+    - client
+  - fields:
+    - write_bytes
+    - write_calls
+    - read_bytes
+    - read_calls
 
 From `/proc/fs/lustre/obdfilter/*/job_stats`:
 
@@ -71,6 +87,30 @@ From `/proc/fs/lustre/mdt/*/md_stats`:
 - lustre2
   - tags:
     - name
+  - fields:
+    - open
+    - close
+    - mknod
+    - link
+    - unlink
+    - mkdir
+    - rmdir
+    - rename
+    - getattr
+    - setattr
+    - getxattr
+    - setxattr
+    - statfs
+    - sync
+    - samedir_rename
+    - crossdir_rename
+
+From `/proc/fs/lustre/mdt/*/exports/*/stats`:
+
+- lustre2
+  - tags:
+    - name
+    - client
   - fields:
     - open
     - close

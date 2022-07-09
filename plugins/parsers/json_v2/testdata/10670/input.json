@@ -1,0 +1,10 @@
+{
+    "weight_ROWKEY": "123",
+    "weight_serialNumber": "AX00",
+    "weight_createdAt": 1644708158939,
+    "weight_weight": 289.799,
+    "sensor_imei": "123",
+    "sensor_distributor_name": null,
+    "sensor_customer_name": "Customer",
+    "sensor_dist_name": null
+}

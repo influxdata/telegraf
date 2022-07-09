@@ -129,17 +129,6 @@ var testErrors = []testData{
 	}},
 }
 
-func TestBasicInfo(t *testing.T) {
-
-	winServices := &WinServices{
-		Log:         testutil.Logger{},
-		mgrProvider: &FakeMgProvider{testErrors[0]},
-	}
-	winServices.Init()
-	require.NotEmpty(t, winServices.SampleConfig())
-	require.NotEmpty(t, winServices.Description())
-}
-
 func TestMgrErrors(t *testing.T) {
 	//mgr.connect error
 	winServices := &WinServices{

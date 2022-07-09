@@ -49,6 +49,23 @@ func TestUriOverride(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCompressionOverride(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		//nolint:errcheck,revive // Ignore the returned error as the test will fail anyway
+		json.NewEncoder(w).Encode(`{"status":"ok"}`)
+	}))
+	defer ts.Close()
+
+	d := NewDatadog(ts.URL)
+	d.Apikey = "123456"
+	d.Compression = "zlib"
+	err := d.Connect()
+	require.NoError(t, err)
+	err = d.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+}
+
 func TestBadStatusCode(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)

@@ -1,8 +1,6 @@
 package sql
 
 import (
-	"context"
-	"flag"
 	"fmt"
 	"testing"
 	"time"
@@ -10,8 +8,8 @@ import (
 	"math/rand"
 	"path/filepath"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
@@ -31,60 +29,41 @@ func pwgen(n int) string {
 	return string(buffer)
 }
 
-var spinup = flag.Bool("spinup", false, "Spin-up the required test containers")
-
-func TestMariaDB(t *testing.T) {
+func TestMariaDBIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	logger := testutil.Logger{}
 
-	addr := "127.0.0.1"
 	port := "3306"
-	passwd := ""
+	passwd := pwgen(32)
 	database := "foo"
 
-	if *spinup {
-		logger.Infof("Spinning up container...")
+	// Determine the test-data mountpoint
+	testdata, err := filepath.Abs("testdata/mariadb")
+	require.NoError(t, err, "determining absolute path of test-data failed")
 
-		// Generate a random password
-		passwd = pwgen(32)
-
-		// Determine the test-data mountpoint
-		testdata, err := filepath.Abs("testdata/mariadb")
-		require.NoError(t, err, "determining absolute path of test-data failed")
-
-		// Spin-up the container
-		ctx := context.Background()
-		req := testcontainers.GenericContainerRequest{
-			ContainerRequest: testcontainers.ContainerRequest{
-				Image: "mariadb",
-				Env: map[string]string{
-					"MYSQL_ROOT_PASSWORD": passwd,
-					"MYSQL_DATABASE":      database,
-				},
-				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
-				},
-				ExposedPorts: []string{"3306/tcp"},
-				WaitingFor:   wait.ForListeningPort("3306/tcp"),
-			},
-			Started: true,
-		}
-		container, err := testcontainers.GenericContainer(ctx, req)
-		require.NoError(t, err, "starting container failed")
-		defer func() {
-			require.NoError(t, container.Terminate(ctx), "terminating container failed")
-		}()
-
-		// Get the connection details from the container
-		addr, err = container.Host(ctx)
-		require.NoError(t, err, "getting container host address failed")
-		p, err := container.MappedPort(ctx, "3306/tcp")
-		require.NoError(t, err, "getting container host port failed")
-		port = p.Port()
+	container := testutil.Container{
+		Image:        "mariadb",
+		ExposedPorts: []string{port},
+		Env: map[string]string{
+			"MYSQL_ROOT_PASSWORD": passwd,
+			"MYSQL_DATABASE":      database,
+		},
+		BindMounts: map[string]string{
+			"/docker-entrypoint-initdb.d": testdata,
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Buffer pool(s) load completed at"),
+			wait.ForListeningPort(nat.Port(port)),
+		),
 	}
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
 
 	// Define the testset
 	var testset = []struct {
@@ -124,8 +103,13 @@ func TestMariaDB(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
 			plugin := &SQL{
-				Driver:  "maria",
-				Dsn:     fmt.Sprintf("root:%s@tcp(%s:%s)/%s", passwd, addr, port, database),
+				Driver: "maria",
+				Dsn: fmt.Sprintf("root:%s@tcp(%s:%s)/%s",
+					passwd,
+					container.Address,
+					container.Ports[port],
+					database,
+				),
 				Queries: tt.queries,
 				Log:     logger,
 			}
@@ -152,58 +136,41 @@ func TestMariaDB(t *testing.T) {
 	}
 }
 
-func TestPostgreSQL(t *testing.T) {
+func TestPostgreSQLIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	logger := testutil.Logger{}
 
-	addr := "127.0.0.1"
 	port := "5432"
-	passwd := ""
+	passwd := pwgen(32)
 	database := "foo"
 
-	if *spinup {
-		logger.Infof("Spinning up container...")
+	// Determine the test-data mountpoint
+	testdata, err := filepath.Abs("testdata/postgres")
+	require.NoError(t, err, "determining absolute path of test-data failed")
 
-		// Generate a random password
-		passwd = pwgen(32)
-
-		// Determine the test-data mountpoint
-		testdata, err := filepath.Abs("testdata/postgres")
-		require.NoError(t, err, "determining absolute path of test-data failed")
-
-		// Spin-up the container
-		ctx := context.Background()
-		req := testcontainers.GenericContainerRequest{
-			ContainerRequest: testcontainers.ContainerRequest{
-				Image: "postgres",
-				Env: map[string]string{
-					"POSTGRES_PASSWORD": passwd,
-					"POSTGRES_DB":       database,
-				},
-				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
-				},
-				ExposedPorts: []string{"5432/tcp"},
-				WaitingFor:   wait.ForListeningPort("5432/tcp"),
-			},
-			Started: true,
-		}
-		container, err := testcontainers.GenericContainer(ctx, req)
-		require.NoError(t, err, "starting container failed")
-		defer func() {
-			require.NoError(t, container.Terminate(ctx), "terminating container failed")
-		}()
-
-		// Get the connection details from the container
-		addr, err = container.Host(ctx)
-		require.NoError(t, err, "getting container host address failed")
-		p, err := container.MappedPort(ctx, "5432/tcp")
-		require.NoError(t, err, "getting container host port failed")
-		port = p.Port()
+	container := testutil.Container{
+		Image:        "postgres",
+		ExposedPorts: []string{port},
+		Env: map[string]string{
+			"POSTGRES_PASSWORD": passwd,
+			"POSTGRES_DB":       database,
+		},
+		BindMounts: map[string]string{
+			"/docker-entrypoint-initdb.d": testdata,
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("database system is ready to accept connections"),
+			wait.ForListeningPort(nat.Port(port)),
+		),
 	}
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
 
 	// Define the testset
 	var testset = []struct {
@@ -243,8 +210,115 @@ func TestPostgreSQL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
 			plugin := &SQL{
-				Driver:  "pgx",
-				Dsn:     fmt.Sprintf("postgres://postgres:%v@%v:%v/%v", passwd, addr, port, database),
+				Driver: "pgx",
+				Dsn: fmt.Sprintf("postgres://postgres:%v@%v:%v/%v",
+					passwd,
+					container.Address,
+					container.Ports[port],
+					database,
+				),
+				Queries: tt.queries,
+				Log:     logger,
+			}
+
+			var acc testutil.Accumulator
+
+			// Startup the plugin
+			err := plugin.Init()
+			require.NoError(t, err)
+			err = plugin.Start(&acc)
+			require.NoError(t, err)
+
+			// Gather
+			err = plugin.Gather(&acc)
+			require.NoError(t, err)
+			require.Len(t, acc.Errors, 0)
+
+			// Stopping the plugin
+			plugin.Stop()
+
+			// Do the comparison
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
+		})
+	}
+}
+
+func TestClickHouseIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	logger := testutil.Logger{}
+
+	port := "9000"
+	user := "default"
+
+	// Determine the test-data mountpoint
+	testdata, err := filepath.Abs("testdata/clickhouse")
+	require.NoError(t, err, "determining absolute path of test-data failed")
+
+	container := testutil.Container{
+		Image:        "yandex/clickhouse-server",
+		ExposedPorts: []string{port, "8123"},
+		BindMounts: map[string]string{
+			"/docker-entrypoint-initdb.d": testdata,
+		},
+		WaitingFor: wait.ForAll(
+			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
+			wait.ForListeningPort(nat.Port(port)),
+			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'"),
+		),
+	}
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	// Define the testset
+	var testset = []struct {
+		name     string
+		queries  []Query
+		expected []telegraf.Metric
+	}{
+		{
+			name: "metric_one",
+			queries: []Query{
+				{
+					Query:               "SELECT * FROM default.metric_one",
+					TagColumnsInclude:   []string{"tag_*"},
+					FieldColumnsExclude: []string{"tag_*", "timestamp"},
+					TimeColumn:          "timestamp",
+					TimeFormat:          "unix",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"sql",
+					map[string]string{
+						"tag_one": "tag1",
+						"tag_two": "tag2",
+					},
+					map[string]interface{}{
+						"int64_one": int64(1234),
+						"int64_two": int64(2345),
+					},
+					time.Unix(1621289085, 0),
+				),
+			},
+		},
+	}
+
+	for _, tt := range testset {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the plugin-under-test
+			plugin := &SQL{
+				Driver: "clickhouse",
+				Dsn: fmt.Sprintf("tcp://%v:%v?username=%v",
+					container.Address,
+					container.Ports[port],
+					user,
+				),
 				Queries: tt.queries,
 				Log:     logger,
 			}

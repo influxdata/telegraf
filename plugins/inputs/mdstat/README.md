@@ -1,16 +1,21 @@
 # mdstat Input Plugin
 
-The mdstat plugin gathers statistics about any Linux MD RAID arrays configured on the host
-by reading /proc/mdstat. For a full list of available fields see the
-/proc/mdstat section of the [proc man page](http://man7.org/linux/man-pages/man5/proc.5.html).
-For a better idea of what each field represents, see the
-[mdstat man page](https://raid.wiki.kernel.org/index.php/Mdstat).
+The mdstat plugin gathers statistics about any Linux MD RAID arrays configured
+on the host by reading /proc/mdstat. For a full list of available fields see the
+/proc/mdstat section of the [proc man page][man-proc].  For a better idea of
+what each field represents, see the [mdstat man page][man-mdstat].
 
-Stat collection based on Prometheus' mdstat collection library at <https://github.com/prometheus/procfs/blob/master/mdstat.go>
+Stat collection based on Prometheus' [mdstat collection library][prom-lib].
+
+[man-proc]: http://man7.org/linux/man-pages/man5/proc.5.html
+
+[man-mdstat]: https://raid.wiki.kernel.org/index.php/Mdstat
+
+[prom-lib]: https://github.com/prometheus/procfs/blob/master/mdstat.go
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get kernel statistics from /proc/mdstat
 [[inputs.mdstat]]
   ## Sets file path
@@ -18,7 +23,7 @@ Stat collection based on Prometheus' mdstat collection library at <https://githu
   # file_name = "/proc/mdstat"
 ```
 
-## Measurements & Fields
+## Metrics
 
 - mdstat
   - BlocksSynced (if the array is rebuilding/checking, this is the count of blocks that have been scanned)

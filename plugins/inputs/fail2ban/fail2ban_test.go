@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -50,10 +52,9 @@ func TestGather(t *testing.T) {
 	execCommand = fakeExecCommand
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
-	err := f.Gather(&acc)
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	require.NoError(t, f.Init())
+	require.NoError(t, f.Gather(&acc))
 
 	fields1 := map[string]interface{}{
 		"banned": 2,

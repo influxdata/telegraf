@@ -1,25 +1,35 @@
 # Salesforce Input Plugin
 
-The Salesforce plugin gathers metrics about the limits in your Salesforce organization and the remaining usage.
-It fetches its data from the [limits endpoint](https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm) of Salesforce's REST API.
+The Salesforce plugin gathers metrics about the limits in your Salesforce
+organization and the remaining usage.  It fetches its data from the [limits
+endpoint][limits] of Salesforce's REST API.
+
+[limits]: https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm
 
 ## Configuration
 
-```toml
-# Gather Metrics about Salesforce limits and remaining usage
+```toml @sample.conf
+# Read API usage and limits for a Salesforce organisation
 [[inputs.salesforce]]
+  ## specify your credentials
+  ##
   username = "your_username"
   password = "your_password"
-  ## (Optional) security token
-  security_token = "your_security_token"
-  ## (Optional) environment type (sandbox or production)
+  ##
+  ## (optional) security token
+  # security_token = "your_security_token"
+  ##
+  ## (optional) environment type (sandbox or production)
   ## default is: production
+  ##
   # environment = "production"
-  ## (Optional) API version (default: "39.0")
+  ##
+  ## (optional) API version (default: "39.0")
+  ##
   # version = "39.0"
 ```
 
-## Measurements & Fields
+## Metrics
 
 Salesforce provide one measurement named "salesforce".
 Each entry is converted to snake\_case and 2 fields are created.
@@ -32,7 +42,7 @@ Each entry is converted to snake\_case and 2 fields are created.
   - \<key\>_remaining (int)
   - (...)
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - host

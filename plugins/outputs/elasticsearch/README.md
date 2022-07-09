@@ -1,6 +1,7 @@
 # Elasticsearch Output Plugin
 
-This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (<http://olivere.github.io/elastic/).>
+This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using
+Elastic (<http://olivere.github.io/elastic/).>
 
 It supports Elasticsearch releases from 5.x up to 7.x.
 
@@ -8,19 +9,28 @@ It supports Elasticsearch releases from 5.x up to 7.x.
 
 ### Indexes per time-frame
 
-This plugin can manage indexes per time-frame, as commonly done in other tools with Elasticsearch.
+This plugin can manage indexes per time-frame, as commonly done in other tools
+with Elasticsearch.
 
-The timestamp of the metric collected will be used to decide the index destination.
+The timestamp of the metric collected will be used to decide the index
+destination.
 
-For more information about this usage on Elasticsearch, check [the docs](https://www.elastic.co/guide/en/elasticsearch/guide/master/time-based.html#index-per-timeframe).
+For more information about this usage on Elasticsearch, check [the
+docs][1].
+
+[1]: https://www.elastic.co/guide/en/elasticsearch/guide/master/time-based.html#index-per-timeframe
 
 ### Template management
 
-Index templates are used in Elasticsearch to define settings and mappings for the indexes and how the fields should be analyzed.
-For more information on how this works, see [the docs](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html).
+Index templates are used in Elasticsearch to define settings and mappings for
+the indexes and how the fields should be analyzed.  For more information on how
+this works, see [the docs][2].
 
-This plugin can create a working template for use with telegraf metrics. It uses Elasticsearch dynamic templates feature to set proper types for the tags and metrics fields.
-If the template specified already exists, it will not overwrite unless you configure this plugin to do so. Thus you can customize this template after its creation if necessary.
+This plugin can create a working template for use with telegraf metrics. It uses
+Elasticsearch dynamic templates feature to set proper types for the tags and
+metrics fields.  If the template specified already exists, it will not overwrite
+unless you configure this plugin to do so. Thus you can customize this template
+after its creation if necessary.
 
 Example of an index template created by telegraf on Elasticsearch 5.x:
 
@@ -98,6 +108,8 @@ Example of an index template created by telegraf on Elasticsearch 5.x:
 
 ```
 
+[2]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+
 ### Example events
 
 This plugin will format the events in the following way:
@@ -144,25 +156,72 @@ This plugin will format the events in the following way:
 }
 ```
 
+## OpenSearch Support
+
+OpenSearch is a fork of Elasticsearch hosted by AWS. The OpenSearch server will
+report itself to clients with an AWS specific-version (e.g. v1.0). In reality,
+the actual underlying Elasticsearch version is v7.1. This breaks Telegraf and
+other Elasticsearch clients that need to know what major version they are
+interfacing with.
+
+Amazon has created a [compatibility mode][3] to allow existing Elasticsearch
+clients to properly work when the version needs to be checked. To enable
+compatibility mode users need to set the `override_main_response_version` to
+`true`.
+
+On existing clusters run:
+
+```json
+PUT /_cluster/settings
+{
+  "persistent" : {
+    "compatibility.override_main_response_version" : true
+  }
+}
+```
+
+And on new clusters set the option to true under advanced options:
+
+```json
+POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
+{
+  "DomainName": "domain-name",
+  "TargetVersion": "OpenSearch_1.0",
+  "AdvancedOptions": {
+    "override_main_response_version": "true"
+   }
+}
+```
+
+[3]: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade
+
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Configuration for Elasticsearch to send metrics to.
 [[outputs.elasticsearch]]
   ## The full HTTP endpoint URL for your Elasticsearch instance
   ## Multiple urls can be specified as part of the same cluster,
-  ## this means that only ONE of the urls will be written to each interval.
+  ## this means that only ONE of the urls will be written to each interval
   urls = [ "http://node1.es.example.com:9200" ] # required.
   ## Elasticsearch client timeout, defaults to "5s" if not set.
   timeout = "5s"
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
   enable_sniffer = false
+  ## Set to true to enable gzip compression
+  enable_gzip = false
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
+  ## Set the timeout for periodic health checks.
+  # health_check_timeout = "1s"
   ## HTTP basic authentication details.
+  ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
+  ## HTTP bearer token authentication details
+  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
@@ -208,21 +267,32 @@ This plugin will format the events in the following way:
   ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
   # float_handling = "none"
   # float_replacement_value = 0.0
+
+  ## Pipeline Config
+  ## To use a ingest pipeline, set this to the name of the pipeline you want to use.
+  # use_pipeline = "my_pipeline"
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the pipeline name. If the tag does not exist,
+  ## the default pipeline will be used as the pipeline. If no default pipeline is set,
+  ## no pipeline is used for the metric.
+  # use_pipeline = "{{es_pipeline}}"
+  # default_pipeline = "my_pipeline"
 ```
 
 ### Permissions
 
-If you are using authentication within your Elasticsearch cluster, you need
-to create a account and create a role with at least the manage role in the
-Cluster Privileges category.  Overwise, your account will not be able to
-connect to your Elasticsearch cluster and send logs to your cluster.  After
-that, you need to add "create_indice" and "write" permission to your specific
-index pattern.
+If you are using authentication within your Elasticsearch cluster, you need to
+create a account and create a role with at least the manage role in the Cluster
+Privileges category.  Overwise, your account will not be able to connect to your
+Elasticsearch cluster and send logs to your cluster.  After that, you need to
+add "create_indice" and "write" permission to your specific index pattern.
 
 ### Required parameters
 
-* `urls`: A list containing the full HTTP URL of one or more nodes from your Elasticsearch instance.
-* `index_name`: The target index for metrics. You can use the date specifiers below to create indexes per time frame.
+* `urls`: A list containing the full HTTP URL of one or more nodes from your
+  Elasticsearch instance.
+* `index_name`: The target index for metrics. You can use the date specifiers
+  below to create indexes per time frame.
 
 ```   %Y - year (2017)
   %y - last two digits of year (00..99)
@@ -232,28 +302,65 @@ index pattern.
   %V - week of the year (ISO week) (01..53)
 ```
 
-Additionally, you can specify dynamic index names by using tags with the notation ```{{tag_name}}```. This will store the metrics with different tag values in different indices. If the tag does not exist in a particular metric, the `default_tag_value` will be used instead.
+Additionally, you can specify dynamic index names by using tags with the
+notation ```{{tag_name}}```. This will store the metrics with different tag
+values in different indices. If the tag does not exist in a particular metric,
+the `default_tag_value` will be used instead.
 
 ### Optional parameters
 
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
-* `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster nodes, thus it is not necessary to list all nodes in the urls config option.
-* `health_check_interval`: Set the interval to check if the nodes are available, in seconds. Setting to 0 will disable the health check (not recommended in production).
-* `username`: The username for HTTP basic authentication details (eg. when using Shield).
-* `password`: The password for HTTP basic authentication details (eg. when using Shield).
-* `manage_template`: Set to true if you want telegraf to manage its index template. If enabled it will create a recommended index template for telegraf indexes.
+* `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster
+  nodes, thus it is not necessary to list all nodes in the urls config option.
+* `health_check_interval`: Set the interval to check if the nodes are available,
+  in seconds. Setting to 0 will disable the health check (not recommended in
+  production).
+* `username`: The username for HTTP basic authentication details (eg. when using
+  Shield).
+* `password`: The password for HTTP basic authentication details (eg. when using
+  Shield).
+* `manage_template`: Set to true if you want telegraf to manage its index
+  template. If enabled it will create a recommended index template for telegraf
+  indexes.
 * `template_name`: The template name used for telegraf indexes.
-* `overwrite_template`: Set to true if you want telegraf to overwrite an existing template.
-* `force_document_id`: Set to true will compute a unique hash from as sha256(concat(timestamp,measurement,series-hash)),enables resend or update data withoud ES duplicated documents.
-* `float_handling`: Specifies how to handle `NaN` and infinite field values. `"none"` (default) will do nothing, `"drop"` will drop the field and `replace` will replace the field value by the number in `float_replacement_value`
-* `float_replacement_value`: Value (defaulting to `0.0`) to replace `NaN`s and `inf`s if `float_handling` is set to `replace`. Negative `inf` will be replaced by the negative value in this number to respect the sign of the field's original value.
+* `overwrite_template`: Set to true if you want telegraf to overwrite an
+  existing template.
+* `force_document_id`: Set to true will compute a unique hash from as
+  sha256(concat(timestamp,measurement,series-hash)),enables resend or update
+  data withoud ES duplicated documents.
+* `float_handling`: Specifies how to handle `NaN` and infinite field
+  values. `"none"` (default) will do nothing, `"drop"` will drop the field and
+  `replace` will replace the field value by the number in
+  `float_replacement_value`
+* `float_replacement_value`: Value (defaulting to `0.0`) to replace `NaN`s and
+  `inf`s if `float_handling` is set to `replace`. Negative `inf` will be
+  replaced by the negative value in this number to respect the sign of the
+  field's original value.
+* `use_pipeline`: If set, the set value will be used as the pipeline to call
+  when sending events to elasticsearch. Additionally, you can specify dynamic
+  pipeline names by using tags with the notation ```{{tag_name}}```.  If the tag
+  does not exist in a particular metric, the `default_pipeline` will be used
+  instead.
+* `default_pipeline`: If dynamic pipeline names the tag does not exist in a
+  particular metric, this value will be used instead.
 
 ## Known issues
 
-Integer values collected that are bigger than 2^63 and smaller than 1e21 (or in this exact same window of their negative counterparts) are encoded by golang JSON encoder in decimal format and that is not fully supported by Elasticsearch dynamic field mapping. This causes the metrics with such values to be dropped in case a field mapping has not been created yet on the telegraf index. If that's the case you will see an exception on Elasticsearch side like this:
+Integer values collected that are bigger than 2^63 and smaller than 1e21 (or in
+this exact same window of their negative counterparts) are encoded by golang
+JSON encoder in decimal format and that is not fully supported by Elasticsearch
+dynamic field mapping. This causes the metrics with such values to be dropped in
+case a field mapping has not been created yet on the telegraf index. If that's
+the case you will see an exception on Elasticsearch side like this:
 
-```{"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed to parse"}],"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token for number_type [BIG_INTEGER]"}},"status":400}```
+```json
+{"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed to parse"}],"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token for number_type [BIG_INTEGER]"}},"status":400}
+```
 
-The correct field mapping will be created on the telegraf index as soon as a supported JSON value is received by Elasticsearch, and subsequent insertions will work because the field mapping will already exist.
+The correct field mapping will be created on the telegraf index as soon as a
+supported JSON value is received by Elasticsearch, and subsequent insertions
+will work because the field mapping will already exist.
 
-This issue is caused by the way Elasticsearch tries to detect integer fields, and by how golang encodes numbers in JSON. There is no clear workaround for this at the moment.
+This issue is caused by the way Elasticsearch tries to detect integer fields,
+and by how golang encodes numbers in JSON. There is no clear workaround for this
+at the moment.

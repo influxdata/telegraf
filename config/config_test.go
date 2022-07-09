@@ -5,11 +5,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -18,6 +22,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
@@ -213,6 +218,11 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	}
 }
 
+func TestConfig_WrongCertPath(t *testing.T) {
+	c := NewConfig()
+	require.Error(t, c.LoadConfig("./testdata/wrong_cert_path.toml"))
+}
+
 func TestConfig_LoadSpecialTypes(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/special_types.toml"))
@@ -224,8 +234,12 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	require.Equal(t, Duration(time.Second), input.WriteTimeout)
 	// Tests telegraf size parsing.
 	require.Equal(t, Size(1024*1024), input.MaxBodySize)
-	// Tests toml multiline basic strings.
-	require.Equal(t, "/path/to/my/cert", strings.TrimRight(input.TLSCert, "\r\n"))
+	// Tests toml multiline basic strings on single line.
+	require.Equal(t, "./testdata/special_types.pem", input.TLSCert)
+	// Tests toml multiline basic strings on single line.
+	require.Equal(t, "./testdata/special_types.key", input.TLSKey)
+	// Tests toml multiline basic strings on multiple lines.
+	require.Equal(t, "/path/", strings.TrimRight(input.Paths[0], "\r\n"))
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
@@ -359,6 +373,302 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 	}
 }
 
+func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
+	formats := []string{
+		"collectd",
+		"csv",
+		"dropwizard",
+		"form_urlencoded",
+		"graphite",
+		"grok",
+		"influx",
+		"json",
+		"json_v2",
+		"logfmt",
+		"nagios",
+		"prometheus",
+		"prometheusremotewrite",
+		"value",
+		"wavefront",
+		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
+	}
+
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/parsers_new.toml"))
+	require.Len(t, c.Inputs, len(formats))
+
+	cfg := parsers.Config{
+		CSVHeaderRowCount:     42,
+		DropwizardTagPathsMap: make(map[string]string),
+		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
+		JSONStrict:            true,
+		MetricName:            "parser_test_new",
+	}
+
+	override := map[string]struct {
+		param map[string]interface{}
+		mask  []string
+	}{
+		"csv": {
+			param: map[string]interface{}{
+				"HeaderRowCount": cfg.CSVHeaderRowCount,
+			},
+			mask: []string{"TimeFunc", "ResetMode"},
+		},
+		"xpath_protobuf": {
+			param: map[string]interface{}{
+				"ProtobufMessageDef":  "testdata/addressbook.proto",
+				"ProtobufMessageType": "addressbook.AddressBook",
+			},
+		},
+	}
+
+	expected := make([]telegraf.Parser, 0, len(formats))
+	for _, format := range formats {
+		formatCfg := &cfg
+		formatCfg.DataFormat = format
+
+		logger := models.NewLogger("parsers", format, cfg.MetricName)
+
+		// Try with the new format
+		if creator, found := parsers.Parsers[format]; found {
+			t.Logf("using new format parser for %q...", format)
+			parserNew := creator(formatCfg.MetricName)
+			if settings, found := override[format]; found {
+				s := reflect.Indirect(reflect.ValueOf(parserNew))
+				for key, value := range settings.param {
+					v := reflect.ValueOf(value)
+					s.FieldByName(key).Set(v)
+				}
+			}
+			models.SetLoggerOnPlugin(parserNew, logger)
+			if p, ok := parserNew.(telegraf.Initializer); ok {
+				require.NoError(t, p.Init())
+			}
+			expected = append(expected, parserNew)
+			continue
+		}
+
+		// Try with the old format
+		parserOld, err := parsers.NewParser(formatCfg)
+		if err == nil {
+			t.Logf("using old format parser for %q...", format)
+			models.SetLoggerOnPlugin(parserOld, logger)
+			if p, ok := parserOld.(telegraf.Initializer); ok {
+				require.NoError(t, p.Init())
+			}
+			expected = append(expected, parserOld)
+			continue
+		}
+		require.Containsf(t, err.Error(), "invalid data format:", "setup %q failed: %v", format, err)
+		require.Failf(t, "%q neither found in old nor new format", format)
+	}
+	require.Len(t, expected, len(formats))
+
+	actual := make([]interface{}, 0)
+	generated := make([]interface{}, 0)
+	for _, plugin := range c.Inputs {
+		input, ok := plugin.Input.(*MockupInputPluginParserNew)
+		require.True(t, ok)
+		// Get the parser set with 'SetParser()'
+		if p, ok := input.Parser.(*models.RunningParser); ok {
+			require.NoError(t, p.Init())
+			actual = append(actual, p.Parser)
+		} else {
+			actual = append(actual, input.Parser)
+		}
+		// Get the parser set with 'SetParserFunc()'
+		g, err := input.ParserFunc()
+		require.NoError(t, err)
+		if rp, ok := g.(*models.RunningParser); ok {
+			generated = append(generated, rp.Parser)
+		} else {
+			generated = append(generated, g)
+		}
+	}
+	require.Len(t, actual, len(formats))
+
+	for i, format := range formats {
+		// Determine the underlying type of the parser
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreTypes(sync.Mutex{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
+		if settings, found := override[format]; found {
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
+		}
+
+		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
+		diff = cmp.Diff(expected[i], generated[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParserFunc() for %q", format)
+	}
+}
+
+func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
+	formats := []string{
+		"collectd",
+		"csv",
+		"dropwizard",
+		"form_urlencoded",
+		"graphite",
+		"grok",
+		"influx",
+		"json",
+		"json_v2",
+		"logfmt",
+		"nagios",
+		"prometheus",
+		"prometheusremotewrite",
+		"value",
+		"wavefront",
+		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
+	}
+
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/parsers_old.toml"))
+	require.Len(t, c.Inputs, len(formats))
+
+	cfg := parsers.Config{
+		CSVHeaderRowCount:     42,
+		DropwizardTagPathsMap: make(map[string]string),
+		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
+		JSONStrict:            true,
+		MetricName:            "parser_test_old",
+	}
+
+	override := map[string]struct {
+		param map[string]interface{}
+		mask  []string
+	}{
+		"csv": {
+			param: map[string]interface{}{
+				"HeaderRowCount": cfg.CSVHeaderRowCount,
+			},
+			mask: []string{"TimeFunc", "ResetMode"},
+		},
+		"xpath_protobuf": {
+			param: map[string]interface{}{
+				"ProtobufMessageDef":  "testdata/addressbook.proto",
+				"ProtobufMessageType": "addressbook.AddressBook",
+			},
+		},
+	}
+
+	expected := make([]telegraf.Parser, 0, len(formats))
+	for _, format := range formats {
+		formatCfg := &cfg
+		formatCfg.DataFormat = format
+
+		logger := models.NewLogger("parsers", format, cfg.MetricName)
+
+		// Try with the new format
+		if creator, found := parsers.Parsers[format]; found {
+			t.Logf("using new format parser for %q...", format)
+			parserNew := creator(formatCfg.MetricName)
+			if settings, found := override[format]; found {
+				s := reflect.Indirect(reflect.ValueOf(parserNew))
+				for key, value := range settings.param {
+					v := reflect.ValueOf(value)
+					s.FieldByName(key).Set(v)
+				}
+			}
+			models.SetLoggerOnPlugin(parserNew, logger)
+			if p, ok := parserNew.(telegraf.Initializer); ok {
+				require.NoError(t, p.Init())
+			}
+			expected = append(expected, parserNew)
+			continue
+		}
+
+		// Try with the old format
+		parserOld, err := parsers.NewParser(formatCfg)
+		if err == nil {
+			t.Logf("using old format parser for %q...", format)
+			models.SetLoggerOnPlugin(parserOld, logger)
+			if p, ok := parserOld.(telegraf.Initializer); ok {
+				require.NoError(t, p.Init())
+			}
+			expected = append(expected, parserOld)
+			continue
+		}
+		require.Containsf(t, err.Error(), "invalid data format:", "setup %q failed: %v", format, err)
+		require.Failf(t, "%q neither found in old nor new format", format)
+	}
+	require.Len(t, expected, len(formats))
+
+	actual := make([]interface{}, 0)
+	generated := make([]interface{}, 0)
+	for _, plugin := range c.Inputs {
+		input, ok := plugin.Input.(*MockupInputPluginParserOld)
+		require.True(t, ok)
+		// Get the parser set with 'SetParser()'
+		if p, ok := input.Parser.(*models.RunningParser); ok {
+			require.NoError(t, p.Init())
+			actual = append(actual, p.Parser)
+		} else {
+			actual = append(actual, input.Parser)
+		}
+		// Get the parser set with 'SetParserFunc()'
+		g, err := input.ParserFunc()
+		require.NoError(t, err)
+		if rp, ok := g.(*models.RunningParser); ok {
+			generated = append(generated, rp.Parser)
+		} else {
+			generated = append(generated, g)
+		}
+	}
+	require.Len(t, actual, len(formats))
+
+	for i, format := range formats {
+		// Determine the underlying type of the parser
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreTypes(sync.Mutex{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
+		if settings, found := override[format]; found {
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
+		}
+
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
+		diff = cmp.Diff(expected[i], generated[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParserFunc() for %q", format)
+	}
+}
+
+/*** Mockup INPUT plugin for (old) parser testing to avoid cyclic dependencies ***/
+type MockupInputPluginParserOld struct {
+	Parser     parsers.Parser
+	ParserFunc parsers.ParserFunc
+}
+
+func (m *MockupInputPluginParserOld) SampleConfig() string                  { return "Mockup old parser test plugin" }
+func (m *MockupInputPluginParserOld) Gather(acc telegraf.Accumulator) error { return nil }
+func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser)       { m.Parser = parser }
+func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc)    { m.ParserFunc = f }
+
+/*** Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies ***/
+type MockupInputPluginParserNew struct {
+	Parser     telegraf.Parser
+	ParserFunc telegraf.ParserFunc
+}
+
+func (m *MockupInputPluginParserNew) SampleConfig() string                  { return "Mockup old parser test plugin" }
+func (m *MockupInputPluginParserNew) Gather(acc telegraf.Accumulator) error { return nil }
+func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser)      { m.Parser = parser }
+func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc)   { m.ParserFunc = f }
+
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
 	Servers      []string `toml:"servers"`
@@ -367,19 +677,19 @@ type MockupInputPlugin struct {
 	ReadTimeout  Duration `toml:"read_timeout"`
 	WriteTimeout Duration `toml:"write_timeout"`
 	MaxBodySize  Size     `toml:"max_body_size"`
+	Paths        []string `toml:"paths"`
 	Port         int      `toml:"port"`
 	Command      string
 	PidFile      string
 	Log          telegraf.Logger `toml:"-"`
 	tls.ServerConfig
 
-	parser parsers.Parser
+	parser telegraf.Parser
 }
 
-func (m *MockupInputPlugin) SampleConfig() string                  { return "Mockup test intput plugin" }
-func (m *MockupInputPlugin) Description() string                   { return "Mockup test intput plugin" }
+func (m *MockupInputPlugin) SampleConfig() string                  { return "Mockup test input plugin" }
 func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPlugin) SetParser(parser parsers.Parser)       { m.parser = parser }
+func (m *MockupInputPlugin) SetParser(parser telegraf.Parser)      { m.parser = parser }
 
 /*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupOuputPlugin struct {
@@ -393,13 +703,14 @@ type MockupOuputPlugin struct {
 
 func (m *MockupOuputPlugin) Connect() error                        { return nil }
 func (m *MockupOuputPlugin) Close() error                          { return nil }
-func (m *MockupOuputPlugin) Description() string                   { return "Mockup test output plugin" }
 func (m *MockupOuputPlugin) SampleConfig() string                  { return "Mockup test output plugin" }
 func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error { return nil }
 
 // Register the mockup plugin on loading
 func init() {
 	// Register the mockup input plugin for the required names
+	inputs.Add("parser_test_new", func() telegraf.Input { return &MockupInputPluginParserNew{} })
+	inputs.Add("parser_test_old", func() telegraf.Input { return &MockupInputPluginParserOld{} })
 	inputs.Add("exec", func() telegraf.Input { return &MockupInputPlugin{Timeout: Duration(time.Second * 5)} })
 	inputs.Add("http_listener_v2", func() telegraf.Input { return &MockupInputPlugin{} })
 	inputs.Add("memcached", func() telegraf.Input { return &MockupInputPlugin{} })

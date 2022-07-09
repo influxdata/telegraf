@@ -10,7 +10,7 @@ body:
   - type: textarea
     id: config
     attributes:
-      label: Relevent telegraf.conf
+      label: Relevant telegraf.conf
       description: Place config in the toml code section. This will be automatically formatted into toml, so no need for backticks.
       render: toml
     validations:
@@ -20,6 +20,7 @@ body:
     attributes:
       label: Logs from Telegraf
       description: Please include the Telegraf logs, ideally with `--debug` used.
+      render: text
     validations:
       required: true
   - type: input

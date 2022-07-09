@@ -1,14 +1,20 @@
 # gNMI (gRPC Network Management Interface) Input Plugin
 
-This plugin consumes telemetry data based on the [gNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.  This input plugin is vendor-agnostic and is supported on any platform that supports the gNMI spec.
+This plugin consumes telemetry data based on the [gNMI][1] Subscribe method. TLS
+is supported for authentication and encryption.  This input plugin is
+vendor-agnostic and is supported on any platform that supports the gNMI spec.
 
 For Cisco devices:
 
-It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
+It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
+(64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
+
+[1]: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# gNMI telemetry input plugin
 [[inputs.gnmi]]
   ## Address and port of the gNMI GRPC server
   addresses = ["10.49.234.114:57777"]
@@ -52,7 +58,7 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
     ## origin usually refers to a (YANG) data model implemented by the device
     ## and path to a specific substructure inside it that should be subscribed to (similar to an XPath)
     ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
-    origin = "openconfig-interfaces"
+    origin = "openconfig"
     path = "/interfaces/interface/state/counters"
 
     # Subscription mode (one of: "target_defined", "sample", "on_change") and interval
@@ -64,11 +70,31 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
 
     ## If suppression is enabled, send updates at least every X seconds anyway
     # heartbeat_interval = "60s"
+
+  ## Tag subscriptions are subscriptions to paths intended to be applied as tags to other subscriptions
+  [[inputs.gnmi.tag_subscription]]
+    # When applying this value as a tag to other metrics, use this tag name
+    name = "descr"
+    # All other subscription fields are as normal
+    origin = "openconfig"
+    path = "/interfaces/interface/state/description"
+    subscription_mode = "on_change"
+    # At least one path element name must be supplied that contains at least one key to match on
+    # Multiple element names can be specified in any order - all element names must be present and contain
+    # to be stored as an in-memory tag
+    elements = ["interface"]
+
 ```
+
+## Metrics
+
+Each configured subscription will emit a different measurement.  Each leaf in a
+GNMI SubscribeResponse Update message will produce a field reading in the
+measurement. GNMI PathElement keys for leaves will attach tags to the field(s).
 
 ## Example Output
 
 ```shell
-ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=MgmtEth0/RP0/CPU0/0,source=10.49.234.115 in-multicast-pkts=0i,out-multicast-pkts=0i,out-errors=0i,out-discards=0i,in-broadcast-pkts=0i,out-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,in-errors=0i,out-unicast-pkts=0i,in-octets=0i,out-octets=0i,last-clear="2019-05-22T16:53:21Z",in-unicast-pkts=0i 1559145777425000000
-ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=GigabitEthernet0/0/0/0,source=10.49.234.115 out-multicast-pkts=0i,out-broadcast-pkts=0i,in-errors=0i,out-errors=0i,in-discards=0i,out-octets=0i,in-unknown-protos=0i,in-unicast-pkts=0i,in-octets=0i,in-multicast-pkts=0i,in-broadcast-pkts=0i,last-clear="2019-05-22T16:54:50Z",out-unicast-pkts=0i,out-discards=0i 1559145777425000000
+ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=MgmtEth0/RP0/CPU0/0,source=10.49.234.115,descr/description=Foo in-multicast-pkts=0i,out-multicast-pkts=0i,out-errors=0i,out-discards=0i,in-broadcast-pkts=0i,out-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,in-errors=0i,out-unicast-pkts=0i,in-octets=0i,out-octets=0i,last-clear="2019-05-22T16:53:21Z",in-unicast-pkts=0i 1559145777425000000
+ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=GigabitEthernet0/0/0/0,source=10.49.234.115,descr/description=Bar out-multicast-pkts=0i,out-broadcast-pkts=0i,in-errors=0i,out-errors=0i,in-discards=0i,out-octets=0i,in-unknown-protos=0i,in-unicast-pkts=0i,in-octets=0i,in-multicast-pkts=0i,in-broadcast-pkts=0i,last-clear="2019-05-22T16:54:50Z",out-unicast-pkts=0i,out-discards=0i 1559145777425000000
 ```

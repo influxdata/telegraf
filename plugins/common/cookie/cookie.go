@@ -19,6 +19,8 @@ type CookieAuthConfig struct {
 	URL    string `toml:"cookie_auth_url"`
 	Method string `toml:"cookie_auth_method"`
 
+	Headers map[string]string `toml:"cookie_auth_headers"`
+
 	// HTTP Basic Auth Credentials
 	Username string `toml:"cookie_auth_username"`
 	Password string `toml:"cookie_auth_password"`
@@ -90,6 +92,14 @@ func (c *CookieAuthConfig) auth() error {
 		req.SetBasicAuth(c.Username, c.Password)
 	}
 
+	for k, v := range c.Headers {
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		} else {
+			req.Header.Add(k, v)
+		}
+	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
@@ -100,7 +110,8 @@ func (c *CookieAuthConfig) auth() error {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	// check either 200 or 201 as some devices may return either
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("cookie auth renewal received status code: %v (%v)",
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),

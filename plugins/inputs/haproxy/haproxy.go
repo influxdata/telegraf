@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package haproxy
 
 import (
+	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 //CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
 
 type haproxy struct {
@@ -30,43 +36,8 @@ type haproxy struct {
 	client *http.Client
 }
 
-var sampleConfig = `
-  ## An array of address to gather stats about. Specify an ip on hostname
-  ## with optional port. ie localhost, 10.10.3.33:1936, etc.
-  ## Make sure you specify the complete path to the stats endpoint
-  ## including the protocol, ie http://10.10.3.33:1936/haproxy?stats
-
-  ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
-  servers = ["http://myhaproxy.com:1936/haproxy?stats"]
-
-  ## Credentials for basic HTTP authentication
-  # username = "admin"
-  # password = "admin"
-
-  ## You can also use local socket with standard wildcard globbing.
-  ## Server address not starting with 'http' will be treated as a possible
-  ## socket, so both examples below are valid.
-  # servers = ["socket:/run/haproxy/admin.sock", "/run/haproxy/*.sock"]
-
-  ## By default, some of the fields are renamed from what haproxy calls them.
-  ## Setting this option to true results in the plugin keeping the original
-  ## field names.
-  # keep_field_names = false
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (h *haproxy) SampleConfig() string {
+func (*haproxy) SampleConfig() string {
 	return sampleConfig
-}
-
-func (h *haproxy) Description() string {
-	return "Read metrics of haproxy, via socket or csv stats page"
 }
 
 // Reads stats from all configured servers accumulates stats.

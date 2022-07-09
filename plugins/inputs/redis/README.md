@@ -1,9 +1,11 @@
 # Redis Input Plugin
 
+The Redis input plugin gathers metrics from one or many Redis servers.
+
 ## Configuration
 
-```toml
-# Read Redis's basic status information
+```toml @sample.conf
+# Read metrics from one or many redis servers
 [[inputs.redis]]
   ## specify servers via a url matching:
   ##  [protocol://][:password]@address[:port]
@@ -18,7 +20,7 @@
 
   ## Optional. Specify redis commands to retrieve values
   # [[inputs.redis.commands]]
-  #   # The command to run where each argument is a separate element 
+  #   # The command to run where each argument is a separate element
   #   command = ["get", "sample-key"]
   #   # The field to store the result in
   #   field = "sample-key-value"
@@ -29,6 +31,9 @@
   ## specify server password
   # password = "s#cr@t%"
 
+  ## specify username for ACL auth (Redis 6.0+)
+  # username = "default"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -37,12 +42,14 @@
   # insecure_skip_verify = true
 ```
 
-## Measurements & Fields
+## Metrics
 
-The plugin gathers the results of the [INFO](https://redis.io/commands/info) redis command.
-There are two separate measurements: _redis_ and _redis\_keyspace_, the latter is used for gathering database related statistics.
+The plugin gathers the results of the [INFO](https://redis.io/commands/info)
+redis command.  There are two separate measurements: _redis_ and
+_redis\_keyspace_, the latter is used for gathering database related statistics.
 
-Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
+Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate)
+and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
 
 - redis
   - keyspace_hitrate(float, number)
@@ -148,7 +155,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - lag(int, number)
     - offset(int, number)
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - port

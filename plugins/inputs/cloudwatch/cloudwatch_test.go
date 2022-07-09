@@ -3,6 +3,7 @@ package cloudwatch
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -360,13 +361,18 @@ func TestUpdateWindow(t *testing.T) {
 
 func TestProxyFunction(t *testing.T) {
 	c := &CloudWatch{
-		HTTPProxy: proxy.HTTPProxy{HTTPProxyURL: "http://www.penguins.com"},
+		HTTPProxy: proxy.HTTPProxy{
+			HTTPProxyURL: "http://www.penguins.com",
+		},
 	}
 
 	proxyFunction, err := c.HTTPProxy.Proxy()
 	require.NoError(t, err)
 
-	proxyResult, err := proxyFunction(&http.Request{})
+	u, err := url.Parse("https://monitoring.us-west-1.amazonaws.com/")
+	require.NoError(t, err)
+
+	proxyResult, err := proxyFunction(&http.Request{URL: u})
 	require.NoError(t, err)
 	require.Equal(t, "www.penguins.com", proxyResult.Host)
 }

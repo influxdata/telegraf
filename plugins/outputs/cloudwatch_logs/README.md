@@ -1,4 +1,4 @@
-# Amazon CloudWatch Logs Output for Telegraf
+# Amazon CloudWatch Logs Output Plugin
 
 This plugin will send logs to Amazon CloudWatch.
 
@@ -7,24 +7,34 @@ This plugin will send logs to Amazon CloudWatch.
 This plugin uses a credential chain for Authentication with the CloudWatch Logs
 API endpoint. In the following order the plugin will attempt to authenticate.
 
-1. Web identity provider credentials via STS if `role_arn` and `web_identity_token_file` are specified
-1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
+1. Web identity provider credentials via STS if `role_arn` and
+   `web_identity_token_file` are specified
+1. Assumed credentials via STS if `role_arn` attribute is specified (source
+   credentials are evaluated from subsequent rules)
 1. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
 1. Shared profile from `profile` attribute
-1. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
-1. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
-1. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
+1. [Environment Variables][1]
+1. [Shared Credentials][2]
+1. [EC2 Instance Profile][3]
 
-The IAM user needs the following permissions (see this [reference](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/permissions-reference-cwl.html) for more):
+The IAM user needs the following permissions (see this [reference][4] for more):
 
 - `logs:DescribeLogGroups` - required for check if configured log group exist
-- `logs:DescribeLogStreams` - required to view all log streams associated with a log group.
+- `logs:DescribeLogStreams` - required to view all log streams associated with a
+  log group.
 - `logs:CreateLogStream` - required to create a new log stream in a log group.)
-- `logs:PutLogEvents` - required to upload a batch of log events into log stream.
+- `logs:PutLogEvents` - required to upload a batch of log events into log
+  stream.
 
-## Config
+[1]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables
+[2]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file
+[3]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+[4]: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/permissions-reference-cwl.html
 
-```toml
+## Configuration
+
+```toml @sample.conf
+# Configuration for AWS CloudWatchLogs output.
 [[outputs.cloudwatch_logs]]
   ## The region is the Amazon region that you wish to connect to.
   ## Examples include but are not limited to:

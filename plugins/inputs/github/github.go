@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package github
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"strings"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // GitHub - plugin main structure
 type GitHub struct {
 	Repositories      []string        `toml:"repositories"`
@@ -31,41 +37,6 @@ type GitHub struct {
 	RateLimit       selfstat.Stat
 	RateLimitErrors selfstat.Stat
 	RateRemaining   selfstat.Stat
-}
-
-const sampleConfig = `
-  ## List of repositories to monitor.
-  repositories = [
-	  "influxdata/telegraf",
-	  "influxdata/influxdb"
-  ]
-
-  ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
-  # access_token = ""
-
-  ## Github API enterprise url. Github Enterprise accounts must specify their base url.
-  # enterprise_base_url = ""
-
-  ## Timeout for HTTP requests.
-  # http_timeout = "5s"
-
-  ## List of additional fields to query.
-	## NOTE: Getting those fields might involve issuing additional API-calls, so please
-	##       make sure you do not exceed the rate-limit of GitHub.
-	##
-	## Available fields are:
-	## 	- pull-requests			-- number of open and closed pull requests (2 API-calls per repository)
-  # additional_fields = []
-`
-
-// SampleConfig returns sample configuration for this plugin.
-func (g *GitHub) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the plugin description.
-func (g *GitHub) Description() string {
-	return "Gather repository information from GitHub hosted repositories."
 }
 
 // Create GitHub Client
@@ -99,6 +70,10 @@ func (g *GitHub) newGithubClient(httpClient *http.Client) (*githubLib.Client, er
 		return githubLib.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
 	}
 	return githubLib.NewClient(httpClient), nil
+}
+
+func (*GitHub) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather GitHub Metrics

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -200,7 +202,7 @@ func TestTags(t *testing.T) {
 	require.True(t, acc.HasMeasurement("x509_cert"))
 
 	require.True(t, acc.HasTag("x509_cert", "common_name"))
-	require.Equal(t, "server.localdomain", acc.TagValue("x509_cert", "common_name"))
+	require.Equal(t, "localhost", acc.TagValue("x509_cert", "common_name"))
 
 	require.True(t, acc.HasTag("x509_cert", "signature_algorithm"))
 	require.Equal(t, "SHA256-RSA", acc.TagValue("x509_cert", "signature_algorithm"))
@@ -287,7 +289,7 @@ func TestGatherChain(t *testing.T) {
 	}
 }
 
-func TestGatherUDPCert(t *testing.T) {
+func TestGatherUDPCertIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -320,27 +322,23 @@ func TestGatherUDPCert(t *testing.T) {
 	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
-func TestStrings(t *testing.T) {
-	sc := X509Cert{}
-	require.NoError(t, sc.Init())
+func TestGatherTCPCert(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
 
-	tests := []struct {
-		name     string
-		method   string
-		returned string
-		expected string
-	}{
-		{name: "description", method: "Description", returned: sc.Description(), expected: description},
-		{name: "sample config", method: "SampleConfig", returned: sc.SampleConfig(), expected: sampleConfig},
+	m := &X509Cert{
+		Sources: []string{ts.URL},
+		Log:     testutil.Logger{},
 	}
+	require.NoError(t, m.Init())
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if test.returned != test.expected {
-				t.Errorf("Expected method %s to return '%s', found '%s'.", test.method, test.expected, test.returned)
-			}
-		})
-	}
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+
+	require.Len(t, acc.Errors, 0)
+	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
 func TestGatherCertIntegration(t *testing.T) {
@@ -350,6 +348,7 @@ func TestGatherCertIntegration(t *testing.T) {
 
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
@@ -359,13 +358,14 @@ func TestGatherCertIntegration(t *testing.T) {
 	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
-func TestGatherCertMustNotTimeout(t *testing.T) {
+func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 	duration := time.Duration(15) * time.Second
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
+		Log:     testutil.Logger{},
 		Timeout: config.Duration(duration),
 	}
 	require.NoError(t, m.Init())
@@ -378,12 +378,12 @@ func TestGatherCertMustNotTimeout(t *testing.T) {
 
 func TestSourcesToURLs(t *testing.T) {
 	m := &X509Cert{
-		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
+		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "smtp://influxdata.com:25", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
 	}
 	require.NoError(t, m.Init())
 
 	require.Equal(t, len(m.globpaths), 2)
-	require.Equal(t, len(m.locations), 2)
+	require.Equal(t, len(m.locations), 3)
 }
 
 func TestServerName(t *testing.T) {

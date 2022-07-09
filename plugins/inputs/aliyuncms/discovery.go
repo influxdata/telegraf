@@ -3,7 +3,6 @@ package aliyuncms
 import (
 	"encoding/json"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,7 +90,6 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 	var (
 		dscReq                = map[string]discoveryRequest{}
 		cli                   = map[string]aliyunSdkClient{}
-		parseRootKey          = regexp.MustCompile(`Describe(.*)`)
 		responseRootKey       string
 		responseObjectIDKey   string
 		err                   error
@@ -112,12 +110,15 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		switch project {
 		case "acs_ecs_dashboard":
 			dscReq[region] = ecs.CreateDescribeInstancesRequest()
+			responseRootKey = "Instances"
 			responseObjectIDKey = "InstanceId"
 		case "acs_rds_dashboard":
 			dscReq[region] = rds.CreateDescribeDBInstancesRequest()
+			responseRootKey = "Items"
 			responseObjectIDKey = "DBInstanceId"
 		case "acs_slb_dashboard":
 			dscReq[region] = slb.CreateDescribeLoadBalancersRequest()
+			responseRootKey = "LoadBalancers"
 			responseObjectIDKey = "LoadBalancerId"
 		case "acs_memcache":
 			return nil, noDiscoverySupportErr
@@ -137,6 +138,7 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 			//req.InitWithApiInfo("oss", "2014-08-15", "DescribeDBInstances", "oss", "openAPI")
 		case "acs_vpc_eip":
 			dscReq[region] = vpc.CreateDescribeEipAddressesRequest()
+			responseRootKey = "EipAddresses"
 			responseObjectIDKey = "AllocationId"
 		case "acs_kvstore":
 			return nil, noDiscoverySupportErr
@@ -235,35 +237,6 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		return nil, errors.Errorf("Can't build discovery request for project: %q,\nregions: %v", project, regions)
 	}
 
-	//Getting response root key (if not set already). This is to be able to parse discovery responses
-	//As they differ per object type
-	//Discovery requests are of the same type per every region, so pick the first one
-	rpcReq, err := getRPCReqFromDiscoveryRequest(dscReq[regions[0]])
-	//This means that the discovery request is not of proper type/kind
-	if err != nil {
-		return nil, errors.Errorf("Can't parse rpc request object from  discovery request %v", dscReq[regions[0]])
-	}
-
-	/*
-		The action name is of the following format Describe<Project related title for managed instances>,
-		For example: DescribeLoadBalancers -> for SLB project, or DescribeInstances for ECS project
-		We will use it to construct root key name in the discovery API response.
-		It follows the following logic: for 'DescribeLoadBalancers' action in discovery request we get the response
-		in json of the following structure:
-		{
-			 ...
-			 "LoadBalancers": {
-				 "LoadBalancer": [ here comes objects, one per every instance]
-			}
-		}
-		As we can see, the root key is a part of action name, except first word (part) 'Describe'
-	*/
-	result := parseRootKey.FindStringSubmatch(rpcReq.GetActionName())
-	if result == nil || len(result) != 2 {
-		return nil, errors.Errorf("Can't parse the discovery response root key from request action name %q", rpcReq.GetActionName())
-	}
-	responseRootKey = result[1]
-
 	return &discoveryTool{
 		req:                dscReq,
 		cli:                cli,
@@ -313,9 +286,9 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 			if !foundDataItem {
 				return nil, errors.Errorf("Didn't find array item in root key %q", key)
 			}
-		case "TotalCount":
+		case "TotalCount", "TotalRecordCount":
 			pdResp.totalCount = int(val.(float64))
-		case "PageSize":
+		case "PageSize", "PageRecordCount":
 			pdResp.pageSize = int(val.(float64))
 		case "PageNumber":
 			pdResp.pageNumber = int(val.(float64))

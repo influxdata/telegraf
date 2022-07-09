@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package icinga2
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Icinga2 struct {
 	Server          string
@@ -50,33 +56,7 @@ var levels = []string{"ok", "warning", "critical", "unknown"}
 
 type ObjectType string
 
-var sampleConfig = `
-  ## Required Icinga2 server address
-  # server = "https://localhost:5665"
-
-  ## Required Icinga2 object type ("services" or "hosts")
-  # object_type = "services"
-
-  ## Credentials for basic HTTP authentication
-  # username = "admin"
-  # password = "admin"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = true
-  `
-
-func (i *Icinga2) Description() string {
-	return "Gather Icinga2 status"
-}
-
-func (i *Icinga2) SampleConfig() string {
+func (*Icinga2) SampleConfig() string {
 	return sampleConfig
 }
 

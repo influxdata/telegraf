@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package http_listener_v2
 
 import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
+	_ "embed"
 	"errors"
 	"io"
 	"net"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
@@ -21,6 +24,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
 // if the request body is over this size, we will return an HTTP 413 error.
@@ -39,7 +46,7 @@ type TimeFunc func() time.Time
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
 	ServiceAddress string            `toml:"service_address"`
-	Path           string            `toml:"path"`
+	Path           string            `toml:"path" deprecated:"1.20.0;use 'paths' instead"`
 	Paths          []string          `toml:"paths"`
 	PathTag        bool              `toml:"path_tag"`
 	Methods        []string          `toml:"methods"`
@@ -67,67 +74,8 @@ type HTTPListenerV2 struct {
 	acc telegraf.Accumulator
 }
 
-const sampleConfig = `
-  ## Address and port to host HTTP listener on
-  service_address = ":8080"
-
-  ## Path to listen to.
-  ## This option is deprecated and only available for backward-compatibility. Please use paths instead.
-  # path = ""
-
-  ## Paths to listen to.
-  # paths = ["/telegraf"]
-
-  ## Save path as http_listener_v2_path tag if set to true
-  # path_tag = false
-
-  ## HTTP methods to accept.
-  # methods = ["POST", "PUT"]
-
-  ## maximum duration before timing out read of the request
-  # read_timeout = "10s"
-  ## maximum duration before timing out write of the response
-  # write_timeout = "10s"
-
-  ## Maximum allowed http request body size in bytes.
-  ## 0 means to use the default of 524,288,000 bytes (500 mebibytes)
-  # max_body_size = "500MB"
-
-  ## Part of the request to consume.  Available options are "body" and
-  ## "query".
-  # data_source = "body"
-
-  ## Set one or more allowed client CA certificate file names to
-  ## enable mutually authenticated TLS connections
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
-  ## Add service certificate and key
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Optional username and password to accept for HTTP basic authentication.
-  ## You probably want to make sure you have TLS configured above for this.
-  # basic_username = "foobar"
-  # basic_password = "barfoo"
-
-  ## Optional setting to map http headers into tags
-  ## If the http header is not present on the request, no corresponding tag will be added
-  ## If multiple instances of the http header are present, only the first value will be used
-  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
-
-func (h *HTTPListenerV2) SampleConfig() string {
+func (*HTTPListenerV2) SampleConfig() string {
 	return sampleConfig
-}
-
-func (h *HTTPListenerV2) Description() string {
-	return "Generic HTTP write listener"
 }
 
 func (h *HTTPListenerV2) Gather(_ telegraf.Accumulator) error {

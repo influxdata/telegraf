@@ -36,6 +36,8 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 
 	gs.Retries = s.Retries
 
+	gs.UseUnconnectedUDPSocket = s.UnconnectedUDPSocket
+
 	switch s.Version {
 	case 3:
 		gs.Version = gosnmp.Version3
@@ -165,5 +167,13 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 		return fmt.Errorf("parsing port: %w", err)
 	}
 	gs.Port = uint16(port)
+	return nil
+}
+
+func (gs GosnmpWrapper) Reconnect() error {
+	if gs.Conn == nil {
+		return gs.Connect()
+	}
+
 	return nil
 }
