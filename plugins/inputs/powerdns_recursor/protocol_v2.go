@@ -14,7 +14,7 @@ import (
 // Unix datagram socket
 // Synchronous request / response, individual datagrams
 // Datagram 1 => status: uint32
-// Datagram 2 => data: byte[] (max 16384 bytes)
+// Datagram 2 => data: byte[] (max 16_384 bytes)
 func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accumulator) error {
 	randomNumber := rand.Int63()
 	recvSocket := filepath.Join("/", "var", "run", fmt.Sprintf("pdns_recursor_telegraf%d", randomNumber))
@@ -75,7 +75,7 @@ func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accum
 	}
 
 	// Read the response data.
-	buf := make([]byte, 16384)
+	buf := make([]byte, 16_384)
 	n, err = conn.Read(buf)
 	if err != nil {
 		return err

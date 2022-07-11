@@ -56,7 +56,15 @@ func (p *PowerdnsRecursor) gatherFromV3Server(address string, acc telegraf.Accum
 		return err
 	}
 	if responseLength == 0 {
-		return fmt.Errorf("received data length was 0")
+		return fmt.Errorf("received data length was '0'")
+	}
+
+	// Don't allow more than 64kb of data to prevent DOS / issues
+	// with architecture mismatch. V2 protocol allowed for up to
+	// 16kb, so 64kb should give us a pretty good margin for anything
+	// that has been added since.
+	if responseLength > 64*1024 {
+		return fmt.Errorf("received data length was '%v', we only allow up to '%v'", responseLength, 64*1024)
 	}
 
 	data := make([]byte, responseLength)

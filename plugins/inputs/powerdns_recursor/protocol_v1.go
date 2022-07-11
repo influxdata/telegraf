@@ -60,7 +60,7 @@ func (p *PowerdnsRecursor) gatherFromV1Server(address string, acc telegraf.Accum
 	}
 
 	// Read the response data.
-	buf := make([]byte, 16384)
+	buf := make([]byte, 16_384)
 	n, err := conn.Read(buf)
 	if err != nil {
 		return err

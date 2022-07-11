@@ -40,11 +40,11 @@ func parseResponse(metrics string) map[string]interface{} {
 // depending on the platform the program is being run on.
 // At the time of writing, the Go type `uint` has the same
 // behavior, where its size and endianness are platform
-// dependent. This means that we can do an unsafe cast to
-// grab the data representing the length, and know that in
-// most cases it'll be what we need. In all other cases,
-// we still handle all error cases gracefully, so the plugin
-// will just fail to gather data.
+// dependent. Using the unsafe method below, and the known
+// integer size, we can "recreate" the corresponding C
+// behavior in an effort to maintain compatibility. Of course
+// in cases where one program is compiled for i386 and the
+// other for amd64 (and similar), this method will fail.
 
 const UIntSizeInBytes = strconv.IntSize / 8
 
