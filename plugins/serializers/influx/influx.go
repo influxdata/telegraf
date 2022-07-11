@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -62,6 +63,7 @@ type Serializer struct {
 	bytesWritten     int
 	fieldSortOrder   FieldSortOrder
 	fieldTypeSupport FieldTypeSupport
+	unitsNanoseconds int64
 
 	buf    bytes.Buffer
 	header []byte
@@ -71,7 +73,8 @@ type Serializer struct {
 
 func NewSerializer() *Serializer {
 	serializer := &Serializer{
-		fieldSortOrder: NoSortFields,
+		fieldSortOrder:   NoSortFields,
+		unitsNanoseconds: 1,
 
 		header: make([]byte, 0, 50),
 		footer: make([]byte, 0, 21),
@@ -90,6 +93,19 @@ func (s *Serializer) SetFieldSortOrder(order FieldSortOrder) {
 
 func (s *Serializer) SetFieldTypeSupport(typeSupport FieldTypeSupport) {
 	s.fieldTypeSupport = typeSupport
+}
+
+func (s *Serializer) SetTimestampUnits(units time.Duration) {
+	unitsNanoseconds := units.Nanoseconds()
+	fmt.Printf("Nanoseconds: %v\n", unitsNanoseconds)
+
+	// if the units passed in were less than or equal to zero,
+	// then serialize the timestamp in seconds (the default)
+	if unitsNanoseconds <= 0 {
+		unitsNanoseconds = 1
+	}
+
+	s.unitsNanoseconds = unitsNanoseconds
 }
 
 // Serialize writes the telegraf.Metric to a byte slice.  May produce multiple
@@ -182,7 +198,7 @@ func (s *Serializer) buildHeader(m telegraf.Metric) error {
 func (s *Serializer) buildFooter(m telegraf.Metric) {
 	s.footer = s.footer[:0]
 	s.footer = append(s.footer, ' ')
-	s.footer = strconv.AppendInt(s.footer, m.Time().UnixNano(), 10)
+	s.footer = strconv.AppendInt(s.footer, m.Time().UnixNano()/s.unitsNanoseconds, 10)
 	s.footer = append(s.footer, '\n')
 }
 

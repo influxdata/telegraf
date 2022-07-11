@@ -30,6 +30,15 @@ for interoperability.
   ## integer values.  Enabling this option will result in field type errors if
   ## existing data has been written.
   influx_uint_support = false
+
+  ## By default, the line format timestamp is at nanosecond precision. The
+  ## precision can be adjusted here. This parameter can be used to set the
+  ## timestamp units to nanoseconds (`ns`), microseconds (`us` or `µs`),
+  ## milliseconds (`ms`), or seconds (`s`). Note that this parameter will be
+  ## truncated to the nearest power of 10, so if the `influx_timestamp_units`
+  ## are set to `15ms` the timestamps for the serialized line will be output in
+  ## hundredths of a second (`10ms`).
+  influx_timestamp_units = "1ns"
 ```
 
 ## Metrics

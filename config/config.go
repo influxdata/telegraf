@@ -1757,7 +1757,10 @@ func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
 func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error) {
-	sc := &serializers.Config{TimestampUnits: 1 * time.Second}
+	sc := &serializers.Config{
+		TimestampUnits:       time.Duration(1 * time.Second),
+		InfluxTimestampUnits: 1 * time.Nanosecond,
+	}
 
 	c.getFieldString(tbl, "data_format", &sc.DataFormat)
 
@@ -1774,6 +1777,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
+	c.getFieldDuration(tbl, "influx_timestamp_units", &sc.InfluxTimestampUnits)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
 	c.getFieldString(tbl, "graphite_tag_sanitize_mode", &sc.GraphiteTagSanitizeMode)
 
@@ -1844,7 +1848,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_parser_type", "influx_sort_fields",
-		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
+		"influx_uint_support", "influx_timestamp_units", "interval", "json_name_key", "json_query", "json_strict",
 		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
 		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
