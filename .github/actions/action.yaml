@@ -17,5 +17,5 @@ runs:
     - --arch=amd64
     - --name=telegraf-128tech
     - --version=${{ inputs.version }}
-    - --iteration=${{ inputs.iteration }}
+    - --iteration=${{ inputs.patch }}
     - --release
