@@ -185,9 +185,14 @@ func (o *OpenStack) Init() error {
 	}
 
 	// The Cinder volume storage service is optional
-	if o.containsService("volumes") {
+	if o.containsService("volumesv3") {
 		if o.volume, err = openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{}); err != nil {
 			return fmt.Errorf("unable to create V3 volume client %v", err)
+		}
+	}
+	if o.containsService("volumesv2") {
+		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
+			return fmt.Errorf("unable to create V2 volume client %v", err)
 		}
 	}
 
