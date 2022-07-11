@@ -46,7 +46,7 @@ type ConfiguredMetric struct {
 }
 
 var sampleConfig = `
-# Read metrics from a 128T instance
+## Read metrics from a 128T instance
 [[inputs.t128_metrics]]
 ## Required. The base url for metrics collection
 # base_url = "http://localhost:31517/api/v1/router/Fabric128/"
@@ -92,6 +92,10 @@ func (plugin *T128Metrics) Init() error {
 
 	if plugin.BaseURL[len(plugin.BaseURL)-1:] != "/" {
 		plugin.BaseURL += "/"
+	}
+
+	if plugin.MaxSimultaneousRequests <= 0 {
+		return fmt.Errorf("max_simultaneous_requests must be greater than 0")
 	}
 
 	transport := http.DefaultTransport

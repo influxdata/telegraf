@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	plugin "github.com/influxdata/telegraf/plugins/inputs/t128_metrics"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
 )
 
@@ -382,7 +383,7 @@ func TestT128MetricsResponseProcessing(t *testing.T) {
 			}
 
 			var acc testutil.Accumulator
-			plugin.Init()
+			require.NoError(t, plugin.Init())
 
 			plugin.Gather(&acc)
 
@@ -421,7 +422,7 @@ func TestT128MetricsRequestFormation(t *testing.T) {
 			}
 
 			var acc testutil.Accumulator
-			plugin.Init()
+			require.NoError(t, plugin.Init())
 
 			require.NoError(t, acc.GatherError(plugin.Gather))
 		})
@@ -462,7 +463,7 @@ func TestT128MetricsRequestLimiting(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
