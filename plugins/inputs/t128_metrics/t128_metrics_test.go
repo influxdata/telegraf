@@ -559,6 +559,9 @@ func createTestServer(t *testing.T, e []Endpoint) *httptest.Server {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
+		require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+		require.Equal(t, "POST", r.Method)
+
 		endpoint, ok := endpoints[r.URL.Path]
 		if !ok {
 			w.WriteHeader(404)

@@ -200,10 +200,12 @@ func (plugin *T128Metrics) createRequest(baseURL string, metric RequestMetric) (
 		return nil, fmt.Errorf("failed to create request body for metric '%s': %w", metric.ID, err)
 	}
 
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s%s", baseURL, metric.ID), bytes.NewBuffer(body))
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s%s", baseURL, metric.ID), bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for metric '%s': %w", metric.ID, err)
 	}
+
+	request.Header.Add("Content-Type", "application/json")
 
 	return request, nil
 }
