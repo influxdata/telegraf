@@ -32,6 +32,7 @@ type T128Metrics struct {
 	ConfiguredMetrics       []ConfiguredMetric `toml:"metric"`
 	Timeout                 config.Duration    `toml:"timeout"`
 	MaxSimultaneousRequests int                `toml:"max_simultaneous_requests"`
+	UseIntegerConversion    bool               `toml:"use_integer_conversion"`
 
 	client  *http.Client
 	limiter *requestLimiter
@@ -56,6 +57,9 @@ var sampleConfig = `
 
 ## The maximum number of requests to be in flight at once
 # max_simultaneous_requests = 20
+
+## Whether to attempt conversion of values to integer before conversion to float
+# use_integer_conversion = false
 
 ## Amount of time allowed to complete a single HTTP request
 # timeout = "5s"
@@ -181,7 +185,10 @@ func (plugin *T128Metrics) retrieveMetric(metric RequestMetric, acc telegraf.Acc
 
 			acc.AddFields(
 				metric.OutMeasurement,
-				map[string]interface{}{metric.OutField: tryNumericConversion(*permutation.Value)},
+				map[string]interface{}{metric.OutField: tryNumericConversion(
+					plugin.UseIntegerConversion,
+					*permutation.Value),
+				},
 				tags,
 				timestamp)
 		}
@@ -244,14 +251,18 @@ func configuredMetricsToRequestMetrics(configuredMetrics []ConfiguredMetric) []R
 	return requestMetrics
 }
 
-func tryNumericConversion(value string) interface{} {
-	if i, err := strconv.Atoi(value); err == nil {
-		return i
-	} else if f, err := strconv.ParseFloat(value, 64); err == nil {
-		return f
-	} else {
-		return value
+func tryNumericConversion(useIntegerConversion bool, value string) interface{} {
+	if useIntegerConversion {
+		if i, err := strconv.Atoi(value); err == nil {
+			return i
+		}
 	}
+
+	if f, err := strconv.ParseFloat(value, 64); err == nil {
+		return f
+	}
+
+	return value
 }
 
 type requestLimiter struct {
@@ -281,6 +292,7 @@ func init() {
 		return &T128Metrics{
 			Timeout:                 config.Duration(DefaultRequestTimeout),
 			MaxSimultaneousRequests: DefaultMaxSimultaneousRequests,
+			UseIntegerConversion:    false,
 		}
 	})
 }
