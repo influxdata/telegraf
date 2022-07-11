@@ -64,13 +64,13 @@ func writeNativeUIntToConn(conn net.Conn, value uint) (int, error) {
 
 	if UIntSizeInBytes == 4 {
 		getEndianness().PutUint32(intData, uint32(value))
+		return conn.Write(intData)
 	} else if UIntSizeInBytes == 8 {
 		getEndianness().PutUint64(intData, uint64(value))
-	} else {
-		return 0, fmt.Errorf("unsupported system configuration")
+		return conn.Write(intData)
 	}
 
-	return conn.Write(intData)
+	return 0, fmt.Errorf("unsupported system configuration")
 }
 
 func readNativeUIntFromConn(conn net.Conn) (uint, error) {
