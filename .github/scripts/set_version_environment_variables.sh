@@ -1,6 +1,6 @@
 echo "VERSION_TAG=$VERSION_TAG"
 
-VERSION_REGEX='^128tech-v([0-9]+\.[0-9]+\.[0-9]+)(-([0-9]+))?$'
+VERSION_REGEX='^v([0-9]+\.[0-9]+\.[0-9]+)(-([0-9]+))?-128tech$'
 [[ $VERSION_TAG =~ $VERSION_REGEX ]]
 
 if [ -z $BASH_REMATCH ]; then
