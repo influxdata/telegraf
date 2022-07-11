@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift/gen-go/zipkincore"
 )
@@ -100,7 +101,7 @@ func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 	res := make([]codec.BinaryAnnotation, len(s.BAnno))
 	for i, a := range s.BAnno {
 		if a.Key() != "" && a.Value() == "" {
-			return nil, fmt.Errorf("No value for key %s at binaryAnnotations[%d]", a.K, i)
+			return nil, fmt.Errorf("No value for key %s at binaryAnnotations[%d]", internal.SanitizeInput(a.K), i)
 		}
 		if a.Value() != "" && a.Key() == "" {
 			return nil, fmt.Errorf("No key at binaryAnnotations[%d]", i)
