@@ -2,6 +2,7 @@ name: Release pipeline for 128tech RPMs
 
 on:
   release:
+    types: [published]
     tags: [128tech-v*]
 
 jobs:
@@ -14,14 +15,14 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
-      - name: Extract the version from the tag name
-        # tag expected to be of the form 128tech-v<version-number>
-        run: echo "::set-env name=VERSION::${VERSION_TAG:9}"
+      - name: Extract the version information from the tag name
+        run: bash .github/scripts/set_version_environment_variables.sh
 
       - name: Build some RPMs
         uses: ./.github/actions
         with:
           version: ${{ env.VERSION }}
+          patch: ${{ env.VERSION_PATCH }}
 
       - name: Upload RPMs as Artifacts
         uses: actions/upload-artifact@v2

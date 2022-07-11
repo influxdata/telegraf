@@ -4,6 +4,9 @@ inputs:
   version:
     description: What version to use for the RPMs
     required: true
+  patch:
+    description: The patch of the version (e.g. 1 for -1 or 2 for -2)
+    required: true
 runs:
   using: "docker"
   image: "Dockerfile"
@@ -14,4 +17,5 @@ runs:
     - --arch=amd64
     - --name=telegraf-128tech
     - --version=${{ inputs.version }}
+    - --iteration=${{ inputs.iteration }}
     - --release

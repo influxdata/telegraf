@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [release-128tech-*]
   release:
+    types: [published]
     tags: [128tech-v*]
 
 jobs:
