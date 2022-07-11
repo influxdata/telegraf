@@ -3,18 +3,11 @@ package powerdns_recursor
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
-	"math/rand"
-	"net"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"strconv"
+	"time"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -22,10 +15,10 @@ import (
 var sampleConfig string
 
 type PowerdnsRecursor struct {
-	UnixSockets        []string `toml:"unix_sockets"`
-	SocketDir          string   `toml:"socket_dir"`
-	SocketMode         string   `toml:"socket_mode"`
-	NewControlProtocol bool     `toml:"new_control_protocol"`
+	UnixSockets            []string `toml:"unix_sockets"`
+	SocketDir              string   `toml:"socket_dir"`
+	SocketMode             string   `toml:"socket_mode"`
+	ControlProtocolVersion int      `toml:"control_protocol_version"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -47,16 +40,25 @@ func (p *PowerdnsRecursor) Init() error {
 
 		p.mode = uint32(mode)
 	}
+
+	if p.ControlProtocolVersion == 0 {
+		p.ControlProtocolVersion = 1
+	}
+
+	if p.ControlProtocolVersion < 1 || p.ControlProtocolVersion > 3 {
+		return fmt.Errorf("unknown control protocol version '%v', allowed values are 1, 2, 3", p.ControlProtocolVersion)
+	}
+
+	if len(p.UnixSockets) == 0 {
+		p.UnixSockets = []string{"/var/run/pdns_recursor.controlsocket"}
+	}
+
 	return nil
 }
 
 func (p *PowerdnsRecursor) Gather(acc telegraf.Accumulator) error {
-	if len(p.UnixSockets) == 0 {
-		return p.gatherServer("/var/run/pdns_recursor.controlsocket", p.NewControlProtocol, acc)
-	}
-
 	for _, serverSocket := range p.UnixSockets {
-		if err := p.gatherServer(serverSocket, p.NewControlProtocol, acc); err != nil {
+		if err := p.gatherFromServer(serverSocket, acc); err != nil {
 			acc.AddError(err)
 		}
 	}
@@ -64,116 +66,20 @@ func (p *PowerdnsRecursor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *PowerdnsRecursor) gatherServer(address string, newProtocol bool, acc telegraf.Accumulator) error {
-	randomNumber := rand.Int63()
-	recvSocket := filepath.Join("/", "var", "run", fmt.Sprintf("pdns_recursor_telegraf%d", randomNumber))
-	if p.SocketDir != "" {
-		recvSocket = filepath.Join(p.SocketDir, fmt.Sprintf("pdns_recursor_telegraf%d", randomNumber))
+func (p *PowerdnsRecursor) gatherFromServer(address string, acc telegraf.Accumulator) error {
+	if p.ControlProtocolVersion == 1 {
+		return p.gatherFromV1Server(address, acc)
 	}
 
-	laddr, err := net.ResolveUnixAddr("unixgram", recvSocket)
-
-	if err != nil {
-		return err
+	if p.ControlProtocolVersion == 2 {
+		return p.gatherFromV2Server(address, acc)
 	}
 
-	defer os.Remove(recvSocket)
-
-	raddr, err := net.ResolveUnixAddr("unixgram", address)
-
-	if err != nil {
-		return err
-	}
-	conn, err := net.DialUnix("unixgram", laddr, raddr)
-	if err != nil {
-		return err
-	}
-	if err := os.Chmod(recvSocket, os.FileMode(p.mode)); err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	if err := conn.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
-		return err
+	if p.ControlProtocolVersion == 3 {
+		return p.gatherFromV3Server(address, acc)
 	}
 
-	if newProtocol {
-		// First send a 0 status code.
-		_, err = conn.Write([]byte{0, 0, 0, 0})
-
-		if err != nil {
-			return err
-		}
-	}
-
-	// Then send the get-all command.
-	command := "get-all\n"
-
-	if newProtocol {
-		command = "get-all"
-	}
-
-	_, err = conn.Write([]byte(command))
-
-	if err != nil {
-		return err
-	}
-
-	if newProtocol {
-		// Read the response status code.
-		status := make([]byte, 4)
-		n, err := conn.Read(status)
-		if err != nil {
-			return err
-		}
-		if n == 0 {
-			return errors.New("no status code received")
-		}
-	}
-
-	// Read the response data.
-	buf := make([]byte, 16384)
-	n, err := conn.Read(buf)
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return errors.New("no data received")
-	}
-
-	metrics := string(buf)
-
-	// Process data
-	fields := p.parseResponse(metrics)
-
-	// Add server socket as a tag
-	tags := map[string]string{"server": address}
-
-	acc.AddFields("powerdns_recursor", fields, tags)
-
-	return conn.Close()
-}
-
-func (p *PowerdnsRecursor) parseResponse(metrics string) map[string]interface{} {
-	values := make(map[string]interface{})
-
-	s := strings.Split(metrics, "\n")
-
-	for _, metric := range s[:len(s)-1] {
-		m := strings.Split(metric, "\t")
-		if len(m) < 2 {
-			continue
-		}
-
-		i, err := strconv.ParseInt(m[1], 10, 64)
-		if err != nil {
-			p.Log.Errorf("error parsing integer for metric %q: %s", metric, err.Error())
-			continue
-		}
-		values[m[0]] = i
-	}
-
-	return values
+	return fmt.Errorf("unknown powerdns recursor protocol version '%v'", p.ControlProtocolVersion)
 }
 
 func init() {
