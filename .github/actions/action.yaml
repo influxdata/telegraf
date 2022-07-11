@@ -10,12 +10,11 @@ inputs:
 runs:
   using: "docker"
   image: "Dockerfile"
+  env:
+    NAME: telegraf-128tech
+    version: ${{ inputs.version }}
+    rpm_iteration: ${{ inputs.patch }}
+    rpm_version: ${{ inputs.version }}-${{ inputs.patch }}
   args:
-    - ./scripts/build.py
-    - --package
-    - --platform=linux
-    - --arch=amd64
-    - --name=telegraf-128tech
-    - --version=${{ inputs.version }}
-    - --iteration=${{ inputs.patch }}
-    - --release
+    - make
+    - telegraf-128tech-${{ inputs.version }}-${{ inputs.patch }}.x86_64.rpm

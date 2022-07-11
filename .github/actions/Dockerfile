@@ -1,1 +1,1 @@
-../../scripts/ci-1.13.docker
+../../scripts/ci-1.15.docker
