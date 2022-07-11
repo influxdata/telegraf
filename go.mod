@@ -30,6 +30,7 @@ require (
 	github.com/benbjohnson/clock v1.0.3
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
+	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/caio/go-tdigest v2.3.0+incompatible // indirect
 	github.com/cenkalti/backoff v2.0.0+incompatible // indirect
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6

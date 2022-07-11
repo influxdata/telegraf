@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/tidwall/gjson"
 	"net/http"
 	"sync"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/c2h5oh/datasize"
 	protobuf "github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -203,9 +205,22 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			influx.Swap = append(influx.Swap, &m)
 		case "tegrastats":
 			m := Tegrastats{}
+
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build tegrastats")
 			}
+
+			// Workaround for largest_free_block_size which is string representation of size eg. 4MB, 5kB
+			blockSizeStr := gjson.Get(string(b), "fields.largest_free_block_size")
+			if blockSizeStr.Exists() {
+				blockSize, err := datasize.ParseString(blockSizeStr.String())
+				if err != nil {
+					return errors.Wrap(err, "build tegrastat parse largest_free_block_size")
+				}
+
+				m.Fields.LargestFreeBlockSizeMb = blockSize.MBytes()
+			}
+
 			influx.Tegrastats = append(influx.Tegrastats, &m)
 		case "smart_device":
 			m := SMART{}

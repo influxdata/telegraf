@@ -149,7 +149,7 @@ message Tegrastats {
     double gr3dfreqproc = 13;
     double mts_bg = 14;
     double mts_fg = 15;
-    double pages = 16;
+    double largest_free_block_count = 16;
     double ram_total = 17;
     double ram_used = 18;
     double swap_cached = 19;
@@ -162,6 +162,9 @@ message Tegrastats {
     double vdd_in_current_miliwats = 26;
     double vdd_soc_avg_miliwats = 27;
     double vdd_soc_current_miliwats = 28;
+    double largest_free_block_size_mb = 29;
+    double nvdec = 30;
+    double nvdec1 = 31;
   }
 
   Fields fields = 1;
