@@ -1,0 +1,17 @@
+name: Build telegraf RPMs
+description: A simple way to build telegraf RPMs within a container
+inputs:
+  version:
+    description: What version to use for the RPMs
+    required: true
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ./scripts/build.py
+    - --package
+    - --platform=linux
+    - --arch=amd64
+    - --name=telegraf-128tech
+    - --version=${{ inputs.version }}
+    - --release

@@ -5,9 +5,11 @@ on:
     branches: [release-128tech-*]
   pull_request:
     branches: [release-128tech-*]
+  release:
+    tags: [128tech-v*]
 
 jobs:
-  build:
+  test:
     name: Continuous Integration
     runs-on: ubuntu-latest
     steps:
