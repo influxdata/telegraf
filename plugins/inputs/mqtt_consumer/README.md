@@ -133,6 +133,11 @@ the topic path. Please see the following example.
 cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
 
+```text
+internal_mqtt_consumer,host=pop-os,version=1.24.0-2a266e53
+messages_received=622i,bytes_received=37942i 1657282270000000000
+```
+
 ## Metrics
 
 - All measurements are tagged with the incoming topic, ie
@@ -143,13 +148,6 @@ cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014
 - when [[inputs.internal]] is set:
   - bytes_received (int): count of the number of bytes have been received from incoming messages
   - messages_received (int): count of the number of messages that have been received from mqtt
-
-## Example Output with [[inputs.internal]] set
-
-```text
-internal_mqtt_consumer,host=pop-os,version=1.24.0-2a266e53
-messages_received=622i,bytes_received=37942i 1657282270000000000
-```
 
 [mqtt]: https://mqtt.org
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
