@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/jsonV1"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift"
@@ -95,7 +96,7 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	spans, err := decoder.Decode(octets)
+	spans, err := decoder.Decode(internal.SanitizeInputByte(octets))
 	if err != nil {
 		s.recorder.Error(err)
 		w.WriteHeader(http.StatusBadRequest)
