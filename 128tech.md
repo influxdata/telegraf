@@ -2,31 +2,24 @@
 
 This README will describe how to modify and build Telegraf for telegraf-128tech.
 
-## Fetching Dependencies
+## Pulling in Upstream Changes
 
-At some point, all of the Telegraf dependencies will need to be pulled down. This will be done during build automatically unless you've already done so and use the flag to skip that step (see "Building a New RPM"). _It's nice to do this manually because there's poor visibility into the build step_.
+When updating an existing version, the tasks are straight forward.
 
-If you try to run commands without having the dependencies downloaded, you will see errors of the following form.
+1. Merge the upstream branch
+2. Cherry-pick desired changes that exist on some other upstream branch (master for example)
 
-```
-internal/internal.go:24:2: cannot find package "github.com/alecthomas/units" in any of:
-        /usr/local/go/src/github.com/alecthomas/units (from $GOROOT)
-        /go/src/github.com/alecthomas/units (from $GOPATH)
-```
+## Moving to a New Upstream Version
 
-To fetch dependencies directly, you can do it simply from the shell. See "Using the Shell" for how to get into it. From the shell's default directory, simply run:
+When moving to a new upstream version, things are a little more complicated. It requires identification of what has been added to our custom telegraf version which must be pulled into the new release branch. This can be done as described in [this little article](https://til.hashrocket.com/posts/18139f4f20-list-different-commits-between-two-branches).
 
-```
-dep ensure --vendor-only -v
-```
-
-The above command provides the best visibility. The technically sanctioned fetch step is:
+First, pull down the new upstream branch. Then, determine what's been added locally and needs to be included in the new custom build. Do this by finding the commits that were added in the custom branch. This example uses release 1.14, but that will change as time passes.
 
 ```
-make deps
+git log --no-merges --left-right --graph --cherry-pick --oneline release-1.14..release-128tech-1.14
 ```
 
-It does take some time to complete. After that, the dependencies exist in the `vendor` folder and don't need to be fetched again.
+That should provide a limited number of commits that will need to be cherry-picked from the original custom branch to the new one. It is possible these would already exist in the new upstream branch if they were back ported to the custom branch.
 
 ## Building a New RPM
 
