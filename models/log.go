@@ -6,7 +6,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 )
 
 // Logger defines a logging structure for plugins.
@@ -45,7 +44,7 @@ func (l *Logger) Error(args ...interface{}) {
 
 // Debugf logs a debug message, patterned after log.Printf.
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! ["+l.Name+"] "+format, internal.SanitizeInput(args...))
+	log.Printf("D! ["+l.Name+"] "+format, args...)
 }
 
 // Debug logs a debug message, patterned after log.Print.
