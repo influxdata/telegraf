@@ -96,7 +96,7 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	spans, err := decoder.Decode(internal.SanitizeInputByte(octets))
+	spans, err := decoder.Decode(octets)
 	if err != nil {
 		s.recorder.Error(err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -139,5 +139,5 @@ func ContentDecoder(r *http.Request) (codec.Decoder, error) {
 			return &thrift.Thrift{}, nil
 		}
 	}
-	return nil, fmt.Errorf("Unknown Content-Type: %s", contentType)
+	return nil, fmt.Errorf("Unknown Content-Type: %s", internal.SanitizeInput(contentType))
 }
