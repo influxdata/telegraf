@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+
+import argparse
+import pathlib
+import subprocess
+import os
+import sys
+
+ROOT = pathlib.Path(__file__).parent.parent.resolve()
+SCRIPTS = ROOT / "scripts"
+IMAGE_NAME = "telegraf-build"
+
+
+def main():
+    args = parse_args()
+    create_docker_env(args.docker_file)
+
+    if args.which == "build":
+        build(args)
+    else:
+        shell(args)
+
+
+def build(args):
+    cmd = [] if args.no_fetch else ["make", "deps", "&&"]
+
+    cmd.extend(
+        [
+            f"./scripts/build.py",
+            "--package",
+            "--platform=linux",
+            "--arch=amd64",
+            f"--name={args.name}",
+            f"--version={args.version}",
+            f"--iteration={args.release}",
+            "--release",
+            "--no-get",
+        ]
+    )
+
+    try:
+        cmd = build_docker_command(args.docker_file, ["bash", "-c", " ".join(cmd)])
+
+        subprocess.check_call(cmd)
+    except subprocess.CalledProcessError as error:
+        print("Failed to build the RPM")
+        sys.exit(1)
+
+
+def shell(args):
+    subprocess.run(build_docker_command(args.docker_file, ["bash"], interactive=True))
+
+
+def create_docker_env(docker_file):
+    try:
+        subprocess.check_call(
+            ["docker", "build", "-t", IMAGE_NAME, "-f", docker_file, SCRIPTS]
+        )
+    except subprocess.CalledProcessError as error:
+        print("Failed to build the docker image")
+        sys.exit(1)
+
+
+def build_docker_command(docker_file, internal_cmd, interactive=False):
+    cmd = [
+        "docker",
+        "run",
+    ]
+
+    if internal_cmd:
+        cmd.append("-it")
+
+    cmd.extend(
+        [
+            "--rm",
+            "-v",
+            f"{ROOT}:/go/src/github.com/influxdata/telegraf",
+            "-w",
+            "/go/src/github.com/influxdata/telegraf",
+            IMAGE_NAME,
+        ]
+    )
+
+    cmd.extend(internal_cmd)
+    print(" ".join(cmd))
+
+    return cmd
+
+
+def parse_args():
+    arg_parser = argparse.ArgumentParser(
+        description="A docker based environment for building telegraf RPMS",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    subcommands = arg_parser.add_subparsers()
+
+    build_parser = subcommands.add_parser(
+        "build", help="Build an RPM from within the docker environment"
+    )
+
+    shell = subcommands.add_parser(
+        "shell", help="Drop into a shell in the docker environment"
+    )
+
+    ## Build args
+    build_parser.set_defaults(which="build")
+
+    build_parser.add_argument(
+        "--version", help="The version the produced RPM should have", required=True
+    )
+
+    build_parser.add_argument(
+        "--release", help="The release version to use for the RPM", default=1
+    )
+
+    build_parser.add_argument(
+        "--name", help="The name the RPM should have", default="telegraf-128tech"
+    )
+
+    build_parser.add_argument(
+        "--no-fetch",
+        help="Whether to fetch dependencies before building. If not, you should have run `make deps` in your source directory.",
+        action="store_true",
+    )
+
+    ## Shell args
+    shell.set_defaults(which="shell")
+
+    ## Common args
+    arg_parser.add_argument(
+        "--docker-file",
+        help="The docker file to use for the container",
+        default=(SCRIPTS / "ci-1.13.docker"),
+    )
+
+    args = arg_parser.parse_args()
+
+    args.docker_file = str(args.docker_file)
+
+    if not pathlib.Path(args.docker_file).exists():
+        print(f'docker file "{args.docker_file}" does not exist')
+        sys.exit(1)
+
+    return args
+
+
+if __name__ == "__main__":
+    main()
