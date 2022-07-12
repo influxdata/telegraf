@@ -179,14 +179,14 @@ execute this script.
     - wwn
   - fields:
     - exit_status
-    - endurance_media_wearout
-    - endurance_remain_perc
-    - endurance_wear_levelling
     - health_ok
+    - media_wearout_indicator
+    - percent_lifetime_remain
     - read_error_rate
     - seek_error
     - temp_c
     - udma_crc_errors
+    - wear_leveling_count
 
 - smart_attribute:
   - tags:

@@ -1416,7 +1416,7 @@ var (
 				"read_error_rate":          int64(0),
 				"temp_c":                   int64(34),
 				"udma_crc_errors":          int64(0),
-				"endurance_wear_levelling": int64(185),
+				"wear_leveling_count": int64(185),
 			},
 			map[string]string{
 				"device":    "ada0",
