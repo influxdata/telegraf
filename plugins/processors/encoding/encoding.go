@@ -151,7 +151,11 @@ func (e *Encoding) Init() error {
 }
 
 func newEncoding() *Encoding {
-	return &Encoding{}
+	return &Encoding{
+		Operation:   "decode",
+		Compression: "gzip",
+		Encoding:    "base64",
+	}
 }
 
 func init() {
@@ -175,7 +179,7 @@ func encode(value, compression, encoding string) (string, error) {
 
 	switch encoding {
 	case "base64":
-		value = base64.RawStdEncoding.EncodeToString([]byte(value))
+		value = base64.StdEncoding.EncodeToString([]byte(value))
 	}
 
 	return value, nil
@@ -184,7 +188,13 @@ func encode(value, compression, encoding string) (string, error) {
 func decode(value, compression, encoding string) (string, error) {
 	switch encoding {
 	case "base64":
-		data, err := base64.RawStdEncoding.DecodeString(value)
+		var data []byte
+		var err error
+		if strings.HasSuffix(value, string(base64.StdPadding)) {
+			data, err = base64.StdEncoding.DecodeString(value)
+		} else {
+			data, err = base64.RawStdEncoding.DecodeString(value)
+		}
 		if err != nil {
 			return "", err
 		}
