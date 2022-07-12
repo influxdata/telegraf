@@ -180,6 +180,7 @@ jobs:
       - restore_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
+      - run: ./scripts/make_docs.sh
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
