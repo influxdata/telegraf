@@ -29,13 +29,9 @@ type CloudWatch struct {
 	Namespace             string `toml:"namespace"` // CloudWatch Metrics Namespace
 	HighResolutionMetrics bool   `toml:"high_resolution_metrics"`
 	svc                   *cloudwatch.Client
-
-	WriteStatistics bool `toml:"write_statistics"`
-
-	Log telegraf.Logger `toml:"-"`
-
+	WriteStatistics       bool            `toml:"write_statistics"`
+	Log                   telegraf.Logger `toml:"-"`
 	internalaws.CredentialConfig
-
 	httpconfig.HTTPClientConfig
 }
 
@@ -179,8 +175,6 @@ func (c *CloudWatch) Connect() error {
 	}
 
 	c.svc = cloudwatch.NewFromConfig(cfg, func(options *cloudwatch.Options) {
-		// Disable logging
-		options.ClientLogMode = 0
 		options.HTTPClient = client
 	})
 
