@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unsafe"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
@@ -246,12 +245,31 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
-	byteCount := len(string(msg.Payload())) +
-		len(string(rune(msg.MessageID()))) +
-		len(msg.Topic()) +
-		int(unsafe.Sizeof(msg.Duplicate())) +
-		len(string(msg.Qos())) +
-		int(unsafe.Sizeof(msg.Retained()))
+	var remainingLength int
+	var qosFlagsSize int
+	topicSize := len(msg.Topic()) + 2
+	qOsSize := 0
+	if msg.Qos() == 1 || msg.Qos() == 2 {
+		qOsSize = 2
+	}
+	payloadSize := len(msg.Payload())
+	remainingContent := topicSize + qOsSize + payloadSize
+	if remainingContent <= 127 {
+		remainingLength = 1
+	} else if remainingContent <= 16383 {
+		remainingLength = 2
+	} else if remainingContent <= 2097151 {
+		remainingLength = 3
+	} else {
+		remainingLength = 4
+	}
+	publishMessageSize := remainingLength + remainingContent + 1
+	if msg.Qos() == 1 {
+		qosFlagsSize = 4
+	} else if msg.Qos() == 2 {
+		qosFlagsSize = 12
+	}
+	byteCount := publishMessageSize + qosFlagsSize
 	m.bytesRecv.Incr(int64(byteCount))
 	m.messagesRecv.Incr(1)
 
