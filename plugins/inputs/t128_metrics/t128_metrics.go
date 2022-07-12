@@ -1,15 +1,12 @@
 package t128_metrics
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"sort"
-	"strconv"
 	"sync"
 	"time"
 
@@ -33,10 +30,11 @@ type T128Metrics struct {
 	Timeout                 config.Duration    `toml:"timeout"`
 	MaxSimultaneousRequests int                `toml:"max_simultaneous_requests"`
 	UseIntegerConversion    bool               `toml:"use_integer_conversion"`
+	UseBulkRetrieval        bool               `toml:"use_bulk_retrieval"`
 
-	client  *http.Client
-	limiter *requestLimiter
-	metrics []RequestMetric
+	client    *http.Client
+	limiter   *requestLimiter
+	retriever Retriever
 }
 
 // ConfiguredMetric represents a single configured metric element
@@ -54,6 +52,10 @@ var sampleConfig = `
 
 ## A socket to use for retrieving metrics - unused by default
 # unix_socket = "/var/run/128technology/web-server.sock"
+
+## Whether or not to use the bulk retrieval API. If used, the base_url should
+## point directly to the bulk metrics endpoint.
+# use_bulk_retrieval = false
 
 ## The maximum number of requests to be in flight at once
 # max_simultaneous_requests = 20
@@ -94,7 +96,7 @@ func (plugin *T128Metrics) Init() error {
 		return fmt.Errorf("base_url is a required configuration field")
 	}
 
-	if plugin.BaseURL[len(plugin.BaseURL)-1:] != "/" {
+	if !plugin.UseBulkRetrieval && plugin.BaseURL[len(plugin.BaseURL)-1:] != "/" {
 		plugin.BaseURL += "/"
 	}
 
@@ -114,7 +116,16 @@ func (plugin *T128Metrics) Init() error {
 
 	plugin.client = &http.Client{Transport: transport, Timeout: time.Duration(plugin.Timeout)}
 	plugin.limiter = newRequestLimiter(plugin.MaxSimultaneousRequests)
-	plugin.metrics = configuredMetricsToRequestMetrics(plugin.ConfiguredMetrics)
+
+	if plugin.UseBulkRetrieval {
+		var err error
+		plugin.retriever, err = NewBulkRetriever(plugin.UseIntegerConversion, plugin.ConfiguredMetrics)
+		if err != nil {
+			return fmt.Errorf("failed to create retriever: %w", err)
+		}
+	} else {
+		plugin.retriever = NewIndividualRetriever(plugin.UseIntegerConversion, plugin.ConfiguredMetrics)
+	}
 
 	return nil
 }
@@ -125,13 +136,13 @@ func (plugin *T128Metrics) Gather(acc telegraf.Accumulator) error {
 	timestamp := time.Now().Round(time.Second)
 
 	var wg sync.WaitGroup
-	wg.Add(len(plugin.metrics))
+	wg.Add(plugin.retriever.RequestCount())
 
-	for _, requestMetric := range plugin.metrics {
-		go func(metric RequestMetric) {
-			plugin.retrieveMetric(metric, acc, timestamp)
+	for index := 0; index < plugin.retriever.RequestCount(); index++ {
+		go func(idx int) {
+			plugin.retrieveMetrics(idx, acc, timestamp)
 			wg.Done()
-		}(requestMetric)
+		}(index)
 	}
 
 	wg.Wait()
@@ -139,10 +150,10 @@ func (plugin *T128Metrics) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (plugin *T128Metrics) retrieveMetric(metric RequestMetric, acc telegraf.Accumulator, timestamp time.Time) {
-	request, err := plugin.createRequest(plugin.BaseURL, metric)
+func (plugin *T128Metrics) retrieveMetrics(index int, acc telegraf.Accumulator, timestamp time.Time) {
+	request, err := plugin.retriever.CreateRequest(index, plugin.BaseURL)
 	if err != nil {
-		acc.AddError(fmt.Errorf("failed to create a request for metric %s: %w", metric.ID, err))
+		acc.AddError(fmt.Errorf("failed to create a request for %s: %w", plugin.retriever.Describe(index), err))
 		return
 	}
 
@@ -151,7 +162,7 @@ func (plugin *T128Metrics) retrieveMetric(metric RequestMetric, acc telegraf.Acc
 	plugin.limiter.done()
 
 	if err != nil {
-		acc.AddError(fmt.Errorf("failed to retrieve metric %s: %w", metric.ID, err))
+		acc.AddError(fmt.Errorf("failed to retrieve %s: %w", plugin.retriever.Describe(index), err))
 		return
 	}
 	defer response.Body.Close()
@@ -162,107 +173,17 @@ func (plugin *T128Metrics) retrieveMetric(metric RequestMetric, acc telegraf.Acc
 			message = []byte("")
 		}
 
-		acc.AddError(fmt.Errorf("status code %d not OK for metric %s: %s", response.StatusCode, metric.ID, message))
+		acc.AddError(fmt.Errorf("status code %d not OK for %s: %s", response.StatusCode, plugin.retriever.Describe(index), message))
 		return
 	}
 
 	var responseMetrics []ResponseMetric
 	if err := json.NewDecoder(response.Body).Decode(&responseMetrics); err != nil {
-		acc.AddError(fmt.Errorf("failed to decode response for metric %s: %w", metric.ID, err))
+		acc.AddError(fmt.Errorf("failed to decode response for %s: %w", plugin.retriever.Describe(index), err))
 		return
 	}
 
-	for _, responseMetric := range responseMetrics {
-		for _, permutation := range responseMetric.Permutations {
-			if permutation.Value == nil {
-				continue
-			}
-
-			tags := make(map[string]string)
-			for _, parameter := range permutation.Parameters {
-				tags[parameter.Name] = parameter.Value
-			}
-
-			acc.AddFields(
-				metric.OutMeasurement,
-				map[string]interface{}{metric.OutField: tryNumericConversion(
-					plugin.UseIntegerConversion,
-					*permutation.Value),
-				},
-				tags,
-				timestamp)
-		}
-	}
-}
-
-func (plugin *T128Metrics) createRequest(baseURL string, metric RequestMetric) (*http.Request, error) {
-	content := struct {
-		Parameters []RequestParameter `json:"parameters,omitempty"`
-	}{
-		metric.Parameters,
-	}
-
-	body, err := json.Marshal(content)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request body for metric '%s': %w", metric.ID, err)
-	}
-
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s%s", baseURL, metric.ID), bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request for metric '%s': %w", metric.ID, err)
-	}
-
-	request.Header.Add("Content-Type", "application/json")
-
-	return request, nil
-}
-
-func configuredMetricsToRequestMetrics(configuredMetrics []ConfiguredMetric) []RequestMetric {
-	requestMetrics := make([]RequestMetric, 0)
-
-	for _, configMetric := range configuredMetrics {
-		for fieldName, fieldPath := range configMetric.Fields {
-			// Sort names for consistency in testing. It's not free, but only happens during startup.
-			parameterNames := make([]string, 0, len(configMetric.Parameters))
-			for parameterName := range configMetric.Parameters {
-				parameterNames = append(parameterNames, parameterName)
-			}
-			sort.Strings(parameterNames)
-
-			parameters := make([]RequestParameter, 0, len(configMetric.Parameters))
-			for _, parameterName := range parameterNames {
-				values := configMetric.Parameters[parameterName]
-				parameters = append(parameters, RequestParameter{
-					Name:    parameterName,
-					Values:  values,
-					Itemize: true,
-				})
-			}
-
-			requestMetrics = append(requestMetrics, RequestMetric{
-				ID:             fieldPath,
-				Parameters:     parameters,
-				OutMeasurement: configMetric.Name,
-				OutField:       fieldName,
-			})
-		}
-	}
-
-	return requestMetrics
-}
-
-func tryNumericConversion(useIntegerConversion bool, value string) interface{} {
-	if useIntegerConversion {
-		if i, err := strconv.Atoi(value); err == nil {
-			return i
-		}
-	}
-
-	if f, err := strconv.ParseFloat(value, 64); err == nil {
-		return f
-	}
-
-	return value
+	plugin.retriever.PopulateResponse(index, acc, responseMetrics, timestamp)
 }
 
 type requestLimiter struct {
@@ -293,6 +214,7 @@ func init() {
 			Timeout:                 config.Duration(DefaultRequestTimeout),
 			MaxSimultaneousRequests: DefaultMaxSimultaneousRequests,
 			UseIntegerConversion:    false,
+			UseBulkRetrieval:        false,
 		}
 	})
 }

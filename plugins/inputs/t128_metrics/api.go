@@ -8,6 +8,15 @@ type RequestMetric struct {
 	OutField       string
 }
 
+// BulkRequestMetrics describes a set of elements to be retrieved from the back end
+type BulkRequestMetrics struct {
+	IDs            []string           `json:"ids"`
+	Parameters     []RequestParameter `json:"parameters,omitempty"`
+	OutMeasurement string             `json:"-"`
+	OutFields      map[string]string  `json:"-"`
+	RequestBody    []byte             `json:"-"`
+}
+
 // RequestParameter is the simple form of a metric's parameters
 type RequestParameter = struct {
 	Name    string   `json:"name"`

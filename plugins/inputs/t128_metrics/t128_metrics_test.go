@@ -32,9 +32,18 @@ var ResponseProcessingTestCases = []struct {
 	ExpectedMetrics   []*testutil.Metric
 	ExpectedErrors    []string
 	IntegerConversion bool
+	BulkRetrieval     bool
 }{
 	{
 		Name:              "empty configured metrics produce no requests or metrics",
+		ConfiguredMetrics: []plugin.ConfiguredMetric{},
+		Endpoints:         []Endpoint{},
+		ExpectedMetrics:   nil,
+		ExpectedErrors:    nil,
+	},
+	{
+		Name:              "empty configured metrics produce no requests or metrics bulk",
+		BulkRetrieval:     true,
 		ConfiguredMetrics: []plugin.ConfiguredMetric{},
 		Endpoints:         []Endpoint{},
 		ExpectedMetrics:   nil,
@@ -48,6 +57,18 @@ var ResponseProcessingTestCases = []struct {
 			map[string][]string{},
 		}},
 		Endpoints:       []Endpoint{{"/stats/test", 200, "{}", "[]"}},
+		ExpectedMetrics: nil,
+		ExpectedErrors:  nil,
+	},
+	{
+		Name:          "empty results produce no metrics bulk",
+		BulkRetrieval: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints:       []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, "[]"}},
 		ExpectedMetrics: nil,
 		ExpectedErrors:  nil,
 	},
@@ -69,6 +90,24 @@ var ResponseProcessingTestCases = []struct {
 		ExpectedErrors:  nil,
 	},
 	{
+		Name:          "none value produces no metric bulk",
+		BulkRetrieval: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, `[{
+			"id": "/stats/test",
+			"permutations": [{
+				"parameters": [],
+				"value": null
+			}]
+		}]`}},
+		ExpectedMetrics: nil,
+		ExpectedErrors:  nil,
+	},
+	{
 		Name: "forms string value if it is non numeric",
 		ConfiguredMetrics: []plugin.ConfiguredMetric{{
 			"test-metric",
@@ -77,6 +116,30 @@ var ResponseProcessingTestCases = []struct {
 		}},
 		Endpoints: []Endpoint{{"/stats/test", 200, "{}", `[{
 			"id": "/stats/test-metric",
+			"permutations": [{
+				"parameters": [],
+				"value": "test-string"
+			}]
+		}]`}},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{},
+				Fields:      map[string]interface{}{"test-field": "test-string"},
+			},
+		},
+		ExpectedErrors: nil,
+	},
+	{
+		Name:          "forms string value if it is non numeric bulk",
+		BulkRetrieval: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, `[{
+			"id": "/stats/test",
 			"permutations": [{
 				"parameters": [],
 				"value": "test-string"
@@ -116,6 +179,31 @@ var ResponseProcessingTestCases = []struct {
 		ExpectedErrors: nil,
 	},
 	{
+		Name:              "forms float value if integer conversion is disabled bulk",
+		BulkRetrieval:     true,
+		IntegerConversion: false,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, `[{
+			"id": "/stats/test",
+			"permutations": [{
+				"parameters": [],
+				"value": "50"
+			}]
+		}]`}},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{},
+				Fields:      map[string]interface{}{"test-field": 50.0},
+			},
+		},
+		ExpectedErrors: nil,
+	},
+	{
 		Name:              "forms integer value if integer conversion is enabled",
 		IntegerConversion: true,
 		ConfiguredMetrics: []plugin.ConfiguredMetric{{
@@ -140,6 +228,31 @@ var ResponseProcessingTestCases = []struct {
 		ExpectedErrors: nil,
 	},
 	{
+		Name:              "forms integer value if integer conversion is enabled bulk",
+		BulkRetrieval:     true,
+		IntegerConversion: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, `[{
+			"id": "/stats/test",
+			"permutations": [{
+				"parameters": [],
+				"value": "50"
+			}]
+		}]`}},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{},
+				Fields:      map[string]interface{}{"test-field": 50},
+			},
+		},
+		ExpectedErrors: nil,
+	},
+	{
 		Name: "forms float value if it is a float",
 		ConfiguredMetrics: []plugin.ConfiguredMetric{{
 			"test-metric",
@@ -148,6 +261,30 @@ var ResponseProcessingTestCases = []struct {
 		}},
 		Endpoints: []Endpoint{{"/stats/test", 200, "{}", `[{
 			"id": "/stats/test-metric",
+			"permutations": [{
+				"parameters": [],
+				"value": "50.5"
+			}]
+		}]`}},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{},
+				Fields:      map[string]interface{}{"test-field": 50.5},
+			},
+		},
+		ExpectedErrors: nil,
+	},
+	{
+		Name:          "forms float value if it is a float bulk",
+		BulkRetrieval: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, `[{
+			"id": "/stats/test",
 			"permutations": [{
 				"parameters": [],
 				"value": "50.5"
@@ -196,6 +333,40 @@ var ResponseProcessingTestCases = []struct {
 		ExpectedErrors: nil,
 	},
 	{
+		Name:              "adds permutation parameters to metrics bulk",
+		BulkRetrieval:     true,
+		IntegerConversion: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, `[{
+			"id": "/stats/test",
+			"permutations": [{
+				"parameters": [
+					{
+						"name": "node",
+						"value": "node1"
+					},
+					{
+						"name": "interface",
+						"value": "intf1"
+					}
+				],
+				"value": "0"
+			}]
+		}]`}},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{"node": "node1", "interface": "intf1"},
+				Fields:      map[string]interface{}{"test-field": 0},
+			},
+		},
+		ExpectedErrors: nil,
+	},
+	{
 		Name:              "produces multiple metrics for multiple permutations",
 		IntegerConversion: true,
 		ConfiguredMetrics: []plugin.ConfiguredMetric{{
@@ -204,6 +375,52 @@ var ResponseProcessingTestCases = []struct {
 			map[string][]string{},
 		}},
 		Endpoints: []Endpoint{{"/stats/test", 200, "{}", `[{
+			"id": "/stats/test",
+			"permutations": [
+				{
+					"parameters": [
+						{
+							"name": "node",
+							"value": "node1"
+						}
+					],
+					"value": "897"
+				},
+				{
+					"parameters": [
+						{
+							"name": "node",
+							"value": "node2"
+						}
+					],
+					"value": "306"
+				}
+			]
+		}]`}},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{"node": "node1"},
+				Fields:      map[string]interface{}{"test-field": 897},
+			},
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{"node": "node2"},
+				Fields:      map[string]interface{}{"test-field": 306},
+			},
+		},
+		ExpectedErrors: nil,
+	},
+	{
+		Name:              "produces multiple metrics for multiple permutations bulk",
+		BulkRetrieval:     true,
+		IntegerConversion: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, `[{
 			"id": "/stats/test",
 			"permutations": [
 				{
@@ -281,6 +498,46 @@ var ResponseProcessingTestCases = []struct {
 		ExpectedErrors: nil,
 	},
 	{
+		Name:              "requests bulk in single request",
+		BulkRetrieval:     true,
+		IntegerConversion: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{
+				"test-field":         "stats/test",
+				"another-test-field": "stats/another/test",
+			},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test", "/stats/another/test"]}`, `[{
+				"id": "/stats/test",
+				"permutations": [{
+					"parameters": [],
+					"value": "50"
+				}]
+			}, {
+				"id": "/stats/another/test",
+				"permutations": [{
+					"parameters": [],
+					"value": "60"
+				}]
+			}
+		]`}},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{},
+				Fields:      map[string]interface{}{"test-field": 50},
+			},
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{},
+				Fields:      map[string]interface{}{"another-test-field": 60},
+			},
+		},
+		ExpectedErrors: nil,
+	},
+	{
 		Name: "propogates errors to accumulator",
 		ConfiguredMetrics: []plugin.ConfiguredMetric{{
 			"404",
@@ -346,6 +603,7 @@ var RequestFormationTestCases = []struct {
 	Name              string
 	ConfiguredMetrics []plugin.ConfiguredMetric
 	Endpoints         []Endpoint
+	BulkRetrieval     bool
 }{
 	{
 		Name: "empty request body with no parameters",
@@ -357,6 +615,16 @@ var RequestFormationTestCases = []struct {
 		Endpoints: []Endpoint{{"/stats/test", 200, "{}", "[]"}},
 	},
 	{
+		Name:          "empty request body with no parameters bulk",
+		BulkRetrieval: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, "[]"}},
+	},
+	{
 		Name: "itemizes with no filter values for empty list",
 		ConfiguredMetrics: []plugin.ConfiguredMetric{{
 			"test-metric",
@@ -366,6 +634,20 @@ var RequestFormationTestCases = []struct {
 		Endpoints: []Endpoint{{"/stats/test", 200, `{"parameters": [{"name": "interface", "itemize": true}]}`, "[]"}},
 	},
 	{
+		Name:          "itemizes with no filter values for empty list bulk",
+		BulkRetrieval: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{"interface": {}},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{
+				"ids": ["/stats/test"],
+				"parameters": [{"name": "interface", "itemize": true}]
+			}`,
+			"[]"}},
+	},
+	{
 		Name: "includes parameter filter values",
 		ConfiguredMetrics: []plugin.ConfiguredMetric{{
 			"test-metric",
@@ -373,6 +655,22 @@ var RequestFormationTestCases = []struct {
 			map[string][]string{"interface": {"intf1", "intf2"}},
 		}},
 		Endpoints: []Endpoint{{"/stats/test", 200, `{
+				"parameters": [
+					{"name": "interface", "values": ["intf1", "intf2"], "itemize": true}
+				]
+			}`,
+			"[]"}},
+	},
+	{
+		Name:          "includes parameter filter values bulk",
+		BulkRetrieval: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{"interface": {"intf1", "intf2"}},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{
+				"ids": ["/stats/test"],
 				"parameters": [
 					{"name": "interface", "values": ["intf1", "intf2"], "itemize": true}
 				]
@@ -398,6 +696,27 @@ var RequestFormationTestCases = []struct {
 			}`,
 			"[]"}},
 	},
+	{
+		Name:          "includes multiple parameter filters",
+		BulkRetrieval: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{
+				"interface": {"intf1", "intf2"},
+				"node":      {"node1", "node2"},
+				"other":     {}},
+		}},
+		Endpoints: []Endpoint{{"/", 200, `{
+				"ids": ["/stats/test"],
+				"parameters": [
+					{"name": "interface", "values": ["intf1", "intf2"], "itemize": true},
+					{"name": "node", "values": ["node1", "node2"], "itemize": true},
+					{"name": "other", "itemize": true}
+				]
+			}`,
+			"[]"}},
+	},
 }
 
 func TestT128MetricsResponseProcessing(t *testing.T) {
@@ -411,6 +730,7 @@ func TestT128MetricsResponseProcessing(t *testing.T) {
 				MaxSimultaneousRequests: 20,
 				ConfiguredMetrics:       testCase.ConfiguredMetrics,
 				UseIntegerConversion:    testCase.IntegerConversion,
+				UseBulkRetrieval:        testCase.BulkRetrieval,
 			}
 
 			var acc testutil.Accumulator
@@ -450,6 +770,7 @@ func TestT128MetricsRequestFormation(t *testing.T) {
 				BaseURL:                 fakeServer.URL,
 				MaxSimultaneousRequests: 20,
 				ConfiguredMetrics:       testCase.ConfiguredMetrics,
+				UseBulkRetrieval:        testCase.BulkRetrieval,
 			}
 
 			var acc testutil.Accumulator
@@ -562,6 +883,7 @@ func TestLoadsFromToml(t *testing.T) {
 	exampleConfig := []byte(`
 		base_url                    = "example/base/url/"
 		unix_socket                 = "example.sock"
+		use_bulk_retrieval    		= true
 		max_simultaneous_requests   = 15
 		timeout                     = "500ms"
 		use_integer_conversion		= true
@@ -579,6 +901,7 @@ func TestLoadsFromToml(t *testing.T) {
 	require.Equal(t, 500*time.Millisecond, time.Duration(plugin.Timeout))
 	require.Equal(t, expectedMetrics, plugin.ConfiguredMetrics)
 	require.True(t, plugin.UseIntegerConversion)
+	require.True(t, plugin.UseBulkRetrieval)
 }
 
 func createTestServer(t *testing.T, e []Endpoint) *httptest.Server {
@@ -595,6 +918,7 @@ func createTestServer(t *testing.T, e []Endpoint) *httptest.Server {
 
 		endpoint, ok := endpoints[r.URL.Path]
 		if !ok {
+			fmt.Printf("There isn't an endpoint for: %v\n", r.URL.Path)
 			w.WriteHeader(404)
 			return
 		}

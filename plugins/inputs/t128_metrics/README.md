@@ -13,6 +13,10 @@ The metrics input plugin collects metrics from a 128T instance.
 ## A socket to use for retrieving metrics - unused by default
 # unix_socket = "/var/run/128technology/web-server.sock"
 
+## Whether or not to use the bulk retrieval API. If used, the base_url should
+## point directly to the bulk metrics endpoint.
+# use_bulk_retrieval = false
+
 ## The maximum number of requests to be in flight at once
 # max_simultaneous_requests = 20
 

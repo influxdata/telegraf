@@ -97,10 +97,9 @@ func (s *Serializer) SetFieldTypeSupport(typeSupport FieldTypeSupport) {
 
 func (s *Serializer) SetTimestampUnits(units time.Duration) {
 	unitsNanoseconds := units.Nanoseconds()
-	fmt.Printf("Nanoseconds: %v\n", unitsNanoseconds)
 
 	// if the units passed in were less than or equal to zero,
-	// then serialize the timestamp in seconds (the default)
+	// then serialize the timestamp in nanoseconds (the default)
 	if unitsNanoseconds <= 0 {
 		unitsNanoseconds = 1
 	}
