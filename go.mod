@@ -64,9 +64,9 @@ require (
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4
-	github.com/google/gnxi v0.0.0-20220411075422-cd6b043b7fd0
-	github.com/google/go-cmp v0.5.7
+	github.com/google/go-cmp v0.5.8
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.3.3
 	github.com/gophercloud/gophercloud v0.24.0
@@ -96,20 +96,19 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 	github.com/mdlayher/apcupsd v0.0.0-20200608131503-2bf01da7bf1b
-	github.com/microsoft/ApplicationInsights-Go v0.4.4
-	github.com/miekg/dns v1.1.48
-	github.com/moby/ipvs v1.0.1
-	github.com/multiplay/go-ts3 v1.0.1
-	github.com/nats-io/nats-server/v2 v2.7.4
-	github.com/nats-io/nats.go v1.13.1-0.20220308171302-2f2f6968e98d
-	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
-	github.com/nsqio/go-nsq v1.1.0
-	github.com/olivere/elastic v6.2.37+incompatible
-	github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802
+	github.com/miekg/dns v1.1.41
+	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/multiplay/go-ts3 v1.0.0
+	github.com/naoina/go-stringutil v0.1.0 // indirect
+	github.com/nats-io/nats-server/v2 v2.1.4
+	github.com/nats-io/nats.go v1.9.1
+	github.com/newrelic/newrelic-telemetry-sdk-go v0.5.1
+	github.com/nsqio/go-nsq v1.0.8
+	github.com/openconfig/gnmi v0.0.0-20220503232738-6eb133c65a13
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.0.2 // indirect
+	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
-	github.com/openzipkin/zipkin-go v0.2.5
-	github.com/pion/dtls/v2 v2.0.13
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/client_model v0.2.0
@@ -143,15 +142,15 @@ require (
 	go.opentelemetry.io/otel/metric v0.28.0
 	go.opentelemetry.io/otel/sdk/metric v0.28.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27
+	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
 	golang.org/x/text v0.3.7
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.11.0
 	google.golang.org/api v0.67.0
-	google.golang.org/genproto v0.0.0-20220207164111-0872dc986b00
+	google.golang.org/genproto v0.0.0-20220505152158-f39f71e6c8f3
 	google.golang.org/grpc v1.46.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
@@ -162,6 +161,17 @@ require (
 	k8s.io/apimachinery v0.23.4
 	k8s.io/client-go v0.23.3
 	modernc.org/sqlite v1.10.8
+)
+
+require (
+	github.com/Jeffail/gabs v1.4.0
+	github.com/google/gnxi v0.0.0-20220528064112-1ebe7b7e58d3
+	github.com/microsoft/ApplicationInsights-Go v0.4.4
+	github.com/moby/ipvs v1.0.2
+	github.com/olivere/elastic v6.2.37+incompatible
+	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
+	github.com/openzipkin/zipkin-go v0.2.5
+	github.com/pion/dtls/v2 v2.1.5
 )
 
 require (
@@ -186,7 +196,6 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
-	github.com/Jeffail/gabs v1.4.0 // indirect
 	github.com/Microsoft/go-winio v0.4.17 // indirect
 	github.com/Microsoft/hcsshim v0.8.24 // indirect
 	github.com/alecthomas/participle v0.4.1 // indirect
@@ -238,7 +247,6 @@ require (
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang-sql/sqlexp v0.0.0-20170517235910-f1bb20e5a188 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/flatbuffers v2.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
@@ -284,7 +292,6 @@ require (
 	github.com/mdlayher/genetlink v1.1.0 // indirect
 	github.com/mdlayher/netlink v1.4.2 // indirect
 	github.com/mdlayher/socket v0.0.0-20211102153432-57e3fa563ecb // indirect
-	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/moby/sys/mount v0.2.0 // indirect
@@ -292,15 +299,10 @@ require (
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/morikuni/aec v1.0.0 // indirect
-	github.com/naoina/go-stringutil v0.1.0 // indirect
-	github.com/nats-io/jwt/v2 v2.2.1-0.20220113022732-58e87895b296 // indirect
+	github.com/nats-io/jwt v0.3.2 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.0.2 // indirect
-	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.8 // indirect
@@ -343,7 +345,7 @@ require (
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
+	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f // indirect
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
@@ -388,3 +390,6 @@ replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemet
 
 // replaced due to open PR updating protobuf https://github.com/riemann/riemann-go-client/pull/27
 replace github.com/riemann/riemann-go-client => github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754
+
+// replaced due to custom logic in https://github.com/128technology/sarama/pull/1
+replace github.com/Shopify/sarama v1.29.0 => github.com/128technology/sarama v1.29.1-1-128tech
