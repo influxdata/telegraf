@@ -21,6 +21,12 @@ const sampleConfig = `
 	##  * "regex": go flavored regex comparison
 	# mode = "exact"
 
+	## Operation dictates how to combine the condition's tag matching
+	## Valid values are:
+	##  * "and": logical and the results together
+	##  * "or": logical or the results together
+	# operation = "and"
+
   [processors.t128_filter.condition.tags]
 	# tag1 = ["value1", "value2"]
 	# tag2 = ["value3"]
@@ -42,9 +48,18 @@ const (
 	globMode  mode = "glob"
 )
 
+type operation string
+
+const (
+	emptyOperation operation = ""
+	andOperation   operation = "and"
+	orOperation    operation = "or"
+)
+
 type Condition struct {
-	Mode mode `toml:"mode"`
-	Tags tags `toml:"tags"`
+	Mode      mode      `toml:"mode"`
+	Operation operation `toml:"operation"`
+	Tags      tags      `toml:"tags"`
 }
 
 type T128Filter struct {
@@ -162,7 +177,10 @@ func createMatcher(conditions []Condition) (matcher, error) {
 			return nil, err
 		}
 
-		conditionMatchers[i] = andConjMatcher{matchers: tagMatchers}
+		conditionMatchers[i], err = getConditionMatcher(tagMatchers, condition.Operation)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return orConjMatcher{conditionMatchers}, nil
@@ -204,6 +222,17 @@ func getTagMatcher(mode mode, tag string, values []string) (matcher, error) {
 	}
 
 	return nil, fmt.Errorf("invalid mode: %s", mode)
+}
+
+func getConditionMatcher(matchers []matcher, operation operation) (matcher, error) {
+	switch operation {
+	case emptyOperation, andOperation:
+		return andConjMatcher{matchers: matchers}, nil
+	case orOperation:
+		return orConjMatcher{matchers: matchers}, nil
+	}
+
+	return nil, fmt.Errorf("invalid operation: %s", operation)
 }
 
 func compileExpressions(values []string) ([]*regexp.Regexp, error) {

@@ -68,7 +68,7 @@ func TestFilters(t *testing.T) {
 			},
 		},
 		{
-			Name:       "ands tags together",
+			Name:       "ands tags together by default",
 			Conditions: []Condition{{Tags: tags{"tag1": {"value1"}, "tag2": {"value2"}}}},
 			InputMetrics: []telegraf.Metric{
 				newMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value2"}, nil),
@@ -76,6 +76,21 @@ func TestFilters(t *testing.T) {
 				newMetric("some-measurement", map[string]string{"tag1": "value2", "tag2": "value2"}, nil),
 			},
 			OutputMetrics: []telegraf.Metric{newMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value2"}, nil)},
+		},
+		{
+			Name:       "or operation ors tags together",
+			Conditions: []Condition{{Operation: orOperation, Tags: tags{"tag1": {"value1"}, "tag2": {"value2"}}}},
+			InputMetrics: []telegraf.Metric{
+				newMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value2"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value1"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "value2", "tag2": "value2"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "value2", "tag2": "value1"}, nil),
+			},
+			OutputMetrics: []telegraf.Metric{
+				newMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value2"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value1"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "value2", "tag2": "value2"}, nil),
+			},
 		},
 		{
 			Name:       "ors multiple values",
@@ -153,6 +168,10 @@ func TestValidation(t *testing.T) {
 			Name:       "invalid mode",
 			Conditions: []Condition{{Mode: "some-invalid-mode", Tags: tags{"tag1": {"just needed a tag"}}}},
 		},
+		{
+			Name:       "invalid operation",
+			Conditions: []Condition{{Operation: "some-invalid-operation", Tags: tags{"tag1": {"just needed a tag"}}}},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -171,6 +190,7 @@ func TestLoadsFromToml(t *testing.T) {
 	exampleConfig := []byte(`
 		[[condition]]
 		  mode = "glob"
+		  operation = "or"
 
 		[condition.tags]
 		  tag1 = ["value1", "value2"]
@@ -182,7 +202,7 @@ func TestLoadsFromToml(t *testing.T) {
 	`)
 
 	assert.NoError(t, toml.Unmarshal(exampleConfig, plugin))
-	assert.Equal(t, []Condition{{Mode: globMode, Tags: tags{"tag1": {"value1", "value2"}}}, {Tags: tags{"tag1": {"value3"}}}}, plugin.Conditions)
+	assert.Equal(t, []Condition{{Mode: globMode, Operation: orOperation, Tags: tags{"tag1": {"value1", "value2"}}}, {Tags: tags{"tag1": {"value3"}}}}, plugin.Conditions)
 }
 
 func TestLoadsFromTomlComplainsAboutDuplicateTags(t *testing.T) {

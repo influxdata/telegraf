@@ -18,6 +18,12 @@ The `t128_filter` filters out metrics passing through it. This processor is usef
     ##  * "regex": go flavored regex comparison
     # mode = "exact"
 
+    ## Operation dictates how to combine the condition's tag matching
+    ## Valid values are:
+    ##  * "and": logical and the results together
+    ##  * "or": logical or the results together
+    # operation = "and"
+
   [processors.t128_filter.condition.tags]
     # tag1 = ["value1", "value2"]
     # tag2 = ["value3"]
