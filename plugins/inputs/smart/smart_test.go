@@ -1411,11 +1411,11 @@ var (
 	}{
 		{
 			map[string]interface{}{
-				"exit_status":              int(0),
-				"health_ok":                bool(true),
-				"read_error_rate":          int64(0),
-				"temp_c":                   int64(34),
-				"udma_crc_errors":          int64(0),
+				"exit_status":         int(0),
+				"health_ok":           bool(true),
+				"read_error_rate":     int64(0),
+				"temp_c":              int64(34),
+				"udma_crc_errors":     int64(0),
 				"wear_leveling_count": int64(185),
 			},
 			map[string]string{
