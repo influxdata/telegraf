@@ -109,10 +109,6 @@ func (plugin *T128GraphQL) checkConfig() error {
 		return fmt.Errorf("extract_fields is a required configuration field")
 	}
 
-	if plugin.Tags == nil {
-		return fmt.Errorf("extract_tags is a required configuration field")
-	}
-
 	return nil
 }
 
