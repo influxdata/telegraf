@@ -23,16 +23,21 @@ type Endpoint struct {
 }
 
 const (
-	ValidExpectedRequestSingleTag    = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
-	ValidQuerySingleTag              = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"
-	ValidExpectedRequestNoTag        = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field}}}}}}}"}`
-	ValidQueryNoTag                  = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field}}}}}}}"
-	ValidExpectedRequestWithAbsPaths = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nname\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}\nname}}}}}"}`
-	ValidQueryWithAbsPaths           = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nname\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}\nname}}}}}"
-	InvalidRouterExpectedRequest     = `{"query":"query {\nallRouters(name:\"not-a-router\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
-	InvalidRouterQuery               = "query {\nallRouters(name:\"not-a-router\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"
-	InvalidFieldExpectedRequest      = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ninvalid-field\ntest-tag}}}}}}}"}`
-	InvalidFieldQuery                = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ninvalid-field\ntest-tag}}}}}}}"
+	ValidExpectedRequest                  = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
+	ValidExpectedRequestNoTag             = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field}}}}}}}"}`
+	ValidExpectedRequestWithAbsPaths      = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nname\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}\nname}}}}}"}`
+	ValidExpectedRequestWithMixedResponse = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\nrouter{\npeers(names:\"peer-1\"){\nnodes{\npaths{\nstatus\nuptime}}}}}}}}}"}`
+	InvalidRouterExpectedRequest          = `{"query":"query {\nallRouters(name:\"not-a-router\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
+	InvalidFieldExpectedRequest           = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ninvalid-field\ntest-tag}}}}}}}"}`
+)
+
+var (
+	ValidQuery                  = ValidExpectedRequest[10 : len(ValidExpectedRequest)-2]
+	ValidQueryNoTag             = ValidExpectedRequestNoTag[10 : len(ValidExpectedRequestNoTag)-2]
+	ValidQueryWithAbsPaths      = ValidExpectedRequestWithAbsPaths[10 : len(ValidExpectedRequestWithAbsPaths)-2]
+	ValidQueryWithMixedResponse = ValidExpectedRequestWithMixedResponse[10 : len(ValidExpectedRequestWithMixedResponse)-2]
+	InvalidRouterQuery          = InvalidRouterExpectedRequest[10 : len(InvalidRouterExpectedRequest)-2]
+	InvalidFieldQuery           = InvalidFieldExpectedRequest[10 : len(InvalidFieldExpectedRequest)-2]
 )
 
 var CollectorTestCases = []struct {
@@ -43,6 +48,8 @@ var CollectorTestCases = []struct {
 	InitError        bool
 	Query            string
 	Endpoint         Endpoint
+	Timeout          config.Duration
+	Deadline         config.Duration
 	ExpectedMetrics  []*testutil.Metric
 	ExpectedErrors   []string
 	RetryIfNotFound  bool
@@ -65,6 +72,16 @@ var CollectorTestCases = []struct {
 		ExpectedRequests: []int{0},
 	},
 	{
+		Name:             "fails init if deadline is too close to timeout",
+		EntryPoint:       "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
+		Fields:           map[string]string{"test-field": "test-field"},
+		Tags:             map[string]string{"test-tag": "test-tag"},
+		Timeout:          config.Duration(time.Second * 5),
+		Deadline:         config.Duration(time.Second * 7),
+		InitError:        true,
+		ExpectedRequests: []int{0},
+	},
+	{
 		Name:       "tag with graphQL argument in path produces no request or metrics",
 		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
 		Fields:     map[string]string{"test-field": "test-field"},
@@ -80,16 +97,16 @@ var CollectorTestCases = []struct {
 		EntryPoint:      "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
 		Fields:          map[string]string{"test-field": "test-field"},
 		Tags:            map[string]string{"test-tag": "test-tag"},
-		Query:           ValidQuerySingleTag,
-		Endpoint:        Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestSingleTag, "{}"},
+		Query:           ValidQuery,
+		Endpoint:        Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequest, "{}"},
 		ExpectedMetrics: nil,
 		ExpectedErrors: []string{
-			"empty response for collector test-collector: {}",
+			"no data found in response for collector test-collector",
 		},
 		ExpectedRequests: []int{1},
 	},
 	{
-		Name:            "retries if not found",
+		Name:            "propogates not found error to accumulator",
 		EntryPoint:      "allRouters(name:'not-a-router')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
 		Fields:          map[string]string{"test-field": "test-field"},
 		Tags:            map[string]string{"test-tag": "test-tag"},
@@ -98,33 +115,16 @@ var CollectorTestCases = []struct {
 		ExpectedMetrics: nil,
 		ExpectedErrors: []string{
 			"status code 404 not OK for collector test-collector: it's not right",
-			"status code 404 not OK for collector test-collector: it's not right",
 		},
-		RetryIfNotFound:  true,
-		ExpectedRequests: []int{1, 2},
-	},
-	{
-		Name:            "doesn't retry if not found",
-		EntryPoint:      "allRouters(name:'not-a-router')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
-		Fields:          map[string]string{"test-field": "test-field"},
-		Tags:            map[string]string{"test-tag": "test-tag"},
-		Query:           InvalidRouterQuery,
-		Endpoint:        Endpoint{"/api/v1/graphql/", 404, InvalidRouterExpectedRequest, `it's not right`},
-		ExpectedMetrics: nil,
-		ExpectedErrors: []string{
-			"status code 404 not OK for collector test-collector: it's not right",
-			"collector configured to not retry when endpoint not found (404), stopping queries",
-		},
-		RetryIfNotFound:  false,
-		ExpectedRequests: []int{1, 1},
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:             "propogates invalid json error to accumulator",
 		EntryPoint:       "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
 		Fields:           map[string]string{"test-field": "test-field"},
 		Tags:             map[string]string{"test-tag": "test-tag"},
-		Query:            ValidQuerySingleTag,
-		Endpoint:         Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestSingleTag, `{"test": }`},
+		Query:            ValidQuery,
+		Endpoint:         Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequest, `{"test": }`},
 		ExpectedMetrics:  nil,
 		ExpectedErrors:   []string{"invalid json response for collector test-collector: invalid character '}' looking for beginning of value"},
 		ExpectedRequests: []int{1},
@@ -146,9 +146,57 @@ var CollectorTestCases = []struct {
 				}]
 			}]
 		  }`},
-		ExpectedMetrics:  nil,
-		ExpectedErrors:   []string{"unexpected response for collector test-collector: Cannot query field \"invalid-field\" on type \"ArpEntryType\"."},
+		ExpectedMetrics: nil,
+		ExpectedErrors: []string{
+			"found errors in response for collector test-collector: Cannot query field \"invalid-field\" on type \"ArpEntryType\".",
+			"no data found in response for collector test-collector",
+		},
 		ExpectedRequests: []int{1},
+	},
+	{
+		Name:       "retries if not found",
+		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
+		Fields:     map[string]string{"test-field": "test-field"},
+		Tags:       nil,
+		Query:      ValidQueryNoTag,
+		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestNoTag, `
+		{
+			"errors": [{
+				"name": "GraphQLError",
+				"message": "highwayManager@CHSSDWCond01CHI.CHSSDWCondMD returned a 404"
+			}]
+		  }`},
+		ExpectedMetrics: nil,
+		ExpectedErrors: []string{
+			"found errors in response for collector test-collector: highwayManager@CHSSDWCond01CHI.CHSSDWCondMD returned a 404",
+			"no data found in response for collector test-collector",
+			"found errors in response for collector test-collector: highwayManager@CHSSDWCond01CHI.CHSSDWCondMD returned a 404",
+			"no data found in response for collector test-collector",
+		},
+		RetryIfNotFound:  true,
+		ExpectedRequests: []int{1, 2},
+	},
+	{
+		Name:       "doesn't retry if not found",
+		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
+		Fields:     map[string]string{"test-field": "test-field"},
+		Tags:       nil,
+		Query:      ValidQueryNoTag,
+		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestNoTag, `
+		{
+			"errors": [{
+				"name": "GraphQLError",
+				"message": "highwayManager@CHSSDWCond01CHI.CHSSDWCondMD returned a 404"
+			}]
+		  }`},
+		ExpectedMetrics: nil,
+		ExpectedErrors: []string{
+			"found errors in response for collector test-collector: highwayManager@CHSSDWCond01CHI.CHSSDWCondMD returned a 404",
+			"no data found in response for collector test-collector",
+			"collector configured to not retry when endpoint not found (404), stopping queries",
+		},
+		RetryIfNotFound:  false,
+		ExpectedRequests: []int{1, 1},
 	},
 	{
 		Name:       "missing extract-tags produces response",
@@ -188,8 +236,8 @@ var CollectorTestCases = []struct {
 		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
 		Fields:     map[string]string{"test-field": "test-field"},
 		Tags:       map[string]string{"test-tag": "test-tag"},
-		Query:      ValidQuerySingleTag,
-		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestSingleTag, `{
+		Query:      ValidQuery,
+		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequest, `{
 			"data": {
 				"allRouters": {
 				  	"nodes": [{
@@ -228,7 +276,9 @@ var CollectorTestCases = []struct {
 			"test-tag":       "test-tag",
 			"other-test-tag": "allRouters/nodes/name",
 		},
-		Query: ValidQueryWithAbsPaths,
+		Deadline: config.Duration(time.Second * 5),
+		Timeout:  config.Duration(time.Second * 10),
+		Query:    ValidQueryWithAbsPaths,
 		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestWithAbsPaths, `{
 			"data": {
 				"allRouters": {
@@ -265,12 +315,94 @@ var CollectorTestCases = []struct {
 		ExpectedErrors:   nil,
 		ExpectedRequests: []int{1},
 	},
+	{
+		Name:       "mixed produces errors and response",
+		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/router/peers(names:'peer-1')/nodes",
+		Fields: map[string]string{
+			"status": "paths/status",
+		},
+		Tags: map[string]string{
+			"uptime": "paths/uptime",
+		},
+		Query: ValidQueryWithMixedResponse,
+		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestWithMixedResponse, `{
+			"errors": [
+			  {
+				"name": "TypeError",
+				"message": "Int cannot represent non 32-bit signed integer value: 3066521082",
+				"locations": [
+				  {
+					"line": 10,
+					"column": 19
+				  }
+				],
+				"path": [
+				  "allRouters",
+				  "nodes",
+				  0,
+				  "nodes",
+				  "nodes",
+				  0,
+				  "router",
+				  "peers",
+				  "nodes",
+				  0,
+				  "paths",
+				  0,
+				  "uptime"
+				]
+			  }
+			],
+			"data": {
+			  "allRouters": {
+				"nodes": [
+				  {
+					"nodes": {
+					  "nodes": [
+						{
+						  "router": {
+							"peers": {
+							  "nodes": [
+								{
+								  "paths": [
+									{
+									  "uptime": null,
+									  "status": "UP"
+									}
+								  ]
+								}
+							  ]
+							}
+						  }
+						}
+					  ]
+					}
+				  }
+				]
+			  }
+			}
+		  }`},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-collector",
+				Tags:        map[string]string{},
+				Fields: map[string]interface{}{
+					"status": "UP",
+				},
+			},
+		},
+		ExpectedErrors: []string{
+			"found errors in response for collector test-collector: Int cannot represent non 32-bit signed integer value: 3066521082",
+		},
+		ExpectedRequests: []int{1},
+	},
 }
 
 func TestT128GraphqlCollector(t *testing.T) {
 	for _, testCase := range CollectorTestCases {
 		t.Run(testCase.Name, func(t *testing.T) {
-			fakeServer, requestCount := createTestServer(t, testCase.Endpoint)
+			hasDeadline := testCase.Deadline != 0
+			fakeServer, requestCount := createTestServer(t, testCase.Endpoint, hasDeadline)
 			defer fakeServer.Close()
 
 			plugin := &plugin.T128GraphQL{
@@ -280,6 +412,14 @@ func TestT128GraphqlCollector(t *testing.T) {
 				Fields:          testCase.Fields,
 				Tags:            testCase.Tags,
 				RetryIfNotFound: testCase.RetryIfNotFound,
+			}
+
+			if testCase.Timeout != 0 {
+				plugin.Timeout = testCase.Timeout
+			}
+
+			if hasDeadline {
+				plugin.Deadline = testCase.Deadline
 			}
 
 			var acc testutil.Accumulator
@@ -355,13 +495,18 @@ func TestTimoutUsedForRequests(t *testing.T) {
 	fakeServer.Close()
 }
 
-func createTestServer(t *testing.T, endpoint Endpoint) (*httptest.Server, *int) {
+func createTestServer(t *testing.T, endpoint Endpoint, hasDeadline bool) (*httptest.Server, *int) {
 	requestCount := 0
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		requestCount += 1
 
 		require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+		if hasDeadline {
+			require.NotEqual(t, r.Header.Get("deadline"), "")
+		} else {
+			require.Equal(t, r.Header.Get("deadline"), "")
+		}
 		require.Equal(t, "POST", r.Method)
 
 		if endpoint.URL != r.URL.Path {
