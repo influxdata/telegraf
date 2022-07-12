@@ -68,3 +68,7 @@ from listed sensors using Junos Telemetry Interface. Refer to
 
 - All measurements are tagged appropriately using the identifier information
   in incoming data
+
+## Example Output
+
+## Metrics
