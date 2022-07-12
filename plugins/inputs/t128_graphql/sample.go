@@ -23,10 +23,6 @@ var sampleConfig = `
 ## If false, the collector will continue querying when the graphQL server responds with 404 Not Found
 # retry_if_not_found = false
 
-## Amount of time for graphQL server to collect and return data. After deadline, partial responses
-## are returned. Default is no deadline. Deadline must be at least 1 second less than timeout.
-# deadline = "0s"
-
 ## Required. The fields to collect with the desired name as the key (left) and the graphQL 
 ## query path as the value (right). The path can be relative to the entry point or an absolute
 ## path that does not diverge from the entry-point and does not contain graphQL arguments such

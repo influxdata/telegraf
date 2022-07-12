@@ -48,8 +48,6 @@ var CollectorTestCases = []struct {
 	InitError        bool
 	Query            string
 	Endpoint         Endpoint
-	Timeout          config.Duration
-	Deadline         config.Duration
 	ExpectedMetrics  []*testutil.Metric
 	ExpectedErrors   []string
 	RetryIfNotFound  bool
@@ -68,16 +66,6 @@ var CollectorTestCases = []struct {
 		EntryPoint:       "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
 		Fields:           nil,
 		Tags:             nil,
-		InitError:        true,
-		ExpectedRequests: []int{0},
-	},
-	{
-		Name:             "fails init if deadline is too close to timeout",
-		EntryPoint:       "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
-		Fields:           map[string]string{"test-field": "test-field"},
-		Tags:             map[string]string{"test-tag": "test-tag"},
-		Timeout:          config.Duration(time.Second * 5),
-		Deadline:         config.Duration(time.Second * 7),
 		InitError:        true,
 		ExpectedRequests: []int{0},
 	},
@@ -276,9 +264,7 @@ var CollectorTestCases = []struct {
 			"test-tag":       "test-tag",
 			"other-test-tag": "allRouters/nodes/name",
 		},
-		Deadline: config.Duration(time.Second * 5),
-		Timeout:  config.Duration(time.Second * 10),
-		Query:    ValidQueryWithAbsPaths,
+		Query: ValidQueryWithAbsPaths,
 		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestWithAbsPaths, `{
 			"data": {
 				"allRouters": {
@@ -401,8 +387,7 @@ var CollectorTestCases = []struct {
 func TestT128GraphqlCollector(t *testing.T) {
 	for _, testCase := range CollectorTestCases {
 		t.Run(testCase.Name, func(t *testing.T) {
-			hasDeadline := testCase.Deadline != 0
-			fakeServer, requestCount := createTestServer(t, testCase.Endpoint, hasDeadline)
+			fakeServer, requestCount := createTestServer(t, testCase.Endpoint)
 			defer fakeServer.Close()
 
 			plugin := &plugin.T128GraphQL{
@@ -412,14 +397,6 @@ func TestT128GraphqlCollector(t *testing.T) {
 				Fields:          testCase.Fields,
 				Tags:            testCase.Tags,
 				RetryIfNotFound: testCase.RetryIfNotFound,
-			}
-
-			if testCase.Timeout != 0 {
-				plugin.Timeout = testCase.Timeout
-			}
-
-			if hasDeadline {
-				plugin.Deadline = testCase.Deadline
 			}
 
 			var acc testutil.Accumulator
@@ -495,18 +472,14 @@ func TestTimoutUsedForRequests(t *testing.T) {
 	fakeServer.Close()
 }
 
-func createTestServer(t *testing.T, endpoint Endpoint, hasDeadline bool) (*httptest.Server, *int) {
+func createTestServer(t *testing.T, endpoint Endpoint) (*httptest.Server, *int) {
 	requestCount := 0
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		requestCount += 1
 
 		require.Equal(t, "application/json", r.Header.Get("Content-Type"))
-		if hasDeadline {
-			require.NotEqual(t, r.Header.Get("deadline"), "")
-		} else {
-			require.Equal(t, r.Header.Get("deadline"), "")
-		}
+		require.NotEqual(t, r.Header.Get("deadline"), "")
 		require.Equal(t, "POST", r.Method)
 
 		if endpoint.URL != r.URL.Path {
