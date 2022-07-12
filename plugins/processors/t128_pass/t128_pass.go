@@ -1,4 +1,4 @@
-package t128_filter
+package t128_pass
 
 import (
 	"fmt"
@@ -10,10 +10,10 @@ import (
 )
 
 const sampleConfig = `
-[[processors.t128_filter]]
+[[processors.t128_pass]]
   ## The conditions that must be met to pass a metric through. This is similar
   ## behavior to a tagpass, but the multiple tags are ANDed
-  [[processors.t128_filter.condition]]
+  [[processors.t128_pass.condition]]
 	## Mode dictates how to match the condition's tag values
 	## Valid values are:
 	##  * "exact": exact string comparison
@@ -30,14 +30,14 @@ const sampleConfig = `
 	## Invert dictates whether to invert the final result of the condition
 	# invert = false
 
-  [processors.t128_filter.condition.tags]
+  [processors.t128_pass.condition.tags]
 	# tag1 = ["value1", "value2"]
 	# tag2 = ["value3"]
 
-  [[processors.t128_filter.condition]]
+  [[processors.t128_pass.condition]]
 	# mode = "exact"
 
-  [processors.t128_filter.condition.tags]
+  [processors.t128_pass.condition.tags]
 	# tag1 = ["value3"]
 `
 
@@ -66,19 +66,19 @@ type Condition struct {
 	Tags      tags      `toml:"tags"`
 }
 
-type T128Filter struct {
+type T128Pass struct {
 	Conditions []Condition `toml:"condition"`
 
 	log     telegraf.Logger `toml:"-"`
 	matcher matcher         `toml:"-"`
 }
 
-func (r *T128Filter) SampleConfig() string {
+func (r *T128Pass) SampleConfig() string {
 	return sampleConfig
 }
 
-func (r *T128Filter) Description() string {
-	return "Filter metrics from being emitted."
+func (r *T128Pass) Description() string {
+	return "Passes metrics through when conditions are met."
 }
 
 type matcher interface {
@@ -279,32 +279,37 @@ func compileGlobs(values []string) ([]glob.Glob, error) {
 	return globs, nil
 }
 
-func (r *T128Filter) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	filteredPoints := make([]telegraf.Metric, 0)
-
+func (r *T128Pass) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
-		if r.matcher.Matches(point) {
-			filteredPoints = append(filteredPoints, point)
+		if !r.matcher.Matches(point) {
+			// copying so that don't hit seg fault
+			fields := make([]*telegraf.Field, len(point.FieldList()))
+			copy(fields, point.FieldList())
+
+			// removing all fields will have telegraf drop the metric
+			for _, field := range fields {
+				point.RemoveField(field.Key)
+			}
 		}
 	}
 
-	return filteredPoints
+	return in
 }
 
-func (r *T128Filter) Init() error {
+func (r *T128Pass) Init() error {
 	var err error
 	r.matcher, err = createMatcher(r.Conditions)
 	return err
 }
 
-func newFilter() *T128Filter {
-	return &T128Filter{
+func newPass() *T128Pass {
+	return &T128Pass{
 		Conditions: make([]Condition, 0),
 	}
 }
 
 func init() {
-	processors.Add("t128_filter", func() telegraf.Processor {
-		return newFilter()
+	processors.Add("t128_pass", func() telegraf.Processor {
+		return newPass()
 	})
 }
