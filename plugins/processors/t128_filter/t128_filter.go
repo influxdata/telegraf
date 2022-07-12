@@ -27,6 +27,9 @@ const sampleConfig = `
 	##  * "or": logical or the results together
 	# operation = "and"
 
+	## Invert dictates whether to invert the final result of the condition
+	# invert = false
+
   [processors.t128_filter.condition.tags]
 	# tag1 = ["value1", "value2"]
 	# tag2 = ["value3"]
@@ -59,6 +62,7 @@ const (
 type Condition struct {
 	Mode      mode      `toml:"mode"`
 	Operation operation `toml:"operation"`
+	Invert    bool      `toml:"invert"`
 	Tags      tags      `toml:"tags"`
 }
 
@@ -169,6 +173,14 @@ func (c orConjMatcher) Matches(point telegraf.Metric) bool {
 	return false
 }
 
+type inversionMatcher struct {
+	matcher matcher
+}
+
+func (m inversionMatcher) Matches(point telegraf.Metric) bool {
+	return !m.matcher.Matches(point)
+}
+
 func createMatcher(conditions []Condition) (matcher, error) {
 	conditionMatchers := make([]matcher, len(conditions))
 	for i, condition := range conditions {
@@ -177,10 +189,16 @@ func createMatcher(conditions []Condition) (matcher, error) {
 			return nil, err
 		}
 
-		conditionMatchers[i], err = getConditionMatcher(tagMatchers, condition.Operation)
+		conditionMatcher, err := getConditionMatcher(tagMatchers, condition.Operation)
 		if err != nil {
 			return nil, err
 		}
+
+		if condition.Invert {
+			conditionMatcher = inversionMatcher{matcher: conditionMatcher}
+		}
+
+		conditionMatchers[i] = conditionMatcher
 	}
 
 	return orConjMatcher{conditionMatchers}, nil

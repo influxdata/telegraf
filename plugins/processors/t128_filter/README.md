@@ -24,6 +24,9 @@ The `t128_filter` filters out metrics passing through it. This processor is usef
     ##  * "or": logical or the results together
     # operation = "and"
 
+    ## Invert dictates whether to invert the final result of the condition
+    # invert = false
+
   [processors.t128_filter.condition.tags]
     # tag1 = ["value1", "value2"]
     # tag2 = ["value3"]

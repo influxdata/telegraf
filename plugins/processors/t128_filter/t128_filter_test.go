@@ -133,6 +133,15 @@ func TestFilters(t *testing.T) {
 				newMetric("some-measurement", map[string]string{"tag1": "234"}, nil),
 			},
 		},
+		{
+			Name:       "inverts",
+			Conditions: []Condition{{Invert: true, Tags: tags{"tag1": {"value1"}}}},
+			InputMetrics: []telegraf.Metric{
+				newMetric("some-measurement", map[string]string{"tag1": "value1"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "value2"}, nil),
+			},
+			OutputMetrics: []telegraf.Metric{newMetric("some-measurement", map[string]string{"tag1": "value2"}, nil)},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -191,6 +200,7 @@ func TestLoadsFromToml(t *testing.T) {
 		[[condition]]
 		  mode = "glob"
 		  operation = "or"
+		  invert = true
 
 		[condition.tags]
 		  tag1 = ["value1", "value2"]
@@ -202,7 +212,13 @@ func TestLoadsFromToml(t *testing.T) {
 	`)
 
 	assert.NoError(t, toml.Unmarshal(exampleConfig, plugin))
-	assert.Equal(t, []Condition{{Mode: globMode, Operation: orOperation, Tags: tags{"tag1": {"value1", "value2"}}}, {Tags: tags{"tag1": {"value3"}}}}, plugin.Conditions)
+	assert.Equal(t,
+		[]Condition{{
+			Mode:      globMode,
+			Operation: orOperation,
+			Invert:    true,
+			Tags:      tags{"tag1": {"value1", "value2"}}}, {Tags: tags{"tag1": {"value3"}}}},
+		plugin.Conditions)
 }
 
 func TestLoadsFromTomlComplainsAboutDuplicateTags(t *testing.T) {
