@@ -32,6 +32,9 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
   ## enable client-side TLS and define CA to authenticate the device
   # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
+  ## Minimal TLS version to accept by the client
+  ## If undet, the value defaults to Golang's default which is TLS v1.2 currently.
+  # tls_min_version = ""
   # insecure_skip_verify = true
 
   ## define client-side TLS certificate & key to authenticate to the device
