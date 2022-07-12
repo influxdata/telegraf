@@ -25,6 +25,9 @@ The graphql input plugin collects data from a 128T instance via graphQL.
 ## Amount of time allowed to complete a single HTTP request
 # timeout = "5s"
 
+## If false, the collector will continue querying when the graphQL server responds with 404 Not Found
+# retry_if_not_found = false
+
 ## Required. The fields to collect with the desired name as the key (left) and the graphQL 
 ## query path as the value (right). The path can be relative to the entry point or an absolute
 ## path that does not diverge from the entry-point and does not contain graphQL arguments such

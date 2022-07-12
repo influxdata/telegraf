@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,9 +33,10 @@ type T128Metrics struct {
 	UseIntegerConversion    bool               `toml:"use_integer_conversion"`
 	UseBulkRetrieval        bool               `toml:"use_bulk_retrieval"`
 
-	client    *http.Client
-	limiter   *requestLimiter
-	retriever Retriever
+	client          *http.Client
+	limiter         *requestLimiter
+	retriever       Retriever
+	notFoundMetrics map[int]struct{}
 }
 
 // ConfiguredMetric represents a single configured metric element
@@ -127,6 +129,8 @@ func (plugin *T128Metrics) Init() error {
 		plugin.retriever = NewIndividualRetriever(plugin.UseIntegerConversion, plugin.ConfiguredMetrics)
 	}
 
+	plugin.notFoundMetrics = make(map[int]struct{}, 0)
+
 	return nil
 }
 
@@ -139,6 +143,11 @@ func (plugin *T128Metrics) Gather(acc telegraf.Accumulator) error {
 	wg.Add(plugin.retriever.RequestCount())
 
 	for index := 0; index < plugin.retriever.RequestCount(); index++ {
+		if _, ok := plugin.notFoundMetrics[index]; ok {
+			wg.Done()
+			continue
+		}
+
 		go func(idx int) {
 			plugin.retrieveMetrics(idx, acc, timestamp)
 			wg.Done()
@@ -171,6 +180,12 @@ func (plugin *T128Metrics) retrieveMetrics(index int, acc telegraf.Accumulator, 
 		message, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			message = []byte("")
+		}
+
+		if strings.Contains(string(message), "No configured endpoints satisfy the request") {
+			acc.AddError(fmt.Errorf("no metric found for %s: will no longer retrieve", plugin.retriever.Describe(index)))
+			plugin.notFoundMetrics[index] = struct{}{}
+			return
 		}
 
 		acc.AddError(fmt.Errorf("status code %d not OK for %s: %s", response.StatusCode, plugin.retriever.Describe(index), message))

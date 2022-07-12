@@ -31,6 +31,7 @@ var ResponseProcessingTestCases = []struct {
 	Endpoints         []Endpoint
 	ExpectedMetrics   []*testutil.Metric
 	ExpectedErrors    []string
+	ExpectedRequests  []int
 	IntegerConversion bool
 	BulkRetrieval     bool
 }{
@@ -40,6 +41,7 @@ var ResponseProcessingTestCases = []struct {
 		Endpoints:         []Endpoint{},
 		ExpectedMetrics:   nil,
 		ExpectedErrors:    nil,
+		ExpectedRequests:  []int{0},
 	},
 	{
 		Name:              "empty configured metrics produce no requests or metrics bulk",
@@ -48,6 +50,7 @@ var ResponseProcessingTestCases = []struct {
 		Endpoints:         []Endpoint{},
 		ExpectedMetrics:   nil,
 		ExpectedErrors:    nil,
+		ExpectedRequests:  []int{0},
 	},
 	{
 		Name: "empty results produce no metrics",
@@ -56,9 +59,10 @@ var ResponseProcessingTestCases = []struct {
 			map[string]string{"test-field": "stats/test"},
 			map[string][]string{},
 		}},
-		Endpoints:       []Endpoint{{"/stats/test", 200, "{}", "[]"}},
-		ExpectedMetrics: nil,
-		ExpectedErrors:  nil,
+		Endpoints:        []Endpoint{{"/stats/test", 200, "{}", "[]"}},
+		ExpectedMetrics:  nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:          "empty results produce no metrics bulk",
@@ -68,9 +72,10 @@ var ResponseProcessingTestCases = []struct {
 			map[string]string{"test-field": "stats/test"},
 			map[string][]string{},
 		}},
-		Endpoints:       []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, "[]"}},
-		ExpectedMetrics: nil,
-		ExpectedErrors:  nil,
+		Endpoints:        []Endpoint{{"/", 200, `{"ids": ["/stats/test"]}`, "[]"}},
+		ExpectedMetrics:  nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name: "none value produces no metric",
@@ -86,8 +91,9 @@ var ResponseProcessingTestCases = []struct {
 				"value": null
 			}]
 		}]`}},
-		ExpectedMetrics: nil,
-		ExpectedErrors:  nil,
+		ExpectedMetrics:  nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:          "none value produces no metric bulk",
@@ -104,8 +110,9 @@ var ResponseProcessingTestCases = []struct {
 				"value": null
 			}]
 		}]`}},
-		ExpectedMetrics: nil,
-		ExpectedErrors:  nil,
+		ExpectedMetrics:  nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name: "forms string value if it is non numeric",
@@ -128,7 +135,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": "test-string"},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:          "forms string value if it is non numeric bulk",
@@ -152,7 +160,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": "test-string"},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "forms float value if integer conversion is disabled",
@@ -176,7 +185,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 50.0},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "forms float value if integer conversion is disabled bulk",
@@ -201,7 +211,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 50.0},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "forms integer value if integer conversion is enabled",
@@ -225,7 +236,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 50},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "forms integer value if integer conversion is enabled bulk",
@@ -250,7 +262,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 50},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name: "forms float value if it is a float",
@@ -273,7 +286,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 50.5},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:          "forms float value if it is a float bulk",
@@ -297,7 +311,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 50.5},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "adds permutation parameters to metrics",
@@ -330,7 +345,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 0},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "adds permutation parameters to metrics bulk",
@@ -364,7 +380,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 0},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "produces multiple metrics for multiple permutations",
@@ -409,7 +426,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 306},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "produces multiple metrics for multiple permutations bulk",
@@ -455,7 +473,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 306},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name:              "hits multiple endpoints",
@@ -495,7 +514,47 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"another-test-field": 60},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{2},
+	},
+	{
+		Name:              "stops retrieving if not found",
+		IntegerConversion: true,
+		ConfiguredMetrics: []plugin.ConfiguredMetric{{
+			"test-metric",
+			map[string]string{"test-field": "stats/test"},
+			map[string][]string{},
+		}, {
+			"another-test-metric",
+			map[string]string{"another-test-field": "stats/another/test"},
+			map[string][]string{},
+		}},
+		Endpoints: []Endpoint{{"/stats/test", 200, "{}", `[{
+			"id": "/stats/test-metric",
+			"permutations": [{
+				"parameters": [],
+				"value": "50"
+			}]
+		}]`}, {
+			"/stats/another/test", 400, "{}",
+			`{"message":"No configured endpoints satisfy the request: {[/stats/test-metric] map[]}"}`,
+		}},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{},
+				Fields:      map[string]interface{}{"test-field": 50},
+			},
+			{
+				Measurement: "test-metric",
+				Tags:        map[string]string{},
+				Fields:      map[string]interface{}{"test-field": 50},
+			},
+		},
+		ExpectedErrors: []string{
+			"no metric found for metric stats/another/test: will no longer retrieve",
+		},
+		ExpectedRequests: []int{2, 3},
 	},
 	{
 		Name:              "requests bulk in single request",
@@ -535,7 +594,8 @@ var ResponseProcessingTestCases = []struct {
 				Fields:      map[string]interface{}{"another-test-field": 60},
 			},
 		},
-		ExpectedErrors: nil,
+		ExpectedErrors:   nil,
+		ExpectedRequests: []int{1},
 	},
 	{
 		Name: "propogates errors to accumulator",
@@ -563,6 +623,7 @@ var ResponseProcessingTestCases = []struct {
 			"status code 300 not OK for metric stats/300: it's not right",
 			"failed to decode response for metric stats/invalid-json: invalid character '}' looking for beginning of value",
 		},
+		ExpectedRequests: []int{3},
 	},
 	{
 		Name:              "mixes errors and valid results",
@@ -596,6 +657,7 @@ var ResponseProcessingTestCases = []struct {
 		ExpectedErrors: []string{
 			"status code 404 not OK for metric stats/404: it's not right",
 		},
+		ExpectedRequests: []int{2},
 	},
 }
 
@@ -722,7 +784,7 @@ var RequestFormationTestCases = []struct {
 func TestT128MetricsResponseProcessing(t *testing.T) {
 	for _, testCase := range ResponseProcessingTestCases {
 		t.Run(testCase.Name, func(t *testing.T) {
-			fakeServer := createTestServer(t, testCase.Endpoints)
+			fakeServer, requestCount := createTestServer(t, testCase.Endpoints)
 			defer fakeServer.Close()
 
 			plugin := &plugin.T128Metrics{
@@ -736,7 +798,20 @@ func TestT128MetricsResponseProcessing(t *testing.T) {
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Init())
 
-			plugin.Gather(&acc)
+			for _, expectedRequests := range testCase.ExpectedRequests {
+				plugin.Gather(&acc)
+				require.Equal(t, expectedRequests, *requestCount)
+
+				// Timestamps aren't important, but need to match
+				for _, m := range acc.Metrics {
+					m.Time = time.Time{}
+				}
+
+				// Avoid specifying this unused type for each field
+				for _, m := range testCase.ExpectedMetrics {
+					m.Type = telegraf.Untyped
+				}
+			}
 
 			var errorStrings []string = nil
 			for _, err := range acc.Errors {
@@ -744,17 +819,6 @@ func TestT128MetricsResponseProcessing(t *testing.T) {
 			}
 
 			require.ElementsMatch(t, testCase.ExpectedErrors, errorStrings)
-
-			// Timestamps aren't important, but need to match
-			for _, m := range acc.Metrics {
-				m.Time = time.Time{}
-			}
-
-			// Avoid specifying this unused type for each field
-			for _, m := range testCase.ExpectedMetrics {
-				m.Type = telegraf.Untyped
-			}
-
 			require.ElementsMatch(t, testCase.ExpectedMetrics, acc.Metrics)
 		})
 	}
@@ -763,7 +827,7 @@ func TestT128MetricsResponseProcessing(t *testing.T) {
 func TestT128MetricsRequestFormation(t *testing.T) {
 	for _, testCase := range RequestFormationTestCases {
 		t.Run(testCase.Name, func(t *testing.T) {
-			fakeServer := createTestServer(t, testCase.Endpoints)
+			fakeServer, _ := createTestServer(t, testCase.Endpoints)
 			defer fakeServer.Close()
 
 			plugin := &plugin.T128Metrics{
@@ -904,14 +968,16 @@ func TestLoadsFromToml(t *testing.T) {
 	require.True(t, plugin.UseBulkRetrieval)
 }
 
-func createTestServer(t *testing.T, e []Endpoint) *httptest.Server {
+func createTestServer(t *testing.T, e []Endpoint) (*httptest.Server, *int) {
 	endpoints := make(map[string]Endpoint)
 	for _, endpoint := range e {
 		endpoints[endpoint.URL] = endpoint
 	}
 
+	requestCount := 0
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
+		requestCount += 1
 
 		require.Equal(t, "application/json", r.Header.Get("Content-Type"))
 		require.Equal(t, "POST", r.Method)
@@ -937,5 +1003,5 @@ func createTestServer(t *testing.T, e []Endpoint) *httptest.Server {
 		w.Write([]byte(endpoint.Response))
 	}))
 
-	return fakeServer
+	return fakeServer, &requestCount
 }

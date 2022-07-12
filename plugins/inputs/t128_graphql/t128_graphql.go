@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -25,18 +26,20 @@ const (
 
 //T128GraphQL is an input for metrics of a 128T router instance
 type T128GraphQL struct {
-	CollectorName string            `toml:"collector_name"`
-	BaseURL       string            `toml:"base_url"`
-	UnixSocket    string            `toml:"unix_socket"`
-	EntryPoint    string            `toml:"entry_point"`
-	Fields        map[string]string `toml:"extract_fields"`
-	Tags          map[string]string `toml:"extract_tags"`
-	Timeout       config.Duration   `toml:"timeout"`
+	CollectorName   string            `toml:"collector_name"`
+	BaseURL         string            `toml:"base_url"`
+	UnixSocket      string            `toml:"unix_socket"`
+	EntryPoint      string            `toml:"entry_point"`
+	Fields          map[string]string `toml:"extract_fields"`
+	Tags            map[string]string `toml:"extract_tags"`
+	Timeout         config.Duration   `toml:"timeout"`
+	RetryIfNotFound bool              `toml:"retry_if_not_found"`
 
-	Config      *Config
-	Query       string
-	requestBody []byte
-	client      *http.Client
+	Config           *Config
+	Query            string
+	requestBody      []byte
+	client           *http.Client
+	endpointNotFound bool
 }
 
 //SampleConfig returns the default configuration of the Input
@@ -103,6 +106,8 @@ func (plugin *T128GraphQL) Init() error {
 
 	plugin.client = &http.Client{Transport: transport, Timeout: time.Duration(plugin.Timeout)}
 
+	plugin.endpointNotFound = false
+
 	return nil
 }
 
@@ -132,6 +137,10 @@ func (plugin *T128GraphQL) checkConfig() error {
 
 //Gather takes in an accumulator and adds the metrics that the Input gathers
 func (plugin *T128GraphQL) Gather(acc telegraf.Accumulator) error {
+	if !plugin.RetryIfNotFound && plugin.endpointNotFound {
+		return nil
+	}
+
 	request, err := plugin.createRequest()
 	if err != nil {
 		acc.AddError(fmt.Errorf("failed to create a request for query %s: %w", plugin.Query, err))
@@ -154,6 +163,14 @@ func (plugin *T128GraphQL) Gather(acc telegraf.Accumulator) error {
 		template := fmt.Sprintf("status code %d not OK for collector ", response.StatusCode) + plugin.CollectorName + ": %s"
 		for _, err := range decodeAndReportJSONErrors(message, template) {
 			acc.AddError(err)
+		}
+
+		if response.StatusCode == 404 {
+			plugin.endpointNotFound = true
+
+			if !plugin.RetryIfNotFound {
+				acc.AddError(errors.New("collector configured to not retry when endpoint not found (404), stopping queries"))
+			}
 		}
 		return nil
 	}
