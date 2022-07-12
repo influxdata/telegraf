@@ -1,6 +1,7 @@
 package tls_test
 
 import (
+	cryptotls "crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -348,6 +349,139 @@ func TestConnect(t *testing.T) {
 
 	defer resp.Body.Close()
 	require.Equal(t, 200, resp.StatusCode)
+}
+
+func TestConnectClientMinTLSVersion(t *testing.T) {
+	serverConfig := tls.ServerConfig{
+		TLSCert:            pki.ServerCertPath(),
+		TLSKey:             pki.ServerKeyPath(),
+		TLSAllowedCACerts:  []string{pki.CACertPath()},
+		TLSAllowedDNSNames: []string{"localhost", "127.0.0.1"},
+	}
+
+	tests := []struct {
+		name string
+		cfg  tls.ClientConfig
+	}{
+		{
+			name: "TLS version default",
+			cfg: tls.ClientConfig{
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientKeyPath(),
+			},
+		},
+		{
+			name: "TLS version 1.0",
+			cfg: tls.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "TLS10",
+			},
+		},
+		{
+			name: "TLS version 1.1",
+			cfg: tls.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "TLS11",
+			},
+		},
+		{
+			name: "TLS version 1.2",
+			cfg: tls.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "TLS12",
+			},
+		},
+		{
+			name: "TLS version 1.3",
+			cfg: tls.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "TLS13",
+			},
+		},
+	}
+
+	tlsVersions := []uint16{
+		cryptotls.VersionTLS10,
+		cryptotls.VersionTLS11,
+		cryptotls.VersionTLS12,
+		cryptotls.VersionTLS13,
+	}
+
+	tlsVersionNames := []string{
+		"TLS 1.0",
+		"TLS 1.1",
+		"TLS 1.2",
+		"TLS 1.3",
+	}
+
+	for _, tt := range tests {
+		clientTLSConfig, err := tt.cfg.TLSConfig()
+		require.NoError(t, err)
+
+		client := http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: clientTLSConfig,
+			},
+			Timeout: 1 * time.Second,
+		}
+
+		clientMinVersion := clientTLSConfig.MinVersion
+		if clientMinVersion == 0 {
+			clientMinVersion = cryptotls.VersionTLS12 // As defined in https://pkg.go.dev/crypto/tls#Config
+		}
+
+		for i, serverTLSMaxVersion := range tlsVersions {
+			serverVersionName := tlsVersionNames[i]
+			t.Run(tt.name+" vs "+serverVersionName, func(t *testing.T) {
+				// Constrain the server's maximum TLS version
+				serverTLSConfig, err := serverConfig.TLSConfig()
+				require.NoError(t, err)
+				serverTLSConfig.MaxVersion = serverTLSMaxVersion
+
+				// Start the server
+				ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}))
+				ts.TLS = serverTLSConfig
+				ts.StartTLS()
+
+				// Do the connection and cleanup
+				resp, err := client.Get(ts.URL)
+				ts.Close()
+
+				// Things should fail if the currently tested "serverTLSMaxVersion"
+				// is below the client minimum version.
+				if serverTLSMaxVersion < clientMinVersion {
+					require.ErrorContains(t, err, "tls: protocol version not supported")
+				} else {
+					require.NoErrorf(t, err, "server=%v client=%v", serverTLSMaxVersion, clientMinVersion)
+					require.Equal(t, 200, resp.StatusCode)
+					resp.Body.Close()
+				}
+			})
+		}
+	}
+}
+
+func TestConnectClientInvalidMinTLSVersion(t *testing.T) {
+	clientConfig := tls.ClientConfig{
+		TLSCA:         pki.CACertPath(),
+		TLSCert:       pki.ClientCertPath(),
+		TLSKey:        pki.ClientKeyPath(),
+		TLSMinVersion: "garbage",
+	}
+
+	_, err := clientConfig.TLSConfig()
+	require.EqualError(t, err, `could not parse tls min version "garbage": unsupported version "garbage"`)
 }
 
 func TestConnectWrongDNS(t *testing.T) {

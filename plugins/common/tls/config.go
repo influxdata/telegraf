@@ -16,6 +16,7 @@ type ClientConfig struct {
 	TLSCert            string `toml:"tls_cert"`
 	TLSKey             string `toml:"tls_key"`
 	TLSKeyPwd          string `toml:"tls_key_pwd"`
+	TLSMinVersion      string `toml:"tls_min_version"`
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 	ServerName         string `toml:"tls_server_name"`
 
@@ -79,6 +80,15 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if c.TLSMinVersion != "" {
+		version, err := ParseTLSVersion(c.TLSMinVersion)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"could not parse tls min version %q: %v", c.TLSMinVersion, err)
+		}
+		tlsConfig.MinVersion = version
 	}
 
 	if c.ServerName != "" {
