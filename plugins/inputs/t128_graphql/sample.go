@@ -1,34 +1,34 @@
 package t128_graphql
 
 var sampleConfig = `
-## Collect data using graphQL
+## Collect data from a 128T instance using graphQL.
 [[inputs.t128_graphql]]
-## Required. The telegraf collector name
-# collector_name = "arp-state"
+## Required. A name for the collector which will be used as the measurement name of the produced data.
+# collector_name = "peer-paths"
 
-## Required. GraphQL ports vary across 128T versions
+## Required. The base url for data collection.
+## graphQL ports vary across 128T versions.
 # base_url = "http://localhost:31517/api/v1/graphql/"
 
-## A socket to use for retrieving metrics - unused by default
+## A socket to use for retrieving data - unused by default
 # unix_socket = "/var/run/128technology/web-server.sock"
 
-## The starting point in the graphQL tree for all configured tags and fields
-# entry_point = "allRouters(name:'ComboEast')/nodes/nodes(name:'combo-east')/nodes/arp/nodes"
+## Required. The path to a point in the graphQL tree from which extract_fields and extract_tags will
+## be specified. This path may contain (<key>:<value>) graphQL arguments such as (name:'ComboEast').
+# entry_point = "allRouters(name:'ComboEast')/nodes/peers/nodes"
 
 ## Amount of time allowed to complete a single HTTP request
 # timeout = "5s"
 
-## Required. The fields to collect with the desired name as the key (left) and graphQL 
-## key as the value (right)
+## Required. The fields to collect with the desired name as the key (left) and the graphQL 
+## query path relative to the entry_point as the value (right).
 # [inputs.t128_graphql.extract_fields]
-#   state = "state"
+#   is-active = "paths/isActive"
+#   status = "paths/status"
 
-## Required. The tags for filtering data with the desired name as the key (left) and 
-## graphQL key as the value (right)
+## The tags for filtering data with the desired name as the key (left) and the graphQL 
+## query path relative to the entry_point as the value (right).
 # [inputs.t128_graphql.extract_tags]
-#   network-interface = "networkInterface"
-#   device-interface = "deviceInterface"
-#   vlan = "vlan"
-#   ip-address = "ipAddress"
-#   destination-mac = "destinationMac"
+#   peer-name = "name"
+#   device-interface = "paths/deviceInterface"
 `
