@@ -61,6 +61,8 @@ func NewBulkRetriever(useIntegerConversion bool, configuredMetrics []ConfiguredM
 			bulkRequest.OutFields[requestID] = fieldName
 		}
 
+		sort.Strings(bulkRequest.IDs)
+
 		var err error
 		bulkRequest.RequestBody, err = json.Marshal(bulkRequest)
 		if err != nil {

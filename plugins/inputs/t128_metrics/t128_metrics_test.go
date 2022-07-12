@@ -509,7 +509,7 @@ var ResponseProcessingTestCases = []struct {
 			},
 			map[string][]string{},
 		}},
-		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/test", "/stats/another/test"]}`, `[{
+		Endpoints: []Endpoint{{"/", 200, `{"ids": ["/stats/another/test", "/stats/test"]}`, `[{
 				"id": "/stats/test",
 				"permutations": [{
 					"parameters": [],
