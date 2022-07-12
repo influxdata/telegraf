@@ -58,7 +58,7 @@ func TestPass(t *testing.T) {
 		},
 		{
 			Name:       "drops",
-			Conditions: []Condition{{Tags: tags{"tag1": {"value1"}}}},
+			Conditions: []Condition{{Tags: leaves{"tag1": {"value1"}}}},
 			InputMetrics: []Metric{
 				passedMetric("some-measurement", map[string]string{"tag1": "value1"}, nil),
 				droppedMetric("some-measurement", map[string]string{"tag1": "value2"}, nil),
@@ -66,14 +66,21 @@ func TestPass(t *testing.T) {
 		},
 		{
 			Name:       "drops if no tag",
-			Conditions: []Condition{{Tags: tags{"tag1": {"value1"}}}},
+			Conditions: []Condition{{Tags: leaves{"tag1": {"value1"}}}},
 			InputMetrics: []Metric{
 				droppedMetric("some-measurement", nil, nil),
 			},
 		},
 		{
+			Name:       "drops if no tag overriden by config",
+			Conditions: []Condition{{IgnoreMissingKeys: true, Tags: leaves{"tag1": {"value1"}}}},
+			InputMetrics: []Metric{
+				passedMetric("some-measurement", nil, nil),
+			},
+		},
+		{
 			Name:       "ors conditions together",
-			Conditions: []Condition{{Tags: tags{"tag1": {"value1"}}}, {Tags: tags{"tag1": {"value2"}}}},
+			Conditions: []Condition{{Tags: leaves{"tag1": {"value1"}}}, {Tags: leaves{"tag1": {"value2"}}}},
 			InputMetrics: []Metric{
 				passedMetric("some-measurement", map[string]string{"tag1": "value1"}, nil),
 				passedMetric("some-measurement", map[string]string{"tag1": "value2"}, nil),
@@ -82,7 +89,7 @@ func TestPass(t *testing.T) {
 		},
 		{
 			Name:       "ands tags together by default",
-			Conditions: []Condition{{Tags: tags{"tag1": {"value1"}, "tag2": {"value2"}}}},
+			Conditions: []Condition{{Tags: leaves{"tag1": {"value1"}, "tag2": {"value2"}}}},
 			InputMetrics: []Metric{
 				passedMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value2"}, nil),
 				droppedMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value1"}, nil),
@@ -91,7 +98,7 @@ func TestPass(t *testing.T) {
 		},
 		{
 			Name:       "or operation ors tags together",
-			Conditions: []Condition{{Operation: orOperation, Tags: tags{"tag1": {"value1"}, "tag2": {"value2"}}}},
+			Conditions: []Condition{{Operation: orOperation, Tags: leaves{"tag1": {"value1"}, "tag2": {"value2"}}}},
 			InputMetrics: []Metric{
 				passedMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value2"}, nil),
 				passedMetric("some-measurement", map[string]string{"tag1": "value1", "tag2": "value1"}, nil),
@@ -101,7 +108,7 @@ func TestPass(t *testing.T) {
 		},
 		{
 			Name:       "ors multiple values",
-			Conditions: []Condition{{Tags: tags{"tag1": {"value1", "value2"}}}},
+			Conditions: []Condition{{Tags: leaves{"tag1": {"value1", "value2"}}}},
 			InputMetrics: []Metric{
 				passedMetric("some-measurement", map[string]string{"tag1": "value1"}, nil),
 				passedMetric("some-measurement", map[string]string{"tag1": "value2"}, nil),
@@ -110,7 +117,7 @@ func TestPass(t *testing.T) {
 		},
 		{
 			Name:       "regex matches whole tag values",
-			Conditions: []Condition{{Mode: regexMode, Tags: tags{"tag1": {"234.*"}}}},
+			Conditions: []Condition{{Mode: regexMode, Tags: leaves{"tag1": {"234.*"}}}},
 			InputMetrics: []Metric{
 				droppedMetric("some-measurement", map[string]string{"tag1": "12345"}, nil),
 				droppedMetric("some-measurement", map[string]string{"tag1": "something-else"}, nil),
@@ -120,7 +127,7 @@ func TestPass(t *testing.T) {
 		},
 		{
 			Name:       "glob matches whole tag values",
-			Conditions: []Condition{{Mode: globMode, Tags: tags{"tag1": {"234*"}}}},
+			Conditions: []Condition{{Mode: globMode, Tags: leaves{"tag1": {"234*"}}}},
 			InputMetrics: []Metric{
 				droppedMetric("some-measurement", map[string]string{"tag1": "12345"}, nil),
 				droppedMetric("some-measurement", map[string]string{"tag1": "something-else"}, nil),
@@ -130,10 +137,44 @@ func TestPass(t *testing.T) {
 		},
 		{
 			Name:       "inverts",
-			Conditions: []Condition{{Invert: true, Tags: tags{"tag1": {"value1"}}}},
+			Conditions: []Condition{{Invert: true, Tags: leaves{"tag1": {"value1"}}}},
 			InputMetrics: []Metric{
 				droppedMetric("some-measurement", map[string]string{"tag1": "value1"}, nil),
 				passedMetric("some-measurement", map[string]string{"tag1": "value2"}, nil),
+			},
+		},
+		{
+			Name:       "fields by themselves",
+			Conditions: []Condition{{Fields: fieldTypes{String: leaves{"field1": {"value1"}}}}},
+			InputMetrics: []Metric{
+				passedMetric("some-measurement", nil, map[string]interface{}{"field1": "value1"}),
+				droppedMetric("some-measurement", nil, map[string]interface{}{"field1": "value2"}),
+			},
+		},
+		{
+			Name:       "field applies mode",
+			Conditions: []Condition{{Mode: globMode, Fields: fieldTypes{String: leaves{"field1": {"value*"}}}}},
+			InputMetrics: []Metric{
+				passedMetric("some-measurement", nil, map[string]interface{}{"field1": "value1"}),
+				passedMetric("some-measurement", nil, map[string]interface{}{"field1": "value2"}),
+				droppedMetric("some-measurement", nil, map[string]interface{}{"field2": "value1"}),
+			},
+		},
+		{
+			Name:       "converts fields to strings for comparison",
+			Conditions: []Condition{{Fields: fieldTypes{String: leaves{"field1": {"12"}}}}},
+			InputMetrics: []Metric{
+				passedMetric("some-measurement", nil, map[string]interface{}{"field1": 12}),
+				droppedMetric("some-measurement", nil, map[string]interface{}{"field1": 23}),
+			},
+		},
+		{
+			Name:       "field ands with tags",
+			Conditions: []Condition{{Tags: leaves{"tag1": {"value1"}}, Fields: fieldTypes{String: leaves{"field1": {"value2"}}}}},
+			InputMetrics: []Metric{
+				passedMetric("some-measurement", map[string]string{"tag1": "value1"}, map[string]interface{}{"field1": "value2"}),
+				droppedMetric("some-measurement", map[string]string{"tag1": "value2"}, map[string]interface{}{"field1": "value2"}),
+				droppedMetric("some-measurement", map[string]string{"tag1": "value1"}, map[string]interface{}{"field1": "value1"}),
 			},
 		},
 	}
@@ -170,20 +211,28 @@ func TestValidation(t *testing.T) {
 		Conditions []Condition
 	}{
 		{
-			Name:       "needs valid regex",
-			Conditions: []Condition{{Mode: regexMode, Tags: tags{"tag1": {"invalid(regex"}}}},
+			Name:       "needs valid tag regex",
+			Conditions: []Condition{{Mode: regexMode, Tags: leaves{"tag1": {"invalid(regex"}}}},
 		},
 		{
-			Name:       "needs valid glob",
-			Conditions: []Condition{{Mode: globMode, Tags: tags{"tag1": {"invalid[glob"}}}},
+			Name:       "needs valid tag glob",
+			Conditions: []Condition{{Mode: globMode, Tags: leaves{"tag1": {"invalid[glob"}}}},
+		},
+		{
+			Name:       "needs valid field regex",
+			Conditions: []Condition{{Mode: regexMode, Fields: fieldTypes{String: leaves{"tag1": {"invalid(regex"}}}}},
+		},
+		{
+			Name:       "needs valid field glob",
+			Conditions: []Condition{{Mode: globMode, Fields: fieldTypes{String: leaves{"tag1": {"invalid[glob"}}}}},
 		},
 		{
 			Name:       "invalid mode",
-			Conditions: []Condition{{Mode: "some-invalid-mode", Tags: tags{"tag1": {"just needed a tag"}}}},
+			Conditions: []Condition{{Mode: "some-invalid-mode", Tags: leaves{"tag1": {"just needed a tag"}}}},
 		},
 		{
 			Name:       "invalid operation",
-			Conditions: []Condition{{Operation: "some-invalid-operation", Tags: tags{"tag1": {"just needed a tag"}}}},
+			Conditions: []Condition{{Operation: "some-invalid-operation", Tags: leaves{"tag1": {"just needed a tag"}}}},
 		},
 	}
 
@@ -205,9 +254,13 @@ func TestLoadsFromToml(t *testing.T) {
 		  mode = "glob"
 		  operation = "or"
 		  invert = true
+		  ignore_missing_keys = true
 
 		[condition.tags]
 		  tag1 = ["value1", "value2"]
+
+		[condition.fields.string]
+		  field1 = ["value1", "value2"]
 
 		[[condition]]
 
@@ -217,11 +270,19 @@ func TestLoadsFromToml(t *testing.T) {
 
 	assert.NoError(t, toml.Unmarshal(exampleConfig, plugin))
 	assert.Equal(t,
-		[]Condition{{
-			Mode:      globMode,
-			Operation: orOperation,
-			Invert:    true,
-			Tags:      tags{"tag1": {"value1", "value2"}}}, {Tags: tags{"tag1": {"value3"}}}},
+		[]Condition{
+			{
+				Mode:              globMode,
+				Operation:         orOperation,
+				Invert:            true,
+				IgnoreMissingKeys: true,
+				Tags:              leaves{"tag1": {"value1", "value2"}},
+				Fields:            fieldTypes{leaves{"field1": {"value1", "value2"}}},
+			},
+			{
+				Tags: leaves{"tag1": {"value3"}},
+			},
+		},
 		plugin.Conditions)
 }
 

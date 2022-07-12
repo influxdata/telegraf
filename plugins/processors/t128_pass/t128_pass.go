@@ -30,9 +30,19 @@ const sampleConfig = `
 	## Invert dictates whether to invert the final result of the condition
 	# invert = false
 
+	## Whether to ignore if any tag or field keys are missing.
+	# ignore_missing_keys = false
+
   [processors.t128_pass.condition.tags]
 	# tag1 = ["value1", "value2"]
 	# tag2 = ["value3"]
+
+  ## Fields work the same was a fields and can be included in the same condition.
+  ## Only string values are accepted and the non-string field values in this section
+  ## will be converted to strings before comparison.
+  [processors.t128_pass.condition.fields.string]
+	# field1 = ["value1", "value2"]
+	# field2 = ["value3"]
 
   [[processors.t128_pass.condition]]
 	# mode = "exact"
@@ -41,8 +51,10 @@ const sampleConfig = `
 	# tag1 = ["value3"]
 `
 
-type tags map[string][]string
+type leaves map[string][]string
 type mode string
+
+type valueGetter func(string, telegraf.Metric) (string, error)
 
 const (
 	emptyMode mode = ""
@@ -60,10 +72,16 @@ const (
 )
 
 type Condition struct {
-	Mode      mode      `toml:"mode"`
-	Operation operation `toml:"operation"`
-	Invert    bool      `toml:"invert"`
-	Tags      tags      `toml:"tags"`
+	Mode              mode       `toml:"mode"`
+	Operation         operation  `toml:"operation"`
+	Invert            bool       `toml:"invert"`
+	IgnoreMissingKeys bool       `toml:"ignore_missing_keys"`
+	Tags              leaves     `toml:"tags"`
+	Fields            fieldTypes `toml:"fields"`
+}
+
+type fieldTypes struct {
+	String leaves `toml:"string"`
 }
 
 type T128Pass struct {
@@ -81,19 +99,45 @@ func (r *T128Pass) Description() string {
 	return "Passes metrics through when conditions are met."
 }
 
+func tagGetter(key string, point telegraf.Metric) (string, error) {
+	value, ok := point.GetTag(key)
+	if !ok {
+		return "", fmt.Errorf("unable to find tag key: %s in metric %+v", key, point)
+	}
+
+	return value, nil
+}
+
+func fieldGetter(key string, point telegraf.Metric) (string, error) {
+	value, ok := point.GetField(key)
+	if !ok {
+		return "", fmt.Errorf("unable to find field key: %s in metric %+v", key, point)
+	}
+
+	valueStr := fmt.Sprintf("%+v", value)
+
+	return valueStr, nil
+}
+
 type matcher interface {
 	Matches(telegraf.Metric) bool
 }
 
+type baseLeafMatcher struct {
+	leafKey           string
+	valueGetter       valueGetter
+	ignoreMissingKeys bool
+}
+
 type exactMatcher struct {
-	tag    string
+	baseLeafMatcher
 	values []string
 }
 
 func (m exactMatcher) Matches(point telegraf.Metric) bool {
-	value, ok := point.GetTag(m.tag)
-	if !ok {
-		return false
+	value, err := m.valueGetter(m.leafKey, point)
+	if err != nil {
+		return m.ignoreMissingKeys
 	}
 
 	for _, expectedValue := range m.values {
@@ -106,14 +150,14 @@ func (m exactMatcher) Matches(point telegraf.Metric) bool {
 }
 
 type regexMatcher struct {
-	tag         string
+	baseLeafMatcher
 	expressions []*regexp.Regexp
 }
 
 func (m regexMatcher) Matches(point telegraf.Metric) bool {
-	value, ok := point.GetTag(m.tag)
-	if !ok {
-		return false
+	value, err := m.valueGetter(m.leafKey, point)
+	if err != nil {
+		return m.ignoreMissingKeys
 	}
 
 	for _, expression := range m.expressions {
@@ -126,14 +170,14 @@ func (m regexMatcher) Matches(point telegraf.Metric) bool {
 }
 
 type globMatcher struct {
-	tag   string
+	baseLeafMatcher
 	globs []glob.Glob
 }
 
 func (m globMatcher) Matches(point telegraf.Metric) bool {
-	value, ok := point.GetTag(m.tag)
-	if !ok {
-		return false
+	value, err := m.valueGetter(m.leafKey, point)
+	if err != nil {
+		return m.ignoreMissingKeys
 	}
 
 	for _, glob := range m.globs {
@@ -184,12 +228,17 @@ func (m inversionMatcher) Matches(point telegraf.Metric) bool {
 func createMatcher(conditions []Condition) (matcher, error) {
 	conditionMatchers := make([]matcher, len(conditions))
 	for i, condition := range conditions {
-		tagMatchers, err := getTagMatchers(condition.Tags, condition.Mode)
+		tagMatchers, err := getLeafMatchers(condition.Tags, condition.Mode, tagGetter, condition.IgnoreMissingKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		conditionMatcher, err := getConditionMatcher(tagMatchers, condition.Operation)
+		fieldMatchers, err := getLeafMatchers(condition.Fields.String, condition.Mode, fieldGetter, condition.IgnoreMissingKeys)
+		if err != nil {
+			return nil, err
+		}
+
+		conditionMatcher, err := getConditionMatcher(append(tagMatchers, fieldMatchers...), condition.Operation)
 		if err != nil {
 			return nil, err
 		}
@@ -204,39 +253,39 @@ func createMatcher(conditions []Condition) (matcher, error) {
 	return orConjMatcher{conditionMatchers}, nil
 }
 
-func getTagMatchers(tags tags, mode mode) ([]matcher, error) {
-	tagMatchers := make([]matcher, 0, len(tags))
+func getLeafMatchers(leaves leaves, mode mode, valueGetter valueGetter, ignoreMissingKeys bool) ([]matcher, error) {
+	leafMatchers := make([]matcher, 0, len(leaves))
 
-	for tagKey, tagValues := range tags {
-		tagMatcher, err := getTagMatcher(mode, tagKey, tagValues)
+	for leafKey, leafValues := range leaves {
+		leafMatcher, err := getLeafMatcher(mode, leafKey, leafValues, valueGetter, ignoreMissingKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		tagMatchers = append(tagMatchers, tagMatcher)
+		leafMatchers = append(leafMatchers, leafMatcher)
 	}
 
-	return tagMatchers, nil
+	return leafMatchers, nil
 }
 
-func getTagMatcher(mode mode, tag string, values []string) (matcher, error) {
+func getLeafMatcher(mode mode, leafKey string, leafValues []string, valueGetter valueGetter, ignoreMissingKeys bool) (matcher, error) {
 	switch mode {
 	case exactMode, emptyMode:
-		return exactMatcher{tag, values}, nil
+		return exactMatcher{baseLeafMatcher{leafKey, valueGetter, ignoreMissingKeys}, leafValues}, nil
 	case regexMode:
-		expressions, err := compileExpressions(values)
+		expressions, err := compileExpressions(leafValues)
 		if err != nil {
 			return nil, err
 		}
 
-		return regexMatcher{tag, expressions}, nil
+		return regexMatcher{baseLeafMatcher{leafKey, valueGetter, ignoreMissingKeys}, expressions}, nil
 	case globMode:
-		globs, err := compileGlobs(values)
+		globs, err := compileGlobs(leafValues)
 		if err != nil {
 			return nil, err
 		}
 
-		return globMatcher{tag, globs}, nil
+		return globMatcher{baseLeafMatcher{leafKey, valueGetter, ignoreMissingKeys}, globs}, nil
 	}
 
 	return nil, fmt.Errorf("invalid mode: %s", mode)
