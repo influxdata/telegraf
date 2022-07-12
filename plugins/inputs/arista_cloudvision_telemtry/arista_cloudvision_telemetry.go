@@ -186,7 +186,6 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 			time.Sleep(1000 * 1000 * 1000 * 15)
 		}
 	}()
-
 	return nil
 }
 
@@ -195,6 +194,9 @@ func (c *CVP) CvpDevices() map[string]string {
 	var bearer = "Bearer " + c.Cvptoken
 	//Connect to CVP resource api
 	req, err := http.NewRequest("GET", "https://"+c.Cvpaddress+"/api/resources/inventory/v1/Device/all", nil)
+	if err != nil {
+		c.Log.Error("Cannot connect to CVP", err)
+	}
 	req.Header.Add("Authorization", bearer)
 	req.Header.Add("Accept", "application/json")
 
@@ -220,10 +222,13 @@ func (c *CVP) CvpDevices() map[string]string {
 	devs := map[string]string{}
 	//Loop through and add devices to devs map that are currently streaming.
 	for _, i := range f {
-		var Dev CvPDevices
-		json.Unmarshal([]byte(i), &Dev)
-		if Dev.Result.Value.StreamingStatus == "STREAMING_STATUS_ACTIVE" {
-			devs[Dev.Result.Value.Fqdn] = Dev.Result.Value.Key.DeviceID
+		var dev CvPDevices
+		err = json.Unmarshal([]byte(i), &dev)
+		if err != nil {
+			c.Log.Debugf("Cannot marshall HTTP Connection to CVP")
+		}
+		if dev.Result.Value.StreamingStatus == "STREAMING_STATUS_ACTIVE" {
+			devs[dev.Result.Value.Fqdn] = dev.Result.Value.Key.DeviceID
 		}
 	}
 	//Return devices.
@@ -367,8 +372,6 @@ func (c *CVP) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Con
 	}
 	if tlscfg != nil {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
-	} else {
-		options = append(options, grpc.WithInsecure())
 	}
 
 	client, err := grpc.DialContext(ctx, address, options...)
