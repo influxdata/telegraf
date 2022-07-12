@@ -56,6 +56,9 @@ func (sm *SyslogMapper) mapStructuredDataItem(key string, value string, msg *rfc
 	if sm.reservedKeys[key] {
 		return
 	}
+
+	value = escapeInvalidCharacters(value)
+
 	isExplicitSdid := false
 	for _, sdid := range sm.Sdids {
 		k := strings.TrimLeft(key, sdid+sm.Separator)
@@ -196,4 +199,14 @@ func newSyslogMapper() *SyslogMapper {
 			"hostname": true, "source": true, "host": true, "severity": true,
 			"facility": true, "appname": true},
 	}
+}
+
+// escapeInvalidCharacters escapes the 3 characters that are invalid for structured data
+// parameter values as per the rfc5424 spec
+// https://datatracker.ietf.org/doc/html/rfc5424#section-6.3.3
+func escapeInvalidCharacters(input string) string {
+	input = strings.Replace(input, "\\", "\\\\", -1)
+	input = strings.Replace(input, "\"", "\\\"", -1)
+	input = strings.Replace(input, "]", "\\]", -1)
+	return input
 }

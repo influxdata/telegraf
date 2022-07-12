@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/metric"
@@ -121,6 +122,41 @@ func TestSyslogMapperWithDefaultSdid(t *testing.T) {
 	require.NoError(t, err)
 	str, _ := syslogMessage.String()
 	require.Equal(t, "<27>2 2010-11-10T23:30:00Z testhost testapp 25 555 [default@32473 tag1=\"bar\" tag2=\"foobar\" value1=\"2\" value2=\"foo\" value3=\"1.2\"] Test message", str, "Wrong syslog message")
+}
+
+func TestSyslogMapperWithSDWithInvalidCharacters(t *testing.T) {
+	s := newSyslog()
+	s.DefaultSdid = "default@32473"
+	s.initializeSyslogMapper()
+
+	// Init metrics
+	m1 := metric.New(
+		"testmetric",
+		map[string]string{
+			"appname":            "testapp",
+			"hostname":           "testhost",
+			"tag1":               "\"\\]",
+			"default@32473_tag2": "foobar",
+		},
+		map[string]interface{}{
+			"severity_code":        uint64(3),
+			"facility_code":        uint64(3),
+			"msg":                  "Test message",
+			"procid":               uint64(25),
+			"version":              uint16(2),
+			"msgid":                int64(555),
+			"timestamp":            time.Date(2010, time.November, 10, 23, 30, 0, 0, time.UTC).UnixNano(),
+			"value1":               "{\"some-json\":[]}",
+			"default@32473_value2": "foo",
+			"value3":               float64(1.2),
+		},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
+	require.NoError(t, err)
+	str, _ := syslogMessage.String()
+	assert.Equal(t, "<27>2 2010-11-10T23:30:00Z testhost testapp 25 555 [default@32473 tag1=\"\\\"\\\\\\]\" tag2=\"foobar\" value1=\"{\\\"some-json\\\":[\\]}\" value2=\"foo\" value3=\"1.2\"] Test message", str, "Wrong syslog message")
 }
 
 func TestSyslogMapperWithDefaultSdidAndOtherSdids(t *testing.T) {
