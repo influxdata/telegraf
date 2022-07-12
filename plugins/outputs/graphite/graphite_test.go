@@ -98,7 +98,8 @@ func TestGraphiteOK(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithSeparatorDot(t *testing.T) {
@@ -160,7 +161,8 @@ func TestGraphiteOkWithSeparatorDot(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
@@ -222,7 +224,8 @@ func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
@@ -288,7 +291,8 @@ func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithTags(t *testing.T) {
@@ -350,7 +354,8 @@ func TestGraphiteOkWithTags(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
@@ -413,7 +418,8 @@ func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
@@ -476,7 +482,8 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TCPServer1(t *testing.T, wg *sync.WaitGroup) {

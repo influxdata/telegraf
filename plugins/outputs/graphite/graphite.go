@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -35,6 +36,7 @@ type Graphite struct {
 
 	conns []net.Conn
 	tlsint.ClientConfig
+	failedServers []string
 }
 
 func (*Graphite) SampleConfig() string {
@@ -56,9 +58,30 @@ func (g *Graphite) Connect() error {
 		return err
 	}
 
+	// Only retry the failed servers
+	servers := g.Servers
+	if len(g.failedServers) > 0 {
+		servers = g.failedServers
+		// Remove failed server from exisiting connections
+		var workingConns []net.Conn
+		for _, conn := range g.conns {
+			var found bool
+			for _, server := range servers {
+				if conn.RemoteAddr().String() == server {
+					found = true
+					break
+				}
+			}
+			if !found {
+				workingConns = append(workingConns, conn)
+			}
+		}
+		g.conns = workingConns
+	}
+
 	// Get Connections
 	var conns []net.Conn
-	for _, server := range g.Servers {
+	for _, server := range servers {
 		// Dialer with timeout
 		d := net.Dialer{Timeout: time.Duration(g.Timeout) * time.Second}
 
@@ -74,7 +97,14 @@ func (g *Graphite) Connect() error {
 			conns = append(conns, conn)
 		}
 	}
-	g.conns = conns
+
+	if len(g.failedServers) > 0 {
+		g.conns = append(g.conns, conns...)
+		g.failedServers = []string{}
+	} else {
+		g.conns = conns
+	}
+
 	return nil
 }
 
@@ -95,14 +125,16 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 	b := make([]byte, 1024)
 
 	if err := conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond)); err != nil {
-		g.Log.Errorf("Couldn't set read deadline for connection due to error %v with remote address %s. closing conn explicitly", err, conn.RemoteAddr().String())
-		_ = conn.Close()
+		g.Log.Debugf("Couldn't set read deadline for connection due to error %v with remote address %s. closing conn explicitly", err, conn.RemoteAddr().String())
+		err = conn.Close()
+		g.Log.Debugf("Failed to close the connection: %v", err)
 		return err
 	}
 	num, err := conn.Read(b)
 	if err == io.EOF {
-		g.Log.Errorf("Conn %s is closed. closing conn explicitly", conn.RemoteAddr().String())
-		_ = conn.Close()
+		g.Log.Debugf("Conn %s is closed. closing conn explicitly", conn.RemoteAddr().String())
+		err = conn.Close()
+		g.Log.Debugf("Failed to close the connection: %v", err)
 		return err
 	}
 	// just in case i misunderstand something or the remote behaves badly
@@ -111,8 +143,9 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 	}
 	// Log non-timeout errors and close.
 	if e, ok := err.(net.Error); !(ok && e.Timeout()) {
-		g.Log.Errorf("conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s", conn, err)
-		_ = conn.Close()
+		g.Log.Debugf("conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s", conn, err)
+		err = conn.Close()
+		g.Log.Debugf("Failed to close the connection: %v", err)
 		return err
 	}
 
@@ -139,9 +172,9 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 	err = g.send(batch)
 
-	// try to reconnect and retry to send
-	if err != nil {
-		g.Log.Error("Graphite: Reconnecting and retrying after receiving error: %v", err)
+	// If a send failed for a server, try to reconnect to that server
+	if len(g.failedServers) > 0 {
+		g.Log.Debugf("Graphite: Reconnecting and retrying for the following servers: %s", strings.Join(g.failedServers, ","))
 		err = g.Connect()
 		if err != nil {
 			return fmt.Errorf("Failed to reconnect: %v", err)
@@ -154,34 +187,40 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 func (g *Graphite) send(batch []byte) error {
 	// This will get set to nil if a successful write occurs
-	err := errors.New("could not write to any Graphite server in cluster")
+	globalErr := errors.New("could not write to any Graphite server in cluster")
 
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))
 	for _, n := range p {
 		if g.Timeout > 0 {
-			err = g.conns[n].SetWriteDeadline(time.Now().Add(time.Duration(g.Timeout) * time.Second))
+			err := g.conns[n].SetWriteDeadline(time.Now().Add(time.Duration(g.Timeout) * time.Second))
 			if err != nil {
-				return err
+				g.Log.Errorf("failed to set write deadline for %s: %v", g.conns[n].RemoteAddr().String(), err)
+				// Mark server as failed so a new connection will be made
+				g.failedServers = append(g.failedServers, g.conns[n].RemoteAddr().String())
 			}
 		}
-		err = g.checkEOF(g.conns[n])
+		err := g.checkEOF(g.conns[n])
 		if err != nil {
-			return err
+			// Mark server as failed so a new connection will be made
+			g.failedServers = append(g.failedServers, g.conns[n].RemoteAddr().String())
+			break
 		}
 		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
-			g.Log.Errorf("Graphite Error: " + e.Error())
+			g.Log.Debugf("Graphite Error: " + e.Error())
 			// Close explicitly and let's try the next one
-			_ = g.conns[n].Close()
+			err := g.conns[n].Close()
+			g.Log.Debugf("Failed to close the connection: %v", err)
+			// Mark server as failed so a new connection will be made
+			g.failedServers = append(g.failedServers, g.conns[n].RemoteAddr().String())
 		} else {
-			// Success
-			err = nil
+			globalErr = nil
 			break
 		}
 	}
 
-	return err
+	return globalErr
 }
 
 func init() {
