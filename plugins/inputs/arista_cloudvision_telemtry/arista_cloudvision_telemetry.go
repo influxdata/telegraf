@@ -138,47 +138,54 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 			InsecureSkipVerify: true,
 		}
 	}
-	//Create a map of devices.  This should read device:target.  The target is the same as the serial number to CVP.
-	cvdevs := make(map[string]string)
 
-	for cvpdevice, devicetarget := range c.CvpDevices() {
-		cvdevs[cvpdevice] = devicetarget
-		c.devices[devicetarget] = cvpdevice
-	}
-	//Create a slice of targets
-	cvdevsslice := make([]string, 0, len(cvdevs))
-	//Iterrate through the slice and append them.
-	for _, value := range cvdevs {
-		cvdevsslice = append(cvdevsslice, value)
-	}
-	// Validate configuration
-	var request []gnmiLib.SubscribeRequest
-	if request, err = c.newSubscribeRequest(cvdevsslice); err != nil {
-		return err
-	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
+	if time.Duration(c.Redial).Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
-	// Start the request for gNMI interface on CVP.
-	c.wg.Add(len(cvdevsslice))
-	CvpAddr := c.Cvpaddress
-	for i := range request {
-		// Loop through the requests for targets.
-		thisReq := make([]gnmiLib.SubscribeRequest, 1)
-		copy(thisReq, request[i:(i+1)])
-		go func(CvpAddr string) {
-			defer c.wg.Done()
-			for ctx.Err() == nil {
-				if err := c.subscribeGNMI(ctx, CvpAddr, tlscfg, &thisReq[0]); err != nil && ctx.Err() == nil {
-					acc.AddError(err)
-				}
 
-				select {
-				case <-ctx.Done():
-				case <-time.After(time.Duration(c.Redial)):
+	go func() {
+		for {
+			//Create a map of devices.  This should read device:target.  The target is the same as the serial number to CVP.
+			var cvdevs []string
+
+			for cvpdevice, devicetarget := range c.CvpDevices() {
+				if _, ok := c.devices[devicetarget]; !ok {
+					c.devices[devicetarget] = cvpdevice
+					cvdevs = append(cvdevs, devicetarget)
 				}
 			}
-		}(CvpAddr)
-	}
+			if len(cvdevs) != 0 {
+				// Validate configuration
+				var request []gnmiLib.SubscribeRequest
+				if request, err = c.newSubscribeRequest(cvdevs); err != nil {
+					fmt.Println(err)
+				}
+
+				// Start the request for gNMI interface on CVP.
+				c.wg.Add(len(cvdevs))
+				CvpAddr := c.Cvpaddress
+				for i := range request {
+					// Loop through the requests for targets.
+					thisReq := make([]gnmiLib.SubscribeRequest, 1)
+					copy(thisReq, request[i:(i+1)])
+					go func(CvpAddr string) {
+						defer c.wg.Done()
+						for ctx.Err() == nil {
+							if err := c.subscribeGNMI(ctx, CvpAddr, tlscfg, &thisReq[0]); err != nil && ctx.Err() == nil {
+								acc.AddError(err)
+							}
+
+							select {
+							case <-ctx.Done():
+							case <-time.After(time.Duration(c.Redial)):
+							}
+						}
+					}(CvpAddr)
+				}
+			}
+			time.Sleep(1000 * 1000 * 1000 * 15)
+		}
+	}()
 
 	return nil
 }
