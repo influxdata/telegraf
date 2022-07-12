@@ -12,9 +12,10 @@ runs:
   image: "Dockerfile"
   env:
     NAME: telegraf-128tech
+    SUPPORTER: camp@juniper.net
     version: ${{ inputs.version }}
     rpm_iteration: ${{ inputs.patch }}
     rpm_version: ${{ inputs.version }}-${{ inputs.patch }}
   args:
     - make
-    - telegraf-128tech-${{ inputs.version }}-${{ inputs.patch }}.x86_64.rpm
+    - x86_64.rpm

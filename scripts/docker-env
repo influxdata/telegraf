@@ -25,16 +25,17 @@ def build(args):
     env = {
         **os.environ,
         "NAME": "telegraf-128tech",
+        "SUPPORTER": args.supporter,
         "version": args.version,
         "rpm_iteration": args.release,
-        "rpm_version": f"{args.version}-{args.release}"
+        "rpm_version": f"{args.version}-{args.release}",
     }
 
     try:
         subprocess.run(
             ["make", f"telegraf-128tech-{args.version}-{args.release}.x86_64.rpm"],
             env=env,
-            check=True
+            check=True,
         )
     except subprocess.CalledProcessError as error:
         print("Failed to build the RPM: {error}")
@@ -113,6 +114,12 @@ def parse_args():
     )
 
     build_parser.add_argument(
+        "--supporter",
+        help="The email address supporting this product",
+        default="camp@juniper.net",
+    )
+
+    build_parser.add_argument(
         "--no-fetch",
         help="Whether to fetch dependencies before building. If not, you should have run `make deps` in your source directory.",
         action="store_true",
@@ -125,7 +132,7 @@ def parse_args():
     arg_parser.add_argument(
         "--docker-file",
         help="The docker file to use for the container",
-        default=(SCRIPTS / "ci-1.15.docker"),
+        default=(SCRIPTS / "ci.docker"),
     )
 
     args = arg_parser.parse_args()

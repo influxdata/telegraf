@@ -47,6 +47,7 @@ MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
+SUPPORTER ?= support@influxdb.com
 
 LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
@@ -332,10 +333,10 @@ $(include_packages):
 			--architecture $(basename $@) \
 			--input-type dir \
 			--output-type rpm \
-			--vendor InfluxData \
-			--url https://github.com/influxdata/telegraf \
+			--vendor "Juniper Networks" \
+			--url https://github.com/128technology/telegraf \
 			--license MIT \
-			--maintainer support@influxdb.com \
+			--maintainer $(SUPPORTER) \
 			--config-files /etc/telegraf/telegraf.conf \
 			--config-files /etc/logrotate.d/telegraf \
 			--after-install scripts/rpm/post-install.sh \
@@ -350,7 +351,7 @@ $(include_packages):
 			--version $(version) \
 			--iteration $(rpm_iteration) \
 			--chdir $(DESTDIR) \
-			--package $(pkgdir)/telegraf-$(rpm_version).$@ ;\
+			--package $(pkgdir)/$(NAME)-$(rpm_version).$@ ;\
 	elif [ "$(suffix $@)" = ".deb" ]; then \
 		fpm --force \
 			--log info \
