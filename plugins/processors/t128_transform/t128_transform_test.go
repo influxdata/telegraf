@@ -12,6 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var transformTypes []string = []string{
+	"rate",
+	"diff",
+	"state-change",
+}
+
 func newMetric(name string, tags map[string]string, fields map[string]interface{}, timestamp time.Time) telegraf.Metric {
 	if tags == nil {
 		tags = map[string]string{}
@@ -160,147 +166,272 @@ func TestLeavesUnmarkedFieldsInTact(t *testing.T) {
 }
 
 func TestRemoveOriginalAndRename(t *testing.T) {
+	type sample = map[string]interface{}
+
 	testCases := []struct {
-		Name            string
-		Fields          map[string]string
-		LastSample      map[string]interface{}
-		CurrentSample   map[string]interface{}
-		TimeDelta       time.Duration
-		RemoveOriginal  bool
-		RemainingFields []string
+		Name           string
+		Fields         map[string]string
+		Samples        []sample
+		PreviousFields map[string]string
+		Timestamps     []int
+		RemoveOriginal bool
+		Result         sample
 	}{
 		{
-			Name:            "remove-matching-new",
-			Fields:          map[string]string{"/rate": "/rate"},
-			LastSample:      map[string]interface{}{},
-			CurrentSample:   map[string]interface{}{"/rate": 50},
-			TimeDelta:       5 * time.Second,
-			RemoveOriginal:  true,
-			RemainingFields: []string{},
+			Name:   "remove-matching-new",
+			Fields: map[string]string{"/rate": "/rate"},
+			Samples: []sample{
+				{},
+				{"/rate": 50},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: true,
+			Result:         sample{},
 		},
 		{
-			Name:            "remove-matching-existing",
-			Fields:          map[string]string{"/rate": "/rate"},
-			LastSample:      map[string]interface{}{"/rate": 45},
-			CurrentSample:   map[string]interface{}{"/rate": 50},
-			TimeDelta:       5 * time.Second,
-			RemoveOriginal:  true,
-			RemainingFields: []string{"/rate"},
+			Name:   "remove-matching-existing",
+			Fields: map[string]string{"/rate": "/rate"},
+			Samples: []sample{
+				{"/rate": 45},
+				{"/rate": 50},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: true,
+			Result:         sample{"/rate": float64(1)},
 		},
 		{
-			Name:            "remove-matching-expired",
-			Fields:          map[string]string{"/rate": "/rate"},
-			LastSample:      map[string]interface{}{"/rate": 45},
-			CurrentSample:   map[string]interface{}{"/rate": 50},
-			TimeDelta:       6 * time.Second,
-			RemoveOriginal:  true,
-			RemainingFields: []string{},
+			Name:   "remove-matching-expired",
+			Fields: map[string]string{"/rate": "/rate"},
+			Samples: []sample{
+				{"/rate": 45},
+				{"/rate": 50},
+			},
+			Timestamps:     []int{0, 6},
+			RemoveOriginal: true,
+			Result:         sample{},
 		},
 		{
-			Name:            "remove-mismatching-new",
-			Fields:          map[string]string{"/rate": "/non-rate"},
-			LastSample:      map[string]interface{}{},
-			CurrentSample:   map[string]interface{}{"/non-rate": 50},
-			TimeDelta:       5 * time.Second,
-			RemoveOriginal:  true,
-			RemainingFields: []string{},
+			Name:   "remove-mismatching-new",
+			Fields: map[string]string{"/rate": "/non-rate"},
+			Samples: []sample{
+				{},
+				{"/non-rate": 50},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: true,
+			Result:         sample{},
 		},
 		{
-			Name:            "remove-mismatching-existing",
-			Fields:          map[string]string{"/rate": "/non-rate"},
-			LastSample:      map[string]interface{}{"/non-rate": 45},
-			CurrentSample:   map[string]interface{}{"/non-rate": 50},
-			TimeDelta:       5 * time.Second,
-			RemoveOriginal:  true,
-			RemainingFields: []string{"/rate"},
+			Name:   "remove-mismatching-existing",
+			Fields: map[string]string{"/rate": "/non-rate"},
+			Samples: []sample{
+				{"/non-rate": 45},
+				{"/non-rate": 50},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: true,
+			Result:         sample{"/rate": float64(1)},
 		},
 		{
-			Name:            "remove-mismatching-expired",
-			Fields:          map[string]string{"/rate": "/non-rate"},
-			LastSample:      map[string]interface{}{"/non-rate": 45},
-			CurrentSample:   map[string]interface{}{"/non-rate": 50},
-			TimeDelta:       6 * time.Second,
-			RemoveOriginal:  true,
-			RemainingFields: []string{},
+			Name:   "remove-mismatching-expired",
+			Fields: map[string]string{"/rate": "/non-rate"},
+			Samples: []sample{
+				{"/non-rate": 45},
+				{"/non-rate": 50},
+			},
+			Timestamps:     []int{0, 6},
+			RemoveOriginal: true,
+			Result:         sample{},
 		},
 
 		{
-			Name:            "leave-matching-new",
-			Fields:          map[string]string{"/rate": "/rate"},
-			LastSample:      map[string]interface{}{},
-			CurrentSample:   map[string]interface{}{"/rate": 50},
-			TimeDelta:       5 * time.Second,
-			RemoveOriginal:  false,
-			RemainingFields: []string{},
+			Name:   "leave-matching-new",
+			Fields: map[string]string{"/rate": "/rate"},
+			Samples: []sample{
+				{},
+				{"/rate": 50},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: false,
+			Result:         sample{},
 		},
 		{
-			Name:            "leave-matching-existing",
-			Fields:          map[string]string{"/rate": "/rate"},
-			LastSample:      map[string]interface{}{"/rate": 45},
-			CurrentSample:   map[string]interface{}{"/rate": 50},
-			TimeDelta:       5 * time.Second,
-			RemoveOriginal:  false,
-			RemainingFields: []string{"/rate"},
+			Name:   "leave-matching-existing",
+			Fields: map[string]string{"/rate": "/rate"},
+			Samples: []sample{
+				{"/rate": 45},
+				{"/rate": 50},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: false,
+			Result:         sample{"/rate": float64(1)},
 		},
 		{
-			Name:            "leave-matching-expired",
-			Fields:          map[string]string{"/rate": "/rate"},
-			LastSample:      map[string]interface{}{"/rate": 45},
-			CurrentSample:   map[string]interface{}{"/rate": 50},
-			TimeDelta:       6 * time.Second,
-			RemoveOriginal:  false,
-			RemainingFields: []string{},
+			Name:   "leave-matching-expired",
+			Fields: map[string]string{"/rate": "/rate"},
+			Samples: []sample{
+				{"/rate": 45},
+				{"/rate": 50},
+			},
+			Timestamps:     []int{0, 6},
+			RemoveOriginal: false,
+			Result:         sample{},
 		},
 		{
-			Name:            "leave-mismatching-new",
-			Fields:          map[string]string{"/rate": "/non-rate"},
-			LastSample:      map[string]interface{}{},
-			CurrentSample:   map[string]interface{}{"/non-rate": 50},
-			TimeDelta:       5 * time.Second,
-			RemoveOriginal:  false,
-			RemainingFields: []string{"/non-rate"},
+			Name:   "leave-mismatching-new",
+			Fields: map[string]string{"/rate": "/non-rate"},
+			Samples: []sample{
+				{},
+				{"/non-rate": 50},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: false,
+			Result:         sample{"/non-rate": int64(50)},
 		},
 		{
-			Name:            "leave-mismatching-existing",
-			Fields:          map[string]string{"/rate": "/non-rate"},
-			LastSample:      map[string]interface{}{"/non-rate": 45},
-			CurrentSample:   map[string]interface{}{"/non-rate": 50},
-			TimeDelta:       5 * time.Second,
-			RemoveOriginal:  false,
-			RemainingFields: []string{"/non-rate", "/rate"},
+			Name:   "leave-mismatching-existing",
+			Fields: map[string]string{"/rate": "/non-rate"},
+			Samples: []sample{
+				{"/non-rate": 45},
+				{"/non-rate": 50},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: false,
+			Result:         sample{"/non-rate": int64(50), "/rate": float64(1)},
 		},
 		{
-			Name:            "leave-mismatching-expired",
-			Fields:          map[string]string{"/rate": "/non-rate"},
-			LastSample:      map[string]interface{}{"/non-rate": 45},
-			CurrentSample:   map[string]interface{}{"/non-rate": 50},
-			TimeDelta:       6 * time.Second,
-			RemoveOriginal:  false,
-			RemainingFields: []string{"/non-rate"},
+			Name:   "leave-mismatching-expired",
+			Fields: map[string]string{"/rate": "/non-rate"},
+			Samples: []sample{
+				{"/non-rate": 45},
+				{"/non-rate": 50},
+			},
+			Timestamps:     []int{0, 6},
+			RemoveOriginal: false,
+			Result:         sample{"/non-rate": int64(50)},
+		},
+
+		{
+			Name:           "previous-new",
+			Fields:         map[string]string{"/rate": "/total"},
+			PreviousFields: map[string]string{"/previous": "/rate"},
+			Samples: []sample{
+				{"/total": 50},
+			},
+			Timestamps:     []int{0},
+			RemoveOriginal: true,
+			Result:         sample{},
+		},
+		{
+			Name:           "previous-new-no-previous-value",
+			Fields:         map[string]string{"/rate": "/total"},
+			PreviousFields: map[string]string{"/previous": "/rate"},
+			Samples: []sample{
+				{"/total": 50},
+				{"/total": 55},
+			},
+			Timestamps:     []int{0, 5},
+			RemoveOriginal: true,
+			Result:         sample{"/rate": float64(1)},
+		},
+		{
+			Name:           "previous-new-previous-value",
+			Fields:         map[string]string{"/rate": "/total"},
+			PreviousFields: map[string]string{"/previous": "/rate"},
+			Samples: []sample{
+				{"/total": 45},
+				{"/total": 55},
+				{"/total": 60},
+			},
+			Timestamps:     []int{0, 5, 10},
+			RemoveOriginal: true,
+			Result:         sample{"/rate": float64(1), "/previous": float64(2)},
+		},
+		{
+			Name:           "previous-expired",
+			Fields:         map[string]string{"/rate": "/total"},
+			PreviousFields: map[string]string{"/previous": "/rate"},
+			Samples: []sample{
+				{"/total": 45},
+				{"/total": 50},
+				{"/total": 55}, // previous assigned here
+				{"/total": 60},
+			},
+			Timestamps:     []int{0, 5, 10, 16},
+			RemoveOriginal: true,
+			Result:         sample{},
+		},
+		{
+			Name:           "previous-null-after-expired",
+			Fields:         map[string]string{"/rate": "/total"},
+			PreviousFields: map[string]string{"/previous": "/rate"},
+			Samples: []sample{
+				{"/total": 45},
+				{"/total": 50},
+				{"/total": 55}, // previous assigned here
+				{"/total": 60}, // expired here
+				{"/total": 65}, // first point - shouldn't have previous
+			},
+			Timestamps:     []int{0, 5, 10, 16, 21},
+			RemoveOriginal: true,
+			Result:         sample{"/rate": float64(1)},
+		},
+		{
+			Name:           "previous-valid-multiple-after-expired",
+			Fields:         map[string]string{"/rate": "/total"},
+			PreviousFields: map[string]string{"/previous": "/rate"},
+			Samples: []sample{
+				{"/total": 45},
+				{"/total": 50},
+				{"/total": 55}, // previous assigned
+				{"/total": 65},
+				{"/total": 70}, // first point
+				{"/total": 80}, // first with previous
+			},
+			Timestamps:     []int{0, 5, 10, 16, 21, 26},
+			RemoveOriginal: true,
+			Result:         sample{"/rate": float64(2), "/previous": float64(1)},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.Name, func(t *testing.T) {
+			assert.True(t, len(testCase.Samples) > 0)
+
+			assert.Truef(t,
+				len(testCase.Samples) == len(testCase.Timestamps),
+				"The number of timestamps (%v) needs to equal the number of samples (%v)",
+				len(testCase.Timestamps),
+				len(testCase.Samples),
+			)
+
 			r := newTransform()
 			r.Fields = testCase.Fields
+			r.PreviousFields = testCase.PreviousFields
 			r.RemoveOriginal = testCase.RemoveOriginal
 			r.Expiration = config.Duration(5 * time.Second)
+			r.Log = testutil.Logger{}
 			assert.Nil(t, r.Init())
 
 			t1 := time.Now()
-			m1 := newMetric("foo", nil, testCase.LastSample, t1)
-			m2 := newMetric("foo", nil, testCase.CurrentSample, t1.Add(testCase.TimeDelta))
-
-			r.Apply(m1)
-			result := r.Apply(m2)[0]
-
-			assert.Len(t, result.FieldList(), len(testCase.RemainingFields))
-
-			for _, field := range testCase.RemainingFields {
-				_, exists := result.GetField(field)
-				assert.Truef(t, exists, "the field '%v' doesn't exist", field)
+			sampleIndex := 0
+			for sampleIndex = 0; sampleIndex < len(testCase.Samples)-1; sampleIndex++ {
+				r.Apply(newMetric(
+					"foo",
+					nil,
+					testCase.Samples[sampleIndex],
+					t1.Add(time.Duration(testCase.Timestamps[sampleIndex])*time.Second)),
+				)
 			}
+
+			m := newMetric("foo", nil,
+				testCase.Samples[sampleIndex],
+				t1.Add(time.Duration(testCase.Timestamps[sampleIndex])*time.Second),
+			)
+
+			result := r.Apply(m)[0]
+
+			assert.Equal(t, result.Fields(), testCase.Result)
 		})
 	}
 }
@@ -329,13 +460,33 @@ func TestFailsRateOnNonIncreasingTimestamp(t *testing.T) {
 }
 
 func TestFailsOnConflictingFieldMappings(t *testing.T) {
-	r := newTransform()
-	r.Fields = map[string]string{
-		"/my/rate":       "/my/total",
-		"/my/other/rate": "/my/total",
-	}
+	for _, transformType := range transformTypes {
+		t.Run(transformType, func(t *testing.T) {
+			r := newTransformType(transformType)
+			r.Fields = map[string]string{
+				"/my/rate":       "/my/total",
+				"/my/other/rate": "/my/total",
+			}
 
-	assert.EqualError(t, r.Init(), "both '/my/other/rate' and '/my/rate' are configured to be calculated from '/my/total'")
+			assert.EqualError(t, r.Init(), "both '/my/other/rate' and '/my/rate' are configured to be calculated from '/my/total'")
+		})
+	}
+}
+
+func TestFailsMissingPreviousSource(t *testing.T) {
+	for _, transformType := range transformTypes {
+		t.Run(transformType, func(t *testing.T) {
+			r := newTransformType(transformType)
+			r.Fields = map[string]string{
+				"/my/rate": "/my/total",
+			}
+			r.PreviousFields = map[string]string{
+				"/my/previous": "/my/missing",
+			}
+
+			assert.EqualError(t, r.Init(), "the previous field '/my/previous' references a transformed field '/my/missing' which does not exist")
+		})
+	}
 }
 
 func TestFailsOnInvalidTransform(t *testing.T) {
@@ -343,7 +494,7 @@ func TestFailsOnInvalidTransform(t *testing.T) {
 	r.Fields = map[string]string{"/my/rate": "/my/rate"}
 	r.Transform = "invalid"
 
-	assert.EqualError(t, r.Init(), "'transform' is required and must be 'diff' or 'rate'")
+	assert.EqualError(t, r.Init(), "'transform' is required and must be 'diff', 'rate', or 'state-change'")
 }
 
 func TestLoadsFromToml(t *testing.T) {
