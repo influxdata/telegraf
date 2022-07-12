@@ -1,8 +1,11 @@
 package t128_transform
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
+	"strings"
 	"sort"
 	"time"
 
@@ -34,6 +37,10 @@ const sampleConfig = `
 	## be excluded.
 	# previous_field = ""
 
+	## Specify a path to persist state across telegraf instance restarts.
+	## Only applicable for "state-change" transforms.
+	# persist_to = ""
+
 [processors.t128_transform.fields]
 	## Replace fields with their computed values, renaming them if indicated
 	# "/rate/metric" = "/total/metric"
@@ -55,6 +62,7 @@ type T128Transform struct {
 	Expiration     config.Duration   `toml:"expiration"`
 	RemoveOriginal bool              `toml:"remove-original"`
 	Transform      string            `toml:"transform"`
+	PersistTo      string            `toml:"persist_to"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -76,6 +84,54 @@ type observedValue struct {
 	previous  interface{}
 	expires   time.Time
 	timestamp time.Time
+}
+
+func (o observedValue) MarshalJSON() ([]byte, error) {
+	value := struct {
+		Value        interface{}  `json:"value"`
+		Previous     interface{}  `json:"previous"`
+		Expires      string       `json:"expires"`
+		Timestamp    string       `json:"timestamp"`
+	}{
+		Value:        o.value,
+		Previous:     o.previous,
+		Expires:      o.expires.Format(time.RFC3339),
+		Timestamp:    o.timestamp.Format(time.RFC3339),
+	}
+
+	return json.Marshal(value)
+}
+
+func (o *observedValue) UnmarshalJSON(j []byte) error {
+	var rawStrings map[string]interface{}
+
+	err := json.Unmarshal(j, &rawStrings)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range rawStrings {
+		switch strings.ToLower(k) {
+		case "value":
+			o.value = v
+		case "previous":
+			o.previous = v
+		case "expires":
+			t, err := time.Parse(time.RFC3339, v.(string))
+			if err != nil {
+				return err
+			}
+			o.expires = t
+		case "timestamp":
+			t, err := time.Parse(time.RFC3339, v.(string))
+			if err != nil {
+				return err
+			}
+			o.timestamp = t
+		}
+	}
+
+	return nil
 }
 
 func (r *T128Transform) SampleConfig() string {
@@ -153,6 +209,13 @@ func (r *T128Transform) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 	}
 
+	if r.PersistTo != "" {
+		err := persistCache(r.PersistTo, r.cache)
+		if err != nil {
+			r.Log.Warnf("unable to persist cache to %s: %s", r.PersistTo, err)
+		}
+	}
+
 	return in
 }
 
@@ -163,6 +226,8 @@ func (r *T128Transform) Init() error {
 
 	switch r.Transform {
 	case "diff":
+		r.PersistTo = ""
+
 		r.transform = func(expired bool, t1, t2 time.Time, v1, v2 interface{}) (interface{}, bool, error) {
 			if expired || v1 == nil {
 				return nil, true, nil
@@ -176,6 +241,8 @@ func (r *T128Transform) Init() error {
 			return current - prev, true, nil
 		}
 	case "rate":
+		r.PersistTo = ""
+
 		r.transform = func(expired bool, t1, t2 time.Time, v1, v2 interface{}) (interface{}, bool, error) {
 			if expired || v1 == nil {
 				return nil, true, nil
@@ -196,6 +263,16 @@ func (r *T128Transform) Init() error {
 			return (current - prev) / (t2.Sub(t1).Seconds()), true, nil
 		}
 	case "state-change":
+
+		if r.PersistTo != "" {
+			persistedCache, err := loadCache(r.PersistTo)
+			if err != nil {
+				r.Log.Warnf("unable to load cache from %s: %s", r.PersistTo, err)
+			} else {
+				r.cache = persistedCache
+			}
+		}
+
 		r.transform = func(expired bool, t1, t2 time.Time, v1, v2 interface{}) (interface{}, bool, error) {
 			if expired || v1 == nil {
 				return v2, true, nil
@@ -245,6 +322,36 @@ func (r *T128Transform) Init() error {
 		// If the time difference matches, don't expire. Adjusting here makes
 		// later math easier.
 		r.Expiration++
+	}
+
+	return nil
+}
+
+func loadCache(path string) (map[uint64]map[string]observedValue, error) {
+	cache := make(map[uint64]map[string]observedValue)
+
+	data, err := ioutil.ReadFile(path)
+    if err != nil {
+      return cache, err
+    }
+
+	err = json.Unmarshal(data, &cache)
+    if err != nil {
+        return cache, err
+    }
+
+	return cache, nil
+}
+
+func persistCache(path string, cache map[uint64]map[string]observedValue) error {
+	file, err := json.MarshalIndent(cache, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path, file, 0644)
+	if err != nil {
+		return err
 	}
 
 	return nil
