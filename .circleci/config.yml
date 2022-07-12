@@ -184,6 +184,7 @@ jobs:
       - run: 'make tidy'
       - run: 'make check'
       - run: 'make check-deps'
+      - run: ./scripts/make_docs.sh
       - test-go
       - save_cache:
           name: 'go module cache'
