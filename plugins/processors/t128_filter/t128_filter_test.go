@@ -90,6 +90,34 @@ func TestFilters(t *testing.T) {
 				newMetric("some-measurement", map[string]string{"tag1": "value2"}, nil),
 			},
 		},
+		{
+			Name:       "regex matches whole tag values",
+			Conditions: []Condition{{Mode: regexMode, Tags: tags{"tag1": {"234.*"}}}},
+			InputMetrics: []telegraf.Metric{
+				newMetric("some-measurement", map[string]string{"tag1": "12345"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "something-else"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "23456"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "234"}, nil),
+			},
+			OutputMetrics: []telegraf.Metric{
+				newMetric("some-measurement", map[string]string{"tag1": "23456"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "234"}, nil),
+			},
+		},
+		{
+			Name:       "glob matches whole tag values",
+			Conditions: []Condition{{Mode: globMode, Tags: tags{"tag1": {"234*"}}}},
+			InputMetrics: []telegraf.Metric{
+				newMetric("some-measurement", map[string]string{"tag1": "12345"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "something-else"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "23456"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "234"}, nil),
+			},
+			OutputMetrics: []telegraf.Metric{
+				newMetric("some-measurement", map[string]string{"tag1": "23456"}, nil),
+				newMetric("some-measurement", map[string]string{"tag1": "234"}, nil),
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -108,11 +136,41 @@ func TestFilters(t *testing.T) {
 	}
 }
 
+func TestValidation(t *testing.T) {
+	testCases := []struct {
+		Name       string
+		Conditions []Condition
+	}{
+		{
+			Name:       "needs valid regex",
+			Conditions: []Condition{{Mode: regexMode, Tags: tags{"tag1": {"invalid(regex"}}}},
+		},
+		{
+			Name:       "needs valid glob",
+			Conditions: []Condition{{Mode: globMode, Tags: tags{"tag1": {"invalid[glob"}}}},
+		},
+		{
+			Name:       "invalid mode",
+			Conditions: []Condition{{Mode: "some-invalid-mode", Tags: tags{"tag1": {"just needed a tag"}}}},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			r := newFilter()
+			r.Conditions = testCase.Conditions
+			r.log = testutil.Logger{}
+			assert.NotNil(t, r.Init())
+		})
+	}
+}
+
 func TestLoadsFromToml(t *testing.T) {
 
 	plugin := &T128Filter{}
 	exampleConfig := []byte(`
 		[[condition]]
+		  mode = "glob"
 
 		[condition.tags]
 		  tag1 = ["value1", "value2"]
@@ -124,7 +182,7 @@ func TestLoadsFromToml(t *testing.T) {
 	`)
 
 	assert.NoError(t, toml.Unmarshal(exampleConfig, plugin))
-	assert.Equal(t, []Condition{{Tags: tags{"tag1": {"value1", "value2"}}}, {Tags: tags{"tag1": {"value3"}}}}, plugin.Conditions)
+	assert.Equal(t, []Condition{{Mode: globMode, Tags: tags{"tag1": {"value1", "value2"}}}, {Tags: tags{"tag1": {"value3"}}}}, plugin.Conditions)
 }
 
 func TestLoadsFromTomlComplainsAboutDuplicateTags(t *testing.T) {

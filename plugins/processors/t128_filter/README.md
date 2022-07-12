@@ -9,12 +9,23 @@ The `t128_filter` filters out metrics passing through it. This processor is usef
 ```toml
 [[processors.t128_filter]]
   ## The conditions that must be met to pass a metric through. This is similar
-  ## behavior to a tagpass, but multiple tags are ANDed
+  ## behavior to a tagpass, but the multiple tags are ANDed
+  [[processors.t128_filter.condition]]
+    ## Mode dictates how to match the condition's tag values
+    ## Valid values are:
+    ##  * "exact": exact string comparison
+    ##  * "glob": go flavored glob comparison (see https://github.com/gobwas/glob)
+    ##  * "regex": go flavored regex comparison
+    # mode = "exact"
+
+  [processors.t128_filter.condition.tags]
+    # tag1 = ["value1", "value2"]
+    # tag2 = ["value3"]
+
   [[processors.t128_filter.condition]]
 
   [processors.t128_filter.condition.tags]
-     #tag1 = ["value1", "value2"]
-     #tag2 = ["value3"]
+    # tag1 = ["value3"]
 ```
 
 ### Basic Example Filter:
