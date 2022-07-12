@@ -26,16 +26,23 @@ The graphql input plugin collects data from a 128T instance via graphQL.
 # timeout = "5s"
 
 ## Required. The fields to collect with the desired name as the key (left) and the graphQL 
-## query path relative to the entry_point as the value (right).
+## query path as the value (right). The path can be relative to the entry point or an absolute
+## path that does not diverge from the entry-point and does not contain graphQL arguments such
+## as (name:'RTR_EAST_COMBO').
 # [inputs.t128_graphql.extract_fields]
 #   is-active = "paths/isActive"
 #   status = "paths/status"
+#   other = "allRouters/nodes/other-field"  # absolute path
 
 ## The tags for filtering data with the desired name as the key (left) and the graphQL 
-## query path relative to the entry_point as the value (right).
+## query path as the value (right). The path can be relative to the entry point or an absolute
+## path that does not diverge from the entry-point and does not contain graphQL arguments such
+## as (name:'RTR_EAST_COMBO').
 # [inputs.t128_graphql.extract_tags]
 #   peer-name = "name"
 #   device-interface = "paths/deviceInterface"
+#   router-name = "allRouters/nodes/name"  # absolute path
+
 ```
 
 ### Example GraphQL Query
@@ -45,6 +52,8 @@ For the configuration above, the plugin will build the following graphQL query:
 query {
   allRouters(name: "RTR_EAST_COMBO") {
     nodes {
+      name
+      other-field
       peers {
         nodes {
           name
@@ -69,6 +78,8 @@ For the query above, an example graphQL response is:
     "allRouters": {
       "nodes": [
         {
+          "name": "RTR_EAST_COMBO",
+          "other-field": "foo",
           "peers": {
             "nodes": [
               {
@@ -99,6 +110,6 @@ For the query above, an example graphQL response is:
 For the response above, the collector outputs:
 
 ```
-peer-paths,device-interface=10,peer-name=fake is-active=true,status="DOWN" 1617285085000000000
-peer-paths,device-interface=11,peer-name=fake is-active=true,status="UP" 1617285085000000000
+peer-paths,router-name=RTR_EAST_COMBO,device-interface=10,peer-name=fake other="foo",is-active=true,status="DOWN" 1617285085000000000
+peer-paths,router-name=RTR_EAST_COMBO,device-interface=11,peer-name=fake other="foo",is-active=true,status="UP" 1617285085000000000
 ```

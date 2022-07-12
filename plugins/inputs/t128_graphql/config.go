@@ -32,7 +32,13 @@ Example:
 		Tags:   map[string]string{".data.allRouters.nodes.nodes.nodes.arp.nodes.test-tag": "test-tag"},
 	}
 */
-func LoadConfig(entryPoint string, fieldsIn map[string]string, tagsIn map[string]string) *Config {
+func LoadConfig(
+	entryPoint string,
+	fieldsWithRelPath map[string]string,
+	fieldsWithAbsPath map[string]string,
+	tagsWithRelPath map[string]string,
+	tagsWithAbsPath map[string]string,
+) *Config {
 	config := &Config{}
 	path := ".data."
 	predicates := map[string]string{}
@@ -51,10 +57,19 @@ func LoadConfig(entryPoint string, fieldsIn map[string]string, tagsIn map[string
 	}
 
 	config.Predicates = predicates
-	config.Fields = formatPaths(fieldsIn, path)
-	config.Tags = formatPaths(tagsIn, path)
+	config.Fields = formatPaths(fieldsWithRelPath, path)
+	addDataWithAbsPath(config.Fields, fieldsWithAbsPath)
+	config.Tags = formatPaths(tagsWithRelPath, path)
+	addDataWithAbsPath(config.Tags, tagsWithAbsPath)
 
 	return config
+}
+
+func addDataWithAbsPath(currentTags map[string]string, tagsWithAbsPath map[string]string) map[string]string {
+	for key, val := range formatPaths(tagsWithAbsPath, ".data.") {
+		currentTags[key] = val
+	}
+	return currentTags
 }
 
 //needed because users configure tags & fields with paths starting at entry_point with "/" instead of "."

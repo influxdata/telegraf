@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -55,7 +56,24 @@ func (plugin *T128GraphQL) Init() error {
 	if err != nil {
 		return err
 	}
-	plugin.Config = LoadConfig(plugin.EntryPoint, plugin.Fields, plugin.Tags)
+
+	fieldsWithRelPath, fieldsWithAbsPath, err := validateAndSeparatePaths(plugin.Fields, plugin.EntryPoint)
+	if err != nil {
+		return err
+	}
+
+	tagsWithRelPath, tagsWithAbsPath, err := validateAndSeparatePaths(plugin.Tags, plugin.EntryPoint)
+	if err != nil {
+		return err
+	}
+
+	plugin.Config = LoadConfig(
+		plugin.EntryPoint,
+		fieldsWithRelPath,
+		fieldsWithAbsPath,
+		tagsWithRelPath,
+		tagsWithAbsPath,
+	)
 
 	//build query, json path to data and request body
 	plugin.Query = BuildQuery(plugin.Config)
@@ -218,6 +236,34 @@ func decodeAndReportJSONErrors(response []byte, template string) []error {
 		errors = append(errors, fmt.Errorf(template, message))
 	}
 	return errors
+}
+
+func validateAndSeparatePaths(data map[string]string, entryPoint string) (map[string]string, map[string]string, error) {
+	predicateRegex := regexp.MustCompile(`\(.*?\)`)
+	cleanEntryPoint := predicateRegex.ReplaceAllString(entryPoint, "")
+	dataWithRelPath := make(map[string]string)
+	dataWithAbsPath := make(map[string]string)
+
+	for name, path := range data {
+		if predicateRegex.MatchString(path) {
+			return nil, nil, fmt.Errorf("absolute path %s on tag can not contain graphQL arguments", path)
+		}
+
+		leafIndex := strings.LastIndex(path, "/")
+		pathToLeaf := path
+		if leafIndex != -1 {
+			pathToLeaf = pathToLeaf[:leafIndex]
+		}
+
+		if !strings.HasPrefix(cleanEntryPoint, pathToLeaf) {
+			dataWithRelPath[name] = path
+			continue
+		}
+
+		dataWithAbsPath[name] = path
+	}
+
+	return dataWithRelPath, dataWithAbsPath, nil
 }
 
 func init() {

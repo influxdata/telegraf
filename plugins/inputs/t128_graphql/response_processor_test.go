@@ -41,7 +41,7 @@ var ResponseProcessingTestCases = []struct {
 				"test-tag": "test-string"
 			}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{},
 				Tags:   map[string]string{"test-tag": "test-string"},
 			},
@@ -57,7 +57,7 @@ var ResponseProcessingTestCases = []struct {
 				"test-tag": 128
 			}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 128.0},
 				Tags:   map[string]string{"test-tag": "128"},
 			},
@@ -74,7 +74,7 @@ var ResponseProcessingTestCases = []struct {
 				"test-tag": "test-string"
 	  		}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field-1": 128.0, "test-field-2": 95.0},
 				Tags:   map[string]string{"test-tag": "test-string"},
 			},
@@ -91,7 +91,7 @@ var ResponseProcessingTestCases = []struct {
 		  		"test-tag-2": "test-string-2"
 	  		}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 128.0},
 				Tags:   map[string]string{"test-tag-1": "test-string-1", "test-tag-2": "test-string-2"},
 			},
@@ -108,7 +108,7 @@ var ResponseProcessingTestCases = []struct {
 		  		"test-tag-2": null
 	  		}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 128.0},
 				Tags:   map[string]string{"test-tag-1": "test-string-1"},
 			},
@@ -124,7 +124,7 @@ var ResponseProcessingTestCases = []struct {
 				"test-tag": 128
 			}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field-renamed": 128.0},
 				Tags:   map[string]string{"test-tag-renamed": "128"},
 			},
@@ -145,11 +145,11 @@ var ResponseProcessingTestCases = []struct {
 				"test-tag": "test-string-2"
 			}]}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 128.0},
 				Tags:   map[string]string{"test-tag": "test-string-1"},
 			},
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 95.0},
 				Tags:   map[string]string{"test-tag": "test-string-2"},
 			},
@@ -177,11 +177,11 @@ var ResponseProcessingTestCases = []struct {
 			}
 		]}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 128.0},
 				Tags:   map[string]string{"test-tag-1": "test-string-1", "test-tag-2": "test-string-2"},
 			},
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 95.0},
 				Tags:   map[string]string{"test-tag-1": "test-string-3", "test-tag-2": "test-string-4"},
 			},
@@ -204,7 +204,7 @@ var ResponseProcessingTestCases = []struct {
 			  	}
 		  	}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 128.0},
 				Tags:   map[string]string{"test-tag-1": "test-string-1", "test-tag-2": "test-string-2"},
 			},
@@ -227,7 +227,7 @@ var ResponseProcessingTestCases = []struct {
 			  	}
 		  	}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field-1": 95.0, "test-field-2": 128.0},
 				Tags:   map[string]string{"test-tag": "test-string-1"},
 			},
@@ -250,7 +250,7 @@ var ResponseProcessingTestCases = []struct {
 			  	}
 		  	}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"test-field": 128.0},
 				Tags:   map[string]string{"test-tag-1": "test-string-1", "test-tag-2": "test-string-2"},
 			},
@@ -325,21 +325,88 @@ var ResponseProcessingTestCases = []struct {
 			  }
 		}}`)),
 		ExpectedOutput: []*plugin.ProcessedResponse{
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"adjacent-address": "12.51.52.30", "is-active": true, "uptime": 188333176.0},
 				Tags:   map[string]string{"peer-name": "AZDCBBP1", "device-interface": "StoreLTE", "vlan": "0"},
 			},
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"adjacent-address": "12.51.52.30", "is-active": true, "uptime": 82247253.0},
 				Tags:   map[string]string{"peer-name": "AZDCBBP1", "device-interface": "StoreWAN", "vlan": "0"},
 			},
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"adjacent-address": "12.51.52.22", "is-active": true, "uptime": 162241794.0},
 				Tags:   map[string]string{"peer-name": "AZDCLTEP1", "device-interface": "StoreLTE", "vlan": "0"},
 			},
-			&plugin.ProcessedResponse{
+			{
 				Fields: map[string]interface{}{"adjacent-address": "12.51.52.22", "is-active": true, "uptime": 82247352.0},
 				Tags:   map[string]string{"peer-name": "AZDCLTEP1", "device-interface": "StoreWAN", "vlan": "0"},
+			},
+		},
+		ExpectedError: nil,
+	},
+	{
+		Name: "process response for tags and fields with absolute path",
+		Fields: map[string]string{
+			".data.allServices.nodes.timeSeriesAnalytic.value":     "value",
+			".data.allServices.nodes.timeSeriesAnalytic.timestamp": "timestamp",
+			".data.allServices.nodes.other":                        "other-field",
+		},
+		Tags: map[string]string{
+			".data.allServices.nodes.timeSeriesAnalytic.test-tag": "test-tag",
+			".data.allServices.nodes.name":                        "name",
+		},
+		JsonInput: generateJsonTestData([]byte(`{
+			"data": {
+			  "allServices": {
+				"nodes": [
+				  {
+					"name": "east",
+					"other": "moo",
+					"timeSeriesAnalytic": [
+					  {
+						"timestamp": "2021-06-14T21:10:00Z",
+						"value": "0",
+						"test-tag": "foo"
+					  }
+					]
+				  },
+				  {
+					"name": "west",
+					"other": "cow",
+					"timeSeriesAnalytic": [
+					  {
+						"timestamp": "2021-06-14T21:10:00Z",
+						"value": "128",
+						"test-tag": "bar"
+					  }
+					]
+				  }
+				]
+			  }
+			}
+		  }`)),
+		ExpectedOutput: []*plugin.ProcessedResponse{
+			{
+				Fields: map[string]interface{}{
+					"value":       "0",
+					"timestamp":   "2021-06-14T21:10:00Z",
+					"other-field": "moo",
+				},
+				Tags: map[string]string{
+					"test-tag": "foo",
+					"name":     "east",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					"value":       "128",
+					"timestamp":   "2021-06-14T21:10:00Z",
+					"other-field": "cow",
+				},
+				Tags: map[string]string{
+					"test-tag": "bar",
+					"name":     "west",
+				},
 			},
 		},
 		ExpectedError: nil,

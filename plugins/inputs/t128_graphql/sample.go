@@ -21,14 +21,20 @@ var sampleConfig = `
 # timeout = "5s"
 
 ## Required. The fields to collect with the desired name as the key (left) and the graphQL 
-## query path relative to the entry_point as the value (right).
+## query path as the value (right). The path can be relative to the entry point or an absolute
+## path that does not diverge from the entry-point and does not contain graphQL arguments such
+## as (name:'RTR_EAST_COMBO').
 # [inputs.t128_graphql.extract_fields]
 #   is-active = "paths/isActive"
 #   status = "paths/status"
+#   other = "allRouters/nodes/other-field"  # absolute path
 
 ## The tags for filtering data with the desired name as the key (left) and the graphQL 
-## query path relative to the entry_point as the value (right).
+## query path as the value (right). The path can be relative to the entry point or an absolute
+## path that does not diverge from the entry-point and does not contain graphQL arguments such
+## as (name:'RTR_EAST_COMBO').
 # [inputs.t128_graphql.extract_tags]
 #   peer-name = "name"
 #   device-interface = "paths/deviceInterface"
+#   router-name = "allRouters/nodes/name"  # absolute path
 `

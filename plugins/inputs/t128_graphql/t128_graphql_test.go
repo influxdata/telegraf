@@ -23,14 +23,16 @@ type Endpoint struct {
 }
 
 const (
-	ValidExpectedRequestSingleTag = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
-	ValidQuerySingleTag           = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"
-	ValidExpectedRequestNoTag 	  = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field}}}}}}}"}`
-	ValidQueryNoTag           	  = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field}}}}}}}"
-	InvalidRouterExpectedRequest  = `{"query":"query {\nallRouters(name:\"not-a-router\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
-	InvalidRouterQuery            = "query {\nallRouters(name:\"not-a-router\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"
-	InvalidFieldExpectedRequest   = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ninvalid-field\ntest-tag}}}}}}}"}`
-	InvalidFieldQuery             = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ninvalid-field\ntest-tag}}}}}}}"
+	ValidExpectedRequestSingleTag    = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
+	ValidQuerySingleTag              = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"
+	ValidExpectedRequestNoTag        = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field}}}}}}}"}`
+	ValidQueryNoTag                  = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field}}}}}}}"
+	ValidExpectedRequestWithAbsPaths = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nname\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}\nname}}}}}"}`
+	ValidQueryWithAbsPaths           = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nname\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}\nname}}}}}"
+	InvalidRouterExpectedRequest     = `{"query":"query {\nallRouters(name:\"not-a-router\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
+	InvalidRouterQuery               = "query {\nallRouters(name:\"not-a-router\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"
+	InvalidFieldExpectedRequest      = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ninvalid-field\ntest-tag}}}}}}}"}`
+	InvalidFieldQuery                = "query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ninvalid-field\ntest-tag}}}}}}}"
 )
 
 var CollectorTestCases = []struct {
@@ -38,30 +40,35 @@ var CollectorTestCases = []struct {
 	EntryPoint      string
 	Fields          map[string]string
 	Tags            map[string]string
+	InitError       bool
 	Query           string
 	Endpoint        Endpoint
 	ExpectedMetrics []*testutil.Metric
 	ExpectedErrors  []string
 }{
 	{
-		Name:            "missing entry-point produces no request or metrics",
-		EntryPoint:      "",
-		Fields:          nil,
-		Tags:            nil,
-		Query:           "",
-		Endpoint:        Endpoint{},
-		ExpectedMetrics: nil,
-		ExpectedErrors:  nil,
+		Name:       "missing entry-point produces no request or metrics",
+		EntryPoint: "",
+		Fields:     nil,
+		Tags:       nil,
+		InitError:  true,
 	},
 	{
-		Name:            "missing extract-fields produces no request or metrics",
-		EntryPoint:      "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
-		Fields:          nil,
-		Tags:            nil,
-		Query:           "",
-		Endpoint:        Endpoint{},
-		ExpectedMetrics: nil,
-		ExpectedErrors:  nil,
+		Name:       "missing extract-fields produces no request or metrics",
+		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
+		Fields:     nil,
+		Tags:       nil,
+		InitError:  true,
+	},
+	{
+		Name:       "tag with graphQL argument in path produces no request or metrics",
+		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
+		Fields:     map[string]string{"test-field": "test-field"},
+		Tags: map[string]string{
+			"test-tag":       "test-tag",
+			"other-test-tag": "allRouters(name:'ComboEast')/nodes/name",
+		},
+		InitError: true,
 	},
 	{
 		Name:            "empty response produces error",
@@ -118,11 +125,11 @@ var CollectorTestCases = []struct {
 		ExpectedErrors:  []string{"unexpected response for collector test-collector: Cannot query field \"invalid-field\" on type \"ArpEntryType\"."},
 	},
 	{
-		Name:            "missing extract-tags produces response",
-		EntryPoint:      "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
-		Fields:          map[string]string{"test-field": "test-field"},
-		Tags:            nil,
-		Query:           ValidQueryNoTag,
+		Name:       "missing extract-tags produces response",
+		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
+		Fields:     map[string]string{"test-field": "test-field"},
+		Tags:       nil,
+		Query:      ValidQueryNoTag,
 		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestNoTag, `{
 			"data": {
 				"allRouters": {
@@ -147,10 +154,10 @@ var CollectorTestCases = []struct {
 				Fields:      map[string]interface{}{"test-field": 128.0},
 			},
 		},
-		ExpectedErrors:  nil,
+		ExpectedErrors: nil,
 	},
 	{
-		Name:       "full config produces response", //complex processing tested separately
+		Name:       "missing tags/fields with absolute path produces response", //complex processing tested separately
 		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
 		Fields:     map[string]string{"test-field": "test-field"},
 		Tags:       map[string]string{"test-tag": "test-tag"},
@@ -182,6 +189,53 @@ var CollectorTestCases = []struct {
 		},
 		ExpectedErrors: nil,
 	},
+	{
+		Name:       "full config produces response", //complex processing tested separately
+		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/arp/nodes",
+		Fields: map[string]string{
+			"test-field":       "test-field",
+			"other-test-field": "allRouters/nodes/nodes/nodes/name",
+		},
+		Tags: map[string]string{
+			"test-tag":       "test-tag",
+			"other-test-tag": "allRouters/nodes/name",
+		},
+		Query: ValidQueryWithAbsPaths,
+		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidExpectedRequestWithAbsPaths, `{
+			"data": {
+				"allRouters": {
+				  	"nodes": [{
+						"name": "ComboEast",
+					  	"nodes": {
+							"nodes": [{
+								"name": "east-combo",
+								"arp": {
+							  		"nodes": [{
+								  		"test-field": 128,
+								  		"test-tag": "test-string-1"
+									}]
+								}
+						  	}]
+					  	}
+					}]
+				}
+			}
+		}`},
+		ExpectedMetrics: []*testutil.Metric{
+			{
+				Measurement: "test-collector",
+				Tags: map[string]string{
+					"test-tag":       "test-string-1",
+					"other-test-tag": "ComboEast",
+				},
+				Fields: map[string]interface{}{
+					"test-field":       128.0,
+					"other-test-field": "east-combo",
+				},
+			},
+		},
+		ExpectedErrors: nil,
+	},
 }
 
 func TestT128GraphqlCollector(t *testing.T) {
@@ -200,7 +254,7 @@ func TestT128GraphqlCollector(t *testing.T) {
 
 			var acc testutil.Accumulator
 
-			if (plugin.EntryPoint == "" || plugin.Fields == nil) {
+			if testCase.InitError {
 				require.Error(t, plugin.Init())
 				return
 			} else {

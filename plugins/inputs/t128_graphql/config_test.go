@@ -8,11 +8,13 @@ import (
 )
 
 var JSONPathFormationTestCases = []struct {
-	Name           string
-	EntryPoint     string
-	Fields         map[string]string
-	Tags           map[string]string
-	ExpectedOutput *plugin.Config
+	Name              string
+	EntryPoint        string
+	Fields            map[string]string
+	FieldsWithAbsPath map[string]string
+	Tags              map[string]string
+	TagsWithAbsPath   map[string]string
+	ExpectedOutput    *plugin.Config
 }{
 	{
 		Name:           "process simple input",
@@ -34,6 +36,35 @@ var JSONPathFormationTestCases = []struct {
 		Fields:         getTestFields(),
 		Tags:           getTestTags(),
 		ExpectedOutput: getTestConfigWithPredicates("(names:[\"wan\",\"lan\"],key2:\"value2\")", "(name:\"east-combo\")"),
+	},
+	{
+		Name:       "process config with absolute path tags and fields",
+		EntryPoint: "allServices/nodes/timeSeriesAnalytic(metric: BANDWIDTH, router: '${ROUTER}', transform: AVERAGE, resolution: 1000, startTime: 'now-180', endTime: 'now')",
+		Fields: map[string]string{
+			"value":     "value",
+			"timestamp": "timestamp",
+		},
+		FieldsWithAbsPath: map[string]string{
+			"other-field": "allServices/nodes/other",
+		},
+		Tags: getTestTags(),
+		TagsWithAbsPath: map[string]string{
+			"name": "allServices/nodes/name",
+		},
+		ExpectedOutput: &plugin.Config{
+			Predicates: map[string]string{
+				".data.allServices.nodes.timeSeriesAnalytic.$predicate": "(metric:BANDWIDTH,router:\"${ROUTER}\",transform:AVERAGE,resolution:1000,startTime:\"now-180\",endTime:\"now\")",
+			},
+			Fields: map[string]string{
+				".data.allServices.nodes.timeSeriesAnalytic.value":     "value",
+				".data.allServices.nodes.timeSeriesAnalytic.timestamp": "timestamp",
+				".data.allServices.nodes.other":                        "other-field",
+			},
+			Tags: map[string]string{
+				".data.allServices.nodes.timeSeriesAnalytic.test-tag": "test-tag",
+				".data.allServices.nodes.name":                        "name",
+			},
+		},
 	},
 	{
 		Name:           "process complex config",
@@ -58,7 +89,13 @@ func getTestConfigWithPredicates(pred1 string, pred2 string) *plugin.Config {
 func TestT128GraphqlEntryPointParsing(t *testing.T) {
 	for _, testCase := range JSONPathFormationTestCases {
 		t.Run(testCase.Name, func(t *testing.T) {
-			parsedEntryPoint := plugin.LoadConfig(testCase.EntryPoint, testCase.Fields, testCase.Tags)
+			parsedEntryPoint := plugin.LoadConfig(
+				testCase.EntryPoint,
+				testCase.Fields,
+				testCase.FieldsWithAbsPath,
+				testCase.Tags,
+				testCase.TagsWithAbsPath,
+			)
 			require.Equal(t, testCase.ExpectedOutput, parsedEntryPoint)
 		})
 	}
