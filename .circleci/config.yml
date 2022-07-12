@@ -539,72 +539,108 @@ workflows:
           requires:
             - 'test-go-mac'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'i386-package':
           requires:
             - 'test-go-linux-386'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'ppc64le-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'riscv64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 's390x-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'armel-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'amd64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'arm64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'armhf-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'static-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'mipsel-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'mips-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'generate-config':
