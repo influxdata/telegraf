@@ -1,4 +1,4 @@
-### Required for all PRs:
+# Required for all PRs
 
 <!-- Before opening a pull request you should run the following checks to make sure the CI will pass.
 
