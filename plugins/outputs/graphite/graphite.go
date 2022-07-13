@@ -81,6 +81,7 @@ func (g *Graphite) Connect() error {
 
 	// Get Connections
 	var conns []net.Conn
+	var failedServers []string
 	for _, server := range servers {
 		// Dialer with timeout
 		d := net.Dialer{Timeout: time.Duration(g.Timeout) * time.Second}
@@ -95,12 +96,15 @@ func (g *Graphite) Connect() error {
 
 		if err == nil {
 			conns = append(conns, conn)
+		} else {
+			g.Log.Debugf("Failed to establish connection: %v", err)
+			failedServers = append(failedServers, server)
 		}
 	}
 
 	if len(g.failedServers) > 0 {
 		g.conns = append(g.conns, conns...)
-		g.failedServers = []string{}
+		g.failedServers = failedServers
 	} else {
 		g.conns = conns
 	}
