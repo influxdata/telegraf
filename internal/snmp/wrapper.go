@@ -36,6 +36,8 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 
 	gs.Retries = s.Retries
 
+	gs.UseUnconnectedUDPSocket = s.UnconnectedUDPSocket
+
 	switch s.Version {
 	case 3:
 		gs.Version = gosnmp.Version3

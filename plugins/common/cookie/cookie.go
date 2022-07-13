@@ -110,7 +110,8 @@ func (c *CookieAuthConfig) auth() error {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	// check either 200 or 201 as some devices may return either
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("cookie auth renewal received status code: %v (%v)",
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),

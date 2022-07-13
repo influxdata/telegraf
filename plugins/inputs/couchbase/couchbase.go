@@ -26,6 +26,9 @@ type Couchbase struct {
 
 	BucketStatsIncluded []string `toml:"bucket_stats_included"`
 
+	ClusterBucketStats bool `toml:"cluster_bucket_stats"`
+	NodeBucketStats    bool `toml:"node_bucket_stats"`
+
 	bucketInclude filter.Filter
 	client        *http.Client
 
@@ -85,32 +88,55 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 		acc.AddFields("couchbase_node", fields, tags)
 	}
 
-	for bucketName := range pool.BucketMap {
-		tags := map[string]string{"cluster": escapedAddr, "bucket": bucketName}
-		bs := pool.BucketMap[bucketName].BasicStats
-		fields := make(map[string]interface{})
-		cb.addBucketField(fields, "quota_percent_used", bs["quotaPercentUsed"])
-		cb.addBucketField(fields, "ops_per_sec", bs["opsPerSec"])
-		cb.addBucketField(fields, "disk_fetches", bs["diskFetches"])
-		cb.addBucketField(fields, "item_count", bs["itemCount"])
-		cb.addBucketField(fields, "disk_used", bs["diskUsed"])
-		cb.addBucketField(fields, "data_used", bs["dataUsed"])
-		cb.addBucketField(fields, "mem_used", bs["memUsed"])
+	for name, bucket := range pool.BucketMap {
+		cluster := regexpURI.ReplaceAllString(addr, "${1}")
 
-		err := cb.gatherDetailedBucketStats(addr, bucketName, fields)
-		if err != nil {
-			return err
+		if cb.ClusterBucketStats {
+			fields := cb.basicBucketStats(bucket.BasicStats)
+			tags := map[string]string{"cluster": cluster, "bucket": name}
+
+			err := cb.gatherDetailedBucketStats(addr, name, nil, fields)
+			if err != nil {
+				return err
+			}
+
+			acc.AddFields("couchbase_bucket", fields, tags)
 		}
 
-		acc.AddFields("couchbase_bucket", fields, tags)
+		if cb.NodeBucketStats {
+			for _, node := range bucket.Nodes() {
+				fields := cb.basicBucketStats(bucket.BasicStats)
+				tags := map[string]string{"cluster": cluster, "bucket": name, "hostname": node.Hostname}
+
+				err := cb.gatherDetailedBucketStats(addr, name, &node.Hostname, fields)
+				if err != nil {
+					return err
+				}
+
+				acc.AddFields("couchbase_node_bucket", fields, tags)
+			}
+		}
 	}
 
 	return nil
 }
 
-func (cb *Couchbase) gatherDetailedBucketStats(server, bucket string, fields map[string]interface{}) error {
+// basicBucketStats gets the basic bucket statistics
+func (cb *Couchbase) basicBucketStats(basicStats map[string]interface{}) map[string]interface{} {
+	fields := make(map[string]interface{})
+	cb.addBucketField(fields, "quota_percent_used", basicStats["quotaPercentUsed"])
+	cb.addBucketField(fields, "ops_per_sec", basicStats["opsPerSec"])
+	cb.addBucketField(fields, "disk_fetches", basicStats["diskFetches"])
+	cb.addBucketField(fields, "item_count", basicStats["itemCount"])
+	cb.addBucketField(fields, "disk_used", basicStats["diskUsed"])
+	cb.addBucketField(fields, "data_used", basicStats["dataUsed"])
+	cb.addBucketField(fields, "mem_used", basicStats["memUsed"])
+	return fields
+}
+
+func (cb *Couchbase) gatherDetailedBucketStats(server, bucket string, nodeHostname *string, fields map[string]interface{}) error {
 	extendedBucketStats := &BucketStats{}
-	err := cb.queryDetailedBucketStats(server, bucket, extendedBucketStats)
+	err := cb.queryDetailedBucketStats(server, bucket, nodeHostname, extendedBucketStats)
 	if err != nil {
 		return err
 	}
@@ -349,9 +375,15 @@ func (cb *Couchbase) addBucketFieldChecked(fields map[string]interface{}, fieldK
 	cb.addBucketField(fields, fieldKey, values[len(values)-1])
 }
 
-func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, bucketStats *BucketStats) error {
+func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, nodeHostname *string, bucketStats *BucketStats) error {
+	url := server + "/pools/default/buckets/" + bucket
+	if nodeHostname != nil {
+		url += "/nodes/" + *nodeHostname
+	}
+	url += "/stats?"
+
 	// Set up an HTTP request to get the complete set of bucket stats.
-	req, err := http.NewRequest("GET", server+"/pools/default/buckets/"+bucket+"/stats?", nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
@@ -399,6 +431,7 @@ func init() {
 	inputs.Add("couchbase", func() telegraf.Input {
 		return &Couchbase{
 			BucketStatsIncluded: []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"},
+			ClusterBucketStats:  true,
 		}
 	})
 }

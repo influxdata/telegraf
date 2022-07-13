@@ -339,6 +339,24 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		test,
 		"logstash_plugins",
 		map[string]interface{}{
+			"failures": int64(2),
+		},
+		map[string]string{
+			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
+			"node_name":    string("node-6-test"),
+			"source":       string("node-6"),
+			"node_version": string("6.4.2"),
+			"pipeline":     string("main"),
+			"plugin_name":  string("date"),
+			"plugin_id":    string("d079424bb6b7b8c7c61d9c5e0ddae445e92fa9ffa2e8690b0a669f7c690542f0"),
+			"plugin_type":  string("filter"),
+		},
+	)
+
+	logstash6accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
 			"duration_in_millis": float64(2814.0),
 			"in":                 float64(76602.0),
 			"out":                float64(76602.0),

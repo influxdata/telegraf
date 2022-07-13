@@ -249,7 +249,12 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		var metrics []telegraf.Metric
 		var err error
 		if h.ParserType == "upstream" {
-			parser := influx_upstream.NewParser()
+			parser := influx_upstream.Parser{}
+			err = parser.Init()
+			if err != ErrEOF && err != nil {
+				h.Log.Debugf("Error initializing parser: %v", err.Error())
+				return
+			}
 			parser.SetTimeFunc(influx_upstream.TimeFunc(h.timeFunc))
 
 			if precisionStr != "" {
@@ -259,13 +264,17 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 			metrics, err = parser.Parse(bytes)
 		} else {
-			metricHandler := influx.NewMetricHandler()
-			parser := influx.NewParser(metricHandler)
+			parser := influx.Parser{}
+			err = parser.Init()
+			if err != ErrEOF && err != nil {
+				h.Log.Debugf("Error initializing parser: %v", err.Error())
+				return
+			}
 			parser.SetTimeFunc(h.timeFunc)
 
 			if precisionStr != "" {
 				precision := getPrecisionMultiplier(precisionStr)
-				metricHandler.SetTimePrecision(precision)
+				parser.SetTimePrecision(precision)
 			}
 
 			metrics, err = parser.Parse(bytes)

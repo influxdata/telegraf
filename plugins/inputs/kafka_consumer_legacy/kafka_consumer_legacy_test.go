@@ -6,7 +6,8 @@ import (
 
 	"github.com/Shopify/sarama"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/graphite"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -43,9 +44,10 @@ func TestRunParser(t *testing.T) {
 	k.acc = &acc
 	defer close(k.done)
 
-	var err error
-	k.parser, err = parsers.NewInfluxParser()
-	require.NoError(t, err)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	k.parser = parser
+
 	go k.receiver()
 	in <- saramaMsg(testMsg)
 	acc.Wait(1)
@@ -60,9 +62,10 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	k.acc = &acc
 	defer close(k.done)
 
-	var err error
-	k.parser, err = parsers.NewInfluxParser()
-	require.NoError(t, err)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	k.parser = parser
+
 	go k.receiver()
 	in <- saramaMsg(invalidMsg)
 	acc.WaitError(1)
@@ -94,9 +97,10 @@ func TestRunParserAndGather(t *testing.T) {
 	k.acc = &acc
 	defer close(k.done)
 
-	var err error
-	k.parser, err = parsers.NewInfluxParser()
-	require.NoError(t, err)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	k.parser = parser
+
 	go k.receiver()
 	in <- saramaMsg(testMsg)
 	acc.Wait(1)
@@ -115,9 +119,9 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	k.acc = &acc
 	defer close(k.done)
 
-	var err error
-	k.parser, err = parsers.NewGraphiteParser("_", []string{}, nil)
-	require.NoError(t, err)
+	p := graphite.Parser{Separator: "_", Templates: []string{}}
+	require.NoError(t, p.Init())
+	k.parser = &p
 	go k.receiver()
 	in <- saramaMsg(testMsgGraphite)
 	acc.Wait(1)
