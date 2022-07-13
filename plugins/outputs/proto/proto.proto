@@ -165,6 +165,9 @@ message Tegrastats {
     double largest_free_block_size_mb = 29;
     double nvdec = 30;
     double nvdec1 = 31;
+    double nvenc = 32;
+    double nvenc1 = 33;
+    double nvjpg = 34;
   }
 
   Fields fields = 1;
