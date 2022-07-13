@@ -245,6 +245,25 @@ const httpServerZonesPayload = `
 }
 `
 
+const httpLimitReqsPayload = `
+{
+        "limit_1": {
+                "passed": 2,
+                "delayed": 9,
+                "rejected": 4,
+                "delayed_dry_run": 100,
+                "rejected_dry_run": 330
+        },
+        "limit_2": {
+                "passed": 451,
+                "delayed": 10,
+                "rejected": 0,
+                "delayed_dry_run": 10,
+                "rejected_dry_run": 32
+        }
+}
+`
+
 const httpLocationZonesPayload = `
 {
   "site1": {
@@ -854,6 +873,48 @@ func TestGatherHttpServerZonesMetrics(t *testing.T) {
 			"source": host,
 			"port":   port,
 			"zone":   "site2",
+		})
+}
+
+func TestGatherHttpLimitReqsMetrics(t *testing.T) {
+	ts, n := prepareEndpoint(t, httpLimitReqsPath, httpLimitReqsPayload)
+	defer ts.Close()
+
+	var acc testutil.Accumulator
+	addr, host, port := prepareAddr(t, ts)
+
+	require.NoError(t, n.gatherHTTPLimitReqsMetrics(addr, &acc))
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"nginx_plus_api_http_limit_reqs",
+		map[string]interface{}{
+			"passed":           int64(2),
+			"delayed":          int64(9),
+			"rejected":         int64(4),
+			"delayed_dry_run":  int64(100),
+			"rejected_dry_run": int64(330),
+		},
+		map[string]string{
+			"source": host,
+			"port":   port,
+			"limit":  "limit_1",
+		})
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"nginx_plus_api_http_limit_reqs",
+		map[string]interface{}{
+			"passed":           int64(451),
+			"delayed":          int64(10),
+			"rejected":         int64(0),
+			"delayed_dry_run":  int64(10),
+			"rejected_dry_run": int64(32),
+		},
+		map[string]string{
+			"source": host,
+			"port":   port,
+			"limit":  "limit_2",
 		})
 }
 

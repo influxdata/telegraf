@@ -180,10 +180,13 @@ execute this script.
   - fields:
     - exit_status
     - health_ok
+    - media_wearout_indicator
+    - percent_lifetime_remain
     - read_error_rate
     - seek_error
     - temp_c
     - udma_crc_errors
+    - wear_leveling_count
 
 - smart_attribute:
   - tags:

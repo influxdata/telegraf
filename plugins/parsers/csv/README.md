@@ -98,6 +98,14 @@ values.
   ## If set to true, the parser will skip csv lines that cannot be parsed.
   ## By default, this is false
   csv_skip_errors = false
+
+  ## Reset the parser on given conditions.
+  ## This option can be used to reset the parser's state e.g. when always reading a
+  ## full CSV structure including header etc. Available modes are
+  ##    "none"   -- do not reset the parser (default)
+  ##    "always" -- reset the parser with each call (ignored in line-wise parsing)
+  ##                Helpful when e.g. reading whole files in each gather-cycle.
+  # csv_reset_mode = "none"
   ```
 
 ### csv_timestamp_column, csv_timestamp_format

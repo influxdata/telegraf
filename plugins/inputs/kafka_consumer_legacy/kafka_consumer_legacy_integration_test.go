@@ -8,7 +8,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -43,8 +43,9 @@ func TestReadsMetricsFromKafkaIntegration(t *testing.T) {
 		PointBuffer:    100000,
 		Offset:         "oldest",
 	}
-	p, _ := parsers.NewInfluxParser()
-	k.SetParser(p)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	k.SetParser(parser)
 
 	// Verify that we can now gather the sent message
 	var acc testutil.Accumulator

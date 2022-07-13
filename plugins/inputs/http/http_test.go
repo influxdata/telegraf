@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -374,7 +375,12 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			})
 
 			tt.plugin.SetParserFunc(func() (telegraf.Parser, error) {
-				return parsers.NewValueParser("metric", "string", "", nil)
+				p := &value.Parser{
+					MetricName: "metric",
+					DataType:   "string",
+				}
+				err := p.Init()
+				return p, err
 			})
 
 			err = tt.plugin.Init()

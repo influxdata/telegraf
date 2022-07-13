@@ -180,6 +180,7 @@ jobs:
       - restore_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
+      - run: ./scripts/make_docs.sh
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
@@ -411,6 +412,20 @@ jobs:
             docker tag telegraf-alpine quay.io/influxdb/telegraf-nightly:alpine
             docker image ls
             docker push quay.io/influxdb/telegraf-nightly:alpine
+  amd64-package-test-nightly:
+    machine:
+      image: ubuntu-2004:current
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '.'
+      - run: sudo apt update && sudo apt install -y snapd
+      - run: sudo snap install lxd
+      - run: sudo lxd init --auto
+      - run: sudo usermod -a -G lxd $(whoami)
+      - run: cd tools/package_lxd_test && go build
+      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*_amd64.deb")
+      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*.x86_64.rpm")
   package-sign-windows:
     executor:
         name: win/default
@@ -525,72 +540,108 @@ workflows:
           requires:
             - 'test-go-mac'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'i386-package':
           requires:
             - 'test-go-linux-386'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'ppc64le-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'riscv64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 's390x-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'armel-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'amd64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'arm64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'armhf-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'static-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'mipsel-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'mips-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'generate-config':
@@ -744,25 +795,35 @@ workflows:
           nightly: true
           requires:
             - 'test-go-linux'
+      - 'package-sign-windows':
+          requires:
+            - 'windows-package-nightly'
+      - 'package-sign-mac':
+           requires:
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
       - nightly:
           requires:
+            - 'amd64-package-test-nightly'
+            - 'arm64-package-nightly'
+            - 'armel-package-nightly'
+            - 'armhf-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
             - 'i386-package-nightly'
+            - 'mips-package-nightly'
+            - 'mipsel-package-nightly'
             - 'ppc64le-package-nightly'
             - 'riscv64-package-nightly'
             - 's390x-package-nightly'
-            - 'armel-package-nightly'
-            - 'amd64-package-nightly'
-            - 'mipsel-package-nightly'
-            - 'mips-package-nightly'
-            - 'darwin-amd64-package-nightly'
-            - 'darwin-arm64-package-nightly'
-            - 'windows-package-nightly'
             - 'static-package-nightly'
-            - 'arm64-package-nightly'
-            - 'armhf-package-nightly'
+            - 'windows-package-nightly'
       - docker-nightly:
           requires:
             - 'nightly'
+      - amd64-package-test-nightly:
+          requires:
+            - 'amd64-package-nightly'
     triggers:
       - schedule:
           cron: "0 7 * * *"

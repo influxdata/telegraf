@@ -135,7 +135,7 @@ func (*Exec) SampleConfig() string {
 
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
-	_, isNagios := e.parser.(*nagios.NagiosParser)
+	_, isNagios := e.parser.(*nagios.Parser)
 
 	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {

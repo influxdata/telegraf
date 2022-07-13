@@ -84,6 +84,12 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
     # tag_only = true
 ```
 
+## Metrics
+
+Each configured subscription will emit a different measurement.  Each leaf in a
+GNMI SubscribeResponse Update message will produce a field reading in the
+measurement. GNMI PathElement keys for leaves will attach tags to the field(s).
+
 ## Example Output
 
 ```shell

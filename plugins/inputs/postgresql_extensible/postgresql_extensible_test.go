@@ -23,7 +23,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 			"POSTGRES_HOST_AUTH_METHOD": "trust",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("database system is ready to accept connections"),
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
