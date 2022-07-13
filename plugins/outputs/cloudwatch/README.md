@@ -59,6 +59,10 @@ The IAM user needs only the `cloudwatch:PutMetricData` permission.
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
 
+  ## Set http_proxy
+  # use_system_proxy = false
+  # http_proxy_url = "http://localhost:8888"
+
   ## Namespace for the CloudWatch MetricDatums
   namespace = "InfluxData/Telegraf"
 
