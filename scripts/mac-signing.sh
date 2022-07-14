@@ -55,6 +55,9 @@ do
   cp ~/project/info.plist "$RootAppDir"
   cp  ~/project/assets/windows/icon.icns "$RootAppDir/Resources"
 
+  xcrun agvtool new-version -all v1.23.1
+  xcrun agvtool new-marketing-version v1.23.1
+
   chmod +x "$RootAppDir/MacOS/telegraf_entry_mac"
 
   # Sign the entire .app bundle, and wrap it in a DMG.
