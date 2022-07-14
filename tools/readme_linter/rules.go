@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"regexp"
 	"strings"
 
 	"github.com/yuin/goldmark/ast"
@@ -81,6 +80,9 @@ func requiredSectionsClose(headings []string) func(*T, ast.Node) error {
 
 func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 	return func(t *T, root ast.Node) error {
+		// We're looking for long lines in paragraphs. Find paragraphs
+		// first, then which lines are in paragraphs
+		paraLines := []int{}
 		for n := root.FirstChild(); n != nil; n = n.NextSibling() {
 			var p *ast.Paragraph
 			var ok bool
@@ -90,16 +92,47 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 
 			segs := p.Lines()
 			for _, seg := range segs.Sliced(0, segs.Len()) {
-				line := string(seg.Value(t.markdown))
-				// Remove links to get an accurate line size, this will allow long URLs for example
-				// Reference: https://github.com/writeas/go-strip-markdown
-				linksReg := regexp.MustCompile(`\[(.*?)\][\[\(].*?[\]\)]`)
-				res := linksReg.ReplaceAllString(line, "$1")
-				if len(res) > threshold {
-					lineNumber := t.line(seg.Start)
-					t.assertLinef(lineNumber, "long line in paragraph")
-				}
+				line := t.line(seg.Start)
+				paraLines = append(paraLines, line)
+				// t.printFileLine(line)
+				// fmt.Printf("paragraph line\n")
 			}
+		}
+
+		// Find long lines in the whole file
+		longLines := []int{}
+		last := 0
+		for i, cur := range t.newlineOffsets {
+			length := cur - last - 1 // -1 to exclude the newline
+			if length > threshold {
+				longLines = append(longLines, i)
+				// t.printFileLine(i)
+				// fmt.Printf("long line\n")
+			}
+			last = cur
+		}
+
+		// Merge both lists
+		p := 0
+		l := 0
+		bads := []int{}
+		for p < len(paraLines) && l < len(longLines) {
+			long := longLines[l]
+			para := paraLines[p]
+			switch {
+			case long == para:
+				bads = append(bads, long)
+				p++
+				l++
+			case long < para:
+				l++
+			case long > para:
+				p++
+			}
+		}
+
+		for _, bad := range bads {
+			t.assertLinef(bad, "long line in paragraph")
 		}
 		return nil
 	}
