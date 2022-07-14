@@ -11,7 +11,7 @@ Collects the metrics from following services of OpenStack:
 
 At present this plugin requires the following APIs:
 
-* blockstorage  v3 or v2
+* blockstorage  v3
 * compute  v2
 * identity  v3
 * networking  v2

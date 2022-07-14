@@ -190,11 +190,6 @@ func (o *OpenStack) Init() error {
 			return fmt.Errorf("unable to create V3 volume client %v", err)
 		}
 	}
-	if o.containsService("volumesv2") {
-		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
-			return fmt.Errorf("unable to create V2 volume client %v", err)
-		}
-	}
 
 	return nil
 }
