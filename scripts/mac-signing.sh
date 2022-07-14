@@ -21,8 +21,9 @@ amdFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
 armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
 macFiles=("${amdFile}" "${armFile}")
 
-plutil -insert CFBundleShortVersionString -string "v1.23.1" ~/project/info.plist
-plutil -insert CFBundleVersion -string "v1.23.1" ~/project/info.plist
+version=$(make version)
+plutil -insert CFBundleShortVersionString -string "$version" ~/project/info.plist
+plutil -insert CFBundleVersion -string "$version" ~/project/info.plist
 
 for tarFile in "${macFiles[@]}";
 do
