@@ -327,6 +327,7 @@ following works:
 - sigs.k8s.io/json [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/structured-merge-diff [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/yaml [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+- github.com/go-stomp/stomp [Apache License 2.0](https://github.com/go-stomp/stomp/blob/master/LICENSE.txt)
 
 ## Telegraf used and modified code from these projects
 
