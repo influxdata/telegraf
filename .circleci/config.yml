@@ -698,21 +698,21 @@ workflows:
           #       only: /.*/
           #     branches:
           #       ignore: /.*/
-      # - 'package-consolidate':
-      #      requires:
-      #       - 'i386-package'
-      #       - 'ppc64le-package'
-      #       - 's390x-package'
-      #       - 'armel-package'
-      #       - 'amd64-package'
-      #       - 'mipsel-package'
-      #       - 'mips-package'
-      #       - 'static-package'
-      #       - 'arm64-package'
-      #       - 'armhf-package'
-      #       - 'riscv64-package'
-      #       - 'package-sign-mac'
-      #       - 'package-sign-windows'
+      - 'package-consolidate':
+           requires:
+            # - 'i386-package'
+            # - 'ppc64le-package'
+            # - 's390x-package'
+            # - 'armel-package'
+            # - 'amd64-package'
+            # - 'mipsel-package'
+            # - 'mips-package'
+            # - 'static-package'
+            # - 'arm64-package'
+            # - 'armhf-package'
+            # - 'riscv64-package'
+            - 'package-sign-mac'
+            # - 'package-sign-windows'
       #      filters:
       #       tags:
       #         only: /.*/
