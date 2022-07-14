@@ -156,7 +156,7 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 			}
 			if len(cvdevs) != 0 {
 				// Validate configuration
-				var request []gnmiLib.SubscribeRequest
+				var request []*gnmiLib.SubscribeRequest
 				if request, err = c.newSubscribeRequest(cvdevs); err != nil {
 					fmt.Println(err)
 				}
@@ -166,12 +166,12 @@ func (c *CVP) Start(acc telegraf.Accumulator) error {
 				CvpAddr := c.Cvpaddress
 				for i := range request {
 					// Loop through the requests for targets.
-					thisReq := make([]gnmiLib.SubscribeRequest, 1)
-					copy(thisReq, request[i:(i+1)])
+					thisReq := make([]*gnmiLib.SubscribeRequest, 1)
+					copy(thisReq, (request[i:(i + 1)]))
 					go func(CvpAddr string) {
 						defer c.wg.Done()
 						for ctx.Err() == nil {
-							if err := c.subscribeGNMI(ctx, CvpAddr, tlscfg, &thisReq[0]); err != nil && ctx.Err() == nil {
+							if err := c.subscribeGNMI(ctx, CvpAddr, tlscfg, thisReq[0]); err != nil && ctx.Err() == nil {
 								acc.AddError(err)
 							}
 
@@ -303,7 +303,7 @@ func parsePath(origin string, pathToParse string, target []string) ([]*gnmiLib.P
 	return gnmilibsslice, nil
 }
 
-func (c *CVP) newSubscribeRequest(targets []string) ([]gnmiLib.SubscribeRequest, error) {
+func (c *CVP) newSubscribeRequest(targets []string) ([]*gnmiLib.SubscribeRequest, error) {
 	// Create subscription objects
 	targetLen := len(targets)
 	subLen := len(c.Subscriptions)
@@ -341,10 +341,10 @@ func (c *CVP) newSubscribeRequest(targets []string) ([]gnmiLib.SubscribeRequest,
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
-	var subSlice []gnmiLib.SubscribeRequest
+	var subSlice []*gnmiLib.SubscribeRequest
 
 	for j, path := range gnmiPath {
-		req := &gnmiLib.SubscribeRequest{
+		req := gnmiLib.SubscribeRequest{
 			Request: &gnmiLib.SubscribeRequest_Subscribe{
 				Subscribe: &gnmiLib.SubscriptionList{
 					Prefix:   path,
@@ -356,7 +356,7 @@ func (c *CVP) newSubscribeRequest(targets []string) ([]gnmiLib.SubscribeRequest,
 				},
 			},
 		}
-		subSlice = append(subSlice, *req)
+		subSlice = append(subSlice, &req)
 	}
 	return subSlice, nil
 }
