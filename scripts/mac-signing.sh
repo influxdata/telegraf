@@ -52,6 +52,9 @@ do
 
   printf "\n"
 
+  plutil -insert CFBundleShortVersionString -string "v1.23.1" ~/project/info.plist
+  plutil -insert CFBundleVersion -string "v1.23.1" ~/project/info.plist
+
   cp ~/project/info.plist "$RootAppDir"
   cp  ~/project/assets/windows/icon.icns "$RootAppDir/Resources"
 
@@ -63,9 +66,6 @@ do
   echo "$baseName"
   hdiutil create -size 500m -volname Telegraf -srcfolder Telegraf.app "$baseName".dmg
   codesign -s "$DeveloperID" --timestamp --options=runtime "$baseName".dmg
-
-  xcrun agvtool new-version -all v1.23.1
-  xcrun agvtool new-marketing-version v1.23.1
 
   # Send the DMG to be notarized.
   # AppleUsername and ApplePassword are environment variables, to follow convention they should have been all caps.
