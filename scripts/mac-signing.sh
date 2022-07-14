@@ -52,8 +52,8 @@ do
 
   printf "\n"
 
-  plutil -insert CFBundleShortVersionString -string "v1.23.1" ~/project/info.plist
-  plutil -insert CFBundleVersion -string "v1.23.1" ~/project/info.plist
+  plutil -replace CFBundleShortVersionString -string "v1.23.1" ~/project/info.plist
+  plutil -replace CFBundleVersion -string "v1.23.1" ~/project/info.plist
 
   cp ~/project/info.plist "$RootAppDir"
   cp  ~/project/assets/windows/icon.icns "$RootAppDir/Resources"
