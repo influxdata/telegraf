@@ -8,11 +8,12 @@ It also support Amazon MQ  <https://aws.amazon.com/amazon-mq/>
 ## Configuration
 
 ```toml @sample.conf
-  ## Host of Active MQ broker
+# Configuration for active mq with stomp protocol to send metrics to
+[[outputs.stomp]]
   host = "localhost:61613"
 
   ## Queue name for producer messages
-  # queueName = "telegraf"
+  queueName = "telegraf"
 
   ## Username and password if required by the Active MQ server.
   # username = ""
@@ -24,5 +25,5 @@ It also support Amazon MQ  <https://aws.amazon.com/amazon-mq/>
   # tls_key = "/etc/telegraf/key.pem"
 
   ## Data format to output.
-  # data_format = "json"
+  data_format = "json"
 ```
