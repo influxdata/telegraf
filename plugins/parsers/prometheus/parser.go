@@ -146,6 +146,7 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
 	metrics = append(metrics, met)
 
+	infSeen := false
 	for _, b := range m.GetHistogram().Bucket {
 		newTags := tags
 		fields = make(map[string]interface{})
@@ -154,6 +155,20 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 
 		histogramMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
 		metrics = append(metrics, histogramMetric)
+		if math.IsInf(b.GetUpperBound(), +1) {
+			infSeen = true
+		}
+	}
+	// Infinity bucket is required for proper function of histogram in prometheus
+	if !infSeen {
+		newTags := tags
+		newTags["le"] = "+Inf"
+
+		fields = make(map[string]interface{})
+		fields[metricName+"_bucket"] = float64(m.GetHistogram().GetSampleCount())
+
+		histogramInfMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		metrics = append(metrics, histogramInfMetric)
 	}
 	return metrics
 }
