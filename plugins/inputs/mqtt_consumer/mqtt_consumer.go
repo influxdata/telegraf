@@ -247,10 +247,12 @@ func compareTopics(expected []string, incoming []string) bool {
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
 	var remainingLength int
 	var qosFlagsSize int
+	var qOsSize int
 	topicSize := len(msg.Topic()) + 2
-	qOsSize := 0
-	if msg.Qos() == 1 || msg.Qos() == 2 {
+	if int(msg.Qos()) == 1 || int(msg.Qos()) == 2 {
 		qOsSize = 2
+	} else {
+		qOsSize = 0
 	}
 	payloadSize := len(msg.Payload())
 	remainingContent := topicSize + qOsSize + payloadSize
@@ -264,9 +266,9 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		remainingLength = 4
 	}
 	publishMessageSize := remainingLength + remainingContent + 1
-	if msg.Qos() == 1 {
+	if int(msg.Qos()) == 1 {
 		qosFlagsSize = 4
-	} else if msg.Qos() == 2 {
+	} else if int(msg.Qos()) == 2 {
 		qosFlagsSize = 12
 	}
 	byteCount := publishMessageSize + qosFlagsSize
