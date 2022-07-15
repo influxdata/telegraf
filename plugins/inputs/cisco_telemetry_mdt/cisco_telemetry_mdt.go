@@ -721,8 +721,8 @@ func (c *CiscoTelemetryMDT) Gather(_ telegraf.Accumulator) error {
 func init() {
 	inputs.Add("cisco_telemetry_mdt", func() telegraf.Input {
 		return &CiscoTelemetryMDT{
-			Transport:        "grpc",
-			ServiceAddress:   "127.0.0.1:57000",
+			Transport:      "grpc",
+			ServiceAddress: "127.0.0.1:57000",
 		}
 	})
 }
