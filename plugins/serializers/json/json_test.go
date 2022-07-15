@@ -243,7 +243,8 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 			filename: "testcases/transformation_single.conf",
 		},
 	}
-	parser := influx.NewParser(influx.NewMetricHandler())
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -288,7 +289,8 @@ func TestSerializeTransformationBatch(t *testing.T) {
 			filename: "testcases/transformation_batch.conf",
 		},
 	}
-	parser := influx.NewParser(influx.NewMetricHandler())
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
