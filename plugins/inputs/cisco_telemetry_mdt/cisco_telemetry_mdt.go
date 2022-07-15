@@ -44,17 +44,21 @@ const (
 // this value is specified in the GRPC docs via GRPC_ARG_HTTP2_MIN_RECV_PING_INTERVAL_WITHOUT_DATA_MS
 const defaultKeepaliveMinTime = config.Duration(time.Second * 300)
 
+type GRPCEnforcementPolicy struct {
+	PermitKeepaliveWithoutCalls bool            `toml:"permit_keepalive_without_calls"`
+	KeepaliveMinTime            config.Duration `toml:"keepalive_minimum_time"`
+}
+
 // CiscoTelemetryMDT plugin for IOS XR, IOS XE and NXOS platforms
 type CiscoTelemetryMDT struct {
 	// Common configuration
-	Transport                   string
-	ServiceAddress              string            `toml:"service_address"`
-	MaxMsgSize                  int               `toml:"max_msg_size"`
-	Aliases                     map[string]string `toml:"aliases"`
-	Dmes                        map[string]string `toml:"dmes"`
-	EmbeddedTags                []string          `toml:"embedded_tags"`
-	PermitKeepaliveWithoutCalls bool              `toml:"permit_keepalive_without_calls"`
-	KeepaliveMinTime            config.Duration   `toml:"keepalive_minimum_time"`
+	Transport         string
+	ServiceAddress    string                `toml:"service_address"`
+	MaxMsgSize        int                   `toml:"max_msg_size"`
+	Aliases           map[string]string     `toml:"aliases"`
+	Dmes              map[string]string     `toml:"dmes"`
+	EmbeddedTags      []string              `toml:"embedded_tags"`
+	EnforcementPolicy GRPCEnforcementPolicy `toml:"grpc_enforcement_policy"`
 
 	Log telegraf.Logger
 
@@ -185,11 +189,11 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 			opts = append(opts, grpc.MaxRecvMsgSize(c.MaxMsgSize))
 		}
 
-		if c.PermitKeepaliveWithoutCalls || c.KeepaliveMinTime != defaultKeepaliveMinTime {
+		if c.EnforcementPolicy.PermitKeepaliveWithoutCalls || (c.EnforcementPolicy.KeepaliveMinTime != 0 && c.EnforcementPolicy.KeepaliveMinTime != defaultKeepaliveMinTime) {
 			// Only set if either parameter does not match defaults
 			opts = append(opts, grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-				MinTime:             time.Duration(c.KeepaliveMinTime),
-				PermitWithoutStream: c.PermitKeepaliveWithoutCalls,
+				MinTime:             time.Duration(c.EnforcementPolicy.KeepaliveMinTime),
+				PermitWithoutStream: c.EnforcementPolicy.PermitKeepaliveWithoutCalls,
 			}))
 		}
 
@@ -719,7 +723,6 @@ func init() {
 		return &CiscoTelemetryMDT{
 			Transport:        "grpc",
 			ServiceAddress:   "127.0.0.1:57000",
-			KeepaliveMinTime: defaultKeepaliveMinTime,
 		}
 	})
 }

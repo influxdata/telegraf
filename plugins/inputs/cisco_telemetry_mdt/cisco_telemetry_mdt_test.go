@@ -781,7 +781,10 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 }
 
 func TestGRPCDialoutKeepalive(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0", PermitKeepaliveWithoutCalls: true}
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0", EnforcementPolicy: GRPCEnforcementPolicy{
+		PermitKeepaliveWithoutCalls: true,
+		KeepaliveMinTime: 0,
+	}}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	require.NoError(t, err)

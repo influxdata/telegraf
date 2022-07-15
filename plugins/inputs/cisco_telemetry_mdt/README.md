@@ -27,16 +27,6 @@ later.
  ## Grpc Maximum Message Size, default is 4MB, increase the size.
  max_msg_size = 4000000
 
- ## GRPC permit keepalives without calls, set to true if your clients are
- ## sending pings without calls in-flight. This can sometimes happen on IOS-XE
- ## devices where the GRPC connection is left open but subscriptions have been
- ## removed, and adding subsequent subscriptions does not keep a stable session.
- # permit_keepalive_without_calls = false
-
- ## GRPC minimum timeout between successive pings, decreasing this value may 
- ## help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
- # keepalive_minimum_time = "5m"
-
  ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
  # tls_key = "/etc/telegraf/key.pem"
@@ -65,6 +55,18 @@ later.
 #    dnpath = '{"Name": "show ip route summary","prop": [{"Key": "routes","Value": "string"}, {"Key": "best-paths","Value": "string"}]}'
 #    dnpath2 = '{"Name": "show processes cpu","prop": [{"Key": "kernel_percent","Value": "float"}, {"Key": "idle_percent","Value": "float"}, {"Key": "process","Value": "string"}, {"Key": "user_percent","Value": "float"}, {"Key": "onesec","Value": "float"}]}'
 #    dnpath3 = '{"Name": "show processes memory physical","prop": [{"Key": "processname","Value": "string"}]}'
+
+ ## Additional GRPC connection settings.
+ [inputs.cisco_telemetry_mdt.grpc_enforcement_policy]
+  ## GRPC permit keepalives without calls, set to true if your clients are
+  ## sending pings without calls in-flight. This can sometimes happen on IOS-XE
+  ## devices where the GRPC connection is left open but subscriptions have been
+  ## removed, and adding subsequent subscriptions does not keep a stable session.
+  # permit_keepalive_without_calls = false
+
+  ## GRPC minimum timeout between successive pings, decreasing this value may 
+  ## help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
+  # keepalive_minimum_time = "5m"
 ```
 
 ## Metrics
