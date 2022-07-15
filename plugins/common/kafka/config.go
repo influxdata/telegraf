@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"github.com/Shopify/sarama"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
@@ -50,8 +51,9 @@ type Config struct {
 	Version          string `toml:"version"`
 	ClientID         string `toml:"client_id"`
 	CompressionCodec int    `toml:"compression_codec"`
+	EnableTLS        *bool  `toml:"enable_tls"`
 
-	EnableTLS *bool `toml:"enable_tls" deprecated:"1.17.0;option is ignored"`
+	Log telegraf.Logger `toml:"-"`
 
 	// Disable full metadata fetching
 	MetadataFull *bool `toml:"metadata_full"`
@@ -76,6 +78,10 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 
+	if k.EnableTLS != nil && *k.EnableTLS {
+		config.Net.TLS.Enable = true
+	}
+
 	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -83,7 +89,13 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
-		config.Net.TLS.Enable = true
+
+		// To maintain backwards compatibility, if the enable_tls option is not
+		// set TLS is enabled if a non-default TLS config is used.
+		if k.EnableTLS == nil {
+			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
+			config.Net.TLS.Enable = true
+		}
 	}
 
 	if k.MetadataFull != nil {
