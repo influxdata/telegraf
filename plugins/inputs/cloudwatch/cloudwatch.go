@@ -4,7 +4,6 @@ package cloudwatch
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -13,8 +12,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	cwClient "github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/smithy-go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -55,7 +56,6 @@ type CloudWatch struct {
 	CacheTTL       config.Duration `toml:"cache_ttl"`
 	RateLimit      int             `toml:"ratelimit"`
 	RecentlyActive string          `toml:"recently_active"`
-	BatchSize      int             `toml:"batch_size"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -147,10 +147,12 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	results := map[string][]types.MetricDataResult{}
 
 	for namespace, namespacedQueries := range queries {
+		// 500 is the maximum number of metric data queries a `GetMetricData` request can contain.
+		batchSize := 500
 		var batches [][]types.MetricDataQuery
 
-		for c.BatchSize < len(namespacedQueries) {
-			namespacedQueries, batches = namespacedQueries[c.BatchSize:], append(batches, namespacedQueries[0:c.BatchSize:c.BatchSize])
+		for batchSize < len(namespacedQueries) {
+			namespacedQueries, batches = namespacedQueries[batchSize:], append(batches, namespacedQueries[0:batchSize:batchSize])
 		}
 		batches = append(batches, namespacedQueries)
 
@@ -160,14 +162,37 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 			go func(n string, inm []types.MetricDataQuery) {
 				defer wg.Done()
 				result, err := c.gatherMetrics(c.getDataInputs(inm))
-				if err != nil {
-					acc.AddError(err)
+				if err == nil {
+					appendResults(&rLock, n, results, result)
 					return
 				}
 
-				rLock.Lock()
-				results[n] = append(results[n], result...)
-				rLock.Unlock()
+				// if there was an error, check for a 413 and if so split the
+				// metrics in half and try again
+				if opErr, ok := err.(*smithy.OperationError); ok {
+					if httpErr, ok := opErr.Err.(*awshttp.ResponseError); ok {
+						if httpErr.HTTPStatusCode() == http.StatusRequestEntityTooLarge {
+							midpoint := len(inm) / 2
+							result, err := c.gatherMetrics(c.getDataInputs(inm[:midpoint]))
+							if err != nil {
+								acc.AddError(err)
+								return
+							}
+							appendResults(&rLock, n, results, result)
+
+							result, err = c.gatherMetrics(c.getDataInputs(inm[midpoint:]))
+							if err != nil {
+								acc.AddError(err)
+								return
+							}
+
+							appendResults(&rLock, n, results, result)
+							return
+						}
+					}
+				}
+
+				acc.AddError(err)
 			}(namespace, batches[i])
 		}
 	}
@@ -175,6 +200,12 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	wg.Wait()
 
 	return c.aggregateMetrics(acc, results)
+}
+
+func appendResults(rLock *sync.Mutex, n string, results map[string][]types.MetricDataResult, result []types.MetricDataResult) {
+	rLock.Lock()
+	results[n] = append(results[n], result...)
+	rLock.Unlock()
 }
 
 func (c *CloudWatch) initializeCloudWatch() error {
@@ -470,7 +501,7 @@ func (c *CloudWatch) gatherMetrics(
 	for {
 		resp, err := c.client.GetMetricData(context.Background(), params)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get metric data: %v", err)
+			return nil, err
 		}
 
 		results = append(results, resp.MetricDataResults...)
@@ -529,7 +560,6 @@ func New() *CloudWatch {
 		CacheTTL:  config.Duration(time.Hour),
 		RateLimit: 25,
 		Timeout:   config.Duration(time.Second * 5),
-		BatchSize: 500,
 	}
 }
 

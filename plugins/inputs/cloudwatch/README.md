@@ -91,12 +91,6 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Timeout for http requests made by the cloudwatch client.
   # timeout = "5s"
 
-  ## Batch Size
-  ## The size of each batch to send requests to Cloudwatch. 500 is the
-  ## suggested largest size. If a request gets to large (413 errors), consider
-  ## reducing this amount.
-  # batch_size = 500
-
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.
   # statistic_include = [ "average", "sum", "minimum", "maximum", sample_count" ]

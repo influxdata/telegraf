@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	cwClient "github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/smithy-go"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
@@ -90,6 +93,99 @@ func (m *mockGatherCloudWatchClient) GetMetricData(_ context.Context, params *cw
 	}, nil
 }
 
+type mockGatherCloudWatchClientTooLarge struct{}
+
+func (m *mockGatherCloudWatchClientTooLarge) GetMetricData(_ context.Context, params *cwClient.GetMetricDataInput, x ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
+	if len(params.MetricDataQueries) == 5 {
+		return nil, &smithy.OperationError{
+			ServiceID:     "",
+			OperationName: "CloudWatch",
+			Err: &awshttp.ResponseError{
+				ResponseError: &smithyhttp.ResponseError{
+					Response: &smithyhttp.Response{
+						Response: &http.Response{
+							StatusCode: http.StatusRequestEntityTooLarge,
+						},
+					},
+				},
+				RequestID: "68ce0c4c-b416-4dd8-9fa3-0218c634794f",
+			},
+		}
+	} else if len(params.MetricDataQueries) == 2 {
+		return &cwClient.GetMetricDataOutput{
+			MetricDataResults: []types.MetricDataResult{
+				{
+					Id:         aws.String("minimum_0_0"),
+					Label:      aws.String("latency_minimum"),
+					StatusCode: types.StatusCodeComplete,
+					Timestamps: []time.Time{
+						*params.EndTime,
+					},
+					Values: []float64{0.1},
+				},
+				{
+					Id:         aws.String("maximum_0_0"),
+					Label:      aws.String("latency_maximum"),
+					StatusCode: types.StatusCodeComplete,
+					Timestamps: []time.Time{
+						*params.EndTime,
+					},
+					Values: []float64{0.3},
+				},
+			},
+		}, nil
+	} else {
+		return &cwClient.GetMetricDataOutput{
+			MetricDataResults: []types.MetricDataResult{
+				{
+					Id:         aws.String("average_0_0"),
+					Label:      aws.String("latency_average"),
+					StatusCode: types.StatusCodeComplete,
+					Timestamps: []time.Time{
+						*params.EndTime,
+					},
+					Values: []float64{0.2},
+				},
+				{
+					Id:         aws.String("sum_0_0"),
+					Label:      aws.String("latency_sum"),
+					StatusCode: types.StatusCodeComplete,
+					Timestamps: []time.Time{
+						*params.EndTime,
+					},
+					Values: []float64{123},
+				},
+				{
+					Id:         aws.String("sample_count_0_0"),
+					Label:      aws.String("latency_sample_count"),
+					StatusCode: types.StatusCodeComplete,
+					Timestamps: []time.Time{
+						*params.EndTime,
+					},
+					Values: []float64{100},
+				},
+			},
+		}, nil
+	}
+}
+
+func (m *mockGatherCloudWatchClientTooLarge) ListMetrics(_ context.Context, params *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
+	return &cwClient.ListMetricsOutput{
+		Metrics: []types.Metric{
+			{
+				Namespace:  params.Namespace,
+				MetricName: aws.String("Latency"),
+				Dimensions: []types.Dimension{
+					{
+						Name:  aws.String("LoadBalancerName"),
+						Value: aws.String("p-example"),
+					},
+				},
+			},
+		},
+	}, nil
+}
+
 func TestSnakeCase(t *testing.T) {
 	require.Equal(t, "cluster_name", snakeCase("Cluster Name"))
 	require.Equal(t, "broker_id", snakeCase("Broker ID"))
@@ -106,7 +202,6 @@ func TestGather(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
-		BatchSize: 500,
 	}
 
 	var acc testutil.Accumulator
@@ -130,6 +225,26 @@ func TestGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
 }
 
+func TestGatherTooLarge(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := config.Duration(duration)
+	c := &CloudWatch{
+		CredentialConfig: internalaws.CredentialConfig{
+			Region: "us-east-1",
+		},
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 200,
+	}
+
+	var acc testutil.Accumulator
+
+	require.NoError(t, c.Init())
+	c.client = &mockGatherCloudWatchClientTooLarge{}
+	require.NoError(t, acc.GatherError(c.Gather))
+}
+
 func TestGather_MultipleNamespaces(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
@@ -138,7 +253,6 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 		Delay:      internalDuration,
 		Period:     internalDuration,
 		RateLimit:  200,
-		BatchSize:  500,
 	}
 
 	var acc testutil.Accumulator
@@ -215,7 +329,6 @@ func TestSelectMetrics(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
-		BatchSize: 500,
 		Metrics: []*Metric{
 			{
 				MetricNames: []string{"Latency", "RequestCount"},
@@ -261,7 +374,6 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Namespaces: []string{namespace},
 		Delay:      internalDuration,
 		Period:     internalDuration,
-		BatchSize:  500,
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -301,7 +413,6 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Namespaces: []string{namespace},
 		Delay:      internalDuration,
 		Period:     internalDuration,
-		BatchSize:  500,
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -341,7 +452,6 @@ func TestUpdateWindow(t *testing.T) {
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
-		BatchSize: 500,
 	}
 
 	now := time.Now()
@@ -370,7 +480,6 @@ func TestProxyFunction(t *testing.T) {
 		HTTPProxy: proxy.HTTPProxy{
 			HTTPProxyURL: "http://www.penguins.com",
 		},
-		BatchSize: 500,
 	}
 
 	proxyFunction, err := c.HTTPProxy.Proxy()
@@ -388,7 +497,6 @@ func TestCombineNamespaces(t *testing.T) {
 	c := &CloudWatch{
 		Namespace:  "AWS/ELB",
 		Namespaces: []string{"AWS/EC2", "AWS/Billing"},
-		BatchSize:  500,
 	}
 
 	require.NoError(t, c.Init())
