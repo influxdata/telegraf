@@ -153,7 +153,7 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 				return connErr
 			}
 
-			if n.jsConn == nil {
+			if n.jsConn != nil {
 				for _, jsSub := range n.JsSubjects {
 					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
 						n.in <- m
