@@ -6,6 +6,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 )
 
 type mockAzureResourcesClient struct{}
@@ -27,12 +28,19 @@ const (
 	testResourceType2 = "Microsoft.Test/type2"
 	testResourceType3 = "Microsoft.Test/type3"
 
-	testResourceGroup1ResourceType1Resource1     = "resourceGroups/" + testResourceGroup1 + "/providers/" + testResourceType1 + "/resource1"
-	testResourceGroup1ResourceType2Resource2     = "resourceGroups/" + testResourceGroup1 + "/providers/" + testResourceType2 + "/resource2"
-	testResourceGroup2ResourceType1Resource3     = "resourceGroups/" + testResourceGroup2 + "/providers/" + testResourceType1 + "/resource3"
-	testResourceGroup2ResourceType2Resource4     = "resourceGroups/" + testResourceGroup2 + "/providers/" + testResourceType2 + "/resource4"
-	testResourceGroup2ResourceType2Resource5     = "resourceGroups/" + testResourceGroup2 + "/providers/" + testResourceType2 + "/resource5"
-	testResourceGroup2ResourceType2Resource6     = "resourceGroups/" + testResourceGroup2 + "/providers/" + testResourceType2 + "/resource6"
+	testResource1Name = "resource1"
+	testResource2Name = "resource2"
+	testResource3Name = "resource3"
+	testResource4Name = "resource4"
+	testResource5Name = "resource5"
+	testResource6Name = "resource6"
+
+	testResourceGroup1ResourceType1Resource1     = "resourceGroups/" + testResourceGroup1 + "/providers/" + testResourceType1 + "/" + testResource1Name
+	testResourceGroup1ResourceType2Resource2     = "resourceGroups/" + testResourceGroup1 + "/providers/" + testResourceType2 + "/" + testResource2Name
+	testResourceGroup2ResourceType1Resource3     = "resourceGroups/" + testResourceGroup2 + "/providers/" + testResourceType1 + "/" + testResource3Name
+	testResourceGroup2ResourceType2Resource4     = "resourceGroups/" + testResourceGroup2 + "/providers/" + testResourceType2 + "/" + testResource4Name
+	testResourceGroup2ResourceType2Resource5     = "resourceGroups/" + testResourceGroup2 + "/providers/" + testResourceType2 + "/" + testResource5Name
+	testResourceGroup2ResourceType2Resource6     = "resourceGroups/" + testResourceGroup2 + "/providers/" + testResourceType2 + "/" + testResource6Name
 	testFullResourceGroup1ResourceType1Resource1 = "/subscriptions/" + testSubscriptionID + "/" + testResourceGroup1ResourceType1Resource1
 	testFullResourceGroup1ResourceType2Resource2 = "/subscriptions/" + testSubscriptionID + "/" + testResourceGroup1ResourceType2Resource2
 	testFullResourceGroup2ResourceType1Resource3 = "/subscriptions/" + testSubscriptionID + "/" + testResourceGroup2ResourceType1Resource3
@@ -40,23 +48,21 @@ const (
 	testFullResourceGroup2ResourceType2Resource5 = "/subscriptions/" + testSubscriptionID + "/" + testResourceGroup2ResourceType2Resource5
 	testFullResourceGroup2ResourceType2Resource6 = "/subscriptions/" + testSubscriptionID + "/" + testResourceGroup2ResourceType2Resource6
 
-	testMetric1             = "metric1"
-	testMetric2             = "metric2"
-	testMetric3             = "metric3"
-	testMetric3WithComma    = ",metric3,"
-	testMetric3ChangedComma = "%2metric3%2"
-	testInvalidMetric       = "invalid"
-	testInvalidAggregation  = "Invalid"
+	testMetric1            = "metric1"
+	testMetric2            = "metric2"
+	testMetric3            = "metric3"
+	testInvalidMetric      = "invalid"
+	testInvalidAggregation = "Invalid"
 
 	testResourceRegion = "eastus"
 )
 
-func setMockAzureClients() *azureClients {
-	return &azureClients{
-		ctx:                     context.Background(),
-		resourcesClient:         &mockAzureResourcesClient{},
-		metricDefinitionsClient: &mockAzureMetricDefinitionsClient{},
-		metricsClient:           &mockAzureMetricsClient{},
+func setMockAzureClients() *receiver.AzureClients {
+	return &receiver.AzureClients{
+		Ctx:                     context.Background(),
+		ResourcesClient:         &mockAzureResourcesClient{},
+		MetricDefinitionsClient: &mockAzureMetricDefinitionsClient{},
+		MetricsClient:           &mockAzureMetricsClient{},
 	}
 }
 

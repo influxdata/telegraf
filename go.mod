@@ -9,7 +9,6 @@ require (
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.17
 	github.com/Azure/azure-kusto-go v0.5.2
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor v0.4.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
@@ -96,6 +95,7 @@ require (
 	github.com/kardianos/service v1.2.1
 	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
+	github.com/logzio/azure-monitor-metrics-receiver v1.0.0
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 	github.com/mdlayher/apcupsd v0.0.0-20200608131503-2bf01da7bf1b
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
@@ -128,7 +128,7 @@ require (
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.2
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.12.0
 	github.com/tidwall/gjson v1.10.2
@@ -175,6 +175,7 @@ require (
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go v61.2.0+incompatible // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.21.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v0.9.1 // indirect
 	github.com/Azure/azure-storage-blob-go v0.14.0 // indirect
 	github.com/Azure/go-amqp v0.17.0 // indirect
@@ -320,7 +321,7 @@ require (
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
 	github.com/signalfx/sapm-proto v0.7.2 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
+	github.com/stretchr/objx v0.4.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
@@ -361,7 +362,7 @@ require (
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.2.2 // indirect
 	k8s.io/klog/v2 v2.30.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect

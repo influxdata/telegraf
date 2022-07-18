@@ -1,8 +1,9 @@
 # Azure Monitor Input Plugin
 
-The `azure_monitor` plugin gathers metrics for each resource from Azure Monitor API.
+The `azure_monitor` plugin gathers metrics for each resource from Azure resources using Azure Monitor API.
+Uses Logz.io Azure-Monitor-Metrics-Receiver package - an SDK wrapper for Azure Monitor SDK.
 
-## Azure Credentials
+## Azure Credential
 
 This plugin uses `client_id`, `client_secret` and `tenant_id` for authentication (access token),
 and `subscription_id` is for accessing Azure resources.

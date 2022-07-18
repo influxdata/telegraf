@@ -1,13 +1,13 @@
 package azure_monitor
 
 import (
-	"context"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"sync"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 )
 
 type AzureMonitor struct {
@@ -20,7 +20,8 @@ type AzureMonitor struct {
 	SubscriptionTargets  []*Resource            `toml:"subscription_target"`
 	Log                  telegraf.Logger        `toml:"-"`
 
-	azureClients *azureClients
+	receiver     *receiver.AzureMonitorMetricsReceiver
+	azureClients *receiver.AzureClients
 }
 
 type ResourceTarget struct {
@@ -40,31 +41,7 @@ type Resource struct {
 	Aggregations []string `toml:"aggregations"`
 }
 
-type azureClients struct {
-	ctx                     context.Context
-	resourcesClient         resourcesClient
-	metricDefinitionsClient metricDefinitionsClient
-	metricsClient           metricsClient
-}
-
-type azureResourcesClient struct {
-	client *armresources.Client
-}
-
-type resourcesClient interface {
-	List(context.Context, *armresources.ClientListOptions) ([]*armresources.ClientListResponse, error)
-	ListByResourceGroup(context.Context, string, *armresources.ClientListByResourceGroupOptions) ([]*armresources.ClientListByResourceGroupResponse, error)
-}
-
-type metricDefinitionsClient interface {
-	List(context.Context, string, *armmonitor.MetricDefinitionsClientListOptions) (armmonitor.MetricDefinitionsClientListResponse, error)
-}
-
-type metricsClient interface {
-	List(context.Context, string, *armmonitor.MetricsClientListOptions) (armmonitor.MetricsClientListResponse, error)
-}
-
-var sampleConfig = `
+const sampleConfig = `
   # can be found under Overview->Essentials in the Azure portal for your application/service
   subscription_id = "<<SUBSCRIPTION_ID>>"
   # can be obtained by registering an application under Azure Active Directory
@@ -74,7 +51,7 @@ var sampleConfig = `
   # can be found under Azure Active Directory->Properties
   tenant_id = "<<TENANT_ID>>"
 
-  # resource target #1 to collect metrics from
+  # resource target #1 to collect metrics of
   [[inputs.azure_monitor.resource_target]]
     # can be found undet Overview->Essentials->JSON View in the Azure portal for your application/service
     # must start with 'resourceGroups/...' ('/subscriptions/xxxxxxxx-xxxx-xxxx-xxx-xxxxxxxxxxxx'
@@ -88,13 +65,13 @@ var sampleConfig = `
     # leave the array empty to collect all aggregation types values for each metric
     aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
     
-  # resource target #2 to collect metrics from
+  # resource target #2 to collect metrics of
   [[inputs.azure_monitor.resource_target]]
     resource_id = "<<RESOURCE_ID>>"
     metrics = [ "<<METRIC>>", "<<METRIC>>" ]
     aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
 
-  # resource group target #1 to collect metrics from resources under it with resource type
+  # resource group target #1 to collect metrics of resources under it with resource type
   [[inputs.azure_monitor.resource_group_target]]
     # the resource group name
     resource_group = "<<RESOURCE_GROUP_NAME>>"
@@ -112,7 +89,7 @@ var sampleConfig = `
       metrics = [ "<<METRIC>>", "<<METRIC>>" ]
       aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
       
-  # resource group target #2 to collect metrics from resources under it with resource type
+  # resource group target #2 to collect metrics of resources under it with resource type
   [[inputs.azure_monitor.resource_group_target]]
     resource_group = "<<RESOURCE_GROUP_NAME>>"
 
@@ -121,13 +98,13 @@ var sampleConfig = `
       metrics = [ "<<METRIC>>", "<<METRIC>>" ]
       aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
   
-  # subscription target #1 to collect metrics from resources under it with resource type    
+  # subscription target #1 to collect metrics of resources under it with resource type    
   [[inputs.azure_monitor.subscription_target]]
     resource_type = "<<RESOURCE_TYPE>>"
     metrics = [ "<<METRIC>>", "<<METRIC>>" ]
     aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
     
-  # subscription target #2 to collect metrics from resources under it with resource type    
+  # subscription target #2 to collect metrics of resources under it with resource type    
   [[inputs.azure_monitor.subscription_target]]
     resource_type = "<<RESOURCE_TYPE>>"
     metrics = [ "<<METRIC>>", "<<METRIC>>" ]
@@ -135,7 +112,7 @@ var sampleConfig = `
 `
 
 func (am *AzureMonitor) Description() string {
-	return "Gather Azure resources metrics from Azure Monitor"
+	return "Gather Azure resources metrics using Azure Monitor API"
 }
 
 func (am *AzureMonitor) SampleConfig() string {
@@ -144,69 +121,111 @@ func (am *AzureMonitor) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (am *AzureMonitor) Init() error {
-	if err := am.setAzureClients(); err != nil {
-		return fmt.Errorf("error setting azure clients: %v", err)
+	if am.azureClients == nil {
+		azureClients, err := receiver.CreateAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID)
+		if err != nil {
+			return err
+		}
+
+		am.azureClients = azureClients
 	}
 
-	if err := am.checkConfigValidation(); err != nil {
-		return fmt.Errorf("config is not valid: %v", err)
+	if err := am.setReceiver(); err != nil {
+		return fmt.Errorf("error setting Azure Monitor receiver: %v", err)
 	}
 
-	am.addPrefixToResourceTargetsResourceID()
-
-	if err := am.createResourceTargetsFromResourceGroupTargets(); err != nil {
+	if err := am.receiver.CreateResourceTargetsFromResourceGroupTargets(); err != nil {
 		return fmt.Errorf("error creating resource targets from resource group targets: %v", err)
 	}
 
-	if err := am.createResourceTargetsFromSubscriptionTargets(); err != nil {
+	if err := am.receiver.CreateResourceTargetsFromSubscriptionTargets(); err != nil {
 		return fmt.Errorf("error creating resource targets from subscription targets: %v", err)
 	}
 
-	if err := am.checkResourceTargetsMetricsValidation(); err != nil {
+	if err := am.receiver.CheckResourceTargetsMetricsValidation(); err != nil {
 		return fmt.Errorf("error checking resource targets metrics validation: %v", err)
 	}
 
-	if err := am.setResourceTargetsMetrics(); err != nil {
+	if err := am.receiver.SetResourceTargetsMetrics(); err != nil {
 		return fmt.Errorf("error setting resource targets metrics: %v", err)
 	}
 
-	if err := am.checkResourceTargetsMetricsMinTimeGrain(); err != nil {
-		return fmt.Errorf("error checking resource targets metrics min time grain: %v", err)
+	if err := am.receiver.SplitResourceTargetsMetricsByMinTimeGrain(); err != nil {
+		return fmt.Errorf("error spliting resource targets metrics by min time grain: %v", err)
 	}
 
-	am.checkResourceTargetsMaxMetrics()
-	am.changeResourceTargetsMetricsWithComma()
-	am.setResourceTargetsAggregations()
+	am.receiver.SplitResourceTargetsWithMoreThanMaxMetrics()
+	am.receiver.SetResourceTargetsAggregations()
 
-	am.Log.Debug("Total resource targets: ", len(am.ResourceTargets))
+	am.Log.Debug("Total resource targets: ", len(am.receiver.Targets.ResourceTargets))
 
 	return nil
 }
 
 func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
 	am.collectResourceTargetsMetrics(acc)
-
 	return nil
 }
 
-func (am *AzureMonitor) setAzureClients() error {
-	if am.azureClients != nil {
-		return nil
+func (am *AzureMonitor) setReceiver() error {
+	resourceTargets := make([]*receiver.ResourceTarget, 0)
+	resourceGroupTargets := make([]*receiver.ResourceGroupTarget, 0)
+	subscriptionTargets := make([]*receiver.Resource, 0)
+
+	for _, target := range am.ResourceTargets {
+		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
 
-	credential, err := azidentity.NewClientSecretCredential(am.TenantID, am.ClientID, am.ClientSecret, nil)
+	for _, target := range am.ResourceGroupTargets {
+		resources := make([]*receiver.Resource, 0)
+
+		for _, resource := range target.Resources {
+			resources = append(resources, receiver.NewResource(resource.ResourceType, resource.Metrics, resource.Aggregations))
+		}
+
+		resourceGroupTargets = append(resourceGroupTargets, receiver.NewResourceGroupTarget(target.ResourceGroup, resources))
+	}
+
+	for _, target := range am.SubscriptionTargets {
+		subscriptionTargets = append(subscriptionTargets, receiver.NewResource(target.ResourceType, target.Metrics, target.Aggregations))
+	}
+
+	targets := receiver.NewTargets(resourceTargets, resourceGroupTargets, subscriptionTargets)
+	rec, err := receiver.NewAzureMonitorMetricsReceiver(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, targets, am.azureClients)
 	if err != nil {
-		return fmt.Errorf("error creating Azure client credentials: %v", err)
+		return err
 	}
 
-	am.azureClients = &azureClients{
-		ctx:                     context.Background(),
-		resourcesClient:         newAzureResourcesClient(am.SubscriptionID, credential),
-		metricsClient:           armmonitor.NewMetricsClient(credential, nil),
-		metricDefinitionsClient: armmonitor.NewMetricDefinitionsClient(credential, nil),
-	}
-
+	am.receiver = rec
 	return nil
+}
+
+func (am *AzureMonitor) collectResourceTargetsMetrics(acc telegraf.Accumulator) {
+	var waitGroup sync.WaitGroup
+
+	for _, target := range am.receiver.Targets.ResourceTargets {
+		am.Log.Debug("Collecting metrics for resource target ", target.ResourceID)
+		waitGroup.Add(1)
+
+		go func(target *receiver.ResourceTarget) {
+			defer waitGroup.Done()
+
+			collectedMetrics, notCollectedMetrics, err := am.receiver.CollectResourceTargetMetrics(target)
+			if err != nil {
+				acc.AddError(fmt.Errorf("%v", err))
+			}
+
+			for _, collectedMetric := range collectedMetrics {
+				acc.AddFields(collectedMetric.Name, collectedMetric.Fields, collectedMetric.Tags, time.Now())
+			}
+
+			for _, notCollectedMetric := range notCollectedMetrics {
+				am.Log.Info("Did not get any metric value from Azure Monitor API for the metric ID ", notCollectedMetric)
+			}
+		}(target)
+
+		waitGroup.Wait()
+	}
 }
 
 func init() {
