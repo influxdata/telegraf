@@ -1,51 +1,52 @@
 # Azure Monitor Input Plugin
 
-The `azure_monitor` plugin, gathers metrics of each Azure 
-resource using Azure Monitor API. Uses **Logz.io 
-azure-monitor-metrics-receiver** package - 
+The `azure_monitor` plugin, gathers metrics of each Azure
+resource using Azure Monitor API. Uses **Logz.io
+azure-monitor-metrics-receiver** package -
 an SDK wrapper for Azure Monitor SDK.
 
 ## Azure Credential
 
-This plugin uses `client_id`, `client_secret` and `tenant_id` 
-for authentication (access token), and `subscription_id` 
+This plugin uses `client_id`, `client_secret` and `tenant_id`
+for authentication (access token), and `subscription_id`
 is for accessing Azure resources.
 
 ## Property Locations
 
-`subscription_id` can be found under **Overview**->**Essentials** in 
+`subscription_id` can be found under **Overview**->**Essentials** in
 the Azure portal for your application/service.
 
-`client_id` and `client_secret` can be obtained by registering an 
+`client_id` and `client_secret` can be obtained by registering an
 application under Azure Active Directory.
 
 `tenant_id` can be found under **Azure Active Directory**->**Properties**.
 
-resource target `resource_id` can be found under 
+resource target `resource_id` can be found under
 **Overview**->**Essentials**->**JSON View** (link) in the Azure
 portal for your application/service.
 
 ## More Information
 
 To see a table of resource types and their metrics, please use this link:
-<https://docs.microsoft.com/en-us/azure/
-azure-monitor/essentials/metrics-supported>
+
+`https://docs.microsoft.com/en-us/azure/azure-monitor/
+essentials/metrics-supported`
 
 ## Rate Limits
 
 Azure API read limit is 12000 requests per hour.
-Please make sure the total number of metrics you are requesting is proportional 
+Please make sure the total number of metrics you are requesting is proportional
 to your time interval.
 
 ## Usage
 
-Use `resource_targets` to collect metrics from specific resources using 
+Use `resource_targets` to collect metrics from specific resources using
 resource id.
 
-Use `resource_group_targets` to collect metrics from resources under the 
+Use `resource_group_targets` to collect metrics from resources under the
 resource group with resource type.
 
-Use `subscription_targets` to collect metrics from resources under the 
+Use `subscription_targets` to collect metrics from resources under the
 subscription with resource type.
 
 ## Configuration
