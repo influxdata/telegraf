@@ -1,10 +1,12 @@
 # Nvidia System Management Interface (SMI) Input Plugin
 
-This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvidia-system-management-interface) binary to pull GPU stats including memory and GPU usage, temp and other.
+This plugin uses a query on the
+[`nvidia-smi`](https://developer.nvidia.com/nvidia-system-management-interface)
+binary to pull GPU stats including memory and GPU usage, temp and other.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
   ## Optional: path to nvidia-smi binary, defaults "/usr/bin/nvidia-smi"
@@ -22,10 +24,12 @@ On Linux, `nvidia-smi` is generally located at `/usr/bin/nvidia-smi`
 
 ### Windows
 
-On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe`
-On Windows 10, you may also find this located here `C:\Windows\System32\nvidia-smi.exe`
+On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA
+Corporation\NVSMI\nvidia-smi.exe` On Windows 10, you may also find this located
+here `C:\Windows\System32\nvidia-smi.exe`
 
-You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe`
+You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program
+Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe`
 
 ## Metrics
 
@@ -64,7 +68,8 @@ You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program
 
 ## Sample Query
 
-The below query could be used to alert on the average temperature of the your GPUs over the last minute
+The below query could be used to alert on the average temperature of the your
+GPUs over the last minute
 
 ```sql
 SELECT mean("temperature_gpu") FROM "nvidia_smi" WHERE time > now() - 5m GROUP BY time(1m), "index", "name", "host"
@@ -98,7 +103,11 @@ nvidia_smi,compute_mode=Default,host=8218cf,index=2,name=GeForce\ GTX\ 1080,psta
 
 ## Limitations
 
-Note that there seems to be an issue with getting current memory clock values when the memory is overclocked.
-This may or may not apply to everyone but it's confirmed to be an issue on an EVGA 2080 Ti.
+Note that there seems to be an issue with getting current memory clock values
+when the memory is overclocked.  This may or may not apply to everyone but it's
+confirmed to be an issue on an EVGA 2080 Ti.
 
-**NOTE:** For use with docker either generate your own custom docker image based on nvidia/cuda which also installs a telegraf package or use [volume mount binding](https://docs.docker.com/storage/bind-mounts/) to inject the required binary into the docker container.
+**NOTE:** For use with docker either generate your own custom docker image based
+on nvidia/cuda which also installs a telegraf package or use [volume mount
+binding](https://docs.docker.com/storage/bind-mounts/) to inject the required
+binary into the docker container.

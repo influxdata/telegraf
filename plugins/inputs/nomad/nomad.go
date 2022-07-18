@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nomad
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Nomad configuration object
 type Nomad struct {
@@ -25,19 +31,6 @@ type Nomad struct {
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
-var sampleConfig = `
-  ## URL for the Nomad agent
-  # url = "http://127.0.0.1:4646"
-
-  ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = /path/to/cafile
-  # tls_cert = /path/to/certfile
-  # tls_key = /path/to/keyfile
-`
-
 func init() {
 	inputs.Add("nomad", func() telegraf.Input {
 		return &Nomad{
@@ -46,14 +39,8 @@ func init() {
 	})
 }
 
-// SampleConfig returns a sample config
-func (n *Nomad) SampleConfig() string {
+func (*Nomad) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns a description of the plugin
-func (n *Nomad) Description() string {
-	return "Read metrics from the Nomad API"
 }
 
 func (n *Nomad) Init() error {

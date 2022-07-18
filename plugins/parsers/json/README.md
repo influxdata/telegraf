@@ -1,10 +1,11 @@
-# JSON
+# JSON Parser Plugin
 
 The JSON data format parses a [JSON][json] object or an array of objects into
 metric fields.
 
-**NOTE:** All JSON numbers are converted to float fields.  JSON strings and booleans are
-ignored unless specified in the `tag_key` or `json_string_fields` options.
+**NOTE:** All JSON numbers are converted to float fields.  JSON strings and
+booleans are ignored unless specified in the `tag_key` or `json_string_fields`
+options.
 
 ## Configuration
 
@@ -100,11 +101,11 @@ the Go "reference time" which is defined to be the specific time:
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
 
-When parsing times that don't include a timezone specifier, times are assumed
-to be UTC. To default to another timezone, or to local time, specify the
-`json_timezone` option.  This option should be set to a
-[Unix TZ value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
-such as `America/New_York`, to `Local` to utilize the system timezone, or to `UTC`.
+When parsing times that don't include a timezone specifier, times are assumed to
+be UTC. To default to another timezone, or to local time, specify the
+`json_timezone` option.  This option should be set to a [Unix TZ
+value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), such as
+`America/New_York`, to `Local` to utilize the system timezone, or to `UTC`.
 
 ## Examples
 

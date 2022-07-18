@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package knx_listener
 
 import (
+	_ "embed"
 	"fmt"
 	"reflect"
 	"sync"
@@ -11,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type KNXInterface interface {
 	Inbound() <-chan knx.GroupEvent
@@ -42,33 +48,8 @@ type KNXListener struct {
 	wg  sync.WaitGroup
 }
 
-func (kl *KNXListener) Description() string {
-	return "Listener capable of handling KNX bus messages provided through a KNX-IP Interface."
-}
-
-func (kl *KNXListener) SampleConfig() string {
-	return `
-  ## Type of KNX-IP interface.
-  ## Can be either "tunnel" or "router".
-  # service_type = "tunnel"
-
-  ## Address of the KNX-IP interface.
-  service_address = "localhost:3671"
-
-  ## Measurement definition(s)
-  # [[inputs.knx_listener.measurement]]
-  #   ## Name of the measurement
-  #   name = "temperature"
-  #   ## Datapoint-Type (DPT) of the KNX messages
-  #   dpt = "9.001"
-  #   ## List of Group-Addresses (GAs) assigned to the measurement
-  #   addresses = ["5/5/1"]
-
-  # [[inputs.knx_listener.measurement]]
-  #   name = "illumination"
-  #   dpt = "9.004"
-  #   addresses = ["5/5/3"]
-`
+func (*KNXListener) SampleConfig() string {
+	return sampleConfig
 }
 
 func (kl *KNXListener) Gather(_ telegraf.Accumulator) error {

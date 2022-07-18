@@ -1,17 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package file
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/dimchansky/utfbom"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type File struct {
 	Files             []string `toml:"files"`
@@ -23,42 +30,8 @@ type File struct {
 	decoder    *encoding.Decoder
 }
 
-const sampleConfig = `
-  ## Files to parse each interval.  Accept standard unix glob matching rules,
-  ## as well as ** to match recursive files and directories.
-  files = ["/tmp/metrics.out"]
-
-
-  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
-  ## to disable. Cautious when file name variation is high, this can increase the cardinality
-  ## significantly. Read more about cardinality here:
-  ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
-  # file_tag = ""
-  #
-
-  ## Character encoding to use when interpreting the file contents.  Invalid
-  ## characters are replaced using the unicode replacement character.  When set
-  ## to the empty string the data is not decoded to text.
-  ##   ex: character_encoding = "utf-8"
-  ##       character_encoding = "utf-16le"
-  ##       character_encoding = "utf-16be"
-  ##       character_encoding = ""
-  # character_encoding = ""
-
-  ## The dataformat to be read from files
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
-
-// SampleConfig returns the default configuration of the Input
-func (f *File) SampleConfig() string {
+func (*File) SampleConfig() string {
 	return sampleConfig
-}
-
-func (f *File) Description() string {
-	return "Parse a complete file each interval"
 }
 
 func (f *File) Init() error {
@@ -97,11 +70,11 @@ func (f *File) refreshFilePaths() error {
 	for _, file := range f.Files {
 		g, err := globpath.Compile(file)
 		if err != nil {
-			return fmt.Errorf("could not compile glob %v: %v", file, err)
+			return fmt.Errorf("could not compile glob %q: %w", file, err)
 		}
 		files := g.Match()
 		if len(files) <= 0 {
-			return fmt.Errorf("could not find file: %v", file)
+			return fmt.Errorf("could not find file(s): %v", file)
 		}
 		allFiles = append(allFiles, files...)
 	}
@@ -120,13 +93,17 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	r, _ := utfbom.Skip(f.decoder.Reader(file))
 	fileContents, err := io.ReadAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("could not read %q: %s", filename, err)
+		return nil, fmt.Errorf("could not read %q: %w", filename, err)
 	}
 	parser, err := f.parserFunc()
 	if err != nil {
-		return nil, fmt.Errorf("could not instantiate parser: %s", err)
+		return nil, fmt.Errorf("could not instantiate parser: %w", err)
 	}
-	return parser.Parse(fileContents)
+	metrics, err := parser.Parse(fileContents)
+	if err != nil {
+		return metrics, fmt.Errorf("could not parse %q: %w", filename, err)
+	}
+	return metrics, err
 }
 
 func init() {

@@ -48,6 +48,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
 	_ "github.com/influxdata/telegraf/plugins/outputs/sql"
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
+	_ "github.com/influxdata/telegraf/plugins/outputs/stomp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/sumologic"
 	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/timestream"

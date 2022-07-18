@@ -1,16 +1,21 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package linux_sysctl_fs
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"os"
-	"strconv"
-
 	"path"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // https://www.kernel.org/doc/Documentation/sysctl/fs.txt
 type SysctlFS struct {
@@ -19,13 +24,6 @@ type SysctlFS struct {
 
 var sysctlFSDescription = `Provides Linux sysctl fs metrics`
 var sysctlFSSampleConfig = ``
-
-func (sfs SysctlFS) Description() string {
-	return sysctlFSDescription
-}
-func (sfs SysctlFS) SampleConfig() string {
-	return sysctlFSSampleConfig
-}
 
 func (sfs *SysctlFS) gatherList(file string, fields map[string]interface{}, fieldNames ...string) error {
 	bs, err := os.ReadFile(sfs.path + "/" + file)
@@ -73,6 +71,10 @@ func (sfs *SysctlFS) gatherOne(name string, fields map[string]interface{}) error
 
 	fields[name] = v
 	return nil
+}
+
+func (*SysctlFS) SampleConfig() string {
+	return sampleConfig
 }
 
 func (sfs *SysctlFS) Gather(acc telegraf.Accumulator) error {

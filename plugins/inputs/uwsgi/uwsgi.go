@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // Package uwsgi implements a telegraf plugin for collecting uwsgi stats from
 // the uwsgi stats server.
 package uwsgi
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +21,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // Uwsgi server struct
 type Uwsgi struct {
 	Servers []string        `toml:"servers"`
@@ -27,24 +33,8 @@ type Uwsgi struct {
 	client *http.Client
 }
 
-// Description returns the plugin description
-func (u *Uwsgi) Description() string {
-	return "Read uWSGI metrics."
-}
-
-// SampleConfig returns the sample configuration
-func (u *Uwsgi) SampleConfig() string {
-	return `
-  ## List with urls of uWSGI Stats servers. URL must match pattern:
-  ## scheme://address[:port]
-  ##
-  ## For example:
-  ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
-  servers = ["tcp://127.0.0.1:1717"]
-
-  ## General connection timeout
-  # timeout = "5s"
-`
+func (*Uwsgi) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather collect data from uWSGI Server

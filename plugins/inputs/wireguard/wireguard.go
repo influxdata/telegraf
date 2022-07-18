@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package wireguard
 
 import (
+	_ "embed"
 	"fmt"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -9,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	measurementDevice = "wireguard_device"
@@ -32,16 +38,8 @@ type Wireguard struct {
 	client *wgctrl.Client
 }
 
-func (wg *Wireguard) Description() string {
-	return "Collect Wireguard server interface and peer statistics"
-}
-
-func (wg *Wireguard) SampleConfig() string {
-	return `
-  ## Optional list of Wireguard device/interface names to query.
-  ## If omitted, all Wireguard interfaces are queried.
-  # devices = ["wg0"]
-`
+func (*Wireguard) SampleConfig() string {
+	return sampleConfig
 }
 
 func (wg *Wireguard) Init() error {

@@ -5,7 +5,7 @@ The zookeeper plugin collects variables outputted from the 'mntr' command
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Reads 'mntr' stats from one or many zookeeper servers
 [[inputs.zookeeper]]
   ## An array of address to gather stats about. Specify an ip or hostname

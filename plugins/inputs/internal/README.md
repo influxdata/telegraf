@@ -7,7 +7,7 @@ plugin.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collect statistics about itself
 [[inputs.internal]]
   ## If true, collect telegraf memory stats.
@@ -16,7 +16,8 @@ plugin.
 
 ## Measurements & Fields
 
-memstats are taken from the Go runtime: <https://golang.org/pkg/runtime/#MemStats>
+memstats are taken from the Go runtime:
+<https://golang.org/pkg/runtime/#MemStats>
 
 - internal_memstats
   - alloc_bytes

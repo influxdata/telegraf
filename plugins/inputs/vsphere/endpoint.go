@@ -100,6 +100,7 @@ type objectRef struct {
 	parentRef    *types.ManagedObjectReference //Pointer because it must be nillable
 	guest        string
 	dcname       string
+	rpname       string
 	customValues map[string]string
 	lookup       map[string]string
 }
@@ -164,6 +165,24 @@ func NewEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
+		},
+		"resourcepool": {
+			name:             "resourcepool",
+			vcName:           "ResourcePool",
+			pKey:             "rpname",
+			parentTag:        "clustername",
+			enabled:          anythingEnabled(parent.ResourcePoolMetricExclude),
+			realTime:         false,
+			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
+			objects:          make(objectMap),
+			filters:          newFilterOrPanic(parent.ResourcePoolMetricInclude, parent.ResourcePoolMetricExclude),
+			paths:            parent.ResourcePoolInclude,
+			excludePaths:     parent.ResourcePoolExclude,
+			simple:           isSimple(parent.ResourcePoolMetricInclude, parent.ResourcePoolMetricExclude),
+			include:          parent.ResourcePoolMetricInclude,
+			collectInstances: parent.ResourcePoolInstances,
+			getObjects:       getResourcePools,
+			parent:           "cluster",
 		},
 		"host": {
 			name:             "host",
@@ -654,6 +673,35 @@ func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilte
 }
 
 //noinspection GoUnusedParameter
+func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
+	var resources []mo.ResourcePool
+	err := resourceFilter.FindAll(ctx, &resources)
+	if err != nil {
+		return nil, err
+	}
+	m := make(objectMap)
+	for _, r := range resources {
+		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+			name:         r.Name,
+			ref:          r.ExtensibleManagedObject.Reference(),
+			parentRef:    r.Parent,
+			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+		}
+	}
+	return m, nil
+}
+
+func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string {
+	//Loop through the Resource Pools objectmap to find the corresponding one
+	for _, r := range rps {
+		if r.ref == rp {
+			return r.name
+		}
+	}
+	return "Resources" //Default value
+}
+
+//noinspection GoUnusedParameter
 func getHosts(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
 	var resources []mo.HostSystem
 	err := resourceFilter.FindAll(ctx, &resources)
@@ -681,6 +729,20 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		return nil, err
 	}
 	m := make(objectMap)
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	//Create a ResourcePool Filter and get the list of Resource Pools
+	rprf := ResourceFilter{
+		finder:       &Finder{client},
+		resType:      "ResourcePool",
+		paths:        []string{"/*/host/**"},
+		excludePaths: nil}
+	resourcePools, err := getResourcePools(ctx, e, &rprf)
+	if err != nil {
+		return nil, err
+	}
 	for _, r := range resources {
 		if r.Runtime.PowerState != "poweredOn" {
 			continue
@@ -688,6 +750,8 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		guest := "unknown"
 		uuid := ""
 		lookup := make(map[string]string)
+		// Get the name of the VM resource pool
+		rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
 
 		// Extract host name
 		if r.Guest != nil && r.Guest.HostName != "" {
@@ -755,6 +819,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			parentRef:    r.Runtime.Host,
 			guest:        guest,
 			altID:        uuid,
+			rpname:       rpname,
 			customValues: e.loadCustomAttributes(&r.ManagedEntity),
 			lookup:       lookup,
 		}
@@ -891,7 +956,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			// Determine time of last successful collection
 			metricName := e.getMetricNameForID(metric.CounterId)
 			if metricName == "" {
-				e.log.Infof("Unable to find metric name for id %d. Skipping!", metric.CounterId)
+				e.log.Debugf("Unable to find metric name for id %d. Skipping!", metric.CounterId)
 				continue
 			}
 			start, ok := e.hwMarks.Get(obj.ref.Value, metricName)
@@ -1190,6 +1255,9 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 
 	if resourceType == "vm" && objectRef.altID != "" {
 		t["uuid"] = objectRef.altID
+	}
+	if resourceType == "vm" && objectRef.rpname != "" {
+		t["rpname"] = objectRef.rpname
 	}
 
 	// Map parent reference

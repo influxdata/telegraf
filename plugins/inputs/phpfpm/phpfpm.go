@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package phpfpm
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	PfPool               = "pool"
@@ -46,45 +52,8 @@ type phpfpm struct {
 	client *http.Client
 }
 
-var sampleConfig = `
-  ## An array of addresses to gather stats about. Specify an ip or hostname
-  ## with optional port and path
-  ##
-  ## Plugin can be configured in three modes (either can be used):
-  ##   - http: the URL must start with http:// or https://, ie:
-  ##       "http://localhost/status"
-  ##       "http://192.168.130.1/status?full"
-  ##
-  ##   - unixsocket: path to fpm socket, ie:
-  ##       "/var/run/php5-fpm.sock"
-  ##      or using a custom fpm status path:
-  ##       "/var/run/php5-fpm.sock:fpm-custom-status-path"
-  ##
-  ##   - fcgi: the URL must start with fcgi:// or cgi://, and port must be present, ie:
-  ##       "fcgi://10.0.0.12:9000/status"
-  ##       "cgi://10.0.10.12:9001/status"
-  ##
-  ## Example of multiple gathering from local socket and remote host
-  ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
-  urls = ["http://localhost/status"]
-
-  ## Duration allowed to complete HTTP requests.
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (p *phpfpm) SampleConfig() string {
+func (*phpfpm) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *phpfpm) Description() string {
-	return "Read metrics of phpfpm, via HTTP status page or socket"
 }
 
 func (p *phpfpm) Init() error {
@@ -268,7 +237,7 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 		}
 		fields := make(map[string]interface{})
 		for k, v := range stats[pool] {
-			fields[strings.Replace(k, " ", "_", -1)] = v
+			fields[strings.ReplaceAll(k, " ", "_")] = v
 		}
 		acc.AddFields("phpfpm", fields, tags)
 	}

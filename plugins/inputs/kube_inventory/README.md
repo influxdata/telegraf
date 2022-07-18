@@ -1,6 +1,7 @@
 # Kubernetes Inventory Input Plugin
 
-This plugin generates metrics derived from the state of the following Kubernetes resources:
+This plugin generates metrics derived from the state of the following Kubernetes
+resources:
 
 - daemonsets
 - deployments
@@ -33,10 +34,11 @@ avoid cardinality issues:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from the Kubernetes api
 [[inputs.kube_inventory]]
   ## URL for the Kubernetes API
-  url = "https://$HOSTIP:6443"
+  url = "https://127.0.0.1"
 
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
@@ -64,8 +66,8 @@ avoid cardinality issues:
   ## selectors to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all selectors as tags
   ## selector_exclude overrides selector_include if both set.
-  selector_include = []
-  selector_exclude = ["*"]
+  # selector_include = []
+  # selector_exclude = ["*"]
 
   ## Optional TLS Config
   ## Trusted root certificates for server
@@ -85,7 +87,13 @@ avoid cardinality issues:
 
 ## Kubernetes Permissions
 
-If using [RBAC authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), you will need to create a cluster role to list "persistentvolumes" and "nodes". You will then need to make an [aggregated ClusterRole](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles) that will eventually be bound to a user or group.
+If using [RBAC authorization][rbac], you will need to create a cluster role to
+list "persistentvolumes" and "nodes". You will then need to make an [aggregated
+ClusterRole][agg] that will eventually be bound to a user or group.
+
+[rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+
+[agg]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
 
 ```yaml
 ---
@@ -114,7 +122,8 @@ aggregationRule:
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
 
-Bind the newly created aggregated ClusterRole with the following config file, updating the subjects as needed.
+Bind the newly created aggregated ClusterRole with the following config file,
+updating the subjects as needed.
 
 ```yaml
 ---
@@ -134,8 +143,9 @@ subjects:
 
 ## Quickstart in k3s
 
-When monitoring [k3s](https://k3s.io) server instances one can re-use already generated administration token.
-This is less secure than using the more restrictive dedicated telegraf user but more convienient to set up.
+When monitoring [k3s](https://k3s.io) server instances one can re-use already
+generated administration token.  This is less secure than using the more
+restrictive dedicated telegraf user but more convienient to set up.
 
 ```console
 # an empty token will make telegraf use the client cert/key files instead
@@ -293,7 +303,8 @@ tls_key = "/run/telegraf-kubernetes-key"
 
 ### pv `phase_type`
 
-The persistentvolume "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
+The persistentvolume "phase" is saved in the `phase` tag with a correlated
+numeric field called `phase_type` corresponding with that tag value.
 
 | Tag value | Corresponding field value |
 | --------- | ------------------------- |
@@ -306,7 +317,8 @@ The persistentvolume "phase" is saved in the `phase` tag with a correlated numer
 
 ### pvc `phase_type`
 
-The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
+The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated
+numeric field called `phase_type` corresponding with that tag value.
 
 | Tag value | Corresponding field value |
 | --------- | ------------------------- |

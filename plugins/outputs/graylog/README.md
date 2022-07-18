@@ -8,22 +8,23 @@ This plugin writes to a Graylog instance using the "[GELF][]" format.
 
 The [GELF spec][] spec defines a number of specific fields in a GELF payload.
 These fields may have specific requirements set by the spec and users of the
-Graylog plugin need to follow these requirements or metrics may be rejected
-due to invalid data.
+Graylog plugin need to follow these requirements or metrics may be rejected due
+to invalid data.
 
-For example, the timestamp field defined in the GELF spec, is required to be
-a UNIX timestamp. This output plugin will not modify or check the timestamp
-field if one is present and send it as-is to Graylog. If the field is absent
-then Telegraf will set the timestamp to the current time.
+For example, the timestamp field defined in the GELF spec, is required to be a
+UNIX timestamp. This output plugin will not modify or check the timestamp field
+if one is present and send it as-is to Graylog. If the field is absent then
+Telegraf will set the timestamp to the current time.
 
-Any field not defined by the spec will have an underscore (e.g. `_`) prefixed
-to the field name.
+Any field not defined by the spec will have an underscore (e.g. `_`) prefixed to
+the field name.
 
 [GELF spec]: https://docs.graylog.org/docs/gelf#gelf-payload-specification
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Send telegraf metrics to graylog
 [[outputs.graylog]]
   ## Endpoints for your graylog instances.
   servers = ["udp://127.0.0.1:12201"]
@@ -49,5 +50,6 @@ to the field name.
   # insecure_skip_verify = false
 ```
 
-Server endpoint may be specified without UDP or TCP scheme (eg. "127.0.0.1:12201").
-In such case, UDP protocol is assumed. TLS config is ignored for UDP endpoints.
+Server endpoint may be specified without UDP or TCP scheme
+(eg. "127.0.0.1:12201").  In such case, UDP protocol is assumed. TLS config is
+ignored for UDP endpoints.

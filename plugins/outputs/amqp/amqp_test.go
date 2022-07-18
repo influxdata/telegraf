@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 )
 

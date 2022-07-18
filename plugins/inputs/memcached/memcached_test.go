@@ -2,10 +2,13 @@ package memcached
 
 import (
 	"bufio"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -15,13 +18,25 @@ func TestMemcachedGeneratesMetricsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	servicePort := "11211"
+	container := testutil.Container{
+		Image:        "memcached",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	m := &Memcached{
-		Servers: []string{testutil.GetLocalHost()},
+		Servers: []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])},
 	}
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(m.Gather)
+	err = acc.GatherError(m.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{"get_hits", "get_misses", "evictions",

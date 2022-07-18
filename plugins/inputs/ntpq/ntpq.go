@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ntpq
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Mapping of ntpq header names to tag keys
 var tagHeaders = map[string]string{
@@ -30,15 +36,8 @@ type NTPQ struct {
 	DNSLookup bool `toml:"dns_lookup"`
 }
 
-func (n *NTPQ) Description() string {
-	return "Get standard NTP query metrics, requires ntpq executable."
-}
-
-func (n *NTPQ) SampleConfig() string {
-	return `
-  ## If false, set the -n ntpq flag. Can reduce metric gather time.
-  dns_lookup = true
-`
+func (*NTPQ) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {

@@ -108,8 +108,10 @@ var multiMetric = testCase{
 }
 
 func TestNewCollectdParser(t *testing.T) {
-	parser, err := NewCollectdParser("", "", []string{}, "join")
-	require.NoError(t, err)
+	parser := Parser{
+		ParseMultiValue: "join",
+	}
+	require.NoError(t, parser.Init())
 	require.Equal(t, parser.popts.SecurityLevel, network.None)
 	require.NotNil(t, parser.popts.PasswordLookup)
 	require.Nil(t, parser.popts.TypesDB)
@@ -124,8 +126,8 @@ func TestParse(t *testing.T) {
 		bytes, err := buf.Bytes()
 		require.NoError(t, err)
 
-		parser := &CollectdParser{}
-		require.NoError(t, err)
+		parser := &Parser{}
+		require.NoError(t, parser.Init())
 		metrics, err := parser.Parse(bytes)
 		require.NoError(t, err)
 
@@ -139,11 +141,26 @@ func TestParseMultiValueSplit(t *testing.T) {
 	bytes, err := buf.Bytes()
 	require.NoError(t, err)
 
-	parser := &CollectdParser{ParseMultiValue: "split"}
+	parser := &Parser{ParseMultiValue: "split"}
+	require.NoError(t, parser.Init())
 	metrics, err := parser.Parse(bytes)
 	require.NoError(t, err)
 
 	require.Equal(t, 2, len(metrics))
+}
+
+func TestParseMultiValueJoin(t *testing.T) {
+	buf, err := writeValueList(multiMetric.vl)
+	require.NoError(t, err)
+	bytes, err := buf.Bytes()
+	require.NoError(t, err)
+
+	parser := &Parser{ParseMultiValue: "join"}
+	require.NoError(t, parser.Init())
+	metrics, err := parser.Parse(bytes)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, len(metrics))
 }
 
 func TestParse_DefaultTags(t *testing.T) {
@@ -152,7 +169,8 @@ func TestParse_DefaultTags(t *testing.T) {
 	bytes, err := buf.Bytes()
 	require.NoError(t, err)
 
-	parser := &CollectdParser{}
+	parser := &Parser{}
+	require.NoError(t, parser.Init())
 	parser.SetDefaultTags(map[string]string{
 		"foo": "bar",
 	})
@@ -164,16 +182,11 @@ func TestParse_DefaultTags(t *testing.T) {
 }
 
 func TestParse_SignSecurityLevel(t *testing.T) {
-	parser := &CollectdParser{}
-	popts := &network.ParseOpts{
-		SecurityLevel: network.Sign,
-		PasswordLookup: &AuthMap{
-			map[string]string{
-				"user0": "bar",
-			},
-		},
+	parser := &Parser{
+		SecurityLevel: "sign",
+		AuthFile:      "testdata/authfile",
 	}
-	parser.SetParseOpts(popts)
+	require.NoError(t, parser.Init())
 
 	// Signed data
 	buf, err := writeValueList(singleMetric.vl)
@@ -219,16 +232,11 @@ func TestParse_SignSecurityLevel(t *testing.T) {
 }
 
 func TestParse_EncryptSecurityLevel(t *testing.T) {
-	parser := &CollectdParser{}
-	popts := &network.ParseOpts{
-		SecurityLevel: network.Encrypt,
-		PasswordLookup: &AuthMap{
-			map[string]string{
-				"user0": "bar",
-			},
-		},
+	parser := &Parser{
+		SecurityLevel: "encrypt",
+		AuthFile:      "testdata/authfile",
 	}
-	parser.SetParseOpts(popts)
+	require.NoError(t, parser.Init())
 
 	// Signed data skipped
 	buf, err := writeValueList(singleMetric.vl)
@@ -278,9 +286,10 @@ func TestParseLine(t *testing.T) {
 	require.NoError(t, err)
 	bytes, err := buf.Bytes()
 	require.NoError(t, err)
-
-	parser, err := NewCollectdParser("", "", []string{}, "split")
-	require.NoError(t, err)
+	parser := Parser{
+		ParseMultiValue: "split",
+	}
+	require.NoError(t, parser.Init())
 	metric, err := parser.ParseLine(string(bytes))
 	require.NoError(t, err)
 

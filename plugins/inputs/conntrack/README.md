@@ -20,30 +20,30 @@ For more information on conntrack-tools, see the
 
 ## Configuration
 
-```toml
- # Collects conntrack stats from the configured directories and files.
- [[inputs.conntrack]]
-   ## The following defaults would work with multiple versions of conntrack.
-   ## Note the nf_ and ip_ filename prefixes are mutually exclusive across
-   ## kernel versions, as are the directory locations.
+```toml @sample.conf
+# Collects conntrack stats from the configured directories and files.
+[[inputs.conntrack]]
+  ## The following defaults would work with multiple versions of conntrack.
+  ## Note the nf_ and ip_ filename prefixes are mutually exclusive across
+  ## kernel versions, as are the directory locations.
 
-   ## Superset of filenames to look for within the conntrack dirs.
-   ## Missing files will be ignored.
-   files = ["ip_conntrack_count","ip_conntrack_max",
-            "nf_conntrack_count","nf_conntrack_max"]
+  ## Superset of filenames to look for within the conntrack dirs.
+  ## Missing files will be ignored.
+  files = ["ip_conntrack_count","ip_conntrack_max",
+          "nf_conntrack_count","nf_conntrack_max"]
 
-   ## Directories to search within for the conntrack files above.
-   ## Missing directories will be ignored.
-   dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
+  ## Directories to search within for the conntrack files above.
+  ## Missing directories will be ignored.
+  dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 ```
 
-## Measurements & Fields
+## Metrics
 
 - conntrack
   - ip_conntrack_count (int, count): the number of entries in the conntrack table
   - ip_conntrack_max (int, size): the max capacity of the conntrack table
 
-## Tags
+### Tags
 
 This input does not use tags.
 

@@ -1,14 +1,18 @@
 # XtremIO Input Plugin
 
-The `xtremio` plugin gathers metrics from a Dell EMC XtremIO Storage Array's V3 Rest API. Documentation can be found [here](https://dl.dell.com/content/docu96624_xtremio-storage-array-x1-and-x2-cluster-types-with-xms-6-3-0-to-6-3-3-and-xios-4-0-15-to-4-0-31-and-6-0-0-to-6-3-3-restful-api-3-x-guide.pdf?language=en_us)
+The `xtremio` plugin gathers metrics from a Dell EMC XtremIO Storage Array's V3
+Rest API. Documentation can be found [here][1].
+
+[1]: https://dl.dell.com/content/docu96624_xtremio-storage-array-x1-and-x2-cluster-types-with-xms-6-3-0-to-6-3-3-and-xios-4-0-15-to-4-0-31-and-6-0-0-to-6-3-3-restful-api-3-x-guide.pdf?language=en_us
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+ # Gathers Metrics From a Dell EMC XtremIO Storage Array's V3 API
 [[inputs.xtremio]]
   ## XtremIO User Interface Endpoint
   url = "https://xtremio.example.com/" # required
-  
+
   ## Credentials
   username = "user1"
   password = "pass123"

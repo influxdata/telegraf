@@ -5,7 +5,8 @@ HTTP events API.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Send aggregate metrics to Sensu Monitor
 [[outputs.sensu]]
   ## BACKEND API URL is the Sensu Backend API root URL to send metrics to
   ## (protocol, host, and port only). The output plugin will automatically

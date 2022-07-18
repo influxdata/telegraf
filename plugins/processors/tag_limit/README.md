@@ -10,7 +10,8 @@ levels of cardinality are computationally and/or financially expensive.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Restricts the number of tags that can pass through this filter and chooses which tags to preserve when over the limit.
 [[processors.tag_limit]]
   ## Maximum number of tags to preserve
   limit = 3

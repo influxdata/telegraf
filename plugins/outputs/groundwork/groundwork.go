@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package groundwork
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,29 +19,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const sampleConfig = `
-  ## URL of your groundwork instance.
-  url = "https://groundwork.example.com"
-
-  ## Agent uuid for GroundWork API Server.
-  agent_id = ""
-
-  ## Username and password to access GroundWork API.
-  username = ""
-  password = ""
-
-  ## Default display name for the host with services(metrics).
-  # default_host = "telegraf"
-
-  ## Default service state.
-  # default_service_state = "SERVICE_OK"
-
-  ## The name of the tag that contains the hostname.
-  # resource_tag = "host"
-
-  ## The name of the tag that contains the host group name.
-  # group_tag = "group"
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type metricMeta struct {
 	group    string
@@ -51,6 +33,7 @@ type Groundwork struct {
 	AgentID             string          `toml:"agent_id"`
 	Username            string          `toml:"username"`
 	Password            string          `toml:"password"`
+	DefaultAppType      string          `toml:"default_app_type"`
 	DefaultHost         string          `toml:"default_host"`
 	DefaultServiceState string          `toml:"default_service_state"`
 	GroupTag            string          `toml:"group_tag"`
@@ -59,7 +42,7 @@ type Groundwork struct {
 	client              clients.GWClient
 }
 
-func (g *Groundwork) SampleConfig() string {
+func (*Groundwork) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -76,6 +59,9 @@ func (g *Groundwork) Init() error {
 	if g.Password == "" {
 		return errors.New("no 'password' provided")
 	}
+	if g.DefaultAppType == "" {
+		return errors.New("no 'default_app_type' provided")
+	}
 	if g.DefaultHost == "" {
 		return errors.New("no 'default_host' provided")
 	}
@@ -88,7 +74,7 @@ func (g *Groundwork) Init() error {
 
 	g.client = clients.GWClient{
 		AppName: "telegraf",
-		AppType: "TELEGRAF",
+		AppType: g.DefaultAppType,
 		GWConnection: &clients.GWConnection{
 			HostName:           g.Server,
 			UserName:           g.Username,
@@ -190,7 +176,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	}
 	requestJSON, err := json.Marshal(transit.ResourcesWithServicesRequest{
 		Context: &transit.TracerContext{
-			AppType:    "TELEGRAF",
+			AppType:    g.DefaultAppType,
 			AgentID:    g.AgentID,
 			TraceToken: traceToken,
 			TimeStamp:  transit.NewTimestamp(),
@@ -212,16 +198,13 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (g *Groundwork) Description() string {
-	return "Send telegraf metrics to GroundWork Monitor"
-}
-
 func init() {
 	outputs.Add("groundwork", func() telegraf.Output {
 		return &Groundwork{
 			GroupTag:            "group",
 			ResourceTag:         "host",
 			DefaultHost:         "telegraf",
+			DefaultAppType:      "TELEGRAF",
 			DefaultServiceState: string(transit.ServiceOk),
 		}
 	})

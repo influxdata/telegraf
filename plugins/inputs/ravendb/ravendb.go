@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ravendb
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // defaultURL will set a default value that corresponds to the default value
 // used by RavenDB
@@ -46,49 +52,8 @@ type RavenDB struct {
 	requestURLCollection string
 }
 
-var sampleConfig = `
-  ## Node URL and port that RavenDB is listening on. By default,
-  ## attempts to connect securely over HTTPS, however, if the user
-  ## is running a local unsecure development cluster users can use
-  ## HTTP via a URL like "http://localhost:8080"
-  url = "https://localhost:4433"
-
-  ## RavenDB X509 client certificate setup
-  # tls_cert = "/etc/telegraf/raven.crt"
-  # tls_key = "/etc/telegraf/raven.key"
-
-  ## Optional request timeout
-  ##
-  ## Timeout, specifies the amount of time to wait
-  ## for a server's response headers after fully writing the request and 
-  ## time limit for requests made by this client
-  # timeout = "5s"
-
-  ## List of statistics which are collected
-  # At least one is required
-  # Allowed values: server, databases, indexes, collections
-  #
-  # stats_include = ["server", "databases", "indexes", "collections"]
-
-  ## List of db where database stats are collected
-  ## If empty, all db are concerned
-  # db_stats_dbs = []
-
-  ## List of db where index status are collected
-  ## If empty, all indexes from all db are concerned
-  # index_stats_dbs = []
-
-  ## List of db where collection status are collected
-  ## If empty, all collections from all db are concerned
-  # collection_stats_dbs = []
-`
-
-func (r *RavenDB) SampleConfig() string {
+func (*RavenDB) SampleConfig() string {
 	return sampleConfig
-}
-
-func (r *RavenDB) Description() string {
-	return "Reads metrics from RavenDB servers via the Monitoring Endpoints"
 }
 
 func (r *RavenDB) Gather(acc telegraf.Accumulator) error {

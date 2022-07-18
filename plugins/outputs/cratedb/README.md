@@ -1,6 +1,7 @@
-# CrateDB Output Plugin for Telegraf
+# CrateDB Output Plugin
 
-This plugin writes to [CrateDB](https://crate.io/) via its [PostgreSQL protocol](https://crate.io/docs/crate/reference/protocols/postgres.html).
+This plugin writes to [CrateDB](https://crate.io/) via its [PostgreSQL
+protocol](https://crate.io/docs/crate/reference/protocols/postgres.html).
 
 ## Table Schema
 
@@ -22,7 +23,7 @@ config option, see below.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for CrateDB to send metrics to.
 [[outputs.cratedb]]
   # A github.com/jackc/pgx/v4 connection string.

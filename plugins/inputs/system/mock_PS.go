@@ -46,8 +46,8 @@ func (m *MockPS) CPUTimes(_, _ bool) ([]cpu.TimesStat, error) {
 	return r0, r1
 }
 
-func (m *MockPS) DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
-	ret := m.Called(mountPointFilter, fstypeExclude)
+func (m *MockPS) DiskUsage(mountPointFilter []string, mountOptsExclude []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
+	ret := m.Called(mountPointFilter, mountOptsExclude, fstypeExclude)
 
 	r0 := ret.Get(0).([]*disk.UsageStat)
 	r1 := ret.Get(1).([]*disk.PartitionStat)

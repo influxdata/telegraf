@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redis_sentinel
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/url"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type RedisSentinel struct {
 	Servers []string `toml:"servers"`
@@ -39,30 +45,8 @@ func init() {
 	})
 }
 
-func (r *RedisSentinel) SampleConfig() string {
-	return `
-  ## specify servers via a url matching:
-  ##  [protocol://][:password]@address[:port]
-  ##  e.g.
-  ##    tcp://localhost:26379
-  ##    tcp://:password@192.168.99.100
-  ##    unix:///var/run/redis-sentinel.sock
-  ##
-  ## If no servers are specified, then localhost is used as the host.
-  ## If no port is specified, 26379 is used
-  # servers = ["tcp://localhost:26379"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = true
-`
-}
-
-func (r *RedisSentinel) Description() string {
-	return "Read metrics from one or many redis-sentinel servers"
+func (*RedisSentinel) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *RedisSentinel) Init() error {
@@ -164,7 +148,7 @@ func prepareFieldValues(fields map[string]string, typeMap map[string]configField
 	preparedFields := make(map[string]interface{})
 
 	for key, val := range fields {
-		key = strings.Replace(key, "-", "_", -1)
+		key = strings.ReplaceAll(key, "-", "_")
 
 		valType, ok := typeMap[key]
 		if !ok {

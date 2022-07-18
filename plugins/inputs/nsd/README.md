@@ -6,7 +6,7 @@ server.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin to collect stats from the NSD DNS resolver
 [[inputs.nsd]]
   ## Address of server to connect to, optionally ':port'. Defaults to the

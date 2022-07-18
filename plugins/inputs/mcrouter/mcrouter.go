@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mcrouter
 
 import (
 	"bufio"
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/url"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Mcrouter is a mcrouter plugin
 type Mcrouter struct {
@@ -28,15 +34,6 @@ const (
 	typeInt   statType = iota
 	typeFloat statType = iota
 )
-
-var sampleConfig = `
-  ## An array of address to gather stats about. Specify an ip or hostname
-  ## with port. ie tcp://localhost:11211, tcp://10.0.0.1:11211, etc.
-	servers = ["tcp://localhost:11211", "unix:///var/run/mcrouter.sock"]
-
-	## Timeout for metric collections from all servers.  Minimum timeout is "1s".
-  # timeout = "5s"
-`
 
 var defaultTimeout = 5 * time.Second
 
@@ -113,14 +110,8 @@ var sendMetrics = map[string]statType{
 	"cmd_lease_set_out_all":                      typeInt,
 }
 
-// SampleConfig returns sample configuration message
-func (m *Mcrouter) SampleConfig() string {
+func (*Mcrouter) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns description of Mcrouter plugin
-func (m *Mcrouter) Description() string {
-	return "Read metrics from one or many mcrouter servers"
 }
 
 // Gather reads stats from all configured servers accumulates stats

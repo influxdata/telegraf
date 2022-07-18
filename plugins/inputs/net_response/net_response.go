@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package net_response
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"net"
 	"net/textproto"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ResultType uint64
 
@@ -33,40 +39,6 @@ type NetResponse struct {
 	Protocol    string
 }
 
-var description = "Collect response time of a TCP or UDP connection"
-
-// Description will return a short string to explain what the plugin does.
-func (*NetResponse) Description() string {
-	return description
-}
-
-var sampleConfig = `
-  ## Protocol, must be "tcp" or "udp"
-  ## NOTE: because the "udp" protocol does not respond to requests, it requires
-  ## a send/expect string pair (see below).
-  protocol = "tcp"
-  ## Server address (default localhost)
-  address = "localhost:80"
-
-  ## Set timeout
-  # timeout = "1s"
-
-  ## Set read timeout (only used if expecting a response)
-  # read_timeout = "1s"
-
-  ## The following options are required for UDP checks. For TCP, they are
-  ## optional. The plugin will send the given string to the server and then
-  ## expect to receive the given 'expect' string back.
-  ## string sent to the server
-  # send = "ssh"
-  ## expected string in answer
-  # expect = "ssh"
-
-  ## Uncomment to remove deprecated fields
-  # fielddrop = ["result_type", "string_found"]
-`
-
-// SampleConfig will return a complete configuration example with details about each field.
 func (*NetResponse) SampleConfig() string {
 	return sampleConfig
 }

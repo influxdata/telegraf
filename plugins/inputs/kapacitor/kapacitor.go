@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kapacitor
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultURL = "http://localhost:9092/kapacitor/v1/debug/vars"
@@ -25,28 +31,8 @@ type Kapacitor struct {
 	client *http.Client
 }
 
-func (*Kapacitor) Description() string {
-	return "Read Kapacitor-formatted JSON metrics from one or more HTTP endpoints"
-}
-
 func (*Kapacitor) SampleConfig() string {
-	return `
-  ## Multiple URLs from which to read Kapacitor-formatted JSON
-  ## Default is "http://localhost:9092/kapacitor/v1/debug/vars".
-  urls = [
-    "http://localhost:9092/kapacitor/v1/debug/vars"
-  ]
-
-  ## Time limit for http requests
-  timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
+	return sampleConfig
 }
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {

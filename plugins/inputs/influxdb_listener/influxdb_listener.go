@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package influxdb_listener
 
 import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -19,6 +21,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// defaultMaxBodySize is the default maximum request body size, in bytes.
@@ -63,54 +69,8 @@ type InfluxDBListener struct {
 	mux http.ServeMux
 }
 
-const sampleConfig = `
-  ## Address and port to host InfluxDB listener on
-  service_address = ":8186"
-
-  ## maximum duration before timing out read of the request
-  read_timeout = "10s"
-  ## maximum duration before timing out write of the response
-  write_timeout = "10s"
-
-  ## Maximum allowed HTTP request body size in bytes.
-  ## 0 means to use the default of 32MiB.
-  max_body_size = "32MiB"
-
-  ## Optional tag name used to store the database.
-  ## If the write has a database in the query string then it will be kept in this tag name.
-  ## This tag can be used in downstream outputs.
-  ## The default value of nothing means it will be off and the database will not be recorded.
-  # database_tag = ""
-
-  ## If set the retention policy specified in the write query will be added as
-  ## the value of this tag name.
-  # retention_policy_tag = ""
-
-  ## Set one or more allowed client CA certificate file names to
-  ## enable mutually authenticated TLS connections
-  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
-  ## Add service certificate and key
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
-
-  ## Optional username and password to accept for HTTP basic authentication.
-  ## You probably want to make sure you have TLS configured above for this.
-  # basic_username = "foobar"
-  # basic_password = "barfoo"
-
-  ## Influx line protocol parser
-  ## 'internal' is the default. 'upstream' is a newer parser that is faster
-  ## and more memory efficient.
-  # parser_type = "internal"
-`
-
-func (h *InfluxDBListener) SampleConfig() string {
+func (*InfluxDBListener) SampleConfig() string {
 	return sampleConfig
-}
-
-func (h *InfluxDBListener) Description() string {
-	return "Accept metrics over InfluxDB 1.x HTTP API"
 }
 
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
@@ -263,9 +223,9 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		if h.ParserType == "upstream" {
 			h.handleWriteUpstreamParser(res, req)
+		} else {
+			h.handleWriteInternalParser(res, req)
 		}
-
-		h.handleWriteInternalParser(res, req)
 	}
 }
 

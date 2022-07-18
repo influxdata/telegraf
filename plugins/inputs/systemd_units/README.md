@@ -1,20 +1,22 @@
 # systemd Units Input Plugin
 
 The systemd_units plugin gathers systemd unit status on Linux. It relies on
-`systemctl list-units [PATTERN] --all --plain --type=service` to collect data on service status.
+`systemctl list-units [PATTERN] --all --plain --type=service` to collect data on
+service status.
 
 The results are tagged with the unit name and provide enumerated fields for
 loaded, active and running fields, indicating the unit health.
 
-This plugin is related to the [win_services module](/plugins/inputs/win_services/), which
-fulfills the same purpose on windows.
+This plugin is related to the [win_services module](../win_services/README.md),
+which fulfills the same purpose on windows.
 
 In addition to services, this plugin can gather other unit types as well,
 see `systemctl list-units --all --type help` for possible options.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Gather systemd units state
 [[inputs.systemd_units]]
   ## Set timeout for systemctl execution
   # timeout = "1s"
@@ -47,7 +49,7 @@ see `systemctl list-units --all --type help` for possible options.
 
 ### Load
 
-enumeration of [unit_load_state_table](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L87)
+enumeration of [unit_load_state_table][1]
 
 | Value | Meaning     | Description                     |
 | ----- | -------     | -----------                     |
@@ -59,9 +61,11 @@ enumeration of [unit_load_state_table](https://github.com/systemd/systemd/blob/c
 | 5     | merged      | unit is ~                       |
 | 6     | masked      | unit is ~                       |
 
+[1]: https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L87
+
 ### Active
 
-enumeration of [unit_active_state_table](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L99)
+enumeration of [unit_active_state_table][2]
 
 | Value | Meaning   | Description                        |
 | ----- | -------   | -----------                        |
@@ -72,11 +76,12 @@ enumeration of [unit_active_state_table](https://github.com/systemd/systemd/blob
 | 4     | activating   | unit is ~                       |
 | 5     | deactivating | unit is ~                       |
 
+[2]: https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L99
+
 ### Sub
 
-enumeration of sub states, see various [unittype_state_tables](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163);
-duplicates were removed, tables are hex aligned to keep some space for future
-values
+enumeration of sub states, see various [unittype_state_tables][3]; duplicates
+were removed, tables are hex aligned to keep some space for future values
 
 | Value  | Meaning               | Description                         |
 | -----  | -------               | -----------                         |
@@ -133,6 +138,8 @@ values
 |        |                       | service_state_table start at 0x00a0 |
 | 0x00a0 | elapsed               | unit is ~                           |
 |        |                       |                                     |
+
+[3]: https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163
 
 ## Example Output
 

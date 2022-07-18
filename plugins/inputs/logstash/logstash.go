@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package logstash
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,37 +19,9 @@ import (
 	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
-const sampleConfig = `
-  ## The URL of the exposed Logstash API endpoint.
-  url = "http://127.0.0.1:9600"
-
-  ## Use Logstash 5 single pipeline API, set to true when monitoring
-  ## Logstash 5.
-  # single_pipeline = false
-
-  ## Enable optional collection components.  Can contain
-  ## "pipelines", "process", and "jvm".
-  # collect = ["pipelines", "process", "jvm"]
-
-  ## Timeout for HTTP requests.
-  # timeout = "5s"
-
-  ## Optional HTTP Basic Auth credentials.
-  # username = "username"
-  # password = "pa$$word"
-
-  ## Optional TLS Config.
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Use TLS but skip chain & host verification.
-  # insecure_skip_verify = false
-
-  ## Optional HTTP headers.
-  # [inputs.logstash.headers]
-  #   "X-Special-Header" = "Special-Value"
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Logstash struct {
 	URL string `toml:"url"`
@@ -73,16 +47,6 @@ func NewLogstash() *Logstash {
 		Headers:        make(map[string]string),
 		Timeout:        config.Duration(time.Second * 5),
 	}
-}
-
-// Description returns short info about plugin
-func (logstash *Logstash) Description() string {
-	return "Read metrics exposed by Logstash"
-}
-
-// SampleConfig returns details how to configure plugin
-func (logstash *Logstash) SampleConfig() string {
-	return sampleConfig
 }
 
 type ProcessStats struct {
@@ -128,6 +92,7 @@ type Plugin struct {
 	ID           string                 `json:"id"`
 	Events       interface{}            `json:"events"`
 	Name         string                 `json:"name"`
+	Failures     *int64                 `json:"failures,omitempty"`
 	BulkRequests map[string]interface{} `json:"bulk_requests"`
 	Documents    map[string]interface{} `json:"documents"`
 }
@@ -152,6 +117,10 @@ const jvmStats = "/_node/stats/jvm"
 const processStats = "/_node/stats/process"
 const pipelinesStats = "/_node/stats/pipelines"
 const pipelineStats = "/_node/stats/pipeline"
+
+func (*Logstash) SampleConfig() string {
+	return sampleConfig
+}
 
 func (logstash *Logstash) Init() error {
 	err := choice.CheckSlice(logstash.Collect, []string{"pipelines", "process", "jvm"})
@@ -291,6 +260,10 @@ func (logstash *Logstash) gatherPluginsStats(
 			return err
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+		if plugin.Failures != nil {
+			failuresFields := map[string]interface{}{"failures": *plugin.Failures}
+			accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
+		}
 		/*
 			The elasticsearch output produces additional stats around
 			bulk requests and document writes (that are elasticsearch specific).
