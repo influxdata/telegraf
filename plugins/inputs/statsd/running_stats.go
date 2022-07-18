@@ -7,6 +7,7 @@ import (
 )
 
 const defaultPercentileLimit = 1000
+const defaultMedianLimit = 1000
 
 // RunningStats calculates a running mean, variance, standard deviation,
 // lower bound, upper bound, count, and can calculate estimated percentiles.
@@ -22,7 +23,10 @@ type RunningStats struct {
 	// We will store a maximum of PercLimit values, at which point we will start
 	// randomly replacing old values, hence it is an estimated percentile.
 	perc      []float64
+	med       []float64
+	MedLen    int
 	PercLimit int
+	MedLimit  int
 
 	sum float64
 
@@ -45,7 +49,11 @@ func (rs *RunningStats) AddValue(v float64) {
 		if rs.PercLimit == 0 {
 			rs.PercLimit = defaultPercentileLimit
 		}
+		if rs.MedLimit == 0 {
+			rs.MedLimit = defaultMedianLimit
+		}
 		rs.perc = make([]float64, 0, rs.PercLimit)
+		rs.med = make([]float64, 0, rs.MedLimit)
 	}
 
 	// These are used for the running mean and variance
@@ -69,10 +77,28 @@ func (rs *RunningStats) AddValue(v float64) {
 		// Reached limit, choose random index to overwrite in the percentile array
 		rs.perc[rand.Intn(len(rs.perc))] = v
 	}
+
+	rs.MedLen = len(rs.med)
+	// Need to sort for median
+	sort.Float64s(rs.med)
+	if rs.MedLen < rs.MedLimit {
+		rs.med = append(rs.med, v)
+	} else {
+		// Reached limit, choose random index to overwrite in the median array
+		rs.med[rand.Intn(rs.MedLen)] = v
+	}
 }
 
 func (rs *RunningStats) Mean() float64 {
 	return rs.k + rs.ex/float64(rs.n)
+}
+
+func (rs *RunningStats) Median() float64 {
+	if rs.MedLen%2 == 0 {
+		return float64((rs.med[rs.MedLen/2-1] + rs.med[rs.MedLen/2]) / 2)
+	} else {
+		return float64(rs.med[rs.MedLen/2])
+	}
 }
 
 func (rs *RunningStats) Variance() float64 {

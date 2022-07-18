@@ -183,6 +183,8 @@ metric type:
         for that stat during that interval.
     - `statsd_<name>_mean`: The mean is the average of all values statsd saw
         for that stat during that interval.
+    - `statsd_<name>_median`: The median is the average of all values statsd saw
+        for that stat during that interval.
     - `statsd_<name>_stddev`: The stddev is the sample standard deviation
         of all values statsd saw for that stat during that interval.
     - `statsd_<name>_sum`: The sum is the sample sum of all values statsd saw
