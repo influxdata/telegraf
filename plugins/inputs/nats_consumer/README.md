@@ -24,7 +24,7 @@ instances of telegraf can read from a NATS cluster in parallel.
   ## With jetstream the nats-server persists messages and 
   ## a consumer can consume historical messages. This is
   ## useful when telegraf needs to restart it don't miss a 
-  ## message. You need to configure the nats-server:
+  ## message. You need to configure the nats-server.
   ## https://docs.nats.io/nats-concepts/jetstream.
   jetstream_subjects = ["js_telegraf"]
 
