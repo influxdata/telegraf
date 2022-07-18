@@ -1363,21 +1363,21 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 
 			// Prepartions for the average health state of the replica-set
-			var ReplMemberCount int = len(newReplStat.Members)
-			var ReplMemberHealthyCount int = 0
+			var replMemberCount int = len(newReplStat.Members)
+			var replMemberHealthyCount int = 0
 
 			// Second for-loop is needed, because of break-construct above
 			for _, member := range newReplStat.Members {
 				// Count only healthy members for the average health state of the replica-set
 				if member.Health == 1 {
-					ReplMemberHealthyCount++
+					replMemberHealthyCount++
 				}
 			}
 
 			// Calculate the average health state of the replica-set (For precise monitoring alerts)
 			// To detect if a member is unhealthy from the perspective of another member and also how bad the replica-set health is
-			if ReplMemberCount > 0 {
-				returnVal.ReplHealthAvg = float64(ReplMemberHealthyCount) / float64(ReplMemberCount)
+			if replMemberCount > 0 {
+				returnVal.ReplHealthAvg = float64(replMemberHealthyCount) / float64(replMemberCount)
 			} else {
 				returnVal.ReplHealthAvg = 0.00
 			}
