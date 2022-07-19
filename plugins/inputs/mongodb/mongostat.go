@@ -1363,8 +1363,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 
 			// Prepartions for the average health state of the replica-set
-			var replMemberCount int = len(newReplStat.Members)
-			var replMemberHealthyCount int = 0
+			replMemberCount := len(newReplStat.Members)
+			replMemberHealthyCount := 0
 
 			// Second for-loop is needed, because of break-construct above
 			for _, member := range newReplStat.Members {
