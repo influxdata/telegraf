@@ -93,7 +93,6 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 		// To maintain backwards compatibility, if the enable_tls option is not
 		// set TLS is enabled if a non-default TLS config is used.
 		if k.EnableTLS == nil {
-			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
 			config.Net.TLS.Enable = true
 		}
 	}
