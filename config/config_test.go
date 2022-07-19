@@ -23,13 +23,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
 	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
-	c.LoadConfig("./testdata/single_plugin_env_vars.toml")
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin_env_vars.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
@@ -146,18 +147,13 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedConfigs[0].Tags = make(map[string]string)
 
 	expectedPlugins[1] = inputs.Inputs["exec"]().(*MockupInputPlugin)
-	parserConfig := &parsers.Config{
+	parser := &json.Parser{
 		MetricName: "exec",
-		DataFormat: "json",
-		JSONStrict: true,
+		Strict:     true,
 	}
-	p, err := parsers.NewParser(parserConfig)
-	require.NoError(t, err)
+	require.NoError(t, parser.Init())
 
-	// Inject logger to have proper struct for comparison
-	models.SetLoggerOnPlugin(p, models.NewLogger("parsers", parserConfig.DataFormat, parserConfig.MetricName))
-
-	expectedPlugins[1].SetParser(p)
+	expectedPlugins[1].SetParser(parser)
 	expectedPlugins[1].Command = "/usr/bin/myothercollector --foo=bar"
 	expectedConfigs[1] = &models.InputConfig{
 		Name:              "exec",
@@ -208,10 +204,26 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		require.NotNil(t, input.Log)
 		input.Log = nil
 
-		// Ignore the parser if not expected
-		if expectedPlugins[i].parser == nil {
-			input.parser = nil
+		// Check the parsers if any
+		if expectedPlugins[i].parser != nil {
+			runningParser, ok := input.parser.(*models.RunningParser)
+			require.True(t, ok)
+
+			// We only use the JSON parser here
+			parser, ok := runningParser.Parser.(*json.Parser)
+			require.True(t, ok)
+
+			// Prepare parser for comparison
+			require.NoError(t, parser.Init())
+			parser.Log = nil
+
+			// Compare the parser
+			require.Equalf(t, expectedPlugins[i].parser, parser, "Plugin %d: incorrect parser produced", i)
 		}
+
+		// Ignore the parsers for further comparisons
+		input.parser = nil
+		expectedPlugins[i].parser = nil
 
 		require.Equalf(t, expectedPlugins[i], plugin.Input, "Plugin %d: incorrect struct produced", i)
 		require.Equalf(t, expectedConfigs[i], plugin.Config, "Plugin %d: incorrect config produced", i)
