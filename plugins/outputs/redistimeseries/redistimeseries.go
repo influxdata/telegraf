@@ -1,6 +1,7 @@
 package redistimeseries
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-redis/redis/v7"
