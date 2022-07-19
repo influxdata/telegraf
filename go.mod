@@ -43,7 +43,7 @@ require (
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cisco-ie/netgonf v0.0.0-20200421160712-10a7ca737235
-	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
+	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20220628142927-f4160bcb943c
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/couchbase/go-couchbase v0.1.1
