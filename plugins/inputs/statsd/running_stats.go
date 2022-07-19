@@ -38,12 +38,14 @@ type RunningStats struct {
 
 	// cache if we have sorted the list so that we never re-sort a sorted list,
 	// which can have very bad performance.
-	sorted bool
+	SortedPerc bool
+	SortedMed  bool
 }
 
 func (rs *RunningStats) AddValue(v float64) {
 	// Whenever a value is added, the list is no longer sorted.
-	rs.sorted = false
+	rs.SortedPerc = false
+	rs.SortedMed = false
 
 	if rs.n == 0 {
 		rs.k = v
@@ -97,11 +99,10 @@ func (rs *RunningStats) Mean() float64 {
 func (rs *RunningStats) Median() float64 {
 	count := len(rs.med)
 	// Need to sort for median
-    if !rs.sorted {
-	    sort.Float64s(rs.med)
-		rs.sorted = true
-    }
-
+	if !rs.SortedMed {
+		sort.Float64s(rs.med)
+		rs.SortedMed = true
+	}
 	if count == 0 {
 		return 0
 	} else if count%2 == 0 {
@@ -140,9 +141,9 @@ func (rs *RunningStats) Percentile(n float64) float64 {
 		n = 100
 	}
 
-	if !rs.sorted {
+	if !rs.SortedPerc {
 		sort.Float64s(rs.perc)
-		rs.sorted = true
+		rs.SortedPerc = true
 	}
 
 	i := float64(len(rs.perc)) * n / float64(100)
