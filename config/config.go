@@ -691,6 +691,15 @@ func (c *Config) addParser(parentname string, table *ast.Table) (*models.Running
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
 
+	if dataformat == "" {
+		if parentname == "exec" {
+			// Legacy support, exec plugin originally parsed JSON by default.
+			dataformat = "json"
+		} else {
+			dataformat = "influx"
+		}
+	}
+
 	creator, ok := parsers.Parsers[dataformat]
 	if !ok {
 		return nil, fmt.Errorf("Undefined but requested parser: %s", dataformat)
