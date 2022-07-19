@@ -23,15 +23,18 @@ type RunningStats struct {
 	// We will store a maximum of PercLimit values, at which point we will start
 	// randomly replacing old values, hence it is an estimated percentile.
 	perc      []float64
-	med       []float64
-	MedLen    int
 	PercLimit int
-	MedLimit  int
 
 	sum float64
 
 	lower float64
 	upper float64
+
+	// Array used to calculate estimated median values
+	// We will store a maximum of MedLimit values, at which point we will start
+	// slicing old values
+	med      []float64
+	MedLimit int
 
 	// cache if we have sorted the list so that we never re-sort a sorted list,
 	// which can have very bad performance.
@@ -78,14 +81,12 @@ func (rs *RunningStats) AddValue(v float64) {
 		rs.perc[rand.Intn(len(rs.perc))] = v
 	}
 
-	rs.MedLen = len(rs.med)
-	// Need to sort for median
-	sort.Float64s(rs.med)
-	if rs.MedLen < rs.MedLimit {
+	if len(rs.med) < rs.MedLimit {
 		rs.med = append(rs.med, v)
 	} else {
-		// Reached limit, choose random index to overwrite in the median array
-		rs.med[rand.Intn(rs.MedLen)] = v
+		// Reached limit, slice off first element
+		rs.med = rs.med[1:]
+		rs.med[len(rs.med)-1] = v
 	}
 }
 
@@ -94,12 +95,19 @@ func (rs *RunningStats) Mean() float64 {
 }
 
 func (rs *RunningStats) Median() float64 {
-	if rs.MedLen == 0 {
+	count := len(rs.med)
+	// Need to sort for median
+    if !rs.sorted {
+	    sort.Float64s(rs.med)
+		rs.sorted = true
+    }
+
+	if count == 0 {
 		return 0
-	} else if rs.MedLen%2 == 0 {
-		return (rs.med[rs.MedLen/2-1] + rs.med[rs.MedLen/2]) / 2
+	} else if count%2 == 0 {
+		return (rs.med[count/2-1] + rs.med[count/2]) / 2
 	} else {
-		return rs.med[rs.MedLen/2]
+		return rs.med[count/2]
 	}
 }
 
