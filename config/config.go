@@ -1091,25 +1091,6 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	return cp, nil
 }
 
-// buildParserOld grabs the necessary entries from the ast.Table for creating
-// a parsers.Parser object, and creates it, which can then be added onto
-// an Input object.
-func (c *Config) buildParserOld(name string, config *parsers.Config) (telegraf.Parser, error) {
-	parser, err := parsers.NewParser(config)
-	if err != nil {
-		return nil, err
-	}
-	logger := models.NewLogger("parsers", config.DataFormat, name)
-	models.SetLoggerOnPlugin(parser, logger)
-	if initializer, ok := parser.(telegraf.Initializer); ok {
-		if err := initializer.Init(); err != nil {
-			return nil, err
-		}
-	}
-
-	return parser, nil
-}
-
 func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 	var fields []json_v2.DataSet
 
