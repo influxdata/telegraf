@@ -119,3 +119,52 @@ Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics,host=linux,name=Gig
 ```
 
 ## Metrics
+- Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization
+  - tags:
+    - host
+    - path
+    - source
+    - subscription
+  - fields:
+    - five_seconds (int, percent)
+
+- Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic
+  - tags:
+    - host
+    - source
+    - Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic/name (enforced tag)
+  - fields:
+    - total-memory (int, byte)
+    - used-memory (int, byte)
+    - free-memory (int, byte)
+    - lowest-usage (int, byte)
+    - highest-usage (int, byte)
+
+- Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics
+  - tags:
+    - host
+    - path
+    - source
+    - subscription
+    - name (implicit tag: interface name)
+  - fields:
+    - discontinuity_time (string, date and time)
+    - in_octets (int, byte)
+    - in_unicast_pkts (int, packet)
+    - in_broadcast_pkts (int, packet)
+    - in_multicast_pkts (int, packet)
+    - in_discards (int, packets)
+    - in_errors (int, packets)
+    - in_unknown_protos (int, packet)
+    - out_octets (int, byte)
+    - out_unicast_pkts (int, packet)
+    - out_broadcast_pkts (int, packet)
+    - out_multicast_pkts (int, packet)
+    - out_discards (int, packet)
+    - out_errors (int, packet)
+    - rx_pps (int, pps)
+    - rx_kbps (int, kbps)
+    - tx_pps (int, pps)
+    - tx_kbps (int, kbps)
+    - num_flaps (int)
+    - in_crc_errors (int)
