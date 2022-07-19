@@ -34,7 +34,7 @@ const (
 	goodMainConfigNoGets
 	badMainConfigNoRequests
 	badMainConfigNoXpaths
-	goodMainConfigNoKeys
+	goodMainConfigNoTags
 	dummySession
 	badSession
 	goodDialinService
@@ -107,7 +107,7 @@ var badSampleXML = []byte(`<asdf><asdf-node><asdf-name>asdf</asdf-name></asdf>`)
 // A mock of a request to create a telemetry subscription through dial-in
 var mockDTSRequest = dialinSubscriptionRequest{
 	XPathFilter:   "/if:interfaces-state/interface",
-	Keys:          []string{"/if:interfaces-state/interface/name"},
+	Tags:          []string{"/if:interfaces-state/interface/name"},
 	UpdateTrigger: "periodic",
 	Period:        config.Duration(1 * time.Second),
 }
@@ -115,13 +115,13 @@ var mockDTSRequest = dialinSubscriptionRequest{
 // A mock of a request to create an event notification subscription
 var mockDENSRequest = notificationSubscriptionRequest{
 	Stream: "ncs-alarms",
-	Keys:   []string{"ncs-alarms:alarm-notification/alarm-class"},
+	Tags:   []string{"ncs-alarms:alarm-notification/alarm-class"},
 }
 
 // A mock of a request to create a get operation
 var mockGRequest = getRequest{
 	SelectFilter: "/memory-statistics/memory-statistic",
-	Keys:         []string{"/memory-statistics/memory-statistic/name"},
+	Tags:         []string{"/memory-statistics/memory-statistic/name"},
 	Period:       config.Duration(1 * time.Second),
 }
 
@@ -167,7 +167,7 @@ func init() {
 	tPassword = flag.String("tPassword", "password", "password")
 	tKey = flag.String("tKey", "", publicKey)
 	tXpathf = flag.String("tXpathf", "", mockDTSRequest.XPathFilter)
-	tXpathk = flag.String("tXpathk", "", mockDTSRequest.Keys[0])
+	tXpathk = flag.String("tXpathk", "", mockDTSRequest.Tags[0])
 
 	// Read parameters of the NETCONF server to be used for test of an
 	// event notification subscription
@@ -237,7 +237,7 @@ func mockEventNotification() testutil.Metric {
 		Measurement: "ncs-alarms:alarm-notification",
 		Tags: map[string]string{
 			"source":                "127.0.0.1",
-			mockDENSRequest.Keys[0]: "changed-alarm",
+			mockDENSRequest.Tags[0]: "changed-alarm",
 		},
 		Fields: map[string]interface{}{
 			"type": "al:out-of-sync", "has-clear": true,
@@ -576,7 +576,7 @@ func TestCiscoTelemetryNETCONF_handleTelemetry(t *testing.T) {
 			name: "BadTelemetryTree",
 			c:    mockCiscoTelemetryNETCONF(nil, nil, false),
 			wantError: "failed to traverse telemetry tree: field name has " +
-				"value 1 with unsupported key data type uint32",
+				"value 1 with unsupported tag data type uint32",
 			args: args{
 				tt: TelemetryTree{XMLName: xml.Name{
 					Space: "urn:ietf:params:xml:ns:yang:ietf-interfaces",
@@ -729,7 +729,7 @@ func TestCiscoTelemetryNETCONF_Start(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		tt.c.Stop()
 		assert.Exactly(t, len(tt.c.userXpaths), tt.wantLengths[0])
-		assert.Exactly(t, len(tt.c.userKeys), tt.wantLengths[1])
+		assert.Exactly(t, len(tt.c.userTags), tt.wantLengths[1])
 
 		switch tt.testType {
 		case goodMainConfig:
@@ -754,7 +754,7 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 		c           *CiscoTelemetryNETCONF
 		wantLengths []int
 		wantXpath   []string
-		wantKeys    []string
+		wantTags    []string
 		testType    int
 	}{
 		{
@@ -763,7 +763,7 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 			wantLengths: []int{3, 3},
 			wantXpath: []string{"interfaces-state/interface",
 				mockDENSRequest.Stream, "memory-statistics/memory-statistic"},
-			wantKeys: []string{"interfaces-state/interface/name",
+			wantTags: []string{"interfaces-state/interface/name",
 				"alarm-notification/alarm-class",
 				"memory-statistics/memory-statistic/name"},
 			testType: goodMainConfig,
@@ -774,7 +774,7 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 				&dialinSubscriptionRequestsService{}, nil, false),
 			wantLengths: []int{1, 1},
 			wantXpath:   []string{"memory-statistics/memory-statistic"},
-			wantKeys:    []string{"memory-statistics/memory-statistic/name"},
+			wantTags:    []string{"memory-statistics/memory-statistic/name"},
 			testType:    goodMainConfigNoSubs,
 		},
 		{
@@ -783,7 +783,7 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 			wantLengths: []int{2, 2},
 			wantXpath: []string{"interfaces-state/interface",
 				mockDENSRequest.Stream},
-			wantKeys: []string{"interfaces-state/interface/name",
+			wantTags: []string{"interfaces-state/interface/name",
 				"alarm-notification/alarm-class"},
 			testType: goodMainConfigNoGets,
 		},
@@ -799,13 +799,13 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 			c: mockCiscoTelemetryNETCONF(&dialinSubscriptionRequestsService{
 				Subscriptions: []dialinSubscriptionRequest{{
 					UpdateTrigger: "periodic",
-					Keys:          []string{"/if:interfaces-state/interface/name"},
+					Tags:          []string{"/if:interfaces-state/interface/name"},
 					Period:        config.Duration(10 * time.Second),
 				}},
 				setting: &setting{},
 			}, &getRequestsService{
 				Gets: []getRequest{{
-					Keys:   []string{"/memory-statistics/memory-statistic/name"},
+					Tags:   []string{"/memory-statistics/memory-statistic/name"},
 					Period: config.Duration(10 * time.Second),
 				}},
 				setting: &setting{},
@@ -814,7 +814,7 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 			testType:    badMainConfigNoXpaths,
 		},
 		{
-			name: "GoodMainConfigNoKeys",
+			name: "GoodMainConfigNoTags",
 			c: mockCiscoTelemetryNETCONF(&dialinSubscriptionRequestsService{
 				Subscriptions: []dialinSubscriptionRequest{{
 					XPathFilter:   mockDTSRequest.XPathFilter,
@@ -832,8 +832,8 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 			wantLengths: []int{2, 0},
 			wantXpath: []string{"interfaces-state/interface",
 				"memory-statistics/memory-statistic"},
-			wantKeys: []string{},
-			testType: goodMainConfigNoKeys,
+			wantTags: []string{},
+			testType: goodMainConfigNoTags,
 		},
 	}
 	for _, tt := range tests {
@@ -845,12 +845,12 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 
 		// Check that preparePaths() built the xpath maps
 		assert.Exactly(t, len(tt.c.userXpaths), tt.wantLengths[0])
-		assert.Exactly(t, len(tt.c.userKeys), tt.wantLengths[1])
+		assert.Exactly(t, len(tt.c.userTags), tt.wantLengths[1])
 		for _, s := range tt.c.Dsrs.Subscriptions {
 			if tt.wantLengths[0] > 0 {
 				assert.Contains(t, tt.c.userXpaths, tt.wantXpath[0])
-				for range s.Keys {
-					assert.Contains(t, tt.c.userKeys, tt.wantKeys[0])
+				for range s.Tags {
+					assert.Contains(t, tt.c.userTags, tt.wantTags[0])
 				}
 			}
 		}
@@ -861,8 +861,8 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 					idx = 1
 				}
 				assert.Contains(t, tt.c.userXpaths, tt.wantXpath[idx])
-				for range g.Keys {
-					assert.Contains(t, tt.c.userKeys, tt.wantKeys[idx])
+				for range g.Tags {
+					assert.Contains(t, tt.c.userTags, tt.wantTags[idx])
 				}
 			}
 		}
@@ -987,7 +987,7 @@ func Test_dialinSubscriptionRequestsService_createService(t *testing.T) {
 			tt.args.c.ServerPublicKey = *tKey
 			if tt.testType == goodDialinTelemetryService {
 				tt.args.c.Dsrs.Subscriptions[0].XPathFilter = *tXpathf
-				tt.args.c.Dsrs.Subscriptions[0].Keys = []string{*tXpathk}
+				tt.args.c.Dsrs.Subscriptions[0].Tags = []string{*tXpathk}
 			}
 		case goodDialinEventNotificationService:
 			tt.args.c.ServerAddress = *enServer
@@ -1179,7 +1179,7 @@ func Test_dialinSubscriptionRequestsService_createRequests(t *testing.T) {
 			tt.args.c.ServerPublicKey = *tKey
 			if len(tt.args.c.Dsrs.Subscriptions) == 1 {
 				tt.args.c.Dsrs.Subscriptions[0].XPathFilter = *tXpathf
-				tt.args.c.Dsrs.Subscriptions[0].Keys = []string{*tXpathk}
+				tt.args.c.Dsrs.Subscriptions[0].Tags = []string{*tXpathk}
 			}
 		}
 
@@ -1278,7 +1278,7 @@ func Test_dialinSubscriptionRequestsService_receiveTelemetry(t *testing.T) {
 
 		go func() {
 			t.Run(tt.name, func(t *testing.T) {
-				// Extract the keys
+				// Extract the tags
 				tt.args.c.preparePaths()
 
 				tt.dsrs.receiveTelemetry(tt.args.ctx, tt.args.c)
@@ -1368,7 +1368,7 @@ func Test_dialinSubscriptionRequestsService_receiveNotifications(t *testing.T) {
 
 		go func() {
 			t.Run(tt.name, func(t *testing.T) {
-				// Extract the keys
+				// Extract the tags
 				tt.args.c.preparePaths()
 
 				tt.dsrs.receiveNotifications(tt.args.ctx, tt.args.c)
@@ -1453,7 +1453,7 @@ func Test_getRequestsService_createService(t *testing.T) {
 
 		if tt.testType == goodGetService {
 			tt.args.c.Grs.Gets[0].SelectFilter = *tXpathf
-			tt.args.c.Grs.Gets[0].Keys = []string{*tXpathk}
+			tt.args.c.Grs.Gets[0].Tags = []string{*tXpathk}
 		}
 
 		acc := &testutil.Accumulator{}

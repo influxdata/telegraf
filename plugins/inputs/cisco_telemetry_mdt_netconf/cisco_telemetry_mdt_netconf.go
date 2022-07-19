@@ -75,20 +75,20 @@ type dialinSubscriptionRequest struct {
 	XPathFilter   string          `toml:"xpath_filter"`
 	UpdateTrigger string          `toml:"update_trigger"`
 	Period        config.Duration `toml:"period"`
-	Keys          []string        `toml:"keys"`
+	Tags          []string        `toml:"tags"`
 }
 
 // notificationSubscriptionRequest given as input to the plugin
 type notificationSubscriptionRequest struct {
 	Stream string   `toml:"stream"`
-	Keys   []string `toml:"keys"`
+	Tags   []string `toml:"tags"`
 }
 
 // getRequest given as input to the plugin
 type getRequest struct {
 	SelectFilter string          `toml:"xpath_filter"`
 	Period       config.Duration `toml:"period"`
-	Keys         []string        `toml:"keys"`
+	Tags         []string        `toml:"tags"`
 }
 
 // netconfSubscriptionRequest sent through NETCONF, as per specification
@@ -132,9 +132,9 @@ type CiscoTelemetryNETCONF struct {
 	IgnoreServerAuthenticity bool   `toml:"ignore_server_authenticity"`
 	ServerPublicKey          string `toml:"server_public_key"`
 
-	// Xpaths and keys of all operations
+	// Xpaths and tags of all operations
 	userXpaths map[string]interface{}
-	userKeys   map[string]interface{}
+	userTags   map[string]interface{}
 
 	Redial config.Duration `toml:"redial"`
 
@@ -265,9 +265,9 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 
 					// Create dynamic subscription over NETCONF
 					log.Printf(
-						"Establishing subscription %s %s %s key(s)=%v...",
+						"Establishing subscription %s %s %s tags(s)=%v...",
 						subscription.XPathFilter, subscription.UpdateTrigger,
-						time.Duration(subscription.Period), subscription.Keys,
+						time.Duration(subscription.Period), subscription.Tags,
 					)
 
 					dsrs.Mutex.Lock()
@@ -666,7 +666,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 // to Influx LINE format and sends it to the accumulator
 func (c *CiscoTelemetryNETCONF) handleTelemetry(tt TelemetryTree, t time.Time) {
 	// Transform XML tree in Influx LINE format
-	grouper, err := tt.TraverseTree(c.userKeys, c.userXpaths,
+	grouper, err := tt.TraverseTree(c.userTags, c.userXpaths,
 		strings.Split(c.ServerAddress, ":")[0], t)
 
 	if err != nil {
@@ -700,22 +700,22 @@ func (c *CiscoTelemetryNETCONF) trimXpath(xpath string) string {
 	return newXpath
 }
 
-// preparePaths prepares the user x-paths and the user keys for tree traversals
+// preparePaths prepares the user x-paths and the user tags for tree traversals
 func (c *CiscoTelemetryNETCONF) preparePaths() {
 	var noXpaths int
-	var noKeys int
+	var noTags int
 
 	sExist := c.Dsrs != nil && len(c.Dsrs.Subscriptions) > 0
 	nExist := c.Dsrs != nil && len(c.Dsrs.Notifications) > 0
 	gExist := c.Grs != nil && len(c.Grs.Gets) > 0
 
-	// Initialize user xpaths and keys
+	// Initialize user xpaths and tags
 	if sExist {
 		for _, s := range c.Dsrs.Subscriptions {
 			if s.XPathFilter != "" {
 				noXpaths++
 			}
-			noKeys += len(s.Keys)
+			noTags += len(s.Tags)
 		}
 	}
 	if nExist {
@@ -723,7 +723,7 @@ func (c *CiscoTelemetryNETCONF) preparePaths() {
 			if n.Stream != "" {
 				noXpaths++
 			}
-			noKeys += len(n.Keys)
+			noTags += len(n.Tags)
 		}
 
 	}
@@ -732,43 +732,43 @@ func (c *CiscoTelemetryNETCONF) preparePaths() {
 			if g.SelectFilter != "" {
 				noXpaths++
 			}
-			noKeys += len(g.Keys)
+			noTags += len(g.Tags)
 		}
 
 	}
 
 	c.userXpaths = make(map[string]interface{}, noXpaths)
-	c.userKeys = make(map[string]interface{}, noKeys)
+	c.userTags = make(map[string]interface{}, noTags)
 
-	// Store x-paths and keys from Subscriptions
+	// Store x-paths and tags from Subscriptions
 	if sExist {
 		for _, s := range c.Dsrs.Subscriptions {
 			if s.XPathFilter != "" {
 				c.userXpaths[c.trimXpath(s.XPathFilter)] = nil
-				for _, k := range s.Keys {
-					c.userKeys[c.trimXpath(k)] = nil
+				for _, k := range s.Tags {
+					c.userTags[c.trimXpath(k)] = nil
 				}
 			}
 		}
 	}
-	// Store x-paths and keys from Notifications
+	// Store x-paths and tags from Notifications
 	if nExist {
 		for _, n := range c.Dsrs.Notifications {
 			if n.Stream != "" {
 				c.userXpaths[c.trimXpath(n.Stream)] = nil
-				for _, k := range n.Keys {
-					c.userKeys[c.trimXpath(k)] = nil
+				for _, k := range n.Tags {
+					c.userTags[c.trimXpath(k)] = nil
 				}
 			}
 		}
 	}
-	// Store x-paths and keys from GetOperations
+	// Store x-paths and tags from GetOperations
 	if gExist {
 		for _, g := range c.Grs.Gets {
 			if g.SelectFilter != "" {
 				c.userXpaths[c.trimXpath(g.SelectFilter)] = nil
-				for _, k := range g.Keys {
-					c.userKeys[c.trimXpath(k)] = nil
+				for _, k := range g.Tags {
+					c.userTags[c.trimXpath(k)] = nil
 				}
 			}
 		}

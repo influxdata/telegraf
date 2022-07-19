@@ -49,12 +49,12 @@ func (m *metricTracker) lookupMeasurement(
 
 // addValue adds the value of the stack element e to the metric.
 // The value is stored either as a tag (if its name is in a predefined
-// list of keys), or as a field.
+// list of tags), or as a field.
 func (m *metricTracker) addValue(rn string, path []string,
-	keys map[string]interface{}, e stackElem) error {
-	key := strings.Join(path, "/")
-	if _, keyFound := keys[key]; !keyFound {
-		// Set the entire traversal path as key only for
+	tags map[string]interface{}, e stackElem) error {
+	tag := strings.Join(path, "/")
+	if _, tagFound := tags[tag]; !tagFound {
+		// Set the entire traversal path as tag only for
 		// the fields that are deeper than the measurement level
 		if uint(len(path))-1 <= m.measurementLevel {
 			m.Fields[e.Tree.XMLName.Local] = e.Tree.Value
@@ -64,23 +64,23 @@ func (m *metricTracker) addValue(rn string, path []string,
 		}
 	} else {
 		// Append namespace sent with XML reply
-		key = rn + key
+		tag = rn + tag
 		switch value := e.Tree.Value.(type) {
 		case uint64:
-			m.Tags[key] = strconv.FormatUint(value, base)
+			m.Tags[tag] = strconv.FormatUint(value, base)
 		case int64:
-			m.Tags[key] = strconv.FormatInt(value, base)
+			m.Tags[tag] = strconv.FormatInt(value, base)
 		case float64:
-			m.Tags[key] = strconv.FormatFloat(value, 'f', -1, 64)
+			m.Tags[tag] = strconv.FormatFloat(value, 'f', -1, 64)
 		case bool:
-			m.Tags[key] = strconv.FormatBool(value)
+			m.Tags[tag] = strconv.FormatBool(value)
 		case string:
-			m.Tags[key] = value
+			m.Tags[tag] = value
 		default:
 			// Assume type is unknown
 			// Return unknown data type error
 			return fmt.Errorf(
-				"failed to traverse telemetry tree: field %v has value %v with unsupported key data type %T",
+				"failed to traverse telemetry tree: field %v has value %v with unsupported tag data type %T",
 				e.Tree.XMLName.Local,
 				value,
 				value,
@@ -116,7 +116,7 @@ func (m *metricTracker) removeValues(path []string, e stackElem) {
 // Representation of a tree as an element of a stack data structure
 // Has Tree as TelemetryTree
 // Has Child as counter of traversed children
-// Has Keys as counter of traversed keys
+// Has Tags as counter of traversed tags
 type stackElem struct {
 	Tree  TelemetryTree
 	Child int
@@ -146,7 +146,7 @@ type TelemetryTree struct {
 
 // TraverseTree traverses an XML tree and builds entries in Influx LINE format
 func (t *TelemetryTree) TraverseTree(
-	userKeys map[string]interface{},
+	userTags map[string]interface{},
 	userXpaths map[string]interface{},
 	source string, timestamp time.Time) (*metric.SeriesGrouper, error) {
 	m := &metricTracker{
@@ -195,7 +195,7 @@ func (t *TelemetryTree) TraverseTree(
 			// If the node is a leaf node, then store its value and pop the node
 			if len(current.Tree.Children) == 0 {
 				if e := m.addValue(rootNamespace,
-					traversalPath, userKeys, current); e != nil {
+					traversalPath, userTags, current); e != nil {
 					return nil, e
 				}
 
@@ -235,7 +235,7 @@ func (t *TelemetryTree) TraverseTree(
 					// Assume we traversed all children of the node
 					for k, v := range m.Fields {
 						// Update the measurement with namespace and add the
-						//fields and keys to the metric.SeriesGrouper
+						//fields and tags to the metric.SeriesGrouper
 						grouper.Add(rootNamespace+m.Measurement, m.Tags, m.Time, k, v)
 					}
 
