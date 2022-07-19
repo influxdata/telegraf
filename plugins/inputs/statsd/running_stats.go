@@ -97,9 +97,9 @@ func (rs *RunningStats) Median() float64 {
 	if rs.MedLen == 0 {
 		return 0
 	} else if rs.MedLen%2 == 0 {
-		return float64((rs.med[rs.MedLen/2-1] + rs.med[rs.MedLen/2]) / 2)
+		return (rs.med[rs.MedLen/2-1] + rs.med[rs.MedLen/2]) / 2
 	} else {
-		return float64(rs.med[rs.MedLen/2])
+		return rs.med[rs.MedLen/2]
 	}
 }
 
