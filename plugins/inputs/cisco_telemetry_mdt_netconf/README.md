@@ -53,30 +53,30 @@ The plugin requires the [netgonf library](github.com/cisco-ie/netgonf).
     update_trigger = "periodic"
     period = "10s"
 
-    ## Leaves to be marked as keys in Influx LINE format.
+    ## Leaves to be marked as tags in Influx LINE format.
     ## They are valid throughout all other defined operations.
-    keys = ["/if:interfaces-state/interface/name"]
+    tags = ["/if:interfaces-state/interface/name"]
 
   ## IOS-XE Subscription - periodic
   [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/mdt-oper:mdt-oper-data/mdt-subscriptions"
     update_trigger = "periodic"
     period = "10s"
-    keys = ["/mdt-oper:mdt-oper-data/mdt-subscriptions/subscription-id"]
+    tags = ["/mdt-oper:mdt-oper-data/mdt-subscriptions/subscription-id"]
 
   ## IOS-XE Subscription - periodic
   [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/memory-ios-xe-oper:memory-statistics/memory-ios-xe-oper:memory-statistic"
     update_trigger = "periodic"
     period = "10s"
-    keys = ["/memory-ios-xe-oper:memory-statistics/memory-ios-xe-oper:memory-statistic/memory-ios-xe-oper:name"]
+    tags = ["/memory-ios-xe-oper:memory-statistics/memory-ios-xe-oper:memory-statistic/memory-ios-xe-oper:name"]
 
   ## IOS-XE Subscription - Xpath union for multiple subtrees
   [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/interfaces-ios-xe-oper:interfaces/interface/statistics/in-octets|/interfaces-ios-xe-oper:interfaces/interface/statistics/out-octets"
     update_trigger = "periodic"
     period = "5s"
-    keys = ["/interfaces-ios-xe-oper:interfaces/interface/name"]
+    tags = ["/interfaces-ios-xe-oper:interfaces/interface/name"]
 
   ## IOS-XE Subscription - on-change
   [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
@@ -89,25 +89,25 @@ The plugin requires the [netgonf library](github.com/cisco-ie/netgonf).
   [[inputs.cisco_telemetry_mdt_netconf.get_service.get]]
     xpath_filter = "/interfaces-state/interface[name='GigabitEthernet1']/oper-status"
     period = "10s"
-    keys = ["/interfaces-state/interface/name"]
+    tags = ["/interfaces-state/interface/name"]
 
-  ## IOS-XE Get Request with filter and multiple keys
+  ## IOS-XE Get Request with filter and multiple tags
   [[inputs.cisco_telemetry_mdt_netconf.get_service.get]]
     xpath_filter = "/interfaces-state/interface[name='GigabitEthernet2']"
     period = "10s"
-    keys = ["/interfaces-state/interface/name", "/interfaces-state/interface/if-index"]
+    tags = ["/interfaces-state/interface/name", "/interfaces-state/interface/if-index"]
 
   ## IOS-XE Get Request without filter
   [[inputs.cisco_telemetry_mdt_netconf.get_service.get]]
     xpath_filter = "/memory-statistics/memory-statistic"
     period = "10s"
-    keys = ["/memory-statistics/memory-statistic/name"]
+    tags = ["/memory-statistics/memory-statistic/name"]
 
   ## Event notification subscription
-  ## NSO Event notfication subscription with a key
+  ## NSO Event notfication subscription with a tag
   [[inputs.cisco_telemetry_mdt_netconf.subscription_service.notification]]
     stream = "ncs-alarms"
-    keys = ["alarm-notification/alarm-class"]
+    tags = ["alarm-notification/alarm-class"]
 ```
 
 ## Example Output
