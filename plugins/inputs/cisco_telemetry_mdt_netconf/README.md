@@ -119,6 +119,7 @@ Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics,host=linux,name=Gig
 ```
 
 ## Metrics
+
 - Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization
   - tags:
     - host
