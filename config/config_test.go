@@ -442,38 +442,22 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 
 		logger := models.NewLogger("parsers", format, cfg.MetricName)
 
-		// Try with the new format
-		if creator, found := parsers.Parsers[format]; found {
-			t.Logf("using new format parser for %q...", format)
-			parserNew := creator(formatCfg.MetricName)
-			if settings, found := override[format]; found {
-				s := reflect.Indirect(reflect.ValueOf(parserNew))
-				for key, value := range settings.param {
-					v := reflect.ValueOf(value)
-					s.FieldByName(key).Set(v)
-				}
-			}
-			models.SetLoggerOnPlugin(parserNew, logger)
-			if p, ok := parserNew.(telegraf.Initializer); ok {
-				require.NoError(t, p.Init())
-			}
-			expected = append(expected, parserNew)
-			continue
-		}
+		creator, found := parsers.Parsers[format]
+		require.Truef(t, found, "No parser for format %q", format)
 
-		// Try with the old format
-		parserOld, err := parsers.NewParser(formatCfg)
-		if err == nil {
-			t.Logf("using old format parser for %q...", format)
-			models.SetLoggerOnPlugin(parserOld, logger)
-			if p, ok := parserOld.(telegraf.Initializer); ok {
-				require.NoError(t, p.Init())
+		parser := creator(formatCfg.MetricName)
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(parser))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
 			}
-			expected = append(expected, parserOld)
-			continue
 		}
-		require.Containsf(t, err.Error(), "invalid data format:", "setup %q failed: %v", format, err)
-		require.Failf(t, "%q neither found in old nor new format", format)
+		models.SetLoggerOnPlugin(parser, logger)
+		if p, ok := parser.(telegraf.Initializer); ok {
+			require.NoError(t, p.Init())
+		}
+		expected = append(expected, parser)
 	}
 	require.Len(t, expected, len(formats))
 
@@ -579,38 +563,22 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 
 		logger := models.NewLogger("parsers", format, cfg.MetricName)
 
-		// Try with the new format
-		if creator, found := parsers.Parsers[format]; found {
-			t.Logf("using new format parser for %q...", format)
-			parserNew := creator(formatCfg.MetricName)
-			if settings, found := override[format]; found {
-				s := reflect.Indirect(reflect.ValueOf(parserNew))
-				for key, value := range settings.param {
-					v := reflect.ValueOf(value)
-					s.FieldByName(key).Set(v)
-				}
-			}
-			models.SetLoggerOnPlugin(parserNew, logger)
-			if p, ok := parserNew.(telegraf.Initializer); ok {
-				require.NoError(t, p.Init())
-			}
-			expected = append(expected, parserNew)
-			continue
-		}
+		creator, found := parsers.Parsers[format]
+		require.Truef(t, found, "No parser for format %q", format)
 
-		// Try with the old format
-		parserOld, err := parsers.NewParser(formatCfg)
-		if err == nil {
-			t.Logf("using old format parser for %q...", format)
-			models.SetLoggerOnPlugin(parserOld, logger)
-			if p, ok := parserOld.(telegraf.Initializer); ok {
-				require.NoError(t, p.Init())
+		parser := creator(formatCfg.MetricName)
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(parser))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
 			}
-			expected = append(expected, parserOld)
-			continue
 		}
-		require.Containsf(t, err.Error(), "invalid data format:", "setup %q failed: %v", format, err)
-		require.Failf(t, "%q neither found in old nor new format", format)
+		models.SetLoggerOnPlugin(parser, logger)
+		if p, ok := parser.(telegraf.Initializer); ok {
+			require.NoError(t, p.Init())
+		}
+		expected = append(expected, parser)
 	}
 	require.Len(t, expected, len(formats))
 
