@@ -28,7 +28,8 @@ The Redis input plugin gathers metrics from one or many Redis servers.
   #   # Can be "string", "integer", or "float"
   #   type = "string"
 
-  ## specify server password
+  ## specify server connection parameters
+  # username = "myuser"
   # password = "s#cr@t%"
 
   ## specify username for ACL auth (Redis 6.0+)
