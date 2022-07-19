@@ -157,7 +157,6 @@ func TestInit(t *testing.T) {
 						ClientConfig: tls.ClientConfig{
 							InsecureSkipVerify: true,
 						},
-						Log: testutil.Logger{},
 					},
 				},
 				Log: testutil.Logger{},
@@ -174,7 +173,6 @@ func TestInit(t *testing.T) {
 						ClientConfig: tls.ClientConfig{
 							InsecureSkipVerify: true,
 						},
-						Log: testutil.Logger{},
 					},
 				},
 				Log: testutil.Logger{},
