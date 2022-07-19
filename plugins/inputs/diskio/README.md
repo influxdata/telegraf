@@ -67,10 +67,12 @@ docker run --privileged -v /:/hostfs:ro -v /run/udev:/run/udev:ro -e HOST_PROC=/
     - merged_reads (integer, counter)
     - merged_writes (integer, counter)
 
-On linux these values correspond to the values in
-[`/proc/diskstats`](https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats)
-and
-[`/sys/block/<dev>/stat`](https://www.kernel.org/doc/Documentation/block/stat.txt).
+On linux these values correspond to the values in [`/proc/diskstats`][1] and
+[`/sys/block/<dev>/stat`][2].
+
+[1]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
+
+[2]: https://www.kernel.org/doc/Documentation/block/stat.txt
 
 ### `reads` & `writes`
 
@@ -124,13 +126,14 @@ SELECT non_negative_derivative(last("io_time"),1ms) FROM "diskio" WHERE time > n
 
 ### Calculate average queue depth
 
-`iops_in_progress` will give you an instantaneous value. This will give you the average between polling intervals.
+`iops_in_progress` will give you an instantaneous value. This will give you the
+average between polling intervals.
 
 ```sql
 SELECT non_negative_derivative(last("weighted_io_time"),1ms) from "diskio" WHERE time > now() - 30m GROUP BY "host","name",time(60s)
 ```
 
-## Example
+## Example Output
 
 ```shell
 diskio,name=sda1 merged_reads=0i,reads=2353i,writes=10i,write_bytes=2117632i,write_time=49i,io_time=1271i,weighted_io_time=1350i,read_bytes=31350272i,read_time=1303i,iops_in_progress=0i,merged_writes=0i 1578326400000000000

@@ -1,6 +1,10 @@
 # Nginx Plus API Input Plugin
 
-Nginx Plus is a commercial version of the open source web server Nginx. The use this plugin you will need a license. For more information about the differences between Nginx (F/OSS) and Nginx Plus, [click here](https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/).
+Nginx Plus is a commercial version of the open source web server Nginx. The use
+this plugin you will need a license. For more information about the differences
+between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
+
+[diff-doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
 
 ## Configuration
 

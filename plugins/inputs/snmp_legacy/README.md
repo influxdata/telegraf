@@ -1,14 +1,10 @@
 # SNMP Legacy Input Plugin
 
-## Deprecated in version 1.0. Use [SNMP input plugin][]
+**Deprecated in version 1.0. Use [SNMP input plugin][]**
 
 The SNMP input plugin gathers metrics from SNMP agents
 
 ## Configuration
-
-In this example, the plugin will gather value of OIDS:
-
-- `.1.3.6.1.2.1.2.2.1.4.1`
 
 ```toml @sample.conf
 # DEPRECATED! PLEASE USE inputs.snmp INSTEAD.
@@ -103,6 +99,10 @@ In this example, the plugin will gather value of OIDS:
     # sub_tables could be not "real subtables"
     sub_tables=[".1.3.6.1.2.1.2.2.1.13", "bytes_recv", "bytes_send"]
 ```
+
+In the previous example, the plugin will gather value of OIDS:
+
+- `.1.3.6.1.2.1.2.2.1.4.1`
 
 ### Simple example
 
@@ -580,7 +580,7 @@ Note: the plugin will add instance name as tag *instance*
 - In **inputs.snmp.subtable** section, you can put a name from `snmptranslate_file`
   as `oid` attribute instead of a valid OID
 
-## Measurements & Fields
+## Metrics
 
 With the last example (Table with both mapping and subtable example):
 
@@ -591,7 +591,7 @@ With the last example (Table with both mapping and subtable example):
 - ifHCInOctets
   - ifHCInOctets
 
-## Tags
+### Tags
 
 With the last example (Table with both mapping and subtable example):
 

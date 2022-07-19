@@ -1,7 +1,8 @@
 # Exec Input Plugin
 
-The `exec` plugin executes all the `commands` in parallel on every interval and parses metrics from
-their output in any one of the accepted [Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+The `exec` plugin executes all the `commands` in parallel on every interval and
+parses metrics from their output in any one of the accepted [Input Data
+Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
 This plugin can be used to poll for custom metrics from any source.
 
@@ -41,14 +42,16 @@ scripts that match the pattern will cause them to be picked up immediately.
 
 ## Example
 
-This script produces static values, since no timestamp is specified the values are at the current time.
+This script produces static values, since no timestamp is specified the values
+are at the current time.
 
 ```sh
 #!/bin/sh
 echo 'example,tag1=a,tag2=b i=42i,j=43i,k=44i'
 ```
 
-It can be paired with the following configuration and will be run at the `interval` of the agent.
+It can be paired with the following configuration and will be run at the
+`interval` of the agent.
 
 ```toml
 [[inputs.exec]]

@@ -100,7 +100,8 @@ All fields for Suricata stats are numeric.
     - tcp_synack
     - ...
 
-Some fields of the Suricata alerts are strings, for example the signatures. See <https://suricata.readthedocs.io/en/suricata-6.0.0/output/eve/eve-json-format.html?highlight=priority#event-type-alert> for more information.
+Some fields of the Suricata alerts are strings, for example the signatures. See
+the Suricata [event docs][1] for more information.
 
 - suricata_alert
   - fields:
@@ -113,6 +114,8 @@ Some fields of the Suricata alerts are strings, for example the signatures. See 
     - target_port
     - target_port
     - ...
+
+[1]: https://suricata.readthedocs.io/en/suricata-6.0.0/output/eve/eve-json-format.html?highlight=priority#event-type-alert
 
 ### Suricata configuration
 
@@ -132,9 +135,10 @@ output in the Suricata configuration file:
 
 ### FreeBSD tuning
 
-Under FreeBSD it is necessary to increase the localhost buffer space to at least 16384, default is 8192
-otherwise messages from Suricata are truncated as they exceed the default available buffer space,
-consequently no statistics are processed by the plugin.
+Under FreeBSD it is necessary to increase the localhost buffer space to at least
+16384, default is 8192 otherwise messages from Suricata are truncated as they
+exceed the default available buffer space, consequently no statistics are
+processed by the plugin.
 
 ```text
 sysctl -w net.local.stream.recvspace=16384

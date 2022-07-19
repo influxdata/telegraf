@@ -19,7 +19,8 @@ The `csgo` plugin gather metrics from Counter-Strike: Global Offensive servers.
 
 ## Metrics
 
-The plugin retrieves the output of the `stats` command that is executed via rcon.
+The plugin retrieves the output of the `stats` command that is executed via
+rcon.
 
 If no servers are specified, no data will be collected
 

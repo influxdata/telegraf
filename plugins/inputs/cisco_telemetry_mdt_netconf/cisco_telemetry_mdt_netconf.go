@@ -25,8 +25,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const pluginName = "[inputs.cisco_telemetry_mdt_netconf]"
-
 // Flags that track the state of a service
 const (
 	connected = iota + 1 // Service is connected to NETCONF server
@@ -139,6 +137,8 @@ type CiscoTelemetryNETCONF struct {
 	userKeys   map[string]interface{}
 
 	Redial config.Duration `toml:"redial"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	acc    telegraf.Accumulator
 	cancel context.CancelFunc
@@ -265,10 +265,9 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 
 					// Create dynamic subscription over NETCONF
 					log.Printf(
-						"%s: establishing subscription %s %s %s key(s)=%v...",
-						pluginName, subscription.XPathFilter,
-						subscription.UpdateTrigger, time.Duration(subscription.Period),
-						subscription.Keys,
+						"Establishing subscription %s %s %s key(s)=%v...",
+						subscription.XPathFilter, subscription.UpdateTrigger,
+						time.Duration(subscription.Period), subscription.Keys,
 					)
 
 					dsrs.Mutex.Lock()
@@ -279,7 +278,7 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 						c.reportError(ctx, err, "create telemetry subscription")
 					} else {
 						log.Printf(
-							"%s: established subscription", pluginName,
+							"Established subscription",
 						)
 						// Announce state:created to the next stage of the pipeline
 						dsrs.setting.state = created
@@ -320,8 +319,8 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 			}
 
 			log.Printf(
-				"%s: establishing notification subscription %s...",
-				pluginName, notification,
+				"Establishing notification subscription %s...",
+				notification,
 			)
 
 			dsrs.Mutex.Lock()
@@ -332,7 +331,7 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 				c.reportError(ctx, err, "create notification subscription")
 			} else {
 				log.Printf(
-					"%s: established subscription", pluginName,
+					"Established subscription",
 				)
 				// Announce state:created to the next stage of the pipeline
 				dsrs.setting.state = created
@@ -361,7 +360,7 @@ func (dsrs *dialinSubscriptionRequestsService) receiveTelemetry(
 
 		if sessionExists {
 			log.Printf(
-				"%s: receiving yang-push messages ...", pluginName,
+				"Receiving yang-push messages ...",
 			)
 
 			err := dsrs.Session.Receive(push)
@@ -388,8 +387,8 @@ func (dsrs *dialinSubscriptionRequestsService) receiveTelemetry(
 	}
 	dsrs.state = ended
 	log.Printf(
-		"%s: stopped Cisco NETCONF dial-in telemetry subscription service on %s",
-		pluginName, c.ServerAddress,
+		"Stopped Cisco NETCONF dial-in telemetry subscription service on %s",
+		c.ServerAddress,
 	)
 }
 
@@ -406,7 +405,7 @@ func (dsrs *dialinSubscriptionRequestsService) receiveNotifications(
 
 		if sessionExists {
 			log.Printf(
-				"%s: receiving event messages ...", pluginName,
+				"Receiving event messages ...",
 			)
 
 			err := dsrs.Session.Receive(event)
@@ -435,8 +434,8 @@ func (dsrs *dialinSubscriptionRequestsService) receiveNotifications(
 	}
 	dsrs.state = ended
 	log.Printf(
-		"%s: stopped Cisco NETCONF event notification subscription service on %s",
-		pluginName, c.ServerAddress,
+		"Stopped Cisco NETCONF event notification subscription service on %s",
+		c.ServerAddress,
 	)
 }
 
@@ -507,8 +506,7 @@ func (grs *getRequestsService) createRequests(
 						if sessionExists {
 							// Get operation
 							log.Printf(
-								"%s: performing <get> operation ...",
-								pluginName,
+								"Performing <get> operation ...",
 							)
 
 							err = grs.Session.Call(get, getReply)
@@ -550,8 +548,8 @@ func (grs *getRequestsService) createRequests(
 				waitgroup.Done()
 
 				log.Printf(
-					"%s: stopped Cisco NETCONF <get> service on %s",
-					pluginName, c.ServerAddress,
+					"Stopped Cisco NETCONF <get> service on %s",
+					c.ServerAddress,
 				)
 			}(gets[i], g.Period)
 		}
@@ -574,8 +572,8 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 		// Dial unknown server
 		if c.IgnoreServerAuthenticity {
 			log.Printf(
-				"%s: dialling unknown NETCONF server %s ...",
-				pluginName, c.ServerAddress,
+				"Dialling unknown NETCONF server %s ...",
+				c.ServerAddress,
 			)
 			client, err = netconf.DialSSHWithPassword(
 				c.ServerAddress,
@@ -585,8 +583,8 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 		} else {
 			// Dial known server
 			log.Printf(
-				"%s: dialling known NETCONF server %s ...",
-				pluginName, c.ServerAddress,
+				"Dialling known NETCONF server %s ...",
+				c.ServerAddress,
 			)
 			if c.ServerPublicKey != "" {
 				if _, _, serverPublicKey, _, _, err =
@@ -619,8 +617,8 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 			s.Client = client
 
 			log.Printf(
-				"%s: dialled server %s",
-				pluginName, c.ServerAddress,
+				"Dialled server %s",
+				c.ServerAddress,
 			)
 			break
 		}
@@ -634,7 +632,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 	// Create NETCONF session
 	for ctx.Err() == nil && s.Client != nil {
 		log.Printf(
-			"%s: creating new NETCONF session ...", pluginName,
+			"Creating new NETCONF session ...",
 		)
 
 		ss, err := s.Client.NewSession()
@@ -643,7 +641,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 			c.reportError(ctx, err, "create NETCONF session")
 		} else {
 			log.Printf(
-				"%s: created new NETCONF session", pluginName,
+				"Created new NETCONF session",
 			)
 			s.Session = ss
 			break
@@ -657,8 +655,8 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 
 	if ctx.Err() == nil {
 		log.Printf(
-			"%s: dialled server %s and created new NETCONF session",
-			pluginName, c.ServerAddress,
+			"Dialled server %s and created new NETCONF session",
+			c.ServerAddress,
 		)
 		s.state = connected
 	}
@@ -780,7 +778,7 @@ func (c *CiscoTelemetryNETCONF) preparePaths() {
 //reportError abstracts the report of error messages based on their root cause
 func (c *CiscoTelemetryNETCONF) reportError(
 	ctx context.Context, err error, processName string) {
-	logMessage := pluginName + ": NETCONF %s stopped"
+	logMessage := "NETCONF %s stopped"
 	errorMessage := "failed to %s: %s"
 
 	if ctx.Err() != nil && ctx.Err() == context.Canceled {
@@ -793,7 +791,7 @@ func (c *CiscoTelemetryNETCONF) reportError(
 			errorMessage, processName, err,
 		))
 	} else if ctx.Err() != nil {
-		// Acknowledge other context erro
+		// Acknowledge other context error
 		log.Println("Context error: Adding error to accumulator: ", err, "!")
 		c.acc.AddError(fmt.Errorf(
 			errorMessage, processName, ctx.Err().Error(),
@@ -812,7 +810,7 @@ func (c *CiscoTelemetryNETCONF) reportError(
 func (s *setting) cleanup() error {
 	// Close open session and client before stopping the plugin
 	log.Printf(
-		"%s: cleaning up ...", pluginName,
+		"cleaning up ...",
 	)
 	var err error
 	if s.Mutex != nil {
@@ -851,23 +849,23 @@ func (c *CiscoTelemetryNETCONF) Start(acc telegraf.Accumulator) error {
 	go func() {
 		if c.Dsrs != nil && len(c.Dsrs.Subscriptions) > 0 {
 			log.Printf(
-				"%s: starting Cisco NETCONF dial-in subscription service on %s",
-				pluginName, c.ServerAddress)
+				"Starting Cisco NETCONF dial-in subscription service on %s",
+				c.ServerAddress)
 			c.waitgroup.Add(1)
 			go c.Dsrs.createService(ctx, c)
 		}
 		if c.Grs != nil && len(c.Grs.Gets) > 0 {
 			log.Printf(
-				"%s: starting Cisco NETCONF get service on %s",
-				pluginName, c.ServerAddress,
+				"Starting Cisco NETCONF get service on %s",
+				c.ServerAddress,
 			)
 			c.waitgroup.Add(1)
 			go c.Grs.createService(ctx, c)
 		}
 		if c.Dsrs != nil && len(c.Dsrs.Notifications) > 0 {
 			log.Printf(
-				"%s: starting Cisco NETCONF notification subscription service on %s",
-				pluginName, c.ServerAddress)
+				"Starting Cisco NETCONF notification subscription service on %s",
+				c.ServerAddress)
 			// Create the Dsrs service only if it was not already created
 			if len(c.Dsrs.Subscriptions) == 0 {
 				c.waitgroup.Add(1)
@@ -882,7 +880,7 @@ func (c *CiscoTelemetryNETCONF) Start(acc telegraf.Accumulator) error {
 // Stop function executed when the plugin is stopped
 func (c *CiscoTelemetryNETCONF) Stop() {
 	log.Printf(
-		"%s: stopping channels ...", pluginName,
+		"Stopping channels ...",
 	)
 
 	// Send process cancellation to goroutines
@@ -911,14 +909,9 @@ func (c *CiscoTelemetryNETCONF) Stop() {
 	c.waitgroup.Wait()
 
 	log.Printf(
-		"%s: stopped Cisco NETCONF telemetry plugin on %s",
-		pluginName, c.ServerAddress,
+		"Stopped Cisco NETCONF telemetry plugin on %s",
+		c.ServerAddress,
 	)
-}
-
-// Description of plugin
-func (c *CiscoTelemetryNETCONF) Description() string {
-	return "Cisco dial-in NETCONF telemetry input plugin"
 }
 
 // SampleConfig of plugin

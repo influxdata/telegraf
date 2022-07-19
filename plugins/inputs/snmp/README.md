@@ -220,9 +220,9 @@ One [metric][] is created for each row of the SNMP table.
 
 #### Two Table Join
 
-Snmp plugin can join two snmp tables that have different indexes. For this to work one table
-should have translation field that return index of second table as value. Examples
-of such fields are:
+Snmp plugin can join two snmp tables that have different indexes. For this to
+work one table should have translation field that return index of second table
+as value. Examples of such fields are:
 
 * Cisco portTable with translation field: `CISCO-STACK-MIB::portIfIndex`,
 which value is IfIndex from ifTable
@@ -231,11 +231,13 @@ which value is IfIndex from ifTable
 * Cisco cpeExtPsePortTable with translation field: `CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex`,
 which value is index from entPhysicalTable
 
-Such field can be used to translate index to secondary table with `secondary_index_table = true`
-and all fields from secondary table (with index pointed from translation field), should have added option
-`secondary_index_use = true`. Telegraf cannot duplicate entries during join so translation
-must be 1-to-1 (not 1-to-many). To add fields from secondary table with index that is not present
-in translation table (outer join), there is a second option for translation index `secondary_outer_join = true`.
+Such field can be used to translate index to secondary table with
+`secondary_index_table = true` and all fields from secondary table (with index
+pointed from translation field), should have added option `secondary_index_use =
+true`. Telegraf cannot duplicate entries during join so translation must be
+1-to-1 (not 1-to-many). To add fields from secondary table with index that is
+not present in translation table (outer join), there is a second option for
+translation index `secondary_outer_join = true`.
 
 ##### Example configuration for table joins
 
@@ -255,7 +257,8 @@ name = "EntPhyIndex"
 oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex"
 ```
 
-Partial result (removed agent_host and host columns from all following outputs in this section):
+Partial result (removed agent_host and host columns from all following outputs
+in this section):
 
 ```text
 > ciscoPower,index=1.2 EntPhyIndex=1002i,PortPwrConsumption=6643i 1621460628000000000
@@ -263,7 +266,8 @@ Partial result (removed agent_host and host columns from all following outputs i
 > ciscoPower,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621460628000000000
 ```
 
-Note here that EntPhyIndex column carries index from ENTITY-MIB table, config for it:
+Note here that EntPhyIndex column carries index from ENTITY-MIB table, config
+for it:
 
 ```toml
 [[inputs.snmp.table]]
@@ -283,9 +287,9 @@ Partial result:
 > entityTable,index=1005 EntPhysicalName="GigabitEthernet1/5" 1621460809000000000
 ```
 
-Now, lets attempt to join these results into one table. EntPhyIndex matches index
-from second table, and lets convert EntPhysicalName into tag, so second table will
-only provide tags into result. Configuration:
+Now, lets attempt to join these results into one table. EntPhyIndex matches
+index from second table, and lets convert EntPhysicalName into tag, so second
+table will only provide tags into result. Configuration:
 
 ```toml
 [[inputs.snmp.table]]
