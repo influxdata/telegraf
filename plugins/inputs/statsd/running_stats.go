@@ -86,7 +86,7 @@ func (rs *RunningStats) AddValue(v float64) {
 	} else {
 		// Reached limit, slice off first element
 		rs.med = rs.med[1:]
-		rs.med[len(rs.med)-1] = v
+		rs.med[len(rs.med)] = v
 	}
 }
 
