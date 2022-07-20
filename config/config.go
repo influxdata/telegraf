@@ -838,7 +838,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// that counts the number of misses. In case we have a parser
 	// for the input both need to miss the entry. We count the
 	// missing entries at the end.
-	missThreshold := 0
 	missCount := make(map[string]int)
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
@@ -858,8 +857,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// If the input has a SetParser or SetParserFunc function, it can accept
 	// arbitrary data-formats, so build the requested parser and set it.
 	if t, ok := input.(telegraf.ParserInput); ok {
-		fmt.Println("[addInput] telegraf.ParserInput")
-		missThreshold = 1
 		parser, err := c.addParser(name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
@@ -869,9 +866,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// Keep the old interface for backward compatibility
 	if t, ok := input.(parsers.ParserInput); ok {
-		fmt.Println("[addInput] parsers.ParserInput")
 		// DEPRECATED: Please switch your plugin to telegraf.ParserInput.
-		missThreshold = 1
 		parser, err := c.addParser(name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
@@ -880,7 +875,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 
 	if t, ok := input.(telegraf.ParserFuncInput); ok {
-		missThreshold = 1
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
@@ -896,7 +890,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	if t, ok := input.(parsers.ParserFuncInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncInput.
-		missThreshold = 1
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
@@ -935,7 +928,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// Check the number of misses against the threshold
 	for key, count := range missCount {
-		if count <= missThreshold {
+		if count <= 1 {
 			continue
 		}
 		if err := c.missingTomlField(nil, key); err != nil {
