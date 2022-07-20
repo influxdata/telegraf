@@ -731,51 +731,94 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		}
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
+	streamingProcessor := creator()
+
+	// For processors with parsers we need to compute the set of
+	// options that is not covered by both, the parser and the processor.
+	// We achieve this by keeping a local book of missing entries
+	// that counts the number of misses. In case we have a parser
+	// for the input both need to miss the entry. We count the
+	// missing entries at the end.
+	missCount := make(map[string]int)
+	c.setLocalMissingTomlFieldTracker(missCount)
+	defer c.resetMissingTomlFieldTracker()
 
 	processorConfig, err := c.buildProcessor(name, table)
 	if err != nil {
 		return err
 	}
 
-	rf, err := c.newRunningProcessor(creator, processorConfig, table)
-	if err != nil {
+	var processor interface{}
+	processor = streamingProcessor
+	if p, ok := streamingProcessor.(unwrappable); ok {
+		processor = p.Unwrap()
+	}
+
+	// If the (underlying) processor has a SetParser or SetParserFunc function,
+	// it can accept arbitrary data-formats, so build the requested parser and
+	// set it.
+	if t, ok := processor.(telegraf.ParserInput); ok {
+		parser, err := c.addParser(name, table)
+		if err != nil {
+			return fmt.Errorf("adding parser failed: %w", err)
+		}
+		t.SetParser(parser)
+	}
+
+	if t, ok := processor.(telegraf.ParserFuncInput); ok {
+		if !c.probeParser(table) {
+			return errors.New("parser not found")
+		}
+		t.SetParserFunc(func() (telegraf.Parser, error) {
+			parser, err := c.addParser(name, table)
+			if err != nil {
+				return nil, err
+			}
+			err = parser.Init()
+			return parser, err
+		})
+	}
+
+	// Setup the processor
+	if err := c.setupProcessorOptions(processorConfig.Name, streamingProcessor, table); err != nil {
 		return err
 	}
+
+	rf := models.NewRunningProcessor(streamingProcessor, processorConfig)
 	c.Processors = append(c.Processors, rf)
 
-	// save a copy for the aggregator
-	rf, err = c.newRunningProcessor(creator, processorConfig, table)
-	if err != nil {
+	// Save a copy for the aggregator
+	if err := c.setupProcessorOptions(processorConfig.Name, streamingProcessor, table); err != nil {
 		return err
 	}
+
+	rf = models.NewRunningProcessor(streamingProcessor, processorConfig)
 	c.AggProcessors = append(c.AggProcessors, rf)
 
 	return nil
 }
 
-func (c *Config) newRunningProcessor(
-	creator processors.StreamingCreator,
-	processorConfig *models.ProcessorConfig,
-	table *ast.Table,
-) (*models.RunningProcessor, error) {
-	processor := creator()
-
+func (c *Config) setupProcessorOptions(name string, processor telegraf.StreamingProcessor, table *ast.Table) error {
 	if p, ok := processor.(unwrappable); ok {
-		if err := c.toml.UnmarshalTable(table, p.Unwrap()); err != nil {
-			return nil, err
+		unwrapped := p.Unwrap()
+		if err := c.toml.UnmarshalTable(table, unwrapped); err != nil {
+			return fmt.Errorf("unmarshalling unwrappable failed: %w", err)
 		}
-	} else {
-		if err := c.toml.UnmarshalTable(table, processor); err != nil {
-			return nil, err
+		if err := c.printUserDeprecation("processors", name, unwrapped); err != nil {
+			return err
 		}
+		return nil
 	}
 
-	if err := c.printUserDeprecation("processors", processorConfig.Name, processor); err != nil {
-		return nil, err
+	if err := c.toml.UnmarshalTable(table, processor); err != nil {
+		return fmt.Errorf("unmarshalling failed: %w", err)
 	}
 
-	rf := models.NewRunningProcessor(processor, processorConfig)
-	return rf, nil
+	if err := c.printUserDeprecation("processors", name, processor); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
