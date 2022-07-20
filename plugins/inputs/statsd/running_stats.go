@@ -86,9 +86,9 @@ func (rs *RunningStats) AddValue(v float64) {
 	if len(rs.med) < rs.MedLimit {
 		rs.med = append(rs.med, v)
 	} else {
-		// Reached limit, insert at rear
-		rs.med[rs.MedInsertIndex] = v
+		// Reached limit, start over
 		rs.MedInsertIndex = (rs.MedInsertIndex + 1) % rs.MedLimit
+		rs.med[rs.MedInsertIndex] = v
 	}
 }
 
