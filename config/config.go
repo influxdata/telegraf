@@ -866,7 +866,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// Keep the old interface for backward compatibility
 	if t, ok := input.(parsers.ParserInput); ok {
-		fmt.Println("[addInput] parsers.ParserInput")
 		// DEPRECATED: Please switch your plugin to telegraf.ParserInput.
 		parser, err := c.addParser(name, table)
 		if err != nil {
