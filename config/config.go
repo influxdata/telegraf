@@ -761,7 +761,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	// If the (underlying) processor has a SetParser or SetParserFunc function,
 	// it can accept arbitrary data-formats, so build the requested parser and
 	// set it.
-	if t, ok := processor.(telegraf.ParserInput); ok {
+	if t, ok := processor.(telegraf.ParserPlugin); ok {
 		parser, err := c.addParser("processors", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
@@ -769,7 +769,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
-	if t, ok := processor.(telegraf.ParserFuncInput); ok {
+	if t, ok := processor.(telegraf.ParserFuncPlugin); ok {
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
@@ -808,21 +808,14 @@ func (c *Config) setupProcessorOptions(name string, processor telegraf.Streaming
 		if err := c.toml.UnmarshalTable(table, unwrapped); err != nil {
 			return fmt.Errorf("unmarshalling unwrappable failed: %w", err)
 		}
-		if err := c.printUserDeprecation("processors", name, unwrapped); err != nil {
-			return err
-		}
-		return nil
+		return c.printUserDeprecation("processors", name, unwrapped)
 	}
 
 	if err := c.toml.UnmarshalTable(table, processor); err != nil {
 		return fmt.Errorf("unmarshalling failed: %w", err)
 	}
 
-	if err := c.printUserDeprecation("processors", name, processor); err != nil {
-		return err
-	}
-
-	return nil
+	return c.printUserDeprecation("processors", name, processor)
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -903,7 +896,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// If the input has a SetParser or SetParserFunc function, it can accept
 	// arbitrary data-formats, so build the requested parser and set it.
-	if t, ok := input.(telegraf.ParserInput); ok {
+	if t, ok := input.(telegraf.ParserPlugin); ok {
 		parser, err := c.addParser("inputs", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
@@ -913,7 +906,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// Keep the old interface for backward compatibility
 	if t, ok := input.(parsers.ParserInput); ok {
-		// DEPRECATED: Please switch your plugin to telegraf.ParserInput.
+		// DEPRECATED: Please switch your plugin to telegraf.ParserPlugin.
 		parser, err := c.addParser("inputs", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
@@ -921,7 +914,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
-	if t, ok := input.(telegraf.ParserFuncInput); ok {
+	if t, ok := input.(telegraf.ParserFuncPlugin); ok {
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
@@ -936,7 +929,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 
 	if t, ok := input.(parsers.ParserFuncInput); ok {
-		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncInput.
+		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncPlugin.
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
