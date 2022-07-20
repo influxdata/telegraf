@@ -96,15 +96,16 @@ func (rs *RunningStats) Mean() float64 {
 
 func (rs *RunningStats) Median() float64 {
 	// Need to sort for median, but keep temporal order
-	sorted := rs.med
-	sort.Float64s(sorted)
-	count := len(sorted)
+	var values []float64
+	values = append(values, rs.med...)
+	sort.Float64s(values)
+	count := len(values)
 	if count == 0 {
 		return 0
 	} else if count%2 == 0 {
-		return (sorted[count/2-1] + sorted[count/2]) / 2
+		return (values[count/2-1] + values[count/2]) / 2
 	} else {
-		return sorted[count/2]
+		return values[count/2]
 	}
 }
 
