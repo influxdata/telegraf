@@ -687,12 +687,12 @@ func (c *Config) probeParser(table *ast.Table) bool {
 	return ok
 }
 
-func (c *Config) addParser(parentname string, table *ast.Table) (*models.RunningParser, error) {
+func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) (*models.RunningParser, error) {
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
 
 	if dataformat == "" {
-		if parentname == "exec" {
+		if parentcategory == "inputs" && parentname == "exec" {
 			// Legacy support, exec plugin originally parsed JSON by default.
 			dataformat = "json"
 		} else {
@@ -762,7 +762,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	// it can accept arbitrary data-formats, so build the requested parser and
 	// set it.
 	if t, ok := processor.(telegraf.ParserInput); ok {
-		parser, err := c.addParser(name, table)
+		parser, err := c.addParser("processors", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
 		}
@@ -774,7 +774,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
-			parser, err := c.addParser(name, table)
+			parser, err := c.addParser("processors", name, table)
 			if err != nil {
 				return nil, err
 			}
@@ -904,7 +904,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// If the input has a SetParser or SetParserFunc function, it can accept
 	// arbitrary data-formats, so build the requested parser and set it.
 	if t, ok := input.(telegraf.ParserInput); ok {
-		parser, err := c.addParser(name, table)
+		parser, err := c.addParser("inputs", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
 		}
@@ -914,7 +914,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// Keep the old interface for backward compatibility
 	if t, ok := input.(parsers.ParserInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserInput.
-		parser, err := c.addParser(name, table)
+		parser, err := c.addParser("inputs", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
 		}
@@ -926,7 +926,12 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
-			return c.addParser(name, table)
+			parser, err := c.addParser("inputs", name, table)
+			if err != nil {
+				return nil, err
+			}
+			err = parser.Init()
+			return parser, err
 		})
 	}
 
@@ -936,7 +941,12 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
-			return c.addParser(name, table)
+			parser, err := c.addParser("inputs", name, table)
+			if err != nil {
+				return nil, err
+			}
+			err = parser.Init()
+			return parser, err
 		})
 	}
 
