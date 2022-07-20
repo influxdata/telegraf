@@ -37,8 +37,9 @@ type RunningStats struct {
 	// Array used to calculate estimated median values
 	// We will store a maximum of MedLimit values, at which point we will start
 	// slicing old values
-	med      []float64
-	MedLimit int
+	med            []float64
+	MedLimit       int
+	MedInsertIndex int
 }
 
 func (rs *RunningStats) AddValue(v float64) {
@@ -54,6 +55,7 @@ func (rs *RunningStats) AddValue(v float64) {
 		}
 		if rs.MedLimit == 0 {
 			rs.MedLimit = defaultMedianLimit
+			rs.MedInsertIndex = defaultMedianLimit - 1
 		}
 		rs.perc = make([]float64, 0, rs.PercLimit)
 		rs.med = make([]float64, 0, rs.MedLimit)
@@ -84,9 +86,9 @@ func (rs *RunningStats) AddValue(v float64) {
 	if len(rs.med) < rs.MedLimit {
 		rs.med = append(rs.med, v)
 	} else {
-		// Reached limit, slice off first element
-		rs.med = rs.med[1:]
-		rs.med[len(rs.med)] = v
+		// Reached limit, insert at rear
+		rs.med[rs.MedInsertIndex] = v
+		rs.MedInsertIndex = (rs.MedInsertIndex + 1) % rs.MedLimit
 	}
 }
 
