@@ -149,6 +149,8 @@ var defaultReplStats = map[string]string{
 	"member_status":                            "NodeType",
 	"state":                                    "NodeState",
 	"repl_state":                               "NodeStateInt",
+	"repl_member_health":                       "NodeHealthInt",
+	"repl_health_avg":                          "ReplHealthAvg",
 	"repl_lag":                                 "ReplLag",
 	"repl_network_bytes":                       "ReplNetworkBytes",
 	"repl_network_getmores_num":                "ReplNetworkGetmoresNum",
