@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite/types"
 	"github.com/aws/smithy-go"
+
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -243,7 +244,7 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
 			// log error and return error to telegraf to retry in next flush interval
 			// We need this is to avoid data drop when there are no tables present in the database
-			return fmt.Errorf("Failed to write to Timestream database '%s' table '%s'. Skipping metric! Error: '%s'",
+			return fmt.Errorf("failed to write to Timestream database '%s' table '%s', Error: '%s'",
 				t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
 
@@ -426,7 +427,7 @@ func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Reco
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
-			t.Log.Errorf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
+			t.Log.Warnf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
 				"Supported values are: [int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool]",
 				fieldName, reflect.TypeOf(fieldValue))
 			continue
@@ -451,12 +452,9 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 	var records []types.Record
 	dimensions := t.buildDimensions(point)
 
-	var multiMeasureName string
-
+	multiMeasureName := t.MeasureNameForMultiMeasureRecords
 	if t.MappingMode == MappingModeSingleTable {
 		multiMeasureName = point.Name()
-	} else {
-		multiMeasureName = t.MeasureNameForMultiMeasureRecords
 	}
 
 	//list of Multi measure value.
