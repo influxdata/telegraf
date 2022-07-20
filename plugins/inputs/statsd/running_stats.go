@@ -55,7 +55,7 @@ func (rs *RunningStats) AddValue(v float64) {
 		}
 		if rs.MedLimit == 0 {
 			rs.MedLimit = defaultMedianLimit
-			rs.MedInsertIndex = defaultMedianLimit - 1
+			rs.MedInsertIndex = 0
 		}
 		rs.perc = make([]float64, 0, rs.PercLimit)
 		rs.med = make([]float64, 0, rs.MedLimit)
@@ -87,8 +87,8 @@ func (rs *RunningStats) AddValue(v float64) {
 		rs.med = append(rs.med, v)
 	} else {
 		// Reached limit, start over
-		rs.MedInsertIndex = (rs.MedInsertIndex + 1) % rs.MedLimit
 		rs.med[rs.MedInsertIndex] = v
+		rs.MedInsertIndex = (rs.MedInsertIndex + 1) % rs.MedLimit
 	}
 }
 
