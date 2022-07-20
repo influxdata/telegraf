@@ -61,9 +61,10 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			"KAFKA_ADVERTISED_HOST_NAME": "localhost",
 			"KAFKA_ADVERTISED_PORT":      "9092",
 			"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("telegraf-test-zookeeper:%s", zookeeper.Ports["2181"]),
+			"KAFKA_CREATE_TOPICS":        "Test:1:1",
 		},
 		Networks:   []string{networkName},
-		WaitingFor: wait.ForLog("[KafkaServer id=1001] started"),
+		WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -92,7 +93,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	// Verify that we can successfully write data to the kafka broker
 	err = k.Write(testutil.MockMetrics())
 	require.NoError(t, err)
-	k.Close()
+	err = k.Close()
+	require.NoError(t, err)
 }
 
 func TestTopicSuffixes(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"

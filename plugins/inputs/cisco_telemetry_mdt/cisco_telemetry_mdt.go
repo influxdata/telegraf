@@ -20,10 +20,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -38,15 +40,25 @@ const (
 	tcpMaxMsgLen uint32 = 1024 * 1024
 )
 
+// default minimum time between successive pings
+// this value is specified in the GRPC docs via GRPC_ARG_HTTP2_MIN_RECV_PING_INTERVAL_WITHOUT_DATA_MS
+const defaultKeepaliveMinTime = config.Duration(time.Second * 300)
+
+type GRPCEnforcementPolicy struct {
+	PermitKeepaliveWithoutCalls bool            `toml:"permit_keepalive_without_calls"`
+	KeepaliveMinTime            config.Duration `toml:"keepalive_minimum_time"`
+}
+
 // CiscoTelemetryMDT plugin for IOS XR, IOS XE and NXOS platforms
 type CiscoTelemetryMDT struct {
 	// Common configuration
-	Transport      string
-	ServiceAddress string            `toml:"service_address"`
-	MaxMsgSize     int               `toml:"max_msg_size"`
-	Aliases        map[string]string `toml:"aliases"`
-	Dmes           map[string]string `toml:"dmes"`
-	EmbeddedTags   []string          `toml:"embedded_tags"`
+	Transport         string
+	ServiceAddress    string                `toml:"service_address"`
+	MaxMsgSize        int                   `toml:"max_msg_size"`
+	Aliases           map[string]string     `toml:"aliases"`
+	Dmes              map[string]string     `toml:"dmes"`
+	EmbeddedTags      []string              `toml:"embedded_tags"`
+	EnforcementPolicy GRPCEnforcementPolicy `toml:"grpc_enforcement_policy"`
 
 	Log telegraf.Logger
 
@@ -175,6 +187,14 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 		if c.MaxMsgSize > 0 {
 			opts = append(opts, grpc.MaxRecvMsgSize(c.MaxMsgSize))
+		}
+
+		if c.EnforcementPolicy.PermitKeepaliveWithoutCalls || (c.EnforcementPolicy.KeepaliveMinTime != 0 && c.EnforcementPolicy.KeepaliveMinTime != defaultKeepaliveMinTime) {
+			// Only set if either parameter does not match defaults
+			opts = append(opts, grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+				MinTime:             time.Duration(c.EnforcementPolicy.KeepaliveMinTime),
+				PermitWithoutStream: c.EnforcementPolicy.PermitKeepaliveWithoutCalls,
+			}))
 		}
 
 		c.grpcServer = grpc.NewServer(opts...)
