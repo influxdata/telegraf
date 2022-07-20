@@ -27,6 +27,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 func TestReadBinaryFile(t *testing.T) {
@@ -654,6 +655,129 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	}
 }
 
+func TestConfig_ProcessorsWithParsers(t *testing.T) {
+	formats := []string{
+		"collectd",
+		"csv",
+		"dropwizard",
+		"form_urlencoded",
+		"graphite",
+		"grok",
+		"influx",
+		"json",
+		"json_v2",
+		"logfmt",
+		"nagios",
+		"prometheus",
+		"prometheusremotewrite",
+		"value",
+		"wavefront",
+		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
+	}
+
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/processors_with_parsers.toml"))
+	require.Len(t, c.Processors, len(formats))
+
+	override := map[string]struct {
+		param map[string]interface{}
+		mask  []string
+	}{
+		"csv": {
+			param: map[string]interface{}{
+				"HeaderRowCount": 42,
+			},
+			mask: []string{"TimeFunc", "ResetMode"},
+		},
+		"xpath_protobuf": {
+			param: map[string]interface{}{
+				"ProtobufMessageDef":  "testdata/addressbook.proto",
+				"ProtobufMessageType": "addressbook.AddressBook",
+			},
+		},
+	}
+
+	expected := make([]telegraf.Parser, 0, len(formats))
+	for _, format := range formats {
+		logger := models.NewLogger("parsers", format, "processors_with_parsers")
+
+		creator, found := parsers.Parsers[format]
+		require.Truef(t, found, "No parser for format %q", format)
+
+		parser := creator("parser_test")
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(parser))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
+			}
+		}
+		models.SetLoggerOnPlugin(parser, logger)
+		if p, ok := parser.(telegraf.Initializer); ok {
+			require.NoError(t, p.Init())
+		}
+		expected = append(expected, parser)
+	}
+	require.Len(t, expected, len(formats))
+
+	actual := make([]interface{}, 0)
+	generated := make([]interface{}, 0)
+	for _, plugin := range c.Processors {
+		var processorIF telegraf.Processor
+		if p, ok := plugin.Processor.(unwrappable); ok {
+			processorIF = p.Unwrap()
+		} else {
+			processorIF = plugin.Processor.(telegraf.Processor)
+		}
+		require.NotNil(t, processorIF)
+
+		processor, ok := processorIF.(*MockupProcessorPluginParser)
+		require.True(t, ok)
+
+		// Get the parser set with 'SetParser()'
+		if p, ok := processor.Parser.(*models.RunningParser); ok {
+			require.NoError(t, p.Init())
+			actual = append(actual, p.Parser)
+		} else {
+			actual = append(actual, processor.Parser)
+		}
+		// Get the parser set with 'SetParserFunc()'
+		if processor.ParserFunc != nil {
+			g, err := processor.ParserFunc()
+			require.NoError(t, err)
+			if rp, ok := g.(*models.RunningParser); ok {
+				generated = append(generated, rp.Parser)
+			} else {
+				generated = append(generated, g)
+			}
+		} else {
+			generated = append(generated, nil)
+		}
+	}
+	require.Len(t, actual, len(formats))
+
+	for i, format := range formats {
+		// Determine the underlying type of the parser
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreTypes(sync.Mutex{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
+		if settings, found := override[format]; found {
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
+		}
+
+		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
+		diff = cmp.Diff(expected[i], generated[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParserFunc() for %q", format)
+	}
+}
+
 /*** Mockup INPUT plugin for (old) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserOld struct {
 	Parser     parsers.Parser
@@ -698,6 +822,24 @@ func (m *MockupInputPlugin) SampleConfig() string                  { return "Moc
 func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error { return nil }
 func (m *MockupInputPlugin) SetParser(parser telegraf.Parser)      { m.parser = parser }
 
+/*** Mockup PROCESSOR plugin for testing to avoid cyclic dependencies ***/
+type MockupProcessorPluginParser struct {
+	Parser     telegraf.Parser
+	ParserFunc telegraf.ParserFunc
+}
+
+func (m *MockupProcessorPluginParser) Start(acc telegraf.Accumulator) error { return nil }
+func (m *MockupProcessorPluginParser) Stop() error                          { return nil }
+func (m *MockupProcessorPluginParser) SampleConfig() string {
+	return "Mockup test processor plugin with parser"
+}
+func (m *MockupProcessorPluginParser) Apply(in ...telegraf.Metric) []telegraf.Metric { return nil }
+func (m *MockupProcessorPluginParser) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupProcessorPluginParser) SetParser(parser telegraf.Parser)    { m.Parser = parser }
+func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) { m.ParserFunc = f }
+
 /*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupOuputPlugin struct {
 	URL             string            `toml:"url"`
@@ -722,6 +864,9 @@ func init() {
 	inputs.Add("http_listener_v2", func() telegraf.Input { return &MockupInputPlugin{} })
 	inputs.Add("memcached", func() telegraf.Input { return &MockupInputPlugin{} })
 	inputs.Add("procstat", func() telegraf.Input { return &MockupInputPlugin{} })
+
+	// Register the mockup output plugin for the required names
+	processors.Add("parser_test", func() telegraf.Processor { return &MockupProcessorPluginParser{} })
 
 	// Register the mockup output plugin for the required names
 	outputs.Add("azure_monitor", func() telegraf.Output { return &MockupOuputPlugin{NamespacePrefix: "Telegraf/"} })
