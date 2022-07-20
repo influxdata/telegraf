@@ -103,7 +103,7 @@ integrated in kernel). Modules might have to be manually enabled by using
 ```sh
 # kernel 5.x.x:
 sudo modprobe rapl
-subo modprobe msr
+sudo modprobe msr
 sudo modprobe intel_rapl_common
 sudo modprobe intel_rapl_msr
 
