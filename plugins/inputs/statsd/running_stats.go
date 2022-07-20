@@ -30,22 +30,20 @@ type RunningStats struct {
 	lower float64
 	upper float64
 
+	// cache if we have sorted the list so that we never re-sort a sorted list,
+	// which can have very bad performance.
+	SortedPerc bool
+
 	// Array used to calculate estimated median values
 	// We will store a maximum of MedLimit values, at which point we will start
 	// slicing old values
 	med      []float64
 	MedLimit int
-
-	// cache if we have sorted the list so that we never re-sort a sorted list,
-	// which can have very bad performance.
-	SortedPerc bool
-	SortedMed  bool
 }
 
 func (rs *RunningStats) AddValue(v float64) {
 	// Whenever a value is added, the list is no longer sorted.
 	rs.SortedPerc = false
-	rs.SortedMed = false
 
 	if rs.n == 0 {
 		rs.k = v
@@ -97,18 +95,16 @@ func (rs *RunningStats) Mean() float64 {
 }
 
 func (rs *RunningStats) Median() float64 {
-	count := len(rs.med)
-	// Need to sort for median
-	if !rs.SortedMed {
-		sort.Float64s(rs.med)
-		rs.SortedMed = true
-	}
+	// Need to sort for median, but keep temporal order
+	sorted := rs.med
+	sort.Float64s(sorted)
+	count := len(sorted)
 	if count == 0 {
 		return 0
 	} else if count%2 == 0 {
-		return (rs.med[count/2-1] + rs.med[count/2]) / 2
+		return (sorted[count/2-1] + sorted[count/2]) / 2
 	} else {
-		return rs.med[count/2]
+		return sorted[count/2]
 	}
 }
 
