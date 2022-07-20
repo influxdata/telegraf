@@ -11,41 +11,43 @@ commit := $(shell git rev-parse --short=8 HEAD)
 glibc_version := 2.17
 
 ifdef NIGHTLY
-	version := $(next_version)
-	rpm_version := nightly
-	rpm_iteration := 0
-	deb_version := nightly
-	deb_iteration := 0
-	tar_version := nightly
+	version ?= $(next_version)
+	rpm_version ?= nightly
+	rpm_iteration ?= 0
+	deb_version ?= nightly
+	deb_iteration ?= 0
+	tar_version ?= nightly
 else ifeq ($(tag),)
-	version := $(next_version)
-	rpm_version := $(version)~$(commit)-0
-	rpm_iteration := 0
-	deb_version := $(version)~$(commit)-0
-	deb_iteration := 0
-	tar_version := $(version)~$(commit)
+	version ?= $(next_version)
+	rpm_version ?= $(version)~$(commit)-0
+	rpm_iteration ?= 0
+	deb_version ?= $(version)~$(commit)-0
+	deb_iteration ?= 0
+	tar_version ?= $(version)~$(commit)
 else ifneq ($(findstring -rc,$(tag)),)
-	version := $(word 1,$(subst -, ,$(tag)))
-	version := $(version:v%=%)
+	version_tag := $(word 1,$(subst -, ,$(tag)))
+	version ?= $(version_tag:v%=%)
 	rc := $(word 2,$(subst -, ,$(tag)))
-	rpm_version := $(version)-0.$(rc)
-	rpm_iteration := 0.$(subst rc,,$(rc))
-	deb_version := $(version)~$(rc)-1
-	deb_iteration := 0
-	tar_version := $(version)~$(rc)
+	rpm_version ?= $(version)-0.$(rc)
+	rpm_iteration ?= 0.$(subst rc,,$(rc))
+	deb_version ?= $(version)~$(rc)-1
+	deb_iteration ?= 0
+	tar_version ?= $(version)~$(rc)
 else
-	version := $(tag:v%=%)
-	rpm_version := $(version)-1
-	rpm_iteration := 1
-	deb_version := $(version)-1
-	deb_iteration := 1
-	tar_version := $(version)
+	version ?= $(tag:v%=%)
+	rpm_version ?= $(version)-1
+	rpm_iteration ?= 1
+	deb_version ?= $(version)-1
+	deb_iteration ?= 1
+	tar_version ?= $(version)
 endif
 
+NAME ?= telegraf
 MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
+SUPPORTER ?= support@influxdb.com
 
 LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
@@ -331,10 +333,10 @@ $(include_packages):
 			--architecture $(basename $@) \
 			--input-type dir \
 			--output-type rpm \
-			--vendor InfluxData \
-			--url https://github.com/influxdata/telegraf \
+			--vendor "Juniper Networks" \
+			--url https://github.com/128technology/telegraf \
 			--license MIT \
-			--maintainer support@influxdb.com \
+			--maintainer $(SUPPORTER) \
 			--config-files /etc/telegraf/telegraf.conf \
 			--config-files /etc/logrotate.d/telegraf \
 			--after-install scripts/rpm/post-install.sh \
@@ -345,11 +347,11 @@ $(include_packages):
 			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
-			--name telegraf \
+			--name $(NAME) \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
 			--chdir $(DESTDIR) \
-			--package $(pkgdir)/telegraf-$(rpm_version).$@ ;\
+			--package $(pkgdir)/$(NAME)-$(rpm_version).$@ ;\
 	elif [ "$(suffix $@)" = ".deb" ]; then \
 		fpm --force \
 			--log info \
@@ -367,15 +369,15 @@ $(include_packages):
 			--after-remove scripts/deb/post-remove.sh \
 			--before-remove scripts/deb/pre-remove.sh \
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
-			--name telegraf \
+			--name $(NAME) \
 			--version $(version) \
 			--iteration $(deb_iteration) \
 			--chdir $(DESTDIR) \
 			--package $(pkgdir)/telegraf_$(deb_version)_$@	;\
 	elif [ "$(suffix $@)" = ".zip" ]; then \
-		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
+		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/$(NAME)-$(tar_version)_$@ ;\
 	elif [ "$(suffix $@)" = ".gz" ]; then \
-		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
+		tar --owner 0 --group 0 -czvf $(pkgdir)/$(NAME)-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
 	fi
 
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux

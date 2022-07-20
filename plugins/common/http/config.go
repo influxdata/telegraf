@@ -2,6 +2,7 @@ package httpconfig
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 // Common HTTP client struct.
 type HTTPClientConfig struct {
+	UnixSocket      string          `toml:"unix_socket"`
 	Timeout         config.Duration `toml:"timeout"`
 	IdleConnTimeout config.Duration `toml:"idle_conn_timeout"`
 
@@ -40,6 +42,12 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		TLSClientConfig: tlsCfg,
 		Proxy:           prox,
 		IdleConnTimeout: time.Duration(h.IdleConnTimeout),
+	}
+
+	if len(h.UnixSocket) > 0 {
+		transport.DialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
+			return net.Dial("unix", h.UnixSocket)
+		}
 	}
 
 	timeout := h.Timeout

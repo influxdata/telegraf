@@ -32,6 +32,7 @@ type Kafka struct {
 	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
 	RoutingTag      string      `toml:"routing_tag"`
 	RoutingKey      string      `toml:"routing_key"`
+	MaxBatchRetry   int         `toml:"max_batch_retry"`
 
 	proxy.Socks5ProxyConfig
 
@@ -181,6 +182,10 @@ var sampleConfig = `
   ## until the next flush.
   # max_retry = 3
 
+  ## The maximum number of times to retry sending all of the metrics in a batch
+  ## until the next flush. Only the unsuccessful metrics will be sent again.
+  # max_batch_retry = 5
+
   ## The maximum permitted size of a message. Should be set equal to or
   ## smaller than the broker's 'message.max.bytes'.
   # max_message_bytes = 1000000
@@ -241,6 +246,14 @@ func ValidateTopicSuffixMethod(method string) error {
 	return fmt.Errorf("unknown topic suffix method provided: %s", method)
 }
 
+func ValidateMaxBatchRetry(maxBatchRetry int) error {
+	if maxBatchRetry < 1 {
+		return fmt.Errorf("Invalid max batch retry: %d - must be greater than or equal to 1", maxBatchRetry)
+	}
+
+	return nil
+}
+
 func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
 	topic := k.Topic
 	if k.TopicTag != "" {
@@ -286,6 +299,12 @@ func (k *Kafka) Init() error {
 	if err != nil {
 		return err
 	}
+
+	err = ValidateMaxBatchRetry(k.MaxBatchRetry)
+	if err != nil {
+		return err
+	}
+
 	config := sarama.NewConfig()
 
 	if err := k.SetConfig(config); err != nil {
@@ -356,7 +375,7 @@ func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
-	for _, metric := range metrics {
+	for idx, metric := range metrics {
 		metric, topic := k.GetTopicName(metric)
 
 		buf, err := k.serializer.Serialize(metric)
@@ -366,8 +385,9 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		}
 
 		m := &sarama.ProducerMessage{
-			Topic: topic,
-			Value: sarama.ByteEncoder(buf),
+			Topic:    topic,
+			Value:    sarama.ByteEncoder(buf),
+			Metadata: idx,
 		}
 
 		// Negative timestamps are not allowed by the Kafka protocol.
@@ -386,11 +406,19 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		msgs = append(msgs, m)
 	}
 
-	err := k.producer.SendMessages(msgs)
-	if err != nil {
-		// We could have many errors, return only the first encountered.
-		if errs, ok := err.(sarama.ProducerErrors); ok {
-			for _, prodErr := range errs {
+	var err error = nil
+	for i := 0; i < k.MaxBatchRetry; i++ {
+		err = k.producer.SendMessages(msgs)
+		if err == nil {
+			break
+		}
+
+		errs, ok := err.(sarama.ProducerErrors)
+		if ok {
+			k.Log.Debugf("Returned errors: %+v", errs)
+
+			unsentMsgs := make([]*sarama.ProducerMessage, len(errs))
+			for i, prodErr := range errs {
 				if prodErr.Err == sarama.ErrMessageSizeTooLarge {
 					k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping batch")
 					return nil
@@ -399,13 +427,26 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
 					return nil
 				}
-				return prodErr //nolint:staticcheck // Return first error encountered
+				unsentMsgs[i] = prodErr.Msg
+
+				printableMsg := getPrintableMessage(*(prodErr.Msg))
+				k.Log.Errorf("Error when sending message: %+v : message = %+v", *prodErr, printableMsg)
 			}
+
+			k.Log.Debugf("Unsent messages: %+v", unsentMsgs)
+			msgs = unsentMsgs
 		}
-		return err
+
+		k.Log.Infof("Failed to send %d messages after try %d", len(errs), i)
 	}
 
-	return nil
+	return err
+}
+
+func getPrintableMessage(msg sarama.ProducerMessage) sarama.ProducerMessage {
+	msg.Value = sarama.StringEncoder(msg.Value.(sarama.ByteEncoder))
+
+	return msg
 }
 
 func init() {
@@ -416,7 +457,8 @@ func init() {
 				MaxRetry:     3,
 				RequiredAcks: -1,
 			},
-			producerFunc: sarama.NewSyncProducer,
+			MaxBatchRetry: 5,
+			producerFunc:  sarama.NewSyncProducer,
 		}
 	})
 }

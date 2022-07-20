@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/shim"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -26,10 +28,11 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	brokers := []string{testutil.GetLocalHost() + ":9092"}
 	s, _ := serializers.NewInfluxSerializer()
 	k := &Kafka{
-		Brokers:      brokers,
-		Topic:        "Test",
-		serializer:   s,
-		producerFunc: sarama.NewSyncProducer,
+		Brokers:       brokers,
+		Topic:         "Test",
+		serializer:    s,
+		MaxBatchRetry: 1,
+		producerFunc:  sarama.NewSyncProducer,
 	}
 
 	// Verify that we can connect to the Kafka broker
@@ -82,8 +85,9 @@ func TestTopicSuffixesIntegration(t *testing.T) {
 		topicSuffix := testcase.topicSuffix
 		expectedTopic := testcase.expectedTopic
 		k := &Kafka{
-			Topic:       topic,
-			TopicSuffix: topicSuffix,
+			Topic:         topic,
+			TopicSuffix:   topicSuffix,
+			MaxBatchRetry: 1,
 		}
 
 		_, topic := k.GetTopicName(m)
@@ -105,6 +109,22 @@ func TestValidateTopicSuffixMethodIntegration(t *testing.T) {
 	}
 }
 
+func TestValidateMaxBatchRetry(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	err := ValidateMaxBatchRetry(0)
+	require.Error(t, err, "Max batch retry of 0 should be invalid.")
+
+	err = ValidateMaxBatchRetry(1)
+	require.NoError(t, err, "Max batch retry of 1 should be valid.")
+
+	err = ValidateMaxBatchRetry(-1)
+	require.Error(t, err, "Max batch retry of -1 should be invalid.")
+
+}
+
 func TestRoutingKey(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -115,7 +135,8 @@ func TestRoutingKey(t *testing.T) {
 		{
 			name: "static routing key",
 			kafka: &Kafka{
-				RoutingKey: "static",
+				RoutingKey:    "static",
+				MaxBatchRetry: 1,
 			},
 			metric: func() telegraf.Metric {
 				m := metric.New(
@@ -135,7 +156,8 @@ func TestRoutingKey(t *testing.T) {
 		{
 			name: "random routing key",
 			kafka: &Kafka{
-				RoutingKey: "random",
+				RoutingKey:    "random",
+				MaxBatchRetry: 1,
 			},
 			metric: func() telegraf.Metric {
 				m := metric.New(
@@ -195,9 +217,10 @@ func TestTopicTag(t *testing.T) {
 		{
 			name: "static topic",
 			plugin: &Kafka{
-				Brokers:      []string{"127.0.0.1"},
-				Topic:        "telegraf",
-				producerFunc: NewMockProducer,
+				Brokers:       []string{"127.0.0.1"},
+				Topic:         "telegraf",
+				MaxBatchRetry: 1,
+				producerFunc:  NewMockProducer,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric(
@@ -215,10 +238,11 @@ func TestTopicTag(t *testing.T) {
 		{
 			name: "topic tag overrides static topic",
 			plugin: &Kafka{
-				Brokers:      []string{"127.0.0.1"},
-				Topic:        "telegraf",
-				TopicTag:     "topic",
-				producerFunc: NewMockProducer,
+				Brokers:       []string{"127.0.0.1"},
+				Topic:         "telegraf",
+				TopicTag:      "topic",
+				MaxBatchRetry: 1,
+				producerFunc:  NewMockProducer,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric(
@@ -238,10 +262,11 @@ func TestTopicTag(t *testing.T) {
 		{
 			name: "missing topic tag falls back to  static topic",
 			plugin: &Kafka{
-				Brokers:      []string{"127.0.0.1"},
-				Topic:        "telegraf",
-				TopicTag:     "topic",
-				producerFunc: NewMockProducer,
+				Brokers:       []string{"127.0.0.1"},
+				Topic:         "telegraf",
+				TopicTag:      "topic",
+				MaxBatchRetry: 1,
+				producerFunc:  NewMockProducer,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric(
@@ -263,6 +288,7 @@ func TestTopicTag(t *testing.T) {
 				Topic:           "telegraf",
 				TopicTag:        "topic",
 				ExcludeTopicTag: true,
+				MaxBatchRetry:   1,
 				producerFunc:    NewMockProducer,
 			},
 			input: []telegraf.Metric{
@@ -301,6 +327,193 @@ func TestTopicTag(t *testing.T) {
 			encoded, err := producer.sent[0].Value.Encode()
 			require.NoError(t, err)
 			require.Equal(t, tt.value, string(encoded))
+		})
+	}
+}
+
+type MockErrorProducer struct {
+	sent         []*sarama.ProducerMessage
+	WhenToError  [][]bool
+	attemptIndex int
+}
+
+func (p *MockErrorProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32, offset int64, err error) {
+	if p.WhenToError[p.attemptIndex][0] {
+		return 0, 0, fmt.Errorf("we got a problem: %d", p.attemptIndex)
+	}
+
+	p.attemptIndex++
+
+	p.sent = append(p.sent, msg)
+	return 0, 0, nil
+}
+
+func (p *MockErrorProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
+	errs := sarama.ProducerErrors{}
+	for i := 0; i < len(msgs); i++ {
+		if p.attemptIndex >= len(p.WhenToError) {
+			break
+		}
+
+		if i >= len(p.WhenToError[p.attemptIndex]) {
+			break
+		}
+
+		if p.WhenToError[p.attemptIndex][i] {
+			errs = append(errs, &sarama.ProducerError{
+				Msg: msgs[i],
+				Err: fmt.Errorf("we got a problem: %d - %d", p.attemptIndex, i),
+			})
+		}
+	}
+	p.attemptIndex++
+
+	if len(errs) > 0 {
+		return errs
+	}
+
+	p.sent = append(p.sent, msgs...)
+	return nil
+}
+
+func (p *MockErrorProducer) Close() error {
+	return nil
+}
+
+func NewMockErrorProducer(addrs []string, config *sarama.Config) (sarama.SyncProducer, error) {
+	return &MockErrorProducer{}, nil
+}
+
+func TestBatchRetry(t *testing.T) {
+	tests := []struct {
+		name        string
+		plugin      *Kafka
+		input       []telegraf.Metric
+		whenToError [][]bool
+		topic       string
+		value       string
+		throws      bool
+	}{
+		{
+			name: "fails multiple times but within max batch retry",
+			plugin: &Kafka{
+				Brokers:       []string{"127.0.0.1"},
+				Topic:         "telegraf",
+				MaxBatchRetry: 3,
+				producerFunc:  NewMockErrorProducer,
+				Log:           shim.NewLogger(),
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			whenToError: [][]bool{{true, false}, {true}},
+			topic:       "telegraf",
+			value:       "cpu time_idle=42 0\n",
+		},
+		{
+			name: "throws when fails past batch retry",
+			plugin: &Kafka{
+				Brokers:       []string{"127.0.0.1"},
+				Topic:         "telegraf",
+				MaxBatchRetry: 2,
+				producerFunc:  NewMockErrorProducer,
+				Log:           shim.NewLogger(),
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			whenToError: [][]bool{{true, false}, {true}},
+			topic:       "telegraf",
+			value:       "cpu time_idle=42 0\n",
+			throws:      true,
+		},
+		{
+			name: "throws when first and only errors",
+			plugin: &Kafka{
+				Brokers:       []string{"127.0.0.1"},
+				Topic:         "telegraf",
+				MaxBatchRetry: 1,
+				producerFunc:  NewMockErrorProducer,
+				Log:           shim.NewLogger(),
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			whenToError: [][]bool{{true, false}},
+			topic:       "telegraf",
+			value:       "cpu time_idle=42 0\n",
+			throws:      true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := serializers.NewInfluxSerializer()
+			require.NoError(t, err)
+			tt.plugin.SetSerializer(s)
+
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			producer := &MockErrorProducer{WhenToError: tt.whenToError}
+			tt.plugin.producer = producer
+
+			err = tt.plugin.Write(tt.input)
+			if tt.throws {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+
+				require.Equal(t, tt.topic, producer.sent[0].Topic)
+
+				encoded, err := producer.sent[0].Value.Encode()
+				require.NoError(t, err)
+				require.Equal(t, tt.value, string(encoded))
+			}
 		})
 	}
 }

@@ -1,0 +1,21 @@
+name: Build telegraf RPMs
+description: A simple way to build telegraf RPMs within a container
+inputs:
+  version:
+    description: What version to use for the RPMs
+    required: true
+  patch:
+    description: The patch of the version (e.g. 1 for -1 or 2 for -2)
+    required: true
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  env:
+    NAME: telegraf-128tech
+    SUPPORTER: camp@juniper.net
+    version: ${{ inputs.version }}
+    rpm_iteration: ${{ inputs.patch }}
+    rpm_version: ${{ inputs.version }}-${{ inputs.patch }}
+  args:
+    - make
+    - x86_64.rpm

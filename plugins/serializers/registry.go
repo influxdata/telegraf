@@ -75,6 +75,9 @@ type Config struct {
 	// Support unsigned integer output; influx format only
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 
+	// Timestamp units to use for Influx formatted output
+	InfluxTimestampUnits time.Duration `toml:"influx_timestamp_units"`
+
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string `toml:"prefix"`
 
@@ -225,6 +228,7 @@ func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
 	s.SetMaxLineBytes(config.InfluxMaxLineBytes)
 	s.SetFieldSortOrder(sort)
 	s.SetFieldTypeSupport(typeSupport)
+	s.SetTimestampUnits(config.InfluxTimestampUnits)
 	return s, nil
 }
 
