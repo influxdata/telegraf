@@ -7,9 +7,9 @@ func SanitizeArgs(args []interface{}) []interface{} {
 	for _, a := range args {
 		switch t := a.(type) {
 		case string:
-			sanitizedArgs = append(sanitizedArgs, sanitizeInput(t))
+			sanitizedArgs = append(sanitizedArgs, SanitizeInput(t))
 		case []byte:
-			sanitizedArgs = append(sanitizedArgs, sanitizeInput(string(t)))
+			sanitizedArgs = append(sanitizedArgs, SanitizeInput(string(t)))
 		default:
 			sanitizedArgs = append(sanitizedArgs, t)
 		}
@@ -17,7 +17,7 @@ func SanitizeArgs(args []interface{}) []interface{} {
 	return sanitizedArgs
 }
 
-func sanitizeInput(input string) string {
+func SanitizeInput(input string) string {
 	escaped := strings.Replace(input, "\n", " ", -1)
 	return strings.Replace(escaped, "\r", "", -1)
 }
