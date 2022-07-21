@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
@@ -106,7 +105,7 @@ func (dpdk *dpdk) Init() error {
 	initMessage, err := dpdk.connector.connect()
 	if initMessage != nil {
 		dpdk.Log.Debugf("Successfully connected to %v running as process with PID %d with len %d",
-			internal.SanitizeInput(initMessage.Version), initMessage.Pid, initMessage.MaxOutputLen)
+			initMessage.Version, initMessage.Pid, initMessage.MaxOutputLen)
 	}
 	return err
 }

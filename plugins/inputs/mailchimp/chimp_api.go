@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 )
 
 const (
@@ -139,7 +138,7 @@ func (a *ChimpAPI) runChimp(params ReportsParams) ([]byte, error) {
 	req.URL.RawQuery = params.String()
 	req.Header.Set("User-Agent", "Telegraf-MailChimp-Plugin")
 	if a.debug {
-		a.log.Debugf("request URL: %s", internal.SanitizeInput(req.URL.String()))
+		a.log.Debugf("request URL: %s", req.URL.String())
 	}
 
 	resp, err := client.Do(req)

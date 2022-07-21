@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -107,7 +106,7 @@ func (g *Graphite) checkEOF(conn net.Conn) {
 	}
 	// just in case i misunderstand something or the remote behaves badly
 	if num != 0 {
-		g.Log.Infof("conn %s .conn.Read data? did not expect that. data: %s", conn, internal.SanitizeInput(string(b[:num])))
+		g.Log.Infof("conn %s .conn.Read data? did not expect that. data: %s", conn, string(b[:num]))
 	}
 	// Log non-timeout errors or close.
 	if e, ok := err.(net.Error); !(ok && e.Timeout()) {

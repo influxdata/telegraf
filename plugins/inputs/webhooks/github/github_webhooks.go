@@ -11,7 +11,6 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
@@ -82,7 +81,7 @@ func (e *newEventError) Error() string {
 }
 
 func (gh *GithubWebhook) NewEvent(data []byte, name string) (Event, error) {
-	gh.log.Debugf("New %v event received", internal.SanitizeInput(name))
+	gh.log.Debugf("New %v event received", name)
 	switch name {
 	case "commit_comment":
 		return generateEvent(data, &CommitCommentEvent{})

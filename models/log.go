@@ -6,7 +6,21 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
+
+func SanitizeArgs(args []interface{}) []interface{} {
+	var sanitizedArgs []interface{}
+	for _, a := range args {
+		switch t := a.(type) {
+		case string:
+			sanitizedArgs = append(sanitizedArgs, internal.SanitizeInput(t))
+		default:
+			sanitizedArgs = append(sanitizedArgs, t)
+		}
+	}
+	return sanitizedArgs
+}
 
 // Logger defines a logging structure for plugins.
 type Logger struct {
@@ -44,7 +58,7 @@ func (l *Logger) Error(args ...interface{}) {
 
 // Debugf logs a debug message, patterned after log.Printf.
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! ["+l.Name+"] "+format, args...)
+	log.Printf("D! ["+l.Name+"] "+format, SanitizeArgs(args)...)
 }
 
 // Debug logs a debug message, patterned after log.Print.
@@ -54,7 +68,7 @@ func (l *Logger) Debug(args ...interface{}) {
 
 // Warnf logs a warning message, patterned after log.Printf.
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! ["+l.Name+"] "+format, args...)
+	log.Printf("W! ["+l.Name+"] "+format, SanitizeArgs(args)...)
 }
 
 // Warn logs a warning message, patterned after log.Print.
@@ -64,7 +78,7 @@ func (l *Logger) Warn(args ...interface{}) {
 
 // Infof logs an information message, patterned after log.Printf.
 func (l *Logger) Infof(format string, args ...interface{}) {
-	log.Printf("I! ["+l.Name+"] "+format, args...)
+	log.Printf("I! ["+l.Name+"] "+format, SanitizeArgs(args)...)
 }
 
 // Info logs an information message, patterned after log.Print.
