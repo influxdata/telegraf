@@ -178,7 +178,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 	// If a send failed for a server, try to reconnect to that server
 	if len(g.failedServers) > 0 {
-		g.Log.Debugf("Graphite: Reconnecting and retrying for the following servers: %s", strings.Join(g.failedServers, ","))
+		g.Log.Debugf("Reconnecting and retrying for the following servers: %s", strings.Join(g.failedServers, ","))
 		err = g.Connect()
 		if err != nil {
 			return fmt.Errorf("Failed to reconnect: %v", err)
