@@ -3,11 +3,16 @@ package shim
 import (
 	"fmt"
 	"log" //nolint:revive // Allow exceptional but valid use of log here.
+	"os"
 	"reflect"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 )
+
+func init() {
+	log.SetOutput(os.Stderr)
+}
 
 // Logger defines a logging structure for plugins.
 // external plugins can only ever write to stderr and writing to stdout
