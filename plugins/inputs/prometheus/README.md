@@ -162,8 +162,9 @@ the following annotation are supported:
 Using the `monitor_kubernetes_pods_namespace` option allows you to limit which
 pods you are scraping.
 
-The setting `pod_namespace_label_name` allows you to change the label name for the namespace of the pod you are scraping.
-The default is `namespace`, but this will overwrite a label with the name `namespace` from a metric scraped.
+The setting `pod_namespace_label_name` allows you to change the label name for
+the namespace of the pod you are scraping. The default is `namespace`, but this
+will overwrite a label with the name `namespace` from a metric scraped.
 
 Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which
 will scrape pods only in the node that telegraf is running. It will fetch the
