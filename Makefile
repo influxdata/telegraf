@@ -18,7 +18,7 @@ ifdef NIGHTLY
 	deb_iteration := 0
 	tar_version := nightly
 else ifeq ($(tag),)
-	version := $(next_version)~$(commit)
+	version := $(next_version)
 	rpm_version := $(version)~$(commit)-0
 	rpm_iteration := 0
 	deb_version := $(version)~$(commit)-0
