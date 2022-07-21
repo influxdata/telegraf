@@ -201,7 +201,6 @@ additional_valid_status_codes = ["0xC0"]
 
 	require.NoError(t, o.InitNodes())
 	require.Len(t, o.nodes, 4)
-	fmt.Printf("%T", o.nodes[2])
 	require.Len(t, o.nodes[2].metricTags, 3)
 	require.Len(t, o.nodes[3].metricTags, 2)
 
