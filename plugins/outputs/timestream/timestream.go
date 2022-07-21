@@ -464,7 +464,7 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
-			t.Log.Errorf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
+			t.Log.Warnf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
 				"Supported values are: [int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool]",
 				fieldName, reflect.TypeOf(fieldValue))
 			continue
