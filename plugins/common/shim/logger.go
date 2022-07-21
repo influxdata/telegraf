@@ -3,31 +3,11 @@ package shim
 import (
 	"fmt"
 	"log" //nolint:revive // Allow exceptional but valid use of log here.
-	"os"
 	"reflect"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 )
-
-func SanitizeArgs(args []interface{}) []interface{} {
-	var sanitizedArgs []interface{}
-	for _, a := range args {
-		switch t := a.(type) {
-		case string:
-			sanitizedArgs = append(sanitizedArgs, internal.SanitizeInput(t))
-		case []byte:
-			sanitizedArgs = append(sanitizedArgs, internal.SanitizeInput(string(t)))
-		default:
-			sanitizedArgs = append(sanitizedArgs, t)
-		}
-	}
-	return sanitizedArgs
-}
-
-func init() {
-	log.SetOutput(os.Stderr)
-}
 
 // Logger defines a logging structure for plugins.
 // external plugins can only ever write to stderr and writing to stdout
@@ -41,7 +21,7 @@ func NewLogger() *Logger {
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	log.Printf("E! "+format, SanitizeArgs(args)...)
+	log.Printf("E! "+format, internal.SanitizeArgs(args)...)
 }
 
 // Error logs an error message, patterned after log.Print.
@@ -51,7 +31,7 @@ func (l *Logger) Error(args ...interface{}) {
 
 // Debugf logs a debug message, patterned after log.Printf.
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! "+format, SanitizeArgs(args)...)
+	log.Printf("D! "+format, internal.SanitizeArgs(args)...)
 }
 
 // Debug logs a debug message, patterned after log.Print.
@@ -61,7 +41,7 @@ func (l *Logger) Debug(args ...interface{}) {
 
 // Warnf logs a warning message, patterned after log.Printf.
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! "+format, SanitizeArgs(args)...)
+	log.Printf("W! "+format, internal.SanitizeArgs(args)...)
 }
 
 // Warn logs a warning message, patterned after log.Print.
@@ -71,7 +51,7 @@ func (l *Logger) Warn(args ...interface{}) {
 
 // Infof logs an information message, patterned after log.Printf.
 func (l *Logger) Infof(format string, args ...interface{}) {
-	log.Printf("I! "+format, SanitizeArgs(args)...)
+	log.Printf("I! "+format, internal.SanitizeArgs(args)...)
 }
 
 // Info logs an information message, patterned after log.Print.
