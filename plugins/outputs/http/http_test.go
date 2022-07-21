@@ -640,12 +640,11 @@ func TestBatchedUnbatched(t *testing.T) {
 		Method: defaultMethod,
 	}
 
-	var s = map[string]serializers.Serializer{
+	jsonSerializer, err := json.NewSerializer(time.Second, "", "")
+	require.NoError(t, err)
+	s := map[string]serializers.Serializer{
 		"influx": influx.NewSerializer(),
-		"json": func(s serializers.Serializer, err error) serializers.Serializer {
-			require.NoError(t, err)
-			return s
-		}(json.NewSerializer(time.Second, "")),
+		"json":   jsonSerializer,
 	}
 
 	for name, serializer := range s {

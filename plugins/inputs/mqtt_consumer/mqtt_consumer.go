@@ -124,7 +124,7 @@ func (m *MQTTConsumer) Init() error {
 	for i, p := range m.TopicParsing {
 		splitMeasurement := strings.Split(p.Measurement, "/")
 		for j := range splitMeasurement {
-			if splitMeasurement[j] != "_" {
+			if splitMeasurement[j] != "_" && splitMeasurement[j] != "" {
 				m.TopicParsing[i].MeasurementIndex = j
 				break
 			}
@@ -343,7 +343,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 // parseFields gets multiple fields from the topic based on the user configuration (TopicParsing.Fields)
 func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
 	for i, k := range keys {
-		if k == "_" {
+		if k == "_" || k == "" {
 			continue
 		}
 
