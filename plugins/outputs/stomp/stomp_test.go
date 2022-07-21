@@ -31,7 +31,7 @@ func TestConnectAndWrite(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
-	s, err := serializers.NewJSONSerializer(10*time.Second, "yyy-dd-mmThh:mm:ss")
+	s, err := serializers.NewJSONSerializer(10*time.Second, "yyy-dd-mmThh:mm:ss", "")
 	require.NoError(t, err)
 	st := &STOMP{
 		Host:          url,
