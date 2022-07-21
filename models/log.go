@@ -60,7 +60,7 @@ func (l *Logger) Error(args ...interface{}) {
 
 // Debugf logs a debug message, patterned after log.Printf.
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! ["+l.Name+"] "+format, SanitizeArgs(args)...)
+	log.Printf("D! ["+l.Name+"] "+format, args...)
 }
 
 // Debug logs a debug message, patterned after log.Print.
@@ -70,7 +70,7 @@ func (l *Logger) Debug(args ...interface{}) {
 
 // Warnf logs a warning message, patterned after log.Printf.
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! ["+l.Name+"] "+format, SanitizeArgs(args)...)
+	log.Printf("W! ["+l.Name+"] "+format, args...)
 }
 
 // Warn logs a warning message, patterned after log.Print.
@@ -80,7 +80,7 @@ func (l *Logger) Warn(args ...interface{}) {
 
 // Infof logs an information message, patterned after log.Printf.
 func (l *Logger) Infof(format string, args ...interface{}) {
-	log.Printf("I! ["+l.Name+"] "+format, SanitizeArgs(args)...)
+	log.Printf("I! ["+l.Name+"] "+format, args...)
 }
 
 // Info logs an information message, patterned after log.Print.
