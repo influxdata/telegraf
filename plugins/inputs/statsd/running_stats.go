@@ -88,8 +88,8 @@ func (rs *RunningStats) AddValue(v float64) {
 	} else {
 		// Reached limit, start over
 		rs.med[rs.MedInsertIndex] = v
-		rs.MedInsertIndex = (rs.MedInsertIndex + 1) % rs.MedLimit
 	}
+	rs.MedInsertIndex = (rs.MedInsertIndex + 1) % rs.MedLimit
 }
 
 func (rs *RunningStats) Mean() float64 {
