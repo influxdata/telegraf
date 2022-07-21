@@ -15,6 +15,8 @@ func SanitizeArgs(args []interface{}) []interface{} {
 		switch t := a.(type) {
 		case string:
 			sanitizedArgs = append(sanitizedArgs, internal.SanitizeInput(t))
+		case []byte:
+			sanitizedArgs = append(sanitizedArgs, internal.SanitizeInput(string(t)))
 		default:
 			sanitizedArgs = append(sanitizedArgs, t)
 		}
