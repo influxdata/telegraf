@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -312,7 +313,15 @@ func (o *OpcUA) validateOPCTags() error {
 
 		//search identifier type
 		switch node.tag.IdentifierType {
-		case "s", "i", "g", "b":
+		case "s":
+			if reflect.ValueOf(node.tag.Identifier).Kind() != reflect.String {
+				return fmt.Errorf("identifier type '%s' does not match the type of identifier '%s'", node.tag.IdentifierType, node.tag.Identifier)
+			}
+		case "i":
+			if _, err := strconv.Atoi(node.tag.Identifier); err != nil {
+				return fmt.Errorf("identifier type '%s' does not match the type of identifier '%s'", node.tag.IdentifierType, node.tag.Identifier)
+			}
+		case "g", "b":
 			// Valid identifier type - do nothing.
 		default:
 			return fmt.Errorf("invalid identifier type '%s' in '%s'", node.tag.IdentifierType, node.tag.FieldName)

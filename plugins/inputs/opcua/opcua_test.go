@@ -201,11 +201,49 @@ additional_valid_status_codes = ["0xC0"]
 
 	require.NoError(t, o.InitNodes())
 	require.Len(t, o.nodes, 4)
-	require.Len(t, o.nodes[2].metricTags, 3)
+	fmt.Printf("%T", o.nodes[2])
+	require.Len(t, o.nodes[2].metricTags, 8)
 	require.Len(t, o.nodes[3].metricTags, 2)
 
 	require.Len(t, o.Workarounds.AdditionalValidStatusCodes, 1)
 	require.Equal(t, o.Workarounds.AdditionalValidStatusCodes[0], "0xC0")
+}
+
+func TestConfigWithMismatchedTypes(t *testing.T) {
+	toml := `
+[[inputs.opcua]]
+name = "localhost"
+endpoint = "opc.tcp://localhost:4840"
+connect_timeout = "10s"
+request_timeout = "5s"
+security_policy = "auto"
+security_mode = "auto"
+certificate = "/etc/telegraf/cert.pem"
+private_key = "/etc/telegraf/key.pem"
+auth_method = "Anonymous"
+username = ""
+password = ""
+nodes = [
+  {name="name", namespace="1", identifier_type="s", identifier="one"},
+  {name="name2", namespace="2", identifier_type="i", identifier="two"},
+]
+`
+
+	c := config.NewConfig()
+	err := c.LoadConfigData([]byte(toml))
+	require.NoError(t, err)
+
+	require.Len(t, c.Inputs, 1)
+
+	o, ok := c.Inputs[0].Input.(*OpcUA)
+	require.True(t, ok)
+
+	require.Len(t, o.RootNodes, 2)
+	require.Equal(t, o.RootNodes[0].FieldName, "name")
+	require.Equal(t, o.RootNodes[1].FieldName, "name2")
+
+	require.Error(t, o.InitNodes())
+	require.Len(t, o.nodes, 2)
 }
 
 func TestTagsSliceToMap(t *testing.T) {
