@@ -253,6 +253,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 				prefix = fieldName + "_"
 			}
 			fields[prefix+"mean"] = stats.Mean()
+			fields[prefix+"median"] = stats.Median()
 			fields[prefix+"stddev"] = stats.Stddev()
 			fields[prefix+"sum"] = stats.Sum()
 			fields[prefix+"upper"] = stats.Upper()
