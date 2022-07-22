@@ -39,7 +39,7 @@ Metrics include generic ones such as `kmalloc_*` as well as those of kernel
 subsystems and drivers used by the system such as `xfs_inode`.
 Each field with `_size` suffix indicates memory consumption in bytes.
 
-- slab
+- slab 
   - fields:
     - kmalloc_8_size (integer)
     - kmalloc_16_size (integer)
