@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
 
 var _ telegraf.Logger = &Logger{}
@@ -15,7 +16,7 @@ type Logger struct {
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l Logger) Errorf(format string, args ...interface{}) {
-	log.Printf("E! ["+l.Name+"] "+format, args...)
+	log.Printf("E! ["+l.Name+"] "+format, internal.SanitizeArgs(args)...)
 }
 
 // Error logs an error message, patterned after log.Print.
@@ -25,7 +26,7 @@ func (l Logger) Error(args ...interface{}) {
 
 // Debugf logs a debug message, patterned after log.Printf.
 func (l Logger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! ["+l.Name+"] "+format, args...)
+	log.Printf("D! ["+l.Name+"] "+format, internal.SanitizeArgs(args)...)
 }
 
 // Debug logs a debug message, patterned after log.Print.
@@ -35,7 +36,7 @@ func (l Logger) Debug(args ...interface{}) {
 
 // Warnf logs a warning message, patterned after log.Printf.
 func (l Logger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! ["+l.Name+"] "+format, args...)
+	log.Printf("W! ["+l.Name+"] "+format, internal.SanitizeArgs(args)...)
 }
 
 // Warn logs a warning message, patterned after log.Print.
@@ -45,7 +46,7 @@ func (l Logger) Warn(args ...interface{}) {
 
 // Infof logs an information message, patterned after log.Printf.
 func (l Logger) Infof(format string, args ...interface{}) {
-	log.Printf("I! ["+l.Name+"] "+format, args...)
+	log.Printf("I! ["+l.Name+"] "+format, internal.SanitizeArgs(args)...)
 }
 
 // Info logs an information message, patterned after log.Print.
