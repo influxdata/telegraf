@@ -129,7 +129,7 @@ func (k *KafkaConsumer) Init() error {
 	cfg.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime)
 
 	if k.ConsumerFetchDefault != 0 {
-		cfg.Consumer.Fetch.Default = k.ConsumerFetchDefault
+		cfg.Consumer.Fetch.Default = config.Size(k.ConsumerFetchDefault)
 	}
 
 	k.config = cfg
