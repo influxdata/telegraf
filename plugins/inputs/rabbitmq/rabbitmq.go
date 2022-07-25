@@ -144,6 +144,7 @@ type Queue struct {
 	IdleSince              string   `json:"idle_since"`
 	SlaveNodes             []string `json:"slave_nodes"`
 	SynchronisedSlaveNodes []string `json:"synchronised_slave_nodes"`
+	HeadMessageTimestamp   *int64   `json:"head_message_timestamp"`
 }
 
 // Node ...
@@ -585,36 +586,42 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 			"auto_delete": strconv.FormatBool(queue.AutoDelete),
 		}
 
+		fields := map[string]interface{}{
+			// common information
+			"consumers":                queue.Consumers,
+			"consumer_utilisation":     queue.ConsumerUtilisation,
+			"idle_since":               queue.IdleSince,
+			"slave_nodes":              len(queue.SlaveNodes),
+			"synchronised_slave_nodes": len(queue.SynchronisedSlaveNodes),
+			"memory":                   queue.Memory,
+			// messages information
+			"message_bytes":             queue.MessageBytes,
+			"message_bytes_ready":       queue.MessageBytesReady,
+			"message_bytes_unacked":     queue.MessageBytesUnacknowledged,
+			"message_bytes_ram":         queue.MessageRAM,
+			"message_bytes_persist":     queue.MessagePersistent,
+			"messages":                  queue.Messages,
+			"messages_ready":            queue.MessagesReady,
+			"messages_unack":            queue.MessagesUnacknowledged,
+			"messages_ack":              queue.MessageStats.Ack,
+			"messages_ack_rate":         queue.MessageStats.AckDetails.Rate,
+			"messages_deliver":          queue.MessageStats.Deliver,
+			"messages_deliver_rate":     queue.MessageStats.DeliverDetails.Rate,
+			"messages_deliver_get":      queue.MessageStats.DeliverGet,
+			"messages_deliver_get_rate": queue.MessageStats.DeliverGetDetails.Rate,
+			"messages_publish":          queue.MessageStats.Publish,
+			"messages_publish_rate":     queue.MessageStats.PublishDetails.Rate,
+			"messages_redeliver":        queue.MessageStats.Redeliver,
+			"messages_redeliver_rate":   queue.MessageStats.RedeliverDetails.Rate,
+		}
+
+		if queue.HeadMessageTimestamp != nil {
+			fields["head_message_timestamp"] = *queue.HeadMessageTimestamp
+		}
+
 		acc.AddFields(
 			"rabbitmq_queue",
-			map[string]interface{}{
-				// common information
-				"consumers":                queue.Consumers,
-				"consumer_utilisation":     queue.ConsumerUtilisation,
-				"idle_since":               queue.IdleSince,
-				"slave_nodes":              len(queue.SlaveNodes),
-				"synchronised_slave_nodes": len(queue.SynchronisedSlaveNodes),
-				"memory":                   queue.Memory,
-				// messages information
-				"message_bytes":             queue.MessageBytes,
-				"message_bytes_ready":       queue.MessageBytesReady,
-				"message_bytes_unacked":     queue.MessageBytesUnacknowledged,
-				"message_bytes_ram":         queue.MessageRAM,
-				"message_bytes_persist":     queue.MessagePersistent,
-				"messages":                  queue.Messages,
-				"messages_ready":            queue.MessagesReady,
-				"messages_unack":            queue.MessagesUnacknowledged,
-				"messages_ack":              queue.MessageStats.Ack,
-				"messages_ack_rate":         queue.MessageStats.AckDetails.Rate,
-				"messages_deliver":          queue.MessageStats.Deliver,
-				"messages_deliver_rate":     queue.MessageStats.DeliverDetails.Rate,
-				"messages_deliver_get":      queue.MessageStats.DeliverGet,
-				"messages_deliver_get_rate": queue.MessageStats.DeliverGetDetails.Rate,
-				"messages_publish":          queue.MessageStats.Publish,
-				"messages_publish_rate":     queue.MessageStats.PublishDetails.Rate,
-				"messages_redeliver":        queue.MessageStats.Redeliver,
-				"messages_redeliver_rate":   queue.MessageStats.RedeliverDetails.Rate,
-			},
+			fields,
 			tags,
 		)
 	}

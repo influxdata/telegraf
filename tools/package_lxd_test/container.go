@@ -175,7 +175,8 @@ func (c *Container) configureYum() error {
 		return err
 	}
 
-	return c.client.Exec(c.Name, "yum", "check-update")
+	// will return a non-zero return code if there are packages to update
+	return c.client.Exec(c.Name, "bash", "-c", "yum check-update || true")
 }
 
 // Create config and update dnf
@@ -189,7 +190,8 @@ func (c *Container) configureDnf() error {
 		return err
 	}
 
-	return c.client.Exec(c.Name, "dnf", "check-update")
+	// will return a non-zero return code if there are packages to update
+	return c.client.Exec(c.Name, "bash", "-c", "dnf check-update || true")
 }
 
 // Create config and update zypper

@@ -1924,3 +1924,21 @@ func TestRequestsStartingWithOmits(t *testing.T) {
 	acc.Wait(len(expected))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
+
+func TestRequestsEmptyFields(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+		},
+	}
+	err := modbus.Init()
+	require.EqualError(t, err, `configuraton invalid: found request section without fields`)
+}

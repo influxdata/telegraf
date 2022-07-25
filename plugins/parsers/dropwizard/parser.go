@@ -206,8 +206,14 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 }
 
 func (p *Parser) Init() error {
-	handler := influx.NewMetricHandler()
-	p.seriesParser = influx.NewSeriesParser(handler)
+	parser := &influx.Parser{
+		Type: "series",
+	}
+	err := parser.Init()
+	if err != nil {
+		return err
+	}
+	p.seriesParser = parser
 
 	if len(p.Templates) != 0 {
 		defaultTemplate, err := templating.NewDefaultTemplateWithPattern("measurement*")
