@@ -43,7 +43,7 @@ type KafkaConsumer struct {
 	BalanceStrategy        string          `toml:"balance_strategy"`
 	Topics                 []string        `toml:"topics"`
 	TopicTag               string          `toml:"topic_tag"`
-	FetchMessageBytes      int32           `toml:"fetch_message_bytes"`
+	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
 
 	kafka.ReadConfig
 
@@ -128,8 +128,8 @@ func (k *KafkaConsumer) Init() error {
 
 	cfg.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime)
 
-	if k.FetchMessageBytes != 0 {
-		cfg.Consumer.Fetch.Default = k.FetchMessageBytes
+	if k.ConsumerFetchDefault != 0 {
+		cfg.Consumer.Fetch.Default = k.ConsumerFetchDefault
 	}
 
 	k.config = cfg
