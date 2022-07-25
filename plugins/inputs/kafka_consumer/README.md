@@ -108,7 +108,7 @@ and use the old zookeeper connection method.
   ## your messages, or else the consumer will spend a lot of time
   ## negotiating sizes and not actually consuming. Similar to the JVM's
   ## `fetch.message.max.bytes`.
-  # consumer_fetch_default = 1048576
+  # consumer_fetch_default = "1MB"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
