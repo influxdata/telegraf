@@ -1,6 +1,21 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.23.3 [2022-07-25]
+
+### Bugfixes
+
+- [#11481](https://github.com/influxdata/telegraf/pull/11481) `inputs.openstack` Use v3 volume library
+- [#11482](https://github.com/influxdata/telegraf/pull/11482) `common.cookie` Use reader over readcloser, regen cookie-jar at reauth
+- [#11527](https://github.com/influxdata/telegraf/pull/11527) `inputs.mqtt_consumer` Topic parsing error when topic having prefix '/'
+- [#11534](https://github.com/influxdata/telegraf/pull/11534) `inputs.snmp_trap` Nil map panic when use snmp_trap with netsnmp translator
+- [#11522](https://github.com/influxdata/telegraf/pull/11522) `inputs.sqlserver` Set lower deadlock priority on queries
+- [#11486](https://github.com/influxdata/telegraf/pull/11486) `parsers.prometheus` Histogram infinity bucket must be always present
+
+### Dependency Updates
+
+- [#11461](https://github.com/influxdata/telegraf/pull/11461) Bump github.com/antchfx/jsonquery from 1.1.5 to 1.2.0
+
 ## v1.23.2 [2022-07-11]
 
 ### Bugfixes
