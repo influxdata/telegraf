@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"strings"
+	"time"
 
 	//Register sql drivers
 	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
@@ -41,6 +42,10 @@ type SQL struct {
 	TableExistsTemplate string
 	InitSQL             string `toml:"init_sql"`
 	Convert             ConvertStruct
+	ConnMaxIdleTime     time.Duration // no default? 0?
+	ConnMaxLifetime     time.Duration // no default? 0?
+	MaxIdleConns        int           // default 2
+	MaxOpenConns        int           // default 0 (unlimited)
 
 	db     *gosql.DB
 	Log    telegraf.Logger `toml:"-"`
@@ -61,6 +66,11 @@ func (p *SQL) Connect() error {
 	if err != nil {
 		return err
 	}
+
+	db.SetConnMaxIdleTime(p.ConnMaxIdleTime)
+	db.SetConnMaxLifetime(p.ConnMaxLifetime)
+	db.SetMaxIdleConns(p.MaxIdleConns)
+	db.SetMaxOpenConns(p.MaxOpenConns)
 
 	if p.InitSQL != "" {
 		_, err = db.Exec(p.InitSQL)
@@ -277,5 +287,6 @@ func newSQL() *SQL {
 			Bool:            "BOOL",
 			ConversionStyle: "unsigned_suffix",
 		},
+		MaxIdleConns: 2,
 	}
 }
