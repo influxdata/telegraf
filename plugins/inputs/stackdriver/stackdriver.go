@@ -4,6 +4,7 @@ package stackdriver
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
