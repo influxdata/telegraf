@@ -628,7 +628,7 @@ func NewBucket(dist *distributionpb.Distribution) (Buckets, error) {
 		return &e, nil
 	}
 
-	return nil, fmt.Errorf("no buckets available")
+	return nil, errors.New("no buckets available")
 }
 
 // AddDistribution adds metrics from a distribution value type.
