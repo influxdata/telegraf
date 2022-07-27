@@ -184,6 +184,10 @@ in the metric.
   ## Useful when not all selected files have the exact same structure.
   # xpath_allow_empty_selection = false
 
+  ## Get native data-types for all data-format that contain type information.
+  ## Currently, protobuf, msgpack and JSON support native data-types
+  # xpath_native_types = false
+
   ## Multiple parsing sections are allowed
   [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
