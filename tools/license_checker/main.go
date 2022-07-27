@@ -3,7 +3,6 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"log" //nolint:revive // We cannot use the Telegraf's logging here
@@ -11,7 +10,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"golang.org/x/mod/modfile"
 
@@ -24,7 +22,6 @@ import (
 var spdxMappingFile []byte
 
 var debug bool
-var spdxCache *cache
 var nameToSPDX map[string]string
 
 func debugf(format string, v ...any) {
@@ -37,17 +34,14 @@ func debugf(format string, v ...any) {
 func main() {
 	var help, verbose bool
 	var threshold float64
-	var cacheFn, whitelistFn, userpkg string
-	var expiry time.Duration
+	var whitelistFn, userpkg string
 
 	flag.BoolVar(&debug, "debug", false, "output debugging information")
 	flag.BoolVar(&help, "help", false, "output this help text")
 	flag.BoolVar(&verbose, "verbose", false, "output verbose information instead of just errors")
 	flag.Float64Var(&threshold, "threshold", 0.8, "threshold for license classification")
-	flag.StringVar(&cacheFn, "cache", "", "use the given cache file")
 	flag.StringVar(&whitelistFn, "whitelist", "", "use the given white-list file for comparison")
 	flag.StringVar(&userpkg, "package", "", "only test the given package (all by default)")
-	flag.DurationVar(&expiry, "expiry", 0, "time until a cache entry expires (never by default)")
 	flag.Parse()
 
 	if help || flag.NArg() > 1 {
@@ -82,20 +76,6 @@ func main() {
 		if err := override.Parse(whitelistFn); err != nil {
 			log.Fatalf("Reading whitelist failed: %v", err)
 		}
-	}
-
-	if cacheFn != "" {
-		var err error
-
-		log.Printf("Reading cache file %q...", cacheFn)
-		spdxCache, err = LoadCache(cacheFn)
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				log.Fatalf("Reading cache file failed: %v", err)
-			}
-			spdxCache = NewCache(expiry)
-		}
-		spdxCache.Expiry = expiry
 	}
 
 	log.Printf("Reading module file %q...", moduleFilename)
@@ -257,13 +237,6 @@ func main() {
 		log.Printf("    %d successful", succeeded)
 		log.Printf("    %d low confidence", warn)
 		log.Printf("    %d errors", failed)
-	}
-
-	if cacheFn != "" {
-		log.Printf("Writing cache file %q...", cacheFn)
-		if err := spdxCache.Save(cacheFn); err != nil {
-			log.Fatalf("Writing cache file failed: %v", err)
-		}
 	}
 
 	if failed > 0 {

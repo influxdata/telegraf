@@ -33,28 +33,26 @@ telegraf$ ./tools/license_checker/license_checker --help
 to get an overview.
 
 As the verification tool downloads each license file linked in the
-dependency license document, it makes sense to use a cache. Each
-cache entry contains the dependency name as well as the version.
-Each cache entry is invalidated if either the version of a package
-changes or if the expiry time is reached (eternal by default).
+dependency license document, you should be careful on not exceeding
+the access limits of e.g. GitHub by running the tool too frequent.
 
-Furthermore, some license text might be wrongly classified, or
-not classified at all. In this case, you can use a _whitelist_ to
-explicitly state the license SPDX classifier for those packages.
+Some packages change the license for newer versions. As we always
+link to the latest license text the classification might not match
+the actual license of our used dependency. Furthermore, some license
+text might be wrongly classified, or not classified at all. In these
+cases, you can use a _whitelist_ to explicitly state the license
+SPDX classifier for those packages.
 See the [whitelist section](#whitelist) for more details.
 
 The recommended use in telegraf is to run
 
 ```shell
 telegraf$ ./tools/license_checker/license_checker \
-              -whitelist ./tools/license_checker/data/whitelist \
-              -cache .license_cache \
-              -expiry 24h
+              -whitelist ./tools/license_checker/data/whitelist
 ```
 
-using the code-versioned whitelist and a cache that expires
-after 24h. This command will report all non-matching entries
-with an `ERR:` prefix.
+using the code-versioned whitelist. This command will report all
+non-matching entries with an `ERR:` prefix.
 
 ## Whitelist
 

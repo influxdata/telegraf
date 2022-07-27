@@ -24,17 +24,6 @@ func (pkg *packageInfo) ToSPDX() {
 }
 
 func (pkg *packageInfo) Classify() (float64, error) {
-	// Use the cache if any
-	if spdxCache != nil {
-		if spdx, confidence, valid := spdxCache.Get(pkg); valid {
-			debugf("%q found cache entry: %q with confidence %f%%", pkg.name, spdx, confidence)
-			if spdx == pkg.spdx {
-				return confidence, nil
-			}
-			return confidence, fmt.Errorf("classification %q does not match", spdx)
-		}
-	}
-
 	// Download the license text
 	source, err := normalizeURL(pkg.url)
 	if err != nil {
@@ -66,12 +55,6 @@ func (pkg *packageInfo) Classify() (float64, error) {
 	}
 	match := coverage.Match[0]
 	debugf("%q found match: %q with confidence %f%%", pkg.name, match.ID, coverage.Percent)
-
-	// Use the cache if any
-	if spdxCache != nil {
-		debugf("%q adding cache entry: %q with confidence %f%%", pkg.name, match.ID, coverage.Percent)
-		spdxCache.Add(pkg, match.ID, coverage.Percent)
-	}
 
 	if match.ID != pkg.spdx {
 		return coverage.Percent, fmt.Errorf("classification %q does not match", match.ID)
