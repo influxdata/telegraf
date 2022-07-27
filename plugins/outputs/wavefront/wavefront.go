@@ -4,6 +4,7 @@ package wavefront
 import (
 	_ "embed"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -77,30 +78,50 @@ func (*Wavefront) SampleConfig() string {
 	return sampleConfig
 }
 
+func SenderURLFromURLAndToken(rawURL, token string) (string, error) {
+	newURL, err := url.Parse(rawURL)
+	if err != nil {
+		return "", fmt.Errorf("could not parse the provided Url: %s", rawURL)
+	}
+	newURL.User = url.User(token)
+
+	return newURL.String(), nil
+}
+
+func SenderURLFromHostAndPort(host string, port int) string {
+	newURL := url.URL{
+		Scheme: "tcp",
+		Host:   fmt.Sprintf("%s:%d", host, port),
+	}
+	return newURL.String()
+}
+
 func (w *Wavefront) Connect() error {
 	flushSeconds := 5
 	if w.ImmediateFlush {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
 	}
+
 	if w.URL != "" {
 		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
-		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
-			Server:               w.URL,
-			Token:                w.Token,
-			FlushIntervalSeconds: flushSeconds,
-			BatchSize:            w.HTTPMaximumBatchSize,
-		})
+		newURL, err := SenderURLFromURLAndToken(w.URL, w.Token)
+		if err != nil {
+			return err
+		}
+
+		sender, err := wavefront.NewSender(newURL,
+			wavefront.BatchSize(w.HTTPMaximumBatchSize),
+			wavefront.FlushIntervalSeconds(flushSeconds),
+		)
 		if err != nil {
 			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.URL)
 		}
 		w.sender = sender
 	} else {
 		w.Log.Debugf("connecting over tcp using Host: %q and Port: %d", w.Host, w.Port)
-		sender, err := wavefront.NewProxySender(&wavefront.ProxyConfiguration{
-			Host:                 w.Host,
-			MetricsPort:          w.Port,
-			FlushIntervalSeconds: flushSeconds,
-		})
+		sender, err := wavefront.NewSender(SenderURLFromHostAndPort(w.Host, w.Port),
+			wavefront.FlushIntervalSeconds(flushSeconds))
+
 		if err != nil {
 			return fmt.Errorf("could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
 		}
@@ -140,7 +161,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 }
 
 func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
-	ret := []*MetricPoint{}
+	ret := make([]*MetricPoint, 0)
 
 	for fieldName, value := range m.Fields() {
 		var name string

@@ -355,6 +355,17 @@ func TestTagLimits(t *testing.T) {
 	require.Equal(t, longKey, tags[longKey])
 }
 
+func TestSenderURLFromHostAndPort(t *testing.T) {
+	require.Equal(t, "tcp://localhost:2878", SenderURLFromHostAndPort("localhost", 2878))
+}
+
+func TestSenderURLFromURLAndToken(t *testing.T) {
+	url, err := SenderURLFromURLAndToken("https://surf.wavefront.com", "11111111-2222-3333-4444-555555555555")
+	require.Nil(t, err)
+	require.Equal(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com",
+		url)
+}
+
 func TestDefaults(t *testing.T) {
 	defaultWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
 	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
