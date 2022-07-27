@@ -51,8 +51,7 @@ configuration.
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Minimal TLS version to accept by the client
-  ## If undet, the value defaults to Golang's default which is TLS v1.2 currently.
-  # tls_min_version = ""
+  # tls_min_version = "TLS12"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
