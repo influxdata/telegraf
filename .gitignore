@@ -13,4 +13,3 @@ process.yml
 /*.conf
 resource.syso
 versioninfo.json
-tools/readme_config_includer/generator.exe
