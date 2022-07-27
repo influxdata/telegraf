@@ -435,8 +435,8 @@ func TestConnectClientMinTLSVersion(t *testing.T) {
 		}
 
 		clientMinVersion := clientTLSConfig.MinVersion
-		if clientMinVersion == 0 {
-			clientMinVersion = cryptotls.VersionTLS12 // As defined in https://pkg.go.dev/crypto/tls#Config
+		if tt.cfg.TLSMinVersion == "" {
+			clientMinVersion = tls.TLSMinVersionDefault
 		}
 
 		for i, serverTLSMaxVersion := range tlsVersions {
@@ -445,6 +445,7 @@ func TestConnectClientMinTLSVersion(t *testing.T) {
 				// Constrain the server's maximum TLS version
 				serverTLSConfig, err := serverConfig.TLSConfig()
 				require.NoError(t, err)
+				serverTLSConfig.MinVersion = cryptotls.VersionTLS10
 				serverTLSConfig.MaxVersion = serverTLSMaxVersion
 
 				// Start the server

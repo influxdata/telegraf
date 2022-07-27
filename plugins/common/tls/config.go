@@ -10,6 +10,8 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 )
 
+const TLSMinVersionDefault = tls.VersionTLS12
+
 // ClientConfig represents the standard client TLS config.
 type ClientConfig struct {
 	TLSCA              string `toml:"tls_ca"`
@@ -82,6 +84,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		}
 	}
 
+	tlsConfig.MinVersion = TLSMinVersionDefault
 	if c.TLSMinVersion != "" {
 		version, err := ParseTLSVersion(c.TLSMinVersion)
 		if err != nil {
@@ -141,6 +144,7 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		tlsConfig.MaxVersion = version
 	}
 
+	tlsConfig.MinVersion = TLSMinVersionDefault
 	if c.TLSMinVersion != "" {
 		version, err := ParseTLSVersion(c.TLSMinVersion)
 		if err != nil {
