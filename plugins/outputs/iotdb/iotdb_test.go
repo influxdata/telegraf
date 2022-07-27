@@ -23,6 +23,9 @@ var (
 )
 
 func TestConnectAndClose(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	test_client := &IoTDB{
 		Host:     test_host,
 		Port:     test_port,
@@ -39,6 +42,9 @@ func TestConnectAndClose(t *testing.T) {
 }
 
 func TestInitAndConnect(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	var test_client = &IoTDB{
 		Host:     test_host,
 		Port:     test_port,
@@ -249,6 +255,9 @@ func TestMetricConvertion_01(t *testing.T) {
 		},
 	}
 	require.True(t, compareRecords(result, &testRecordsWithTags_01, test_client.Log))
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_01))
 }
 
@@ -275,6 +284,9 @@ func TestMetricConvertion_02(t *testing.T) {
 		Timestamp_list:    []int64{const_TestTimestamp.UnixNano()},
 	}
 	require.True(t, compareRecords(result, &testRecordsWithTags_02, test_client.Log))
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_02))
 }
 
@@ -314,6 +326,9 @@ func TestMetricConvertion_03(t *testing.T) {
 		},
 	}
 	require.True(t, compareRecords(result, &testRecordsWithTags_03, test_client.Log))
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_01))
 }
 
@@ -355,6 +370,9 @@ func TestTagsConvertion_05(t *testing.T) {
 		},
 	}
 	require.True(t, compareRecords(result, &testRecordsWithTags_05, test_client.Log))
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_01))
 }
 
@@ -396,5 +414,8 @@ func TestTagsConvertion_06(t *testing.T) {
 		},
 	}
 	require.True(t, compareRecords(result, &testRecordsWithTags_06, test_client.Log))
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_01))
 }

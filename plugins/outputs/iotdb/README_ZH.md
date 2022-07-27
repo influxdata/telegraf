@@ -1,5 +1,3 @@
-[English](./README.md) | [中文](./README_ZH.md)
-
 # Apache IoTDB
 
 [![Main Mac and Linux](https://github.com/apache/iotdb/actions/workflows/main-unix.yml/badge.svg)](https://github.com/apache/iotdb/actions/workflows/main-unix.yml)
@@ -7,10 +5,10 @@
 [![coveralls](https://coveralls.io/repos/github/apache/iotdb/badge.svg?branch=master)](https://coveralls.io/repos/github/apache/iotdb/badge.svg?branch=master)
 [![GitHub release](https://img.shields.io/github/release/apache/iotdb.svg)](https://github.com/apache/iotdb/releases)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-![](https://github-size-badge.herokuapp.com/apache/iotdb.svg)
-![](https://img.shields.io/github/downloads/apache/iotdb/total.svg)
-![](https://img.shields.io/badge/platform-win10%20%7C%20macox%20%7C%20linux-yellow.svg)
-![](https://img.shields.io/badge/java--language-1.8-blue.svg)
+![size](https://github-size-badge.herokuapp.com/apache/iotdb.svg)
+![downloads](https://img.shields.io/github/downloads/apache/iotdb/total.svg)
+![platform](https://img.shields.io/badge/platform-win10%20%7C%20macox%20%7C%20linux-yellow.svg)
+![java-language](https://img.shields.io/badge/java--language-1.8-blue.svg)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/iotdb.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/iotdb/context:java)
 [![IoTDB Website](https://img.shields.io/website-up-down-green-red/https/shields.io.svg?label=iotdb-website)](https://iotdb.apache.org/)
 [![Maven Version](https://maven-badges.herokuapp.com/maven-central/org.apache.iotdb/iotdb-parent/badge.svg)](http://search.maven.org/#search|gav|1|g:"org.apache.iotdb")
@@ -20,23 +18,25 @@ Apache IoTDB（物联网数据库）是一个物联网原生数据库，在数�
 由于其轻量级架构、高性能和丰富的功能集，以及与Apache Hadoop、Spark和Flink的深度集成，
 Apache IoTDB可以满足物联网工业领域的海量数据存储、高速数据摄取和复杂数据分析的要求。
 
-Apache IoTDB website: https://iotdb.apache.org
-Apache IoTDB Github: https://github.com/apache/iotdb
+Apache IoTDB website: <https://iotdb.apache.org>
+Apache IoTDB Github: <https://github.com/apache/iotdb>
 
 # Apache IoTDB Go语言客户端
 
 [![E2E Tests](https://github.com/apache/iotdb-client-go/actions/workflows/e2e.yml/badge.svg)](https://github.com/apache/iotdb-client-go/actions/workflows/e2e.yml)
 [![GitHub release](https://img.shields.io/github/release/apache/iotdb-client-go.svg)](https://github.com/apache/iotdb-client-go/releases)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-![](https://github-size-badge.herokuapp.com/apache/iotdb-client-go.svg)
-![](https://img.shields.io/badge/platform-win10%20%7C%20macos%20%7C%20linux-yellow.svg)
+![size](https://github-size-badge.herokuapp.com/apache/iotdb-client-go.svg)
+![platform](https://img.shields.io/badge/platform-win10%20%7C%20macos%20%7C%20linux-yellow.svg)
 [![IoTDB Website](https://img.shields.io/website-up-down-green-red/https/shields.io.svg?label=iotdb-website)](https://iotdb.apache.org/)
 
 Apache IoTDB 有一个go语言客户端，能够使用go语言原生接口支持 IoTDB 的数据增删改查。
 
-Apache IoTDB Golang Client Github: https://github.com/apache/iotdb
+Apache IoTDB Golang Client Github: <https://github.com/apache/iotdb>
 
 # IoTDB 输出插件
+
+[English](./README.md) | [中文](./README_ZH.md)
 
 IoTDB 输出插件可以把 Telegraf 采集到的数据保存到IoTDB数据库。该插件使用了go语言客户端的接口，能够支持会话连接、数据插入。
 
@@ -128,4 +128,3 @@ IoTDB 输出插件可以把 Telegraf 采集到的数据保存到IoTDB数据库�
   treateTagsAs = "DeviceID_subtree"
 
 ```
-

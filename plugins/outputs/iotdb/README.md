@@ -1,5 +1,3 @@
-[English](./README.md) | [中文](./README_ZH.md)
-
 # Apache IoTDB
 
 [![Main Mac and Linux](https://github.com/apache/iotdb/actions/workflows/main-unix.yml/badge.svg)](https://github.com/apache/iotdb/actions/workflows/main-unix.yml)
@@ -7,10 +5,10 @@
 [![coveralls](https://coveralls.io/repos/github/apache/iotdb/badge.svg?branch=master)](https://coveralls.io/repos/github/apache/iotdb/badge.svg?branch=master)
 [![GitHub release](https://img.shields.io/github/release/apache/iotdb.svg)](https://github.com/apache/iotdb/releases)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-![](https://github-size-badge.herokuapp.com/apache/iotdb.svg)
-![](https://img.shields.io/github/downloads/apache/iotdb/total.svg)
-![](https://img.shields.io/badge/platform-win10%20%7C%20macox%20%7C%20linux-yellow.svg)
-![](https://img.shields.io/badge/java--language-1.8-blue.svg)
+![size](https://github-size-badge.herokuapp.com/apache/iotdb.svg)
+![downloads](https://img.shields.io/github/downloads/apache/iotdb/total.svg)
+![platform](https://img.shields.io/badge/platform-win10%20%7C%20macox%20%7C%20linux-yellow.svg)
+![java-language](https://img.shields.io/badge/java--language-1.8-blue.svg)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/iotdb.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/iotdb/context:java)
 [![IoTDB Website](https://img.shields.io/website-up-down-green-red/https/shields.io.svg?label=iotdb-website)](https://iotdb.apache.org/)
 [![Maven Version](https://maven-badges.herokuapp.com/maven-central/org.apache.iotdb/iotdb-parent/badge.svg)](http://search.maven.org/#search|gav|1|g:"org.apache.iotdb")
@@ -18,23 +16,25 @@
 
 Apache IoTDB (Database for Internet of Things) is an IoT native database with high performance for data management and analysis, deployable on the edge and the cloud. Due to its light-weight architecture, high performance and rich feature set together with its deep integration with Apache Hadoop, Spark and Flink, Apache IoTDB can meet the requirements of massive data storage, high-speed data ingestion and complex data analysis in the IoT industrial fields.
 
-Apache IoTDB website: https://iotdb.apache.org
-Apache IoTDB Github: https://github.com/apache/iotdb
+Apache IoTDB website: <https://iotdb.apache.org>
+Apache IoTDB Github: <https://github.com/apache/iotdb>
 
 # Apache IoTDB Client for Golang
 
 [![E2E Tests](https://github.com/apache/iotdb-client-go/actions/workflows/e2e.yml/badge.svg)](https://github.com/apache/iotdb-client-go/actions/workflows/e2e.yml)
 [![GitHub release](https://img.shields.io/github/release/apache/iotdb-client-go.svg)](https://github.com/apache/iotdb-client-go/releases)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-![](https://github-size-badge.herokuapp.com/apache/iotdb-client-go.svg)
-![](https://img.shields.io/badge/platform-win10%20%7C%20macos%20%7C%20linux-yellow.svg)
+![size](https://github-size-badge.herokuapp.com/apache/iotdb-client-go.svg)
+![platform](https://img.shields.io/badge/platform-win10%20%7C%20macos%20%7C%20linux-yellow.svg)
 [![IoTDB Website](https://img.shields.io/website-up-down-green-red/https/shields.io.svg?label=iotdb-website)](https://iotdb.apache.org/)
 
 There is an Apache IoTDB Client for Golang, using native Golang API to inserting, deleting, modifying records.
 
-Apache IoTDB Golang Client Github: https://github.com/apache/iotdb
+Apache IoTDB Golang Client Github: <https://github.com/apache/iotdb>
 
 # IoTDB Output Plugin
+
+[English](./README.md) | [中文](./README_ZH.md)
 
 The IoTDB output plugin saves Telegraf metric data to an IoTDB backend. This plugin uses Apache IoTDB client for Golang to support session connection and data insertion.
 
@@ -46,7 +46,7 @@ There is a sample configuration: [English Configuration](./sample.conf). And the
 
 ## Please pay attention to these points
 
-1. IoTDB (version 0.13.x or older) **DO NOT support unsigned integer**. There are three available options of converting uint64, which are specified by parameter `convertUint64To`. 
+1. IoTDB (version 0.13.x or older) **DO NOT support unsigned integer**. There are three available options of converting uint64, which are specified by parameter `convertUint64To`.
 
    - `ToInt64`, default option. If an unsigned integer is greater than `math.MaxInt64`, save it as `int64`; else save `math.MaxInt64`(9223372036854775807).
    - `ForceToInt64`, force converting an unsigned integer to a`int64`, no mater the value it is. This option may lead to exception if the value is greater than `int64`.
@@ -61,16 +61,14 @@ There is a sample configuration: [English Configuration](./sample.conf). And the
 
    For example, there is a metric:
 
-   ```
-   Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2="hello"}
-   ```
+   `Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2="hello"}`
 
-   - `Measurements`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"` 
+   - `Measurements`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"`
    - `DeviceID_subtree`, result: `root.sg.device.private.working, s1=100, s2="hello"`
 
 ## Testing
 
-**Please prepare running database before testing**. Target address is `localhost:6667` by default, which can be edit in `iotdb_test.go`. `test_host` is the target ip address of database server. 
+**Please prepare running database before testing**. Target address is `localhost:6667` by default, which can be edit in `iotdb_test.go`. `test_host` is the target ip address of database server.
 
 Testing contains: network connection, error correction, datatype conversion, data writing.
 
@@ -133,4 +131,3 @@ Testing contains: network connection, error correction, datatype conversion, dat
   treateTagsAs = "DeviceID_subtree"
 
 ```
-
