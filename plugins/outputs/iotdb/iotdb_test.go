@@ -16,28 +16,28 @@ import (
 )
 
 var (
-	test_host     = "localhost" // The server's (ip) address that you want to connect to.
-	test_port     = "6667"      // The server's port that you want to connect to.
-	test_user     = "root"
-	test_password = "root"
+	testHost     = "localhost" // The server's (ip) address that you want to connect to.
+	testPort     = "6667"      // The server's port that you want to connect to.
+	testUser     = "root"
+	testPassword = "root"
 )
 
 func TestConnectAndClose(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	test_client := &IoTDB{
-		Host:     test_host,
-		Port:     test_port,
-		User:     test_user,
-		Password: test_password,
+	testClient := &IoTDB{
+		Host:     testHost,
+		Port:     testPort,
+		User:     testUser,
+		Password: testPassword,
 	}
-	test_client.Log = testutil.Logger{}
+	testClient.Log = testutil.Logger{}
 
 	var err error
-	err = test_client.Connect()
+	err = testClient.Connect()
 	require.NoError(t, err)
-	err = test_client.Close()
+	err = testClient.Close()
 	require.NoError(t, err)
 }
 
@@ -45,20 +45,20 @@ func TestInitAndConnect(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	var test_client = &IoTDB{
-		Host:     test_host,
-		Port:     test_port,
-		User:     test_user,
-		Password: test_password,
+	var testClient = &IoTDB{
+		Host:     testHost,
+		Port:     testPort,
+		User:     testUser,
+		Password: testPassword,
 	}
-	test_client.Log = testutil.Logger{}
+	testClient.Log = testutil.Logger{}
 
 	var err error
-	err = test_client.Init()
+	err = testClient.Init()
 	require.NoError(t, err)
-	err = test_client.Connect()
+	err = testClient.Connect()
 	require.NoError(t, err)
-	err = test_client.Close()
+	err = testClient.Close()
 	require.NoError(t, err)
 }
 
@@ -79,8 +79,8 @@ func generateTestMetric(
 }
 
 var (
-	const_TestTimestamp = time.Date(2022, time.July, 20, 12, 25, 33, 44, time.UTC)
-	testMetrics_01      = []telegraf.Metric{
+	constTestTimestamp = time.Date(2022, time.July, 20, 12, 25, 33, 44, time.UTC)
+	testMetrics001     = []telegraf.Metric{
 		generateTestMetric(
 			"root.computer.fan",
 			[]telegraf.Tag{
@@ -91,7 +91,7 @@ var (
 				{Key: "temperature", Value: float64(42.55)},
 				{Key: "counter", Value: int64(987654321)},
 			},
-			const_TestTimestamp,
+			constTestTimestamp,
 		),
 		generateTestMetric(
 			"root.computer.fan",
@@ -103,7 +103,7 @@ var (
 				{Key: "temperature", Value: float64(56.24)},
 				{Key: "counter", Value: int64(123456789)},
 			},
-			const_TestTimestamp,
+			constTestTimestamp,
 		),
 		generateTestMetric(
 			"root.computer.keyboard",
@@ -116,86 +116,85 @@ var (
 				{Key: "bool", Value: bool(false)},
 				{Key: "int_text", Value: "123456789011"},
 			},
-			const_TestTimestamp,
+			constTestTimestamp,
 		),
 	}
-	testMetrics_02 = []telegraf.Metric{
+	testMetrics002 = []telegraf.Metric{
 		generateTestMetric(
 			"root.computer.mouse",
 			[]telegraf.Tag{},
 			[]telegraf.Field{
 				{Key: "unsigned_big", Value: uint64(math.MaxInt64 + 1000)},
 			},
-			const_TestTimestamp,
+			constTestTimestamp,
 		),
 	}
 )
 
 // compare two RecordsWithTags, returns True if and only if they are the same.
-func compareRecords(rwt1 *RecordsWithTags, rwt2 *RecordsWithTags, Log telegraf.Logger) bool {
-	if len(rwt1.DeviceId_list) == len(rwt2.DeviceId_list) &&
-		len(rwt1.Measurements_list) == len(rwt2.Measurements_list) &&
-		len(rwt1.Values_list) == len(rwt2.Values_list) &&
-		len(rwt1.DataTypes_list) == len(rwt2.DataTypes_list) &&
-		len(rwt1.Timestamp_list) == len(rwt2.Timestamp_list) {
-		// ok
-	} else {
-		Log.Errorf("compareRecords Cechk failed. Two RecordsWithTags has different shape.")
+func compareRecords(rwt1 *RecordsWithTags, rwt2 *RecordsWithTags, log telegraf.Logger) bool {
+	if !(len(rwt1.DeviceIDList) == len(rwt2.DeviceIDList) &&
+		len(rwt1.MeasurementsList) == len(rwt2.MeasurementsList) &&
+		len(rwt1.ValuesList) == len(rwt2.ValuesList) &&
+		len(rwt1.DataTypesList) == len(rwt2.DataTypesList) &&
+		len(rwt1.TimestampList) == len(rwt2.TimestampList)) {
+		// length not match
+		log.Errorf("compareRecords Cechk failed. Two RecordsWithTags has different shape.")
 		return false
 	}
-	for index, deviceID := range rwt1.DeviceId_list {
-		if !(deviceID == rwt2.DeviceId_list[index]) {
-			Log.Errorf("compareRecords Cechk failed. rwt1.DeviceId_list[%d]=%v, rwt2.DeviceId_list[%d]=%v.",
-				index, deviceID, index, rwt2.DeviceId_list[index])
+	for index, deviceID := range rwt1.DeviceIDList {
+		if !(deviceID == rwt2.DeviceIDList[index]) {
+			log.Errorf("compareRecords Cechk failed. rwt1.DeviceIDList[%d]=%v, rwt2.DeviceIDList[%d]=%v.",
+				index, deviceID, index, rwt2.DeviceIDList[index])
 			return false
 		}
 	}
-	for index, m_list := range rwt1.Measurements_list {
-		if !(len(m_list) == len(rwt2.Measurements_list[index])) {
-			Log.Errorf("compareRecords Cechk failed. Two Measurements_list has different shape. %d : %d",
-				len(m_list), len(rwt2.Measurements_list[index]))
+	for index, mList := range rwt1.MeasurementsList {
+		if !(len(mList) == len(rwt2.MeasurementsList[index])) {
+			log.Errorf("compareRecords Cechk failed. Two MeasurementsList has different shape. %d : %d",
+				len(mList), len(rwt2.MeasurementsList[index]))
 			return false
 		}
-		for index_2, m := range rwt1.Measurements_list[index] {
-			if !(m == rwt2.Measurements_list[index][index_2]) {
-				Log.Errorf("compareRecords Cechk failed. rwt1.Measurements_list[%d][%d]=%v, rwt2.Measurements_list[%d][%d]=%v.",
-					index, index_2, m, index, index_2, rwt2.Measurements_list[index][index_2])
+		for index002, m := range rwt1.MeasurementsList[index] {
+			if !(m == rwt2.MeasurementsList[index][index002]) {
+				log.Errorf("compareRecords Cechk failed. rwt1.MeasurementsList[%d][%d]=%v, rwt2.MeasurementsList[%d][%d]=%v.",
+					index, index002, m, index, index002, rwt2.MeasurementsList[index][index002])
 				return false
 			}
 		}
 	}
-	for index, m_list := range rwt1.Values_list {
-		if !(len(m_list) == len(rwt2.Values_list[index])) {
-			Log.Errorf("compareRecords Cechk failed. Two Values_list has different shape. %d : %d",
-				len(m_list), len(rwt2.Values_list[index]))
+	for index, mList := range rwt1.ValuesList {
+		if !(len(mList) == len(rwt2.ValuesList[index])) {
+			log.Errorf("compareRecords Cechk failed. Two ValuesList has different shape. %d : %d",
+				len(mList), len(rwt2.ValuesList[index]))
 			return false
 		}
-		for index_2, m := range rwt1.Values_list[index] {
-			if !(m == rwt2.Values_list[index][index_2]) {
-				Log.Errorf("compareRecords Cechk failed. rwt1.Values_list[%d][%d]=%v, rwt2.Values_list[%d][%d]=%v.",
-					index, index_2, m, index, index_2, rwt2.Values_list[index][index_2])
+		for index002, m := range rwt1.ValuesList[index] {
+			if !(m == rwt2.ValuesList[index][index002]) {
+				log.Errorf("compareRecords Cechk failed. rwt1.ValuesList[%d][%d]=%v, rwt2.ValuesList[%d][%d]=%v.",
+					index, index002, m, index, index002, rwt2.ValuesList[index][index002])
 				return false
 			}
 		}
 	}
-	for index, m_list := range rwt1.DataTypes_list {
-		if !(len(m_list) == len(rwt2.DataTypes_list[index])) {
-			Log.Errorf("compareRecords Cechk failed. Two DataTypes_list has different shape. %d : %d",
-				len(m_list), len(rwt2.DataTypes_list[index]))
+	for index, mList := range rwt1.DataTypesList {
+		if !(len(mList) == len(rwt2.DataTypesList[index])) {
+			log.Errorf("compareRecords Cechk failed. Two DataTypesList has different shape. %d : %d",
+				len(mList), len(rwt2.DataTypesList[index]))
 			return false
 		}
-		for index_2, m := range rwt1.DataTypes_list[index] {
-			if !(m == rwt2.DataTypes_list[index][index_2]) {
-				Log.Errorf("compareRecords Cechk failed. rwt1.DataTypes_list[%d][%d]=%v, rwt2.DataTypes_list[%d][%d]=%v.",
-					index, index_2, m, index, index_2, rwt2.DataTypes_list[index][index_2])
+		for index002, m := range rwt1.DataTypesList[index] {
+			if !(m == rwt2.DataTypesList[index][index002]) {
+				log.Errorf("compareRecords Cechk failed. rwt1.DataTypesList[%d][%d]=%v, rwt2.DataTypesList[%d][%d]=%v.",
+					index, index002, m, index, index002, rwt2.DataTypesList[index][index002])
 				return false
 			}
 		}
 	}
-	for index, timestamp := range rwt1.Timestamp_list {
-		if !(timestamp == rwt2.Timestamp_list[index]) {
-			Log.Errorf("compareRecords Cechk failed. rwt1.DeviceId_list[%d]=%v, rwt2.DeviceId_list[%d]=%v.",
-				index, timestamp, index, rwt2.Timestamp_list[index])
+	for index, timestamp := range rwt1.TimestampList {
+		if !(timestamp == rwt2.TimestampList[index]) {
+			log.Errorf("compareRecords Cechk failed. rwt1.DeviceIDList[%d]=%v, rwt2.DeviceIDList[%d]=%v.",
+				index, timestamp, index, rwt2.TimestampList[index])
 			return false
 		}
 	}
@@ -203,219 +202,219 @@ func compareRecords(rwt1 *RecordsWithTags, rwt2 *RecordsWithTags, Log telegraf.L
 }
 
 // util function, test 'Write' with given session and config
-func test_Connect_WriteMetricInThisConf(s *IoTDB, metrics []telegraf.Metric) error {
-	conn_err := s.Connect()
-	if conn_err != nil {
-		return conn_err
+func testConnectWriteMetricInThisConf(s *IoTDB, metrics []telegraf.Metric) error {
+	connError := s.Connect()
+	if connError != nil {
+		return connError
 	}
-	write_err := s.Write(metrics)
-	if write_err != nil {
-		return write_err
+	writeError := s.Write(metrics)
+	if writeError != nil {
+		return writeError
 	}
-	close_err := s.Close()
-	if close_err != nil {
-		return close_err
+	closeError := s.Close()
+	if closeError != nil {
+		return closeError
 	}
 	return nil
 }
 
 // Test defualt configuration, uint64 -> int64
-func TestMetricConvertion_01(t *testing.T) {
-	var test_client = &IoTDB{
-		Host:            test_host,
-		Port:            test_port,
-		User:            test_user,
-		Password:        test_password,
+func TestMetricConvertion001(t *testing.T) {
+	var testClient = &IoTDB{
+		Host:            testHost,
+		Port:            testPort,
+		User:            testUser,
+		Password:        testPassword,
 		ConvertUint64To: "ToInt64",
 		TimeStampUnit:   "nanosecond",
 		TreateTagsAs:    "Measurements",
 	}
-	test_client.Log = testutil.Logger{}
+	testClient.Log = testutil.Logger{}
 
-	result, err := test_client.ConvertMetricsToRecordsWithTags(testMetrics_01)
+	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	var testRecordsWithTags_01 = RecordsWithTags{
-		DeviceId_list: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
-		Measurements_list: [][]string{
+	var testRecordsWithTags001 = RecordsWithTags{
+		DeviceIDList: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
+		MeasurementsList: [][]string{
 			{"temperature", "counter"}, {"temperature", "counter"},
 			{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
 		},
-		Values_list: [][]interface{}{
+		ValuesList: [][]interface{}{
 			{float64(42.55), int64(987654321)},
 			{float64(56.24), int64(123456789)},
 			{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
 		},
-		DataTypes_list: [][]client.TSDataType{
+		DataTypesList: [][]client.TSDataType{
 			{client.DOUBLE, client.INT64},
 			{client.DOUBLE, client.INT64},
 			{client.DOUBLE, client.INT64, client.INT64, client.TEXT, client.BOOLEAN, client.TEXT},
 		},
-		Timestamp_list: []int64{
-			const_TestTimestamp.UnixNano(), const_TestTimestamp.UnixNano(), const_TestTimestamp.UnixNano(),
+		TimestampList: []int64{
+			constTestTimestamp.UnixNano(), constTestTimestamp.UnixNano(), constTestTimestamp.UnixNano(),
 		},
 	}
-	require.True(t, compareRecords(result, &testRecordsWithTags_01, test_client.Log))
+	require.True(t, compareRecords(result, &testRecordsWithTags001, testClient.Log))
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_01))
+	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics001))
 }
 
 // Test converting uint64 to text.
-func TestMetricConvertion_02(t *testing.T) {
-	var test_client = &IoTDB{
-		Host:            test_host,
-		Port:            test_port,
-		User:            test_user,
-		Password:        test_password,
+func TestMetricConvertion002(t *testing.T) {
+	var testClient = &IoTDB{
+		Host:            testHost,
+		Port:            testPort,
+		User:            testUser,
+		Password:        testPassword,
 		ConvertUint64To: "Text",
 		TimeStampUnit:   "nanosecond",
 		TreateTagsAs:    "Measurements",
 	}
-	test_client.Log = testutil.Logger{}
+	testClient.Log = testutil.Logger{}
 
-	result, err := test_client.ConvertMetricsToRecordsWithTags(testMetrics_02)
+	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics002)
 	require.NoError(t, err)
-	testRecordsWithTags_02 := RecordsWithTags{
-		DeviceId_list:     []string{"root.computer.mouse"},
-		Measurements_list: [][]string{{"unsigned_big"}},
-		Values_list:       [][]interface{}{{fmt.Sprintf("%d", uint64(math.MaxInt64+1000))}},
-		DataTypes_list:    [][]client.TSDataType{{client.TEXT}},
-		Timestamp_list:    []int64{const_TestTimestamp.UnixNano()},
+	testRecordsWithTags002 := RecordsWithTags{
+		DeviceIDList:     []string{"root.computer.mouse"},
+		MeasurementsList: [][]string{{"unsigned_big"}},
+		ValuesList:       [][]interface{}{{fmt.Sprintf("%d", uint64(math.MaxInt64+1000))}},
+		DataTypesList:    [][]client.TSDataType{{client.TEXT}},
+		TimestampList:    []int64{constTestTimestamp.UnixNano()},
 	}
-	require.True(t, compareRecords(result, &testRecordsWithTags_02, test_client.Log))
+	require.True(t, compareRecords(result, &testRecordsWithTags002, testClient.Log))
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_02))
+	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics002))
 }
 
 // Test time unit second.
-func TestMetricConvertion_03(t *testing.T) {
-	var test_client = &IoTDB{
-		Host:            test_host,
-		Port:            test_port,
-		User:            test_user,
-		Password:        test_password,
+func TestTagsConvertion003(t *testing.T) {
+	var testClient = &IoTDB{
+		Host:            testHost,
+		Port:            testPort,
+		User:            testUser,
+		Password:        testPassword,
 		ConvertUint64To: "ToInt64",
 		TimeStampUnit:   "second",
 		TreateTagsAs:    "Measurements",
 	}
-	test_client.Log = testutil.Logger{}
+	testClient.Log = testutil.Logger{}
 
-	result, err := test_client.ConvertMetricsToRecordsWithTags(testMetrics_01)
+	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	var testRecordsWithTags_03 = RecordsWithTags{
-		DeviceId_list: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
-		Measurements_list: [][]string{
+	var testRecordsWithTags003 = RecordsWithTags{
+		DeviceIDList: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
+		MeasurementsList: [][]string{
 			{"temperature", "counter"}, {"temperature", "counter"},
 			{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
 		},
-		Values_list: [][]interface{}{
+		ValuesList: [][]interface{}{
 			{float64(42.55), int64(987654321)},
 			{float64(56.24), int64(123456789)},
 			{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
 		},
-		DataTypes_list: [][]client.TSDataType{
+		DataTypesList: [][]client.TSDataType{
 			{client.DOUBLE, client.INT64},
 			{client.DOUBLE, client.INT64},
 			{client.DOUBLE, client.INT64, client.INT64, client.TEXT, client.BOOLEAN, client.TEXT},
 		},
-		Timestamp_list: []int64{
-			const_TestTimestamp.Unix(), const_TestTimestamp.Unix(), const_TestTimestamp.Unix(),
+		TimestampList: []int64{
+			constTestTimestamp.Unix(), constTestTimestamp.Unix(), constTestTimestamp.Unix(),
 		},
 	}
-	require.True(t, compareRecords(result, &testRecordsWithTags_03, test_client.Log))
+	require.True(t, compareRecords(result, &testRecordsWithTags003, testClient.Log))
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_01))
+	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics001))
 }
 
 // Test Tags modification in method 'Measurements'
-func TestTagsConvertion_05(t *testing.T) {
-	var test_client = &IoTDB{
-		Host:            test_host,
-		Port:            test_port,
-		User:            test_user,
-		Password:        test_password,
+func TestTagsConvertion004(t *testing.T) {
+	var testClient = &IoTDB{
+		Host:            testHost,
+		Port:            testPort,
+		User:            testUser,
+		Password:        testPassword,
 		ConvertUint64To: "ToInt64",
 		TimeStampUnit:   "nanosecond",
 		TreateTagsAs:    "Measurements",
 	}
-	test_client.Log = testutil.Logger{}
+	testClient.Log = testutil.Logger{}
 
-	result, err := test_client.ConvertMetricsToRecordsWithTags(testMetrics_01)
+	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	err = test_client.ModifiyRecordsWithTags(result)
+	err = testClient.ModifiyRecordsWithTags(result)
 	require.NoError(t, err)
-	testRecordsWithTags_05 := RecordsWithTags{
-		DeviceId_list: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
-		Measurements_list: [][]string{
+	testRecordsWithTags004 := RecordsWithTags{
+		DeviceIDList: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
+		MeasurementsList: [][]string{
 			{"temperature", "counter", "owner", "price"}, {"temperature", "counter", "owner", "price"},
 			{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
 		},
-		Values_list: [][]interface{}{
+		ValuesList: [][]interface{}{
 			{float64(42.55), int64(987654321), "cpu", "expensive"},
 			{float64(56.24), int64(123456789), "gpu", "cheap"},
 			{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
 		},
-		DataTypes_list: [][]client.TSDataType{
+		DataTypesList: [][]client.TSDataType{
 			{client.DOUBLE, client.INT64, client.TEXT, client.TEXT},
 			{client.DOUBLE, client.INT64, client.TEXT, client.TEXT},
 			{client.DOUBLE, client.INT64, client.INT64, client.TEXT, client.BOOLEAN, client.TEXT},
 		},
-		Timestamp_list: []int64{
-			const_TestTimestamp.UnixNano(), const_TestTimestamp.UnixNano(), const_TestTimestamp.UnixNano(),
+		TimestampList: []int64{
+			constTestTimestamp.UnixNano(), constTestTimestamp.UnixNano(), constTestTimestamp.UnixNano(),
 		},
 	}
-	require.True(t, compareRecords(result, &testRecordsWithTags_05, test_client.Log))
+	require.True(t, compareRecords(result, &testRecordsWithTags004, testClient.Log))
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_01))
+	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics001))
 }
 
 // Test Tags modification in method 'DeviceID_subtree'
-func TestTagsConvertion_06(t *testing.T) {
-	var test_client = &IoTDB{
-		Host:            test_host,
-		Port:            test_port,
-		User:            test_user,
-		Password:        test_password,
+func TestTagsConvertion005(t *testing.T) {
+	var testClient = &IoTDB{
+		Host:            testHost,
+		Port:            testPort,
+		User:            testUser,
+		Password:        testPassword,
 		ConvertUint64To: "ToInt64",
 		TimeStampUnit:   "nanosecond",
 		TreateTagsAs:    "DeviceID_subtree",
 	}
-	test_client.Log = testutil.Logger{}
+	testClient.Log = testutil.Logger{}
 
-	result, err := test_client.ConvertMetricsToRecordsWithTags(testMetrics_01)
+	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	err = test_client.ModifiyRecordsWithTags(result)
+	err = testClient.ModifiyRecordsWithTags(result)
 	require.NoError(t, err)
-	testRecordsWithTags_06 := RecordsWithTags{
-		DeviceId_list: []string{"root.computer.fan.cpu.expensive", "root.computer.fan.gpu.cheap", "root.computer.keyboard"},
-		Measurements_list: [][]string{
+	testRecordsWithTags005 := RecordsWithTags{
+		DeviceIDList: []string{"root.computer.fan.cpu.expensive", "root.computer.fan.gpu.cheap", "root.computer.keyboard"},
+		MeasurementsList: [][]string{
 			{"temperature", "counter"}, {"temperature", "counter"},
 			{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
 		},
-		Values_list: [][]interface{}{
+		ValuesList: [][]interface{}{
 			{float64(42.55), int64(987654321)},
 			{float64(56.24), int64(123456789)},
 			{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
 		},
-		DataTypes_list: [][]client.TSDataType{
+		DataTypesList: [][]client.TSDataType{
 			{client.DOUBLE, client.INT64},
 			{client.DOUBLE, client.INT64},
 			{client.DOUBLE, client.INT64, client.INT64, client.TEXT, client.BOOLEAN, client.TEXT},
 		},
-		Timestamp_list: []int64{
-			const_TestTimestamp.UnixNano(), const_TestTimestamp.UnixNano(), const_TestTimestamp.UnixNano(),
+		TimestampList: []int64{
+			constTestTimestamp.UnixNano(), constTestTimestamp.UnixNano(), constTestTimestamp.UnixNano(),
 		},
 	}
-	require.True(t, compareRecords(result, &testRecordsWithTags_06, test_client.Log))
+	require.True(t, compareRecords(result, &testRecordsWithTags005, testClient.Log))
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	require.NoError(t, test_Connect_WriteMetricInThisConf(test_client, testMetrics_01))
+	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics001))
 }
