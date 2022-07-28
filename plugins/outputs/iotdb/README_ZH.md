@@ -1,8 +1,10 @@
 # IoTDB 输出插件
 
+我们提供不同语言的说明文档和配置文件。请在这里选择一个适合您的文档：
 [English](./README.md) | [中文](./README_ZH.md)
 
 IoTDB 输出插件可以把 Telegraf 采集到的数据保存到IoTDB数据库。该插件使用了go语言客户端的接口，能够支持会话连接、数据插入。
+对于采集到的数据(metrics)，该插件会将其转换为记录(records)并插入数据库。
 
 ## Apache IoTDB
 

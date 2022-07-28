@@ -1,10 +1,13 @@
 # IoTDB Output Plugin
 
+We provide readme and sample configuration file in different languages.
+Please Choose a friendly one here:
 [English](./README.md) | [中文](./README_ZH.md)
 
 The IoTDB output plugin saves Telegraf metric data to an IoTDB backend.
 This plugin uses Apache IoTDB client for Golang to support session connection
-and data insertion.
+and data insertion. For metrics sampled, this pulgin converts them into records
+and inserts them into databases.
 
 ## Apache IoTDB
 
