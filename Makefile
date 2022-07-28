@@ -115,6 +115,7 @@ versioninfo:
 	go generate cmd/telegraf/telegraf_windows.go; \
 
 build_tools:
+	$(HOSTGO) build -o ./tools/license_checker/license_checker ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
 
 embed_readme_%:
@@ -227,6 +228,8 @@ clean:
 	rm -rf tools/readme_config_includer/generator.exe
 	rm -rf tools/package_lxd_test/package_lxd_test
 	rm -rf tools/package_lxd_test/package_lxd_test.exe
+	rm -rf tools/license_checker/license_checker
+	rm -rf tools/license_checker/license_checker.exe
 
 .PHONY: docker-image
 docker-image:

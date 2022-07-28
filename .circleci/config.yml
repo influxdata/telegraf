@@ -232,6 +232,21 @@ jobs:
           os: windows
           gotestsum: "gotestsum.exe"
 
+  test-licenses:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
+      - run: 'make build_tools'
+      - run: 'sh ./tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
+      - save_cache:
+          name: 'go module cache'
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - '/go/pkg/mod'
+
   windows-package:
     parameters:
       nightly:
@@ -725,6 +740,7 @@ workflows:
       - 'test-go-linux-386'
       - 'test-go-mac'
       - 'test-go-windows'
+      - 'test-licenses'
       - 'windows-package':
           name: 'windows-package-nightly'
           nightly: true
