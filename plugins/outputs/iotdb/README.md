@@ -1,4 +1,12 @@
-# Apache IoTDB
+# IoTDB Output Plugin
+
+[English](./README.md) | [中文](./README_ZH.md)
+
+The IoTDB output plugin saves Telegraf metric data to an IoTDB backend.
+This plugin uses Apache IoTDB client for Golang to support session connection
+and data insertion.
+
+## Apache IoTDB
 
 [![Main Mac and Linux](https://github.com/apache/iotdb/actions/workflows/main-unix.yml/badge.svg)](https://github.com/apache/iotdb/actions/workflows/main-unix.yml)
 [![Main Win](https://github.com/apache/iotdb/actions/workflows/main-win.yml/badge.svg)](https://github.com/apache/iotdb/actions/workflows/main-win.yml)
@@ -14,12 +22,18 @@
 [![Maven Version](https://maven-badges.herokuapp.com/maven-central/org.apache.iotdb/iotdb-parent/badge.svg)](http://search.maven.org/#search|gav|1|g:"org.apache.iotdb")
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/apacheiotdb/shared_invite/zt-qvso1nj8-7715TpySZtZqmyG5qXQwpg)
 
-Apache IoTDB (Database for Internet of Things) is an IoT native database with high performance for data management and analysis, deployable on the edge and the cloud. Due to its light-weight architecture, high performance and rich feature set together with its deep integration with Apache Hadoop, Spark and Flink, Apache IoTDB can meet the requirements of massive data storage, high-speed data ingestion and complex data analysis in the IoT industrial fields.
+Apache IoTDB (Database for Internet of Things) is an IoT native database with
+high performance for data management and analysis, deployable on the edge and
+the cloud. Due to its light-weight architecture, high performance and rich
+feature set together with its deep integration with Apache Hadoop, Spark and
+Flink, Apache IoTDB can meet the requirements of massive data storage,
+high-speed data ingestion and complex data analysis in the IoT industrial
+fields.
 
 Apache IoTDB website: <https://iotdb.apache.org>
 Apache IoTDB Github: <https://github.com/apache/iotdb>
 
-# Apache IoTDB Client for Golang
+## Apache IoTDB Client for Golang
 
 [![E2E Tests](https://github.com/apache/iotdb-client-go/actions/workflows/e2e.yml/badge.svg)](https://github.com/apache/iotdb-client-go/actions/workflows/e2e.yml)
 [![GitHub release](https://img.shields.io/github/release/apache/iotdb-client-go.svg)](https://github.com/apache/iotdb-client-go/releases)
@@ -28,36 +42,50 @@ Apache IoTDB Github: <https://github.com/apache/iotdb>
 ![platform](https://img.shields.io/badge/platform-win10%20%7C%20macos%20%7C%20linux-yellow.svg)
 [![IoTDB Website](https://img.shields.io/website-up-down-green-red/https/shields.io.svg?label=iotdb-website)](https://iotdb.apache.org/)
 
-There is an Apache IoTDB Client for Golang, using native Golang API to inserting, deleting, modifying records.
+There is an Apache IoTDB Client for Golang, using native Golang API to
+inserting, deleting, modifying records.
 
 Apache IoTDB Golang Client Github: <https://github.com/apache/iotdb>
 
-# IoTDB Output Plugin
-
-[English](./README.md) | [中文](./README_ZH.md)
-
-The IoTDB output plugin saves Telegraf metric data to an IoTDB backend. This plugin uses Apache IoTDB client for Golang to support session connection and data insertion.
-
 ## Getting started
 
-Before using this plugin, please configure the IP address, port number, user name, password and other information of the database server, as well as some data type conversion, time unit and other configurations.
+Before using this plugin, please configure the IP address, port number,
+user name, password and other information of the database server,
+as well as some data type conversion, time unit and other configurations.
 
-There is a sample configuration: [English Configuration](./sample.conf). And there is one in Chinese:  [中文配置样例](./sample_zh.conf). The configuration is also provided at the end of this readme.
+There is a sample configuration: [English Configuration](./sample.conf).
+And there is one in Chinese:  [中文配置样例](./sample_zh.conf).
+The configuration is also provided at the end of this readme.
 
 ## Please pay attention to these points
 
-1. IoTDB (version 0.13.x or older) **DO NOT support unsigned integer**. There are three available options of converting uint64, which are specified by parameter `convertUint64To`.
+1. IoTDB (version 0.13.x or older) **DO NOT support unsigned integer**.
+There are three available options of converting uint64, which are specified by
+parameter `convertUint64To`.
 
-   - `ToInt64`, default option. If an unsigned integer is greater than `math.MaxInt64`, save it as `int64`; else save `math.MaxInt64`(9223372036854775807).
-   - `ForceToInt64`, force converting an unsigned integer to a`int64`, no mater the value it is. This option may lead to exception if the value is greater than `int64`.
-   - `Text`force converting an unsigned integer to a string, no mater the value it is.
+   - `ToInt64`, default option. If an unsigned integer is greater than
+   `math.MaxInt64`, save it as `int64`; else save `math.MaxInt64`
+   (9223372036854775807).
+   - `ForceToInt64`, force converting an unsigned integer to a`int64`,no mater
+   what the value it is. This option may lead to exception if the value is
+   greater than `int64`.
+   - `Text`force converting an unsigned integer to a string, no mater what the
+   value it is.
 
-2. IoTDB supports a variety of time precision, but no matter what precision, timestamp is stored in `Int64`, so users need to specify the unit of timestamp. Default unit is `nanosecond`.
+2. IoTDB supports a variety of time precision, but no matter what precision,
+timestamp is stored in `Int64`, so users need to specify the unit of timestamp.
+Default unit is `nanosecond`.
 
-3. Till now, IoTDB can not support Tag indexing well. To see current process method, please refer to [InfluxDB-Protocol Adapter](https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html). There are two available options of converting tags, which are specified by parameter `treateTagsAs`:
+3. Till now, IoTDB can not support Tag indexing well. To see current process
+method, please refer to [InfluxDB-Protocol Adapter](
+   https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html).
+There are two available options of converting tags, which are specified by
+parameter `treateTagsAs`:
 
-   - `Measurements`. Treat Tags as measurements. For each Key:Value in Tag, convert them into Measurement, Value, DataType, which are supported in IoTDB.
-   - `DeviceID_subtree`, default option. Treat Tags as part of device id. Tags is subtree of 'Name'.
+   - `Measurements`. Treat Tags as measurements. For each Key:Value in Tag,
+   convert them into Measurement, Value, DataType, which are supported in IoTDB.
+   - `DeviceID_subtree`, default option. Treat Tags as part of device id. Tags
+   is subtree of 'Name'.
 
    For example, there is a metric:
 
@@ -68,13 +96,16 @@ There is a sample configuration: [English Configuration](./sample.conf). And the
 
 ## Testing
 
-**Please prepare running database before testing**. Target address is `localhost:6667` by default, which can be edit in `iotdb_test.go`. `test_host` is the target ip address of database server.
+**Please prepare running database before testing**.
+Target address is`localhost:6667` by default, which can be edit in
+`iotdb_test.go`. `test_host` is the target ip address of database server.
 
-Testing contains: network connection, error correction, datatype conversion, data writing.
+Testing contains: network connection, error correction, datatype conversion,
+data writing.
 
 ## Configuration
 
-```properties
+```toml @sample.conf
 # Save metrics to an IoTDB Database
 [[outputs.iotdb]]
   ## Configuration of IoTDB server

@@ -1,4 +1,10 @@
-# Apache IoTDB
+# IoTDB 输出插件
+
+[English](./README.md) | [中文](./README_ZH.md)
+
+IoTDB 输出插件可以把 Telegraf 采集到的数据保存到IoTDB数据库。该插件使用了go语言客户端的接口，能够支持会话连接、数据插入。
+
+## Apache IoTDB
 
 [![Main Mac and Linux](https://github.com/apache/iotdb/actions/workflows/main-unix.yml/badge.svg)](https://github.com/apache/iotdb/actions/workflows/main-unix.yml)
 [![Main Win](https://github.com/apache/iotdb/actions/workflows/main-win.yml/badge.svg)](https://github.com/apache/iotdb/actions/workflows/main-win.yml)
@@ -21,7 +27,7 @@ Apache IoTDB可以满足物联网工业领域的海量数据存储、高速数�
 Apache IoTDB website: <https://iotdb.apache.org>
 Apache IoTDB Github: <https://github.com/apache/iotdb>
 
-# Apache IoTDB Go语言客户端
+## Apache IoTDB Go语言客户端
 
 [![E2E Tests](https://github.com/apache/iotdb-client-go/actions/workflows/e2e.yml/badge.svg)](https://github.com/apache/iotdb-client-go/actions/workflows/e2e.yml)
 [![GitHub release](https://img.shields.io/github/release/apache/iotdb-client-go.svg)](https://github.com/apache/iotdb-client-go/releases)
@@ -33,12 +39,6 @@ Apache IoTDB Github: <https://github.com/apache/iotdb>
 Apache IoTDB 有一个go语言客户端，能够使用go语言原生接口支持 IoTDB 的数据增删改查。
 
 Apache IoTDB Golang Client Github: <https://github.com/apache/iotdb>
-
-# IoTDB 输出插件
-
-[English](./README.md) | [中文](./README_ZH.md)
-
-IoTDB 输出插件可以把 Telegraf 采集到的数据保存到IoTDB数据库。该插件使用了go语言客户端的接口，能够支持会话连接、数据插入。
 
 ## 快速上手
 
@@ -73,7 +73,7 @@ IoTDB 输出插件可以把 Telegraf 采集到的数据保存到IoTDB数据库�
 
 ## 配置文件
 
-```properties
+```toml @sample_zh.conf
 # 将采集到的数据保存到IoTDB
 [[outputs.iotdb]]
   ## IoTDB 服务器配置
