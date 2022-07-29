@@ -222,6 +222,11 @@ func (adx *AzureDataExplorer) Init() error {
 	if adx.MetricsGrouping == "" {
 		adx.MetricsGrouping = tablePerMetric
 	}
+
+	if adx.IngestionType == "" {
+		adx.IngestionType = queuedIngestion
+	}
+
 	if !(adx.MetricsGrouping == singleTable || adx.MetricsGrouping == tablePerMetric) {
 		return errors.New("metrics grouping type is not valid")
 	}
