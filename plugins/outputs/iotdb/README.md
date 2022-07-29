@@ -40,9 +40,9 @@ parameter `uint64_conversion`.
    - `text`force converting an unsigned integer to a string, no mater what the
    value it is.
 
-2. IoTDB supports a variety of time precision, but no matter what precision,
-timestamp is stored in `Int64`, so users need to specify the unit of timestamp.
-Default unit is `nanosecond`.
+2. IoTDB supports a variety of time precision. You can specify which precision
+you want using the `timestamp_precision` option. Default is `nanosecond`.
+Other options are "second", "millisecond", "microsecond".
 
 3. Till now, IoTDB can not support Tag indexing well. To see current process
    method, please refer to [InfluxDB-Protocol Adapter](
@@ -64,12 +64,10 @@ Default unit is `nanosecond`.
 
 ## Testing
 
-**Please prepare running database before testing**.
-Target address is`localhost:6667` by default, which can be edit in
-`iotdb_test.go`. `test_host` is the target ip address of database server.
-
 Testing contains: network connection, error correction, datatype conversion,
 data writing.
+
+Use `-short` option to make testing shorter. This mode skips integration tests.
 
 ## Configuration
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/apache/iotdb-client-go/client"
@@ -29,9 +30,9 @@ type IoTDB struct {
 	ConvertUint64To string          `toml:"uint64_conversion"`
 	TimeStampUnit   string          `toml:"timestamp_precision"`
 	TreatTagsAs     string          `toml:"convert_tags_to"`
+	Log             telegraf.Logger `toml:"-"`
 
 	session *client.Session
-	Log     telegraf.Logger `toml:"-"`
 }
 
 type recordsWithTags struct {
@@ -51,7 +52,7 @@ func (*IoTDB) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (s *IoTDB) Init() error {
-	if time.Duration(s.Timeout)/time.Millisecond < 0 {
+	if s.Timeout < 0 {
 		return errors.New("negative timeout")
 	}
 	if !choice.Contains(s.ConvertUint64To, []string{"int64", "int64_clip", "text"}) {
@@ -63,7 +64,7 @@ func (s *IoTDB) Init() error {
 	if !choice.Contains(s.TreatTagsAs, []string{"fields", "device_id"}) {
 		return fmt.Errorf("unknown 'convert_tags_to' method %q", s.TreatTagsAs)
 	}
-	s.Log.Info("IoTDB output plugin initialization completed.")
+	s.Log.Info("Initialization completed.")
 	return nil
 }
 
@@ -76,15 +77,14 @@ func (s *IoTDB) Connect() error {
 	}
 	var ss = client.NewSession(sessionConf)
 	s.session = &ss
-	if err := s.session.Open(false, int(time.Duration(s.Timeout)/time.Millisecond)); err != nil {
+	timeoutInMs := int(time.Duration(s.Timeout).Milliseconds())
+	if err := s.session.Open(false, timeoutInMs); err != nil {
 		return fmt.Errorf("connecting to %s:%s failed: %w", s.Host, s.Port, err)
 	}
 	return nil
 }
 
 func (s *IoTDB) Close() error {
-	// Close any connections here.
-	// Write will not be called once Close is called, so there is no need to synchronize.
 	_, err := s.session.Close()
 	return err
 }
@@ -94,15 +94,14 @@ func (s *IoTDB) Close() error {
 // batch of writes and the entire batch will be retried automatically.
 func (s *IoTDB) Write(metrics []telegraf.Metric) error {
 	// Convert Metrics to Records with Tags
-	rwt, err := s.ConvertMetricsToRecordsWithTags(metrics)
+	rwt, err := s.convertMetricsToRecordsWithTags(metrics)
 	if err != nil {
 		return err
 	}
 	// Write to client.
 	// If first writing fails, the client will automatically retry three times. If all fail, it returns an error.
 	if err := s.WriteRecordsWithTags(rwt); err != nil {
-		s.Log.Errorf("IoTDB Write Error: %s", err.Error())
-		return err
+		return fmt.Errorf("write failed: %w", err)
 	}
 	return nil
 }
@@ -126,7 +125,7 @@ func (s *IoTDB) getDataTypeAndValue(value interface{}) (client.TSDataType, inter
 		case "int64":
 			return client.INT64, int64(v)
 		case "text":
-			return client.TEXT, fmt.Sprintf("%d", v)
+			return client.TEXT, strconv.FormatUint(v, 10)
 		default:
 			return client.UNKNOW, int64(0)
 		}
@@ -137,7 +136,6 @@ func (s *IoTDB) getDataTypeAndValue(value interface{}) (client.TSDataType, inter
 	case bool:
 		return client.BOOLEAN, v
 	default:
-		s.Log.Errorf("Unknown datatype: '%T' %v", value, value)
 		return client.UNKNOW, int64(0)
 	}
 }
@@ -154,12 +152,12 @@ func (s *IoTDB) convertTimestampOfMetric(m telegraf.Metric) (int64, error) {
 	case "nanosecond":
 		return m.Time().UnixNano(), nil
 	default:
-		return 0, fmt.Errorf("IoTDB Configuration Error: unknown TimeStampUnit: %s", s.TimeStampUnit)
+		return 0, fmt.Errorf("unknown timestamp_precision %q", s.TimeStampUnit)
 	}
 }
 
 // convert Metrics to Records with tags
-func (s *IoTDB) ConvertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*recordsWithTags, error) {
+func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*recordsWithTags, error) {
 	var deviceidList []string
 	var measurementsList [][]string
 	var valuesList [][]interface{}
@@ -178,7 +176,7 @@ func (s *IoTDB) ConvertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 		for _, field := range metric.FieldList() {
 			datatype, value := s.getDataTypeAndValue(field.Value)
 			if datatype == client.UNKNOW {
-				return nil, fmt.Errorf("field %q has unknown datatype, values: %v", field.Key, field.Value)
+				return nil, fmt.Errorf("datatype of %q is unknown, values: %v", field.Key, field.Value)
 			}
 			keys = append(keys, field.Key)
 			values = append(values, value)
@@ -210,20 +208,22 @@ func (s *IoTDB) ConvertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 
 // modify recordsWithTags according to 'TreatTagsAs' Configuration
 func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
-	if s.TreatTagsAs == "fields" {
+	switch s.TreatTagsAs {
+	case "fields":
 		// method 1: treat Tag(Key:Value) as measurement
 		for index, tags := range rwt.TagsList { // for each record
 			for _, tag := range tags { // for each tag of this record, append it's Key:Value to measurements
 				datatype, value := s.getDataTypeAndValue(tag.Value)
-				if datatype != client.UNKNOW {
-					rwt.MeasurementsList[index] = append(rwt.MeasurementsList[index], tag.Key)
-					rwt.ValuesList[index] = append(rwt.ValuesList[index], value)
-					rwt.DataTypesList[index] = append(rwt.DataTypesList[index], datatype)
+				if datatype == client.UNKNOW {
+					return fmt.Errorf("datatype of %q is unknown, values: %v", tag.Key, value)
 				}
+				rwt.MeasurementsList[index] = append(rwt.MeasurementsList[index], tag.Key)
+				rwt.ValuesList[index] = append(rwt.ValuesList[index], value)
+				rwt.DataTypesList[index] = append(rwt.DataTypesList[index], datatype)
 			}
 		}
 		return nil
-	} else if s.TreatTagsAs == "device_id" {
+	case "device_id":
 		// method 2: treat Tag(Key:Value) as subtree of device id
 		for index, tags := range rwt.TagsList { // for each record
 			subfix := ""
@@ -233,11 +233,10 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 			rwt.DeviceIDList[index] = rwt.DeviceIDList[index] + subfix
 		}
 		return nil
+	default:
+		// something go wrong. This configuration should have been checked in func Init().
+		return fmt.Errorf("unknown 'convert_tags_to' method: %q", s.TreatTagsAs)
 	}
-	// something go wrong. This configuration should have been checked in func Init().
-	errorMsg := fmt.Sprintf("IoTDB Configuration Error: unknown TreatTagsAs: %s", s.TreatTagsAs)
-	s.Log.Errorf(errorMsg)
-	return errors.New(errorMsg)
 }
 
 // Write records with tags to IoTDB server
@@ -252,7 +251,7 @@ func (s *IoTDB) WriteRecordsWithTags(rwt *recordsWithTags) error {
 		rwt.DataTypesList, rwt.ValuesList, rwt.TimestampList)
 	if status != nil {
 		if verifyResult := client.VerifySuccess(status); verifyResult != nil {
-			s.Log.Info(verifyResult)
+			s.Log.Debug(verifyResult)
 		}
 	}
 	return err
