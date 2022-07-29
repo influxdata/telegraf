@@ -45,7 +45,7 @@ func (c *Container) Start() error {
 	var containerMounts []testcontainers.ContainerMount
 
 	for k, v := range c.BindMounts {
-		containerMounts = append(containerMounts, testcontainers.BindMount(k, testcontainers.ContainerMountTarget(v)))
+		containerMounts = append(containerMounts, testcontainers.BindMount(v, testcontainers.ContainerMountTarget(k)))
 	}
 
 	req := testcontainers.GenericContainerRequest{
