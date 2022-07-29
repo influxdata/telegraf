@@ -22,17 +22,21 @@ var (
 	testPassword = "root"
 )
 
+func newTestClient() *IoTDB {
+	testClient := newIoTDB()
+	testClient.Host = testHost
+	testClient.Port = testPort
+	testClient.User = testUser
+	testClient.Password = testPassword
+	testClient.Log = testutil.Logger{}
+	return testClient
+}
+
 func TestConnectAndClose(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	testClient := &IoTDB{
-		Host:     testHost,
-		Port:     testPort,
-		User:     testUser,
-		Password: testPassword,
-	}
-	testClient.Log = testutil.Logger{}
+	testClient := newTestClient()
 
 	var err error
 	err = testClient.Connect()
@@ -45,13 +49,7 @@ func TestInitAndConnect(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	var testClient = &IoTDB{
-		Host:     testHost,
-		Port:     testPort,
-		User:     testUser,
-		Password: testPassword,
-	}
-	testClient.Log = testutil.Logger{}
+	testClient := newTestClient()
 
 	var err error
 	err = testClient.Init()
@@ -131,15 +129,15 @@ var (
 	}
 )
 
-// compare two RecordsWithTags, returns True if and only if they are the same.
-func compareRecords(rwt1 *RecordsWithTags, rwt2 *RecordsWithTags, log telegraf.Logger) bool {
+// compare two recordsWithTags, returns True if and only if they are the same.
+func compareRecords(rwt1 *recordsWithTags, rwt2 *recordsWithTags, log telegraf.Logger) bool {
 	if !(len(rwt1.DeviceIDList) == len(rwt2.DeviceIDList) &&
 		len(rwt1.MeasurementsList) == len(rwt2.MeasurementsList) &&
 		len(rwt1.ValuesList) == len(rwt2.ValuesList) &&
 		len(rwt1.DataTypesList) == len(rwt2.DataTypesList) &&
 		len(rwt1.TimestampList) == len(rwt2.TimestampList)) {
 		// length not match
-		log.Errorf("compareRecords Cechk failed. Two RecordsWithTags has different shape.")
+		log.Errorf("compareRecords Cechk failed. Two recordsWithTags has different shape.")
 		return false
 	}
 	for index, deviceID := range rwt1.DeviceIDList {
@@ -220,20 +218,11 @@ func testConnectWriteMetricInThisConf(s *IoTDB, metrics []telegraf.Metric) error
 
 // Test defualt configuration, uint64 -> int64
 func TestMetricConvertion001(t *testing.T) {
-	var testClient = &IoTDB{
-		Host:            testHost,
-		Port:            testPort,
-		User:            testUser,
-		Password:        testPassword,
-		ConvertUint64To: "ToInt64",
-		TimeStampUnit:   "nanosecond",
-		TreateTagsAs:    "Measurements",
-	}
-	testClient.Log = testutil.Logger{}
+	testClient := newTestClient()
 
 	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	var testRecordsWithTags001 = RecordsWithTags{
+	var testRecordsWithTags001 = recordsWithTags{
 		DeviceIDList: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
 		MeasurementsList: [][]string{
 			{"temperature", "counter"}, {"temperature", "counter"},
@@ -262,20 +251,12 @@ func TestMetricConvertion001(t *testing.T) {
 
 // Test converting uint64 to text.
 func TestMetricConvertion002(t *testing.T) {
-	var testClient = &IoTDB{
-		Host:            testHost,
-		Port:            testPort,
-		User:            testUser,
-		Password:        testPassword,
-		ConvertUint64To: "Text",
-		TimeStampUnit:   "nanosecond",
-		TreateTagsAs:    "Measurements",
-	}
-	testClient.Log = testutil.Logger{}
+	testClient := newTestClient()
+	testClient.ConvertUint64To = "text"
 
 	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics002)
 	require.NoError(t, err)
-	testRecordsWithTags002 := RecordsWithTags{
+	testRecordsWithTags002 := recordsWithTags{
 		DeviceIDList:     []string{"root.computer.mouse"},
 		MeasurementsList: [][]string{{"unsigned_big"}},
 		ValuesList:       [][]interface{}{{fmt.Sprintf("%d", uint64(math.MaxInt64+1000))}},
@@ -291,20 +272,12 @@ func TestMetricConvertion002(t *testing.T) {
 
 // Test time unit second.
 func TestTagsConvertion003(t *testing.T) {
-	var testClient = &IoTDB{
-		Host:            testHost,
-		Port:            testPort,
-		User:            testUser,
-		Password:        testPassword,
-		ConvertUint64To: "ToInt64",
-		TimeStampUnit:   "second",
-		TreateTagsAs:    "Measurements",
-	}
-	testClient.Log = testutil.Logger{}
+	testClient := newTestClient()
+	testClient.TimeStampUnit = "second"
 
 	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	var testRecordsWithTags003 = RecordsWithTags{
+	var testRecordsWithTags003 = recordsWithTags{
 		DeviceIDList: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
 		MeasurementsList: [][]string{
 			{"temperature", "counter"}, {"temperature", "counter"},
@@ -331,24 +304,16 @@ func TestTagsConvertion003(t *testing.T) {
 	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics001))
 }
 
-// Test Tags modification in method 'Measurements'
+// Test Tags modification in method 'fields'
 func TestTagsConvertion004(t *testing.T) {
-	var testClient = &IoTDB{
-		Host:            testHost,
-		Port:            testPort,
-		User:            testUser,
-		Password:        testPassword,
-		ConvertUint64To: "ToInt64",
-		TimeStampUnit:   "nanosecond",
-		TreateTagsAs:    "Measurements",
-	}
-	testClient.Log = testutil.Logger{}
+	testClient := newTestClient()
+	testClient.TreateTagsAs = "fields"
 
 	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	err = testClient.ModifiyRecordsWithTags(result)
+	err = testClient.modifiyRecordsWithTags(result)
 	require.NoError(t, err)
-	testRecordsWithTags004 := RecordsWithTags{
+	testRecordsWithTags004 := recordsWithTags{
 		DeviceIDList: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
 		MeasurementsList: [][]string{
 			{"temperature", "counter", "owner", "price"}, {"temperature", "counter", "owner", "price"},
@@ -375,24 +340,16 @@ func TestTagsConvertion004(t *testing.T) {
 	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics001))
 }
 
-// Test Tags modification in method 'DeviceID_subtree'
+// Test Tags modification in method 'device_id'
 func TestTagsConvertion005(t *testing.T) {
-	var testClient = &IoTDB{
-		Host:            testHost,
-		Port:            testPort,
-		User:            testUser,
-		Password:        testPassword,
-		ConvertUint64To: "ToInt64",
-		TimeStampUnit:   "nanosecond",
-		TreateTagsAs:    "DeviceID_subtree",
-	}
-	testClient.Log = testutil.Logger{}
+	testClient := newTestClient()
+	testClient.TreateTagsAs = "device_id"
 
 	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	err = testClient.ModifiyRecordsWithTags(result)
+	err = testClient.modifiyRecordsWithTags(result)
 	require.NoError(t, err)
-	testRecordsWithTags005 := RecordsWithTags{
+	testRecordsWithTags005 := recordsWithTags{
 		DeviceIDList: []string{"root.computer.fan.cpu.expensive", "root.computer.fan.gpu.cheap", "root.computer.keyboard"},
 		MeasurementsList: [][]string{
 			{"temperature", "counter"}, {"temperature", "counter"},
