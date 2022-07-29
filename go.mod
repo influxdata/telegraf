@@ -22,7 +22,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1529
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
-	github.com/antchfx/jsonquery v1.2.0
+	github.com/antchfx/jsonquery v1.3.0
 	github.com/antchfx/xmlquery v1.3.9
 	github.com/antchfx/xpath v1.2.1
 	github.com/apache/thrift v0.15.0
@@ -53,8 +53,9 @@ require (
 	github.com/djherbis/times v1.5.0
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
+	github.com/doclambda/protobufquery v0.0.0-20220727165953-0da287796ee9
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0
+	github.com/eclipse/paho.golang v0.10.0
 	github.com/eclipse/paho.mqtt.golang v1.3.5
 	github.com/fatih/color v1.13.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -73,6 +74,7 @@ require (
 	github.com/google/gnxi v0.0.0-20220411075422-cd6b043b7fd0
 	github.com/google/go-cmp v0.5.8
 	github.com/google/go-github/v32 v32.1.0
+	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.3.0
 	github.com/gopcua/opcua v0.3.3
 	github.com/gophercloud/gophercloud v0.25.0
@@ -154,6 +156,7 @@ require (
 	go.opentelemetry.io/otel/metric v0.30.0
 	go.opentelemetry.io/otel/sdk/metric v0.28.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
+	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 	golang.org/x/net v0.0.0-20220622184535-263ec571b305
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
@@ -374,7 +377,6 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	golang.org/x/tools v0.1.11 // indirect

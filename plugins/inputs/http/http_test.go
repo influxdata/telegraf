@@ -16,8 +16,8 @@ import (
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/oauth"
 	httpplugin "github.com/influxdata/telegraf/plugins/inputs/http"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
@@ -295,7 +295,9 @@ func TestBodyAndContentEncoding(t *testing.T) {
 			})
 
 			tt.plugin.SetParserFunc(func() (telegraf.Parser, error) {
-				return parsers.NewParser(&parsers.Config{DataFormat: "influx"})
+				parser := &influx.Parser{}
+				err := parser.Init()
+				return parser, err
 			})
 
 			var acc testutil.Accumulator
