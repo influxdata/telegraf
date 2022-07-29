@@ -23,8 +23,8 @@ const maxTagLength = 254
 type Wavefront struct {
 	URL                  string                          `toml:"url"`
 	Token                string                          `toml:"token"`
-	Host                 string                          `toml:"host"`
-	Port                 int                             `toml:"port"`
+	Host                 string                          `toml:"host" deprecated:"2.4.0;use url instead"`
+	Port                 int                             `toml:"port" deprecated:"2.4.0;use url instead"`
 	Prefix               string                          `toml:"prefix"`
 	SimpleFields         bool                            `toml:"simple_fields"`
 	MetricSeparator      string                          `toml:"metric_separator"`
