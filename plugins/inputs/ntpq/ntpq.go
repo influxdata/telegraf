@@ -28,12 +28,12 @@ var tagHeaders = map[string]string{
 }
 
 type NTPQ struct {
+	DNSLookup bool `toml:"dns_lookup"`
+
 	runQ   func() ([]byte, error)
 	tagI   map[string]int
 	floatI map[string]int
 	intI   map[string]int
-
-	DNSLookup bool `toml:"dns_lookup"`
 }
 
 func (*NTPQ) SampleConfig() string {
@@ -54,7 +54,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	lineCounter := 0
+	var foundHeader bool
 	numColumns := 0
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
@@ -76,7 +76,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// If lineCounter == 0, then this is the header line
-		if lineCounter == 0 {
+		if !foundHeader {
 			numColumns = len(fields)
 			for i, field := range fields {
 				// Check if field is a tag:
@@ -97,93 +97,94 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					continue
 				}
 			}
-		} else {
-			if len(fields) != numColumns {
+			foundHeader = true
+			continue
+		}
+
+		if len(fields) != numColumns {
+			continue
+		}
+
+		mFields := make(map[string]interface{})
+
+		// Get tags from output
+		for key, index := range n.tagI {
+			if index == -1 {
+				continue
+			}
+			tags[key] = fields[index]
+		}
+
+		// Get integer metrics from output
+		for key, index := range n.intI {
+			if index == -1 || index >= len(fields) {
+				continue
+			}
+			if fields[index] == "-" {
 				continue
 			}
 
-			mFields := make(map[string]interface{})
-
-			// Get tags from output
-			for key, index := range n.tagI {
-				if index == -1 {
-					continue
-				}
-				tags[key] = fields[index]
-			}
-
-			// Get integer metrics from output
-			for key, index := range n.intI {
-				if index == -1 || index >= len(fields) {
-					continue
-				}
-				if fields[index] == "-" {
-					continue
-				}
-
-				if key == "when" || key == "poll" {
-					when := fields[index]
-					switch {
-					case strings.HasSuffix(when, "h"):
-						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "h"))
-						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-							continue
-						}
-						// seconds in an hour
-						mFields[key] = int64(m) * 3600
-						continue
-					case strings.HasSuffix(when, "d"):
-						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "d"))
-						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-							continue
-						}
-						// seconds in a day
-						mFields[key] = int64(m) * 86400
-						continue
-					case strings.HasSuffix(when, "m"):
-						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "m"))
-						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-							continue
-						}
-						// seconds in a day
-						mFields[key] = int64(m) * 60
+			if key == "when" || key == "poll" {
+				when := fields[index]
+				switch {
+				case strings.HasSuffix(when, "h"):
+					m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "h"))
+					if err != nil {
+						acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 						continue
 					}
-				}
-
-				m, err := strconv.Atoi(fields[index])
-				if err != nil {
-					acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
+					// seconds in an hour
+					mFields[key] = int64(m) * 3600
+					continue
+				case strings.HasSuffix(when, "d"):
+					m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "d"))
+					if err != nil {
+						acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
+						continue
+					}
+					// seconds in a day
+					mFields[key] = int64(m) * 86400
+					continue
+				case strings.HasSuffix(when, "m"):
+					m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "m"))
+					if err != nil {
+						acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
+						continue
+					}
+					// seconds in a day
+					mFields[key] = int64(m) * 60
 					continue
 				}
-				mFields[key] = int64(m)
 			}
 
-			// get float metrics from output
-			for key, index := range n.floatI {
-				if index == -1 || index >= len(fields) {
-					continue
-				}
-				if fields[index] == "-" {
-					continue
-				}
-
-				m, err := strconv.ParseFloat(fields[index], 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("error ntpq: parsing float: %s", fields[index]))
-					continue
-				}
-				mFields[key] = m
+			m, err := strconv.Atoi(fields[index])
+			if err != nil {
+				acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
+				continue
 			}
-
-			acc.AddFields("ntpq", mFields, tags)
+			mFields[key] = int64(m)
 		}
 
-		lineCounter++
+		// get float metrics from output
+		for key, index := range n.floatI {
+			if index == -1 || index >= len(fields) {
+				continue
+			}
+			if fields[index] == "-" {
+				continue
+			}
+
+			m, err := strconv.ParseFloat(fields[index], 64)
+			if err != nil {
+				acc.AddError(fmt.Errorf("error ntpq: parsing float: %s", fields[index]))
+				continue
+			}
+			mFields[key] = m
+		}
+
+		acc.AddFields("ntpq", mFields, tags)
 	}
+
 	return nil
 }
 
