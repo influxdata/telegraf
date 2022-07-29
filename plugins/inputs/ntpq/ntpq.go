@@ -193,13 +193,11 @@ func (n *NTPQ) Init() error {
 				return nil, err
 			}
 
-			var cmd *exec.Cmd
-			if n.DNSLookup {
-				cmd = exec.Command(bin, "-p")
-			} else {
-				cmd = exec.Command(bin, "-p", "-n")
+			args := []string{"-p"}
+			if !n.DNSLookup {
+				args = append(args, "-n")
 			}
-
+			cmd := exec.Command(bin, args...)
 			return cmd.Output()
 		}
 
