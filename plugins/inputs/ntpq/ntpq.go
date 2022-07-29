@@ -19,12 +19,37 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+type elementType int64
+
+const (
+	None elementType = iota
+	Tag
+	FieldInt
+	FieldFloat
+	FieldDuration
+)
+
+type column struct {
+	name  string
+	etype elementType
+}
+
 // Mapping of ntpq header names to tag keys
 var tagHeaders = map[string]string{
 	"remote": "remote",
 	"refid":  "refid",
 	"st":     "stratum",
 	"t":      "type",
+}
+
+// Mapping of fields
+var fieldElements = map[string]elementType{
+	"delay":  FieldFloat,
+	"jitter": FieldFloat,
+	"offset": FieldFloat,
+	"reach":  FieldInt,
+	"poll":   FieldDuration,
+	"when":   FieldDuration,
 }
 
 type NTPQ struct {
@@ -55,7 +80,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var foundHeader bool
-	numColumns := 0
+	var columns []column
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -69,124 +94,95 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		}
 		line = reg.ReplaceAllString(line, "")
 
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
+		elements := strings.Fields(line)
+		if len(elements) < 2 {
 			continue
 		}
 
 		// If lineCounter == 0, then this is the header line
 		if !foundHeader {
-			numColumns = len(fields)
-			for i, field := range fields {
-				// Check if field is a tag:
-				if tagKey, ok := tagHeaders[field]; ok {
-					n.tagI[tagKey] = i
+			for _, el := range elements {
+				// Check if the element is a tag
+				if name, isTag := tagHeaders[el]; isTag {
+					columns = append(columns, column{
+						name:  name,
+						etype: Tag,
+					})
 					continue
 				}
 
-				// check if field is a float metric:
-				if _, ok := n.floatI[field]; ok {
-					n.floatI[field] = i
+				// Add a field
+				if etype, isField := fieldElements[el]; isField {
+					columns = append(columns, column{
+						name:  el,
+						etype: etype,
+					})
 					continue
 				}
 
-				// check if field is an int metric:
-				if _, ok := n.intI[field]; ok {
-					n.intI[field] = i
-					continue
-				}
+				// Skip the column if not found
+				columns = append(columns, column{etype: None})
 			}
 			foundHeader = true
 			continue
 		}
 
-		if len(fields) != numColumns {
+		if len(elements) != len(columns) {
 			continue
 		}
 
 		tags := make(map[string]string)
-		mFields := make(map[string]interface{})
+		fields := make(map[string]interface{})
 
 		if prefix != "" {
 			tags["state_prefix"] = prefix
 		}
 
-		// Get tags from output
-		for key, index := range n.tagI {
-			if index == -1 {
-				continue
-			}
-			tags[key] = fields[index]
-		}
+		for i, raw := range elements {
+			col := columns[i]
 
-		// Get integer metrics from output
-		for key, index := range n.intI {
-			if index == -1 || index >= len(fields) {
+			switch col.etype {
+			case None:
 				continue
-			}
-			if fields[index] == "-" {
-				continue
-			}
-
-			if key == "when" || key == "poll" {
-				when := fields[index]
-				switch {
-				case strings.HasSuffix(when, "h"):
-					m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "h"))
-					if err != nil {
-						acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-						continue
-					}
-					// seconds in an hour
-					mFields[key] = int64(m) * 3600
-					continue
-				case strings.HasSuffix(when, "d"):
-					m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "d"))
-					if err != nil {
-						acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-						continue
-					}
-					// seconds in a day
-					mFields[key] = int64(m) * 86400
-					continue
-				case strings.HasSuffix(when, "m"):
-					m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "m"))
-					if err != nil {
-						acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-						continue
-					}
-					// seconds in a day
-					mFields[key] = int64(m) * 60
+			case Tag:
+				tags[col.name] = raw
+			case FieldInt:
+				value, err := strconv.ParseInt(raw, 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("parsing %q (%v) as int failed: %w", col.name, raw, err))
 					continue
 				}
+				fields[col.name] = value
+			case FieldFloat:
+				value, err := strconv.ParseFloat(raw, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("parsing %q (%v) as float failed: %w", col.name, raw, err))
+					continue
+				}
+				fields[col.name] = value
+			case FieldDuration:
+				factor := int64(1)
+				suffix := raw[len(raw)-1:]
+				switch suffix {
+				case "d":
+					factor = 24 * 3600
+				case "h":
+					factor = 3600
+				case "m":
+					factor = 60
+				default:
+					suffix = ""
+				}
+				value, err := strconv.ParseInt(strings.TrimSuffix(raw, suffix), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("parsing %q (%v) as duration failed: %w", col.name, raw, err))
+					continue
+				}
+				fields[col.name] = value * factor
 			}
-
-			m, err := strconv.Atoi(fields[index])
-			if err != nil {
-				acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-				continue
-			}
-			mFields[key] = int64(m)
 		}
 
-		// get float metrics from output
-		for key, index := range n.floatI {
-			if index == -1 || index >= len(fields) {
-				continue
-			}
-			if fields[index] == "-" {
-				continue
-			}
-
-			m, err := strconv.ParseFloat(fields[index], 64)
-			if err != nil {
-				acc.AddError(fmt.Errorf("error ntpq: parsing float: %s", fields[index]))
-				continue
-			}
-			mFields[key] = m
-		}
-
-		acc.AddFields("ntpq", mFields, tags)
+		acc.AddFields("ntpq", fields, tags)
 	}
 
 	return nil
