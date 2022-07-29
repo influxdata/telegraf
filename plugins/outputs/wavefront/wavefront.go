@@ -78,7 +78,7 @@ func (*Wavefront) SampleConfig() string {
 	return sampleConfig
 }
 
-func SenderURLFromURLAndToken(rawURL, token string) (string, error) {
+func senderURLFromURLAndToken(rawURL, token string) (string, error) {
 	newURL, err := url.Parse(rawURL)
 	if err != nil {
 		return "", fmt.Errorf("could not parse the provided Url: %s", rawURL)
@@ -88,12 +88,8 @@ func SenderURLFromURLAndToken(rawURL, token string) (string, error) {
 	return newURL.String(), nil
 }
 
-func SenderURLFromHostAndPort(host string, port int) string {
-	newURL := url.URL{
-		Scheme: "tcp",
-		Host:   fmt.Sprintf("%s:%d", host, port),
-	}
-	return newURL.String()
+func senderURLFromHostAndPort(host string, port int) string {
+	return fmt.Sprintf("http://%s:%d", host, port)
 }
 
 func (w *Wavefront) Connect() error {
@@ -101,32 +97,30 @@ func (w *Wavefront) Connect() error {
 	if w.ImmediateFlush {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
 	}
-
+	var connectionURL string
 	if w.URL != "" {
 		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
-		newURL, err := SenderURLFromURLAndToken(w.URL, w.Token)
+		connectionURLWithToken, err := senderURLFromURLAndToken(w.URL, w.Token)
 		if err != nil {
 			return err
 		}
-
-		sender, err := wavefront.NewSender(newURL,
-			wavefront.BatchSize(w.HTTPMaximumBatchSize),
-			wavefront.FlushIntervalSeconds(flushSeconds),
-		)
-		if err != nil {
-			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.URL)
-		}
-		w.sender = sender
+		connectionURL = connectionURLWithToken
 	} else {
-		w.Log.Debugf("connecting over tcp using Host: %q and Port: %d", w.Host, w.Port)
-		sender, err := wavefront.NewSender(SenderURLFromHostAndPort(w.Host, w.Port),
-			wavefront.FlushIntervalSeconds(flushSeconds))
-
-		if err != nil {
-			return fmt.Errorf("could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
-		}
-		w.sender = sender
+		w.Log.Warnf("configuration with host/port is deprecated. Please use url.")
+		w.Log.Debugf("connecting over http using Host: %q and Port: %d", w.Host, w.Port)
+		connectionURL = senderURLFromHostAndPort(w.Host, w.Port)
 	}
+
+	sender, err := wavefront.NewSender(connectionURL,
+		wavefront.BatchSize(w.HTTPMaximumBatchSize),
+		wavefront.FlushIntervalSeconds(flushSeconds),
+	)
+
+	if err != nil {
+		return fmt.Errorf("could not create Wavefront Sender for the provided url")
+	}
+
+	w.sender = sender
 
 	if w.ConvertPaths && w.MetricSeparator == "_" {
 		w.ConvertPaths = false

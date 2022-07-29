@@ -356,11 +356,11 @@ func TestTagLimits(t *testing.T) {
 }
 
 func TestSenderURLFromHostAndPort(t *testing.T) {
-	require.Equal(t, "tcp://localhost:2878", SenderURLFromHostAndPort("localhost", 2878))
+	require.Equal(t, "http://localhost:2878", senderURLFromHostAndPort("localhost", 2878))
 }
 
 func TestSenderURLFromURLAndToken(t *testing.T) {
-	url, err := SenderURLFromURLAndToken("https://surf.wavefront.com", "11111111-2222-3333-4444-555555555555")
+	url, err := senderURLFromURLAndToken("https://surf.wavefront.com", "11111111-2222-3333-4444-555555555555")
 	require.Nil(t, err)
 	require.Equal(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com",
 		url)
