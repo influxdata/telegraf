@@ -35,17 +35,17 @@ type ConvertStruct struct {
 }
 
 type SQL struct {
-	Driver              string
-	DataSourceName      string
-	TimestampColumn     string
-	TableTemplate       string
-	TableExistsTemplate string
-	InitSQL             string `toml:"init_sql"`
-	Convert             ConvertStruct
-	ConnMaxIdleTime     time.Duration // no default? 0?
-	ConnMaxLifetime     time.Duration // no default? 0?
-	MaxIdleConns        int           // default 2
-	MaxOpenConns        int           // default 0 (unlimited)
+	Driver                string
+	DataSourceName        string
+	TimestampColumn       string
+	TableTemplate         string
+	TableExistsTemplate   string
+	InitSQL               string `toml:"init_sql"`
+	Convert               ConvertStruct
+	ConnectionMaxIdleTime time.Duration
+	ConnectionMaxLifetime time.Duration
+	ConnectionMaxIdle     int
+	ConnectionMaxOpen     int
 
 	db     *gosql.DB
 	Log    telegraf.Logger `toml:"-"`
@@ -67,10 +67,10 @@ func (p *SQL) Connect() error {
 		return err
 	}
 
-	db.SetConnMaxIdleTime(p.ConnMaxIdleTime)
-	db.SetConnMaxLifetime(p.ConnMaxLifetime)
-	db.SetMaxIdleConns(p.MaxIdleConns)
-	db.SetMaxOpenConns(p.MaxOpenConns)
+	db.SetConnMaxIdleTime(p.ConnectionMaxIdleTime)
+	db.SetConnMaxLifetime(p.ConnectionMaxLifetime)
+	db.SetMaxIdleConns(p.ConnectionMaxIdle)
+	db.SetMaxOpenConns(p.ConnectionMaxOpen)
 
 	if p.InitSQL != "" {
 		_, err = db.Exec(p.InitSQL)
@@ -287,6 +287,11 @@ func newSQL() *SQL {
 			Bool:            "BOOL",
 			ConversionStyle: "unsigned_suffix",
 		},
-		MaxIdleConns: 2,
+		// Defaults for the connection settings (ConnectionMaxIdleTime,
+		// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
+		// mirror the golang defaults. As of go 1.18 all of them default to 0
+		// except max idle connections which is 2. See
+		// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
+		ConnectionMaxIdle: 2,
 	}
 }
