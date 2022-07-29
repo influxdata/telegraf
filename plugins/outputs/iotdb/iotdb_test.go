@@ -137,25 +137,25 @@ func compareRecords(rwt1 *recordsWithTags, rwt2 *recordsWithTags, log telegraf.L
 		len(rwt1.DataTypesList) == len(rwt2.DataTypesList) &&
 		len(rwt1.TimestampList) == len(rwt2.TimestampList)) {
 		// length not match
-		log.Errorf("compareRecords Cechk failed. Two recordsWithTags has different shape.")
+		log.Errorf("compareRecords Check failed. Two recordsWithTags has different shape.")
 		return false
 	}
 	for index, deviceID := range rwt1.DeviceIDList {
 		if !(deviceID == rwt2.DeviceIDList[index]) {
-			log.Errorf("compareRecords Cechk failed. rwt1.DeviceIDList[%d]=%v, rwt2.DeviceIDList[%d]=%v.",
+			log.Errorf("compareRecords Check failed. rwt1.DeviceIDList[%d]=%v, rwt2.DeviceIDList[%d]=%v.",
 				index, deviceID, index, rwt2.DeviceIDList[index])
 			return false
 		}
 	}
 	for index, mList := range rwt1.MeasurementsList {
 		if !(len(mList) == len(rwt2.MeasurementsList[index])) {
-			log.Errorf("compareRecords Cechk failed. Two MeasurementsList has different shape. %d : %d",
+			log.Errorf("compareRecords Check failed. Two MeasurementsList has different shape. %d : %d",
 				len(mList), len(rwt2.MeasurementsList[index]))
 			return false
 		}
 		for index002, m := range rwt1.MeasurementsList[index] {
 			if !(m == rwt2.MeasurementsList[index][index002]) {
-				log.Errorf("compareRecords Cechk failed. rwt1.MeasurementsList[%d][%d]=%v, rwt2.MeasurementsList[%d][%d]=%v.",
+				log.Errorf("compareRecords Check failed. rwt1.MeasurementsList[%d][%d]=%v, rwt2.MeasurementsList[%d][%d]=%v.",
 					index, index002, m, index, index002, rwt2.MeasurementsList[index][index002])
 				return false
 			}
@@ -163,13 +163,13 @@ func compareRecords(rwt1 *recordsWithTags, rwt2 *recordsWithTags, log telegraf.L
 	}
 	for index, mList := range rwt1.ValuesList {
 		if !(len(mList) == len(rwt2.ValuesList[index])) {
-			log.Errorf("compareRecords Cechk failed. Two ValuesList has different shape. %d : %d",
+			log.Errorf("compareRecords Check failed. Two ValuesList has different shape. %d : %d",
 				len(mList), len(rwt2.ValuesList[index]))
 			return false
 		}
 		for index002, m := range rwt1.ValuesList[index] {
 			if !(m == rwt2.ValuesList[index][index002]) {
-				log.Errorf("compareRecords Cechk failed. rwt1.ValuesList[%d][%d]=%v, rwt2.ValuesList[%d][%d]=%v.",
+				log.Errorf("compareRecords Check failed. rwt1.ValuesList[%d][%d]=%v, rwt2.ValuesList[%d][%d]=%v.",
 					index, index002, m, index, index002, rwt2.ValuesList[index][index002])
 				return false
 			}
@@ -177,13 +177,13 @@ func compareRecords(rwt1 *recordsWithTags, rwt2 *recordsWithTags, log telegraf.L
 	}
 	for index, mList := range rwt1.DataTypesList {
 		if !(len(mList) == len(rwt2.DataTypesList[index])) {
-			log.Errorf("compareRecords Cechk failed. Two DataTypesList has different shape. %d : %d",
+			log.Errorf("compareRecords Check failed. Two DataTypesList has different shape. %d : %d",
 				len(mList), len(rwt2.DataTypesList[index]))
 			return false
 		}
 		for index002, m := range rwt1.DataTypesList[index] {
 			if !(m == rwt2.DataTypesList[index][index002]) {
-				log.Errorf("compareRecords Cechk failed. rwt1.DataTypesList[%d][%d]=%v, rwt2.DataTypesList[%d][%d]=%v.",
+				log.Errorf("compareRecords Check failed. rwt1.DataTypesList[%d][%d]=%v, rwt2.DataTypesList[%d][%d]=%v.",
 					index, index002, m, index, index002, rwt2.DataTypesList[index][index002])
 				return false
 			}
@@ -191,7 +191,7 @@ func compareRecords(rwt1 *recordsWithTags, rwt2 *recordsWithTags, log telegraf.L
 	}
 	for index, timestamp := range rwt1.TimestampList {
 		if !(timestamp == rwt2.TimestampList[index]) {
-			log.Errorf("compareRecords Cechk failed. rwt1.DeviceIDList[%d]=%v, rwt2.DeviceIDList[%d]=%v.",
+			log.Errorf("compareRecords Check failed. rwt1.DeviceIDList[%d]=%v, rwt2.DeviceIDList[%d]=%v.",
 				index, timestamp, index, rwt2.TimestampList[index])
 			return false
 		}
@@ -216,8 +216,8 @@ func testConnectWriteMetricInThisConf(s *IoTDB, metrics []telegraf.Metric) error
 	return nil
 }
 
-// Test defualt configuration, uint64 -> int64
-func TestMetricConvertion001(t *testing.T) {
+// Test default configuration, uint64 -> int64
+func TestMetricConversion001(t *testing.T) {
 	testClient := newTestClient()
 
 	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
@@ -250,7 +250,7 @@ func TestMetricConvertion001(t *testing.T) {
 }
 
 // Test converting uint64 to text.
-func TestMetricConvertion002(t *testing.T) {
+func TestMetricConversion002(t *testing.T) {
 	testClient := newTestClient()
 	testClient.ConvertUint64To = "text"
 
@@ -271,7 +271,7 @@ func TestMetricConvertion002(t *testing.T) {
 }
 
 // Test time unit second.
-func TestTagsConvertion003(t *testing.T) {
+func TestTagsConversion003(t *testing.T) {
 	testClient := newTestClient()
 	testClient.TimeStampUnit = "second"
 
@@ -305,13 +305,13 @@ func TestTagsConvertion003(t *testing.T) {
 }
 
 // Test Tags modification in method 'fields'
-func TestTagsConvertion004(t *testing.T) {
+func TestTagsConversion004(t *testing.T) {
 	testClient := newTestClient()
-	testClient.TreateTagsAs = "fields"
+	testClient.TreatTagsAs = "fields"
 
 	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	err = testClient.modifiyRecordsWithTags(result)
+	err = testClient.modifyRecordsWithTags(result)
 	require.NoError(t, err)
 	testRecordsWithTags004 := recordsWithTags{
 		DeviceIDList: []string{"root.computer.fan", "root.computer.fan", "root.computer.keyboard"},
@@ -341,13 +341,13 @@ func TestTagsConvertion004(t *testing.T) {
 }
 
 // Test Tags modification in method 'device_id'
-func TestTagsConvertion005(t *testing.T) {
+func TestTagsConversion005(t *testing.T) {
 	testClient := newTestClient()
-	testClient.TreateTagsAs = "device_id"
+	testClient.TreatTagsAs = "device_id"
 
 	result, err := testClient.ConvertMetricsToRecordsWithTags(testMetrics001)
 	require.NoError(t, err)
-	err = testClient.modifiyRecordsWithTags(result)
+	err = testClient.modifyRecordsWithTags(result)
 	require.NoError(t, err)
 	testRecordsWithTags005 := recordsWithTags{
 		DeviceIDList: []string{"root.computer.fan.cpu.expensive", "root.computer.fan.gpu.cheap", "root.computer.keyboard"},

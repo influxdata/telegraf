@@ -87,7 +87,6 @@ data writing.
   ## Timeout to open a new session.
   ## A value of zero means no timeout.
   #  timeout = "5s"
-  timeout = 5000
 
   ## Configuration of type conversion for 64-bit unsigned int
   ## IoTDB currently DOES NOT support unsigned integers (version 13.x). 
@@ -103,7 +102,7 @@ data writing.
   ## Configuration of TimeStamp
   ## TimeStamp is always saved in 64bits int. timestamp_precision specifies the unit of timestamp. 
   ## Available value:
-  ## "second", "millisecond", "microsecond", "nanosecond"(defualt)
+  ## "second", "millisecond", "microsecond", "nanosecond"(default)
   # timestamp_precision = "nanosecond"
 
   ## Handling of tags
