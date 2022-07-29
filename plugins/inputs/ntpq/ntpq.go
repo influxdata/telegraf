@@ -55,10 +55,7 @@ var fieldElements = map[string]elementType{
 type NTPQ struct {
 	DNSLookup bool `toml:"dns_lookup"`
 
-	runQ   func() ([]byte, error)
-	tagI   map[string]int
-	floatI map[string]int
-	intI   map[string]int
+	runQ func() ([]byte, error)
 }
 
 func (*NTPQ) SampleConfig() string {
@@ -188,56 +185,30 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NTPQ) runq() ([]byte, error) {
-	bin, err := exec.LookPath("ntpq")
-	if err != nil {
-		return nil, err
-	}
+func (n *NTPQ) Init() error {
+	if n.runQ == nil {
+		n.runQ = func() ([]byte, error) {
+			bin, err := exec.LookPath("ntpq")
+			if err != nil {
+				return nil, err
+			}
 
-	var cmd *exec.Cmd
-	if n.DNSLookup {
-		cmd = exec.Command(bin, "-p")
-	} else {
-		cmd = exec.Command(bin, "-p", "-n")
-	}
+			var cmd *exec.Cmd
+			if n.DNSLookup {
+				cmd = exec.Command(bin, "-p")
+			} else {
+				cmd = exec.Command(bin, "-p", "-n")
+			}
 
-	return cmd.Output()
-}
+			return cmd.Output()
+		}
 
-func newNTPQ() *NTPQ {
-	// Mapping of the ntpq tag key to the index in the command output
-	tagI := map[string]int{
-		"remote":  -1,
-		"refid":   -1,
-		"stratum": -1,
-		"type":    -1,
 	}
-
-	// Mapping of float metrics to their index in the command output
-	floatI := map[string]int{
-		"delay":  -1,
-		"offset": -1,
-		"jitter": -1,
-	}
-
-	// Mapping of int metrics to their index in the command output
-	intI := map[string]int{
-		"when":  -1,
-		"poll":  -1,
-		"reach": -1,
-	}
-
-	n := &NTPQ{
-		tagI:   tagI,
-		floatI: floatI,
-		intI:   intI,
-	}
-	n.runQ = n.runq
-	return n
+	return nil
 }
 
 func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
-		return newNTPQ()
+		return &NTPQ{}
 	})
 }

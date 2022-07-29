@@ -23,8 +23,12 @@ func TestCases(t *testing.T) {
 
 	// Register the plugin
 	inputs.Add("ntpq", func() telegraf.Input {
-		return newNTPQ()
+		return &NTPQ{}
 	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	for _, f := range folders {
 		// Only handle folders
@@ -61,8 +65,6 @@ func TestCases(t *testing.T) {
 			var expected []telegraf.Metric
 			if _, err := os.Stat(expectedFilename); err == nil {
 				var err error
-				parser := &influx.Parser{}
-				require.NoError(t, parser.Init())
 				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
 				require.NoError(t, err)
 			}
@@ -86,6 +88,7 @@ func TestCases(t *testing.T) {
 			plugin.runQ = func() ([]byte, error) {
 				return data, inputErr
 			}
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
 			if errorMsg != "" {
