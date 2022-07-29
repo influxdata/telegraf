@@ -41,11 +41,15 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	if durStr == "" {
 		durStr = "0s"
 	}
-	// special case: logging interval had a default of 0d, which silently
-	// failed, but in order to prevent issues with default configs that had
-	// uncommented the option, change it from zero days to zero hours.
-	if durStr == "0d" {
-		durStr = "0h"
+
+	// parse day durations
+	if strings.HasSuffix(durStr, "d") {
+		dI, err := strconv.ParseInt(durStr[0:len(durStr)-1], 10, 64)
+		if err == nil {
+			dur := time.Duration(dI) * time.Duration(24) * time.Hour
+			*d = Duration(dur)
+			return nil
+		}
 	}
 
 	dur, err := time.ParseDuration(durStr)
