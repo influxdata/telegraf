@@ -1,7 +1,9 @@
 package testutil
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -81,4 +83,56 @@ func ParseMetricsFrom(lines []string, header string, parser LineParser) ([]teleg
 		metrics = append(metrics, m)
 	}
 	return metrics, nil
+}
+
+//ParseMetricsFromFile parses metrics from the given file in line-protocol
+func ParseMetricsFromFile(filename string, parser telegraf.Parser) ([]telegraf.Metric, error) {
+	var metrics []telegraf.Metric
+
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 || strings.HasPrefix(string(line), "#") {
+			continue
+		}
+
+		nonutc, err := parser.Parse(line)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse metric in %q failed: %v", line, err)
+		}
+		for _, m := range nonutc {
+			// The timezone needs to be UTC to match the timestamp test results
+			m.SetTime(m.Time().UTC())
+			metrics = append(metrics, m)
+		}
+	}
+
+	return metrics, nil
+}
+
+//ParseLinesFromFile returns the lines of the file as strings
+func ParseLinesFromFile(filename string) ([]string, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) == 0 || strings.HasPrefix(string(line), "#") {
+			continue
+		}
+		lines = append(lines, line)
+	}
+
+	return lines, nil
 }
