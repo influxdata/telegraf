@@ -60,14 +60,13 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		tags := make(map[string]string)
 		// if there is an ntpq state prefix, remove it and make it it's own tag
 		// see https://github.com/influxdata/telegraf/issues/1161
+		var prefix string
 		if strings.ContainsAny(string(line[0]), "*#o+x.-") {
-			tags["state_prefix"] = string(line[0])
+			prefix = string(line[0])
 			line = strings.TrimLeft(line, "*#o+x.-")
 		}
-
 		line = reg.ReplaceAllString(line, "")
 
 		fields := strings.Fields(line)
@@ -105,7 +104,12 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
+		tags := make(map[string]string)
 		mFields := make(map[string]interface{})
+
+		if prefix != "" {
+			tags["state_prefix"] = prefix
+		}
 
 		// Get tags from output
 		for key, index := range n.tagI {
