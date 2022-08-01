@@ -824,19 +824,13 @@ func (a *Agent) flushLoop(
 		case <-flushRequested:
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-output.BatchReady:
-			// Favor the ticker over batch ready
-			select {
-			case <-ticker.Elapsed():
-				logError(a.flushOnce(output, ticker, output.Write))
-			default:
-				logError(a.flushOnce(output, ticker, output.WriteBatch))
-			}
+			logError(a.flushBatch(output, ticker, output.WriteBatch))
 		}
 	}
 }
 
 // flushOnce runs the output's Write function once, logging a warning each
-// interval it fails to complete before.
+// interval it fails to complete before the flush interval elapses.
 func (a *Agent) flushOnce(
 	output *models.RunningOutput,
 	ticker Ticker,
@@ -857,6 +851,25 @@ func (a *Agent) flushOnce(
 				output.LogName())
 			output.LogBufferStatus()
 		}
+	}
+}
+
+// flushBatch runs the output's Write function once Unlike flushOnce the
+// interval elapsing is not considered during these flushes.
+func (a *Agent) flushBatch(
+	output *models.RunningOutput,
+	ticker Ticker,
+	writeFunc func() error,
+) error {
+	done := make(chan error)
+	go func() {
+		done <- writeFunc()
+	}()
+
+	for {
+		err := <-done
+		output.LogBufferStatus()
+		return err
 	}
 }
 
