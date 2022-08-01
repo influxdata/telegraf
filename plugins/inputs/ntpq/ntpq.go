@@ -73,54 +73,46 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	var foundHeader bool
-	var columns []column
 	scanner := bufio.NewScanner(bytes.NewReader(out))
+
+	// Look for the header
+	var columns []column
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// if there is an ntpq state prefix, remove it and make it it's own tag
-		// see https://github.com/influxdata/telegraf/issues/1161
-		var prefix string
-		if strings.ContainsAny(string(line[0]), "*#o+x.-") {
-			prefix = string(line[0])
-			line = strings.TrimLeft(line, "*#o+x.-")
-		}
-		line = reBrackets.ReplaceAllString(line, "")
-
-		elements := strings.Fields(line)
+		_, elements := processLine(line)
 		if len(elements) < 2 {
 			continue
 		}
 
-		// If lineCounter == 0, then this is the header line
-		if !foundHeader {
-			for _, el := range elements {
-				// Check if the element is a tag
-				if name, isTag := tagHeaders[el]; isTag {
-					columns = append(columns, column{
-						name:  name,
-						etype: Tag,
-					})
-					continue
-				}
-
-				// Add a field
-				if etype, isField := fieldElements[el]; isField {
-					columns = append(columns, column{
-						name:  el,
-						etype: etype,
-					})
-					continue
-				}
-
-				// Skip the column if not found
-				columns = append(columns, column{etype: None})
+		for _, el := range elements {
+			// Check if the element is a tag
+			if name, isTag := tagHeaders[el]; isTag {
+				columns = append(columns, column{
+					name:  name,
+					etype: Tag,
+				})
+				continue
 			}
-			foundHeader = true
-			continue
-		}
 
+			// Add a field
+			if etype, isField := fieldElements[el]; isField {
+				columns = append(columns, column{
+					name:  el,
+					etype: etype,
+				})
+				continue
+			}
+
+			// Skip the column if not found
+			columns = append(columns, column{etype: None})
+		}
+		break
+	}
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		prefix, elements := processLine(line)
 		if len(elements) != len(columns) {
 			continue
 		}
@@ -200,6 +192,19 @@ func (n *NTPQ) Init() error {
 
 	}
 	return nil
+}
+
+func processLine(line string) (string, []string) {
+	// if there is an ntpq state prefix, remove it and make it it's own tag
+	// see https://github.com/influxdata/telegraf/issues/1161
+	var prefix string
+	if strings.ContainsAny(string(line[0]), "*#o+x.-") {
+		prefix = string(line[0])
+		line = strings.TrimLeft(line, "*#o+x.-")
+	}
+	line = reBrackets.ReplaceAllString(line, "")
+
+	return prefix, strings.Fields(line)
 }
 
 func init() {
