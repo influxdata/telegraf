@@ -100,7 +100,7 @@ require (
 	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.2.1
-	github.com/karrick/godirwalk v1.16.1
+	github.com/karrick/godirwalk v1.17.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lxc/lxd v0.0.0-20220624154119-6d73e2a3d0c5
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
