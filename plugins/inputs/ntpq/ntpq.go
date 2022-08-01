@@ -19,6 +19,11 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// Due to problems with a parsing, we have to use regexp expression in order
+// to remove string that starts from '(' and ends with space
+// see: https://github.com/influxdata/telegraf/issues/2386
+var reBrackets = regexp.MustCompile(`\s+\([\S]*`)
+
 type elementType int64
 
 const (
@@ -68,14 +73,6 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	// Due to problems with a parsing, we have to use regexp expression in order
-	// to remove string that starts from '(' and ends with space
-	// see: https://github.com/influxdata/telegraf/issues/2386
-	reg, err := regexp.Compile(`\s+\([\S]*`)
-	if err != nil {
-		return err
-	}
-
 	var foundHeader bool
 	var columns []column
 	scanner := bufio.NewScanner(bytes.NewReader(out))
@@ -89,7 +86,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			prefix = string(line[0])
 			line = strings.TrimLeft(line, "*#o+x.-")
 		}
-		line = reg.ReplaceAllString(line, "")
+		line = reBrackets.ReplaceAllString(line, "")
 
 		elements := strings.Fields(line)
 		if len(elements) < 2 {
