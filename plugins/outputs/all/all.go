@@ -11,6 +11,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloud_pubsub"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch_logs"
+	_ "github.com/influxdata/telegraf/plugins/outputs/coralogix"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/discard"
