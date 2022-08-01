@@ -46,8 +46,9 @@ avoid cardinality issues:
   ## If both of these are empty, we'll use the default serviceaccount:
   ## at: /run/secrets/kubernetes.io/serviceaccount/token
   ##
-  ## To auto-refresh the token, please use a file with the bearer_token option.
-  ## If given a string, Telegraf cannot refresh the token periodically.
+  ## To re-read the token at each interval, please use a file with the
+  ## bearer_token option. If given a string, Telegraf will always use that
+  ## token.
   # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
   # bearer_token_string = "abc_123"
