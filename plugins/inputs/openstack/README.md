@@ -75,6 +75,13 @@ your requirements. This will help with load and cardinality as well.
   username = "admin"
   password = "password"
 
+  ## AllowReauth should be set to true if you grant permission for Gophercloud to
+  ## cache your credentials in memory, and to allow Gophercloud to attempt to
+  ## re-authenticate automatically if/when your token expires.  If you set it to
+  ## false, it will not cache these settings, but re-authentication will not be
+  ## possible.  This setting defaults to false.
+  # allow_reauth = false
+
   ## Available services are:
   ## "agents", "aggregates", "flavors", "hypervisors", "networks", "nova_services",
   ## "ports", "projects", "servers", "services", "stacks", "storage_pools", "subnets", "volumes"
