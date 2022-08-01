@@ -139,6 +139,7 @@ type OplogStats struct {
 // ReplSetMember stores information related to a replica set member
 type ReplSetMember struct {
 	Name       string    `bson:"name"`
+	Health     int64     `bson:"health"`
 	State      int64     `bson:"state"`
 	StateStr   string    `bson:"stateStr"`
 	OptimeDate time.Time `bson:"optimeDate"`
@@ -783,9 +784,11 @@ type StatLine struct {
 	NetOut, NetOutCnt                        int64
 	NumConnections                           int64
 	ReplSetName                              string
+	ReplHealthAvg                            float64
 	NodeType                                 string
 	NodeState                                string
 	NodeStateInt                             int64
+	NodeHealthInt                            int64
 
 	// Replicated Metrics fields
 	ReplNetworkBytes                    int64
@@ -1332,6 +1335,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 					returnVal.NodeState = member.StateStr
 					// Store my state integer
 					returnVal.NodeStateInt = member.State
+					// Store my health integer
+					returnVal.NodeHealthInt = member.Health
 
 					if member.State == 1 {
 						// I'm the master
@@ -1355,6 +1360,26 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				} else {
 					returnVal.ReplLag = lag
 				}
+			}
+
+			// Prepartions for the average health state of the replica-set
+			replMemberCount := len(newReplStat.Members)
+			replMemberHealthyCount := 0
+
+			// Second for-loop is needed, because of break-construct above
+			for _, member := range newReplStat.Members {
+				// Count only healthy members for the average health state of the replica-set
+				if member.Health == 1 {
+					replMemberHealthyCount++
+				}
+			}
+
+			// Calculate the average health state of the replica-set (For precise monitoring alerts)
+			// To detect if a member is unhealthy from the perspective of another member and also how bad the replica-set health is
+			if replMemberCount > 0 {
+				returnVal.ReplHealthAvg = float64(replMemberHealthyCount) / float64(replMemberCount)
+			} else {
+				returnVal.ReplHealthAvg = 0.00
 			}
 		}
 	}
