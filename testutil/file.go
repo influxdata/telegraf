@@ -128,7 +128,7 @@ func ParseLinesFromFile(filename string) ([]string, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if len(line) == 0 || strings.HasPrefix(string(line), "#") {
+		if len(line) == 0 || strings.HasPrefix(line, "#") {
 			continue
 		}
 		lines = append(lines, line)

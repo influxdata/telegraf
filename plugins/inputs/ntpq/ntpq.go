@@ -189,7 +189,6 @@ func (n *NTPQ) Init() error {
 			cmd := exec.Command(bin, args...)
 			return cmd.Output()
 		}
-
 	}
 	return nil
 }
