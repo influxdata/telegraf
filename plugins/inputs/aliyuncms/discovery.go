@@ -71,7 +71,7 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 			rpcReq, ok := ptrV.Field(i).Interface().(*requests.RpcRequest)
 
 			if !ok {
-				return nil, errors.Errorf("cant convert interface of %v to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
+				return nil, errors.Errorf("can't convert interface of %v to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
 			}
 
 			return rpcReq, nil

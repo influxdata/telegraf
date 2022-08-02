@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	// Black import required to register driver
+	// Blank import required to register driver
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
