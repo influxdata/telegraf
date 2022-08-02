@@ -11,7 +11,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kballard/go-shellquote"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -58,13 +61,39 @@ var fieldElements = map[string]elementType{
 }
 
 type NTPQ struct {
-	DNSLookup bool `toml:"dns_lookup"`
+	DNSLookup bool   `toml:"dns_lookup" deprecated:"1.24.0;add '-n' to 'options' instead to skip DNS lookup"`
+	Options   string `toml:"options"`
 
 	runQ func() ([]byte, error)
 }
 
 func (*NTPQ) SampleConfig() string {
 	return sampleConfig
+}
+
+func (n *NTPQ) Init() error {
+	if n.runQ == nil {
+		args, err := shellquote.Split(n.Options)
+		if err != nil {
+			return fmt.Errorf("splitting options failed: %w", err)
+		}
+		n.runQ = func() ([]byte, error) {
+			bin, err := exec.LookPath("ntpq")
+			if err != nil {
+				return nil, err
+			}
+
+			if !n.DNSLookup {
+				if !choice.Contains("-n", args) {
+					args = append(args, "-n")
+				}
+			}
+			fmt.Println(args)
+			cmd := exec.Command(bin, args...)
+			return cmd.Output()
+		}
+	}
+	return nil
 }
 
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
@@ -174,25 +203,6 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NTPQ) Init() error {
-	if n.runQ == nil {
-		n.runQ = func() ([]byte, error) {
-			bin, err := exec.LookPath("ntpq")
-			if err != nil {
-				return nil, err
-			}
-
-			args := []string{"-p"}
-			if !n.DNSLookup {
-				args = append(args, "-n")
-			}
-			cmd := exec.Command(bin, args...)
-			return cmd.Output()
-		}
-	}
-	return nil
-}
-
 func processLine(line string) (string, []string) {
 	// if there is an ntpq state prefix, remove it and make it it's own tag
 	// see https://github.com/influxdata/telegraf/issues/1161
@@ -208,6 +218,9 @@ func processLine(line string) (string, []string) {
 
 func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
-		return &NTPQ{}
+		return &NTPQ{
+			DNSLookup: true,
+			Options:   "-p",
+		}
 	})
 }
