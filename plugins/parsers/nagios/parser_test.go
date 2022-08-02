@@ -215,8 +215,8 @@ func assertNagiosState(t *testing.T, m telegraf.Metric, f map[string]interface{}
 }
 
 func TestParse(t *testing.T) {
-	parser := NagiosParser{
-		MetricName: "nagios_test",
+	parser := Parser{
+		metricName: "nagios_test",
 	}
 
 	tests := []struct {

@@ -21,7 +21,9 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 			"POSTGRES_HOST_AUTH_METHOD": "trust",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("database system is ready to accept connections"),
+			// the database comes up twice, once right away, then again a second
+			// time after the docker entrypoint starts configuraiton
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}

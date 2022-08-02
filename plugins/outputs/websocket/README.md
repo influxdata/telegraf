@@ -35,6 +35,10 @@ It can output data in any of the [supported output formats][formats].
   # socks5_username = "alice"
   # socks5_password = "pass123"
 
+  ## Optional HTTP proxy to use
+  # use_system_proxy = false
+  # http_proxy_url = "http://localhost:8888"
+
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:

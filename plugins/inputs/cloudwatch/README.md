@@ -46,7 +46,8 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
 
-  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  ## Set http_proxy
+  # use_system_proxy = false
   # http_proxy_url = "http://localhost:8888"
 
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
@@ -89,6 +90,12 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
   ## Timeout for http requests made by the cloudwatch client.
   # timeout = "5s"
+
+  ## Batch Size
+  ## The size of each batch to send requests to Cloudwatch. 500 is the
+  ## suggested largest size. If a request gets to large (413 errors), consider
+  ## reducing this amount.
+  # batch_size = 500
 
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.

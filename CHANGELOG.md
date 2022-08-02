@@ -1,6 +1,78 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.23.3 [2022-07-25]
+
+### Bugfixes
+
+- [#11481](https://github.com/influxdata/telegraf/pull/11481) `inputs.openstack` Use v3 volume library
+- [#11482](https://github.com/influxdata/telegraf/pull/11482) `common.cookie` Use reader over readcloser, regen cookie-jar at reauth
+- [#11527](https://github.com/influxdata/telegraf/pull/11527) `inputs.mqtt_consumer` Topic parsing error when topic having prefix '/'
+- [#11534](https://github.com/influxdata/telegraf/pull/11534) `inputs.snmp_trap` Nil map panic when use snmp_trap with netsnmp translator
+- [#11522](https://github.com/influxdata/telegraf/pull/11522) `inputs.sqlserver` Set lower deadlock priority on queries
+- [#11486](https://github.com/influxdata/telegraf/pull/11486) `parsers.prometheus` Histogram infinity bucket must be always present
+
+### Dependency Updates
+
+- [#11461](https://github.com/influxdata/telegraf/pull/11461) Bump github.com/antchfx/jsonquery from 1.1.5 to 1.2.0
+
+## v1.23.2 [2022-07-11]
+
+### Bugfixes
+
+- [#11460](https://github.com/influxdata/telegraf/pull/11460) Deprecation warnings for non-deprecated packages
+- [#11472](https://github.com/influxdata/telegraf/pull/11472) `common.http` Allow 201 for cookies, update header docs
+- [#11448](https://github.com/influxdata/telegraf/pull/11448) `inputs.sqlserver` Use bigint for backupsize in sqlserver
+- [#11011](https://github.com/influxdata/telegraf/pull/11011) `inputs.gnmi` Refactor tag-only subs for complex keys
+- [#10331](https://github.com/influxdata/telegraf/pull/10331) `inputs.snmp` Snmp UseUnconnectedUDPSocket when using udp
+
+### Dependency Updates
+
+- [#11438](https://github.com/influxdata/telegraf/pull/11438) Bump github.com/docker/docker from 20.10.14 to 20.10.17
+
+## v1.23.1 [2022-07-05]
+
+### Bugfixes
+
+- [#11335](https://github.com/influxdata/telegraf/pull/11335) Bring back old xpath section names
+- [#9315](https://github.com/influxdata/telegraf/pull/9315) `inputs.rabbitmq` Don't require listeners to be present in overview
+- [#11280](https://github.com/influxdata/telegraf/pull/11280) Filter out views in mongodb lookup
+- [#11311](https://github.com/influxdata/telegraf/pull/11311) Fix race condition in configuration and prevent concurrent map writes to c.UnusedFields
+- [#11397](https://github.com/influxdata/telegraf/pull/11397) Resolve jolokia2 panic on null response
+- [#11276](https://github.com/influxdata/telegraf/pull/11276) Restore sample configurations broken during initial migration
+- [#11413](https://github.com/influxdata/telegraf/pull/11413) Sync back sample.confs for inputs.couchbase and outputs.groundwork.
+
+### Dependency Updates
+
+- [#11295](https://github.com/influxdata/telegraf/pull/11295) Bump cloud.google.com/go/monitoring from 1.2.0 to 1.5.0
+- [#11297](https://github.com/influxdata/telegraf/pull/11297) Bump github.com/aws/aws-sdk-go-v2/credentials from 1.12.2 to 1.12.5
+- [#11318](https://github.com/influxdata/telegraf/pull/11318) Bump google.golang.org/grpc from 1.46.2 to 1.47.0
+- [#11223](https://github.com/influxdata/telegraf/pull/11223) Bump k8s.io/client-go from 0.23.3 to 0.24.1
+- [#11299](https://github.com/influxdata/telegraf/pull/11299) Bump github.com/go-logfmt/logfmt from 0.5.0 to 0.5.1
+- [#11328](https://github.com/influxdata/telegraf/pull/11328) Bump github.com/aws/aws-sdk-go-v2/service/dynamodb from 1.15.3 to 1.15.7
+- [#11320](https://github.com/influxdata/telegraf/pull/11320) Bump go.mongodb.org/mongo-driver from 1.9.0 to 1.9.1
+- [#11321](https://github.com/influxdata/telegraf/pull/11321) Bump github.com/gophercloud/gophercloud from 0.24.0 to 0.25.0
+- [#11338](https://github.com/influxdata/telegraf/pull/11338) Bump google.golang.org/api from 0.74.0 to 0.84.0
+- [#11340](https://github.com/influxdata/telegraf/pull/11340) Bump github.com/fatih/color from 1.10.0 to 1.13.0
+- [#11322](https://github.com/influxdata/telegraf/pull/11322) Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.3.2 to 1.13.6
+- [#11319](https://github.com/influxdata/telegraf/pull/11319) Bump github.com/Shopify/sarama from 1.32.0 to 1.34.1
+- [#11342](https://github.com/influxdata/telegraf/pull/11342) Bump github.com/dynatrace-oss/dynatrace-metric-utils-go from 0.3.0 to 0.5.0
+- [#11339](https://github.com/influxdata/telegraf/pull/11339) Bump github.com/nats-io/nats.go from 1.15.0 to 1.16.0
+- [#11349](https://github.com/influxdata/telegraf/pull/11349) Bump cloud.google.com/go/pubsub from 1.18.0 to 1.22.2
+- [#11369](https://github.com/influxdata/telegraf/pull/11369) Bump go.opentelemetry.io/collector/pdata from 0.52.0 to 0.54.0
+- [#11346](https://github.com/influxdata/telegraf/pull/11346) Bump github.com/jackc/pgx/v4 from 4.15.0 to 4.16.1
+- [#11379](https://github.com/influxdata/telegraf/pull/11379) Bump cloud.google.com/go/bigquery from 1.8.0 to 1.33.0
+- [#11378](https://github.com/influxdata/telegraf/pull/11378) Bump github.com/Azure/azure-kusto-go from 0.6.0 to 0.7.0
+- [#11394](https://github.com/influxdata/telegraf/pull/11394) Bump cloud.google.com/go/pubsub from 1.22.2 to 1.23.0
+- [#11380](https://github.com/influxdata/telegraf/pull/11380) Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.13.0 to 1.15.7
+- [#11382](https://github.com/influxdata/telegraf/pull/11382) Bump github.com/aws/aws-sdk-go-v2/service/ec2 from 1.1.0 to 1.46.0
+- [#11395](https://github.com/influxdata/telegraf/pull/11395) Bump github.com/golang-jwt/jwt/v4 from 4.4.1 to 4.4.2
+- [#11396](https://github.com/influxdata/telegraf/pull/11396) Bump github.com/vmware/govmomi from 0.27.3 to 0.28.0
+- [#11415](https://github.com/influxdata/telegraf/pull/11415) Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.15.4 to 1.15.8
+- [#11416](https://github.com/influxdata/telegraf/pull/11416) Bump github.com/influxdata/influxdb-observability/otel2influx from 0.2.21 to 0.2.22
+- [#11434](https://github.com/influxdata/telegraf/pull/11434) Bump k8s.io/api from 0.24.1 to 0.24.2
+- [#11437](https://github.com/influxdata/telegraf/pull/11437) Bump github.com/prometheus/client_golang from 1.12.1 to 1.12.2
+
 ## v1.23.0 [2022-06-13]
 
 ### Bugfixes

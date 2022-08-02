@@ -19,6 +19,26 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// Due to problems with a parsing, we have to use regexp expression in order
+// to remove string that starts from '(' and ends with space
+// see: https://github.com/influxdata/telegraf/issues/2386
+var reBrackets = regexp.MustCompile(`\s+\([\S]*`)
+
+type elementType int64
+
+const (
+	None elementType = iota
+	Tag
+	FieldInt
+	FieldFloat
+	FieldDuration
+)
+
+type column struct {
+	name  string
+	etype elementType
+}
+
 // Mapping of ntpq header names to tag keys
 var tagHeaders = map[string]string{
 	"remote": "remote",
@@ -27,13 +47,20 @@ var tagHeaders = map[string]string{
 	"t":      "type",
 }
 
-type NTPQ struct {
-	runQ   func() ([]byte, error)
-	tagI   map[string]int
-	floatI map[string]int
-	intI   map[string]int
+// Mapping of fields
+var fieldElements = map[string]elementType{
+	"delay":  FieldFloat,
+	"jitter": FieldFloat,
+	"offset": FieldFloat,
+	"reach":  FieldInt,
+	"poll":   FieldDuration,
+	"when":   FieldDuration,
+}
 
+type NTPQ struct {
 	DNSLookup bool `toml:"dns_lookup"`
+
+	runQ func() ([]byte, error)
 }
 
 func (*NTPQ) SampleConfig() string {
@@ -46,197 +73,141 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	// Due to problems with a parsing, we have to use regexp expression in order
-	// to remove string that starts from '(' and ends with space
-	// see: https://github.com/influxdata/telegraf/issues/2386
-	reg, err := regexp.Compile(`\s+\([\S]*`)
-	if err != nil {
-		return err
-	}
-
-	lineCounter := 0
-	numColumns := 0
 	scanner := bufio.NewScanner(bytes.NewReader(out))
+
+	// Look for the header
+	var columns []column
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		tags := make(map[string]string)
-		// if there is an ntpq state prefix, remove it and make it it's own tag
-		// see https://github.com/influxdata/telegraf/issues/1161
-		if strings.ContainsAny(string(line[0]), "*#o+x.-") {
-			tags["state_prefix"] = string(line[0])
-			line = strings.TrimLeft(line, "*#o+x.-")
-		}
-
-		line = reg.ReplaceAllString(line, "")
-
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
+		_, elements := processLine(line)
+		if len(elements) < 2 {
 			continue
 		}
 
-		// If lineCounter == 0, then this is the header line
-		if lineCounter == 0 {
-			numColumns = len(fields)
-			for i, field := range fields {
-				// Check if field is a tag:
-				if tagKey, ok := tagHeaders[field]; ok {
-					n.tagI[tagKey] = i
-					continue
-				}
-
-				// check if field is a float metric:
-				if _, ok := n.floatI[field]; ok {
-					n.floatI[field] = i
-					continue
-				}
-
-				// check if field is an int metric:
-				if _, ok := n.intI[field]; ok {
-					n.intI[field] = i
-					continue
-				}
-			}
-		} else {
-			if len(fields) != numColumns {
+		for _, el := range elements {
+			// Check if the element is a tag
+			if name, isTag := tagHeaders[el]; isTag {
+				columns = append(columns, column{
+					name:  name,
+					etype: Tag,
+				})
 				continue
 			}
 
-			mFields := make(map[string]interface{})
-
-			// Get tags from output
-			for key, index := range n.tagI {
-				if index == -1 {
-					continue
-				}
-				tags[key] = fields[index]
+			// Add a field
+			if etype, isField := fieldElements[el]; isField {
+				columns = append(columns, column{
+					name:  el,
+					etype: etype,
+				})
+				continue
 			}
 
-			// Get integer metrics from output
-			for key, index := range n.intI {
-				if index == -1 || index >= len(fields) {
-					continue
-				}
-				if fields[index] == "-" {
-					continue
-				}
+			// Skip the column if not found
+			columns = append(columns, column{etype: None})
+		}
+		break
+	}
+	for scanner.Scan() {
+		line := scanner.Text()
 
-				if key == "when" || key == "poll" {
-					when := fields[index]
-					switch {
-					case strings.HasSuffix(when, "h"):
-						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "h"))
-						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-							continue
-						}
-						// seconds in an hour
-						mFields[key] = int64(m) * 3600
-						continue
-					case strings.HasSuffix(when, "d"):
-						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "d"))
-						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-							continue
-						}
-						// seconds in a day
-						mFields[key] = int64(m) * 86400
-						continue
-					case strings.HasSuffix(when, "m"):
-						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "m"))
-						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-							continue
-						}
-						// seconds in a day
-						mFields[key] = int64(m) * 60
-						continue
-					}
-				}
-
-				m, err := strconv.Atoi(fields[index])
-				if err != nil {
-					acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
-					continue
-				}
-				mFields[key] = int64(m)
-			}
-
-			// get float metrics from output
-			for key, index := range n.floatI {
-				if index == -1 || index >= len(fields) {
-					continue
-				}
-				if fields[index] == "-" {
-					continue
-				}
-
-				m, err := strconv.ParseFloat(fields[index], 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("error ntpq: parsing float: %s", fields[index]))
-					continue
-				}
-				mFields[key] = m
-			}
-
-			acc.AddFields("ntpq", mFields, tags)
+		prefix, elements := processLine(line)
+		if len(elements) != len(columns) {
+			continue
 		}
 
-		lineCounter++
+		tags := make(map[string]string)
+		fields := make(map[string]interface{})
+
+		if prefix != "" {
+			tags["state_prefix"] = prefix
+		}
+
+		for i, raw := range elements {
+			col := columns[i]
+
+			switch col.etype {
+			case None:
+				continue
+			case Tag:
+				tags[col.name] = raw
+			case FieldInt:
+				value, err := strconv.ParseInt(raw, 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("parsing %q (%v) as int failed: %w", col.name, raw, err))
+					continue
+				}
+				fields[col.name] = value
+			case FieldFloat:
+				value, err := strconv.ParseFloat(raw, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("parsing %q (%v) as float failed: %w", col.name, raw, err))
+					continue
+				}
+				fields[col.name] = value
+			case FieldDuration:
+				factor := int64(1)
+				suffix := raw[len(raw)-1:]
+				switch suffix {
+				case "d":
+					factor = 24 * 3600
+				case "h":
+					factor = 3600
+				case "m":
+					factor = 60
+				default:
+					suffix = ""
+				}
+				value, err := strconv.ParseInt(strings.TrimSuffix(raw, suffix), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("parsing %q (%v) as duration failed: %w", col.name, raw, err))
+					continue
+				}
+				fields[col.name] = value * factor
+			}
+		}
+
+		acc.AddFields("ntpq", fields, tags)
+	}
+
+	return nil
+}
+
+func (n *NTPQ) Init() error {
+	if n.runQ == nil {
+		n.runQ = func() ([]byte, error) {
+			bin, err := exec.LookPath("ntpq")
+			if err != nil {
+				return nil, err
+			}
+
+			args := []string{"-p"}
+			if !n.DNSLookup {
+				args = append(args, "-n")
+			}
+			cmd := exec.Command(bin, args...)
+			return cmd.Output()
+		}
 	}
 	return nil
 }
 
-func (n *NTPQ) runq() ([]byte, error) {
-	bin, err := exec.LookPath("ntpq")
-	if err != nil {
-		return nil, err
+func processLine(line string) (string, []string) {
+	// if there is an ntpq state prefix, remove it and make it it's own tag
+	// see https://github.com/influxdata/telegraf/issues/1161
+	var prefix string
+	if strings.ContainsAny(string(line[0]), "*#o+x.-") {
+		prefix = string(line[0])
+		line = strings.TrimLeft(line, "*#o+x.-")
 	}
+	line = reBrackets.ReplaceAllString(line, "")
 
-	var cmd *exec.Cmd
-	if n.DNSLookup {
-		cmd = exec.Command(bin, "-p")
-	} else {
-		cmd = exec.Command(bin, "-p", "-n")
-	}
-
-	return cmd.Output()
-}
-
-func newNTPQ() *NTPQ {
-	// Mapping of the ntpq tag key to the index in the command output
-	tagI := map[string]int{
-		"remote":  -1,
-		"refid":   -1,
-		"stratum": -1,
-		"type":    -1,
-	}
-
-	// Mapping of float metrics to their index in the command output
-	floatI := map[string]int{
-		"delay":  -1,
-		"offset": -1,
-		"jitter": -1,
-	}
-
-	// Mapping of int metrics to their index in the command output
-	intI := map[string]int{
-		"when":  -1,
-		"poll":  -1,
-		"reach": -1,
-	}
-
-	n := &NTPQ{
-		tagI:   tagI,
-		floatI: floatI,
-		intI:   intI,
-	}
-	n.runQ = n.runq
-	return n
+	return prefix, strings.Fields(line)
 }
 
 func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
-		return newNTPQ()
+		return &NTPQ{}
 	})
 }

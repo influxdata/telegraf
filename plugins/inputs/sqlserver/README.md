@@ -100,6 +100,15 @@ config file to use windows authentication.
   servers = ["Server=192.168.1.10;Port=1433;app name=telegraf;log=1;",]
 ```
 
+To set up a configurable timeout, add timeout to the connections string
+in your config file.
+
+```toml
+servers = [
+  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;dial timeout=30",
+]
+```
+
 ## Configuration
 
 ```toml @sample.conf

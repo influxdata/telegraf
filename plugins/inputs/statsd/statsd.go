@@ -150,7 +150,7 @@ type Statsd struct {
 	// Max duration for each metric to stay cached without being updated.
 	MaxTTL config.Duration `toml:"max_ttl"`
 
-	graphiteParser *graphite.GraphiteParser
+	graphiteParser *graphite.Parser
 
 	acc telegraf.Accumulator
 
@@ -253,6 +253,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 				prefix = fieldName + "_"
 			}
 			fields[prefix+"mean"] = stats.Mean()
+			fields[prefix+"median"] = stats.Median()
 			fields[prefix+"stddev"] = stats.Stddev()
 			fields[prefix+"sum"] = stats.Sum()
 			fields[prefix+"upper"] = stats.Upper()
@@ -713,7 +714,8 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 	var err error
 
 	if p == nil || s.graphiteParser.Separator != s.MetricSeparator {
-		p, err = graphite.NewGraphiteParser(s.MetricSeparator, s.Templates, nil)
+		p = &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
+		err = p.Init()
 		s.graphiteParser = p
 	}
 

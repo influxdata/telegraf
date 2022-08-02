@@ -20,6 +20,7 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 		CSVHeaderRowCount: 42,
 		XPathProtobufFile: "xpath/testcases/protos/addressbook.proto",
 		XPathProtobufType: "addressbook.AddressBook",
+		JSONStrict:        true,
 	}
 
 	// Some parsers need certain settings to not error. Furthermore, we
@@ -77,7 +78,7 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected, actual, options...)
 		require.Emptyf(t, diff, "Difference for %q", name)

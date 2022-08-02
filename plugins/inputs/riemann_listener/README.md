@@ -7,7 +7,7 @@ client that use riemann clients using riemann-protobuff format.
 
 ```toml @sample.conf
 # Riemann protobuff listener
-[[inputs.rimann_listener]]
+[[inputs.riemann_listener]]
   ## URL to listen on
   ## Default is "tcp://:5555"
   #  service_address = "tcp://:8094"
