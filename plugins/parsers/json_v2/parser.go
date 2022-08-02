@@ -10,13 +10,47 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/tidwall/gjson"
 )
 
+type Config struct {
+	MeasurementName     string `toml:"measurement_name"`      // OPTIONAL
+	MeasurementNamePath string `toml:"measurement_name_path"` // OPTIONAL
+	TimestampPath       string `toml:"timestamp_path"`        // OPTIONAL
+	TimestampFormat     string `toml:"timestamp_format"`      // OPTIONAL, but REQUIRED when timestamp_path is defined
+	TimestampTimezone   string `toml:"timestamp_timezone"`    // OPTIONAL, but REQUIRES timestamp_path
+
+	Fields      []DataSet `toml:"field"`
+	Tags        []DataSet `toml:"tag"`
+	JSONObjects []Object  `toml:"object"`
+}
+
+type DataSet struct {
+	Path     string `toml:"path"` // REQUIRED
+	Type     string `toml:"type"` // OPTIONAL, can't be set for tags they will always be a string
+	Rename   string `toml:"rename"`
+	Optional bool   `toml:"optional"` // Will suppress errors if there isn't a match with Path
+}
+
+type Object struct {
+	Path               string            `toml:"path"`     // REQUIRED
+	Optional           bool              `toml:"optional"` // Will suppress errors if there isn't a match with Path
+	TimestampKey       string            `toml:"timestamp_key"`
+	TimestampFormat    string            `toml:"timestamp_format"`   // OPTIONAL, but REQUIRED when timestamp_path is defined
+	TimestampTimezone  string            `toml:"timestamp_timezone"` // OPTIONAL, but REQUIRES timestamp_path
+	Renames            map[string]string `toml:"renames"`
+	Fields             map[string]string `toml:"fields"`
+	Tags               []string          `toml:"tags"`
+	IncludedKeys       []string          `toml:"included_keys"`
+	ExcludedKeys       []string          `toml:"excluded_keys"`
+	DisablePrependKeys bool              `toml:"disable_prepend_keys"`
+	FieldPaths         []DataSet         `toml:"field"`
+	TagPaths           []DataSet         `toml:"tag"`
+}
+
 // Parser adheres to the parser interface, contains the parser configuration, and data required to parse JSON
 type Parser struct {
-	Configs           []json_v2.Config  `toml:"json_v2"`
+	Configs           []Config          `toml:"json_v2"`
 	DefaultMetricName string            `toml:"-"`
 	DefaultTags       map[string]string `toml:"-"`
 	Log               telegraf.Logger   `toml:"-"`
@@ -32,13 +66,13 @@ type Parser struct {
 	// iterateObjects dictates if ExpandArray function will handle objects
 	iterateObjects bool
 	// objectConfig contains the config for an object, some info is needed while iterating over the gjson results
-	objectConfig json_v2.Object
+	objectConfig Object
 }
 
 type PathResult struct {
 	result gjson.Result
 	tag    bool
-	json_v2.DataSet
+	DataSet
 }
 
 type MetricNode struct {
@@ -145,7 +179,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 // processMetric will iterate over all 'field' or 'tag' configs and create metrics for each
 // A field/tag can either be a single value or an array of values, each resulting in its own metric
 // For multiple configs, a set of metrics is created from the cartesian product of each separate config
-func (p *Parser) processMetric(input []byte, data []json_v2.DataSet, tag bool, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp time.Time) ([]telegraf.Metric, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
@@ -387,7 +421,7 @@ func (p *Parser) existsInpathResults(index int) *PathResult {
 }
 
 // processObjects will iterate over all 'object' configs and create metrics for each
-func (p *Parser) processObjects(input []byte, objects []json_v2.Object, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.Time) ([]telegraf.Metric, error) {
 	p.iterateObjects = true
 	var t []telegraf.Metric
 	for _, c := range objects {

@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 
@@ -113,14 +112,14 @@ func TestParseInvalidXML(t *testing.T) {
 	var tests = []struct {
 		name          string
 		input         string
-		configs       []xpath.Config
+		configs       []Config
 		defaultTags   map[string]string
 		expectedError string
 	}{
 		{
 			name:  "invalid XML (missing close tag)",
 			input: invalidXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					MetricQuery: "test",
 					Timestamp:   "/Device_1/Timestamp_unix",
@@ -152,14 +151,14 @@ func TestInvalidTypeQueriesFail(t *testing.T) {
 	var tests = []struct {
 		name          string
 		input         string
-		configs       []xpath.Config
+		configs       []Config
 		defaultTags   map[string]string
 		expectedError string
 	}{
 		{
 			name:  "invalid field (int) type",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					FieldsInt: map[string]string{
@@ -193,14 +192,14 @@ func TestInvalidTypeQueries(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
-		configs     []xpath.Config
+		configs     []Config
 		defaultTags map[string]string
 		expected    telegraf.Metric
 	}{
 		{
 			name:  "invalid field type (number)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
@@ -221,7 +220,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 		{
 			name:  "invalid field type (boolean)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
@@ -263,14 +262,14 @@ func TestParseTimestamps(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
-		configs     []xpath.Config
+		configs     []Config
 		defaultTags map[string]string
 		expected    telegraf.Metric
 	}{
 		{
 			name:  "parse timestamp (no fmt)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 				},
@@ -286,7 +285,7 @@ func TestParseTimestamps(t *testing.T) {
 		{
 			name:  "parse timestamp (unix)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp:    "/Device_1/Timestamp_unix",
 					TimestampFmt: "unix",
@@ -303,7 +302,7 @@ func TestParseTimestamps(t *testing.T) {
 		{
 			name:  "parse timestamp (unix_ms)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp:    "/Device_1/Timestamp_unix_ms",
 					TimestampFmt: "unix_ms",
@@ -320,7 +319,7 @@ func TestParseTimestamps(t *testing.T) {
 		{
 			name:  "parse timestamp (unix_us)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp:    "/Device_1/Timestamp_unix_us",
 					TimestampFmt: "unix_us",
@@ -337,7 +336,7 @@ func TestParseTimestamps(t *testing.T) {
 		{
 			name:  "parse timestamp (unix_us)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp:    "/Device_1/Timestamp_unix_ns",
 					TimestampFmt: "unix_ns",
@@ -354,7 +353,7 @@ func TestParseTimestamps(t *testing.T) {
 		{
 			name:  "parse timestamp (RFC3339)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp:    "/Device_1/Timestamp_iso",
 					TimestampFmt: "2006-01-02T15:04:05Z",
@@ -392,14 +391,14 @@ func TestParseSingleValues(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
-		configs     []xpath.Config
+		configs     []Config
 		defaultTags map[string]string
 		expected    telegraf.Metric
 	}{
 		{
 			name:  "parse scalar values as string fields",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
@@ -426,7 +425,7 @@ func TestParseSingleValues(t *testing.T) {
 		{
 			name:  "parse scalar values as typed fields (w/o int)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
@@ -453,7 +452,7 @@ func TestParseSingleValues(t *testing.T) {
 		{
 			name:  "parse values as typed fields (w/ int)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
@@ -482,7 +481,7 @@ func TestParseSingleValues(t *testing.T) {
 		{
 			name:  "parse substring values",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
@@ -505,7 +504,7 @@ func TestParseSingleValues(t *testing.T) {
 		{
 			name:  "parse substring values (typed)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
@@ -528,7 +527,7 @@ func TestParseSingleValues(t *testing.T) {
 		{
 			name:  "parse substring values (typed int)",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					FieldsInt: map[string]string{
@@ -551,7 +550,7 @@ func TestParseSingleValues(t *testing.T) {
 		{
 			name:  "parse tags",
 			input: singleMetricValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix",
 					Tags: map[string]string{
@@ -595,14 +594,14 @@ func TestParseSingleAttributes(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
-		configs     []xpath.Config
+		configs     []Config
 		defaultTags map[string]string
 		expected    telegraf.Metric
 	}{
 		{
 			name:  "parse attr timestamp (unix)",
 			input: singleMetricAttributesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix/@value",
 				},
@@ -618,7 +617,7 @@ func TestParseSingleAttributes(t *testing.T) {
 		{
 			name:  "parse attr timestamp (RFC3339)",
 			input: singleMetricAttributesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp:    "/Device_1/Timestamp_iso/@value",
 					TimestampFmt: "2006-01-02T15:04:05Z",
@@ -635,7 +634,7 @@ func TestParseSingleAttributes(t *testing.T) {
 		{
 			name:  "parse attr as string fields",
 			input: singleMetricAttributesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
@@ -662,7 +661,7 @@ func TestParseSingleAttributes(t *testing.T) {
 		{
 			name:  "parse attr as typed fields (w/o int)",
 			input: singleMetricAttributesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
@@ -689,7 +688,7 @@ func TestParseSingleAttributes(t *testing.T) {
 		{
 			name:  "parse attr as typed fields (w/ int)",
 			input: singleMetricAttributesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
@@ -718,7 +717,7 @@ func TestParseSingleAttributes(t *testing.T) {
 		{
 			name:  "parse attr substring",
 			input: singleMetricAttributesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
@@ -739,7 +738,7 @@ func TestParseSingleAttributes(t *testing.T) {
 		{
 			name:  "parse attr tags",
 			input: singleMetricAttributesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Tags: map[string]string{
@@ -762,7 +761,7 @@ func TestParseSingleAttributes(t *testing.T) {
 		{
 			name:  "parse attr bool",
 			input: singleMetricAttributesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
@@ -804,14 +803,14 @@ func TestParseMultiValues(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
-		configs     []xpath.Config
+		configs     []Config
 		defaultTags map[string]string
 		expected    telegraf.Metric
 	}{
 		{
 			name:  "select values (float)",
 			input: singleMetricMultiValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Timestamp/@value",
 					Fields: map[string]string{
@@ -842,7 +841,7 @@ func TestParseMultiValues(t *testing.T) {
 		{
 			name:  "select values (int)",
 			input: singleMetricMultiValuesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Timestamp: "/Timestamp/@value",
 					FieldsInt: map[string]string{
@@ -894,14 +893,14 @@ func TestParseMultiNodes(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
-		configs     []xpath.Config
+		configs     []Config
 		defaultTags map[string]string
 		expected    []telegraf.Metric
 	}{
 		{
 			name:  "select all devices",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "/Device",
 					Timestamp: "/Timestamp/@value",
@@ -1011,14 +1010,14 @@ func TestParseMetricQuery(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
-		configs     []xpath.Config
+		configs     []Config
 		defaultTags map[string]string
 		expected    telegraf.Metric
 	}{
 		{
 			name:  "parse metric name query",
 			input: metricNameQueryXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					MetricQuery: "name(/Device_1/Metric/@*[1])",
 					Timestamp:   "/Device_1/Timestamp_unix",
@@ -1040,7 +1039,7 @@ func TestParseMetricQuery(t *testing.T) {
 		{
 			name:  "parse metric name constant",
 			input: metricNameQueryXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					MetricQuery: "'the_metric'",
 					Timestamp:   "/Device_1/Timestamp_unix",
@@ -1083,13 +1082,13 @@ func TestParseErrors(t *testing.T) {
 	var tests = []struct {
 		name     string
 		input    string
-		configs  []xpath.Config
+		configs  []Config
 		expected string
 	}{
 		{
 			name:  "string metric name query",
 			input: metricNameQueryXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					MetricQuery: "arbitrary",
 					Timestamp:   "/Device_1/Timestamp_unix",
@@ -1123,12 +1122,12 @@ func TestEmptySelection(t *testing.T) {
 	var tests = []struct {
 		name    string
 		input   string
-		configs []xpath.Config
+		configs []Config
 	}{
 		{
 			name:  "empty path",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "/Device/NonExisting",
 					Fields:    map[string]string{"value": "number(Value)"},
@@ -1140,7 +1139,7 @@ func TestEmptySelection(t *testing.T) {
 		{
 			name:  "empty pattern",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "//NonExisting",
 					Fields:    map[string]string{"value": "number(Value)"},
@@ -1152,7 +1151,7 @@ func TestEmptySelection(t *testing.T) {
 		{
 			name:  "empty axis",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "/Device/child::NonExisting",
 					Fields:    map[string]string{"value": "number(Value)"},
@@ -1164,7 +1163,7 @@ func TestEmptySelection(t *testing.T) {
 		{
 			name:  "empty predicate",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "/Device[@NonExisting=true]",
 					Fields:    map[string]string{"value": "number(Value)"},
@@ -1196,12 +1195,12 @@ func TestEmptySelectionAllowed(t *testing.T) {
 	var tests = []struct {
 		name    string
 		input   string
-		configs []xpath.Config
+		configs []Config
 	}{
 		{
 			name:  "empty path",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "/Device/NonExisting",
 					Fields:    map[string]string{"value": "number(Value)"},
@@ -1213,7 +1212,7 @@ func TestEmptySelectionAllowed(t *testing.T) {
 		{
 			name:  "empty pattern",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "//NonExisting",
 					Fields:    map[string]string{"value": "number(Value)"},
@@ -1225,7 +1224,7 @@ func TestEmptySelectionAllowed(t *testing.T) {
 		{
 			name:  "empty axis",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "/Device/child::NonExisting",
 					Fields:    map[string]string{"value": "number(Value)"},
@@ -1237,7 +1236,7 @@ func TestEmptySelectionAllowed(t *testing.T) {
 		{
 			name:  "empty predicate",
 			input: multipleNodesXML,
-			configs: []xpath.Config{
+			configs: []Config{
 				{
 					Selection: "/Device[@NonExisting=true]",
 					Fields:    map[string]string{"value": "number(Value)"},
@@ -1362,7 +1361,7 @@ func TestTestCases(t *testing.T) {
 				Format:              fileformat,
 				ProtobufMessageDef:  pbmsgdef,
 				ProtobufMessageType: pbmsgtype,
-				Configs:             []xpath.Config{*cfg},
+				Configs:             []Config{*cfg},
 				Log:                 testutil.Logger{Name: "parsers.xml"},
 			}
 			require.NoError(t, parser.Init())
@@ -1388,7 +1387,7 @@ func TestProtobufImporting(t *testing.T) {
 		ProtobufMessageDef:  "person.proto",
 		ProtobufMessageType: "importtest.Person",
 		ProtobufImportPaths: []string{"testcases/protos"},
-		Configs:             []xpath.Config{},
+		Configs:             []Config{},
 		Log:                 testutil.Logger{Name: "parsers.protobuf"},
 	}
 	require.NoError(t, parser.Init())
@@ -1469,7 +1468,7 @@ func readMetricFile(filename string) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func loadTestConfiguration(filename string) (*xpath.Config, []string, error) {
+func loadTestConfiguration(filename string) (*Config, []string, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, nil, err
@@ -1482,7 +1481,7 @@ func loadTestConfiguration(filename string) (*xpath.Config, []string, error) {
 			header = append(header, line)
 		}
 	}
-	cfg := xpath.Config{}
+	cfg := Config{}
 	err = toml.Unmarshal(buf, &cfg)
 	return &cfg, header, err
 }
