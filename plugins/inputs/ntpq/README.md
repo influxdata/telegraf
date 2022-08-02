@@ -30,8 +30,21 @@ server (RMS of difference of multiple time samples, milliseconds);
 # Get standard NTP query metrics, requires ntpq executable.
 [[inputs.ntpq]]
   ## If false, set the -n ntpq flag. Can reduce metric gather time.
-  dns_lookup = true
+  ## DEPRECATED since 1.24.0: add '-n' to 'options' instead to skip DNS lookup
+  # dns_lookup = true
+
+  ## Options to pass to the ntpq command.
+  # options = "-p"
 ```
+
+You can pass arbitrary options accepted by the `ntpq` command using the
+`options` setting. In case you want to skip DNS lookups use
+
+```toml
+  options = "-p -n"
+```
+
+for example.
 
 ## Metrics
 
