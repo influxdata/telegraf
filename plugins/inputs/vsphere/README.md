@@ -566,6 +566,7 @@ For a detailed list of commonly available metrics, please refer to
   * esxhost (name of ESXi host)
   * guest (guest operating system id)
   * resource pool (name of resource pool)
+  * memorySizeMB (configured RAM in MB)
 * cpu stats for Host and VM
   * cpu (cpu core - not all CPU fields will have this tag)
 * datastore stats for Host and VM
