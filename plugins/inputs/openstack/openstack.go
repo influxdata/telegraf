@@ -75,7 +75,6 @@ type OpenStack struct {
 	TagValue         string          `toml:"tag_value"`
 	HumanReadableTS  bool            `toml:"human_readable_timestamps"`
 	MeasureRequest   bool            `toml:"measure_openstack_requests"`
-	AllowReauth      bool            `toml:"allow_reauth"`
 	Log              telegraf.Logger `toml:"-"`
 	httpconfig.HTTPClientConfig
 
@@ -142,7 +141,7 @@ func (o *OpenStack) Init() error {
 		TenantName:       o.Project,
 		Username:         o.Username,
 		Password:         o.Password,
-		AllowReauth:      o.AllowReauth,
+		AllowReauth:      true,
 	}
 	provider, err := openstack.NewClient(authOption.IdentityEndpoint)
 	if err != nil {
