@@ -176,7 +176,7 @@ func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
 			tags["state_prefix"] = prefix
 		}
 		if server != "" {
-			tags["server"] = server
+			tags["source"] = server
 		}
 
 		for i, raw := range elements {

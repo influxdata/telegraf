@@ -70,7 +70,7 @@ All measurements have the following tags:
 - stratum
 
 In case you are specifying `servers`, the measurement has an
-additional `server` tag.
+additional `source` tag.
 
 ## Example Output
 
