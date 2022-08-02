@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+
+	"github.com/influxdata/telegraf"
 )
 
 type HTTPMetric struct {
@@ -27,6 +28,8 @@ type openTSDBHttp struct {
 	BatchSize int
 	Path      string
 	Debug     bool
+
+	log telegraf.Logger
 
 	metricCounter int
 	body          requestBody
@@ -175,8 +178,7 @@ func (o *openTSDBHttp) flush() error {
 		if resp.StatusCode < 400 || resp.StatusCode > 499 {
 			return fmt.Errorf("error sending metrics (status %d)", resp.StatusCode)
 		}
-		log.Printf("E! Received %d status code. Dropping metrics to avoid overflowing buffer.",
-			resp.StatusCode)
+		o.log.Errorf("Received %d status code. Dropping metrics to avoid overflowing buffer.", resp.StatusCode)
 	}
 
 	return nil

@@ -114,6 +114,7 @@ func (o *OpenTSDB) WriteHTTP(metrics []telegraf.Metric, u *url.URL) error {
 		BatchSize: o.HTTPBatchSize,
 		Path:      o.HTTPPath,
 		Debug:     o.Debug,
+		log:       o.Log,
 	}
 
 	for _, m := range metrics {
