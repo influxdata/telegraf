@@ -1,20 +1,23 @@
 # Supervisor Input Plugin
 
-This plugin gather information about processes that running under supervisor using XML-RPC API
+This plugin gather information about processes that
+running under supervisor using XML-RPC API
 
 Plugin minimum tested version: 3.3.2
 
 ## Supervisor configuration
 
-This plugin needs TCP HTTP server to be enabled for collecting information. Here is example of
-`inet_http_server` section in supervisor config that will work with default plugin configuration.
+This plugin needs TCP HTTP server to be enabled for collecting information.
+Here is example of `inet_http_server` section in supervisor config that will
+work with default plugin configuration. It is also recommended to setup
+basic authentication to http server:
 
 ```ini
 [inet_http_server]
-port=127.0.0.1:9001
+port = 127.0.0.1:9001
+username = user
+password = pass
 ```
-
-It is also recommended to setup basic authentication to http server as described [here](http://supervisord.org/configuration.html#inet-http-server-section-values).
 
 ## Configuration
 
@@ -34,13 +37,16 @@ It is also recommended to setup basic authentication to http server as described
 
 ### Optional metrics
 
-You can control gathering of some supervisor's metrics (processes PIDs and exit codes) by setting metrics_include
-and metrics_exclude parameters in configuration file.
+You can control gathering of some supervisor's metrics (processes PIDs
+and exit codes) by setting metrics_include and metrics_exclude parameters
+in configuration file.
 
 ### Server tag
 
-Server tag is used to identify metrics source server. You have an option to use host:port pair of supervisor's http
-endpoint by default or you can use supervisor's identification string, which is set in supervisor's configuration file.
+Server tag is used to identify metrics source server. You have an option
+to use host:port pair of supervisor's http endpoint by default or you
+can use supervisor's identification string, which is set in supervisor's
+configuration file.
 
 ## Metrics
 
