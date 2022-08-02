@@ -1,8 +1,6 @@
 package parsers
 
 import (
-	"fmt"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
@@ -145,23 +143,4 @@ type Config struct {
 
 	// LogFmt configuration
 	LogFmtTagKeys []string `toml:"logfmt_tag_keys"`
-}
-
-// NewParser returns a Parser interface based on the given config.
-// DEPRECATED: Please instantiate the parser directly instead of using this function.
-func NewParser(config *Config) (telegraf.Parser, error) {
-	creator, found := Parsers[config.DataFormat]
-	if !found {
-		return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
-	}
-
-	// Try to create new-style parsers the old way...
-	parser := creator(config.MetricName)
-	p, ok := parser.(ParserCompatibility)
-	if !ok {
-		return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
-	}
-	err := p.InitFromConfig(config)
-
-	return parser, err
 }
