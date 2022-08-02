@@ -209,7 +209,7 @@ func TestConnect(t *testing.T) {
 	fakeClient := kusto.NewMockClient()
 	plugin := AzureDataExplorer{
 		Log:       testutil.Logger{},
-		Endpoint:  "someendpoint",
+		Endpoint:  "https://sometestcluster.dummyregion.env.kusto.windows.net",
 		Database:  "databasename",
 		client:    fakeClient,
 		ingestors: make(map[string]ingest.Ingestor),
