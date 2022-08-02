@@ -850,7 +850,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		if r.Summary.Config.MemorySizeMB != 0 {
 			memorySizeMB = r.Summary.Config.MemorySizeMB
 		}
-		
+
 		cvs := make(map[string]string)
 		if e.customAttrEnabled {
 			for _, cv := range r.Summary.CustomValue {
