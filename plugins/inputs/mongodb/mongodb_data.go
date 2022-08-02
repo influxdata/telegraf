@@ -149,6 +149,8 @@ var defaultReplStats = map[string]string{
 	"member_status":                            "NodeType",
 	"state":                                    "NodeState",
 	"repl_state":                               "NodeStateInt",
+	"repl_member_health":                       "NodeHealthInt",
+	"repl_health_avg":                          "ReplHealthAvg",
 	"repl_lag":                                 "ReplLag",
 	"repl_network_bytes":                       "ReplNetworkBytes",
 	"repl_network_getmores_num":                "ReplNetworkGetmoresNum",
@@ -214,6 +216,14 @@ var wiredTigerExtStats = map[string]string{
 	"wtcache_internal_pages_evicted":       "InternalPagesEvicted",
 	"wtcache_modified_pages_evicted":       "ModifiedPagesEvicted",
 	"wtcache_unmodified_pages_evicted":     "UnmodifiedPagesEvicted",
+}
+
+var wiredTigerConnectionStats = map[string]string{
+	"wt_connection_files_currently_open": "FilesCurrentlyOpen",
+}
+
+var wiredTigerDataHandleStats = map[string]string{
+	"wt_data_handles_currently_active": "DataHandlesCurrentlyActive",
 }
 
 var defaultTCMallocStats = map[string]string{
@@ -394,6 +404,8 @@ func (d *MongodbData) AddDefaultStats() {
 			d.add(key, floatVal)
 		}
 		d.addStat(statLine, wiredTigerExtStats)
+		d.addStat(statLine, wiredTigerConnectionStats)
+		d.addStat(statLine, wiredTigerDataHandleStats)
 		d.add("page_faults", d.StatLine.FaultsCnt)
 	}
 }

@@ -12,7 +12,8 @@ A few example usecases include:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Dates measurements, tags, and fields that pass through this filter.
 [[processors.date]]
   ## New tag to create
   tag_key = "month"

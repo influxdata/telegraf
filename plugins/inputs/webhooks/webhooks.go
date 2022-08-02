@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package webhooks
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/artifactory"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
@@ -17,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/particle"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Webhook interface {
 	Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger)
@@ -29,12 +36,13 @@ func init() {
 type Webhooks struct {
 	ServiceAddress string `toml:"service_address"`
 
-	Github     *github.GithubWebhook         `toml:"github"`
-	Filestack  *filestack.FilestackWebhook   `toml:"filestack"`
-	Mandrill   *mandrill.MandrillWebhook     `toml:"mandrill"`
-	Rollbar    *rollbar.RollbarWebhook       `toml:"rollbar"`
-	Papertrail *papertrail.PapertrailWebhook `toml:"papertrail"`
-	Particle   *particle.ParticleWebhook     `toml:"particle"`
+	Github      *github.GithubWebhook           `toml:"github"`
+	Filestack   *filestack.FilestackWebhook     `toml:"filestack"`
+	Mandrill    *mandrill.MandrillWebhook       `toml:"mandrill"`
+	Rollbar     *rollbar.RollbarWebhook         `toml:"rollbar"`
+	Papertrail  *papertrail.PapertrailWebhook   `toml:"papertrail"`
+	Particle    *particle.ParticleWebhook       `toml:"particle"`
+	Artifactory *artifactory.ArtifactoryWebhook `toml:"artifactory"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -45,58 +53,8 @@ func NewWebhooks() *Webhooks {
 	return &Webhooks{}
 }
 
-func (wb *Webhooks) SampleConfig() string {
-	return `
-  ## Address and port to host Webhook listener on
-  service_address = ":1619"
-
-  [inputs.webhooks.filestack]
-    path = "/filestack"
-
-	## HTTP basic auth
-	#username = ""
-	#password = ""
-
-  [inputs.webhooks.github]
-    path = "/github"
-    # secret = ""
-
-	## HTTP basic auth
-	#username = ""
-	#password = ""
-
-  [inputs.webhooks.mandrill]
-    path = "/mandrill"
-
-	## HTTP basic auth
-	#username = ""
-	#password = ""
-
-  [inputs.webhooks.rollbar]
-    path = "/rollbar"
-
-	## HTTP basic auth
-	#username = ""
-	#password = ""
-
-  [inputs.webhooks.papertrail]
-    path = "/papertrail"
-
-	## HTTP basic auth
-	#username = ""
-	#password = ""
-
-  [inputs.webhooks.particle]
-    path = "/particle"
-
-	## HTTP basic auth
-	#username = ""
-	#password = ""
-`
-}
-
-func (wb *Webhooks) Description() string {
-	return "A Webhooks Event collector"
+func (*Webhooks) SampleConfig() string {
+	return sampleConfig
 }
 
 func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {

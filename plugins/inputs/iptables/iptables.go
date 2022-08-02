@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
 package iptables
 
 import (
+	_ "embed"
 	"errors"
 	"os/exec"
 	"regexp"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Iptables is a telegraf plugin to gather packets and bytes throughput from Linux's iptables packet filter.
 type Iptables struct {
@@ -24,31 +30,8 @@ type Iptables struct {
 	lister  chainLister
 }
 
-// Description returns a short description of the plugin.
-func (ipt *Iptables) Description() string {
-	return "Gather packets and bytes throughput from iptables"
-}
-
-// SampleConfig returns sample configuration options.
-func (ipt *Iptables) SampleConfig() string {
-	return `
-  ## iptables require root access on most systems.
-  ## Setting 'use_sudo' to true will make use of sudo to run iptables.
-  ## Users must configure sudo to allow telegraf user to run iptables with no password.
-  ## iptables can be restricted to only list command "iptables -nvL".
-  use_sudo = false
-  ## Setting 'use_lock' to true runs iptables with the "-w" option.
-  ## Adjust your sudo settings appropriately if using this option ("iptables -w 5 -nvl")
-  use_lock = false
-  ## Define an alternate executable, such as "ip6tables". Default is "iptables".
-  # binary = "ip6tables"
-  ## defines the table to monitor:
-  table = "filter"
-  ## defines the chains to monitor.
-  ## NOTE: iptables rules without a comment will not be monitored.
-  ## Read the plugin documentation for more information.
-  chains = [ "INPUT" ]
-`
+func (*Iptables) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather gathers iptables packets and bytes throughput from the configured tables and chains.
@@ -150,7 +133,7 @@ type chainLister func(table, chain string) (string, error)
 
 func init() {
 	inputs.Add("iptables", func() telegraf.Input {
-		ipt := new(Iptables)
+		ipt := &Iptables{}
 		ipt.lister = ipt.chainList
 		return ipt
 	})

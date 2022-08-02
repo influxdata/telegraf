@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package http
 
 import (
@@ -5,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,103 +14,26 @@ import (
 	"time"
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/idtoken"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	maxErrMsgLen = 1024
 	defaultURL   = "http://127.0.0.1:8080/telegraf"
 )
-
-var sampleConfig = `
-  ## URL is the address to send metrics to
-  url = "http://127.0.0.1:8080/telegraf"
-
-  ## Timeout for HTTP message
-  # timeout = "5s"
-
-  ## HTTP method, one of: "POST" or "PUT"
-  # method = "POST"
-
-  ## HTTP Basic Auth credentials
-  # username = "username"
-  # password = "pa$$word"
-
-  ## OAuth2 Client Credentials Grant
-  # client_id = "clientid"
-  # client_secret = "secret"
-  # token_url = "https://indentityprovider/oauth2/v1/token"
-  # scopes = ["urn:opc:idm:__myscopes__"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Optional Cookie authentication
-  # cookie_auth_url = "https://localhost/authMe"
-  # cookie_auth_method = "POST"
-  # cookie_auth_username = "username"
-  # cookie_auth_password = "pa$$word"
-  # cookie_auth_headers = '{"Content-Type": "application/json", "X-MY-HEADER":"hello"}'
-  # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
-  ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
-  # cookie_auth_renewal = "5m"
-
-  ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "influx"
-
-  ## Use batch serialization format (default) instead of line based format.
-  ## Batch format is more efficient and should be used unless line based
-  ## format is really needed.
-  # use_batch_format = true
-
-  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
-  ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
-
-  ## Additional HTTP headers
-  # [outputs.http.headers]
-  #   # Should be set manually to "application/json" for json data_format
-  #   Content-Type = "text/plain; charset=utf-8"
-
-  ## Idle (keep-alive) connection timeout.
-  ## Maximum amount of time before idle connection is closed.
-  ## Zero means no limit.
-  # idle_conn_timeout = 0
-
-  ## Amazon Region
-  #region = "us-east-1"
-
-  ## Amazon Credentials
-  ## Credentials are loaded in the following order
-  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
-  ## 2) Assumed credentials via STS if role_arn is specified
-  ## 3) explicit credentials from 'access_key' and 'secret_key'
-  ## 4) shared profile from 'profile'
-  ## 5) environment variables
-  ## 6) shared credentials file
-  ## 7) EC2 Instance Profile
-  #access_key = ""
-  #secret_key = ""
-  #token = ""
-  #role_arn = ""
-  #web_identity_token_file = ""
-  #role_session_name = ""
-  #profile = ""
-  #shared_credential_file = ""
-`
 
 const (
 	defaultContentType    = "text/plain; charset=utf-8"
@@ -134,6 +59,14 @@ type HTTP struct {
 
 	awsCfg *awsV2.Config
 	internalaws.CredentialConfig
+
+	// Google API Auth
+	CredentialsFile string `toml:"google_application_credentials"`
+	oauth2Token     *oauth2.Token
+}
+
+func (*HTTP) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *HTTP) SetSerializer(serializer serializers.Serializer) {
@@ -169,14 +102,6 @@ func (h *HTTP) Connect() error {
 
 func (h *HTTP) Close() error {
 	return nil
-}
-
-func (h *HTTP) Description() string {
-	return "A plugin that can transmit metrics over HTTP"
-}
-
-func (h *HTTP) SampleConfig() string {
-	return sampleConfig
 }
 
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
@@ -260,6 +185,15 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
+	// google api auth
+	if h.CredentialsFile != "" {
+		token, err := h.getAccessToken(context.Background(), h.URL)
+		if err != nil {
+			return err
+		}
+		token.SetAuthHeader(req)
+	}
+
 	req.Header.Set("User-Agent", internal.ProductToken())
 	req.Header.Set("Content-Type", defaultContentType)
 	if h.ContentEncoding == "gzip" {
@@ -311,4 +245,24 @@ func init() {
 			UseBatchFormat: defaultUseBatchFormat,
 		}
 	})
+}
+
+func (h *HTTP) getAccessToken(ctx context.Context, audience string) (*oauth2.Token, error) {
+	if h.oauth2Token.Valid() {
+		return h.oauth2Token, nil
+	}
+
+	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(h.CredentialsFile))
+	if err != nil {
+		return nil, fmt.Errorf("error creating oauth2 token source: %s", err)
+	}
+
+	token, err := ts.Token()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching oauth2 token: %s", err)
+	}
+
+	h.oauth2Token = token
+
+	return token, nil
 }

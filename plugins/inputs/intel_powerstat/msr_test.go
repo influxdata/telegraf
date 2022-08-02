@@ -93,6 +93,60 @@ func TestReadValueFromFileAtOffset(t *testing.T) {
 	require.Equal(t, zero, <-testChannel)
 }
 
+func TestCreateUncoreFreqPath(t *testing.T) {
+	path, err := createUncoreFreqPath("0", "initial", "min", "0")
+	expectedPath := "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/initial_min_freq_khz"
+	require.Equal(t, nil, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("0", "initial", "max", "0")
+	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/initial_max_freq_khz"
+	require.Equal(t, nil, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("0", "current", "min", "0")
+	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
+	require.Equal(t, nil, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("0", "current", "max", "0")
+	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
+	require.Equal(t, nil, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("9", "current", "max", "0")
+	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_09_die_00/max_freq_khz"
+	require.Equal(t, nil, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("99", "current", "max", "0")
+	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_99_die_00/max_freq_khz"
+	require.Equal(t, nil, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("0", "current", "max", "9")
+	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_09/max_freq_khz"
+	require.Equal(t, nil, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("0", "current", "max", "99")
+	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_99/max_freq_khz"
+	require.Equal(t, nil, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("0", "foo", "max", "0")
+	expectedPath = ""
+	expectedError := errors.New("unknown frequency type foo, only 'initial' and 'current' are supported")
+	require.Equal(t, expectedError, err)
+	require.Equal(t, expectedPath, path)
+
+	path, err = createUncoreFreqPath("0", "current", "bar", "0")
+	expectedPath = ""
+	expectedError = errors.New("unknown frequency type bar, only 'min' and 'max' are supported")
+	require.Equal(t, expectedError, err)
+	require.Equal(t, expectedPath, path)
+}
+
 func prepareTestData(fsMock *mockFileService, cores []string, msr *msrServiceImpl, t *testing.T) {
 	// Prepare MSR offsets and CPUCoresData for test.
 	fsMock.On("getStringsMatchingPatternOnPath", mock.Anything).
@@ -109,8 +163,8 @@ func verifyCPUCoresData(cores []string, t *testing.T, msr *msrServiceImpl, expec
 		require.Equal(t, expectedValue, msr.cpuCoresData[core].mperf)
 		require.Equal(t, expectedValue, msr.cpuCoresData[core].aperf)
 		require.Equal(t, expectedValue, msr.cpuCoresData[core].timeStampCounter)
-		require.Equal(t, (expectedValue>>16)&0xFF, msr.cpuCoresData[core].throttleTemp)
-		require.Equal(t, (expectedValue>>16)&0x7F, msr.cpuCoresData[core].temp)
+		require.Equal(t, int64((expectedValue>>16)&0xFF), msr.cpuCoresData[core].throttleTemp)
+		require.Equal(t, int64((expectedValue>>16)&0x7F), msr.cpuCoresData[core].temp)
 
 		if verifyDelta {
 			require.Equal(t, delta, msr.cpuCoresData[core].c3Delta)

@@ -1,18 +1,27 @@
 # Iptables Input Plugin
 
-The iptables plugin gathers packets and bytes counters for rules within a set of table and chain from the Linux's iptables firewall.
+The iptables plugin gathers packets and bytes counters for rules within a set of
+table and chain from the Linux's iptables firewall.
 
-Rules are identified through associated comment. **Rules without comment are ignored**.
-Indeed we need a unique ID for the rule and the rule number is not a constant: it may vary when rules are inserted/deleted at start-up or by automatic tools (interactive firewalls, fail2ban, ...).
-Also when the rule set is becoming big (hundreds of lines) most people are interested in monitoring only a small part of the rule set.
+Rules are identified through associated comment. **Rules without comment are
+ignored**.  Indeed we need a unique ID for the rule and the rule number is not a
+constant: it may vary when rules are inserted/deleted at start-up or by
+automatic tools (interactive firewalls, fail2ban, ...).  Also when the rule set
+is becoming big (hundreds of lines) most people are interested in monitoring
+only a small part of the rule set.
 
-Before using this plugin **you must ensure that the rules you want to monitor are named with a unique comment**. Comments are added using the `-m comment --comment "my comment"` iptables options.
+Before using this plugin **you must ensure that the rules you want to monitor
+are named with a unique comment**. Comments are added using the `-m comment
+--comment "my comment"` iptables options.
 
-The iptables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities. You have several options to grant telegraf to run iptables:
+The iptables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities. You
+have several options to grant telegraf to run iptables:
 
 * Run telegraf as root. This is strongly discouraged.
-* Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW. This is the simplest and recommended option.
-* Configure sudo to grant telegraf to run iptables. This is the most restrictive option, but require sudo setup.
+* Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW. This is
+  the simplest and recommended option.
+* Configure sudo to grant telegraf to run iptables. This is the most restrictive
+  option, but require sudo setup.
 
 ## Using systemd capabilities
 
@@ -47,20 +56,32 @@ Defaults!IPTABLESSHOW !logfile, !syslog, !pam_session
 
 ## Using IPtables lock feature
 
-Defining multiple instances of this plugin in telegraf.conf can lead to concurrent IPtables access resulting in "ERROR in input [inputs.iptables]: exit status 4" messages in telegraf.log and missing metrics. Setting 'use_lock = true' in the plugin configuration will run IPtables with the '-w' switch, allowing a lock usage to prevent this error.
+Defining multiple instances of this plugin in telegraf.conf can lead to
+concurrent IPtables access resulting in "ERROR in input [inputs.iptables]: exit
+status 4" messages in telegraf.log and missing metrics. Setting 'use_lock =
+true' in the plugin configuration will run IPtables with the '-w' switch,
+allowing a lock usage to prevent this error.
 
 ## Configuration
 
-```toml
-  # use sudo to run iptables
+```toml @sample.conf
+# Gather packets and bytes throughput from iptables
+[[inputs.iptables]]
+  ## iptables require root access on most systems.
+  ## Setting 'use_sudo' to true will make use of sudo to run iptables.
+  ## Users must configure sudo to allow telegraf user to run iptables with no password.
+  ## iptables can be restricted to only list command "iptables -nvL".
   use_sudo = false
-  # run iptables with the lock option
+  ## Setting 'use_lock' to true runs iptables with the "-w" option.
+  ## Adjust your sudo settings appropriately if using this option ("iptables -w 5 -nvl")
   use_lock = false
-  # Define an alternate executable, such as "ip6tables". Default is "iptables".
+  ## Define an alternate executable, such as "ip6tables". Default is "iptables".
   # binary = "ip6tables"
-  # defines the table to monitor:
+  ## defines the table to monitor:
   table = "filter"
-  # defines the chains to monitor:
+  ## defines the chains to monitor.
+  ## NOTE: iptables rules without a comment will not be monitored.
+  ## Read the plugin documentation for more information.
   chains = [ "INPUT" ]
 ```
 

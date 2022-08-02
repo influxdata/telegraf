@@ -11,7 +11,8 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Read Nginx virtual host traffic status module information (nginx-module-sts)
 [[inputs.nginx_sts]]
   ## An array of ngx_http_status_module or status URI to gather stats.
   urls = ["http://localhost/status"]

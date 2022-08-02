@@ -111,6 +111,7 @@ func TestDiskIO(t *testing.T) {
 				ps:      &mps,
 				Devices: tt.devices,
 			}
+			require.NoError(t, diskio.Init())
 			err := diskio.Gather(&acc)
 			require.Equal(t, tt.err, err)
 

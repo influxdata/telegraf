@@ -4,7 +4,8 @@ The `warp10` output plugin writes metrics to [Warp 10][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Write metrics to Warp 10
 [[outputs.warp10]]
   # Prefix to add to the measurement.
   prefix = "telegraf."

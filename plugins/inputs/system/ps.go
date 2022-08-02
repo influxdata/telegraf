@@ -17,7 +17,7 @@ import (
 
 type PS interface {
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error)
-	DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error)
+	DiskUsage(mountPointFilter []string, mountOptsExclude []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error)
 	NetIO() ([]net.IOCountersStat, error)
 	NetProto() ([]net.ProtoCountersStat, error)
 	DiskIO(names []string) (map[string]disk.IOCountersStat, error)
@@ -91,6 +91,7 @@ func newSet() *set {
 
 func (s *SystemPS) DiskUsage(
 	mountPointFilter []string,
+	mountOptsExclude []string,
 	fstypeExclude []string,
 ) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
 	parts, err := s.Partitions(true)
@@ -101,6 +102,10 @@ func (s *SystemPS) DiskUsage(
 	mountPointFilterSet := newSet()
 	for _, filter := range mountPointFilter {
 		mountPointFilterSet.add(filter)
+	}
+	mountOptFilterSet := newSet()
+	for _, filter := range mountOptsExclude {
+		mountOptFilterSet.add(filter)
 	}
 	fstypeExcludeSet := newSet()
 	for _, filter := range fstypeExclude {
@@ -120,9 +125,15 @@ func (s *SystemPS) DiskUsage(
 	var partitions []*disk.PartitionStat
 	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
+partitionRange:
 	for i := range parts {
 		p := parts[i]
 
+		for _, o := range p.Opts {
+			if !mountOptFilterSet.empty() && mountOptFilterSet.has(o) {
+				continue partitionRange
+			}
+		}
 		// If there is a filter set and if the mount point is not a
 		// member of the filter set, don't gather info on it.
 		if !mountPointFilterSet.empty() && !mountPointFilterSet.has(p.Mountpoint) {
@@ -154,7 +165,7 @@ func (s *SystemPS) DiskUsage(
 		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
 			if s.Log != nil {
-				s.Log.Errorf("[SystemPS] => error getting disk usage (%q): %v", mountpoint, err)
+				s.Log.Debugf("[SystemPS] => unable to get disk usage (%q): %v", mountpoint, err)
 			}
 			continue
 		}

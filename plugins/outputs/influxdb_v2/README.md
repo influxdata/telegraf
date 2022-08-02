@@ -4,7 +4,7 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for sending metrics to InfluxDB 2.0
 [[outputs.influxdb_v2]]
   ## The URLs of the InfluxDB cluster nodes.

@@ -1,10 +1,13 @@
 package supervisor
 
 import (
+	"path/filepath"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestShort_SampleData(t *testing.T) {
@@ -122,16 +125,33 @@ func TestIntegration_BasicGathering(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+	const supervisorPort = "9001"
+	supervisorConfig, err := filepath.Abs("testdata/supervisord.conf")
+	require.NoError(t, err, "Failed to get absolute path of supervisord config")
+	ctr := testutil.Container{
+		Image:        "niasar/supervisor:stretch-3.3",
+		ExposedPorts: []string{supervisorPort},
+		BindMounts: map[string]string{
+			"/etc/supervisor/supervisord.conf": supervisorConfig,
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("supervisord started with pid"),
+			wait.ForListeningPort(nat.Port(supervisorPort)),
+		),
+	}
+	err = ctr.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, ctr.Terminate(), "terminating container failed")
+	}()
 	s := &Supervisor{
-		Server:      "http://login:pass@" + testutil.GetLocalHost() + ":9001/RPC2",
+		Server:      "http://login:pass@" + testutil.GetLocalHost() + ":" + ctr.Ports[supervisorPort] + "/RPC2",
 		UseIdentTag: true,
 		MetricsInc:  []string{},
 		MetricsExc:  []string{},
 	}
-	err := s.Init()
-	if err != nil {
-		t.Errorf("failed to run Init function: %v", err)
-	}
+	err = s.Init()
+	require.NoError(t, err, "failed to run Init function")
 	var acc testutil.Accumulator
 	err = acc.GatherError(s.Gather)
 	require.NoError(t, err)

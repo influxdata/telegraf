@@ -20,7 +20,8 @@ submits data to InfluxDB determines the destination database.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Accept metrics over InfluxDB 1.x HTTP API
 [[inputs.influxdb_listener]]
   ## Address and port to host HTTP listener on
   service_address = ":8186"

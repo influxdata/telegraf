@@ -18,9 +18,15 @@ This plugin gathers the statistic data from MySQL server
 * File events statistics
 * Table schema statistics
 
+In order to gather metrics from the performance schema, it must first be enabled
+in mySQL configuration. See the performance schema [quick start][quick-start].
+
+[quick-start]: https://dev.mysql.com/doc/refman/8.0/en/performance-schema-quick-start.html
+
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from one or many mysql servers
 [[inputs.mysql]]
   ## specify servers via a url matching:
   ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
@@ -65,7 +71,7 @@ This plugin gathers the statistic data from MySQL server
 
   ## gather metrics from all channels from SHOW SLAVE STATUS command output
   # gather_all_slave_channels = false
-  
+
   ## gather metrics from SHOW SLAVE STATUS command output
   # gather_slave_status = false
 
@@ -280,7 +286,8 @@ and process. It has following fields:
 for them. It has following fields:
   * auto_increment_column(int, number)
   * auto_increment_column_max(int, number)
-* InnoDB metrics - all metrics of information_schema.INNODB_METRICS with a status "enabled"
+* InnoDB metrics - all metrics of information_schema.INNODB_METRICS with a status "enabled". For MariaDB,
+`mariadb_dialect = true` to use `ENABLED=1`.
 * Perf table lock waits - gathers total number and time for SQL and external
 lock waits events for each table and operation. It has following fields.
 The unit of fields varies by the tags.

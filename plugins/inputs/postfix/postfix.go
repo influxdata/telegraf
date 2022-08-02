@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -6,6 +7,7 @@
 package postfix
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,13 +19,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## Postfix queue directory. If not provided, telegraf will try to use
-  ## 'postconf -h queue_directory' to determine it.
-  # queue_directory = "/var/spool/postfix"
-`
-
-const description = "Measure postfix queue statistics"
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 func getQueueDirectory() (string, error) {
 	qd, err := exec.Command("postconf", "-h", "queue_directory").Output()
@@ -83,6 +81,10 @@ type Postfix struct {
 	QueueDirectory string
 }
 
+func (*Postfix) SampleConfig() string {
+	return sampleConfig
+}
+
 func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 	if p.QueueDirectory == "" {
 		var err error
@@ -103,14 +105,6 @@ func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
-}
-
-func (p *Postfix) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Postfix) Description() string {
-	return description
 }
 
 func init() {

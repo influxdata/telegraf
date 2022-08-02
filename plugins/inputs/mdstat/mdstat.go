@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
@@ -19,6 +20,7 @@
 package mdstat
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"regexp"
@@ -29,6 +31,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultHostProc = "/proc"
@@ -60,20 +66,6 @@ type recoveryLine struct {
 
 type MdstatConf struct {
 	FileName string `toml:"file_name"`
-}
-
-func (k *MdstatConf) Description() string {
-	return "Get md array statistics from /proc/mdstat"
-}
-
-var mdSampleConfig = `
-	## Sets file path
-	## If not specified, then default is /proc/mdstat
-	# file_name = "/proc/mdstat"
-`
-
-func (k *MdstatConf) SampleConfig() string {
-	return mdSampleConfig
 }
 
 func evalStatusLine(deviceLine, statusLineStr string) (statusLine, error) {
@@ -185,6 +177,10 @@ func evalComponentDevices(deviceFields []string) string {
 	// Ensure no churn on tag ordering change
 	sort.Strings(mdComponentDevices)
 	return strings.Join(mdComponentDevices, ",")
+}
+
+func (*MdstatConf) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {

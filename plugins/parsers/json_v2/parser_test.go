@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -28,11 +27,11 @@ func TestMultipleConfigs(t *testing.T) {
 
 	expectedErrors := []struct {
 		Name  string
-		Error error
+		Error string
 	}{
 		{
 			Name:  "wrong_path",
-			Error: fmt.Errorf(json_v2.GJSONPathNUllErrorMSG),
+			Error: "wrong",
 		},
 	}
 
@@ -58,7 +57,7 @@ func TestMultipleConfigs(t *testing.T) {
 				var expectedError bool
 				for _, e := range expectedErrors {
 					if e.Name == f.Name() {
-						require.Equal(t, e.Error, err)
+						require.Contains(t, err.Error(), e.Error)
 						expectedError = true
 						break
 					}
@@ -69,7 +68,7 @@ func TestMultipleConfigs(t *testing.T) {
 			}
 
 			// Process expected metrics and compare with resulting metrics
-			expectedOutputs, err := readMetricFile(fmt.Sprintf("testdata/%s/expected.out", f.Name()))
+			expectedOutputs, err := readMetricFile(t, fmt.Sprintf("testdata/%s/expected.out", f.Name()))
 			require.NoError(t, err)
 			resultingMetrics := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expectedOutputs, resultingMetrics, testutil.IgnoreTime())
@@ -87,7 +86,7 @@ func TestMultipleConfigs(t *testing.T) {
 	}
 }
 
-func readMetricFile(path string) ([]telegraf.Metric, error) {
+func readMetricFile(t *testing.T, path string) ([]telegraf.Metric, error) {
 	var metrics []telegraf.Metric
 	expectedFile, err := os.Open(path)
 	if err != nil {
@@ -95,7 +94,8 @@ func readMetricFile(path string) ([]telegraf.Metric, error) {
 	}
 	defer expectedFile.Close()
 
-	parser := influx.NewParser(influx.NewMetricHandler())
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 	scanner := bufio.NewScanner(expectedFile)
 	for scanner.Scan() {
 		line := scanner.Text()

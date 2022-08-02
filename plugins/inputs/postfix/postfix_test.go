@@ -14,9 +14,7 @@ import (
 )
 
 func TestGather(t *testing.T) {
-	td, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(td)
+	td := t.TempDir()
 
 	for _, q := range []string{"active", "hold", "incoming", "maildrop", "deferred/0/0", "deferred/F/F"} {
 		require.NoError(t, os.MkdirAll(filepath.FromSlash(td+"/"+q), 0755))

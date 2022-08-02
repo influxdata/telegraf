@@ -66,10 +66,6 @@ func (i *erroringInput) SampleConfig() string {
 	return ""
 }
 
-func (i *erroringInput) Description() string {
-	return ""
-}
-
 func (i *erroringInput) Gather(acc telegraf.Accumulator) error {
 	acc.AddError(errors.New("intentional"))
 	return nil

@@ -1,8 +1,10 @@
-// Package neptuneapex implements an input plugin for the Neptune Apex
+//go:generate ../../../tools/readme_config_includer/generator
+// Package neptune_apex implements an input plugin for the Neptune Apex
 // aquarium controller.
-package neptuneapex
+package neptune_apex
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Measurement is constant across all metrics.
 const Measurement = "neptune_apex"
@@ -55,26 +61,8 @@ type NeptuneApex struct {
 	httpClient      *http.Client
 }
 
-// Description implements telegraf.Input.Description
-func (*NeptuneApex) Description() string {
-	return "Neptune Apex data collector"
-}
-
-// SampleConfig implements telegraf.Input.SampleConfig
 func (*NeptuneApex) SampleConfig() string {
-	return `
-  ## The Neptune Apex plugin reads the publicly available status.xml data from a local Apex.
-  ## Measurements will be logged under "apex".
-
-  ## The base URL of the local Apex(es). If you specify more than one server, they will
-  ## be differentiated by the "source" tag.
-  servers = [
-    "http://apex.local",
-  ]
-
-  ## The response_timeout specifies how long to wait for a reply from the Apex.
-  #response_timeout = "5s"
-`
+	return sampleConfig
 }
 
 // Gather implements telegraf.Input.Gather

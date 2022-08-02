@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package instrumental
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	ValueIncludesBadChar = regexp.MustCompile("[^[:digit:].]")
@@ -43,19 +49,9 @@ const (
 	HandshakeFormat = HelloMessage + AuthFormat
 )
 
-var sampleConfig = `
-  ## Project API Token (required)
-  api_token = "API Token" # required
-  ## Prefix the metrics with a given name
-  prefix = ""
-  ## Stats output template (Graphite formatting)
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  template = "host.tags.measurement.field"
-  ## Timeout in seconds to connect
-  timeout = "2s"
-  ## Display Communication to Instrumental
-  debug = false
-`
+func (*Instrumental) SampleConfig() string {
+	return sampleConfig
+}
 
 func (i *Instrumental) Connect() error {
 	connection, err := net.DialTimeout("tcp", i.Host+":8000", time.Duration(i.Timeout))
@@ -166,14 +162,6 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	_ = i.Close()
 
 	return nil
-}
-
-func (i *Instrumental) Description() string {
-	return "Configuration for sending metrics to an Instrumental project"
-}
-
-func (i *Instrumental) SampleConfig() string {
-	return sampleConfig
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {

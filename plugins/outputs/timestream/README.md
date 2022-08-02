@@ -2,9 +2,22 @@
 
 The Timestream output plugin writes metrics to the [Amazon Timestream] service.
 
+## Authentication
+
+This plugin uses a credential chain for Authentication with Timestream
+API endpoint. In the following order the plugin will attempt to authenticate.
+
+1. Web identity provider credentials via STS if `role_arn` and `web_identity_token_file` are specified
+1. [Assumed credentials via STS] if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules). The `endpoint_url` attribute is used only for Timestream service. When fetching credentials, STS global endpoint will be used.
+1. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
+1. Shared profile from `profile` attribute
+1. [Environment Variables]
+1. [Shared Credentials]
+1. [EC2 Instance Profile]
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for sending metrics to Amazon Timestream.
 [[outputs.timestream]]
   ## Amazon Region
@@ -118,32 +131,47 @@ The Timestream output plugin writes metrics to the [Amazon Timestream] service.
   ## Specifies the Timestream table tags.
   ## Check Timestream documentation for more details
   # create_table_tags = { "foo" = "bar", "environment" = "dev"}
+
+  ## Specify the maximum number of parallel go routines to ingest/write data
+  ## If not specified, defaulted to 1 go routines
+  max_write_go_routines = 25
 ```
 
 ### Batching
 
-Timestream WriteInputRequest.CommonAttributes are used to efficiently write data to Timestream.
+Timestream WriteInputRequest.CommonAttributes are used to efficiently write data
+to Timestream.
 
 ### Multithreading
 
-Single thread is used to write the data to Timestream, following general plugin design pattern.
+Single thread is used to write the data to Timestream, following general plugin
+design pattern.
 
 ### Errors
 
-In case of an attempt to write an unsupported by Timestream Telegraf Field type, the field is dropped and error is emitted to the logs.
+In case of an attempt to write an unsupported by Timestream Telegraf Field type,
+the field is dropped and error is emitted to the logs.
 
-In case of receiving ThrottlingException or InternalServerException from Timestream, the errors are returned to Telegraf, in which case Telegraf will keep the metrics in buffer and retry writing those metrics on the next flush.
+In case of receiving ThrottlingException or InternalServerException from
+Timestream, the errors are returned to Telegraf, in which case Telegraf will
+keep the metrics in buffer and retry writing those metrics on the next flush.
 
 In case of receiving ResourceNotFoundException:
 
-- If `create_table_if_not_exists` configuration is set to `true`, the plugin will try to create appropriate table and write the records again, if the table creation was successful.
-- If `create_table_if_not_exists` configuration is set to `false`, the records are dropped, and an error is emitted to the logs.
+- If `create_table_if_not_exists` configuration is set to `true`, the plugin
+  will try to create appropriate table and write the records again, if the table
+  creation was successful.
+- If `create_table_if_not_exists` configuration is set to `false`, the records
+  are dropped, and an error is emitted to the logs.
 
-In case of receiving any other AWS error from Timestream, the records are dropped, and an error is emitted to the logs, as retrying such requests isn't likely to succeed.
+In case of receiving any other AWS error from Timestream, the records are
+dropped, and an error is emitted to the logs, as retrying such requests isn't
+likely to succeed.
 
 ### Logging
 
-Turn on debug flag in the Telegraf to turn on detailed logging (including records being written to Timestream).
+Turn on debug flag in the Telegraf to turn on detailed logging (including
+records being written to Timestream).
 
 ### Testing
 
@@ -154,3 +182,7 @@ go test -v ./plugins/outputs/timestream/...
 ```
 
 [Amazon Timestream]: https://aws.amazon.com/timestream/
+[Assumed credentials via STS]: https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/credentials/stscreds
+[Environment Variables]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables
+[Shared Credentials]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file
+[EC2 Instance Profile]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html

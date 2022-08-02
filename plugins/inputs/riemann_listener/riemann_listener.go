@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package riemann_listener
 
 import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -24,6 +26,10 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type RiemannSocketListener struct {
 	ServiceAddress  string           `toml:"service_address"`
@@ -265,38 +271,8 @@ func (rsl *riemannListener) riemannReturnErrorResponse(conn net.Conn, errorMessa
 	}
 }
 
-func (rsl *RiemannSocketListener) Description() string {
-	return "Riemann protobuff listener."
-}
-
-func (rsl *RiemannSocketListener) SampleConfig() string {
-	return `
-  ## URL to listen on.
-  ## Default is "tcp://:5555"
-  # service_address = "tcp://:8094"
-  # service_address = "tcp://127.0.0.1:http"
-  # service_address = "tcp4://:8094"
-  # service_address = "tcp6://:8094"
-  # service_address = "tcp6://[2001:db8::1]:8094"
-
-  ## Maximum number of concurrent connections.
-  ## 0 (default) is unlimited.
-  # max_connections = 1024
-  ## Read timeout.
-  ## 0 (default) is unlimited.
-  # read_timeout = "30s"
-  ## Optional TLS configuration.
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key  = "/etc/telegraf/key.pem"
-  ## Enables client authentication if set.
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-  ## Maximum socket buffer size (in bytes when no unit specified).
-  # read_buffer_size = "64KiB"
-  ## Period between keep alive probes.
-  ## 0 disables keep alive probes.
-  ## Defaults to the OS configuration.
-  # keep_alive_period = "5m"
-`
+func (*RiemannSocketListener) SampleConfig() string {
+	return sampleConfig
 }
 
 func (rsl *RiemannSocketListener) Gather(_ telegraf.Accumulator) error {

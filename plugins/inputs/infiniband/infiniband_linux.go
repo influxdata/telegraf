@@ -5,10 +5,10 @@ package infiniband
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/Mellanox/rdmamap"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"strconv"
 )
 
 // Gather statistics from our infiniband cards
@@ -50,9 +50,4 @@ func addStats(dev string, port string, stats []rdmamap.RdmaStatEntry, acc telegr
 	}
 
 	acc.AddFields("infiniband", fields, tags)
-}
-
-// Initialise plugin
-func init() {
-	inputs.Add("infiniband", func() telegraf.Input { return &Infiniband{} })
 }

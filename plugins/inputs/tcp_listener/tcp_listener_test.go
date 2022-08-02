@@ -1,19 +1,16 @@
 package tcp_listener
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/graphite"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -50,7 +47,10 @@ func BenchmarkTCP(b *testing.B) {
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(b, parser.Init())
+	listener.parser = parser
+
 	acc := &testutil.Accumulator{Discard: true}
 
 	// send multiple messages to socket
@@ -80,7 +80,9 @@ func TestHighTrafficTCP(t *testing.T) {
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
 	acc := &testutil.Accumulator{}
 
 	// send multiple messages to socket
@@ -108,7 +110,9 @@ func TestConnectTCP(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -148,7 +152,9 @@ func TestConcurrentConns(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -185,7 +191,9 @@ func TestConcurrentConns1(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      1,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -220,7 +228,9 @@ func TestCloseConcurrentConns(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -241,7 +251,9 @@ func TestRunParser(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
@@ -255,30 +267,24 @@ func TestRunParser(t *testing.T) {
 	)
 }
 
-func TestRunParserInvalidMsg(_ *testing.T) {
+func TestRunParserInvalidMsg(t *testing.T) {
 	var testmsg = []byte("cpu_load_short")
 
 	listener, in := newTestTCPListener()
-	acc := testutil.Accumulator{}
-	listener.acc = &acc
-	defer close(listener.done)
+	listener.Log = &testutil.CaptureLogger{}
+	listener.acc = &testutil.Accumulator{}
 
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
 	listener.wg.Add(1)
-
-	buf := bytes.NewBuffer(nil)
-	log.SetOutput(buf)
-	defer log.SetOutput(os.Stderr)
 
 	go listener.tcpParser()
 	in <- testmsg
 
-	scnr := bufio.NewScanner(buf)
-	for scnr.Scan() {
-		if strings.Contains(scnr.Text(), "tcp_listener has received 1 malformed packets thus far.") {
-			break
-		}
-	}
+	listener.Stop()
+	errmsg := listener.Log.(*testutil.CaptureLogger).LastError
+	require.Contains(t, errmsg, "tcp_listener has received 1 malformed packets thus far.")
 }
 
 func TestRunParserGraphiteMsg(t *testing.T) {
@@ -289,7 +295,9 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewGraphiteParser("_", []string{}, nil)
+	p := graphite.Parser{Separator: "_", Templates: []string{}}
+	require.NoError(t, p.Init())
+	listener.parser = &p
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
@@ -309,10 +317,10 @@ func TestRunParserJSONMsg(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "udp_json_test",
-	})
+	parser := &json.Parser{MetricName: "udp_json_test"}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
+
 	listener.wg.Add(1)
 	go listener.tcpParser()
 

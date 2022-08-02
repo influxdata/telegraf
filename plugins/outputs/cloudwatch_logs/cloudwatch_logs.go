@@ -1,18 +1,27 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cloudwatch_logs
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type messageBatch struct {
 	logEvents    []types.InputLogEvent
@@ -73,73 +82,8 @@ const (
 	// Otherwise, the operation fails.
 )
 
-var sampleConfig = `
-## The region is the Amazon region that you wish to connect to.
-## Examples include but are not limited to:
-## - us-west-1
-## - us-west-2
-## - us-east-1
-## - ap-southeast-1
-## - ap-southeast-2
-## ...
-region = "us-east-1"
-
-## Amazon Credentials
-## Credentials are loaded in the following order
-## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
-## 2) Assumed credentials via STS if role_arn is specified
-## 3) explicit credentials from 'access_key' and 'secret_key'
-## 4) shared profile from 'profile'
-## 5) environment variables
-## 6) shared credentials file
-## 7) EC2 Instance Profile
-#access_key = ""
-#secret_key = ""
-#token = ""
-#role_arn = ""
-#web_identity_token_file = ""
-#role_session_name = ""
-#profile = ""
-#shared_credential_file = ""
-
-## Endpoint to make request against, the correct endpoint is automatically
-## determined and this option should only be set if you wish to override the
-## default.
-##   ex: endpoint_url = "http://localhost:8000"
-# endpoint_url = ""
-
-## Cloud watch log group. Must be created in AWS cloudwatch logs upfront!
-## For example, you can specify the name of the k8s cluster here to group logs from all cluster in oine place
-log_group = "my-group-name"
-
-## Log stream in log group
-## Either log group name or reference to metric attribute, from which it can be parsed:
-## tag:<TAG_NAME> or field:<FIELD_NAME>. If log stream is not exist, it will be created.
-## Since AWS is not automatically delete logs streams with expired logs entries (i.e. empty log stream)
-## you need to put in place appropriate house-keeping (https://forums.aws.amazon.com/thread.jspa?threadID=178855)
-log_stream = "tag:location"
-
-## Source of log data - metric name
-## specify the name of the metric, from which the log data should be retrieved.
-## I.e., if you  are using docker_log plugin to stream logs from container, then
-## specify log_data_metric_name  = "docker_log"
-log_data_metric_name  = "docker_log"
-
-## Specify from which metric attribute the log data should be retrieved:
-## tag:<TAG_NAME> or field:<FIELD_NAME>.
-## I.e., if you  are using docker_log plugin to stream logs from container, then
-## specify log_data_source  = "field:message"
-log_data_source  = "field:message"
-`
-
-// SampleConfig returns sample config description for plugin
-func (c *CloudWatchLogs) SampleConfig() string {
+func (*CloudWatchLogs) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns one-liner description for plugin
-func (c *CloudWatchLogs) Description() string {
-	return "Configuration for AWS CloudWatchLogs output."
 }
 
 // Init initialize plugin with checking configuration parameters
@@ -189,10 +133,31 @@ func (c *CloudWatchLogs) Connect() error {
 	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
 	var err error
 
-	cfg, err := c.CredentialConfig.Credentials()
+	awsCreds, awsErr := c.CredentialConfig.Credentials()
+	if awsErr != nil {
+		return awsErr
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return err
 	}
+	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				PartitionID:   "aws",
+				URL:           c.CredentialConfig.EndpointURL,
+				SigningRegion: c.CredentialConfig.Region,
+			}, nil
+		})
+
+		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
+		if err != nil {
+			return err
+		}
+	}
+
+	cfg.Credentials = awsCreds.Credentials
 	c.svc = cloudwatchlogs.NewFromConfig(cfg)
 
 	//Find log group with name 'c.LogGroup'
@@ -276,7 +241,10 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 		lsContainer := &logStreamContainer{
 			currentBatchSizeBytes: 0,
 			currentBatchIndex:     0,
-			messageBatches:        []messageBatch{{}}}
+			messageBatches: []messageBatch{
+				{},
+			},
+		}
 
 		switch c.lsKey {
 		case "tag":

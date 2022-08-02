@@ -9,10 +9,11 @@ This section is for developers who want to create a new aggregator plugin.
   register themselves.  See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
   `github.com/influxdata/telegraf/plugins/aggregators/all/all.go` file.
-* The `SampleConfig` function should return valid toml that describes how the
-  plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [Sample Config][] page for the latest style guidelines.
-* The `Description` function should say in one line what this aggregator does.
+* Each plugin requires a file called `sample.conf` containing the sample configuration
+  for the plugin in TOML format.
+  Please consult the [Sample Config][] page for the latest style guidelines.
+* Each plugin `README.md` file should include the `sample.conf` file in a section
+  describing the configuration by specifying a `toml` section in the form `toml @sample.conf`. The specified file(s) are then injected automatically into the Readme.
 * The Aggregator plugin will need to keep caches of metrics that have passed
   through it. This should be done using the builtin `HashID()` function of
   each metric.
@@ -22,14 +23,21 @@ This section is for developers who want to create a new aggregator plugin.
 ### Aggregator Plugin Example
 
 ```go
+//go:generate ../../../tools/readme_config_includer/generator
 package min
 
 // min.go
 
 import (
+    _ "embed"
+
     "github.com/influxdata/telegraf"
     "github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Min struct {
     // caches for metric fields, names, and tags
@@ -44,24 +52,12 @@ func NewMin() telegraf.Aggregator {
     return m
 }
 
-var sampleConfig = `
-  ## period is the flush & clear interval of the aggregator.
-  period = "30s"
-  ## If true drop_original will drop the original metrics and
-  ## only send aggregates.
-  drop_original = false
-`
-
-func (m *Min) Init() error {
-    return nil
-}
-
-func (m *Min) SampleConfig() string {
+func (*Min) SampleConfig() string {
     return sampleConfig
 }
 
-func (m *Min) Description() string {
-    return "Keep the aggregate min of each metric passing through."
+func (m *Min) Init() error {
+    return nil
 }
 
 func (m *Min) Add(in telegraf.Metric) {
@@ -126,7 +122,3 @@ func init() {
     })
 }
 ```
-
-[telegraf.Aggregator]: https://godoc.org/github.com/influxdata/telegraf#Aggregator
-[Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
-[Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md

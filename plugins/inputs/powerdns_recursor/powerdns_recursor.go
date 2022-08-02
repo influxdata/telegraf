@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package powerdns_recursor
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type PowerdnsRecursor struct {
 	UnixSockets []string `toml:"unix_sockets"`
 	SocketDir   string   `toml:"socket_dir"`
@@ -28,23 +34,8 @@ type PowerdnsRecursor struct {
 
 var defaultTimeout = 5 * time.Second
 
-var sampleConfig = `
-  ## Path to the Recursor control socket.
-  unix_sockets = ["/var/run/pdns_recursor.controlsocket"]
-
-  ## Directory to create receive socket.  This default is likely not writable,
-  ## please reference the full plugin documentation for a recommended setup.
-  # socket_dir = "/var/run/"
-  ## Socket permissions for the receive socket.
-  # socket_mode = "0666"
-`
-
-func (p *PowerdnsRecursor) SampleConfig() string {
+func (*PowerdnsRecursor) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *PowerdnsRecursor) Description() string {
-	return "Read metrics from one or many PowerDNS Recursor servers"
 }
 
 func (p *PowerdnsRecursor) Init() error {

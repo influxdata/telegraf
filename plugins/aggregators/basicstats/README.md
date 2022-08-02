@@ -1,11 +1,12 @@
 # BasicStats Aggregator Plugin
 
-The BasicStats aggregator plugin give us count,diff,max,min,mean,non_negative_diff,sum,s2(variance), stdev for a set of values,
-emitting the aggregate every `period` seconds.
+The BasicStats aggregator plugin give us count, diff, max, min, mean,
+non_negative_diff, sum, s2(variance), stdev for a set of values, emitting the
+aggregate every `period` seconds.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Keep the aggregate basicstats of each metric passing through.
 [[aggregators.basicstats]]
   ## The period on which to flush & clear the aggregator.

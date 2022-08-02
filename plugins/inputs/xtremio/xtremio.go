@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package xtremio
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type XtremIO struct {
 	Username   string          `toml:"username"`
 	Password   string          `toml:"password"`
@@ -27,32 +33,7 @@ type XtremIO struct {
 	client *http.Client
 }
 
-const sampleConfig = `
-  ## XtremIO User Interface Endpoint
-  url = "https://xtremio.example.com/" # required
-
-  ## Credentials
-  username = "user1"
-  password = "pass123"
-
-  ## Metrics to collect from the XtremIO
-  # collectors = ["bbus","clusters","ssds","volumes","xms"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-// Description will appear directly above the plugin definition in the config file
-func (xio *XtremIO) Description() string {
-	return `Gathers Metrics From a Dell EMC XtremIO Storage Array's V3 API`
-}
-
-// SampleConfig will populate the sample configuration portion of the plugin's configuration
-func (xio *XtremIO) SampleConfig() string {
+func (*XtremIO) SampleConfig() string {
 	return sampleConfig
 }
 

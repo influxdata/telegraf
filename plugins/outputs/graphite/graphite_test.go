@@ -98,7 +98,8 @@ func TestGraphiteOK(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithSeparatorDot(t *testing.T) {
@@ -160,7 +161,8 @@ func TestGraphiteOkWithSeparatorDot(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
@@ -222,7 +224,8 @@ func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
@@ -288,7 +291,8 @@ func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithTags(t *testing.T) {
@@ -350,7 +354,8 @@ func TestGraphiteOkWithTags(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
@@ -413,7 +418,8 @@ func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
@@ -476,7 +482,8 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
 	wg2.Wait()
-	g.Close()
+	err := g.Close()
+	require.NoError(t, err)
 }
 
 func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
@@ -495,7 +502,8 @@ func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -511,7 +519,8 @@ func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -525,7 +534,8 @@ func TCPServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -541,7 +551,8 @@ func TCPServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -555,7 +566,8 @@ func TCPServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -571,7 +583,8 @@ func TCPServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -585,7 +598,8 @@ func TCPServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()

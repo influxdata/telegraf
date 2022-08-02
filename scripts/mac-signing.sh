@@ -21,6 +21,10 @@ amdFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
 armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
 macFiles=("${amdFile}" "${armFile}")
 
+version=$(make version)
+plutil -insert CFBundleShortVersionString -string "$version" ~/project/info.plist
+plutil -insert CFBundleVersion -string "$version" ~/project/info.plist
+
 for tarFile in "${macFiles[@]}";
 do
   cleanup
@@ -53,7 +57,7 @@ do
   printf "\n"
 
   cp ~/project/info.plist "$RootAppDir"
-  cp  ~/project/assets/icon.icns "$RootAppDir/Resources"
+  cp  ~/project/assets/windows/icon.icns "$RootAppDir/Resources"
 
   chmod +x "$RootAppDir/MacOS/telegraf_entry_mac"
 

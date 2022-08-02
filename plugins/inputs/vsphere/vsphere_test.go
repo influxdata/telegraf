@@ -5,13 +5,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 	"unsafe"
 
-	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
@@ -139,12 +137,17 @@ func defaultVSphere() *VSphere {
 		DatastoreMetricInclude: []string{
 			"disk.used.*",
 			"disk.provisioned.*"},
-		DatastoreMetricExclude:  nil,
-		DatastoreInclude:        []string{"/**"},
-		DatacenterMetricInclude: nil,
-		DatacenterMetricExclude: nil,
-		DatacenterInclude:       []string{"/**"},
-		ClientConfig:            itls.ClientConfig{InsecureSkipVerify: true},
+		DatastoreMetricExclude: nil,
+		DatastoreInclude:       []string{"/**"},
+		ResourcePoolMetricInclude: []string{
+			"cpu.capacity.*",
+			"mem.capacity.*"},
+		ResourcePoolMetricExclude: nil,
+		ResourcePoolInclude:       []string{"/**"},
+		DatacenterMetricInclude:   nil,
+		DatacenterMetricExclude:   nil,
+		DatacenterInclude:         []string{"/**"},
+		ClientConfig:              itls.ClientConfig{InsecureSkipVerify: true},
 
 		MaxQueryObjects:         256,
 		MaxQueryMetrics:         256,
@@ -222,22 +225,16 @@ func TestAlignMetrics(t *testing.T) {
 	}
 }
 
-func TestParseConfig(t *testing.T) {
-	v := VSphere{}
-	c := v.SampleConfig()
-	p := regexp.MustCompile("\n#")
-	c = configHeader + "\n[[inputs.vsphere]]\n" + p.ReplaceAllLiteralString(c, "\n")
-	tab, err := toml.Parse([]byte(c))
-	require.NoError(t, err)
-	require.NotNil(t, tab)
-}
-
 func TestConfigDurationParsing(t *testing.T) {
 	v := defaultVSphere()
 	require.Equal(t, int32(300), int32(time.Duration(v.HistoricalInterval).Seconds()), "HistoricalInterval.Seconds() with default duration should resolve 300")
 }
 
 func TestMaxQuery(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -295,6 +292,10 @@ func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, exp
 }
 
 func TestFinder(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -331,6 +332,12 @@ func TestFinder(t *testing.T) {
 
 	host = []mo.HostSystem{}
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0", &host)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(host))
+	require.Equal(t, "DC0_C0_H0", host[0].Name)
+
+	var resourcepool = []mo.ResourcePool{}
+	err = f.Find(ctx, "ResourcePool", "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(host))
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
@@ -411,6 +418,10 @@ func TestFinder(t *testing.T) {
 }
 
 func TestFolders(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -452,10 +463,18 @@ func TestFolders(t *testing.T) {
 }
 
 func TestCollectionWithClusterMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	testCollection(t, false)
 }
 
 func TestCollectionNoClusterMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	testCollection(t, true)
 }
 

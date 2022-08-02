@@ -4,12 +4,9 @@ Reports the number and total size of files in specified directories.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Count files in a directory
 [[inputs.filecount]]
-  ## Directory to gather stats about.
-  ##   deprecated in 1.9; use the directories option
-  # directory = "/var/cache/apt/archives"
-
   ## Directories to gather stats about.
   ## This accept standard unit glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:

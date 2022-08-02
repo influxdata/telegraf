@@ -1,7 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package stackdriver
 
 import (
 	"context"
+	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -25,87 +28,12 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	defaultRateLimit = 14
-	description      = "Gather timeseries from Google Cloud Platform v3 monitoring API"
-	sampleConfig     = `
-  ## GCP Project
-  project = "erudite-bloom-151019"
-
-  ## Include timeseries that start with the given metric type.
-  metric_type_prefix_include = [
-    "compute.googleapis.com/",
-  ]
-
-  ## Exclude timeseries that start with the given metric type.
-  # metric_type_prefix_exclude = []
-
-  ## Many metrics are updated once per minute; it is recommended to override
-  ## the agent level interval with a value of 1m or greater.
-  interval = "1m"
-
-  ## Maximum number of API calls to make per second.  The quota for accounts
-  ## varies, it can be viewed on the API dashboard:
-  ##   https://cloud.google.com/monitoring/quotas#quotas_and_limits
-  # rate_limit = 14
-
-  ## The delay and window options control the number of points selected on
-  ## each gather.  When set, metrics are gathered between:
-  ##   start: now() - delay - window
-  ##   end:   now() - delay
-  #
-  ## Collection delay; if set too low metrics may not yet be available.
-  # delay = "5m"
-  #
-  ## If unset, the window will start at 1m and be updated dynamically to span
-  ## the time between calls (approximately the length of the plugin interval).
-  # window = "1m"
-
-  ## TTL for cached list of metric types.  This is the maximum amount of time
-  ## it may take to discover new metrics.
-  # cache_ttl = "1h"
-
-  ## If true, raw bucket counts are collected for distribution value types.
-  ## For a more lightweight collection, you may wish to disable and use
-  ## distribution_aggregation_aligners instead.
-  # gather_raw_distribution_buckets = true
-
-  ## Aggregate functions to be used for metrics whose value type is
-  ## distribution.  These aggregate values are recorded in in addition to raw
-  ## bucket counts; if they are enabled.
-  ##
-  ## For a list of aligner strings see:
-  ##   https://cloud.google.com/monitoring/api/ref_v3/rpc/google.monitoring.v3#aligner
-  # distribution_aggregation_aligners = [
-  # 	"ALIGN_PERCENTILE_99",
-  # 	"ALIGN_PERCENTILE_95",
-  # 	"ALIGN_PERCENTILE_50",
-  # ]
-
-  ## Filters can be added to reduce the number of time series matched.  All
-  ## functions are supported: starts_with, ends_with, has_substring, and
-  ## one_of.  Only the '=' operator is supported.
-  ##
-  ## The logical operators when combining filters are defined statically using
-  ## the following values:
-  ##   filter ::= <resource_labels> {AND <metric_labels>}
-  ##   resource_labels ::= <resource_labels> {OR <resource_label>}
-  ##   metric_labels ::= <metric_labels> {OR <metric_label>}
-  ##
-  ## For more details, see https://cloud.google.com/monitoring/api/v3/filters
-  #
-  ## Resource labels refine the time series selection with the following expression:
-  ##   resource.labels.<key> = <value>
-  # [[inputs.stackdriver.filter.resource_labels]]
-  #   key = "instance_name"
-  #   value = 'starts_with("localhost")'
-  #
-  ## Metric labels refine the time series selection with the following expression:
-  ##   metric.labels.<key> = <value>
-  #  [[inputs.stackdriver.filter.metric_labels]]
-  #  	 key = "device_name"
-  #  	 value = 'one_of("sda", "sdb")'
-`
 )
 
 var (
@@ -264,13 +192,7 @@ func (smc *stackdriverMetricClient) Close() error {
 	return smc.conn.Close()
 }
 
-// Description implements telegraf.Input interface
-func (s *Stackdriver) Description() string {
-	return description
-}
-
-// SampleConfig implements telegraf.Input interface
-func (s *Stackdriver) SampleConfig() string {
+func (*Stackdriver) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -643,6 +565,73 @@ func (s *Stackdriver) gatherTimeSeries(
 	return nil
 }
 
+type Buckets interface {
+	Amount() int32
+	UpperBound(i int32) float64
+}
+
+type LinearBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Linear
+}
+
+func (l *LinearBuckets) Amount() int32 {
+	return l.NumFiniteBuckets + 2
+}
+
+func (l *LinearBuckets) UpperBound(i int32) float64 {
+	return l.Offset + (l.Width * float64(i))
+}
+
+type ExponentialBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Exponential
+}
+
+func (e *ExponentialBuckets) Amount() int32 {
+	return e.NumFiniteBuckets + 2
+}
+
+func (e *ExponentialBuckets) UpperBound(i int32) float64 {
+	width := math.Pow(e.GrowthFactor, float64(i))
+	return e.Scale * width
+}
+
+type ExplicitBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Explicit
+}
+
+func (e *ExplicitBuckets) Amount() int32 {
+	return int32(len(e.Bounds)) + 1
+}
+
+func (e *ExplicitBuckets) UpperBound(i int32) float64 {
+	return e.Bounds[i]
+}
+
+func NewBucket(dist *distributionpb.Distribution) (Buckets, error) {
+	linearBuckets := dist.BucketOptions.GetLinearBuckets()
+	if linearBuckets != nil {
+		var l LinearBuckets
+		l.Distribution_BucketOptions_Linear = linearBuckets
+		return &l, nil
+	}
+
+	exponentialBuckets := dist.BucketOptions.GetExponentialBuckets()
+	if exponentialBuckets != nil {
+		var e ExponentialBuckets
+		e.Distribution_BucketOptions_Exponential = exponentialBuckets
+		return &e, nil
+	}
+
+	explicitBuckets := dist.BucketOptions.GetExplicitBuckets()
+	if explicitBuckets != nil {
+		var e ExplicitBuckets
+		e.Distribution_BucketOptions_Explicit = explicitBuckets
+		return &e, nil
+	}
+
+	return nil, errors.New("no buckets available")
+}
+
 // AddDistribution adds metrics from a distribution value type.
 func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags map[string]string, ts time.Time,
 	grouper *lockedSeriesGrouper, tsConf *timeSeriesConf,
@@ -669,18 +658,11 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 		}
 	}
 
-	linearBuckets := dist.BucketOptions.GetLinearBuckets()
-	exponentialBuckets := dist.BucketOptions.GetExponentialBuckets()
-	explicitBuckets := dist.BucketOptions.GetExplicitBuckets()
-
-	var numBuckets int32
-	if linearBuckets != nil {
-		numBuckets = linearBuckets.NumFiniteBuckets + 2
-	} else if exponentialBuckets != nil {
-		numBuckets = exponentialBuckets.NumFiniteBuckets + 2
-	} else {
-		numBuckets = int32(len(explicitBuckets.Bounds)) + 1
+	bucket, err := NewBucket(dist)
+	if err != nil {
+		return err
 	}
+	numBuckets := bucket.Amount()
 
 	var i int32
 	var count int64
@@ -690,15 +672,7 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 		if i == numBuckets-1 {
 			tags["lt"] = "+Inf"
 		} else {
-			var upperBound float64
-			if linearBuckets != nil {
-				upperBound = linearBuckets.Offset + (linearBuckets.Width * float64(i))
-			} else if exponentialBuckets != nil {
-				width := math.Pow(exponentialBuckets.GrowthFactor, float64(i))
-				upperBound = exponentialBuckets.Scale * width
-			} else if explicitBuckets != nil {
-				upperBound = explicitBuckets.Bounds[i]
-			}
+			upperBound := bucket.UpperBound(i)
 			tags["lt"] = strconv.FormatFloat(upperBound, 'f', -1, 64)
 		}
 
@@ -716,7 +690,7 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 }
 
 func init() {
-	f := func() telegraf.Input {
+	inputs.Add("stackdriver", func() telegraf.Input {
 		return &Stackdriver{
 			CacheTTL:                        defaultCacheTTL,
 			RateLimit:                       defaultRateLimit,
@@ -724,7 +698,5 @@ func init() {
 			GatherRawDistributionBuckets:    true,
 			DistributionAggregationAligners: []string{},
 		}
-	}
-
-	inputs.Add("stackdriver", f)
+	})
 }

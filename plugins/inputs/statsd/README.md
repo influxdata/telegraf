@@ -1,8 +1,10 @@
 # StatsD Input Plugin
 
+The StatsD input plugin gathers metrics from a Statsd server.
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Statsd Server
 [[inputs.statsd]]
   ## Protocol, must be "tcp", "udp4", "udp6" or "udp" (default=udp)
@@ -91,7 +93,8 @@ The statsd plugin is a special type of plugin which runs a backgrounded statsd
 listener service while telegraf is running.
 
 The format of the statsd messages was based on the format described in the
-original [etsy statsd](https://github.com/etsy/statsd/blob/master/docs/metric_types.md)
+original [etsy
+statsd](https://github.com/etsy/statsd/blob/master/docs/metric_types.md)
 implementation. In short, the telegraf statsd listener will accept:
 
 - Gauges
@@ -144,9 +147,11 @@ users.current,service=payroll,region=us-west:32|g
 
 ```
 current.users,service=payroll,server=host01:west=10,east=10,central=2,south=10|g
-``` -->
+```
 
-## Measurements
+-->
+
+## Metrics
 
 Meta:
 
@@ -177,6 +182,8 @@ metric type:
     - `statsd_<name>_upper`: The upper bound is the highest value statsd saw
         for that stat during that interval.
     - `statsd_<name>_mean`: The mean is the average of all values statsd saw
+        for that stat during that interval.
+    - `statsd_<name>_median`: The median is the middle of all values statsd saw
         for that stat during that interval.
     - `statsd_<name>_stddev`: The stddev is the sample standard deviation
         of all values statsd saw for that stat during that interval.
@@ -222,8 +229,8 @@ measurements and tags.
 The plugin supports specifying templates for transforming statsd buckets into
 InfluxDB measurement names and tags. The templates have a _measurement_ keyword,
 which can be used to specify parts of the bucket that are to be used in the
-measurement name. Other words in the template are used as tag names. For example,
-the following template:
+measurement name. Other words in the template are used as tag names. For
+example, the following template:
 
 ```toml
 templates = [

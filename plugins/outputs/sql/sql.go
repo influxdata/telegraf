@@ -1,9 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sql
 
 import (
 	gosql "database/sql"
+	_ "embed"
 	"fmt"
 	"strings"
+	"time"
 
 	//Register sql drivers
 	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
@@ -15,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ConvertStruct struct {
 	Integer         string
@@ -28,17 +35,25 @@ type ConvertStruct struct {
 }
 
 type SQL struct {
-	Driver              string
-	DataSourceName      string
-	TimestampColumn     string
-	TableTemplate       string
-	TableExistsTemplate string
-	InitSQL             string `toml:"init_sql"`
-	Convert             ConvertStruct
+	Driver                string
+	DataSourceName        string
+	TimestampColumn       string
+	TableTemplate         string
+	TableExistsTemplate   string
+	InitSQL               string `toml:"init_sql"`
+	Convert               ConvertStruct
+	ConnectionMaxIdleTime time.Duration
+	ConnectionMaxLifetime time.Duration
+	ConnectionMaxIdle     int
+	ConnectionMaxOpen     int
 
 	db     *gosql.DB
 	Log    telegraf.Logger `toml:"-"`
 	tables map[string]bool
+}
+
+func (*SQL) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *SQL) Connect() error {
@@ -51,6 +66,11 @@ func (p *SQL) Connect() error {
 	if err != nil {
 		return err
 	}
+
+	db.SetConnMaxIdleTime(p.ConnectionMaxIdleTime)
+	db.SetConnMaxLifetime(p.ConnectionMaxLifetime)
+	db.SetMaxIdleConns(p.ConnectionMaxIdle)
+	db.SetMaxOpenConns(p.ConnectionMaxOpen)
 
 	if p.InitSQL != "" {
 		_, err = db.Exec(p.InitSQL)
@@ -71,12 +91,12 @@ func (p *SQL) Close() error {
 
 // Quote an identifier (table or column name)
 func quoteIdent(name string) string {
-	return `"` + strings.Replace(sanitizeQuoted(name), `"`, `""`, -1) + `"`
+	return `"` + strings.ReplaceAll(sanitizeQuoted(name), `"`, `""`) + `"`
 }
 
 // Quote a string literal
 func quoteStr(name string) string {
-	return "'" + strings.Replace(name, "'", "''", -1) + "'"
+	return "'" + strings.ReplaceAll(name, "'", "''") + "'"
 }
 
 func sanitizeQuoted(in string) string {
@@ -121,63 +141,6 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 	return datatype
 }
 
-var sampleConfig = `
-  ## Database driver
-  ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
-  # driver = ""
-
-  ## Data source name
-  ## The format of the data source name is different for each database driver.
-  ## See the plugin readme for details.
-  # data_source_name = ""
-
-  ## Timestamp column name
-  # timestamp_column = "timestamp"
-
-  ## Table creation template
-  ## Available template variables:
-  ##  {TABLE} - table name as a quoted identifier
-  ##  {TABLELITERAL} - table name as a quoted string literal
-  ##  {COLUMNS} - column definitions (list of quoted identifiers and types)
-  # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
-
-  ## Table existence check template
-  ## Available template variables:
-  ##  {TABLE} - tablename as a quoted identifier
-  # table_exists_template = "SELECT 1 FROM {TABLE} LIMIT 1"
-
-  ## Initialization SQL
-  # init_sql = ""
-
-  ## Metric type to SQL type conversion
-  ## The values on the left are the data types Telegraf has and the values on
-  ## the right are the data types Telegraf will use when sending to a database.
-  ##
-  ## The database values used must be data types the destination database
-  ## understands. It is up to the user to ensure that the selected data type is
-  ## available in the database they are using. Refer to your database
-  ## documentation for what data types are available and supported.
-  #[outputs.sql.convert]
-  #  integer              = "INT"
-  #  real                 = "DOUBLE"
-  #  text                 = "TEXT"
-  #  timestamp            = "TIMESTAMP"
-  #  defaultvalue         = "TEXT"
-  #  unsigned             = "UNSIGNED"
-  #  bool                 = "BOOL"
-
-  ## This setting controls the behavior of the unsigned value. By default the
-  ## setting will take the integer value and append the unsigned value to it. The other
-  ## option is "literal", which will use the actual value the user provides to
-  ## the unsigned option. This is useful for a database like ClickHouse where
-  ## the unsigned value should use a value like "uint64".
-  # conversion_style = "unsigned_suffix"
-`
-
-func (p *SQL) SampleConfig() string { return sampleConfig }
-func (p *SQL) Description() string  { return "Send metrics to SQL Database" }
-
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	var columns []string
 	//  ##  {KEY_COLUMNS} is a comma-separated list of key columns (timestamp and tags)
@@ -200,10 +163,10 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	}
 
 	query := p.TableTemplate
-	query = strings.Replace(query, "{TABLE}", quoteIdent(metric.Name()), -1)
-	query = strings.Replace(query, "{TABLELITERAL}", quoteStr(metric.Name()), -1)
-	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
-	//query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
+	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
+	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
+	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
+	//query = strings.ReplaceAll(query, "{KEY_COLUMNS}", strings.Join(pk, ","))
 
 	return query
 }
@@ -232,7 +195,7 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 }
 
 func (p *SQL) tableExists(tableName string) bool {
-	stmt := strings.Replace(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName), -1)
+	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
 	return err == nil
@@ -251,8 +214,8 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			if err != nil {
 				return err
 			}
-			p.tables[tablename] = true
 		}
+		p.tables[tablename] = true
 
 		var columns []string
 		var values []interface{}
@@ -324,5 +287,11 @@ func newSQL() *SQL {
 			Bool:            "BOOL",
 			ConversionStyle: "unsigned_suffix",
 		},
+		// Defaults for the connection settings (ConnectionMaxIdleTime,
+		// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
+		// mirror the golang defaults. As of go 1.18 all of them default to 0
+		// except max idle connections which is 2. See
+		// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
+		ConnectionMaxIdle: 2,
 	}
 }

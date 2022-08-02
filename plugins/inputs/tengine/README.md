@@ -6,7 +6,7 @@ The tengine plugin gathers metrics from the
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Tengine's basic status information (ngx_http_reqstat_module)
 [[inputs.tengine]]
   ## An array of Tengine reqstat module URI to gather stats.

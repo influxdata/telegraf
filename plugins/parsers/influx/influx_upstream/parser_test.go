@@ -594,7 +594,8 @@ func parseTests(stream bool) []parseTest {
 func TestParser(t *testing.T) {
 	for _, tt := range parseTests(false) {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := Parser{}
+			require.NoError(t, parser.Init())
 			parser.SetTimeFunc(DefaultTime)
 			if tt.timeFunc != nil {
 				parser.SetTimeFunc(tt.timeFunc)
@@ -621,7 +622,8 @@ func TestParser(t *testing.T) {
 func BenchmarkParser(b *testing.B) {
 	for _, tt := range parseTests(false) {
 		b.Run(tt.name, func(b *testing.B) {
-			parser := NewParser()
+			parser := Parser{}
+			require.NoError(b, parser.Init())
 			for n := 0; n < b.N; n++ {
 				metrics, err := parser.Parse(tt.input)
 				_ = err
@@ -728,7 +730,10 @@ func TestSeriesParser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := NewSeriesParser()
+			parser := Parser{
+				Type: "series",
+			}
+			require.NoError(t, parser.Init())
 			if tt.timeFunc != nil {
 				parser.SetTimeFunc(tt.timeFunc)
 			}
@@ -778,7 +783,8 @@ func TestParserErrorString(t *testing.T) {
 
 	for _, tt := range ptests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := Parser{}
+			require.NoError(t, parser.Init())
 
 			_, err := parser.Parse(tt.input)
 			require.Equal(t, tt.errString, err.Error())
