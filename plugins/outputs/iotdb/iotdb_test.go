@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/apache/iotdb-client-go/client"
-	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const testPort = "6667"
@@ -258,30 +256,16 @@ func TestMetricConversion(t *testing.T) {
 	}
 }
 
-// Start a container and do integration test.
-func TestIntegrationInserts(t *testing.T) {
+func TestIntegrationLocalServerInserts(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	container := testutil.Container{
-		Image:        "apache/iotdb:0.13.0-node",
-		ExposedPorts: []string{testPort},
-		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(testPort)),
-			wait.ForLog("Waiting for connections"),
-		),
-	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start IoTDB container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating IoTDB container failed")
-	}()
-
-	t.Logf("Container Address:%v, ExposedPorts:[%v:%v]", container.Address, container.Ports[testPort], testPort)
+	// require a local running instance
+	t.Skip("No running instance of Apache IoTDB.")
 	// create a client and tests two groups of insertion
 	testClient := &IoTDB{
-		Host:            container.Address,
-		Port:            container.Ports[testPort],
+		Host:            "localhost",
+		Port:            testPort,
 		User:            "root",
 		Password:        "root",
 		Timeout:         config.Duration(time.Second * 5),
