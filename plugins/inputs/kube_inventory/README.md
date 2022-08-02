@@ -52,6 +52,7 @@ avoid cardinality issues:
   ## If given a string, Telegraf cannot refresh the token periodically.
   # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
+  ## deprecated in 1.24.0; use bearer_token with a file
   # bearer_token_string = "abc_123"
 
   ## Set response_timeout (default 5 seconds)
