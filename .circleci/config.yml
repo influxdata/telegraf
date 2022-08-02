@@ -240,7 +240,7 @@ jobs:
           key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'make build_tools'
-      - run: 'sh ./tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
+      - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
       - save_cache:
           name: 'go module cache'
           key: go-mod-v1-{{ checksum "go.sum" }}

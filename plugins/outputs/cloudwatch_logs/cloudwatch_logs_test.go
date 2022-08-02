@@ -207,6 +207,24 @@ func TestInit(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "valid config with EndpointURL",
+			plugin: &CloudWatchLogs{
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:      "eu-central-1",
+					AccessKey:   "dummy",
+					SecretKey:   "dummy",
+					EndpointURL: "https://test.com",
+				},
+				LogGroup:     "TestLogGroup",
+				LogStream:    "tag:source",
+				LDMetricName: "docker_log",
+				LDSource:     "tag:location",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
