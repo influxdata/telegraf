@@ -2,8 +2,10 @@ package ntpq
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -35,11 +37,10 @@ func TestCases(t *testing.T) {
 		if !f.IsDir() {
 			continue
 		}
-		configFilename := filepath.Join("testcases", f.Name(), "telegraf.conf")
-		inputFilename := filepath.Join("testcases", f.Name(), "input.txt")
-		inputErrorFilename := filepath.Join("testcases", f.Name(), "input.err")
-		expectedFilename := filepath.Join("testcases", f.Name(), "expected.out")
-		expectedErrorFilename := filepath.Join("testcases", f.Name(), "expected.err")
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
 		// Compare options
 		options := []cmp.Option{
@@ -49,17 +50,8 @@ func TestCases(t *testing.T) {
 
 		t.Run(f.Name(), func(t *testing.T) {
 			// Read the input data
-			data, err := os.ReadFile(inputFilename)
+			inputData, inputErrors, err := readInputData(testcasePath)
 			require.NoError(t, err)
-
-			// Read the input error message if any
-			var inputErr error
-			if _, err := os.Stat(inputErrorFilename); err == nil {
-				x, err := testutil.ParseLinesFromFile(inputErrorFilename)
-				require.NoError(t, err)
-				require.Len(t, x, 1)
-				inputErr = errors.New(x[0])
-			}
 
 			// Read the expected output if any
 			var expected []telegraf.Metric
@@ -70,12 +62,12 @@ func TestCases(t *testing.T) {
 			}
 
 			// Read the expected output if any
-			var errorMsg string
+			var expectedErrors []string
 			if _, err := os.Stat(expectedErrorFilename); err == nil {
-				x, err := testutil.ParseLinesFromFile(expectedErrorFilename)
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
 				require.NoError(t, err)
-				require.Len(t, x, 1)
-				errorMsg = x[0]
+				require.NotEmpty(t, expectedErrors)
 			}
 
 			// Configure the plugin
@@ -85,21 +77,70 @@ func TestCases(t *testing.T) {
 
 			// Fake the reading
 			plugin := cfg.Inputs[0].Input.(*NTPQ)
-			plugin.runQ = func() ([]byte, error) {
-				return data, inputErr
+			plugin.runQ = func(server string) ([]byte, error) {
+				return inputData[server], inputErrors[server]
 			}
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
-			if errorMsg != "" {
-				require.EqualError(t, plugin.Gather(&acc), errorMsg)
-				return
+			require.NoError(t, plugin.Gather(&acc))
+			if len(acc.Errors) > 0 {
+				var actualErrorMsgs []string
+				for _, err := range acc.Errors {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
 			}
 
-			// No error case
-			require.NoError(t, plugin.Gather(&acc))
+			// Check the metric nevertheless as we might get some metrics despite errors.
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, options...)
 		})
 	}
+}
+
+func readInputData(path string) (map[string][]byte, map[string]error, error) {
+	// Get all elements in the testcase directory
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data := make(map[string][]byte)
+	errs := make(map[string]error)
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasPrefix(e.Name(), "input") {
+			continue
+		}
+
+		filename := filepath.Join(path, e.Name())
+		ext := filepath.Ext(e.Name())
+		server := strings.TrimPrefix(e.Name(), "input")
+		server = strings.TrimPrefix(server, "_") // This needs to be separate for non-server cases
+		server = strings.TrimSuffix(server, ext)
+
+		switch ext {
+		case ".txt":
+			// Read the input data
+			d, err := os.ReadFile(filename)
+			if err != nil {
+				return nil, nil, fmt.Errorf("reading %q failed: %w", filename, err)
+			}
+			data[server] = d
+		case ".err":
+			// Read the input error message
+			msgs, err := testutil.ParseLinesFromFile(filename)
+			if err != nil {
+				return nil, nil, fmt.Errorf("reading error %q failed: %w", filename, err)
+			}
+			if len(msgs) != 1 {
+				return nil, nil, fmt.Errorf("unexpected number of errors: %d", len(msgs))
+			}
+			errs[server] = errors.New(msgs[0])
+		default:
+			return nil, nil, fmt.Errorf("unexpected input %q", filename)
+		}
+	}
+
+	return data, errs, nil
 }

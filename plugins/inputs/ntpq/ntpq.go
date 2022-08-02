@@ -61,10 +61,11 @@ var fieldElements = map[string]elementType{
 }
 
 type NTPQ struct {
-	DNSLookup bool   `toml:"dns_lookup" deprecated:"1.24.0;add '-n' to 'options' instead to skip DNS lookup"`
-	Options   string `toml:"options"`
+	DNSLookup bool     `toml:"dns_lookup" deprecated:"1.24.0;add '-n' to 'options' instead to skip DNS lookup"`
+	Options   string   `toml:"options"`
+	Servers   []string `toml:"servers"`
 
-	runQ func() ([]byte, error)
+	runQ func(string) ([]byte, error)
 }
 
 func (*NTPQ) SampleConfig() string {
@@ -72,23 +73,33 @@ func (*NTPQ) SampleConfig() string {
 }
 
 func (n *NTPQ) Init() error {
+	if len(n.Servers) == 0 {
+		n.Servers = []string{""}
+	}
+
 	if n.runQ == nil {
-		args, err := shellquote.Split(n.Options)
+		options, err := shellquote.Split(n.Options)
 		if err != nil {
 			return fmt.Errorf("splitting options failed: %w", err)
 		}
-		n.runQ = func() ([]byte, error) {
+		if !n.DNSLookup {
+			if !choice.Contains("-n", options) {
+				options = append(options, "-n")
+			}
+		}
+
+		n.runQ = func(server string) ([]byte, error) {
 			bin, err := exec.LookPath("ntpq")
 			if err != nil {
 				return nil, err
 			}
 
-			if !n.DNSLookup {
-				if !choice.Contains("-n", args) {
-					args = append(args, "-n")
-				}
+			// Needs to be last argument
+			var args []string
+			args = append(args, options...)
+			if server != "" {
+				args = append(args, server)
 			}
-			fmt.Println(args)
 			cmd := exec.Command(bin, args...)
 			return cmd.Output()
 		}
@@ -97,9 +108,21 @@ func (n *NTPQ) Init() error {
 }
 
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
-	out, err := n.runQ()
+	for _, server := range n.Servers {
+		n.gatherServer(acc, server)
+	}
+	return nil
+}
+
+func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
+	var msgPrefix string
+	if server != "" {
+		msgPrefix = fmt.Sprintf("[%s] ", server)
+	}
+	out, err := n.runQ(server)
 	if err != nil {
-		return err
+		acc.AddError(fmt.Errorf("%s%w", msgPrefix, err))
+		return
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(out))
@@ -152,6 +175,9 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		if prefix != "" {
 			tags["state_prefix"] = prefix
 		}
+		if server != "" {
+			tags["source"] = server
+		}
 
 		for i, raw := range elements {
 			col := columns[i]
@@ -164,14 +190,16 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			case FieldInt:
 				value, err := strconv.ParseInt(raw, 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("parsing %q (%v) as int failed: %w", col.name, raw, err))
+					msg := fmt.Sprintf("%sparsing %q (%v) as int failed", msgPrefix, col.name, raw)
+					acc.AddError(fmt.Errorf("%s: %w", msg, err))
 					continue
 				}
 				fields[col.name] = value
 			case FieldFloat:
 				value, err := strconv.ParseFloat(raw, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("parsing %q (%v) as float failed: %w", col.name, raw, err))
+					msg := fmt.Sprintf("%sparsing %q (%v) as float failed", msgPrefix, col.name, raw)
+					acc.AddError(fmt.Errorf("%s: %w", msg, err))
 					continue
 				}
 				fields[col.name] = value
@@ -190,7 +218,8 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 				}
 				value, err := strconv.ParseInt(strings.TrimSuffix(raw, suffix), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("parsing %q (%v) as duration failed: %w", col.name, raw, err))
+					msg := fmt.Sprintf("%sparsing %q (%v) as duration failed", msgPrefix, col.name, raw)
+					acc.AddError(fmt.Errorf("%s: %w", msg, err))
 					continue
 				}
 				fields[col.name] = value * factor
@@ -199,8 +228,6 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 		acc.AddFields("ntpq", fields, tags)
 	}
-
-	return nil
 }
 
 func processLine(line string) (string, []string) {

@@ -35,6 +35,10 @@ server (RMS of difference of multiple time samples, milliseconds);
 
   ## Options to pass to the ntpq command.
   # options = "-p"
+
+  ## Servers to query with ntpq.
+  ## If no server is given, the local machine is queried.
+  # servers = []
 ```
 
 You can pass arbitrary options accepted by the `ntpq` command using the
@@ -58,11 +62,15 @@ for example.
 
 ### Tags
 
-- All measurements have the following tags:
-  - refid
-  - remote
-  - type
-  - stratum
+All measurements have the following tags:
+
+- refid
+- remote
+- type
+- stratum
+
+In case you are specifying `servers`, the measurement has an
+additional `source` tag.
 
 ## Example Output
 
