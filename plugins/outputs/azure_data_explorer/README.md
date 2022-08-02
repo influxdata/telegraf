@@ -98,7 +98,6 @@ corresponding table mapping as per the above mentioned commands.
 
 ## Ingestion type
 
-
 **Note**:
 [Streaming ingestion](https://aka.ms/AAhlg6s)
 has to be enabled on ADX [configure the ADX cluster]
