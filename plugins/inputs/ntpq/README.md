@@ -68,7 +68,8 @@ All measurements have the following tags:
   - type
   - stratum
 
-In case you are specifying `servers`, the measurement has an additional `server` tag.
+In case you are specifying `servers`, the measurement has an
+additional `server` tag.
 
 ## Example Output
 
