@@ -796,7 +796,6 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		}
 		guest := "unknown"
 		uuid := ""
-		var memorySizeMB int32
 		lookup := make(map[string]string)
 		// Get the name of the VM resource pool
 		rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
@@ -847,9 +846,6 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			}
 			uuid = r.Config.Uuid
 		}
-		if r.Summary.Config.MemorySizeMB != 0 {
-			memorySizeMB = r.Summary.Config.MemorySizeMB
-		}
 
 		cvs := make(map[string]string)
 		if e.customAttrEnabled {
@@ -873,7 +869,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Runtime.Host,
 			guest:        guest,
-			memorySizeMB: memorySizeMB,
+			memorySizeMB: r.Summary.Config.MemorySizeMB,
 			altID:        uuid,
 			rpname:       rpname,
 			customValues: e.loadCustomAttributes(r.ManagedEntity),
