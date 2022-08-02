@@ -16,7 +16,7 @@ port=127.0.0.1:9001
 
 It is also recommended to setup basic authentication to http server as described [here](http://supervisord.org/configuration.html#inet-http-server-section-values).
 
-## Plugin configuration
+## Configuration
 
 ```toml
 [inputs.supervisor]
