@@ -13,7 +13,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -25,7 +24,7 @@ var (
 	testdataDir = getTestdataDir()
 )
 
-func NewInfluxParser() (parsers.Parser, error) {
+func NewInfluxParser() (telegraf.Parser, error) {
 	parser := &influx.Parser{}
 	err := parser.Init()
 	if err != nil {
@@ -315,7 +314,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 		})
 }
 
-func createGrokParser() (parsers.Parser, error) {
+func createGrokParser() (telegraf.Parser, error) {
 	parser := &grok.Parser{
 		Measurement:        "tail_grok",
 		Patterns:           []string{"%{TEST_LOG_MULTILINE}"},
@@ -344,7 +343,7 @@ cpu,42
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
-	plugin.SetParserFunc(func() (parsers.Parser, error) {
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
@@ -405,7 +404,7 @@ skip2,mem,100
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
-	plugin.SetParserFunc(func() (parsers.Parser, error) {
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
 			MeasurementColumn: "measurement1",
 			HeaderRowCount:    2,
@@ -467,7 +466,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.PathTag = "customPathTagMyFile"
-	plugin.SetParserFunc(func() (parsers.Parser, error) {
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		p := &json.Parser{MetricName: "cpu"}
 		err := p.Init()
 		return p, err

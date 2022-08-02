@@ -22,7 +22,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -57,7 +56,7 @@ type DirectoryMonitor struct {
 	filesInUse          sync.Map
 	cancel              context.CancelFunc
 	context             context.Context
-	parserFunc          parsers.ParserFunc
+	parserFunc          telegraf.ParserFunc
 	filesProcessed      selfstat.Stat
 	filesDropped        selfstat.Stat
 	waitGroup           *sync.WaitGroup
@@ -220,7 +219,7 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 	return monitor.parseFile(parser, reader, file.Name())
 }
 
-func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
+func (monitor *DirectoryMonitor) parseFile(parser telegraf.Parser, reader io.Reader, fileName string) error {
 	var splitter bufio.SplitFunc
 
 	// Decide on how to split the file
@@ -250,7 +249,7 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 	return scanner.Err()
 }
 
-func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Reader, fileName string) error {
+func (monitor *DirectoryMonitor) parseAtOnce(parser telegraf.Parser, reader io.Reader, fileName string) error {
 	bytes, err := io.ReadAll(reader)
 	if err != nil {
 		return err
@@ -264,7 +263,7 @@ func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Re
 	return monitor.sendMetrics(metrics)
 }
 
-func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
+func (monitor *DirectoryMonitor) parseMetrics(parser telegraf.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
 	switch parser.(type) {
 	case *csv.Parser:
 		metrics, err = parser.Parse(line)
@@ -333,7 +332,7 @@ func (monitor *DirectoryMonitor) isIgnoredFile(fileName string) bool {
 	return false
 }
 
-func (monitor *DirectoryMonitor) SetParserFunc(fn parsers.ParserFunc) {
+func (monitor *DirectoryMonitor) SetParserFunc(fn telegraf.ParserFunc) {
 	monitor.parserFunc = fn
 }
 

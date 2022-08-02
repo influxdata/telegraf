@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -32,7 +31,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 
 	type fields struct {
 		ContentEncoding string
-		parser          parsers.Parser
+		parser          telegraf.Parser
 		records         map[telegraf.TrackingID]string
 	}
 	type args struct {

@@ -19,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -213,7 +212,7 @@ type SocketListener struct {
 
 	Log telegraf.Logger
 
-	parsers.Parser
+	telegraf.Parser
 	telegraf.Accumulator
 	io.Closer
 }
@@ -226,7 +225,7 @@ func (sl *SocketListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (sl *SocketListener) SetParser(parser parsers.Parser) {
+func (sl *SocketListener) SetParser(parser telegraf.Parser) {
 	sl.Parser = parser
 }
 

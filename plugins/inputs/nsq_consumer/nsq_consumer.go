@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -45,7 +44,7 @@ type NSQConsumer struct {
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
-	parser   parsers.Parser
+	parser   telegraf.Parser
 	consumer *nsq.Consumer
 
 	Log telegraf.Logger
@@ -61,7 +60,7 @@ func (*NSQConsumer) SampleConfig() string {
 }
 
 // SetParser takes the data_format from the config and finds the right parser for that format
-func (n *NSQConsumer) SetParser(parser parsers.Parser) {
+func (n *NSQConsumer) SetParser(parser telegraf.Parser) {
 	n.parser = parser
 }
 

@@ -753,14 +753,14 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 
 /*** Mockup INPUT plugin for (old) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserOld struct {
-	Parser     parsers.Parser
-	ParserFunc parsers.ParserFunc
+	Parser     telegraf.Parser
+	ParserFunc telegraf.ParserFunc
 }
 
 func (m *MockupInputPluginParserOld) SampleConfig() string                  { return "Mockup old parser test plugin" }
 func (m *MockupInputPluginParserOld) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser)       { m.Parser = parser }
-func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc)    { m.ParserFunc = f }
+func (m *MockupInputPluginParserOld) SetParser(parser telegraf.Parser)      { m.Parser = parser }
+func (m *MockupInputPluginParserOld) SetParserFunc(f telegraf.ParserFunc)   { m.ParserFunc = f }
 
 /*** Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserNew struct {

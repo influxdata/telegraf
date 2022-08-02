@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -64,7 +63,7 @@ type natsConsumer struct {
 	subs   []*nats.Subscription
 	jsSubs []*nats.Subscription
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	// channel for all incoming NATS messages
 	in chan *nats.Msg
 	// channel for all NATS read errors
@@ -78,7 +77,7 @@ func (*natsConsumer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *natsConsumer) SetParser(parser parsers.Parser) {
+func (n *natsConsumer) SetParser(parser telegraf.Parser) {
 	n.parser = parser
 }
 

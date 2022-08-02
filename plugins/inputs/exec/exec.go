@@ -20,7 +20,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
 
@@ -36,7 +35,7 @@ type Exec struct {
 	Environment []string        `toml:"environment"`
 	Timeout     config.Duration `toml:"timeout"`
 
-	parser parsers.Parser
+	parser telegraf.Parser
 
 	runner Runner
 	Log    telegraf.Logger `toml:"-"`
@@ -159,7 +158,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	}
 }
 
-func (e *Exec) SetParser(parser parsers.Parser) {
+func (e *Exec) SetParser(parser telegraf.Parser) {
 	e.parser = parser
 }
 

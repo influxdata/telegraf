@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -65,7 +64,7 @@ type EventHub struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	in     chan []telegraf.Metric
 }
 
@@ -74,7 +73,7 @@ func (*EventHub) SampleConfig() string {
 }
 
 // SetParser sets the parser
-func (e *EventHub) SetParser(parser parsers.Parser) {
+func (e *EventHub) SetParser(parser telegraf.Parser) {
 	e.parser = parser
 }
 

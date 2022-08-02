@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -65,7 +64,7 @@ type AMQPConsumer struct {
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
 
-	parser  parsers.Parser
+	parser  telegraf.Parser
 	conn    *amqp.Connection
 	wg      *sync.WaitGroup
 	cancel  context.CancelFunc
@@ -98,7 +97,7 @@ func (*AMQPConsumer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (a *AMQPConsumer) SetParser(parser parsers.Parser) {
+func (a *AMQPConsumer) SetParser(parser telegraf.Parser) {
 	a.parser = parser
 }
 

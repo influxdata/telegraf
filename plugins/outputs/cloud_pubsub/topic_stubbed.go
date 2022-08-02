@@ -14,7 +14,6 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/stretchr/testify/require"
@@ -47,7 +46,7 @@ type (
 	stubTopic struct {
 		Settings  pubsub.PublishSettings
 		ReturnErr map[string]bool
-		parsers.Parser
+		telegraf.Parser
 		*testing.T
 
 		stopped bool
