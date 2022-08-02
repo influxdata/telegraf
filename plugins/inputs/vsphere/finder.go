@@ -264,7 +264,7 @@ func init() {
 		"HostSystem":   {"parent", "summary.customValue", "customValue"},
 		"ResourcePool": {"parent", "customValue"},
 		"VirtualMachine": {"runtime.host", "config.guestId", "config.uuid", "runtime.powerState",
-			"summary.customValue", "guest.net", "guest.hostName", "resourcePool", "customValue"},
+			"summary.customValue", "guest.net", "guest.hostName", "summary.config.memorySizeMB", "resourcePool", "customValue"},
 		"Datastore":              {"parent", "info", "customValue"},
 		"ClusterComputeResource": {"parent", "customValue"},
 		"Datacenter":             {"parent", "customValue"},

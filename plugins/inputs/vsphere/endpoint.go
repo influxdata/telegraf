@@ -99,6 +99,7 @@ type objectRef struct {
 	ref          types.ManagedObjectReference
 	parentRef    *types.ManagedObjectReference //Pointer because it must be nillable
 	guest        string
+	memorySizeMB int32
 	dcname       string
 	rpname       string
 	customValues map[string]string
@@ -749,6 +750,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		}
 		guest := "unknown"
 		uuid := ""
+		var memorySizeMB int32 = 0
 		lookup := make(map[string]string)
 		// Get the name of the VM resource pool
 		rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
@@ -796,6 +798,10 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			guest = cleanGuestID(r.Config.GuestId)
 			uuid = r.Config.Uuid
 		}
+		if r.Summary.Config.MemorySizeMB != 0 {
+			memorySizeMB = r.Summary.Config.MemorySizeMB
+		}
+		
 		cvs := make(map[string]string)
 		if e.customAttrEnabled {
 			for _, cv := range r.Summary.CustomValue {
@@ -818,6 +824,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Runtime.Host,
 			guest:        guest,
+			memorySizeMB: memorySizeMB,
 			altID:        uuid,
 			rpname:       rpname,
 			customValues: e.loadCustomAttributes(&r.ManagedEntity),
@@ -1258,6 +1265,9 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 	if resourceType == "vm" && objectRef.rpname != "" {
 		t["rpname"] = objectRef.rpname
+	}
+	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
+		t["memorySizeMB"] = strconv.Itoa(int(objectRef.memorySizeMB))
 	}
 
 	// Map parent reference
