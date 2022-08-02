@@ -796,7 +796,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		}
 		guest := "unknown"
 		uuid := ""
-		var memorySizeMB int32 = 0
+		var memorySizeMB int32
 		lookup := make(map[string]string)
 		// Get the name of the VM resource pool
 		rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
