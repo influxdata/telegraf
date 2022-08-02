@@ -27,20 +27,20 @@ func newTestClient() *IoTDB {
 	return testClient
 }
 
-// This func makes sure fields in order.
-func generateTestMetric(
+func newMetricWithOrderedFields(
 	name string,
 	tags []telegraf.Tag,
 	fields []telegraf.Field,
 	timestamp time.Time,
 ) telegraf.Metric {
-	// "metric.New" uses map[string]interface{} so fields are NOT in order.
+	// This function creates new Metric and makes sure fields in order.
+	// `metric.New()` uses map[string]interface{} so fields are NOT in order.
+	// `AddField()` makes sure fields are in order, which is necessary for testing.
 	m := metric.New(name, map[string]string{}, map[string]interface{}{}, timestamp)
 	for _, tag := range tags {
 		m.AddTag(tag.Key, tag.Value)
 	}
 	for _, field := range fields {
-		// "AddField" makes sure fields are in order.
 		m.AddField(field.Key, field.Value)
 	}
 	return m
@@ -49,7 +49,7 @@ func generateTestMetric(
 var (
 	constTestTimestamp = time.Date(2022, time.July, 20, 12, 25, 33, 44, time.UTC)
 	testMetrics001     = []telegraf.Metric{
-		generateTestMetric(
+		newMetricWithOrderedFields(
 			"root.computer.fan",
 			[]telegraf.Tag{
 				{Key: "price", Value: "expensive"},
@@ -61,7 +61,7 @@ var (
 			},
 			constTestTimestamp,
 		),
-		generateTestMetric(
+		newMetricWithOrderedFields(
 			"root.computer.fan",
 			[]telegraf.Tag{ // same keys in different order
 				{Key: "owner", Value: "gpu"},
@@ -73,7 +73,7 @@ var (
 			},
 			constTestTimestamp,
 		),
-		generateTestMetric(
+		newMetricWithOrderedFields(
 			"root.computer.keyboard",
 			[]telegraf.Tag{},
 			[]telegraf.Field{
@@ -88,7 +88,7 @@ var (
 		),
 	}
 	testMetrics002 = []telegraf.Metric{
-		generateTestMetric(
+		newMetricWithOrderedFields(
 			"root.computer.mouse",
 			[]telegraf.Tag{},
 			[]telegraf.Field{
