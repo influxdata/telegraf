@@ -73,13 +73,6 @@ func (v *Parser) SetDefaultTags(tags map[string]string) {
 	v.DefaultTags = tags
 }
 
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (v *Parser) InitFromConfig(config *parsers.Config) error {
-	v.MetricName = config.MetricName
-	v.DefaultTags = config.DefaultTags
-	return v.Init()
-}
-
 func (v *Parser) Init() error {
 	if v.FieldName == "" {
 		v.FieldName = "value"

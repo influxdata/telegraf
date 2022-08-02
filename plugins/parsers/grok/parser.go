@@ -560,20 +560,6 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 	return ts.Add(t.incr*t.incrn + t.rollover)
 }
 
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.Measurement = config.MetricName
-	p.DefaultTags = config.DefaultTags
-	p.CustomPatterns = config.GrokCustomPatterns
-	p.CustomPatternFiles = config.GrokCustomPatternFiles
-	p.NamedPatterns = config.GrokNamedPatterns
-	p.Patterns = config.GrokPatterns
-	p.Timezone = config.GrokTimezone
-	p.UniqueTimestamp = config.GrokUniqueTimestamp
-
-	return p.Init()
-}
-
 func (p *Parser) Init() error {
 	if len(p.Patterns) == 0 {
 		p.Patterns = []string{"%{COMBINED_LOG_FORMAT}"}

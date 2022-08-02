@@ -195,11 +195,3 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 func init() {
 	parsers.Add("graphite", func(_ string) telegraf.Parser { return &Parser{} })
 }
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.Templates = append(p.Templates, config.Templates...)
-	p.Separator = config.Separator
-	p.DefaultTags = config.DefaultTags
-
-	return p.Init()
-}

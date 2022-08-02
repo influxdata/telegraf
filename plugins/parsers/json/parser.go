@@ -237,18 +237,3 @@ func init() {
 			}
 		})
 }
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.MetricName = config.MetricName
-	p.TagKeys = config.TagKeys
-	p.NameKey = config.JSONNameKey
-	p.StringFields = config.JSONStringFields
-	p.Query = config.JSONQuery
-	p.TimeKey = config.JSONTimeKey
-	p.TimeFormat = config.JSONTimeFormat
-	p.Timezone = config.JSONTimezone
-	p.Strict = config.JSONStrict
-	p.DefaultTags = config.DefaultTags
-
-	return p.Init()
-}

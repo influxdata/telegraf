@@ -664,17 +664,3 @@ func init() {
 		},
 	)
 }
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.DefaultMetricName = config.MetricName
-	p.DefaultTags = config.DefaultTags
-
-	// Convert the config formats which is a one-to-one copy
-	if len(config.JSONV2Config) > 0 {
-		p.Configs = make([]json_v2.Config, 0, len(config.JSONV2Config))
-		p.Configs = append(p.Configs, config.JSONV2Config...)
-	}
-
-	return p.Init()
-}

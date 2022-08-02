@@ -319,10 +319,3 @@ func init() {
 		},
 	)
 }
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.metricName = config.MetricName
-	p.DefaultTags = config.DefaultTags
-	return nil
-}

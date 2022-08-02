@@ -452,27 +452,3 @@ func init() {
 			return &Parser{MetricName: defaultMetricName}
 		})
 }
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.HeaderRowCount = config.CSVHeaderRowCount
-	p.SkipRows = config.CSVSkipRows
-	p.SkipColumns = config.CSVSkipColumns
-	p.Delimiter = config.CSVDelimiter
-	p.Comment = config.CSVComment
-	p.TrimSpace = config.CSVTrimSpace
-	p.ColumnNames = config.CSVColumnNames
-	p.ColumnTypes = config.CSVColumnTypes
-	p.TagColumns = config.CSVTagColumns
-	p.MeasurementColumn = config.CSVMeasurementColumn
-	p.TimestampColumn = config.CSVTimestampColumn
-	p.TimestampFormat = config.CSVTimestampFormat
-	p.Timezone = config.CSVTimezone
-	p.DefaultTags = config.DefaultTags
-	p.SkipValues = config.CSVSkipValues
-	p.MetadataRows = config.CSVMetadataRows
-	p.MetadataSeparators = config.CSVMetadataSeparators
-	p.MetadataTrimSet = config.CSVMetadataTrimSet
-	p.ResetMode = "none"
-
-	return p.Init()
-}

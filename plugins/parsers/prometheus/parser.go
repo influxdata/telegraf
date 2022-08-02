@@ -203,11 +203,6 @@ func (p *Parser) GetTimestamp(m *dto.Metric, now time.Time) time.Time {
 	return t
 }
 
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.IgnoreTimestamp = config.PrometheusIgnoreTimestamp
-	return nil
-}
-
 func init() {
 	parsers.Add("prometheus",
 		func(defaultMetricName string) telegraf.Parser {

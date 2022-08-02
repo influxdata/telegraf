@@ -162,13 +162,6 @@ func (p *Parser) Init() error {
 	return nil
 }
 
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.DefaultTags = config.DefaultTags
-
-	return p.Init()
-}
-
 func init() {
 	parsers.Add("influx",
 		func(_ string) telegraf.Parser {

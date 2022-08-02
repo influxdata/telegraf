@@ -206,12 +206,3 @@ func init() {
 			}
 		})
 }
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.AuthFile = config.CollectdAuthFile
-	p.SecurityLevel = config.CollectdSecurityLevel
-	p.TypesDB = config.CollectdTypesDB
-	p.ParseMultiValue = config.CollectdSplit
-
-	return p.Init()
-}

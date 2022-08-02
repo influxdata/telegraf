@@ -17,12 +17,6 @@ func Add(name string, creator Creator) {
 	Parsers[name] = creator
 }
 
-// ParserCompatibility is an interface for backward-compatible initialization of new parsers
-type ParserCompatibility interface {
-	// InitFromConfig sets the parser internal variables from the old-style config
-	InitFromConfig(config *Config) error
-}
-
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {

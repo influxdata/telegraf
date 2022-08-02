@@ -595,23 +595,3 @@ func init() {
 		},
 	)
 }
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.Format = config.DataFormat
-	if p.Format == "xpath_protobuf" {
-		p.ProtobufMessageDef = config.XPathProtobufFile
-		p.ProtobufMessageType = config.XPathProtobufType
-	}
-	p.PrintDocument = config.XPathPrintDocument
-	p.DefaultMetricName = config.MetricName
-	p.DefaultTags = config.DefaultTags
-
-	// Convert the config formats which is a one-to-one copy
-	if len(config.XPathConfig) > 0 {
-		p.Configs = make([]xpath.Config, 0, len(config.XPathConfig))
-		p.Configs = append(p.Configs, config.XPathConfig...)
-	}
-
-	return p.Init()
-}
