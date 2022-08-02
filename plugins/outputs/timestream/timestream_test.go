@@ -361,7 +361,6 @@ func TestTransformMetricsRequestsAboveLimitAreSplit(t *testing.T) {
 }
 
 func TestTransformMetricsDifferentDimensionsSameTimestampsAreWrittenSeparate(t *testing.T) {
-
 	input1 := testutil.MustMetric(
 		metricName1,
 		map[string]string{"tag1": "value1"},
