@@ -34,7 +34,7 @@ type podResponse struct {
 	Kind       string        `json:"kind"`
 	APIVersion string        `json:"apiVersion"`
 	Metadata   podMetadata   `json:"metadata"`
-	Items      []*corev1.Pod `json:"items,string,omitempty"`
+	Items      []*corev1.Pod `json:"items,omitempty"`
 }
 
 const cAdvisorPodListDefaultInterval = 60

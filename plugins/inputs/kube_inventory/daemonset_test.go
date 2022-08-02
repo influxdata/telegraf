@@ -128,8 +128,6 @@ func TestDaemonSet(t *testing.T) {
 
 func TestDaemonSetSelectorFilter(t *testing.T) {
 	cli := &client{}
-	now := time.Now()
-	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
 	responseMap := map[string]interface{}{
 		"/daemonsets/": &v1.DaemonSetList{
