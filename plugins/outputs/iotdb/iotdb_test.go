@@ -264,7 +264,7 @@ func TestIntegrationInserts(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	container := testutil.Container{
-		Image:        "apache/iotdb:1.13.0",
+		Image:        "apache/iotdb:0.13.0-node",
 		ExposedPorts: []string{testPort},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(testPort)),
