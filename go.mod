@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/monitoring v1.5.0
 	cloud.google.com/go/pubsub v1.23.0
 	collectd.org v0.5.0
-	github.com/Azure/azure-event-hubs-go/v3 v3.3.17
+	github.com/Azure/azure-event-hubs-go/v3 v3.3.18
 	github.com/Azure/azure-kusto-go v0.7.0
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
 	github.com/Azure/go-autorest/autorest v0.11.24
@@ -133,7 +133,7 @@ require (
 	github.com/sensu/sensu-go/api/core/v2 v2.14.0
 	github.com/shirou/gopsutil/v3 v3.22.7
 	github.com/showwin/speedtest-go v1.1.5
-	github.com/signalfx/golib/v3 v3.3.43
+	github.com/signalfx/golib/v3 v3.3.45
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.2

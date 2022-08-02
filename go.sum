@@ -87,8 +87,8 @@ gioui.org v0.0.0-20210308172011-57750fc8a0a6/go.mod h1:RSH6KIUZ0p2xy5zHDxgAM4zum
 github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
 github.com/Azure/azure-amqp-common-go/v3 v3.2.3 h1:uDF62mbd9bypXWi19V1bN5NZEO84JqgmI5G73ibAmrk=
 github.com/Azure/azure-amqp-common-go/v3 v3.2.3/go.mod h1:7rPmbSfszeovxGfc5fSAXE4ehlXQZHpMja2OtxC2Tas=
-github.com/Azure/azure-event-hubs-go/v3 v3.3.17 h1:9k2yRMBJWgcIlSNBuKVja2af/oR3oMowqFPpHDV5Kl4=
-github.com/Azure/azure-event-hubs-go/v3 v3.3.17/go.mod h1:R5H325+EzgxcBDkUerEwtor7ZQg77G7HiOTwpcuIVXY=
+github.com/Azure/azure-event-hubs-go/v3 v3.3.18 h1:jgWDk2qmknA0UsfyzjHiW5yciOw3aBY0Oq9p/M9lz2Q=
+github.com/Azure/azure-event-hubs-go/v3 v3.3.18/go.mod h1:R5H325+EzgxcBDkUerEwtor7ZQg77G7HiOTwpcuIVXY=
 github.com/Azure/azure-kusto-go v0.7.0 h1:vc6avA4df8b1c1uwYgVv02wvhhSiHtaqtC/9sOw+lDY=
 github.com/Azure/azure-kusto-go v0.7.0/go.mod h1:PrnIeDgVjBc1Jv1dwOuL1om6/zIWQ7SbIBlx+/9UdWc=
 github.com/Azure/azure-pipeline-go v0.1.8/go.mod h1:XA1kFWRVhSK+KNFiOhfv83Fv8L9achrP7OxIzeTn1Yg=
@@ -2092,8 +2092,8 @@ github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2 h1:X886QgwZH5qr9HIQkk3m
 github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2/go.mod h1:tCQQqyJAVF1+mxNdqOi18sS/zaSrE6EMyWwRA2QTl70=
 github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 h1:WsShHmu12ZztYPfh9b+I+VjYD1o8iOHhB67WZCMEEE8=
 github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083/go.mod h1:adPDS6s7WaajdFBV9mQ7i0dKfQ8xiDnF9ZNETVPpp7c=
-github.com/signalfx/golib/v3 v3.3.43 h1:GvzjE2WaYU3oPhoek52/5zYZ5tPnt05EXUmszSZct+E=
-github.com/signalfx/golib/v3 v3.3.43/go.mod h1:LR8eTSda7NzynOqe0ibvV63OuqorWcHDtRCY22zTpKg=
+github.com/signalfx/golib/v3 v3.3.45 h1:gvFJ2FTf+0GUlUNzP0wWtEpYCxIcW63Jkk7BglNnSto=
+github.com/signalfx/golib/v3 v3.3.45/go.mod h1:LR8eTSda7NzynOqe0ibvV63OuqorWcHDtRCY22zTpKg=
 github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9/go.mod h1:Ytb8KfCSyuwy/VILnROdgCvbQLA5ch0nkbG7lKT0BXw=
 github.com/signalfx/sapm-proto v0.7.2 h1:iM/y3gezQm1/j7JBS0gXhEJ8ROeneb6DY7n0OcnvLks=
 github.com/signalfx/sapm-proto v0.7.2/go.mod h1:HLufOh6Gd2altGxbeve+s6hh0EWCWoOM7MmuYuvs5PI=
