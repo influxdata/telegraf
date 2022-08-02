@@ -121,15 +121,15 @@ func TestInitInvalid(t *testing.T) {
 	}
 }
 
+// Test Metric conversion, which means testing function `convertMetricsToRecordsWithTags`
 func TestMetricConversion(t *testing.T) {
 	var testTimestamp = time.Date(2022, time.July, 20, 12, 25, 33, 44, time.UTC)
 
 	tests := []struct {
-		name         string
-		plugin       *IoTDB
-		expected     recordsWithTags
-		metrics      []telegraf.Metric
-		doTestModify bool // if true, modify before comparing; if false, do not call `modifyRecordsWithTags`
+		name     string
+		plugin   *IoTDB
+		expected recordsWithTags
+		metrics  []telegraf.Metric
 	}{
 		{
 			name:   "default config",
@@ -192,7 +192,6 @@ func TestMetricConversion(t *testing.T) {
 					testTimestamp,
 				),
 			},
-			doTestModify: false,
 		},
 		{
 			name:   "unsigned int to text",
@@ -214,7 +213,6 @@ func TestMetricConversion(t *testing.T) {
 					testTimestamp,
 				),
 			},
-			doTestModify: false,
 		},
 		{
 			name:   "unsigned int to int with overflow",
@@ -236,7 +234,6 @@ func TestMetricConversion(t *testing.T) {
 					testTimestamp,
 				),
 			},
-			doTestModify: false,
 		},
 		{
 			name:   "second timestamp precision",
@@ -258,8 +255,31 @@ func TestMetricConversion(t *testing.T) {
 					testTimestamp,
 				),
 			},
-			doTestModify: false,
 		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.Log = &testutil.Logger{}
+			require.NoError(t, tt.plugin.Init())
+			actual, err := tt.plugin.convertMetricsToRecordsWithTags(tt.metrics)
+			require.NoError(t, err)
+			// Ignore the tags-list for comparison
+			actual.TagsList = nil
+			require.EqualValues(t, &tt.expected, actual)
+		})
+	}
+}
+
+// Test tags handling, which means testing function `modifyRecordsWithTags`
+func TestTagsHandling(t *testing.T) {
+	var testTimestamp = time.Date(2022, time.July, 20, 12, 25, 33, 44, time.UTC)
+
+	tests := []struct {
+		name     string
+		plugin   *IoTDB
+		expected recordsWithTags
+		input    recordsWithTags
+	}{
 		{ //treat tags as fields. And input Tags are NOT in order.
 			name:   "treat tags as fields",
 			plugin: func() *IoTDB { s := newIoTDB(); s.TreatTagsAs = "fields"; return s }(),
@@ -274,21 +294,21 @@ func TestMetricConversion(t *testing.T) {
 				},
 				TimestampList: []int64{testTimestamp.UnixNano()},
 			},
-			metrics: []telegraf.Metric{
-				newMetricWithOrderedFields(
-					"root.computer.fields",
-					[]telegraf.Tag{
-						{Key: "price", Value: "expensive"},
-						{Key: "owner", Value: "cpu"},
-					},
-					[]telegraf.Field{
-						{Key: "temperature", Value: float64(42.55)},
-						{Key: "counter", Value: int64(987654321)},
-					},
-					testTimestamp,
-				),
+			input: recordsWithTags{
+				DeviceIDList:     []string{"root.computer.fields"},
+				MeasurementsList: [][]string{{"temperature", "counter"}},
+				ValuesList: [][]interface{}{
+					{float64(42.55), int64(987654321)},
+				},
+				DataTypesList: [][]client.TSDataType{
+					{client.DOUBLE, client.INT64},
+				},
+				TimestampList: []int64{testTimestamp.UnixNano()},
+				TagsList: [][]*telegraf.Tag{{
+					{Key: "owner", Value: "cpu"},
+					{Key: "price", Value: "expensive"},
+				}},
 			},
-			doTestModify: true,
 		},
 		{ //treat tags as device IDs. And input Tags are in order.
 			name:   "treat tags as device IDs",
@@ -304,35 +324,31 @@ func TestMetricConversion(t *testing.T) {
 				},
 				TimestampList: []int64{testTimestamp.UnixNano()},
 			},
-			metrics: []telegraf.Metric{
-				newMetricWithOrderedFields(
-					"root.computer.deviceID",
-					[]telegraf.Tag{
-						{Key: "owner", Value: "cpu"},
-						{Key: "price", Value: "expensive"},
-					},
-					[]telegraf.Field{
-						{Key: "temperature", Value: float64(42.55)},
-						{Key: "counter", Value: int64(987654321)},
-					},
-					testTimestamp,
-				),
+			input: recordsWithTags{
+				DeviceIDList:     []string{"root.computer.deviceID"},
+				MeasurementsList: [][]string{{"temperature", "counter"}},
+				ValuesList: [][]interface{}{
+					{float64(42.55), int64(987654321)},
+				},
+				DataTypesList: [][]client.TSDataType{
+					{client.DOUBLE, client.INT64},
+				},
+				TimestampList: []int64{testTimestamp.UnixNano()},
+				TagsList: [][]*telegraf.Tag{{
+					{Key: "owner", Value: "cpu"},
+					{Key: "price", Value: "expensive"},
+				}},
 			},
-			doTestModify: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.plugin.Log = &testutil.Logger{}
 			require.NoError(t, tt.plugin.Init())
-			actual, err := tt.plugin.convertMetricsToRecordsWithTags(tt.metrics)
-			require.NoError(t, err)
-			if tt.doTestModify { // then `expected` is after modified; else `expected` is before modified.
-				require.NoError(t, tt.plugin.modifyRecordsWithTags(actual))
-			}
+			require.NoError(t, tt.plugin.modifyRecordsWithTags(&tt.input))
 			// Ignore the tags-list for comparison
-			actual.TagsList = nil
-			require.EqualValues(t, &tt.expected, actual)
+			tt.input.TagsList = nil
+			require.EqualValues(t, tt.expected, tt.input)
 		})
 	}
 }
