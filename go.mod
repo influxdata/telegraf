@@ -133,7 +133,7 @@ require (
 	github.com/sensu/sensu-go/api/core/v2 v2.14.0
 	github.com/shirou/gopsutil/v3 v3.22.7
 	github.com/showwin/speedtest-go v1.1.5
-	github.com/signalfx/golib/v3 v3.3.43
+	github.com/signalfx/golib/v3 v3.3.45
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.2
