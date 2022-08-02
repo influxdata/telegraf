@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/apache/iotdb-client-go/client"
@@ -100,7 +101,7 @@ func (s *IoTDB) Write(metrics []telegraf.Metric) error {
 	}
 	// Write to client.
 	// If first writing fails, the client will automatically retry three times. If all fail, it returns an error.
-	if err := s.WriteRecordsWithTags(rwt); err != nil {
+	if err := s.writeRecordsWithTags(rwt); err != nil {
 		return fmt.Errorf("write failed: %w", err)
 	}
 	return nil
@@ -226,11 +227,11 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 	case "device_id":
 		// method 2: treat Tag(Key:Value) as subtree of device id
 		for index, tags := range rwt.TagsList { // for each record
-			subfix := ""
+			topic := []string{rwt.DeviceIDList[index]}
 			for _, tag := range tags { // for each tag, append it's Value
-				subfix = subfix + "." + tag.Value
+				topic = append(topic, tag.Value)
 			}
-			rwt.DeviceIDList[index] = rwt.DeviceIDList[index] + subfix
+			rwt.DeviceIDList[index] = strings.Join(topic, ".")
 		}
 		return nil
 	default:
@@ -240,11 +241,10 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 }
 
 // Write records with tags to IoTDB server
-func (s *IoTDB) WriteRecordsWithTags(rwt *recordsWithTags) error {
+func (s *IoTDB) writeRecordsWithTags(rwt *recordsWithTags) error {
 	// deal with tags
-	modifyError := s.modifyRecordsWithTags(rwt)
-	if modifyError != nil {
-		return modifyError
+	if err := s.modifyRecordsWithTags(rwt); err != nil {
+		return err
 	}
 	// write to IoTDB server
 	status, err := s.session.InsertRecords(rwt.DeviceIDList, rwt.MeasurementsList,

@@ -27,7 +27,7 @@ configuration.
 
 ## Please pay attention to these points
 
-1. IoTDB (version 0.13.x or older) **DO NOT support unsigned integer**.
+1. IoTDB currently **DOES NOT support unsigned integer**.
 There are three available options of converting uint64, which are specified by
 parameter `uint64_conversion`.
 
@@ -62,13 +62,6 @@ Other options are "second", "millisecond", "microsecond".
    - `fields`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"`
    - `device_id`, result: `root.sg.device.private.working, s1=100, s2="hello"`
 
-## Testing
-
-Testing contains: network connection, error correction, datatype conversion,
-data writing.
-
-Use `-short` option to make testing shorter. This mode skips integration tests.
-
 ## Configuration
 
 ```toml @sample.conf
@@ -79,12 +72,12 @@ Use `-short` option to make testing shorter. This mode skips integration tests.
   # port = "6667"
 
   ## Configuration of authentication
-  user = "root"
-  password = "root"
+  # user = "root"
+  # password = "root"
 
   ## Timeout to open a new session.
   ## A value of zero means no timeout.
-  #  timeout = "5s"
+  # timeout = "5s"
 
   ## Configuration of type conversion for 64-bit unsigned int
   ## IoTDB currently DOES NOT support unsigned integers (version 13.x). 

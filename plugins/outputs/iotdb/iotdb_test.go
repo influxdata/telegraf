@@ -10,6 +10,7 @@ import (
 	"github.com/apache/iotdb-client-go/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -28,18 +29,20 @@ func newTestClient() *IoTDB {
 	return testClient
 }
 
-// This func makes sure fields in order. "metric.New" uses map[string]interface{} so fields are not in order.
+// This func makes sure fields in order.
 func generateTestMetric(
 	name string,
 	tags []telegraf.Tag,
 	fields []telegraf.Field,
 	timestamp time.Time,
 ) telegraf.Metric {
+	// "metric.New" uses map[string]interface{} so fields are NOT in order.
 	m := metric.New(name, map[string]string{}, map[string]interface{}{}, timestamp)
 	for _, tag := range tags {
 		m.AddTag(tag.Key, tag.Value)
 	}
 	for _, field := range fields {
+		// "AddField" makes sure fields are in order.
 		m.AddField(field.Key, field.Value)
 	}
 	return m
@@ -97,33 +100,6 @@ var (
 		),
 	}
 )
-
-// compare two recordsWithTags, returns True if and only if they are the same.
-func requireRecordsEqual(t *testing.T, rwtExcepted *recordsWithTags, rwtActual *recordsWithTags, msg string) {
-	t.Logf("Testing case named %q", msg)
-	require.EqualValues(t, rwtExcepted.DeviceIDList, rwtActual.DeviceIDList)
-	require.EqualValues(t, rwtExcepted.MeasurementsList, rwtActual.MeasurementsList)
-	require.EqualValues(t, rwtExcepted.ValuesList, rwtActual.ValuesList)
-	require.EqualValues(t, rwtExcepted.DataTypesList, rwtActual.DataTypesList)
-	require.EqualValues(t, rwtExcepted.TimestampList, rwtActual.TimestampList)
-}
-
-// util function, test 'Write' with given session and config
-func testConnectWriteMetricInThisConf(s *IoTDB, metrics []telegraf.Metric) error {
-	connError := s.Connect()
-	if connError != nil {
-		return connError
-	}
-	writeError := s.Write(metrics)
-	if writeError != nil {
-		return writeError
-	}
-	closeError := s.Close()
-	if closeError != nil {
-		return closeError
-	}
-	return nil
-}
 
 func TestMetricConversion(t *testing.T) {
 	var (
@@ -273,7 +249,12 @@ func TestMetricConversion(t *testing.T) {
 		if testCase.needModify {
 			require.NoError(t, testCase.cli.modifyRecordsWithTags(result))
 		}
-		requireRecordsEqual(t, &(testCase.expectedRWT), result, testCase.name)
+		t.Logf("Testing case named %q", testCase.name)
+		require.EqualValues(t, testCase.expectedRWT.DeviceIDList, result.DeviceIDList)
+		require.EqualValues(t, testCase.expectedRWT.MeasurementsList, result.MeasurementsList)
+		require.EqualValues(t, testCase.expectedRWT.ValuesList, result.ValuesList)
+		require.EqualValues(t, testCase.expectedRWT.DataTypesList, result.DataTypesList)
+		require.EqualValues(t, testCase.expectedRWT.TimestampList, result.TimestampList)
 	}
 }
 
@@ -297,9 +278,20 @@ func TestIntegrationInserts(t *testing.T) {
 	}()
 
 	t.Logf("Container Address:%v, ExposedPorts:[%v:%v]", container.Address, container.Ports[testPort], testPort)
-
-	testClient := newTestClient()
-	testClient.Host = container.Address
-	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics001))
-	require.NoError(t, testConnectWriteMetricInThisConf(testClient, testMetrics002))
+	// create a client and tests two groups of insertion
+	testClient := &IoTDB{
+		Host:            container.Address,
+		Port:            container.Ports[testPort],
+		User:            "root",
+		Password:        "root",
+		Timeout:         config.Duration(time.Second * 5),
+		ConvertUint64To: "int64_clip",
+		TimeStampUnit:   "nanosecond",
+		TreatTagsAs:     "device_id",
+	}
+	testClient.Log = testutil.Logger{}
+	require.NoError(t, testClient.Connect())
+	require.NoError(t, testClient.Write(testMetrics001))
+	require.NoError(t, testClient.Write(testMetrics002))
+	require.NoError(t, testClient.Close())
 }
