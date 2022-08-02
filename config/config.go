@@ -900,36 +900,11 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
-	// Keep the old interface for backward compatibility
-	if t, ok := input.(parsers.ParserInput); ok {
-		// DEPRECATED: Please switch your plugin to telegraf.ParserPlugin.
-		parser, err := c.addParser("inputs", name, table)
-		if err != nil {
-			return fmt.Errorf("adding parser failed: %w", err)
-		}
-		t.SetParser(parser)
-	}
-
 	if t, ok := input.(telegraf.ParserFuncPlugin); ok {
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
-			parser, err := c.addParser("inputs", name, table)
-			if err != nil {
-				return nil, err
-			}
-			err = parser.Init()
-			return parser, err
-		})
-	}
-
-	if t, ok := input.(parsers.ParserFuncInput); ok {
-		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncPlugin.
-		if !c.probeParser(table) {
-			return errors.New("parser not found")
-		}
-		t.SetParserFunc(func() (parsers.Parser, error) {
 			parser, err := c.addParser("inputs", name, table)
 			if err != nil {
 				return nil, err
