@@ -63,10 +63,11 @@ for example.
 ### Tags
 
 All measurements have the following tags:
-  - refid
-  - remote
-  - type
-  - stratum
+
+- refid
+- remote
+- type
+- stratum
 
 In case you are specifying `servers`, the measurement has an
 additional `server` tag.
