@@ -73,6 +73,9 @@ sudo yum install telegraf
 
 Telegraf requires Go version 1.18 or newer, the Makefile requires GNU make.
 
+On Windows, the makefile requires the use of a bash terminal to support all makefile targets.
+An easy option to get bash for windows is using the version that comes with [git for windows](https://gitforwindows.org/).
+
 1. [Install Go](https://golang.org/doc/install) >=1.18 (1.18.0 recommended)
 2. Clone the Telegraf repository:
 

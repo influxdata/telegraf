@@ -1,10 +1,9 @@
-ifeq ($(OS),Windows_NT)
-	next_version := $(shell type build_version.txt)
-	tag := $(shell git describe --exact-match --tags 2> nul)
-else
-	next_version := $(shell cat build_version.txt)
-	tag := $(shell git describe --exact-match --tags 2>/dev/null)
+ifeq ($(OS),$(filter $(OS),Windows_NT Windows))
+	EXEEXT=".exe"
 endif
+
+next_version := $(shell cat build_version.txt)
+tag := $(shell git describe --exact-match --tags 2>/dev/null)
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
