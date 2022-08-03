@@ -1,5 +1,5 @@
-ifeq ($(OS),$(filter $(OS),Windows_NT Windows))
-	EXEEXT=".exe"
+ifneq (,$(filter $(OS),Windows_NT Windows))
+	EXEEXT=.exe
 endif
 
 next_version := $(shell cat build_version.txt)
