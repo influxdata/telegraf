@@ -80,6 +80,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	k := &Kafka{
 		Brokers:      brokers,
 		Topic:        "Test",
+		Log:          testutil.Logger{},
 		serializer:   s,
 		producerFunc: sarama.NewSyncProducer,
 	}
@@ -133,6 +134,7 @@ func TestTopicSuffixes(t *testing.T) {
 		k := &Kafka{
 			Topic:       topic,
 			TopicSuffix: topicSuffix,
+			Log:         testutil.Logger{},
 		}
 
 		_, topic := k.GetTopicName(m)
@@ -200,6 +202,7 @@ func TestRoutingKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.kafka.Log = testutil.Logger{}
 			key, err := tt.kafka.routingKey(tt.metric)
 			require.NoError(t, err)
 			tt.check(t, key)
@@ -328,6 +331,8 @@ func TestTopicTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.Log = testutil.Logger{}
+
 			s, err := serializers.NewInfluxSerializer()
 			require.NoError(t, err)
 			tt.plugin.SetSerializer(s)

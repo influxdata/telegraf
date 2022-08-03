@@ -17,6 +17,7 @@ import (
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -72,7 +73,8 @@ func TestMain(m *testing.M) {
 	//nolint:errcheck,revive
 	go serv.Serve(lis)
 
-	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure())
+	opt := grpc.WithTransportCredentials(insecure.NewCredentials())
+	conn, err := grpc.Dial(lis.Addr().String(), opt)
 	if err != nil {
 		log.Fatal(err)
 	}
