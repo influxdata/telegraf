@@ -70,7 +70,6 @@ const MaxWriteRoutinesDefault = 1
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
 var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
-
 	awsCreds, awsErr := credentialConfig.Credentials()
 	if awsErr != nil {
 		panic("Unable to load credentials config " + awsErr.Error())

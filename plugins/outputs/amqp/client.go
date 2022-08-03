@@ -35,8 +35,8 @@ type client struct {
 	config  *ClientConfig
 }
 
-// Connect opens a connection to one of the brokers at random
-func Connect(config *ClientConfig) (*client, error) {
+// newClient opens a connection to one of the brokers at random
+func newClient(config *ClientConfig) (*client, error) {
 	client := &client{
 		config: config,
 	}

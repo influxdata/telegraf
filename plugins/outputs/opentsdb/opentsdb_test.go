@@ -126,16 +126,16 @@ func TestSanitize(t *testing.T) {
 }
 
 func BenchmarkHttpSend(b *testing.B) {
-	const BatchSize = 50
-	const MetricsCount = 4 * BatchSize
-	metrics := make([]telegraf.Metric, MetricsCount)
-	for i := 0; i < MetricsCount; i++ {
+	const batchSize = 50
+	const metricsCount = 4 * batchSize
+	metrics := make([]telegraf.Metric, metricsCount)
+	for i := 0; i < metricsCount; i++ {
 		metrics[i] = testutil.TestMetric(1.0)
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, "{}")
+		_, _ = fmt.Fprintln(w, "{}")
 	}))
 	defer ts.Close()
 
@@ -155,13 +155,13 @@ func BenchmarkHttpSend(b *testing.B) {
 		Host:          ts.URL,
 		Port:          port,
 		Prefix:        "",
-		HTTPBatchSize: BatchSize,
+		HTTPBatchSize: batchSize,
 		HTTPPath:      "/api/put",
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		o.Write(metrics)
+		_ = o.Write(metrics)
 	}
 }
 func TestWriteIntegration(t *testing.T) {
