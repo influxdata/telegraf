@@ -57,20 +57,22 @@ mid-low level.
   ## Set cluster_stats to true when you want to obtain cluster stats.
   cluster_stats = false
 
-  ## Only gather cluster_stats from the master node. To work this require local = true
+  ## Only gather cluster_stats from the master node.
+  ## To work this require local = true
   cluster_stats_only_from_master = true
 
   ## Indices to collect; can be one or more indices names or _all
-  ## Use of wildcards is allowed. Use a wildcard at the end to retrieve index names that end with a changing value, like a date.
+  ## Use of wildcards is allowed. Use a wildcard at the end to retrieve index
+  ## names that end with a changing value, like a date.
   indices_include = ["_all"]
 
   ## One of "shards", "cluster", "indices"
   ## Currently only "shards" is implemented
   indices_level = "shards"
 
-  ## node_stats is a list of sub-stats that you want to have gathered. Valid options
-  ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
-  ## "breaker". Per default, all stats are gathered.
+  ## node_stats is a list of sub-stats that you want to have gathered.
+  ## Valid options are "indices", "os", "process", "jvm", "thread_pool",
+  ## "fs", "transport", "http", "breaker". Per default, all stats are gathered.
   # node_stats = ["jvm", "http"]
 
   ## HTTP Basic Authentication username and password.
@@ -84,10 +86,12 @@ mid-low level.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Sets the number of most recent indices to return for indices that are configured with a date-stamped suffix.
-  ## Each 'indices_include' entry ending with a wildcard (*) or glob matching pattern will group together all indices that match it, and 
-  ## sort them by the date or number after the wildcard. Metrics then are gathered for only the 'num_most_recent_indices' amount of most 
-  ## recent indices.
+  ## Sets the number of most recent indices to return for indices that are
+  ## configured with a date-stamped suffix. Each 'indices_include' entry
+  ## ending with a wildcard (*) or glob matching pattern will group together
+  ## all indices that match it, and  sort them by the date or number after
+  ## the wildcard. Metrics then are gathered for only the
+  ## 'num_most_recent_indices' amount of most  recent indices.
   # num_most_recent_indices = 0
 ```
 
@@ -826,7 +830,8 @@ Emitted when the appropriate `shards_stats` options are set.
     - request_cache_miss_count (float)
     - retention_leases_primary_term (float)
     - retention_leases_version (float)
-    - routing_state (int) (UNASSIGNED = 1, INITIALIZING = 2, STARTED = 3, RELOCATING = 4, other = 0)
+    - routing_state (int)
+      (UNASSIGNED = 1, INITIALIZING = 2, STARTED = 3, RELOCATING = 4, other = 0)
     - search_fetch_current (float)
     - search_fetch_time_in_millis (float)
     - search_fetch_total (float)
