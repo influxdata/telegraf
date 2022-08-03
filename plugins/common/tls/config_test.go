@@ -482,7 +482,8 @@ func TestConnectClientInvalidMinTLSVersion(t *testing.T) {
 	}
 
 	_, err := clientConfig.TLSConfig()
-	require.EqualError(t, err, `could not parse tls min version "garbage": unsupported version "garbage"`)
+	expected := `could not parse tls min version "garbage": unsupported version "garbage" (available: TLS10,TLS11,TLS12,TLS13)`
+	require.EqualError(t, err, expected)
 }
 
 func TestConnectWrongDNS(t *testing.T) {

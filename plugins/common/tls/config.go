@@ -88,8 +88,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	if c.TLSMinVersion != "" {
 		version, err := ParseTLSVersion(c.TLSMinVersion)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"could not parse tls min version %q: %v", c.TLSMinVersion, err)
+			return nil, fmt.Errorf("could not parse tls min version %q: %w", c.TLSMinVersion, err)
 		}
 		tlsConfig.MinVersion = version
 	}
