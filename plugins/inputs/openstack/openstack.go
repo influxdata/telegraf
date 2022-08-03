@@ -141,6 +141,7 @@ func (o *OpenStack) Init() error {
 		TenantName:       o.Project,
 		Username:         o.Username,
 		Password:         o.Password,
+		AllowReauth:      true,
 	}
 	provider, err := openstack.NewClient(authOption.IdentityEndpoint)
 	if err != nil {

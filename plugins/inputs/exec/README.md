@@ -43,7 +43,8 @@ scripts that match the pattern will cause them to be picked up immediately.
 ## Example
 
 This script produces static values, since no timestamp is specified the values
-are at the current time.
+are at the current time. Ensure that int values are followed with `i` for proper
+parsing.
 
 ```sh
 #!/bin/sh
