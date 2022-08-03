@@ -45,9 +45,6 @@ MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u $(GOOS) -u $(GOARCH) -u $(GOARM) -- go
-ifeq ($(GOOS), windows)
-	EXEEXT := .exe
-endif
 
 LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
