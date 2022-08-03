@@ -17,3 +17,6 @@ body:
 
         https://docs.influxdata.com/telegraf
         https://github.com/influxdata/telegraf/tree/master/docs
+  - type: textarea
+    attributes:
+      label: "Please direct all support questsions to slack or the forums. Thank you."
