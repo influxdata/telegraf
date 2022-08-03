@@ -1,10 +1,9 @@
-ifeq ($(OS),Windows_NT)
-	next_version := $(shell type build_version.txt)
-	tag := $(shell git describe --exact-match --tags 2> nul)
-else
-	next_version := $(shell cat build_version.txt)
-	tag := $(shell git describe --exact-match --tags 2>/dev/null)
+ifneq (,$(filter $(OS),Windows_NT Windows))
+	EXEEXT=.exe
 endif
+
+next_version := $(shell cat build_version.txt)
+tag := $(shell git describe --exact-match --tags 2>/dev/null)
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
@@ -115,8 +114,8 @@ versioninfo:
 	go generate cmd/telegraf/telegraf_windows.go; \
 
 build_tools:
-	$(HOSTGO) build -o ./tools/license_checker/license_checker ./tools/license_checker
-	$(HOSTGO) build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
+	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
 
 embed_readme_%:
 	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
