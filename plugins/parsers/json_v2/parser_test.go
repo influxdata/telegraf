@@ -1,7 +1,6 @@
 package json_v2_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -20,7 +19,7 @@ import (
 
 func TestMultipleConfigs(t *testing.T) {
 	// Get all directories in testdata
-	folders, err := ioutil.ReadDir("testdata")
+	folders, err := os.ReadDir("testdata")
 	require.NoError(t, err)
 	// Make sure testdata contains data
 	require.Greater(t, len(folders), 0)
