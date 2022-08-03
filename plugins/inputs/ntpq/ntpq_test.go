@@ -18,6 +18,26 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestInitInvalid(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *NTPQ
+		expected string
+	}{
+		{
+			name:     "invalid reach_format",
+			plugin:   &NTPQ{ReachFormat: "garbage"},
+			expected: `unknown 'reach_format' "garbage"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.EqualError(t, tt.plugin.Init(), tt.expected)
+		})
+	}
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")
