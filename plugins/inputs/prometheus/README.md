@@ -55,7 +55,7 @@ in Prometheus format.
   # monitor_kubernetes_pods_namespace = ""
   ## The name of the label for the pod that is being scraped.
   ## Default is 'namespace' but this can conflict with metrics that have the label 'namespace'
-  # pod_namespace_label_name = "pod_namespace"
+  # pod_namespace_label_name = "namespace"
   # label selector to target pods which have the label
   # kubernetes_label_selector = "env=dev,app=nginx"
   # field selector to target pods
