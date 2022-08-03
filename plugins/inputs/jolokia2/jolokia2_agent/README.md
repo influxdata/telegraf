@@ -1,6 +1,8 @@
 # Jolokia2 Proxy input plugin
 
-The `jolokia2_proxy` input plugin reads JMX metrics from one or more _targets_ by interacting with a [Jolokia proxy](https://jolokia.org/features/proxy.html) REST endpoint.
+The `jolokia2_proxy` input plugin reads JMX metrics from one or more _targets_
+by interacting with a [Jolokia proxy](https://jolokia.org/features/proxy.html)
+REST endpoint.
 
 ## Configuration
 

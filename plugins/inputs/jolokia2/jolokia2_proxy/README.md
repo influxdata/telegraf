@@ -1,6 +1,7 @@
 # Jolokia2 Agent plugin
 
-The `jolokia2_agent` input plugin reads JMX metrics from one or more [Jolokia agent](https://jolokia.org/agent/jvm.html) REST endpoints.
+The `jolokia2_agent` input plugin reads JMX metrics from one or more
+[Jolokia agent](https://jolokia.org/agent/jvm.html) REST endpoints.
 
 ## Configuration
 
