@@ -122,7 +122,7 @@ func TestInitInvalid(t *testing.T) {
 }
 
 // Test Metric conversion, which means testing function `convertMetricsToRecordsWithTags`
-func TestMetricConversion(t *testing.T) {
+func TestMetricConversionToRecordsWithTags(t *testing.T) {
 	var testTimestamp = time.Date(2022, time.July, 20, 12, 25, 33, 44, time.UTC)
 
 	tests := []struct {
@@ -349,6 +349,140 @@ func TestTagsHandling(t *testing.T) {
 			// Ignore the tags-list for comparison
 			tt.input.TagsList = nil
 			require.EqualValues(t, tt.expected, tt.input)
+		})
+	}
+}
+
+// Test entire Metric conversion, from metrics to records which are ready to insert
+func TestEntireMetricConversion(t *testing.T) {
+	var testTimestamp = time.Date(2022, time.July, 20, 12, 25, 33, 44, time.UTC)
+
+	tests := []struct {
+		name         string
+		plugin       *IoTDB
+		expected     recordsWithTags
+		metrics      []telegraf.Metric
+		requireEqual bool
+	}{
+		{
+			name:   "default config",
+			plugin: func() *IoTDB { s := newIoTDB(); return s }(),
+			expected: recordsWithTags{
+				DeviceIDList: []string{"root.computer.screen.high.LED"},
+				MeasurementsList: [][]string{
+					{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
+				},
+				ValuesList: [][]interface{}{
+					{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
+				},
+				DataTypesList: [][]client.TSDataType{
+					{client.DOUBLE, client.INT64, client.INT64, client.TEXT, client.BOOLEAN, client.TEXT},
+				},
+				TimestampList: []int64{testTimestamp.UnixNano()},
+			},
+			metrics: []telegraf.Metric{
+				newMetricWithOrderedFields(
+					"root.computer.screen",
+					[]telegraf.Tag{
+						{Key: "brightness", Value: "high"},
+						{Key: "type", Value: "LED"},
+					},
+					[]telegraf.Field{
+						{Key: "temperature", Value: float64(30.33)},
+						{Key: "counter", Value: int64(123456789)},
+						{Key: "unsigned_big", Value: uint64(math.MaxInt64 + 1000)},
+						{Key: "string", Value: "Made in China."},
+						{Key: "bool", Value: bool(false)},
+						{Key: "int_text", Value: "123456789011"},
+					},
+					testTimestamp,
+				),
+			},
+			requireEqual: true,
+		},
+		{
+			name:   "wrong order of tags",
+			plugin: func() *IoTDB { s := newIoTDB(); return s }(),
+			expected: recordsWithTags{
+				DeviceIDList: []string{"root.computer.screen.LED.high"},
+				MeasurementsList: [][]string{
+					{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
+				},
+				ValuesList: [][]interface{}{
+					{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
+				},
+				DataTypesList: [][]client.TSDataType{
+					{client.DOUBLE, client.INT64, client.INT64, client.TEXT, client.BOOLEAN, client.TEXT},
+				},
+				TimestampList: []int64{testTimestamp.UnixNano()},
+			},
+			metrics: []telegraf.Metric{
+				newMetricWithOrderedFields(
+					"root.computer.screen",
+					[]telegraf.Tag{
+						{Key: "brightness", Value: "high"},
+						{Key: "type", Value: "LED"},
+					},
+					[]telegraf.Field{
+						{Key: "temperature", Value: float64(30.33)},
+						{Key: "counter", Value: int64(123456789)},
+						{Key: "unsigned_big", Value: uint64(math.MaxInt64 + 1000)},
+						{Key: "string", Value: "Made in China."},
+						{Key: "bool", Value: bool(false)},
+						{Key: "int_text", Value: "123456789011"},
+					},
+					testTimestamp,
+				),
+			},
+			requireEqual: false,
+		},
+		{
+			name:   "wrong order of tags",
+			plugin: func() *IoTDB { s := newIoTDB(); return s }(),
+			expected: recordsWithTags{
+				DeviceIDList: []string{"root.computer.screen.LED.high"},
+				MeasurementsList: [][]string{
+					{"temperature", "counter"},
+				},
+				ValuesList: [][]interface{}{
+					{float64(30.33), int64(123456789)},
+				},
+				DataTypesList: [][]client.TSDataType{
+					{client.DOUBLE, client.INT64},
+				},
+				TimestampList: []int64{testTimestamp.UnixNano()},
+			},
+			metrics: []telegraf.Metric{
+				newMetricWithOrderedFields(
+					"root.computer.screen",
+					[]telegraf.Tag{
+						{Key: "brightness", Value: "high"},
+						{Key: "type", Value: "LED"},
+					},
+					[]telegraf.Field{
+						{Key: "temperature", Value: float64(30.33)},
+						{Key: "counter", Value: int64(123456789)},
+					},
+					testTimestamp,
+				),
+			},
+			requireEqual: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.Log = &testutil.Logger{}
+			require.NoError(t, tt.plugin.Init())
+			actual, err := tt.plugin.convertMetricsToRecordsWithTags(tt.metrics)
+			require.NoError(t, err)
+			require.NoError(t, tt.plugin.modifyRecordsWithTags(actual))
+			// Ignore the tags-list for comparison
+			actual.TagsList = nil
+			if tt.requireEqual {
+				require.EqualValues(t, &tt.expected, actual)
+			} else {
+				require.NotEqualValues(t, &tt.expected, actual)
+			}
 		})
 	}
 }
