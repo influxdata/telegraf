@@ -83,11 +83,11 @@ An easy option to get bash for windows is using the version that comes with [git
    git clone https://github.com/influxdata/telegraf.git
    ```
 
-3. Run `make` from the source directory
+3. Run `make build` from the source directory
 
    ```shell
    cd telegraf
-   make
+   make build
    ```
 
 ### Nightly Builds
