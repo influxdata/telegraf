@@ -1,5 +1,6 @@
-//go:generate ../../../tools/readme_config_includer/generator
 // Package x509_cert reports metrics from an SSL certificate.
+//
+//go:generate ../../../tools/readme_config_includer/generator
 package x509_cert
 
 import (
@@ -28,6 +29,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -143,6 +145,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		if err != nil {
 			return nil, err
 		}
+
 		c.tlsCfg.ServerName = serverName
 
 		c.tlsCfg.InsecureSkipVerify = true
@@ -196,6 +199,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		if err != nil {
 			return nil, err
 		}
+
 		c.tlsCfg.ServerName = serverName
 		c.tlsCfg.InsecureSkipVerify = true
 
@@ -363,6 +367,15 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				tags["verification"] = "valid"
 				fields["verification_code"] = 0
 			} else {
+				c.Log.Debugf("Invalid certificate at index %2d!", i)
+				c.Log.Debugf("  cert DNS names:    %v", cert.DNSNames)
+				c.Log.Debugf("  cert IP addresses: %v", cert.IPAddresses)
+				c.Log.Debugf("  opts.DNSName:      %v", opts.DNSName)
+				c.Log.Debugf("  verify options:    %v", opts)
+				c.Log.Debugf("  verify error:      %v", err)
+				c.Log.Debugf("  location:          %v", location)
+				c.Log.Debugf("  tlsCfg.ServerName: %v", c.tlsCfg.ServerName)
+				c.Log.Debugf("  ServerName:        %v", c.ServerName)
 				tags["verification"] = "invalid"
 				fields["verification_code"] = 1
 				fields["verification_error"] = err.Error()
