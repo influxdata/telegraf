@@ -4,7 +4,11 @@ package opentelemetry
 import (
 	"context"
 	_ "embed"
+	"fmt"
+	"runtime"
 	"time"
+
+	ntls "crypto/tls"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
@@ -35,6 +39,8 @@ type OpenTelemetry struct {
 	Compression string            `toml:"compression"`
 	Headers     map[string]string `toml:"headers"`
 	Attributes  map[string]string `toml:"attributes"`
+	Dialect     string            `toml:"dialect"`
+	CoralogixConfig
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -42,6 +48,14 @@ type OpenTelemetry struct {
 	grpcClientConn       *grpc.ClientConn
 	metricsServiceClient pmetricotlp.Client
 	callOptions          []grpc.CallOption
+}
+
+const coralogixDialect = "coralogix"
+
+type CoralogixConfig struct {
+	AppName    string `toml:"application_name"`
+	SubSystem  string `toml:"subsystem_name"`
+	PrivateKey string `toml:"private_key"`
 }
 
 func (*OpenTelemetry) SampleConfig() string {
@@ -60,6 +74,14 @@ func (o *OpenTelemetry) Connect() error {
 	if o.Compression == "" {
 		o.Compression = defaultCompression
 	}
+	if o.Dialect == coralogixDialect {
+		if o.Headers == nil {
+			o.Headers = make(map[string]string)
+		}
+		o.Headers["ApplicationName"] = o.CoralogixConfig.AppName
+		o.Headers["ApiName"] = o.CoralogixConfig.SubSystem
+		o.Headers["Authorization"] = "Bearer " + o.CoralogixConfig.PrivateKey
+	}
 
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(logger)
 	if err != nil {
@@ -71,11 +93,15 @@ func (o *OpenTelemetry) Connect() error {
 		return err
 	} else if tlsConfig != nil {
 		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
+	} else if o.Dialect == coralogixDialect {
+		// For coralogix, we default to GRPC connection with TLS using native Go TLS package
+		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
 	} else {
 		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
+	userAgent := fmt.Sprintf("telegraf (%s/%s)", runtime.GOOS, runtime.GOARCH)
 
-	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption)
+	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
 	if err != nil {
 		return err
 	}
