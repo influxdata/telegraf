@@ -24,7 +24,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
-	_tls "github.com/influxdata/telegraf/plugins/common/tls"
+	commontls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,12 +37,13 @@ type X509Cert struct {
 	Timeout          config.Duration `toml:"timeout"`
 	ServerName       string          `toml:"server_name"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
-	tlsCfg           *tls.Config
-	_tls.ClientConfig
+	Log              telegraf.Logger `toml:"-"`
+	commontls.ClientConfig
 	proxy.TCPProxy
+
+	tlsCfg    *tls.Config
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
-	Log       telegraf.Logger
 }
 
 func (c *X509Cert) sourcesToURLs() error {
