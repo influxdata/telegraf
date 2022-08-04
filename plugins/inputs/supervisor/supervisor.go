@@ -120,8 +120,6 @@ func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) 
 		if err != nil {
 			return map[string]string{}, map[string]interface{}{}, err
 		}
-	case "none":
-		break
 	}
 	return tags, fields, nil
 }
@@ -138,8 +136,6 @@ func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to decorate server string: %v", err)
 		}
-	case "none":
-		break
 	}
 	tags := map[string]string{"server": server}
 	fields := map[string]interface{}{"state": status.StateCode}
@@ -163,10 +159,7 @@ func (s *Supervisor) Init() error {
 		return fmt.Errorf("metrics filter setup failed: %v", err)
 	}
 	// Checking validity of server_tag setting
-	switch s.ServerTag {
-	case "host", "instance", "none":
-		break
-	default:
+	if !(s.ServerTag == "host" || s.ServerTag == "instance" || s.ServerTag == "none") {
 		return fmt.Errorf("unknown value of server_tag in plugin configuration (%s)", s.ServerTag)
 	}
 	return nil

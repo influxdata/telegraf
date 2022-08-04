@@ -7,11 +7,12 @@ Minimum tested version of supervisor: 3.3.2
 
 ## Supervisor configuration
 
-This plugin needs an HTTP server to be enabled in supervisor, also it's recommended
-to enable basic authentication on the HTTP server. When using basic authentication 
-make sure to include the username and password in the plugin's url setting.
-Here is an example of the `inet_http_server` section in supervisor's config that will
-work with default plugin configuration:
+This plugin needs an HTTP server to be enabled in supervisor,
+also it's recommended to enable basic authentication on the
+HTTP server. When using basic authentication make sure to
+include the username and password in the plugin's url setting.
+Here is an example of the `inet_http_server` section in supervisor's
+config that will work with default plugin configuration:
 
 ```ini
 [inet_http_server]
