@@ -27,6 +27,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+var userAgent = fmt.Sprintf("telegraf (%s/%s)", runtime.GOOS, runtime.GOARCH)
+
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
@@ -39,7 +41,7 @@ type OpenTelemetry struct {
 	Compression string            `toml:"compression"`
 	Headers     map[string]string `toml:"headers"`
 	Attributes  map[string]string `toml:"attributes"`
-	coralogix *CoralogixConfig `toml:"coralogix"`
+	Coralogix   *CoralogixConfig  `toml:"coralogix"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -48,8 +50,6 @@ type OpenTelemetry struct {
 	metricsServiceClient pmetricotlp.Client
 	callOptions          []grpc.CallOption
 }
-
-const coralogixDialect = "coralogix"
 
 type CoralogixConfig struct {
 	AppName    string `toml:"application_name"`
@@ -73,13 +73,13 @@ func (o *OpenTelemetry) Connect() error {
 	if o.Compression == "" {
 		o.Compression = defaultCompression
 	}
-	if o.Dialect == coralogixDialect {
+	if o.Coralogix != nil {
 		if o.Headers == nil {
 			o.Headers = make(map[string]string)
 		}
-		o.Headers["ApplicationName"] = o.CoralogixConfig.AppName
-		o.Headers["ApiName"] = o.CoralogixConfig.SubSystem
-		o.Headers["Authorization"] = "Bearer " + o.CoralogixConfig.PrivateKey
+		o.Headers["ApplicationName"] = o.Coralogix.AppName
+		o.Headers["ApiName"] = o.Coralogix.SubSystem
+		o.Headers["Authorization"] = "Bearer " + o.Coralogix.PrivateKey
 	}
 
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(logger)
@@ -92,13 +92,12 @@ func (o *OpenTelemetry) Connect() error {
 		return err
 	} else if tlsConfig != nil {
 		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
-	} else if o.Dialect == coralogixDialect {
-		// For coralogix, we default to GRPC connection with TLS using native Go TLS package
+	} else if o.Coralogix != nil {
+		// For coralogix, we enforce GRPC connection with TLS
 		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
 	} else {
 		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
-	userAgent := fmt.Sprintf("telegraf (%s/%s)", runtime.GOOS, runtime.GOARCH)
 
 	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
 	if err != nil {
