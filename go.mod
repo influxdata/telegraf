@@ -134,7 +134,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.22.7
 	github.com/showwin/speedtest-go v1.1.5
 	github.com/signalfx/golib/v3 v3.3.45
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.2
 	github.com/stretchr/testify v1.8.0
@@ -160,7 +160,7 @@ require (
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
-	golang.org/x/sys v0.0.0-20220622161953-175b2fd9d664
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
 	golang.org/x/text v0.3.7
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.11.0
