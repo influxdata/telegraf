@@ -1,16 +1,17 @@
 # Supervisor Input Plugin
 
-This plugin gather information about processes that
-running under supervisor using XML-RPC API
+This plugin gathers information about processes that
+running under supervisor using XML-RPC API.
 
-Plugin minimum tested version: 3.3.2
+Minimum tested version of supervisor: 3.3.2
 
 ## Supervisor configuration
 
-This plugin needs TCP HTTP server to be enabled for collecting information.
-Here is example of `inet_http_server` section in supervisor config that will
-work with default plugin configuration. It is also recommended to setup
-basic authentication to http server:
+This plugin needs an HTTP server to be enabled in supervisor, also it's recommended
+to enable basic authentication on the HTTP server. When using basic authentication 
+make sure to include the username and password in the plugin's url setting.
+Here is an example of the `inet_http_server` section in supervisor's config that will
+work with default plugin configuration:
 
 ```ini
 [inet_http_server]

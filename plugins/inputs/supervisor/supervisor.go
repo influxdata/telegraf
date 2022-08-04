@@ -1,6 +1,7 @@
 package supervisor
 
 import (
+	_ "embed"
 	"fmt"
 	"net/url"
 
@@ -12,11 +13,11 @@ import (
 )
 
 type Supervisor struct {
-	Server      string          `toml:"url"`
-	UseIdentTag bool            `toml:"use_identification_tag"`
-	MetricsInc  []string        `toml:"metrics_include"`
-	MetricsExc  []string        `toml:"metrics_exclude"`
-	Log         telegraf.Logger `toml:"-"`
+	Server     string          `toml:"url"`
+	ServerTag  string          `toml:"server_tag"`
+	MetricsInc []string        `toml:"metrics_include"`
+	MetricsExc []string        `toml:"metrics_exclude"`
+	Log        telegraf.Logger `toml:"-"`
 
 	rpcClient   *xmlrpc.Client
 	fieldFilter filter.Filter
@@ -44,18 +45,9 @@ type supervisorInfo struct {
 	Ident     string
 }
 
-const sampleConfig = `
-  ## Url of supervisor's XML-RPC endpoint if basic auth enabled in supervisor http server,
-  ## than you have to add credentials to url (ex. http://login:pass@localhost:9001/RPC2)
-  # url="http://localhost:9001/RPC2"
-  ## Use supervisor identification string as server tag
-  # use_identification_tag = false
-  ## With settings below you can manage gathering additional information about processes
-  ## If both of them empty, then all additional information will be collected.
-  ## Currently supported supported additional metrics are: pid, rc
-  # metrics_include = []
-  # metrics_exclude = ["pid", "rc"]
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 func (s *Supervisor) Description() string {
 	return "Gather info about processes state, that running under supervisor using its XML-RPC API"
@@ -119,28 +111,35 @@ func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) 
 	if s.fieldFilter.Match("rc") {
 		fields["exitCode"] = pInfo.ExitStatus
 	}
-	if s.UseIdentTag {
+	switch s.ServerTag {
+	case "instance":
 		tags["server"] = status.Ident
-	} else {
+	case "host":
 		var err error
 		tags["server"], err = beautifyServerString(s.Server)
 		if err != nil {
 			return map[string]string{}, map[string]interface{}{}, err
 		}
+	case "none":
+		break
 	}
 	return tags, fields, nil
 }
 
 // Parsing of supervisor instance data
 func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string, map[string]interface{}, error) {
-	server := status.Ident
-	// Using server URL for server tag instead of instance identification, if plugin configured accordingly
-	if !s.UseIdentTag {
-		var err error
+	var server string
+	var err error
+	switch s.ServerTag {
+	case "instance":
+		server = status.Ident
+	case "host":
 		server, err = beautifyServerString(s.Server)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to decorate server string: %v", err)
 		}
+	case "none":
+		break
 	}
 	tags := map[string]string{"server": server}
 	fields := map[string]interface{}{"state": status.StateCode}
@@ -163,12 +162,22 @@ func (s *Supervisor) Init() error {
 	if err != nil {
 		return fmt.Errorf("metrics filter setup failed: %v", err)
 	}
+	// Checking validity of server_tag setting
+	switch s.ServerTag {
+	case "host", "instance", "none":
+		break
+	default:
+		return fmt.Errorf("unknown value of server_tag in plugin configuration (%s)", s.ServerTag)
+	}
 	return nil
 }
 
 func init() {
 	inputs.Add("supervisor", func() telegraf.Input {
-		return &Supervisor{MetricsExc: []string{"pid", "rc"}}
+		return &Supervisor{
+			MetricsExc: []string{"pid", "rc"},
+			ServerTag:  "none",
+		}
 	})
 }
 

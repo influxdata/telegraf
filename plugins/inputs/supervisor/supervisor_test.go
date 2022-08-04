@@ -94,10 +94,10 @@ func TestShort_SampleData(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			s := &Supervisor{
-				Server:      "http://example.org:9001/RPC2",
-				UseIdentTag: false,
-				MetricsInc:  []string{},
-				MetricsExc:  []string{},
+				Server:     "http://example.org:9001/RPC2",
+				ServerTag:  "host",
+				MetricsInc: []string{},
+				MetricsExc: []string{},
 			}
 			status := supervisorInfo{
 				StateCode: tC.supervisorData.StateCode,
@@ -145,10 +145,10 @@ func TestIntegration_BasicGathering(t *testing.T) {
 		require.NoError(t, ctr.Terminate(), "terminating container failed")
 	}()
 	s := &Supervisor{
-		Server:      "http://login:pass@" + testutil.GetLocalHost() + ":" + ctr.Ports[supervisorPort] + "/RPC2",
-		UseIdentTag: true,
-		MetricsInc:  []string{},
-		MetricsExc:  []string{},
+		Server:     "http://login:pass@" + testutil.GetLocalHost() + ":" + ctr.Ports[supervisorPort] + "/RPC2",
+		ServerTag:  "instance",
+		MetricsInc: []string{},
+		MetricsExc: []string{},
 	}
 	err = s.Init()
 	require.NoError(t, err, "failed to run Init function")
