@@ -2,6 +2,9 @@ module github.com/influxdata/telegraf
 
 go 1.18
 
+// Workaround for https://github.com/lxc/lxd/issues/10745 (failing "go list -m all")
+replace google.golang.org/grpc/naming => google.golang.org/grpc v1.29.1
+
 require (
 	cloud.google.com/go/bigquery v1.33.0
 	cloud.google.com/go/monitoring v1.5.0
