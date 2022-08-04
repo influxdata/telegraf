@@ -39,8 +39,7 @@ type OpenTelemetry struct {
 	Compression string            `toml:"compression"`
 	Headers     map[string]string `toml:"headers"`
 	Attributes  map[string]string `toml:"attributes"`
-	Dialect     string            `toml:"dialect"`
-	CoralogixConfig
+	coralogix *CoralogixConfig `toml:"coralogix"`
 
 	Log telegraf.Logger `toml:"-"`
 
