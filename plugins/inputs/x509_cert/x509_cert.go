@@ -75,9 +75,6 @@ func (c *X509Cert) serverName(u *url.URL) (string, error) {
 	if c.tlsCfg.ServerName != "" {
 		return c.tlsCfg.ServerName, nil
 	}
-	if c.ServerName != "" {
-		return c.ServerName, nil
-	}
 	return u.Hostname(), nil
 }
 
@@ -387,10 +384,20 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *X509Cert) Init() error {
+	// Check the server name and transfer it if necessary
+	if c.ClientConfig.ServerName != "" && c.ServerName != "" {
+		return fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.ClientConfig.ServerName)
+	} else if c.ServerName != "" {
+		// Store the user-provided server-name in the TLS configuration
+		c.ClientConfig.ServerName = c.ServerName
+	}
+
+	// Normalize the sources, handle files and file-globbing
 	if err := c.sourcesToURLs(); err != nil {
 		return err
 	}
 
+	// Create the TLS configuration
 	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -399,11 +406,6 @@ func (c *X509Cert) Init() error {
 		tlsCfg = &tls.Config{}
 	}
 	c.tlsCfg = tlsCfg
-
-	// Check settings
-	if tlsCfg.ServerName != "" && c.ServerName != "" {
-		return fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.tlsCfg.ServerName)
-	}
 
 	return nil
 }
