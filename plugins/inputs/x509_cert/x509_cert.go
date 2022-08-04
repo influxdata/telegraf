@@ -72,9 +72,6 @@ func (c *X509Cert) sourcesToURLs() error {
 
 func (c *X509Cert) serverName(u *url.URL) (string, error) {
 	if c.tlsCfg.ServerName != "" {
-		if c.ServerName != "" {
-			return "", fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.tlsCfg.ServerName)
-		}
 		return c.tlsCfg.ServerName, nil
 	}
 	if c.ServerName != "" {
@@ -389,8 +386,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *X509Cert) Init() error {
-	err := c.sourcesToURLs()
-	if err != nil {
+	if err := c.sourcesToURLs(); err != nil {
 		return err
 	}
 
@@ -401,16 +397,12 @@ func (c *X509Cert) Init() error {
 	if tlsCfg == nil {
 		tlsCfg = &tls.Config{}
 	}
-
-	if tlsCfg.ServerName != "" && c.ServerName == "" {
-		// Save SNI from tlsCfg.ServerName to c.ServerName and reset tlsCfg.ServerName.
-		// We need to reset c.tlsCfg.ServerName for each certificate when there's
-		// no explicit SNI (c.tlsCfg.ServerName or c.ServerName) otherwise we'll always (re)use
-		// first uri HostName for all certs (see issue 8914)
-		c.ServerName = tlsCfg.ServerName
-		tlsCfg.ServerName = ""
-	}
 	c.tlsCfg = tlsCfg
+
+	// Check settings
+	if tlsCfg.ServerName != "" && c.ServerName != "" {
+		return fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.tlsCfg.ServerName)
+	}
 
 	return nil
 }
