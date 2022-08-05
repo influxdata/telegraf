@@ -11,8 +11,8 @@ protocol](https://jolokia.org/reference/html/protocol.html).
 
 ### Jolokia Agent Configuration
 
-The `jolokia2_agent` input plugin reads JMX metrics from one or more [Jolokia
-agent](https://jolokia.org/agent/jvm.html) REST endpoints.
+The `jolokia2_agent` input plugin reads JMX metrics from one or more
+[Jolokia agent](https://jolokia.org/agent/jvm.html) REST endpoints.
 
 ```toml @sample.conf
 [[inputs.jolokia2_agent]]
@@ -205,3 +205,7 @@ configurations that apply to every `metric` declaration.
 
 Please help improve this list and contribute new configuration files by opening
 an issue or pull request.
+
+## Metrics
+
+## Example Output

@@ -1,4 +1,4 @@
-# Jolokia2 Agent plugin
+# Jolokia2 Agent Input Plugin
 
 The `jolokia2_agent` input plugin reads JMX metrics from one or more
 [Jolokia agent](https://jolokia.org/agent/jvm.html) REST endpoints.
@@ -38,3 +38,7 @@ The `jolokia2_agent` input plugin reads JMX metrics from one or more
     mbean = "java.lang:type=Runtime"
     paths = ["Uptime"]
 ```
+
+## Metrics
+
+## Example Output

@@ -1,4 +1,4 @@
-# Jolokia2 Proxy input plugin
+# Jolokia2 Proxy Input Plugin
 
 The `jolokia2_proxy` input plugin reads JMX metrics from one or more _targets_
 by interacting with a [Jolokia proxy](https://jolokia.org/features/proxy.html)
@@ -31,3 +31,7 @@ REST endpoint.
     mbean = "java.lang:type=Runtime"
     paths = ["Uptime"]
 ```
+
+## Metrics
+
+## Example Output
