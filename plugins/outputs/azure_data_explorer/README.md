@@ -43,7 +43,7 @@ of logs, metrics and time series data.
   # create_tables = true
 
  # type of ingestion managed or queued
-   # ingestion_type : "" 
+ # ingestion_type : "" 
 ```
 
 ## Metrics Grouping
