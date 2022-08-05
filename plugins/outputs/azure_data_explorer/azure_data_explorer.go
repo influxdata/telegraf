@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -79,24 +80,27 @@ func (adx *AzureDataExplorer) Connect() error {
 
 // Clean up and close the ingestor
 func (adx *AzureDataExplorer) Close() error {
-	var err error
+	var errs []error
 	for _, v := range adx.ingestors {
-		err = v.Close()
+		if inerr := v.Close(); inerr != nil {
+			// accumulate errors while closing ingestors
+			errs = append(errs, inerr)
+		}
 	}
-	err2 := adx.client.Close()
-	if err == nil {
-		err = err2
-	} else {
-		err = kustoerrors.GetCombinedError(err, err2)
+	if clienterr := adx.client.Close(); clienterr != nil {
+		errs = append(errs, clienterr)
 	}
-	if err != nil {
+	var comberr error
+	if len(errs) != 0 {
+		// combine errors in a single object
+		comberr = kustoerrors.GetCombinedError(errs...)
 		adx.Log.Warn("error closing connections")
 	} else {
 		adx.Log.Info("closed ingestor and client")
 	}
 	adx.client = nil
 	adx.ingestors = nil
-	return err
+	return comberr
 }
 
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
@@ -109,9 +113,9 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) error {
 	tableMetricGroups := make(map[string][]byte)
 	// Group metrics by name and serialize them
-	for _, metric := range metrics {
-		tableName := metric.Name()
-		metricInBytes, err := adx.serializer.Serialize(metric)
+	for _, m := range metrics {
+		tableName := m.Name()
+		metricInBytes, err := adx.serializer.Serialize(m)
 		if err != nil {
 			return err
 		}
@@ -138,8 +142,8 @@ func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) err
 func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error {
 	//serialise each metric in metrics - store in byte[]
 	metricsArray := make([]byte, 0)
-	for _, metric := range metrics {
-		metricsInBytes, err := adx.serializer.Serialize(metric)
+	for _, m := range metrics {
+		metricsInBytes, err := adx.serializer.Serialize(m)
 		if err != nil {
 			return err
 		}
@@ -159,7 +163,6 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.FileOption, tableName string, metricsArray []byte) error {
 	ingestor, err := adx.getIngestor(ctx, tableName)
 	if err != nil {
-		adx.Log.Error(err)
 		return err
 	}
 	length := len(metricsArray)
@@ -184,7 +187,7 @@ func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string)
 			return nil, fmt.Errorf("creating ingestor for %q failed: %v", tableName, err)
 		}
 		adx.ingestors[tableName] = tempIngestor
-		adx.Log.Infof("Ingestor for table %s created", tableName)
+		adx.Log.Debugf("Ingestor for table %s created", tableName)
 		ingestor = tempIngestor
 	}
 	return ingestor, nil
@@ -221,14 +224,14 @@ func (adx *AzureDataExplorer) Init() error {
 	}
 	if adx.MetricsGrouping == "" {
 		adx.MetricsGrouping = tablePerMetric
+	} else if !(choice.Contains(adx.MetricsGrouping, []string{singleTable, tablePerMetric})) {
+		return fmt.Errorf("unknown metrics grouping type %q", adx.MetricsGrouping)
 	}
 
 	if adx.IngestionType == "" {
 		adx.IngestionType = queuedIngestion
-	}
-
-	if !(adx.MetricsGrouping == singleTable || adx.MetricsGrouping == tablePerMetric) {
-		return errors.New("metrics grouping type is not valid")
+	} else if !(choice.Contains(adx.IngestionType, []string{managedIngestion, queuedIngestion})) {
+		return fmt.Errorf("unknown ingestion type %q", adx.IngestionType)
 	}
 
 	serializer, err := json.NewSerializer(time.Nanosecond, time.RFC3339Nano, "")
@@ -252,20 +255,27 @@ func init() {
 func createIngestorByTable(client *kusto.Client, database string, tableName string, ingestionType string) (ingest.Ingestor, error) {
 	var ingestor ingest.Ingestor
 	var err error
-	if strings.ToLower(ingestionType) == managedIngestion {
-		mi, err := ingest.NewManaged(client, database, tableName)
-		if err != nil {
-			return nil, err
+	switch strings.ToLower(ingestionType) {
+	case managedIngestion:
+		{
+			mi, err := ingest.NewManaged(client, database, tableName)
+			if err != nil {
+				return nil, err
+			}
+			ingestor = mi
 		}
-		ingestor = mi
-	} else if strings.ToLower(ingestionType) == queuedIngestion {
-		qi, err := ingest.New(client, database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
-		if err != nil {
-			return nil, err
+	case queuedIngestion:
+		{
+			qi, err := ingest.New(client, database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
+			if err != nil {
+				return nil, err
+			}
+			ingestor = qi
 		}
-		ingestor = qi
-	} else {
-		err = errors.New(`ingestion_type has to be one of managed or queued`)
+	default:
+		{
+			err = fmt.Errorf(`ingestion_type has to be one of %q or %q`, managedIngestion, queuedIngestion)
+		}
 	}
 	if ingestor != nil {
 		return ingestor, nil

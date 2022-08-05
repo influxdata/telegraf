@@ -189,7 +189,7 @@ func TestInitValidations(t *testing.T) {
 				client:          fakeClient,
 				ingestors:       make(map[string]ingest.Ingestor),
 			},
-			expectedError: "metrics grouping type is not valid",
+			expectedError: "unknown metrics grouping type \"multitable\"",
 		},
 	}
 
@@ -234,6 +234,21 @@ func TestInit(t *testing.T) {
 	require.Equal(t, initResponse, nil)
 }
 
+func TestInitInvalid(t *testing.T) {
+	t.Parallel()
+	fakeClient := kusto.NewMockClient()
+	plugin := AzureDataExplorer{
+		Log:           testutil.Logger{},
+		Endpoint:      "someendpoint",
+		Database:      "databasename",
+		IngestionType: "invalid",
+		client:        fakeClient,
+		ingestors:     make(map[string]ingest.Ingestor),
+	}
+	initResponse := plugin.Init()
+	require.NotNil(t, initResponse)
+}
+
 func TestCreateRealIngestorManaged(t *testing.T) {
 	t.Parallel()
 	kustoLocalClient := kusto.NewMockClient()
@@ -256,7 +271,7 @@ func TestInvalidIngestorType(t *testing.T) {
 	localIngestor, err := createIngestorByTable(kustoLocalClient, "telegrafdb", "metrics", "streaming")
 	require.NotNil(t, err)
 	require.Nil(t, localIngestor)
-	require.Equal(t, "ingestion_type has to be one of managed or queued", err.Error())
+	require.Equal(t, "ingestion_type has to be one of \"managed\" or \"queued\"", err.Error())
 }
 
 func TestClose(t *testing.T) {
