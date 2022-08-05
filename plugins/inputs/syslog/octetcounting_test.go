@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func getTestCasesForOctetCounting() []testCaseStream {
+func getTestCasesForOctetCounting(hasRemoteAddr bool) []testCaseStream {
 	testCases := []testCaseStream{
 		{
 			name: "1st/avg/ok",
@@ -330,11 +330,22 @@ func getTestCasesForOctetCounting() []testCaseStream {
 		},
 	}
 
+	if hasRemoteAddr {
+		for _, tc := range testCases {
+			for _, m := range tc.wantStrict {
+				m.AddTag("source", "127.0.0.1")
+			}
+			for _, m := range tc.wantBestEffort {
+				m.AddTag("source", "127.0.0.1")
+			}
+		}
+	}
+
 	return testCases
 }
 
 func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
-	for _, tc := range getTestCasesForOctetCounting() {
+	for _, tc := range getTestCasesForOctetCounting(protocol != "unix") {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, framing.OctetCounting)
@@ -393,7 +404,7 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 
 func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool) {
 	keepAlive := (*config.Duration)(nil)
-	for _, tc := range getTestCasesForOctetCounting() {
+	for _, tc := range getTestCasesForOctetCounting(protocol != "unix") {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, framing.OctetCounting)

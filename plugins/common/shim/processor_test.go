@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
@@ -53,7 +53,8 @@ func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 	}()
 
 	serializer, _ := serializers.NewInfluxSerializer()
-	parser, _ := parsers.NewInfluxParser()
+	parser := influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	m := metric.New("thing",
 		map[string]string{

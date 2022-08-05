@@ -1355,6 +1355,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
 	c.getFieldString(tbl, "json_timestamp_format", &sc.TimestampFormat)
+	c.getFieldString(tbl, "json_transformation", &sc.Transformation)
 
 	c.getFieldBool(tbl, "splunkmetric_hec_routing", &sc.HecRouting)
 	c.getFieldBool(tbl, "splunkmetric_multimetric", &sc.SplunkmetricMultiMetric)
@@ -1429,7 +1430,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp",
 		"influx_parser_type",
-		"prometheus_ignore_timestamp", // not used anymore?
 		"value_field_name":
 
 	// Serializer options to ignore

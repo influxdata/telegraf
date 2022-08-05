@@ -25,6 +25,15 @@ var (
 	testdataDir = getTestdataDir()
 )
 
+func NewInfluxParser() (parsers.Parser, error) {
+	parser := &influx.Parser{}
+	err := parser.Init()
+	if err != nil {
+		return nil, err
+	}
+	return parser, nil
+}
+
 func NewTestTail() *Tail {
 	offsetsMutex.Lock()
 	offsetsCopy := make(map[string]int64, len(offsets))
@@ -68,7 +77,7 @@ func TestTailBadLine(t *testing.T) {
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
+	tt.SetParserFunc(NewInfluxParser)
 
 	err = tt.Init()
 	require.NoError(t, err)
@@ -97,7 +106,7 @@ func TestColoredLine(t *testing.T) {
 	tt.FromBeginning = true
 	tt.Filters = []string{"ansi_color"}
 	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
+	tt.SetParserFunc(NewInfluxParser)
 
 	err = tt.Init()
 	require.NoError(t, err)
@@ -130,7 +139,7 @@ func TestTailDosLineEndings(t *testing.T) {
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
+	tt.SetParserFunc(NewInfluxParser)
 
 	err = tt.Init()
 	require.NoError(t, err)
@@ -607,10 +616,7 @@ func TestCharacterEncoding(t *testing.T) {
 				WatchMethod:         watchMethod,
 			}
 
-			plugin.SetParserFunc(func() (parsers.Parser, error) {
-				handler := influx.NewMetricHandler()
-				return influx.NewParser(handler), nil
-			})
+			plugin.SetParserFunc(NewInfluxParser)
 
 			if tt.offset != 0 {
 				plugin.offsets = map[string]int64{
@@ -650,7 +656,7 @@ func TestTailEOF(t *testing.T) {
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
+	tt.SetParserFunc(NewInfluxParser)
 
 	err = tt.Init()
 	require.NoError(t, err)

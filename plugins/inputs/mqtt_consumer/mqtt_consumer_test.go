@@ -8,6 +8,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -413,6 +414,39 @@ func TestTopicTag(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:  "topic parsing configured topic with a prefix `/`",
+			topic: "/telegraf/123/test/hello",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "/telegraf/+/test/hello",
+					Measurement: "/_/_/measurement/_",
+					Tags:        "/testTag/_/_/_",
+					Fields:      "/_/testNumber/_/testString",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"testTag": "telegraf",
+					},
+					map[string]interface{}{
+						"testNumber": 123,
+						"testString": "hello",
+						"time_idle":  42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -439,11 +473,11 @@ func TestTopicTag(t *testing.T) {
 			plugin.TopicTag = tt.topicTag()
 			plugin.TopicParsing = tt.topicParsing
 
-			parser, err := parsers.NewInfluxParser()
-			require.NoError(t, err)
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
 			plugin.SetParser(parser)
 
-			err = plugin.Init()
+			err := plugin.Init()
 			require.Equal(t, tt.expectedError, err)
 			if tt.expectedError != nil {
 				return

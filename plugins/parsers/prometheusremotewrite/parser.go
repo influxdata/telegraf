@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
@@ -81,4 +82,15 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
+}
+
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	return nil
+}
+
+func init() {
+	parsers.Add("prometheusremotewrite",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{}
+		})
 }

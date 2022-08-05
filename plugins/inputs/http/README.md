@@ -58,7 +58,7 @@ configuration.
   # cookie_auth_method = "POST"
   # cookie_auth_username = "username"
   # cookie_auth_password = "pa$$word"
-  # cookie_auth_headers = '{"Content-Type": "application/json", "X-MY-HEADER":"hello"}'
+  # cookie_auth_headers = { Content-Type = "application/json", X-MY-HEADER = "hello" }
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
   ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
   # cookie_auth_renewal = "5m"
@@ -75,6 +75,18 @@ configuration.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
 
+```
+
+## Example Output
+
+This example output was taken from [this instructional article][1].
+
+[1]: https://docs.influxdata.com/telegraf/v1.21/guides/using_http/
+
+```shell
+citibike,station_id=4703 eightd_has_available_keys=false,is_installed=1,is_renting=1,is_returning=1,legacy_id="4703",num_bikes_available=6,num_bikes_disabled=2,num_docks_available=26,num_docks_disabled=0,num_ebikes_available=0,station_status="active" 1641505084000000000
+citibike,station_id=4704 eightd_has_available_keys=false,is_installed=1,is_renting=1,is_returning=1,legacy_id="4704",num_bikes_available=10,num_bikes_disabled=2,num_docks_available=36,num_docks_disabled=0,num_ebikes_available=0,station_status="active" 1641505084000000000
+citibike,station_id=4711 eightd_has_available_keys=false,is_installed=1,is_renting=1,is_returning=1,legacy_id="4711",num_bikes_available=9,num_bikes_disabled=0,num_docks_available=36,num_docks_disabled=0,num_ebikes_available=1,station_status="active" 1641505084000000000
 ```
 
 ## Metrics

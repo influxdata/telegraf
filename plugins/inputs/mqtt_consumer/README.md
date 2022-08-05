@@ -87,6 +87,13 @@ and creates metrics using one of the supported [input data formats][].
   #      key = type
 ```
 
+## Example Output
+
+```text
+mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=45i 1653579140440951943
+mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=100i 1653579153147395661
+```
+
 ## About Topic Parsing
 
 The MQTT topic as a whole is stored as a tag, but this can be far too coarse to
@@ -95,7 +102,7 @@ tag values to be extracted from the MQTT topic letting you store the information
 provided in the topic in a meaningful way. An `_` denotes an ignored entry in
 the topic path. Please see the following example.
 
-## Example Configuration for topic parsing
+### Topic Parsing Example
 
 ```toml
 [[inputs.mqtt_consumer]]
@@ -133,9 +140,20 @@ Will result in the following metric:
 cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
 
+## Field Pivoting Example
+
+You can use the pivot processor to rotate single
+valued metrics into a multi field metric.
+For more info check out the pivot processors
+[here][1].
+
+For this example these are the topics:
+
 ```text
-internal_mqtt_consumer,host=pop-os,version=1.24.0-2a266e53
-messages_received=622i,bytes_received=37942i 1657282270000000000
+/sensors/CLE/v1/device5/temp
+/sensors/CLE/v1/device5/rpm
+/sensors/CLE/v1/device5/ph
+/sensors/CLE/v1/device5/spin
 ```
 
 ```text
@@ -201,6 +219,13 @@ sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 - when [[inputs.internal]] is set:
   - bytes_received (int): count of the number of bytes have been received from incoming messages
   - messages_received (int): count of the number of messages that have been received from mqtt
+  
+This will result in the following metric:
+
+```text
+internal_mqtt_consumer,host=pop-os,version=1.24.0-2a266e53
+messages_received=622i,bytes_received=37942i 1657282270000000000
+```
 
 [mqtt]: https://mqtt.org
 [input data formats]: /docs/DATA_FORMATS_INPUT.md

@@ -129,6 +129,7 @@ expose all stats)
     - duration_in_millis
     - in
     - out
+    - failures(if exists)
     - bulk_requests_failures (for Logstash 7+)
     - bulk_requests_with_errors (for Logstash 7+)
     - documents_successes (for logstash 7+)
