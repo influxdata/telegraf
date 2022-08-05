@@ -70,7 +70,9 @@ func TestMultipleConfigs(t *testing.T) {
 			if len(expectedErrors) > 0 {
 				sort.Strings(actualErrorMsgs)
 				sort.Strings(expectedErrors)
-				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+				for i, msg := range expectedErrors {
+					require.Contains(t, actualErrorMsgs[i], msg)
+				}
 			} else {
 				require.Empty(t, actualErrorMsgs)
 			}
