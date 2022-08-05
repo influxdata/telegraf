@@ -146,11 +146,11 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			return nil, err
 		}
 
-		downloadTlsCfg := c.tlsCfg.Clone()
-		downloadTlsCfg.ServerName = serverName
-		downloadTlsCfg.InsecureSkipVerify = true
+		downloadTLSCfg := c.tlsCfg.Clone()
+		downloadTLSCfg.ServerName = serverName
+		downloadTLSCfg.InsecureSkipVerify = true
 
-		conn := tls.Client(ipConn, downloadTlsCfg)
+		conn := tls.Client(ipConn, downloadTLSCfg)
 		defer conn.Close()
 
 		hsErr := conn.Handshake()
@@ -198,16 +198,16 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			return nil, err
 		}
 
-		downloadTlsCfg := c.tlsCfg.Clone()
-		downloadTlsCfg.ServerName = serverName
-		downloadTlsCfg.InsecureSkipVerify = true
+		downloadTLSCfg := c.tlsCfg.Clone()
+		downloadTLSCfg.ServerName = serverName
+		downloadTLSCfg.InsecureSkipVerify = true
 
 		smtpConn, err := smtp.NewClient(ipConn, u.Host)
 		if err != nil {
 			return nil, err
 		}
 
-		err = smtpConn.Hello(downloadTlsCfg.ServerName)
+		err = smtpConn.Hello(downloadTLSCfg.ServerName)
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +224,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			return nil, fmt.Errorf("did not get 220 after STARTTLS: %s", err.Error())
 		}
 
-		tlsConn := tls.Client(ipConn, downloadTlsCfg)
+		tlsConn := tls.Client(ipConn, downloadTLSCfg)
 		defer tlsConn.Close()
 
 		hsErr := tlsConn.Handshake()
