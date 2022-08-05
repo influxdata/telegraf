@@ -74,6 +74,8 @@ InfluxDB it is recommended to use [`influxdb_listener`][influxdb_listener] or
 Metrics are collected from the part of the request specified by the
 `data_source` param and are parsed depending on the value of `data_format`.
 
+## Example Output
+
 ## Troubleshooting
 
 Send Line Protocol:

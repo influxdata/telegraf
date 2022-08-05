@@ -112,5 +112,3 @@ an authorization cookie.  The Cookie Auth Renewal interval will renew the
 authorization by retrieving a new cookie at the given interval.
 
 [tesla]: https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network
-
-## Example Output
