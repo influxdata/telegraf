@@ -373,8 +373,14 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	if tags == nil {
 		tags = map[string]string{}
 	}
+
 	tags["pod_name"] = pod.Name
-	tags["namespace"] = pod.Namespace
+	podNamespace := "namespace"
+	if p.PodNamespaceLabelName != "" {
+		podNamespace = p.PodNamespaceLabelName
+	}
+	tags[podNamespace] = pod.Namespace
+
 	// add labels as metrics tags
 	for k, v := range pod.Labels {
 		tags[k] = v
