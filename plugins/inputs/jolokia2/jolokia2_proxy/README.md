@@ -5,7 +5,7 @@ The `jolokia2_agent` input plugin reads JMX metrics from one or more
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read JMX metrics from a Jolokia REST proxy endpoint
 [[inputs.jolokia2_proxy]]
   # default_tag_prefix      = ""

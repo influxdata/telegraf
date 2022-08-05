@@ -6,7 +6,7 @@ REST endpoint.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read JMX metrics from a Jolokia REST agent endpoint
 [[inputs.jolokia2_agent]]
   # default_tag_prefix      = ""
