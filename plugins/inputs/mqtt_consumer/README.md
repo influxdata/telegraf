@@ -201,7 +201,7 @@ sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 This will result in the following metric:
 
 ```text
-internal_mqtt_consumer,host=pop-os,version=1.24.0-2a266e53,messages_received=622i,bytes_received=37942i 1657282270000000000
+internal_mqtt_consumer host=pop-os version=1.24.0 messages_received=622i bytes_received=37942i 1657282270000000000
 ```
 
 [mqtt]: https://mqtt.org
