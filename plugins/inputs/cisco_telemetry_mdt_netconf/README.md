@@ -140,9 +140,7 @@ Sample metrics include:
 - Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic
   - tags:
     - host
-    - path
     - source
-    - subscription
     - Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic/name (enforced tag)
   - fields:
     - total-memory (int, byte)
