@@ -160,7 +160,6 @@ func (*CloudWatch) SampleConfig() string {
 }
 
 func (c *CloudWatch) Connect() error {
-
 	cfg, err := c.CredentialConfig.Credentials()
 
 	if err != nil {

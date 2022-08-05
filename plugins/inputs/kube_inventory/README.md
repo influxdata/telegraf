@@ -44,10 +44,15 @@ avoid cardinality issues:
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ##
   ## If both of these are empty, we'll use the default serviceaccount:
   ## at: /run/secrets/kubernetes.io/serviceaccount/token
-  # bearer_token = "/path/to/bearer/token"
+  ##
+  ## To auto-refresh the token, please use a file with the bearer_token option.
+  ## If given a string, Telegraf cannot refresh the token periodically.
+  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
+  ## deprecated in 1.24.0; use bearer_token with a file
   # bearer_token_string = "abc_123"
 
   ## Set response_timeout (default 5 seconds)

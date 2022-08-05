@@ -27,7 +27,7 @@ type Kubernetes struct {
 
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`
-	BearerTokenString string `toml:"bearer_token_string"`
+	BearerTokenString string `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 
 	LabelInclude []string `toml:"label_include"`
 	LabelExclude []string `toml:"label_exclude"`
@@ -63,14 +63,6 @@ func (k *Kubernetes) Init() error {
 	// If neither are provided, use the default service account.
 	if k.BearerToken == "" && k.BearerTokenString == "" {
 		k.BearerToken = defaultServiceAccountPath
-	}
-
-	if k.BearerToken != "" {
-		token, err := os.ReadFile(k.BearerToken)
-		if err != nil {
-			return err
-		}
-		k.BearerTokenString = strings.TrimSpace(string(token))
 	}
 
 	labelFilter, err := filter.NewIncludeExcludeFilter(k.LabelInclude, k.LabelExclude)
@@ -185,6 +177,13 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 			TLSClientConfig:       tlsCfg,
 			ResponseHeaderTimeout: time.Duration(k.ResponseTimeout),
 		}
+	}
+	if k.BearerToken != "" {
+		token, err := os.ReadFile(k.BearerToken)
+		if err != nil {
+			return err
+		}
+		k.BearerTokenString = strings.TrimSpace(string(token))
 	}
 	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
 	req.Header.Add("Accept", "application/json")

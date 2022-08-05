@@ -2,22 +2,25 @@ module github.com/influxdata/telegraf
 
 go 1.18
 
+// Workaround for https://github.com/lxc/lxd/issues/10745 (failing "go list -m all")
+replace google.golang.org/grpc/naming => google.golang.org/grpc v1.29.1
+
 require (
 	cloud.google.com/go/bigquery v1.33.0
 	cloud.google.com/go/monitoring v1.5.0
-	cloud.google.com/go/pubsub v1.23.0
+	cloud.google.com/go/pubsub v1.24.0
 	collectd.org v0.5.0
-	github.com/Azure/azure-event-hubs-go/v3 v3.3.17
+	github.com/Azure/azure-event-hubs-go/v3 v3.3.18
 	github.com/Azure/azure-kusto-go v0.7.0
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
 	github.com/Azure/go-autorest/autorest v0.11.24
 	github.com/Azure/go-autorest/autorest/adal v0.9.21
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
-	github.com/BurntSushi/toml v0.4.1
+	github.com/BurntSushi/toml v1.2.0
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
-	github.com/Shopify/sarama v1.34.1
+	github.com/Shopify/sarama v1.35.0
 	github.com/aerospike/aerospike-client-go/v5 v5.7.0
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1529
@@ -32,11 +35,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.15.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.5
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
-	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.7.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.19.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.11
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.15.7
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.15.10
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.51.0
-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.15.7
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.15.10
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.7
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.13.6
 	github.com/aws/smithy-go v1.12.0
@@ -84,7 +87,7 @@ require (
 	github.com/gosnmp/gosnmp v1.34.0
 	github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9
 	github.com/gwos/tcg/sdk v0.0.0-20220621192633-df0eac0a1a4c
-	github.com/harlow/kinesis-consumer v0.3.6-0.20210911031324-5a873d6e9fec
+	github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/influxdata/go-syslog/v3 v3.0.0
@@ -134,8 +137,8 @@ require (
 	github.com/sensu/sensu-go/api/core/v2 v2.14.0
 	github.com/shirou/gopsutil/v3 v3.22.7
 	github.com/showwin/speedtest-go v1.1.5
-	github.com/signalfx/golib/v3 v3.3.43
-	github.com/sirupsen/logrus v1.8.1
+	github.com/signalfx/golib/v3 v3.3.45
+	github.com/sirupsen/logrus v1.9.0
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.2
 	github.com/stretchr/testify v1.8.0
@@ -158,14 +161,14 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.31.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
-	golang.org/x/net v0.0.0-20220622184535-263ec571b305
-	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
+	golang.org/x/net v0.0.0-20220708220712-1185a9018129
+	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
-	golang.org/x/sys v0.0.0-20220622161953-175b2fd9d664
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
 	golang.org/x/text v0.3.7
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.11.0
-	google.golang.org/api v0.84.0
+	google.golang.org/api v0.85.0
 	google.golang.org/genproto v0.0.0-20220623142657-077d458a5694
 	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.0
@@ -174,14 +177,14 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.24.2
-	k8s.io/apimachinery v0.24.2
+	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.1
 	modernc.org/sqlite v1.17.3
 )
 
 require (
 	cloud.google.com/go v0.102.1 // indirect
-	cloud.google.com/go/compute v1.6.1 // indirect
+	cloud.google.com/go/compute v1.7.0 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/Azure/azure-amqp-common-go/v3 v3.2.3 // indirect
@@ -209,15 +212,15 @@ require (
 	github.com/apache/arrow/go/arrow v0.0.0-20211006091945-a69884db78f4 // indirect
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/armon/go-metrics v0.3.3 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.2 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.3 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.5.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.15 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.16.0 // indirect
@@ -239,7 +242,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/eapache/go-resiliency v1.2.0 // indirect
+	github.com/eapache/go-resiliency v1.3.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
@@ -266,7 +269,7 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.0.0-20220520183353-fd19c99a87aa // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.1.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.4.0 // indirect
 	github.com/grid-x/serial v0.0.0-20211107191517-583c7356b3aa // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
@@ -299,7 +302,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/webbrowser v1.0.0 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
-	github.com/klauspost/compress v1.15.6 // indirect
+	github.com/klauspost/compress v1.15.8 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/ragel-machinery v0.0.0-20181214104525-299bdde78165 // indirect
@@ -333,7 +336,7 @@ require (
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	github.com/pierrec/lz4/v4 v4.1.14 // indirect
+	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pion/logging v0.2.2 // indirect
 	github.com/pion/transport v0.13.0 // indirect
 	github.com/pion/udp v0.1.1 // indirect
