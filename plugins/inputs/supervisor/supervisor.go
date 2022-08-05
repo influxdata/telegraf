@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/kolo/xmlrpc"
 
@@ -14,7 +15,6 @@ import (
 
 type Supervisor struct {
 	Server     string          `toml:"url"`
-	ServerTag  string          `toml:"server_tag"`
 	MetricsInc []string        `toml:"metrics_include"`
 	MetricsExc []string        `toml:"metrics_exclude"`
 	Log        telegraf.Logger `toml:"-"`
@@ -111,33 +111,26 @@ func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) 
 	if s.fieldFilter.Match("rc") {
 		fields["exitCode"] = pInfo.ExitStatus
 	}
-	switch s.ServerTag {
-	case "instance":
-		tags["server"] = status.Ident
-	case "host":
-		var err error
-		tags["server"], err = beautifyServerString(s.Server)
-		if err != nil {
-			return map[string]string{}, map[string]interface{}{}, err
-		}
+	splittedURL, err := beautifyServerString(s.Server)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse server string: %v", err)
 	}
+	tags["supervisor_id"] = status.Ident
+	tags["supervisor_host"] = splittedURL[0]
+	tags["supervisor_port"] = splittedURL[1]
 	return tags, fields, nil
 }
 
 // Parsing of supervisor instance data
 func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string, map[string]interface{}, error) {
-	var server string
-	var err error
-	switch s.ServerTag {
-	case "instance":
-		server = status.Ident
-	case "host":
-		server, err = beautifyServerString(s.Server)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decorate server string: %v", err)
-		}
+	splittedURL, err := beautifyServerString(s.Server)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse server string: %v", err)
 	}
-	tags := map[string]string{"server": server}
+	tags := map[string]string{}
+	tags["supervisor_id"] = status.Ident
+	tags["supervisor_host"] = splittedURL[0]
+	tags["supervisor_port"] = splittedURL[1]
 	fields := map[string]interface{}{"state": status.StateCode}
 	return tags, fields, nil
 }
@@ -158,10 +151,6 @@ func (s *Supervisor) Init() error {
 	if err != nil {
 		return fmt.Errorf("metrics filter setup failed: %v", err)
 	}
-	// Checking validity of server_tag setting
-	if !(s.ServerTag == "host" || s.ServerTag == "instance" || s.ServerTag == "none") {
-		return fmt.Errorf("unknown value of server_tag in plugin configuration (%s)", s.ServerTag)
-	}
 	return nil
 }
 
@@ -169,16 +158,23 @@ func init() {
 	inputs.Add("supervisor", func() telegraf.Input {
 		return &Supervisor{
 			MetricsExc: []string{"pid", "rc"},
-			ServerTag:  "none",
 		}
 	})
 }
 
 // Function to get only address and port from URL
-func beautifyServerString(rawurl string) (string, error) {
+func beautifyServerString(rawurl string) ([]string, error) {
 	parsedURL, err := url.Parse(rawurl)
+	splittedURL := strings.Split(parsedURL.Host, ":")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return parsedURL.Host, nil
+	if len(splittedURL) < 2 {
+		if parsedURL.Scheme == "https" {
+			splittedURL[1] = "443"
+		} else {
+			splittedURL[1] = "80"
+		}
+	}
+	return splittedURL, nil
 }

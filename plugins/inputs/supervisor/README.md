@@ -28,8 +28,6 @@ password = pass
   ## Url of supervisor's XML-RPC endpoint if basic auth enabled in supervisor http server,
   ## than you have to add credentials to url (ex. http://login:pass@localhost:9001/RPC2)
   # url="http://localhost:9001/RPC2"
-  ## Use supervisor identification string as server tag
-  # use_identification_tag = false
   ## With settings below you can manage gathering additional information about processes
   ## If both of them empty, then all additional information will be collected.
   ## Currently supported supported additional metrics are: pid, rc

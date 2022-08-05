@@ -56,6 +56,8 @@ func TestShort_SampleData(t *testing.T) {
 			},
 			supervisorData: supervisorInfo{
 				StateCode: int8(1),
+				StateName: "RUNNING",
+				Ident:     "supervisor",
 			},
 			expProcessFields: []map[string]interface{}{
 				{
@@ -73,21 +75,27 @@ func TestShort_SampleData(t *testing.T) {
 			},
 			expProcessTags: []map[string]string{
 				{
-					"process": "Process0",
-					"group":   "ProcessGroup0",
-					"server":  "example.org:9001",
+					"process":         "Process0",
+					"group":           "ProcessGroup0",
+					"supervisor_host": "example.org",
+					"supervisor_port": "9001",
+					"supervisor_id":   "supervisor",
 				},
 				{
-					"process": "Process1",
-					"group":   "ProcessGroup1",
-					"server":  "example.org:9001",
+					"process":         "Process1",
+					"group":           "ProcessGroup1",
+					"supervisor_host": "example.org",
+					"supervisor_port": "9001",
+					"supervisor_id":   "supervisor",
 				},
 			},
 			expInstanceFields: map[string]interface{}{
 				"state": int8(1),
 			},
 			expInstancesTags: map[string]string{
-				"server": "example.org:9001",
+				"supervisor_host": "example.org",
+				"supervisor_port": "9001",
+				"supervisor_id":   "supervisor",
 			},
 		},
 	}
@@ -95,13 +103,13 @@ func TestShort_SampleData(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			s := &Supervisor{
 				Server:     "http://example.org:9001/RPC2",
-				ServerTag:  "host",
 				MetricsInc: []string{},
 				MetricsExc: []string{},
 			}
 			status := supervisorInfo{
 				StateCode: tC.supervisorData.StateCode,
 				StateName: tC.supervisorData.StateName,
+				Ident:     tC.supervisorData.Ident,
 			}
 			err := s.Init()
 			if err != nil {
@@ -146,7 +154,6 @@ func TestIntegration_BasicGathering(t *testing.T) {
 	}()
 	s := &Supervisor{
 		Server:     "http://login:pass@" + testutil.GetLocalHost() + ":" + ctr.Ports[supervisorPort] + "/RPC2",
-		ServerTag:  "instance",
 		MetricsInc: []string{},
 		MetricsExc: []string{},
 	}
@@ -160,4 +167,10 @@ func TestIntegration_BasicGathering(t *testing.T) {
 	require.Equal(t, acc.HasField("supervisor_processes", "pid"), true)
 	require.Equal(t, acc.HasField("supervisor_processes", "exitCode"), true)
 	require.Equal(t, acc.HasField("supervisor_instance", "state"), true)
+	require.Equal(t, acc.HasTag("supervisor_processes", "supervisor_id"), true)
+	require.Equal(t, acc.HasTag("supervisor_processes", "supervisor_host"), true)
+	require.Equal(t, acc.HasTag("supervisor_processes", "supervisor_port"), true)
+	require.Equal(t, acc.HasTag("supervisor_instance", "supervisor_id"), true)
+	require.Equal(t, acc.HasTag("supervisor_instance", "supervisor_host"), true)
+	require.Equal(t, acc.HasTag("supervisor_instance", "supervisor_port"), true)
 }
