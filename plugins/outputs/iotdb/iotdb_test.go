@@ -1,4 +1,3 @@
-//go:generate ../../../tools/readme_config_includer/generator
 package iotdb
 
 import (
@@ -9,12 +8,13 @@ import (
 
 	"github.com/apache/iotdb-client-go/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // newMetricWithOrderedFields creates new Metric and makes sure fields are in
