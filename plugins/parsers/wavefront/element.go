@@ -52,19 +52,22 @@ func (ep *ValueParser) parse(p *PointParser, pt *Point) error {
 
 	p.writeBuf.Reset()
 	if tok == MinusSign {
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 	}
 
 	for tok != EOF && (tok == Letter || tok == Number || tok == Dot || tok == MinusSign) {
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 	}
 	p.unscan()
 
 	pt.Value = p.writeBuf.String()
-	_, err := strconv.ParseFloat(pt.Value, 64)
-	if err != nil {
+	if _, err := strconv.ParseFloat(pt.Value, 64); err != nil {
 		return fmt.Errorf("invalid metric value %s", pt.Value)
 	}
 	return nil
@@ -90,7 +93,9 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 
 	p.writeBuf.Reset()
 	for tok != EOF && tok == Number {
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 	}
 	p.unscan()
@@ -187,7 +192,9 @@ func parseQuotedLiteral(p *PointParser) (string, error) {
 	for tok != EOF && (tok != Quotes || (tok == Quotes && escaped)) {
 		// let everything through
 		escaped = tok == Backslash
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return "", fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 	}
 	if tok == EOF {
@@ -208,7 +215,9 @@ func parseLiteral(p *PointParser) (string, error) {
 
 	p.writeBuf.Reset()
 	for tok != EOF && tok > literalBeg && tok < literalEnd {
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return "", fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 		if tok == Delta {
 			return "", errors.New("found delta inside metric name")
