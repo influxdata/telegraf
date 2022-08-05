@@ -249,9 +249,14 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	var qosFlagsSize int
 	var qOsSize int
 	topicSize := len(msg.Topic()) + 2
-	if int(msg.Qos()) == 1 || int(msg.Qos()) == 2 {
+	switch int(msg.Qos()) {
+	case 1:
 		qOsSize = 2
-	} else {
+		qosFlagsSize = 4
+	case 2:
+		qOsSize = 2
+		qosFlagsSize = 12
+	default:
 		qOsSize = 0
 	}
 	payloadSize := len(msg.Payload())
@@ -266,11 +271,6 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		remainingLength = 4
 	}
 	publishMessageSize := remainingLength + remainingContent + 1
-	if int(msg.Qos()) == 1 {
-		qosFlagsSize = 4
-	} else if int(msg.Qos()) == 2 {
-		qosFlagsSize = 12
-	}
 	byteCount := publishMessageSize + qosFlagsSize
 	m.bytesRecv.Incr(int64(byteCount))
 	m.messagesRecv.Incr(1)

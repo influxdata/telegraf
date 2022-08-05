@@ -127,9 +127,9 @@ the topic path. Please see the following example.
       test = "int"
 ```
 
-## Example Output
+Will result in the following metric:
 
-```shell
+```text
 cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
 
@@ -137,6 +137,59 @@ cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014
 internal_mqtt_consumer,host=pop-os,version=1.24.0-2a266e53
 messages_received=622i,bytes_received=37942i 1657282270000000000
 ```
+
+```text
+internal_mqtt_consumer,host=pop-os,version=1.24.0-2a266e53
+messages_received=622i,bytes_received=37942i 1657282270000000000
+```
+
+=======
+## Field Pivoting Example
+
+You can use the pivot processor to rotate single
+valued metrics into a multi field metric.
+For more info check out the pivot processors
+[here][1].
+
+For this example these are the topics:
+
+```text
+/sensors/CLE/v1/device5/temp
+/sensors/CLE/v1/device5/rpm
+/sensors/CLE/v1/device5/ph
+/sensors/CLE/v1/device5/spin
+```
+
+And these are the metrics:
+
+```text
+sensors,site=CLE,version=v1,device_name=device5,field=temp value=390
+sensors,site=CLE,version=v1,device_name=device5,field=rpm value=45.0
+sensors,site=CLE,version=v1,device_name=device5,field=ph value=1.45
+```
+
+Using pivot in the config will rotate the metrics into a multi field metric.
+The config:
+
+```toml
+[[inputs.mqtt_consumer]]
+    ....
+    topics = "/sensors/#"
+    [[inputs.mqtt_consumer.topic_parsing]]
+        measurement = "/measurement/_/_/_/_"
+        tags = "/_/site/version/device_name/field"
+[[processors.pivot]]
+    tag_key = "field"
+    value_key = "value"
+```
+
+Will result in the following metric:
+
+```text
+sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
+```
+
+[1]: <https://github.com/influxdata/telegraf/tree/master/plugins/processors/pivot> "Pivot Processor"
 
 ## Metrics
 
