@@ -84,6 +84,10 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		}
 	}
 
+	// Explicitly and consistently set the minimal accepted version using the
+	// defined default. We use this setting for both clients and servers
+	// instead of relying on Golang's default that is different for clients
+	// and servers and might change over time.
 	tlsConfig.MinVersion = TLSMinVersionDefault
 	if c.TLSMinVersion != "" {
 		version, err := ParseTLSVersion(c.TLSMinVersion)
@@ -143,6 +147,10 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		tlsConfig.MaxVersion = version
 	}
 
+	// Explicitly and consistently set the minimal accepted version using the
+	// defined default. We use this setting for both clients and servers
+	// instead of relying on Golang's default that is different for clients
+	// and servers and might change over time.
 	tlsConfig.MinVersion = TLSMinVersionDefault
 	if c.TLSMinVersion != "" {
 		version, err := ParseTLSVersion(c.TLSMinVersion)
