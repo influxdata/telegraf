@@ -115,9 +115,9 @@ func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) 
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse server string: %v", err)
 	}
-	tags["supervisor_id"] = status.Ident
-	tags["supervisor_host"] = splittedURL[0]
-	tags["supervisor_port"] = splittedURL[1]
+	tags["id"] = status.Ident
+	tags["source"] = splittedURL[0]
+	tags["port"] = splittedURL[1]
 	return tags, fields, nil
 }
 
@@ -128,9 +128,9 @@ func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string
 		return nil, nil, fmt.Errorf("failed to parse server string: %v", err)
 	}
 	tags := map[string]string{}
-	tags["supervisor_id"] = status.Ident
-	tags["supervisor_host"] = splittedURL[0]
-	tags["supervisor_port"] = splittedURL[1]
+	tags["id"] = status.Ident
+	tags["source"] = splittedURL[0]
+	tags["port"] = splittedURL[1]
 	fields := map[string]interface{}{"state": status.StateCode}
 	return tags, fields, nil
 }

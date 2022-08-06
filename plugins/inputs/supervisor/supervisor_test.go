@@ -75,27 +75,27 @@ func TestShort_SampleData(t *testing.T) {
 			},
 			expProcessTags: []map[string]string{
 				{
-					"process":         "Process0",
-					"group":           "ProcessGroup0",
-					"supervisor_host": "example.org",
-					"supervisor_port": "9001",
-					"supervisor_id":   "supervisor",
+					"process": "Process0",
+					"group":   "ProcessGroup0",
+					"source":  "example.org",
+					"port":    "9001",
+					"id":      "supervisor",
 				},
 				{
-					"process":         "Process1",
-					"group":           "ProcessGroup1",
-					"supervisor_host": "example.org",
-					"supervisor_port": "9001",
-					"supervisor_id":   "supervisor",
+					"process": "Process1",
+					"group":   "ProcessGroup1",
+					"source":  "example.org",
+					"port":    "9001",
+					"id":      "supervisor",
 				},
 			},
 			expInstanceFields: map[string]interface{}{
 				"state": int8(1),
 			},
 			expInstancesTags: map[string]string{
-				"supervisor_host": "example.org",
-				"supervisor_port": "9001",
-				"supervisor_id":   "supervisor",
+				"source": "example.org",
+				"port":   "9001",
+				"id":     "supervisor",
 			},
 		},
 	}
@@ -167,10 +167,10 @@ func TestIntegration_BasicGathering(t *testing.T) {
 	require.Equal(t, acc.HasField("supervisor_processes", "pid"), true)
 	require.Equal(t, acc.HasField("supervisor_processes", "exitCode"), true)
 	require.Equal(t, acc.HasField("supervisor_instance", "state"), true)
-	require.Equal(t, acc.HasTag("supervisor_processes", "supervisor_id"), true)
-	require.Equal(t, acc.HasTag("supervisor_processes", "supervisor_host"), true)
-	require.Equal(t, acc.HasTag("supervisor_processes", "supervisor_port"), true)
-	require.Equal(t, acc.HasTag("supervisor_instance", "supervisor_id"), true)
-	require.Equal(t, acc.HasTag("supervisor_instance", "supervisor_host"), true)
-	require.Equal(t, acc.HasTag("supervisor_instance", "supervisor_port"), true)
+	require.Equal(t, acc.HasTag("supervisor_processes", "id"), true)
+	require.Equal(t, acc.HasTag("supervisor_processes", "source"), true)
+	require.Equal(t, acc.HasTag("supervisor_processes", "port"), true)
+	require.Equal(t, acc.HasTag("supervisor_instance", "id"), true)
+	require.Equal(t, acc.HasTag("supervisor_instance", "source"), true)
+	require.Equal(t, acc.HasTag("supervisor_instance", "port"), true)
 }
