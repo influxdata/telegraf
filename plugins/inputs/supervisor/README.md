@@ -52,7 +52,9 @@ configuration file.
 
 - supervisor_processes
   - Tags:
-    - server (Supervisor address or identification string)
+    - source (Hostname or IP address of supervisor's instance)
+    - port (Port number of supervisor's HTTP server)
+    - id (Supervisor's identification string)
     - name (Process name)
     - group (Process group)
   - Fields:
@@ -63,7 +65,9 @@ configuration file.
 
 - supervisor_instance
   - Tags:
-    - server (Supervisor address or identification string)
+    - source (Hostname or IP address of supervisor's instance)
+    - port (Port number of supervisor's HTTP server)
+    - id (Supervisor's identification string)
   - Fields:
     - state (int, see reference)
 
@@ -92,6 +96,6 @@ configuration file.
 ## Example Output
 
 ```shell
-supervisor_processes,host=localhost,group=ExampleGroup,process=ExampleProcess,server=localhost:9001 exitCode=0i,pid=12345i,state=20i,uptime=4812i
-supervisor_instance,host=localhost,server=localhost:9001 state=1
+supervisor_processes,group=ExampleGroup,id=supervisor,port=9001,process=ExampleProcess,source=localhost state=20i,uptime=75958i 1659786637000000000
+supervisor_instance,id=supervisor,port=9001,source=localhost state=1i 1659786637000000000
 ```
