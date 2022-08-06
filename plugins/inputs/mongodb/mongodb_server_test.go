@@ -143,3 +143,14 @@ func TestPoolStatsVersionCompatibility(t *testing.T) {
 		})
 	}
 }
+
+func TestIgnoreUnreachableHosts(t *testing.T) {
+	m := &MongoDB{
+		Log:     testutil.Logger{},
+		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
+	}
+
+	m.IgnoreUnreachableHosts = true
+	err := m.Init()
+	require.NoError(t, err)
+}

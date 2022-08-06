@@ -43,6 +43,10 @@ All MongoDB server versions from 2.6 and higher are supported.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## When true, telegraf will not return an error on init if one of
+  ## the mongodb targets is unreachable
+  # ignore_unreachable_hosts = false
 ```
 
 ### Permissions

@@ -26,13 +26,14 @@ import (
 var sampleConfig string
 
 type MongoDB struct {
-	Servers             []string
-	Ssl                 Ssl
-	GatherClusterStatus bool
-	GatherPerdbStats    bool
-	GatherColStats      bool
-	GatherTopStat       bool
-	ColStatsDbs         []string
+	Servers                []string
+	Ssl                    Ssl
+	GatherClusterStatus    bool
+	GatherPerdbStats       bool
+	GatherColStats         bool
+	GatherTopStat          bool
+	IgnoreUnreachableHosts bool
+	ColStatsDbs            []string
 	tlsint.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -110,7 +111,11 @@ func (m *MongoDB) Init() error {
 
 		err = client.Ping(ctx, opts.ReadPreference)
 		if err != nil {
-			return fmt.Errorf("unable to connect to MongoDB: %s", err)
+			if !m.IgnoreUnreachableHosts {
+				return fmt.Errorf("unable to connect to MongoDB: %s", err)
+			}
+
+			m.Log.Infof("unable to connect do MongoDB: %s", err)
 		}
 
 		server := &Server{
