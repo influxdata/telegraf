@@ -8,6 +8,14 @@ type Input interface {
 	Gather(Accumulator) error
 }
 
+type MockInput interface {
+	PluginDescriber
+
+	// MockGather takes in an accumulator and adds the metrics that the Input
+	// gathers. This is called every agent.interval. It is used to produce mock data
+	MockGather(Accumulator) error
+}
+
 type ServiceInput interface {
 	Input
 

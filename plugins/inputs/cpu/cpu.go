@@ -45,8 +45,21 @@ func (*CPUStats) SampleConfig() string {
 	return sampleConfig
 }
 
+func (c *CPUStats) MockGather(acc telegraf.Accumulator) error {
+	return c.gather(acc, func() ([]cpuUtil.TimesStat, error) {
+		// TODO: some realistic stuff
+		return []cpuUtil.TimesStat{{
+			CPU:  "1",
+			User: float64(time.Now().Second()),
+		}}, nil
+	})
+}
 func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
-	times, err := c.ps.CPUTimes(c.PerCPU, c.TotalCPU)
+	return c.gather(acc, func() ([]cpuUtil.TimesStat, error) { return c.ps.CPUTimes(c.PerCPU, c.TotalCPU) })
+}
+
+func (c *CPUStats) gather(acc telegraf.Accumulator, gatherf func() ([]cpuUtil.TimesStat, error)) error {
+	times, err := gatherf()
 	if err != nil {
 		return fmt.Errorf("error getting CPU info: %s", err)
 	}

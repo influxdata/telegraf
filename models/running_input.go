@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -114,8 +115,20 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 }
 
 func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
+	return r.doGather(acc, r.Input.Gather)
+}
+
+func (r *RunningInput) MockGather(acc telegraf.Accumulator) error {
+	mi, ok := r.Input.(telegraf.MockInput)
+	if !ok {
+		return errors.New("input is not a mock gatherer")
+	}
+	return r.doGather(acc, mi.MockGather)
+}
+
+func (r *RunningInput) doGather(acc telegraf.Accumulator, gatherf func(acc telegraf.Accumulator) error) error {
 	start := time.Now()
-	err := r.Input.Gather(acc)
+	err := gatherf(acc)
 	elapsed := time.Since(start)
 	r.GatherTime.Incr(elapsed.Nanoseconds())
 	return err

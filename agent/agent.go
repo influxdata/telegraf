@@ -98,9 +98,10 @@ type outputUnit struct {
 // Run starts and runs the Agent until the context is done.
 func (a *Agent) Run(ctx context.Context) error {
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
-		"Flush Interval:%s",
+		"Flush Interval:%s, Mock Data:%t",
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
-		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
+		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval),
+		a.Config.Agent.Mock)
 
 	log.Printf("D! [agent] Initializing plugins")
 	err := a.initPlugins()
@@ -408,7 +409,7 @@ func (a *Agent) testRunInputs(
 			case "cpu", "mongodb", "procstat":
 				nulAcc := NewAccumulator(input, nul)
 				nulAcc.SetPrecision(getPrecision(precision, interval))
-				if err := input.Input.Gather(nulAcc); err != nil {
+				if err := a.doGather(nulAcc, input); err != nil {
 					nulAcc.AddError(err)
 				}
 
@@ -418,7 +419,7 @@ func (a *Agent) testRunInputs(
 			acc := NewAccumulator(input, unit.dst)
 			acc.SetPrecision(getPrecision(precision, interval))
 
-			if err := input.Input.Gather(acc); err != nil {
+			if err := a.doGather(acc, input); err != nil {
 				acc.AddError(err)
 			}
 		}(input)
@@ -484,7 +485,7 @@ func (a *Agent) gatherOnce(
 ) error {
 	done := make(chan error)
 	go func() {
-		done <- input.Gather(acc)
+		done <- a.doGather(acc, input)
 	}()
 
 	// Only warn after interval seconds, even if the interval is started late.
@@ -504,6 +505,17 @@ func (a *Agent) gatherOnce(
 			log.Printf("D! [%s] Previous collection has not completed; scheduled collection skipped",
 				input.LogName())
 		}
+	}
+}
+
+func (a *Agent) doGather(
+	acc telegraf.Accumulator,
+	input *models.RunningInput,
+) error {
+	if !a.Config.Agent.Mock {
+		return input.Gather(acc)
+	} else {
+		return input.MockGather(acc)
 	}
 }
 

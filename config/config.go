@@ -93,6 +93,7 @@ func NewConfig() *Config {
 			FlushInterval:              Duration(10 * time.Second),
 			LogTarget:                  "file",
 			LogfileRotationMaxArchives: 5,
+			Mock:                       false,
 		},
 
 		Tags:          make(map[string]string),
@@ -188,6 +189,9 @@ type AgentConfig struct {
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
+
+	// Debug is the option for running in debug mode
+	Mock bool `toml:"mock"`
 
 	// Quiet is the option for running in quiet mode
 	Quiet bool `toml:"quiet"`
