@@ -35,6 +35,7 @@ type MongoDB struct {
 	IgnoreUnreachableHosts bool
 	ColStatsDbs            []string
 	tlsint.ClientConfig
+	tlsConfig *tls.Config
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -51,10 +52,9 @@ func (*MongoDB) SampleConfig() string {
 }
 
 func (m *MongoDB) Init() error {
-	var tlsConfig *tls.Config
 	if m.Ssl.Enabled {
 		// Deprecated TLS config
-		tlsConfig = &tls.Config{
+		m.tlsConfig = &tls.Config{
 			InsecureSkipVerify: m.ClientConfig.InsecureSkipVerify,
 		}
 		if len(m.Ssl.CaCerts) == 0 {
@@ -67,10 +67,10 @@ func (m *MongoDB) Init() error {
 				return fmt.Errorf("failed to parse root certificate")
 			}
 		}
-		tlsConfig.RootCAs = roots
+		m.tlsConfig.RootCAs = roots
 	} else {
 		var err error
-		tlsConfig, err = m.ClientConfig.TLSConfig()
+		m.tlsConfig, err = m.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
@@ -80,6 +80,11 @@ func (m *MongoDB) Init() error {
 		m.Servers = []string{"mongodb://127.0.0.1:27017"}
 	}
 
+	return nil
+}
+
+// Start runs after init and setup mongodb connections
+func (m *MongoDB) Start() error {
 	for _, connURL := range m.Servers {
 		if !strings.HasPrefix(connURL, "mongodb://") && !strings.HasPrefix(connURL, "mongodb+srv://") {
 			// Preserve backwards compatibility for hostnames without a
@@ -97,8 +102,8 @@ func (m *MongoDB) Init() error {
 		defer cancel() //nolint:revive
 
 		opts := options.Client().ApplyURI(connURL)
-		if tlsConfig != nil {
-			opts.TLSConfig = tlsConfig
+		if m.tlsConfig != nil {
+			opts.TLSConfig = m.tlsConfig
 		}
 		if opts.ReadPreference == nil {
 			opts.ReadPreference = readpref.Nearest()
