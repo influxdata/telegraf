@@ -66,3 +66,37 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	require.True(t, acc.HasStringField("zookeeper", "avg_latency"), "avg_latency")
 	// require.True(t, acc.HasFloat64Field("zookeeper", "avg_latency"), "avg_latency")
 }
+
+func TestZookeeperPrometheusIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	servicePort := "7000"
+	container := testutil.Container{
+		Image:        "zookeeper",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"ZOO_CFG_EXTRA": "metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("ZooKeeper audit is disabled."),
+		),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	z := &Zookeeper{
+		Servers: []string{
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
+		},
+		MetricsProvider: "prometheus",
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(z.Gather))
+}

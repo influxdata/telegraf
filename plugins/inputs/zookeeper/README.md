@@ -6,17 +6,26 @@ The zookeeper plugin collects variables outputted from the 'mntr' command
 ## Configuration
 
 ```toml @sample.conf
-# Reads 'mntr' stats from one or many zookeeper servers
+# Reads metrics from one or many zookeeper servers
 [[inputs.zookeeper]]
   ## An array of address to gather stats about. Specify an ip or hostname
   ## with port. ie localhost:2181, 10.0.0.1:2181, etc.
-
   ## If no servers are specified, then localhost is used as the host.
-  ## If no port is specified, 2181 is used
+  ## If no port is specified, 2181 is used for java and 7000 for prometheus
+  ## metric providers.
   servers = [":2181"]
 
   ## Timeout for metric collections from all servers.  Minimum timeout is "1s".
   # timeout = "5s"
+
+  ## Metrics Provider
+  ## Choose from: "java" or "prometheus". By default, mntr is used to collect
+  ## metrics produced in the Java Properties format. There is the option to
+  ## also produce Prometheus style metrics from Zookeeper. This requires
+  ## additional configuraiton. Using this provider requires the use of a
+  ## different port, 7000 by default, and will produce metrics in a different
+  ## format.
+  # metrics_provider = "java"
 
   ## Optional TLS Config
   # enable_tls = true
@@ -79,8 +88,38 @@ zk_open_file_descriptor_count   44
 zk_max_file_descriptor_count    4096
 ```
 
+### Prometheus Metric Provider
+
+The Prometheus Metric provider does not use `mntr` and instead pulls down
+metrics from the exposed Prometheus `/metrics` endpoint on port 7000, by
+default. Users should be able to `curl` or open in a browser this endpoint and
+verify that metrics are generated if the correct Zookeeper configuration
+settings are enabled.
+
 ## Example Output
+
+With the default, "java" metric provider:
 
 ```shell
 zookeeper,server=localhost,port=2181,state=standalone ephemerals_count=0i,approximate_data_size=10044i,open_file_descriptor_count=44i,max_latency=0i,packets_received=7i,outstanding_requests=0i,znode_count=129i,max_file_descriptor_count=4096i,version="3.4.9-3--1",avg_latency=0i,packets_sent=6i,num_alive_connections=1i,watch_count=0i,min_latency=0i 1522351112000000000
+```
+
+With the "prometheus" metric provider:
+
+```shell
+prometheus,source=localhost:7000 read_commit_proc_issued_count=0,read_commit_proc_issued_sum=0 1659986918000000000
+prometheus,source=localhost:7000 proposal_latency_count=0,proposal_latency_sum=0 1659986918000000000
+prometheus,source=localhost:7000 max_file_descriptor_count=1048576 1659986918000000000
+prometheus,source=localhost:7000 reads_after_write_in_session_queue_count=0,reads_after_write_in_session_queue_sum=0 1659986918000000000
+prometheus,source=localhost:7000 commit_process_time_count=0,commit_process_time_sum=0 1659986918000000000
+prometheus,source=localhost:7000 om_commit_process_time_ms_count=0,om_commit_process_time_ms_sum=0 1659986918000000000
+prometheus,source=localhost:7000 packets_sent=0 1659986918000000000
+prometheus,source=localhost:7000 outstanding_tls_handshake=0 1659986918000000000
+prometheus,source=localhost:7000 packets_received=0 1659986918000000000
+prometheus,source=localhost:7000 pending_session_queue_size_count=0,pending_session_queue_size_sum=0 1659986918000000000
+prometheus,pool=mapped,source=localhost:7000 jvm_buffer_pool_used_buffers=0 1659986918000000000
+prometheus,pool=direct,source=localhost:7000 jvm_buffer_pool_used_buffers=23 1659986918000000000
+prometheus,source=localhost:7000 quit_leading_due_to_disloyal_voter=0 1659986918000000000
+prometheus,source=localhost:7000 sync_processor_queue_and_flush_time_ms_count=0,sync_processor_queue_and_flush_time_ms_sum=0 1659986918000000000
+...
 ```

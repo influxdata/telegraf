@@ -7,7 +7,10 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,11 +18,14 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -27,15 +33,21 @@ var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
 
 // Zookeeper is a zookeeper plugin
 type Zookeeper struct {
-	Servers []string
-	Timeout config.Duration
+	Servers         []string        `toml:"servers"`
+	Timeout         config.Duration `toml:"timeout"`
+	MetricsProvider string          `toml:"metrics_provider"`
 
 	EnableTLS bool `toml:"enable_tls"`
 	EnableSSL bool `toml:"enable_ssl" deprecated:"1.7.0;use 'enable_tls' instead"`
 	tlsint.ClientConfig
 
+	Log telegraf.Logger `toml:"-"`
+
 	initialized bool
 	tlsConfig   *tls.Config
+
+	httpconfig.HTTPClientConfig
+	client *http.Client
 }
 
 var defaultTimeout = 5 * time.Second
@@ -54,6 +66,14 @@ func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
 
 func (*Zookeeper) SampleConfig() string {
 	return sampleConfig
+}
+
+func (z *Zookeeper) Init() error {
+	if z.MetricsProvider != "java" && z.MetricsProvider != "prometheus" {
+		return fmt.Errorf("unrecognized metrics provider '%s', choose from: \"java\" or \"prometheus\"", z.MetricsProvider)
+	}
+
+	return nil
 }
 
 // Gather reads stats from all configured servers accumulates stats
@@ -81,12 +101,17 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, serverAddress := range z.Servers {
-		acc.AddError(z.gatherServer(ctx, serverAddress, acc))
+		if z.MetricsProvider == "prometheus" {
+			acc.AddError(z.gatherPrometheusMetrics(ctx, serverAddress, acc))
+		} else {
+			acc.AddError(z.gatherJavaMetrics(ctx, serverAddress, acc))
+		}
 	}
+
 	return nil
 }
 
-func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegraf.Accumulator) error {
+func (z *Zookeeper) gatherJavaMetrics(ctx context.Context, address string, acc telegraf.Accumulator) error {
 	var zookeeperState string
 	_, _, err := net.SplitHostPort(address)
 	if err != nil {
@@ -157,8 +182,89 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	return nil
 }
 
+func (z *Zookeeper) gatherPrometheusMetrics(ctx context.Context, address string, acc telegraf.Accumulator) error {
+	// ensure the correct port is used
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		address = address + ":7000"
+	}
+	if host == "" {
+		address = "localhost" + address
+	}
+
+	// add protocol and metrics URL
+	address = fmt.Sprintf("http://%s/metrics", address)
+	source, err := url.ParseRequestURI(address)
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest("GET", address, nil)
+	if err != nil {
+		return err
+	}
+
+	if z.client == nil {
+		err := z.startClient()
+		if err != nil {
+			return err
+		}
+	}
+
+	resp, err := z.client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"received status code %d (%s)",
+			resp.StatusCode,
+			http.StatusText(resp.StatusCode),
+		)
+	}
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading body failed: %v", err)
+	}
+
+	// Instantiate a new parser for the new data to avoid trouble with stateful parsers
+	parser := prometheus.Parser{
+		IgnoreTimestamp: true,
+	}
+	metrics, err := parser.Parse(b)
+	if err != nil {
+		return fmt.Errorf("parsing metrics failed: %v", err)
+	}
+
+	for _, metric := range metrics {
+		if !metric.HasTag("source") {
+			metric.AddTag("source", source.Host)
+		}
+		acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+	}
+
+	return nil
+}
+
+func (z *Zookeeper) startClient() error {
+	ctx := context.Background()
+	client, err := z.HTTPClientConfig.CreateClient(ctx, z.Log)
+	if err != nil {
+		return err
+	}
+
+	z.client = client
+
+	return nil
+}
+
 func init() {
 	inputs.Add("zookeeper", func() telegraf.Input {
-		return &Zookeeper{}
+		return &Zookeeper{
+			MetricsProvider: "java",
+		}
 	})
 }
