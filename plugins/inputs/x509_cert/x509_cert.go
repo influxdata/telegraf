@@ -47,6 +47,106 @@ type X509Cert struct {
 	globpaths []*globpath.GlobPath
 }
 
+func (*X509Cert) SampleConfig() string {
+	return sampleConfig
+}
+
+func (c *X509Cert) Init() error {
+	// Check if we do have at least one source
+	if len(c.Sources) == 0 {
+		return errors.New("no source configured")
+	}
+
+	// Check the server name and transfer it if necessary
+	if c.ClientConfig.ServerName != "" && c.ServerName != "" {
+		return fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.ClientConfig.ServerName)
+	} else if c.ServerName != "" {
+		// Store the user-provided server-name in the TLS configuration
+		c.ClientConfig.ServerName = c.ServerName
+	}
+
+	// Normalize the sources, handle files and file-globbing
+	if err := c.sourcesToURLs(); err != nil {
+		return err
+	}
+
+	// Create the TLS configuration
+	tlsCfg, err := c.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+	if tlsCfg == nil {
+		tlsCfg = &tls.Config{}
+	}
+	c.tlsCfg = tlsCfg
+
+	return nil
+}
+
+// Gather adds metrics into the accumulator.
+func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
+	now := time.Now()
+	collectedUrls, err := c.collectCertURLs()
+	if err != nil {
+		acc.AddError(fmt.Errorf("cannot get file: %s", err.Error()))
+	}
+
+	for _, location := range append(c.locations, collectedUrls...) {
+		certs, err := c.getCert(location, time.Duration(c.Timeout))
+		if err != nil {
+			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
+		}
+
+		for i, cert := range certs {
+			fields := getFields(cert, now)
+			tags := getTags(cert, location.String())
+
+			// The first certificate is the leaf/end-entity certificate which
+			// needs DNS name validation against the URL hostname.
+			opts := x509.VerifyOptions{
+				Intermediates: x509.NewCertPool(),
+				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+				Roots:         c.tlsCfg.RootCAs,
+			}
+			if i == 0 {
+				opts.DNSName, err = c.serverName(location)
+				if err != nil {
+					return err
+				}
+				for _, c := range certs[1:] {
+					opts.Intermediates.AddCert(c)
+				}
+			}
+
+			_, err = cert.Verify(opts)
+			if err == nil {
+				tags["verification"] = "valid"
+				fields["verification_code"] = 0
+			} else {
+				c.Log.Debugf("Invalid certificate at index %2d!", i)
+				c.Log.Debugf("  cert DNS names:    %v", cert.DNSNames)
+				c.Log.Debugf("  cert IP addresses: %v", cert.IPAddresses)
+				c.Log.Debugf("  opts.DNSName:      %v", opts.DNSName)
+				c.Log.Debugf("  verify options:    %v", opts)
+				c.Log.Debugf("  verify error:      %v", err)
+				c.Log.Debugf("  location:          %v", location)
+				c.Log.Debugf("  tlsCfg.ServerName: %v", c.tlsCfg.ServerName)
+				c.Log.Debugf("  ServerName:        %v", c.ServerName)
+				tags["verification"] = "invalid"
+				fields["verification_code"] = 1
+				fields["verification_error"] = err.Error()
+			}
+
+			acc.AddFields("x509_cert", fields, tags)
+			if c.ExcludeRootCerts {
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "file://") ||
@@ -310,106 +410,6 @@ func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 	}
 
 	return urls, nil
-}
-
-func (*X509Cert) SampleConfig() string {
-	return sampleConfig
-}
-
-// Gather adds metrics into the accumulator.
-func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
-	now := time.Now()
-	collectedUrls, err := c.collectCertURLs()
-	if err != nil {
-		acc.AddError(fmt.Errorf("cannot get file: %s", err.Error()))
-	}
-
-	for _, location := range append(c.locations, collectedUrls...) {
-		certs, err := c.getCert(location, time.Duration(c.Timeout))
-		if err != nil {
-			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
-		}
-
-		for i, cert := range certs {
-			fields := getFields(cert, now)
-			tags := getTags(cert, location.String())
-
-			// The first certificate is the leaf/end-entity certificate which
-			// needs DNS name validation against the URL hostname.
-			opts := x509.VerifyOptions{
-				Intermediates: x509.NewCertPool(),
-				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-				Roots:         c.tlsCfg.RootCAs,
-			}
-			if i == 0 {
-				opts.DNSName, err = c.serverName(location)
-				if err != nil {
-					return err
-				}
-				for _, c := range certs[1:] {
-					opts.Intermediates.AddCert(c)
-				}
-			}
-
-			_, err = cert.Verify(opts)
-			if err == nil {
-				tags["verification"] = "valid"
-				fields["verification_code"] = 0
-			} else {
-				c.Log.Debugf("Invalid certificate at index %2d!", i)
-				c.Log.Debugf("  cert DNS names:    %v", cert.DNSNames)
-				c.Log.Debugf("  cert IP addresses: %v", cert.IPAddresses)
-				c.Log.Debugf("  opts.DNSName:      %v", opts.DNSName)
-				c.Log.Debugf("  verify options:    %v", opts)
-				c.Log.Debugf("  verify error:      %v", err)
-				c.Log.Debugf("  location:          %v", location)
-				c.Log.Debugf("  tlsCfg.ServerName: %v", c.tlsCfg.ServerName)
-				c.Log.Debugf("  ServerName:        %v", c.ServerName)
-				tags["verification"] = "invalid"
-				fields["verification_code"] = 1
-				fields["verification_error"] = err.Error()
-			}
-
-			acc.AddFields("x509_cert", fields, tags)
-			if c.ExcludeRootCerts {
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
-func (c *X509Cert) Init() error {
-	// Check if we do have at least one source
-	if len(c.Sources) == 0 {
-		return errors.New("no source configured")
-	}
-
-	// Check the server name and transfer it if necessary
-	if c.ClientConfig.ServerName != "" && c.ServerName != "" {
-		return fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.ClientConfig.ServerName)
-	} else if c.ServerName != "" {
-		// Store the user-provided server-name in the TLS configuration
-		c.ClientConfig.ServerName = c.ServerName
-	}
-
-	// Normalize the sources, handle files and file-globbing
-	if err := c.sourcesToURLs(); err != nil {
-		return err
-	}
-
-	// Create the TLS configuration
-	tlsCfg, err := c.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-	if tlsCfg == nil {
-		tlsCfg = &tls.Config{}
-	}
-	c.tlsCfg = tlsCfg
-
-	return nil
 }
 
 func init() {
