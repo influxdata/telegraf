@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 
@@ -131,10 +133,31 @@ func (c *CloudWatchLogs) Connect() error {
 	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
 	var err error
 
-	cfg, err := c.CredentialConfig.Credentials()
+	awsCreds, awsErr := c.CredentialConfig.Credentials()
+	if awsErr != nil {
+		return awsErr
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return err
 	}
+	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				PartitionID:   "aws",
+				URL:           c.CredentialConfig.EndpointURL,
+				SigningRegion: c.CredentialConfig.Region,
+			}, nil
+		})
+
+		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
+		if err != nil {
+			return err
+		}
+	}
+
+	cfg.Credentials = awsCreds.Credentials
 	c.svc = cloudwatchlogs.NewFromConfig(cfg)
 
 	//Find log group with name 'c.LogGroup'

@@ -1,0 +1,2 @@
+ntpq,remote=83.137.98.96,refid=10.177.80.37,stratum=2,type=u when=740i,poll=1024i,reach=377i,delay=54.033,offset=243.426,jitter=449514 0
+ntpq,remote=131.188.3.221,refid=10.177.80.37,stratum=2,type=u when=783i,poll=1024i,reach=377i,delay=111.820,offset=261.921,jitter=449528 0

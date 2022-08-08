@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func getTestCasesForRFC5426() []testCasePacket {
+func getTestCasesForRFC5426(hasRemoteAddr bool) []testCasePacket {
 	testCases := []testCasePacket{
 		{
 			name: "complete",
@@ -223,11 +223,22 @@ func getTestCasesForRFC5426() []testCasePacket {
 		},
 	}
 
+	if hasRemoteAddr {
+		for _, tc := range testCases {
+			if tc.wantStrict != nil {
+				tc.wantStrict.AddTag("source", "127.0.0.1")
+			}
+			if tc.wantBestEffort != nil {
+				tc.wantBestEffort.AddTag("source", "127.0.0.1")
+			}
+		}
+	}
+
 	return testCases
 }
 
 func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool) {
-	for _, tc := range getTestCasesForRFC5426() {
+	for _, tc := range getTestCasesForRFC5426(protocol != "unixgram") {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create receiver
 			receiver := newUDPSyslogReceiver(protocol+"://"+address, bestEffort, syslogRFC5424)
@@ -350,6 +361,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 			map[string]string{
 				"severity": "alert",
 				"facility": "kern",
+				"source":   "127.0.0.1",
 			},
 			map[string]interface{}{
 				"version":       uint16(1),
@@ -380,6 +392,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 			map[string]string{
 				"severity": "alert",
 				"facility": "kern",
+				"source":   "127.0.0.1",
 			},
 			map[string]interface{}{
 				"version":       uint16(1),
@@ -409,6 +422,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 			map[string]string{
 				"severity": "alert",
 				"facility": "kern",
+				"source":   "127.0.0.1",
 			},
 			map[string]interface{}{
 				"version":       uint16(1),

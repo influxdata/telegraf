@@ -20,6 +20,7 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 		CSVHeaderRowCount: 42,
 		XPathProtobufFile: "xpath/testcases/protos/addressbook.proto",
 		XPathProtobufType: "addressbook.AddressBook",
+		JSONStrict:        true,
 	}
 
 	// Some parsers need certain settings to not error. Furthermore, we

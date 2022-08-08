@@ -1,0 +1,37 @@
+name: Feature request
+description: Create a feature request to make Telegraf more awesome
+labels: ["feature request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking time to share with us this feature request! Please describe why you would like this feature to be added to Telegraf, how you plan to use it to make your life better.
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe how you plan to use this feature. 
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Describe what you expected to happen when you performed the above steps.
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: Describe what actually happened when you performed the above steps.
+    validations:
+      required: true
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional info
+      description: Include gist of relevant config, logs, etc.
+    validations:
+      required: false
+

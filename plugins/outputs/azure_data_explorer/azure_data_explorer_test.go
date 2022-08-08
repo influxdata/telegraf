@@ -134,7 +134,7 @@ func TestWrite(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
-			serializer, err := telegrafJson.NewSerializer(time.Second, "")
+			serializer, err := telegrafJson.NewSerializer(time.Second, "", "")
 			require.NoError(t, err)
 
 			plugin := AzureDataExplorer{

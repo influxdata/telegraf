@@ -9,15 +9,12 @@ upsd should be installed and it's daemon should be running.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Monitor UPSes connected via Network UPS Tools
 [[inputs.upsd]]
   ## A running NUT server to connect to.
-  # If not provided will default to 127.0.0.1
   # server = "127.0.0.1"
-  
-  ## The default NUT port 3493 can be overridden with:
   # port = 3493
-  
   # username = "user"
   # password = "password"
 ```

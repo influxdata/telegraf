@@ -111,16 +111,16 @@ func (r *response) WriteHeader(code int) {
 		r.header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	}
 
-	fmt.Fprintf(r.w, "Status: %d %s\r\n", code, http.StatusText(code))
-	r.header.Write(r.w)
-	r.w.WriteString("\r\n")
+	_, _ = fmt.Fprintf(r.w, "Status: %d %s\r\n", code, http.StatusText(code))
+	_ = r.header.Write(r.w)
+	_, _ = r.w.WriteString("\r\n")
 }
 
 func (r *response) Flush() {
 	if !r.wroteHeader {
 		r.WriteHeader(http.StatusOK)
 	}
-	r.w.Flush()
+	_ = r.w.Flush()
 }
 
 func (r *response) Close() error {

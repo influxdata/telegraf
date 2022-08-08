@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
+	"github.com/doclambda/protobufquery"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -34,6 +36,7 @@ type Parser struct {
 	ProtobufImportPaths []string          `toml:"xpath_protobuf_import_paths"`
 	PrintDocument       bool              `toml:"xpath_print_document"`
 	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
+	NativeTypes         bool              `toml:"xpath_native_types"`
 	Configs             []xpath.Config    `toml:"xpath"`
 	DefaultMetricName   string            `toml:"-"`
 	DefaultTags         map[string]string `toml:"-"`
@@ -451,17 +454,29 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 	// separately. Those iterators will be returned for queries directly
 	// referencing a node (value or attribute).
 	n := expr.Evaluate(p.document.CreateXPathNavigator(root))
-	if iter, ok := n.(*path.NodeIterator); ok {
-		// We got an iterator, so take the first match and get the referenced
-		// property. This will always be a string.
-		if iter.MoveNext() {
-			r = iter.Current().Value()
+	iter, ok := n.(*path.NodeIterator)
+	if !ok {
+		return n, nil
+	}
+	// We got an iterator, so take the first match and get the referenced
+	// property. This will always be a string.
+	if iter.MoveNext() {
+		current := iter.Current()
+		// If the dataformat supports native types and if support is
+		// enabled, we should return the native type of the data
+		if p.NativeTypes {
+			switch nn := current.(type) {
+			case *jsonquery.NodeNavigator:
+				return nn.GetValue(), nil
+			case *protobufquery.NodeNavigator:
+				return nn.GetValue(), nil
+			}
 		}
-	} else {
-		r = n
+		// Fallback to get the string value representation
+		return iter.Current().Value(), nil
 	}
 
-	return r, nil
+	return nil, nil
 }
 
 func splitLastPathElement(query string) []string {

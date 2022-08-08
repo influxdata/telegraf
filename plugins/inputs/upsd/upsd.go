@@ -1,13 +1,20 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package upsd
 
 import (
+	_ "embed"
 	"fmt"
+	"strings"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	nut "github.com/robbiet480/go.nut"
-	"strings"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 //See: https://networkupstools.org/docs/developer-guide.chunked/index.html
 
@@ -23,18 +30,6 @@ type Upsd struct {
 
 	batteryRuntimeTypeWarningIssued bool
 }
-
-func (*Upsd) Description() string {
-	return "Monitor UPSes connected via Network UPS Tools"
-}
-
-var sampleConfig = `
- ## A running NUT server to connect to.
- # server = "127.0.0.1"
- # port = 3493
- # username = "user"
- # password = "password"
-`
 
 func (*Upsd) SampleConfig() string {
 	return sampleConfig

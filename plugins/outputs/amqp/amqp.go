@@ -300,7 +300,7 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 }
 
 func connect(clientConfig *ClientConfig) (Client, error) {
-	return Connect(clientConfig)
+	return newClient(clientConfig)
 }
 
 func init() {
