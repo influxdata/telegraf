@@ -417,6 +417,7 @@ func TestServerName(t *testing.T) {
 		test := elt
 		t.Run(test.name, func(t *testing.T) {
 			sc := &X509Cert{
+				Sources:      []string{test.url},
 				ServerName:   test.fromCfg,
 				ClientConfig: _tls.ClientConfig{ServerName: test.fromTLS},
 				Log:          testutil.Logger{},
