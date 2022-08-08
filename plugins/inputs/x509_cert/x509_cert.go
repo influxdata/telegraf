@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
 	"net/smtp"
@@ -380,6 +381,11 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *X509Cert) Init() error {
+	// Check if we do have at least one source
+	if len(c.Sources) == 0 {
+		return errors.New("no source configured")
+	}
+
 	// Check the server name and transfer it if necessary
 	if c.ClientConfig.ServerName != "" && c.ServerName != "" {
 		return fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.ClientConfig.ServerName)
