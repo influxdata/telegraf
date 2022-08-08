@@ -222,13 +222,15 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		return certs, nil
 	case "https":
 		protocol = "tcp"
+		if u.Port() == "" {
+			u.Host += ":443"
+		}
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
 		dialer, err := c.Proxy()
 		if err != nil {
 			return nil, err
 		}
-
 		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
