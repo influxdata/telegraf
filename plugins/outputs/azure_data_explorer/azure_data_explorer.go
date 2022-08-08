@@ -170,7 +170,7 @@ func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.Fil
 	reader := bytes.NewReader(metricsArray)
 	mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", tableName), ingest.JSON)
 	if _, err := ingestor.FromReader(ctx, reader, format, mapping); err != nil {
-		adx.Log.Errorf("pushMetrics ingestion request to Azure Data Explorer for table %q failed: %v", tableName, err)
+		adx.Log.Errorf("sending ingestion request to Azure Data Explorer for table %q failed: %v", tableName, err)
 	}
 	return nil
 }
