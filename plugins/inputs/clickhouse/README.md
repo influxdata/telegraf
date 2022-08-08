@@ -9,11 +9,10 @@ This plugin gathers the statistic data from
 # Read metrics from one or many ClickHouse servers
 [[inputs.clickhouse]]
   ## Username for authorization on ClickHouse server
-  ## example: username = "default"
   username = "default"
 
   ## Password for authorization on ClickHouse server
-  # password = "super_secret"
+  # password = ""
 
   ## HTTP(s) timeout while getting metrics values
   ## The timeout includes connection time, any redirects, and reading the
