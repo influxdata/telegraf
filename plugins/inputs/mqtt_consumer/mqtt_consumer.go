@@ -261,11 +261,11 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	}
 	payloadSize := len(msg.Payload())
 	remainingContent := topicSize + qOsSize + payloadSize
-	if remainingContent < 1 << 7 {
+	if remainingContent < 1<<7 {
 		remainingLength = 1
-	} else if remainingContent < 1 << 14 {
+	} else if remainingContent < 1<<14 {
 		remainingLength = 2
-	} else if remainingContent < 1 << 21 {
+	} else if remainingContent < 1<<21 {
 		remainingLength = 3
 	} else {
 		remainingLength = 4
