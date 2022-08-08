@@ -205,7 +205,3 @@ configurations that apply to every `metric` declaration.
 
 Please help improve this list and contribute new configuration files by opening
 an issue or pull request.
-
-## Metrics
-
-## Example Output
