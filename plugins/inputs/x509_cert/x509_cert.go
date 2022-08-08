@@ -333,25 +333,21 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			fields := getFields(cert, now)
 			tags := getTags(cert, location.String())
 
-			// The first certificate is the leaf/end-entity certificate which needs DNS
-			// name validation against the URL hostname.
+			// The first certificate is the leaf/end-entity certificate which
+			// needs DNS name validation against the URL hostname.
 			opts := x509.VerifyOptions{
 				Intermediates: x509.NewCertPool(),
 				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+				Roots:         c.tlsCfg.RootCAs,
 			}
 			if i == 0 {
 				opts.DNSName, err = c.serverName(location)
 				if err != nil {
 					return err
 				}
-				for j, cert := range certs {
-					if j != 0 {
-						opts.Intermediates.AddCert(cert)
-					}
+				for _, c := range certs[1:] {
+					opts.Intermediates.AddCert(c)
 				}
-			}
-			if c.tlsCfg.RootCAs != nil {
-				opts.Roots = c.tlsCfg.RootCAs
 			}
 
 			_, err = cert.Verify(opts)
