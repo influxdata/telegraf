@@ -63,8 +63,8 @@ the `[output.opentelemetry.coralogix]` section.
 There, you can find the required setting to interact with the server.
 
 - The `private_key` is your Private Key, which you can find in Settings > Send Your Data.
-- The `application_name`, is your application name, which will be added to your metric attributes.
-- The `subsystem_name`, is your subsystem, which will be added to your metric attributes.
+- The `application`, is your application name, which will be added to your metric attributes.
+- The `subsystem`, is your subsystem, which will be added to your metric attributes.
 
 More information in the
 [Getting Started page](https://coralogix.com/docs/guide-first-steps-coralogix/).

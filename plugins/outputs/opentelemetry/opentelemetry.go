@@ -52,8 +52,8 @@ type OpenTelemetry struct {
 }
 
 type CoralogixConfig struct {
-	AppName    string `toml:"application_name"`
-	SubSystem  string `toml:"subsystem_name"`
+	AppName    string `toml:"application"`
+	SubSystem  string `toml:"subsystem"`
 	PrivateKey string `toml:"private_key"`
 }
 
