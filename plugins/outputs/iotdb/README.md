@@ -110,5 +110,4 @@ Other options are "second", "millisecond", "microsecond".
   ##   - "fields"     --  root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"
   ##   - "device_id"  --  root.sg.device.private.working, s1=100, s2="hello"
   # convert_tags_to = "device_id"
-
 ```
