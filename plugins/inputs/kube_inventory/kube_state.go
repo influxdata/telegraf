@@ -162,6 +162,7 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
 	"resourcequotas":         collectResourceQuotas,
+	"secrets":                collectSecrets,
 }
 
 func atoi(s string) int64 {
@@ -210,6 +211,7 @@ var (
 	serviceMeasurement               = "kubernetes_service"
 	statefulSetMeasurement           = "kubernetes_statefulset"
 	resourcequotaMeasurement         = "kubernetes_resourcequota"
+	secretMeasurement                = "kubernetes_secret"
 )
 
 func init() {
