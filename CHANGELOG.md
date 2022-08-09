@@ -1,6 +1,10 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+### BREAKING CHANGES
+
+- [#11493](https://github.com/influxdata/telegraf/pull/11493) `common.tls` Set default minimum TLS version to v1.2 for security reasons on both server and client connections. This is a change from the previous defaults (TLS v1.0) on the server configuration and might break clients relying on older TLS versions. You can manually revert to older versions on a per-plugin basis using the `tls_min_version` option in the plugins required.
+
 ## v1.23.3 [2022-07-25]
 
 ### Bugfixes
