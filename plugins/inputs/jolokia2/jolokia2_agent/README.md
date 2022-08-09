@@ -1,10 +1,11 @@
-# Jolokia2 Proxy input plugin
+# Jolokia2 Agent Input Plugin
 
-The `jolokia2_proxy` input plugin reads JMX metrics from one or more _targets_ by interacting with a [Jolokia proxy](https://jolokia.org/features/proxy.html) REST endpoint.
+The `jolokia2_agent` input plugin reads JMX metrics from one or more
+[Jolokia agent](https://jolokia.org/agent/jvm.html) REST endpoints.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read JMX metrics from a Jolokia REST agent endpoint
 [[inputs.jolokia2_agent]]
   # default_tag_prefix      = ""

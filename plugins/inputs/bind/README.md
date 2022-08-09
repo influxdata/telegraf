@@ -30,14 +30,15 @@ distros still do not enable support for JSON statistics in their BIND packages.
   # timeout = "4s"
 ```
 
-- **urls** []string: List of BIND statistics channel URLs to collect from. Do not include a
-  trailing slash in the URL. Default is "http://localhost:8053/xml/v3".
+- **urls** []string: List of BIND statistics channel URLs to collect from.
+  Do not include a trailing slash in the URL.
+  Default is "http://localhost:8053/xml/v3".
 - **gather_memory_contexts** bool: Report per-context memory statistics.
 - **gather_views** bool: Report per-view query statistics.
-- **timeout** Timeout for http requests made by bind nameserver (example: "4s").
+- **timeout** Timeout for http requests made by bind (example: "4s").
 
-The following table summarizes the URL formats which should be used, depending
-on your BIND version and configured statistics channel.
+The following table summarizes the URL formats which should be used,
+depending on your BIND version and configured statistics channel.
 
 | BIND Version | Statistics Format | Example URL                   |
 | ------------ | ----------------- | ----------------------------- |
@@ -48,8 +49,8 @@ on your BIND version and configured statistics channel.
 
 ### Configuration of BIND Daemon
 
-Add the following to your named.conf if running Telegraf on the same host as the
-BIND daemon:
+Add the following to your named.conf if running Telegraf on the same host
+as the BIND daemon:
 
 ```json
 statistics-channels {
@@ -57,10 +58,11 @@ statistics-channels {
 };
 ```
 
-Alternatively, specify a wildcard address (e.g., 0.0.0.0) or specific IP address
-of an interface to configure the BIND daemon to listen on that address. Note
-that you should secure the statistics channel with an ACL if it is publicly
-reachable. Consult the BIND Administrator Reference Manual for more information.
+Alternatively, specify a wildcard address (e.g., 0.0.0.0) or specific
+IP address of an interface to configure the BIND daemon to listen on that
+address. Note that you should secure the statistics channel with an ACL if
+it is publicly reachable. Consult the BIND Administrator Reference Manual
+for more information.
 
 ## Metrics
 

@@ -28,49 +28,63 @@ Sample Applications](https://doc.dpdk.org/guides/sample_app_ug/index.html) is
 also available for users to discover and test the capabilities of DPDK libraries
 and to explore the exposed metrics.
 
-> **DPDK Version Info:** This plugin uses this `v2` interface to read telemetry data from applications build with
-> `DPDK version >= 20.05`. The default configuration include reading common statistics from `/ethdev/stats` that is
-> available from `DPDK version >= 20.11`. When using `DPDK 20.05 <= version < DPDK 20.11` it is recommended to disable
-> querying `/ethdev/stats` by setting corresponding `exclude_commands` configuration option.
-> **NOTE:** Since DPDK will most likely run with root privileges, the socket telemetry interface exposed by DPDK
-> will also require root access. This means that either access permissions have to be adjusted for socket telemetry
-> interface to allow Telegraf to access it, or Telegraf should run with root privileges.
-> **NOTE:** The DPDK socket must exist for Telegraf to start successfully. Telegraf will attempt
-> to connect to the DPDK socket during the initialization phase.
+> **DPDK Version Info:** This plugin uses this `v2` interface to read telemetry
+> data from applications build with `DPDK version >= 20.05`. The default
+> configuration include reading common statistics from `/ethdev/stats` that is
+> available from `DPDK version >= 20.11`. When using
+> `DPDK 20.05 <= version < DPDK 20.11` it is recommended to disable querying
+> `/ethdev/stats` by setting corresponding `exclude_commands` configuration
+> option.
+> **NOTE:** Since DPDK will most likely run with root privileges, the socket
+> telemetry interface exposed by DPDK will also require root access. This means
+> that either access permissions have to be adjusted for socket telemetry
+> interface to allow Telegraf to access it, or Telegraf should run with root
+> privileges.
+> **NOTE:** The DPDK socket must exist for Telegraf to start successfully.
+> Telegraf will attempt to connect to the DPDK socket during the initialization
+> phase.
 
 ## Configuration
 
 ```toml @sample.conf
 # Reads metrics from DPDK applications using v2 telemetry interface.
 [[inputs.dpdk]]
-  ## Path to DPDK telemetry socket. This shall point to v2 version of DPDK telemetry interface.
+  ## Path to DPDK telemetry socket. This shall point to v2 version of DPDK
+  ## telemetry interface.
   # socket_path = "/var/run/dpdk/rte/dpdk_telemetry.v2"
 
-  ## Duration that defines how long the connected socket client will wait for a response before terminating connection.
-  ## This includes both writing to and reading from socket. Since it's local socket access
-  ## to a fast packet processing application, the timeout should be sufficient for most users.
+  ## Duration that defines how long the connected socket client will wait for
+  ## a response before terminating connection.
+  ## This includes both writing to and reading from socket. Since it's local
+  ## socket access to a fast packet processing application, the timeout should
+  ## be sufficient for most users.
   ## Setting the value to 0 disables the timeout (not recommended)
   # socket_access_timeout = "200ms"
 
   ## Enables telemetry data collection for selected device types.
-  ## Adding "ethdev" enables collection of telemetry from DPDK NICs (stats, xstats, link_status).
-  ## Adding "rawdev" enables collection of telemetry from DPDK Raw Devices (xstats).
+  ## Adding "ethdev" enables collection of telemetry from DPDK NICs
+  ## (stats, xstats, link_status).
+  ## Adding "rawdev" enables collection of telemetry from DPDK Raw Devices
+  ## (xstats).
   # device_types = ["ethdev"]
 
   ## List of custom, application-specific telemetry commands to query
-  ## The list of available commands depend on the application deployed. Applications can register their own commands
-  ##   via telemetry library API http://doc.dpdk.org/guides/prog_guide/telemetry_lib.html#registering-commands
-  ## For e.g. L3 Forwarding with Power Management Sample Application this could be:
+  ## The list of available commands depend on the application deployed.
+  ## Applications can register their own commands via telemetry library API
+  ## http://doc.dpdk.org/guides/prog_guide/telemetry_lib.html#registering-commands
+  ## For L3 Forwarding with Power Management Sample Application this could be:
   ##   additional_commands = ["/l3fwd-power/stats"]
   # additional_commands = []
 
   ## Allows turning off collecting data for individual "ethdev" commands.
-  ## Remove "/ethdev/link_status" from list to start getting link status metrics.
+  ## Remove "/ethdev/link_status" from list to gather link status metrics.
   [inputs.dpdk.ethdev]
     exclude_commands = ["/ethdev/link_status"]
 
-  ## When running multiple instances of the plugin it's recommended to add a unique tag to each instance to identify
-  ## metrics exposed by an instance of DPDK application. This is useful when multiple DPDK apps run on a single host.
+  ## When running multiple instances of the plugin it's recommended to add a
+  ## unique tag to each instance to identify metrics exposed by an instance
+  ## of DPDK application. This is useful when multiple DPDK apps run on a
+  ## single host.
   ##  [inputs.dpdk.tags]
   ##    dpdk_instance = "my-fwd-app"
 ```
@@ -152,7 +166,8 @@ Management Sample Application][sample-app].
 Command entries specified in `additional_commands` should match DPDK command
 format:
 
-* Command entry format: either `command` or `command,params` for commands that expect parameters, where comma (`,`) separates command from params.
+* Command entry format: either `command` or `command,params` for commands that
+  expect parameters, where comma (`,`) separates command from params.
 * Command entry length (command with params) should be `< 1024` characters.
 * Command length (without params) should be `< 56` characters.
 * Commands have to start with `/`.
@@ -182,7 +197,8 @@ instance a unique tag `[inputs.dpdk.tags]` allows distinguishing between them.
   [inputs.dpdk.tags]
     dpdk_instance = "l3fwd-power"
 
-# Instance #2 - L2 Forwarding with Intel Cache Allocation Technology (CAT) Application
+# Instance #2 - L2 Forwarding with Intel Cache Allocation Technology (CAT)
+# Application
 [[inputs.dpdk]]
   socket_path = "/var/run/dpdk/rte/l2fwd-cat_telemetry.v2"
   device_types = ["ethdev"]
@@ -206,10 +222,12 @@ JSON Flattener](../../parsers/json/README.md) and exposed as fields.  If DPDK
 response contains no information (is empty or is null) then such response will
 be discarded.
 
-> **NOTE:**  Since DPDK allows registering custom metrics in its telemetry framework the JSON response from DPDK
-> may contain various sets of metrics. While metrics from `/ethdev/stats` should be most stable, the `/ethdev/xstats`
-> may contain driver-specific metrics (depending on DPDK application configuration). The application-specific commands
-> like `/l3fwd-power/stats` can return their own specific set of metrics.
+> **NOTE:**  Since DPDK allows registering custom metrics in its telemetry
+> framework the JSON response from DPDK may contain various sets of metrics.
+> While metrics from `/ethdev/stats` should be most stable, the `/ethdev/xstats`
+> may contain driver-specific metrics (depending on DPDK application
+> configuration). The application-specific commands like `/l3fwd-power/stats`
+> can return their own specific set of metrics.
 
 ## Example Output
 

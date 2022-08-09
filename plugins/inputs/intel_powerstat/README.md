@@ -1,7 +1,7 @@
 # Intel PowerStat Input Plugin
 
-This input plugin monitors power statistics on Intel-based platforms and assumes
-presence of Linux based OS.
+This input plugin monitors power statistics on Intel-based platforms and
+assumes presence of Linux based OS.
 
 Main use cases are power saving and workload migration. Telemetry frameworks
 allow users to monitor critical platform level metrics. Key source of platform
@@ -12,28 +12,37 @@ temperature, actual CPU utilization and power statistics.
 ## Configuration
 
 ```toml @sample.conf
-# Intel PowerStat plugin enables monitoring of platform metrics (power, TDP) and per-CPU metrics like temperature, power and utilization.
+# Intel PowerStat plugin enables monitoring of platform metrics (power, TDP)
+# and per-CPU metrics like temperature, power and utilization.
 [[inputs.intel_powerstat]]
-  ## The user can choose which package metrics are monitored by the plugin with the package_metrics setting:
-  ## - The default, will collect "current_power_consumption", "current_dram_power_consumption" and "thermal_design_power"
-  ## - Setting this value to an empty array means no package metrics will be collected
-  ## - Finally, a user can specify individual metrics to capture from the supported options list
+  ## The user can choose which package metrics are monitored by the plugin with
+  ## the package_metrics setting:
+  ## - The default, will collect "current_power_consumption",
+  ##   "current_dram_power_consumption" and "thermal_design_power"
+  ## - Leaving this setting empty means no package metrics will be collected
+  ## - Finally, a user can specify individual metrics to capture from the
+  ##   supported options list
   ## Supported options:
-  ##   "current_power_consumption", "current_dram_power_consumption", "thermal_design_power", "max_turbo_frequency", "uncore_frequency"
+  ##   "current_power_consumption", "current_dram_power_consumption",
+  ##   "thermal_design_power", "max_turbo_frequency", "uncore_frequency"
   # package_metrics = ["current_power_consumption", "current_dram_power_consumption", "thermal_design_power"]
 
-  ## The user can choose which per-CPU metrics are monitored by the plugin in cpu_metrics array.
-  ## Empty or missing array means no per-CPU specific metrics will be collected by the plugin.
+  ## The user can choose which per-CPU metrics are monitored by the plugin in
+  ## cpu_metrics array.
+  ## Empty or missing array means no per-CPU specific metrics will be collected
+  ## by the plugin.
   ## Supported options:
-  ##   "cpu_frequency", "cpu_c0_state_residency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"
-  ## ATTENTION: cpu_busy_cycles option is DEPRECATED - superseded by cpu_c0_state_residency
+  ##   "cpu_frequency", "cpu_c0_state_residency", "cpu_c1_state_residency",
+  ##   "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature",
+  ##   "cpu_busy_frequency"
+  ## ATTENTION: cpu_busy_cycles is DEPRECATED - use cpu_c0_state_residency
   # cpu_metrics = []
 ```
 
 ## Example: Configuration with no per-CPU telemetry
 
-This configuration allows getting default processor package specific metrics, no
-per-CPU metrics are collected:
+This configuration allows getting default processor package specific metrics,
+no per-CPU metrics are collected:
 
 ```toml
 [[inputs.intel_powerstat]]
@@ -42,8 +51,8 @@ per-CPU metrics are collected:
 
 ## Example: Configuration with no per-CPU telemetry - equivalent case
 
-This configuration allows getting default processor package specific metrics, no
-per-CPU metrics are collected:
+This configuration allows getting default processor package specific metrics,
+no per-CPU metrics are collected:
 
 ```toml
 [[inputs.intel_powerstat]]
@@ -72,8 +81,8 @@ Temperature and CPU Frequency):
 
 ## Example: Configuration with all available metrics
 
-This configuration allows getting all processor package specific metrics and all
-per-CPU metrics:
+This configuration allows getting all processor package specific metrics and
+all per-CPU metrics:
 
 ```toml
 [[inputs.intel_powerstat]]
@@ -87,10 +96,14 @@ Plugin is based on Linux Kernel modules that expose specific metrics over
 `sysfs` or `devfs` interfaces. The following dependencies are expected by
 plugin:
 
-- _intel-rapl_ module which exposes Intel Runtime Power Limiting metrics over `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`),
-- _msr_ kernel module that provides access to processor model specific registers over `devfs` (`/dev/cpu/cpu%d/msr`),
-- _cpufreq_ kernel module - which exposes per-CPU Frequency over `sysfs` (`/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq`).
-- _intel-uncore-frequency_ module exposes Intel uncore frequency metrics over `sysfs` (`/sys/devices/system/cpu/intel_uncore_frequency`),
+- _intel-rapl_ module which exposes Intel Runtime Power Limiting metrics over
+  `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`),
+- _msr_ kernel module that provides access to processor model specific
+  registers over `devfs` (`/dev/cpu/cpu%d/msr`),
+- _cpufreq_ kernel module - which exposes per-CPU Frequency over `sysfs`
+ (`/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq`).
+- _intel-uncore-frequency_ module exposes Intel uncore frequency metrics
+  over `sysfs` (`/sys/devices/system/cpu/intel_uncore_frequency`),
 
 Minimum kernel version required is 3.13 to satisfy most of requirements,
 for `uncore_frequency` metrics `intel-uncore-frequency` module is required
@@ -143,17 +156,23 @@ The following processor properties are examined in more detail in this section:
 processor _cpu family_, _model_ and _flags_. The following processor properties
 are required by the plugin:
 
-- Processor _cpu family_ must be Intel (0x6) - since data used by the plugin assumes Intel specific
-model specific registers for all features
+- Processor _cpu family_ must be Intel (0x6) - since data used by the plugin
+  assumes Intel specific model specific registers for all features
 - The following processor flags shall be present:
-  - "_msr_" shall be present for plugin to read platform data from processor model specific registers and collect
-    the following metrics: _powerstat\_core.cpu\_temperature_, _powerstat\_core.cpu\_busy\_frequency_,
-    _powerstat\_core.cpu\_c0\_state\_residency_, _powerstat\_core.cpu\_c1\_state\_residency_, _powerstat\_core.cpu\_c6\_state\_residency_
-  - "_aperfmperf_" shall be present to collect the following metrics: _powerstat\_core.cpu\_busy\_frequency_,
-    _powerstat\_core.cpu\_c0\_state\_residency_, _powerstat\_core.cpu\_c1\_state\_residency_
+  - "_msr_" shall be present for plugin to read platform data from processor
+    model specific registers and collect the following metrics:
+    _powerstat\_core.cpu\_temperature_, _powerstat\_core.cpu\_busy\_frequency_,
+    _powerstat\_core.cpu\_c0\_state\_residency_,
+    _powerstat\_core.cpu\_c1\_state\_residency_,
+    _powerstat\_core.cpu\_c6\_state\_residency_
+  - "_aperfmperf_" shall be present to collect the following metrics:
+    _powerstat\_core.cpu\_busy\_frequency_,
+    _powerstat\_core.cpu\_c0\_state\_residency_,
+    _powerstat\_core.cpu\_c1\_state\_residency_
   - "_dts_" shall be present to collect _powerstat\_core.cpu\_temperature_
-- Processor _Model number_ must be one of the following values for plugin to read _powerstat\_core.cpu\_c1\_state\_residency_
-and _powerstat\_core.cpu\_c6\_state\_residency_ metrics:
+- Processor _Model number_ must be one of the following values for plugin to
+  read _powerstat\_core.cpu\_c1\_state\_residency_ and
+  _powerstat\_core.cpu\_c6\_state\_residency_ metrics:
 
 | Model number | Processor name |
 |-----|-------------|
@@ -228,7 +247,7 @@ value.
    while core_id and package_id tags are additional topology information.
 
   - Available metrics for powerstat_core measurement
-  
+
       | Metric name (field) | Description | Units |
       |---------------------|-------------|-------|
       | `cpu_frequency_mhz` | Current operational frequency of CPU Core | MHz |
@@ -240,7 +259,6 @@ value.
       | `cpu_busy_cycles_percent` | (**DEPRECATED** - superseded by cpu_c0_state_residency_percent) CPU Core Busy cycles as a ratio of Cycles spent in C0 state residency to all cycles executed by CPU Core | % |
 
 - powerstat_package
-
   - The following Tags are returned by plugin with powerstat_package measurements:
 
       | Tag | Description |
@@ -250,8 +268,8 @@ value.
       | `die`| Specific tag for all `uncore_frequency` metrics. Id of die
       | `type`| Specific tag for all `uncore_frequency` metrics. Type of uncore frequency (current or initial)
 
-   Measurement powerstat_package metrics are collected per processor package -_package_id_ tag indicates which package metric refers to.
-
+   Measurement powerstat_package metrics are collected per processor package
+   _package_id_ tag indicates which package metric refers to.
   - Available metrics for powerstat_package measurement
 
       | Metric name (field) | Description | Units |

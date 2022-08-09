@@ -4,8 +4,9 @@ The multifile input plugin allows Telegraf to combine data from multiple files
 into a single metric, creating one field or tag per file.  This is often
 useful creating custom metrics from the `/sys` or `/proc` filesystems.
 
-> Note: If you wish to parse metrics from a single file formatted in one of the supported
-> [input data formats][], you should use the [file][] input plugin instead.
+> Note: If you wish to parse metrics from a single file formatted in one of
+> the supported [input data formats][], you should use the [file][] input
+> plugin instead.
 
 ## Configuration
 
@@ -43,8 +44,11 @@ Path of the file to be parsed, relative to the `base_dir`.
 Name of the field/tag key, defaults to `$(basename file)`.
 * `conversion`:
 Data format used to parse the file contents:
-  * `float(X)`: Converts the input value into a float and divides by the Xth power of 10. Effectively just moves the decimal left X places. For example a value of `123` with `float(2)` will result in `1.23`.
-  * `float`: Converts the value into a float with no adjustment. Same as `float(0)`.
+  * `float(X)`: Converts the input value into a float and divides by the Xth
+    power of 10. Effectively just moves the decimal left X places. For example
+    a value of `123` with `float(2)` will result in `1.23`.
+  * `float`: Converts the value into a float with no adjustment.
+    Same as `float(0)`.
   * `int`: Converts the value into an integer.
   * `string`, `""`: No conversion.
   * `bool`: Converts the value into a boolean.

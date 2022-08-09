@@ -1,8 +1,7 @@
 # CloudWatch Metric Streams Input Plugin
 
-The CloudWatch Metric Streams plugin is a service input plugin that
-listens for metrics sent via HTTP and performs the required
-processing for
+The CloudWatch Metric Streams plugin is a service input plugin that listens
+for metrics sent via HTTP and performs the required processing for
 [Metric Streams from AWS](#troubleshooting-documentation).
 
 For cost, see the Metric Streams example in
@@ -11,6 +10,7 @@ For cost, see the Metric Streams example in
 ## Configuration
 
 ```toml @sample.conf
+# AWS Metric Streams listener
 [[inputs.cloudwatch_metric_streams]]
   ## Address and port to host HTTP listener on
   service_address = ":443"
@@ -31,7 +31,8 @@ For cost, see the Metric Streams example in
   ## Optional access key for Firehose security.
   # access_key = "test-key"
 
-  ## An optional flag to keep Metric Streams metrics compatible with CloudWatch's API naming
+  ## An optional flag to keep Metric Streams metrics compatible with
+  ## CloudWatch's API naming
   # api_compatability = false
 
   ## Set one or more allowed client CA certificate file names to
@@ -125,7 +126,9 @@ The plugin has its own internal metrics for troubleshooting:
 * Request Time
   * The duration of the request measured in ns.
 * Age Max
-  * The maximum age of a metric in this interval. This is useful for offsetting any lag or latency measurements in a metrics pipeline that measures based on the timestamp.
+  * The maximum age of a metric in this interval. This is useful for offsetting
+    any lag or latency measurements in a metrics pipeline that measures based
+    on the timestamp.
 * Age Min
   * The minimum age of a metric in this interval.
 
