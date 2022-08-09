@@ -20,7 +20,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Win_PerfCounters struct {
+type WinPerfCounters struct {
 	PrintValid                 bool `toml:"PrintValid"`
 	PreVistaSupport            bool `toml:"PreVistaSupport" deprecated:"1.7.0;determined dynamically"`
 	UsePerfCounterTime         bool
@@ -127,28 +127,24 @@ func extractCounterInfoFromCounterPath(counterPath string) (computer, object, in
 		rightObjectBorderIndex = leftCounterBorderIndex
 	}
 	if rightObjectBorderIndex == -1 || leftObjectBorderIndex == -1 {
-		err = errors.New("cannot parse object from: " + counterPath)
-		return
+		return "", "", "", "", errors.New("cannot parse object from: " + counterPath)
 	}
 	if leftComputerBorderIndex > -1 {
 		// validate there is leading \\ and not empty computer (\\\O)
 		if leftComputerBorderIndex != 1 || leftComputerBorderIndex == leftObjectBorderIndex-1 {
-			err = errors.New("cannot parse computer from: " + counterPath)
-			return
-		} else {
-			computer = counterPath[leftComputerBorderIndex+1 : leftObjectBorderIndex]
+			return "", "", "", "", errors.New("cannot parse computer from: " + counterPath)
 		}
+		computer = counterPath[leftComputerBorderIndex+1 : leftObjectBorderIndex]
 	}
 
 	if leftInstanceBorderIndex > -1 && rightInstanceBorderIndex > -1 {
 		instance = counterPath[leftInstanceBorderIndex+1 : rightInstanceBorderIndex]
 	} else if (leftInstanceBorderIndex == -1 && rightInstanceBorderIndex > -1) || (leftInstanceBorderIndex > -1 && rightInstanceBorderIndex == -1) {
-		err = errors.New("cannot parse instance from: " + counterPath)
-		return
+		return "", "", "", "", errors.New("cannot parse instance from: " + counterPath)
 	}
 	object = counterPath[leftObjectBorderIndex+1 : rightObjectBorderIndex]
 	counter = counterPath[leftCounterBorderIndex+1:]
-	return
+	return "", "", "", "", nil
 }
 
 func (m *WinPerfCounters) SampleConfig() string {
@@ -156,18 +152,19 @@ func (m *WinPerfCounters) SampleConfig() string {
 }
 
 func (m *WinPerfCounters) hostname() string {
-	if m.cachedHostname == "" {
-		hostname, err := os.Hostname()
-		if err == nil {
-			m.cachedHostname = hostname
-		} else {
-			m.cachedHostname = "localhost"
-		}
+	if m.cachedHostname != "" {
+		return m.cachedHostname
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		m.cachedHostname = "localhost"
+	} else {
+		m.cachedHostname = hostname
 	}
 	return m.cachedHostname
 }
 
-func newCounter(counterHandle PDH_HCOUNTER, counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) *counter {
+func newCounter(counterHandle PDH_HCOUNTER, counterPath string, computer string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) *counter {
 	measurementName := sanitizedChars.Replace(measurement)
 	if measurementName == "" {
 		measurementName = "win_perf_counters"
@@ -184,8 +181,7 @@ func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, c
 	origCounterPath := counterPath
 	var err error
 	var counterHandle PDH_HCOUNTER
-	var hostCounter *hostCountersInfo
-	var ok bool
+
 	sourceTag := computer
 	if computer == "localhost" {
 		sourceTag = m.hostname()
@@ -193,14 +189,15 @@ func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, c
 	if m.hostCounters == nil {
 		m.hostCounters = make(map[string]*hostCountersInfo)
 	}
-	if hostCounter, ok = m.hostCounters[computer]; !ok {
+	hostCounter, ok := m.hostCounters[computer]
+	if !ok {
 		hostCounter = &hostCountersInfo{computer: computer, tag: sourceTag}
 		m.hostCounters[computer] = hostCounter
 		hostCounter.query = m.queryCreator.NewPerformanceQuery(computer)
 		if err = hostCounter.query.Open(); err != nil {
 			return err
 		}
-		hostCounter.counters = make([]*counter, 0, 0)
+		hostCounter.counters = make([]*counter, 0)
 	}
 
 	if !hostCounter.query.IsVistaOrNewer() {
@@ -213,7 +210,6 @@ func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, c
 		if err != nil {
 			return err
 		}
-
 	}
 
 	if m.UseWildcardsExpansion {
@@ -233,8 +229,10 @@ func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, c
 		}
 
 		for _, counterPath := range counters {
-			var err error
-			counterHandle, err := hostCounter.query.AddCounterToQuery(counterPath)
+			_, err := hostCounter.query.AddCounterToQuery(counterPath)
+			if err != nil {
+				return err
+			}
 
 			computer, objectName, instance, counterName, err = extractCounterInfoFromCounterPath(counterPath)
 			if err != nil {
