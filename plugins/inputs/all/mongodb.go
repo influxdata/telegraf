@@ -1,0 +1,7 @@
+//go:build all || inputs || inputs.mongodb
+
+package all
+
+import (
+	_ "github.com/influxdata/telegraf/plugins/inputs/mongodb"
+)
