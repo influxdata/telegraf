@@ -25,42 +25,51 @@ as well as some data type conversion, time unit and other configurations.
 Please see the [configuration section](#Configuration) for an example
 configuration.
 
-## Please pay attention to these points
+## Metric Translation
 
-1. IoTDB currently **DOES NOT support unsigned integer**.
+IoTDB uses a different data format for metric data than telegraf. It is
+important to note that depending on the metrics being written, the translation
+may be lossy. This plugin translates to IoTDB format in the following ways:
+
+### Unsigned Integers
+
+IoTDB currently **DOES NOT support unsigned integer**.
 There are three available options of converting uint64, which are specified by
-parameter `uint64_conversion`.
+setting `uint64_conversion`.
 
-   - `int64_clip`, default option. If an unsigned integer is greater than
-   `math.MaxInt64`, save it as `int64`; else save `math.MaxInt64`
-   (9223372036854775807).
-   - `int64`, force converting an unsigned integer to a`int64`,no mater
-   what the value it is. This option may lead to exception if the value is
-   greater than `int64`.
-   - `text`force converting an unsigned integer to a string, no mater what the
-   value it is.
+- `int64_clip`, default option. If an unsigned integer is greater than
+`math.MaxInt64`, save it as `int64`; else save `math.MaxInt64`
+(9223372036854775807).
+- `int64`, force converting an unsigned integer to a`int64`,no mater
+what the value it is. This option may lead to exception if the value is
+greater than `int64`.
+- `text`force converting an unsigned integer to a string, no mater what the
+value it is.
 
-2. IoTDB supports a variety of time precision. You can specify which precision
-you want using the `timestamp_precision` option. Default is `nanosecond`.
-Other options are "second", "millisecond", "microsecond".
+### Time Precision
 
-3. Till now, IoTDB can not support Tag indexing well. To see current process
-   method, please refer to [InfluxDB-Protocol Adapter](
-   https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html).
-   There are two available options of converting tags, which are specified by
-   parameter `convert_tags_to`:
+IoTDB supports a variety of time precision. You can specify which precision
+you want using the `timestamp_precision` setting. Default is `nanosecond`.
+Other options are `second`, `millisecond`, `microsecond`.
 
-   - `fields`. Treat Tags as measurements. For each Key:Value in Tag,
-   convert them into Measurement, Value, DataType, which are supported in IoTDB.
-   - `device_id`, default option. Treat Tags as part of device id. Tags
-   is subtree of 'Name'.
+### Metadata (tags)
 
-   For example, there is a metric:
+IoTDB uses a tree model for metadata while Telegraf uses a tag model.
+(See [InfluxDB-Protocol Adapter](
+https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html)
+There are two available options of converting tags, which are specified by
+setting `convert_tags_to`:
 
-   `Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2="hello"}`
+- `fields`. Treat Tags as measurements. For each Key:Value in Tag,
+convert them into Measurement, Value, DataType, which are supported in IoTDB.
+- `device_id`, default option. Treat Tags as part of device id. Tags
+constitute a subtree of `Name`.
 
-   - `fields`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"`
-   - `device_id`, result: `root.sg.device.private.working, s1=100, s2="hello"`
+For example, there is a metric:
+`Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2="hello"}`
+
+- `fields`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"`
+- `device_id`, result: `root.sg.device.private.working, s1=100, s2="hello"`
 
 ## Configuration
 
@@ -83,8 +92,8 @@ Other options are "second", "millisecond", "microsecond".
   ## IoTDB currently DOES NOT support unsigned integers (version 13.x). 
   ## 32-bit unsigned integers are safely converted into 64-bit signed integers by the plugin,
   ## however, this is not true for 64-bit values in general as overflows may occur.
-  ## The following option allows to specify the handling of 64-bit unsigned integers.
-  ## Available options are:
+  ## The following setting allows to specify the handling of 64-bit unsigned integers.
+  ## Available values are:
   ##   - "int64"       --  convert to 64-bit signed integers and accept overflows
   ##   - "int64_clip"  --  convert to 64-bit signed integers and clip the values on overflow to 9,223,372,036,854,775,807
   ##   - "text"        --  convert to the string representation of the value
@@ -101,7 +110,7 @@ Other options are "second", "millisecond", "microsecond".
   ## A guide with suggestions on how to handle tags can be found here:
   ##     https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html
   ## 
-  ## Available methods are:
+  ## Available values are:
   ##   - "fields"     --  convert tags to fields in the measurement
   ##   - "device_id"  --  attach tags to the device ID
   ##
