@@ -28,7 +28,8 @@ Monitor app.
 
 ### Schema
 
-*Measurement name* is specified per performance object or `win_perf_counters` by default.
+*Measurement name* is specified per performance object
+or `win_perf_counters` by default.
 
 *Tags:*
 
@@ -36,7 +37,8 @@ Monitor app.
 - objectname - normalized name of the performance object
 - instance - instance name, if performance object supports multiple instances, otherwise omitted
 
-*Fields* are counters of the performance object. The field name is normalized counter name.
+*Fields* are counters of the performance object.
+The field name is normalized counter name.
 
 ### Plugin wide
 
@@ -140,7 +142,8 @@ Example:
 
 (Optional)
 
-Host names or ip addresses of computers to gather all performance counters from.  User, under which Telegraf runs, must be already authenticated to the remote computer(s).
+Host names or ip addresses of computers to gather all performance counters from.
+User, under which Telegraf runs, must be already authenticated to the remote computer(s).
 E.g. via Windows sharing `net use \\SQL-SERVER-01`.
 Use either localhost (`"localhost"`) or real local computer name to gather counters also from localhost among other computers.
 Skip, if gather only from localhost.
@@ -237,7 +240,7 @@ as seen in the Windows Performance Monitor.
 A field representing raw counter value has the `_Raw` suffix. Raw values should
 be further used in a calculation,
 e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
-Note: Time based counters (i.e. _% Processor Time_) are reported in hundredths
+Note: Time based counters (i.e. *% Processor Time*) are reported in hundredths
 of nanoseconds.
 This key is optional. It is a simple bool.
 If set to `true`, counter values will be provided in the raw, integer, form. This is in contrast with the default behavior, where values are returned in a formatted, displayable, form
@@ -669,3 +672,11 @@ your performance counters.
 ```batchfile
 lodctr /r
 ```
+
+## Example output
+
+TODO
+
+## Metrics
+
+TODO
