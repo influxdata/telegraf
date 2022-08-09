@@ -90,6 +90,10 @@ For an introduction to AMQP see:
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional Proxy Configuration
+  # use_proxy = false
+  # proxy_url = "localhost:8888"
+
   ## If true use batch serialization format instead of line based delimiting.
   ## Only applies to data formats which are not line based such as JSON.
   ## Recommended to set to true.
