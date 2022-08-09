@@ -26,7 +26,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1529
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.0
-	github.com/antchfx/xmlquery v1.3.9
+	github.com/antchfx/xmlquery v1.3.12
 	github.com/antchfx/xpath v1.2.1
 	github.com/apache/thrift v0.16.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
