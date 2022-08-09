@@ -88,15 +88,14 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 // extractCounterInfoFromCounterPath gets object name, instance name (if available) and counter name from counter path
 // General Counter path pattern is: \\computer\object(parent/instance#index)\counter
 // parent/instance#index part is skipped in single instance objects (e.g. Memory): \\computer\object\counter
-func extractCounterInfoFromCounterPath(counterPath string) (computer, object, instance, counter string, err error) {
-	computer = ""
+func extractCounterInfoFromCounterPath(counterPath string) (string, string, string, string, error) {
 	leftComputerBorderIndex := -1
 	rightObjectBorderIndex := -1
 	leftObjectBorderIndex := -1
 	leftCounterBorderIndex := -1
 	rightInstanceBorderIndex := -1
 	leftInstanceBorderIndex := -1
-	bracketLevel := 0
+	var bracketLevel int
 
 	for i := len(counterPath) - 1; i >= 0; i-- {
 		switch counterPath[i] {
@@ -129,6 +128,8 @@ func extractCounterInfoFromCounterPath(counterPath string) (computer, object, in
 	if rightObjectBorderIndex == -1 || leftObjectBorderIndex == -1 {
 		return "", "", "", "", errors.New("cannot parse object from: " + counterPath)
 	}
+
+	var computer, object, instance, counter string
 	if leftComputerBorderIndex > -1 {
 		// validate there is leading \\ and not empty computer (\\\O)
 		if leftComputerBorderIndex != 1 || leftComputerBorderIndex == leftObjectBorderIndex-1 {
@@ -144,7 +145,7 @@ func extractCounterInfoFromCounterPath(counterPath string) (computer, object, in
 	}
 	object = counterPath[leftObjectBorderIndex+1 : rightObjectBorderIndex]
 	counter = counterPath[leftCounterBorderIndex+1:]
-	return "", "", "", "", nil
+	return computer, object, instance, counter, nil
 }
 
 func (m *WinPerfCounters) SampleConfig() string {
@@ -339,45 +340,45 @@ func (m *WinPerfCounters) ParseConfig() error {
 		m.Sources = []string{"localhost"}
 	}
 
-	if len(m.Object) > 0 {
-		for _, PerfObject := range m.Object {
-			computers := PerfObject.Sources
-			if len(computers) == 0 {
-				computers = m.Sources
+	if len(m.Object) <= 0 {
+		err := errors.New("no performance objects configured")
+		return err
+	}
+
+	for _, PerfObject := range m.Object {
+		computers := PerfObject.Sources
+		if len(computers) == 0 {
+			computers = m.Sources
+		}
+		for _, computer := range computers {
+			if computer == "" {
+				// localhost as a computer name in counter path doesn't work
+				computer = "localhost"
 			}
-			for _, computer := range computers {
-				if computer == "" {
-					// localhost as a computer name in counter path doesn't work
-					computer = "localhost"
+			for _, counter := range PerfObject.Counters {
+				if len(PerfObject.Instances) == 0 {
+					m.Log.Warnf("Missing 'Instances' param for object '%s'\n", PerfObject.ObjectName)
 				}
-				for _, counter := range PerfObject.Counters {
-					if len(PerfObject.Instances) == 0 {
-						m.Log.Warnf("Missing 'Instances' param for object '%s'\n", PerfObject.ObjectName)
-					}
-					for _, instance := range PerfObject.Instances {
-						objectname := PerfObject.ObjectName
+				for _, instance := range PerfObject.Instances {
+					objectname := PerfObject.ObjectName
 
-						counterPath = formatPath(computer, objectname, instance, counter)
+					counterPath = formatPath(computer, objectname, instance, counter)
 
-						err := m.AddItem(counterPath, computer, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
-						if err != nil {
-							if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-								m.Log.Errorf("invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
-							}
-							if PerfObject.FailOnMissing {
-								return err
-							}
+					err := m.AddItem(counterPath, computer, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
+					if err != nil {
+						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
+							m.Log.Errorf("invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
+						}
+						if PerfObject.FailOnMissing {
+							return err
 						}
 					}
 				}
 			}
 		}
-		return nil
-	} else {
-		err := errors.New("no performance objects configured")
-		return err
 	}
 
+	return nil
 }
 
 func (m *WinPerfCounters) checkError(err error) error {
@@ -437,7 +438,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 			m.Log.Debugf("gathering from %s", hostInfo.computer)
 			start := time.Now()
 			err := m.gatherComputerCounters(hostInfo, acc)
-			m.Log.Debugf("gathering from %s finished in %.3fs", hostInfo.computer, time.Now().Sub(start).Seconds())
+			m.Log.Debugf("gathering from %s finished in %.3fs", hostInfo.computer, time.Since(start))
 			if err != nil {
 				acc.AddError(fmt.Errorf("error during collecting data on host '%s': %s", hostInfo.computer, err.Error()))
 			}

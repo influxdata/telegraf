@@ -1037,7 +1037,6 @@ func TestParseConfigNoInstance(t *testing.T) {
 	counters, ok = m.hostCounters["localhost"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 2)
-
 }
 
 func TestParseConfigInvalidCounterError(t *testing.T) {
@@ -1343,7 +1342,6 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 	require.True(t, acc1.HasTimestamp(measurement, MetricTime))
 	err = m.cleanQueries()
 	require.NoError(t, err)
-
 }
 
 func TestGatherError(t *testing.T) {
