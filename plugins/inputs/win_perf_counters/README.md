@@ -143,12 +143,13 @@ Example:
 (Optional)
 
 Host names or ip addresses of computers to gather all performance counters from.
-User, under which Telegraf runs, must be already authenticated to the remote computer(s).
+The user running Telegraf must be authenticated to the remote computer(s).
 E.g. via Windows sharing `net use \\SQL-SERVER-01`.
-Use either localhost (`"localhost"`) or real local computer name to gather counters also from localhost among other computers.
-Skip, if gather only from localhost.
+Use either localhost (`"localhost"`) or real local computer name to gather counters
+also from localhost among other computers. Skip, if gather only from localhost.
 
-If a performance object is present only on specific hosts set `Source` param on the object level configuration to override global Sources.
+If a performance object is present only on specific hosts set `Source` param on
+the object level configuration to override global Sources.
 
 Example:  `Sources = ["localhost", "SQL-SERVER-01", "SQL-SERVER-02", "SQL-SERVER-03"]`
 
@@ -215,7 +216,8 @@ is set to `true`.
 
 (Optional)
 
-Overrides the [Sources](#sources) global parameter for current performance object. See [Sources](#sources) description for more details.
+Overrides the [Sources](#sources) global parameter for current performance object.
+See [Sources](#sources) description for more details.
 
 #### Measurement
 
@@ -243,10 +245,14 @@ e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
 Note: Time based counters (i.e. *% Processor Time*) are reported in hundredths
 of nanoseconds.
 This key is optional. It is a simple bool.
-If set to `true`, counter values will be provided in the raw, integer, form. This is in contrast with the default behavior, where values are returned in a formatted, displayable, form
-as seen in the Windows Performance Monitor.  
-A field representing raw counter value has the `_Raw` suffix. Raw values should be further used in a calculation, e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
-Note: Time based counters (i.e. `% Processor Time`) are reported in hundredths of nanoseconds.
+If set to `true`, counter values will be provided in the raw, integer, form.
+This is in contrast with the default behavior, where values are returned in a
+formatted, displayable, form as seen in the Windows Performance Monitor.  
+A field representing raw counter value has the `_Raw` suffix.
+Raw values should be further used in a calculation,
+e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
+Note: Time based counters (i.e. `% Processor Time`)
+are reported in hundredths of nanoseconds.
 
 Example: `UseRawValues = true`
 
@@ -673,7 +679,7 @@ your performance counters.
 lodctr /r
 ```
 
-## Example output
+# Example output
 
 TODO
 
