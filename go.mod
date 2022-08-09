@@ -116,10 +116,10 @@ require (
 	github.com/pborman/ansi v1.0.0
 	github.com/pion/dtls/v2 v2.1.5
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.12.2
+	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/client_model v0.2.0
-	github.com/prometheus/common v0.32.1
-	github.com/prometheus/procfs v0.7.3
+	github.com/prometheus/common v0.37.0
+	github.com/prometheus/procfs v0.8.0
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
 	github.com/rabbitmq/amqp091-go v1.3.4
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
