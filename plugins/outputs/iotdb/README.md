@@ -66,7 +66,10 @@ convert them into Measurement, Value, DataType, which are supported in IoTDB.
 constitute a subtree of `Name`.
 
 For example, there is a metric:
-`Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2="hello"}`
+
+```markdown
+Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2="hello"}
+```
 
 - `fields`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"`
 - `device_id`, result: `root.sg.device.private.working, s1=100, s2="hello"`
