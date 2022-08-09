@@ -4,7 +4,7 @@
 
 regex='^	_ "([^"]*)"$'
 #line='_ "github.com/influxdata/telegraf/plugins/inputs/synproxy"'
-while IFS= read line; do
+while IFS= read -r line; do
     if [[ ! $line =~ $regex ]]; then
 	#don't print errors for lines that aren't imports
 	#echo no match: $line
