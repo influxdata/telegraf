@@ -153,4 +153,7 @@ func TestIgnoreUnreachableHosts(t *testing.T) {
 	m.IgnoreUnreachableHosts = true
 	err := m.Init()
 	require.NoError(t, err)
+	err = m.Start()
+	require.NoError(t, err)
+}
 }
