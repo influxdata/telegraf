@@ -201,8 +201,8 @@ lint-branch:
 
 .PHONY: tidy
 tidy:
-	go mod verify -tags "$(BUILDTAGS)"
-	go mod tidy -tags "$(BUILDTAGS)"
+	go mod verify
+	go mod tidy
 	@if ! git diff --quiet go.mod go.sum; then \
 		echo "please run go mod tidy and check in changes, you might have to use the same version of Go as the CI"; \
 		exit 1; \
