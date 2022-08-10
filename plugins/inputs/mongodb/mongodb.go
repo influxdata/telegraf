@@ -35,11 +35,11 @@ type MongoDB struct {
 	IgnoreUnreachableHosts bool
 	ColStatsDbs            []string
 	tlsint.ClientConfig
-	tlsConfig *tls.Config
 
 	Log telegraf.Logger `toml:"-"`
 
-	clients []*Server
+	clients   []*Server
+	tlsConfig *tls.Config
 }
 
 type Ssl struct {
