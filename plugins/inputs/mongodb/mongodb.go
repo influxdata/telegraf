@@ -95,7 +95,7 @@ func (m *MongoDB) Start() error {
 
 		u, err := url.Parse(connURL)
 		if err != nil {
-			return fmt.Errorf("unable to parse connection URL: %q", err)
+			return fmt.Errorf("unable to parse connection URL: %w", err)
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -111,13 +111,13 @@ func (m *MongoDB) Start() error {
 
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
-			return fmt.Errorf("unable to connect to MongoDB: %q", err)
+			return fmt.Errorf("unable to connect to MongoDB: %w", err)
 		}
 
 		err = client.Ping(ctx, opts.ReadPreference)
 		if err != nil {
 			if !m.IgnoreUnreachableHosts {
-				return fmt.Errorf("unable to connect to MongoDB: %s", err)
+				return fmt.Errorf("unable to connect to MongoDB: %w", err)
 			}
 
 			m.Log.Infof("unable to connect do MongoDB: %s", err)
