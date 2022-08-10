@@ -156,4 +156,15 @@ func TestIgnoreUnreachableHosts(t *testing.T) {
 	err = m.Start()
 	require.NoError(t, err)
 }
+
+func TestNoticeUnreachleHosts(t *testing.T) {
+	m := &MongoDB{
+		Log:     testutil.Logger{},
+		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
+	}
+
+	err := m.Init()
+	require.NoError(t, err)
+	err = m.Start()
+	require.Error(t, err)
 }
