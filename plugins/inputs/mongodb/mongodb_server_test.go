@@ -97,6 +97,49 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 	}
 }
 
+func TestIgnoreUnreachableHostsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := createTestServer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	m := &MongoDB{
+		Log:     testutil.Logger{},
+		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
+	}
+
+	m.IgnoreUnreachableHosts = true
+	err := m.Init()
+	require.NoError(t, err)
+	err = m.Start()
+	require.NoError(t, err)
+}
+
+func TestNoticeUnreachleHostsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := createTestServer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	m := &MongoDB{
+		Log:     testutil.Logger{},
+		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
+	}
+
+	err := m.Init()
+	require.NoError(t, err)
+	err = m.Start()
+	require.Error(t, err)
+}
+
 func TestPoolStatsVersionCompatibility(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -142,29 +185,4 @@ func TestPoolStatsVersionCompatibility(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestIgnoreUnreachableHosts(t *testing.T) {
-	m := &MongoDB{
-		Log:     testutil.Logger{},
-		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
-	}
-
-	m.IgnoreUnreachableHosts = true
-	err := m.Init()
-	require.NoError(t, err)
-	err = m.Start()
-	require.NoError(t, err)
-}
-
-func TestNoticeUnreachleHosts(t *testing.T) {
-	m := &MongoDB{
-		Log:     testutil.Logger{},
-		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
-	}
-
-	err := m.Init()
-	require.NoError(t, err)
-	err = m.Start()
-	require.Error(t, err)
 }
