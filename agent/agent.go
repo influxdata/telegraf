@@ -861,16 +861,9 @@ func (a *Agent) flushBatch(
 	ticker Ticker,
 	writeFunc func() error,
 ) error {
-	done := make(chan error)
-	go func() {
-		done <- writeFunc()
-	}()
-
-	for {
-		err := <-done
-		output.LogBufferStatus()
-		return err
-	}
+	err := writeFunc()
+	output.LogBufferStatus()
+	return err
 }
 
 // Test runs the inputs, processors and aggregators for a single gather and
