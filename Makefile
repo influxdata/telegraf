@@ -126,7 +126,7 @@ docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processo
 
 .PHONY: build
 build:
-	go build -ldflags "$(LDFLAGS)" -tags "$(BUILDTAGS)" ./cmd/telegraf
+	go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
 telegraf: build
@@ -134,15 +134,15 @@ telegraf: build
 # Used by dockerfile builds
 .PHONY: go-install
 go-install:
-	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+	go install -tags "$(BUILDTAGS)" -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: test
 test:
-	go test -short $(race_detector) ./...
+	go test -tags "$(BUILDTAGS)" -short $(race_detector) ./...
 
 .PHONY: test-integration
 test-integration:
-	go test -run Integration $(race_detector) ./...
+	go test -tags "$(BUILDTAGS)" -run Integration $(race_detector) ./...
 
 .PHONY: fmt
 fmt:
@@ -160,8 +160,8 @@ fmtcheck:
 
 .PHONY: vet
 vet:
-	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
-	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -ne 0 ]; then \
+	go vet -tags "$(BUILDTAGS)" $$(go list ./... | grep -v ./plugins/parsers/influx)
+	@if [ $$? -ne 0 ]; then \
 		echo ""; \
 		echo "go vet has found suspicious constructs. Please remediate any reported errors"; \
 		echo "to fix them before submitting code for review."; \
@@ -201,8 +201,8 @@ lint-branch:
 
 .PHONY: tidy
 tidy:
-	go mod verify
-	go mod tidy
+	go mod verify -tags "$(BUILDTAGS)"
+	go mod tidy -tags "$(BUILDTAGS)"
 	@if ! git diff --quiet go.mod go.sum; then \
 		echo "please run go mod tidy and check in changes, you might have to use the same version of Go as the CI"; \
 		exit 1; \
@@ -213,7 +213,7 @@ check: fmtcheck vet
 
 .PHONY: test-all
 test-all: fmtcheck vet
-	go test $(race_detector) ./...
+	go test -tags "$(BUILDTAGS)" $(race_detector) ./...
 
 .PHONY: check-deps
 check-deps:
@@ -266,7 +266,7 @@ install: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -tags "$(BUILDTAGS)" -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
