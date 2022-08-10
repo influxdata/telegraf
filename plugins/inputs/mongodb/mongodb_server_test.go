@@ -46,6 +46,8 @@ func TestGetDefaultTagsIntegration(t *testing.T) {
 	}
 	err := m.Init()
 	require.NoError(t, err)
+	err = m.Start()
+	require.NoError(t, err)
 
 	server := m.clients[0]
 
@@ -80,6 +82,8 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 		},
 	}
 	err := m.Init()
+	require.NoError(t, err)
+	err = m.Start()
 	require.NoError(t, err)
 
 	server := m.clients[0]
