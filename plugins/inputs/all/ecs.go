@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ecs
+//go:build !custom || inputs || inputs.ecs
 
 package all
 

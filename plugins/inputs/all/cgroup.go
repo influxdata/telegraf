@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.cgroup
+//go:build !custom || inputs || inputs.cgroup
 
 package all
 

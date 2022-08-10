@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.cisco_telemetry_mdt
+//go:build !custom || inputs || inputs.cisco_telemetry_mdt
 
 package all
 

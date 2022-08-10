@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nats_consumer
+//go:build !custom || inputs || inputs.nats_consumer
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.phpfpm
+//go:build !custom || inputs || inputs.phpfpm
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.syslog
+//go:build !custom || inputs || inputs.syslog
 
 package all
 

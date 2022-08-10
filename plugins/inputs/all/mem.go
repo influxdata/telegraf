@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.mem || core
+//go:build !custom || inputs || inputs.mem || core
 
 package all
 

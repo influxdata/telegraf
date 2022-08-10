@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.filecount
+//go:build !custom || inputs || inputs.filecount
 
 package all
 

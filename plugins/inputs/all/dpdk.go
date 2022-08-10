@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.dpdk
+//go:build !custom || inputs || inputs.dpdk
 
 package all
 

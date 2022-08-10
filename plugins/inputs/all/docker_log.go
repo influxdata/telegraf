@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.docker_log
+//go:build !custom || inputs || inputs.docker_log
 
 package all
 

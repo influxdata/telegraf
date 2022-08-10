@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.fibaro
+//go:build !custom || inputs || inputs.fibaro
 
 package all
 

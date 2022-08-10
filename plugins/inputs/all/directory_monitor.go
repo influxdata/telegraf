@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.directory_monitor
+//go:build !custom || inputs || inputs.directory_monitor
 
 package all
 

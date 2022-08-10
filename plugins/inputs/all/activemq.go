@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.activemq
+//go:build !custom || inputs || inputs.activemq
 
 package all
 

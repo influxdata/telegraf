@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.solr
+//go:build !custom || inputs || inputs.solr
 
 package all
 

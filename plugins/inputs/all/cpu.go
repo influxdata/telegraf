@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.cpu || core
+//go:build !custom || inputs || inputs.cpu || core
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.sensors
+//go:build !custom || inputs || inputs.sensors
 
 package all
 

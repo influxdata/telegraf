@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nginx_sts
+//go:build !custom || inputs || inputs.nginx_sts
 
 package all
 

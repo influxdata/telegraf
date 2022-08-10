@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.mock
+//go:build !custom || inputs || inputs.mock
 
 package all
 

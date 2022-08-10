@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.stackdriver
+//go:build !custom || inputs || inputs.stackdriver
 
 package all
 

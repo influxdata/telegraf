@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.teamspeak
+//go:build !custom || inputs || inputs.teamspeak
 
 package all
 

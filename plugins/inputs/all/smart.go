@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.smart
+//go:build !custom || inputs || inputs.smart
 
 package all
 

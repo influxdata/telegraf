@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.cloudwatch_metric_streams
+//go:build !custom || inputs || inputs.cloudwatch_metric_streams
 
 package all
 

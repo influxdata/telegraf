@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ceph
+//go:build !custom || inputs || inputs.ceph
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.linux_sysctl_fs
+//go:build !custom || inputs || inputs.linux_sysctl_fs
 
 package all
 

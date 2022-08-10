@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.fluentd
+//go:build !custom || inputs || inputs.fluentd
 
 package all
 

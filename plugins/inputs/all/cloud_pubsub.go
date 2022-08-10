@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.cloud_pubsub
+//go:build !custom || inputs || inputs.cloud_pubsub
 
 package all
 

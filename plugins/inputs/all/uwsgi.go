@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.uwsgi
+//go:build !custom || inputs || inputs.uwsgi
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.http_listener_v2
+//go:build !custom || inputs || inputs.http_listener_v2
 
 package all
 

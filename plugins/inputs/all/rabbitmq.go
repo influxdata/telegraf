@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.rabbitmq
+//go:build !custom || inputs || inputs.rabbitmq
 
 package all
 

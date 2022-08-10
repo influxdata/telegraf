@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.prometheus
+//go:build !custom || inputs || inputs.prometheus
 
 package all
 

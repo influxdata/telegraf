@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.passenger
+//go:build !custom || inputs || inputs.passenger
 
 package all
 

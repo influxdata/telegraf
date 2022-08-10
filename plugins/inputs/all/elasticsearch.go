@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.elasticsearch
+//go:build !custom || inputs || inputs.elasticsearch
 
 package all
 

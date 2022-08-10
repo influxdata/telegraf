@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.webhooks
+//go:build !custom || inputs || inputs.webhooks
 
 package all
 

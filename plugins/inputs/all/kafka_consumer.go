@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.kafka_consumer
+//go:build !custom || inputs || inputs.kafka_consumer
 
 package all
 

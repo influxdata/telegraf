@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.leofs
+//go:build !custom || inputs || inputs.leofs
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.zookeeper
+//go:build !custom || inputs || inputs.zookeeper
 
 package all
 

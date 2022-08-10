@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.procstat
+//go:build !custom || inputs || inputs.procstat
 
 package all
 

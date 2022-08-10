@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.clickhouse
+//go:build !custom || inputs || inputs.clickhouse
 
 package all
 

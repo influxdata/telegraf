@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.intel_pmu
+//go:build !custom || inputs || inputs.intel_pmu
 
 package all
 

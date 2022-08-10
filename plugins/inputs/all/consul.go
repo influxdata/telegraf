@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.consul
+//go:build !custom || inputs || inputs.consul
 
 package all
 

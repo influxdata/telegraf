@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.vsphere
+//go:build !custom || inputs || inputs.vsphere
 
 package all
 

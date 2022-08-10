@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.memcached
+//go:build !custom || inputs || inputs.memcached
 
 package all
 

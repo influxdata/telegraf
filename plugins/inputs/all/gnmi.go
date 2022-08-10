@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.gnmi
+//go:build !custom || inputs || inputs.gnmi
 
 package all
 

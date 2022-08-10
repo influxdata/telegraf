@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.pgbouncer
+//go:build !custom || inputs || inputs.pgbouncer
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.udp_listener
+//go:build !custom || inputs || inputs.udp_listener
 
 package all
 

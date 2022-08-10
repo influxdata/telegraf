@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.intel_rdt
+//go:build !custom || inputs || inputs.intel_rdt
 
 package all
 

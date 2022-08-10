@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.postfix
+//go:build !custom || inputs || inputs.postfix
 
 package all
 

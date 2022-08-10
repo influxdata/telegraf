@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.marklogic
+//go:build !custom || inputs || inputs.marklogic
 
 package all
 

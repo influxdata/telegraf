@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.suricata
+//go:build !custom || inputs || inputs.suricata
 
 package all
 

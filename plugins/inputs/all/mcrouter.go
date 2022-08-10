@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.mcrouter
+//go:build !custom || inputs || inputs.mcrouter
 
 package all
 

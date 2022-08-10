@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.beat
+//go:build !custom || inputs || inputs.beat
 
 package all
 

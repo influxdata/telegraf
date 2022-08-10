@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.dcos
+//go:build !custom || inputs || inputs.dcos
 
 package all
 

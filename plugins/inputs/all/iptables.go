@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.iptables
+//go:build !custom || inputs || inputs.iptables
 
 package all
 

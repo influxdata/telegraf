@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ipset
+//go:build !custom || inputs || inputs.ipset
 
 package all
 

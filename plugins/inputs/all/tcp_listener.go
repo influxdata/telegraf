@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.tcp_listener
+//go:build !custom || inputs || inputs.tcp_listener
 
 package all
 

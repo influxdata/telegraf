@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ipvs
+//go:build !custom || inputs || inputs.ipvs
 
 package all
 

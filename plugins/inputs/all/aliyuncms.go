@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.aliyuncms
+//go:build !custom || inputs || inputs.aliyuncms
 
 package all
 

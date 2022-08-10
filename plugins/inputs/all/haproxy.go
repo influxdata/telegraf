@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.haproxy
+//go:build !custom || inputs || inputs.haproxy
 
 package all
 

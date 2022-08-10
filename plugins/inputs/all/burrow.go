@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.burrow
+//go:build !custom || inputs || inputs.burrow
 
 package all
 

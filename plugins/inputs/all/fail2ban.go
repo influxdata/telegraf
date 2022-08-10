@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.fail2ban
+//go:build !custom || inputs || inputs.fail2ban
 
 package all
 

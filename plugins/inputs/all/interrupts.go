@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.interrupts
+//go:build !custom || inputs || inputs.interrupts
 
 package all
 

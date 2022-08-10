@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.cloudwatch
+//go:build !custom || inputs || inputs.cloudwatch
 
 package all
 

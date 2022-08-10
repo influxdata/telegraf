@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.riak
+//go:build !custom || inputs || inputs.riak
 
 package all
 

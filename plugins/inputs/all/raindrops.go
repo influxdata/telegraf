@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.raindrops
+//go:build !custom || inputs || inputs.raindrops
 
 package all
 

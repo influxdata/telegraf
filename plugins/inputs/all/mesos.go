@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.mesos
+//go:build !custom || inputs || inputs.mesos
 
 package all
 

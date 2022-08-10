@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.riemann_listener
+//go:build !custom || inputs || inputs.riemann_listener
 
 package all
 

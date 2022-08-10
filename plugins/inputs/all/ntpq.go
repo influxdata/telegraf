@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ntpq
+//go:build !custom || inputs || inputs.ntpq
 
 package all
 

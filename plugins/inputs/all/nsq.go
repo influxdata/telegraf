@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nsq
+//go:build !custom || inputs || inputs.nsq
 
 package all
 

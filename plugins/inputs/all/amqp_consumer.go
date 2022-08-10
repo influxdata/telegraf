@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.amqp_consumer
+//go:build !custom || inputs || inputs.amqp_consumer
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ipmi_sensor
+//go:build !custom || inputs || inputs.ipmi_sensor
 
 package all
 

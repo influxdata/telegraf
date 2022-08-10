@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.opcua
+//go:build !custom || inputs || inputs.opcua
 
 package all
 

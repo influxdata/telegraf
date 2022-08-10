@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.salesforce
+//go:build !custom || inputs || inputs.salesforce
 
 package all
 

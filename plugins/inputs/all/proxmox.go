@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.proxmox
+//go:build !custom || inputs || inputs.proxmox
 
 package all
 

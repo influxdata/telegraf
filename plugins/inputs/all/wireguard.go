@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.wireguard
+//go:build !custom || inputs || inputs.wireguard
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.conntrack
+//go:build !custom || inputs || inputs.conntrack
 
 package all
 

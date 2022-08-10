@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.varnish
+//go:build !custom || inputs || inputs.varnish
 
 package all
 

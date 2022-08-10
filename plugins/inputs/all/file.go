@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.file
+//go:build !custom || inputs || inputs.file
 
 package all
 

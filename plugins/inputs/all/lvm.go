@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.lvm
+//go:build !custom || inputs || inputs.lvm
 
 package all
 

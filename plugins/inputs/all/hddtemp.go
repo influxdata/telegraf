@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.hddtemp
+//go:build !custom || inputs || inputs.hddtemp
 
 package all
 

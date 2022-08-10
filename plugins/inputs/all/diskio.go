@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.diskio || core
+//go:build !custom || inputs || inputs.diskio || core
 
 package all
 

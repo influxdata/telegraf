@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.redis
+//go:build !custom || inputs || inputs.redis
 
 package all
 

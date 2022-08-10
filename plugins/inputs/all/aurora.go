@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.aurora
+//go:build !custom || inputs || inputs.aurora
 
 package all
 

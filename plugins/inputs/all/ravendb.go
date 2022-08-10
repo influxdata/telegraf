@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ravendb
+//go:build !custom || inputs || inputs.ravendb
 
 package all
 

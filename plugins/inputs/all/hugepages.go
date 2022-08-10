@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.hugepages
+//go:build !custom || inputs || inputs.hugepages
 
 package all
 

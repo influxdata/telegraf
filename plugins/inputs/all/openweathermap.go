@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.openweathermap
+//go:build !custom || inputs || inputs.openweathermap
 
 package all
 

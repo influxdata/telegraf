@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.openntpd
+//go:build !custom || inputs || inputs.openntpd
 
 package all
 

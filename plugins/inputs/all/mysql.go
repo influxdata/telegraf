@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.mysql
+//go:build !custom || inputs || inputs.mysql
 
 package all
 

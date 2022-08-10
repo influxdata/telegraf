@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.puppetagent
+//go:build !custom || inputs || inputs.puppetagent
 
 package all
 

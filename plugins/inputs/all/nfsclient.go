@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nfsclient
+//go:build !custom || inputs || inputs.nfsclient
 
 package all
 

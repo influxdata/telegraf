@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.tengine
+//go:build !custom || inputs || inputs.tengine
 
 package all
 

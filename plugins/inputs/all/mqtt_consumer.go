@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.mqtt_consumer
+//go:build !custom || inputs || inputs.mqtt_consumer
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.rethinkdb
+//go:build !custom || inputs || inputs.rethinkdb
 
 package all
 

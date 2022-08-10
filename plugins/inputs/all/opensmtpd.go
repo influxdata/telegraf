@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.opensmtpd
+//go:build !custom || inputs || inputs.opensmtpd
 
 package all
 

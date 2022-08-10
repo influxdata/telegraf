@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.postgresql
+//go:build !custom || inputs || inputs.postgresql
 
 package all
 

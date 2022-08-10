@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.sysstat
+//go:build !custom || inputs || inputs.sysstat
 
 package all
 

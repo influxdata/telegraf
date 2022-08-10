@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.chrony
+//go:build !custom || inputs || inputs.chrony
 
 package all
 

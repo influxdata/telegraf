@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.bcache
+//go:build !custom || inputs || inputs.bcache
 
 package all
 

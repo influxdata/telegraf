@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.jenkins
+//go:build !custom || inputs || inputs.jenkins
 
 package all
 

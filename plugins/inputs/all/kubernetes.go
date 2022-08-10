@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.kubernetes
+//go:build !custom || inputs || inputs.kubernetes
 
 package all
 

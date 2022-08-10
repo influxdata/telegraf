@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.github
+//go:build !custom || inputs || inputs.github
 
 package all
 

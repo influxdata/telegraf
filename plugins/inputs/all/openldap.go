@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.openldap
+//go:build !custom || inputs || inputs.openldap
 
 package all
 

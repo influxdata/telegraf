@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.modbus
+//go:build !custom || inputs || inputs.modbus
 
 package all
 

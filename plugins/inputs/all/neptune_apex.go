@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.neptune_apex
+//go:build !custom || inputs || inputs.neptune_apex
 
 package all
 

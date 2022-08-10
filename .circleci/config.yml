@@ -85,7 +85,7 @@ commands:
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- -tags all ${RACE} -short -cover -coverprofile=coverage.out ./...
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
       - when:
           condition:
             and:

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nginx_upstream_check
+//go:build !custom || inputs || inputs.nginx_upstream_check
 
 package all
 

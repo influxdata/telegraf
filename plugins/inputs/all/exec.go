@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.exec
+//go:build !custom || inputs || inputs.exec
 
 package all
 

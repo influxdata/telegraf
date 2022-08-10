@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.lanz
+//go:build !custom || inputs || inputs.lanz
 
 package all
 

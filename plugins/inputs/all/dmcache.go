@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.dmcache
+//go:build !custom || inputs || inputs.dmcache
 
 package all
 

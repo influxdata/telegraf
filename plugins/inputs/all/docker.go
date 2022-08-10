@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.docker
+//go:build !custom || inputs || inputs.docker
 
 package all
 

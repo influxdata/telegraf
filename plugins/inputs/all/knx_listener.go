@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.knx_listener
+//go:build !custom || inputs || inputs.knx_listener
 
 package all
 

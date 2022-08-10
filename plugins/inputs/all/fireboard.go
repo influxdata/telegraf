@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.fireboard
+//go:build !custom || inputs || inputs.fireboard
 
 package all
 

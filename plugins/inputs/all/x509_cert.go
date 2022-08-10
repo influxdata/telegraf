@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.x509_cert
+//go:build !custom || inputs || inputs.x509_cert
 
 package all
 

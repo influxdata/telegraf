@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.net
+//go:build !custom || inputs || inputs.net
 
 package all
 

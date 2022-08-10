@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.httpjson
+//go:build !custom || inputs || inputs.httpjson
 
 package all
 

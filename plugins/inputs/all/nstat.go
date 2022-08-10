@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nstat
+//go:build !custom || inputs || inputs.nstat
 
 package all
 

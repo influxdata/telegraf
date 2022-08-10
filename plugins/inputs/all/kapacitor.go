@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.kapacitor
+//go:build !custom || inputs || inputs.kapacitor
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.kube_inventory
+//go:build !custom || inputs || inputs.kube_inventory
 
 package all
 

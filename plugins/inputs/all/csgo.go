@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.csgo
+//go:build !custom || inputs || inputs.csgo
 
 package all
 

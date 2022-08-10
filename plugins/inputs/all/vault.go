@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.vault
+//go:build !custom || inputs || inputs.vault
 
 package all
 

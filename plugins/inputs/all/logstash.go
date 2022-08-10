@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.logstash
+//go:build !custom || inputs || inputs.logstash
 
 package all
 

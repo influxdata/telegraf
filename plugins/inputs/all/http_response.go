@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.http_response
+//go:build !custom || inputs || inputs.http_response
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.azure_storage_queue
+//go:build !custom || inputs || inputs.azure_storage_queue
 
 package all
 

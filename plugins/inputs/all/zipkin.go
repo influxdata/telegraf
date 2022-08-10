@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.zipkin
+//go:build !custom || inputs || inputs.zipkin
 
 package all
 

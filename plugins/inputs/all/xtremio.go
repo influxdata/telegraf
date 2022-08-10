@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.xtremio
+//go:build !custom || inputs || inputs.xtremio
 
 package all
 

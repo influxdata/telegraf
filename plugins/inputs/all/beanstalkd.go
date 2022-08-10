@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.beanstalkd
+//go:build !custom || inputs || inputs.beanstalkd
 
 package all
 

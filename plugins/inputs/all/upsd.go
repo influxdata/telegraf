@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.upsd
+//go:build !custom || inputs || inputs.upsd
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ras
+//go:build !custom || inputs || inputs.ras
 
 package all
 

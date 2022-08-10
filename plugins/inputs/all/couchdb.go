@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.couchdb
+//go:build !custom || inputs || inputs.couchdb
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nsd
+//go:build !custom || inputs || inputs.nsd
 
 package all
 

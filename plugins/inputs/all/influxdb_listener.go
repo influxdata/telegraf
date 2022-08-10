@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.influxdb_listener
+//go:build !custom || inputs || inputs.influxdb_listener
 
 package all
 

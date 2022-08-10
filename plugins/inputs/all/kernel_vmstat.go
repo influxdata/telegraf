@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.kernel_vmstat
+//go:build !custom || inputs || inputs.kernel_vmstat
 
 package all
 

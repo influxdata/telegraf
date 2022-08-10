@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.sflow
+//go:build !custom || inputs || inputs.sflow
 
 package all
 

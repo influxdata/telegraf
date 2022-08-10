@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.trig
+//go:build !custom || inputs || inputs.trig
 
 package all
 

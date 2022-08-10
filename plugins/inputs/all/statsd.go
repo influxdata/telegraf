@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.statsd
+//go:build !custom || inputs || inputs.statsd
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.dovecot
+//go:build !custom || inputs || inputs.dovecot
 
 package all
 

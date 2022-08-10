@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nvidia_smi
+//go:build !custom || inputs || inputs.nvidia_smi
 
 package all
 

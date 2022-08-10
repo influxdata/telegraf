@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.twemproxy
+//go:build !custom || inputs || inputs.twemproxy
 
 package all
 

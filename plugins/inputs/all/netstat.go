@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.netstat
+//go:build !custom || inputs || inputs.netstat
 
 package all
 

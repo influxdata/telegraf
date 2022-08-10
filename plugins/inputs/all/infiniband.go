@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.infiniband
+//go:build !custom || inputs || inputs.infiniband
 
 package all
 

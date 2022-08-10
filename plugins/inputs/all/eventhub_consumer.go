@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.eventhub_consumer
+//go:build !custom || inputs || inputs.eventhub_consumer
 
 package all
 

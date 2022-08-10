@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.opentelemetry
+//go:build !custom || inputs || inputs.opentelemetry
 
 package all
 

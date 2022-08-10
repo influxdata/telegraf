@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.snmp_trap
+//go:build !custom || inputs || inputs.snmp_trap
 
 package all
 

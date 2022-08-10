@@ -23,7 +23,7 @@ while IFS= read -r line; do
     fi
 
     IFS= cat > "$plugin.go" <<EOF
-//go:build all || inputs || inputs.$plugin
+//go:build !custom || inputs || inputs.$plugin
 
 package all
 

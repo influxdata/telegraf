@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.zfs
+//go:build !custom || inputs || inputs.zfs
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.win_services
+//go:build !custom || inputs || inputs.win_services
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.dns_query
+//go:build !custom || inputs || inputs.dns_query
 
 package all
 

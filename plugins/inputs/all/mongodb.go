@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.mongodb
+//go:build !custom || inputs || inputs.mongodb
 
 package all
 

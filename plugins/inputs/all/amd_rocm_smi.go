@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.amd_rocm_smi
+//go:build !custom || inputs || inputs.amd_rocm_smi
 
 package all
 

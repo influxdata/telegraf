@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.ping
+//go:build !custom || inputs || inputs.ping
 
 package all
 

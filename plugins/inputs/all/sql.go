@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.sql
+//go:build !custom || inputs || inputs.sql
 
 package all
 

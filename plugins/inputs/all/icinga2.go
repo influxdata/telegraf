@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.icinga2
+//go:build !custom || inputs || inputs.icinga2
 
 package all
 

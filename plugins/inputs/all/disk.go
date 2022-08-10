@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.disk || core
+//go:build !custom || inputs || inputs.disk || core
 
 package all
 

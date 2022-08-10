@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.mailchimp
+//go:build !custom || inputs || inputs.mailchimp
 
 package all
 

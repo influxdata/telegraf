@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.graylog
+//go:build !custom || inputs || inputs.graylog
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.socketstat
+//go:build !custom || inputs || inputs.socketstat
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.logparser
+//go:build !custom || inputs || inputs.logparser
 
 package all
 

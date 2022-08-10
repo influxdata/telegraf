@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.powerdns
+//go:build !custom || inputs || inputs.powerdns
 
 package all
 

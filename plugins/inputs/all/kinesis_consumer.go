@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.kinesis_consumer
+//go:build !custom || inputs || inputs.kinesis_consumer
 
 package all
 

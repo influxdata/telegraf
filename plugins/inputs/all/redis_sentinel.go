@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.redis_sentinel
+//go:build !custom || inputs || inputs.redis_sentinel
 
 package all
 

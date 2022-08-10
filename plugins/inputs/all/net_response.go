@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.net_response
+//go:build !custom || inputs || inputs.net_response
 
 package all
 

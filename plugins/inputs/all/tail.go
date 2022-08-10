@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.tail
+//go:build !custom || inputs || inputs.tail
 
 package all
 

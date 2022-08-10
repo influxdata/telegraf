@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.pf
+//go:build !custom || inputs || inputs.pf
 
 package all
 

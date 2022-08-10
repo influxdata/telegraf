@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.openstack
+//go:build !custom || inputs || inputs.openstack
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.systemd_units
+//go:build !custom || inputs || inputs.systemd_units
 
 package all
 

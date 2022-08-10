@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.monit
+//go:build !custom || inputs || inputs.monit
 
 package all
 

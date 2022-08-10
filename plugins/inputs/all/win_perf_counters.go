@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.win_perf_counters
+//go:build !custom || inputs || inputs.win_perf_counters
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.cassandra
+//go:build !custom || inputs || inputs.cassandra
 
 package all
 

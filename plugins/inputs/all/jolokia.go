@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.jolokia
+//go:build !custom || inputs || inputs.jolokia
 
 package all
 

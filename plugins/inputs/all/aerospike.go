@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.aerospike
+//go:build !custom || inputs || inputs.aerospike
 
 package all
 

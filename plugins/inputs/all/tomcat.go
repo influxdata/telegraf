@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.tomcat
+//go:build !custom || inputs || inputs.tomcat
 
 package all
 

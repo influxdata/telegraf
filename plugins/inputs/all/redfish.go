@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.redfish
+//go:build !custom || inputs || inputs.redfish
 
 package all
 

@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.internet_speed
+//go:build !custom || inputs || inputs.internet_speed
 
 package all
 

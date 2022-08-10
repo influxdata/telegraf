@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.kibana
+//go:build !custom || inputs || inputs.kibana
 
 package all
 

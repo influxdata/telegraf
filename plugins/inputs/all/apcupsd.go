@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.apcupsd
+//go:build !custom || inputs || inputs.apcupsd
 
 package all
 

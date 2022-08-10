@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.nomad
+//go:build !custom || inputs || inputs.nomad
 
 package all
 

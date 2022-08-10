@@ -1,4 +1,4 @@
-//go:build all || inputs || inputs.minecraft
+//go:build !custom || inputs || inputs.minecraft
 
 package all
 

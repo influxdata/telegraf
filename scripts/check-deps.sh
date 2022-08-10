@@ -21,7 +21,7 @@ for target in ${targets}; do
 
 	echo "${target%%/*}/${target##*/}"
 	GOOS=${target%%/*} GOARCH=${target##*/} \
-		go list -tags all -deps -f '{{with .Module}}{{.Path}}{{end}}' ./cmd/telegraf/ >> "${tmpdir}/golist"
+		go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./cmd/telegraf/ >> "${tmpdir}/golist"
 done
 
 LC_ALL=C sort -u < "${tmpdir}/golist" | while IFS= read -r dep; do
