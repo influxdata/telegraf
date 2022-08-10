@@ -120,7 +120,7 @@ func (m *MongoDB) Start() error {
 				return fmt.Errorf("unable to connect to MongoDB: %w", err)
 			}
 
-			m.Log.Infof("unable to connect do MongoDB: %s", err)
+			m.Log.Errorf("unable to connect do MongoDB: %s", err)
 		}
 
 		server := &Server{
