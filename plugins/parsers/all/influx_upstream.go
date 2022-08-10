@@ -3,5 +3,5 @@
 package all
 
 import (
-	_ "github.com/influxdata/telegraf/plugins/parsers/influx_upstream"
+	_ "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 )
