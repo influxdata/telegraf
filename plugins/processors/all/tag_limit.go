@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/tag_limit"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/tag_limit" // register plugin

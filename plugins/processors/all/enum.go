@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/enum"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/enum" // register plugin

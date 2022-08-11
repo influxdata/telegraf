@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/topk"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/topk" // register plugin

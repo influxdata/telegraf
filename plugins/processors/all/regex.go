@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/regex"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/regex" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/reverse_dns"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/reverse_dns" // register plugin

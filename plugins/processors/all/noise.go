@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/noise"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/noise" // register plugin

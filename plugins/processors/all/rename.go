@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/rename"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/rename" // register plugin

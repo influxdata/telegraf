@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/execd"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/execd" // register plugin

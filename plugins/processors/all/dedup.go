@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/dedup"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/dedup" // register plugin

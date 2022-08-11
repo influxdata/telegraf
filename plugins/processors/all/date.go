@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/processors/date"
-)
+import _ "github.com/influxdata/telegraf/plugins/processors/date" // register plugin
