@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/parsers/prometheus"
-)
+import _ "github.com/influxdata/telegraf/plugins/parsers/prometheus" // register plugin

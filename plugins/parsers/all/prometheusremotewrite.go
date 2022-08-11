@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
-)
+import _ "github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/parsers/wavefront"
-)
+import _ "github.com/influxdata/telegraf/plugins/parsers/wavefront" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
-)
+import _ "github.com/influxdata/telegraf/plugins/parsers/form_urlencoded" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/parsers/logfmt"
-)
+import _ "github.com/influxdata/telegraf/plugins/parsers/logfmt" // register plugin
