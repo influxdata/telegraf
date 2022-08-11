@@ -125,6 +125,13 @@ telegraf config > telegraf.conf
 telegraf config --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb
 ```
 
+### Generate a telegraf config file with PowerShell
+
+```shell
+ .\telegraf.exe config | Out-File -FilePath telegraf.conf -Encoding utf8
+```
+This avoids generating a config with `UTF-16 LE BOM` encondig, which is the default for PowerShell 5.x and not supported by Telegraf ()
+
 ### Run a single telegraf collection, outputting metrics to stdout
 
 ```shell
