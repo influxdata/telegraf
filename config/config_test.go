@@ -108,6 +108,11 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
+func TestConfig_UTF16LE(t *testing.T) {
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/UTF16LE_encoded.toml"))
+}
+
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))

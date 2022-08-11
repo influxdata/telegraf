@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -342,10 +344,9 @@ func (c *Config) LoadDirectory(path string) error {
 }
 
 // Try to find a default config file at these locations (in order):
-//   1. $TELEGRAF_CONFIG_PATH
-//   2. $HOME/.telegraf/telegraf.conf
-//   3. /etc/telegraf/telegraf.conf
-//
+//  1. $TELEGRAF_CONFIG_PATH
+//  2. $HOME/.telegraf/telegraf.conf
+//  3. /etc/telegraf/telegraf.conf
 func getDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
@@ -401,6 +402,18 @@ func (c *Config) LoadConfig(path string) error {
 // LoadConfigData loads TOML-formatted config data
 func (c *Config) LoadConfigData(data []byte) error {
 	tbl, err := parseConfig(data)
+
+	var e *toml.LineError
+	if errors.As(err, &e) {
+		// If the error is on line 1 then it might be the encoding being UTF16-LE (Windows)
+		if e.Line == 1 {
+			decoder := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()
+			transformedData, _, _ := transform.Bytes(decoder, data)
+
+			tbl, err = parseConfig(transformedData)
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("Error parsing data: %s", err)
 	}
