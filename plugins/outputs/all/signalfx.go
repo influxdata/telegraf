@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/signalfx"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/signalfx" // register plugin

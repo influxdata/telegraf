@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/syslog" // register plugin

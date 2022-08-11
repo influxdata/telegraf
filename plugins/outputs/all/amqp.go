@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/amqp" // register plugin

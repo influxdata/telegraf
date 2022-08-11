@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/cratedb" // register plugin

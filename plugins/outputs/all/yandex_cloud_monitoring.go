@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/yandex_cloud_monitoring"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/yandex_cloud_monitoring" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/sql"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/sql" // register plugin

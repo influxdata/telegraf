@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/graphite" // register plugin

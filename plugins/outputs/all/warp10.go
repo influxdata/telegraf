@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/warp10"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/warp10" // register plugin

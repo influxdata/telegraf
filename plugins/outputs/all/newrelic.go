@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/newrelic"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/newrelic" // register plugin

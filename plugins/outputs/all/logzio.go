@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/logzio"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/logzio" // register plugin

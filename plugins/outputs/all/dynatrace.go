@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/dynatrace"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/dynatrace" // register plugin

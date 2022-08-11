@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/opentsdb"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/opentsdb" // register plugin

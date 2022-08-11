@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/librato" // register plugin

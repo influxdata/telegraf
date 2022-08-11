@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/azure_data_explorer"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/azure_data_explorer" // register plugin

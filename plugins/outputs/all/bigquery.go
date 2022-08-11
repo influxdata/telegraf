@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/bigquery"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/bigquery" // register plugin

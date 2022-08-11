@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch" // register plugin

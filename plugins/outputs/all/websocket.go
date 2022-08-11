@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/websocket"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/websocket" // register plugin

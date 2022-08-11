@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/amon"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/amon" // register plugin

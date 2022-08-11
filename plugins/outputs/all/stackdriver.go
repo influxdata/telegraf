@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/stackdriver" // register plugin

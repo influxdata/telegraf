@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/http"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/http" // register plugin

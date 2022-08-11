@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/loki"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/loki" // register plugin

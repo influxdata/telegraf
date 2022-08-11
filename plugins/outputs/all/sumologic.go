@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/sumologic"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/sumologic" // register plugin

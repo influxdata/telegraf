@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
-)
+import _ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch" // register plugin
