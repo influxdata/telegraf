@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/aggregators/histogram"
-)
+import _ "github.com/influxdata/telegraf/plugins/aggregators/histogram" // register plugin

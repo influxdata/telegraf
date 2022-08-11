@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/aggregators/quantile"
-)
+import _ "github.com/influxdata/telegraf/plugins/aggregators/quantile" // register plugin

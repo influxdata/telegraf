@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/aggregators/derivative"
-)
+import _ "github.com/influxdata/telegraf/plugins/aggregators/derivative" // register plugin

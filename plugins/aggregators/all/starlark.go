@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/aggregators/starlark"
-)
+import _ "github.com/influxdata/telegraf/plugins/aggregators/starlark" // register plugin
