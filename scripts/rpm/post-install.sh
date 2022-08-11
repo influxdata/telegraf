@@ -1,10 +1,5 @@
 #!/bin/bash
 
-BIN_DIR=/usr/bin
-LOG_DIR=/var/log/telegraf
-SCRIPT_DIR=/usr/lib/telegraf/scripts
-LOGROTATE_DIR=/etc/logrotate.d
-
 # Remove legacy symlink, if it exists
 if [[ -L /etc/init.d/telegraf ]]; then
     rm -f /etc/init.d/telegraf
@@ -30,13 +25,14 @@ if [[ ! -f /etc/telegraf/telegraf.conf ]] && [[ -f /etc/telegraf/telegraf.conf.s
 fi
 
 # Set up log directories
+LOG_DIR=/var/log/telegraf
 test -d $LOG_DIR || mkdir -p $LOG_DIR
 chown -R -L telegraf:telegraf $LOG_DIR
 chmod 755 $LOG_DIR
 
 # Set up systemd service
 if [[ -d /run/systemd/system ]]; then
-    cp -f $SCRIPT_DIR/telegraf.service /usr/lib/systemd/system/telegraf.service
+    cp -f /usr/lib/telegraf/scripts/telegraf.service /usr/lib/systemd/system/telegraf.service
     systemctl enable telegraf || true
     systemctl daemon-reload || true
 fi
