@@ -454,6 +454,7 @@ func main() {
 			}
 
 			printer.PrintSampleConfig(
+				os.Stdout,
 				sectionFilters,
 				inputFilters,
 				outputFilters,
@@ -514,6 +515,7 @@ func main() {
 		return
 	case *fSampleConfig:
 		printer.PrintSampleConfig(
+			os.Stdout,
 			sectionFilters,
 			inputFilters,
 			outputFilters,
@@ -522,8 +524,8 @@ func main() {
 		)
 		return
 	case *fUsage != "":
-		err := printer.PrintInputConfig(*fUsage)
-		err2 := printer.PrintOutputConfig(*fUsage)
+		err := printer.PrintInputConfig(*fUsage, os.Stdout)
+		err2 := printer.PrintOutputConfig(*fUsage, os.Stdout)
 		if err != nil && err2 != nil {
 			log.Fatalf("E! %s and %s", err, err2)
 		}

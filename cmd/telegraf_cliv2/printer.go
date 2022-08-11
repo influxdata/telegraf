@@ -1,4 +1,4 @@
-package printer
+package main
 
 import (
 	_ "embed"
@@ -57,35 +57,35 @@ var globalTagsConfig = `
 //go:embed agent.conf
 var agentConfig string
 
-var OutputHeader = `
+var outputHeader = `
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #
 ###############################################################################
 
 `
 
-var ProcessorHeader = `
+var processorHeader = `
 ###############################################################################
 #                            PROCESSOR PLUGINS                                #
 ###############################################################################
 
 `
 
-var AggregatorHeader = `
+var aggregatorHeader = `
 ###############################################################################
 #                            AGGREGATOR PLUGINS                               #
 ###############################################################################
 
 `
 
-var InputHeader = `
+var inputHeader = `
 ###############################################################################
 #                            INPUT PLUGINS                                    #
 ###############################################################################
 
 `
 
-var ServiceInputHeader = `
+var serviceInputHeader = `
 ###############################################################################
 #                            SERVICE INPUT PLUGINS                            #
 ###############################################################################
@@ -101,8 +101,8 @@ func sliceContains(name string, list []string) bool {
 	return false
 }
 
-// PrintSampleConfig prints the sample config
-func PrintSampleConfig(
+// printSampleConfig prints the sample config
+func printSampleConfig(
 	outputBuffer io.Writer,
 	sectionFilters []string,
 	inputFilters []string,
@@ -122,11 +122,11 @@ func PrintSampleConfig(
 	if sliceContains("outputs", sectionFilters) {
 		if len(outputFilters) != 0 {
 			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
-				_, _ = outputBuffer.Write([]byte(OutputHeader))
+				_, _ = outputBuffer.Write([]byte(outputHeader))
 			}
 			printFilteredOutputs(outputFilters, false, outputBuffer)
 		} else {
-			_, _ = outputBuffer.Write([]byte(OutputHeader))
+			_, _ = outputBuffer.Write([]byte(outputHeader))
 			printFilteredOutputs(outputDefaults, false, outputBuffer)
 			// Print non-default outputs, commented
 			var pnames []string
@@ -144,11 +144,11 @@ func PrintSampleConfig(
 	if sliceContains("processors", sectionFilters) {
 		if len(processorFilters) != 0 {
 			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
-				_, _ = outputBuffer.Write([]byte(ProcessorHeader))
+				_, _ = outputBuffer.Write([]byte(processorHeader))
 			}
 			printFilteredProcessors(processorFilters, false, outputBuffer)
 		} else {
-			_, _ = outputBuffer.Write([]byte(ProcessorHeader))
+			_, _ = outputBuffer.Write([]byte(processorHeader))
 			pnames := []string{}
 			for pname := range processors.Processors {
 				pnames = append(pnames, pname)
@@ -162,11 +162,11 @@ func PrintSampleConfig(
 	if sliceContains("aggregators", sectionFilters) {
 		if len(aggregatorFilters) != 0 {
 			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
-				_, _ = outputBuffer.Write([]byte(AggregatorHeader))
+				_, _ = outputBuffer.Write([]byte(aggregatorHeader))
 			}
 			printFilteredAggregators(aggregatorFilters, false, outputBuffer)
 		} else {
-			_, _ = outputBuffer.Write([]byte(AggregatorHeader))
+			_, _ = outputBuffer.Write([]byte(aggregatorHeader))
 			pnames := []string{}
 			for pname := range aggregators.Aggregators {
 				pnames = append(pnames, pname)
@@ -180,11 +180,11 @@ func PrintSampleConfig(
 	if sliceContains("inputs", sectionFilters) {
 		if len(inputFilters) != 0 {
 			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
-				_, _ = outputBuffer.Write([]byte(InputHeader))
+				_, _ = outputBuffer.Write([]byte(inputHeader))
 			}
 			printFilteredInputs(inputFilters, false, outputBuffer)
 		} else {
-			_, _ = outputBuffer.Write([]byte(InputHeader))
+			_, _ = outputBuffer.Write([]byte(inputHeader))
 			printFilteredInputs(inputDefaults, false, outputBuffer)
 			// Print non-default inputs, commented
 			var pnames []string
@@ -295,7 +295,7 @@ func printFilteredInputs(inputFilters []string, commented bool, outputBuffer io.
 	}
 	sort.Strings(servInputNames)
 
-	_, _ = outputBuffer.Write([]byte(ServiceInputHeader))
+	_, _ = outputBuffer.Write([]byte(serviceInputHeader))
 	for _, name := range servInputNames {
 		printConfig(name, servInputs[name], "inputs", commented, inputs.Deprecations[name], outputBuffer)
 	}
