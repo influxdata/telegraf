@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/coreos/go-semver/semver"
 	"golang.org/x/text/encoding/unicode"
@@ -405,12 +406,15 @@ func (c *Config) LoadConfigData(data []byte) error {
 
 	var e *toml.LineError
 	if errors.As(err, &e) {
-		// If the error is on line 1 then it might be the encoding being UTF16-LE (Windows)
-		if e.Line == 1 {
-			decoder := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()
-			transformedData, _, _ := transform.Bytes(decoder, data)
+		// If the error is on line 1 and data does not consist entirely of valid UTF-8 encoded runes
+		// Then it might be the encoding being UTF16-LE (Windows)
+		valid := utf8.Valid(data)
 
-			tbl, err = parseConfig(transformedData)
+		if e.Line == 1 && !valid {
+			decoder := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()
+			data, _, _ = transform.Bytes(decoder, data)
+
+			tbl, err = parseConfig(data)
 		}
 	}
 

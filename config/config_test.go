@@ -70,7 +70,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := NewConfig()
-	c.LoadConfig("./testdata/single_plugin.toml")
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -111,6 +111,8 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 func TestConfig_UTF16LE(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/UTF16LE_encoded.toml"))
+	require.Error(t, c.LoadConfig("./testdata/UTF8_error_line1.toml"))
+	require.Error(t, c.LoadConfig("./testdata/UTF16LE_error_line1.toml"))
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
