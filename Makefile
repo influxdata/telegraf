@@ -133,15 +133,15 @@ telegraf: build
 # Used by dockerfile builds
 .PHONY: go-install
 go-install:
-	go install -tags "$(BUILDTAGS)" -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: test
 test:
-	go test -tags "$(BUILDTAGS)" -short $(race_detector) ./...
+	go test -short $(race_detector) ./...
 
 .PHONY: test-integration
 test-integration:
-	go test -tags "$(BUILDTAGS)" -run Integration $(race_detector) ./...
+	go test -run Integration $(race_detector) ./...
 
 .PHONY: fmt
 fmt:
@@ -159,8 +159,8 @@ fmtcheck:
 
 .PHONY: vet
 vet:
-	go vet -tags "$(BUILDTAGS)" $$(go list ./... | grep -v ./plugins/parsers/influx)
-	@if [ $$? -ne 0 ]; then \
+	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
+	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -ne 0 ]; then \
 		echo ""; \
 		echo "go vet has found suspicious constructs. Please remediate any reported errors"; \
 		echo "to fix them before submitting code for review."; \
@@ -212,7 +212,7 @@ check: fmtcheck vet
 
 .PHONY: test-all
 test-all: fmtcheck vet
-	go test -tags "$(BUILDTAGS)" $(race_detector) ./...
+	go test $(race_detector) ./...
 
 .PHONY: check-deps
 check-deps:
@@ -265,7 +265,7 @@ install: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	go build -tags "$(BUILDTAGS)" -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
