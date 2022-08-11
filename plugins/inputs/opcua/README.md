@@ -155,6 +155,8 @@ This example group configuration has two groups with two nodes each:
   ]
 ```
 
+## Metrics
+
 ## Example Output
 
 ```text
