@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/mcrouter"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/mcrouter" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/conntrack"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/conntrack" // register plugin

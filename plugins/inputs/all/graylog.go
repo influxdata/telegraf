@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/graylog" // register plugin

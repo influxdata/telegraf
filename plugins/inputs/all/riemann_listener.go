@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/riemann_listener"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/riemann_listener" // register plugin

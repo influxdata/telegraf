@@ -1,7 +1,5 @@
-//go:build !custom || inputs || inputs.swap || core
+//go:build !custom || inputs || inputs.swap
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/swap"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/swap" // register plugin

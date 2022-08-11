@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/fluentd"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/fluentd" // register plugin

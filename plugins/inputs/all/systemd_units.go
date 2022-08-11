@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/systemd_units"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/systemd_units" // register plugin

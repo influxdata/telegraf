@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/bond"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/bond" // register plugin

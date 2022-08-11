@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/directory_monitor"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/directory_monitor" // register plugin

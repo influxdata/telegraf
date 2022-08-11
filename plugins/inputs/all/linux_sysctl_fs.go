@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/linux_sysctl_fs"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/linux_sysctl_fs" // register plugin

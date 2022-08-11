@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/zipkin"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/zipkin" // register plugin

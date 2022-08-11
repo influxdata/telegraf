@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/ping"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/ping" // register plugin

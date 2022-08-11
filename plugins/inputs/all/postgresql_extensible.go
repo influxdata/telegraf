@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/postgresql_extensible"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/postgresql_extensible" // register plugin

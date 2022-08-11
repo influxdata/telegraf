@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/ras"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/ras" // register plugin

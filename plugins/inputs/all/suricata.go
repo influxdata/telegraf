@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/suricata"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/suricata" // register plugin

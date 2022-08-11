@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/memcached"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/memcached" // register plugin

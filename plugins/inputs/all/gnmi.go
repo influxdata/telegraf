@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/gnmi"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/gnmi" // register plugin

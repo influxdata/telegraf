@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/redis_sentinel"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/redis_sentinel" // register plugin

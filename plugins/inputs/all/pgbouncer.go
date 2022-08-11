@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/pgbouncer"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/pgbouncer" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/hddtemp"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/hddtemp" // register plugin

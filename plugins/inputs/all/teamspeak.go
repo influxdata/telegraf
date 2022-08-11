@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/teamspeak"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/teamspeak" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/filecount"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/filecount" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/mailchimp"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/mailchimp" // register plugin

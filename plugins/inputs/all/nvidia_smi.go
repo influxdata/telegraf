@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/nvidia_smi"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/nvidia_smi" // register plugin

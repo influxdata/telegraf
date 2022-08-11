@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/intel_powerstat"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/intel_powerstat" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/mdstat"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/mdstat" // register plugin

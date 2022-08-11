@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/tomcat"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/tomcat" // register plugin

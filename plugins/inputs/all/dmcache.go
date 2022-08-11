@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/dmcache"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/dmcache" // register plugin

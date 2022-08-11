@@ -1,7 +1,5 @@
-//go:build !custom || inputs || inputs.system || core
+//go:build !custom || inputs || inputs.system
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/system"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/system" // register plugin

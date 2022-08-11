@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/tcp_listener"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/tcp_listener" // register plugin

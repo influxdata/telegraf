@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/aliyuncms"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/aliyuncms" // register plugin

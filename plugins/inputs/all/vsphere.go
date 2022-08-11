@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/vsphere"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/vsphere" // register plugin

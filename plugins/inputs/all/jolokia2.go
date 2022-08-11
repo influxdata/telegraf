@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/jolokia2"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/jolokia2" // register plugin

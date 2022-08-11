@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/rabbitmq"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/rabbitmq" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/monit"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/monit" // register plugin

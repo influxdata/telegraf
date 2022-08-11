@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/bcache" // register plugin

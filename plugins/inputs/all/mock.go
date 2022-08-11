@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/mock"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/mock" // register plugin

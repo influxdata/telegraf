@@ -1,7 +1,5 @@
-//go:build !custom || inputs || inputs.processes || core
+//go:build !custom || inputs || inputs.processes
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/processes"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/processes" // register plugin

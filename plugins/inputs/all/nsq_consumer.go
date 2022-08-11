@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/nsq_consumer"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/nsq_consumer" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/logstash"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/logstash" // register plugin

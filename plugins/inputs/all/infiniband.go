@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/infiniband"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/infiniband" // register plugin

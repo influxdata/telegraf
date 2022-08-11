@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/udp_listener"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/udp_listener" // register plugin

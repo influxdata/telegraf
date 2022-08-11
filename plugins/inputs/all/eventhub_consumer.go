@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/eventhub_consumer"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/eventhub_consumer" // register plugin

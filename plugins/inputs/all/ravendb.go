@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/ravendb"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/ravendb" // register plugin

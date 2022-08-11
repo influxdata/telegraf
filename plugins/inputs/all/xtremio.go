@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/xtremio"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/xtremio" // register plugin

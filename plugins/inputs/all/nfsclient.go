@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/nfsclient"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/nfsclient" // register plugin

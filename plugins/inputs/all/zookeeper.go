@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/zookeeper" // register plugin

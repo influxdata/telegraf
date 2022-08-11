@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/puppetagent"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/puppetagent" // register plugin

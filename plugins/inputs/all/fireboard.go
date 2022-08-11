@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/fireboard"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/fireboard" // register plugin

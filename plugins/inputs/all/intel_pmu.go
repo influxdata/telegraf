@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/intel_pmu"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/intel_pmu" // register plugin

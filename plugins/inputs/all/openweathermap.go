@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/openweathermap"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/openweathermap" // register plugin

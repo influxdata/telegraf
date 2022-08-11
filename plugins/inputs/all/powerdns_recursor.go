@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/powerdns_recursor"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/powerdns_recursor" // register plugin

@@ -2,6 +2,4 @@
 
 package all
 
-import (
-	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
-)
+import _ "github.com/influxdata/telegraf/plugins/inputs/haproxy" // register plugin
