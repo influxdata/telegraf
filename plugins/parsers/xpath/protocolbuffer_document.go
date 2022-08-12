@@ -95,6 +95,7 @@ func (d *protobufDocument) Parse(buf []byte) (dataNode, error) {
 
 	// Unmarshal the received buffer
 	if err := proto.Unmarshal(buf, msg.Interface()); err != nil {
+		d.Log.Debugf("message data: %v", buf)
 		return nil, err
 	}
 
