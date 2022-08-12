@@ -31,10 +31,11 @@ The Kapacitor plugin collects metrics from the given Kapacitor instances.
   - [num_subscriptions](#num_subscriptions) _(integer)_
   - [num_tasks](#num_tasks) _(integer)_
 - [kapacitor_alert](#kapacitor_alert)
-  - [notification_dropped](#notification_dropped) _(integer)_
+  - [notification_dropped](#notification-dropped) _(integer)_
   - [primary-handle-count](#primary-handle-count) _(integer)_
   - [secondary-handle-count](#secondary-handle-count) _(integer)_
-- (Kapacitor Enterprise only) [kapacitor_cluster](#kapacitor_cluster) _(integer)_
+- (Kapacitor Enterprise only) [kapacitor_cluster](#kapacitor_cluster)
+  _(integer)_
   - [dropped_member_events](#dropped_member_events) _(integer)_
   - [dropped_user_events](#dropped_user_events) _(integer)_
   - [query_handler_errors](#query_handler_errors) _(integer)_
@@ -90,8 +91,8 @@ The Kapacitor plugin collects metrics from the given Kapacitor instances.
 
 ## kapacitor
 
-The `kapacitor` measurement stores fields with information related to [Kapacitor
-tasks][tasks] and [subscriptions][subs].
+The `kapacitor` measurement stores fields with information related to
+[Kapacitor tasks][tasks] and [subscriptions][subs].
 
 [tasks]: https://docs.influxdata.com/kapacitor/latest/introduction/getting-started/#kapacitor-tasks
 
@@ -150,6 +151,10 @@ The number of gossip member events that were dropped.
 ### dropped_user_events
 
 The number of gossip user events that were dropped.
+
+### query_handler_errors
+
+The number of errors from event handlers.
 
 ---
 

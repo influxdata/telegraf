@@ -34,27 +34,36 @@ Fields:
 * bytes - Current number of bytes used to store items
 * bytes_read - Total number of bytes read by this server from network
 * bytes_written - Total number of bytes sent by this server to network
-* cas_badval - Number of CAS reqs for which a key was found, but the CAS value did not match
+* cas_badval - Number of CAS reqs for which a key was found, but the CAS value
+  did not match
 * cas_hits - Number of successful CAS reqs
 * cas_misses - Number of CAS reqs against missing keys
 * cmd_flush - Cumulative number of flush reqs
 * cmd_get - Cumulative number of retrieval reqs
 * cmd_set - Cumulative number of storage reqs
 * cmd_touch - Cumulative number of touch reqs
-* conn_yields - Number of times any connection yielded to another due to hitting the -R limit
-* connection_structures - Number of connection structures allocated by the server
+* conn_yields - Number of times any connection yielded to another due to
+  hitting the -R limit
+* connection_structures - Number of connection structures allocated by the
+  server
 * curr_connections - Number of open connections
 * curr_items - Current number of items stored
 * decr_hits - Number of successful decr reqs
 * decr_misses - Number of decr reqs against missing keys
 * delete_hits - Number of deletion reqs resulting in an item being removed
 * delete_misses - umber of deletions reqs for missing keys
-* evicted_active - Items evicted from LRU that had been hit recently but did not jump to top of LRU
-* evicted_unfetched - Items evicted from LRU that were never touched by get/incr/append/etc
-* evictions - Number of valid items removed from cache to free memory for new items
-* expired_unfetched - Items pulled from LRU that were never touched by get/incr/append/etc before expiring
-* get_expired - Number of items that have been requested but had already expired
-* get_flushed - Number of items that have been requested but have been flushed via flush_all
+* evicted_active - Items evicted from LRU that had been hit recently but did
+  not jump to top of LRU
+* evicted_unfetched - Items evicted from LRU that were never touched by
+  get/incr/append/etc
+* evictions - Number of valid items removed from cache to free memory for
+  new items
+* expired_unfetched - Items pulled from LRU that were never touched by
+  get/incr/append/etc before expiring
+* get_expired - Number of items that have been requested but had already
+  expired
+* get_flushed - Number of items that have been requested but have been flushed
+  via flush_all
 * get_hits - Number of keys that have been requested and found present
 * get_misses - Number of items that have been requested and not found
 * hash_bytes - Bytes currently used by hash tables
@@ -63,14 +72,19 @@ Fields:
 * incr_hits - Number of successful incr reqs
 * incr_misses - Number of incr reqs against missing keys
 * limit_maxbytes - Number of bytes this server is allowed to use for storage
-* listen_disabled_num - Number of times server has stopped accepting new connections (maxconns)
+* listen_disabled_num - Number of times server has stopped accepting new
+  connections (maxconns)
 * max_connections - Max number of simultaneous connections
-* reclaimed - Number of times an entry was stored using memory from an expired entry
+* reclaimed - Number of times an entry was stored using memory from an
+  expired entry
 * rejected_connections - Conns rejected in maxconns_fast mode
-* store_no_memory - Number of rejected storage requests caused by exhaustion of the memory limit when evictions are disabled
-* store_too_large - Number of rejected storage requests caused by attempting to write a value larger than the item size limit
+* store_no_memory - Number of rejected storage requests caused by exhaustion
+  of the memory limit when evictions are disabled
+* store_too_large - Number of rejected storage requests caused by attempting
+  to write a value larger than the item size limit
 * threads - Number of worker threads requested
-* total_connections - Total number of connections opened since the server started running
+* total_connections - Total number of connections opened since the server
+  started running
 * total_items - Total number of items stored since the server started
 * touch_hits - Number of keys that have been touched with a new expiration time
 * touch_misses - Number of items that have been touched and not found

@@ -20,6 +20,10 @@ type metricDiff struct {
 	Time        time.Time
 }
 
+type helper interface {
+	Helper()
+}
+
 func lessFunc(lhs, rhs *metricDiff) bool {
 	if lhs.Measurement != rhs.Measurement {
 		return lhs.Measurement < rhs.Measurement
@@ -140,8 +144,10 @@ func MetricEqual(expected, actual telegraf.Metric, opts ...cmp.Option) bool {
 
 // RequireMetricEqual halts the test with an error if the metrics are not
 // equal.
-func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric, opts ...cmp.Option) {
-	t.Helper()
+func RequireMetricEqual(t testing.TB, expected, actual telegraf.Metric, opts ...cmp.Option) {
+	if x, ok := t.(helper); ok {
+		x.Helper()
+	}
 
 	var lhs, rhs *metricDiff
 	if expected != nil {
@@ -159,8 +165,10 @@ func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric, opts ...
 
 // RequireMetricsEqual halts the test with an error if the array of metrics
 // are not equal.
-func RequireMetricsEqual(t *testing.T, expected, actual []telegraf.Metric, opts ...cmp.Option) {
-	t.Helper()
+func RequireMetricsEqual(t testing.TB, expected, actual []telegraf.Metric, opts ...cmp.Option) {
+	if x, ok := t.(helper); ok {
+		x.Helper()
+	}
 
 	lhs := make([]*metricDiff, 0, len(expected))
 	for _, m := range expected {

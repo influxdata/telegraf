@@ -1,14 +1,14 @@
 version: 2.1
 orbs:
-  win: circleci/windows@2.4.0
-  aws-cli: circleci/aws-cli@1.4.0
+  win: circleci/windows@5.0.0
+  aws-cli: circleci/aws-cli@3.1.1
 
 executors:
   telegraf-ci:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.18.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.18.5'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -180,6 +180,7 @@ jobs:
       - restore_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
+      - run: ./scripts/make_docs.sh
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
@@ -230,6 +231,21 @@ jobs:
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
+
+  test-licenses:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
+      - run: 'make build_tools'
+      - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
+      - save_cache:
+          name: 'go module cache'
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - '/go/pkg/mod'
 
   windows-package:
     parameters:
@@ -539,72 +555,108 @@ workflows:
           requires:
             - 'test-go-mac'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'i386-package':
           requires:
             - 'test-go-linux-386'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'ppc64le-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'riscv64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 's390x-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'armel-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'amd64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'arm64-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'armhf-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'static-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'mipsel-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'mips-package':
           requires:
             - 'test-go-linux'
           filters:
+            branches:
+              ignore:
+                - master
             tags:
               only: /.*/
       - 'generate-config':
@@ -688,6 +740,7 @@ workflows:
       - 'test-go-linux-386'
       - 'test-go-mac'
       - 'test-go-windows'
+      - 'test-licenses'
       - 'windows-package':
           name: 'windows-package-nightly'
           nightly: true

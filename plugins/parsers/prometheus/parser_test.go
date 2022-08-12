@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,9 +9,11 @@ import (
 	"testing"
 	"time"
 
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -46,6 +49,32 @@ apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="+Inf"} 20
 apiserver_request_latencies_sum{resource="bindings",verb="POST"} 1.02726334e+08
 apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
 `
+	validUniqueHistogramJSON = `{
+		"name": "apiserver_request_latencies",
+		"help": "Response latency distribution in microseconds for each verb, resource and client.",
+		"type": "HISTOGRAM",
+		"metric": [
+			{
+				"label": [
+					{"name": "resource", "value": "bindings"},
+					{"name": "verb", "value": "POST"}
+				],
+				"histogram": {
+					"sample_count": 2025,
+					"sample_sum": 1.02726334e+08,
+					"bucket": [
+						{"cumulative_count": 1994,"upper_bound": 125000},
+						{"cumulative_count": 1997,"upper_bound": 250000},
+						{"cumulative_count": 2000,"upper_bound": 500000},
+						{"cumulative_count": 2005,"upper_bound": 1e+06},
+						{"cumulative_count": 2012,"upper_bound": 2e+06},
+						{"cumulative_count": 2017,"upper_bound": 4e+06},
+						{"cumulative_count": 2024,"upper_bound": 8e+06}
+					]
+				}
+			}
+		]
+	}`
 )
 
 func TestParsingValidGauge(t *testing.T) {
@@ -471,5 +500,137 @@ func TestParserProtobufHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error reading metrics for %s: %s", ts.URL, err)
 	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestHistogramInfBucketPresence(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_count": float64(2025.0),
+				"apiserver_request_latencies_sum":   float64(1.02726334e+08),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "125000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(1994.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "250000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(1997.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "500000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2000.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "1e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2005.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "2e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2012.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "4e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2017.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "8e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2024.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "+Inf",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2025.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+	}
+
+	var metricFamily dto.MetricFamily
+	err := json.Unmarshal([]byte(validUniqueHistogramJSON), &metricFamily)
+	require.NoError(t, err)
+
+	m := metricFamily.Metric[0]
+	tags := common.MakeLabels(m, map[string]string{})
+	metrics := makeBuckets(m, tags, *metricFamily.Name, metricFamily.GetType(), time.Now())
+
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }

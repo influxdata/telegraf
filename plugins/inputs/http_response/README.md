@@ -10,7 +10,8 @@ This input plugin checks HTTP/HTTPS connections.
   ## List of urls to query.
   # urls = ["http://localhost"]
 
-  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  ## Set http_proxy.
+  ## Telegraf uses the system wide proxy settings if it's is not set.
   # http_proxy = "http://localhost:8888"
 
   ## Set response_timeout (default 5 seconds)
@@ -36,12 +37,14 @@ This input plugin checks HTTP/HTTPS connections.
   # '''
 
   ## Optional name of the field that will contain the body of the response.
-  ## By default it is set to an empty String indicating that the body's content won't be added
+  ## By default it is set to an empty String indicating that the body's
+  ## content won't be added
   # response_body_field = ''
 
   ## Maximum allowed HTTP response body size in bytes.
   ## 0 means to use the default of 32MiB.
-  ## If the response body size exceeds this limit a "body_read_error" will be raised
+  ## If the response body size exceeds this limit a "body_read_error" will
+  ## be raised.
   # response_body_max_size = "32MiB"
 
   ## Optional substring or regex match in body of the response (case sensitive)
@@ -50,9 +53,10 @@ This input plugin checks HTTP/HTTPS connections.
   # response_string_match = "\".*_status\".?:.?\"up\""
 
   ## Expected response status code.
-  ## The status code of the response is compared to this value. If they match, the field
-  ## "response_status_code_match" will be 1, otherwise it will be 0. If the
-  ## expected status code is 0, the check is disabled and the field won't be added.
+  ## The status code of the response is compared to this value. If they match,
+  ## the field "response_status_code_match" will be 1, otherwise it will be 0.
+  ## If the expected status code is 0, the check is disabled and the field
+  ## won't be added.
   # response_status_code = 0
 
   ## Optional TLS Config
@@ -69,8 +73,9 @@ This input plugin checks HTTP/HTTPS connections.
   #   Host = "github.com"
 
   ## Optional setting to map response http headers into tags
-  ## If the http header is not present on the request, no corresponding tag will be added
-  ## If multiple instances of the http header are present, only the first value will be used
+  ## If the http header is not present on the request, no corresponding tag will
+  ## be added. If multiple instances of the http header are present, only the
+  ## first value will be used.
   # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
 
   ## Interface to use when dialing an address
@@ -91,7 +96,8 @@ This input plugin checks HTTP/HTTPS connections.
     - response_string_match (int, 0 = mismatch / body read error, 1 = match)
     - response_status_code_match (int, 0 = mismatch, 1 = match)
     - http_response_code (int, response status code)
-    - result_type (string, deprecated in 1.6: use `result` tag and `result_code` field)
+    - result_type (string, deprecated in 1.6: use `result` tag and
+     `result_code` field)
     - result_code (int, [see below](#result--result_code))
 
 ### `result` / `result_code`

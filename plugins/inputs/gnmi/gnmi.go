@@ -20,6 +20,7 @@ import (
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
@@ -269,12 +270,13 @@ func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 
 // SubscribeGNMI and extract telemetry data
 func (c *GNMI) subscribeGNMI(ctx context.Context, worker *Worker, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
-	var opt grpc.DialOption
+	var creds credentials.TransportCredentials
 	if tlscfg != nil {
-		opt = grpc.WithTransportCredentials(credentials.NewTLS(tlscfg))
+		creds = credentials.NewTLS(tlscfg)
 	} else {
-		opt = grpc.WithInsecure()
+		creds = insecure.NewCredentials()
 	}
+	opt := grpc.WithTransportCredentials(creds)
 
 	client, err := grpc.DialContext(ctx, worker.address, opt)
 	if err != nil {
