@@ -2,9 +2,10 @@ package powerdns_recursor
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf"
 	"net"
 	"time"
+
+	"github.com/influxdata/telegraf"
 )
 
 // V3 (4.6.0+) Protocol:
@@ -64,7 +65,7 @@ func (p *PowerdnsRecursor) gatherFromV3Server(address string, acc telegraf.Accum
 	// 16kb, so 64kb should give us a pretty good margin for anything
 	// that has been added since.
 	if responseLength > 64*1024 {
-		return fmt.Errorf("received data length was '%v', we only allow up to '%v'", responseLength, 64*1024)
+		return fmt.Errorf("received data length was '%d', we only allow up to '%d'", responseLength, 64*1024)
 	}
 
 	data := make([]byte, responseLength)
@@ -85,5 +86,5 @@ func (p *PowerdnsRecursor) gatherFromV3Server(address string, acc telegraf.Accum
 
 	acc.AddFields("powerdns_recursor", fields, tags)
 
-	return conn.Close()
+	return nil
 }

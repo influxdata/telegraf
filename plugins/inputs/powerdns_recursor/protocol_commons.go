@@ -46,7 +46,7 @@ func parseResponse(metrics string) map[string]interface{} {
 // in cases where one program is compiled for i386 and the
 // other for amd64 (and similar), this method will fail.
 
-const UIntSizeInBytes = strconv.IntSize / 8
+const uintSizeInBytes = strconv.IntSize / 8
 
 func getEndianness() binary.ByteOrder {
 	buf := make([]byte, 2)
@@ -60,12 +60,12 @@ func getEndianness() binary.ByteOrder {
 }
 
 func writeNativeUIntToConn(conn net.Conn, value uint) (int, error) {
-	intData := make([]byte, UIntSizeInBytes)
+	intData := make([]byte, uintSizeInBytes)
 
-	if UIntSizeInBytes == 4 {
+	if uintSizeInBytes == 4 {
 		getEndianness().PutUint32(intData, uint32(value))
 		return conn.Write(intData)
-	} else if UIntSizeInBytes == 8 {
+	} else if uintSizeInBytes == 8 {
 		getEndianness().PutUint64(intData, uint64(value))
 		return conn.Write(intData)
 	}
@@ -74,7 +74,7 @@ func writeNativeUIntToConn(conn net.Conn, value uint) (int, error) {
 }
 
 func readNativeUIntFromConn(conn net.Conn) (uint, error) {
-	intData := make([]byte, UIntSizeInBytes)
+	intData := make([]byte, uintSizeInBytes)
 
 	n, err := conn.Read(intData)
 
@@ -82,13 +82,13 @@ func readNativeUIntFromConn(conn net.Conn) (uint, error) {
 		return 0, err
 	}
 
-	if n != UIntSizeInBytes {
-		return 0, fmt.Errorf("did not read enough data for native uint: read '%v' bytes, expected '%v'", n, UIntSizeInBytes)
+	if n != uintSizeInBytes {
+		return 0, fmt.Errorf("did not read enough data for native uint: read '%v' bytes, expected '%v'", n, uintSizeInBytes)
 	}
 
-	if UIntSizeInBytes == 4 {
+	if uintSizeInBytes == 4 {
 		return uint(getEndianness().Uint32(intData)), nil
-	} else if UIntSizeInBytes == 8 {
+	} else if uintSizeInBytes == 8 {
 		return uint(getEndianness().Uint64(intData)), nil
 	} else {
 		return 0, fmt.Errorf("unsupported system configuration")

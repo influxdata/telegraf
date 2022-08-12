@@ -2,12 +2,13 @@ package powerdns_recursor
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf"
 	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/influxdata/telegraf"
 )
 
 // V2 (4.5.0 - 4.5.9) Protocol:
@@ -17,13 +18,9 @@ import (
 // Datagram 2 => data: byte[] (max 16_384 bytes)
 func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accumulator) error {
 	randomNumber := rand.Int63()
-	recvSocket := filepath.Join("/", "var", "run", fmt.Sprintf("pdns_recursor_telegraf%d", randomNumber))
-	if p.SocketDir != "" {
-		recvSocket = filepath.Join(p.SocketDir, fmt.Sprintf("pdns_recursor_telegraf%d", randomNumber))
-	}
+	recvSocket := filepath.Join(p.SocketDir, fmt.Sprintf("pdns_recursor_telegraf%d", randomNumber))
 
 	laddr, err := net.ResolveUnixAddr("unixgram", recvSocket)
-
 	if err != nil {
 		return err
 	}
@@ -31,18 +28,20 @@ func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accum
 	defer os.Remove(recvSocket)
 
 	raddr, err := net.ResolveUnixAddr("unixgram", address)
-
 	if err != nil {
 		return err
 	}
+
 	conn, err := net.DialUnix("unixgram", laddr, raddr)
 	if err != nil {
 		return err
 	}
+
+	defer conn.Close()
+
 	if err := os.Chmod(recvSocket, os.FileMode(p.mode)); err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	if err := conn.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
 		return err
@@ -50,7 +49,6 @@ func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accum
 
 	// First send a 0 status code.
 	_, err = conn.Write([]byte{0, 0, 0, 0})
-
 	if err != nil {
 		return err
 	}
@@ -59,7 +57,6 @@ func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accum
 	command := "get-all"
 
 	_, err = conn.Write([]byte(command))
-
 	if err != nil {
 		return err
 	}
@@ -94,5 +91,5 @@ func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accum
 
 	acc.AddFields("powerdns_recursor", fields, tags)
 
-	return conn.Close()
+	return nil
 }
