@@ -53,41 +53,67 @@ func (i *sliceFlags) Set(value string) error {
 }
 
 // If you update these, update usage.go and usage_windows.go
-var fDebug = flag.Bool("debug", false,
-	"turn on debug logging")
-var pprofAddr = flag.String("pprof-addr", "",
-	"pprof address to listen on, not activate pprof if empty")
-var fQuiet = flag.Bool("quiet", false,
-	"run in quiet mode")
-var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs")
-var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 
-var fConfigs sliceFlags
-var fConfigDirs sliceFlags
-var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [notify, poll]")
-var fVersion = flag.Bool("version", false, "display the version and exit")
-var fSampleConfig = flag.Bool("sample-config", false,
-	"print out full sample configuration")
-var fPidfile = flag.String("pidfile", "", "file to write our pid to")
-var fDeprecationList = flag.Bool("deprecation-list", false,
-	"print all deprecated plugins or plugin options.")
 var fSectionFilters = flag.String("section-filter", "",
 	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
-var fInputList = flag.Bool("input-list", false,
-	"print available input plugins.")
+
 var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
-var fOutputList = flag.Bool("output-list", false,
-	"print available output plugins.")
+
 var fAggregatorFilters = flag.String("aggregator-filter", "",
 	"filter the aggregators to enable, separator is :")
 var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
-var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 
+// !!! MIGRATED !!!
+
+// String slices
+var fConfigs sliceFlags
+var fConfigDirs sliceFlags
+
+//int
+var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
+
+//windows only
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fService = flag.String("service", "", "operate on the service (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceRestartDelay = flag.String("service-restart-delay", "5m", "delay before service auto restart, default is 5m (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceAutoRestart = flag.Bool("service-auto-restart", false, "auto restart service on failure (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
+
+// bool
+var fRunOnce = flag.Bool("once", false, "run one gather and exit")
+var fDebug = flag.Bool("debug", false, "turn on debug logging")
+var fQuiet = flag.Bool("quiet", false, "run in quiet mode")
+var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs")
+var fDeprecationList = flag.Bool("deprecation-list", false, "print all deprecated plugins or plugin options.")
+var fInputList = flag.Bool("input-list", false, "print available input plugins.")
+var fOutputList = flag.Bool("output-list", false, "print available output plugins.")
+var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
+var fVersion = flag.Bool("version", false, "display the version and exit")
+
+// string
+var pprofAddr = flag.String("pprof-addr", "", "pprof address to listen on, not activate pprof if empty")
+var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [notify, poll]")
+var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fPlugins = flag.String("plugin-directory", "", "path to directory containing external plugins")
+var fUsage = flag.String("usage", "", "print usage for a plugin, ie, 'telegraf --usage mysql'")
+
+// config subcommand flags
 // Initialize the subcommand `telegraf config`
 // This duplicates the above filters which are used for `telegraf --sample-config` and `telegraf --deprecation-list`
 var configCmd = flag.NewFlagSet("config", flag.ExitOnError)
@@ -102,32 +128,7 @@ var fsubAggregatorFilters = configCmd.String("aggregator-filter", "",
 var fSubProcessorFilters = configCmd.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
 
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fService = flag.String("service", "",
-	"operate on the service (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fServiceName = flag.String("service-name", "telegraf",
-	"service name (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service",
-	"service display name (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fServiceAutoRestart = flag.Bool("service-auto-restart", false,
-	"auto restart service on failure (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fServiceRestartDelay = flag.String("service-restart-delay", "5m",
-	"delay before service auto restart, default is 5m (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fRunAsConsole = flag.Bool("console", false,
-	"run as console application (windows only)")
-var fPlugins = flag.String("plugin-directory", "",
-	"path to directory containing external plugins")
-var fRunOnce = flag.Bool("once", false, "run one gather and exit")
+//
 
 var stop chan struct{}
 
