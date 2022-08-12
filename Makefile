@@ -45,8 +45,8 @@ MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
-BUILD_INFO_IMPORT_PATH=github.com/influxdata/telegraf/internal
-LDFLAGS := $(LDFLAGS) -X $(BUILD_INFO_IMPORT_PATH).commit=$(commit) -X $(BUILD_INFO_IMPORT_PATH).branch=$(branch) -X $(BUILD_INFO_IMPORT_PATH).goos=$(GOOS) -X $(BUILD_INFO_IMPORT_PATH).goarch=$(GOARCH)
+INTERNAL_PKG=github.com/influxdata/telegraf/internal
+LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).commit=$(commit) -X $(INTERNAL_PKG).branch=$(branch)
 ifneq ($(tag),)
 	LDFLAGS += -X $(BUILD_INFO_IMPORT_PATH).version=$(version)
 else
