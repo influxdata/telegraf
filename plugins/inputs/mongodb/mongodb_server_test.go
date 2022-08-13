@@ -119,7 +119,8 @@ func TestIgnoreUnreachableHostsIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	var acc testutil.Accumulator
-	m.Gather(&acc)
+	err = m.Gather(&acc)
+	require.NoError(t, err)
 	require.NotContains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
@@ -146,7 +147,8 @@ func TestNoticeUnreachleHostsIntegration(t *testing.T) {
 	m.IgnoreUnreachableHosts = false
 
 	var acc testutil.Accumulator
-	m.Gather(&acc)
+	err = m.Gather(&acc)
+	require.NoError(t, err)
 	require.Contains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
