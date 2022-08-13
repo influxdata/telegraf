@@ -22,6 +22,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -146,7 +147,6 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 				if err := srv.ping(); err != nil {
 					return
 				}
-
 			}
 
 			err := srv.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDbs)
