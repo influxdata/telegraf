@@ -106,11 +106,6 @@ func TestIgnoreUnreachableHostsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := createTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
-
 	m := &MongoDB{
 		Log:     testutil.Logger{},
 		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
@@ -127,11 +122,6 @@ func TestNoticeUnreachleHostsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
-	container := createTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
 
 	m := &MongoDB{
 		Log:     testutil.Logger{},
