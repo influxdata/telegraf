@@ -46,6 +46,8 @@ All MongoDB server versions from 2.6 and higher are supported.
 
   ## When true, telegraf will not return an error on start if one of
   ## the mongodb targets is unreachable
+  ## Note that while running, telegraf will also avoid data gathering for
+  ## unreachable mongo endpoints
   # ignore_unreachable_hosts = false
 ```
 

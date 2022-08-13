@@ -117,6 +117,10 @@ func TestIgnoreUnreachableHostsIntegration(t *testing.T) {
 	require.NoError(t, err)
 	err = m.Start()
 	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	m.Gather(&acc)
+	require.NotContains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
 func TestNoticeUnreachleHostsIntegration(t *testing.T) {
@@ -133,6 +137,17 @@ func TestNoticeUnreachleHostsIntegration(t *testing.T) {
 	require.NoError(t, err)
 	err = m.Start()
 	require.Error(t, err)
+
+	// set IgnoreUnreachableHosts to true to bypass start error
+	m.IgnoreUnreachableHosts = true
+	err = m.Start()
+	require.NoError(t, err)
+	// set back to false to test the log behavior
+	m.IgnoreUnreachableHosts = false
+
+	var acc testutil.Accumulator
+	m.Gather(&acc)
+	require.Contains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
 func TestPoolStatsVersionCompatibility(t *testing.T) {

@@ -142,6 +142,13 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
+			if m.IgnoreUnreachableHosts {
+				if err := srv.ping(); err != nil {
+					return
+				}
+
+			}
+
 			err := srv.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDbs)
 			if err != nil {
 				m.Log.Errorf("failed to gather data: %q", err)
