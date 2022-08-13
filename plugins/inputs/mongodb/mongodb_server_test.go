@@ -12,6 +12,7 @@ import (
 )
 
 var ServicePort = "27017"
+var unreachableMongoEndpoint = "mongodb://user:pass@127.0.0.1:27017/nop"
 
 func createTestServer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
@@ -107,8 +108,8 @@ func TestIgnoreUnreachableHostsIntegration(t *testing.T) {
 	}
 
 	m := &MongoDB{
-		Log:     testutil.Logger{},
-		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
+		Log:     &testutil.CaptureLogger{},
+		Servers: []string{unreachableMongoEndpoint},
 	}
 
 	m.IgnoreUnreachableHosts = true
@@ -124,8 +125,8 @@ func TestNoticeUnreachleHostsIntegration(t *testing.T) {
 	}
 
 	m := &MongoDB{
-		Log:     testutil.Logger{},
-		Servers: []string{"mongodb://user:pass@127.0.0.1:27017/nop"},
+		Log:     &testutil.CaptureLogger{},
+		Servers: []string{unreachableMongoEndpoint},
 	}
 
 	err := m.Init()
