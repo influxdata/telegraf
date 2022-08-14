@@ -23,7 +23,6 @@ following works:
 - github.com/Azure/go-ansiterm [MIT License](https://github.com/Azure/go-ansiterm/blob/master/LICENSE)
 - github.com/Azure/go-autorest [Apache License 2.0](https://github.com/Azure/go-autorest/blob/master/LICENSE)
 - github.com/Azure/go-ntlmssp [MIT License](https://github.com/Azure/go-ntlmssp/blob/master/LICENSE)
-- github.com/AzureAD/microsoft-authentication-library-for-go [MIT License](https://github.com/AzureAD/microsoft-authentication-library-for-go/blob/dev/LICENSE)
 - github.com/ClickHouse/clickhouse-go [MIT License](https://github.com/ClickHouse/clickhouse-go/blob/master/LICENSE)
 - github.com/Mellanox/rdmamap [Apache License 2.0](https://github.com/Mellanox/rdmamap/blob/master/LICENSE)
 - github.com/Microsoft/go-winio [MIT License](https://github.com/Microsoft/go-winio/blob/master/LICENSE)
