@@ -1,7 +1,7 @@
 # Elasticsearch Query Input Plugin
 
-This [elasticsearch](https://www.elastic.co/) query plugin queries endpoints to
-obtain metrics from data stored in an Elasticsearch cluster.
+This [elasticsearch](https://www.elastic.co/) query plugin queries endpoints
+to obtain metrics from data stored in an Elasticsearch cluster.
 
 The following is supported:
 
@@ -12,8 +12,8 @@ The following is supported:
 
 ## Elasticsearch Support
 
-This plugins is tested against Elasticsearch 5.x and 6.x releases.  Currently it
-is known to break on 7.x or greater versions.
+This plugins is tested against Elasticsearch 5.x and 6.x releases.
+Currently it is known to break on 7.x or greater versions.
 
 ## Configuration
 
@@ -80,7 +80,8 @@ is known to break on 7.x or greater versions.
     # metric_function = "avg"
 
     ## Fields to be used as tags
-    ## Must be text, non-analyzed fields. Metric aggregations are performed per tag
+    ## Must be text, non-analyzed fields. Metric aggregations are performed
+    ## per tag
     # tags = ["field.keyword", "field2.keyword"]
 
     ## Set to true to not ignore documents when the tag(s) above are missing

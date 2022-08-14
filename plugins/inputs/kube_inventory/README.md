@@ -1,7 +1,7 @@
 # Kubernetes Inventory Input Plugin
 
-This plugin generates metrics derived from the state of the following Kubernetes
-resources:
+This plugin generates metrics derived from the state of the following
+Kubernetes resources:
 
 - daemonsets
 - deployments
@@ -14,9 +14,9 @@ resources:
 - services
 - statefulsets
 
-Kubernetes is a fast moving project, with a new minor release every 3 months. As
-such, we will aim to maintain support only for versions that are supported by
-the major cloud providers; this is roughly 4 release / 2 years.
+Kubernetes is a fast moving project, with a new minor release every 3 months.
+As such, we will aim to maintain support only for versions that are supported
+by the major cloud providers; this is roughly 4 release / 2 years.
 
 **This plugin supports Kubernetes 1.11 and later.**
 
@@ -30,7 +30,8 @@ avoid cardinality issues:
 - Write to a database with an appropriate [retention policy][].
 - Consider using the [Time Series Index][tsi].
 - Monitor your databases [series cardinality][].
-- Consult the [InfluxDB documentation][influx-docs] for the most up-to-date techniques.
+- Consult the [InfluxDB documentation][influx-docs] for the most up-to-date
+  techniques.
 
 ## Configuration
 
@@ -44,10 +45,15 @@ avoid cardinality issues:
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ##
   ## If both of these are empty, we'll use the default serviceaccount:
   ## at: /run/secrets/kubernetes.io/serviceaccount/token
-  # bearer_token = "/path/to/bearer/token"
+  ##
+  ## To auto-refresh the token, please use a file with the bearer_token option.
+  ## If given a string, Telegraf cannot refresh the token periodically.
+  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
+  ## deprecated in 1.24.0; use bearer_token with a file
   # bearer_token_string = "abc_123"
 
   ## Set response_timeout (default 5 seconds)
@@ -55,8 +61,9 @@ avoid cardinality issues:
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
-  ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress",
+  ## "nodes", "persistentvolumes", "persistentvolumeclaims", "pods", "services",
+  ## "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -347,4 +354,3 @@ kubernetes_statefulset,namespace=default,selector_select1=s1,statefulset_name=et
 [tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/
-[k8s-telegraf]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/

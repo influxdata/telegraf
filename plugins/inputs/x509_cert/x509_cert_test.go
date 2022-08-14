@@ -103,6 +103,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{test.server},
 				Timeout: config.Duration(test.timeout),
+				Log:     testutil.Logger{},
 			}
 			require.NoError(t, sc.Init())
 
@@ -165,6 +166,7 @@ func TestGatherLocal(t *testing.T) {
 
 			sc := X509Cert{
 				Sources: []string{f.Name()},
+				Log:     testutil.Logger{},
 			}
 			require.NoError(t, sc.Init())
 
@@ -193,6 +195,7 @@ func TestTags(t *testing.T) {
 
 	sc := X509Cert{
 		Sources: []string{f.Name()},
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, sc.Init())
 
@@ -242,6 +245,7 @@ func TestGatherExcludeRootCerts(t *testing.T) {
 	sc := X509Cert{
 		Sources:          []string{f.Name()},
 		ExcludeRootCerts: true,
+		Log:              testutil.Logger{},
 	}
 	require.NoError(t, sc.Init())
 
@@ -277,6 +281,7 @@ func TestGatherChain(t *testing.T) {
 
 			sc := X509Cert{
 				Sources: []string{f.Name()},
+				Log:     testutil.Logger{},
 			}
 			require.NoError(t, sc.Init())
 
@@ -365,8 +370,8 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 	duration := time.Duration(15) * time.Second
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
-		Log:     testutil.Logger{},
 		Timeout: config.Duration(duration),
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
@@ -379,6 +384,7 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 func TestSourcesToURLs(t *testing.T) {
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "smtp://influxdata.com:25", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
@@ -407,6 +413,7 @@ func TestServerName(t *testing.T) {
 			sc := &X509Cert{
 				ServerName:   test.fromCfg,
 				ClientConfig: _tls.ClientConfig{ServerName: test.fromTLS},
+				Log:          testutil.Logger{},
 			}
 			require.NoError(t, sc.Init())
 			u, err := url.Parse(test.url)

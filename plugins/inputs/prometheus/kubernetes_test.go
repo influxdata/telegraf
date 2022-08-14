@@ -119,6 +119,27 @@ func TestDeletePods(t *testing.T) {
 	require.Equal(t, 0, len(prom.kubernetesPods))
 }
 
+func TestKeepDefaultNamespaceLabelName(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
+
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	registerPod(p, prom)
+	tags := prom.kubernetesPods["http://127.0.0.1:9102/metrics"].Tags
+	require.Equal(t, "default", tags["namespace"])
+}
+
+func TestChangeNamespaceLabelName(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}, PodNamespaceLabelName: "pod_namespace"}
+
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	registerPod(p, prom)
+	tags := prom.kubernetesPods["http://127.0.0.1:9102/metrics"].Tags
+	require.Equal(t, "default", tags["pod_namespace"])
+	require.Equal(t, "", tags["namespace"])
+}
+
 func TestPodHasMatchingNamespace(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}, PodNamespace: "default"}
 

@@ -157,6 +157,17 @@ should be made to switch between these two styles but if given the option it
 is preferred to use the non-reseting variant.  This style is more resilient in
 the face of downtime and does not contain a fixed time element.
 
+### Source tag
+
+When metrics are gathered from another host, the metric schema should have a tag
+named "source" that contains the other host's name. See [this feature
+request](https://github.com/influxdata/telegraf/issues/4413) for details.
+
+The metric schema doesn't need to have a tag for the host running
+telegraf. Telegraf agent code can add a tag named "host" and by default
+containing the hostname reported by the kernel. This can be configured through
+the "hostname" and "omit_hostname" agent settings.
+
 ## Go Best Practices
 
 In general code should follow best practice describe in [Code Review

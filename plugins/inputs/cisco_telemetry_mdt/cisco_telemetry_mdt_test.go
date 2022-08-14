@@ -12,6 +12,7 @@ import (
 	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -699,7 +700,7 @@ func TestGRPCDialoutError(t *testing.T) {
 	require.NoError(t, err)
 
 	addr := c.Address()
-	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure())
+	conn, err := grpc.Dial(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	client := dialout.NewGRPCMdtDialoutClient(conn)
 	stream, err := client.MdtDialout(context.Background())
@@ -725,7 +726,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	telemetry := mockTelemetryMessage()
 
 	addr := c.Address()
-	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	require.NoError(t, err)
 	client := dialout.NewGRPCMdtDialoutClient(conn)
 	stream, err := client.MdtDialout(context.TODO())
@@ -736,7 +737,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	args := &dialout.MdtDialoutArgs{Data: data, ReqId: 456}
 	require.NoError(t, stream.Send(args))
 
-	conn2, err := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	conn2, err := grpc.Dial(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	require.NoError(t, err)
 	client2 := dialout.NewGRPCMdtDialoutClient(conn2)
 	stream2, err := client2.MdtDialout(context.TODO())
@@ -777,4 +778,30 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	tags = map[string]string{"path": "type:model/other/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
+}
+
+func TestGRPCDialoutKeepalive(t *testing.T) {
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0", EnforcementPolicy: GRPCEnforcementPolicy{
+		PermitKeepaliveWithoutCalls: true,
+		KeepaliveMinTime:            0,
+	}}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	require.NoError(t, err)
+
+	addr := c.Address()
+	conn, err := grpc.Dial(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	client := dialout.NewGRPCMdtDialoutClient(conn)
+	stream, err := client.MdtDialout(context.Background())
+	require.NoError(t, err)
+
+	telemetry := mockTelemetryMessage()
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
+	args := &dialout.MdtDialoutArgs{Data: data, ReqId: 456}
+	require.NoError(t, stream.Send(args))
+
+	c.Stop()
+	require.NoError(t, conn.Close())
 }

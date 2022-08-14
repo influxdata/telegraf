@@ -51,7 +51,8 @@ The mock plugin only requires that:
 
 The available algorithms for generating mock data include:
 
-* Constant - generate a field with the given value of type string, float, int or bool
+* Constant - generate a field with the given value of type string, float, int
+  or bool
 * Random Float - generate a random float, inclusive of min and max
 * Sine Wave - produce a sine wave with a certain amplitude and period
 * Step - always add the step value, negative values accepted

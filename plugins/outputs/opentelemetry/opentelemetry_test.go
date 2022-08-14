@@ -2,14 +2,14 @@ package opentelemetry
 
 import (
 	"context"
+	"net"
+	"testing"
+	"time"
+
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"google.golang.org/grpc/credentials/insecure"
-	"net"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
@@ -66,13 +66,7 @@ func TestOpenTelemetry(t *testing.T) {
 		time.Unix(0, 1622848686000000000))
 
 	err = plugin.Write([]telegraf.Metric{input})
-	if err != nil {
-		// TODO not sure why the service returns this error, but the data arrives as required by the test
-		// rpc error: code = Internal desc = grpc: error while marshaling: proto: Marshal called with nil
-		if !strings.Contains(err.Error(), "proto: Marshal called with nil") {
-			assert.NoError(t, err)
-		}
-	}
+	require.NoError(t, err)
 
 	got := m.GotMetrics()
 
@@ -139,5 +133,5 @@ func (m *mockOtelService) Export(ctx context.Context, request pmetricotlp.Reques
 	ctxMetadata, ok := metadata.FromIncomingContext(ctx)
 	assert.Equal(m.t, []string{"header1"}, ctxMetadata.Get("test"))
 	assert.True(m.t, ok)
-	return pmetricotlp.Response{}, nil
+	return pmetricotlp.NewResponse(), nil
 }

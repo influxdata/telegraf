@@ -138,6 +138,7 @@ To complete TLS setup please refer to [rsyslog docs][4].
     - facility (string)
     - hostname (string)
     - appname (string)
+    - source (string)
   - fields
     - version (integer)
     - severity_code (integer)
@@ -164,8 +165,6 @@ syslog,appname=evntslog,facility=local4,hostname=mymachine.example.com,severity=
 
 ## Troubleshooting
 
-You can send debugging messages directly to the input plugin using netcat:
-
 ```sh
 # TCP with octet framing
 echo "57 <13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc 127.0.0.1 6514
@@ -173,6 +172,14 @@ echo "57 <13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc 127.0.0.
 # UDP
 echo "<13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc -u 127.0.0.1 6514
 ```
+
+### Resolving Source IPs
+
+The `source` tag stores the remote IP address of the syslog sender.
+To resolve these IPs to DNS names, use the
+[`reverse_dns` processor](../../../plugins/processors/reverse_dns).
+
+You can send debugging messages directly to the input plugin using netcat:
 
 ### RFC3164
 
@@ -201,3 +208,19 @@ $UDPServerRun 514
 
 Make adjustments to the target address as needed and sent your RFC3164 messages
 to port 514.
+
+## Example Output
+
+Here is example output of this plugin:
+
+```shell
+syslog,appname=docker-compose,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643706396113000i,version=1i 1624643706400667198
+syslog,appname=tailscaled,facility=daemon,host=bb8,hostname=dev,location=home,severity=info,source=10.0.0.15 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643706403394000i,version=1i 1624643706407850408
+syslog,appname=docker-compose,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643706675853000i,version=1i 1624643706679251683
+syslog,appname=telegraf,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643710005006000i,version=1i 1624643710008285426
+syslog,appname=telegraf,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643710005696000i,version=1i 1624643710010754050
+syslog,appname=docker-compose,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643715777813000i,version=1i 1624643715782158154
+syslog,appname=docker-compose,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643716396547000i,version=1i 1624643716400395788
+syslog,appname=tailscaled,facility=daemon,host=bb8,hostname=dev,location=home,severity=info,source=10.0.0.15 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643716404931000i,version=1i 1624643716416947058
+syslog,appname=docker-compose,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643716676633000i,version=1i 1624643716680157558
+```

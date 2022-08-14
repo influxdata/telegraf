@@ -159,6 +159,8 @@ by running Telegraf with the `--debug` argument.
     - repl_updates (integer)
     - repl_oplog_window_sec (integer)
     - repl_state (integer)
+    - repl_member_health (integer)
+    - repl_health_avg (float)
     - resident_megabytes (integer)
     - state (string)
     - storage_freelist_search_bucket_exhausted (integer)

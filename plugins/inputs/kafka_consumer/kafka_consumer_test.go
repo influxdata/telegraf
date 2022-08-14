@@ -296,8 +296,7 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	// err = cg.ConsumeClaim(session, &claim)
 	//require.NoError(t, err)
 	// So stick with the line below for now.
-	//nolint:errcheck
-	cg.ConsumeClaim(session, &claim)
+	_ = cg.ConsumeClaim(session, &claim)
 
 	err = cg.Cleanup(session)
 	require.NoError(t, err)

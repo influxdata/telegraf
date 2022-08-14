@@ -11,8 +11,9 @@ import (
 )
 
 func TestGather(t *testing.T) {
-	var lvm LVM = LVM{UseSudo: false}
 	var acc testutil.Accumulator
+
+	lvm := LVM{UseSudo: false}
 
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
@@ -129,8 +130,9 @@ func TestHelperProcess(_ *testing.T) {
 
 // test when no lvm devices exist
 func TestGatherNoLVM(t *testing.T) {
-	var noLVM LVM = LVM{UseSudo: false}
 	var acc testutil.Accumulator
+
+	noLVM := LVM{UseSudo: false}
 
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommandNoLVM

@@ -49,6 +49,9 @@ InfluxDB it is recommended to use [`influxdb_listener`][influxdb_listener] or
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
+  ## Minimal TLS version accepted by the server
+  # tls_min_version = "TLS12"
+
   ## Optional username and password to accept for HTTP basic authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"
@@ -70,6 +73,8 @@ InfluxDB it is recommended to use [`influxdb_listener`][influxdb_listener] or
 
 Metrics are collected from the part of the request specified by the
 `data_source` param and are parsed depending on the value of `data_format`.
+
+## Example Output
 
 ## Troubleshooting
 

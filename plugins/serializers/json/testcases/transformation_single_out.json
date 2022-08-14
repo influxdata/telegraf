@@ -1,0 +1,32 @@
+[
+  {
+    "sdkVersion": "4.9.1",
+    "time": 1653643420,
+    "key": "12345",
+    "events": [
+      {
+        "time": 1653643420,
+        "flag": "F5",
+        "experimentVersion": 0,
+        "value": "false",
+        "type": "IMPRESSION",
+        "count": 5
+      }
+    ]
+  },
+  {
+    "sdkVersion": "1.18.3",
+    "time": 1653646789,
+    "key": "67890",
+    "events": [
+      {
+        "time": 1653646789,
+        "flag": "E42",
+        "experimentVersion": 0,
+        "value": "true",
+        "type": "EXPRESSION",
+        "count": 42
+      }
+    ]
+  }
+]

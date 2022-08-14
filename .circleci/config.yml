@@ -1,14 +1,14 @@
 version: 2.1
 orbs:
-  win: circleci/windows@2.4.0
-  aws-cli: circleci/aws-cli@1.4.0
+  win: circleci/windows@5.0.0
+  aws-cli: circleci/aws-cli@3.1.1
 
 executors:
   telegraf-ci:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.18.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.18.5'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -231,6 +231,21 @@ jobs:
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
+
+  test-licenses:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
+      - run: 'make build_tools'
+      - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
+      - save_cache:
+          name: 'go module cache'
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - '/go/pkg/mod'
 
   windows-package:
     parameters:
@@ -725,6 +740,7 @@ workflows:
       - 'test-go-linux-386'
       - 'test-go-mac'
       - 'test-go-windows'
+      - 'test-licenses'
       - 'windows-package':
           name: 'windows-package-nightly'
           nightly: true
