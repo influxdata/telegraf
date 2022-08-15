@@ -3,7 +3,7 @@ package groundwork
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,7 +29,7 @@ func TestWriteWithDefaults(t *testing.T) {
 
 	// Simulate Groundwork server that should receive custom metrics
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 
 		// Decode body to use in assertions below
@@ -81,7 +81,7 @@ func TestWriteWithFields(t *testing.T) {
 
 	// Simulate Groundwork server that should receive custom metrics
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 
 		// Decode body to use in assertions below
@@ -142,7 +142,7 @@ func TestWriteWithTags(t *testing.T) {
 
 	// Simulate Groundwork server that should receive custom metrics
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 
 		// Decode body to use in assertions below
