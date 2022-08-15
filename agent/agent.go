@@ -824,7 +824,7 @@ func (a *Agent) flushLoop(
 		case <-flushRequested:
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-output.BatchReady:
-			logError(a.flushBatch(output, ticker, output.WriteBatch))
+			logError(a.flushBatch(output, output.WriteBatch))
 		}
 	}
 }
@@ -858,7 +858,6 @@ func (a *Agent) flushOnce(
 // interval elapsing is not considered during these flushes.
 func (a *Agent) flushBatch(
 	output *models.RunningOutput,
-	ticker Ticker,
 	writeFunc func() error,
 ) error {
 	err := writeFunc()
