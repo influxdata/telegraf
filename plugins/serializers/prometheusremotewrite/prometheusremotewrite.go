@@ -335,9 +335,11 @@ func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time) 
 	}}
 	labelscopy := make([]prompb.Label, len(labels), len(labels)+1)
 	copy(labelscopy, labels)
-	labels = append(labelscopy, prompb.Label{
-		Name:  "__name__",
-		Value: name,
-	})
+	labels = append([]prompb.Label{
+		prompb.Label{
+			Name:  "__name__",
+			Value: name,
+		},
+	}, labelscopy...)
 	return MakeMetricKey(labels), prompb.TimeSeries{Labels: labels, Samples: sample}
 }
