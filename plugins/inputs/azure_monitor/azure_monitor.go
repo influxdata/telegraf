@@ -2,12 +2,10 @@ package azure_monitor
 
 import (
 	"fmt"
-	"sync"
-	"time"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
+	"sync"
 )
 
 type AzureMonitor struct {
@@ -131,27 +129,27 @@ func (am *AzureMonitor) Init() error {
 	}
 
 	if err := am.setReceiver(); err != nil {
-		return fmt.Errorf("error setting Azure Monitor receiver: %v", err)
+		return fmt.Errorf("error setting Azure Monitor receiver: %w", err)
 	}
 
 	if err := am.receiver.CreateResourceTargetsFromResourceGroupTargets(); err != nil {
-		return fmt.Errorf("error creating resource targets from resource group targets: %v", err)
+		return fmt.Errorf("error creating resource targets from resource group targets: %w", err)
 	}
 
 	if err := am.receiver.CreateResourceTargetsFromSubscriptionTargets(); err != nil {
-		return fmt.Errorf("error creating resource targets from subscription targets: %v", err)
+		return fmt.Errorf("error creating resource targets from subscription targets: %w", err)
 	}
 
 	if err := am.receiver.CheckResourceTargetsMetricsValidation(); err != nil {
-		return fmt.Errorf("error checking resource targets metrics validation: %v", err)
+		return fmt.Errorf("error checking resource targets metrics validation: %w", err)
 	}
 
 	if err := am.receiver.SetResourceTargetsMetrics(); err != nil {
-		return fmt.Errorf("error setting resource targets metrics: %v", err)
+		return fmt.Errorf("error setting resource targets metrics: %w", err)
 	}
 
 	if err := am.receiver.SplitResourceTargetsMetricsByMinTimeGrain(); err != nil {
-		return fmt.Errorf("error spliting resource targets metrics by min time grain: %v", err)
+		return fmt.Errorf("error spliting resource targets metrics by min time grain: %w", err)
 	}
 
 	am.receiver.SplitResourceTargetsWithMoreThanMaxMetrics()
@@ -163,22 +161,46 @@ func (am *AzureMonitor) Init() error {
 }
 
 func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
-	am.collectResourceTargetsMetrics(acc)
+	var waitGroup sync.WaitGroup
+
+	for _, target := range am.receiver.Targets.ResourceTargets {
+		am.Log.Debug("Collecting metrics for resource target ", target.ResourceID)
+		waitGroup.Add(1)
+
+		go func(target *receiver.ResourceTarget) {
+			defer waitGroup.Done()
+
+			collectedMetrics, notCollectedMetrics, err := am.receiver.CollectResourceTargetMetrics(target)
+			if err != nil {
+				acc.AddError(err)
+			}
+
+			for _, collectedMetric := range collectedMetrics {
+				acc.AddFields(collectedMetric.Name, collectedMetric.Fields, collectedMetric.Tags)
+			}
+
+			for _, notCollectedMetric := range notCollectedMetrics {
+				am.Log.Info("Did not get any metric value from Azure Monitor API for the metric ID ", notCollectedMetric)
+			}
+		}(target)
+
+		waitGroup.Wait()
+	}
+
 	return nil
 }
 
 func (am *AzureMonitor) setReceiver() error {
-	resourceTargets := make([]*receiver.ResourceTarget, 0)
-	resourceGroupTargets := make([]*receiver.ResourceGroupTarget, 0)
-	subscriptionTargets := make([]*receiver.Resource, 0)
+	var resourceTargets []*receiver.ResourceTarget
+	var resourceGroupTargets []*receiver.ResourceGroupTarget
+	var subscriptionTargets []*receiver.Resource
 
 	for _, target := range am.ResourceTargets {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
 
 	for _, target := range am.ResourceGroupTargets {
-		resources := make([]*receiver.Resource, 0)
-
+		var resources []*receiver.Resource
 		for _, resource := range target.Resources {
 			resources = append(resources, receiver.NewResource(resource.ResourceType, resource.Metrics, resource.Aggregations))
 		}
@@ -191,41 +213,9 @@ func (am *AzureMonitor) setReceiver() error {
 	}
 
 	targets := receiver.NewTargets(resourceTargets, resourceGroupTargets, subscriptionTargets)
-	rec, err := receiver.NewAzureMonitorMetricsReceiver(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, targets, am.azureClients)
-	if err != nil {
-		return err
-	}
-
-	am.receiver = rec
-	return nil
-}
-
-func (am *AzureMonitor) collectResourceTargetsMetrics(acc telegraf.Accumulator) {
-	var waitGroup sync.WaitGroup
-
-	for _, target := range am.receiver.Targets.ResourceTargets {
-		am.Log.Debug("Collecting metrics for resource target ", target.ResourceID)
-		waitGroup.Add(1)
-
-		go func(target *receiver.ResourceTarget) {
-			defer waitGroup.Done()
-
-			collectedMetrics, notCollectedMetrics, err := am.receiver.CollectResourceTargetMetrics(target)
-			if err != nil {
-				acc.AddError(fmt.Errorf("%v", err))
-			}
-
-			for _, collectedMetric := range collectedMetrics {
-				acc.AddFields(collectedMetric.Name, collectedMetric.Fields, collectedMetric.Tags, time.Now())
-			}
-
-			for _, notCollectedMetric := range notCollectedMetrics {
-				am.Log.Info("Did not get any metric value from Azure Monitor API for the metric ID ", notCollectedMetric)
-			}
-		}(target)
-
-		waitGroup.Wait()
-	}
+	var err error
+	am.receiver, err = receiver.NewAzureMonitorMetricsReceiver(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, targets, am.azureClients)
+	return err
 }
 
 func init() {

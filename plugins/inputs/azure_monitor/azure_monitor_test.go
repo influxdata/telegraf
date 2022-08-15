@@ -6,7 +6,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 	"github.com/influxdata/telegraf/testutil"
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,45 +65,43 @@ func TestInit_ResourceTargetsOnly(t *testing.T) {
 		}
 	}
 
-	err := am.Init()
-	require.NoError(t, err)
-
-	assert.Len(t, am.receiver.Targets.ResourceTargets, 8)
+	require.NoError(t, am.Init())
+	require.Len(t, am.receiver.Targets.ResourceTargets, 8)
 
 	for _, target := range am.receiver.Targets.ResourceTargets {
-		assert.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
+		require.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
 
 		if target.ResourceID == testFullResourceGroup1ResourceType1Resource1 {
-			assert.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
+			require.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				assert.Equal(t, []string{testMetric3}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+				require.Equal(t, []string{testMetric3}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
-				assert.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+				require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 3 {
-				assert.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 4 {
-				assert.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
-				assert.Equal(t, expectedResourceMetrics, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, expectedResourceMetrics, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 		}
 		if target.ResourceID == testFullResourceGroup1ResourceType2Resource2 {
-			assert.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
-			assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+			require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+			require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 		}
 		if target.ResourceID == testFullResourceGroup2ResourceType1Resource3 {
-			assert.Equal(t, []string{testMetric1, testMetric2, testMetric3}, target.Metrics)
-			assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+			require.Equal(t, []string{testMetric1, testMetric2, testMetric3}, target.Metrics)
+			require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 		}
 	}
 }
@@ -180,61 +177,59 @@ func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
 		}
 	}
 
-	err := am.Init()
-	require.NoError(t, err)
-
-	assert.Len(t, am.receiver.Targets.ResourceTargets, 9)
+	require.NoError(t, am.Init())
+	require.Len(t, am.receiver.Targets.ResourceTargets, 9)
 
 	for _, target := range am.receiver.Targets.ResourceTargets {
-		assert.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
+		require.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
 
 		if target.ResourceID == testFullResourceGroup1ResourceType1Resource1 {
-			assert.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
+			require.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				assert.Equal(t, []string{testMetric3}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+				require.Equal(t, []string{testMetric3}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
-				assert.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+				require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 3 {
-				assert.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 4 {
-				assert.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
-				assert.Equal(t, expectedResourceMetrics, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, expectedResourceMetrics, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 		}
 		if target.ResourceID == testFullResourceGroup1ResourceType2Resource2 {
-			assert.Contains(t, []int{1, 2}, len(target.Metrics))
+			require.Contains(t, []int{1, 2}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				assert.Equal(t, []string{testMetric2}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric2}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
-				assert.Contains(t, []int{1, 5}, len(target.Aggregations))
+				require.Contains(t, []int{1, 5}, len(target.Aggregations))
 
 				if len(target.Aggregations) == 1 {
-					assert.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
-					assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+					require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 				}
 				if len(target.Aggregations) == 5 {
-					assert.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
-					assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+					require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 				}
 			}
 		}
 		if target.ResourceID == testFullResourceGroup2ResourceType1Resource3 {
-			assert.Equal(t, []string{testMetric3}, target.Metrics)
-			assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+			require.Equal(t, []string{testMetric3}, target.Metrics)
+			require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 		}
 	}
 }
@@ -295,72 +290,70 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 		}
 	}
 
-	err := am.Init()
-	require.NoError(t, err)
-
-	assert.Len(t, am.receiver.Targets.ResourceTargets, 11)
+	require.NoError(t, am.Init())
+	require.Len(t, am.receiver.Targets.ResourceTargets, 11)
 
 	for _, target := range am.receiver.Targets.ResourceTargets {
-		assert.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
+		require.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
 
 		if target.ResourceID == testFullResourceGroup1ResourceType1Resource1 {
-			assert.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
+			require.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				assert.Equal(t, []string{testMetric3}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+				require.Equal(t, []string{testMetric3}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
-				assert.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+				require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 3 {
-				assert.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 4 {
-				assert.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
-				assert.Equal(t, expectedResourceMetrics, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, expectedResourceMetrics, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 		}
 		if target.ResourceID == testFullResourceGroup1ResourceType2Resource2 {
-			assert.Contains(t, []int{1, 2}, len(target.Metrics))
+			require.Contains(t, []int{1, 2}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				assert.Equal(t, []string{testMetric2}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric2}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
-				assert.Contains(t, []int{1, 5}, len(target.Aggregations))
+				require.Contains(t, []int{1, 5}, len(target.Aggregations))
 
 				if len(target.Aggregations) == 1 {
-					assert.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
-					assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+					require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 				}
 				if len(target.Aggregations) == 5 {
-					assert.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
-					assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+					require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 				}
 			}
 		}
 		if target.ResourceID == testFullResourceGroup2ResourceType1Resource3 {
-			assert.Contains(t, []int{3, 7, receiver.MaxMetricsPerRequest}, len(target.Metrics))
+			require.Contains(t, []int{3, 7, receiver.MaxMetricsPerRequest}, len(target.Metrics))
 
 			if len(target.Metrics) == 3 {
-				assert.Equal(t, []string{testMetric1, testMetric2, testMetric3}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+				require.Equal(t, []string{testMetric1, testMetric2, testMetric3}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 7 {
-				assert.Equal(t, []string{testMetric2, testMetric2, testMetric2, testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{testMetric2, testMetric2, testMetric2, testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
-				assert.Equal(t, expectedResourceMetrics, target.Metrics)
-				assert.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, expectedResourceMetrics, target.Metrics)
+				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 		}
 	}
@@ -488,10 +481,8 @@ func TestInit_AllTargetTypes(t *testing.T) {
 		}
 	}
 
-	err := am.Init()
-	require.NoError(t, err)
-
-	assert.Len(t, am.receiver.Targets.ResourceTargets, 28)
+	require.NoError(t, am.Init())
+	require.Len(t, am.receiver.Targets.ResourceTargets, 28)
 }
 
 func TestInit_NoSubscriptionID(t *testing.T) {
@@ -510,8 +501,7 @@ func TestInit_NoSubscriptionID(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_NoClientID(t *testing.T) {
@@ -530,8 +520,7 @@ func TestInit_NoClientID(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_NoClientSecret(t *testing.T) {
@@ -550,8 +539,7 @@ func TestInit_NoClientSecret(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_NoTenantID(t *testing.T) {
@@ -570,8 +558,7 @@ func TestInit_NoTenantID(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_NoTargets(t *testing.T) {
@@ -584,8 +571,7 @@ func TestInit_NoTargets(t *testing.T) {
 		azureClients:   setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceTargetWithoutResourceID(t *testing.T) {
@@ -605,8 +591,7 @@ func TestInit_ResourceTargetWithoutResourceID(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
@@ -626,8 +611,7 @@ func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithoutResourceGroup(t *testing.T) {
@@ -652,8 +636,7 @@ func TestInit_ResourceGroupTargetWithoutResourceGroup(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithResourceWithoutResourceType(t *testing.T) {
@@ -678,8 +661,7 @@ func TestInit_ResourceGroupTargetWithResourceWithoutResourceType(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithInvalidMetric(t *testing.T) {
@@ -704,8 +686,7 @@ func TestInit_ResourceGroupTargetWithInvalidMetric(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
@@ -730,8 +711,7 @@ func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithoutResources(t *testing.T) {
@@ -750,8 +730,7 @@ func TestInit_ResourceGroupTargetWithoutResources(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetNoResourceFound(t *testing.T) {
@@ -776,8 +755,7 @@ func TestInit_ResourceGroupTargetNoResourceFound(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_SubscriptionTargetWithoutResourceType(t *testing.T) {
@@ -797,8 +775,7 @@ func TestInit_SubscriptionTargetWithoutResourceType(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_SubscriptionTargetWithInvalidMetric(t *testing.T) {
@@ -818,8 +795,7 @@ func TestInit_SubscriptionTargetWithInvalidMetric(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
@@ -839,8 +815,7 @@ func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_SubscriptionTargetNoResourceFound(t *testing.T) {
@@ -860,8 +835,7 @@ func TestInit_SubscriptionTargetNoResourceFound(t *testing.T) {
 		azureClients: setMockAzureClients(),
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestInit_BadCredentials(t *testing.T) {
@@ -880,8 +854,7 @@ func TestInit_BadCredentials(t *testing.T) {
 		Log: testutil.Logger{},
 	}
 
-	err := am.Init()
-	require.Error(t, err)
+	require.Error(t, am.Init())
 }
 
 func TestGather_Success(t *testing.T) {
@@ -990,10 +963,9 @@ func TestGather_Success(t *testing.T) {
 	expectedResource3MetricsTags[receiver.MetricTagUnit] = string(armmonitor.MetricUnitBytes)
 
 	acc := testutil.Accumulator{}
-	err = acc.GatherError(am.Gather)
-	require.NoError(t, err)
 
-	assert.Len(t, acc.Metrics, 4)
+	require.NoError(t, acc.GatherError(am.Gather))
+	require.Len(t, acc.Metrics, 4)
 
 	acc.AssertContainsTaggedFields(t, expectedResource1Metric1Name, expectedResource1Metric1MetricFields, expectedResource1MetricsTags)
 	acc.AssertContainsTaggedFields(t, expectedResource1Metric2Name, expectedResource1Metric2MetricFields, expectedResource1MetricsTags)
