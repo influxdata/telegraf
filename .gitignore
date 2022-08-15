@@ -6,6 +6,7 @@
 /tools/package_lxd_test/package_lxd_test
 /tools/license_checker/license_checker*
 /tools/readme_config_includer/generator*
+/tools/customizer/customizer*
 /vendor
 .DS_Store
 process.yml
