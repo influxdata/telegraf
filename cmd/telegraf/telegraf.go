@@ -135,44 +135,50 @@ var (
 var stop chan struct{}
 
 func reloadLoop(
+	pprofErr <-chan error,
 	inputFilters []string,
 	outputFilters []string,
-) {
+) error {
 	reload := make(chan bool, 1)
 	reload <- true
-	for <-reload {
-		reload <- false
-		ctx, cancel := context.WithCancel(context.Background())
+	for {
+		select {
+		case <-reload:
+			reload <- false
+			ctx, cancel := context.WithCancel(context.Background())
 
-		signals := make(chan os.Signal, 1)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
-			syscall.SIGTERM, syscall.SIGINT)
-		if *fWatchConfig != "" {
-			for _, fConfig := range fConfigs {
-				if _, err := os.Stat(fConfig); err == nil {
-					go watchLocalConfig(signals, fConfig)
-				} else {
-					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
+			signals := make(chan os.Signal, 1)
+			signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
+				syscall.SIGTERM, syscall.SIGINT)
+			if *fWatchConfig != "" {
+				for _, fConfig := range fConfigs {
+					if _, err := os.Stat(fConfig); err == nil {
+						go watchLocalConfig(signals, fConfig)
+					} else {
+						log.Printf("W! Cannot watch config %s: %s", fConfig, err)
+					}
 				}
 			}
-		}
-		go func() {
-			select {
-			case sig := <-signals:
-				if sig == syscall.SIGHUP {
-					log.Printf("I! Reloading Telegraf config")
-					<-reload
-					reload <- true
+			go func() {
+				select {
+				case sig := <-signals:
+					if sig == syscall.SIGHUP {
+						log.Printf("I! Reloading Telegraf config")
+						<-reload
+						reload <- true
+					}
+					cancel()
+				case <-stop:
+					cancel()
 				}
-				cancel()
-			case <-stop:
-				cancel()
-			}
-		}()
+			}()
 
-		err := runAgent(ctx, inputFilters, outputFilters)
-		if err != nil && err != context.Canceled {
-			log.Fatalf("E! [telegraf] Error running agent: %v", err)
+			err := runAgent(ctx, inputFilters, outputFilters)
+			if err != nil && err != context.Canceled {
+				return fmt.Errorf("error running agent: %v", err)
+			}
+		case err := <-pprofErr:
+			return fmt.Errorf("pprof server failed: %v", err)
 		}
 	}
 }
@@ -423,6 +429,7 @@ func main() {
 		}
 	}
 
+	pprofErr := make(chan error)
 	if *pprofAddr != "" {
 		go func() {
 			pprofHostPort := *pprofAddr
@@ -435,7 +442,8 @@ func main() {
 			log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
 
 			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
-				log.Fatal("E! " + err.Error())
+				pprofErr <- err
+				return
 			}
 		}()
 	}
@@ -554,8 +562,11 @@ func main() {
 		return
 	}
 
-	run(
+	if err := run(
+		pprofErr,
 		inputFilters,
 		outputFilters,
-	)
+	); err != nil {
+		log.Fatalf("E! [telegraf] %v", err)
+	}
 }

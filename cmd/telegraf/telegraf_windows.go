@@ -14,7 +14,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-func run(inputFilters, outputFilters []string) {
+func run(pprofErr <-chan error, inputFilters, outputFilters []string) error {
 	// Register the eventlog logging target for windows.
 	logger.RegisterEventLogger(*fServiceName)
 
@@ -25,11 +25,13 @@ func run(inputFilters, outputFilters []string) {
 		)
 	} else {
 		stop = make(chan struct{})
-		reloadLoop(
+		return reloadLoop(
+			pprofErr
 			inputFilters,
 			outputFilters,
 		)
 	}
+	return nil
 }
 
 type program struct {

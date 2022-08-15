@@ -3,9 +3,10 @@
 
 package main
 
-func run(inputFilters, outputFilters []string) {
+func run(pprofErr <-chan error, inputFilters, outputFilters []string) error {
 	stop = make(chan struct{})
-	reloadLoop(
+	return reloadLoop(
+		pprofErr,
 		inputFilters,
 		outputFilters,
 	)
