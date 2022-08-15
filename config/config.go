@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -24,14 +25,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
-	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -692,6 +691,15 @@ func (c *Config) addParser(parentname string, table *ast.Table) (*models.Running
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
 
+	if dataformat == "" {
+		if parentname == "exec" {
+			// Legacy support, exec plugin originally parsed JSON by default.
+			dataformat = "json"
+		} else {
+			dataformat = "influx"
+		}
+	}
+
 	creator, ok := parsers.Parsers[dataformat]
 	if !ok {
 		return nil, fmt.Errorf("Undefined but requested parser: %s", dataformat)
@@ -830,7 +838,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// that counts the number of misses. In case we have a parser
 	// for the input both need to miss the entry. We count the
 	// missing entries at the end.
-	missThreshold := 0
 	missCount := make(map[string]int)
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
@@ -850,92 +857,50 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// If the input has a SetParser or SetParserFunc function, it can accept
 	// arbitrary data-formats, so build the requested parser and set it.
 	if t, ok := input.(telegraf.ParserInput); ok {
-		missThreshold = 1
-		if parser, err := c.addParser(name, table); err == nil {
-			t.SetParser(parser)
-		} else {
-			missThreshold = 0
-			// Fallback to the old way of instantiating the parsers.
-			config, err := c.getParserConfig(name, table)
-			if err != nil {
-				return err
-			}
-			parser, err := c.buildParserOld(name, config)
-			if err != nil {
-				return err
-			}
-			t.SetParser(parser)
+		parser, err := c.addParser(name, table)
+		if err != nil {
+			return fmt.Errorf("adding parser failed: %w", err)
 		}
+		t.SetParser(parser)
 	}
 
 	// Keep the old interface for backward compatibility
 	if t, ok := input.(parsers.ParserInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserInput.
-		missThreshold = 1
-		if parser, err := c.addParser(name, table); err == nil {
-			t.SetParser(parser)
-		} else {
-			missThreshold = 0
-			// Fallback to the old way of instantiating the parsers.
-			config, err := c.getParserConfig(name, table)
-			if err != nil {
-				return err
-			}
-			parser, err := c.buildParserOld(name, config)
-			if err != nil {
-				return err
-			}
-			t.SetParser(parser)
+		parser, err := c.addParser(name, table)
+		if err != nil {
+			return fmt.Errorf("adding parser failed: %w", err)
 		}
+		t.SetParser(parser)
 	}
 
 	if t, ok := input.(telegraf.ParserFuncInput); ok {
-		missThreshold = 1
-		if c.probeParser(table) {
-			t.SetParserFunc(func() (telegraf.Parser, error) {
-				parser, err := c.addParser(name, table)
-				if err != nil {
-					return nil, err
-				}
-				err = parser.Init()
-				return parser, err
-			})
-		} else {
-			missThreshold = 0
-			// Fallback to the old way
-			config, err := c.getParserConfig(name, table)
-			if err != nil {
-				return err
-			}
-			t.SetParserFunc(func() (telegraf.Parser, error) {
-				return c.buildParserOld(name, config)
-			})
+		if !c.probeParser(table) {
+			return errors.New("parser not found")
 		}
+		t.SetParserFunc(func() (telegraf.Parser, error) {
+			parser, err := c.addParser(name, table)
+			if err != nil {
+				return nil, err
+			}
+			err = parser.Init()
+			return parser, err
+		})
 	}
 
 	if t, ok := input.(parsers.ParserFuncInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncInput.
-		missThreshold = 1
-		if c.probeParser(table) {
-			t.SetParserFunc(func() (parsers.Parser, error) {
-				parser, err := c.addParser(name, table)
-				if err != nil {
-					return nil, err
-				}
-				err = parser.Init()
-				return parser, err
-			})
-		} else {
-			missThreshold = 0
-			// Fallback to the old way
-			config, err := c.getParserConfig(name, table)
-			if err != nil {
-				return err
-			}
-			t.SetParserFunc(func() (parsers.Parser, error) {
-				return c.buildParserOld(name, config)
-			})
+		if !c.probeParser(table) {
+			return errors.New("parser not found")
 		}
+		t.SetParserFunc(func() (parsers.Parser, error) {
+			parser, err := c.addParser(name, table)
+			if err != nil {
+				return nil, err
+			}
+			err = parser.Init()
+			return parser, err
+		})
 	}
 
 	pluginConfig, err := c.buildInput(name, table)
@@ -963,7 +928,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// Check the number of misses against the threshold
 	for key, count := range missCount {
-		if count <= missThreshold {
+		if count <= 1 {
 			continue
 		}
 		if err := c.missingTomlField(nil, key); err != nil {
@@ -1119,173 +1084,6 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	return cp, nil
 }
 
-// buildParserOld grabs the necessary entries from the ast.Table for creating
-// a parsers.Parser object, and creates it, which can then be added onto
-// an Input object.
-func (c *Config) buildParserOld(name string, config *parsers.Config) (telegraf.Parser, error) {
-	parser, err := parsers.NewParser(config)
-	if err != nil {
-		return nil, err
-	}
-	logger := models.NewLogger("parsers", config.DataFormat, name)
-	models.SetLoggerOnPlugin(parser, logger)
-	if initializer, ok := parser.(telegraf.Initializer); ok {
-		if err := initializer.Init(); err != nil {
-			return nil, err
-		}
-	}
-
-	return parser, nil
-}
-
-func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
-	pc := &parsers.Config{
-		JSONStrict: true,
-	}
-
-	c.getFieldString(tbl, "data_format", &pc.DataFormat)
-
-	// Legacy support, exec plugin originally parsed JSON by default.
-	if name == "exec" && pc.DataFormat == "" {
-		pc.DataFormat = "json"
-	} else if pc.DataFormat == "" {
-		pc.DataFormat = "influx"
-	}
-
-	c.getFieldString(tbl, "separator", &pc.Separator)
-
-	c.getFieldStringSlice(tbl, "templates", &pc.Templates)
-	c.getFieldStringSlice(tbl, "tag_keys", &pc.TagKeys)
-	c.getFieldStringSlice(tbl, "json_string_fields", &pc.JSONStringFields)
-	c.getFieldString(tbl, "json_name_key", &pc.JSONNameKey)
-	c.getFieldString(tbl, "json_query", &pc.JSONQuery)
-	c.getFieldString(tbl, "json_time_key", &pc.JSONTimeKey)
-	c.getFieldString(tbl, "json_time_format", &pc.JSONTimeFormat)
-	c.getFieldString(tbl, "json_timezone", &pc.JSONTimezone)
-	c.getFieldBool(tbl, "json_strict", &pc.JSONStrict)
-	c.getFieldString(tbl, "data_type", &pc.DataType)
-	c.getFieldString(tbl, "collectd_auth_file", &pc.CollectdAuthFile)
-	c.getFieldString(tbl, "collectd_security_level", &pc.CollectdSecurityLevel)
-	c.getFieldString(tbl, "collectd_parse_multivalue", &pc.CollectdSplit)
-
-	c.getFieldStringSlice(tbl, "collectd_typesdb", &pc.CollectdTypesDB)
-
-	c.getFieldString(tbl, "dropwizard_metric_registry_path", &pc.DropwizardMetricRegistryPath)
-	c.getFieldString(tbl, "dropwizard_time_path", &pc.DropwizardTimePath)
-	c.getFieldString(tbl, "dropwizard_time_format", &pc.DropwizardTimeFormat)
-	c.getFieldString(tbl, "dropwizard_tags_path", &pc.DropwizardTagsPath)
-	c.getFieldStringMap(tbl, "dropwizard_tag_paths", &pc.DropwizardTagPathsMap)
-
-	//for grok data_format
-	c.getFieldStringSlice(tbl, "grok_named_patterns", &pc.GrokNamedPatterns)
-	c.getFieldStringSlice(tbl, "grok_patterns", &pc.GrokPatterns)
-	c.getFieldString(tbl, "grok_custom_patterns", &pc.GrokCustomPatterns)
-	c.getFieldStringSlice(tbl, "grok_custom_pattern_files", &pc.GrokCustomPatternFiles)
-	c.getFieldString(tbl, "grok_timezone", &pc.GrokTimezone)
-	c.getFieldString(tbl, "grok_unique_timestamp", &pc.GrokUniqueTimestamp)
-
-	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
-
-	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
-
-	// for influx parser
-	c.getFieldString(tbl, "influx_parser_type", &pc.InfluxParserType)
-
-	// for XPath parser family
-	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
-		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
-		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
-		c.getFieldStringSlice(tbl, "xpath_protobuf_import_paths", &pc.XPathProtobufImportPaths)
-		c.getFieldBool(tbl, "xpath_print_document", &pc.XPathPrintDocument)
-
-		// Determine the actual xpath configuration tables
-		node, xpathOK := tbl.Fields["xpath"]
-		if !xpathOK {
-			// Add this for backward compatibility
-			node, xpathOK = tbl.Fields[pc.DataFormat]
-		}
-		if xpathOK {
-			if subtbls, ok := node.([]*ast.Table); ok {
-				pc.XPathConfig = make([]xpath.Config, len(subtbls))
-				for i, subtbl := range subtbls {
-					subcfg := pc.XPathConfig[i]
-					c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
-					c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
-					c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
-					c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
-					c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
-					c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
-					c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
-					c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
-					c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
-					c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
-					c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
-					c.getFieldString(subtbl, "tag_selection", &subcfg.TagSelection)
-					c.getFieldBool(subtbl, "tag_name_expansion", &subcfg.TagNameExpand)
-					c.getFieldString(subtbl, "tag_name", &subcfg.TagNameQuery)
-					c.getFieldString(subtbl, "tag_value", &subcfg.TagValueQuery)
-					pc.XPathConfig[i] = subcfg
-				}
-			}
-		}
-	}
-
-	// for JSON_v2 parser
-	if node, ok := tbl.Fields["json_v2"]; ok {
-		if metricConfigs, ok := node.([]*ast.Table); ok {
-			pc.JSONV2Config = make([]json_v2.Config, len(metricConfigs))
-			for i, metricConfig := range metricConfigs {
-				mc := pc.JSONV2Config[i]
-				c.getFieldString(metricConfig, "measurement_name", &mc.MeasurementName)
-				if mc.MeasurementName == "" {
-					mc.MeasurementName = name
-				}
-				c.getFieldString(metricConfig, "measurement_name_path", &mc.MeasurementNamePath)
-				c.getFieldString(metricConfig, "timestamp_path", &mc.TimestampPath)
-				c.getFieldString(metricConfig, "timestamp_format", &mc.TimestampFormat)
-				c.getFieldString(metricConfig, "timestamp_timezone", &mc.TimestampTimezone)
-
-				mc.Fields = getFieldSubtable(c, metricConfig)
-				mc.Tags = getTagSubtable(c, metricConfig)
-
-				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
-					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
-						for _, objectConfig := range objectconfigs {
-							var o json_v2.Object
-							c.getFieldString(objectConfig, "path", &o.Path)
-							c.getFieldBool(objectConfig, "optional", &o.Optional)
-							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
-							c.getFieldString(objectConfig, "timestamp_format", &o.TimestampFormat)
-							c.getFieldString(objectConfig, "timestamp_timezone", &o.TimestampTimezone)
-							c.getFieldBool(objectConfig, "disable_prepend_keys", &o.DisablePrependKeys)
-							c.getFieldStringSlice(objectConfig, "included_keys", &o.IncludedKeys)
-							c.getFieldStringSlice(objectConfig, "excluded_keys", &o.ExcludedKeys)
-							c.getFieldStringSlice(objectConfig, "tags", &o.Tags)
-							c.getFieldStringMap(objectConfig, "renames", &o.Renames)
-							c.getFieldStringMap(objectConfig, "fields", &o.Fields)
-
-							o.FieldPaths = getFieldSubtable(c, objectConfig)
-							o.TagPaths = getTagSubtable(c, objectConfig)
-
-							mc.JSONObjects = append(mc.JSONObjects, o)
-						}
-					}
-				}
-
-				pc.JSONV2Config[i] = mc
-			}
-		}
-	}
-
-	pc.MetricName = name
-
-	if c.hasErrs() {
-		return nil, c.firstErr()
-	}
-
-	return pc, nil
-}
-
 func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 	var fields []json_v2.DataSet
 
@@ -1355,6 +1153,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
 	c.getFieldString(tbl, "json_timestamp_format", &sc.TimestampFormat)
+	c.getFieldString(tbl, "json_transformation", &sc.Transformation)
 
 	c.getFieldBool(tbl, "splunkmetric_hec_routing", &sc.HecRouting)
 	c.getFieldBool(tbl, "splunkmetric_multimetric", &sc.SplunkmetricMultiMetric)
@@ -1424,12 +1223,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
 
 	// Parser options to ignore
-	case "data_type", "separator", "tag_keys",
-		// "templates", // shared with serializers
-		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
-		"grok_timezone", "grok_unique_timestamp",
-		"influx_parser_type",
-		"value_field_name":
+	case "data_type":
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",

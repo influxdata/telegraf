@@ -360,7 +360,6 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 	fieldSplitter := regexp.MustCompile(`[ :]+`)
 
 	for _, file := range files {
-
 		/* From /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
 		 * extract the object store target name,
 		 * and for per-client files under

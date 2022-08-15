@@ -12,12 +12,14 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -63,6 +65,7 @@ type AMQP struct {
 	ContentEncoding    string            `toml:"content_encoding"`
 	Log                telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
+	proxy.TCPProxy
 
 	serializer   serializers.Serializer
 	connect      func(*ClientConfig) (Client, error)
@@ -283,6 +286,12 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 	}
 	clientConfig.tlsConfig = tlsConfig
 
+	dialer, err := q.TCPProxy.Proxy()
+	if err != nil {
+		return nil, err
+	}
+	clientConfig.dialer = dialer
+
 	var auth []amqp.Authentication
 	if strings.ToUpper(q.AuthMethod) == "EXTERNAL" {
 		auth = []amqp.Authentication{&externalAuth{}}
@@ -300,7 +309,7 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 }
 
 func connect(clientConfig *ClientConfig) (Client, error) {
-	return Connect(clientConfig)
+	return newClient(clientConfig)
 }
 
 func init() {

@@ -11,6 +11,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 )
 
 type ClientConfig struct {
@@ -26,6 +27,7 @@ type ClientConfig struct {
 	tlsConfig         *tls.Config
 	timeout           time.Duration
 	auth              []amqp.Authentication
+	dialer            *proxy.ProxiedDialer
 	log               telegraf.Logger
 }
 
@@ -35,8 +37,8 @@ type client struct {
 	config  *ClientConfig
 }
 
-// Connect opens a connection to one of the brokers at random
-func Connect(config *ClientConfig) (*client, error) {
+// newClient opens a connection to one of the brokers at random
+func newClient(config *ClientConfig) (*client, error) {
 	client := &client{
 		config: config,
 	}
@@ -50,7 +52,7 @@ func Connect(config *ClientConfig) (*client, error) {
 				TLSClientConfig: config.tlsConfig,
 				SASL:            config.auth, // if nil, it will be PLAIN taken from url
 				Dial: func(network, addr string) (net.Conn, error) {
-					return net.DialTimeout(network, addr, config.timeout)
+					return config.dialer.DialTimeout(network, addr, config.timeout)
 				},
 			})
 		if err == nil {

@@ -134,7 +134,7 @@ func poolStatsCommand(version string) (string, error) {
 		return "", err
 	}
 
-	if major == 5 {
+	if major >= 5 {
 		return "connPoolStats", nil
 	}
 	return "shardConnPoolStats", nil

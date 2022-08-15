@@ -425,14 +425,13 @@ func TestParseCompleteFile(t *testing.T) {
 	require.NoError(t, err)
 	r.Log = testutil.Logger{}
 
-	parserConfig := parsers.Config{
-		DataFormat:  "json",
-		JSONNameKey: "name",
-		TagKeys:     []string{"tag1"},
-	}
-
 	r.SetParserFunc(func() (parsers.Parser, error) {
-		return parsers.NewParser(&parserConfig)
+		parser := &json.Parser{
+			NameKey: "name",
+			TagKeys: []string{"tag1"},
+		}
+		err := parser.Init()
+		return parser, err
 	})
 
 	testJSON := `{

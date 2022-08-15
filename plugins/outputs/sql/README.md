@@ -114,6 +114,20 @@ convert settings.
   ## the unsigned option. This is useful for a database like ClickHouse where
   ## the unsigned value should use a value like "uint64".
   # conversion_style = "unsigned_suffix"
+
+  ## Maximum amount of time a connection may be idle. "0s" means connections are
+  ## never closed due to idle time.
+  # connection_max_idle_time = "0s"
+
+  ## Maximum amount of time a connection may be reused. "0s" means connections
+  ## are never closed due to age.
+  # connection_max_lifetime = "0s"
+
+  ## Maximum number of connections in the idle connection pool. 0 means unlimited.
+  # connection_max_idle = 2
+
+  ## Maximum number of open connections to the database. 0 means unlimited.
+  # connection_max_open = 0
 ```
 
 ## Driver-specific information

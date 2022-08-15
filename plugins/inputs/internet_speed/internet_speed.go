@@ -31,7 +31,6 @@ func (*InternetSpeed) SampleConfig() string {
 }
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
-
 	// Get closest server
 	s := is.serverCache
 	if s == nil {

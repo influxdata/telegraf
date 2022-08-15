@@ -101,6 +101,9 @@ type Config struct {
 	// Timestamp format to use for JSON and CSV formatted output
 	TimestampFormat string `toml:"timestamp_format"`
 
+	// Transformation as JSONata expression to use for JSON formatted output
+	Transformation string `toml:"transformation"`
+
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool `toml:"hec_routing"`
 
@@ -141,7 +144,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
-		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat)
+		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat, config.Transformation)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
 	case "nowmetric":
@@ -210,8 +213,8 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
 }
 
-func NewJSONSerializer(timestampUnits time.Duration, timestampFormat string) (Serializer, error) {
-	return json.NewSerializer(timestampUnits, timestampFormat)
+func NewJSONSerializer(timestampUnits time.Duration, timestampFormat, transform string) (Serializer, error) {
+	return json.NewSerializer(timestampUnits, timestampFormat, transform)
 }
 
 func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {

@@ -24,6 +24,22 @@ telegraf config --input-filter cpu:mem:net:swap --output-filter influxdb:kafka
 
 [View the full list][flags] of Telegraf commands and flags or by running `telegraf --help`.
 
+### Windows PowerShell v5 Encoding
+
+In PowerShell 5, the default encoding is UTF-16LE and not UTF-8. Telegraf
+expects a valid UTF-8 file. This is not an issue with PowerShell 6 or newer,
+as well as the Command Prompt or with using the Git Bash shell.
+
+As such, users will need to specify the output encoding when generating a full
+configuration file:
+
+```sh
+telegraf.exe config | Out-File -Encoding utf8 telegraf.conf
+```
+
+This will generate a UTF-8 encoded file with a BOM. However, Telegraf can
+handle the leading BOM.
+
 ## Configuration Loading
 
 The location of the configuration file can be set via the `--config` command

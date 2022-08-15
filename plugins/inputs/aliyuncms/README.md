@@ -1,18 +1,20 @@
 # Alibaba (Aliyun) CloudMonitor Service Statistics Input Plugin
 
-Here and after we use `Aliyun` instead `Alibaba` as it is default naming across
-web console and docs.
+Here and after we use `Aliyun` instead `Alibaba` as it is default naming
+across web console and docs.
 
-This plugin will pull Metric Statistics from Aliyun CMS.
+This plugin will pull metric statistics from Aliyun CMS.
 
 ## Aliyun Authentication
 
-This plugin uses an [AccessKey][1] credential for Authentication with the Aliyun
-OpenAPI endpoint.  In the following order the plugin will attempt to
-authenticate.
+This plugin uses an [AccessKey][1] credential for Authentication with the
+Aliyun OpenAPI endpoint.  In the following order the plugin will attempt
+to authenticate.
 
-1. Ram RoleARN credential if `access_key_id`, `access_key_secret`, `role_arn`, `role_session_name` is specified
-2. AccessKey STS token credential if `access_key_id`, `access_key_secret`, `access_key_sts_token` is specified
+1. Ram RoleARN credential if `access_key_id`, `access_key_secret`, `role_arn`,
+   `role_session_name` is specified
+2. AccessKey STS token credential if `access_key_id`, `access_key_secret`,
+   `access_key_sts_token` is specified
 3. AccessKey credential if `access_key_id`, `access_key_secret` is specified
 4. Ecs Ram Role Credential if `role_name` is specified
 5. RSA keypair credential if `private_key`, `public_key_id` is specified
@@ -45,18 +47,21 @@ authenticate.
   # public_key_id = ""
   # role_name = ""
 
-  ## Specify the ali cloud region list to be queried for metrics and objects discovery
-  ## If not set, all supported regions (see below) would be covered, it can provide a significant load on API, so the recommendation here
-  ## is to limit the list as much as possible. Allowed values: https://www.alibabacloud.com/help/zh/doc-detail/40654.htm
+  ## Specify ali cloud regions to be queried for metric and object discovery
+  ## If not set, all supported regions (see below) would be covered, it can
+  ## provide a significant load on API, so the recommendation here is to
+  ## limit the list as much as possible.
+  ## Allowed values: https://www.alibabacloud.com/help/zh/doc-detail/40654.htm
   ## Default supported regions are:
-  ## 21 items: cn-qingdao,cn-beijing,cn-zhangjiakou,cn-huhehaote,cn-hangzhou,cn-shanghai,cn-shenzhen,
-  ##           cn-heyuan,cn-chengdu,cn-hongkong,ap-southeast-1,ap-southeast-2,ap-southeast-3,ap-southeast-5,
-  ##           ap-south-1,ap-northeast-1,us-west-1,us-east-1,eu-central-1,eu-west-1,me-east-1
+  ##   cn-qingdao,cn-beijing,cn-zhangjiakou,cn-huhehaote,cn-hangzhou,
+  ##   cn-shanghai, cn-shenzhen, cn-heyuan,cn-chengdu,cn-hongkong,
+  ##   ap-southeast-1,ap-southeast-2,ap-southeast-3,ap-southeast-5,
+  ##   ap-south-1,ap-northeast-1, us-west-1,us-east-1,eu-central-1,
+  ##   eu-west-1,me-east-1
   ##
-  ## From discovery perspective it set the scope for object discovery, the discovered info can be used to enrich
-  ## the metrics with objects attributes/tags. Discovery is supported not for all projects (if not supported, then
-  ## it will be reported on the start - for example for 'acs_cdn' project:
-  ## 'E! [inputs.aliyuncms] Discovery tool is not activated: no discovery support for project "acs_cdn"' )
+  ## From discovery perspective it set the scope for object discovery,
+  ## the discovered info can be used to enrich the metrics with objects
+  ##  attributes/tags. Discovery is not supported for all projects.
   ## Currently, discovery supported for the following projects:
   ## - acs_ecs_dashboard
   ## - acs_rds_dashboard
@@ -64,22 +69,23 @@ authenticate.
   ## - acs_vpc_eip
   regions = ["cn-hongkong"]
 
-  # The minimum period for AliyunCMS metrics is 1 minute (60s). However not all
-  # metrics are made available to the 1 minute period. Some are collected at
-  # 3 minute, 5 minute, or larger intervals.
-  # See: https://help.aliyun.com/document_detail/51936.html?spm=a2c4g.11186623.2.18.2bc1750eeOw1Pv
-  # Note that if a period is configured that is smaller than the minimum for a
-  # particular metric, that metric will not be returned by the Aliyun OpenAPI
-  # and will not be collected by Telegraf.
-  #
-  ## Requested AliyunCMS aggregation Period (required - must be a multiple of 60s)
+  ## Requested AliyunCMS aggregation Period (required)
+  ## The period must be multiples of 60s and the minimum for AliyunCMS metrics
+  ## is 1 minute (60s). However not all metrics are made available to the
+  ## one minute period. Some are collected at 3 minute, 5 minute, or larger
+  ## intervals.
+  ## See: https://help.aliyun.com/document_detail/51936.html?spm=a2c4g.11186623.2.18.2bc1750eeOw1Pv
+  ## Note that if a period is configured that is smaller than the minimum for
+  ## a particular metric, that metric will not be returned by Aliyun's
+  ## OpenAPI and will not be collected by Telegraf.
   period = "5m"
 
-  ## Collection Delay (required - must account for metrics availability via AliyunCMS API)
+  ## Collection Delay (required)
+  ## The delay must account for metrics availability via AliyunCMS API.
   delay = "1m"
 
-  ## Recommended: use metric 'interval' that is a multiple of 'period' to avoid
-  ## gaps or overlap in pulled data
+  ## Recommended: use metric 'interval' that is a multiple of 'period'
+  ## to avoid gaps or overlap in pulled data
   interval = "5m"
 
   ## Metric Statistic Project (required)
@@ -94,15 +100,19 @@ authenticate.
   ## Metrics to Pull (Required)
   [[inputs.aliyuncms.metrics]]
   ## Metrics names to be requested,
-  ## described here (per project): https://help.aliyun.com/document_detail/28619.html?spm=a2c4g.11186623.6.690.1938ad41wg8QSq
+  ## Description can be found here (per project):
+  ## https://help.aliyun.com/document_detail/28619.html?spm=a2c4g.11186623.6.690.1938ad41wg8QSq
   names = ["InstanceActiveConnection", "InstanceNewConnection"]
 
-  ## Dimension filters for Metric (these are optional).
-  ## This allows to get additional metric dimension. If dimension is not specified it can be returned or
-  ## the data can be aggregated - it depends on particular metric, you can find details here: https://help.aliyun.com/document_detail/28619.html?spm=a2c4g.11186623.6.690.1938ad41wg8QSq
+  ## Dimension filters for Metric (optional).
+  ## This allows to get additional metric dimension. If dimension is not
+  ## specified it can be returned or the data can be aggregated - it depends
+  ## on particular metric, you can find details here:
+  ## https://help.aliyun.com/document_detail/28619.html?spm=a2c4g.11186623.6.690.1938ad41wg8QSq
   ##
-  ## Note, that by default dimension filter includes the list of discovered objects in scope (if discovery is enabled)
-  ## Values specified here would be added into the list of discovered objects.
+  ## Note, that by default dimension filter includes the list of discovered
+  ## objects in scope (if discovery is enabled).
+  # Values specified here would be added into the list of discovered objects.
   ## You can specify either single dimension:
   #dimensions = '{"instanceId": "p-example"}'
 
@@ -111,26 +121,30 @@ authenticate.
 
   ## Enrichment tags, can be added from discovery (if supported)
   ## Notation is <measurement_tag_name>:<JMES query path (https://jmespath.org/tutorial.html)>
-  ## To figure out which fields are available, consult the Describe<ObjectType> API per project.
+  ## To figure out which fields are available, consult the Describe<ObjectType>
+  ## API per project.
   ## For example, for SLB: https://api.aliyun.com/#/?product=Slb&version=2014-05-15&api=DescribeLoadBalancers&params={}&tab=MOCK&lang=GO
   #tag_query_path = [
   #    "address:Address",
   #    "name:LoadBalancerName",
   #    "cluster_owner:Tags.Tag[?TagKey=='cs.cluster.name'].TagValue | [0]"
   #    ]
-  ## The following tags added by default: regionId (if discovery enabled), userId, instanceId.
+  ## The following tags added by default:
+  ##   regionId (if discovery enabled), userId, instanceId.
 
-  ## Allow metrics without discovery data, if discovery is enabled. If set to true, then metric without discovery
-  ## data would be emitted, otherwise dropped. This cane be of help, in case debugging dimension filters, or partial coverage
-  ## of discovery scope vs monitoring scope
-  #allow_dps_without_discovery = false
+  ## Allow metrics without discovery data, if discovery is enabled.
+  ## If set to true, then metric without discovery data would be emitted, otherwise dropped.
+  ## This cane be of help, in case debugging dimension filters, or partial coverage of
+  ## discovery scope vs monitoring scope 
+  # allow_dps_without_discovery = false
 ```
 
 ### Requirements and Terminology
 
 Plugin Configuration utilizes [preset metric items references][2]
 
-- `discovery_region` must be a valid Aliyun [Region](https://www.alibabacloud.com/help/doc-detail/40654.htm) value
+- `discovery_region` must be a valid Aliyun
+  [Region](https://www.alibabacloud.com/help/doc-detail/40654.htm) value
 - `period` must be a valid duration value
 - `project` must be a preset project value
 - `names` must be preset metric names

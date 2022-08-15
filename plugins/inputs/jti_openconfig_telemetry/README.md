@@ -50,6 +50,8 @@ from listed sensors using Junos Telemetry Interface. Refer to
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+  ## Minimal TLS version to accept by the client
+  # tls_min_version = "TLS12"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
@@ -65,3 +67,7 @@ from listed sensors using Junos Telemetry Interface. Refer to
 
 - All measurements are tagged appropriately using the identifier information
   in incoming data
+
+## Example Output
+
+## Metrics

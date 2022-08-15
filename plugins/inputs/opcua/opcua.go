@@ -312,7 +312,11 @@ func (o *OpcUA) validateOPCTags() error {
 
 		//search identifier type
 		switch node.tag.IdentifierType {
-		case "s", "i", "g", "b":
+		case "i":
+			if _, err := strconv.Atoi(node.tag.Identifier); err != nil {
+				return fmt.Errorf("identifier type '%s' does not match the type of identifier '%s'", node.tag.IdentifierType, node.tag.Identifier)
+			}
+		case "s", "g", "b":
 			// Valid identifier type - do nothing.
 		default:
 			return fmt.Errorf("invalid identifier type '%s' in '%s'", node.tag.IdentifierType, node.tag.FieldName)

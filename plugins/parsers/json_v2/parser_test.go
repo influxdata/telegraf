@@ -1,10 +1,9 @@
 package json_v2_test
 
 import (
-	"bufio"
-	"fmt"
-	"io/ioutil"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -20,99 +19,77 @@ import (
 
 func TestMultipleConfigs(t *testing.T) {
 	// Get all directories in testdata
-	folders, err := ioutil.ReadDir("testdata")
+	folders, err := os.ReadDir("testdata")
 	require.NoError(t, err)
 	// Make sure testdata contains data
 	require.Greater(t, len(folders), 0)
 
-	expectedErrors := []struct {
-		Name  string
-		Error string
-	}{
-		{
-			Name:  "wrong_path",
-			Error: "wrong",
-		},
-	}
+	// Setup influx parser for parsing the expected metrics
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	inputs.Add("file", func() telegraf.Input {
+		return &file.File{}
+	})
 
 	for _, f := range folders {
+		testdataPath := filepath.Join("testdata", f.Name())
+		configFilename := filepath.Join(testdataPath, "telegraf.conf")
+		expectedFilename := filepath.Join(testdataPath, "expected.out")
+		expectedErrorFilename := filepath.Join(testdataPath, "expected.err")
+
 		t.Run(f.Name(), func(t *testing.T) {
-			// Process the telegraf config file for the test
-			buf, err := os.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", f.Name()))
-			require.NoError(t, err)
-			inputs.Add("file", func() telegraf.Input {
-				return &file.File{}
-			})
-			cfg := config.NewConfig()
-			err = cfg.LoadConfigData(buf)
+			// Read the expected output
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
 			require.NoError(t, err)
 
-			// Gather the metrics from the input file configure
-			acc := testutil.Accumulator{}
-			for _, input := range cfg.Inputs {
-				err = input.Init()
+			// Read the expected errors if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
 				require.NoError(t, err)
-				err = input.Gather(&acc)
-				// If the test has an expected error then require one was received
-				var expectedError bool
-				for _, e := range expectedErrors {
-					if e.Name == f.Name() {
-						require.Contains(t, err.Error(), e.Error)
-						expectedError = true
-						break
-					}
-				}
-				if !expectedError {
-					require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+
+			// Gather the metrics from the input file configure
+			var acc testutil.Accumulator
+			var actualErrorMsgs []string
+			for _, input := range cfg.Inputs {
+				require.NoError(t, input.Init())
+				if err := input.Gather(&acc); err != nil {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
 				}
 			}
 
+			// If the test has expected error(s) then compare them
+			if len(expectedErrors) > 0 {
+				sort.Strings(actualErrorMsgs)
+				sort.Strings(expectedErrors)
+				for i, msg := range expectedErrors {
+					require.Contains(t, actualErrorMsgs[i], msg)
+				}
+			} else {
+				require.Empty(t, actualErrorMsgs)
+			}
+
 			// Process expected metrics and compare with resulting metrics
-			expectedOutputs, err := readMetricFile(t, fmt.Sprintf("testdata/%s/expected.out", f.Name()))
-			require.NoError(t, err)
-			resultingMetrics := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, expectedOutputs, resultingMetrics, testutil.IgnoreTime())
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 
 			// Folder with timestamp prefixed will also check for matching timestamps to make sure they are parsed correctly
 			// The milliseconds weren't matching, seemed like a rounding difference between the influx parser
 			// Compares each metrics times separately and ignores milliseconds
 			if strings.HasPrefix(f.Name(), "timestamp") {
-				require.Equal(t, len(expectedOutputs), len(resultingMetrics))
-				for i, m := range resultingMetrics {
-					require.Equal(t, expectedOutputs[i].Time().Truncate(time.Second), m.Time().Truncate(time.Second))
+				require.Equal(t, len(expected), len(actual))
+				for i, m := range actual {
+					require.Equal(t, expected[i].Time().Truncate(time.Second), m.Time().Truncate(time.Second))
 				}
 			}
 		})
 	}
-}
-
-func readMetricFile(t *testing.T, path string) ([]telegraf.Metric, error) {
-	var metrics []telegraf.Metric
-	expectedFile, err := os.Open(path)
-	if err != nil {
-		return metrics, err
-	}
-	defer expectedFile.Close()
-
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-	scanner := bufio.NewScanner(expectedFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line != "" {
-			m, err := parser.ParseLine(line)
-			// The timezone needs to be UTC to match the timestamp test results
-			m.SetTime(m.Time().UTC())
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse metric in %q failed: %v", line, err)
-			}
-			metrics = append(metrics, m)
-		}
-	}
-	err = expectedFile.Close()
-	if err != nil {
-		return metrics, err
-	}
-
-	return metrics, nil
 }
