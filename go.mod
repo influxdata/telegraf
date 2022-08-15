@@ -145,7 +145,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.13.0
 	github.com/tidwall/gjson v1.14.1
 	github.com/tinylib/msgp v1.1.6
-	github.com/urfave/cli/v2 v2.3.0
+	github.com/urfave/cli/v2 v2.11.2
 	github.com/vapourismo/knx-go v0.0.0-20211128234507-8198fa17db36
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.29.0
@@ -181,7 +181,10 @@ require (
 	modernc.org/sqlite v1.17.3
 )
 
-require gopkg.in/macaroon-bakery.v3 v3.0.0 // indirect
+require (
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	gopkg.in/macaroon-bakery.v3 v3.0.0 // indirect
+)
 
 require (
 	cloud.google.com/go v0.102.1 // indirect
