@@ -103,6 +103,13 @@ plugin and use the old zookeeper connection method.
   ## '2 * max_processing_time'.
   # max_processing_time = "100ms"
 
+  ## The default number of message bytes to fetch from the broker in each
+  ## request (default 1MB). This should be larger than the majority of
+  ## your messages, or else the consumer will spend a lot of time
+  ## negotiating sizes and not actually consuming. Similar to the JVM's
+  ## `fetch.message.max.bytes`.
+  # consumer_fetch_default = "1MB"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
