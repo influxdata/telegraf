@@ -75,6 +75,8 @@ func (ki *KubernetesInventory) gatherCertificates(r corev1.Secret, acc telegraf.
 			}
 			fields := getFields(cert, now)
 			tags := getTags(cert)
+			tags["name"] = r.Name
+			tags["namespace"] = r.Namespace
 			opts := x509.VerifyOptions{
 				Intermediates: x509.NewCertPool(),
 				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
