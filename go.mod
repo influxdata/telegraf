@@ -31,14 +31,14 @@ require (
 	github.com/apache/thrift v0.16.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
-	github.com/aws/aws-sdk-go-v2 v1.16.10
+	github.com/aws/aws-sdk-go-v2 v1.16.11
 	github.com/aws/aws-sdk-go-v2/config v1.15.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.5
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.11
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.19.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.13
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.15.10
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.51.2
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.52.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.15.10
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.7
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.13.6
@@ -217,13 +217,13 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.3 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.5.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.17 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.11 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.18 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.12 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.16.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.8 // indirect
