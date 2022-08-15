@@ -37,6 +37,19 @@ import (
 	"gopkg.in/tomb.v1"
 )
 
+// sliceFlags implements the flag.Value interface
+type sliceFlags []string
+
+func (i *sliceFlags) String() string {
+	s := strings.Join(*i, " ")
+	return "[" + s + "]"
+}
+
+func (i *sliceFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 // If you update these, update usage.go and usage_windows.go
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
@@ -47,8 +60,8 @@ var fQuiet = flag.Bool("quiet", false,
 var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs")
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 
-var fConfigs []string
-var fConfigDirs []string
+var fConfigs sliceFlags
+var fConfigDirs sliceFlags
 var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [notify, poll]")
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
@@ -123,7 +136,7 @@ func reloadLoop(
 			syscall.SIGTERM, syscall.SIGINT)
 		if *fWatchConfig != "" {
 			// watch any --config-file passed
-			watchConfigs := make([]string, len(fConfigs))
+			watchConfigs := make(sliceFlags, len(fConfigs))
 			copy(watchConfigs, fConfigs)
 			// also watch any files within any --config-dir passed
 			configsFromDirs := configDirFiles()
@@ -159,7 +172,7 @@ func reloadLoop(
 
 // configDirFiles returns a slice made up of filepaths corresponding
 // to config files defined in any of the config directories.
-func configDirFiles() []string {
+func configDirFiles() sliceFlags {
 	configs := make([]string, 0)
 	for _, dir := range fConfigDirs {
 		walkfn := func(thispath string, info os.FileInfo, _ error) error {
