@@ -9,8 +9,10 @@ similar constructs.
 - An output must conform to the [telegraf.Output][] interface.
 - Outputs should call `outputs.Add` in their `init` function to register
   themselves.  See below for a quick example.
-- To be available within Telegraf itself, plugins must add themselves to the
-  `github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
+- To be available within Telegraf itself, plugins must register themselves
+  using a file in `github.com/influxdata/telegraf/plugins/outputs/all` named
+  according to the plugin name. Make sure your also add build-tags to
+  conditionally build the plugin.
 - Each plugin requires a file called `sample.conf` containing the sample
   configuration  for the plugin in TOML format.
   Please consult the [Sample Config][] page for the latest style guidelines.
@@ -19,6 +21,8 @@ similar constructs.
 - Follow the recommended [Code Style][].
 
 ## Output Plugin Example
+
+Content of your plugin file e.g. `simpleoutput.go`
 
 ```go
 //go:generate ../../../tools/readme_config_includer/generator
@@ -75,8 +79,21 @@ func (s *Simple) Write(metrics []telegraf.Metric) error {
 func init() {
     outputs.Add("simpleoutput", func() telegraf.Output { return &Simple{} })
 }
+```
+
+Registration of the plugin on `plugins/outputs/all/simpleoutput.go`:
+
+```go
+//go:build !custom || outputs || outputs.simpleoutput
+
+package all
+
+import _ "github.com/influxdata/telegraf/plugins/outputs/simpleoutput" // register plugin
 
 ```
+
+The _build-tags_ in the first line allow to selectively include/exclude your
+plugin when customizing Telegraf.
 
 ## Data Formats
 
