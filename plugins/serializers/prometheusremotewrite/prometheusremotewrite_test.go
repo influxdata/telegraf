@@ -108,7 +108,6 @@ http_requests_total{code="400", method="post"} 3
 			expected: []byte(`
 http_request_duration_seconds_count 144320
 http_request_duration_seconds_sum 53423
-http_request_duration_seconds_bucket{le="+Inf"} 144320
 `),
 		},
 		{
@@ -125,9 +124,6 @@ http_request_duration_seconds_bucket{le="+Inf"} 144320
 				telegraf.Histogram,
 			),
 			expected: []byte(`
-http_request_duration_seconds_count 0
-http_request_duration_seconds_sum 0
-http_request_duration_seconds_bucket{le="+Inf"} 0
 http_request_duration_seconds_bucket{le="0.5"} 129389
 `),
 		},
@@ -355,7 +351,7 @@ rpc_duration_seconds{quantile="0.99"} 76656
 `),
 		},
 		{
-			name: "newer sample",
+			name: "samples in series sorted chronologically",
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -369,13 +365,32 @@ rpc_duration_seconds{quantile="0.99"} 76656
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
+						"time_idle": 50.0,
+					},
+					time.Unix(4, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 38.0,
+					},
+					time.Unix(2, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []byte(`
+cpu_time_idle 42
 cpu_time_idle 43
+cpu_time_idle 38
+cpu_time_idle 50
 `),
 		},
 		{
@@ -582,16 +597,16 @@ cpu_time_idle{host_name="example.org"} 42
 			},
 			expected: []byte(`
 cpu_time_guest{cpu="cpu0"} 8106.04
-cpu_time_system{cpu="cpu0"} 26271.4
-cpu_time_user{cpu="cpu0"} 92904.33
 cpu_time_guest{cpu="cpu1"} 8181.63
-cpu_time_system{cpu="cpu1"} 25351.49
-cpu_time_user{cpu="cpu1"} 96912.57
 cpu_time_guest{cpu="cpu2"} 7470.04
-cpu_time_system{cpu="cpu2"} 24998.43
-cpu_time_user{cpu="cpu2"} 96034.08
 cpu_time_guest{cpu="cpu3"} 7517.95
+cpu_time_system{cpu="cpu0"} 26271.4
+cpu_time_system{cpu="cpu1"} 25351.49
+cpu_time_system{cpu="cpu2"} 24998.43
 cpu_time_system{cpu="cpu3"} 24970.82
+cpu_time_user{cpu="cpu0"} 92904.33
+cpu_time_user{cpu="cpu1"} 96912.57
+cpu_time_user{cpu="cpu2"} 96034.08
 cpu_time_user{cpu="cpu3"} 94148
 `),
 		},
