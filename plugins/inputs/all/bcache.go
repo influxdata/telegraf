@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.bcache
+//go:build (!custom || inputs || inputs.bcache) && !windows
 
 package all
 
