@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.tail
+//go:build (!custom || inputs || inputs.tail) && !solaris
 
 package all
 
