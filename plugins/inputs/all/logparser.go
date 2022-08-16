@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.logparser
+//go:build (!custom || inputs || inputs.logparser) && !solaris
 
 package all
 
