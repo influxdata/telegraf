@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.synproxy
+//go:build (!custom || inputs || inputs.synproxy) && linux
 
 package all
 
