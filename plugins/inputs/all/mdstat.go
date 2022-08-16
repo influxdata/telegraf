@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.mdstat
+//go:build (!custom || inputs || inputs.mdstat) && linux
 
 package all
 
