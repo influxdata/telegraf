@@ -18,6 +18,10 @@ The `jolokia2_agent` input plugin reads JMX metrics from one or more
   # password = ""
   # response_timeout = "5s"
 
+  ## Optional origin URL to include as a header in the request. Some endpoints
+  ## may reject an empty origin.
+  # origin = ""
+
   ## Optional TLS config
   # tls_ca   = "/var/private/ca.pem"
   # tls_cert = "/var/private/client.pem"
