@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.infiniband
+//go:build (!custom || inputs || inputs.infiniband) && linux
 
 package all
 
