@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.intel_pmu
+//go:build (!custom || inputs || inputs.intel_pmu) && linux && amd64
 
 package all
 
