@@ -5,7 +5,7 @@
 
 ### Bugfixes
 
-- [#11647](https://github.com/influxdata/telegraf/pull/11647) Bump github.com/lxc/lxd to latest git to fix https://github.com/lxc/lxd/issues/10738.
+- [#11647](https://github.com/influxdata/telegraf/pull/11647) Bump github.com/lxc/lxd to be able to run tests
 - [#11664](https://github.com/influxdata/telegraf/pull/11664) Sync sql output and input build constraints to handle loong64 in go1.19.
 - [#10841](https://github.com/influxdata/telegraf/pull/10841) Updating credentials file to not use endpoint_url parameter
 - [#10851](https://github.com/influxdata/telegraf/pull/10851) `inputs.cloudwatch` Customizable batch size when querying
@@ -47,7 +47,7 @@
 - [#11602](https://github.com/influxdata/telegraf/pull/11602) `deps` Update k8s.io/apimachinery from 0.24.2 to 0.24.3
 - [#11603](https://github.com/influxdata/telegraf/pull/11603) `deps` Update github.com/Shopify/sarama from 1.34.1 to 1.35.0
 - [#11616](https://github.com/influxdata/telegraf/pull/11616) `deps` Bump github.com/sirupsen/logrus from 1.8.1 to 1.9.0
-- [#11636](https://github.com/influxdata/telegraf/pull/11636) `deps` Bump github.com/emicklei/go-restful from v2.9.5&#43;incompatible to v3.8.0
+- [#11636](https://github.com/influxdata/telegraf/pull/11636) `deps` Bump github.com/emicklei/go-restful from v2.9.5+incompatible to v3.8.0
 - [#11641](https://github.com/influxdata/telegraf/pull/11641) `deps` Bump github.com/hashicorp/consul/api from 1.12.0 to 1.13.1
 - [#11640](https://github.com/influxdata/telegraf/pull/11640) `deps` Bump github.com/prometheus/client_golang from 1.12.2 to 1.13.0
 - [#11643](https://github.com/influxdata/telegraf/pull/11643) `deps` Bump google.golang.org/api from 0.85.0 to 0.91.0
