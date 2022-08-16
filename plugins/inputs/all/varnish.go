@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.varnish
+//go:build (!custom || inputs || inputs.varnish) && !windows
 
 package all
 
