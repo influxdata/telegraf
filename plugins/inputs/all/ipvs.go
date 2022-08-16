@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.ipvs
+//go:build (!custom || inputs || inputs.ipvs) && linux
 
 package all
 
