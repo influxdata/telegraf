@@ -336,6 +336,29 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					return fmt.Errorf("E! %s and %s", err, err2)
 				}
 				return nil
+			// DEPRECATED
+			case cCtx.Bool("version"):
+				fmt.Println(formatFullVersion())
+				return nil
+			// DEPRECATED
+			case cCtx.Bool("sample-config"):
+				filters := processFilterFlags(
+					cCtx.String("section-filter"),
+					cCtx.String("input-filter"),
+					cCtx.String("output-filter"),
+					cCtx.String("aggregator-filter"),
+					cCtx.String("processor-filter"),
+				)
+
+				printSampleConfig(
+					outputBuffer,
+					filters.section,
+					filters.input,
+					filters.output,
+					filters.aggregator,
+					filters.processor,
+				)
+				return nil
 			}
 
 			if cCtx.String("pprof-addr") != "" {
@@ -373,9 +396,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			},
 			{
 				Name:  "version",
-				Usage: "print current version to stdout.",
+				Usage: "print current version to stdout",
 				Action: func(cCtx *cli.Context) error {
-					fmt.Println(formatFullVersion())
+					_, _ = outputBuffer.Write([]byte(formatFullVersion()))
 					return nil
 				},
 			},
