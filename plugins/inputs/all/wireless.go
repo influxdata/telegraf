@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.wireless
+//go:build (!custom || inputs || inputs.wireless) && linux
 
 package all
 
