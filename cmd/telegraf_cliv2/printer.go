@@ -343,12 +343,12 @@ func printConfig(name string, p telegraf.PluginDescriber, op string, commented b
 		_, _ = outputBuffer.Write([]byte(fmt.Sprintf("\n%s ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)))
 	}
 
-	config := p.SampleConfig()
-	if config == "" {
+	sample := p.SampleConfig()
+	if sample == "" {
 		_, _ = outputBuffer.Write([]byte(fmt.Sprintf("\n#[[%s.%s]]", op, name)))
 		_, _ = outputBuffer.Write([]byte(fmt.Sprintf("\n%s  # no configuration\n\n", comment)))
 	} else {
-		lines := strings.Split(config, "\n")
+		lines := strings.Split(sample, "\n")
 		_, _ = outputBuffer.Write([]byte("\n"))
 		for i, line := range lines {
 			if i == len(lines)-1 {

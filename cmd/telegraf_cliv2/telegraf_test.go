@@ -2,11 +2,163 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"os"
 	"testing"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/stretchr/testify/require"
 )
+
+type MockConfig struct {
+	Buffer                    io.Writer
+	ExpectedDeprecatedPlugins map[string][]config.PluginDeprecationInfo
+}
+
+func NewMockConfig(buffer io.Writer) *MockConfig {
+	return &MockConfig{
+		Buffer: buffer,
+	}
+}
+
+func (m *MockConfig) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFilter []string) map[string][]config.PluginDeprecationInfo {
+	return m.ExpectedDeprecatedPlugins
+}
+
+func (m *MockConfig) PrintDeprecationList(plugins []config.PluginDeprecationInfo) {
+	for _, p := range plugins {
+		_, _ = m.Buffer.Write([]byte(fmt.Sprintf("plugin name: %s\n", p.Name)))
+	}
+}
+
+type MockServer struct {
+	Address string
+}
+
+func NewMockServer() *MockServer {
+	return &MockServer{}
+}
+
+func (m *MockServer) Start(address string) {
+	m.Address = "localhost:6060"
+}
+
+func TestUsageFlag(t *testing.T) {
+	tests := []struct {
+		PluginName     string
+		ExpectedError  string
+		ExpectedOutput string
+	}{
+		{
+			PluginName:    "example",
+			ExpectedError: "E! input example not found and output example not found",
+		},
+		{
+			PluginName: "temp",
+			ExpectedOutput: `# Read metrics about temperature
+[[inputs.temp]]
+	# no configuration`,
+		},
+	}
+
+	for _, test := range tests {
+		buf := new(bytes.Buffer)
+		args := os.Args[0:1]
+		args = append(args, "--usage", test.PluginName)
+		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+		if test.ExpectedError != "" {
+			require.ErrorContains(t, err, test.ExpectedError)
+			return
+		}
+		require.NoError(t, err)
+		require.Equal(t, test.ExpectedOutput, buf.String())
+	}
+}
+
+func TestInputListFlag(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "--input-list")
+	temp := inputs.Inputs
+	inputs.Inputs = map[string]inputs.Creator{
+		"test": func() telegraf.Input { return nil },
+	}
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+	require.NoError(t, err)
+	expectedOutput := `Available Input Plugins:
+  test
+`
+	require.Equal(t, expectedOutput, buf.String())
+	inputs.Inputs = temp
+}
+
+func TestOutputListFlag(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "--output-list")
+	temp := outputs.Outputs
+	outputs.Outputs = map[string]outputs.Creator{
+		"test": func() telegraf.Output { return nil },
+	}
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+	require.NoError(t, err)
+	expectedOutput := `Available Output Plugins:
+  test
+`
+	require.Equal(t, expectedOutput, buf.String())
+	outputs.Outputs = temp
+}
+
+func TestDeprecationListFlag(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "--deprecation-list")
+	mS := NewMockServer()
+	mC := NewMockConfig(buf)
+	mC.ExpectedDeprecatedPlugins = make(map[string][]config.PluginDeprecationInfo)
+	mC.ExpectedDeprecatedPlugins["inputs"] = []config.PluginDeprecationInfo{
+		{
+			DeprecationInfo: config.DeprecationInfo{
+				Name: "test",
+			},
+		},
+	}
+	err := runApp(args, buf, mS, mC)
+	require.NoError(t, err)
+	expectedOutput := `Deprecated Input Plugins:
+plugin name: test
+Deprecated Output Plugins:
+Deprecated Processor Plugins:
+Deprecated Aggregator Plugins:
+`
+
+	require.Equal(t, expectedOutput, buf.String())
+}
+
+func TestPprofAddressFlag(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	address := "localhost:6060"
+	args = append(args, "--pprof-addr", address)
+	m := NewMockServer()
+	err := runApp(args, buf, m, NewMockConfig(buf))
+	require.NoError(t, err)
+	require.Equal(t, address, m.Address)
+}
+
+// !!! DEPRECATED !!!
+// TestPluginDirectoryFlag tests `--plugin-directory`
+func TestPluginDirectoryFlag(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "--plugin-directory", ".")
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+	require.ErrorContains(t, err, "E! go plugin support is not enabled")
+}
 
 func TestSubcommandConfig(t *testing.T) {
 	tests := []struct {
@@ -103,7 +255,7 @@ func TestSubcommandConfig(t *testing.T) {
 			buf := new(bytes.Buffer)
 			args := os.Args[0:1]
 			args = append(args, test.commands...)
-			err := runApp(args, buf)
+			err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
 			require.NoError(t, err)
 			output := buf.String()
 			for _, e := range test.expectedHeaders {
