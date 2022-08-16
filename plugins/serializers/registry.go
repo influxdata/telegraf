@@ -209,7 +209,7 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 		TimestampExport: exportTimestamp,
 		MetricSortOrder: sortMetrics,
 		StringHandling:  stringAsLabels,
-		CompactEncoding: config.CompactEncoding,
+		CompactEncoding: config.PrometheusCompactEncoding,
 	})
 }
 
