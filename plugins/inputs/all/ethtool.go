@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.ethtool
+//go:build (!custom || inputs || inputs.ethtool) && linux
 
 package all
 
