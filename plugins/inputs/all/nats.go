@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.nats
+//go:build (!custom || inputs || inputs.nats) && (!freebsd || cgo)
 
 package all
 
