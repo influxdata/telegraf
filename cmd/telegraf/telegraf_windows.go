@@ -20,6 +20,7 @@ func run(pprofErr <-chan error, inputFilters, outputFilters []string) error {
 
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		runAsWindowsService(
+			pprofErr,
 			inputFilters,
 			outputFilters,
 		)
@@ -35,6 +36,7 @@ func run(pprofErr <-chan error, inputFilters, outputFilters []string) error {
 }
 
 type program struct {
+	pprofErr      <-chan error
 	inputFilters  []string
 	outputFilters []string
 }
@@ -46,6 +48,7 @@ func (p *program) Start(s service.Service) error {
 func (p *program) run() {
 	stop = make(chan struct{})
 	reloadLoop(
+		p.pprofErr,
 		p.inputFilters,
 		p.outputFilters,
 	)
@@ -58,7 +61,7 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func runAsWindowsService(inputFilters, outputFilters []string) {
+func runAsWindowsService(pprofErr <-chan error, inputFilters, outputFilters []string) {
 	programFiles := os.Getenv("ProgramFiles")
 	if programFiles == "" { // Should never happen
 		programFiles = "C:\\Program Files"
@@ -72,6 +75,7 @@ func runAsWindowsService(inputFilters, outputFilters []string) {
 	}
 
 	prg := &program{
+		pprofErr:      pprofErr,
 		inputFilters:  inputFilters,
 		outputFilters: outputFilters,
 	}
