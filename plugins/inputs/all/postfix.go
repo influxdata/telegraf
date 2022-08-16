@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.postfix
+//go:build (!custom || inputs || inputs.postfix) && !windows
 
 package all
 
