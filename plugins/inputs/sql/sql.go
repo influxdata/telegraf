@@ -204,16 +204,26 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 	return rowCount, nil
 }
 
+// If users allow connection failures, we will attempt to reconnect
+// every at each reconnectInterval.
+// We'll apply exponential backoff up until a sane max backoff
+// of 60s, the default Agent.Interval at which each Gather is run.
+var (
+	reconnectInterval    = 500 * time.Millisecond
+	maxReconnectInterval = 60 * time.Second
+)
+
 type SQL struct {
-	Driver             string          `toml:"driver"`
-	Dsn                config.Secret   `toml:"dsn"`
-	Timeout            config.Duration `toml:"timeout"`
-	MaxIdleTime        config.Duration `toml:"connection_max_idle_time"`
-	MaxLifetime        config.Duration `toml:"connection_max_life_time"`
-	MaxOpenConnections int             `toml:"connection_max_open"`
-	MaxIdleConnections int             `toml:"connection_max_idle"`
-	Queries            []Query         `toml:"query"`
-	Log                telegraf.Logger `toml:"-"`
+	AllowConnectionFailures bool            `toml:"allow_connection_failures"`
+	Driver                  string          `toml:"driver"`
+	Dsn                     config.Secret   `toml:"dsn"`
+	Timeout                 config.Duration `toml:"timeout"`
+	MaxIdleTime             config.Duration `toml:"connection_max_idle_time"`
+	MaxLifetime             config.Duration `toml:"connection_max_life_time"`
+	MaxOpenConnections      int             `toml:"connection_max_open"`
+	MaxIdleConnections      int             `toml:"connection_max_idle"`
+	Queries                 []Query         `toml:"query"`
+	Log                     telegraf.Logger `toml:"-"`
 
 	driverName string
 	db         *dbsql.DB
@@ -366,9 +376,53 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	s.Log.Debug("Connecting...")
 	s.db, err = dbsql.Open(s.driverName, string(dsn))
 	if err != nil {
+		if !s.AllowConnectionFailures {
+			return err
+		}
+		// if connection failures allowed, periodically attempt to reconnect to the DB
+		go s.connect()
+	}
+
+	err = s.start()
+	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+// connect will periodically connect to the DB, backing off exponentially on failure
+// until a maximum of 60s. It will then attempt to start by setting connection limits
+// and preparing query statements.
+func (s *SQL) connect() {
+	s.Log.Warnf("Attempting to connect to DB, backing off %s", reconnectInterval.String())
+	time.Sleep(reconnectInterval)
+	if reconnectInterval < maxReconnectInterval {
+		reconnectInterval *= 2
+	}
+
+	var err error
+	s.db, err = dbsql.Open(s.driverName, s.Dsn)
+	for err != nil {
+		s.connect()
+	}
+
+	// We have connected, let's start to prepare statements, at which point
+	// Gather will begin to run queries against the DB on the next call
+	err = s.start()
+	for err != nil {
+		// This start could be a failed connection when we re-connect with PingContext
+		// or it could be a failure to prepare statement (e.g. bad query).
+		// As the user has already opted in to accepting database connection failures,
+		// we won't fail out for this latter case as we normally would in the non-AcceptConnectionFailure
+		// path. Instead, we will log the error and attempt to connect again, in case it was a connection issue.
+		s.Log.Warn(err.Error())
+		s.connect()
+	}
+}
+
+// start sets connection limits and attempts to prepare query statements
+func (s *SQL) start() error {
 	// Set the connection limits
 	// s.db.SetConnMaxIdleTime(time.Duration(s.MaxIdleTime)) // Requires go >= 1.15
 	s.db.SetConnMaxLifetime(time.Duration(s.MaxLifetime))
@@ -378,7 +432,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	// Test if the connection can be established
 	s.Log.Debug("Testing connectivity...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
-	err = s.db.PingContext(ctx)
+	err := s.db.PingContext(ctx)
 	cancel()
 	if err != nil {
 		return fmt.Errorf("connecting to database failed: %v", err)
