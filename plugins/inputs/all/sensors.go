@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.sensors
+//go:build (!custom || inputs || inputs.sensors) && linux
 
 package all
 
