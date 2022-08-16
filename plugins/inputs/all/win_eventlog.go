@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.win_eventlog
+//go:build (!custom || inputs || inputs.win_eventlog) && windows
 
 package all
 
