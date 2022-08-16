@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -132,7 +133,7 @@ func main() {
 		// Perform the build
 		var out bytes.Buffer
 		makeCmd := exec.Command("make", "clean", "all")
-		makeCmd.Env = append(makeCmd.Env, "BUILDTAGS="+tags)
+		makeCmd.Env = append(os.Environ(), "BUILDTAGS="+tags)
 		makeCmd.Stdout = &out
 		makeCmd.Stderr = &out
 
