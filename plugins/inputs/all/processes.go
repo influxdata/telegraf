@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.processes
+//go:build (!custom || inputs || inputs.processes) && !windows
 
 package all
 
