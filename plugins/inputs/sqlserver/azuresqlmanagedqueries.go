@@ -102,7 +102,7 @@ END
 SELECT
 	'sqlserver_database_io' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,DB_NAME(mf.database_id) AS [database_name]
+	,DB_NAME(mf.[database_id]) AS [database_name]
 	,COALESCE(mf.[physical_name],'RBPEX') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
 	,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
 	,mf.[type_desc] AS [file_type]
