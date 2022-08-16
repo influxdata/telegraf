@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.socketstat
+//go:build (!custom || inputs || inputs.socketstat) && !windows
 
 package all
 
