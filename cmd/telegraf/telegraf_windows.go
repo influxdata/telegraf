@@ -26,7 +26,7 @@ func run(pprofErr <-chan error, inputFilters, outputFilters []string) error {
 	} else {
 		stop = make(chan struct{})
 		return reloadLoop(
-			pprofErr
+			pprofErr,
 			inputFilters,
 			outputFilters,
 		)
