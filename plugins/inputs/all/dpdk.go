@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.dpdk
+//go:build (!custom || inputs || inputs.dpdk) && linux
 
 package all
 
