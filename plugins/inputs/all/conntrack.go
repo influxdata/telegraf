@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.conntrack
+//go:build (!custom || inputs || inputs.conntrack) && linux
 
 package all
 
