@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.intel_rdt
+//go:build (!custom || inputs || inputs.intel_rdt) && !windows
 
 package all
 
