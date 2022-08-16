@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.zfs
+//go:build (!custom || inputs || inputs.zfs) && (linux || freebsd)
 
 package all
 
