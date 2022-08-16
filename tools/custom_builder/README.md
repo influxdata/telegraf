@@ -1,18 +1,18 @@
-# Telegraf customizer tool
+# Telegraf customization tool
 
-Telegraf's `customizer` is a tool to select the plugins compiled into the
+Telegraf's `custom_builder` is a tool to select the plugins compiled into the
 Telegraf binary. By doing so, Telegraf can become smaller, saving both disk
 space and memory if only a sub-set of plugins is selected.
 
 ## Building
 
-To build `customizer` run the following command:
+To build `custom_builder` run the following command:
 
 ```shell
 # make build_tools
 ```
 
-The resulting binary is located in the `tools/customizer` folder.
+The resulting binary is located in the `tools/custom_builder` folder.
 
 ## Running
 
@@ -21,7 +21,7 @@ Telegraf configuration file(s). Assuming your configuration is
 in `/etc/telegraf/telegraf.conf` you can run
 
 ```shell
-# ./tools/customizer/customizer --config /etc/telegraf/telegraf.conf
+# ./tools/custom_builder/custom_builder --config /etc/telegraf/telegraf.conf
 ```
 
 to build a Telegraf binary tailored to your configuration.
@@ -30,7 +30,7 @@ Telegraf itself. To additionally use the configurations in
 `/etc/telegraf/telegraf.d` run
 
 ```shell
-# ./tools/customizer/customizer                      \
+# ./tools/custom_builder/custom_builder                      \
     --config     /etc/telegraf/telegraf.conf \
     --config-dir /etc/telegraf/telegraf.d
 ```
@@ -39,7 +39,7 @@ Configurations can also be retrieved from remote locations just
 like for Telegraf.
 
 ```shell
-# ./tools/customizer/customizer --config http://myserver/telegraf.conf
+# ./tools/custom_builder/custom_builder --config http://myserver/telegraf.conf
 ```
 
 will download the configuration from `myserver`.
@@ -47,11 +47,11 @@ will download the configuration from `myserver`.
 The `--config` and `--config-dir` option can be used multiple times.
 In case you want to deploy Telegraf to multiple systems with
 different configurations, simply specify the super-set of all
-configurations you have. `customizer` will figure out the list
+configurations you have. `custom_builder` will figure out the list
 for you
 
 ```shell
-# ./tools/customizer/customizer             \
+# ./tools/custom_builder/custom_builder             \
     --config system1/telegraf.conf  \
     --config system2/telegraf.conf  \
     --config ...                    \
@@ -69,5 +69,5 @@ select the set of plugins. To see which tags are set use the `--tags` flag.
 To get more help run
 
 ```shell
-# ./tools/customizer/customizer --help
+# ./tools/custom_builder/custom_builder --help
 ```

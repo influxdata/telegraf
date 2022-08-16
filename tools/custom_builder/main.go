@@ -23,22 +23,22 @@ This is a tool build Telegraf with a custom set of plugins. The plugins are
 select according to the specified Telegraf configuration files. This allows
 to shrink the binary size by only selecting the plugins you really need.
 A more detailed documentation is available at
-http://github.com/influxdata/telegraf/tools/customizer/README.md
+http://github.com/influxdata/telegraf/tools/custom_builder/README.md
 `
 
 const examples = `
 The following command with customize Telegraf to fit the configuration found
 at the default locations
 
-  customizer --config /etc/telegraf/telegraf.conf --config-dir /etc/telegraf/telegraf.d
+  custom_builder --config /etc/telegraf/telegraf.conf --config-dir /etc/telegraf/telegraf.d
 
 You can the --config and --config-dir multiple times
 
-  customizer --config global.conf --config myinputs.conf --config myoutputs.conf
+  custom_builder --config global.conf --config myinputs.conf --config myoutputs.conf
 
 or use one or more remote address(es) to load the config
 
-  customizer --config global.conf --config http://myserver/plugins.conf
+  custom_builder --config global.conf --config http://myserver/plugins.conf
 
 Combinations of local and remote config as well as config directories are
 possible.
@@ -48,7 +48,7 @@ func usage() {
 	_, _ = fmt.Fprint(flag.CommandLine.Output(), description)
 	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
 	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "Usage:")
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "  customizer [flags]")
+	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "  custom_builder [flags]")
 	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
 	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "Flags:")
 	flag.PrintDefaults()
