@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.lustre2
+//go:build (!custom || inputs || inputs.lustre2) && !windows
 
 package all
 
