@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
@@ -33,9 +33,13 @@ func setMockAzureClients() *receiver.AzureClients {
 func (marc *mockAzureResourcesClient) List(_ context.Context, _ *armresources.ClientListOptions) ([]*armresources.ClientListResponse, error) {
 	var responses []*armresources.ClientListResponse
 
-	file, _ := ioutil.ReadFile("testdata/json/azure_resources_response.json")
+	file, err := os.ReadFile("testdata/json/azure_resources_response.json")
+	if err != nil {
+		return nil, fmt.Errorf("error reading file: %w", err)
+	}
+
 	var genericResourcesExpanded []*armresources.GenericResourceExpanded
-	if err := json.Unmarshal(file, &genericResourcesExpanded); err != nil {
+	if err = json.Unmarshal(file, &genericResourcesExpanded); err != nil {
 		return nil, err
 	}
 
@@ -57,9 +61,13 @@ func (marc *mockAzureResourcesClient) ListByResourceGroup(
 	_ *armresources.ClientListByResourceGroupOptions) ([]*armresources.ClientListByResourceGroupResponse, error) {
 	var responses []*armresources.ClientListByResourceGroupResponse
 
-	file, _ := ioutil.ReadFile("testdata/json/azure_resources_response.json")
+	file, err := os.ReadFile("testdata/json/azure_resources_response.json")
+	if err != nil {
+		return nil, fmt.Errorf("error reading file: %w", err)
+	}
+
 	var genericResourcesExpanded []*armresources.GenericResourceExpanded
-	if err := json.Unmarshal(file, &genericResourcesExpanded); err != nil {
+	if err = json.Unmarshal(file, &genericResourcesExpanded); err != nil {
 		return nil, err
 	}
 
@@ -102,9 +110,13 @@ func (mamdc *mockAzureMetricDefinitionsClient) List(
 	resourceID string,
 	_ *armmonitor.MetricDefinitionsClientListOptions) (armmonitor.MetricDefinitionsClientListResponse, error) {
 
-	file, _ := ioutil.ReadFile("testdata/json/azure_metric_definitions_responses.json")
+	file, err := os.ReadFile("testdata/json/azure_metric_definitions_responses.json")
+	if err != nil {
+		return armmonitor.MetricDefinitionsClientListResponse{}, fmt.Errorf("error reading file: %w", err)
+	}
+
 	var metricDefinitions [][]*armmonitor.MetricDefinition
-	if err := json.Unmarshal(file, &metricDefinitions); err != nil {
+	if err = json.Unmarshal(file, &metricDefinitions); err != nil {
 		return armmonitor.MetricDefinitionsClientListResponse{}, err
 	}
 
@@ -145,9 +157,13 @@ func (mamc *mockAzureMetricsClient) List(
 	_ context.Context,
 	resourceID string,
 	_ *armmonitor.MetricsClientListOptions) (armmonitor.MetricsClientListResponse, error) {
-	file, _ := ioutil.ReadFile("testdata/json/azure_metrics_responses.json")
+	file, err := os.ReadFile("testdata/json/azure_metrics_responses.json")
+	if err != nil {
+		return armmonitor.MetricsClientListResponse{}, fmt.Errorf("error reading file: %w", err)
+	}
+
 	var metricResponses []armmonitor.Response
-	if err := json.Unmarshal(file, &metricResponses); err != nil {
+	if err = json.Unmarshal(file, &metricResponses); err != nil {
 		return armmonitor.MetricsClientListResponse{}, err
 	}
 
@@ -203,7 +219,11 @@ func (mamc *mockAzureMetricsClient) List(
 }
 
 func TestInit_ResourceTargetsOnly(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_targets_only.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_targets_only.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -274,7 +294,11 @@ func TestInit_ResourceTargetsOnly(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_targets_only.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_targets_only.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -361,7 +385,11 @@ func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
 }
 
 func TestInit_SubscriptionTargetsOnly(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_targets_only.toml")
+	file, err := os.ReadFile("testdata/toml/init_subscription_targets_only.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -460,7 +488,11 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 }
 
 func TestInit_AllTargetTypes(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_all_target_types.toml")
+	file, err := os.ReadFile("testdata/toml/init_all_target_types.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -488,7 +520,11 @@ func TestInit_AllTargetTypes(t *testing.T) {
 }
 
 func TestInit_NoSubscriptionID(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_no_subscription_id.toml")
+	file, err := os.ReadFile("testdata/toml/init_no_subscription_id.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -499,7 +535,11 @@ func TestInit_NoSubscriptionID(t *testing.T) {
 }
 
 func TestInit_NoClientID(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_no_client_id.toml")
+	file, err := os.ReadFile("testdata/toml/init_no_client_id.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -510,7 +550,11 @@ func TestInit_NoClientID(t *testing.T) {
 }
 
 func TestInit_NoClientSecret(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_no_client_secret.toml")
+	file, err := os.ReadFile("testdata/toml/init_no_client_secret.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -521,7 +565,11 @@ func TestInit_NoClientSecret(t *testing.T) {
 }
 
 func TestInit_NoTenantID(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_no_tenant_id.toml")
+	file, err := os.ReadFile("testdata/toml/init_no_tenant_id.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -532,7 +580,11 @@ func TestInit_NoTenantID(t *testing.T) {
 }
 
 func TestInit_NoTargets(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_no_targets.toml")
+	file, err := os.ReadFile("testdata/toml/init_no_targets.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -543,7 +595,11 @@ func TestInit_NoTargets(t *testing.T) {
 }
 
 func TestInit_ResourceTargetWithoutResourceID(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_target_without_resource_id.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_target_without_resource_id.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -554,7 +610,11 @@ func TestInit_ResourceTargetWithoutResourceID(t *testing.T) {
 }
 
 func TestInit_ResourceTargetWithInvalidResourceID(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_target_with_invalid_resource_id.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_target_with_invalid_resource_id.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -565,7 +625,11 @@ func TestInit_ResourceTargetWithInvalidResourceID(t *testing.T) {
 }
 
 func TestInit_ResourceTargetWithInvalidMetric(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_target_with_invalid_metric.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_target_with_invalid_metric.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -576,7 +640,11 @@ func TestInit_ResourceTargetWithInvalidMetric(t *testing.T) {
 }
 
 func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_target_with_invalid_aggregation.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_target_with_invalid_aggregation.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -587,7 +655,11 @@ func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetWithoutResourceGroup(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_without_resource_group.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_target_without_resource_group.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -598,7 +670,11 @@ func TestInit_ResourceGroupTargetWithoutResourceGroup(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetWithResourceWithoutResourceType(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_resource_without_resource_type.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_target_with_resource_without_resource_type.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -609,7 +685,11 @@ func TestInit_ResourceGroupTargetWithResourceWithoutResourceType(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetWithInvalidResourceGroup(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_invalid_resource_group.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_target_with_invalid_resource_group.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -620,7 +700,11 @@ func TestInit_ResourceGroupTargetWithInvalidResourceGroup(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetWithInvalidResourceType(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_invalid_resource_type.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_target_with_invalid_resource_type.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -631,7 +715,11 @@ func TestInit_ResourceGroupTargetWithInvalidResourceType(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetWithInvalidMetric(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_invalid_metric.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_target_with_invalid_metric.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -642,7 +730,11 @@ func TestInit_ResourceGroupTargetWithInvalidMetric(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_invalid_aggregation.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_target_with_invalid_aggregation.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -653,7 +745,11 @@ func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetWithoutResources(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_without_resources.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_target_without_resources.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -664,7 +760,11 @@ func TestInit_ResourceGroupTargetWithoutResources(t *testing.T) {
 }
 
 func TestInit_ResourceGroupTargetNoResourceFound(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_no_resource_found.toml")
+	file, err := os.ReadFile("testdata/toml/init_resource_group_target_no_resource_found.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -675,7 +775,11 @@ func TestInit_ResourceGroupTargetNoResourceFound(t *testing.T) {
 }
 
 func TestInit_SubscriptionTargetWithoutResourceType(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_without_resource_type.toml")
+	file, err := os.ReadFile("testdata/toml/init_subscription_target_without_resource_type.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -686,7 +790,11 @@ func TestInit_SubscriptionTargetWithoutResourceType(t *testing.T) {
 }
 
 func TestInit_SubscriptionTargetWithInvalidResourceType(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_with_invalid_resource_type.toml")
+	file, err := os.ReadFile("testdata/toml/init_subscription_target_with_invalid_resource_type.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -697,7 +805,11 @@ func TestInit_SubscriptionTargetWithInvalidResourceType(t *testing.T) {
 }
 
 func TestInit_SubscriptionTargetWithInvalidMetric(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_with_invalid_metric.toml")
+	file, err := os.ReadFile("testdata/toml/init_subscription_target_with_invalid_metric.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -708,7 +820,11 @@ func TestInit_SubscriptionTargetWithInvalidMetric(t *testing.T) {
 }
 
 func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_with_invalid_aggregation.toml")
+	file, err := os.ReadFile("testdata/toml/init_subscription_target_with_invalid_aggregation.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -719,7 +835,11 @@ func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
 }
 
 func TestInit_SubscriptionTargetNoResourceFound(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_no_resource_found.toml")
+	file, err := os.ReadFile("testdata/toml/init_subscription_target_no_resource_found.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -730,7 +850,11 @@ func TestInit_SubscriptionTargetNoResourceFound(t *testing.T) {
 }
 
 func TestInit_BadCredentials(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/init_bad_credentials.toml")
+	file, err := os.ReadFile("testdata/toml/init_bad_credentials.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
@@ -739,7 +863,11 @@ func TestInit_BadCredentials(t *testing.T) {
 }
 
 func TestGather_Success(t *testing.T) {
-	file, _ := ioutil.ReadFile("testdata/toml/gather_success.toml")
+	file, err := os.ReadFile("testdata/toml/gather_success.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
 	var am *AzureMonitor
 	require.NoError(t, toml.Unmarshal(file, &am))
 
