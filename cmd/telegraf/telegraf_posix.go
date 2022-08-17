@@ -3,10 +3,7 @@
 
 package main
 
-func run(inputFilters, outputFilters []string) {
+func (a *AgentManager) Run() error {
 	stop = make(chan struct{})
-	reloadLoop(
-		inputFilters,
-		outputFilters,
-	)
+	return a.reloadLoop()
 }

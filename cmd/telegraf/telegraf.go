@@ -1,27 +1,14 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"flag"
 	"fmt"
-	"log"
+	"io"
+	"log" //nolint:revive
 	"net/http"
-	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
-	"os/signal"
 	"sort"
 	"strings"
-	"syscall"
-	"time"
 
-	"github.com/coreos/go-systemd/daemon"
-
-	"github.com/fatih/color"
-
-	"github.com/influxdata/tail/watch"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/config/printer"
 	"github.com/influxdata/telegraf/internal"
@@ -37,144 +24,33 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	"github.com/influxdata/telegraf/plugins/processors"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
-	"gopkg.in/tomb.v1"
 )
 
-type sliceFlags []string
+var (
+	version string
+	commit  string
+	branch  string
+)
 
-func (i *sliceFlags) String() string {
-	s := strings.Join(*i, " ")
-	return "[" + s + "]"
-}
+func formatFullVersion() string {
+	var parts = []string{"Telegraf"}
 
-func (i *sliceFlags) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
-// If you update these, update usage.go and usage_windows.go
-
-var fSectionFilters = flag.String("section-filter", "",
-	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
-var fInputFilters = flag.String("input-filter", "",
-	"filter the inputs to enable, separator is :")
-
-var fOutputFilters = flag.String("output-filter", "",
-	"filter the outputs to enable, separator is :")
-
-var fAggregatorFilters = flag.String("aggregator-filter", "",
-	"filter the aggregators to enable, separator is :")
-var fProcessorFilters = flag.String("processor-filter", "",
-	"filter the processors to enable, separator is :")
-
-// !!! MIGRATED !!!
-
-// String slices
-var fConfigs sliceFlags
-var fConfigDirs sliceFlags
-
-// int
-var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
-
-// windows only
-//
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fService = flag.String("service", "", "operate on the service (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fServiceRestartDelay = flag.String("service-restart-delay", "5m", "delay before service auto restart, default is 5m (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fServiceAutoRestart = flag.Bool("service-auto-restart", false, "auto restart service on failure (windows only)")
-
-//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
-var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
-
-// bool
-var fRunOnce = flag.Bool("once", false, "run one gather and exit")
-var fDebug = flag.Bool("debug", false, "turn on debug logging")
-var fQuiet = flag.Bool("quiet", false, "run in quiet mode")
-var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs")
-var fDeprecationList = flag.Bool("deprecation-list", false, "print all deprecated plugins or plugin options.")
-var fInputList = flag.Bool("input-list", false, "print available input plugins.")
-var fOutputList = flag.Bool("output-list", false, "print available output plugins.")
-var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
-var fVersion = flag.Bool("version", false, "display the version and exit")
-
-// string
-var pprofAddr = flag.String("pprof-addr", "", "pprof address to listen on, not activate pprof if empty")
-var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [notify, poll]")
-var fPidfile = flag.String("pidfile", "", "file to write our pid to")
-var fPlugins = flag.String("plugin-directory", "", "path to directory containing external plugins")
-var fUsage = flag.String("usage", "", "print usage for a plugin, ie, 'telegraf --usage mysql'")
-
-// config subcommand flags
-// Initialize the subcommand `telegraf config`
-// This duplicates the above filters which are used for `telegraf --sample-config` and `telegraf --deprecation-list`
-var configCmd = flag.NewFlagSet("config", flag.ExitOnError)
-var fSubSectionFilters = configCmd.String("section-filter", "",
-	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
-var fSubInputFilters = configCmd.String("input-filter", "",
-	"filter the inputs to enable, separator is :")
-var fSubOutputFilters = configCmd.String("output-filter", "",
-	"filter the outputs to enable, separator is :")
-var fsubAggregatorFilters = configCmd.String("aggregator-filter", "",
-	"filter the aggregators to enable, separator is :")
-var fSubProcessorFilters = configCmd.String("processor-filter", "",
-	"filter the processors to enable, separator is :")
-
-//
-
-var stop chan struct{}
-
-func reloadLoop(
-	inputFilters []string,
-	outputFilters []string,
-) {
-	reload := make(chan bool, 1)
-	reload <- true
-	for <-reload {
-		reload <- false
-		ctx, cancel := context.WithCancel(context.Background())
-
-		signals := make(chan os.Signal, 1)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
-			syscall.SIGTERM, syscall.SIGINT)
-		if *fWatchConfig != "" {
-			for _, fConfig := range fConfigs {
-				if _, err := os.Stat(fConfig); err == nil {
-					go watchLocalConfig(signals, fConfig)
-				} else {
-					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
-				}
-			}
-		}
-		go func() {
-			select {
-			case sig := <-signals:
-				if sig == syscall.SIGHUP {
-					log.Printf("I! Reloading Telegraf config")
-					<-reload
-					reload <- true
-				}
-				cancel()
-			case <-stop:
-				cancel()
-			}
-		}()
-
-		err := runAgent(ctx, inputFilters, outputFilters)
-		if err != nil && err != context.Canceled {
-			log.Fatalf("E! [telegraf] Error running agent: %v", err)
-		}
+	if version != "" {
+		parts = append(parts, version)
+	} else {
+		parts = append(parts, "unknown")
 	}
-}
+
+	if branch != "" || commit != "" {
+		if branch == "" {
+			branch = "unknown"
+		}
+		if commit == "" {
+			commit = "unknown"
+		}
+		git := fmt.Sprintf("(git: %s %s)", branch, commit)
+		parts = append(parts, git)
+	}
 
 func watchLocalConfig(signals chan os.Signal, fConfig string) {
 	var mytomb tomb.Tomb
@@ -393,149 +269,188 @@ func main() {
 
 	logger.SetupLogging(logger.LogConfig{})
 
-	// Load external plugins, if requested.
-	if *fPlugins != "" {
-		log.Printf("I! Loading external plugins from: %s", *fPlugins)
-		if err := goplugin.LoadExternalPlugins(*fPlugins); err != nil {
-			log.Fatal("E! " + err.Error())
-		}
-	}
-
-	if *pprofAddr != "" {
-		go func() {
-			pprofHostPort := *pprofAddr
-			parts := strings.Split(pprofHostPort, ":")
-			if len(parts) == 2 && parts[0] == "" {
-				pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
-			}
-			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
-
-			log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
-
-			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
-				log.Fatal("E! " + err.Error())
-			}
-		}()
-	}
-
-	if len(args) > 0 {
-		switch args[0] {
-		case "version":
-			fmt.Println(internal.FormatFullVersion())
-			return
-		case "config":
-			err := configCmd.Parse(args[1:])
-			if err != nil {
-				log.Fatal("E! " + err.Error())
+			// Configure version
+			if err := internal.SetVersion(version); err != nil {
+				log.Println("Telegraf version already configured to: " + internal.Version())
 			}
 
-			// The sub_Filters are populated when the filter flags are set after the subcommand config
-			// e.g. telegraf config --section-filter inputs
-			subSectionFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubSectionFilters)+":", ":"))
-			subInputFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubInputFilters)+":", ":"))
-			subOutputFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubOutputFilters)+":", ":"))
-			subAggregatorFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fsubAggregatorFilters)+":", ":"))
-			subProcessorFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubProcessorFilters)+":", ":"))
-
-			// Overwrite the global filters if the subfilters are defined, this allows for backwards compatibility
-			// Now you can still filter the sample config like so: telegraf --section-filter inputs config
-			if len(subSectionFilters) > 0 {
-				sectionFilters = subSectionFilters
-			}
-			if len(subInputFilters) > 0 {
-				inputFilters = subInputFilters
-			}
-			if len(subOutputFilters) > 0 {
-				outputFilters = subOutputFilters
-			}
-			if len(subAggregatorFilters) > 0 {
-				aggregatorFilters = subAggregatorFilters
-			}
-			if len(subProcessorFilters) > 0 {
-				processorFilters = subProcessorFilters
+			// Deprecated: Use execd instead
+			// Load external plugins, if requested.
+			if cCtx.String("plugin-directory") != "" {
+				log.Printf("I! Loading external plugins from: %s", cCtx.String("plugin-directory"))
+				if err := goplugin.LoadExternalPlugins(cCtx.String("plugin-directory")); err != nil {
+					return fmt.Errorf("E! %w", err)
+				}
 			}
 
-			printer.PrintSampleConfig(
-				os.Stdout,
-				sectionFilters,
-				inputFilters,
-				outputFilters,
-				aggregatorFilters,
-				processorFilters,
+			// switch for flags which just do something and exit immediately
+			switch {
+			// print available input plugins
+			case cCtx.Bool("deprecation-list"):
+				filters := processFilterFlags(
+					cCtx.String("section-filter"),
+					cCtx.String("input-filter"),
+					cCtx.String("output-filter"),
+					cCtx.String("aggregator-filter"),
+					cCtx.String("processor-filter"),
+				)
+				infos := c.CollectDeprecationInfos(
+					filters.input, filters.output, filters.aggregator, filters.processor,
+				)
+				//nolint:revive // We will notice if Println fails
+				_, _ = outputBuffer.Write([]byte("Deprecated Input Plugins:\n"))
+				c.PrintDeprecationList(infos["inputs"])
+				//nolint:revive // We will notice if Println fails
+				_, _ = outputBuffer.Write([]byte("Deprecated Output Plugins:\n"))
+				c.PrintDeprecationList(infos["outputs"])
+				//nolint:revive // We will notice if Println fails
+				_, _ = outputBuffer.Write([]byte("Deprecated Processor Plugins:\n"))
+				c.PrintDeprecationList(infos["processors"])
+				//nolint:revive // We will notice if Println fails
+				_, _ = outputBuffer.Write([]byte("Deprecated Aggregator Plugins:\n"))
+				c.PrintDeprecationList(infos["aggregators"])
+				return nil
+			// print available output plugins
+			case cCtx.Bool("output-list"):
+				_, _ = outputBuffer.Write([]byte("Available Output Plugins:\n"))
+				names := make([]string, 0, len(outputs.Outputs))
+				for k := range outputs.Outputs {
+					names = append(names, k)
+				}
+				sort.Strings(names)
+				for _, k := range names {
+					_, _ = outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
+				}
+				return nil
+			// print available input plugins
+			case cCtx.Bool("input-list"):
+				_, _ = outputBuffer.Write([]byte("Available Input Plugins:\n"))
+				names := make([]string, 0, len(inputs.Inputs))
+				for k := range inputs.Inputs {
+					names = append(names, k)
+				}
+				sort.Strings(names)
+				for _, k := range names {
+					_, _ = outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
+				}
+				return nil
+			// print usage for a plugin, ie, 'telegraf --usage mysql'
+			case cCtx.String("usage") != "":
+				err := printer.PrintInputConfig(cCtx.String("usage"), outputBuffer)
+				err2 := printer.PrintOutputConfig(cCtx.String("usage"), outputBuffer)
+				if err != nil && err2 != nil {
+					return fmt.Errorf("E! %s and %s", err, err2)
+				}
+				return nil
+			// DEPRECATED
+			case cCtx.Bool("version"):
+				fmt.Println(formatFullVersion())
+				return nil
+			// DEPRECATED
+			case cCtx.Bool("sample-config"):
+				filters := processFilterFlags(
+					cCtx.String("section-filter"),
+					cCtx.String("input-filter"),
+					cCtx.String("output-filter"),
+					cCtx.String("aggregator-filter"),
+					cCtx.String("processor-filter"),
+				)
+
+				printSampleConfig(
+					outputBuffer,
+					filters.section,
+					filters.input,
+					filters.output,
+					filters.aggregator,
+					filters.processor,
+				)
+				return nil
+			}
+
+			if cCtx.String("pprof-addr") != "" {
+				pprof.Start(cCtx.String("pprof-addr"))
+			}
+
+			filters := processFilterFlags(
+				cCtx.String("section-filter"),
+				cCtx.String("input-filter"),
+				cCtx.String("output-filter"),
+				cCtx.String("aggregator-filter"),
+				cCtx.String("processor-filter"),
 			)
-			return
-		}
+
+			g := GlobalFlags{
+				config:      cCtx.StringSlice("config"),
+				configDir:   cCtx.StringSlice("config-directory"),
+				testWait:    cCtx.Int("test-wait"),
+				watchConfig: cCtx.String("watch-config"),
+				pidFile:     cCtx.String("pidfile"),
+				plugindDir:  cCtx.String("plugin-directory"),
+				test:        cCtx.Bool("test"),
+				debug:       cCtx.Bool("debug"),
+				once:        cCtx.Bool("once"),
+				quiet:       cCtx.Bool("quiet"),
+			}
+
+			w := WindowFlags{
+				service:             cCtx.String("service"),
+				serviceName:         cCtx.String("service-name"),
+				serviceDisplayName:  cCtx.String("service-display-name"),
+				serviceRestartDelay: cCtx.String("service-restart-delay"),
+				serviceAutoRestart:  cCtx.Bool("service-auto-restart"),
+				console:             cCtx.Bool("console"),
+			}
+
+			m.Init(pprof.ErrChan(), filters, g, w)
+			return m.Run()
+		},
+		Commands: []*cli.Command{
+			{
+				Name:  "config",
+				Usage: "print out full sample configuration to stdout",
+				Flags: pluginFilterFlags,
+				Action: func(cCtx *cli.Context) error {
+					// The sub_Filters are populated when the filter flags are set after the subcommand config
+					// e.g. telegraf config --section-filter inputs
+					filters := processFilterFlags(
+						cCtx.String("section-filter"),
+						cCtx.String("input-filter"),
+						cCtx.String("output-filter"),
+						cCtx.String("aggregator-filter"),
+						cCtx.String("processor-filter"),
+					)
+
+					printSampleConfig(
+						outputBuffer,
+						filters.section,
+						filters.input,
+						filters.output,
+						filters.aggregator,
+						filters.processor,
+					)
+					return nil
+				},
+			},
+			{
+				Name:  "version",
+				Usage: "print current version to stdout",
+				Action: func(cCtx *cli.Context) error {
+					_, _ = outputBuffer.Write([]byte(formatFullVersion()))
+					return nil
+				},
+			},
+		},
 	}
 
-	// switch for flags which just do something and exit immediately
-	switch {
-	case *fDeprecationList:
-		c := config.NewConfig()
-		infos := c.CollectDeprecationInfos(
-			inputFilters,
-			outputFilters,
-			aggregatorFilters,
-			processorFilters,
-		)
-		//nolint:revive // We will notice if Println fails
-		fmt.Println("Deprecated Input Plugins: ")
-		c.PrintDeprecationList(infos["inputs"])
-		//nolint:revive // We will notice if Println fails
-		fmt.Println("Deprecated Output Plugins: ")
-		c.PrintDeprecationList(infos["outputs"])
-		//nolint:revive // We will notice if Println fails
-		fmt.Println("Deprecated Processor Plugins: ")
-		c.PrintDeprecationList(infos["processors"])
-		//nolint:revive // We will notice if Println fails
-		fmt.Println("Deprecated Aggregator Plugins: ")
-		c.PrintDeprecationList(infos["aggregators"])
-		return
-	case *fOutputList:
-		fmt.Println("Available Output Plugins: ")
-		names := make([]string, 0, len(outputs.Outputs))
-		for k := range outputs.Outputs {
-			names = append(names, k)
-		}
-		sort.Strings(names)
-		for _, k := range names {
-			fmt.Printf("  %s\n", k)
-		}
-		return
-	case *fInputList:
-		fmt.Println("Available Input Plugins:")
-		names := make([]string, 0, len(inputs.Inputs))
-		for k := range inputs.Inputs {
-			names = append(names, k)
-		}
-		sort.Strings(names)
-		for _, k := range names {
-			fmt.Printf("  %s\n", k)
-		}
-		return
-	case *fVersion:
-		fmt.Println(internal.FormatFullVersion())
-		return
-	case *fSampleConfig:
-		printer.PrintSampleConfig(
-			os.Stdout,
-			sectionFilters,
-			inputFilters,
-			outputFilters,
-			aggregatorFilters,
-			processorFilters,
-		)
-		return
-	case *fUsage != "":
-		err := printer.PrintInputConfig(*fUsage, os.Stdout)
-		err2 := printer.PrintOutputConfig(*fUsage, os.Stdout)
-		if err != nil && err2 != nil {
-			log.Fatalf("E! %s and %s", err, err2)
-		}
-		return
-	}
+	return app.Run(args)
+}
 
-	run(
-		inputFilters,
-		outputFilters,
-	)
+func main() {
+	agent := AgentManager{}
+	pprof := NewPprofServer()
+	c := config.NewConfig()
+	err := runApp(os.Args, os.Stdout, pprof, c, &agent)
+	if err != nil {
+		log.Fatalf("E! %s", err)
+	}
 }

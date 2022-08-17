@@ -6,7 +6,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"runtime"
 
@@ -14,41 +14,36 @@ import (
 	"github.com/kardianos/service"
 )
 
-func run(inputFilters, outputFilters []string) {
+func (a *AgentManager) Run() error {
 	// Register the eventlog logging target for windows.
-	logger.RegisterEventLogger(*fServiceName)
-
-	if runtime.GOOS == "windows" && windowsRunAsService() {
-		runAsWindowsService(
-			inputFilters,
-			outputFilters,
-		)
-	} else {
-		stop = make(chan struct{})
-		reloadLoop(
-			inputFilters,
-			outputFilters,
-		)
+	err := logger.RegisterEventLogger(a.serviceName)
+	if err != nil {
+		return err
 	}
+
+	if runtime.GOOS != "windows" && !a.windowsRunAsService() {
+		stop = make(chan struct{})
+		return a.reloadLoop()
+	}
+
+	return a.runAsWindowsService()
 }
 
 type program struct {
-	inputFilters  []string
-	outputFilters []string
+	*AgentManager
 }
 
 func (p *program) Start(s service.Service) error {
-	go p.run()
-	return nil
+	errChan := make(chan error)
+	go func() {
+		stop = make(chan struct{})
+		err := p.reloadLoop()
+		errChan <- err
+		close(stop)
+	}()
+	return <-errChan
 }
-func (p *program) run() {
-	stop = make(chan struct{})
-	reloadLoop(
-		p.inputFilters,
-		p.outputFilters,
-	)
-	close(stop)
-}
+
 func (p *program) Stop(s service.Service) error {
 	var empty struct{}
 	stop <- empty // signal reloadLoop to finish (context cancel)
@@ -56,70 +51,68 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func runAsWindowsService(inputFilters, outputFilters []string) {
+func (a *AgentManager) runAsWindowsService() error {
 	programFiles := os.Getenv("ProgramFiles")
 	if programFiles == "" { // Should never happen
 		programFiles = "C:\\Program Files"
 	}
 	svcConfig := &service.Config{
-		Name:        *fServiceName,
-		DisplayName: *fServiceDisplayName,
+		Name:        a.serviceName,
+		DisplayName: a.serviceDisplayName,
 		Description: "Collects data using a series of plugins and publishes it to " +
 			"another series of plugins.",
 		Arguments: []string{"--config", programFiles + "\\Telegraf\\telegraf.conf"},
 	}
 
 	prg := &program{
-		inputFilters:  inputFilters,
-		outputFilters: outputFilters,
+		AgentManager: a,
 	}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
-		log.Fatal("E! " + err.Error())
+		return fmt.Errorf("E! " + err.Error())
 	}
 	// Handle the --service flag here to prevent any issues with tooling that
 	// may not have an interactive session, e.g. installing from Ansible.
-	if *fService != "" {
-		if len(fConfigs) > 0 {
+	if a.service != "" {
+		if len(a.config) > 0 {
 			svcConfig.Arguments = []string{}
 		}
-		for _, fConfig := range fConfigs {
+		for _, fConfig := range a.config {
 			svcConfig.Arguments = append(svcConfig.Arguments, "--config", fConfig)
 		}
 
-		for _, fConfigDirectory := range fConfigDirs {
+		for _, fConfigDirectory := range a.configDir {
 			svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", fConfigDirectory)
 		}
 
 		//set servicename to service cmd line, to have a custom name after relaunch as a service
-		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", *fServiceName)
+		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", a.serviceName)
 
-		if *fServiceAutoRestart {
-			svcConfig.Option = service.KeyValue{"OnFailure": "restart", "OnFailureDelayDuration": *fServiceRestartDelay}
+		if a.serviceAutoRestart {
+			svcConfig.Option = service.KeyValue{"OnFailure": "restart", "OnFailureDelayDuration": a.serviceRestartDelay}
 		}
 
-		err := service.Control(s, *fService)
+		err := service.Control(s, a.service)
 		if err != nil {
-			log.Fatal("E! " + err.Error())
+			return fmt.Errorf("E! " + err.Error())
 		}
-		os.Exit(0)
 	} else {
 		logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
 		err = s.Run()
-
 		if err != nil {
-			log.Println("E! " + err.Error())
+			return fmt.Errorf("E! " + err.Error())
 		}
 	}
+	return nil
 }
 
 // Return true if Telegraf should create a Windows service.
-func windowsRunAsService() bool {
-	if *fService != "" {
+func (a *AgentManager) windowsRunAsService() bool {
+	if a.service != "" {
 		return true
 	}
 
-	if *fRunAsConsole {
+	if a.console {
 		return false
 	}
 
