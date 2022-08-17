@@ -1,6 +1,12 @@
 package azure_monitor
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"github.com/influxdata/toml"
+	"io/ioutil"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
@@ -9,59 +15,217 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInit_ResourceTargetsOnly(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{testMetric1, testMetric2, testMetric3},
-				[]string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)},
-			},
-			{
-				testResourceGroup1ResourceType2Resource2,
-				[]string{testMetric1, testMetric2},
-				[]string{},
-			},
-			{
-				testResourceGroup2ResourceType1Resource3,
-				[]string{},
-				[]string{string(armmonitor.AggregationTypeEnumTotal)},
-			},
-			{
-				testResourceGroup1ResourceType2Resource2,
-				[]string{},
-				[]string{},
-			},
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{},
-				[]string{},
+type mockAzureResourcesClient struct{}
+
+type mockAzureMetricDefinitionsClient struct{}
+
+type mockAzureMetricsClient struct{}
+
+func setMockAzureClients() *receiver.AzureClients {
+	return &receiver.AzureClients{
+		Ctx:                     context.Background(),
+		ResourcesClient:         &mockAzureResourcesClient{},
+		MetricDefinitionsClient: &mockAzureMetricDefinitionsClient{},
+		MetricsClient:           &mockAzureMetricsClient{},
+	}
+}
+
+func (marc *mockAzureResourcesClient) List(_ context.Context, _ *armresources.ClientListOptions) ([]*armresources.ClientListResponse, error) {
+	var responses []*armresources.ClientListResponse
+
+	file, _ := ioutil.ReadFile("testdata/json/azure_resources_response.json")
+	var genericResourcesExpanded []*armresources.GenericResourceExpanded
+	if err := json.Unmarshal(file, &genericResourcesExpanded); err != nil {
+		return nil, err
+	}
+
+	response := &armresources.ClientListResponse{
+		ClientListResult: armresources.ClientListResult{
+			ResourceListResult: armresources.ResourceListResult{
+				Value: genericResourcesExpanded,
 			},
 		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
 	}
+
+	responses = append(responses, response)
+	return responses, nil
+}
+
+func (marc *mockAzureResourcesClient) ListByResourceGroup(
+	_ context.Context,
+	resourceGroup string,
+	_ *armresources.ClientListByResourceGroupOptions) ([]*armresources.ClientListByResourceGroupResponse, error) {
+	var responses []*armresources.ClientListByResourceGroupResponse
+
+	file, _ := ioutil.ReadFile("testdata/json/azure_resources_response.json")
+	var genericResourcesExpanded []*armresources.GenericResourceExpanded
+	if err := json.Unmarshal(file, &genericResourcesExpanded); err != nil {
+		return nil, err
+	}
+
+	if resourceGroup == "resourceGroup1" {
+		response := &armresources.ClientListByResourceGroupResponse{
+			ClientListByResourceGroupResult: armresources.ClientListByResourceGroupResult{
+				ResourceListResult: armresources.ResourceListResult{
+					Value: []*armresources.GenericResourceExpanded{
+						genericResourcesExpanded[0],
+						genericResourcesExpanded[1],
+					},
+				},
+			},
+		}
+
+		responses = append(responses, response)
+		return responses, nil
+	}
+
+	if resourceGroup == "resourceGroup2" {
+		response := &armresources.ClientListByResourceGroupResponse{
+			ClientListByResourceGroupResult: armresources.ClientListByResourceGroupResult{
+				ResourceListResult: armresources.ResourceListResult{
+					Value: []*armresources.GenericResourceExpanded{
+						genericResourcesExpanded[2],
+					},
+				},
+			},
+		}
+
+		responses = append(responses, response)
+		return responses, nil
+	}
+
+	return nil, fmt.Errorf("resouce group was not found")
+}
+
+func (mamdc *mockAzureMetricDefinitionsClient) List(
+	_ context.Context,
+	resourceID string,
+	_ *armmonitor.MetricDefinitionsClientListOptions) (armmonitor.MetricDefinitionsClientListResponse, error) {
+
+	file, _ := ioutil.ReadFile("testdata/json/azure_metric_definitions_responses.json")
+	var metricDefinitions [][]*armmonitor.MetricDefinition
+	if err := json.Unmarshal(file, &metricDefinitions); err != nil {
+		return armmonitor.MetricDefinitionsClientListResponse{}, err
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1" {
+		return armmonitor.MetricDefinitionsClientListResponse{
+			MetricDefinitionsClientListResult: armmonitor.MetricDefinitionsClientListResult{
+				MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
+					Value: metricDefinitions[0],
+				},
+			},
+		}, nil
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
+		return armmonitor.MetricDefinitionsClientListResponse{
+			MetricDefinitionsClientListResult: armmonitor.MetricDefinitionsClientListResult{
+				MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
+					Value: metricDefinitions[1],
+				},
+			},
+		}, nil
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3" {
+		return armmonitor.MetricDefinitionsClientListResponse{
+			MetricDefinitionsClientListResult: armmonitor.MetricDefinitionsClientListResult{
+				MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
+					Value: metricDefinitions[2],
+				},
+			},
+		}, nil
+	}
+
+	return armmonitor.MetricDefinitionsClientListResponse{}, fmt.Errorf("resource ID was not found")
+}
+
+func (mamc *mockAzureMetricsClient) List(
+	_ context.Context,
+	resourceID string,
+	_ *armmonitor.MetricsClientListOptions) (armmonitor.MetricsClientListResponse, error) {
+	file, _ := ioutil.ReadFile("testdata/json/azure_metrics_responses.json")
+	var metricResponses []armmonitor.Response
+	if err := json.Unmarshal(file, &metricResponses); err != nil {
+		return armmonitor.MetricsClientListResponse{}, err
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1" {
+		return armmonitor.MetricsClientListResponse{
+			MetricsClientListResult: armmonitor.MetricsClientListResult{
+				Response: metricResponses[0],
+			},
+		}, nil
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
+		return armmonitor.MetricsClientListResponse{
+			MetricsClientListResult: armmonitor.MetricsClientListResult{
+				Response: metricResponses[1],
+			},
+		}, nil
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3" {
+		return armmonitor.MetricsClientListResponse{
+			MetricsClientListResult: armmonitor.MetricsClientListResult{
+				Response: metricResponses[2],
+			},
+		}, nil
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource4" {
+		return armmonitor.MetricsClientListResponse{
+			MetricsClientListResult: armmonitor.MetricsClientListResult{
+				Response: metricResponses[3],
+			},
+		}, nil
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource5" {
+		return armmonitor.MetricsClientListResponse{
+			MetricsClientListResult: armmonitor.MetricsClientListResult{
+				Response: metricResponses[4],
+			},
+		}, nil
+	}
+
+	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource6" {
+		return armmonitor.MetricsClientListResponse{
+			MetricsClientListResult: armmonitor.MetricsClientListResult{
+				Response: metricResponses[5],
+			},
+		}, nil
+	}
+
+	return armmonitor.MetricsClientListResponse{}, fmt.Errorf("resource ID was not found")
+}
+
+func TestInit_ResourceTargetsOnly(t *testing.T) {
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_targets_only.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	for index := 1; index <= 27; index++ {
 		if index <= 10 {
-			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, testMetric1)
+			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, "metric1")
 		} else if index <= 23 {
-			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, testMetric2)
+			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, "metric2")
 		} else {
-			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, testMetric3)
+			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, "metric3")
 		}
 	}
 
-	expectedResourceMetrics := make([]string, 0)
+	var expectedResourceMetrics []string
 	for index := 1; index <= receiver.MaxMetricsPerRequest; index++ {
 		if index <= 10 {
-			expectedResourceMetrics = append(expectedResourceMetrics, testMetric1)
+			expectedResourceMetrics = append(expectedResourceMetrics, "metric1")
 		} else {
-			expectedResourceMetrics = append(expectedResourceMetrics, testMetric2)
+			expectedResourceMetrics = append(expectedResourceMetrics, "metric2")
 		}
 	}
 
@@ -69,25 +233,28 @@ func TestInit_ResourceTargetsOnly(t *testing.T) {
 	require.Len(t, am.receiver.Targets.ResourceTargets, 8)
 
 	for _, target := range am.receiver.Targets.ResourceTargets {
-		require.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
+		require.Contains(t, []string{
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1",
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2",
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3"}, target.ResourceID)
 
-		if target.ResourceID == testFullResourceGroup1ResourceType1Resource1 {
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1" {
 			require.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				require.Equal(t, []string{testMetric3}, target.Metrics)
+				require.Equal(t, []string{"metric3"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
-				require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+				require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 3 {
-				require.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
+				require.Equal(t, []string{"metric2", "metric2", "metric2"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 4 {
-				require.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
+				require.Equal(t, []string{"metric3", "metric3", "metric3", "metric3"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
@@ -95,85 +262,41 @@ func TestInit_ResourceTargetsOnly(t *testing.T) {
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 		}
-		if target.ResourceID == testFullResourceGroup1ResourceType2Resource2 {
-			require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
+			require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
 			require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 		}
-		if target.ResourceID == testFullResourceGroup2ResourceType1Resource3 {
-			require.Equal(t, []string{testMetric1, testMetric2, testMetric3}, target.Metrics)
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3" {
+			require.Equal(t, []string{"metric1", "metric2", "metric3"}, target.Metrics)
 			require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 		}
 	}
 }
 
 func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceGroupTargets: []*ResourceGroupTarget{
-			{
-				ResourceGroup: testResourceGroup1,
-				Resources: []*Resource{
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{testMetric1, testMetric2, testMetric3},
-						Aggregations: []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)},
-					},
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{},
-						Aggregations: []string{},
-					},
-					{
-						ResourceType: testResourceType2,
-						Metrics:      []string{},
-						Aggregations: []string{string(armmonitor.AggregationTypeEnumAverage)},
-					},
-					{
-						ResourceType: testResourceType2,
-						Metrics:      []string{testMetric2},
-						Aggregations: []string{},
-					},
-					{
-						ResourceType: testResourceType2,
-						Metrics:      []string{testMetric2},
-						Aggregations: []string{},
-					},
-				},
-			},
-			{
-				ResourceGroup: testResourceGroup2,
-				Resources: []*Resource{
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{testMetric3},
-						Aggregations: []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)},
-					},
-				},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_targets_only.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	for index := 1; index <= 27; index++ {
 		if index <= 10 {
-			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, testMetric1)
+			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, "metric1")
 		} else if index <= 23 {
-			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, testMetric2)
+			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, "metric2")
 		} else {
-			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, testMetric3)
+			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, "metric3")
 		}
 	}
 
-	expectedResourceMetrics := make([]string, 0)
+	var expectedResourceMetrics []string
 	for index := 1; index <= receiver.MaxMetricsPerRequest; index++ {
 		if index <= 10 {
-			expectedResourceMetrics = append(expectedResourceMetrics, testMetric1)
+			expectedResourceMetrics = append(expectedResourceMetrics, "metric1")
 		} else {
-			expectedResourceMetrics = append(expectedResourceMetrics, testMetric2)
+			expectedResourceMetrics = append(expectedResourceMetrics, "metric2")
 		}
 	}
 
@@ -181,25 +304,28 @@ func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
 	require.Len(t, am.receiver.Targets.ResourceTargets, 9)
 
 	for _, target := range am.receiver.Targets.ResourceTargets {
-		require.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
+		require.Contains(t, []string{
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1",
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2",
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3"}, target.ResourceID)
 
-		if target.ResourceID == testFullResourceGroup1ResourceType1Resource1 {
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1" {
 			require.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				require.Equal(t, []string{testMetric3}, target.Metrics)
+				require.Equal(t, []string{"metric3"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
-				require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+				require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 3 {
-				require.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
+				require.Equal(t, []string{"metric2", "metric2", "metric2"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 4 {
-				require.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
+				require.Equal(t, []string{"metric3", "metric3", "metric3", "metric3"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
@@ -207,86 +333,57 @@ func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 		}
-		if target.ResourceID == testFullResourceGroup1ResourceType2Resource2 {
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
 			require.Contains(t, []int{1, 2}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				require.Equal(t, []string{testMetric2}, target.Metrics)
+				require.Equal(t, []string{"metric2"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
 				require.Contains(t, []int{1, 5}, len(target.Aggregations))
 
 				if len(target.Aggregations) == 1 {
-					require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+					require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
 					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 				}
 				if len(target.Aggregations) == 5 {
-					require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+					require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
 					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 				}
 			}
 		}
-		if target.ResourceID == testFullResourceGroup2ResourceType1Resource3 {
-			require.Equal(t, []string{testMetric3}, target.Metrics)
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3" {
+			require.Equal(t, []string{"metric3"}, target.Metrics)
 			require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 		}
 	}
 }
 
 func TestInit_SubscriptionTargetsOnly(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		SubscriptionTargets: []*Resource{
-			{
-				ResourceType: testResourceType1,
-				Metrics:      []string{testMetric1, testMetric2, testMetric3},
-				Aggregations: []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)},
-			},
-			{
-				ResourceType: testResourceType2,
-				Metrics:      []string{},
-				Aggregations: []string{string(armmonitor.AggregationTypeEnumAverage)},
-			},
-			{
-				ResourceType: testResourceType2,
-				Metrics:      []string{testMetric2},
-				Aggregations: []string{},
-			},
-			{
-				ResourceType: testResourceType2,
-				Metrics:      []string{},
-				Aggregations: []string{},
-			},
-			{
-				ResourceType: testResourceType1,
-				Metrics:      []string{},
-				Aggregations: []string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_targets_only.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	for index := 1; index <= 27; index++ {
 		if index <= 10 {
-			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, testMetric1)
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric1")
 		} else if index <= 23 {
-			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, testMetric2)
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric2")
 		} else {
-			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, testMetric3)
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric3")
 		}
 	}
 
-	expectedResourceMetrics := make([]string, 0)
+	var expectedResourceMetrics []string
 	for index := 1; index <= receiver.MaxMetricsPerRequest; index++ {
 		if index <= 10 {
-			expectedResourceMetrics = append(expectedResourceMetrics, testMetric1)
+			expectedResourceMetrics = append(expectedResourceMetrics, "metric1")
 		} else {
-			expectedResourceMetrics = append(expectedResourceMetrics, testMetric2)
+			expectedResourceMetrics = append(expectedResourceMetrics, "metric2")
 		}
 	}
 
@@ -294,25 +391,28 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 	require.Len(t, am.receiver.Targets.ResourceTargets, 11)
 
 	for _, target := range am.receiver.Targets.ResourceTargets {
-		require.Contains(t, []string{testFullResourceGroup1ResourceType1Resource1, testFullResourceGroup1ResourceType2Resource2, testFullResourceGroup2ResourceType1Resource3}, target.ResourceID)
+		require.Contains(t, []string{
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1",
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2",
+			"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3"}, target.ResourceID)
 
-		if target.ResourceID == testFullResourceGroup1ResourceType1Resource1 {
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1" {
 			require.Contains(t, []int{1, 2, 3, 4, receiver.MaxMetricsPerRequest}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				require.Equal(t, []string{testMetric3}, target.Metrics)
+				require.Equal(t, []string{"metric3"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
-				require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+				require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 3 {
-				require.Equal(t, []string{testMetric2, testMetric2, testMetric2}, target.Metrics)
+				require.Equal(t, []string{"metric2", "metric2", "metric2"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 4 {
-				require.Equal(t, []string{testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
+				require.Equal(t, []string{"metric3", "metric3", "metric3", "metric3"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
@@ -320,35 +420,35 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 		}
-		if target.ResourceID == testFullResourceGroup1ResourceType2Resource2 {
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
 			require.Contains(t, []int{1, 2}, len(target.Metrics))
 
 			if len(target.Metrics) == 1 {
-				require.Equal(t, []string{testMetric2}, target.Metrics)
+				require.Equal(t, []string{"metric2"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
 				require.Contains(t, []int{1, 5}, len(target.Aggregations))
 
 				if len(target.Aggregations) == 1 {
-					require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+					require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
 					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 				}
 				if len(target.Aggregations) == 5 {
-					require.Equal(t, []string{testMetric1, testMetric2}, target.Metrics)
+					require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
 					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 				}
 			}
 		}
-		if target.ResourceID == testFullResourceGroup2ResourceType1Resource3 {
+		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3" {
 			require.Contains(t, []int{3, 7, receiver.MaxMetricsPerRequest}, len(target.Metrics))
 
 			if len(target.Metrics) == 3 {
-				require.Equal(t, []string{testMetric1, testMetric2, testMetric3}, target.Metrics)
+				require.Equal(t, []string{"metric1", "metric2", "metric3"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
 			}
 			if len(target.Metrics) == 7 {
-				require.Equal(t, []string{testMetric2, testMetric2, testMetric2, testMetric3, testMetric3, testMetric3, testMetric3}, target.Metrics)
+				require.Equal(t, []string{"metric2", "metric2", "metric2", "metric3", "metric3", "metric3", "metric3"}, target.Metrics)
 				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
@@ -360,124 +460,26 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 }
 
 func TestInit_AllTargetTypes(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{testMetric1, testMetric2, testMetric3},
-				[]string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)},
-			},
-			{
-				testResourceGroup1ResourceType2Resource2,
-				[]string{testMetric1, testMetric2},
-				[]string{},
-			},
-			{
-				testResourceGroup2ResourceType1Resource3,
-				[]string{},
-				[]string{string(armmonitor.AggregationTypeEnumTotal)},
-			},
-			{
-				testResourceGroup1ResourceType2Resource2,
-				[]string{},
-				[]string{},
-			},
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{},
-				[]string{},
-			},
-		},
-		ResourceGroupTargets: []*ResourceGroupTarget{
-			{
-				ResourceGroup: testResourceGroup1,
-				Resources: []*Resource{
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{testMetric1, testMetric2, testMetric3},
-						Aggregations: []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)},
-					},
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{},
-						Aggregations: []string{},
-					},
-					{
-						ResourceType: testResourceType2,
-						Metrics:      []string{},
-						Aggregations: []string{string(armmonitor.AggregationTypeEnumAverage)},
-					},
-					{
-						ResourceType: testResourceType2,
-						Metrics:      []string{testMetric2},
-						Aggregations: []string{},
-					},
-					{
-						ResourceType: testResourceType2,
-						Metrics:      []string{testMetric2},
-						Aggregations: []string{},
-					},
-				},
-			},
-			{
-				ResourceGroup: testResourceGroup2,
-				Resources: []*Resource{
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{testMetric3},
-						Aggregations: []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)},
-					},
-				},
-			},
-		},
-		SubscriptionTargets: []*Resource{
-			{
-				ResourceType: testResourceType1,
-				Metrics:      []string{testMetric1, testMetric2, testMetric3},
-				Aggregations: []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)},
-			},
-			{
-				ResourceType: testResourceType2,
-				Metrics:      []string{},
-				Aggregations: []string{string(armmonitor.AggregationTypeEnumAverage)},
-			},
-			{
-				ResourceType: testResourceType2,
-				Metrics:      []string{testMetric2},
-				Aggregations: []string{},
-			},
-			{
-				ResourceType: testResourceType2,
-				Metrics:      []string{},
-				Aggregations: []string{},
-			},
-			{
-				ResourceType: testResourceType1,
-				Metrics:      []string{},
-				Aggregations: []string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_all_target_types.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	for index := 1; index <= 27; index++ {
 		if index <= 10 {
-			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, testMetric1)
-			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, testMetric1)
-			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, testMetric1)
+			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, "metric1")
+			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, "metric1")
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric1")
 		} else if index <= 23 {
-			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, testMetric2)
-			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, testMetric2)
-			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, testMetric2)
+			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, "metric2")
+			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, "metric2")
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric2")
 		} else {
-			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, testMetric3)
-			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, testMetric3)
-			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, testMetric3)
+			am.ResourceTargets[4].Metrics = append(am.ResourceTargets[4].Metrics, "metric3")
+			am.ResourceGroupTargets[0].Resources[1].Metrics = append(am.ResourceGroupTargets[0].Resources[1].Metrics, "metric3")
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric3")
 		}
 	}
 
@@ -486,421 +488,265 @@ func TestInit_AllTargetTypes(t *testing.T) {
 }
 
 func TestInit_NoSubscriptionID(t *testing.T) {
-	am := &AzureMonitor{
-		ClientID:     testClientID,
-		ClientSecret: testClientSecret,
-		TenantID:     testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{},
-				[]string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_no_subscription_id.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_NoClientID(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{},
-				[]string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_no_client_id.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_NoClientSecret(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		TenantID:       testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{},
-				[]string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_no_client_secret.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_NoTenantID(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{},
-				[]string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_no_tenant_id.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_NoTargets(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		Log:            testutil.Logger{},
-		azureClients:   setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_no_targets.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceTargetWithoutResourceID(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				"",
-				[]string{},
-				[]string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_target_without_resource_id.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
+
+	require.Error(t, am.Init())
+}
+
+func TestInit_ResourceTargetWithInvalidResourceID(t *testing.T) {
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_target_with_invalid_resource_id.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
+
+	require.Error(t, am.Init())
+}
+
+func TestInit_ResourceTargetWithInvalidMetric(t *testing.T) {
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_target_with_invalid_metric.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{},
-				[]string{testInvalidAggregation},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_target_with_invalid_aggregation.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithoutResourceGroup(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceGroupTargets: []*ResourceGroupTarget{
-			{
-				"",
-				[]*Resource{
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{},
-						Aggregations: []string{},
-					},
-				},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_without_resource_group.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithResourceWithoutResourceType(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceGroupTargets: []*ResourceGroupTarget{
-			{
-				testResourceGroup1,
-				[]*Resource{
-					{
-						ResourceType: "",
-						Metrics:      []string{},
-						Aggregations: []string{},
-					},
-				},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_resource_without_resource_type.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
+
+	require.Error(t, am.Init())
+}
+
+func TestInit_ResourceGroupTargetWithInvalidResourceGroup(t *testing.T) {
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_invalid_resource_group.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
+
+	require.Error(t, am.Init())
+}
+
+func TestInit_ResourceGroupTargetWithInvalidResourceType(t *testing.T) {
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_invalid_resource_type.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithInvalidMetric(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceGroupTargets: []*ResourceGroupTarget{
-			{
-				testResourceGroup1,
-				[]*Resource{
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{testInvalidMetric},
-						Aggregations: []string{},
-					},
-				},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_invalid_metric.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceGroupTargets: []*ResourceGroupTarget{
-			{
-				testResourceGroup1,
-				[]*Resource{
-					{
-						ResourceType: testResourceType1,
-						Metrics:      []string{},
-						Aggregations: []string{testInvalidAggregation},
-					},
-				},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_with_invalid_aggregation.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetWithoutResources(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceGroupTargets: []*ResourceGroupTarget{
-			{
-				testResourceGroup1,
-				[]*Resource{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_without_resources.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_ResourceGroupTargetNoResourceFound(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceGroupTargets: []*ResourceGroupTarget{
-			{
-				testResourceGroup2,
-				[]*Resource{
-					{
-						ResourceType: testResourceType2,
-						Metrics:      []string{testMetric1, testMetric2},
-						Aggregations: []string{string(armmonitor.AggregationTypeEnumTotal)},
-					},
-				},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_resource_group_target_no_resource_found.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_SubscriptionTargetWithoutResourceType(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		SubscriptionTargets: []*Resource{
-			{
-				ResourceType: "",
-				Metrics:      []string{},
-				Aggregations: []string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_without_resource_type.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
+
+	require.Error(t, am.Init())
+}
+
+func TestInit_SubscriptionTargetWithInvalidResourceType(t *testing.T) {
+	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_with_invalid_resource_type.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_SubscriptionTargetWithInvalidMetric(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		SubscriptionTargets: []*Resource{
-			{
-				ResourceType: testResourceType1,
-				Metrics:      []string{testInvalidMetric},
-				Aggregations: []string{},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_with_invalid_metric.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		SubscriptionTargets: []*Resource{
-			{
-				ResourceType: testResourceType1,
-				Metrics:      []string{},
-				Aggregations: []string{testInvalidAggregation},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_with_invalid_aggregation.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_SubscriptionTargetNoResourceFound(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		SubscriptionTargets: []*Resource{
-			{
-				ResourceType: testResourceType3,
-				Metrics:      []string{testMetric1, testMetric2},
-				Aggregations: []string{string(armmonitor.AggregationTypeEnumTotal)},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_subscription_target_no_resource_found.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
 	require.Error(t, am.Init())
 }
 
 func TestInit_BadCredentials(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{},
-				[]string{},
-			},
-		},
-		Log: testutil.Logger{},
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/init_bad_credentials.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
 
+	am.Log = testutil.Logger{}
 	require.Error(t, am.Init())
 }
 
 func TestGather_Success(t *testing.T) {
-	am := &AzureMonitor{
-		SubscriptionID: testSubscriptionID,
-		ClientID:       testClientID,
-		ClientSecret:   testClientSecret,
-		TenantID:       testTenantID,
-		ResourceTargets: []*ResourceTarget{
-			{
-				testResourceGroup1ResourceType1Resource1,
-				[]string{testMetric1, testMetric2},
-				[]string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumMaximum)},
-			},
-			{
-				testResourceGroup1ResourceType2Resource2,
-				[]string{testMetric1},
-				[]string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumMinimum)},
-			},
-			{
-				testResourceGroup2ResourceType1Resource3,
-				[]string{testMetric1},
-				[]string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumMinimum)},
-			},
-			{
-				testResourceGroup2ResourceType2Resource4,
-				[]string{testMetric1},
-				[]string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumMaximum)},
-			},
-			{
-				testResourceGroup2ResourceType2Resource5,
-				[]string{testMetric2},
-				[]string{string(armmonitor.AggregationTypeEnumTotal)},
-			},
-			{
-				testResourceGroup2ResourceType2Resource6,
-				[]string{testMetric2},
-				[]string{string(armmonitor.AggregationTypeEnumAverage)},
-			},
-		},
-		Log:          testutil.Logger{},
-		azureClients: setMockAzureClients(),
-	}
+	file, _ := ioutil.ReadFile("testdata/toml/gather_success.toml")
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
 
-	resourceTargets := make([]*receiver.ResourceTarget, 0)
+	am.Log = testutil.Logger{}
+	am.azureClients = setMockAzureClients()
 
+	var resourceTargets []*receiver.ResourceTarget
 	for _, target := range am.ResourceTargets {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
@@ -929,11 +775,11 @@ func TestGather_Success(t *testing.T) {
 	expectedResource1Metric2MetricFields[receiver.MetricFieldTotal] = 2.5
 	expectedResource1Metric2MetricFields[receiver.MetricFieldMaximum] = 2.5
 	expectedResource1MetricsTags := make(map[string]string)
-	expectedResource1MetricsTags[receiver.MetricTagSubscriptionID] = testSubscriptionID
-	expectedResource1MetricsTags[receiver.MetricTagResourceGroup] = testResourceGroup1
-	expectedResource1MetricsTags[receiver.MetricTagNamespace] = testResourceType1
-	expectedResource1MetricsTags[receiver.MetricTagResourceName] = testResource1Name
-	expectedResource1MetricsTags[receiver.MetricTagResourceRegion] = testResourceRegion
+	expectedResource1MetricsTags[receiver.MetricTagSubscriptionID] = "subscriptionID"
+	expectedResource1MetricsTags[receiver.MetricTagResourceGroup] = "resourceGroup1"
+	expectedResource1MetricsTags[receiver.MetricTagNamespace] = "Microsoft.Test/type1"
+	expectedResource1MetricsTags[receiver.MetricTagResourceName] = "resource1"
+	expectedResource1MetricsTags[receiver.MetricTagResourceRegion] = "eastus"
 	expectedResource1MetricsTags[receiver.MetricTagUnit] = string(armmonitor.MetricUnitCount)
 
 	expectedResource2Metric1Name := "azure_monitor_microsoft_test_type2_metric1"
@@ -942,11 +788,11 @@ func TestGather_Success(t *testing.T) {
 	expectedResource2Metric1MetricFields[receiver.MetricFieldTotal] = 5.0
 	expectedResource2Metric1MetricFields[receiver.MetricFieldMinimum] = 2.5
 	expectedResource2MetricsTags := make(map[string]string)
-	expectedResource2MetricsTags[receiver.MetricTagSubscriptionID] = testSubscriptionID
-	expectedResource2MetricsTags[receiver.MetricTagResourceGroup] = testResourceGroup1
-	expectedResource2MetricsTags[receiver.MetricTagNamespace] = testResourceType2
-	expectedResource2MetricsTags[receiver.MetricTagResourceName] = testResource2Name
-	expectedResource2MetricsTags[receiver.MetricTagResourceRegion] = testResourceRegion
+	expectedResource2MetricsTags[receiver.MetricTagSubscriptionID] = "subscriptionID"
+	expectedResource2MetricsTags[receiver.MetricTagResourceGroup] = "resourceGroup1"
+	expectedResource2MetricsTags[receiver.MetricTagNamespace] = "Microsoft.Test/type2"
+	expectedResource2MetricsTags[receiver.MetricTagResourceName] = "resource2"
+	expectedResource2MetricsTags[receiver.MetricTagResourceRegion] = "eastus"
 	expectedResource2MetricsTags[receiver.MetricTagUnit] = string(armmonitor.MetricUnitCount)
 
 	expectedResource3Metric1Name := "azure_monitor_microsoft_test_type1_metric1"
@@ -955,11 +801,11 @@ func TestGather_Success(t *testing.T) {
 	expectedResource3Metric1MetricFields[receiver.MetricFieldTotal] = 2.5
 	expectedResource3Metric1MetricFields[receiver.MetricFieldMinimum] = 2.5
 	expectedResource3MetricsTags := make(map[string]string)
-	expectedResource3MetricsTags[receiver.MetricTagSubscriptionID] = testSubscriptionID
-	expectedResource3MetricsTags[receiver.MetricTagResourceGroup] = testResourceGroup2
-	expectedResource3MetricsTags[receiver.MetricTagNamespace] = testResourceType1
-	expectedResource3MetricsTags[receiver.MetricTagResourceName] = testResource3Name
-	expectedResource3MetricsTags[receiver.MetricTagResourceRegion] = testResourceRegion
+	expectedResource3MetricsTags[receiver.MetricTagSubscriptionID] = "subscriptionID"
+	expectedResource3MetricsTags[receiver.MetricTagResourceGroup] = "resourceGroup2"
+	expectedResource3MetricsTags[receiver.MetricTagNamespace] = "Microsoft.Test/type1"
+	expectedResource3MetricsTags[receiver.MetricTagResourceName] = "resource3"
+	expectedResource3MetricsTags[receiver.MetricTagResourceRegion] = "eastus"
 	expectedResource3MetricsTags[receiver.MetricTagUnit] = string(armmonitor.MetricUnitBytes)
 
 	acc := testutil.Accumulator{}

@@ -1,0 +1,8 @@
+subscription_id = "subscriptionID"
+client_id = "clientID"
+client_secret = "clientSecret"
+tenant_id = "tenantID"
+
+  [[resource_target]]
+    metrics = ["metric1", "metric2", "metric3"]
+    aggregations = ["Total", "Average"]
