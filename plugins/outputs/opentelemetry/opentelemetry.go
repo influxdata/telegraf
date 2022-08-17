@@ -4,8 +4,6 @@ package opentelemetry
 import (
 	"context"
 	_ "embed"
-	"fmt"
-	"runtime"
 	"time"
 
 	ntls "crypto/tls"
@@ -28,7 +26,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-var userAgent = fmt.Sprintf("telegraf %s (%s/%s)", internal.Version(), runtime.GOOS, runtime.GOARCH)
+var userAgent = internal.ProductToken()
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
