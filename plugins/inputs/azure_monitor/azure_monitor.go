@@ -2,10 +2,11 @@ package azure_monitor
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
-	"sync"
 )
 
 type AzureMonitor struct {

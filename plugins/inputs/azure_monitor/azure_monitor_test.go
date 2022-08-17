@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
-	"github.com/influxdata/toml"
 	"io/ioutil"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 	"github.com/stretchr/testify/require"
 )
