@@ -73,10 +73,11 @@ var fProcessorFilters = flag.String("processor-filter", "",
 var fConfigs sliceFlags
 var fConfigDirs sliceFlags
 
-//int
+// int
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 
-//windows only
+// windows only
+//
 //nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fService = flag.String("service", "", "operate on the service (windows only)")
 

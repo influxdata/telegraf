@@ -61,15 +61,16 @@ type TelegrafConfig interface {
 
 type Server interface {
 	Start(string)
+	ErrChan() <-chan error
 }
 
 type PprofServer struct {
-	Err chan error
+	err chan error
 }
 
 func NewPprofServer() *PprofServer {
 	return &PprofServer{
-		Err: make(chan error),
+		err: make(chan error),
 	}
 }
 
@@ -85,10 +86,14 @@ func (p *PprofServer) Start(address string) {
 		log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
 
 		if err := http.ListenAndServe(address, nil); err != nil {
-			p.Err <- fmt.Errorf("E! %w", err)
+			p.err <- fmt.Errorf("E! %w", err)
 		}
-		close(p.Err)
+		close(p.err)
 	}()
+}
+
+func (p *PprofServer) ErrChan() <-chan error {
+	return p.err
 }
 
 type Filters struct {
@@ -110,7 +115,7 @@ func processFilterFlags(section, input, output, aggregator, processor string) Fi
 
 // deleteEmpty will create a new slice without any empty strings
 // useful when using strings.Split(s, sep), when `sep` is provided
-// but no `sep`` is found, returns slice of length 1 containing s
+// but no `sep“ is found, returns slice of length 1 containing s
 func deleteEmpty(s []string) []string {
 	var r []string
 	for _, str := range s {
@@ -123,8 +128,7 @@ func deleteEmpty(s []string) []string {
 
 // runApp defines all the subcommands and flags for Telegraf
 // this abstraction is used for testing, so outputBuffer and args can be changed
-func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig) error {
-
+func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig, m Manager) error {
 	pluginFilterFlags := []cli.Flag{
 		&cli.StringFlag{
 			Name:  "section-filter",
@@ -160,7 +164,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Usage: "configuration file to load",
 				},
 				&cli.StringSliceFlag{
-					Name:  "config-diPrintDeprecationListrectory",
+					Name:  "config-directory",
 					Usage: "directory containing additional *.conf files",
 				},
 				// Int flags
@@ -186,6 +190,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.StringFlag{
 					Name:        "service-restart-delay",
 					DefaultText: "5m",
+				},
+				&cli.BoolFlag{
+					Name:  "service-auto-restart",
+					Usage: "auto restart service on failure (windows only)",
 				},
 				&cli.BoolFlag{
 					Name:  "console",
@@ -365,7 +373,38 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				pprof.Start(cCtx.String("pprof-addr"))
 			}
 
-			return nil
+			filters := processFilterFlags(
+				cCtx.String("section-filter"),
+				cCtx.String("input-filter"),
+				cCtx.String("output-filter"),
+				cCtx.String("aggregator-filter"),
+				cCtx.String("processor-filter"),
+			)
+
+			g := GlobalFlags{
+				config:      cCtx.StringSlice("config"),
+				configDir:   cCtx.StringSlice("config-directory"),
+				testWait:    cCtx.Int("test-wait"),
+				watchConfig: cCtx.String("watch-config"),
+				pidFile:     cCtx.String("pidfile"),
+				plugindDir:  cCtx.String("plugin-directory"),
+				test:        cCtx.Bool("test"),
+				debug:       cCtx.Bool("debug"),
+				once:        cCtx.Bool("once"),
+				quiet:       cCtx.Bool("quiet"),
+			}
+
+			w := WindowFlags{
+				service:             cCtx.String("service"),
+				serviceName:         cCtx.String("service-name"),
+				serviceDisplayName:  cCtx.String("service-display-name"),
+				serviceRestartDelay: cCtx.String("service-restart-delay"),
+				serviceAutoRestart:  cCtx.Bool("service-auto-restart"),
+				console:             cCtx.Bool("console"),
+			}
+
+			m.Init(pprof.ErrChan(), filters, g, w)
+			return m.Run()
 		},
 		Commands: []*cli.Command{
 			{
@@ -409,9 +448,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 }
 
 func main() {
+	agent := AgentManager{}
 	pprof := NewPprofServer()
 	c := config.NewConfig()
-	err := runApp(os.Args, os.Stdout, pprof, c)
+	err := runApp(os.Args, os.Stdout, pprof, c, &agent)
 	if err != nil {
 		log.Fatalf("E! %s", err)
 	}

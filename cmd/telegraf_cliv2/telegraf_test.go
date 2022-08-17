@@ -14,6 +14,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type MockManager struct{}
+
+func NewMockManager() *MockManager {
+	return &MockManager{}
+}
+
+func (m *MockManager) Init(serverErr <-chan error, f Filters, g GlobalFlags, w WindowFlags) {
+
+}
+
+func (m *MockManager) Run() error {
+	return nil
+}
+
 type MockConfig struct {
 	Buffer                    io.Writer
 	ExpectedDeprecatedPlugins map[string][]config.PluginDeprecationInfo
@@ -47,6 +61,10 @@ func (m *MockServer) Start(address string) {
 	m.Address = "localhost:6060"
 }
 
+func (m *MockServer) ErrChan() <-chan error {
+	return nil
+}
+
 func TestUsageFlag(t *testing.T) {
 	tests := []struct {
 		PluginName     string
@@ -69,7 +87,7 @@ func TestUsageFlag(t *testing.T) {
 		buf := new(bytes.Buffer)
 		args := os.Args[0:1]
 		args = append(args, "--usage", test.PluginName)
-		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 		if test.ExpectedError != "" {
 			require.ErrorContains(t, err, test.ExpectedError)
 			return
@@ -87,7 +105,7 @@ func TestInputListFlag(t *testing.T) {
 	inputs.Inputs = map[string]inputs.Creator{
 		"test": func() telegraf.Input { return nil },
 	}
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 	require.NoError(t, err)
 	expectedOutput := `Available Input Plugins:
   test
@@ -104,7 +122,7 @@ func TestOutputListFlag(t *testing.T) {
 	outputs.Outputs = map[string]outputs.Creator{
 		"test": func() telegraf.Output { return nil },
 	}
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 	require.NoError(t, err)
 	expectedOutput := `Available Output Plugins:
   test
@@ -127,7 +145,7 @@ func TestDeprecationListFlag(t *testing.T) {
 			},
 		},
 	}
-	err := runApp(args, buf, mS, mC)
+	err := runApp(args, buf, mS, mC, NewMockManager())
 	require.NoError(t, err)
 	expectedOutput := `Deprecated Input Plugins:
 plugin name: test
@@ -145,7 +163,7 @@ func TestPprofAddressFlag(t *testing.T) {
 	address := "localhost:6060"
 	args = append(args, "--pprof-addr", address)
 	m := NewMockServer()
-	err := runApp(args, buf, m, NewMockConfig(buf))
+	err := runApp(args, buf, m, NewMockConfig(buf), NewMockManager())
 	require.NoError(t, err)
 	require.Equal(t, address, m.Address)
 }
@@ -156,7 +174,7 @@ func TestPluginDirectoryFlag(t *testing.T) {
 	buf := new(bytes.Buffer)
 	args := os.Args[0:1]
 	args = append(args, "--plugin-directory", ".")
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 	require.ErrorContains(t, err, "E! go plugin support is not enabled")
 }
 
@@ -255,7 +273,7 @@ func TestSubcommandConfig(t *testing.T) {
 			buf := new(bytes.Buffer)
 			args := os.Args[0:1]
 			args = append(args, test.commands...)
-			err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+			err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 			require.NoError(t, err)
 			output := buf.String()
 			for _, e := range test.expectedHeaders {
@@ -313,7 +331,7 @@ func TestVersionSubcommand(t *testing.T) {
 		version = test.Version
 		branch = test.Branch
 		commit = test.Commit
-		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf))
+		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 		require.NoError(t, err)
 		require.Equal(t, test.ExpectedOutput, buf.String())
 	}
