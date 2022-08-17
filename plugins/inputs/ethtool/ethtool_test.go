@@ -308,7 +308,10 @@ func toStringMapInterface(in map[string]uint64) map[string]interface{} {
 func toStringMapUint(in map[string]interface{}) map[string]uint64 {
 	var m = map[string]uint64{}
 	for k, v := range in {
-		t := v.(uint64)
+		t, ok := v.(uint64)
+		if !ok {
+			errors.New("something in the interface is not a unit")
+		}
 		m[k] = t
 	}
 	return m
