@@ -71,3 +71,11 @@ To get more help run
 ```shell
 # ./tools/custom_builder/custom_builder --help
 ```
+
+## Notes
+
+Please make sure to include all `parsers` you intend to use and check the
+enabled-plugins list.
+
+Additional plugins can potentially be enabled automatically due to
+dependencies without being shown in the enabled-plugins list.
