@@ -125,7 +125,7 @@ docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processo
 
 .PHONY: build
 build:
-	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
 telegraf: build

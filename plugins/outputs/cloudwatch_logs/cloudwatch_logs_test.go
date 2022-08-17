@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/config/aws"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -63,7 +63,7 @@ func (c *mockCloudWatchLogs) PutLogEvents(_ context.Context, input *cloudwatchlo
 	return output, nil
 }
 
-//Ensure mockCloudWatchLogs implement cloudWatchLogs interface
+// Ensure mockCloudWatchLogs implement cloudWatchLogs interface
 var _ cloudWatchLogs = (*mockCloudWatchLogs)(nil)
 
 func RandStringBytes(n int) string {
@@ -243,8 +243,8 @@ func TestConnect(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w,
 			`{
-				   "logGroups": [ 
-					  { 
+				   "logGroups": [
+					  {
 						 "arn": "string",
 						 "creationTime": 123456789,
 						 "kmsKeyId": "string",
@@ -283,8 +283,8 @@ func TestWrite(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w,
 			`{
-				   "logGroups": [ 
-					  { 
+				   "logGroups": [
+					  {
 						 "arn": "string",
 						 "creationTime": 123456789,
 						 "kmsKeyId": "string",

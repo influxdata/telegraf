@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/config/aws"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
 

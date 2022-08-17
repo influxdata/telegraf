@@ -4,6 +4,60 @@
 ### BREAKING CHANGES
 
 - [#11493](https://github.com/influxdata/telegraf/pull/11493) `common.tls` Set default minimum TLS version to v1.2 for security reasons on both server and client connections. This is a change from the previous defaults (TLS v1.0) on the server configuration and might break clients relying on older TLS versions. You can manually revert to older versions on a per-plugin basis using the `tls_min_version` option in the plugins required.
+## v1.23.4 [2022-08-16]
+
+### Bugfixes
+
+- [#11647](https://github.com/influxdata/telegraf/pull/11647) Bump github.com/lxc/lxd to be able to run tests
+- [#11664](https://github.com/influxdata/telegraf/pull/11664) Sync sql output and input build constraints to handle loong64 in go1.19.
+- [#10841](https://github.com/influxdata/telegraf/pull/10841) Updating credentials file to not use endpoint_url parameter
+- [#10851](https://github.com/influxdata/telegraf/pull/10851) `inputs.cloudwatch` Customizable batch size when querying
+- [#11577](https://github.com/influxdata/telegraf/pull/11577) `inputs.kube_inventory` Send file location to enable token auto-refresh
+- [#11578](https://github.com/influxdata/telegraf/pull/11578) `inputs.kubernetes` Refresh token from file at each read
+- [#11635](https://github.com/influxdata/telegraf/pull/11635) `inputs.mongodb` Update version check for newer versions
+- [#11539](https://github.com/influxdata/telegraf/pull/11539) `inputs.opcua` Return an error with mismatched types
+- [#11548](https://github.com/influxdata/telegraf/pull/11548) `inputs.sqlserver` Set lower deadlock priority
+- [#11556](https://github.com/influxdata/telegraf/pull/11556) `inputs.stackdriver` Handle when no buckets available
+- [#11576](https://github.com/influxdata/telegraf/pull/11576) `inputs` Linter issues
+- [#11595](https://github.com/influxdata/telegraf/pull/11595) `outputs` Linter issues
+- [#11607](https://github.com/influxdata/telegraf/pull/11607) `parsers` Linter issues
+
+### Features
+
+- [#11622](https://github.com/influxdata/telegraf/pull/11622) Add coralogix dialect to opentelemetry
+
+### Dependency Updates
+
+- [#11412](https://github.com/influxdata/telegraf/pull/11412) `deps` Bump github.com/testcontainers/testcontainers-go from 0.12.0 to 0.13.0
+- [#11565](https://github.com/influxdata/telegraf/pull/11565) `deps` Bump github.com/apache/thrift from 0.15.0 to 0.16.0
+- [#11567](https://github.com/influxdata/telegraf/pull/11567) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2 from 1.46.0 to 1.51.0
+- [#11494](https://github.com/influxdata/telegraf/pull/11494) `deps` Update all go.opentelemetry.io dependencies
+- [#11569](https://github.com/influxdata/telegraf/pull/11569) `deps` Bump github.com/go-ldap/ldap/v3 from 3.4.1 to 3.4.4
+- [#11574](https://github.com/influxdata/telegraf/pull/11574) `deps` Bump github.com/karrick/godirwalk from 1.16.1 to 1.17.0
+- [#11568](https://github.com/influxdata/telegraf/pull/11568) `deps` Bump github.com/vmware/govmomi from 0.28.0 to 0.29.0
+- [#11347](https://github.com/influxdata/telegraf/pull/11347) `deps` Bump github.com/eclipse/paho.mqtt.golang from 1.3.5 to 1.4.1
+- [#11580](https://github.com/influxdata/telegraf/pull/11580) `deps` Bump github.com/shirou/gopsutil/v3 from 3.22.4 to 3.22.7
+- [#11582](https://github.com/influxdata/telegraf/pull/11582) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs
+- [#11583](https://github.com/influxdata/telegraf/pull/11583) `deps` Bump github.com/Azure/go-autorest/autorest/adal
+- [#11581](https://github.com/influxdata/telegraf/pull/11581) `deps` Bump github.com/pion/dtls/v2 from 2.0.13 to 2.1.5
+- [#11590](https://github.com/influxdata/telegraf/pull/11590) `deps` Bump github.com/Azure/azure-event-hubs-go/v3
+- [#11586](https://github.com/influxdata/telegraf/pull/11586) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch
+- [#11585](https://github.com/influxdata/telegraf/pull/11585) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis
+- [#11584](https://github.com/influxdata/telegraf/pull/11584) `deps` Bump github.com/aws/aws-sdk-go-v2/service/dynamodb
+- [#11598](https://github.com/influxdata/telegraf/pull/11598) `deps` Bump github.com/signalfx/golib/v3 from 3.3.43 to 3.3.45
+- [#11605](https://github.com/influxdata/telegraf/pull/11605) `deps` Update github.com/BurntSushi/toml from 0.4.1 to 1.2.0
+- [#11604](https://github.com/influxdata/telegraf/pull/11604) `deps` Update cloud.google.com/go/pubsub from 1.23.0 to 1.24.0
+- [#11602](https://github.com/influxdata/telegraf/pull/11602) `deps` Update k8s.io/apimachinery from 0.24.2 to 0.24.3
+- [#11603](https://github.com/influxdata/telegraf/pull/11603) `deps` Update github.com/Shopify/sarama from 1.34.1 to 1.35.0
+- [#11616](https://github.com/influxdata/telegraf/pull/11616) `deps` Bump github.com/sirupsen/logrus from 1.8.1 to 1.9.0
+- [#11636](https://github.com/influxdata/telegraf/pull/11636) `deps` Bump github.com/emicklei/go-restful from v2.9.5+incompatible to v3.8.0
+- [#11641](https://github.com/influxdata/telegraf/pull/11641) `deps` Bump github.com/hashicorp/consul/api from 1.12.0 to 1.13.1
+- [#11640](https://github.com/influxdata/telegraf/pull/11640) `deps` Bump github.com/prometheus/client_golang from 1.12.2 to 1.13.0
+- [#11643](https://github.com/influxdata/telegraf/pull/11643) `deps` Bump google.golang.org/api from 0.85.0 to 0.91.0
+- [#11644](https://github.com/influxdata/telegraf/pull/11644) `deps` Bump github.com/antchfx/xmlquery from 1.3.9 to 1.3.12
+- [#11651](https://github.com/influxdata/telegraf/pull/11651) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2
+- [#11652](https://github.com/influxdata/telegraf/pull/11652) `deps` Bump github.com/aws/aws-sdk-go-v2/feature/ec2/imds
+- [#11653](https://github.com/influxdata/telegraf/pull/11653) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs
 
 ## v1.23.3 [2022-07-25]
 

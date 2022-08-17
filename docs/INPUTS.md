@@ -13,8 +13,10 @@ and submit new inputs.
 - A plugin must conform to the [telegraf.Input][] interface.
 - Input Plugins should call `inputs.Add` in their `init` function to register
   themselves.  See below for a quick example.
-- Input Plugins must be added to the
-  `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
+- To be available within Telegraf itself, plugins must register themselves
+  using a file in `github.com/influxdata/telegraf/plugins/inputs/all` named
+  according to the plugin name. Make sure your also add build-tags to
+  conditionally build the plugin.
 - Each plugin requires a file called `sample.conf` containing the sample
   configuration  for the plugin in TOML format.
   Please consult the [Sample Config][] page for the latest style guidelines.
@@ -26,6 +28,8 @@ Let's say you've written a plugin that emits metrics about processes on the
 current host.
 
 ## Input Plugin Example
+
+Content of your plugin file e.g. `simple.go`
 
 ```go
 //go:generate ../../../tools/readme_config_includer/generator
@@ -71,11 +75,25 @@ func init() {
 }
 ```
 
+Registration of the plugin on `plugins/inputs/all/simple.go`:
+
+```go
+//go:build !custom || inputs || inputs.simple
+
+package all
+
+import _ "github.com/influxdata/telegraf/plugins/inputs/simple" // register plugin
+
+```
+
+The _build-tags_ in the first line allow to selectively include/exclude your
+plugin when customizing Telegraf.
+
 ### Development
 
 - Run `make static` followed by `make plugin-[pluginName]` to spin up a docker
   dev environment using docker-compose.
-- ***[Optional]*** When developing a plugin, add a `dev` directory with a
+- __[Optional]__ When developing a plugin, add a `dev` directory with a
   `docker-compose.yml` and `telegraf.conf` as well as any other supporting
   files, where sensible.
 
