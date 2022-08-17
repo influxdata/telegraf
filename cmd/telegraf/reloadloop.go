@@ -261,9 +261,12 @@ func (a *AgentManager) gather(ctx context.Context) error {
 		if err != nil {
 			log.Printf("E! Unable to create pidfile: %s", err)
 		} else {
-			fmt.Fprintf(f, "%d\n", os.Getpid())
+			_, _ = fmt.Fprintf(f, "%d\n", os.Getpid())
 
-			f.Close()
+			err = f.Close()
+			if err != nil {
+				return err
+			}
 
 			defer func() {
 				err := os.Remove(a.pidFile)
