@@ -27,7 +27,7 @@ var (
 	ErrorNotImplemented = errors.New("not implemented yet")
 )
 
-// Set via the LDFLAGS.
+// Set via LDFLAGS -X
 var (
 	version = "unknown"
 	branch  = ""

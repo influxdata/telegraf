@@ -48,9 +48,9 @@ HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 INTERNAL_PKG=github.com/influxdata/telegraf/internal
 LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).commit=$(commit) -X $(INTERNAL_PKG).branch=$(branch)
 ifneq ($(tag),)
-	LDFLAGS += -X $(BUILD_INFO_IMPORT_PATH).version=$(version)
+	LDFLAGS += -X $(INTERNAL_PKG).version=$(version)
 else
-	LDFLAGS += -X $(BUILD_INFO_IMPORT_PATH).version=$(version)-$(commit)
+	LDFLAGS += -X $(INTERNAL_PKG).version=$(version)-$(commit)
 endif
 
 # Go built-in race detector works only for 64 bits architectures.
