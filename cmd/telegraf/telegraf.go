@@ -44,87 +44,20 @@ type TelegrafConfig interface {
 		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
-	if int64(c.Agent.Interval) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
+func NewPprofServer() *PprofServer {
+	return &PprofServer{
+		err: make(chan error),
 	}
+}
 
-	if int64(c.Agent.FlushInterval) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.Interval)
-	}
-
-	// Setup logging as configured.
-	telegraf.Debug = c.Agent.Debug || *fDebug
-	logConfig := logger.LogConfig{
-		Debug:               telegraf.Debug,
-		Quiet:               c.Agent.Quiet || *fQuiet,
-		LogTarget:           c.Agent.LogTarget,
-		Logfile:             c.Agent.Logfile,
-		RotationInterval:    c.Agent.LogfileRotationInterval,
-		RotationMaxSize:     c.Agent.LogfileRotationMaxSize,
-		RotationMaxArchives: c.Agent.LogfileRotationMaxArchives,
-		LogWithTimezone:     c.Agent.LogWithTimezone,
-	}
-
-	logger.SetupLogging(logConfig)
-
-	log.Printf("I! Starting Telegraf %s%s", internal.Version(), internal.Customized)
-	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs",
-		len(inputs.Inputs),
-		len(aggregators.Aggregators),
-		len(processors.Processors),
-		len(parsers.Parsers),
-		len(outputs.Outputs),
-	)
-	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
-	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
-	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-	if !*fRunOnce && (*fTest || *fTestWait != 0) {
-		log.Print("W! " + color.RedString("Outputs are not used in testing mode!"))
-	} else {
-		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-	}
-	log.Printf("I! Tags enabled: %s", c.ListTags())
-
-	if count, found := c.Deprecations["inputs"]; found && (count[0] > 0 || count[1] > 0) {
-		log.Printf("W! Deprecated inputs: %d and %d options", count[0], count[1])
-	}
-	if count, found := c.Deprecations["aggregators"]; found && (count[0] > 0 || count[1] > 0) {
-		log.Printf("W! Deprecated aggregators: %d and %d options", count[0], count[1])
-	}
-	if count, found := c.Deprecations["processors"]; found && (count[0] > 0 || count[1] > 0) {
-		log.Printf("W! Deprecated processors: %d and %d options", count[0], count[1])
-	}
-	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
-		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
-	}
-
-	ag, err := agent.NewAgent(c)
-	if err != nil {
-		return err
-	}
-
-	// Notify systemd that telegraf is ready
-	// SdNotify() only tries to notify if the NOTIFY_SOCKET environment is set, so it's safe to call when systemd isn't present.
-	// Ignore the return values here because they're not valid for platforms that don't use systemd.
-	// For platforms that use systemd, telegraf doesn't log if the notification failed.
-	_, _ = daemon.SdNotify(false, daemon.SdNotifyReady)
-
-	if *fRunOnce {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Once(ctx, wait)
-	}
-
-	if *fTest || *fTestWait != 0 {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, wait)
-	}
-
-	if *fPidfile != "" {
-		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Printf("E! Unable to create pidfile: %s", err)
-		} else {
-			fmt.Fprintf(f, "%d\n", os.Getpid())
+func (p *PprofServer) Start(address string) {
+	go func() {
+		pprofHostPort := address
+		parts := strings.Split(pprofHostPort, ":")
+		if len(parts) == 2 && parts[0] == "" {
+			pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+		}
+		pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
 
 			f.Close()
 
@@ -155,34 +88,150 @@ func deleteEmpty(s []string) []string {
 	return r
 }
 
-func main() {
-	flag.Var(&fConfigs, "config", "configuration file to load")
-	flag.Var(&fConfigDirs, "config-directory", "directory containing additional *.conf files")
+// runApp defines all the subcommands and flags for Telegraf
+// this abstraction is used for testing, so outputBuffer and args can be changed
+func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig, m Manager) error {
+	pluginFilterFlags := []cli.Flag{
+		&cli.StringFlag{
+			Name:  "section-filter",
+			Usage: "filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'",
+		},
+		&cli.StringFlag{
+			Name:  "input-filter",
+			Usage: "filter the inputs to enable, separator is :",
+		},
+		&cli.StringFlag{
+			Name:  "output-filter",
+			Usage: "filter the outputs to enable, separator is :",
+		},
+		&cli.StringFlag{
+			Name:  "aggregator-filter",
+			Usage: "filter the aggregators to enable, separator is :",
+		},
+		&cli.StringFlag{
+			Name:  "processor-filter",
+			Usage: "filter the processors to enable, separator is :",
+		},
+	}
 
-	flag.Usage = func() { usageExit(0) }
-	flag.Parse()
-	args := flag.Args()
-
-	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
-	if *fSectionFilters != "" {
-		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
-	}
-	if *fInputFilters != "" {
-		inputFilters = strings.Split(":"+strings.TrimSpace(*fInputFilters)+":", ":")
-	}
-	if *fOutputFilters != "" {
-		outputFilters = strings.Split(":"+strings.TrimSpace(*fOutputFilters)+":", ":")
-	}
-
-	aggregatorFilters, processorFilters := []string{}, []string{}
-	if *fAggregatorFilters != "" {
-		aggregatorFilters = strings.Split(":"+strings.TrimSpace(*fAggregatorFilters)+":", ":")
-	}
-	if *fProcessorFilters != "" {
-		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
-	}
-
-	logger.SetupLogging(logger.LogConfig{})
+	app := &cli.App{
+		Name:   "Telegraf",
+		Usage:  "The plugin-driven server agent for collecting & reporting metrics.",
+		Writer: outputBuffer,
+		Flags: append(
+			[]cli.Flag{
+				// String slice flags
+				&cli.StringSliceFlag{
+					Name:  "config",
+					Usage: "configuration file to load",
+				},
+				&cli.StringSliceFlag{
+					Name:  "config-directory",
+					Usage: "directory containing additional *.conf files",
+				},
+				// Int flags
+				&cli.IntFlag{
+					Name:  "test-wait",
+					Usage: "wait up to this many seconds for service inputs to complete in test mode",
+				},
+				// Windows only string & bool flags
+				&cli.StringFlag{
+					Name:  "service",
+					Usage: "operate on the service (windows only)",
+				},
+				&cli.StringFlag{
+					Name:        "service-name",
+					DefaultText: "telegraf",
+					Usage:       "service name (windows only)",
+				},
+				&cli.StringFlag{
+					Name:        "service-display-name",
+					DefaultText: "Telegraf Data Collector Service",
+					Usage:       "service display name (windows only)",
+				},
+				&cli.StringFlag{
+					Name:        "service-restart-delay",
+					DefaultText: "5m",
+				},
+				&cli.BoolFlag{
+					Name:  "service-auto-restart",
+					Usage: "auto restart service on failure (windows only)",
+				},
+				&cli.BoolFlag{
+					Name:  "console",
+					Usage: "run as console application (windows only)",
+				},
+				//
+				// String flags
+				&cli.StringFlag{
+					Name:  "usage",
+					Usage: "print usage for a plugin, ie, 'telegraf --usage mysql'",
+				},
+				&cli.StringFlag{
+					Name:  "pprof-addr",
+					Usage: "pprof address to listen on, not activate pprof if empty",
+				},
+				&cli.StringFlag{
+					Name:  "watch-config",
+					Usage: "Monitoring config changes [notify, poll]",
+				},
+				&cli.StringFlag{
+					Name:  "pidfile",
+					Usage: "file to write our pid to",
+				},
+				//
+				// Bool flags
+				&cli.BoolFlag{
+					Name:  "once",
+					Usage: "run one gather and exit",
+				},
+				&cli.BoolFlag{
+					Name:  "debug",
+					Usage: "turn on debug logging",
+				},
+				&cli.BoolFlag{
+					Name:  "quiet",
+					Usage: "run in quiet mode",
+				},
+				&cli.BoolFlag{
+					Name:  "test",
+					Usage: "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs",
+				},
+				// TODO: Change "deprecation-list, input-list, output-list" flags to become a subcommand "list" that takes
+				// "input,output,aggregator,processor, deprecated" as parameters
+				&cli.BoolFlag{
+					Name:  "deprecation-list",
+					Usage: "print all deprecated plugins or plugin options",
+				},
+				&cli.BoolFlag{
+					Name:  "input-list",
+					Usage: "print available input plugins",
+				},
+				&cli.BoolFlag{
+					Name:  "output-list",
+					Usage: "print available output plugins",
+				},
+				//
+				// !!! The following flags are DEPRECATED !!!
+				// Already covered with the subcommand `./telegraf version`
+				&cli.BoolFlag{
+					Name:  "version",
+					Usage: "DEPRECATED: display the version and exit",
+				},
+				// Already covered with the subcommand `./telegraf config`
+				&cli.BoolFlag{
+					Name:  "sample-config",
+					Usage: "DEPRECATED: print out full sample configuration",
+				},
+				// Using execd plugin to add external plugins is preffered (less size impact, easier for end user)
+				&cli.StringFlag{
+					Name:  "plugin-directory",
+					Usage: "DEPRECATED: path to directory containing external plugins",
+				},
+				// !!!
+			}, pluginFilterFlags...),
+		Action: func(cCtx *cli.Context) error {
+			logger.SetupLogging(logger.LogConfig{})
 
 			// Deprecated: Use execd instead
 			// Load external plugins, if requested.
