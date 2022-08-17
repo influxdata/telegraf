@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+var buildTargets = []string{"build"}
+
 var categories = []string{
 	"aggregators",
 	"inputs",
@@ -132,7 +134,7 @@ func main() {
 	if !dryrun {
 		// Perform the build
 		var out bytes.Buffer
-		makeCmd := exec.Command("make", "clean", "all")
+		makeCmd := exec.Command("make", buildTargets...)
 		makeCmd.Env = append(os.Environ(), "BUILDTAGS="+tags)
 		makeCmd.Stdout = &out
 		makeCmd.Stderr = &out
