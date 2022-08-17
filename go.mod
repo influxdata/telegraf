@@ -61,7 +61,6 @@ require (
 	github.com/eclipse/paho.golang v0.10.0
 	github.com/eclipse/paho.mqtt.golang v1.4.1
 	github.com/fatih/color v1.13.0
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-logfmt/logfmt v0.5.1
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
@@ -182,6 +181,8 @@ require (
 )
 
 require (
+	github.com/imdario/mergo v0.3.12 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	gopkg.in/macaroon-bakery.v3 v3.0.0 // indirect
 )
