@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/stretchr/testify/require"
@@ -309,18 +310,18 @@ func TestVersionSubcommand(t *testing.T) {
 		{
 			Version:        "v2.0.0",
 			Branch:         "master",
-			ExpectedOutput: "Telegraf v2.0.0 (git: master unknown)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: master@unknown)",
 		},
 		{
 			Version:        "v2.0.0",
 			Branch:         "master",
 			Commit:         "123",
-			ExpectedOutput: "Telegraf v2.0.0 (git: master 123)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: master@123)",
 		},
 		{
 			Version:        "v2.0.0",
 			Commit:         "123",
-			ExpectedOutput: "Telegraf v2.0.0 (git: unknown 123)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: unknown@123)",
 		},
 	}
 
@@ -328,9 +329,9 @@ func TestVersionSubcommand(t *testing.T) {
 		buf := new(bytes.Buffer)
 		args := os.Args[0:1]
 		args = append(args, "version")
-		version = test.Version
-		branch = test.Branch
-		commit = test.Commit
+		internal.Version = test.Version
+		internal.Branch = test.Branch
+		internal.Commit = test.Commit
 		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 		require.NoError(t, err)
 		require.Equal(t, test.ExpectedOutput, buf.String())

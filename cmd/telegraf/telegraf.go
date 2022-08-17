@@ -25,94 +25,10 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 )
 
-var (
-	version string
-	commit  string
-	branch  string
-)
-
-func formatFullVersion() string {
-	var parts = []string{"Telegraf"}
-
-	if version != "" {
-		parts = append(parts, version)
-	} else {
-		parts = append(parts, "unknown")
-	}
-
-	if branch != "" || commit != "" {
-		if branch == "" {
-			branch = "unknown"
-		}
-		if commit == "" {
-			commit = "unknown"
-		}
-		git := fmt.Sprintf("(git: %s %s)", branch, commit)
-		parts = append(parts, git)
-	}
-
-func watchLocalConfig(signals chan os.Signal, fConfig string) {
-	var mytomb tomb.Tomb
-	var watcher watch.FileWatcher
-	if *fWatchConfig == "poll" {
-		watcher = watch.NewPollingFileWatcher(fConfig)
-	} else {
-		watcher = watch.NewInotifyFileWatcher(fConfig)
-	}
-	changes, err := watcher.ChangeEvents(&mytomb, 0)
-	if err != nil {
-		log.Printf("E! Error watching config: %s\n", err)
-		return
-	}
-	log.Println("I! Config watcher started")
-	select {
-	case <-changes.Modified:
-		log.Println("I! Config file modified")
-	case <-changes.Deleted:
-		// deleted can mean moved. wait a bit a check existence
-		<-time.After(time.Second)
-		if _, err := os.Stat(fConfig); err == nil {
-			log.Println("I! Config file overwritten")
-		} else {
-			log.Println("W! Config file deleted")
-			if err := watcher.BlockUntilExists(&mytomb); err != nil {
-				log.Printf("E! Cannot watch for config: %s\n", err.Error())
-				return
-			}
-			log.Println("I! Config file appeared")
-		}
-	case <-changes.Truncated:
-		log.Println("I! Config file truncated")
-	case <-mytomb.Dying():
-		log.Println("I! Config watcher ended")
-		return
-	}
-	mytomb.Done()
-	signals <- syscall.SIGHUP
+type TelegrafConfig interface {
+	CollectDeprecationInfos([]string, []string, []string, []string) map[string][]config.PluginDeprecationInfo
+	PrintDeprecationList([]config.PluginDeprecationInfo)
 }
-
-func runAgent(ctx context.Context,
-	inputFilters []string,
-	outputFilters []string,
-) error {
-	// If no other options are specified, load the config file and run.
-	c := config.NewConfig()
-	c.OutputFilters = outputFilters
-	c.InputFilters = inputFilters
-	var err error
-	// providing no "config" flag should load default config
-	if len(fConfigs) == 0 {
-		err = c.LoadConfig("")
-		if err != nil {
-			return err
-		}
-	}
-	for _, fConfig := range fConfigs {
-		err = c.LoadConfig(fConfig)
-		if err != nil {
-			return err
-		}
-	}
 
 	for _, fConfigDirectory := range fConfigDirs {
 		err = c.LoadDirectory(fConfigDirectory)
@@ -268,11 +184,6 @@ func main() {
 
 	logger.SetupLogging(logger.LogConfig{})
 
-			// Configure version
-			if err := internal.SetVersion(version); err != nil {
-				log.Println("Telegraf version already configured to: " + internal.Version())
-			}
-
 			// Deprecated: Use execd instead
 			// Load external plugins, if requested.
 			if cCtx.String("plugin-directory") != "" {
@@ -343,7 +254,7 @@ func main() {
 				return nil
 			// DEPRECATED
 			case cCtx.Bool("version"):
-				fmt.Println(formatFullVersion())
+				fmt.Println(internal.FormatFullVersion())
 				return nil
 			// DEPRECATED
 			case cCtx.Bool("sample-config"):
@@ -434,7 +345,7 @@ func main() {
 				Name:  "version",
 				Usage: "print current version to stdout",
 				Action: func(cCtx *cli.Context) error {
-					_, _ = outputBuffer.Write([]byte(formatFullVersion()))
+					_, _ = outputBuffer.Write([]byte(internal.FormatFullVersion()))
 					return nil
 				},
 			},
