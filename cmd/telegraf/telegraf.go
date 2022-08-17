@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/config/printer"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
@@ -336,8 +335,8 @@ func main() {
 				return nil
 			// print usage for a plugin, ie, 'telegraf --usage mysql'
 			case cCtx.String("usage") != "":
-				err := printer.PrintInputConfig(cCtx.String("usage"), outputBuffer)
-				err2 := printer.PrintOutputConfig(cCtx.String("usage"), outputBuffer)
+				err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
+				err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
 				if err != nil && err2 != nil {
 					return fmt.Errorf("E! %s and %s", err, err2)
 				}
