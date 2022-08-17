@@ -13,11 +13,11 @@ import (
 
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/fatih/color"
+	"github.com/influxdata/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
-	"github.com/influxdata/tail/watch"
 	"gopkg.in/tomb.v1"
 )
 
