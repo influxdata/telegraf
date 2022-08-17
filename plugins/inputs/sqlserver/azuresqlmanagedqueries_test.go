@@ -107,6 +107,7 @@ func TestAzureSQLIntegration_Managed_DatabaseIO_Query(t *testing.T) {
 
 	require.True(t, acc.HasMeasurement("sqlserver_database_io"))
 	require.True(t, acc.HasTag("sqlserver_database_io", "sql_instance"))
+	require.True(t, acc.HasTag("sqlserver_database_io", "database_name"))
 	require.True(t, acc.HasTag("sqlserver_database_io", "physical_filename"))
 	require.True(t, acc.HasTag("sqlserver_database_io", "logical_filename"))
 	require.True(t, acc.HasTag("sqlserver_database_io", "file_type"))
