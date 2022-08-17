@@ -79,6 +79,7 @@ func setup() {
 	interfaceMap = make(map[string]*InterfaceMock)
 
 	eth1Stat := map[string]uint64{
+		"interface_up":                   1,
 		"port_rx_1024_to_15xx":           25167245,
 		"port_rx_128_to_255":             1573526387,
 		"port_rx_15xx_to_jumbo":          137819058,
@@ -322,12 +323,17 @@ func TestGather(t *testing.T) {
 	require.Len(t, acc.Metrics, 2)
 
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
+	expectedFieldsEth1["interface_up"] = true
+
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
+	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
 		"driver":    "driver1",
 		"interface": "eth2",
@@ -347,6 +353,8 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 
 	// Should contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
+	expectedFieldsEth1["interface_up"] = true
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
@@ -355,6 +363,8 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 
 	// Should not contain eth2
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
+	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
 		"interface": "eth2",
 		"driver":    "driver1",
@@ -374,6 +384,8 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 
 	// Should not contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
+	expectedFieldsEth1["interface_up"] = true
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
@@ -382,6 +394,8 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 
 	// Should contain eth2
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
+	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
 		"interface": "eth2",
 		"driver":    "driver1",
