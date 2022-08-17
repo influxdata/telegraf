@@ -79,7 +79,6 @@ func setup() {
 	interfaceMap = make(map[string]*InterfaceMock)
 
 	eth1Stat := map[string]uint64{
-		"interface_up":                   1,
 		"port_rx_1024_to_15xx":           25167245,
 		"port_rx_128_to_255":             1573526387,
 		"port_rx_15xx_to_jumbo":          137819058,
@@ -305,6 +304,15 @@ func toStringMapInterface(in map[string]uint64) map[string]interface{} {
 	return m
 }
 
+func toStringMapUint(in map[string]interface{}) map[string]uint64 {
+	var m = map[string]uint64{}
+	for k, v := range in {
+		t := v.(uint64)
+		m[k] = t
+	}
+	return m
+}
+
 func TestGather(t *testing.T) {
 	setup()
 	var acc testutil.Accumulator
@@ -321,8 +329,8 @@ func TestGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
 	expectedTagsEth2 := map[string]string{
-		"interface": "eth2",
 		"driver":    "driver1",
+		"interface": "eth2",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
 }
@@ -383,93 +391,110 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 
 type TestCase struct {
 	normalization  []string
-	stats          map[string]uint64
-	expectedFields map[string]uint64
+	stats          map[string]interface{}
+	expectedFields map[string]interface{}
 }
 
 func TestNormalizedKeys(t *testing.T) {
 	cases := []TestCase{
 		{
 			normalization: []string{"underscore"},
-			stats: map[string]uint64{
-				"port rx":      1,
-				" Port_tx":     0,
-				"interface_up": 0,
+			stats: map[string]interface{}{
+				"port rx":      uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]uint64{
-				"port_rx":      1,
-				"_Port_tx":     0,
-				"interface_up": 0,
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"_Port_tx":             uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
 			},
 		},
 		{
 			normalization: []string{"underscore", "lower"},
-			stats: map[string]uint64{
-				"Port rx":      1,
-				" Port_tx":     0,
-				"interface_up": 0,
+			stats: map[string]interface{}{
+				"Port rx":      uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]uint64{
-				"port_rx":      1,
-				"_port_tx":     0,
-				"interface_up": 0,
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"_port_tx":             uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
 			},
 		},
 		{
 			normalization: []string{"underscore", "lower", "trim"},
-			stats: map[string]uint64{
-				"  Port RX ":   1,
-				" Port_tx":     0,
-				"interface_up": 0,
+			stats: map[string]interface{}{
+				"  Port RX ":   uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]uint64{
-				"port_rx":      1,
-				"port_tx":      0,
-				"interface_up": 0,
-			},
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"port_tx":              uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0)},
 		},
 		{
 			normalization: []string{"underscore", "lower", "snakecase", "trim"},
-			stats: map[string]uint64{
-				"  Port RX ":   1,
-				" Port_tx":     0,
-				"interface_up": 0,
+			stats: map[string]interface{}{
+				"  Port RX ":   uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]uint64{
-				"port_rx":      1,
-				"port_tx":      0,
-				"interface_up": 0,
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"port_tx":              uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
 			},
 		},
 		{
 			normalization: []string{"snakecase"},
-			stats: map[string]uint64{
-				"  PortRX ":    1,
-				" PortTX":      0,
-				"interface_up": 0,
+			stats: map[string]interface{}{
+				"  PortRX ":    uint64(1),
+				" PortTX":      uint64(0),
+				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]uint64{
-				"port_rx":      1,
-				"port_tx":      0,
-				"interface_up": 0,
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"port_tx":              uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
 			},
 		},
 		{
 			normalization: []string{},
-			stats: map[string]uint64{
-				"  Port RX ":   1,
-				" Port_tx":     0,
-				"interface_up": 0,
+			stats: map[string]interface{}{
+				"  Port RX ":   uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]uint64{
-				"  Port RX ":   1,
-				" Port_tx":     0,
-				"interface_up": 0,
+			expectedFields: map[string]interface{}{
+				"  Port RX ":           uint64(1),
+				" Port_tx":             uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
+			},
+		},
+		{
+			normalization: []string{},
+			stats: map[string]interface{}{
+				"  Port RX ": uint64(1),
+				" Port_tx":   uint64(0),
+			},
+			expectedFields: map[string]interface{}{
+				"  Port RX ":   uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": true,
 			},
 		},
 	}
 	for _, c := range cases {
-		eth0 := &InterfaceMock{"eth0", "e1000e", c.stats, false, true}
+		eth0 := &InterfaceMock{"eth0", "e1000e", toStringMapUint(c.stats), false, true}
 		expectedTags := map[string]string{
 			"interface": eth0.Name,
 			"driver":    eth0.DriverName,
@@ -492,7 +517,7 @@ func TestNormalizedKeys(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, acc.Metrics, 1)
 
-		acc.AssertContainsFields(t, pluginName, toStringMapInterface(c.expectedFields))
-		acc.AssertContainsTaggedFields(t, pluginName, toStringMapInterface(c.expectedFields), expectedTags)
+		acc.AssertContainsFields(t, pluginName, c.expectedFields)
+		acc.AssertContainsTaggedFields(t, pluginName, c.expectedFields, expectedTags)
 	}
 }
