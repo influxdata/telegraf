@@ -219,18 +219,6 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 	assert.Equal(t, r1, r2)
 }
 
-func TestVersionAlreadySet(t *testing.T) {
-	err := SetVersion("foo")
-	assert.NoError(t, err)
-
-	err = SetVersion("bar")
-
-	assert.Error(t, err)
-	assert.IsType(t, ErrorVersionAlreadySet, err)
-
-	assert.Equal(t, "foo", Version())
-}
-
 func TestAlignDuration(t *testing.T) {
 	tests := []struct {
 		name     string

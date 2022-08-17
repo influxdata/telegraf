@@ -126,12 +126,6 @@ var fPlugins = flag.String("plugin-directory", "",
 	"path to directory containing external plugins")
 var fRunOnce = flag.Bool("once", false, "run one gather and exit")
 
-var (
-	version string
-	commit  string
-	branch  string
-)
-
 var stop chan struct{}
 
 func reloadLoop(
@@ -277,7 +271,7 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 
-	log.Printf("I! Starting Telegraf %s", version)
+	log.Printf("I! Starting Telegraf %s", internal.Version())
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
@@ -348,29 +342,6 @@ func usageExit(rc int) {
 	os.Exit(rc)
 }
 
-func formatFullVersion() string {
-	var parts = []string{"Telegraf"}
-
-	if version != "" {
-		parts = append(parts, version)
-	} else {
-		parts = append(parts, "unknown")
-	}
-
-	if branch != "" || commit != "" {
-		if branch == "" {
-			branch = "unknown"
-		}
-		if commit == "" {
-			commit = "unknown"
-		}
-		git := fmt.Sprintf("(git: %s %s)", branch, commit)
-		parts = append(parts, git)
-	}
-
-	return strings.Join(parts, " ")
-}
-
 func deleteEmpty(s []string) []string {
 	var r []string
 	for _, str := range s {
@@ -410,11 +381,6 @@ func main() {
 
 	logger.SetupLogging(logger.LogConfig{})
 
-	// Configure version
-	if err := internal.SetVersion(version); err != nil {
-		log.Println("Telegraf version already configured to: " + internal.Version())
-	}
-
 	// Load external plugins, if requested.
 	if *fPlugins != "" {
 		log.Printf("I! Loading external plugins from: %s", *fPlugins)
@@ -443,7 +409,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Println(formatFullVersion())
+			fmt.Println(internal.FormatFullVersion())
 			return
 		case "config":
 			err := configCmd.Parse(args[1:])
@@ -534,7 +500,7 @@ func main() {
 		}
 		return
 	case *fVersion:
-		fmt.Println(formatFullVersion())
+		fmt.Println(internal.FormatFullVersion())
 		return
 	case *fSampleConfig:
 		printer.PrintSampleConfig(

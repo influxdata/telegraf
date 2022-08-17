@@ -23,35 +23,48 @@ import (
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 var (
-	ErrTimeout             = errors.New("command timed out")
-	ErrorNotImplemented    = errors.New("not implemented yet")
-	ErrorVersionAlreadySet = errors.New("version has already been set")
+	ErrTimeout          = errors.New("command timed out")
+	ErrorNotImplemented = errors.New("not implemented yet")
 )
 
-// Set via the main module
-var version string
+// Set via LDFLAGS -X
+var (
+	version = "unknown"
+	branch  = ""
+	commit  = ""
+)
 
 type ReadWaitCloser struct {
 	pipeReader *io.PipeReader
 	wg         sync.WaitGroup
 }
 
-// SetVersion sets the telegraf agent version
-func SetVersion(v string) error {
-	if version != "" {
-		return ErrorVersionAlreadySet
-	}
-	version = v
-	if version == "" {
-		version = "unknown"
-	}
-
-	return nil
-}
-
 // Version returns the telegraf agent version
 func Version() string {
 	return version
+}
+
+func FormatFullVersion() string {
+	var parts = []string{"Telegraf"}
+
+	if version != "" {
+		parts = append(parts, version)
+	} else {
+		parts = append(parts, "unknown")
+	}
+
+	if branch != "" || commit != "" {
+		if branch == "" {
+			branch = "unknown"
+		}
+		if commit == "" {
+			commit = "unknown"
+		}
+		git := fmt.Sprintf("(git: %s@%s)", branch, commit)
+		parts = append(parts, git)
+	}
+
+	return strings.Join(parts, " ")
 }
 
 // ProductToken returns a tag for Telegraf that can be used in user agents.
