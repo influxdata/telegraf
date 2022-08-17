@@ -213,6 +213,7 @@ following works:
 - github.com/moby/term [Apache License 2.0](https://github.com/moby/term/blob/master/LICENSE)
 - github.com/modern-go/concurrent [Apache License 2.0](https://github.com/modern-go/concurrent/blob/master/LICENSE)
 - github.com/modern-go/reflect2 [Apache License 2.0](https://github.com/modern-go/reflect2/blob/master/LICENSE)
+- github.com/montanaflynn/stats [MIT License](https://github.com/montanaflynn/stats/blob/master/LICENSE)
 - github.com/morikuni/aec [MIT License](https://github.com/morikuni/aec/blob/master/LICENSE)
 - github.com/multiplay/go-ts3 [BSD 2-Clause "Simplified" License](https://github.com/multiplay/go-ts3/blob/master/LICENSE)
 - github.com/munnerz/goautoneg [BSD 3-Clause Clear License](https://github.com/munnerz/goautoneg/blob/master/LICENSE)
