@@ -288,6 +288,7 @@ following works:
 - github.com/xdg-go/stringprep [Apache License 2.0](https://github.com/xdg-go/stringprep/blob/master/LICENSE)
 - github.com/xdg/scram [Apache License 2.0](https://github.com/xdg-go/scram/blob/master/LICENSE)
 - github.com/xdg/stringprep [Apache License 2.0](https://github.com/xdg-go/stringprep/blob/master/LICENSE)
+- github.com/xrash/smetrics [MIT License](https://github.com/xrash/smetrics/blob/master/LICENSE)
 - github.com/youmark/pkcs8 [MIT License](https://github.com/youmark/pkcs8/blob/master/LICENSE)
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)
 - github.com/yusufpapurcu/wmi [MIT License](https://github.com/yusufpapurcu/wmi/blob/master/LICENSE)
