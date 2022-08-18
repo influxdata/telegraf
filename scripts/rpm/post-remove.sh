@@ -7,6 +7,7 @@ if [[ "$1" = "0" ]]; then
     if [[ -d /run/systemd/system ]]; then
         systemctl disable telegraf
         rm -f /usr/lib/systemd/system/telegraf.service
+        systemctl daemon-reload
     fi
 fi
 
