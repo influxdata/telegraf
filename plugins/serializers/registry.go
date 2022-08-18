@@ -130,6 +130,9 @@ type Config struct {
 	// Output string fields as metric labels; when false string fields are
 	// discarded.
 	PrometheusStringAsLabel bool `toml:"prometheus_string_as_label"`
+
+	// Encode metrics without HELP metadata. This helps reduce the payload size.
+	PrometheusCompactEncoding bool `toml:"prometheus_compact_encoding"`
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -206,6 +209,7 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 		TimestampExport: exportTimestamp,
 		MetricSortOrder: sortMetrics,
 		StringHandling:  stringAsLabels,
+		CompactEncoding: config.PrometheusCompactEncoding,
 	})
 }
 

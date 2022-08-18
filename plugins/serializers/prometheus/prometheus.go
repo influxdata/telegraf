@@ -36,6 +36,10 @@ type FormatConfig struct {
 	TimestampExport TimestampExport
 	MetricSortOrder MetricSortOrder
 	StringHandling  StringHandling
+	// CompactEncoding defines whether to include
+	// HELP metadata in Prometheus payload. Setting to true
+	// helps to reduce payload size.
+	CompactEncoding bool
 }
 
 type Serializer struct {
