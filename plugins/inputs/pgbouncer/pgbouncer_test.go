@@ -90,6 +90,16 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 		"maxwait",
 	}
 
+	intMetricsPgBouncerDatabases := []string{
+		"current_connections",
+		"pool_size",
+		"min_pool_size",
+		"reserve_pool",
+		"max_connections",
+		"paused",
+		"disabled",
+	}
+
 	int32Metrics := []string{}
 
 	metricsCounted := 0
@@ -104,11 +114,16 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
+	for _, metric := range intMetricsPgBouncerDatabases {
+		require.True(t, acc.HasInt64Field("pgbouncer_databases", metric))
+		metricsCounted++
+	}
+
 	for _, metric := range int32Metrics {
 		require.True(t, acc.HasInt32Field("pgbouncer", metric))
 		metricsCounted++
 	}
 
 	require.True(t, metricsCounted > 0)
-	require.Equal(t, len(intMetricsPgBouncer)+len(intMetricsPgBouncerPools)+len(int32Metrics), metricsCounted)
+	require.Equal(t, len(intMetricsPgBouncer)+len(intMetricsPgBouncerPools)+len(intMetricsPgBouncerDatabases)+len(int32Metrics), metricsCounted)
 }

@@ -27,6 +27,10 @@ var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode"
 	"avg_req": true, "avg_recv": true, "avg_sent": true, "avg_query": true,
 }
 
+var ignoredDbColumns = map[string]bool{"name": true, "host": true, "port": true,
+	"database": true, "force_user": true, "pool_mode": true,
+}
+
 func (*PgBouncer) SampleConfig() string {
 	return sampleConfig
 }
@@ -130,7 +134,55 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields("pgbouncer_pools", fields, tags)
 	}
 
-	return poolRows.Err()
+	err = poolRows.Err()
+	if err != nil {
+		return err
+	}
+
+	// DATABASES
+	query = `SHOW DATABASES`
+	dbRows, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+	defer dbRows.Close()
+
+	// grab the column information from the result
+	if columns, err = dbRows.Columns(); err != nil {
+		return err
+	}
+
+	for dbRows.Next() {
+		tags, columnMap, err := p.accRow(dbRows, columns)
+		if err != nil {
+			return err
+		}
+
+		// SHOW DATABASES displays pgbouncer database name under name column,
+		// while using database column to store Postgres database name.
+		if database, ok := columnMap["database"]; ok {
+			if s, ok := (*database).(string); ok && s != "" {
+				tags["pg_dbname"] = s
+			}
+		}
+
+		// pass it under db tag to be compatible with the rest of the measurements
+		if name, ok := columnMap["name"]; ok {
+			if s, ok := (*name).(string); ok && s != "" {
+				tags["db"] = s
+			}
+		}
+
+		fields := make(map[string]interface{})
+		for col, val := range columnMap {
+			_, ignore := ignoredDbColumns[col]
+			if !ignore {
+				fields[col] = *val
+			}
+		}
+		acc.AddFields("pgbouncer_databases", fields, tags)
+	}
+	return dbRows.Err()
 }
 
 type scanner interface {
