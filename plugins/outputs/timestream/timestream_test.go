@@ -536,6 +536,7 @@ func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 		"as retrying this error doesn't make sense.")
 }
 func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
+	t.Skip("Skipping test due to data race, will be re-visited")
 	const maxWriteRecordsCalls = 5
 	const maxRecordsInWriteRecordsCall = 100
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
