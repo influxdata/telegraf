@@ -386,7 +386,7 @@ func (c *Config) LoadConfig(path string) error {
 			return err
 		}
 	}
-	data, err := loadConfig(path)
+	data, err := LoadConfigFile(path)
 	if err != nil {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
@@ -565,7 +565,7 @@ func escapeEnv(value string) string {
 	return envVarEscaper.Replace(value)
 }
 
-func loadConfig(config string) ([]byte, error) {
+func LoadConfigFile(config string) ([]byte, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
 		if err != nil {

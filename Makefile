@@ -114,6 +114,7 @@ versioninfo:
 	go generate cmd/telegraf/telegraf_windows.go; \
 
 build_tools:
+	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
 
@@ -223,6 +224,8 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf tools/custom_builder/custom_builder
+	rm -rf tools/custom_builder/custom_builder.exe
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
 	rm -rf tools/package_lxd_test/package_lxd_test

@@ -27,12 +27,15 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/aggregators"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
+	"github.com/influxdata/telegraf/plugins/processors"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"gopkg.in/tomb.v1"
 )
@@ -271,7 +274,14 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 
-	log.Printf("I! Starting Telegraf %s", internal.Version())
+	log.Printf("I! Starting Telegraf %s%s", internal.Version(), internal.Customized)
+	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs",
+		len(inputs.Inputs),
+		len(aggregators.Aggregators),
+		len(processors.Processors),
+		len(parsers.Parsers),
+		len(outputs.Outputs),
+	)
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
