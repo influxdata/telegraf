@@ -604,7 +604,7 @@ FROM (
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 		,DB_NAME() as [database_name]
 		,s.[session_id]
-		,ISNULL(r.[request_id], 0) as [request_id]
+		,r.[request_id]
 		,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
 		,COALESCE(r.[status], s.[status]) AS [status]
 		,COALESCE(r.[cpu_time], s.[cpu_time]) AS [cpu_time_ms]
@@ -660,7 +660,7 @@ WHERE
 		AND (	--Always fetch user process (in any state), fetch system process only if active
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
-		)
+		)		
 	)  
 OPTION(MAXDOP 1);
 `
