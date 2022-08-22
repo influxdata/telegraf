@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -90,6 +91,8 @@ type MQTTConsumer struct {
 	topicTagParse string
 	ctx           context.Context
 	cancel        context.CancelFunc
+	payloadSize   selfstat.Stat
+	messagesRecv  selfstat.Stat
 }
 
 func (*MQTTConsumer) SampleConfig() string {
@@ -146,6 +149,8 @@ func (m *MQTTConsumer) Init() error {
 		}
 	}
 
+	m.payloadSize = selfstat.Register("mqtt_consumer", "payload_size", map[string]string{})
+	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", map[string]string{})
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
@@ -240,6 +245,10 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
+	payloadBytes := len(msg.Payload())
+	m.payloadSize.Incr(int64(payloadBytes))
+	m.messagesRecv.Incr(1)
+
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
 		return err
