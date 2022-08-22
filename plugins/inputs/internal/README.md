@@ -84,5 +84,5 @@ internal_write,output=file,host=tyrion,version=1.99.0 buffer_limit=10000i,write_
 internal_gather,input=internal,host=tyrion,version=1.99.0 metrics_gathered=19i,gather_time_ns=442114i 1480682800000000000
 internal_gather,input=http_listener,host=tyrion,version=1.99.0 metrics_gathered=0i,gather_time_ns=167285i 1480682800000000000
 internal_http_listener,address=:8186,host=tyrion,version=1.99.0 queries_received=0i,writes_received=0i,requests_received=0i,buffers_created=0i,requests_served=0i,pings_received=0i,bytes_received=0i,not_founds_served=0i,pings_served=0i,queries_served=0i,writes_served=0i 1480682800000000000
-internal_mqtt_consumer,host=tyrion,version=1.99.0 messages_received=622i,bytes_received=37942i 1657282270000000000
+internal_mqtt_consumer,host=tyrion,version=1.99.0 messages_received=622i,payload_size=37942i 1657282270000000000
 ```

@@ -91,7 +91,7 @@ type MQTTConsumer struct {
 	topicTagParse string
 	ctx           context.Context
 	cancel        context.CancelFunc
-	bytesRecv     selfstat.Stat
+	payloadSize   selfstat.Stat
 	messagesRecv  selfstat.Stat
 }
 
@@ -149,7 +149,7 @@ func (m *MQTTConsumer) Init() error {
 		}
 	}
 
-	m.bytesRecv = selfstat.Register("mqtt_consumer", "bytes_received", map[string]string{})
+	m.payloadSize = selfstat.Register("mqtt_consumer", "payload_size", map[string]string{})
 	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", map[string]string{})
 	return nil
 }
@@ -245,34 +245,8 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
-	var remainingLength int
-	var qosFlagsSize int
-	var qOsSize int
-	topicSize := len(msg.Topic()) + 2
-	switch int(msg.Qos()) {
-	case 1:
-		qOsSize = 2
-		qosFlagsSize = 4
-	case 2:
-		qOsSize = 2
-		qosFlagsSize = 12
-	default:
-		qOsSize = 0
-	}
-	payloadSize := len(msg.Payload())
-	remainingContent := topicSize + qOsSize + payloadSize
-	if remainingContent < 1<<7 {
-		remainingLength = 1
-	} else if remainingContent < 1<<14 {
-		remainingLength = 2
-	} else if remainingContent < 1<<21 {
-		remainingLength = 3
-	} else {
-		remainingLength = 4
-	}
-	publishMessageSize := remainingLength + remainingContent + 1
-	byteCount := publishMessageSize + qosFlagsSize
-	m.bytesRecv.Incr(int64(byteCount))
+	payloadBytes := len(msg.Payload())
+	m.payloadSize.Incr(int64(payloadBytes))
 	m.messagesRecv.Incr(1)
 
 	metrics, err := m.parser.Parse(msg.Payload())
