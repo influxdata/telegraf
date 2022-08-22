@@ -835,7 +835,6 @@ func (s *Statsd) aggregate(m metric) {
 				s.counters[bm.hash].fields[bm.field] =
 					s.counters[bm.hash].fields[bm.field].(int64) + 1
 			}
-
 		}
 		if len(s.HistogramBuckets) > 0 {
 			// Handle +Inf
