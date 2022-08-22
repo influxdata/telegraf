@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf"
@@ -97,7 +98,9 @@ func TestUsageFlag(t *testing.T) {
 			continue
 		}
 		require.NoError(t, err)
-		require.Equal(t, test.ExpectedOutput, buf.String())
+		// To run this test on windows and linux, remove windows carriage return
+		o := strings.Replace(buf.String(), "\r", "", -1)
+		require.Equal(t, test.ExpectedOutput, o)
 	}
 }
 
