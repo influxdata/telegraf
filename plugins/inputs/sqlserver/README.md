@@ -341,7 +341,7 @@ The new (version 2) metrics provide:
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
 - *Schedulers* - This captures `sys.dm_os_schedulers`.
 - *SqlRequests* - This captures a snapshot of `sys.dm_exec_requests` and `sys.dm_exec_sessions` that gives you running requests as well as wait types and
-  blocking sessions.
+  blocking sessions. Telegraf's monitoring request is omitted unless it is a heading blocker.
 - *VolumeSpace* - uses `sys.dm_os_volume_stats` to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
 - *Cpu* - uses the buffer ring (`sys.dm_os_ring_buffers`) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
 
@@ -371,7 +371,7 @@ to test,differences in DMVs:
 - *AzureSQLDBServerProperties*: Relevant Azure SQL relevant properties from  such as Tier, #Vcores, Memory etc, storage, etc.
 - *AzureSQLDBWaitstats*: Wait time in ms from `sys.dm_db_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected only as of the end of the a statement. and for a specific database only.
 - *AzureSQLOsWaitstats*: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
-- *AzureSQLDBRequests: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
+- *AzureSQLDBRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`. Telegraf's monitoring request is omitted unless it is a heading blocker
 - *AzureSQLDBSchedulers* - This captures `sys.dm_os_schedulers` snapshots.
 
 ### database_type = "AzureSQLManagedInstance"
@@ -386,7 +386,7 @@ in DMVs:
 - *AzureSQLMIPerformanceCounters*: A select list of performance counters from `sys.dm_os_performance_counters` including cloud specific counters for SQL Hyperscale.
 - *AzureSQLMIServerProperties*: Relevant Azure SQL relevant properties such as Tier, #Vcores, Memory etc, storage, etc.
 - *AzureSQLMIOsWaitstats*: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
-- *AzureSQLMIRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
+- *AzureSQLMIRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`. Telegraf's monitoring request is omitter unless it is a heading blocker
 - *AzureSQLMISchedulers*: This captures `sys.dm_os_schedulers` snapshots.
 
 ### database_type = "AzureSQLPool"
