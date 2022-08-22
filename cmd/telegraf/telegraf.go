@@ -6,6 +6,7 @@ import (
 	"log" //nolint:revive
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -34,9 +35,13 @@ type Filters struct {
 	processor  []string
 }
 
-func usageExit(rc int) {
-	fmt.Println(internal.Usage)
-	os.Exit(rc)
+func processFilterFlags(section, input, output, aggregator, processor string) Filters {
+	sectionFilters := deleteEmpty(strings.Split(section, ":"))
+	inputFilters := deleteEmpty(strings.Split(input, ":"))
+	outputFilters := deleteEmpty(strings.Split(output, ":"))
+	aggregatorFilters := deleteEmpty(strings.Split(aggregator, ":"))
+	processorFilters := deleteEmpty(strings.Split(processor, ":"))
+	return Filters{sectionFilters, inputFilters, outputFilters, aggregatorFilters, processorFilters}
 }
 
 func deleteEmpty(s []string) []string {

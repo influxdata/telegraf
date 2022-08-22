@@ -19,6 +19,11 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/aggregators"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/processors"
 	"gopkg.in/tomb.v1"
 )
 
@@ -211,7 +216,14 @@ func (a *AgentManager) gather(ctx context.Context) error {
 
 	logger.SetupLogging(logConfig)
 
-	log.Printf("I! Starting Telegraf %s", internal.Version)
+	log.Printf("I! Starting Telegraf %s%s", internal.Version, internal.Customized)
+	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs",
+		len(inputs.Inputs),
+		len(aggregators.Aggregators),
+		len(processors.Processors),
+		len(parsers.Parsers),
+		len(outputs.Outputs),
+	)
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
