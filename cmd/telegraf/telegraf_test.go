@@ -78,9 +78,12 @@ func TestUsageFlag(t *testing.T) {
 		},
 		{
 			PluginName: "temp",
-			ExpectedOutput: `# Read metrics about temperature
+			ExpectedOutput: `
+# Read metrics about temperature
 [[inputs.temp]]
-	# no configuration`,
+  # no configuration
+
+`,
 		},
 	}
 
@@ -91,7 +94,7 @@ func TestUsageFlag(t *testing.T) {
 		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 		if test.ExpectedError != "" {
 			require.ErrorContains(t, err, test.ExpectedError)
-			return
+			continue
 		}
 		require.NoError(t, err)
 		require.Equal(t, test.ExpectedOutput, buf.String())
@@ -179,7 +182,7 @@ func TestPluginDirectoryFlag(t *testing.T) {
 	require.ErrorContains(t, err, "E! go plugin support is not enabled")
 }
 
-func TestSubcommandConfig(t *testing.T) {
+func TestCommandConfig(t *testing.T) {
 	tests := []struct {
 		name            string
 		commands        []string
@@ -188,6 +191,18 @@ func TestSubcommandConfig(t *testing.T) {
 		expectedPlugins []string
 		removedPlugins  []string
 	}{
+		// Deprecated flag replaced with command "config"
+		{
+			name:     "no filters",
+			commands: []string{"--sample-config"},
+			expectedHeaders: []string{
+				outputHeader,
+				inputHeader,
+				aggregatorHeader,
+				processorHeader,
+				serviceInputHeader,
+			},
+		},
 		{
 			name:     "no filters",
 			commands: []string{"config"},
@@ -293,7 +308,7 @@ func TestSubcommandConfig(t *testing.T) {
 	}
 }
 
-func TestVersionSubcommand(t *testing.T) {
+func TestCommandVersion(t *testing.T) {
 	tests := []struct {
 		Version        string
 		Branch         string
@@ -329,6 +344,52 @@ func TestVersionSubcommand(t *testing.T) {
 		buf := new(bytes.Buffer)
 		args := os.Args[0:1]
 		args = append(args, "version")
+		internal.Version = test.Version
+		internal.Branch = test.Branch
+		internal.Commit = test.Commit
+		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
+		require.NoError(t, err)
+		require.Equal(t, test.ExpectedOutput, buf.String())
+	}
+}
+
+// Deprecated in favor of command version
+func TestFlagVersion(t *testing.T) {
+	tests := []struct {
+		Version        string
+		Branch         string
+		Commit         string
+		ExpectedOutput string
+	}{
+		{
+			Version:        "v2.0.0",
+			ExpectedOutput: "Telegraf v2.0.0",
+		},
+		{
+			ExpectedOutput: "Telegraf unknown",
+		},
+		{
+			Version:        "v2.0.0",
+			Branch:         "master",
+			ExpectedOutput: "Telegraf v2.0.0 (git: master@unknown)",
+		},
+		{
+			Version:        "v2.0.0",
+			Branch:         "master",
+			Commit:         "123",
+			ExpectedOutput: "Telegraf v2.0.0 (git: master@123)",
+		},
+		{
+			Version:        "v2.0.0",
+			Commit:         "123",
+			ExpectedOutput: "Telegraf v2.0.0 (git: unknown@123)",
+		},
+	}
+
+	for _, test := range tests {
+		buf := new(bytes.Buffer)
+		args := os.Args[0:1]
+		args = append(args, "--version")
 		internal.Version = test.Version
 		internal.Branch = test.Branch
 		internal.Commit = test.Commit

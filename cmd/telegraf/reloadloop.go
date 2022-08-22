@@ -72,46 +72,46 @@ func (a *AgentManager) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w W
 func (a *AgentManager) reloadLoop() error {
 	reload := make(chan bool, 1)
 	reload <- true
-	for {
-		select {
-		case <-reload:
-			reload <- false
-			ctx, cancel := context.WithCancel(context.Background())
+	for <-reload {
+		reload <- false
+		ctx, cancel := context.WithCancel(context.Background())
 
-			signals := make(chan os.Signal, 1)
-			signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
-				syscall.SIGTERM, syscall.SIGINT)
-			if a.watchConfig != "" {
-				for _, fConfig := range a.config {
-					if _, err := os.Stat(fConfig); err == nil {
-						go a.watchLocalConfig(signals, fConfig)
-					} else {
-						log.Printf("W! Cannot watch config %s: %s", fConfig, err)
-					}
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
+			syscall.SIGTERM, syscall.SIGINT)
+		if a.watchConfig != "" {
+			for _, fConfig := range a.config {
+				if _, err := os.Stat(fConfig); err == nil {
+					go a.watchLocalConfig(signals, fConfig)
+				} else {
+					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
 				}
 			}
-			go func() {
-				select {
-				case sig := <-signals:
-					if sig == syscall.SIGHUP {
-						log.Printf("I! Reloading Telegraf config")
-						<-reload
-						reload <- true
-					}
-					cancel()
-				case <-stop:
-					cancel()
+		}
+		go func() {
+			select {
+			case sig := <-signals:
+				if sig == syscall.SIGHUP {
+					log.Printf("I! Reloading Telegraf config")
+					<-reload
+					reload <- true
 				}
-			}()
-
-			err := a.gather(ctx)
-			if err != nil && err != context.Canceled {
-				return fmt.Errorf("E! [telegraf] Error running agent: %v", err)
+				cancel()
+			case err := <-a.pprofErr:
+				log.Printf("E! pprof server failed: %v", err)
+				cancel()
+			case <-stop:
+				cancel()
 			}
-		case err := <-a.pprofErr:
-			return fmt.Errorf("pprof server failed: %v", err)
+		}()
+
+		err := a.gather(ctx)
+		if err != nil && err != context.Canceled {
+			return fmt.Errorf("[telegraf] Error running agent: %v", err)
 		}
 	}
+
+	return nil
 }
 
 func (a *AgentManager) watchLocalConfig(signals chan os.Signal, fConfig string) {

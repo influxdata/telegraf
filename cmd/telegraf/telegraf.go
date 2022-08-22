@@ -4,25 +4,21 @@ import (
 	"fmt"
 	"io"
 	"log" //nolint:revive
-	"net/http"
 	"os"
 	"sort"
-	"strings"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
-	"github.com/influxdata/telegraf/plugins/aggregators"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
-	"github.com/influxdata/telegraf/plugins/processors"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"github.com/urfave/cli/v2"
 )
 
 type TelegrafConfig interface {
@@ -30,47 +26,12 @@ type TelegrafConfig interface {
 	PrintDeprecationList([]config.PluginDeprecationInfo)
 }
 
-	for _, fConfigDirectory := range fConfigDirs {
-		err = c.LoadDirectory(fConfigDirectory)
-		if err != nil {
-			return err
-		}
-	}
-
-	if !(*fTest || *fTestWait != 0) && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
-	}
-	if *fPlugins == "" && len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
-	}
-
-func NewPprofServer() *PprofServer {
-	return &PprofServer{
-		err: make(chan error),
-	}
-}
-
-func (p *PprofServer) Start(address string) {
-	go func() {
-		pprofHostPort := address
-		parts := strings.Split(pprofHostPort, ":")
-		if len(parts) == 2 && parts[0] == "" {
-			pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
-		}
-		pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
-
-			f.Close()
-
-			defer func() {
-				err := os.Remove(*fPidfile)
-				if err != nil {
-					log.Printf("E! Unable to remove pidfile: %s", err)
-				}
-			}()
-		}
-	}
-
-	return ag.Run(ctx)
+type Filters struct {
+	section    []string
+	input      []string
+	output     []string
+	aggregator []string
+	processor  []string
 }
 
 func usageExit(rc int) {
@@ -303,7 +264,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				return nil
 			// DEPRECATED
 			case cCtx.Bool("version"):
-				fmt.Println(internal.FormatFullVersion())
+				_, _ = outputBuffer.Write([]byte(internal.FormatFullVersion()))
 				return nil
 			// DEPRECATED
 			case cCtx.Bool("sample-config"):
