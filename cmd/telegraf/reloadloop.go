@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log" //no:lint revive
+	"log" //nolint:revive
 	"os"
 	"os/signal"
 	"strings"

@@ -223,40 +223,40 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					filters.input, filters.output, filters.aggregator, filters.processor,
 				)
 				//nolint:revive // We will notice if Println fails
-				_, _ = outputBuffer.Write([]byte("Deprecated Input Plugins:\n"))
+				outputBuffer.Write([]byte("Deprecated Input Plugins:\n"))
 				c.PrintDeprecationList(infos["inputs"])
 				//nolint:revive // We will notice if Println fails
-				_, _ = outputBuffer.Write([]byte("Deprecated Output Plugins:\n"))
+				outputBuffer.Write([]byte("Deprecated Output Plugins:\n"))
 				c.PrintDeprecationList(infos["outputs"])
 				//nolint:revive // We will notice if Println fails
-				_, _ = outputBuffer.Write([]byte("Deprecated Processor Plugins:\n"))
+				outputBuffer.Write([]byte("Deprecated Processor Plugins:\n"))
 				c.PrintDeprecationList(infos["processors"])
 				//nolint:revive // We will notice if Println fails
-				_, _ = outputBuffer.Write([]byte("Deprecated Aggregator Plugins:\n"))
+				outputBuffer.Write([]byte("Deprecated Aggregator Plugins:\n"))
 				c.PrintDeprecationList(infos["aggregators"])
 				return nil
 			// print available output plugins
 			case cCtx.Bool("output-list"):
-				_, _ = outputBuffer.Write([]byte("Available Output Plugins:\n"))
+				outputBuffer.Write([]byte("Available Output Plugins:\n"))
 				names := make([]string, 0, len(outputs.Outputs))
 				for k := range outputs.Outputs {
 					names = append(names, k)
 				}
 				sort.Strings(names)
 				for _, k := range names {
-					_, _ = outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
+					outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
 				}
 				return nil
 			// print available input plugins
 			case cCtx.Bool("input-list"):
-				_, _ = outputBuffer.Write([]byte("Available Input Plugins:\n"))
+				outputBuffer.Write([]byte("Available Input Plugins:\n"))
 				names := make([]string, 0, len(inputs.Inputs))
 				for k := range inputs.Inputs {
 					names = append(names, k)
 				}
 				sort.Strings(names)
 				for _, k := range names {
-					_, _ = outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
+					outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
 				}
 				return nil
 			// print usage for a plugin, ie, 'telegraf --usage mysql'
@@ -269,7 +269,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				return nil
 			// DEPRECATED
 			case cCtx.Bool("version"):
-				_, _ = outputBuffer.Write([]byte(internal.FormatFullVersion()))
+				outputBuffer.Write([]byte(internal.FormatFullVersion()))
 				return nil
 			// DEPRECATED
 			case cCtx.Bool("sample-config"):
@@ -360,7 +360,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				Name:  "version",
 				Usage: "print current version to stdout",
 				Action: func(cCtx *cli.Context) error {
-					_, _ = outputBuffer.Write([]byte(internal.FormatFullVersion()))
+					outputBuffer.Write([]byte(internal.FormatFullVersion()))
 					return nil
 				},
 			},

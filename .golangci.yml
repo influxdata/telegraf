@@ -4,7 +4,6 @@ linters:
     # - telegraflinter
     - bodyclose
     - dogsled
-    - errcheck
     - goprintffuncname
     - gosimple
     - govet
@@ -71,7 +70,7 @@ linters-settings:
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unhandled-error
-        arguments: ["fmt.Printf", "fmt.Println", "fmt.Print"]
+        arguments: ["outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print"]
       - name: unnecessary-stmt
       - name: unreachable-code
       # - name: unused-parameter

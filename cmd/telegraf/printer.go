@@ -111,7 +111,7 @@ func printSampleConfig(
 	processorFilters []string,
 ) {
 	// print headers
-	_, _ = outputBuffer.Write([]byte(header))
+	outputBuffer.Write([]byte(header))
 
 	if len(sectionFilters) == 0 {
 		sectionFilters = sectionDefaults
@@ -122,11 +122,11 @@ func printSampleConfig(
 	if sliceContains("outputs", sectionFilters) {
 		if len(outputFilters) != 0 {
 			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
-				_, _ = outputBuffer.Write([]byte(outputHeader))
+				outputBuffer.Write([]byte(outputHeader))
 			}
 			printFilteredOutputs(outputFilters, false, outputBuffer)
 		} else {
-			_, _ = outputBuffer.Write([]byte(outputHeader))
+			outputBuffer.Write([]byte(outputHeader))
 			printFilteredOutputs(outputDefaults, false, outputBuffer)
 			// Print non-default outputs, commented
 			var pnames []string
@@ -144,11 +144,11 @@ func printSampleConfig(
 	if sliceContains("processors", sectionFilters) {
 		if len(processorFilters) != 0 {
 			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
-				_, _ = outputBuffer.Write([]byte(processorHeader))
+				outputBuffer.Write([]byte(processorHeader))
 			}
 			printFilteredProcessors(processorFilters, false, outputBuffer)
 		} else {
-			_, _ = outputBuffer.Write([]byte(processorHeader))
+			outputBuffer.Write([]byte(processorHeader))
 			pnames := []string{}
 			for pname := range processors.Processors {
 				pnames = append(pnames, pname)
@@ -162,11 +162,11 @@ func printSampleConfig(
 	if sliceContains("aggregators", sectionFilters) {
 		if len(aggregatorFilters) != 0 {
 			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
-				_, _ = outputBuffer.Write([]byte(aggregatorHeader))
+				outputBuffer.Write([]byte(aggregatorHeader))
 			}
 			printFilteredAggregators(aggregatorFilters, false, outputBuffer)
 		} else {
-			_, _ = outputBuffer.Write([]byte(aggregatorHeader))
+			outputBuffer.Write([]byte(aggregatorHeader))
 			pnames := []string{}
 			for pname := range aggregators.Aggregators {
 				pnames = append(pnames, pname)
@@ -180,11 +180,11 @@ func printSampleConfig(
 	if sliceContains("inputs", sectionFilters) {
 		if len(inputFilters) != 0 {
 			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
-				_, _ = outputBuffer.Write([]byte(inputHeader))
+				outputBuffer.Write([]byte(inputHeader))
 			}
 			printFilteredInputs(inputFilters, false, outputBuffer)
 		} else {
-			_, _ = outputBuffer.Write([]byte(inputHeader))
+			outputBuffer.Write([]byte(inputHeader))
 			printFilteredInputs(inputDefaults, false, outputBuffer)
 			// Print non-default inputs, commented
 			var pnames []string
@@ -295,7 +295,7 @@ func printFilteredInputs(inputFilters []string, commented bool, outputBuffer io.
 	}
 	sort.Strings(servInputNames)
 
-	_, _ = outputBuffer.Write([]byte(serviceInputHeader))
+	outputBuffer.Write([]byte(serviceInputHeader))
 	for _, name := range servInputNames {
 		printConfig(name, servInputs[name], "inputs", commented, inputs.Deprecations[name], outputBuffer)
 	}
@@ -321,11 +321,11 @@ func printFilteredOutputs(outputFilters []string, commented bool, outputBuffer i
 
 func printFilteredGlobalSections(sectionFilters []string, outputBuffer io.Writer) {
 	if sliceContains("global_tags", sectionFilters) {
-		_, _ = outputBuffer.Write([]byte(globalTagsConfig))
+		outputBuffer.Write([]byte(globalTagsConfig))
 	}
 
 	if sliceContains("agent", sectionFilters) {
-		_, _ = outputBuffer.Write([]byte(agentConfig))
+		outputBuffer.Write([]byte(agentConfig))
 	}
 }
 
@@ -340,22 +340,22 @@ func printConfig(name string, p telegraf.PluginDescriber, op string, commented b
 		if di.RemovalIn != "" {
 			removalNote = " and will be removed in " + di.RemovalIn
 		}
-		_, _ = outputBuffer.Write([]byte(fmt.Sprintf("\n%s ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)))
+		outputBuffer.Write([]byte(fmt.Sprintf("\n%s ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)))
 	}
 
 	sample := p.SampleConfig()
 	if sample == "" {
-		_, _ = outputBuffer.Write([]byte(fmt.Sprintf("\n#[[%s.%s]]", op, name)))
-		_, _ = outputBuffer.Write([]byte(fmt.Sprintf("\n%s  # no configuration\n\n", comment)))
+		outputBuffer.Write([]byte(fmt.Sprintf("\n#[[%s.%s]]", op, name)))
+		outputBuffer.Write([]byte(fmt.Sprintf("\n%s  # no configuration\n\n", comment)))
 	} else {
 		lines := strings.Split(sample, "\n")
-		_, _ = outputBuffer.Write([]byte("\n"))
+		outputBuffer.Write([]byte("\n"))
 		for i, line := range lines {
 			if i == len(lines)-1 {
-				_, _ = outputBuffer.Write([]byte("\n"))
+				outputBuffer.Write([]byte("\n"))
 				continue
 			}
-			_, _ = outputBuffer.Write([]byte(strings.TrimRight(comment+line, " ") + "\n"))
+			outputBuffer.Write([]byte(strings.TrimRight(comment+line, " ") + "\n"))
 		}
 	}
 }
