@@ -40,7 +40,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.15.10
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.52.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.15.10
-	github.com/aws/aws-sdk-go-v2/service/sts v1.16.7
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.13
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.13.12
 	github.com/aws/smithy-go v1.12.1
 	github.com/benbjohnson/clock v1.3.0
@@ -148,7 +148,7 @@ require (
 	github.com/vapourismo/knx-go v0.0.0-20211128234507-8198fa17db36
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.29.0
-	github.com/wavefronthq/wavefront-sdk-go v0.10.1
+	github.com/wavefronthq/wavefront-sdk-go v0.10.2
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.4.1
