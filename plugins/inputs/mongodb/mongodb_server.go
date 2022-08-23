@@ -38,7 +38,7 @@ func IsAuthorization(err error) bool {
 }
 
 func (s *Server) ping() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	return s.client.Ping(ctx, nil)
