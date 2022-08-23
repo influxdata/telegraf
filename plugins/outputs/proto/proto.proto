@@ -269,6 +269,7 @@ message System {
 
   message Tags {
     string host = 1;
+    string vpn_ip = 2;
   }
 
   Tags tags = 3;
