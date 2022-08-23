@@ -124,7 +124,7 @@ func TestRetryBehaviorIntegration(t *testing.T) {
 	require.NotContains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
-func TestDefaultBehaviorIntegration(t *testing.T) {
+func TestErrorBehaviorIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -143,7 +143,7 @@ func TestDefaultBehaviorIntegration(t *testing.T) {
 	m.DisconnectedServersBehavior = "retry"
 	err = m.Start()
 	require.NoError(t, err)
-	m.DisconnectedServersBehavior = "default"
+	m.DisconnectedServersBehavior = "error"
 
 	var acc testutil.Accumulator
 	err = m.Gather(&acc)

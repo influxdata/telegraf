@@ -46,9 +46,9 @@ All MongoDB server versions from 2.6 and higher are supported.
 
   ## Specifies plugin behavior regarding disconnected servers
   ## Available choices :
-  ##   - default: telegraf will return an error on startup if one the servers is unreachable
+  ##   - error: telegraf will return an error on startup if one the servers is unreachable
   ##   - retry: telegraf will start anyway and retry connexions to unreachable servers
-  # disconnected_servers_behavior = default
+  # disconnected_servers_behavior = "error"
 ```
 
 ### Permissions

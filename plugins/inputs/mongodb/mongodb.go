@@ -26,7 +26,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var DisconnectedServersBehaviors = []string{"default", "retry"}
+var DisconnectedServersBehaviors = []string{"error", "retry"}
 
 type MongoDB struct {
 	Servers                     []string
@@ -56,7 +56,7 @@ func (*MongoDB) SampleConfig() string {
 
 func (m *MongoDB) Init() error {
 	if m.DisconnectedServersBehavior == "" {
-		m.DisconnectedServersBehavior = "default"
+		m.DisconnectedServersBehavior = "error"
 	}
 
 	err := choice.Check(m.DisconnectedServersBehavior, DisconnectedServersBehaviors)
@@ -128,7 +128,7 @@ func (m *MongoDB) Start() error {
 
 		err = client.Ping(ctx, opts.ReadPreference)
 		if err != nil {
-			if m.DisconnectedServersBehavior == "default" {
+			if m.DisconnectedServersBehavior == "error" {
 				return fmt.Errorf("unable to ping MongoDB: %w", err)
 			}
 
