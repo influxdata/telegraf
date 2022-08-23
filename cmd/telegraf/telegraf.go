@@ -1,356 +1,293 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"io"
 	"log" //nolint:revive
 	"os"
-	"sort"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
+	"github.com/coreos/go-systemd/daemon"
+	"github.com/fatih/color"
+	"github.com/influxdata/tail/watch"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
-	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
+	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	_ "github.com/influxdata/telegraf/plugins/outputs/all"
-	_ "github.com/influxdata/telegraf/plugins/parsers/all"
-	_ "github.com/influxdata/telegraf/plugins/processors/all"
-	"github.com/urfave/cli/v2"
+	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/processors"
+	"gopkg.in/tomb.v1"
 )
 
-type TelegrafConfig interface {
-	CollectDeprecationInfos([]string, []string, []string, []string) map[string][]config.PluginDeprecationInfo
-	PrintDeprecationList([]config.PluginDeprecationInfo)
+var stop chan struct{}
+
+type GlobalFlags struct {
+	config      []string
+	configDir   []string
+	testWait    int
+	watchConfig string
+	pidFile     string
+	plugindDir  string
+	test        bool
+	debug       bool
+	once        bool
+	quiet       bool
 }
 
-type Filters struct {
-	section    []string
-	input      []string
-	output     []string
-	aggregator []string
-	processor  []string
+type WindowFlags struct {
+	service             string
+	serviceName         string
+	serviceDisplayName  string
+	serviceRestartDelay string
+	serviceAutoRestart  bool
+	console             bool
 }
 
-func processFilterFlags(section, input, output, aggregator, processor string) Filters {
-	sectionFilters := deleteEmpty(strings.Split(section, ":"))
-	inputFilters := deleteEmpty(strings.Split(input, ":"))
-	outputFilters := deleteEmpty(strings.Split(output, ":"))
-	aggregatorFilters := deleteEmpty(strings.Split(aggregator, ":"))
-	processorFilters := deleteEmpty(strings.Split(processor, ":"))
-	return Filters{sectionFilters, inputFilters, outputFilters, aggregatorFilters, processorFilters}
+type App interface {
+	Init(<-chan error, Filters, GlobalFlags, WindowFlags)
+	Run() error
 }
 
-func deleteEmpty(s []string) []string {
-	var r []string
-	for _, str := range s {
-		if str != "" {
-			r = append(r, str)
+type Telegraf struct {
+	pprofErr <-chan error
+
+	inputFilters  []string
+	outputFilters []string
+
+	GlobalFlags
+	WindowFlags
+}
+
+func (a *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w WindowFlags) {
+	a.pprofErr = pprofErr
+	a.inputFilters = f.input
+	a.outputFilters = f.output
+	a.GlobalFlags = g
+	a.WindowFlags = w
+}
+
+func (a *Telegraf) reloadLoop() error {
+	reload := make(chan bool, 1)
+	reload <- true
+	for <-reload {
+		reload <- false
+		ctx, cancel := context.WithCancel(context.Background())
+
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
+			syscall.SIGTERM, syscall.SIGINT)
+		if a.watchConfig != "" {
+			for _, fConfig := range a.config {
+				if _, err := os.Stat(fConfig); err == nil {
+					go a.watchLocalConfig(signals, fConfig)
+				} else {
+					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
+				}
+			}
+		}
+		go func() {
+			select {
+			case sig := <-signals:
+				if sig == syscall.SIGHUP {
+					log.Printf("I! Reloading Telegraf config")
+					<-reload
+					reload <- true
+				}
+				cancel()
+			case err := <-a.pprofErr:
+				log.Printf("E! pprof server failed: %v", err)
+				cancel()
+			case <-stop:
+				cancel()
+			}
+		}()
+
+		err := a.gather(ctx)
+		if err != nil && err != context.Canceled {
+			return fmt.Errorf("[telegraf] Error running agent: %v", err)
 		}
 	}
-	return r
+
+	return nil
 }
 
-// runApp defines all the subcommands and flags for Telegraf
-// this abstraction is used for testing, so outputBuffer and args can be changed
-func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig, m Manager) error {
-	pluginFilterFlags := []cli.Flag{
-		&cli.StringFlag{
-			Name:  "section-filter",
-			Usage: "filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'",
-		},
-		&cli.StringFlag{
-			Name:  "input-filter",
-			Usage: "filter the inputs to enable, separator is :",
-		},
-		&cli.StringFlag{
-			Name:  "output-filter",
-			Usage: "filter the outputs to enable, separator is :",
-		},
-		&cli.StringFlag{
-			Name:  "aggregator-filter",
-			Usage: "filter the aggregators to enable, separator is :",
-		},
-		&cli.StringFlag{
-			Name:  "processor-filter",
-			Usage: "filter the processors to enable, separator is :",
-		},
+func (a *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
+	var mytomb tomb.Tomb
+	var watcher watch.FileWatcher
+	if a.watchConfig == "poll" {
+		watcher = watch.NewPollingFileWatcher(fConfig)
+	} else {
+		watcher = watch.NewInotifyFileWatcher(fConfig)
 	}
-
-	extraFlags := append(pluginFilterFlags, cliFlags()...)
-
-	app := &cli.App{
-		Name:   "Telegraf",
-		Usage:  "The plugin-driven server agent for collecting & reporting metrics.",
-		Writer: outputBuffer,
-		Flags: append(
-			[]cli.Flag{
-				// String slice flags
-				&cli.StringSliceFlag{
-					Name:  "config",
-					Usage: "configuration file to load",
-				},
-				&cli.StringSliceFlag{
-					Name:  "config-directory",
-					Usage: "directory containing additional *.conf files",
-				},
-				// Int flags
-				&cli.IntFlag{
-					Name:  "test-wait",
-					Usage: "wait up to this many seconds for service inputs to complete in test mode",
-				},
-				//
-				// String flags
-				&cli.StringFlag{
-					Name:  "usage",
-					Usage: "print usage for a plugin, ie, 'telegraf --usage mysql'",
-				},
-				&cli.StringFlag{
-					Name:  "pprof-addr",
-					Usage: "pprof address to listen on, not activate pprof if empty",
-				},
-				&cli.StringFlag{
-					Name:  "watch-config",
-					Usage: "Monitoring config changes [notify, poll]",
-				},
-				&cli.StringFlag{
-					Name:  "pidfile",
-					Usage: "file to write our pid to",
-				},
-				//
-				// Bool flags
-				&cli.BoolFlag{
-					Name:  "once",
-					Usage: "run one gather and exit",
-				},
-				&cli.BoolFlag{
-					Name:  "debug",
-					Usage: "turn on debug logging",
-				},
-				&cli.BoolFlag{
-					Name:  "quiet",
-					Usage: "run in quiet mode",
-				},
-				&cli.BoolFlag{
-					Name:  "test",
-					Usage: "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs",
-				},
-				// TODO: Change "deprecation-list, input-list, output-list" flags to become a subcommand "list" that takes
-				// "input,output,aggregator,processor, deprecated" as parameters
-				&cli.BoolFlag{
-					Name:  "deprecation-list",
-					Usage: "print all deprecated plugins or plugin options",
-				},
-				&cli.BoolFlag{
-					Name:  "input-list",
-					Usage: "print available input plugins",
-				},
-				&cli.BoolFlag{
-					Name:  "output-list",
-					Usage: "print available output plugins",
-				},
-				//
-				// !!! The following flags are DEPRECATED !!!
-				// Already covered with the subcommand `./telegraf version`
-				&cli.BoolFlag{
-					Name:  "version",
-					Usage: "DEPRECATED: display the version and exit",
-				},
-				// Already covered with the subcommand `./telegraf config`
-				&cli.BoolFlag{
-					Name:  "sample-config",
-					Usage: "DEPRECATED: print out full sample configuration",
-				},
-				// Using execd plugin to add external plugins is preffered (less size impact, easier for end user)
-				&cli.StringFlag{
-					Name:  "plugin-directory",
-					Usage: "DEPRECATED: path to directory containing external plugins",
-				},
-				// !!!
-			}, extraFlags...),
-		Action: func(cCtx *cli.Context) error {
-			logger.SetupLogging(logger.LogConfig{})
-
-			// Deprecated: Use execd instead
-			// Load external plugins, if requested.
-			if cCtx.String("plugin-directory") != "" {
-				log.Printf("I! Loading external plugins from: %s", cCtx.String("plugin-directory"))
-				if err := goplugin.LoadExternalPlugins(cCtx.String("plugin-directory")); err != nil {
-					return fmt.Errorf("E! %w", err)
-				}
-			}
-
-			// switch for flags which just do something and exit immediately
-			switch {
-			// print available input plugins
-			case cCtx.Bool("deprecation-list"):
-				filters := processFilterFlags(
-					cCtx.String("section-filter"),
-					cCtx.String("input-filter"),
-					cCtx.String("output-filter"),
-					cCtx.String("aggregator-filter"),
-					cCtx.String("processor-filter"),
-				)
-				infos := c.CollectDeprecationInfos(
-					filters.input, filters.output, filters.aggregator, filters.processor,
-				)
-				//nolint:revive // We will notice if Println fails
-				outputBuffer.Write([]byte("Deprecated Input Plugins:\n"))
-				c.PrintDeprecationList(infos["inputs"])
-				//nolint:revive // We will notice if Println fails
-				outputBuffer.Write([]byte("Deprecated Output Plugins:\n"))
-				c.PrintDeprecationList(infos["outputs"])
-				//nolint:revive // We will notice if Println fails
-				outputBuffer.Write([]byte("Deprecated Processor Plugins:\n"))
-				c.PrintDeprecationList(infos["processors"])
-				//nolint:revive // We will notice if Println fails
-				outputBuffer.Write([]byte("Deprecated Aggregator Plugins:\n"))
-				c.PrintDeprecationList(infos["aggregators"])
-				return nil
-			// print available output plugins
-			case cCtx.Bool("output-list"):
-				outputBuffer.Write([]byte("Available Output Plugins:\n"))
-				names := make([]string, 0, len(outputs.Outputs))
-				for k := range outputs.Outputs {
-					names = append(names, k)
-				}
-				sort.Strings(names)
-				for _, k := range names {
-					outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
-				}
-				return nil
-			// print available input plugins
-			case cCtx.Bool("input-list"):
-				outputBuffer.Write([]byte("Available Input Plugins:\n"))
-				names := make([]string, 0, len(inputs.Inputs))
-				for k := range inputs.Inputs {
-					names = append(names, k)
-				}
-				sort.Strings(names)
-				for _, k := range names {
-					outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
-				}
-				return nil
-			// print usage for a plugin, ie, 'telegraf --usage mysql'
-			case cCtx.String("usage") != "":
-				err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
-				err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
-				if err != nil && err2 != nil {
-					return fmt.Errorf("E! %s and %s", err, err2)
-				}
-				return nil
-			// DEPRECATED
-			case cCtx.Bool("version"):
-				outputBuffer.Write([]byte(fmt.Sprintf("%s\n", internal.FormatFullVersion())))
-				return nil
-			// DEPRECATED
-			case cCtx.Bool("sample-config"):
-				filters := processFilterFlags(
-					cCtx.String("section-filter"),
-					cCtx.String("input-filter"),
-					cCtx.String("output-filter"),
-					cCtx.String("aggregator-filter"),
-					cCtx.String("processor-filter"),
-				)
-
-				printSampleConfig(
-					outputBuffer,
-					filters.section,
-					filters.input,
-					filters.output,
-					filters.aggregator,
-					filters.processor,
-				)
-				return nil
-			}
-
-			if cCtx.String("pprof-addr") != "" {
-				pprof.Start(cCtx.String("pprof-addr"))
-			}
-
-			filters := processFilterFlags(
-				cCtx.String("section-filter"),
-				cCtx.String("input-filter"),
-				cCtx.String("output-filter"),
-				cCtx.String("aggregator-filter"),
-				cCtx.String("processor-filter"),
-			)
-
-			g := GlobalFlags{
-				config:      cCtx.StringSlice("config"),
-				configDir:   cCtx.StringSlice("config-directory"),
-				testWait:    cCtx.Int("test-wait"),
-				watchConfig: cCtx.String("watch-config"),
-				pidFile:     cCtx.String("pidfile"),
-				plugindDir:  cCtx.String("plugin-directory"),
-				test:        cCtx.Bool("test"),
-				debug:       cCtx.Bool("debug"),
-				once:        cCtx.Bool("once"),
-				quiet:       cCtx.Bool("quiet"),
-			}
-
-			w := WindowFlags{
-				service:             cCtx.String("service"),
-				serviceName:         cCtx.String("service-name"),
-				serviceDisplayName:  cCtx.String("service-display-name"),
-				serviceRestartDelay: cCtx.String("service-restart-delay"),
-				serviceAutoRestart:  cCtx.Bool("service-auto-restart"),
-				console:             cCtx.Bool("console"),
-			}
-
-			m.Init(pprof.ErrChan(), filters, g, w)
-			return m.Run()
-		},
-		Commands: []*cli.Command{
-			{
-				Name:  "config",
-				Usage: "print out full sample configuration to stdout",
-				Flags: pluginFilterFlags,
-				Action: func(cCtx *cli.Context) error {
-					// The sub_Filters are populated when the filter flags are set after the subcommand config
-					// e.g. telegraf config --section-filter inputs
-					filters := processFilterFlags(
-						cCtx.String("section-filter"),
-						cCtx.String("input-filter"),
-						cCtx.String("output-filter"),
-						cCtx.String("aggregator-filter"),
-						cCtx.String("processor-filter"),
-					)
-
-					printSampleConfig(
-						outputBuffer,
-						filters.section,
-						filters.input,
-						filters.output,
-						filters.aggregator,
-						filters.processor,
-					)
-					return nil
-				},
-			},
-			{
-				Name:  "version",
-				Usage: "print current version to stdout",
-				Action: func(cCtx *cli.Context) error {
-					outputBuffer.Write([]byte(fmt.Sprintf("%s\n", internal.FormatFullVersion())))
-					return nil
-				},
-			},
-		},
-	}
-
-	return app.Run(args)
-}
-
-func main() {
-	agent := AgentManager{}
-	pprof := NewPprofServer()
-	c := config.NewConfig()
-	err := runApp(os.Args, os.Stdout, pprof, c, &agent)
+	changes, err := watcher.ChangeEvents(&mytomb, 0)
 	if err != nil {
-		log.Fatalf("E! %s", err)
+		log.Printf("E! Error watching config: %s\n", err)
+		return
 	}
+	log.Println("I! Config watcher started")
+	select {
+	case <-changes.Modified:
+		log.Println("I! Config file modified")
+	case <-changes.Deleted:
+		// deleted can mean moved. wait a bit a check existence
+		<-time.After(time.Second)
+		if _, err := os.Stat(fConfig); err == nil {
+			log.Println("I! Config file overwritten")
+		} else {
+			log.Println("W! Config file deleted")
+			if err := watcher.BlockUntilExists(&mytomb); err != nil {
+				log.Printf("E! Cannot watch for config: %s\n", err.Error())
+				return
+			}
+			log.Println("I! Config file appeared")
+		}
+	case <-changes.Truncated:
+		log.Println("I! Config file truncated")
+	case <-mytomb.Dying():
+		log.Println("I! Config watcher ended")
+		return
+	}
+	mytomb.Done()
+	signals <- syscall.SIGHUP
+}
+
+func (a *Telegraf) gather(ctx context.Context) error {
+	// If no other options are specified, load the config file and run.
+	c := config.NewConfig()
+	c.OutputFilters = a.outputFilters
+	c.InputFilters = a.inputFilters
+	var err error
+	// providing no "config" flag should load default config
+	if len(a.config) == 0 {
+		err = c.LoadConfig("")
+		if err != nil {
+			return err
+		}
+	}
+	for _, fConfig := range a.config {
+		err = c.LoadConfig(fConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, fConfigDirectory := range a.configDir {
+		err = c.LoadDirectory(fConfigDirectory)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !(a.test || a.testWait != 0) && len(c.Outputs) == 0 {
+		return errors.New("Error: no outputs found, did you provide a valid config file?")
+	}
+	if a.plugindDir == "" && len(c.Inputs) == 0 {
+		return errors.New("Error: no inputs found, did you provide a valid config file?")
+	}
+
+	if int64(c.Agent.Interval) <= 0 {
+		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
+	}
+
+	if int64(c.Agent.FlushInterval) <= 0 {
+		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.Interval)
+	}
+
+	// Setup logging as configured.
+	telegraf.Debug = c.Agent.Debug || a.debug
+	logConfig := logger.LogConfig{
+		Debug:               telegraf.Debug,
+		Quiet:               c.Agent.Quiet || a.quiet,
+		LogTarget:           c.Agent.LogTarget,
+		Logfile:             c.Agent.Logfile,
+		RotationInterval:    c.Agent.LogfileRotationInterval,
+		RotationMaxSize:     c.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: c.Agent.LogfileRotationMaxArchives,
+		LogWithTimezone:     c.Agent.LogWithTimezone,
+	}
+
+	logger.SetupLogging(logConfig)
+
+	log.Printf("I! Starting Telegraf %s%s", internal.Version, internal.Customized)
+	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs",
+		len(inputs.Inputs),
+		len(aggregators.Aggregators),
+		len(processors.Processors),
+		len(parsers.Parsers),
+		len(outputs.Outputs),
+	)
+	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
+	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
+	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
+	if !a.once && (a.test || a.testWait != 0) {
+		log.Print("W! " + color.RedString("Outputs are not used in testing mode!"))
+	} else {
+		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	}
+	log.Printf("I! Tags enabled: %s", c.ListTags())
+
+	if count, found := c.Deprecations["inputs"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated inputs: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["aggregators"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated aggregators: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["processors"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated processors: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
+	}
+
+	ag, err := agent.NewAgent(c)
+	if err != nil {
+		return err
+	}
+
+	// Notify systemd that telegraf is ready
+	// SdNotify() only tries to notify if the NOTIFY_SOCKET environment is set, so it's safe to call when systemd isn't present.
+	// Ignore the return values here because they're not valid for platforms that don't use systemd.
+	// For platforms that use systemd, telegraf doesn't log if the notification failed.
+	_, _ = daemon.SdNotify(false, daemon.SdNotifyReady)
+
+	if a.once {
+		wait := time.Duration(a.testWait) * time.Second
+		return ag.Once(ctx, wait)
+	}
+
+	if a.test || a.testWait != 0 {
+		wait := time.Duration(a.testWait) * time.Second
+		return ag.Test(ctx, wait)
+	}
+
+	if a.pidFile != "" {
+		f, err := os.OpenFile(a.pidFile, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Printf("E! Unable to create pidfile: %s", err)
+		} else {
+			_, _ = fmt.Fprintf(f, "%d\n", os.Getpid())
+
+			err = f.Close()
+			if err != nil {
+				return err
+			}
+
+			defer func() {
+				err := os.Remove(a.pidFile)
+				if err != nil {
+					log.Printf("E! Unable to remove pidfile: %s", err)
+				}
+			}()
+		}
+	}
+
+	return ag.Run(ctx)
 }

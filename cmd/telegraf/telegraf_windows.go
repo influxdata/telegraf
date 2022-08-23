@@ -8,7 +8,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/influxdata/telegraf/logger"
 	"github.com/kardianos/service"
@@ -22,18 +21,18 @@ func cliFlags() []cli.Flag {
 			Usage: "operate on the service (windows only)",
 		},
 		&cli.StringFlag{
-			Name:        "service-name",
-			DefaultText: "telegraf",
-			Usage:       "service name (windows only)",
+			Name:  "service-name",
+			Value: "telegraf",
+			Usage: "service name (windows only)",
 		},
 		&cli.StringFlag{
-			Name:        "service-display-name",
-			DefaultText: "Telegraf Data Collector Service",
-			Usage:       "service display name (windows only)",
+			Name:  "service-display-name",
+			Value: "Telegraf Data Collector Service",
+			Usage: "service display name (windows only)",
 		},
 		&cli.StringFlag{
-			Name:        "service-restart-delay",
-			DefaultText: "5m",
+			Name:  "service-restart-delay",
+			Value: "5m",
 		},
 		&cli.BoolFlag{
 			Name:  "service-auto-restart",
@@ -46,14 +45,14 @@ func cliFlags() []cli.Flag {
 	}
 }
 
-func (a *AgentManager) Run() error {
+func (a *Telegraf) Run() error {
 	// Register the eventlog logging target for windows.
 	err := logger.RegisterEventLogger(a.serviceName)
 	if err != nil {
 		return err
 	}
 
-	if runtime.GOOS != "windows" && !a.windowsRunAsService() {
+	if !a.windowsRunAsService() {
 		stop = make(chan struct{})
 		return a.reloadLoop()
 	}
@@ -62,18 +61,26 @@ func (a *AgentManager) Run() error {
 }
 
 type program struct {
-	*AgentManager
+	*Telegraf
 }
 
 func (p *program) Start(s service.Service) error {
-	errChan := make(chan error)
 	go func() {
 		stop = make(chan struct{})
 		err := p.reloadLoop()
-		errChan <- err
+		if err != nil {
+			fmt.Printf("E! %v\n", err)
+		}
 		close(stop)
 	}()
-	return <-errChan
+	return nil
+}
+
+func (p *program) run(errChan chan error) {
+	stop = make(chan struct{})
+	err := p.reloadLoop()
+	errChan <- err
+	close(stop)
 }
 
 func (p *program) Stop(s service.Service) error {
@@ -83,7 +90,7 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func (a *AgentManager) runAsWindowsService() error {
+func (a *Telegraf) runAsWindowsService() error {
 	programFiles := os.Getenv("ProgramFiles")
 	if programFiles == "" { // Should never happen
 		programFiles = "C:\\Program Files"
@@ -97,7 +104,7 @@ func (a *AgentManager) runAsWindowsService() error {
 	}
 
 	prg := &program{
-		AgentManager: a,
+		Telegraf: a,
 	}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
@@ -139,7 +146,7 @@ func (a *AgentManager) runAsWindowsService() error {
 }
 
 // Return true if Telegraf should create a Windows service.
-func (a *AgentManager) windowsRunAsService() bool {
+func (a *Telegraf) windowsRunAsService() bool {
 	if a.service != "" {
 		return true
 	}

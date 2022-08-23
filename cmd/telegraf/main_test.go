@@ -16,17 +16,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type MockManager struct{}
-
-func NewMockManager() *MockManager {
-	return &MockManager{}
+type MockTelegraf struct {
+	GlobalFlags
+	WindowFlags
 }
 
-func (m *MockManager) Init(serverErr <-chan error, f Filters, g GlobalFlags, w WindowFlags) {
-
+func NewMockManager() *MockTelegraf {
+	return &MockTelegraf{}
 }
 
-func (m *MockManager) Run() error {
+func (m *MockTelegraf) Init(serverErr <-chan error, f Filters, g GlobalFlags, w WindowFlags) {
+	m.GlobalFlags = g
+	m.WindowFlags = w
+}
+
+func (m *MockTelegraf) Run() error {
 	return nil
 }
 
@@ -399,5 +403,22 @@ func TestFlagVersion(t *testing.T) {
 		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
 		require.NoError(t, err)
 		require.Equal(t, test.ExpectedOutput, buf.String())
+	}
+}
+
+func TestGlobablBoolFlags(t *testing.T) {
+	commands := []string{
+		"--debug",
+		"--test",
+		"--quiet",
+		"--once",
+	}
+
+	for _, cmd := range commands {
+		buf := new(bytes.Buffer)
+		args := os.Args[0:1]
+		args = append(args, cmd)
+		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockManager())
+		require.NoError(t, err)
 	}
 }
