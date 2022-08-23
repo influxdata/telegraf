@@ -17,6 +17,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -25,15 +26,17 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var DisconnectedServersBehaviors = []string{"default", "retry"}
+
 type MongoDB struct {
-	Servers                []string
-	Ssl                    Ssl
-	GatherClusterStatus    bool
-	GatherPerdbStats       bool
-	GatherColStats         bool
-	GatherTopStat          bool
-	IgnoreUnreachableHosts bool
-	ColStatsDbs            []string
+	Servers                     []string
+	Ssl                         Ssl
+	GatherClusterStatus         bool
+	GatherPerdbStats            bool
+	GatherColStats              bool
+	GatherTopStat               bool
+	DisconnectedServersBehavior string
+	ColStatsDbs                 []string
 	tlsint.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -52,6 +55,15 @@ func (*MongoDB) SampleConfig() string {
 }
 
 func (m *MongoDB) Init() error {
+	if m.DisconnectedServersBehavior == "" {
+		m.DisconnectedServersBehavior = "default"
+	}
+
+	err := choice.Check(m.DisconnectedServersBehavior, DisconnectedServersBehaviors)
+	if err != nil {
+		return err
+	}
+
 	if m.Ssl.Enabled {
 		// Deprecated TLS config
 		m.tlsConfig = &tls.Config{
@@ -116,7 +128,7 @@ func (m *MongoDB) Start() error {
 
 		err = client.Ping(ctx, opts.ReadPreference)
 		if err != nil {
-			if !m.IgnoreUnreachableHosts {
+			if m.DisconnectedServersBehavior == "default" {
 				return fmt.Errorf("unable to connect to MongoDB: %w", err)
 			}
 
@@ -142,7 +154,7 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
-			if m.IgnoreUnreachableHosts {
+			if m.DisconnectedServersBehavior == "retry" {
 				if err := srv.ping(); err != nil {
 					return
 				}

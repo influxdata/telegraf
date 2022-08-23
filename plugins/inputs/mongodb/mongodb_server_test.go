@@ -102,7 +102,7 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 	}
 }
 
-func TestIgnoreUnreachableHostsIntegration(t *testing.T) {
+func TestRetryBehaviorIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -112,7 +112,7 @@ func TestIgnoreUnreachableHostsIntegration(t *testing.T) {
 		Servers: []string{unreachableMongoEndpoint},
 	}
 
-	m.IgnoreUnreachableHosts = true
+	m.DisconnectedServersBehavior = "retry"
 	err := m.Init()
 	require.NoError(t, err)
 	err = m.Start()
@@ -124,7 +124,7 @@ func TestIgnoreUnreachableHostsIntegration(t *testing.T) {
 	require.NotContains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
-func TestNoticeUnreachleHostsIntegration(t *testing.T) {
+func TestDefaultBehaviorIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -139,12 +139,11 @@ func TestNoticeUnreachleHostsIntegration(t *testing.T) {
 	err = m.Start()
 	require.Error(t, err)
 
-	// set IgnoreUnreachableHosts to true to bypass start error
-	m.IgnoreUnreachableHosts = true
+	// set to retry to bypass start error
+	m.DisconnectedServersBehavior = "retry"
 	err = m.Start()
 	require.NoError(t, err)
-	// set back to false to test the log behavior
-	m.IgnoreUnreachableHosts = false
+	m.DisconnectedServersBehavior = "default"
 
 	var acc testutil.Accumulator
 	err = m.Gather(&acc)
