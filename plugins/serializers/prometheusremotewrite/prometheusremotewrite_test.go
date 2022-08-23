@@ -127,6 +127,21 @@ http_request_duration_seconds_sum 53423
 http_request_duration_seconds_bucket{le="0.5"} 129389
 `),
 		},
+		{
+			name: "invalid histogram buckets dropped",
+			metric: testutil.MustMetric(
+				"prometheus",
+				map[string]string{
+					"le": "invalid_bound",
+				},
+				map[string]interface{}{
+					"http_request_duration_seconds_bucket": 129389.0,
+				},
+				time.Unix(0, 0),
+				telegraf.Histogram,
+			),
+			expected: []byte(``),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -348,6 +363,40 @@ rpc_duration_seconds{quantile="0.05"} 3272
 rpc_duration_seconds{quantile="0.5"} 4773
 rpc_duration_seconds{quantile="0.9"} 9001
 rpc_duration_seconds{quantile="0.99"} 76656
+`),
+		},
+		{
+			name: "no samples dropped",
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 35.0,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 25.0,
+					},
+					time.Unix(1, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 85.0,
+					},
+					time.Unix(3, 0),
+				),
+			},
+			expected: []byte(`
+cpu_time_idle 35
+cpu_time_idle 25
+cpu_time_idle 85
 `),
 		},
 		{

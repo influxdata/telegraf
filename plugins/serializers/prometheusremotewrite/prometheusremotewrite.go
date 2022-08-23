@@ -59,7 +59,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, metric := range metrics {
 		commonLabels := s.createLabels(metric)
 		for _, field := range metric.FieldList() {
-			metricName := prometheus.MetricName(metric.Name(), field.Key, metric.Type())
+			metricName := MetricName(metric.Name(), field.Key, metric.Type())
 			metricName, ok := prometheus.SanitizeMetricName(metricName)
 			if !ok {
 				continue
@@ -78,33 +78,11 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			case telegraf.Histogram:
 				switch {
 				case strings.HasSuffix(field.Key, "_bucket"):
-					// if bucket only, init sum, count, inf
-					// metrickeysum, promtssum := getPromTS(fmt.Sprintf("%s_sum", metricName), commonLabels, float64(0), metric.Time())
-					// if _, ok = entries[metrickeysum]; !ok {
-					// 	entries[metrickeysum] = promtssum
-					// }
-
-					// metrickeycount, promtscount := getPromTS(fmt.Sprintf("%s_count", metricName), commonLabels, float64(0), metric.Time())
-					// if _, ok = entries[metrickeycount]; !ok {
-					// 	entries[metrickeycount] = promtscount
-					// }
-
-					// labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
-					// copy(labels, commonLabels)
-					// labels = append(labels, prompb.Label{
-					// 	Name:  "le",
-					// 	Value: "+Inf",
-					// })
-					// metrickeyinf, promtsinf := getPromTS(fmt.Sprintf("%s_bucket", metricName), labels, float64(0), metric.Time())
-					// if _, ok = entries[metrickeyinf]; !ok {
-					// 	entries[metrickeyinf] = promtsinf
-					// }
-
 					le, ok := metric.GetTag("le")
 					if !ok {
 						continue
 					}
-					bound, err := strconv.ParseFloat(le, 64)
+					_, err := strconv.ParseFloat(le, 64)
 					if err != nil {
 						continue
 					}
@@ -112,37 +90,19 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					if !ok {
 						continue
 					}
-
-					labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
-					copy(labels, commonLabels)
-					labels = append(labels, prompb.Label{
-						Name:  "le",
-						Value: fmt.Sprint(bound),
-					})
-					entries.Add(fmt.Sprintf("%s_bucket", metricName), labels, float64(count), metric.Time())
+					entries.Add(metricName, commonLabels, float64(count), metric.Time())
 				case strings.HasSuffix(field.Key, "_sum"):
 					sum, ok := prometheus.SampleSum(field.Value)
 					if !ok {
 						continue
 					}
-					entries.Add(fmt.Sprintf("%s_sum", metricName), commonLabels, sum, metric.Time())
+					entries.Add(metricName, commonLabels, sum, metric.Time())
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
 						continue
 					}
-					// if no bucket generate +Inf entry
-					// labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
-					// copy(labels, commonLabels)
-					// labels = append(labels, prompb.Label{
-					// 	Name:  "le",
-					// 	Value: "+Inf",
-					// })
-					// metrickeyinf, promtsinf := getPromTS(fmt.Sprintf("%s_bucket", metricName), labels, float64(count), metric.Time())
-					// if minf, ok := entries[metrickeyinf]; !ok || minf.Samples[0].Value == 0 {
-					// 	entries[metrickeyinf] = promtsinf
-					// }
-					entries.Add(fmt.Sprintf("%s_count", metricName), commonLabels, float64(count), metric.Time())
+					entries.Add(metricName, commonLabels, float64(count), metric.Time())
 				default:
 					continue
 				}
@@ -153,19 +113,19 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					if !ok {
 						continue
 					}
-					entries.Add(fmt.Sprintf("%s_sum", metricName), commonLabels, sum, metric.Time())
+					entries.Add(metricName, commonLabels, sum, metric.Time())
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
 						continue
 					}
-					entries.Add(fmt.Sprintf("%s_count", metricName), commonLabels, float64(count), metric.Time())
+					entries.Add(metricName, commonLabels, float64(count), metric.Time())
 				default:
 					quantileTag, ok := metric.GetTag("quantile")
 					if !ok {
 						continue
 					}
-					quantile, err := strconv.ParseFloat(quantileTag, 64)
+					_, err := strconv.ParseFloat(quantileTag, 64)
 					if err != nil {
 						continue
 					}
@@ -173,14 +133,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					if !ok {
 						continue
 					}
-
-					labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
-					copy(labels, commonLabels)
-					labels = append(labels, prompb.Label{
-						Name:  "quantile",
-						Value: fmt.Sprint(quantile),
-					})
-					entries.Add(metricName, labels, value, metric.Time())
+					entries.Add(metricName, commonLabels, value, metric.Time())
 				}
 			default:
 				return nil, fmt.Errorf("unknown type %v", metric.Type())
@@ -191,6 +144,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var promTS = make([]prompb.TimeSeries, len(entries))
 	var i int
 	for _, promts := range entries {
+		// sort samples to avoid out-of-order problems at receiver
 		samplescopy := promts.Samples
 		sort.Slice(samplescopy, func(i, j int) bool {
 			return samplescopy[i].Timestamp < samplescopy[j].Timestamp
@@ -250,15 +204,22 @@ func hasLabel(name string, labels []prompb.Label) bool {
 func (s *Serializer) createLabels(metric telegraf.Metric) []prompb.Label {
 	labels := make([]prompb.Label, 0, len(metric.TagList()))
 	for _, tag := range metric.TagList() {
-		// Ignore special tags for histogram and summary types.
+		value := tag.Value
+		// special histogram and summary tags must be string formatted correctly
 		switch metric.Type() {
 		case telegraf.Histogram:
 			if tag.Key == "le" {
-				continue
+				bound, err := strconv.ParseFloat(tag.Value, 64)
+				if err == nil {
+					value = fmt.Sprint(bound)
+				}
 			}
 		case telegraf.Summary:
 			if tag.Key == "quantile" {
-				continue
+				quantile, err := strconv.ParseFloat(tag.Value, 64)
+				if err == nil {
+					value = fmt.Sprint(quantile)
+				}
 			}
 		}
 
@@ -268,11 +229,11 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []prompb.Label {
 		}
 
 		// remove tags with empty values
-		if tag.Value == "" {
+		if value == "" {
 			continue
 		}
 
-		labels = append(labels, prompb.Label{Name: name, Value: tag.Value})
+		labels = append(labels, prompb.Label{Name: name, Value: value})
 	}
 
 	if s.config.StringHandling != StringAsLabel {
@@ -308,6 +269,13 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []prompb.Label {
 	}
 
 	return labels
+}
+
+func MetricName(measurement, fieldKey string, valueType telegraf.ValueType) string {
+	if measurement == "prometheus" {
+		return fieldKey
+	}
+	return measurement + "_" + fieldKey
 }
 
 func MakeMetricKey(labels []prompb.Label) MetricKey {
