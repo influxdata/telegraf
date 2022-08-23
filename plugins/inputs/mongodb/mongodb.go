@@ -61,7 +61,7 @@ func (m *MongoDB) Init() error {
 
 	err := choice.Check(m.DisconnectedServersBehavior, DisconnectedServersBehaviors)
 	if err != nil {
-		return err
+		return fmt.Errorf("disconnected_servers_behavior: %w", err)
 	}
 
 	if m.Ssl.Enabled {
