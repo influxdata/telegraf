@@ -5,7 +5,7 @@ package main
 
 import "github.com/urfave/cli/v2"
 
-func (a *AgentManager) Run() error {
+func (a *Telegraf) Run() error {
 	stop = make(chan struct{})
 	return a.reloadLoop()
 }
