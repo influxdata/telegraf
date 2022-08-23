@@ -122,7 +122,7 @@ func TestInitBlankEndpoint(t *testing.T) {
 
 	errorInit := plugin.Init()
 	require.Error(t, errorInit)
-	require.Equal(t, "Endpoint configuration cannot be empty", errorInit.Error())
+	require.Equal(t, "endpoint configuration cannot be empty", errorInit.Error())
 }
 
 type mockIngestor struct {

@@ -76,7 +76,6 @@ func (adx *AzureDataExplorer) Connect() error {
 }
 
 func (adx *AzureDataExplorer) Close() error {
-
 	var errs []error
 	for _, v := range adx.ingestors {
 		if err := v.Close(); err != nil {
