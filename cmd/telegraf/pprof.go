@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log" //nolint: revive
 	"net/http"
 	"strings"
 )

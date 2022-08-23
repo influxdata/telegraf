@@ -12,7 +12,39 @@ import (
 
 	"github.com/influxdata/telegraf/logger"
 	"github.com/kardianos/service"
+	"github.com/urfave/cli/v2"
 )
+
+func cliFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:  "service",
+			Usage: "operate on the service (windows only)",
+		},
+		&cli.StringFlag{
+			Name:        "service-name",
+			DefaultText: "telegraf",
+			Usage:       "service name (windows only)",
+		},
+		&cli.StringFlag{
+			Name:        "service-display-name",
+			DefaultText: "Telegraf Data Collector Service",
+			Usage:       "service display name (windows only)",
+		},
+		&cli.StringFlag{
+			Name:        "service-restart-delay",
+			DefaultText: "5m",
+		},
+		&cli.BoolFlag{
+			Name:  "service-auto-restart",
+			Usage: "auto restart service on failure (windows only)",
+		},
+		&cli.BoolFlag{
+			Name:  "console",
+			Usage: "run as console application (windows only)",
+		},
+	}
+}
 
 func (a *AgentManager) Run() error {
 	// Register the eventlog logging target for windows.

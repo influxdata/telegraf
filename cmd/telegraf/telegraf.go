@@ -80,6 +80,8 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		},
 	}
 
+	extraFlags := append(pluginFilterFlags, cliFlags()...)
+
 	app := &cli.App{
 		Name:   "Telegraf",
 		Usage:  "The plugin-driven server agent for collecting & reporting metrics.",
@@ -99,33 +101,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.IntFlag{
 					Name:  "test-wait",
 					Usage: "wait up to this many seconds for service inputs to complete in test mode",
-				},
-				// Windows only string & bool flags
-				&cli.StringFlag{
-					Name:  "service",
-					Usage: "operate on the service (windows only)",
-				},
-				&cli.StringFlag{
-					Name:        "service-name",
-					DefaultText: "telegraf",
-					Usage:       "service name (windows only)",
-				},
-				&cli.StringFlag{
-					Name:        "service-display-name",
-					DefaultText: "Telegraf Data Collector Service",
-					Usage:       "service display name (windows only)",
-				},
-				&cli.StringFlag{
-					Name:        "service-restart-delay",
-					DefaultText: "5m",
-				},
-				&cli.BoolFlag{
-					Name:  "service-auto-restart",
-					Usage: "auto restart service on failure (windows only)",
-				},
-				&cli.BoolFlag{
-					Name:  "console",
-					Usage: "run as console application (windows only)",
 				},
 				//
 				// String flags
@@ -195,7 +170,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Usage: "DEPRECATED: path to directory containing external plugins",
 				},
 				// !!!
-			}, pluginFilterFlags...),
+			}, extraFlags...),
 		Action: func(cCtx *cli.Context) error {
 			logger.SetupLogging(logger.LogConfig{})
 
