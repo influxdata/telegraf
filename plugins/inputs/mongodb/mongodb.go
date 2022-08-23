@@ -129,10 +129,10 @@ func (m *MongoDB) Start() error {
 		err = client.Ping(ctx, opts.ReadPreference)
 		if err != nil {
 			if m.DisconnectedServersBehavior == "default" {
-				return fmt.Errorf("unable to connect to MongoDB: %w", err)
+				return fmt.Errorf("unable to ping MongoDB: %w", err)
 			}
 
-			m.Log.Errorf("unable to connect to MongoDB: %w", err)
+			m.Log.Errorf("unable to ping MongoDB: %w", err)
 		}
 
 		server := &Server{
