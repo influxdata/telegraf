@@ -320,26 +320,26 @@ func TestCommandVersion(t *testing.T) {
 	}{
 		{
 			Version:        "v2.0.0",
-			ExpectedOutput: "Telegraf v2.0.0",
+			ExpectedOutput: "Telegraf v2.0.0\n",
 		},
 		{
-			ExpectedOutput: "Telegraf unknown",
+			ExpectedOutput: "Telegraf unknown\n",
 		},
 		{
 			Version:        "v2.0.0",
 			Branch:         "master",
-			ExpectedOutput: "Telegraf v2.0.0 (git: master@unknown)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: master@unknown)\n",
 		},
 		{
 			Version:        "v2.0.0",
 			Branch:         "master",
 			Commit:         "123",
-			ExpectedOutput: "Telegraf v2.0.0 (git: master@123)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: master@123)\n",
 		},
 		{
 			Version:        "v2.0.0",
 			Commit:         "123",
-			ExpectedOutput: "Telegraf v2.0.0 (git: unknown@123)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: unknown@123)\n",
 		},
 	}
 
@@ -366,26 +366,26 @@ func TestFlagVersion(t *testing.T) {
 	}{
 		{
 			Version:        "v2.0.0",
-			ExpectedOutput: "Telegraf v2.0.0",
+			ExpectedOutput: "Telegraf v2.0.0\n",
 		},
 		{
-			ExpectedOutput: "Telegraf unknown",
+			ExpectedOutput: "Telegraf unknown\n",
 		},
 		{
 			Version:        "v2.0.0",
 			Branch:         "master",
-			ExpectedOutput: "Telegraf v2.0.0 (git: master@unknown)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: master@unknown)\n",
 		},
 		{
 			Version:        "v2.0.0",
 			Branch:         "master",
 			Commit:         "123",
-			ExpectedOutput: "Telegraf v2.0.0 (git: master@123)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: master@123)\n",
 		},
 		{
 			Version:        "v2.0.0",
 			Commit:         "123",
-			ExpectedOutput: "Telegraf v2.0.0 (git: unknown@123)",
+			ExpectedOutput: "Telegraf v2.0.0 (git: unknown@123)\n",
 		},
 	}
 

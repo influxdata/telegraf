@@ -244,7 +244,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				return nil
 			// DEPRECATED
 			case cCtx.Bool("version"):
-				outputBuffer.Write([]byte(internal.FormatFullVersion()))
+				outputBuffer.Write([]byte(fmt.Sprintf("%s\n", internal.FormatFullVersion())))
 				return nil
 			// DEPRECATED
 			case cCtx.Bool("sample-config"):
@@ -335,7 +335,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				Name:  "version",
 				Usage: "print current version to stdout",
 				Action: func(cCtx *cli.Context) error {
-					outputBuffer.Write([]byte(internal.FormatFullVersion()))
+					outputBuffer.Write([]byte(fmt.Sprintf("%s\n", internal.FormatFullVersion())))
 					return nil
 				},
 			},
