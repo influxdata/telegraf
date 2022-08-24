@@ -155,7 +155,6 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=3, name="motor1_overheating"},
     ]
 
-    [[inputs.modbus.request.tags]]
     [inputs.modbus.request.tags]
       machine = "impresser"
       location = "main building"
@@ -175,7 +174,6 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=8, name="power_factor", type="INT64",   scale=0.01  },
     ]
 
-    [[inputs.modbus.request.tags]]
     [inputs.modbus.request.tags]
       machine = "impresser"
       location = "main building"
@@ -192,7 +190,6 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=4, name="hours",       type="UINT32"                  },  # will result in UIN64 field
     ]
 
-    [[inputs.modbus.request.tags]]
     [inputs.modbus.request.tags]
       machine = "impresser"
       location = "main building"

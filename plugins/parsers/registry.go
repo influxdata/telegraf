@@ -259,8 +259,19 @@ func NewParser(config *Config) (Parser, error) {
 		}
 	case "nagios":
 		parser, err = NewNagiosParser()
-	case "prometheus":
-		parser, err = NewPrometheusParser(
+	case "graphite":
+		parser, err = NewGraphiteParser(config.Separator,
+			config.Templates, config.DefaultTags)
+	case "collectd":
+		parser, err = NewCollectdParser(config.CollectdAuthFile,
+			config.CollectdSecurityLevel, config.CollectdTypesDB, config.CollectdSplit)
+	case "dropwizard":
+		parser, err = NewDropwizardParser(
+			config.DropwizardMetricRegistryPath,
+			config.DropwizardTimePath,
+			config.DropwizardTimeFormat,
+			config.DropwizardTagsPath,
+			config.DropwizardTagPathsMap,
 			config.DefaultTags,
 			config.Separator,
 			config.Templates)
@@ -310,16 +321,22 @@ func NewParser(config *Config) (Parser, error) {
 	return parser, err
 }
 
-		// Try to create new-style parsers the old way...
-		// DEPRECATED: Please instantiate the parser directly instead of using this function.
-		parser = creator(config.MetricName)
-		p, ok := parser.(ParserCompatibility)
-		if !ok {
-			return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
-		}
-		err = p.InitFromConfig(config)
+func newGrokParser(metricName string,
+	patterns []string, nPatterns []string,
+	cPatterns string, cPatternFiles []string,
+	tZone string, uniqueTimestamp string) (Parser, error) {
+	parser := grok.Parser{
+		Measurement:        metricName,
+		Patterns:           patterns,
+		NamedPatterns:      nPatterns,
+		CustomPatterns:     cPatterns,
+		CustomPatternFiles: cPatternFiles,
+		Timezone:           tZone,
+		UniqueTimestamp:    uniqueTimestamp,
 	}
-	return parser, err
+
+	err := parser.Compile()
+	return &parser, err
 }
 
 func NewNagiosParser() (Parser, error) {
@@ -405,6 +422,7 @@ func NewFormUrlencodedParser(
 	return &form_urlencoded.Parser{
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
+		TagKeys:     tagKeys,
 	}, nil
 }
 

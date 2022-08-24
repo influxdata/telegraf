@@ -119,7 +119,6 @@ telegraf config > telegraf.conf
 ### Generate config with only cpu input & influxdb output plugins defined
 
 ```shell
-telegraf config --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb
 telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb config
 ```
 

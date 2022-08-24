@@ -23,7 +23,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/config/printer"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
@@ -357,16 +356,6 @@ func formatFullVersion() string {
 	return strings.Join(parts, " ")
 }
 
-func deleteEmpty(s []string) []string {
-	var r []string
-	for _, str := range s {
-		if str != "" {
-			r = append(r, str)
-		}
-	}
-	return r
-}
-
 func main() {
 	flag.Var(&fConfigs, "config", "configuration file to load")
 	flag.Var(&fConfigDirs, "config-directory", "directory containing additional *.conf files")
@@ -432,38 +421,7 @@ func main() {
 			fmt.Println(formatFullVersion())
 			return
 		case "config":
-			err := configCmd.Parse(args[1:])
-			if err != nil {
-				log.Fatal("E! " + err.Error())
-			}
-
-			// The sub_Filters are populated when the filter flags are set after the subcommand config
-			// e.g. telegraf config --section-filter inputs
-			subSectionFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubSectionFilters)+":", ":"))
-			subInputFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubInputFilters)+":", ":"))
-			subOutputFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubOutputFilters)+":", ":"))
-			subAggregatorFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fsubAggregatorFilters)+":", ":"))
-			subProcessorFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubProcessorFilters)+":", ":"))
-
-			// Overwrite the global filters if the subfilters are defined, this allows for backwards compatibility
-			// Now you can still filter the sample config like so: telegraf --section-filter inputs config
-			if len(subSectionFilters) > 0 {
-				sectionFilters = subSectionFilters
-			}
-			if len(subInputFilters) > 0 {
-				inputFilters = subInputFilters
-			}
-			if len(subOutputFilters) > 0 {
-				outputFilters = subOutputFilters
-			}
-			if len(subAggregatorFilters) > 0 {
-				aggregatorFilters = subAggregatorFilters
-			}
-			if len(subProcessorFilters) > 0 {
-				processorFilters = subProcessorFilters
-			}
-
-			printer.PrintSampleConfig(
+			config.PrintSampleConfig(
 				sectionFilters,
 				inputFilters,
 				outputFilters,
@@ -523,7 +481,7 @@ func main() {
 		fmt.Println(formatFullVersion())
 		return
 	case *fSampleConfig:
-		printer.PrintSampleConfig(
+		config.PrintSampleConfig(
 			sectionFilters,
 			inputFilters,
 			outputFilters,
@@ -532,8 +490,8 @@ func main() {
 		)
 		return
 	case *fUsage != "":
-		err := printer.PrintInputConfig(*fUsage)
-		err2 := printer.PrintOutputConfig(*fUsage)
+		err := config.PrintInputConfig(*fUsage)
+		err2 := config.PrintOutputConfig(*fUsage)
 		if err != nil && err2 != nil {
 			log.Fatalf("E! %s and %s", err, err2)
 		}

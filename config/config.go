@@ -38,6 +38,17 @@ import (
 )
 
 var (
+	// Default sections
+	sectionDefaults = []string{"global_tags", "agent", "outputs",
+		"processors", "aggregators", "inputs"}
+
+	// Default input plugins
+	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
+		"processes", "disk", "diskio"}
+
+	// Default output plugins
+	outputDefaults = []string{"influxdb"}
+
 	// envVarRe is a regex to find environment variables in the config file
 	envVarRe = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
 
@@ -1550,8 +1561,6 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 					c.getFieldString(subtbl, "tag_value", &subcfg.TagValueQuery)
 					pc.XPathConfig[i] = subcfg
 				}
-
-				pc.JSONV2Config[i] = mc
 			}
 		}
 	}
@@ -1627,8 +1636,6 @@ func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 			}
 		}
 	}
-	return nil
-}
 
 	return fields
 }
@@ -1648,7 +1655,6 @@ func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 			}
 		}
 	}
-}
 
 	return tags
 }

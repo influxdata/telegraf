@@ -6,7 +6,6 @@ plugins.
 
 1. [InfluxDB Line Protocol](/plugins/serializers/influx)
 1. [Carbon2](/plugins/serializers/carbon2)
-1. [CSV](/plugins/serializers/csv)
 1. [Graphite](/plugins/serializers/graphite)
 1. [JSON](/plugins/serializers/json)
 1. [MessagePack](/plugins/serializers/msgpack)

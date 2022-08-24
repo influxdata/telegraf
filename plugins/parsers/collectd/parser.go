@@ -10,15 +10,15 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const (
 	DefaultAuthFile = "/etc/collectd/auth_file"
 )
 
-type Parser struct {
-	DefaultTags map[string]string `toml:"-"`
+type CollectdParser struct {
+	// DefaultTags will be added to every parsed metric
+	DefaultTags map[string]string
 
 	//whether or not to split multi value metric into multiple metrics
 	//default value is split
@@ -27,48 +27,53 @@ type Parser struct {
 	popts           network.ParseOpts
 }
 
-	popts         network.ParseOpts
-	AuthFile      string   `toml:"collectd_auth_file"`
-	SecurityLevel string   `toml:"collectd_security_level"`
-	TypesDB       []string `toml:"collectd_typesdb"`
-
-	Log telegraf.Logger `toml:"-"`
+func (p *CollectdParser) SetParseOpts(popts *network.ParseOpts) {
+	p.popts = *popts
 }
 
-func (p *Parser) Init() error {
-	switch p.SecurityLevel {
+func NewCollectdParser(
+	authFile string,
+	securityLevel string,
+	typesDB []string,
+	split string,
+) (*CollectdParser, error) {
+	popts := network.ParseOpts{}
+
+	switch securityLevel {
 	case "none":
-		p.popts.SecurityLevel = network.None
+		popts.SecurityLevel = network.None
 	case "sign":
-		p.popts.SecurityLevel = network.Sign
+		popts.SecurityLevel = network.Sign
 	case "encrypt":
-		p.popts.SecurityLevel = network.Encrypt
+		popts.SecurityLevel = network.Encrypt
 	default:
-		p.popts.SecurityLevel = network.None
+		popts.SecurityLevel = network.None
 	}
 
-	if p.AuthFile == "" {
-		p.AuthFile = DefaultAuthFile
+	if authFile == "" {
+		authFile = DefaultAuthFile
 	}
-	p.popts.PasswordLookup = network.NewAuthFile(p.AuthFile)
+	popts.PasswordLookup = network.NewAuthFile(authFile)
 
-	for _, path := range p.TypesDB {
+	for _, path := range typesDB {
 		db, err := LoadTypesDB(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		if p.popts.TypesDB != nil {
-			p.popts.TypesDB.Merge(db)
+		if popts.TypesDB != nil {
+			popts.TypesDB.Merge(db)
 		} else {
-			p.popts.TypesDB = db
+			popts.TypesDB = db
 		}
 	}
 
-	return nil
+	parser := CollectdParser{popts: popts,
+		ParseMultiValue: split}
+	return &parser, nil
 }
 
-func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *CollectdParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	valueLists, err := network.Parse(buf, p.popts)
 	if err != nil {
 		return nil, fmt.Errorf("collectd parser error: %s", err)
@@ -93,7 +98,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *CollectdParser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	if err != nil {
 		return nil, err
@@ -106,7 +111,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	return metrics[0], nil
 }
 
-func (p *Parser) SetDefaultTags(tags map[string]string) {
+func (p *CollectdParser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
@@ -199,22 +204,4 @@ func LoadTypesDB(path string) (*api.TypesDB, error) {
 		return nil, err
 	}
 	return api.NewTypesDB(reader)
-}
-
-func init() {
-	parsers.Add("collectd",
-		func(_ string) telegraf.Parser {
-			return &Parser{
-				AuthFile: DefaultAuthFile,
-			}
-		})
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.AuthFile = config.CollectdAuthFile
-	p.SecurityLevel = config.CollectdSecurityLevel
-	p.TypesDB = config.CollectdTypesDB
-	p.ParseMultiValue = config.CollectdSplit
-
-	return p.Init()
 }

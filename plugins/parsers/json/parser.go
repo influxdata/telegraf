@@ -21,6 +21,19 @@ var (
 	ErrWrongType = errors.New("must be an object or an array of objects")
 )
 
+type Config struct {
+	MetricName   string
+	TagKeys      []string
+	NameKey      string
+	StringFields []string
+	Query        string
+	TimeKey      string
+	TimeFormat   string
+	Timezone     string
+	DefaultTags  map[string]string
+	Strict       bool
+}
+
 type Parser struct {
 	metricName   string
 	tagKeys      filter.Filter
@@ -69,7 +82,7 @@ func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf
 		case map[string]interface{}:
 			metrics, err := p.parseObject(v, timestamp)
 			if err != nil {
-				if p.Strict {
+				if p.strict {
 					return nil, err
 				}
 				continue
@@ -85,7 +98,7 @@ func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf
 
 func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
 	tags := make(map[string]string)
-	for k, v := range p.DefaultTags {
+	for k, v := range p.defaultTags {
 		tags[k] = v
 	}
 
@@ -95,7 +108,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 		return nil, err
 	}
 
-	name := p.MetricName
+	name := p.metricName
 
 	// checks if json_name_key is set
 	if p.nameKey != "" {
@@ -111,17 +124,17 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 			return nil, err
 		}
 
-		if f.Fields[p.TimeKey] == nil {
+		if f.Fields[p.timeKey] == nil {
 			err := fmt.Errorf("JSON time key could not be found")
 			return nil, err
 		}
 
-		timestamp, err = internal.ParseTimestamp(p.TimeFormat, f.Fields[p.TimeKey], p.Timezone)
+		timestamp, err = internal.ParseTimestamp(p.timeFormat, f.Fields[p.timeKey], p.timezone)
 		if err != nil {
 			return nil, err
 		}
 
-		delete(f.Fields, p.TimeKey)
+		delete(f.Fields, p.timeKey)
 
 		// if the year is 0, set to current year
 		if timestamp.Year() == 0 {
@@ -168,7 +181,7 @@ func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]inte
 	for fk := range fields {
 		switch fields[fk].(type) {
 		case string, bool:
-			if p.stringFilter != nil && p.stringFilter.Match(fk) {
+			if p.stringFields != nil && p.stringFields.Match(fk) {
 				continue
 			}
 			delete(fields, fk)
@@ -177,25 +190,9 @@ func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]inte
 	return tags, fields
 }
 
-func (p *Parser) Init() error {
-	var err error
-
-	p.stringFilter, err = filter.Compile(p.StringFields)
-	if err != nil {
-		return fmt.Errorf("compiling string-fields filter failed: %v", err)
-	}
-
-	p.tagFilter, err = filter.Compile(p.TagKeys)
-	if err != nil {
-		return fmt.Errorf("compiling tag-key filter failed: %v", err)
-	}
-
-	return nil
-}
-
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	if p.Query != "" {
-		result := gjson.GetBytes(buf, p.Query)
+	if p.query != "" {
+		result := gjson.GetBytes(buf, p.query)
 		buf = []byte(result.Raw)
 		if !result.IsArray() && !result.IsObject() && result.Type != gjson.Null {
 			err := fmt.Errorf("query path must lead to a JSON object, array of objects or null, but lead to: %v", result.Type)
@@ -246,14 +243,22 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
-	p.DefaultTags = tags
+	p.defaultTags = tags
 }
 
-func init() {
-	parsers.Add("json",
-		func(defaultMetricName string) telegraf.Parser {
-			return &Parser{MetricName: defaultMetricName}
-		})
+type JSONFlattener struct {
+	Fields map[string]interface{}
+}
+
+// FlattenJSON flattens nested maps/interfaces into a fields map (ignoring bools and string)
+func (f *JSONFlattener) FlattenJSON(
+	fieldname string,
+	v interface{}) error {
+	if f.Fields == nil {
+		f.Fields = make(map[string]interface{})
+	}
+
+	return f.FullFlattenJSON(fieldname, v, false, false)
 }
 
 // FullFlattenJSON flattens nested maps/interfaces into a fields map (including bools and string)
