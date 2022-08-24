@@ -197,16 +197,12 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				infos := c.CollectDeprecationInfos(
 					filters.input, filters.output, filters.aggregator, filters.processor,
 				)
-				//nolint:revive // We will notice if Println fails
 				outputBuffer.Write([]byte("Deprecated Input Plugins:\n"))
 				c.PrintDeprecationList(infos["inputs"])
-				//nolint:revive // We will notice if Println fails
 				outputBuffer.Write([]byte("Deprecated Output Plugins:\n"))
 				c.PrintDeprecationList(infos["outputs"])
-				//nolint:revive // We will notice if Println fails
 				outputBuffer.Write([]byte("Deprecated Processor Plugins:\n"))
 				c.PrintDeprecationList(infos["processors"])
-				//nolint:revive // We will notice if Println fails
 				outputBuffer.Write([]byte("Deprecated Aggregator Plugins:\n"))
 				c.PrintDeprecationList(infos["aggregators"])
 				return nil
