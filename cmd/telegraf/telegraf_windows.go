@@ -45,19 +45,19 @@ func cliFlags() []cli.Flag {
 	}
 }
 
-func (a *Telegraf) Run() error {
+func (t *Telegraf) Run() error {
 	// Register the eventlog logging target for windows.
-	err := logger.RegisterEventLogger(a.serviceName)
+	err := logger.RegisterEventLogger(t.serviceName)
 	if err != nil {
 		return err
 	}
 
-	if !a.windowsRunAsService() {
+	if !t.windowsRunAsService() {
 		stop = make(chan struct{})
-		return a.reloadLoop()
+		return t.reloadLoop()
 	}
 
-	return a.runAsWindowsService()
+	return t.runAsWindowsService()
 }
 
 type program struct {
@@ -90,21 +90,21 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func (a *Telegraf) runAsWindowsService() error {
+func (t *Telegraf) runAsWindowsService() error {
 	programFiles := os.Getenv("ProgramFiles")
 	if programFiles == "" { // Should never happen
 		programFiles = "C:\\Program Files"
 	}
 	svcConfig := &service.Config{
-		Name:        a.serviceName,
-		DisplayName: a.serviceDisplayName,
+		Name:        t.serviceName,
+		DisplayName: t.serviceDisplayName,
 		Description: "Collects data using a series of plugins and publishes it to " +
 			"another series of plugins.",
 		Arguments: []string{"--config", programFiles + "\\Telegraf\\telegraf.conf"},
 	}
 
 	prg := &program{
-		Telegraf: a,
+		Telegraf: t,
 	}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
@@ -112,26 +112,26 @@ func (a *Telegraf) runAsWindowsService() error {
 	}
 	// Handle the --service flag here to prevent any issues with tooling that
 	// may not have an interactive session, e.g. installing from Ansible.
-	if a.service != "" {
-		if len(a.config) > 0 {
+	if t.service != "" {
+		if len(t.config) > 0 {
 			svcConfig.Arguments = []string{}
 		}
-		for _, fConfig := range a.config {
+		for _, fConfig := range t.config {
 			svcConfig.Arguments = append(svcConfig.Arguments, "--config", fConfig)
 		}
 
-		for _, fConfigDirectory := range a.configDir {
+		for _, fConfigDirectory := range t.configDir {
 			svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", fConfigDirectory)
 		}
 
 		//set servicename to service cmd line, to have a custom name after relaunch as a service
-		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", a.serviceName)
+		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", t.serviceName)
 
-		if a.serviceAutoRestart {
-			svcConfig.Option = service.KeyValue{"OnFailure": "restart", "OnFailureDelayDuration": a.serviceRestartDelay}
+		if t.serviceAutoRestart {
+			svcConfig.Option = service.KeyValue{"OnFailure": "restart", "OnFailureDelayDuration": t.serviceRestartDelay}
 		}
 
-		err := service.Control(s, a.service)
+		err := service.Control(s, t.service)
 		if err != nil {
 			return fmt.Errorf("E! " + err.Error())
 		}
@@ -146,12 +146,12 @@ func (a *Telegraf) runAsWindowsService() error {
 }
 
 // Return true if Telegraf should create a Windows service.
-func (a *Telegraf) windowsRunAsService() bool {
-	if a.service != "" {
+func (t *Telegraf) windowsRunAsService() bool {
+	if t.service != "" {
 		return true
 	}
 
-	if a.console {
+	if t.console {
 		return false
 	}
 

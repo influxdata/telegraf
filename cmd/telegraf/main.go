@@ -64,19 +64,19 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		},
 		&cli.StringFlag{
 			Name:  "input-filter",
-			Usage: "filter the inputs to enable, separator is :",
+			Usage: "filter the inputs to enable, separator is ':'",
 		},
 		&cli.StringFlag{
 			Name:  "output-filter",
-			Usage: "filter the outputs to enable, separator is :",
+			Usage: "filter the outputs to enable, separator is ':'",
 		},
 		&cli.StringFlag{
 			Name:  "aggregator-filter",
-			Usage: "filter the aggregators to enable, separator is :",
+			Usage: "filter the aggregators to enable, separator is ':'",
 		},
 		&cli.StringFlag{
 			Name:  "processor-filter",
-			Usage: "filter the processors to enable, separator is :",
+			Usage: "filter the processors to enable, separator is ':'",
 		},
 	}
 
@@ -110,7 +110,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				&cli.StringFlag{
 					Name:  "pprof-addr",
-					Usage: "pprof address to listen on, not activate pprof if empty",
+					Usage: "pprof host/IP and port to listen on (e.g. 'localhost:6060')",
 				},
 				&cli.StringFlag{
 					Name:  "watch-config",
