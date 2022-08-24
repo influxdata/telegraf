@@ -24,7 +24,7 @@ func TestStartNoParsers(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	require.NoError(t, logparser.Start(&acc))
+	require.Error(t, logparser.Start(&acc))
 }
 
 func TestGrokParseLogFilesNonExistPattern(t *testing.T) {

@@ -1242,7 +1242,9 @@ ELSE
 `
 
 const sqlServerRequestsV2 string = `
+SET DEADLOCK_PRIORITY -10;
 SET NOCOUNT ON;
+
 DECLARE 
 	 @SqlStatement AS nvarchar(max)
 	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
@@ -1324,6 +1326,8 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerVolumeSpaceV2 string = `
+SET DEADLOCK_PRIORITY -10;
+
 /* Only for on-prem version of SQL Server
 Gets data about disk space, only for volumes used by SQL Server (data available form sql 2008R2 and later)
 */
@@ -1349,6 +1353,8 @@ IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
 `
 
 const sqlServerCPUV2 string = `
+SET DEADLOCK_PRIORITY -10;
+
 /*The ring buffer has a new value every minute*/
 IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 BEGIN

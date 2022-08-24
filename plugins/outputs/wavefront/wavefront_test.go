@@ -8,7 +8,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -353,11 +352,6 @@ func TestTagLimits(t *testing.T) {
 	_, tags = w.buildTags(template)
 	require.Contains(t, tags, longKey, "Should contain non truncated long key")
 	require.Equal(t, longKey, tags[longKey])
-}
-
-func TestDefaults(t *testing.T) {
-	defaultWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
-	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
 }
 
 // Benchmarks to test performance of string replacement via Regex and Replacer

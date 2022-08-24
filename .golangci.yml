@@ -126,7 +126,7 @@ issues:
     - path: _test\.go
       text: "parameter.*seems to be a control flag, avoid control coupling"
 
-    - path: (^agent/|^cmd/|^config/|^filter/|^internal/|^logger/|^metric/|^models/|^selfstat/|^testutil/|^plugins/serializers/)
+    - path: (^agent/|^cmd/|^config/|^filter/|^internal/|^logger/|^metric/|^models/|^selfstat/|^testutil/|^plugins/serializers/|^plugins/inputs/zipkin/cmd)
       text: "imports-blacklist: should not use the following blacklisted import: \"log\""
       linters:
         - revive

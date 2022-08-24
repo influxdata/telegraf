@@ -14,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 var timeLayouts = map[string]string{
@@ -67,17 +66,17 @@ var (
 
 // Parser is the primary struct to handle and grok-patterns defined in the config toml
 type Parser struct {
-	Patterns []string `toml:"grok_patterns"`
+	Patterns []string
 	// namedPatterns is a list of internally-assigned names to the patterns
 	// specified by the user in Patterns.
 	// They will look like:
 	//   GROK_INTERNAL_PATTERN_0, GROK_INTERNAL_PATTERN_1, etc.
-	NamedPatterns      []string          `toml:"grok_named_patterns"`
-	CustomPatterns     string            `toml:"grok_custom_patterns"`
-	CustomPatternFiles []string          `toml:"grok_custom_pattern_files"`
-	Measurement        string            `toml:"-"`
-	DefaultTags        map[string]string `toml:"-"`
-	Log                telegraf.Logger   `toml:"-"`
+	NamedPatterns      []string
+	CustomPatterns     string
+	CustomPatternFiles []string
+	Measurement        string
+	DefaultTags        map[string]string
+	Log                telegraf.Logger `toml:"-"`
 
 	// Timezone is an optional component to help render log dates to
 	// your chosen zone.
@@ -86,11 +85,11 @@ type Parser struct {
 	// 1. Local             -- interpret based on machine localtime
 	// 2. "America/Chicago" -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 	// 3. UTC               -- or blank/unspecified, will return timestamp in UTC
-	Timezone string `toml:"grok_timezone"`
+	Timezone string
 	loc      *time.Location
 
 	// UniqueTimestamp when set to "disable", timestamp will not incremented if there is a duplicate.
-	UniqueTimestamp string `toml:"grok_unique_timestamp"`
+	UniqueTimestamp string
 
 	// typeMap is a map of patterns -> capture name -> modifier,
 	//   ie, {
@@ -558,44 +557,4 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 		}
 	}
 	return ts.Add(t.incr*t.incrn + t.rollover)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.Measurement = config.MetricName
-	p.DefaultTags = config.DefaultTags
-	p.CustomPatterns = config.GrokCustomPatterns
-	p.CustomPatternFiles = config.GrokCustomPatternFiles
-	p.NamedPatterns = config.GrokNamedPatterns
-	p.Patterns = config.GrokPatterns
-	p.Timezone = config.GrokTimezone
-	p.UniqueTimestamp = config.GrokUniqueTimestamp
-
-	return p.Init()
-}
-
-func (p *Parser) Init() error {
-	if len(p.Patterns) == 0 {
-		p.Patterns = []string{"%{COMBINED_LOG_FORMAT}"}
-	}
-
-	if p.UniqueTimestamp == "" {
-		p.UniqueTimestamp = "auto"
-	}
-
-	if p.Timezone == "" {
-		p.Timezone = "Canada/Eastern"
-	}
-
-	return p.Compile()
-}
-
-func init() {
-	parsers.Add("grok",
-		func(defaultMetricName string) telegraf.Parser {
-			return &Parser{
-				Measurement: defaultMetricName,
-			}
-		},
-	)
 }

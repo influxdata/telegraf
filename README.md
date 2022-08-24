@@ -120,6 +120,7 @@ telegraf config > telegraf.conf
 
 ```shell
 telegraf config --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb
+telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb config
 ```
 
 ### Run a single telegraf collection, outputting metrics to stdout

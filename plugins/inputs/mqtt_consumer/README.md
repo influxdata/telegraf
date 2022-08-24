@@ -6,6 +6,14 @@ and creates metrics using one of the supported [input data formats][].
 ## Configuration
 
 ```toml @sample.conf
+# MQTT Consumer Input Plugin
+
+The [MQTT][mqtt] consumer plugin reads from the specified MQTT topics
+and creates metrics using one of the supported [input data formats][].
+
+## Configuration
+
+```toml @sample.conf
 # Read metrics from MQTT topic(s)
 [[inputs.mqtt_consumer]]
   ## Broker URLs for the MQTT server or cluster.  To connect to multiple
@@ -132,6 +140,128 @@ the topic path. Please see the following example.
 ```shell
 cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
+
+## Metrics
+
+- All measurements are tagged with the incoming topic, ie
+`topic=telegraf/host01/cpu`
+
+- example when [[inputs.mqtt_consumer.topic_parsing]] is set
+
+[mqtt]: https://mqtt.org
+[input data formats]: /docs/DATA_FORMATS_INPUT.md
+
+  ## Enable extracting tag values from MQTT topics
+  ## _ denotes an ignored entry in the topic path
+  # [[inputs.mqtt_consumer.topic_parsing]]
+  #   topic = ""
+  #   measurement = ""
+  #   tags = ""
+  #   fields = ""
+  ## Value supported is int, float, unit
+  #   [[inputs.mqtt_consumer.topic.types]]
+  #      key = type
+```
+
+## Example Output
+
+```text
+mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=45i 1653579140440951943
+mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=100i 1653579153147395661
+```
+
+## About Topic Parsing
+
+The MQTT topic as a whole is stored as a tag, but this can be far too coarse to
+be easily used when utilizing the data further down the line. This change allows
+tag values to be extracted from the MQTT topic letting you store the information
+provided in the topic in a meaningful way. An `_` denotes an ignored entry in
+the topic path. Please see the following example.
+
+### Topic Parsing Example
+
+```toml
+[[inputs.mqtt_consumer]]
+  ## Broker URLs for the MQTT server or cluster.  To connect to multiple
+  ## clusters or standalone servers, use a separate plugin instance.
+  ##   example: servers = ["tcp://localhost:1883"]
+  ##            servers = ["ssl://localhost:1883"]
+  ##            servers = ["ws://localhost:1883"]
+  servers = ["tcp://127.0.0.1:1883"]
+
+  ## Topics that will be subscribed to.
+  topics = [
+    "telegraf/+/cpu/23",
+  ]
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "value"
+  data_type = "float"
+
+  [[inputs.mqtt_consumer.topic_parsing]]
+    topic = "telegraf/one/cpu/23"
+    measurement = "_/_/measurement/_"
+    tags = "tag/_/_/_"
+    fields = "_/_/_/test"
+    [inputs.mqtt_consumer.topic_parsing.types]
+      test = "int"
+```
+
+Will result in the following metric:
+
+```text
+cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
+```
+
+## Field Pivoting Example
+
+You can use the pivot processor to rotate single
+valued metrics into a multi field metric.
+For more info check out the pivot processors
+[here][1].
+
+For this example these are the topics:
+
+```text
+/sensors/CLE/v1/device5/temp
+/sensors/CLE/v1/device5/rpm
+/sensors/CLE/v1/device5/ph
+/sensors/CLE/v1/device5/spin
+```
+
+And these are the metrics:
+
+```text
+sensors,site=CLE,version=v1,device_name=device5,field=temp value=390
+sensors,site=CLE,version=v1,device_name=device5,field=rpm value=45.0
+sensors,site=CLE,version=v1,device_name=device5,field=ph value=1.45
+```
+
+Using pivot in the config will rotate the metrics into a multi field metric.
+The config:
+
+```toml
+[[inputs.mqtt_consumer]]
+    ....
+    topics = "/sensors/#"
+    [[inputs.mqtt_consumer.topic_parsing]]
+        measurement = "/measurement/_/_/_/_"
+        tags = "/_/site/version/device_name/field"
+[[processors.pivot]]
+    tag_key = "field"
+    value_key = "value"
+```
+
+Will result in the following metric:
+
+```text
+sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
+```
+
+[1]: <https://github.com/influxdata/telegraf/tree/master/plugins/processors/pivot> "Pivot Processor"
 
 ## Metrics
 

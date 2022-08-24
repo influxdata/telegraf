@@ -212,14 +212,16 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 		// fields to labels if enabled.
 		if c.StringAsLabel {
 			for fn, fv := range point.Fields() {
-				switch fv := fv.(type) {
-				case string:
-					name, ok := serializer.SanitizeLabelName(fn)
-					if !ok {
-						continue
-					}
-					labels[name] = fv
+				sfv, ok := fv.(string)
+				if !ok {
+					continue
 				}
+
+				name, ok := serializer.SanitizeLabelName(fn)
+				if !ok {
+					continue
+				}
+				labels[name] = sfv
 			}
 		}
 

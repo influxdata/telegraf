@@ -95,7 +95,78 @@ func TestGather(t *testing.T) {
 		descriptor *metricpb.MetricDescriptor
 		timeseries *monitoringpb.TimeSeries
 		expected   []telegraf.Metric
+		wantAccErr bool
 	}{
+		{
+			name: "no_bucket",
+			descriptor: &metricpb.MetricDescriptor{
+				ValueType: metricpb.MetricDescriptor_DISTRIBUTION,
+			},
+			timeseries: createTimeSeries(
+				&monitoringpb.Point{
+					Interval: &monitoringpb.TimeInterval{
+						EndTime: &timestamppb.Timestamp{
+							Seconds: now.Unix(),
+						},
+					},
+					Value: &monitoringpb.TypedValue{
+						Value: &monitoringpb.TypedValue_DistributionValue{
+							DistributionValue: &distribution.Distribution{
+								Count: 2,
+							},
+						},
+					},
+				},
+				metricpb.MetricDescriptor_DISTRIBUTION,
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric("",
+					map[string]string{
+						"project_id":    "test",
+						"resource_type": "global",
+					},
+					map[string]interface{}{
+						"value_count":                    2,
+						"value_mean":                     float64(0),
+						"value_sum_of_squared_deviation": float64(0),
+					},
+					now),
+			},
+			wantAccErr: true,
+		},
+		{
+			name: "int64",
+			descriptor: &metricpb.MetricDescriptor{
+				Type:      "telegraf/cpu/usage",
+				ValueType: metricpb.MetricDescriptor_INT64,
+			},
+			timeseries: createTimeSeries(
+				&monitoringpb.Point{
+					Interval: &monitoringpb.TimeInterval{
+						EndTime: &timestamppb.Timestamp{
+							Seconds: now.Unix(),
+						},
+					},
+					Value: &monitoringpb.TypedValue{
+						Value: &monitoringpb.TypedValue_Int64Value{
+							Int64Value: 42,
+						},
+					},
+				},
+				metricpb.MetricDescriptor_INT64,
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric("telegraf/cpu",
+					map[string]string{
+						"resource_type": "global",
+						"project_id":    "test",
+					},
+					map[string]interface{}{
+						"usage": 42,
+					},
+					now),
+			},
+		},
 		{
 			name: "double",
 			descriptor: &metricpb.MetricDescriptor{
@@ -673,6 +744,8 @@ func TestGather(t *testing.T) {
 
 			err := s.Gather(&acc)
 			require.NoError(t, err)
+			require.Equalf(t, len(acc.Errors) > 0, tt.wantAccErr,
+				"Accumulator errors. got=%v, want=%t", acc.Errors, tt.wantAccErr)
 
 			actual := []telegraf.Metric{}
 			for _, m := range acc.Metrics {

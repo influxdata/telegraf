@@ -106,7 +106,7 @@ deps:
 
 .PHONY: version
 version:
-	@echo $(version)-$(commit)
+	@echo $(version)
 
 .PHONY: versioninfo
 versioninfo:
@@ -225,8 +225,6 @@ clean:
 	rm -rf build
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
-	rm -rf tools/package_lxd_test/package_lxd_test
-	rm -rf tools/package_lxd_test/package_lxd_test.exe
 
 .PHONY: docker-image
 docker-image:
@@ -237,8 +235,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.18.3 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.18.3
+	docker build -t quay.io/influxdb/telegraf-ci:1.18.5 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.18.5
 
 .PHONY: install
 install: $(buildbin)

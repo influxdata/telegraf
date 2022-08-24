@@ -11,8 +11,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	parser := &Parser{}
-	require.NoError(t, parser.Init())
+	parser := NewWavefrontParser(nil)
 
 	parsedMetrics, err := parser.Parse([]byte("test.metric 1"))
 	require.NoError(t, err)
@@ -79,8 +78,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseLine(t *testing.T) {
-	parser := &Parser{}
-	require.NoError(t, parser.Init())
+	parser := NewWavefrontParser(nil)
 
 	parsedMetric, err := parser.ParseLine("test.metric 1")
 	require.NoError(t, err)
@@ -115,8 +113,7 @@ func TestParseLine(t *testing.T) {
 }
 
 func TestParseMultiple(t *testing.T) {
-	parser := &Parser{}
-	require.NoError(t, parser.Init())
+	parser := NewWavefrontParser(nil)
 
 	parsedMetrics, err := parser.Parse([]byte("test.metric 1\ntest.metric2 2 1530939936"))
 	require.NoError(t, err)
@@ -151,8 +148,7 @@ func TestParseMultiple(t *testing.T) {
 }
 
 func TestParseSpecial(t *testing.T) {
-	parser := &Parser{}
-	require.NoError(t, parser.Init())
+	parser := NewWavefrontParser(nil)
 
 	parsedMetric, err := parser.ParseLine("\"test.metric\" 1 1530939936")
 	require.NoError(t, err)
@@ -166,8 +162,7 @@ func TestParseSpecial(t *testing.T) {
 }
 
 func TestParseInvalid(t *testing.T) {
-	parser := &Parser{}
-	require.NoError(t, parser.Init())
+	parser := NewWavefrontParser(nil)
 
 	_, err := parser.Parse([]byte("test.metric"))
 	require.Error(t, err)
@@ -198,9 +193,7 @@ func TestParseInvalid(t *testing.T) {
 }
 
 func TestParseDefaultTags(t *testing.T) {
-	parser := &Parser{}
-	require.NoError(t, parser.Init())
-	parser.SetDefaultTags(map[string]string{"myDefault": "value1", "another": "test2"})
+	parser := NewWavefrontParser(map[string]string{"myDefault": "value1", "another": "test2"})
 
 	parsedMetrics, err := parser.Parse([]byte("test.metric 1 1530939936"))
 	require.NoError(t, err)

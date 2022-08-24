@@ -156,6 +156,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     ]
 
     [[inputs.modbus.request.tags]]
+    [inputs.modbus.request.tags]
       machine = "impresser"
       location = "main building"
 
@@ -175,6 +176,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     ]
 
     [[inputs.modbus.request.tags]]
+    [inputs.modbus.request.tags]
       machine = "impresser"
       location = "main building"
 
@@ -191,6 +193,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     ]
 
     [[inputs.modbus.request.tags]]
+    [inputs.modbus.request.tags]
       machine = "impresser"
       location = "main building"
 

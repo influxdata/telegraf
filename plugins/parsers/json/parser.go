@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 var (
@@ -23,21 +22,43 @@ var (
 )
 
 type Parser struct {
-	MetricName   string   `toml:"metric_name"`
-	TagKeys      []string `toml:"tag_keys"`
-	NameKey      string   `toml:"json_name_key"`
-	StringFields []string `toml:"json_string_fields"`
-	Query        string   `toml:"json_query"`
-	TimeKey      string   `toml:"json_time_key"`
-	TimeFormat   string   `toml:"json_time_format"`
-	Timezone     string   `toml:"json_timezone"`
-	Strict       bool     `toml:"json_strict"`
+	metricName   string
+	tagKeys      filter.Filter
+	stringFields filter.Filter
+	nameKey      string
+	query        string
+	timeKey      string
+	timeFormat   string
+	timezone     string
+	defaultTags  map[string]string
+	strict       bool
 
-	DefaultTags map[string]string `toml:"-"`
-	Log         telegraf.Logger   `toml:"-"`
+	Log telegraf.Logger `toml:"-"`
+}
 
-	tagFilter    filter.Filter
-	stringFilter filter.Filter
+func New(config *Config) (*Parser, error) {
+	stringFilter, err := filter.Compile(config.StringFields)
+	if err != nil {
+		return nil, err
+	}
+
+	tagKeyFilter, err := filter.Compile(config.TagKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Parser{
+		metricName:   config.MetricName,
+		tagKeys:      tagKeyFilter,
+		nameKey:      config.NameKey,
+		stringFields: stringFilter,
+		query:        config.Query,
+		timeKey:      config.TimeKey,
+		timeFormat:   config.TimeFormat,
+		timezone:     config.Timezone,
+		defaultTags:  config.DefaultTags,
+		strict:       config.Strict,
+	}, nil
 }
 
 func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
@@ -77,15 +98,15 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 	name := p.MetricName
 
 	// checks if json_name_key is set
-	if p.NameKey != "" {
-		if field, ok := f.Fields[p.NameKey].(string); ok {
+	if p.nameKey != "" {
+		if field, ok := f.Fields[p.nameKey].(string); ok {
 			name = field
 		}
 	}
 
 	// if time key is specified, set timestamp to it
-	if p.TimeKey != "" {
-		if p.TimeFormat == "" {
+	if p.timeKey != "" {
+		if p.timeFormat == "" {
 			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
 			return nil, err
 		}
@@ -115,19 +136,19 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 }
 
 // will take in field map with strings and bools,
-// search for tag-keys that match fieldnames and add them to tags
+// search for TagKeys that match fieldnames and add them to tags
 // will delete any strings/bools that shouldn't be fields
 // assumes that any non-numeric values in TagKeys should be displayed as tags
 func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
 	for name, value := range fields {
-		if p.tagFilter == nil {
+		if p.tagKeys == nil {
 			continue
 		}
 		// skip switch statement if tagkey doesn't match fieldname
-		if !p.tagFilter.Match(name) {
+		if !p.tagKeys.Match(name) {
 			continue
 		}
-		// switch any fields in TagKeys into tags
+		// switch any fields in tagkeys into tags
 		switch t := value.(type) {
 		case string:
 			tags[name] = t
@@ -235,17 +256,58 @@ func init() {
 		})
 }
 
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.MetricName = config.MetricName
-	p.TagKeys = config.TagKeys
-	p.NameKey = config.JSONNameKey
-	p.StringFields = config.JSONStringFields
-	p.Query = config.JSONQuery
-	p.TimeKey = config.JSONTimeKey
-	p.TimeFormat = config.JSONTimeFormat
-	p.Timezone = config.JSONTimezone
-	p.Strict = config.JSONStrict
-	p.DefaultTags = config.DefaultTags
+// FullFlattenJSON flattens nested maps/interfaces into a fields map (including bools and string)
+func (f *JSONFlattener) FullFlattenJSON(
+	fieldname string,
+	v interface{},
+	convertString bool,
+	convertBool bool,
+) error {
+	if f.Fields == nil {
+		f.Fields = make(map[string]interface{})
+	}
 
-	return p.Init()
+	switch t := v.(type) {
+	case map[string]interface{}:
+		for k, v := range t {
+			fieldkey := k
+			if fieldname != "" {
+				fieldkey = fieldname + "_" + fieldkey
+			}
+
+			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
+			if err != nil {
+				return err
+			}
+		}
+	case []interface{}:
+		for i, v := range t {
+			fieldkey := strconv.Itoa(i)
+			if fieldname != "" {
+				fieldkey = fieldname + "_" + fieldkey
+			}
+			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
+			if err != nil {
+				return err
+			}
+		}
+	case float64:
+		f.Fields[fieldname] = t
+	case string:
+		if !convertString {
+			return nil
+		}
+		f.Fields[fieldname] = v.(string)
+	case bool:
+		if !convertBool {
+			return nil
+		}
+		f.Fields[fieldname] = v.(bool)
+	case nil:
+		return nil
+	default:
+		return fmt.Errorf("JSON Flattener: got unexpected type %T with value %v (%s)",
+			t, t, fieldname)
+	}
+	return nil
 }

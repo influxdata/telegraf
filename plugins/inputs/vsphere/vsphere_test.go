@@ -21,23 +21,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var configHeader = `
-[agent]
-  interval = "10s"
-  round_interval = true
-  metric_batch_size = 1000
-  metric_buffer_limit = 10000
-  collection_jitter = "0s"
-  flush_interval = "10s"
-  flush_jitter = "0s"
-  precision = ""
-  debug = false
-  quiet = false
-  logfile = ""
-  hostname = ""
-  omit_hostname = false
-`
-
 func defaultVSphere() *VSphere {
 	return &VSphere{
 		Log: testutil.Logger{},

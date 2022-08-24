@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -322,25 +320,6 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
-func TestGatherTCPCert(t *testing.T) {
-	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
-
-	m := &X509Cert{
-		Sources: []string{ts.URL},
-		Log:     testutil.Logger{},
-	}
-	require.NoError(t, m.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, m.Gather(&acc))
-
-	require.Len(t, acc.Errors, 0)
-	require.True(t, acc.HasMeasurement("x509_cert"))
-}
-
 func TestGatherCertIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -348,7 +327,6 @@ func TestGatherCertIntegration(t *testing.T) {
 
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
-		Log:     testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
@@ -365,7 +343,6 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 	duration := time.Duration(15) * time.Second
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
-		Log:     testutil.Logger{},
 		Timeout: config.Duration(duration),
 	}
 	require.NoError(t, m.Init())
@@ -378,12 +355,12 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 
 func TestSourcesToURLs(t *testing.T) {
 	m := &X509Cert{
-		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "smtp://influxdata.com:25", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
+		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
 	}
 	require.NoError(t, m.Init())
 
 	require.Equal(t, len(m.globpaths), 2)
-	require.Equal(t, len(m.locations), 3)
+	require.Equal(t, len(m.locations), 2)
 }
 
 func TestServerName(t *testing.T) {

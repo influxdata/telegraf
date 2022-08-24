@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
-	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
@@ -307,13 +306,13 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 }
 
 func createGrokParser() (parsers.Parser, error) {
-	parser := &grok.Parser{
-		Measurement:        "tail_grok",
-		Patterns:           []string{"%{TEST_LOG_MULTILINE}"},
-		CustomPatternFiles: []string{filepath.Join(testdataDir, "test-patterns")},
-		Log:                testutil.Logger{},
+	grokConfig := &parsers.Config{
+		MetricName:             "tail_grok",
+		GrokPatterns:           []string{"%{TEST_LOG_MULTILINE}"},
+		GrokCustomPatternFiles: []string{filepath.Join(testdataDir, "test-patterns")},
+		DataFormat:             "grok",
 	}
-	err := parser.Init()
+	parser, err := parsers.NewParser(grokConfig)
 	return parser, err
 }
 
@@ -459,9 +458,10 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.PathTag = "customPathTagMyFile"
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		p := &json.Parser{MetricName: "cpu"}
-		err := p.Init()
-		return p, err
+		return json.New(
+			&json.Config{
+				MetricName: "cpu",
+			})
 	})
 
 	err = plugin.Init()

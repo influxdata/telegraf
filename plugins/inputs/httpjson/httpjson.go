@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
@@ -136,12 +136,13 @@ func (h *HTTPJSON) gatherServer(
 		"server": serverURL,
 	}
 
-	parser := &json.Parser{
+	parser, err := parsers.NewParser(&parsers.Config{
+		DataFormat:  "json",
 		MetricName:  msrmntName,
 		TagKeys:     h.TagKeys,
 		DefaultTags: tags,
-	}
-	if err := parser.Init(); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 

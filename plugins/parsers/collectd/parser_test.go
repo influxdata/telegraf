@@ -160,7 +160,7 @@ func TestParseMultiValueJoin(t *testing.T) {
 	metrics, err := parser.Parse(bytes)
 	require.NoError(t, err)
 
-	require.Equal(t, 1, len(metrics))
+	require.Equal(t, 2, len(metrics))
 }
 
 func TestParse_DefaultTags(t *testing.T) {

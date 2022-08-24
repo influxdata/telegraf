@@ -22,7 +22,10 @@ type Parser struct {
 
 	//whether or not to split multi value metric into multiple metrics
 	//default value is split
-	ParseMultiValue string `toml:"collectd_parse_multivalue"`
+	ParseMultiValue string
+	Log             telegraf.Logger `toml:"-"`
+	popts           network.ParseOpts
+}
 
 	popts         network.ParseOpts
 	AuthFile      string   `toml:"collectd_auth_file"`
@@ -108,7 +111,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 // unmarshalValueList translates a ValueList into a Telegraf metric.
-func (p *Parser) unmarshalValueList(vl *api.ValueList) []telegraf.Metric {
+func (p *CollectdParser) unmarshalValueList(vl *api.ValueList) []telegraf.Metric {
 	timestamp := vl.Time.UTC()
 
 	var metrics []telegraf.Metric

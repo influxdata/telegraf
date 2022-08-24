@@ -15,9 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
-	"github.com/influxdata/telegraf/plugins/parsers/grok"
-	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -44,15 +43,16 @@ func TestFileTag(t *testing.T) {
 		Files:   []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
 		FileTag: "filename",
 	}
-	require.NoError(t, r.Init())
+	err = r.Init()
+	require.NoError(t, err)
 
-	r.SetParserFunc(func() (telegraf.Parser, error) {
-		p := &json.Parser{}
-		err := p.Init()
-		return p, err
-	})
+	parserConfig := parsers.Config{
+		DataFormat: "json",
+	}
+	r.SetParserFunc(func() (telegraf.Parser, error) { return parsers.NewParser(&parserConfig) })
 
-	require.NoError(t, r.Gather(&acc))
+	err = r.Gather(&acc)
+	require.NoError(t, err)
 
 	for _, m := range acc.Metrics {
 		for key, value := range m.Tags {
@@ -68,13 +68,13 @@ func TestJSONParserCompile(t *testing.T) {
 	r := File{
 		Files: []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
 	}
-	require.NoError(t, r.Init())
-
-	r.SetParserFunc(func() (telegraf.Parser, error) {
-		p := &json.Parser{TagKeys: []string{"parent_ignored_child"}}
-		err := p.Init()
-		return p, err
-	})
+	err := r.Init()
+	require.NoError(t, err)
+	parserConfig := parsers.Config{
+		DataFormat: "json",
+		TagKeys:    []string{"parent_ignored_child"},
+	}
+	r.SetParserFunc(func() (telegraf.Parser, error) { return parsers.NewParser(&parserConfig) })
 
 	require.NoError(t, r.Gather(&acc))
 	require.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)
@@ -90,15 +90,12 @@ func TestGrokParser(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := &grok.Parser{
-			Patterns: []string{"%{COMMON_LOG_FORMAT}"},
-			Log:      testutil.Logger{},
-		}
-		err := parser.Init()
+	parserConfig := parsers.Config{
+		DataFormat:   "grok",
+		GrokPatterns: []string{"%{COMMON_LOG_FORMAT}"},
+	}
 
-		return parser, err
-	})
+	r.SetParserFunc(func() (telegraf.Parser, error) { return parsers.NewParser(&parserConfig) })
 
 	err = r.Gather(&acc)
 	require.NoError(t, err)

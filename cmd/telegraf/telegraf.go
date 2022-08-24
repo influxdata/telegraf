@@ -85,20 +85,6 @@ var fProcessorFilters = flag.String("processor-filter", "",
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 
-// Initialize the subcommand `telegraf config`
-// This duplicates the above filters which are used for `telegraf --sample-config` and `telegraf --deprecation-list`
-var configCmd = flag.NewFlagSet("config", flag.ExitOnError)
-var fSubSectionFilters = configCmd.String("section-filter", "",
-	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
-var fSubInputFilters = configCmd.String("input-filter", "",
-	"filter the inputs to enable, separator is :")
-var fSubOutputFilters = configCmd.String("output-filter", "",
-	"filter the outputs to enable, separator is :")
-var fsubAggregatorFilters = configCmd.String("aggregator-filter", "",
-	"filter the aggregators to enable, separator is :")
-var fSubProcessorFilters = configCmd.String("processor-filter", "",
-	"filter the processors to enable, separator is :")
-
 //nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")

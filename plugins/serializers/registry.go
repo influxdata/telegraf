@@ -57,15 +57,6 @@ type Config struct {
 	// Character used for metric name sanitization in Carbon2.
 	Carbon2SanitizeReplaceChar string `toml:"carbon2_sanitize_replace_char"`
 
-	// Separator for CSV
-	CSVSeparator string `toml:"csv_separator"`
-
-	// Output a CSV header for naming the columns
-	CSVHeader bool `toml:"csv_header"`
-
-	// Prefix the tag and field columns for CSV format
-	CSVPrefix bool `toml:"csv_column_prefix"`
-
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
 
@@ -98,7 +89,7 @@ type Config struct {
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration `toml:"timestamp_units"`
 
-	// Timestamp format to use for JSON and CSV formatted output
+	// Timestamp format to use for JSON formatted output
 	TimestampFormat string `toml:"timestamp_format"`
 
 	// Include HEC routing fields for splunkmetric output
@@ -160,10 +151,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
-}
-
-func NewCSVSerializer(config *Config) (Serializer, error) {
-	return csv.NewSerializer(config.TimestampFormat, config.CSVSeparator, config.CSVHeader, config.CSVPrefix)
 }
 
 func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
