@@ -110,7 +110,7 @@ func (a *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := a.gather(ctx)
+		err := a.runAgent(ctx)
 		if err != nil && err != context.Canceled {
 			return fmt.Errorf("[telegraf] Error running agent: %v", err)
 		}
@@ -159,7 +159,7 @@ func (a *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 	signals <- syscall.SIGHUP
 }
 
-func (a *Telegraf) gather(ctx context.Context) error {
+func (a *Telegraf) runAgent(ctx context.Context) error {
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.OutputFilters = a.outputFilters

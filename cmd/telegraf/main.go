@@ -82,6 +82,137 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 
 	extraFlags := append(pluginFilterFlags, cliFlags()...)
 
+	// This function is used when Telegraf is run with only flags
+	action := func(cCtx *cli.Context) error {
+		logger.SetupLogging(logger.LogConfig{})
+
+		// Deprecated: Use execd instead
+		// Load external plugins, if requested.
+		if cCtx.String("plugin-directory") != "" {
+			log.Printf("I! Loading external plugins from: %s", cCtx.String("plugin-directory"))
+			if err := goplugin.LoadExternalPlugins(cCtx.String("plugin-directory")); err != nil {
+				return fmt.Errorf("E! %w", err)
+			}
+		}
+
+		// switch for flags which just do something and exit immediately
+		switch {
+		// print available input plugins
+		case cCtx.Bool("deprecation-list"):
+			filters := processFilterFlags(
+				cCtx.String("section-filter"),
+				cCtx.String("input-filter"),
+				cCtx.String("output-filter"),
+				cCtx.String("aggregator-filter"),
+				cCtx.String("processor-filter"),
+			)
+			infos := c.CollectDeprecationInfos(
+				filters.input, filters.output, filters.aggregator, filters.processor,
+			)
+			outputBuffer.Write([]byte("Deprecated Input Plugins:\n"))
+			c.PrintDeprecationList(infos["inputs"])
+			outputBuffer.Write([]byte("Deprecated Output Plugins:\n"))
+			c.PrintDeprecationList(infos["outputs"])
+			outputBuffer.Write([]byte("Deprecated Processor Plugins:\n"))
+			c.PrintDeprecationList(infos["processors"])
+			outputBuffer.Write([]byte("Deprecated Aggregator Plugins:\n"))
+			c.PrintDeprecationList(infos["aggregators"])
+			return nil
+		// print available output plugins
+		case cCtx.Bool("output-list"):
+			outputBuffer.Write([]byte("Available Output Plugins:\n"))
+			names := make([]string, 0, len(outputs.Outputs))
+			for k := range outputs.Outputs {
+				names = append(names, k)
+			}
+			sort.Strings(names)
+			for _, k := range names {
+				outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
+			}
+			return nil
+		// print available input plugins
+		case cCtx.Bool("input-list"):
+			outputBuffer.Write([]byte("Available Input Plugins:\n"))
+			names := make([]string, 0, len(inputs.Inputs))
+			for k := range inputs.Inputs {
+				names = append(names, k)
+			}
+			sort.Strings(names)
+			for _, k := range names {
+				outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
+			}
+			return nil
+		// print usage for a plugin, ie, 'telegraf --usage mysql'
+		case cCtx.String("usage") != "":
+			err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
+			err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
+			if err != nil && err2 != nil {
+				return fmt.Errorf("E! %s and %s", err, err2)
+			}
+			return nil
+		// DEPRECATED
+		case cCtx.Bool("version"):
+			outputBuffer.Write([]byte(fmt.Sprintf("%s\n", internal.FormatFullVersion())))
+			return nil
+		// DEPRECATED
+		case cCtx.Bool("sample-config"):
+			filters := processFilterFlags(
+				cCtx.String("section-filter"),
+				cCtx.String("input-filter"),
+				cCtx.String("output-filter"),
+				cCtx.String("aggregator-filter"),
+				cCtx.String("processor-filter"),
+			)
+
+			printSampleConfig(
+				outputBuffer,
+				filters.section,
+				filters.input,
+				filters.output,
+				filters.aggregator,
+				filters.processor,
+			)
+			return nil
+		}
+
+		if cCtx.String("pprof-addr") != "" {
+			pprof.Start(cCtx.String("pprof-addr"))
+		}
+
+		filters := processFilterFlags(
+			cCtx.String("section-filter"),
+			cCtx.String("input-filter"),
+			cCtx.String("output-filter"),
+			cCtx.String("aggregator-filter"),
+			cCtx.String("processor-filter"),
+		)
+
+		g := GlobalFlags{
+			config:      cCtx.StringSlice("config"),
+			configDir:   cCtx.StringSlice("config-directory"),
+			testWait:    cCtx.Int("test-wait"),
+			watchConfig: cCtx.String("watch-config"),
+			pidFile:     cCtx.String("pidfile"),
+			plugindDir:  cCtx.String("plugin-directory"),
+			test:        cCtx.Bool("test"),
+			debug:       cCtx.Bool("debug"),
+			once:        cCtx.Bool("once"),
+			quiet:       cCtx.Bool("quiet"),
+		}
+
+		w := WindowFlags{
+			service:             cCtx.String("service"),
+			serviceName:         cCtx.String("service-name"),
+			serviceDisplayName:  cCtx.String("service-display-name"),
+			serviceRestartDelay: cCtx.String("service-restart-delay"),
+			serviceAutoRestart:  cCtx.Bool("service-auto-restart"),
+			console:             cCtx.Bool("console"),
+		}
+
+		m.Init(pprof.ErrChan(), filters, g, w)
+		return m.Run()
+	}
+
 	app := &cli.App{
 		Name:   "Telegraf",
 		Usage:  "The plugin-driven server agent for collecting & reporting metrics.",
@@ -171,135 +302,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				// !!!
 			}, extraFlags...),
-		Action: func(cCtx *cli.Context) error {
-			logger.SetupLogging(logger.LogConfig{})
-
-			// Deprecated: Use execd instead
-			// Load external plugins, if requested.
-			if cCtx.String("plugin-directory") != "" {
-				log.Printf("I! Loading external plugins from: %s", cCtx.String("plugin-directory"))
-				if err := goplugin.LoadExternalPlugins(cCtx.String("plugin-directory")); err != nil {
-					return fmt.Errorf("E! %w", err)
-				}
-			}
-
-			// switch for flags which just do something and exit immediately
-			switch {
-			// print available input plugins
-			case cCtx.Bool("deprecation-list"):
-				filters := processFilterFlags(
-					cCtx.String("section-filter"),
-					cCtx.String("input-filter"),
-					cCtx.String("output-filter"),
-					cCtx.String("aggregator-filter"),
-					cCtx.String("processor-filter"),
-				)
-				infos := c.CollectDeprecationInfos(
-					filters.input, filters.output, filters.aggregator, filters.processor,
-				)
-				outputBuffer.Write([]byte("Deprecated Input Plugins:\n"))
-				c.PrintDeprecationList(infos["inputs"])
-				outputBuffer.Write([]byte("Deprecated Output Plugins:\n"))
-				c.PrintDeprecationList(infos["outputs"])
-				outputBuffer.Write([]byte("Deprecated Processor Plugins:\n"))
-				c.PrintDeprecationList(infos["processors"])
-				outputBuffer.Write([]byte("Deprecated Aggregator Plugins:\n"))
-				c.PrintDeprecationList(infos["aggregators"])
-				return nil
-			// print available output plugins
-			case cCtx.Bool("output-list"):
-				outputBuffer.Write([]byte("Available Output Plugins:\n"))
-				names := make([]string, 0, len(outputs.Outputs))
-				for k := range outputs.Outputs {
-					names = append(names, k)
-				}
-				sort.Strings(names)
-				for _, k := range names {
-					outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
-				}
-				return nil
-			// print available input plugins
-			case cCtx.Bool("input-list"):
-				outputBuffer.Write([]byte("Available Input Plugins:\n"))
-				names := make([]string, 0, len(inputs.Inputs))
-				for k := range inputs.Inputs {
-					names = append(names, k)
-				}
-				sort.Strings(names)
-				for _, k := range names {
-					outputBuffer.Write([]byte(fmt.Sprintf("  %s\n", k)))
-				}
-				return nil
-			// print usage for a plugin, ie, 'telegraf --usage mysql'
-			case cCtx.String("usage") != "":
-				err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
-				err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
-				if err != nil && err2 != nil {
-					return fmt.Errorf("E! %s and %s", err, err2)
-				}
-				return nil
-			// DEPRECATED
-			case cCtx.Bool("version"):
-				outputBuffer.Write([]byte(fmt.Sprintf("%s\n", internal.FormatFullVersion())))
-				return nil
-			// DEPRECATED
-			case cCtx.Bool("sample-config"):
-				filters := processFilterFlags(
-					cCtx.String("section-filter"),
-					cCtx.String("input-filter"),
-					cCtx.String("output-filter"),
-					cCtx.String("aggregator-filter"),
-					cCtx.String("processor-filter"),
-				)
-
-				printSampleConfig(
-					outputBuffer,
-					filters.section,
-					filters.input,
-					filters.output,
-					filters.aggregator,
-					filters.processor,
-				)
-				return nil
-			}
-
-			if cCtx.String("pprof-addr") != "" {
-				pprof.Start(cCtx.String("pprof-addr"))
-			}
-
-			filters := processFilterFlags(
-				cCtx.String("section-filter"),
-				cCtx.String("input-filter"),
-				cCtx.String("output-filter"),
-				cCtx.String("aggregator-filter"),
-				cCtx.String("processor-filter"),
-			)
-
-			g := GlobalFlags{
-				config:      cCtx.StringSlice("config"),
-				configDir:   cCtx.StringSlice("config-directory"),
-				testWait:    cCtx.Int("test-wait"),
-				watchConfig: cCtx.String("watch-config"),
-				pidFile:     cCtx.String("pidfile"),
-				plugindDir:  cCtx.String("plugin-directory"),
-				test:        cCtx.Bool("test"),
-				debug:       cCtx.Bool("debug"),
-				once:        cCtx.Bool("once"),
-				quiet:       cCtx.Bool("quiet"),
-			}
-
-			w := WindowFlags{
-				service:             cCtx.String("service"),
-				serviceName:         cCtx.String("service-name"),
-				serviceDisplayName:  cCtx.String("service-display-name"),
-				serviceRestartDelay: cCtx.String("service-restart-delay"),
-				serviceAutoRestart:  cCtx.Bool("service-auto-restart"),
-				console:             cCtx.Bool("console"),
-			}
-
-			m.Init(pprof.ErrChan(), filters, g, w)
-			return m.Run()
-		},
+		Action: action,
 		Commands: []*cli.Command{
 			{
 				Name:  "config",

@@ -461,16 +461,3 @@ func TestFlagsAreSet(t *testing.T) {
 	require.Equal(t, expectedString, m.watchConfig)
 	require.Equal(t, expectedString, m.pidFile)
 }
-
-func TestWindowsFlagsAreNotSet(t *testing.T) {
-	commands := []string{
-		"--service", "test",
-	}
-
-	buf := new(bytes.Buffer)
-	args := os.Args[0:1]
-	args = append(args, commands...)
-	m := NewMockTelegraf()
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), m)
-	require.Error(t, err)
-}
