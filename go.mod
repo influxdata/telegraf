@@ -49,6 +49,7 @@ require (
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20220628142927-f4160bcb943c
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
+	github.com/cornelk/hashmap v1.0.1
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/denisenkom/go-mssqldb v0.12.0
 	github.com/dimchansky/utfbom v1.1.1
@@ -243,6 +244,7 @@ require (
 	github.com/couchbase/gomemcached v0.1.3 // indirect
 	github.com/couchbase/goutils v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dchest/siphash v1.1.0 // indirect
 	github.com/devigned/tab v0.1.1 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/go-connections v0.4.0

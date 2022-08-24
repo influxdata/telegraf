@@ -80,6 +80,7 @@ following works:
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
 - github.com/couchbase/goutils [Apache License 2.0](https://github.com/couchbase/goutils/blob/master/LICENSE.md)
 - github.com/davecgh/go-spew [ISC License](https://github.com/davecgh/go-spew/blob/master/LICENSE)
+- github.com/dchest/siphash [Creative Commons Zero v1.0 Universal](https://github.com/dchest/siphash/blob/master/LICENSE)
 - github.com/denisenkom/go-mssqldb [BSD 3-Clause "New" or "Revised" License](https://github.com/denisenkom/go-mssqldb/blob/master/LICENSE.txt)
 - github.com/devigned/tab [MIT License](https://github.com/devigned/tab/blob/master/LICENSE)
 - github.com/dimchansky/utfbom [Apache License 2.0](https://github.com/dimchansky/utfbom/blob/master/LICENSE)
