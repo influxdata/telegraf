@@ -21,7 +21,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Shopify/sarama v1.35.0
-	github.com/aerospike/aerospike-client-go/v5 v5.7.0
+	github.com/aerospike/aerospike-client-go/v5 v5.9.0
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1727
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
@@ -40,7 +40,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.15.10
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.52.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.15.10
-	github.com/aws/aws-sdk-go-v2/service/sts v1.16.7
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.13
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.13.12
 	github.com/aws/smithy-go v1.12.1
 	github.com/benbjohnson/clock v1.3.0
