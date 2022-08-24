@@ -11,8 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFlagsAreSet(t *testing.T) {
-	expectedInt := 1
+func TestWindowsFlagsAreSet(t *testing.T) {
 	expectedString := "test"
 
 	commands := []string{
