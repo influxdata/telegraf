@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -425,4 +426,51 @@ func TestGlobablBoolFlags(t *testing.T) {
 	require.Equal(t, true, m.test)
 	require.Equal(t, true, m.once)
 	require.Equal(t, true, m.quiet)
+}
+
+func TestFlagsAreSet(t *testing.T) {
+	expectedInt := 1
+	expectedString := "test"
+
+	commands := []string{
+		"--config", expectedString,
+		"--config-directory", expectedString,
+		"--debug",
+		"--test",
+		"--quiet",
+		"--once",
+		"--test-wait", strconv.Itoa(expectedInt),
+		"--watch-config", expectedString,
+		"--pidfile", expectedString,
+	}
+
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, commands...)
+	m := NewMockTelegraf()
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), m)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{expectedString}, m.config)
+	require.Equal(t, []string{expectedString}, m.configDir)
+	require.Equal(t, true, m.debug)
+	require.Equal(t, true, m.test)
+	require.Equal(t, true, m.once)
+	require.Equal(t, true, m.quiet)
+	require.Equal(t, expectedInt, m.testWait)
+	require.Equal(t, expectedString, m.watchConfig)
+	require.Equal(t, expectedString, m.pidFile)
+}
+
+func TestWindowsFlagsAreNotSet(t *testing.T) {
+	commands := []string{
+		"--service", "test",
+	}
+
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, commands...)
+	m := NewMockTelegraf()
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), m)
+	require.Error(t, err)
 }

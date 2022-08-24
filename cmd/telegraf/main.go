@@ -114,7 +114,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				&cli.StringFlag{
 					Name:  "watch-config",
-					Usage: "Monitoring config changes [notify, poll]",
+					Usage: "monitoring config changes [notify, poll]",
 				},
 				&cli.StringFlag{
 					Name:  "pidfile",
