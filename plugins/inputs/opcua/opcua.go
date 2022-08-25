@@ -22,6 +22,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -205,7 +206,7 @@ func tagsSliceToMap(tags [][]string) (map[string]string, error) {
 	return m, nil
 }
 
-//InitNodes Method on OpcUA
+// InitNodes Method on OpcUA
 func (o *OpcUA) InitNodes() error {
 	for _, node := range o.RootNodes {
 		o.nodes = append(o.nodes, Node{
@@ -295,7 +296,7 @@ func newMP(n *Node) metricParts {
 
 func (o *OpcUA) validateOPCTags() error {
 	nameEncountered := map[metricParts]struct{}{}
-	for _, node := range o.nodes {
+	for i, node := range o.nodes {
 		mp := newMP(&node)
 		//check empty name
 		if node.tag.FieldName == "" {
@@ -322,7 +323,7 @@ func (o *OpcUA) validateOPCTags() error {
 			return fmt.Errorf("invalid identifier type '%s' in '%s'", node.tag.IdentifierType, node.tag.FieldName)
 		}
 
-		node.idStr = BuildNodeID(node.tag)
+		o.nodes[i].idStr = BuildNodeID(node.tag)
 
 		//parse NodeIds and NodeIds errors
 		nid, niderr := ua.ParseNodeID(node.idStr)
