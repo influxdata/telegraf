@@ -326,7 +326,7 @@ func (o *OpcUA) validateOPCTags() error {
 		o.nodes[i].idStr = BuildNodeID(node.tag)
 
 		//parse NodeIds and NodeIds errors
-		nid, niderr := ua.ParseNodeID(node.idStr)
+		nid, niderr := ua.ParseNodeID(o.nodes[i].idStr)
 		// build NodeIds and Errors
 		o.nodeIDs = append(o.nodeIDs, nid)
 		o.nodeIDerror = append(o.nodeIDerror, niderr)
