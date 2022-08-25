@@ -1,8 +1,9 @@
-package printer
+package main
 
 import (
 	_ "embed"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 
@@ -100,8 +101,9 @@ func sliceContains(name string, list []string) bool {
 	return false
 }
 
-// PrintSampleConfig prints the sample config
-func PrintSampleConfig(
+// printSampleConfig prints the sample config
+func printSampleConfig(
+	outputBuffer io.Writer,
 	sectionFilters []string,
 	inputFilters []string,
 	outputFilters []string,
@@ -109,23 +111,23 @@ func PrintSampleConfig(
 	processorFilters []string,
 ) {
 	// print headers
-	fmt.Print(header)
+	outputBuffer.Write([]byte(header))
 
 	if len(sectionFilters) == 0 {
 		sectionFilters = sectionDefaults
 	}
-	printFilteredGlobalSections(sectionFilters)
+	printFilteredGlobalSections(sectionFilters, outputBuffer)
 
 	// print output plugins
 	if sliceContains("outputs", sectionFilters) {
 		if len(outputFilters) != 0 {
 			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
-				fmt.Print(outputHeader)
+				outputBuffer.Write([]byte(outputHeader))
 			}
-			printFilteredOutputs(outputFilters, false)
+			printFilteredOutputs(outputFilters, false, outputBuffer)
 		} else {
-			fmt.Print(outputHeader)
-			printFilteredOutputs(outputDefaults, false)
+			outputBuffer.Write([]byte(outputHeader))
+			printFilteredOutputs(outputDefaults, false, outputBuffer)
 			// Print non-default outputs, commented
 			var pnames []string
 			for pname := range outputs.Outputs {
@@ -134,7 +136,7 @@ func PrintSampleConfig(
 				}
 			}
 			sort.Strings(pnames)
-			printFilteredOutputs(pnames, true)
+			printFilteredOutputs(pnames, true, outputBuffer)
 		}
 	}
 
@@ -142,17 +144,17 @@ func PrintSampleConfig(
 	if sliceContains("processors", sectionFilters) {
 		if len(processorFilters) != 0 {
 			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
-				fmt.Print(processorHeader)
+				outputBuffer.Write([]byte(processorHeader))
 			}
-			printFilteredProcessors(processorFilters, false)
+			printFilteredProcessors(processorFilters, false, outputBuffer)
 		} else {
-			fmt.Print(processorHeader)
+			outputBuffer.Write([]byte(processorHeader))
 			pnames := []string{}
 			for pname := range processors.Processors {
 				pnames = append(pnames, pname)
 			}
 			sort.Strings(pnames)
-			printFilteredProcessors(pnames, true)
+			printFilteredProcessors(pnames, true, outputBuffer)
 		}
 	}
 
@@ -160,17 +162,17 @@ func PrintSampleConfig(
 	if sliceContains("aggregators", sectionFilters) {
 		if len(aggregatorFilters) != 0 {
 			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
-				fmt.Print(aggregatorHeader)
+				outputBuffer.Write([]byte(aggregatorHeader))
 			}
-			printFilteredAggregators(aggregatorFilters, false)
+			printFilteredAggregators(aggregatorFilters, false, outputBuffer)
 		} else {
-			fmt.Print(aggregatorHeader)
+			outputBuffer.Write([]byte(aggregatorHeader))
 			pnames := []string{}
 			for pname := range aggregators.Aggregators {
 				pnames = append(pnames, pname)
 			}
 			sort.Strings(pnames)
-			printFilteredAggregators(pnames, true)
+			printFilteredAggregators(pnames, true, outputBuffer)
 		}
 	}
 
@@ -178,12 +180,12 @@ func PrintSampleConfig(
 	if sliceContains("inputs", sectionFilters) {
 		if len(inputFilters) != 0 {
 			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
-				fmt.Print(inputHeader)
+				outputBuffer.Write([]byte(inputHeader))
 			}
-			printFilteredInputs(inputFilters, false)
+			printFilteredInputs(inputFilters, false, outputBuffer)
 		} else {
-			fmt.Print(inputHeader)
-			printFilteredInputs(inputDefaults, false)
+			outputBuffer.Write([]byte(inputHeader))
+			printFilteredInputs(inputDefaults, false, outputBuffer)
 			// Print non-default inputs, commented
 			var pnames []string
 			for pname := range inputs.Inputs {
@@ -192,7 +194,7 @@ func PrintSampleConfig(
 				}
 			}
 			sort.Strings(pnames)
-			printFilteredInputs(pnames, true)
+			printFilteredInputs(pnames, true, outputBuffer)
 		}
 	}
 }
@@ -217,7 +219,7 @@ func PluginNameCounts(plugins []string) []string {
 	return namecount
 }
 
-func printFilteredProcessors(processorFilters []string, commented bool) {
+func printFilteredProcessors(processorFilters []string, commented bool, outputBuffer io.Writer) {
 	// Filter processors
 	var pnames []string
 	for pname := range processors.Processors {
@@ -231,11 +233,11 @@ func printFilteredProcessors(processorFilters []string, commented bool) {
 	for _, pname := range pnames {
 		creator := processors.Processors[pname]
 		output := creator()
-		printConfig(pname, output, "processors", commented, processors.Deprecations[pname])
+		printConfig(pname, output, "processors", commented, processors.Deprecations[pname], outputBuffer)
 	}
 }
 
-func printFilteredAggregators(aggregatorFilters []string, commented bool) {
+func printFilteredAggregators(aggregatorFilters []string, commented bool, outputBuffer io.Writer) {
 	// Filter outputs
 	var anames []string
 	for aname := range aggregators.Aggregators {
@@ -249,11 +251,11 @@ func printFilteredAggregators(aggregatorFilters []string, commented bool) {
 	for _, aname := range anames {
 		creator := aggregators.Aggregators[aname]
 		output := creator()
-		printConfig(aname, output, "aggregators", commented, aggregators.Deprecations[aname])
+		printConfig(aname, output, "aggregators", commented, aggregators.Deprecations[aname], outputBuffer)
 	}
 }
 
-func printFilteredInputs(inputFilters []string, commented bool) {
+func printFilteredInputs(inputFilters []string, commented bool, outputBuffer io.Writer) {
 	// Filter inputs
 	var pnames []string
 	for pname := range inputs.Inputs {
@@ -284,7 +286,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 			continue
 		}
 
-		printConfig(pname, input, "inputs", commented, inputs.Deprecations[pname])
+		printConfig(pname, input, "inputs", commented, inputs.Deprecations[pname], outputBuffer)
 	}
 
 	// Print Service Inputs
@@ -293,13 +295,13 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	}
 	sort.Strings(servInputNames)
 
-	fmt.Print(serviceInputHeader)
+	outputBuffer.Write([]byte(serviceInputHeader))
 	for _, name := range servInputNames {
-		printConfig(name, servInputs[name], "inputs", commented, inputs.Deprecations[name])
+		printConfig(name, servInputs[name], "inputs", commented, inputs.Deprecations[name], outputBuffer)
 	}
 }
 
-func printFilteredOutputs(outputFilters []string, commented bool) {
+func printFilteredOutputs(outputFilters []string, commented bool, outputBuffer io.Writer) {
 	// Filter outputs
 	var onames []string
 	for oname := range outputs.Outputs {
@@ -313,21 +315,21 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 	for _, oname := range onames {
 		creator := outputs.Outputs[oname]
 		output := creator()
-		printConfig(oname, output, "outputs", commented, outputs.Deprecations[oname])
+		printConfig(oname, output, "outputs", commented, outputs.Deprecations[oname], outputBuffer)
 	}
 }
 
-func printFilteredGlobalSections(sectionFilters []string) {
+func printFilteredGlobalSections(sectionFilters []string, outputBuffer io.Writer) {
 	if sliceContains("global_tags", sectionFilters) {
-		fmt.Print(globalTagsConfig)
+		outputBuffer.Write([]byte(globalTagsConfig))
 	}
 
 	if sliceContains("agent", sectionFilters) {
-		fmt.Print(agentConfig)
+		outputBuffer.Write([]byte(agentConfig))
 	}
 }
 
-func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool, di telegraf.DeprecationInfo) {
+func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool, di telegraf.DeprecationInfo, outputBuffer io.Writer) {
 	comment := ""
 	if commented {
 		comment = "# "
@@ -338,44 +340,44 @@ func printConfig(name string, p telegraf.PluginDescriber, op string, commented b
 		if di.RemovalIn != "" {
 			removalNote = " and will be removed in " + di.RemovalIn
 		}
-		fmt.Printf("\n%s ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)
+		outputBuffer.Write([]byte(fmt.Sprintf("\n%s ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)))
 	}
 
-	config := p.SampleConfig()
-	if config == "" {
-		fmt.Printf("\n#[[%s.%s]]", op, name)
-		fmt.Printf("\n%s  # no configuration\n\n", comment)
+	sample := p.SampleConfig()
+	if sample == "" {
+		outputBuffer.Write([]byte(fmt.Sprintf("\n#[[%s.%s]]", op, name)))
+		outputBuffer.Write([]byte(fmt.Sprintf("\n%s  # no configuration\n\n", comment)))
 	} else {
-		lines := strings.Split(config, "\n")
-		fmt.Print("\n")
+		lines := strings.Split(sample, "\n")
+		outputBuffer.Write([]byte("\n"))
 		for i, line := range lines {
 			if i == len(lines)-1 {
-				fmt.Print("\n")
+				outputBuffer.Write([]byte("\n"))
 				continue
 			}
-			fmt.Print(strings.TrimRight(comment+line, " ") + "\n")
+			outputBuffer.Write([]byte(strings.TrimRight(comment+line, " ") + "\n"))
 		}
 	}
 }
 
 // PrintInputConfig prints the config usage of a single input.
-func PrintInputConfig(name string) error {
+func PrintInputConfig(name string, outputBuffer io.Writer) error {
 	creator, ok := inputs.Inputs[name]
 	if !ok {
 		return fmt.Errorf("input %s not found", name)
 	}
 
-	printConfig(name, creator(), "inputs", false, inputs.Deprecations[name])
+	printConfig(name, creator(), "inputs", false, inputs.Deprecations[name], outputBuffer)
 	return nil
 }
 
 // PrintOutputConfig prints the config usage of a single output.
-func PrintOutputConfig(name string) error {
+func PrintOutputConfig(name string, outputBuffer io.Writer) error {
 	creator, ok := outputs.Outputs[name]
 	if !ok {
 		return fmt.Errorf("output %s not found", name)
 	}
 
-	printConfig(name, creator(), "outputs", false, outputs.Deprecations[name])
+	printConfig(name, creator(), "outputs", false, outputs.Deprecations[name], outputBuffer)
 	return nil
 }

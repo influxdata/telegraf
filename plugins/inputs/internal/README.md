@@ -14,7 +14,7 @@ plugin.
   # collect_memstats = true
 ```
 
-## Measurements & Fields
+## Metrics
 
 memstats are taken from the Go runtime:
 <https://golang.org/pkg/runtime/#MemStats>

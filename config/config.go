@@ -107,7 +107,7 @@ func NewConfig() *Config {
 	}
 
 	// Handle unknown version
-	version := internal.Version()
+	version := internal.Version
 	if version == "" || version == "unknown" {
 		version = "0.0.0-unknown"
 	}

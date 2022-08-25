@@ -29,9 +29,9 @@ var (
 
 // Set via LDFLAGS -X
 var (
-	version = "unknown"
-	branch  = ""
-	commit  = ""
+	Version = "unknown"
+	Branch  = ""
+	Commit  = ""
 )
 
 type ReadWaitCloser struct {
@@ -39,28 +39,23 @@ type ReadWaitCloser struct {
 	wg         sync.WaitGroup
 }
 
-// Version returns the telegraf agent version
-func Version() string {
-	return version
-}
-
 func FormatFullVersion() string {
 	var parts = []string{"Telegraf"}
 
-	if version != "" {
-		parts = append(parts, version)
+	if Version != "" {
+		parts = append(parts, Version)
 	} else {
 		parts = append(parts, "unknown")
 	}
 
-	if branch != "" || commit != "" {
-		if branch == "" {
-			branch = "unknown"
+	if Branch != "" || Commit != "" {
+		if Branch == "" {
+			Branch = "unknown"
 		}
-		if commit == "" {
-			commit = "unknown"
+		if Commit == "" {
+			Commit = "unknown"
 		}
-		git := fmt.Sprintf("(git: %s@%s)", branch, commit)
+		git := fmt.Sprintf("(git: %s@%s)", Branch, Commit)
 		parts = append(parts, git)
 	}
 
@@ -70,7 +65,7 @@ func FormatFullVersion() string {
 // ProductToken returns a tag for Telegraf that can be used in user agents.
 func ProductToken() string {
 	return fmt.Sprintf("Telegraf/%s Go/%s",
-		Version(), strings.TrimPrefix(runtime.Version(), "go"))
+		Version, strings.TrimPrefix(runtime.Version(), "go"))
 }
 
 // ReadLines reads contents from a file and splits them by new lines.
@@ -82,8 +77,9 @@ func ReadLines(filename string) ([]string, error) {
 // ReadLines reads contents from file and splits them by new line.
 // The offset tells at which line number to start.
 // The count determines the number of lines to read (starting from offset):
-//   n >= 0: at most n lines
-//   n < 0: whole file
+//
+//	n >= 0: at most n lines
+//	n < 0: whole file
 func ReadLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -244,9 +240,10 @@ func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
 
 // ParseTimestamp parses a Time according to the standard Telegraf options.
 // These are generally displayed in the toml similar to:
-//   json_time_key= "timestamp"
-//   json_time_format = "2006-01-02T15:04:05Z07:00"
-//   json_timezone = "America/Los_Angeles"
+//
+//	json_time_key= "timestamp"
+//	json_time_format = "2006-01-02T15:04:05Z07:00"
+//	json_timezone = "America/Los_Angeles"
 //
 // The format can be one of "unix", "unix_ms", "unix_us", "unix_ns", or a Go
 // time layout suitable for time.Parse.
@@ -295,7 +292,8 @@ func parseUnix(format string, timestamp interface{}) (time.Time, error) {
 // Returns the integers before and after an optional decimal point.  Both '.'
 // and ',' are supported for the decimal point.  The timestamp can be an int64,
 // float64, or string.
-//   ex: "42.5" -> (42, 5, nil)
+//
+//	ex: "42.5" -> (42, 5, nil)
 func parseComponents(timestamp interface{}) (int64, int64, error) {
 	switch ts := timestamp.(type) {
 	case string:
