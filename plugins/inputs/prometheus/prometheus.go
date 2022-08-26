@@ -27,6 +27,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+
 //go:embed sample.conf
 var sampleConfig string
 
@@ -255,6 +256,7 @@ func (p *Prometheus) createHTTPClient() (*http.Client, error) {
 
 	client := &http.Client{
 		Transport: &http.Transport{
+			Proxy:             http.ProxyFromEnvironment,
 			TLSClientConfig:   tlsCfg,
 			DisableKeepAlives: true,
 		},
