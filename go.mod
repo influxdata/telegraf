@@ -92,8 +92,8 @@ require (
 	github.com/hashicorp/consul/api v1.14.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.2.22
-	github.com/influxdata/influxdb-observability/influx2otel v0.2.21
+	github.com/influxdata/influxdb-observability/common v0.2.26
+	github.com/influxdata/influxdb-observability/influx2otel v0.2.26
 	github.com/influxdata/influxdb-observability/otel2influx v0.2.22
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
@@ -160,7 +160,7 @@ require (
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.4.1
 	go.mongodb.org/mongo-driver v1.10.1
-	go.opentelemetry.io/collector/pdata v0.56.0
+	go.opentelemetry.io/collector/pdata v0.57.2
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.31.0
 	go.opentelemetry.io/otel/metric v0.31.0
 	go.opentelemetry.io/otel/sdk/metric v0.31.0
