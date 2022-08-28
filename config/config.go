@@ -107,7 +107,7 @@ func NewConfig() *Config {
 	}
 
 	// Handle unknown version
-	version := internal.Version()
+	version := internal.Version
 	if version == "" || version == "unknown" {
 		version = "0.0.0-unknown"
 	}
@@ -342,10 +342,9 @@ func (c *Config) LoadDirectory(path string) error {
 }
 
 // Try to find a default config file at these locations (in order):
-//   1. $TELEGRAF_CONFIG_PATH
-//   2. $HOME/.telegraf/telegraf.conf
-//   3. /etc/telegraf/telegraf.conf
-//
+//  1. $TELEGRAF_CONFIG_PATH
+//  2. $HOME/.telegraf/telegraf.conf
+//  3. /etc/telegraf/telegraf.conf
 func getDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
@@ -387,7 +386,7 @@ func (c *Config) LoadConfig(path string) error {
 			return err
 		}
 	}
-	data, err := loadConfig(path)
+	data, err := LoadConfigFile(path)
 	if err != nil {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
@@ -566,7 +565,7 @@ func escapeEnv(value string) string {
 	return envVarEscaper.Replace(value)
 }
 
-func loadConfig(config string) ([]byte, error) {
+func LoadConfigFile(config string) ([]byte, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
 		if err != nil {
@@ -1165,6 +1164,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
 	c.getFieldBool(tbl, "prometheus_string_as_label", &sc.PrometheusStringAsLabel)
+	c.getFieldBool(tbl, "prometheus_compact_encoding", &sc.PrometheusCompactEncoding)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1233,6 +1233,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
 		"json_timestamp_format", "json_timestamp_units",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
+		"prometheus_compact_encoding",
 		"splunkmetric_hec_routing", "splunkmetric_multimetric",
 		"wavefront_disable_prefix_conversion", "wavefront_source_override", "wavefront_use_strict":
 	default:

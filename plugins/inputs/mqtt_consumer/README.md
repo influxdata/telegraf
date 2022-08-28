@@ -194,5 +194,15 @@ sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 
 - example when [[inputs.mqtt_consumer.topic_parsing]] is set
 
+- when [[inputs.internal]] is set:
+  - payload_size (int): get the cumulative size in bytes that have been received from incoming messages
+  - messages_received (int): count of the number of messages that have been received from mqtt
+  
+This will result in the following metric:
+
+```text
+internal_mqtt_consumer host=pop-os version=1.24.0 messages_received=622i payload_size=37942i 1657282270000000000
+```
+
 [mqtt]: https://mqtt.org
 [input data formats]: /docs/DATA_FORMATS_INPUT.md

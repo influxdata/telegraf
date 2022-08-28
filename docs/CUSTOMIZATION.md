@@ -17,13 +17,13 @@ build as otherwise _all_ plugins will be selected regardless of other tags.
 ## Via make
 
 When using the project's makefile, the build can be customized via the
-`BUILDTAGS` environment variable containing a __space-separated__ list of the
+`BUILDTAGS` environment variable containing a __comma-separated__ list of the
 selected plugins (or categories) __and__ the `custom` tag.
 
 For example
 
 ```shell
-BUILDTAGS="custom inputs outputs.influxdb_v2 parsers.json" make
+BUILDTAGS="custom,inputs,outputs.influxdb_v2,parsers.json" make
 ```
 
 will build a customized Telegraf including _all_ `inputs`, the InfluxDB v2
@@ -32,13 +32,13 @@ will build a customized Telegraf including _all_ `inputs`, the InfluxDB v2
 ## Via `go build`
 
 If you wish to build Telegraf using native go tools, you can use the `go build`
-command with the `-tags` option. Specify  a __space-separated__ list of the
+command with the `-tags` option. Specify  a __comma-separated__ list of the
 selected plugins (or categories) __and__ the `custom` tag as argument.
 
 For example
 
 ```shell
-go build -tags "custom inputs outputs.influxdb_v2 parsers.json" ./cmd/telegraf
+go build -tags "custom,inputs,outputs.influxdb_v2,parsers.json" ./cmd/telegraf
 ```
 
 will build a customized Telegraf including _all_ `inputs`, the InfluxDB v2

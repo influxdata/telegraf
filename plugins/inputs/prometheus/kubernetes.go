@@ -8,12 +8,10 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"os/user"
 	"path/filepath"
 	"time"
 
-	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -23,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type podMetadata struct {
@@ -39,27 +38,21 @@ type podResponse struct {
 
 const cAdvisorPodListDefaultInterval = 60
 
-// loadClient parses a kubeconfig from a file and returns a Kubernetes
-// client. It does not support extensions or client auth providers.
-func loadClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
-	data, err := os.ReadFile(kubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed reading '%s': %v", kubeconfigPath, err)
+// loadConfig parses a kubeconfig from a file and returns a Kubernetes rest.Config
+func loadConfig(kubeconfigPath string) (*rest.Config, error) {
+	if kubeconfigPath == "" {
+		return rest.InClusterConfig()
 	}
 
-	// Unmarshal YAML into a Kubernetes config object.
-	var config rest.Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, err
-	}
-	return kubernetes.NewForConfig(&config)
+	return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 }
 
 func (p *Prometheus) startK8s(ctx context.Context) error {
-	config, err := rest.InClusterConfig()
+	config, err := loadConfig(p.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("failed to get InClusterConfig - %v", err)
+		return fmt.Errorf("failed to get rest.Config from %v - %v", p.KubeConfig, err)
 	}
+
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		u, err := user.Current()
@@ -67,13 +60,16 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 			return fmt.Errorf("failed to get current user - %v", err)
 		}
 
-		configLocation := filepath.Join(u.HomeDir, ".kube/config")
-		if p.KubeConfig != "" {
-			configLocation = p.KubeConfig
-		}
-		client, err = loadClient(configLocation)
+		kubeconfig := filepath.Join(u.HomeDir, ".kube/config")
+
+		config, err = loadConfig(kubeconfig)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get rest.Config from %v - %v", kubeconfig, err)
+		}
+
+		client, err = kubernetes.NewForConfig(config)
+		if err != nil {
+			return fmt.Errorf("failed to get kubernetes client - %v", err)
 		}
 	}
 

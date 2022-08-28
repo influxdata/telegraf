@@ -45,12 +45,12 @@ MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
-
-LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
+INTERNAL_PKG=github.com/influxdata/telegraf/internal
+LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).Commit=$(commit) -X $(INTERNAL_PKG).Branch=$(branch)
 ifneq ($(tag),)
-	LDFLAGS += -X main.version=$(version)
+	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)
 else
-	LDFLAGS += -X main.version=$(version)-$(commit)
+	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)-$(commit)
 endif
 
 # Go built-in race detector works only for 64 bits architectures.
@@ -114,6 +114,7 @@ versioninfo:
 	go generate cmd/telegraf/telegraf_windows.go; \
 
 build_tools:
+	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
 
@@ -223,6 +224,8 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf tools/custom_builder/custom_builder
+	rm -rf tools/custom_builder/custom_builder.exe
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
 	rm -rf tools/package_lxd_test/package_lxd_test
