@@ -236,18 +236,6 @@ SELECT
 	,(SELECT SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT) / 128) FROM sys.database_files WHERE type_desc = 'ROWS') AS used_space_data_mb
 	 ,CASE
 		WHEN slo.[edition] = 'Hyperscale' then NULL
-		ELSE (SELECT SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT) / 128) FROM sys.database_files WHERE type_desc = 'ROWS')
-	 END AS used_space_data_mb
-	 ,CASE
-		WHEN slo.[edition] = 'Hyperscale' then NULL
-		ELSE (SELECT total_log_size_in_bytes / (1024 * 1024) FROM sys.dm_db_log_space_usage)
-	 END AS total_log_mb
-	 ,CASE
-		WHEN slo.[edition] = 'Hyperscale' then NULL
-		ELSE (SELECT used_log_space_in_bytes / (1024 * 1024) FROM sys.dm_db_log_space_usage)
-	 END AS used_space_log_mb
-	,CASE
-		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE (
 			SELECT (CAST(DATABASEPROPERTYEX(DB_NAME(), 'MaxSizeInBytes') AS BIGINT) / (1024 * 1024) - SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS  INT) / 128))
 			FROM sys.database_files
