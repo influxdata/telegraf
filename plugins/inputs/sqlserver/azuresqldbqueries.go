@@ -245,6 +245,7 @@ SELECT
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE (SELECT used_log_space_in_bytes / (1024 * 1024) FROM sys.dm_db_log_space_usage)
 	 END AS used_space_log_mb
+	/*
 	,CASE
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE (
@@ -252,6 +253,7 @@ SELECT
 			(select SUM([size]/128 - CAST(FILEPROPERTY(name, 'SpaceUsed') AS int)/128) FROM sys.database_files)
 		)
 	END AS [available_storage_mb]
+	*/
 	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 	FROM sys.[databases] AS d

@@ -368,7 +368,7 @@ to test,differences in DMVs:
 - *AzureSQLDBMemoryClerks*: Memory clerk breakdown from `sys.dm_os_memory_clerks`.
 - *AzureSQLDBResourceGovernance*: Relevant properties indicatign resource limits from `sys.dm_user_db_resource_governance`
 - *AzureSQLDBPerformanceCounters*: A select list of performance counters from `sys.dm_os_performance_counters` including cloud specific counters for SQL Hyperscale.
-- *AzureSQLDBServerProperties*: Relevant Azure SQL relevant properties from  such as Tier, #Vcores, Memory etc, storage, etc.
+- *AzureSQLDBServerProperties*: Relevant Azure SQL relevant properties from  such as Tier, #Vcores, Memory, storage, used space for data and log files etc.
 - *AzureSQLDBWaitstats*: Wait time in ms from `sys.dm_db_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected only as of the end of the a statement. and for a specific database only.
 - *AzureSQLOsWaitstats*: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
 - *AzureSQLDBRequests: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
