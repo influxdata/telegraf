@@ -15,19 +15,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockAzureClientsManager struct{}
+
 type mockAzureResourcesClient struct{}
 
 type mockAzureMetricDefinitionsClient struct{}
 
 type mockAzureMetricsClient struct{}
 
-func setMockAzureClients() *receiver.AzureClients {
+func (mam *mockAzureClientsManager) createAzureClients(_ string, _ string, _ string, _ string) (*receiver.AzureClients, error) {
 	return &receiver.AzureClients{
 		Ctx:                     context.Background(),
 		ResourcesClient:         &mockAzureResourcesClient{},
 		MetricDefinitionsClient: &mockAzureMetricDefinitionsClient{},
 		MetricsClient:           &mockAzureMetricsClient{},
-	}
+	}, nil
 }
 
 func (marc *mockAzureResourcesClient) List(_ context.Context, _ *armresources.ClientListOptions) ([]*armresources.ClientListResponse, error) {
@@ -228,7 +230,7 @@ func TestInit_ResourceTargetsOnly(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	for index := 1; index <= 27; index++ {
 		if index <= 10 {
@@ -303,7 +305,7 @@ func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	for index := 1; index <= 27; index++ {
 		if index <= 10 {
@@ -394,7 +396,7 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	for index := 1; index <= 27; index++ {
 		if index <= 10 {
@@ -497,7 +499,7 @@ func TestInit_AllTargetTypes(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	for index := 1; index <= 27; index++ {
 		if index <= 10 {
@@ -529,7 +531,7 @@ func TestInit_NoSubscriptionID(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -544,7 +546,7 @@ func TestInit_NoClientID(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -559,7 +561,7 @@ func TestInit_NoClientSecret(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -574,7 +576,7 @@ func TestInit_NoTenantID(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -589,7 +591,7 @@ func TestInit_NoTargets(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -604,7 +606,7 @@ func TestInit_ResourceTargetWithoutResourceID(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -619,7 +621,7 @@ func TestInit_ResourceTargetWithInvalidResourceID(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -634,7 +636,7 @@ func TestInit_ResourceTargetWithInvalidMetric(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -649,7 +651,7 @@ func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -664,7 +666,7 @@ func TestInit_ResourceGroupTargetWithoutResourceGroup(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -679,7 +681,7 @@ func TestInit_ResourceGroupTargetWithResourceWithoutResourceType(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -694,7 +696,7 @@ func TestInit_ResourceGroupTargetWithInvalidResourceGroup(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -709,7 +711,7 @@ func TestInit_ResourceGroupTargetWithInvalidResourceType(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -724,7 +726,7 @@ func TestInit_ResourceGroupTargetWithInvalidMetric(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -739,7 +741,7 @@ func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -754,7 +756,7 @@ func TestInit_ResourceGroupTargetWithoutResources(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -769,7 +771,7 @@ func TestInit_ResourceGroupTargetNoResourceFound(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -784,7 +786,7 @@ func TestInit_SubscriptionTargetWithoutResourceType(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -799,7 +801,7 @@ func TestInit_SubscriptionTargetWithInvalidResourceType(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -814,7 +816,7 @@ func TestInit_SubscriptionTargetWithInvalidMetric(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -829,7 +831,7 @@ func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -844,7 +846,7 @@ func TestInit_SubscriptionTargetNoResourceFound(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	require.Error(t, am.Init())
 }
@@ -859,6 +861,7 @@ func TestInit_BadCredentials(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
+	am.azureManager = &azureClientsManager{}
 	require.Error(t, am.Init())
 }
 
@@ -872,25 +875,28 @@ func TestGather_Success(t *testing.T) {
 	require.NoError(t, toml.Unmarshal(file, &am))
 
 	am.Log = testutil.Logger{}
-	am.azureClients = setMockAzureClients()
+	am.azureManager = &mockAzureClientsManager{}
 
 	var resourceTargets []*receiver.ResourceTarget
 	for _, target := range am.ResourceTargets {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
 
-	rec, err := receiver.NewAzureMonitorMetricsReceiver(
+	var azureClients *receiver.AzureClients
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID)
+	require.NoError(t, err)
+	require.NotNil(t, azureClients)
+
+	am.receiver, err = receiver.NewAzureMonitorMetricsReceiver(
 		am.SubscriptionID,
 		am.ClientID,
 		am.ClientSecret,
 		am.TenantID,
 		receiver.NewTargets(resourceTargets, []*receiver.ResourceGroupTarget{}, []*receiver.Resource{}),
-		am.azureClients,
+		azureClients,
 	)
 	require.NoError(t, err)
-	require.NotNil(t, rec)
-
-	am.receiver = rec
+	require.NotNil(t, am.receiver)
 
 	expectedResource1Metric1Name := "azure_monitor_microsoft_test_type1_metric1"
 	expectedResource1Metric1MetricFields := make(map[string]interface{})

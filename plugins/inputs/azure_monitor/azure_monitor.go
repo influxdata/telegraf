@@ -20,6 +20,7 @@ type AzureMonitor struct {
 	Log                  telegraf.Logger        `toml:"-"`
 
 	receiver     *receiver.AzureMonitorMetricsReceiver
+	azureManager azureClientsCreator
 	azureClients *receiver.AzureClients
 }
 
@@ -38,6 +39,12 @@ type Resource struct {
 	ResourceType string   `toml:"resource_type"`
 	Metrics      []string `toml:"metrics"`
 	Aggregations []string `toml:"aggregations"`
+}
+
+type azureClientsManager struct{}
+
+type azureClientsCreator interface {
+	createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string) (*receiver.AzureClients, error)
 }
 
 const sampleConfig = `
@@ -120,36 +127,33 @@ func (am *AzureMonitor) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (am *AzureMonitor) Init() error {
-	if am.azureClients == nil {
-		azureClients, err := receiver.CreateAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID)
-		if err != nil {
-			return err
-		}
-
-		am.azureClients = azureClients
+	var err error
+	am.azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID)
+	if err != nil {
+		return err
 	}
 
-	if err := am.setReceiver(); err != nil {
+	if err = am.setReceiver(); err != nil {
 		return fmt.Errorf("error setting Azure Monitor receiver: %w", err)
 	}
 
-	if err := am.receiver.CreateResourceTargetsFromResourceGroupTargets(); err != nil {
+	if err = am.receiver.CreateResourceTargetsFromResourceGroupTargets(); err != nil {
 		return fmt.Errorf("error creating resource targets from resource group targets: %w", err)
 	}
 
-	if err := am.receiver.CreateResourceTargetsFromSubscriptionTargets(); err != nil {
+	if err = am.receiver.CreateResourceTargetsFromSubscriptionTargets(); err != nil {
 		return fmt.Errorf("error creating resource targets from subscription targets: %w", err)
 	}
 
-	if err := am.receiver.CheckResourceTargetsMetricsValidation(); err != nil {
+	if err = am.receiver.CheckResourceTargetsMetricsValidation(); err != nil {
 		return fmt.Errorf("error checking resource targets metrics validation: %w", err)
 	}
 
-	if err := am.receiver.SetResourceTargetsMetrics(); err != nil {
+	if err = am.receiver.SetResourceTargetsMetrics(); err != nil {
 		return fmt.Errorf("error setting resource targets metrics: %w", err)
 	}
 
-	if err := am.receiver.SplitResourceTargetsMetricsByMinTimeGrain(); err != nil {
+	if err = am.receiver.SplitResourceTargetsMetricsByMinTimeGrain(); err != nil {
 		return fmt.Errorf("error spliting resource targets metrics by min time grain: %w", err)
 	}
 
@@ -219,8 +223,19 @@ func (am *AzureMonitor) setReceiver() error {
 	return err
 }
 
+func (acm *azureClientsManager) createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string) (*receiver.AzureClients, error) {
+	azureClients, err := receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("error creating Azure clients: %w", err)
+	}
+
+	return azureClients, nil
+}
+
 func init() {
 	inputs.Add("azure_monitor", func() telegraf.Input {
-		return &AzureMonitor{}
+		return &AzureMonitor{
+			azureManager: &azureClientsManager{},
+		}
 	})
 }
