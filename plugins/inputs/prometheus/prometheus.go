@@ -140,17 +140,6 @@ func (p *Prometheus) Init() error {
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
 	}
 
-	ctx := context.Background()
-	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
-	if err != nil {
-		return err
-	}
-	p.client = client
-	p.headers = map[string]string{
-		"User-Agent": internal.ProductToken(),
-		"Accept":     acceptHeader,
-	}
-
 	return nil
 }
 
@@ -228,6 +217,17 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
+	ctx := context.Background()
+	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
+	if err != nil {
+		return err
+	}
+	p.client = client
+	p.headers = map[string]string{
+		"User-Agent": internal.ProductToken(),
+		"Accept":     acceptHeader,
+	}
+
 	var wg sync.WaitGroup
 
 	allURLs, err := p.GetAllURLs()
