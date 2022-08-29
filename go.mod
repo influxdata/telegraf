@@ -82,7 +82,7 @@ require (
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.3.0
 	github.com/gopcua/opcua v0.3.3
-	github.com/gophercloud/gophercloud v0.25.0
+	github.com/gophercloud/gophercloud v1.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/gosnmp/gosnmp v1.34.0
