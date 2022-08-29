@@ -36,7 +36,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.16.12
 	github.com/aws/aws-sdk-go-v2/config v1.15.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.5
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.11
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.13
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.19.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.13
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.16.1
@@ -181,9 +181,9 @@ require (
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.24.3
-	k8s.io/apimachinery v0.24.3
-	k8s.io/client-go v0.24.3
+	k8s.io/api v0.25.0
+	k8s.io/apimachinery v0.25.0
+	k8s.io/client-go v0.25.0
 	modernc.org/sqlite v1.17.3
 )
 
@@ -411,9 +411,9 @@ require (
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.2.2 // indirect
-	k8s.io/klog/v2 v2.60.1 // indirect
+	k8s.io/klog/v2 v2.70.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803164354-a70c9af30aea // indirect
-	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 // indirect
+	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 	lukechampine.com/uint128 v1.1.1 // indirect
 	modernc.org/cc/v3 v3.36.0 // indirect
 	modernc.org/ccgo/v3 v3.16.6 // indirect
@@ -423,7 +423,7 @@ require (
 	modernc.org/opt v0.1.1 // indirect
 	modernc.org/strutil v1.1.1 // indirect
 	modernc.org/token v1.0.0 // indirect
-	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
+	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
