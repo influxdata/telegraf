@@ -66,15 +66,15 @@ type Telegraf struct {
 	WindowFlags
 }
 
-func (a *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w WindowFlags) {
-	a.pprofErr = pprofErr
-	a.inputFilters = f.input
-	a.outputFilters = f.output
-	a.GlobalFlags = g
-	a.WindowFlags = w
+func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w WindowFlags) {
+	t.pprofErr = pprofErr
+	t.inputFilters = f.input
+	t.outputFilters = f.output
+	t.GlobalFlags = g
+	t.WindowFlags = w
 }
 
-func (a *Telegraf) reloadLoop() error {
+func (t *Telegraf) reloadLoop() error {
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {
@@ -84,10 +84,10 @@ func (a *Telegraf) reloadLoop() error {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
-		if a.watchConfig != "" {
-			for _, fConfig := range a.config {
+		if t.watchConfig != "" {
+			for _, fConfig := range t.config {
 				if _, err := os.Stat(fConfig); err == nil {
-					go a.watchLocalConfig(signals, fConfig)
+					go t.watchLocalConfig(signals, fConfig)
 				} else {
 					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
 				}
@@ -102,7 +102,7 @@ func (a *Telegraf) reloadLoop() error {
 					reload <- true
 				}
 				cancel()
-			case err := <-a.pprofErr:
+			case err := <-t.pprofErr:
 				log.Printf("E! pprof server failed: %v", err)
 				cancel()
 			case <-stop:
@@ -110,7 +110,7 @@ func (a *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := a.runAgent(ctx)
+		err := t.runAgent(ctx)
 		if err != nil && err != context.Canceled {
 			return fmt.Errorf("[telegraf] Error running agent: %v", err)
 		}
@@ -119,10 +119,10 @@ func (a *Telegraf) reloadLoop() error {
 	return nil
 }
 
-func (a *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
+func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 	var mytomb tomb.Tomb
 	var watcher watch.FileWatcher
-	if a.watchConfig == "poll" {
+	if t.watchConfig == "poll" {
 		watcher = watch.NewPollingFileWatcher(fConfig)
 	} else {
 		watcher = watch.NewInotifyFileWatcher(fConfig)
@@ -159,37 +159,37 @@ func (a *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 	signals <- syscall.SIGHUP
 }
 
-func (a *Telegraf) runAgent(ctx context.Context) error {
+func (t *Telegraf) runAgent(ctx context.Context) error {
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
-	c.OutputFilters = a.outputFilters
-	c.InputFilters = a.inputFilters
+	c.OutputFilters = t.outputFilters
+	c.InputFilters = t.inputFilters
 	var err error
 	// providing no "config" flag should load default config
-	if len(a.config) == 0 {
+	if len(t.config) == 0 {
 		err = c.LoadConfig("")
 		if err != nil {
 			return err
 		}
 	}
-	for _, fConfig := range a.config {
+	for _, fConfig := range t.config {
 		err = c.LoadConfig(fConfig)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, fConfigDirectory := range a.configDir {
+	for _, fConfigDirectory := range t.configDir {
 		err = c.LoadDirectory(fConfigDirectory)
 		if err != nil {
 			return err
 		}
 	}
 
-	if !(a.test || a.testWait != 0) && len(c.Outputs) == 0 {
+	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
-	if a.plugindDir == "" && len(c.Inputs) == 0 {
+	if t.plugindDir == "" && len(c.Inputs) == 0 {
 		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
@@ -202,10 +202,10 @@ func (a *Telegraf) runAgent(ctx context.Context) error {
 	}
 
 	// Setup logging as configured.
-	telegraf.Debug = c.Agent.Debug || a.debug
+	telegraf.Debug = c.Agent.Debug || t.debug
 	logConfig := logger.LogConfig{
 		Debug:               telegraf.Debug,
-		Quiet:               c.Agent.Quiet || a.quiet,
+		Quiet:               c.Agent.Quiet || t.quiet,
 		LogTarget:           c.Agent.LogTarget,
 		Logfile:             c.Agent.Logfile,
 		RotationInterval:    c.Agent.LogfileRotationInterval,
@@ -227,7 +227,7 @@ func (a *Telegraf) runAgent(ctx context.Context) error {
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-	if !a.once && (a.test || a.testWait != 0) {
+	if !t.once && (t.test || t.testWait != 0) {
 		log.Print("W! " + color.RedString("Outputs are not used in testing mode!"))
 	} else {
 		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
@@ -258,18 +258,18 @@ func (a *Telegraf) runAgent(ctx context.Context) error {
 	// For platforms that use systemd, telegraf doesn't log if the notification failed.
 	_, _ = daemon.SdNotify(false, daemon.SdNotifyReady)
 
-	if a.once {
-		wait := time.Duration(a.testWait) * time.Second
+	if t.once {
+		wait := time.Duration(t.testWait) * time.Second
 		return ag.Once(ctx, wait)
 	}
 
-	if a.test || a.testWait != 0 {
-		wait := time.Duration(a.testWait) * time.Second
+	if t.test || t.testWait != 0 {
+		wait := time.Duration(t.testWait) * time.Second
 		return ag.Test(ctx, wait)
 	}
 
-	if a.pidFile != "" {
-		f, err := os.OpenFile(a.pidFile, os.O_CREATE|os.O_WRONLY, 0644)
+	if t.pidFile != "" {
+		f, err := os.OpenFile(t.pidFile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Printf("E! Unable to create pidfile: %s", err)
 		} else {
@@ -281,7 +281,7 @@ func (a *Telegraf) runAgent(ctx context.Context) error {
 			}
 
 			defer func() {
-				err := os.Remove(a.pidFile)
+				err := os.Remove(t.pidFile)
 				if err != nil {
 					log.Printf("E! Unable to remove pidfile: %s", err)
 				}
