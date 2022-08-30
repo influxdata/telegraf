@@ -26,7 +26,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var DisconnectedServersBehaviors = []string{"error", "retry"}
+var DisconnectedServersBehaviors = []string{"error", "skip"}
 
 type MongoDB struct {
 	Servers                     []string
@@ -153,7 +153,7 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
-			if m.DisconnectedServersBehavior == "retry" {
+			if m.DisconnectedServersBehavior == "skip" {
 				if err := srv.ping(); err != nil {
 					return
 				}

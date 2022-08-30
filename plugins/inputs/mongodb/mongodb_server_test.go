@@ -102,7 +102,7 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 	}
 }
 
-func TestRetryBehaviorIntegration(t *testing.T) {
+func TestSkipBehaviorIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -112,7 +112,7 @@ func TestRetryBehaviorIntegration(t *testing.T) {
 		Servers: []string{unreachableMongoEndpoint},
 	}
 
-	m.DisconnectedServersBehavior = "retry"
+	m.DisconnectedServersBehavior = "skip"
 	err := m.Init()
 	require.NoError(t, err)
 	err = m.Start()
@@ -139,8 +139,8 @@ func TestErrorBehaviorIntegration(t *testing.T) {
 	err = m.Start()
 	require.Error(t, err)
 
-	// set to retry to bypass start error
-	m.DisconnectedServersBehavior = "retry"
+	// set to skip to bypass start error
+	m.DisconnectedServersBehavior = "skip"
 	err = m.Start()
 	require.NoError(t, err)
 	m.DisconnectedServersBehavior = "error"
