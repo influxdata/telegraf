@@ -81,7 +81,8 @@ func (e *Execd) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		b, err := e.serializer.Serialize(m)
 		if err != nil {
-			return fmt.Errorf("error serializing metrics: %s", err)
+			e.Log.Warn("Skipping metric due to a serialization error: %s", err)
+			continue
 		}
 
 		if _, err = e.process.Stdin.Write(b); err != nil {
