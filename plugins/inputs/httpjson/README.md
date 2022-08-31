@@ -13,12 +13,6 @@ flattens the JSON and finds all numeric values, treating them as floats.
   ## NOTE This plugin only reads numerical measurements, strings and booleans
   ## will be ignored.
 
-  ## Name for the service being polled.  Will be appended to the name of the
-  ## measurement e.g. "httpjson_webserver_stats".
-  ##
-  ## Deprecated (1.3.0): Use name_override, name_suffix, name_prefix instead.
-  name = "webserver_stats"
-
   ## URL of each server in the service's cluster
   servers = [
     "http://localhost:9999/stats/",

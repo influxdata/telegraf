@@ -32,7 +32,6 @@ type Zookeeper struct {
 	Timeout config.Duration
 
 	EnableTLS bool `toml:"enable_tls"`
-	EnableSSL bool `toml:"enable_ssl" deprecated:"1.7.0;use 'enable_tls' instead"`
 	tlsint.ClientConfig
 
 	initialized bool
@@ -43,7 +42,7 @@ var defaultTimeout = 5 * time.Second
 
 func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
 	var dialer net.Dialer
-	if z.EnableTLS || z.EnableSSL {
+	if z.EnableTLS {
 		deadline, ok := ctx.Deadline()
 		if ok {
 			dialer.Deadline = deadline

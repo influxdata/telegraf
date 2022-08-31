@@ -54,7 +54,6 @@ func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
@@ -84,7 +83,6 @@ func newTestHTTPSListenerV2() (*HTTPListenerV2, error) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		ServerConfig:   *pki.TLSServerConfig(),
@@ -124,7 +122,6 @@ func TestInvalidListenerConfig(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "address_without_port",
-		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
@@ -342,7 +339,6 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(len(hugeMetric)),
@@ -368,7 +364,6 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(4096),

@@ -15,7 +15,6 @@ import (
 	"github.com/kballard/go-shellquote"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -66,7 +65,6 @@ var fieldElements = map[string]elementType{
 }
 
 type NTPQ struct {
-	DNSLookup   bool     `toml:"dns_lookup" deprecated:"1.24.0;add '-n' to 'options' instead to skip DNS lookup"`
 	Options     string   `toml:"options"`
 	Servers     []string `toml:"servers"`
 	ReachFormat string   `toml:"reach_format"`
@@ -87,11 +85,6 @@ func (n *NTPQ) Init() error {
 		options, err := shellquote.Split(n.Options)
 		if err != nil {
 			return fmt.Errorf("splitting options failed: %w", err)
-		}
-		if !n.DNSLookup {
-			if !choice.Contains("-n", options) {
-				options = append(options, "-n")
-			}
 		}
 
 		n.runQ = func(server string) ([]byte, error) {
@@ -295,8 +288,7 @@ func processLine(line string) (string, []string) {
 func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
 		return &NTPQ{
-			DNSLookup: true,
-			Options:   "-p",
+			Options: "-p",
 		}
 	})
 }

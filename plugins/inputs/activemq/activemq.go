@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,8 +24,6 @@ import (
 var sampleConfig string
 
 type ActiveMQ struct {
-	Server          string          `toml:"server" deprecated:"1.11.0;use 'url' instead"`
-	Port            int             `toml:"port" deprecated:"1.11.0;use 'url' instead"`
 	URL             string          `toml:"url"`
 	Username        string          `toml:"username"`
 	Password        string          `toml:"password"`
@@ -114,13 +111,12 @@ func (a *ActiveMQ) Init() error {
 		a.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
-	var err error
-	u := &url.URL{Scheme: "http", Host: a.Server + ":" + strconv.Itoa(a.Port)}
-	if a.URL != "" {
-		u, err = url.Parse(a.URL)
-		if err != nil {
-			return err
-		}
+	if a.URL == "" {
+		return fmt.Errorf("url is required")
+	}
+	u, err := url.Parse(a.URL)
+	if err != nil {
+		return err
 	}
 
 	if !strings.HasPrefix(u.Scheme, "http") {
@@ -279,8 +275,6 @@ func (a *ActiveMQ) SubscribersURL() string {
 func init() {
 	inputs.Add("activemq", func() telegraf.Input {
 		return &ActiveMQ{
-			Server:   "localhost",
-			Port:     8161,
 			Webadmin: "admin",
 		}
 	})

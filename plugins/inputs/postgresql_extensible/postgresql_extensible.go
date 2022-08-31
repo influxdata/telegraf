@@ -26,7 +26,6 @@ var sampleConfig string
 
 type Postgresql struct {
 	postgresql.Service
-	Databases          []string `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	AdditionalTags     []string
 	Timestamp          string
 	Query              query
@@ -40,7 +39,6 @@ type query []struct {
 	Sqlquery    string
 	Script      string
 	Version     int
-	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Tagvalue    string
 	Measurement string
 	Timestamp   string
@@ -86,12 +84,11 @@ func ReadQueryFromFile(filePath string) (string, error) {
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var (
-		err        error
-		sqlQuery   string
-		queryAddon string
-		dbVersion  int
-		query      string
-		measName   string
+		err       error
+		sqlQuery  string
+		dbVersion int
+		query     string
+		measName  string
 	)
 
 	// Retrieving the database version
@@ -110,17 +107,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		} else {
 			measName = "postgresql"
 		}
-
-		if p.Query[i].Withdbname {
-			if len(p.Databases) != 0 {
-				queryAddon = fmt.Sprintf(` IN ('%s')`, strings.Join(p.Databases, "','"))
-			} else {
-				queryAddon = " is not null"
-			}
-		} else {
-			queryAddon = ""
-		}
-		sqlQuery += queryAddon
 
 		if p.Query[i].Version <= dbVersion {
 			p.gatherMetricsFromQuery(acc, sqlQuery, p.Query[i].Tagvalue, p.Query[i].Timestamp, measName)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -171,7 +172,6 @@ func genMockHTTPJSON(response string, statusCode int) []*HTTPJSON {
 				"http://server1.example.com/metrics/",
 				"http://server2.example.com/metrics/",
 			},
-			Name:   "my_webapp",
 			Method: "GET",
 			Parameters: map[string]string{
 				"httpParam1": "12",
@@ -188,7 +188,6 @@ func genMockHTTPJSON(response string, statusCode int) []*HTTPJSON {
 				"http://server3.example.com/metrics/",
 				"http://server4.example.com/metrics/",
 			},
-			Name:   "other_webapp",
 			Method: "POST",
 			Parameters: map[string]string{
 				"httpParam1": "12",
@@ -222,7 +221,7 @@ func TestHttpJson200(t *testing.T) {
 
 		for _, srv := range service.Servers {
 			tags := map[string]string{"server": srv}
-			mname := "httpjson_" + service.Name
+			mname := "httpjson_" + service.ServerName
 			expectedFields["response_time"] = 1.0
 			acc.AssertContainsTaggedFields(t, mname, expectedFields, tags)
 		}
@@ -242,9 +241,11 @@ func TestHttpJsonGET_URL(t *testing.T) {
 
 	a := HTTPJSON{
 		Servers: []string{ts.URL + "?api_key=mykey"},
-		Name:    "",
-		Method:  "GET",
-		client:  &RealHTTPClient{client: &http.Client{}},
+		ClientConfig: tls.ClientConfig{
+			ServerName: "",
+		},
+		Method: "GET",
+		client: &RealHTTPClient{client: &http.Client{}},
 	}
 
 	var acc testutil.Accumulator
@@ -314,8 +315,10 @@ func TestHttpJsonGET(t *testing.T) {
 	defer ts.Close()
 
 	a := HTTPJSON{
-		Servers:    []string{ts.URL},
-		Name:       "",
+		Servers: []string{ts.URL},
+		ClientConfig: tls.ClientConfig{
+			ServerName: "",
+		},
 		Method:     "GET",
 		Parameters: params,
 		client:     &RealHTTPClient{client: &http.Client{}},
@@ -389,8 +392,10 @@ func TestHttpJsonPOST(t *testing.T) {
 	defer ts.Close()
 
 	a := HTTPJSON{
-		Servers:    []string{ts.URL},
-		Name:       "",
+		Servers: []string{ts.URL},
+		ClientConfig: tls.ClientConfig{
+			ServerName: "",
+		},
 		Method:     "POST",
 		Parameters: params,
 		client:     &RealHTTPClient{client: &http.Client{}},
@@ -496,7 +501,7 @@ func TestHttpJson200Tags(t *testing.T) {
 	httpjson := genMockHTTPJSON(validJSONTags, 200)
 
 	for _, service := range httpjson {
-		if service.Name == "other_webapp" {
+		if service.ServerName == "other_webapp" {
 			var acc testutil.Accumulator
 			err := acc.GatherError(service.Gather)
 			// Set responsetime
@@ -508,7 +513,7 @@ func TestHttpJson200Tags(t *testing.T) {
 			for _, srv := range service.Servers {
 				tags := map[string]string{"server": srv, "role": "master", "build": "123"}
 				fields := map[string]interface{}{"value": float64(15), "response_time": float64(1)}
-				mname := "httpjson_" + service.Name
+				mname := "httpjson_" + service.ServerName
 				acc.AssertContainsTaggedFields(t, mname, fields, tags)
 			}
 		}
@@ -534,7 +539,7 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 	httpjson := genMockHTTPJSON(validJSONArrayTags, 200)
 
 	for _, service := range httpjson {
-		if service.Name == "other_webapp" {
+		if service.ServerName == "other_webapp" {
 			var acc testutil.Accumulator
 			err := acc.GatherError(service.Gather)
 			// Set responsetime
@@ -550,12 +555,12 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 					require.Equal(t, "123", m.Tags["build"])
 					require.Equal(t, float64(15), m.Fields["value"])
 					require.Equal(t, float64(1), m.Fields["response_time"])
-					require.Equal(t, "httpjson_"+service.Name, m.Measurement)
+					require.Equal(t, "httpjson_"+service.ServerName, m.Measurement)
 				} else if m.Tags["role"] == "slave" {
 					require.Equal(t, "456", m.Tags["build"])
 					require.Equal(t, float64(17), m.Fields["value"])
 					require.Equal(t, float64(1), m.Fields["response_time"])
-					require.Equal(t, "httpjson_"+service.Name, m.Measurement)
+					require.Equal(t, "httpjson_"+service.ServerName, m.Measurement)
 				} else {
 					require.FailNow(t, "unknown metric")
 				}
@@ -571,7 +576,7 @@ func TestHttpJsonBOM(t *testing.T) {
 	httpjson := genMockHTTPJSON(string(jsonBOM), 200)
 
 	for _, service := range httpjson {
-		if service.Name == "other_webapp" {
+		if service.ServerName == "other_webapp" {
 			var acc testutil.Accumulator
 			err := acc.GatherError(service.Gather)
 			require.NoError(t, err)

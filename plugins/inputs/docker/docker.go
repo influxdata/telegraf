@@ -35,14 +35,10 @@ var sampleConfig string
 // Docker object
 type Docker struct {
 	Endpoint       string
-	ContainerNames []string `toml:"container_names" deprecated:"1.4.0;use 'container_name_include' instead"`
-
 	GatherServices bool `toml:"gather_services"`
 
 	Timeout          config.Duration
-	PerDevice        bool     `toml:"perdevice" deprecated:"1.18.0;use 'perdevice_include' instead"`
 	PerDeviceInclude []string `toml:"perdevice_include"`
-	Total            bool     `toml:"total" deprecated:"1.18.0;use 'total_include' instead"`
 	TotalInclude     []string `toml:"total_include"`
 	TagEnvironment   []string `toml:"tag_env"`
 	LabelInclude     []string `toml:"docker_label_include"`
@@ -103,25 +99,6 @@ func (d *Docker) Init() error {
 	err = choice.CheckSlice(d.TotalInclude, containerMetricClasses)
 	if err != nil {
 		return fmt.Errorf("error validating 'total_include' setting : %v", err)
-	}
-
-	// Temporary logic needed for backwards compatibility until 'perdevice' setting is removed.
-	if d.PerDevice {
-		if !choice.Contains("network", d.PerDeviceInclude) {
-			d.PerDeviceInclude = append(d.PerDeviceInclude, "network")
-		}
-		if !choice.Contains("blkio", d.PerDeviceInclude) {
-			d.PerDeviceInclude = append(d.PerDeviceInclude, "blkio")
-		}
-	}
-
-	// Temporary logic needed for backwards compatibility until 'total' setting is removed.
-	if !d.Total {
-		if choice.Contains("cpu", d.TotalInclude) {
-			d.TotalInclude = []string{"cpu"}
-		} else {
-			d.TotalInclude = []string{}
-		}
 	}
 
 	return nil
@@ -879,11 +856,6 @@ func parseSize(sizeStr string) (int64, error) {
 }
 
 func (d *Docker) createContainerFilters() error {
-	// Backwards compatibility for deprecated `container_names` parameter.
-	if len(d.ContainerNames) > 0 {
-		d.ContainerInclude = append(d.ContainerInclude, d.ContainerNames...)
-	}
-
 	containerFilter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
 	if err != nil {
 		return err
@@ -929,7 +901,6 @@ func (d *Docker) getNewClient() (Client, error) {
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			PerDevice:        true,
 			PerDeviceInclude: []string{"cpu"},
 			TotalInclude:     []string{"cpu", "blkio", "network"},
 			Timeout:          config.Duration(time.Second * 5),

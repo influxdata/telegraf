@@ -34,7 +34,6 @@ type semaphore chan empty
 
 // AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
-	URL                    string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
 	Brokers                []string          `toml:"brokers"`
 	Username               string            `toml:"username"`
 	Password               string            `toml:"password"`
@@ -192,9 +191,6 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 
 func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, error) {
 	brokers := a.Brokers
-	if len(brokers) == 0 {
-		brokers = []string{a.URL}
-	}
 
 	p := rand.Perm(len(brokers))
 	for _, n := range p {
@@ -452,7 +448,6 @@ func (a *AMQPConsumer) Stop() {
 func init() {
 	inputs.Add("amqp_consumer", func() telegraf.Input {
 		return &AMQPConsumer{
-			URL:                    DefaultBroker,
 			AuthMethod:             DefaultAuthMethod,
 			ExchangeType:           DefaultExchangeType,
 			ExchangeDurability:     DefaultExchangeDurability,

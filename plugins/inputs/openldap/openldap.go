@@ -22,10 +22,8 @@ var sampleConfig string
 type Openldap struct {
 	Host               string
 	Port               int
-	SSL                string `toml:"ssl" deprecated:"1.7.0;use 'tls' instead"`
 	TLS                string `toml:"tls"`
 	InsecureSkipVerify bool
-	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string
@@ -53,10 +51,8 @@ func NewOpenldap() *Openldap {
 	return &Openldap{
 		Host:               "localhost",
 		Port:               389,
-		SSL:                "",
 		TLS:                "",
 		InsecureSkipVerify: false,
-		SSLCA:              "",
 		TLSCA:              "",
 		BindDn:             "",
 		BindPassword:       "",
@@ -70,13 +66,6 @@ func (*Openldap) SampleConfig() string {
 
 // gather metrics
 func (o *Openldap) Gather(acc telegraf.Accumulator) error {
-	if o.TLS == "" {
-		o.TLS = o.SSL
-	}
-	if o.TLSCA == "" {
-		o.TLSCA = o.SSLCA
-	}
-
 	var err error
 	var l *ldap.Conn
 	if o.TLS != "" {

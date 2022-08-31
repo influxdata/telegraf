@@ -68,11 +68,6 @@ func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.Contai
 		"state_code":     stateCode,
 	}
 
-	// deprecated in 1.15: use `state_reason` instead
-	if state == "terminated" {
-		fields["terminated_reason"] = stateReason
-	}
-
 	if stateReason != "" {
 		fields["state_reason"] = stateReason
 	}

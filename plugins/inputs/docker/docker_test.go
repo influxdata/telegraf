@@ -567,7 +567,6 @@ func TestContainerLabels(t *testing.T) {
 				newClient:    newClientFunc,
 				LabelInclude: tt.include,
 				LabelExclude: tt.exclude,
-				Total:        true,
 				TotalInclude: []string{"cpu"},
 			}
 
@@ -925,7 +924,6 @@ func TestDockerGatherInfo(t *testing.T) {
 		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
 			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
 		PerDeviceInclude: []string{"cpu", "network", "blkio"},
-		Total:            true,
 		TotalInclude:     []string{""},
 	}
 
@@ -1511,9 +1509,7 @@ func TestDocker_Init(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Docker{
 				Log:              testutil.Logger{},
-				PerDevice:        tt.fields.PerDevice,
 				PerDeviceInclude: tt.fields.PerDeviceInclude,
-				Total:            tt.fields.Total,
 				TotalInclude:     tt.fields.TotalInclude,
 			}
 			err := d.Init()

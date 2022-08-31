@@ -41,7 +41,6 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
   - fields:
     - status_code (integer, green=1 yellow=2 red=3 unknown=0)
     - heap_total_bytes (integer)
-    - heap_max_bytes (integer; deprecated in 1.13.3: use `heap_total_bytes` field)
     - heap_used_bytes (integer)
     - heap_size_limit (integer)
     - uptime_ms (integer)

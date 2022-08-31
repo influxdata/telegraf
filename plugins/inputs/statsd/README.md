@@ -42,11 +42,6 @@ The StatsD input plugin gathers metrics from a Statsd server.
   ## separator to use between elements of a statsd metric
   metric_separator = "_"
 
-  ## Parses tags in the datadog statsd format
-  ## http://docs.datadoghq.com/guides/dogstatsd/
-  ## deprecated in 1.10; use datadog_extensions option instead
-  parse_data_dog_tags = false
-
   ## Parses extensions to statsd in the datadog statsd format
   ## currently supports metrics and datadog tags.
   ## http://docs.datadoghq.com/guides/dogstatsd/

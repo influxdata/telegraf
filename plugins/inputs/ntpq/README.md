@@ -32,11 +32,7 @@ server (RMS of difference of multiple time samples, milliseconds);
   ## Servers to query with ntpq.
   ## If no server is given, the local machine is queried.
   # servers = []
-
-  ## If false, set the -n ntpq flag. Can reduce metric gather time.
-  ## DEPRECATED since 1.24.0: add '-n' to 'options' instead to skip DNS lookup
-  # dns_lookup = true
-
+  
   ## Options to pass to the ntpq command.
   # options = "-p"
 

@@ -41,7 +41,6 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 
 	consumer := &NSQConsumer{
 		Log:                    testutil.Logger{},
-		Server:                 "127.0.0.1:4155",
 		Topic:                  "telegraf",
 		Channel:                "consume",
 		MaxInFlight:            1,

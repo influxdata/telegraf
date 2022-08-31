@@ -250,14 +250,6 @@ func setResult(result ResultType, fields map[string]interface{}, tags map[string
 
 	tags["result"] = tag
 	fields["result_code"] = uint64(result)
-
-	// deprecated in 1.7; use result tag
-	fields["result_type"] = tag
-
-	// deprecated in 1.4; use result tag
-	if expect != "" {
-		fields["string_found"] = result == Success
-	}
 }
 
 func init() {

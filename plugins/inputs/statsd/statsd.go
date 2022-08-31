@@ -80,13 +80,9 @@ type Statsd struct {
 	DeleteCounters bool
 	DeleteSets     bool
 	DeleteTimings  bool
-	ConvertNames   bool `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
-	// This flag enables parsing of tags in the dogstatsd extension to the
-	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
-	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;use 'datadog_extensions' instead"`
 
 	// Parses extensions to statsd in the datadog statsd format
 	// currently supports metrics and datadog tags.
@@ -303,10 +299,6 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 }
 
 func (s *Statsd) Start(ac telegraf.Accumulator) error {
-	if s.ParseDataDogTags {
-		s.DataDogExtensions = true
-	}
-
 	s.acc = ac
 
 	// Make data structures
@@ -729,10 +721,6 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 		name, tags, field, _ = p.ApplyTemplate(name)
 	}
 
-	if s.ConvertNames {
-		name = strings.ReplaceAll(name, ".", "_")
-		name = strings.ReplaceAll(name, "-", "__")
-	}
 	if field == "" {
 		field = defaultFieldName
 	}

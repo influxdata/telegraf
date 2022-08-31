@@ -43,7 +43,6 @@ const DefaultClientTimeout = 4
 // see the sample config for further details
 type RabbitMQ struct {
 	URL      string `toml:"url"`
-	Name     string `toml:"name" deprecated:"1.3.0;use 'tags' instead"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
@@ -52,7 +51,6 @@ type RabbitMQ struct {
 	ClientTimeout         config.Duration `toml:"client_timeout"`
 
 	Nodes     []string `toml:"nodes"`
-	Queues    []string `toml:"queues" deprecated:"1.6.0;use 'queue_name_include' instead"`
 	Exchanges []string `toml:"exchanges"`
 
 	MetricInclude             []string `toml:"metric_include"`
@@ -422,9 +420,6 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 	}
 
 	tags := map[string]string{"url": r.URL}
-	if r.Name != "" {
-		tags["name"] = r.Name
-	}
 	fields := map[string]interface{}{
 		"messages":               overview.QueueTotals.Messages,
 		"messages_ready":         overview.QueueTotals.MessagesReady,
@@ -725,11 +720,6 @@ func (r *RabbitMQ) shouldGatherNode(node *Node) bool {
 }
 
 func (r *RabbitMQ) createQueueFilter() error {
-	// Backwards compatibility for deprecated `queues` parameter.
-	if len(r.Queues) > 0 {
-		r.QueueInclude = append(r.QueueInclude, r.Queues...)
-	}
-
 	queueFilter, err := filter.NewIncludeExcludeFilter(r.QueueInclude, r.QueueExclude)
 	if err != nil {
 		return err

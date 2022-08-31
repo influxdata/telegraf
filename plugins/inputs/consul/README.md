@@ -20,14 +20,6 @@ if needed.
   ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"
 
-  ## Metric version controls the mapping from Consul metrics into
-  ## Telegraf metrics. Version 2 moved all fields with string values
-  ## to tags.
-  ##
-  ##   example: metric_version = 1; deprecated in 1.16
-  ##            metric_version = 2; recommended version
-  # metric_version = 1
-
   ## ACL token used in every request
   # token = ""
 

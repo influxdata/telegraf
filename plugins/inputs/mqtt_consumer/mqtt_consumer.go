@@ -74,7 +74,6 @@ type MQTTConsumer struct {
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	parser                 parsers.Parser
 
-	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 	PersistentSession bool
 	ClientID          string `toml:"client_id"`
 
@@ -332,15 +331,6 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		return opts, fmt.Errorf("could not get host informations")
 	}
 	for _, server := range m.Servers {
-		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4
-		if !strings.Contains(server, "://") {
-			m.Log.Warnf("Server %q should be updated to use `scheme://host:port` format", server)
-			if tlsCfg == nil {
-				server = "tcp://" + server
-			} else {
-				server = "ssl://" + server
-			}
-		}
 		opts.AddBroker(server)
 	}
 	opts.SetAutoReconnect(false)

@@ -35,10 +35,6 @@ submits data to InfluxDB determines the destination database.
   ## 0 means to use the default of 32MiB.
   max_body_size = 0
 
-  ## Maximum line size allowed to be sent in bytes.
-  ##   deprecated in 1.14; parser now handles lines of unlimited length and option is ignored
-  # max_line_size = 0
-
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
   tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]

@@ -11,11 +11,6 @@ API.
   ## ActiveMQ WebConsole URL
   url = "http://127.0.0.1:8161"
 
-  ## Required ActiveMQ Endpoint
-  ##   deprecated in 1.11; use the url option
-  # server = "192.168.50.10"
-  # port = 8161
-
   ## Credentials for basic HTTP authentication
   # username = "admin"
   # password = "admin"

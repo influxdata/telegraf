@@ -55,9 +55,6 @@ View the current scores with a command, substituting your player name:
 
   ## Server RCON Password.
   password = ""
-
-  ## Uncomment to remove deprecated metric components.
-  # tagdrop = ["server"]
 ```
 
 ## Metrics

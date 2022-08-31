@@ -44,8 +44,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 			),
 			IsPgBouncer: false,
 		},
-		Databases: []string{"postgres"},
-		Query:     q,
+		Query: q,
 	}
 
 	var acc testutil.Accumulator
@@ -61,10 +60,9 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	}
 
 	acc := queryRunner(t, query{{
-		Sqlquery:   "select * from pg_stat_database",
-		Version:    901,
-		Withdbname: false,
-		Tagvalue:   "",
+		Sqlquery: "select * from pg_stat_database",
+		Version:  901,
+		Tagvalue: "",
 	}})
 
 	intMetrics := []string{
@@ -161,11 +159,10 @@ func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 
 	for q, assertions := range examples {
 		acc := queryRunner(t, query{{
-			Sqlquery:   q,
-			Version:    901,
-			Withdbname: false,
-			Tagvalue:   "",
-			Timestamp:  "ts",
+			Sqlquery:  q,
+			Version:   901,
+			Tagvalue:  "",
+			Timestamp: "ts",
 		}})
 		assertions(acc)
 	}
@@ -178,10 +175,9 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 	}
 
 	acc := queryRunner(t, query{{
-		Sqlquery:   "select * from pg_stat_database",
-		Version:    901,
-		Withdbname: false,
-		Tagvalue:   "",
+		Sqlquery: "select * from pg_stat_database",
+		Version:  901,
+		Tagvalue: "",
 	}})
 
 	intMetrics := []string{
@@ -236,10 +232,9 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 
 func TestPostgresqlSqlScript(t *testing.T) {
 	q := query{{
-		Script:     "testdata/test.sql",
-		Version:    901,
-		Withdbname: false,
-		Tagvalue:   "",
+		Script:   "testdata/test.sql",
+		Version:  901,
+		Tagvalue: "",
 	}}
 	p := &Postgresql{
 		Log: testutil.Logger{},
@@ -250,8 +245,7 @@ func TestPostgresqlSqlScript(t *testing.T) {
 			),
 			IsPgBouncer: false,
 		},
-		Databases: []string{"postgres"},
-		Query:     q,
+		Query: q,
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, p.Init())

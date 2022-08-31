@@ -96,8 +96,6 @@ This input plugin checks HTTP/HTTPS connections.
     - response_string_match (int, 0 = mismatch / body read error, 1 = match)
     - response_status_code_match (int, 0 = mismatch, 1 = match)
     - http_response_code (int, response status code)
-    - result_type (string, deprecated in 1.6: use `result` tag and
-     `result_code` field)
     - result_code (int, [see below](#result--result_code))
 
 ### `result` / `result_code`

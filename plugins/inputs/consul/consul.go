@@ -24,12 +24,10 @@ type Consul struct {
 	Token      string
 	Username   string
 	Password   string
-	Datacentre string `toml:"datacentre" deprecated:"1.10.0;use 'datacenter' instead"`
 	Datacenter string
 	tls.ClientConfig
-	TagDelimiter  string
-	MetricVersion int
-	Log           telegraf.Logger
+	TagDelimiter string
+	Log          telegraf.Logger
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -37,14 +35,6 @@ type Consul struct {
 
 func (*Consul) SampleConfig() string {
 	return sampleConfig
-}
-
-func (c *Consul) Init() error {
-	if c.MetricVersion != 2 {
-		c.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
-	}
-
-	return nil
 }
 
 func (c *Consul) createAPIClient() (*api.Client, error) {
@@ -56,10 +46,6 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 
 	if c.Scheme != "" {
 		config.Scheme = c.Scheme
-	}
-
-	if c.Datacentre != "" {
-		config.Datacenter = c.Datacentre
 	}
 
 	if c.Datacenter != "" {
@@ -99,16 +85,9 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		record["warning"] = 0
 		record[check.Status] = 1
 
-		if c.MetricVersion == 2 {
-			tags["check_name"] = check.Name
-			tags["service_id"] = check.ServiceID
-			tags["status"] = check.Status
-		} else {
-			record["check_name"] = check.Name
-			record["service_id"] = check.ServiceID
-			record["status"] = check.Status
-		}
-
+		tags["check_name"] = check.Name
+		tags["service_id"] = check.ServiceID
+		tags["status"] = check.Status
 		tags["node"] = check.Node
 		tags["service_name"] = check.ServiceName
 		tags["check_id"] = check.CheckID

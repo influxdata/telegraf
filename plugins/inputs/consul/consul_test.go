@@ -98,9 +98,7 @@ func TestGatherHealthCheckV2(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	consul := &Consul{
-		MetricVersion: 2,
-	}
+	consul := &Consul{}
 	consul.GatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
@@ -128,8 +126,7 @@ func TestGatherHealthCheckWithDelimitedTagsV2(t *testing.T) {
 	var acc testutil.Accumulator
 
 	consul := &Consul{
-		MetricVersion: 2,
-		TagDelimiter:  ":",
+		TagDelimiter: ":",
 	}
 	consul.GatherHealthCheck(&acc, sampleChecks)
 

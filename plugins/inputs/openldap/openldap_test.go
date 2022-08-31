@@ -147,7 +147,6 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 	o := &Openldap{
 		Host:               container.Address,
 		Port:               port,
-		SSL:                "starttls",
 		InsecureSkipVerify: true,
 		BindDn:             "CN=manager,DC=example,DC=org",
 		BindPassword:       "secret",
@@ -207,7 +206,6 @@ func TestOpenldapLDAPSIntegration(t *testing.T) {
 	o := &Openldap{
 		Host:               container.Address,
 		Port:               port,
-		SSL:                "ldaps",
 		InsecureSkipVerify: true,
 		BindDn:             "CN=manager,DC=example,DC=org",
 		BindPassword:       "secret",
@@ -265,7 +263,6 @@ func TestOpenldapInvalidSSLIntegration(t *testing.T) {
 	o := &Openldap{
 		Host:               container.Address,
 		Port:               port,
-		SSL:                "invalid",
 		InsecureSkipVerify: true,
 	}
 
@@ -305,7 +302,6 @@ func TestOpenldapBindIntegration(t *testing.T) {
 	o := &Openldap{
 		Host:               container.Address,
 		Port:               port,
-		SSL:                "",
 		InsecureSkipVerify: true,
 		BindDn:             "CN=manager,DC=example,DC=org",
 		BindPassword:       "secret",
@@ -357,7 +353,6 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 	o := &Openldap{
 		Host:               container.Address,
 		Port:               port,
-		SSL:                "",
 		InsecureSkipVerify: true,
 		BindDn:             "CN=manager,DC=example,DC=org",
 		BindPassword:       "secret",

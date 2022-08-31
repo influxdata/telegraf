@@ -89,21 +89,6 @@ Set it to `0s` to disable periodic refreshing.
 Example:
 `CountersRefreshInterval=1m`
 
-#### PreVistaSupport
-
-(Deprecated in 1.7; Necessary features on Windows Vista and newer are checked
-dynamically)
-
-Bool, if set to `true`, the plugin will use the localized PerfCounter interface
-that has been present since before Vista for backwards compatibility.
-
-It is recommended NOT to use this on OSes starting with Vista and newer because
-it requires more configuration to use this than the newer interface present
-since Vista.
-
-Example for Windows Server 2003, this would be set to true:
-`PreVistaSupport=true`
-
 #### UsePerfCounterTime
 
 Bool, if set to `true` will request a timestamp along with the PerfCounter data.
