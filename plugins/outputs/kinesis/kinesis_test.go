@@ -93,7 +93,8 @@ func TestPartitionKey(t *testing.T) {
 	k = KinesisOutput{
 		Log: testutil.Logger{},
 		Partition: &Partition{
-			Key: "-",
+			Key:    "-",
+			Method: "static",
 		},
 	}
 	require.Equal(t, "-", k.getPartitionKey(testPoint), "PartitionKey should be '-'")
