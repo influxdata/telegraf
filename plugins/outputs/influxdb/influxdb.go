@@ -1,5 +1,6 @@
+// nolint
+//
 //go:generate ../../../tools/readme_config_includer/generator
-//nolint
 package influxdb
 
 import (
@@ -19,6 +20,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -38,7 +40,6 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URL                       string            `toml:"url" deprecated:"0.1.9;2.0.0;use 'urls' instead"`
 	URLs                      []string          `toml:"urls"`
 	Username                  string            `toml:"username"`
 	Password                  string            `toml:"password"`
@@ -59,8 +60,6 @@ type InfluxDB struct {
 	InfluxUintSupport         bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
-	Precision string `toml:"precision" deprecated:"1.0.0;option is ignored"`
-
 	clients []Client
 
 	CreateHTTPClientF func(config *HTTPConfig) (Client, error)
@@ -78,9 +77,6 @@ func (i *InfluxDB) Connect() error {
 
 	urls := make([]string, 0, len(i.URLs))
 	urls = append(urls, i.URLs...)
-	if i.URL != "" {
-		urls = append(urls, i.URL)
-	}
 
 	if len(urls) == 0 {
 		urls = append(urls, defaultURL)

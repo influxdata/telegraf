@@ -91,14 +91,18 @@ func TestPartitionKey(t *testing.T) {
 	require.Equal(t, byte(4), u.Version(), "PartitionKey should be UUIDv4")
 
 	k = KinesisOutput{
-		Log:          testutil.Logger{},
-		PartitionKey: "-",
+		Log: testutil.Logger{},
+		Partition: &Partition{
+			Key: "-",
+		},
 	}
 	require.Equal(t, "-", k.getPartitionKey(testPoint), "PartitionKey should be '-'")
 
 	k = KinesisOutput{
-		Log:                testutil.Logger{},
-		RandomPartitionKey: true,
+		Log: testutil.Logger{},
+		Partition: &Partition{
+			Method: "random",
+		},
 	}
 	partitionKey = k.getPartitionKey(testPoint)
 	u, err = uuid.FromString(partitionKey)

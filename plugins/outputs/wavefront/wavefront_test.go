@@ -16,8 +16,6 @@ import (
 // default config used by Tests
 func defaultWavefront() *Wavefront {
 	return &Wavefront{
-		Host:            "localhost",
-		Port:            2878,
 		Prefix:          "testWF.",
 		SimpleFields:    false,
 		MetricSeparator: ".",
@@ -291,10 +289,6 @@ func TestBuildValue(t *testing.T) {
 
 func TestBuildValueString(t *testing.T) {
 	w := defaultWavefront()
-	w.StringToNumber = map[string][]map[string]float64{
-		"test1": {{"green": 1, "red": 10}},
-		"test2": {{"active": 1, "hidden": 2}},
-	}
 
 	var valuetests = []struct {
 		value interface{}

@@ -18,18 +18,18 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser   string          `toml:"api_user"`
-	APIToken  string          `toml:"api_token"`
-	Debug     bool            `toml:"debug"`
-	SourceTag string          `toml:"source_tag" deprecated:"1.0.0;use 'template' instead"`
-	Timeout   config.Duration `toml:"timeout"`
-	Template  string          `toml:"template"`
-	Log       telegraf.Logger `toml:"-"`
+	APIUser  string          `toml:"api_user"`
+	APIToken string          `toml:"api_token"`
+	Debug    bool            `toml:"debug"`
+	Timeout  config.Duration `toml:"timeout"`
+	Template string          `toml:"template"`
+	Log      telegraf.Logger `toml:"-"`
 
 	APIUrl string
 	client *http.Client
@@ -87,9 +87,6 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 	}
 	if l.Template == "" {
 		l.Template = "host"
-	}
-	if l.SourceTag != "" {
-		l.Template = l.SourceTag
 	}
 
 	tempGauges := []*Gauge{}
@@ -233,7 +230,7 @@ func (g *Gauge) setValue(v interface{}) error {
 	return nil
 }
 
-//Close is used to close the connection to librato Output
+// Close is used to close the connection to librato Output
 func (l *Librato) Close() error {
 	return nil
 }

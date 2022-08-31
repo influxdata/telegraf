@@ -27,11 +27,9 @@ const maxRecordsPerRequest uint32 = 500
 
 type (
 	KinesisOutput struct {
-		StreamName         string     `toml:"streamname"`
-		PartitionKey       string     `toml:"partitionkey" deprecated:"1.5.0;use 'partition.key' instead"`
-		RandomPartitionKey bool       `toml:"use_random_partitionkey" deprecated:"1.5.0;use 'partition.method' instead"`
-		Partition          *Partition `toml:"partition"`
-		Debug              bool       `toml:"debug"`
+		StreamName string     `toml:"streamname"`
+		Partition  *Partition `toml:"partition"`
+		Debug      bool       `toml:"debug"`
 
 		Log        telegraf.Logger `toml:"-"`
 		serializer serializers.Serializer
@@ -56,10 +54,6 @@ func (*KinesisOutput) SampleConfig() string {
 }
 
 func (k *KinesisOutput) Connect() error {
-	if k.Partition == nil {
-		k.Log.Error("Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
-	}
-
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
@@ -114,6 +108,7 @@ func (k *KinesisOutput) writeKinesis(r []types.PutRecordsRequestEntry) time.Dura
 }
 
 func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
+	defaultKey := "telegraf"
 	if k.Partition != nil {
 		switch k.Partition.Method {
 		case "static":
@@ -133,19 +128,12 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 				return k.Partition.Default
 			}
 			// Default partition name if default is not set
-			return "telegraf"
+			return defaultKey
 		default:
 			k.Log.Errorf("You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
 		}
 	}
-	if k.RandomPartitionKey {
-		u, err := uuid.NewV4()
-		if err != nil {
-			return k.Partition.Default
-		}
-		return u.String()
-	}
-	return k.PartitionKey
+	return defaultKey
 }
 
 func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {

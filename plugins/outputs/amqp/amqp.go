@@ -42,7 +42,6 @@ func (a *externalAuth) Response() string {
 }
 
 type AMQP struct {
-	URL                string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
 	Brokers            []string          `toml:"brokers"`
 	Exchange           string            `toml:"exchange"`
 	ExchangeType       string            `toml:"exchange_type"`
@@ -56,9 +55,6 @@ type AMQP struct {
 	RoutingTag         string            `toml:"routing_tag"`
 	RoutingKey         string            `toml:"routing_key"`
 	DeliveryMode       string            `toml:"delivery_mode"`
-	Database           string            `toml:"database" deprecated:"1.7.0;use 'headers' instead"`
-	RetentionPolicy    string            `toml:"retention_policy" deprecated:"1.7.0;use 'headers' instead"`
-	Precision          string            `toml:"precision" deprecated:"1.2.0;option is ignored"`
 	Headers            map[string]string `toml:"headers"`
 	Timeout            config.Duration   `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
@@ -247,9 +243,6 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 	}
 
 	clientConfig.brokers = q.Brokers
-	if len(clientConfig.brokers) == 0 {
-		clientConfig.brokers = []string{q.URL}
-	}
 
 	switch q.DeliveryMode {
 	case "transient":
@@ -264,12 +257,6 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 		clientConfig.headers = make(amqp.Table, len(q.Headers))
 		for k, v := range q.Headers {
 			clientConfig.headers[k] = v
-		}
-	} else {
-		// Copy deprecated fields into message header
-		clientConfig.headers = amqp.Table{
-			"database":         q.Database,
-			"retention_policy": q.RetentionPolicy,
 		}
 	}
 
@@ -315,13 +302,10 @@ func connect(clientConfig *ClientConfig) (Client, error) {
 func init() {
 	outputs.Add("amqp", func() telegraf.Output {
 		return &AMQP{
-			URL:             DefaultURL,
-			ExchangeType:    DefaultExchangeType,
-			AuthMethod:      DefaultAuthMethod,
-			Database:        DefaultDatabase,
-			RetentionPolicy: DefaultRetentionPolicy,
-			Timeout:         config.Duration(time.Second * 5),
-			connect:         connect,
+			ExchangeType: DefaultExchangeType,
+			AuthMethod:   DefaultAuthMethod,
+			Timeout:      config.Duration(time.Second * 5),
+			connect:      connect,
 		}
 	})
 }

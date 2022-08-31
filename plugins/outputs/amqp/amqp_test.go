@@ -75,24 +75,6 @@ func TestConnect(t *testing.T) {
 			},
 		},
 		{
-			name: "headers overrides deprecated dbrp",
-			output: &AMQP{
-				Headers: map[string]string{
-					"foo": "bar",
-				},
-				connect: func(_ *ClientConfig) (Client, error) {
-					return NewMockClient(), nil
-				},
-			},
-			errFunc: func(t *testing.T, output *AMQP, err error) {
-				cfg := output.config
-				require.Equal(t, amqp.Table{
-					"foo": "bar",
-				}, cfg.headers)
-				require.NoError(t, err)
-			},
-		},
-		{
 			name: "exchange args",
 			output: &AMQP{
 				ExchangeArguments: map[string]string{

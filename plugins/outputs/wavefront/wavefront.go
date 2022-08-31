@@ -15,28 +15,26 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
 const maxTagLength = 254
 
 type Wavefront struct {
-	URL                  string                          `toml:"url"`
-	Token                string                          `toml:"token"`
-	Host                 string                          `toml:"host" deprecated:"2.4.0;use url instead"`
-	Port                 int                             `toml:"port" deprecated:"2.4.0;use url instead"`
-	Prefix               string                          `toml:"prefix"`
-	SimpleFields         bool                            `toml:"simple_fields"`
-	MetricSeparator      string                          `toml:"metric_separator"`
-	ConvertPaths         bool                            `toml:"convert_paths"`
-	ConvertBool          bool                            `toml:"convert_bool"`
-	HTTPMaximumBatchSize int                             `toml:"http_maximum_batch_size"`
-	UseRegex             bool                            `toml:"use_regex"`
-	UseStrict            bool                            `toml:"use_strict"`
-	TruncateTags         bool                            `toml:"truncate_tags"`
-	ImmediateFlush       bool                            `toml:"immediate_flush"`
-	SourceOverride       []string                        `toml:"source_override"`
-	StringToNumber       map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
+	URL                  string   `toml:"url"`
+	Token                string   `toml:"token"`
+	Prefix               string   `toml:"prefix"`
+	SimpleFields         bool     `toml:"simple_fields"`
+	MetricSeparator      string   `toml:"metric_separator"`
+	ConvertPaths         bool     `toml:"convert_paths"`
+	ConvertBool          bool     `toml:"convert_bool"`
+	HTTPMaximumBatchSize int      `toml:"http_maximum_batch_size"`
+	UseRegex             bool     `toml:"use_regex"`
+	UseStrict            bool     `toml:"use_strict"`
+	TruncateTags         bool     `toml:"truncate_tags"`
+	ImmediateFlush       bool     `toml:"immediate_flush"`
+	SourceOverride       []string `toml:"source_override"`
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
@@ -105,10 +103,6 @@ func (w *Wavefront) Connect() error {
 			return err
 		}
 		connectionURL = connectionURLWithToken
-	} else {
-		w.Log.Warnf("configuration with host/port is deprecated. Please use url.")
-		w.Log.Debugf("connecting over http using Host: %q and Port: %d", w.Host, w.Port)
-		connectionURL = senderURLFromHostAndPort(w.Host, w.Port)
 	}
 
 	sender, err := wavefront.NewSender(connectionURL,
@@ -283,18 +277,6 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 		return float64(v.(uint64)), nil
 	case float64:
 		return v.(float64), nil
-	case string:
-		for prefix, mappings := range w.StringToNumber {
-			if strings.HasPrefix(name, prefix) {
-				for _, mapping := range mappings {
-					val, hasVal := mapping[p]
-					if hasVal {
-						return val, nil
-					}
-				}
-			}
-		}
-		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	default:
 		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	}
