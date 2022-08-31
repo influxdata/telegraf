@@ -287,32 +287,6 @@ func TestBuildValue(t *testing.T) {
 	}
 }
 
-func TestBuildValueString(t *testing.T) {
-	w := defaultWavefront()
-
-	var valuetests = []struct {
-		value interface{}
-		name  string
-		out   float64
-		isErr bool
-	}{
-		{value: int64(123), name: "", out: 123},
-		{value: "green", name: "test1", out: 1},
-		{value: "red", name: "test1", out: 10},
-		{value: "hidden", name: "test2", out: 2},
-		{value: "bad", name: "test1", out: 0, isErr: true},
-	}
-
-	for _, vt := range valuetests {
-		value, err := buildValue(vt.value, vt.name, w)
-		if vt.isErr && err == nil {
-			t.Errorf("\nexpected error with\t%+v\nreceived\t%+v\n", vt.out, value)
-		} else if value != vt.out {
-			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", vt.out, value)
-		}
-	}
-}
-
 func TestTagLimits(t *testing.T) {
 	w := defaultWavefront()
 	w.TruncateTags = true
