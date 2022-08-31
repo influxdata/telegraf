@@ -108,7 +108,6 @@ func (k *KinesisOutput) writeKinesis(r []types.PutRecordsRequestEntry) time.Dura
 }
 
 func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
-	defaultKey := "telegraf"
 	if k.Partition != nil {
 		switch k.Partition.Method {
 		case "static":
@@ -128,12 +127,12 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 				return k.Partition.Default
 			}
 			// Default partition name if default is not set
-			return defaultKey
+			return "telegraf"
 		default:
 			k.Log.Errorf("You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
 		}
 	}
-	return defaultKey
+	return ""
 }
 
 func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
