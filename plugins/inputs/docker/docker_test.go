@@ -1444,9 +1444,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 
 func TestDocker_Init(t *testing.T) {
 	type fields struct {
-		PerDevice        bool
 		PerDeviceInclude []string
-		Total            bool
 		TotalInclude     []string
 	}
 	tests := []struct {
@@ -1459,9 +1457,7 @@ func TestDocker_Init(t *testing.T) {
 		{
 			"Unsupported perdevice_include setting",
 			fields{
-				PerDevice:        false,
 				PerDeviceInclude: []string{"nonExistentClass"},
-				Total:            false,
 				TotalInclude:     []string{"cpu"},
 			},
 			true,
@@ -1471,9 +1467,7 @@ func TestDocker_Init(t *testing.T) {
 		{
 			"Unsupported total_include setting",
 			fields{
-				PerDevice:        false,
 				PerDeviceInclude: []string{"cpu"},
-				Total:            false,
 				TotalInclude:     []string{"nonExistentClass"},
 			},
 			true,
@@ -1483,9 +1477,7 @@ func TestDocker_Init(t *testing.T) {
 		{
 			"PerDevice true adds network and blkio",
 			fields{
-				PerDevice:        true,
-				PerDeviceInclude: []string{"cpu"},
-				Total:            true,
+				PerDeviceInclude: []string{"cpu", "network", "blkio"},
 				TotalInclude:     []string{"cpu"},
 			},
 			false,
@@ -1495,10 +1487,8 @@ func TestDocker_Init(t *testing.T) {
 		{
 			"Total false removes network and blkio",
 			fields{
-				PerDevice:        false,
 				PerDeviceInclude: []string{"cpu"},
-				Total:            false,
-				TotalInclude:     []string{"cpu", "network", "blkio"},
+				TotalInclude:     []string{"cpu"},
 			},
 			false,
 			[]string{"cpu"},

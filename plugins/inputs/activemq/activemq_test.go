@@ -47,6 +47,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	activeMQ := new(ActiveMQ)
+	activeMQ.URL = "http://localhost:8161"
 	require.NoError(t, activeMQ.Init())
 
 	activeMQ.GatherQueuesMetrics(&acc, queues)
@@ -91,6 +92,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	activeMQ := new(ActiveMQ)
+	activeMQ.URL = "http://localhost:8161"
 	require.NoError(t, activeMQ.Init())
 
 	activeMQ.GatherTopicsMetrics(&acc, topics)
@@ -129,6 +131,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	activeMQ := new(ActiveMQ)
+	activeMQ.URL = "http://localhost:8161"
 	require.NoError(t, activeMQ.Init())
 
 	activeMQ.GatherSubscribersMetrics(&acc, subscribers)
