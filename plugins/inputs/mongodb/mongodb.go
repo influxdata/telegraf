@@ -155,14 +155,14 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			if m.DisconnectedServersBehavior == "skip" {
 				if err := srv.ping(); err != nil {
-					m.Log.Debugf("failed to ping server: %q", err)
+					m.Log.Debugf("failed to ping server: %w", err)
 					return
 				}
 			}
 
 			err := srv.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDbs)
 			if err != nil {
-				m.Log.Errorf("failed to gather data: %q", err)
+				m.Log.Errorf("failed to gather data: %w", err)
 			}
 		}(client)
 	}
