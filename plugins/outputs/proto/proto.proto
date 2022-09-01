@@ -713,7 +713,6 @@ message GPS {
 }
 
 message Uploader {
-
   message Fields {
     string auth_token_status = 1;
     string initialized = 2;
@@ -725,10 +724,11 @@ message Uploader {
     string url = 2;
   }
 
-  Fields fields = 1;
+  Fields fields = 1; // DEPRECATED - use fields_map instead
   string name = 2;
   Tags tags = 3;
   double timestamp = 4;
+  map<string, string> fields_map = 5;
 }
 
 message UploaderStats {
@@ -768,10 +768,11 @@ message DetectNet {
     string url = 2;
   }
 
-  Fields fields = 1;
+  Fields fields = 1;  // DEPRECATED - use fields_map instead
   string name = 2;
   Tags tags = 3;
   double timestamp = 4;
+  map<string, string> fields_map = 5;
 }
 
 message SegNet {
@@ -790,10 +791,11 @@ message SegNet {
     string url = 2;
   }
 
-  Fields fields = 1;
+  Fields fields = 1;  // DEPRECATED - use fields_map instead
   string name = 2;
   Tags tags = 3;
   double timestamp = 4;
+  map<string, string> fields_map = 5;
 }
 
 message PPCorrection {
@@ -810,14 +812,14 @@ message PPCorrection {
     string url = 2;
   }
 
-  Fields fields = 1;
+  Fields fields = 1;  // DEPRECATED - use fields_map instead
   string name = 2;
   Tags tags = 3;
   double timestamp = 4;
+  map<string, string> fields_map = 5;
 }
 
 message Able {
-
   message Fields {
     string alpr_loaded = 1;
     string context_frame_loaded = 2;
@@ -837,10 +839,11 @@ message Able {
     string url = 2;
   }
 
-  Fields fields = 1;
+  Fields fields = 1;  // DEPRECATED - use fields_map instead
   string name = 2;
   Tags tags = 3;
   double timestamp = 4;
+  map<string, string> fields_map = 5;
 }
 
 message CameraControl {
@@ -856,10 +859,11 @@ message CameraControl {
     string url = 2;
   }
 
-  Fields fields = 1;
+  Fields fields = 1;  // DEPRECATED - use fields_map instead
   string name = 2;
   Tags tags = 3;
   double timestamp = 4;
+  map<string, string> fields_map = 5;
 }
 
 message Influx {

@@ -241,28 +241,60 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			}
 			influx.Gps = append(influx.Gps, &m)
 		case "pp_correction_metrics":
-			m := PPCorrection{}
-			if err := json.Unmarshal(b, &m); err != nil {
-				return errors.Wrap(err, "build PPCorrection")
+			m := PPCorrection{
+				FieldsMap: map[string]string{},
+				Tags:      &PPCorrection_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
 			}
+
+			for k, v := range metric.Fields() {
+				m.FieldsMap[k] = fmt.Sprintf("%v", v)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
 			influx.PpCorrection = append(influx.PpCorrection, &m)
 		case "able_metrics":
-			m := Able{}
-			if err := json.Unmarshal(b, &m); err != nil {
-				return errors.Wrap(err, "build ABLE")
+			m := Able{
+				FieldsMap: map[string]string{},
+				Tags:      &Able_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
 			}
+
+			for k, v := range metric.Fields() {
+				m.FieldsMap[k] = fmt.Sprintf("%v", v)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
 			influx.Able = append(influx.Able, &m)
 		case "camera_control_metrics":
-			m := CameraControl{}
-			if err := json.Unmarshal(b, &m); err != nil {
-				return errors.Wrap(err, "build Camera Control")
+			m := CameraControl{
+				FieldsMap: map[string]string{},
+				Tags:      &CameraControl_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
 			}
+
+			for k, v := range metric.Fields() {
+				m.FieldsMap[k] = fmt.Sprintf("%v", v)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
 			influx.CameraControl = append(influx.CameraControl, &m)
 		case "uploader_metrics":
-			m := Uploader{}
-			if err := json.Unmarshal(b, &m); err != nil {
-				return errors.Wrap(err, "build Uploader")
+			m := Uploader{
+				FieldsMap: map[string]string{},
+				Tags:      &Uploader_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
 			}
+
+			for k, v := range metric.Fields() {
+				m.FieldsMap[k] = fmt.Sprintf("%v", v)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
 			influx.Uploader = append(influx.Uploader, &m)
 		case "uploader_stats":
 			m := UploaderStats{}
@@ -271,16 +303,32 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			}
 			influx.UploaderStats = append(influx.UploaderStats, &m)
 		case "segnet_metrics":
-			m := SegNet{}
-			if err := json.Unmarshal(b, &m); err != nil {
-				return errors.Wrap(err, "build Segnet")
+			m := SegNet{
+				FieldsMap: map[string]string{},
+				Tags:      &SegNet_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
 			}
+
+			for k, v := range metric.Fields() {
+				m.FieldsMap[k] = fmt.Sprintf("%v", v)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
 			influx.SegNet = append(influx.SegNet, &m)
 		case "detectnet_metrics":
-			m := DetectNet{}
-			if err := json.Unmarshal(b, &m); err != nil {
-				return errors.Wrap(err, "build Detectnet")
+			m := DetectNet{
+				FieldsMap: map[string]string{},
+				Tags:      &DetectNet_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
 			}
+
+			for k, v := range metric.Fields() {
+				m.FieldsMap[k] = fmt.Sprintf("%v", v)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
 			influx.Detectnet = append(influx.Detectnet, &m)
 		case "glog":
 			m := Glog{}
