@@ -582,16 +582,16 @@ cpu_time_idle{host_name="example.org"} 42
 			},
 			expected: []byte(`
 cpu_time_guest{cpu="cpu0"} 8106.04
-cpu_time_system{cpu="cpu0"} 26271.4
-cpu_time_user{cpu="cpu0"} 92904.33
 cpu_time_guest{cpu="cpu1"} 8181.63
-cpu_time_system{cpu="cpu1"} 25351.49
-cpu_time_user{cpu="cpu1"} 96912.57
 cpu_time_guest{cpu="cpu2"} 7470.04
-cpu_time_system{cpu="cpu2"} 24998.43
-cpu_time_user{cpu="cpu2"} 96034.08
 cpu_time_guest{cpu="cpu3"} 7517.95
+cpu_time_system{cpu="cpu0"} 26271.4
+cpu_time_system{cpu="cpu1"} 25351.49
+cpu_time_system{cpu="cpu2"} 24998.43
 cpu_time_system{cpu="cpu3"} 24970.82
+cpu_time_user{cpu="cpu0"} 92904.33
+cpu_time_user{cpu="cpu1"} 96912.57
+cpu_time_user{cpu="cpu2"} 96034.08
 cpu_time_user{cpu="cpu3"} 94148
 `),
 		},
