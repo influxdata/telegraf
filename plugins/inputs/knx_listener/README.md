@@ -17,6 +17,11 @@ underlying "knx-go" project site (<https://github.com/vapourismo/knx-go>).
   ## Address of the KNX-IP interface.
   service_address = "localhost:3671"
 
+  ## Used transport protocol.
+  ## Can be either "UDP" (default) or "TCP".
+  ## TCP is currently only in tunnel mode supported.
+  # service_proto = "TCP"
+
   ## Measurement definition(s)
   # [[inputs.knx_listener.measurement]]
   #   ## Name of the measurement
