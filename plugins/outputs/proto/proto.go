@@ -330,6 +330,53 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 
 			m.Tags.Host, _ = metric.GetTag("host")
 			influx.Detectnet = append(influx.Detectnet, &m)
+		case "recorder_metrics":
+			m := Recorder{
+				FieldsMap: map[string]string{},
+				Tags:      &Recorder_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
+			}
+
+			for k, v := range metric.Fields() {
+				m.FieldsMap[k] = fmt.Sprintf("%v", v)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
+			influx.Recorder = append(influx.Recorder, &m)
+		case "event_data_cutter_metrics":
+			m := EventDataCutter{
+				FieldsMap: map[string]string{},
+				Tags:      &EventDataCutter_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
+			}
+
+			for k, v := range metric.Fields() {
+				m.FieldsMap[k] = fmt.Sprintf("%v", v)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
+			influx.EventDataCutter = append(influx.EventDataCutter, &m)
+		case "event_data_cutter_stats":
+			m := EventDataCutterStats{
+				FieldsMap: map[string]int64{},
+				Tags:      &EventDataCutterStats_Tags{},
+				Name:      metric.Name(),
+				Timestamp: float64(metric.Time().UTC().UnixNano()),
+			}
+
+			for k, v := range metric.Fields() {
+				vv, ok := v.(float64)
+				if !ok {
+					continue
+				}
+
+				m.FieldsMap[k] = int64(vv)
+			}
+
+			m.Tags.Host, _ = metric.GetTag("host")
+			influx.EventDataCutterStats = append(influx.EventDataCutterStats, &m)
 		case "glog":
 			m := Glog{}
 			if err := json.Unmarshal(b, &m); err != nil {

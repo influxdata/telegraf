@@ -866,6 +866,39 @@ message CameraControl {
   map<string, string> fields_map = 5;
 }
 
+message EventDataCutter {
+  message Tags {
+    string host = 1;
+  }
+
+  string name = 1;
+  Tags tags = 2;
+  double timestamp = 3;
+  map<string, string> fields_map = 4;
+}
+
+message EventDataCutterStats {
+  message Tags {
+    string host = 1;
+  }
+
+  string name = 1;
+  Tags tags = 2;
+  double timestamp = 3;
+  map<string, int64> fields_map = 4;
+}
+
+message Recorder {
+  message Tags {
+    string host = 1;
+  }
+
+  string name = 1;
+  Tags tags = 2;
+  double timestamp = 3;
+  map<string, string> fields_map = 4;
+}
+
 message Influx {
   repeated Kernel kernel = 1;
   repeated LinuxSysctlFs linux_sysctl_fs = 2;
@@ -897,6 +930,9 @@ message Influx {
   repeated UploaderStats uploader_stats = 28;
   repeated Wireless wireless = 29;
   repeated PPCorrection ppCorrection = 30;
+  repeated EventDataCutter eventDataCutter = 31;
+  repeated EventDataCutterStats eventDataCutterStats = 32;
+  repeated Recorder recorder = 33;
 }
 
 
