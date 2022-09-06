@@ -74,7 +74,6 @@ func (*DirectoryMonitor) SampleConfig() string {
 }
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
-
 	err := filepath.Walk(monitor.Directory,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
