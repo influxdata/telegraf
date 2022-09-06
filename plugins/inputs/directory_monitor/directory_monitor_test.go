@@ -514,7 +514,7 @@ func TestParseSubdirectories(t *testing.T) {
 	require.NoError(t, err)
 	err = r.Gather(&acc)
 	require.NoError(t, err)
-	acc.Wait(1)
+	acc.Wait(2)
 	r.Stop()
 
 	require.NoError(t, acc.FirstError())
