@@ -456,3 +456,74 @@ func TestParseCompleteFile(t *testing.T) {
 	require.Len(t, acc.Metrics, 1)
 	testutil.RequireMetricEqual(t, testutil.TestMetric(100.1), acc.GetTelegrafMetrics()[0], testutil.IgnoreTime())
 }
+
+func TestParseSubdirectories(t *testing.T) {
+	acc := testutil.Accumulator{}
+
+	// Establish process directory and finished directory.
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
+
+	// Init plugin.
+	r := DirectoryMonitor{
+		Directory:          processDirectory,
+		FinishedDirectory:  finishedDirectory,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        "at-once",
+	}
+	err := r.Init()
+	require.NoError(t, err)
+	r.Log = testutil.Logger{}
+
+	r.SetParserFunc(func() (parsers.Parser, error) {
+		parser := &json.Parser{
+			NameKey: "name",
+			TagKeys: []string{"tag1"},
+		}
+		err := parser.Init()
+		return parser, err
+	})
+
+	testJSON := `{
+		"name": "test1",
+		"value": 100.1,
+		"tag1": "value1"
+	}`
+
+	// Write json file to process into the 'process' directory.
+	testJSONFile := "test.json"
+	f, err := os.Create(filepath.Join(processDirectory, testJSONFile))
+	require.NoError(t, err)
+	_, err = f.WriteString(testJSON)
+	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
+
+	// Write json file to process into a subdirectory in the the 'process' directory.
+	err = os.Mkdir(filepath.Join(processDirectory, "sub"), os.ModePerm)
+	require.NoError(t, err)
+	f, err = os.Create(filepath.Join(processDirectory, "sub", testJSONFile))
+	require.NoError(t, err)
+	_, err = f.WriteString(testJSON)
+	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
+
+	err = r.Start(&acc)
+	require.NoError(t, err)
+	err = r.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(1)
+	r.Stop()
+
+	require.NoError(t, acc.FirstError())
+	require.Len(t, acc.Metrics, 2)
+	testutil.RequireMetricEqual(t, testutil.TestMetric(100.1), acc.GetTelegrafMetrics()[0], testutil.IgnoreTime())
+
+	// File should have gone back to the test directory, as we configured.
+	_, err = os.Stat(filepath.Join(finishedDirectory, testJSONFile))
+	require.NoError(t, err)
+	_, err = os.Stat(filepath.Join(finishedDirectory, "sub", testJSONFile))
+	require.NoError(t, err)
+}

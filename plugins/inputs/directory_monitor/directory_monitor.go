@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -73,32 +74,37 @@ func (*DirectoryMonitor) SampleConfig() string {
 }
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
-	// Get all files sitting in the directory.
-	files, err := os.ReadDir(monitor.Directory)
-	if err != nil {
-		return fmt.Errorf("unable to monitor the targeted directory: %w", err)
-	}
 
-	for _, file := range files {
-		filePath := monitor.Directory + "/" + file.Name()
+	err := filepath.Walk(monitor.Directory,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 
-		// We've been cancelled via Stop().
-		if monitor.context.Err() != nil {
-			//nolint:nilerr // context cancelation is not an error
+			// We've been cancelled via Stop().
+			if monitor.context.Err() != nil {
+				//nolint:nilerr // context cancelation is not an error
+				return io.EOF
+			}
+
+			stat, err := times.Stat(path)
+			if err != nil {
+				return nil
+			}
+
+			timeThresholdExceeded := time.Since(stat.AccessTime()) >= time.Duration(monitor.DirectoryDurationThreshold)
+
+			// If file is decaying, process it.
+			if timeThresholdExceeded {
+				monitor.processFile(info.Name(), path)
+			}
 			return nil
-		}
-
-		stat, err := times.Stat(filePath)
-		if err != nil {
-			continue
-		}
-
-		timeThresholdExceeded := time.Since(stat.AccessTime()) >= time.Duration(monitor.DirectoryDurationThreshold)
-
-		// If file is decaying, process it.
-		if timeThresholdExceeded {
-			monitor.processFile(file)
-		}
+		})
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -149,25 +155,19 @@ func (monitor *DirectoryMonitor) Monitor() {
 	}
 }
 
-func (monitor *DirectoryMonitor) processFile(file os.DirEntry) {
-	if file.IsDir() {
-		return
-	}
-
-	filePath := monitor.Directory + "/" + file.Name()
-
+func (monitor *DirectoryMonitor) processFile(name string, path string) {
 	// File must be configured to be monitored, if any configuration...
-	if !monitor.isMonitoredFile(file.Name()) {
+	if !monitor.isMonitoredFile(name) {
 		return
 	}
 
 	// ...and should not be configured to be ignored.
-	if monitor.isIgnoredFile(file.Name()) {
+	if monitor.isIgnoredFile(name) {
 		return
 	}
 
 	select {
-	case monitor.filesToProcess <- filePath:
+	case monitor.filesToProcess <- path:
 	default:
 	}
 }
@@ -300,8 +300,15 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 }
 
 func (monitor *DirectoryMonitor) moveFile(filePath string, directory string) {
-	err := os.Rename(filePath, directory+"/"+filepath.Base(filePath))
+	basePath := strings.Replace(filePath, monitor.Directory, "", 1)
+	newPath := filepath.Join(directory, basePath)
 
+	err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm)
+	if err != nil {
+		monitor.Log.Errorf("Error creating directory hierachy for " + filePath + ". Error: " + err.Error())
+	}
+
+	err = os.Rename(filePath, newPath)
 	if err != nil {
 		monitor.Log.Errorf("Error while moving file '" + filePath + "' to another directory. Error: " + err.Error())
 	}

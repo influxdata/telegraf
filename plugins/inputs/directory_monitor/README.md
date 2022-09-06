@@ -1,6 +1,6 @@
 # Directory Monitor Input Plugin
 
-This plugin monitors a single directory (without looking at sub-directories),
+This plugin monitors a single directory (traversing sub-directories),
 and takes in each file placed in the directory.  The plugin will gather all
 files in the directory at the configured interval, and parse the ones that
 haven't been picked up yet.
@@ -18,10 +18,10 @@ be guaranteed to finish writing before the `directory_duration_threshold`.
 ```toml @sample.conf
 # Ingests files in a directory and then moves them to a target directory.
 [[inputs.directory_monitor]]
-  ## The directory to monitor and read files from.
+  ## The directory to monitor and read files from (including subdirectories.
   directory = ""
   #
-  ## The directory to move finished files to.
+  ## The directory to move finished files to (maintaining directory hierachy from source.
   finished_directory = ""
   #
   ## The directory to move files to upon file error.
@@ -56,7 +56,7 @@ be guaranteed to finish writing before the `directory_duration_threshold`.
   #
   ## Specify if the file can be read completely at once or if it needs to be read line by line (default).
   ## Possible values: "line-by-line", "at-once"
-  # parse_method = "line-by-line" 
+  # parse_method = "line-by-line"
   #
   ## The dataformat to be read from the files.
   ## Each data format has its own unique set of configuration options, read
