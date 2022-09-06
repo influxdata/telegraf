@@ -18,7 +18,7 @@ be guaranteed to finish writing before the `directory_duration_threshold`.
 ```toml @sample.conf
 # Ingests files in a directory and then moves them to a target directory.
 [[inputs.directory_monitor]]
-  ## The directory to monitor and read files from (including subdirectories.
+  ## The directory to monitor and read files from (including sub-directories.
   directory = ""
   #
   ## The directory to move finished files to (maintaining directory hierachy from source.
