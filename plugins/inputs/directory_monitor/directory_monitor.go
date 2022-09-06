@@ -88,7 +88,8 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 
 			stat, err := times.Stat(path)
 			if err != nil {
-				return nil
+				// Don't stop traversing if there is an eror
+				return nil //nolint:nilerr
 			}
 
 			timeThresholdExceeded := time.Since(stat.AccessTime()) >= time.Duration(monitor.DirectoryDurationThreshold)
