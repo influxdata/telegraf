@@ -65,7 +65,7 @@ be guaranteed to finish writing before the `directory_duration_threshold`.
   data_format = "influx"
 ```
 
-## Metrics
+## Example Output
 
 The format of metrics produced by this plugin depends on the content and data
 format of the file.
