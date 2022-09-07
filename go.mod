@@ -1,6 +1,6 @@
 module github.com/influxdata/telegraf
 
-go 1.18
+go 1.19
 
 // Workaround for https://github.com/lxc/lxd/issues/10745 (failing "go list -m all")
 replace google.golang.org/grpc/naming => google.golang.org/grpc v1.29.1
