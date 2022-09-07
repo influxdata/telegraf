@@ -23,6 +23,7 @@ type ClientConfig struct {
 	ResponseTimeout time.Duration
 	Username        string
 	Password        string
+	Origin          string
 	ProxyConfig     *ProxyConfig
 	tls.ClientConfig
 }
@@ -137,6 +138,9 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 	}
 
 	req.Header.Add("Content-type", "application/json")
+	if c.config.Origin != "" {
+		req.Header.Add("Origin", c.config.Origin)
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
