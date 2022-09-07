@@ -19,7 +19,7 @@ var _ = context.Background
 var _ = time.Now
 var _ = bytes.Equal
 
-//A subset of thrift base types, except BYTES.
+// A subset of thrift base types, except BYTES.
 type AnnotationType int64
 
 const (
@@ -112,13 +112,13 @@ func (p *AnnotationType) Value() (driver.Value, error) {
 // clients such as web browsers.
 //
 // Attributes:
-//  - Ipv4: IPv4 host address packed into 4 bytes.
+//   - Ipv4: IPv4 host address packed into 4 bytes.
 //
 // Ex for the ip 1.2.3.4, it would be (1 << 24) | (2 << 16) | (3 << 8) | 4
-//  - Port: IPv4 port or 0, if unknown.
+//   - Port: IPv4 port or 0, if unknown.
 //
 // Note: this is to be treated as an unsigned integer, so watch for negatives.
-//  - ServiceName: Classifier of a source or destination in lowercase, such as "zipkin-web".
+//   - ServiceName: Classifier of a source or destination in lowercase, such as "zipkin-web".
 //
 // This is the primary parameter for trace lookup, so should be intuitive as
 // possible, for example, matching names in service discovery.
@@ -132,7 +132,7 @@ func (p *AnnotationType) Value() (driver.Value, error) {
 // Particularly clients may not have a reliable service name at ingest. One
 // approach is to set service_name to "" at ingest, and later assign a
 // better label based on binary annotations, such as user agent.
-//  - Ipv6: IPv6 host address packed into 16 bytes. Ex Inet6Address.getBytes()
+//   - Ipv6: IPv6 host address packed into 16 bytes. Ex Inet6Address.getBytes()
 type Endpoint struct {
 	Ipv4        int32  `thrift:"ipv4,1" db:"ipv4" json:"ipv4"`
 	Port        int16  `thrift:"port,2" db:"port" json:"port"`
@@ -384,12 +384,12 @@ func (p *Endpoint) String() string {
 // Unlike log statements, annotations are often codes: for example "sr".
 //
 // Attributes:
-//  - Timestamp: Microseconds from epoch.
+//   - Timestamp: Microseconds from epoch.
 //
 // This value should use the most precise value possible. For example,
 // gettimeofday or multiplying currentTimeMillis by 1000.
-//  - Value: Usually a short tag indicating an event, like "sr" or "finagle.retry".
-//  - Host: The host that recorded the value, primarily for query by service name.
+//   - Value: Usually a short tag indicating an event, like "sr" or "finagle.retry".
+//   - Host: The host that recorded the value, primarily for query by service name.
 type Annotation struct {
 	Timestamp int64     `thrift:"timestamp,1" db:"timestamp" json:"timestamp"`
 	Value     string    `thrift:"value,2" db:"value" json:"value"`
@@ -610,14 +610,14 @@ func (p *Annotation) String() string {
 // you can see the different points of view, which often help in debugging.
 //
 // Attributes:
-//  - Key: Name used to lookup spans, such as "http.path" or "finagle.version".
-//  - Value: Serialized thrift bytes, in TBinaryProtocol format.
+//   - Key: Name used to lookup spans, such as "http.path" or "finagle.version".
+//   - Value: Serialized thrift bytes, in TBinaryProtocol format.
 //
 // For legacy reasons, byte order is big-endian. See THRIFT-3217.
-//  - AnnotationType: The thrift type of value, most often STRING.
+//   - AnnotationType: The thrift type of value, most often STRING.
 //
 // annotation_type shouldn't vary for the same key.
-//  - Host: The host that recorded value, allowing query by service name or address.
+//   - Host: The host that recorded value, allowing query by service name or address.
 //
 // There are two exceptions: when key is "ca" or "sa", this is the source or
 // destination of an RPC. This exception allows zipkin to display network
@@ -885,19 +885,24 @@ func (p *BinaryAnnotation) String() string {
 // String encoding is fixed-width lower-hex, to avoid signed interpretation.
 //
 // Attributes:
-//  - TraceID: Unique 8-byte identifier for a trace, set on all spans within it.
-//  - Name: Span name in lowercase, rpc method for example. Conventionally, when the
+//   - TraceID: Unique 8-byte identifier for a trace, set on all spans within it.
+//   - Name: Span name in lowercase, rpc method for example. Conventionally, when the
+//
 // span name isn't known, name = "unknown".
-//  - ID: Unique 8-byte identifier of this span within a trace. A span is uniquely
+//   - ID: Unique 8-byte identifier of this span within a trace. A span is uniquely
+//
 // identified in storage by (trace_id, id).
-//  - ParentID: The parent's Span.id; absent if this the root span in a trace.
-//  - Annotations: Associates events that explain latency with a timestamp. Unlike log
+//   - ParentID: The parent's Span.id; absent if this the root span in a trace.
+//   - Annotations: Associates events that explain latency with a timestamp. Unlike log
+//
 // statements, annotations are often codes: for example SERVER_RECV("sr").
 // Annotations are sorted ascending by timestamp.
-//  - BinaryAnnotations: Tags a span with context, usually to support query or aggregation. For
+//   - BinaryAnnotations: Tags a span with context, usually to support query or aggregation. For
+//
 // example, a binary annotation key could be "http.path".
-//  - Debug: True is a request to store this span even if it overrides sampling policy.
-//  - Timestamp: Epoch microseconds of the start of this span, absent if this an incomplete
+//   - Debug: True is a request to store this span even if it overrides sampling policy.
+//   - Timestamp: Epoch microseconds of the start of this span, absent if this an incomplete
+//
 // span.
 //
 // This value should be set directly by instrumentation, using the most
@@ -915,9 +920,10 @@ func (p *BinaryAnnotation) String() string {
 // There are two known edge-cases where this could be absent: both cases
 // exist when a collector receives a span in parts and a binary annotation
 // precedes a timestamp. This is possible when..
-//  - The span is in-flight (ex not yet received a timestamp)
-//  - The span's start event was lost
-//  - Duration: Measurement in microseconds of the critical path, if known. Durations of
+//   - The span is in-flight (ex not yet received a timestamp)
+//   - The span's start event was lost
+//   - Duration: Measurement in microseconds of the critical path, if known. Durations of
+//
 // less than one microsecond must be rounded up to 1 microsecond.
 //
 // This value should be set directly, as opposed to implicitly via annotation
@@ -933,7 +939,8 @@ func (p *BinaryAnnotation) String() string {
 // this field non-atomically is implementation-specific.
 //
 // This field is i64 vs i32 to support spans longer than 35 minutes.
-//  - TraceIDHigh: Optional unique 8-byte additional identifier for a trace. If non zero, this
+//   - TraceIDHigh: Optional unique 8-byte additional identifier for a trace. If non zero, this
+//
 // means the trace uses 128 bit traceIds instead of 64 bit.
 type Span struct {
 	TraceID int64 `thrift:"trace_id,1" db:"trace_id" json:"trace_id"`

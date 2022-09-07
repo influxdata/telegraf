@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//compares metrics without comparing time
+// compares metrics without comparing time
 func compareMetrics(t *testing.T, expected, actual []telegraf.Metric) {
 	require.Equal(t, len(expected), len(actual))
 	for i, m := range actual {

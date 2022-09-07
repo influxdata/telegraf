@@ -4,9 +4,9 @@ import (
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 )
 
-//------------------------------------------------------------------------------------------------
-//------------------ Azure Managed Instance ------------------------------------------------------
-//------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// ------------------ Azure Managed Instance ------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 const sqlAzureMIProperties = `
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';

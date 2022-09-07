@@ -16,6 +16,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -63,19 +64,19 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 
 // processChronycOutput takes in a string output from the chronyc command, like:
 //
-//     Reference ID    : 192.168.1.22 (ntp.example.com)
-//     Stratum         : 3
-//     Ref time (UTC)  : Thu May 12 14:27:07 2016
-//     System time     : 0.000020390 seconds fast of NTP time
-//     Last offset     : +0.000012651 seconds
-//     RMS offset      : 0.000025577 seconds
-//     Frequency       : 16.001 ppm slow
-//     Residual freq   : -0.000 ppm
-//     Skew            : 0.006 ppm
-//     Root delay      : 0.001655 seconds
-//     Root dispersion : 0.003307 seconds
-//     Update interval : 507.2 seconds
-//     Leap status     : Normal
+//	Reference ID    : 192.168.1.22 (ntp.example.com)
+//	Stratum         : 3
+//	Ref time (UTC)  : Thu May 12 14:27:07 2016
+//	System time     : 0.000020390 seconds fast of NTP time
+//	Last offset     : +0.000012651 seconds
+//	RMS offset      : 0.000025577 seconds
+//	Frequency       : 16.001 ppm slow
+//	Residual freq   : -0.000 ppm
+//	Skew            : 0.006 ppm
+//	Root delay      : 0.001655 seconds
+//	Root dispersion : 0.003307 seconds
+//	Update interval : 507.2 seconds
+//	Leap status     : Normal
 //
 // The value on the left side of the colon is used as field name, if the first field on
 // the right side is a float. If it cannot be parsed as float, it is a tag name.

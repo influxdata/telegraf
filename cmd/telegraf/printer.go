@@ -54,6 +54,7 @@ var globalTagsConfig = `
 `
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the agentConfig data.
+//
 //go:embed agent.conf
 var agentConfig string
 

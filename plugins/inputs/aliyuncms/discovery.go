@@ -52,8 +52,8 @@ type parsedDResp struct {
 	pageNumber int
 }
 
-//getRPCReqFromDiscoveryRequest - utility function to map between aliyun request primitives
-//discoveryRequest represents different type of discovery requests
+// getRPCReqFromDiscoveryRequest - utility function to map between aliyun request primitives
+// discoveryRequest represents different type of discovery requests
 func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, error) {
 	if reflect.ValueOf(req).Type().Kind() != reflect.Ptr ||
 		reflect.ValueOf(req).IsNil() {
@@ -80,12 +80,12 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 	return nil, errors.Errorf("didn't find *requests.RpcRequest embedded struct in %q", ptrV.Type())
 }
 
-//newDiscoveryTool function returns discovery tool object.
-//The object is used to periodically get data about aliyun objects and send this
-//data into channel. The intention is to enrich reported metrics with discovery data.
-//Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
-//Discovery can be limited by region if not set, then all regions is queried.
-//Request against API can inquire additional costs, consult with aliyun API documentation.
+// newDiscoveryTool function returns discovery tool object.
+// The object is used to periodically get data about aliyun objects and send this
+// data into channel. The intention is to enrich reported metrics with discovery data.
+// Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
+// Discovery can be limited by region if not set, then all regions is queried.
+// Request against API can inquire additional costs, consult with aliyun API documentation.
 func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
 	var (
 		dscReq                = map[string]discoveryRequest{}
