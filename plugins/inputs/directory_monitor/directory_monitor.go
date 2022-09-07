@@ -29,6 +29,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -78,7 +79,6 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 	processFile := func(path string, name string) error {
 		// We've been cancelled via Stop().
 		if monitor.context.Err() != nil {
-			//nolint:nilerr // context cancelation is not an error
 			return io.EOF
 		}
 

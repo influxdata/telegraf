@@ -21,7 +21,7 @@ be guaranteed to finish writing before the `directory_duration_threshold`.
   ## The directory to monitor and read files from (including sub-directories if "recursive" is true).
   directory = ""
   #
-  ## The directory to move finished files to (maintaining directory hierachy from source.
+  ## The directory to move finished files to (maintaining directory hierachy from source).
   finished_directory = ""
   #
   ## Setting recursive to true will make the plugin recursively walk the directory and process all sub-directories.
