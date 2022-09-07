@@ -146,10 +146,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##  |                 to reduce the number of requested registers by keeping
     ##  |                 the number of requests.
     ##  |---aggressive -- Rearrange request boundaries similar to "rearrange" but
-    ##                    allow to request registers not specified by the user to
-    ##                    fill gaps. This usually reduces the number of requests at the
-    ##                    cost of more requested registers.
+    ##  |                 allow to request registers not specified by the user to
+    ##  |                 fill gaps. This usually reduces the number of requests at the
+    ##  |                 cost of more requested registers.
+    ##  |---max_insert -- Rearrange request keeping the number of extra fields below the value 
+    ##                    provided in "max_extra_registers". It is not necessary to define 'omitted'
+    ##                    fields as the optimisation will add such field only where needed.
     # optimization = "none"
+    
+    ## Max extra register. For the 'max_insert' optimization only. Set the maximum size by which 
+    # a request can be extended in order to keep the number of requests lower. This needs to be 
+    # a positive integer lower than the maximum number of recoil fields per query: 125
+    # max_extra_registers = 50
 
     ## Field definitions
     ## Analog Variables, Input Registers and Holding Registers
@@ -408,6 +416,18 @@ This algorithm might be usefull if you only want to specify the fields you are
 interested in but want to minimize the number of requests sent to the device.
 
 __Please note:__ This optimization might take long in case of many non-consecutive, non-ommitted fields!
+
+##### `max_insert`
+
+With this optimization, user defined omitted fields are ignored, which allows composing
+shorter configuration files in the case of devices with many available registers.
+Every request is build considering the cost of adding a new register (including the gap between this one
+and the previous one of the request) compared to the cost of creating a new request.
+
+__Please note:__ The optimal value for `max_extra_registers` will depend on the network and the queried
+device. It is hence recommended to test several values and assess performance in order to find the best value.
+When running telegraf with the `--test` flag, you can check the number of requests and the number of touched
+registers that your configuration results to.
 
 #### Field definitions
 

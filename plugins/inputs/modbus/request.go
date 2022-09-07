@@ -1,6 +1,9 @@
 package modbus
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 type request struct {
 	address uint16
@@ -123,7 +126,55 @@ func optimizeGroup(g request, maxBatchSize uint16) []request {
 	return requests
 }
 
-func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16, optimization string) []request {
+func optimitzeGroupWithinLimits(fields []field, maxBatchSize uint16, maxExtraRegisters uint16) []request {
+	fields = removeAllOmitted(fields)
+	var requests []request
+	currentRequest := newRequest(fields[0])
+	for _, f := range fields[1:] {
+		// Check if we need to interrupt the current chunk and require a new one
+		extraLength := f.address + f.length - (currentRequest.address + currentRequest.length)
+		needInterrupt := extraLength > maxExtraRegisters                                  // too far appart
+		needInterrupt = needInterrupt || currentRequest.length+extraLength > maxBatchSize // too large
+		if !needInterrupt {
+			// Still safe to add the field to the current request
+			currentRequest.length = f.address + f.length - currentRequest.address
+			currentRequest.fields = append(currentRequest.fields, f)
+			continue
+		}
+		// Finish the current request, add it to the list and construct a new one
+		requests = append(requests, currentRequest)
+		currentRequest = newRequest(f)
+
+	}
+	requests = append(requests, currentRequest)
+	return requests
+}
+func newRequest(f field) request {
+	r := request{
+		address: f.address,
+		length:  f.length,
+		fields:  []field{},
+		// tags:    map[string]string{},
+	}
+	if !f.omit {
+		r.fields = append(r.fields, f)
+	}
+	// Copy the tags
+	// for k, v := range tags {
+	// 	r.tags[k] = v
+	// }
+	return r
+}
+func removeAllOmitted(fields []field) []field {
+	var noOmitRequest []field
+	for _, f := range fields {
+		if !f.omit {
+			noOmitRequest = append(noOmitRequest, f)
+		}
+	}
+	return noOmitRequest
+}
+func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16, optimization string, maxTouchedRegisters uint16) []request {
 	if len(fields) == 0 {
 		return nil
 	}
@@ -156,14 +207,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 		if current.length > 0 {
 			groups = append(groups, current)
 		}
-		current = request{
-			fields:  []field{},
-			address: f.address,
-			length:  f.length,
-		}
-		if !f.omit {
-			current.fields = append(current.fields, f)
-		}
+		current = newRequest(f)
 	}
 	if current.length > 0 {
 		groups = append(groups, current)
@@ -194,7 +238,17 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 			if len(g.fields) > 0 {
 				total.fields = append(total.fields, g.fields...)
 			}
-			requests = optimizeGroup(total, maxBatchSize)
+		}
+		requests = optimizeGroup(total, maxBatchSize)
+	case "max_insert":
+		// Similar to aggressive but keeps the number of touched registers bellow a threshold
+		requests = optimitzeGroupWithinLimits(fields, maxBatchSize, maxTouchedRegisters)
+	default:
+		// no optimization
+		for _, g := range groups {
+			if len(g.fields) > 0 {
+				requests = append(requests, splitMaxBatchSize(g, maxBatchSize)...)
+			}
 		}
 	}
 
@@ -205,5 +259,16 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 			requests[i].tags[k] = v
 		}
 	}
+	fmt.Printf("[Modbus] Number of requests %d\n", len(requests))
+	totalTouchedFields := uint16(0)
+	for _, r := range requests {
+		// for idx, r := range requests {
+		totalTouchedFields += r.length / r.fields[0].length
+		// fmt.Printf("Request %d: address %d length %d for %d active fields: filling rate %v%%\n", idx, r.address, r.length, len(r.fields), int(100*float32(int(r.fields[0].length)*len(r.fields))/float32(r.length)))
+		// for yy, f := range r.fields {
+		// 	fmt.Printf("\t%d address %d\n", yy, f.address)
+		// }
+	}
+	fmt.Printf("[Modbus] Total number of touched Registers %d\n", totalTouchedFields)
 	return requests
 }

@@ -23,13 +23,14 @@ type requestFieldDefinition struct {
 }
 
 type requestDefinition struct {
-	SlaveID      byte                     `toml:"slave_id"`
-	ByteOrder    string                   `toml:"byte_order"`
-	RegisterType string                   `toml:"register"`
-	Measurement  string                   `toml:"measurement"`
-	Optimization string                   `toml:"optimization"`
-	Fields       []requestFieldDefinition `toml:"fields"`
-	Tags         map[string]string        `toml:"tags"`
+	SlaveID           byte                     `toml:"slave_id"`
+	ByteOrder         string                   `toml:"byte_order"`
+	RegisterType      string                   `toml:"register"`
+	Measurement       string                   `toml:"measurement"`
+	Optimization      string                   `toml:"optimization"`
+	MaxExtraRegisters uint16                   `toml:"max_extra_registers"`
+	Fields            []requestFieldDefinition `toml:"fields"`
+	Tags              map[string]string        `toml:"tags"`
 }
 
 type ConfigurationPerRequest struct {
@@ -46,11 +47,16 @@ func (c *ConfigurationPerRequest) Check() error {
 
 	for _, def := range c.Requests {
 		// Check for valid optimization
-		validOptimizations := []string{"", "none", "shrink", "rearrange", "aggressive"}
+		validOptimizations := []string{"", "none", "shrink", "rearrange", "aggressive", "max_insert"}
 		if !choice.Contains(def.Optimization, validOptimizations) {
 			return fmt.Errorf("unknown optimization %q", def.Optimization)
 		}
-
+		if def.Optimization == "max_insert" && def.MaxExtraRegisters > maxQuantityHoldingRegisters {
+			return fmt.Errorf("max_insert optimization requires max_extra_registers to be smaller than %v but %v was provided", maxQuantityHoldingRegisters, def.MaxExtraRegisters)
+		}
+		if def.Optimization == "max_insert" && def.MaxExtraRegisters == 0 {
+			return fmt.Errorf("max_insert optimization requires max_extra_registers to be larger than 0 but %v was provided or was not set", def.MaxExtraRegisters)
+		}
 		// Check byte order of the data
 		switch def.ByteOrder {
 		case "":
@@ -162,16 +168,16 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 
 		switch def.RegisterType {
 		case "coil":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils, def.Optimization)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils, def.Optimization, def.MaxExtraRegisters)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput, def.Optimization)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput, def.Optimization, def.MaxExtraRegisters)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters, def.Optimization)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters, def.Optimization, def.MaxExtraRegisters)
 			set.holding = append(set.holding, requests...)
 		case "input":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters, def.Optimization)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters, def.Optimization, def.MaxExtraRegisters)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
