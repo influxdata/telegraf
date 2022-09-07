@@ -660,7 +660,8 @@ WHERE
 		AND (	--Always fetch user process (in any state), fetch system process only if active
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
-		)		
+		)
+		AND [session_id] <> @@SPID		
 	)  
 OPTION(MAXDOP 1);
 `
