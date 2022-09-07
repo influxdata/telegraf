@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -27,10 +26,6 @@ type InterfaceMock struct {
 
 type CommandEthtoolMock struct {
 	InterfaceMap map[string]*InterfaceMock
-}
-
-type Logger struct {
-	Log telegraf.Logger
 }
 
 func (c *CommandEthtoolMock) Init() error {
@@ -310,13 +305,10 @@ func toStringMapInterface(in map[string]uint64) map[string]interface{} {
 	return m
 }
 
-func (l *Logger) toStringMapUint(in map[string]interface{}) map[string]uint64 {
+func toStringMapUint(in map[string]interface{}) map[string]uint64 {
 	var m = map[string]uint64{}
 	for k, v := range in {
-		t, ok := v.(uint64)
-		if !ok {
-			l.Log.Error("value in the interface is not a unit64")
-		}
+		t := v.(uint64)
 		m[k] = t
 	}
 	return m
@@ -515,9 +507,9 @@ func TestNormalizedKeys(t *testing.T) {
 			},
 		},
 	}
-	l := Logger{}
+
 	for _, c := range cases {
-		eth0 := &InterfaceMock{"eth0", "e1000e", l.toStringMapUint(c.stats), false, true}
+		eth0 := &InterfaceMock{"eth0", "e1000e", toStringMapUint(c.stats), false, true}
 		expectedTags := map[string]string{
 			"interface": eth0.Name,
 			"driver":    eth0.DriverName,
