@@ -16,6 +16,7 @@ setup_go () {
         exit 1
     fi
 
+    sudo rm -rfv /usr/local/go
     sudo tar -C /usr/local -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
 
     echo "$PATH"
