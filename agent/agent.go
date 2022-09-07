@@ -47,11 +47,10 @@ type inputUnit struct {
 	inputs []*models.RunningInput
 }
 
-/*
 //	______     ┌───────────┐     ______
 // ()_____)──▶ │ Processor │──▶ ()_____)
 //	           └───────────┘
-*/
+
 type processorUnit struct {
 	src       <-chan telegraf.Metric
 	dst       chan<- telegraf.Metric
@@ -62,7 +61,6 @@ type processorUnit struct {
 // Typically the aggregators write to a processor channel and pass the original
 // metrics to the output channel.  The sink channels may be the same channel.
 
-/*
 //	               ┌────────────┐
 //	          ┌──▶ │ Aggregator │───┐
 //	          │    └────────────┘   │
@@ -74,7 +72,7 @@ type processorUnit struct {
 //	          │    └────────────┘
 //	          │                           ______
 //	          └────────────────────────▶ ()_____)
-*/
+
 type aggregatorUnit struct {
 	src         <-chan telegraf.Metric
 	aggC        chan<- telegraf.Metric
@@ -85,7 +83,6 @@ type aggregatorUnit struct {
 // outputUnit is a group of Outputs and their source channel.  Metrics on the
 // channel are written to all outputs.
 
-/*
 //	                          ┌────────┐
 //	                     ┌──▶ │ Output │
 //	                     │    └────────┘
@@ -95,7 +92,7 @@ type aggregatorUnit struct {
 //	                     │    ┌────────┐
 //	                     └──▶ │ Output │
 //	                          └────────┘
-*/
+
 type outputUnit struct {
 	src     <-chan telegraf.Metric
 	outputs []*models.RunningOutput
