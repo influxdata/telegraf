@@ -468,6 +468,7 @@ func TestParseSubdirectories(t *testing.T) {
 	r := DirectoryMonitor{
 		Directory:          processDirectory,
 		FinishedDirectory:  finishedDirectory,
+		Recursive:          true,
 		MaxBufferedMetrics: defaultMaxBufferedMetrics,
 		FileQueueSize:      defaultFileQueueSize,
 		ParseMethod:        "at-once",

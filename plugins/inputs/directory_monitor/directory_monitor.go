@@ -44,6 +44,7 @@ var (
 type DirectoryMonitor struct {
 	Directory         string `toml:"directory"`
 	FinishedDirectory string `toml:"finished_directory"`
+	Recursive         bool   `toml:"recursive"`
 	ErrorDirectory    string `toml:"error_directory"`
 	FileTag           string `toml:"file_tag"`
 
@@ -74,37 +75,64 @@ func (*DirectoryMonitor) SampleConfig() string {
 }
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
-	err := filepath.Walk(monitor.Directory,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
+	processFile := func(path string, name string) error {
+		// We've been cancelled via Stop().
+		if monitor.context.Err() != nil {
+			//nolint:nilerr // context cancelation is not an error
+			return io.EOF
+		}
 
-			// We've been cancelled via Stop().
-			if monitor.context.Err() != nil {
-				//nolint:nilerr // context cancelation is not an error
-				return io.EOF
-			}
+		stat, err := times.Stat(path)
+		if err != nil {
+			// Don't stop traversing if there is an eror
+			return nil //nolint:nilerr
+		}
 
-			stat, err := times.Stat(path)
-			if err != nil {
-				// Don't stop traversing if there is an eror
-				return nil //nolint:nilerr
-			}
+		timeThresholdExceeded := time.Since(stat.AccessTime()) >= time.Duration(monitor.DirectoryDurationThreshold)
 
-			timeThresholdExceeded := time.Since(stat.AccessTime()) >= time.Duration(monitor.DirectoryDurationThreshold)
-
-			// If file is decaying, process it.
-			if timeThresholdExceeded {
-				monitor.processFile(info.Name(), path)
-			}
-			return nil
-		})
-	if err == io.EOF {
+		// If file is decaying, process it.
+		if timeThresholdExceeded {
+			monitor.processFile(name, path)
+		}
 		return nil
 	}
-	if err != nil {
-		return err
+
+	if monitor.Recursive {
+		err := filepath.Walk(monitor.Directory,
+			func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+
+				return processFile(path, info.Name())
+			})
+		// We've been cancelled via Stop().
+		if err == io.EOF {
+			//nolint:nilerr // context cancelation is not an error
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	} else {
+		// Get all files sitting in the directory.
+		files, err := os.ReadDir(monitor.Directory)
+		if err != nil {
+			return fmt.Errorf("unable to monitor the targeted directory: %w", err)
+		}
+
+		for _, file := range files {
+			if file.IsDir() {
+				continue
+			}
+			path := monitor.Directory + "/" + file.Name()
+			err := processFile(path, file.Name())
+			// We've been cancelled via Stop().
+			if err == io.EOF {
+				//nolint:nilerr // context cancelation is not an error
+				return nil
+			}
+		}
 	}
 
 	return nil
