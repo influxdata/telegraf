@@ -264,7 +264,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 
 		// ignore error because it's been handled before getting here
-		tlsCfg, _ := p.ClientConfig.TLSConfig()
+		tlsCfg, _ := p.HTTPClientConfig.TLSConfig()
 		uClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig:   tlsCfg,
