@@ -151,7 +151,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.13.0
 	github.com/tidwall/gjson v1.14.3
 	github.com/tinylib/msgp v1.1.6
-	github.com/urfave/cli/v2 v2.11.2
+	github.com/urfave/cli/v2 v2.14.1
 	github.com/vapourismo/knx-go v0.0.0-20220829185957-fb5458a5389d
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.29.0
@@ -172,7 +172,7 @@ require (
 	golang.org/x/sys v0.0.0-20220804214406-8e32c043e418
 	golang.org/x/text v0.3.7
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
-	gonum.org/v1/gonum v0.11.0
+	gonum.org/v1/gonum v0.12.0
 	google.golang.org/api v0.91.0
 	google.golang.org/genproto v0.0.0-20220808131553-a91ffa7f803e
 	google.golang.org/grpc v1.48.0
