@@ -15,6 +15,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -23,9 +24,10 @@ type JolokiaAgent struct {
 	DefaultFieldSeparator string
 	DefaultTagPrefix      string
 
-	URLs            []string `toml:"urls"`
-	Username        string
-	Password        string
+	URLs            []string        `toml:"urls"`
+	Username        string          `toml:"username"`
+	Password        string          `toml:"password"`
+	Origin          string          `toml:"origin"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
@@ -91,6 +93,7 @@ func (ja *JolokiaAgent) createClient(url string) (*common.Client, error) {
 	return common.NewClient(url, &common.ClientConfig{
 		Username:        ja.Username,
 		Password:        ja.Password,
+		Origin:          ja.Origin,
 		ResponseTimeout: time.Duration(ja.ResponseTimeout),
 		ClientConfig:    ja.ClientConfig,
 	})
