@@ -24,6 +24,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -341,7 +342,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 	return nil
 }
 
-//tag helper
+// tag helper
 func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string, err error) {
 	var (
 		ok        bool

@@ -640,8 +640,8 @@ func (x *SubscriptionResponse) GetSubscriptionId() uint32 {
 	return 0
 }
 
-// 2. Telemetry data send back on the same connection as the
-//    subscription request.
+//  2. Telemetry data send back on the same connection as the
+//     subscription request.
 type OpenConfigData struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

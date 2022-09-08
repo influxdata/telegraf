@@ -15,6 +15,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -53,11 +54,13 @@ type pluginData struct {
 
 // parse JSON from fluentd Endpoint
 // Parameters:
-// 		data: unprocessed json received from endpoint
+//
+//	data: unprocessed json received from endpoint
 //
 // Returns:
-//		pluginData:		slice that contains parsed plugins
-//		error:			error that may have occurred
+//
+//	pluginData:		slice that contains parsed plugins
+//	error:			error that may have occurred
 func parse(data []byte) (datapointArray []pluginData, err error) {
 	var endpointData endpointInfo
 
