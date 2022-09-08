@@ -516,15 +516,19 @@ func (s *Statsd) parser() error {
 				case line == "":
 				case s.DataDogExtensions && strings.HasPrefix(line, "_e"):
 					if err := s.parseEventMessage(in.Time, line, in.Addr); err != nil {
-						return err
+						// Log the line causing the parsing error and continue
+						// with the next line to not stop the whole gathering
+						// process.
+						s.Log.Errorf("Parsing line failed: %v", err)
+						s.Log.Debugf("  line was: %s", line)
 					}
 				default:
 					if err := s.parseStatsdLine(line); err != nil {
-						if errors.Cause(err) == errParsing {
-							// parsing errors log when the error occurs
-							continue
+						if errors.Cause(err) != errParsing {
+							// Ignore parsing errors but error out on
+							// everything else...
+							return err
 						}
-						return err
 					}
 				}
 			}
