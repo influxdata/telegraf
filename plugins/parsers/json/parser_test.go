@@ -514,7 +514,7 @@ func TestHttpJsonBOM(t *testing.T) {
 	require.NoError(t, err)
 }
 
-//for testing issue #4260
+// for testing issue #4260
 func TestJSONParseNestedArray(t *testing.T) {
 	testString := `{
 	"total_devices": 5,

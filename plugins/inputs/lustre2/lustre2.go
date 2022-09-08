@@ -21,6 +21,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -38,9 +39,12 @@ type Lustre2 struct {
 	allFields map[tags]map[string]interface{}
 }
 
-/* The wanted fields would be a []string if not for the
+/*
+	The wanted fields would be a []string if not for the
+
 lines that start with read_bytes/write_bytes and contain
-   both the byte count and the function call count
+
+	both the byte count and the function call count
 */
 type mapping struct {
 	inProc   string // What to look for at the start of a line in /proc/fs/lustre/*

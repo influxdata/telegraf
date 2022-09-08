@@ -2,7 +2,7 @@
 
 set -eux
 
-GO_VERSION="1.18.5"
+GO_VERSION="1.19.1"
 
 setup_go () {
     choco feature enable -n allowGlobalConfirmation

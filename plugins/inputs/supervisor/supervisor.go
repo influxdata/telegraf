@@ -46,6 +46,7 @@ type supervisorInfo struct {
 }
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
