@@ -14,7 +14,7 @@ import (
 	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -49,7 +49,8 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 		Nsqd:                   []string{"127.0.0.1:4155"},
 	}
 
-	p, _ := parsers.NewInfluxParser()
+	p := &influx.Parser{}
+	require.NoError(t, p.Init())
 	consumer.SetParser(p)
 	var acc testutil.Accumulator
 	require.Len(t, acc.Metrics, 0, "There should not be any points")

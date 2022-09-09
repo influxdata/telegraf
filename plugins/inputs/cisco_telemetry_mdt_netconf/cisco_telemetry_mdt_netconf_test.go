@@ -435,6 +435,7 @@ func TestCiscoTelemetryNETCONF_connectClient(t *testing.T) {
 			tt.args.ctx = ctx
 			tt.c.cancel = cancel
 			tt.c.acc = acc
+			tt.c.Log = testutil.Logger{}
 
 			w := new(sync.WaitGroup)
 			w.Add(1)
@@ -721,6 +722,7 @@ func TestCiscoTelemetryNETCONF_Start(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt.c.Log = testutil.Logger{}
 
 		t.Run(tt.name, func(t *testing.T) {
 			assert.NoError(t, tt.c.Start(tt.args.acc))
@@ -915,6 +917,7 @@ func TestCiscoTelemetryNETCONF_Stop(t *testing.T) {
 	for _, tt := range tests {
 		_, cancel := context.WithCancel(context.Background())
 		tt.c.cancel = cancel
+		tt.c.Log = testutil.Logger{}
 		t.Run(tt.name, func(t *testing.T) {
 			assert.NotPanics(t, func() { tt.c.Stop() })
 		})
@@ -1003,6 +1006,7 @@ func Test_dialinSubscriptionRequestsService_createService(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		tt.args.ctx, tt.args.c.cancel = ctx, cancel
 		tt.dsrs.setting = mockSetting()
+		tt.args.c.Log = testutil.Logger{}
 
 		w := new(sync.WaitGroup)
 		w.Add(1)
@@ -1159,6 +1163,7 @@ func Test_dialinSubscriptionRequestsService_createRequests(t *testing.T) {
 		tt.dsrs = tt.args.c.Dsrs
 		ctx, cancel := context.WithCancel(context.Background())
 		tt.args.ctx, tt.args.c.cancel = ctx, cancel
+		tt.args.c.Log = testutil.Logger{}
 
 		// Read user input because we require a connection to a real NETCONF server.
 		switch tt.testType {
@@ -1263,6 +1268,7 @@ func Test_dialinSubscriptionRequestsService_receiveTelemetry(t *testing.T) {
 		tt.dsrs = tt.args.c.Dsrs
 		ctx, cancel := context.WithCancel(context.Background())
 		tt.args.ctx, tt.args.c.cancel = ctx, cancel
+		tt.args.c.Log = testutil.Logger{}
 
 		switch tt.testType {
 		case goodDialinReceive:
@@ -1353,6 +1359,7 @@ func Test_dialinSubscriptionRequestsService_receiveNotifications(t *testing.T) {
 		tt.dsrs = tt.args.c.Dsrs
 		ctx, cancel := context.WithCancel(context.Background())
 		tt.args.ctx, tt.args.c.cancel = ctx, cancel
+		tt.args.c.Log = testutil.Logger{}
 
 		switch tt.testType {
 		case goodDialinReceive:
@@ -1450,6 +1457,7 @@ func Test_getRequestsService_createService(t *testing.T) {
 		tt.args.c.Username = *tUser
 		tt.args.c.Password = *tPassword
 		tt.args.c.ServerPublicKey = *tKey
+		tt.args.c.Log = testutil.Logger{}
 
 		if tt.testType == goodGetService {
 			tt.args.c.Grs.Gets[0].SelectFilter = *tXpathf
@@ -1555,6 +1563,7 @@ func Test_getRequestsService_createRequests(t *testing.T) {
 		tt.grs = tt.args.c.Grs
 		ctx, cancel := context.WithCancel(context.Background())
 		tt.args.ctx, tt.args.c.cancel = ctx, cancel
+		tt.args.c.Log = testutil.Logger{}
 
 		// Read user input because we require a connection to a real NETCONF server.
 		tt.args.c.ServerAddress = *tServer

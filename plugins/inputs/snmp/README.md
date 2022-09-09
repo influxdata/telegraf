@@ -30,6 +30,12 @@ path onto the global path variable
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
+  ## Unconnected UDP socket
+  ## When true, SNMP reponses are accepted from any address not just
+  ## the requested address. This can be useful when gathering from
+  ## redundant/failover systems.
+  # unconnected_udp_socket = false 
+
   ## Path to mib files
   ## Used by the gosmi translator.
   ## To add paths when translating with netsnmp, use the MIBDIRS environment variable
@@ -348,6 +354,10 @@ needed:
 ```sh
 sudo tcpdump -s 0 -i eth0 -w telegraf-snmp.pcap host 127.0.0.1 and port 161
 ```
+
+## Metrics
+
+The field and tags will depend on the table and fields configured.
 
 ## Example Output
 

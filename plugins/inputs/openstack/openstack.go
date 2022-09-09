@@ -23,7 +23,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/schedulerstats"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/volumetenants"
-	"github.com/gophercloud/gophercloud/openstack/blockstorage/v2/volumes"
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/aggregates"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/diagnostics"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/hypervisors"
@@ -141,6 +141,7 @@ func (o *OpenStack) Init() error {
 		TenantName:       o.Project,
 		Username:         o.Username,
 		Password:         o.Password,
+		AllowReauth:      true,
 	}
 	provider, err := openstack.NewClient(authOption.IdentityEndpoint)
 	if err != nil {
@@ -185,9 +186,9 @@ func (o *OpenStack) Init() error {
 	}
 
 	// The Cinder volume storage service is optional
-	if o.containsService("volumev2") {
-		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
-			return fmt.Errorf("unable to create V2 volume client %v", err)
+	if o.containsService("volumev3") {
+		if o.volume, err = openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{}); err != nil {
+			return fmt.Errorf("unable to create V3 volume client %v", err)
 		}
 	}
 

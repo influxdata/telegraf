@@ -68,7 +68,7 @@ func TestMultipleConfigs(t *testing.T) {
 			}
 
 			// Process expected metrics and compare with resulting metrics
-			expectedOutputs, err := readMetricFile(fmt.Sprintf("testdata/%s/expected.out", f.Name()))
+			expectedOutputs, err := readMetricFile(t, fmt.Sprintf("testdata/%s/expected.out", f.Name()))
 			require.NoError(t, err)
 			resultingMetrics := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expectedOutputs, resultingMetrics, testutil.IgnoreTime())
@@ -86,7 +86,7 @@ func TestMultipleConfigs(t *testing.T) {
 	}
 }
 
-func readMetricFile(path string) ([]telegraf.Metric, error) {
+func readMetricFile(t *testing.T, path string) ([]telegraf.Metric, error) {
 	var metrics []telegraf.Metric
 	expectedFile, err := os.Open(path)
 	if err != nil {
@@ -94,7 +94,8 @@ func readMetricFile(path string) ([]telegraf.Metric, error) {
 	}
 	defer expectedFile.Close()
 
-	parser := influx.NewParser(influx.NewMetricHandler())
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 	scanner := bufio.NewScanner(expectedFile)
 	for scanner.Scan() {
 		line := scanner.Text()

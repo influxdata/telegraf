@@ -18,6 +18,11 @@ This plugin gathers the statistic data from MySQL server
 * File events statistics
 * Table schema statistics
 
+In order to gather metrics from the performance schema, it must first be enabled
+in mySQL configuration. See the performance schema [quick start][quick-start].
+
+[quick-start]: https://dev.mysql.com/doc/refman/8.0/en/performance-schema-quick-start.html
+
 ## Configuration
 
 ```toml @sample.conf

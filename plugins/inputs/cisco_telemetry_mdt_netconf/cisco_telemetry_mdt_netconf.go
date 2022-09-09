@@ -7,7 +7,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"regexp"
 	"strings"
 	"sync"
@@ -264,7 +263,7 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 					}
 
 					// Create dynamic subscription over NETCONF
-					log.Printf(
+					c.Log.Debugf(
 						"Establishing subscription %s %s %s tags(s)=%v...",
 						subscription.XPathFilter, subscription.UpdateTrigger,
 						time.Duration(subscription.Period), subscription.Tags,
@@ -277,7 +276,7 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 					if err != nil {
 						c.reportError(ctx, err, "create telemetry subscription")
 					} else {
-						log.Printf(
+						c.Log.Debugf(
 							"Established subscription",
 						)
 						// Announce state:created to the next stage of the pipeline
@@ -318,7 +317,7 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 				notifications[i] = &netconf.CreateSubscription{}
 			}
 
-			log.Printf(
+			c.Log.Debugf(
 				"Establishing notification subscription %s...",
 				notification,
 			)
@@ -330,7 +329,7 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 			if err != nil {
 				c.reportError(ctx, err, "create notification subscription")
 			} else {
-				log.Printf(
+				c.Log.Debugf(
 					"Established subscription",
 				)
 				// Announce state:created to the next stage of the pipeline
@@ -359,7 +358,7 @@ func (dsrs *dialinSubscriptionRequestsService) receiveTelemetry(
 		dsrs.Mutex.Unlock()
 
 		if sessionExists {
-			log.Printf(
+			c.Log.Debugf(
 				"Receiving yang-push messages ...",
 			)
 
@@ -386,7 +385,7 @@ func (dsrs *dialinSubscriptionRequestsService) receiveTelemetry(
 		}
 	}
 	dsrs.state = ended
-	log.Printf(
+	c.Log.Debugf(
 		"Stopped Cisco NETCONF dial-in telemetry subscription service on %s",
 		c.ServerAddress,
 	)
@@ -404,7 +403,7 @@ func (dsrs *dialinSubscriptionRequestsService) receiveNotifications(
 		dsrs.Mutex.Unlock()
 
 		if sessionExists {
-			log.Printf(
+			c.Log.Debugf(
 				"Receiving event messages ...",
 			)
 
@@ -433,7 +432,7 @@ func (dsrs *dialinSubscriptionRequestsService) receiveNotifications(
 		}
 	}
 	dsrs.state = ended
-	log.Printf(
+	c.Log.Debugf(
 		"Stopped Cisco NETCONF event notification subscription service on %s",
 		c.ServerAddress,
 	)
@@ -505,7 +504,7 @@ func (grs *getRequestsService) createRequests(
 						sessionExists := grs.Session != nil
 						if sessionExists {
 							// Get operation
-							log.Printf(
+							c.Log.Debugf(
 								"Performing <get> operation ...",
 							)
 
@@ -547,7 +546,7 @@ func (grs *getRequestsService) createRequests(
 				ticker.Stop()
 				waitgroup.Done()
 
-				log.Printf(
+				c.Log.Debugf(
 					"Stopped Cisco NETCONF <get> service on %s",
 					c.ServerAddress,
 				)
@@ -571,7 +570,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 	for ctx.Err() == nil {
 		// Dial unknown server
 		if c.IgnoreServerAuthenticity {
-			log.Printf(
+			c.Log.Debugf(
 				"Dialling unknown NETCONF server %s ...",
 				c.ServerAddress,
 			)
@@ -582,7 +581,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 			)
 		} else {
 			// Dial known server
-			log.Printf(
+			c.Log.Debugf(
 				"Dialling known NETCONF server %s ...",
 				c.ServerAddress,
 			)
@@ -616,7 +615,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 		} else {
 			s.Client = client
 
-			log.Printf(
+			c.Log.Debugf(
 				"Dialled server %s",
 				c.ServerAddress,
 			)
@@ -631,7 +630,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 
 	// Create NETCONF session
 	for ctx.Err() == nil && s.Client != nil {
-		log.Printf(
+		c.Log.Debugf(
 			"Creating new NETCONF session ...",
 		)
 
@@ -640,7 +639,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 		if err != nil {
 			c.reportError(ctx, err, "create NETCONF session")
 		} else {
-			log.Printf(
+			c.Log.Debugf(
 				"Created new NETCONF session",
 			)
 			s.Session = ss
@@ -654,7 +653,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 	}
 
 	if ctx.Err() == nil {
-		log.Printf(
+		c.Log.Debugf(
 			"Dialled server %s and created new NETCONF session",
 			c.ServerAddress,
 		)
@@ -783,23 +782,23 @@ func (c *CiscoTelemetryNETCONF) reportError(
 
 	if ctx.Err() != nil && ctx.Err() == context.Canceled {
 		// Acknowledge errors due to context cancellation
-		log.Printf(
+		c.Log.Errorf(
 			logMessage, processName,
 		)
-		log.Println("Context cancelled. Adding error to accumulator: ", err, "!")
+		c.Log.Errorf("Context cancelled. Adding error to accumulator: ", err)
 		c.acc.AddError(fmt.Errorf(
 			errorMessage, processName, err,
 		))
 	} else if ctx.Err() != nil {
 		// Acknowledge other context error
-		log.Println("Context error: Adding error to accumulator: ", err, "!")
+		c.Log.Errorf("Context error: Adding error to accumulator: ", err)
 		c.acc.AddError(fmt.Errorf(
 			errorMessage, processName, ctx.Err().Error(),
 		))
 
 	} else {
 		// Report base error
-		log.Println("Adding error to accumulator: ", err, "!")
+		c.Log.Errorf("Adding error to accumulator: ", err)
 		c.acc.AddError(fmt.Errorf(
 			errorMessage, processName, err,
 		))
@@ -809,9 +808,6 @@ func (c *CiscoTelemetryNETCONF) reportError(
 // cleanup should be called before the termination of the plugin
 func (s *setting) cleanup() error {
 	// Close open session and client before stopping the plugin
-	log.Printf(
-		"cleaning up ...",
-	)
 	var err error
 	if s.Mutex != nil {
 		s.Mutex.Lock()
@@ -848,14 +844,14 @@ func (c *CiscoTelemetryNETCONF) Start(acc telegraf.Accumulator) error {
 	defer c.waitgroup.Done()
 	go func() {
 		if c.Dsrs != nil && len(c.Dsrs.Subscriptions) > 0 {
-			log.Printf(
+			c.Log.Debugf(
 				"Starting Cisco NETCONF dial-in subscription service on %s",
 				c.ServerAddress)
 			c.waitgroup.Add(1)
 			go c.Dsrs.createService(ctx, c)
 		}
 		if c.Grs != nil && len(c.Grs.Gets) > 0 {
-			log.Printf(
+			c.Log.Debugf(
 				"Starting Cisco NETCONF get service on %s",
 				c.ServerAddress,
 			)
@@ -863,7 +859,7 @@ func (c *CiscoTelemetryNETCONF) Start(acc telegraf.Accumulator) error {
 			go c.Grs.createService(ctx, c)
 		}
 		if c.Dsrs != nil && len(c.Dsrs.Notifications) > 0 {
-			log.Printf(
+			c.Log.Debugf(
 				"Starting Cisco NETCONF notification subscription service on %s",
 				c.ServerAddress)
 			// Create the Dsrs service only if it was not already created
@@ -879,7 +875,7 @@ func (c *CiscoTelemetryNETCONF) Start(acc telegraf.Accumulator) error {
 
 // Stop function executed when the plugin is stopped
 func (c *CiscoTelemetryNETCONF) Stop() {
-	log.Printf(
+	c.Log.Debugf(
 		"Stopping channels ...",
 	)
 
@@ -908,7 +904,7 @@ func (c *CiscoTelemetryNETCONF) Stop() {
 	// Wait for goroutines to finish their execution
 	c.waitgroup.Wait()
 
-	log.Printf(
+	c.Log.Debugf(
 		"Stopped Cisco NETCONF telemetry plugin on %s",
 		c.ServerAddress,
 	)

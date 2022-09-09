@@ -3,7 +3,9 @@
 /telegraf
 /telegraf.exe
 /telegraf.gz
-/tools/readme_config_includer/generator
+/tools/package_lxd_test/package_lxd_test
+/tools/license_checker/license_checker*
+/tools/readme_config_includer/generator*
 /vendor
 .DS_Store
 process.yml

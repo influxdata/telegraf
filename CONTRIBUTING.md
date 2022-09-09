@@ -68,12 +68,13 @@ Telegraf uses Go modules. Assuming you can already build the project, run this i
 
 **Unit Tests:**
 
-Before opening a pull request you should run the linter checks and
-the short tests.
+Before opening a pull request you should run the following checks to make sure the CI will pass.
 
 ```shell
 make check
+make check-deps
 make test
+make docs
 ```
 
 **Execute integration tests:**

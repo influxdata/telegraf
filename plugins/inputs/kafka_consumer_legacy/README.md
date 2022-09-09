@@ -12,7 +12,6 @@ instances of telegraf can read from the same topic in parallel.
 ## Configuration
 
 ```toml @sample.conf
-## DEPRECATED: The 'kafka_consumer_legacy' plugin is deprecated in version 1.4.0, use 'inputs.kafka_consumer' instead, NOTE: 'kafka_consumer' only supports Kafka v0.8+.
 # Read metrics from Kafka topic(s)
 [[inputs.kafka_consumer_legacy]]
   ## topic(s) to consume

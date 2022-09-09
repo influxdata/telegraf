@@ -447,6 +447,8 @@ func TestStateTag(t *testing.T) {
 		"repl_updates":                              int64(0),
 		"repl_updates_per_sec":                      int64(0),
 		"repl_state":                                int64(0),
+		"repl_member_health":                        int64(0),
+		"repl_health_avg":                           float64(0),
 		"resident_megabytes":                        int64(0),
 		"state":                                     "PRIMARY",
 		"storage_freelist_search_bucket_exhausted":  int64(0),

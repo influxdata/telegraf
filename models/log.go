@@ -4,6 +4,7 @@ import (
 	"log"
 	"reflect"
 
+	"github.com/fatih/color"
 	"github.com/influxdata/telegraf"
 )
 
@@ -99,5 +100,38 @@ func SetLoggerOnPlugin(i interface{}, logger telegraf.Logger) {
 	default:
 		logger.Debugf("Plugin %q defines a 'Log' field on its struct of an unexpected type %q. Expected telegraf.Logger",
 			valI.Type().Name(), field.Type().String())
+	}
+}
+
+func deprecationPrefix(level telegraf.Escalation) string {
+	switch level {
+	case telegraf.Warn:
+		return "W! " + color.YellowString("DeprecationWarning")
+	case telegraf.Error:
+		return "E! " + color.RedString("DeprecationError")
+	}
+	return ""
+}
+
+func PrintPluginDeprecationNotice(level telegraf.Escalation, name string, info telegraf.DeprecationInfo) {
+	switch level {
+	case telegraf.Warn, telegraf.Error:
+		prefix := deprecationPrefix(level)
+
+		log.Printf(
+			"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
+			prefix, name, info.Since, info.RemovalIn, info.Notice,
+		)
+	}
+}
+
+func PrintOptionDeprecationNotice(level telegraf.Escalation, plugin, option string, info telegraf.DeprecationInfo) {
+	switch level {
+	case telegraf.Warn, telegraf.Error:
+		prefix := deprecationPrefix(level)
+		log.Printf(
+			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
+			prefix, option, plugin, info.Since, info.RemovalIn, info.Notice,
+		)
 	}
 }

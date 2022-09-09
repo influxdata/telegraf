@@ -19,7 +19,7 @@ To generate a file with specific inputs and outputs, you can use the
 --input-filter and --output-filter flags:
 
 ```sh
-telegraf --input-filter cpu:mem:net:swap --output-filter influxdb:kafka config
+telegraf config --input-filter cpu:mem:net:swap --output-filter influxdb:kafka
 ```
 
 [View the full list][flags] of Telegraf commands and flags or by running `telegraf --help`.
