@@ -159,6 +159,7 @@ go test -v ./plugins/outputs/timestream/...
 ```
 
 ### Mapping data from Influx to Timestream
+
 When writing data from Influx to Timestream,
 data is written by default as follows:
 
@@ -170,7 +171,6 @@ data is written by default as follows:
  ```
 
  For example, consider the following data in line protocol format:
-
  >weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200 airquality,location=us-west no2=5,pm25=16 1465839830100400200
 
 where:    
@@ -181,76 +181,92 @@ where:
 When you choose to create a separate table for each measurement and store
 multiple fields in a single table row, the data will be written into
 Timestream as:
+  1. The plugin will create 2 tables, namely, weather and airquality (mapping_mode=multi-table).
+  2. The tables may contain multiple fields in a single table row (use_multi_measure_records=true).
+  3. The table weather will contain the following columns and data:
 
-```   
-    1. The plugin will create 2 tables, namely, weather and airquality (mapping_mode=multi-table).
-    2. The tables may contain multiple fields in a single table row (use_multi_measure_records=true).
-    3. The table weather will contain the following columns and data:
-       time | location | season | measure_name | temperature | humidity
-       2016-06-13 17:43:50 | us-midwest | summer | <measure_name_for_multi_measure_records> | 82 | 71
-    4. The table airquality will contain the following columns and data:
-       time | location | measure_name | no2 | pm25
-       2016-06-13 17:43:50 | us-west | <measure_name_for_multi_measure_records> | 5 | 16
-    NOTE
-    <measure_name_for_multi_measure_records> represents the actual value of that property.
-```
+  ```
+    time | location | season | measure_name | temperature | humidity
+    2016-06-13 17:43:50 | us-midwest | summer | <measure_name_for_multi_measure_records> | 82 | 71
+  ```
 
-   You can also choose to create a separate table per measurement and store
-   each field in a separate row per table. In that case:
+  4. The table airquality will contain the following columns and data:
 
-```
-    1. The plugin will create 2 tables, namely, weather and airquality (mapping_mode=multi-table).
-    2. Each table row will contain a single field only (use_multi_measure_records=false).
-    3. The table weather will contain the following columns and data:
-          time | location | season | measure_name | measure_value::bigint
-          2016-06-13 17:43:50 | us-midwest | summer | temperature | 82
-          2016-06-13 17:43:50 | us-midwest | summer | humidity | 71
-    4. The table airquality will contain the following columns and data:
-          time | location | measure_name | measure_value::bigint
-          2016-06-13 17:43:50 | us-west | no2 | 5
-          2016-06-13 17:43:50 | us-west | pm25 | 16
-```    
+  ```
+    time | location | measure_name | no2 | pm25
+    2016-06-13 17:43:50 | us-west | <measure_name_for_multi_measure_records> | 5 | 16
+  ```
 
-   You can also choose to store all the measurements in a single table and
-   store all fields in a single table row. In that case:
+  NOTE:
+  `<measure_name_for_multi_measure_records>` represents the actual
+  value of that property.
 
-```
-   1. This plugin will create a table with name <single_table_name> (mapping_mode=single-table).
-   2. The table may contain multiple fields in a single table row (use_multi_measure_records=true).
-   3. The table will contain the following column and data:
-     time | location | season | <single_table_dimension_name_for_telegraf_measurement_name>
-    | measure_name | temperature | humidity | no2 | pm25
-    2016-06-13 17:43:50 | us-midwest | summer | weather | <measure_name_for_multi_measure_records>
-    | 82 | 71 | null | null
-    2016-06-13 17:43:50 | us-west | null | airquality | <measure_name_for_multi_measure_records>
-    | null | null | 5 | 16
 
-    NOTE
-    <single_table_name> represents the actual value of that property.
-    <single_table_dimension_name_for_telegraf_measurement_name> represents the actual value
-    of that property.
-    <measure_name_for_multi_measure_records> represents the actual value of  that property.
+You can also choose to create a separate table per measurement and store
+each field in a separate row per table. In that case:
 
-```
+  1. The plugin will create 2 tables, namely, weather and airquality (mapping_mode=multi-table).
+  2. Each table row will contain a single field only (use_multi_measure_records=false).
+  3. The table weather will contain the following columns and data:
+
+  ```
+    time | location | season | measure_name | measure_value::bigint
+    2016-06-13 17:43:50 | us-midwest | summer | temperature | 82
+    2016-06-13 17:43:50 | us-midwest | summer | humidity | 71
+  ```
+
+  4. The table airquality will contain the following columns and data:
+
+  ```
+    time | location | measure_name | measure_value::bigint
+    2016-06-13 17:43:50 | us-west | no2 | 5
+    2016-06-13 17:43:50 | us-west | pm25 | 16
+  ```
+
+You can also choose to store all the measurements in a single table and
+store all fields in a single table row. In that case:
+
+ 1. This plugin will create a table with name <single_table_name> (mapping_mode=single-table).
+ 2. The table may contain multiple fields in a single table row (use_multi_measure_records=true).
+ 3. The table will contain the following column and data:
+
+  ```
+   time | location | season | <single_table_dimension_name_for_telegraf_measurement_name>
+   | measure_name | temperature | humidity | no2 | pm25
+   2016-06-13 17:43:50 | us-midwest | summer | weather | <measure_name_for_multi_measure_records>
+   | 82 | 71 | null | null
+   2016-06-13 17:43:50 | us-west | null | airquality | <measure_name_for_multi_measure_records>
+   | null | null | 5 | 16
+  ```
+
+  NOTE:
+  `<single_table_name>` represents the actual value of that property.
+  `<single_table_dimension_name_for_telegraf_measurement_name>` represents
+  the actual value of that property.
+  `<measure_name_for_multi_measure_records>` represents the actual value of
+  that property.
+
 
 Furthermore, you can choose to store all the measurements in a single table
 and store each field in a separate table row. In that case:
 
-```
    1. Timestream will create a table with name <single_table_name> (mapping_mode=single-table).
    2. Each table row will contain a single field only (use_multi_measure_records=false).
    3. The table will contain the following column and data:
-          time | location | season | namespace | measure_name | measure_value::bigint
-          2016-06-13 17:43:50 | us-midwest | summer | weather | temperature | 82
-          2016-06-13 17:43:50 | us-midwest | summer | weather | humidity | 71
-          2016-06-13 17:43:50 | us-west | NULL | airquality | no2 | 5
-          2016-06-13 17:43:50 | us-west | NULL | airquality | pm25 | 16
-    NOTE
-    <single_table_name> represents the actual value of that property.
-    <single_table_dimension_name_for_telegraf_measurement_name> represents the actual value
+
+   ```
+    time | location | season | namespace | measure_name | measure_value::bigint
+    2016-06-13 17:43:50 | us-midwest | summer | weather | temperature | 82
+    2016-06-13 17:43:50 | us-midwest | summer | weather | humidity | 71
+    2016-06-13 17:43:50 | us-west | NULL | airquality | no2 | 5
+    2016-06-13 17:43:50 | us-west | NULL | airquality | pm25 | 16
+   ```
+    NOTE:
+    `<single_table_name>` represents the actual value of that property.
+    `<single_table_dimension_name_for_telegraf_measurement_name>` represents the actual value
     of that property.
-    <measure_name_for_multi_measure_records> represents the actual value of that property.
-```
+    `<measure_name_for_multi_measure_records>` represents the actual value of that property.
+
 
 ### References
 
