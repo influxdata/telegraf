@@ -184,13 +184,15 @@ func (monitor *DirectoryMonitor) Monitor() {
 }
 
 func (monitor *DirectoryMonitor) processFile(path string) {
+	basePath := strings.Replace(path, monitor.Directory, "", 1)
+
 	// File must be configured to be monitored, if any configuration...
-	if !monitor.isMonitoredFile(path) {
+	if !monitor.isMonitoredFile(basePath) {
 		return
 	}
 
 	// ...and should not be configured to be ignored.
-	if monitor.isIgnoredFile(path) {
+	if monitor.isIgnoredFile(basePath) {
 		return
 	}
 
