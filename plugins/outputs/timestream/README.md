@@ -159,10 +159,10 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## 2. The table may contain multiple fields in a single table row (use_multi_measure_records=true).
   ## 3. The table will contain the following column and data:
   ##    time | location | season | <single_table_dimension_name_for_telegraf_measurement_name>
-  ##    | measure_name | temperature | humidity | no2 | pm25
-  ##    2016-06-13 17:43:50 | us-midwest | summer | weather | <measure_name_for_multi_measure_records>
-  ##    | 82 | 71 | null | null
-  ##    2016-06-13 17:43:50 | us-west | null | airquality | <measure_name_for_multi_measure_records>
+  ##  | measure_name | temperature | humidity | no2 | pm25
+  ##  2016-06-13 17:43:50 | us-midwest | summer | weather | <measure_name_for_multi_measure_records>
+  ##  | 82 | 71 | null | null
+  ##  2016-06-13 17:43:50 | us-west | null | airquality | <measure_name_for_multi_measure_records>
   ##    | null | null | 5 | 16
   ##  NOTE
   ##  <single_table_name> represents the actual value of that property.
@@ -175,11 +175,11 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## 1. Timestream will create a table with name <single_table_name> (mapping_mode=single-table).
   ## 2. Each table row will contain a single field only (use_multi_measure_records=false).
   ## 3. The table will contain the following column and data:
-  ##        time | location | season | namespace | measure_name | measure_value::bigint
-  ##        2016-06-13 17:43:50 | us-midwest | summer | weather | temperature | 82
-  ##        2016-06-13 17:43:50 | us-midwest | summer | weather | humidity | 71
-  ##        2016-06-13 17:43:50 | us-west | NULL | airquality | no2 | 5
-  ##        2016-06-13 17:43:50 | us-west | NULL | airquality | pm25 | 16
+  ##  time | location | season | namespace | measure_name | measure_value::bigint
+  ##  2016-06-13 17:43:50 | us-midwest | summer | weather | temperature | 82
+  ##  2016-06-13 17:43:50 | us-midwest | summer | weather | humidity | 71
+  ##  2016-06-13 17:43:50 | us-west | NULL | airquality | no2 | 5
+  ##  2016-06-13 17:43:50 | us-west | NULL | airquality | pm25 | 16
   ##  NOTE
   ##  <single_table_name> represents the actual value of that property.
   ##  <single_table_dimension_name_for_telegraf_measurement_name> represents the actual value
@@ -231,9 +231,9 @@ Execute unit tests with:
 ```shell
 go test -v ./plugins/outputs/timestream/...
 ```
-
 ### Mapping data from Influx to Timestream
-When writing data from Influx to Timestream, the data is written by default as follows:
+When writing data from Influx to Timestream,
+data is written by default as follows:
 ```
  1. The timestamp is written as the time field.
  2. Tags are written as dimensions.
@@ -251,7 +251,8 @@ where:
   `temperature`, `humidity`, `no2`, `pm25` are fields.
 
 When you choose to create a separate table for each measurement and store
-multiple fields in a single table row, the data will be written into Timestream as:
+multiple fields in a single table row, the data will be written into
+Timestream as:
 
 ```   
     1. The plugin will create 2 tables, namely, weather and airquality (mapping_mode=multi-table).
@@ -303,9 +304,8 @@ multiple fields in a single table row, the data will be written into Timestream 
     <measure_name_for_multi_measure_records> represents the actual value of  that property.
 
 ```
-
-
-   Furthermore, you can choose to store all the measurements in a single table and store each field in a separate table row. In that case:
+Furthermore, you can choose to store all the measurements in a single table
+and store each field in a separate table row. In that case:
 ```
    1. Timestream will create a table with name <single_table_name> (mapping_mode=single-table).
    2. Each table row will contain a single field only (use_multi_measure_records=false).
