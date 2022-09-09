@@ -70,7 +70,7 @@ func TestExternalOutputWorks(t *testing.T) {
 	wg.Wait()
 }
 
-func TestPartiallyUnserializableMetricsWorks(t *testing.T) {
+func TestPartiallyUnserializableThrowError(t *testing.T) {
 	influxSerializer, err := serializers.NewInfluxSerializer()
 	require.NoError(t, err)
 
@@ -78,11 +78,48 @@ func TestPartiallyUnserializableMetricsWorks(t *testing.T) {
 	require.NoError(t, err)
 
 	e := &Execd{
-		Command:      []string{exe, "-testoutput"},
-		Environment:  []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
-		RestartDelay: config.Duration(5 * time.Second),
-		serializer:   influxSerializer,
-		Log:          testutil.Logger{},
+		Command:                  []string{exe, "-testoutput"},
+		Environment:              []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
+		RestartDelay:             config.Duration(5 * time.Second),
+		IgnoreSerializationError: false,
+		serializer:               influxSerializer,
+		Log:                      testutil.Logger{},
+	}
+
+	require.NoError(t, e.Init())
+
+	m1 := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu1"},
+		map[string]interface{}{"idle": 50, "sys": 30},
+		now,
+	)
+
+	m2 := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu2"},
+		map[string]interface{}{},
+		now,
+	)
+
+	require.NoError(t, e.Connect())
+	require.Error(t, e.Write([]telegraf.Metric{m1, m2}))
+	require.NoError(t, e.Close())
+}
+func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
+	influxSerializer, err := serializers.NewInfluxSerializer()
+	require.NoError(t, err)
+
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	e := &Execd{
+		Command:                  []string{exe, "-testoutput"},
+		Environment:              []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
+		RestartDelay:             config.Duration(5 * time.Second),
+		IgnoreSerializationError: true,
+		serializer:               influxSerializer,
+		Log:                      testutil.Logger{},
 	}
 
 	require.NoError(t, e.Init())

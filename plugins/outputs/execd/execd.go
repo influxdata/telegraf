@@ -21,10 +21,11 @@ import (
 var sampleConfig string
 
 type Execd struct {
-	Command      []string        `toml:"command"`
-	Environment  []string        `toml:"environment"`
-	RestartDelay config.Duration `toml:"restart_delay"`
-	Log          telegraf.Logger
+	Command                  []string        `toml:"command"`
+	Environment              []string        `toml:"environment"`
+	RestartDelay             config.Duration `toml:"restart_delay"`
+	IgnoreSerializationError bool            `toml:"ignore_serialization_error"`
+	Log                      telegraf.Logger
 
 	process    *process.Process
 	serializer serializers.Serializer
@@ -81,8 +82,12 @@ func (e *Execd) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		b, err := e.serializer.Serialize(m)
 		if err != nil {
-			e.Log.Warn("Skipping metric due to a serialization error: %s", err)
-			continue
+			if e.IgnoreSerializationError {
+				e.Log.Error("Skipping metric due to a serialization error: %w", err)
+				continue
+			} else {
+				return fmt.Errorf("error serializing metrics: %w", err)
+			}
 		}
 
 		if _, err = e.process.Stdin.Write(b); err != nil {
