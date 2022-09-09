@@ -151,10 +151,12 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for slaveID, requests := range m.requests {
+		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
 		if err := m.readSlaveData(slaveID, requests); err != nil {
 			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
 			mberr, ok := err.(*mb.Error)
 			if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+				m.Log.Debugf("Reconnecting to %s...", m.Controller)
 				if err := m.disconnect(); err != nil {
 					return fmt.Errorf("disconnecting failed: %w", err)
 				}
