@@ -1050,9 +1050,9 @@ func TestRetryFailExhausted(t *testing.T) {
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
 
-	err := modbus.Gather(&acc)
-	require.Error(t, err)
-	require.Equal(t, "modbus: exception '6' (server device busy), function '129'", err.Error())
+	require.NoError(t, modbus.Gather(&acc))
+	require.Len(t, acc.Errors, 1)
+	require.Error(t, acc.FirstError(), "modbus: exception '6' (server device busy), function '129'")
 }
 
 func TestRetryFailIllegal(t *testing.T) {
@@ -1072,7 +1072,8 @@ func TestRetryFailIllegal(t *testing.T) {
 			data[1] = byte(0)
 
 			return data, &mbserver.IllegalFunction
-		})
+		},
+	)
 
 	modbus := Modbus{
 		Name:       "TestRetryFailExhausted",
@@ -1092,9 +1093,9 @@ func TestRetryFailIllegal(t *testing.T) {
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
 
-	err := modbus.Gather(&acc)
-	require.Error(t, err)
-	require.Equal(t, "modbus: exception '1' (illegal function), function '129'", err.Error())
+	require.NoError(t, modbus.Gather(&acc))
+	require.Len(t, acc.Errors, 1)
+	require.Error(t, acc.FirstError(), "modbus: exception '1' (illegal function), function '129'")
 	require.Equal(t, counter, 1)
 }
 
