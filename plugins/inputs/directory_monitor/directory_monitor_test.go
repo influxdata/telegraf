@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -536,6 +537,11 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 	finishedDirectory := t.TempDir()
 	processDirectory := t.TempDir()
 
+	filesToIgnore := `sub/test.json`
+	if runtime.GOOS == "windows" {
+		filesToIgnore = `\\sub\\test.json`
+	}
+
 	// Init plugin.
 	r := DirectoryMonitor{
 		Directory:          processDirectory,
@@ -544,7 +550,7 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 		MaxBufferedMetrics: defaultMaxBufferedMetrics,
 		FileQueueSize:      defaultFileQueueSize,
 		ParseMethod:        "at-once",
-		FilesToIgnore:      []string{"sub/test.json"},
+		FilesToIgnore:      []string{filesToIgnore},
 	}
 	err := r.Init()
 	require.NoError(t, err)
