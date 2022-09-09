@@ -106,6 +106,7 @@ func TestPartiallyUnserializableThrowError(t *testing.T) {
 	require.Error(t, e.Write([]telegraf.Metric{m1, m2}))
 	require.NoError(t, e.Close())
 }
+
 func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
 	influxSerializer, err := serializers.NewInfluxSerializer()
 	require.NoError(t, err)
