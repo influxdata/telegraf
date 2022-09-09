@@ -1231,7 +1231,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
-		"json_timestamp_format", "json_timestamp_units",
+		"json_timestamp_format", "json_timestamp_units", "json_transformation",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"prometheus_compact_encoding",
 		"splunkmetric_hec_routing", "splunkmetric_multimetric",
