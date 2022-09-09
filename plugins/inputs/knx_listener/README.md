@@ -12,7 +12,7 @@ underlying "knx-go" project site (<https://github.com/vapourismo/knx-go>).
 [[inputs.knx_listener]]
   ## Type of KNX-IP interface.
   ## Can be either "tunnel_udp", "tunnel_tcp", "tunnel" (alias for tunnel_udp) or "router".
-  # service_type = "tunnel_udp"
+  # service_type = "tunnel"
 
   ## Address of the KNX-IP interface.
   service_address = "localhost:3671"
