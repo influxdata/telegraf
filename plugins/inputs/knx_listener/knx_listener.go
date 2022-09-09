@@ -38,6 +38,7 @@ type Measurement struct {
 type KNXListener struct {
 	ServiceType    string          `toml:"service_type"`
 	ServiceAddress string          `toml:"service_address"`
+	ServiceProto   string          `toml:"service_proto"`
 	Measurements   []Measurement   `toml:"measurement"`
 	Log            telegraf.Logger `toml:"-"`
 
@@ -83,16 +84,23 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Connect to the KNX-IP interface
-	kl.Log.Infof("Trying to connect to %q at %q", kl.ServiceType, kl.ServiceAddress)
+	kl.Log.Infof("Trying to connect to %q at %q:%q", kl.ServiceType, kl.ServiceProto, kl.ServiceAddress)
 	switch kl.ServiceType {
 	case "tunnel":
-		c, err := knx.NewGroupTunnel(kl.ServiceAddress, knx.DefaultTunnelConfig)
+		tunnelconfig := knx.DefaultTunnelConfig
+		if kl.ServiceProto == "TCP" {
+			tunnelconfig.UseTCP = true
+		}
+		c, err := knx.NewGroupTunnel(kl.ServiceAddress, tunnelconfig)
 		if err != nil {
 			return err
 		}
 		kl.client = &c
 	case "router":
 		c, err := knx.NewGroupRouter(kl.ServiceAddress, knx.DefaultRouterConfig)
+		if kl.ServiceProto == "TCP" {
+			return fmt.Errorf("TCP is not supported in router configuration")
+		}
 		if err != nil {
 			return err
 		}
