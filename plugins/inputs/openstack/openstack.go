@@ -1,4 +1,3 @@
-//go:generate ../../../tools/readme_config_includer/generator
 // Package openstack implements an OpenStack input plugin for Telegraf
 //
 // The OpenStack input plug is a simple two phase metric collector.  In the first
@@ -7,6 +6,8 @@
 //
 // No aggregation is performed by the input plugin, instead queries to InfluxDB should
 // be used to gather global totals of things such as tag frequency.
+//
+//go:generate ../../../tools/readme_config_includer/generator
 package openstack
 
 import (
@@ -45,6 +46,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 

@@ -347,7 +347,7 @@ BEGIN
 
 `
 
-//Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
+// Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
 const sqlServerSchedulersV2 string = `
 SET DEADLOCK_PRIORITY - 10;
 
@@ -388,8 +388,11 @@ EXEC sp_executesql @SqlStatement
 
 /*
 This string defines a SQL statements to retrieve Performance Counters as documented here -
+
 	SQL Server Performance Objects - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects?view=sql-server-ver15#SQLServerPOs
+
 Some of the specific objects used are -
+
 	MSSQL$*:Access Methods - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object?view=sql-server-ver15
 	MSSQL$*:Buffer Manager - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object?view=sql-server-ver15
 	MSSQL$*:Databases - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-ver15
@@ -1318,7 +1321,7 @@ LEFT OUTER JOIN sys.dm_exec_requests AS r
 OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt
 WHERE 1 = 1
 	AND (r.session_id IS NOT NULL AND (s.is_user_process = 1 
-	OR r.status COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')))
+	OR r.status COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')) AND r.session_id <> @@SPID)
 	OR  (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
 OPTION(MAXDOP 1)'
 

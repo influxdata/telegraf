@@ -18,6 +18,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -233,7 +234,7 @@ func (g *Gauge) setValue(v interface{}) error {
 	return nil
 }
 
-//Close is used to close the connection to librato Output
+// Close is used to close the connection to librato Output
 func (l *Librato) Close() error {
 	return nil
 }

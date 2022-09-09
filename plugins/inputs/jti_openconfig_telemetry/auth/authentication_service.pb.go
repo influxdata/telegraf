@@ -84,7 +84,6 @@ func (x *LoginRequest) GetClientId() string {
 	return ""
 }
 
-//
 // The response message containing the result of login attempt.
 // result value of true indicates success and false indicates
 // failure
