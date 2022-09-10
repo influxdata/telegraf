@@ -1,0 +1,15 @@
+{
+  "id": "9990002665",
+  "deviceType": "HUB",
+  "sensors": [],
+  "segment": {
+    "id": "68e384b9-129c-4b41-9fc3-66af3d80e7b6",
+    "name": "AirthingsHub",
+    "started": "2021-03-27T13:28:58",
+    "active": true
+  },
+  "location": {
+    "id": "85fb5d47-96e9-4c2e-a427-14e47605516f",
+    "name": "-"
+  }
+}

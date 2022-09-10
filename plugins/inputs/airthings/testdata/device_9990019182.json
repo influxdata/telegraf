@@ -1,0 +1,20 @@
+{
+  "id": "9990019182",
+  "deviceType": "WAVE_MINI",
+  "sensors": [
+    "temp",
+    "humidity",
+    "voc",
+    "mold"
+  ],
+  "segment": {
+    "id": "c6ddc7f5-e052-4969-8cca-f79f6a96b4f1",
+    "name": "VOC",
+    "started": "2021-03-29T07:19:01",
+    "active": true
+  },
+  "location": {
+    "id": "3e401c4f-ea93-457b-944d-d5e97aae8148",
+    "name": "Home"
+  }
+}

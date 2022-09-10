@@ -1,0 +1,12 @@
+{
+  "data": {
+    "battery": 78,
+    "humidity": 24.0,
+    "mold": 0.0,
+    "rssi": -51,
+    "temp": 22.9,
+    "time": 1648624138,
+    "voc": 161.0,
+    "relayDeviceType": "hub"
+  }
+}

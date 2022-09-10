@@ -1,0 +1,19 @@
+{
+  "id": "9990012993",
+  "deviceType": "WAVE_GEN2",
+  "sensors": [
+    "radonShortTermAvg",
+    "temp",
+    "humidity"
+  ],
+  "segment": {
+    "id": "3f2f2e23-f81d-46dd-8da6-9c5ed051b6e5",
+    "name": "Basement",
+    "started": "2022-03-28T07:50:44",
+    "active": true
+  },
+  "location": {
+    "id": "3e401c4f-ea93-457b-944d-d5e97aae8148",
+    "name": "Home"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "data": {
+    "battery": 100,
+    "humidity": 23.0,
+    "radonShortTermAvg": 165.0,
+    "rssi": -59,
+    "temp": 23.3,
+    "time": 1648623946,
+    "relayDeviceType": "hub"
+  }
+}

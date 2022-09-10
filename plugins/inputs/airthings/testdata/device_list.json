@@ -1,0 +1,80 @@
+{
+  "devices": [
+    {
+      "id": "9990002665",
+      "deviceType": "HUB",
+      "sensors": [],
+      "segment": {
+        "id": "68e384b9-129c-4b41-9fc3-66af3d80e7b6",
+        "name": "AirthingsHub",
+        "started": "2120-10-27T12:29:28",
+        "active": true
+      },
+      "location": {
+        "id": "85fb5d47-96e9-4c2e-a427-14e47605516f",
+        "name": "-"
+      }
+    },
+    {
+      "id": "9990019182",
+      "deviceType": "WAVE_MINI",
+      "sensors": [
+        "temp",
+        "humidity",
+        "voc",
+        "mold"
+      ],
+      "segment": {
+        "id": "c6ddc7f5-e052-4969-8cca-f79f6a96b4f1",
+        "name": "VOC",
+        "started": "2120-09-12T07:20:28",
+        "active": true
+      },
+      "location": {
+        "id": "3e401c4f-ea93-457b-944d-d5e97aae8148",
+        "name": "Home"
+      }
+    },
+    {
+      "id": "9990131459",
+      "deviceType": "WAVE_PLUS",
+      "sensors": [
+        "radonShortTermAvg",
+        "temp",
+        "humidity",
+        "pressure",
+        "co2",
+        "voc"
+      ],
+      "segment": {
+        "id": "2bd162ce-4470-429f-8eff-4680ed5c6197",
+        "name": "Bedroom",
+        "started": "2122-10-22T20:19:18",
+        "active": true
+      },
+      "location": {
+        "id": "3e401c4f-ea93-457b-944d-d5e97aae8148",
+        "name": "Home"
+      }
+    },
+    {
+      "id": "9990012993",
+      "deviceType": "WAVE_GEN2",
+      "sensors": [
+        "radonShortTermAvg",
+        "temp",
+        "humidity"
+      ],
+      "segment": {
+        "id": "3f2f2e23-f81d-46dd-8da6-9c5ed051b6e5",
+        "name": "Basement",
+        "started": "2122-11-11T17:52:43",
+        "active": true
+      },
+      "location": {
+        "id": "3e401c4f-ea93-457b-944d-d5e97aae8148",
+        "name": "Home"
+      }
+    }
+  ]
+}

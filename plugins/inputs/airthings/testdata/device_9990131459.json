@@ -1,0 +1,22 @@
+{
+  "id": "9990131459",
+  "deviceType": "WAVE_PLUS",
+  "sensors": [
+    "radonShortTermAvg",
+    "temp",
+    "humidity",
+    "pressure",
+    "co2",
+    "voc"
+  ],
+  "segment": {
+    "id": "2bd162ce-4470-429f-8eff-4680ed5c6197",
+    "name": "Bedroom",
+    "started": "2022-03-24T18:29:08",
+    "active": true
+  },
+  "location": {
+    "id": "3e401c4f-ea93-457b-944d-d5e97aae8148",
+    "name": "Home"
+  }
+}
