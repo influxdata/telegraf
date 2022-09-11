@@ -4,11 +4,13 @@ package airthings
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/oauth2/clientcredentials"
 	"net/http"
 	"net/url"
@@ -20,6 +22,8 @@ import (
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //
 //go:embed sample.conf
+var sampleConfig string
+
 type DeviceList struct {
 	Devices []struct {
 		Id         string        `json:"id"`
@@ -54,34 +58,9 @@ const (
 	TagSegmentStarted = Segment + ".started"
 )
 
-var sampleConfig = `
-  [[inputs.airthings]]
-  ## URL is the address to get metrics from
-  url = "https://ext-api.airthings.com/v1/"
-
-  ## Show inactive devices true
-  showInactive = true
-
-  ## Timeout for HTTPS
-  # timeout = "5s"
-
-  ## Interval for the Consumers API (The API is limited to 120 requests per hour)
-  ## One API call is made to get the list of devices, the two calls per device
-  ## e.g. 3 devices will generate 1 + (3 * 2) = 7 calls per execution cycle.
-  ## 120 / 7 = 17 max call / hour
-  ## 60 min / 17 = 3,5 minutes pause between calls, 3,5 min = 210 sec interval
-  ## 210 sec + safety margin = 225 sec
-  interval = "225s"
-
-  ## OAuth2 Client Credentials Grant
-  client_id = "<INSERT CLIENT_ID HERE>"
-  client_secret = "<INSERT CLIENT_SECRET HERE>"
-  # insecureHttps = [true|false]
-  # token_url = "https://accounts-api.airthings.com/v1/token"
-  # scopes = ["read:device:current_values"]
-`
-
 type Airthings struct {
+	Log telegraf.Logger `toml:"-"`
+
 	URL           string          `toml:"url"`
 	ShowInactive  bool            `toml:"showInactive"`
 	ClientId      string          `toml:"client_id"`
@@ -92,7 +71,6 @@ type Airthings struct {
 	Timeout       config.Duration `toml:"timeout"`
 
 	tls.ClientConfig
-	Log        telegraf.Logger
 	cfg        *clientcredentials.Config
 	httpClient *http.Client
 	timer      time.Time
@@ -107,7 +85,8 @@ func (m *Airthings) Description() string {
 }
 
 func (m *Airthings) Init() error {
-	m.Log.Debug("Init")
+
+	m.Log.Info("Init")
 	m.timer = time.Now()
 
 	if m.cfg == nil {
@@ -268,4 +247,8 @@ func (m *Airthings) doHttpRequest(httpMethod string, baseUrl string, pathCompone
 	buf := &bytes.Buffer{}
 	buf.ReadFrom(resp.Body)
 	return buf.Bytes(), nil
+}
+
+func init() {
+	inputs.Add("airthings", func() telegraf.Input { return &Airthings{} })
 }
