@@ -23,7 +23,9 @@ const (
 	emulatorHostEnv  = "STORAGE_EMULATOR_HOST"
 	defaultOffSetKey = "offset-key.json"
 )
-
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 type GCS struct {
 	CredentialsFile string `toml:"credentials_file"`
 	Bucket          string `toml:"bucket"`
