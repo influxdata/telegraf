@@ -98,20 +98,14 @@ func (m *Airthings) Init() error {
 		}
 	}
 
-	//ctx := context.WithValue(oauth2.NoContext, oauth2.HTTPClient, myClient)
 	m.httpClient = m.cfg.Client(context.Background())
-
-	/*
-		customTransport := http.DefaultTransport.(*http.Transport).Clone()
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		client := &http.Client{Transport: customTransport}
-	*/
 
 	return nil
 }
 
 func (m *Airthings) Gather(acc telegraf.Accumulator) error {
-	m.Log.Debugf("Gather duration since last run %s", time.Since(m.timer))
+	m.Log.Infof("Gather duration since last run %s", time.Since(m.timer))
+	m.timer = time.Now()
 	deviceList, err := m.deviceList()
 	if err != nil {
 		return err
@@ -203,14 +197,9 @@ func (m *Airthings) deviceList() (*DeviceList, error) {
 		m.Log.Errorf("error parsing url %v, %v", m.URL, err)
 		return nil, err
 	}
+
 	u.Query().Add("showInactive", strconv.FormatBool(m.ShowInactive))
-	/*
-		if PathDevices == path {
-			query := r.URL.Query()
-			query.Add("showInactive", strconv.FormatBool(m.ShowInactive))
-			r.URL.RawQuery = query.Encode()
-		}
-	*/
+
 	resp, err := m.doHttpRequest(http.MethodGet, u.String(), "/devices")
 	if err != nil {
 		return nil, err
