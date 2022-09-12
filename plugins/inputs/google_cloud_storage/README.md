@@ -22,7 +22,7 @@ The Google Cloud Storage plugin will collect metrics on the given Google Cloud S
   ## Optional. Filepath for GCP credentials JSON file to authorize calls to
   ## Google Cloud Storage APIs. If not set explicitly, Telegraf will attempt to use
   ## Application Default Credentials, which is preferred.
-  credentials_file = "/Users/gkatzioura/Downloads/bigquerttest-9a75af07ee11.json"
+  credentials_file = "/Users/user/Downloads/service-account.json"
 
   data_format = "json"
 
