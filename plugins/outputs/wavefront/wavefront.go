@@ -4,6 +4,7 @@ package wavefront
 import (
 	_ "embed"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -14,27 +15,29 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
 const maxTagLength = 254
 
 type Wavefront struct {
-	URL             string                          `toml:"url"`
-	Token           string                          `toml:"token"`
-	Host            string                          `toml:"host"`
-	Port            int                             `toml:"port"`
-	Prefix          string                          `toml:"prefix"`
-	SimpleFields    bool                            `toml:"simple_fields"`
-	MetricSeparator string                          `toml:"metric_separator"`
-	ConvertPaths    bool                            `toml:"convert_paths"`
-	ConvertBool     bool                            `toml:"convert_bool"`
-	UseRegex        bool                            `toml:"use_regex"`
-	UseStrict       bool                            `toml:"use_strict"`
-	TruncateTags    bool                            `toml:"truncate_tags"`
-	ImmediateFlush  bool                            `toml:"immediate_flush"`
-	SourceOverride  []string                        `toml:"source_override"`
-	StringToNumber  map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
+	URL                  string                          `toml:"url"`
+	Token                string                          `toml:"token"`
+	Host                 string                          `toml:"host" deprecated:"2.4.0;use url instead"`
+	Port                 int                             `toml:"port" deprecated:"2.4.0;use url instead"`
+	Prefix               string                          `toml:"prefix"`
+	SimpleFields         bool                            `toml:"simple_fields"`
+	MetricSeparator      string                          `toml:"metric_separator"`
+	ConvertPaths         bool                            `toml:"convert_paths"`
+	ConvertBool          bool                            `toml:"convert_bool"`
+	HTTPMaximumBatchSize int                             `toml:"http_maximum_batch_size"`
+	UseRegex             bool                            `toml:"use_regex"`
+	UseStrict            bool                            `toml:"use_strict"`
+	TruncateTags         bool                            `toml:"truncate_tags"`
+	ImmediateFlush       bool                            `toml:"immediate_flush"`
+	SourceOverride       []string                        `toml:"source_override"`
+	StringToNumber       map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
@@ -76,34 +79,49 @@ func (*Wavefront) SampleConfig() string {
 	return sampleConfig
 }
 
+func senderURLFromURLAndToken(rawURL, token string) (string, error) {
+	newURL, err := url.Parse(rawURL)
+	if err != nil {
+		return "", fmt.Errorf("could not parse the provided Url: %s", rawURL)
+	}
+	newURL.User = url.User(token)
+
+	return newURL.String(), nil
+}
+
+func senderURLFromHostAndPort(host string, port int) string {
+	return fmt.Sprintf("http://%s:%d", host, port)
+}
+
 func (w *Wavefront) Connect() error {
 	flushSeconds := 5
 	if w.ImmediateFlush {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
 	}
+	var connectionURL string
 	if w.URL != "" {
 		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
-		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
-			Server:               w.URL,
-			Token:                w.Token,
-			FlushIntervalSeconds: flushSeconds,
-		})
+		connectionURLWithToken, err := senderURLFromURLAndToken(w.URL, w.Token)
 		if err != nil {
-			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.URL)
+			return err
 		}
-		w.sender = sender
+		connectionURL = connectionURLWithToken
 	} else {
-		w.Log.Debugf("connecting over tcp using Host: %q and Port: %d", w.Host, w.Port)
-		sender, err := wavefront.NewProxySender(&wavefront.ProxyConfiguration{
-			Host:                 w.Host,
-			MetricsPort:          w.Port,
-			FlushIntervalSeconds: flushSeconds,
-		})
-		if err != nil {
-			return fmt.Errorf("could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
-		}
-		w.sender = sender
+		w.Log.Warnf("configuration with host/port is deprecated. Please use url.")
+		w.Log.Debugf("connecting over http using Host: %q and Port: %d", w.Host, w.Port)
+		connectionURL = senderURLFromHostAndPort(w.Host, w.Port)
 	}
+
+	sender, err := wavefront.NewSender(connectionURL,
+		wavefront.BatchSize(w.HTTPMaximumBatchSize),
+		wavefront.FlushIntervalSeconds(flushSeconds),
+	)
+
+	if err != nil {
+		return fmt.Errorf("could not create Wavefront Sender for the provided url")
+	}
+
+	w.sender = sender
 
 	if w.ConvertPaths && w.MetricSeparator == "_" {
 		w.ConvertPaths = false
@@ -138,7 +156,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 }
 
 func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
-	ret := []*MetricPoint{}
+	ret := make([]*MetricPoint, 0)
 
 	for fieldName, value := range m.Fields() {
 		var name string
@@ -292,12 +310,13 @@ func (w *Wavefront) Close() error {
 func init() {
 	outputs.Add("wavefront", func() telegraf.Output {
 		return &Wavefront{
-			Token:           "DUMMY_TOKEN",
-			MetricSeparator: ".",
-			ConvertPaths:    true,
-			ConvertBool:     true,
-			TruncateTags:    false,
-			ImmediateFlush:  true,
+			Token:                "DUMMY_TOKEN",
+			MetricSeparator:      ".",
+			ConvertPaths:         true,
+			ConvertBool:          true,
+			TruncateTags:         false,
+			ImmediateFlush:       true,
+			HTTPMaximumBatchSize: 10000,
 		}
 	})
 }

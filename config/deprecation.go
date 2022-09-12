@@ -11,45 +11,24 @@ import (
 	"github.com/fatih/color"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-// Escalation level for the plugin or option
-type Escalation int
-
-func (e Escalation) String() string {
-	switch e {
-	case Warn:
-		return "WARN"
-	case Error:
-		return "ERROR"
-	}
-	return "NONE"
-}
-
-const (
-	// None means no deprecation
-	None Escalation = iota
-	// Warn means deprecated but still within the grace period
-	Warn
-	// Error means deprecated and beyond grace period
-	Error
-)
-
-// deprecationInfo contains all important information to describe a deprecated entity
-type deprecationInfo struct {
+// DeprecationInfo contains all important information to describe a deprecated entity
+type DeprecationInfo struct {
 	// Name of the plugin or plugin option
 	Name string
 	// LogLevel is the level of deprecation which currently corresponds to a log-level
-	LogLevel Escalation
+	LogLevel telegraf.Escalation
 	info     telegraf.DeprecationInfo
 }
 
-func (di *deprecationInfo) determineEscalation(telegrafVersion *semver.Version) error {
-	di.LogLevel = None
+func (di *DeprecationInfo) determineEscalation(telegrafVersion *semver.Version) error {
+	di.LogLevel = telegraf.None
 	if di.info.Since == "" {
 		return nil
 	}
@@ -78,19 +57,19 @@ func (di *deprecationInfo) determineEscalation(telegrafVersion *semver.Version) 
 		Patch: telegrafVersion.Patch,
 	}
 	if !version.LessThan(*removal) {
-		di.LogLevel = Error
+		di.LogLevel = telegraf.Error
 	} else if !version.LessThan(*since) {
-		di.LogLevel = Warn
+		di.LogLevel = telegraf.Warn
 	}
 	return nil
 }
 
-// pluginDeprecationInfo holds all information about a deprecated plugin or it's options
-type pluginDeprecationInfo struct {
-	deprecationInfo
+// PluginDeprecationInfo holds all information about a deprecated plugin or it's options
+type PluginDeprecationInfo struct {
+	DeprecationInfo
 
 	// Options deprecated for this plugin
-	Options []deprecationInfo
+	Options []DeprecationInfo
 }
 
 func (c *Config) incrementPluginDeprecations(category string) {
@@ -109,11 +88,11 @@ func (c *Config) incrementPluginOptionDeprecations(category string) {
 	c.Deprecations[category] = newcounts
 }
 
-func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) pluginDeprecationInfo {
-	info := pluginDeprecationInfo{
-		deprecationInfo: deprecationInfo{
+func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) PluginDeprecationInfo {
+	info := PluginDeprecationInfo{
+		DeprecationInfo: DeprecationInfo{
 			Name:     category + "." + name,
-			LogLevel: None,
+			LogLevel: telegraf.None,
 		},
 	}
 
@@ -121,25 +100,25 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 	switch category {
 	case "aggregators":
 		if pi, deprecated := aggregators.Deprecations[name]; deprecated {
-			info.deprecationInfo.info = pi
+			info.DeprecationInfo.info = pi
 		}
 	case "inputs":
 		if pi, deprecated := inputs.Deprecations[name]; deprecated {
-			info.deprecationInfo.info = pi
+			info.DeprecationInfo.info = pi
 		}
 	case "outputs":
 		if pi, deprecated := outputs.Deprecations[name]; deprecated {
-			info.deprecationInfo.info = pi
+			info.DeprecationInfo.info = pi
 		}
 	case "processors":
 		if pi, deprecated := processors.Deprecations[name]; deprecated {
-			info.deprecationInfo.info = pi
+			info.DeprecationInfo.info = pi
 		}
 	}
 	if err := info.determineEscalation(c.version); err != nil {
 		panic(fmt.Errorf("plugin %q: %v", info.Name, err))
 	}
-	if info.LogLevel != None {
+	if info.LogLevel != telegraf.None {
 		c.incrementPluginDeprecations(category)
 	}
 
@@ -159,7 +138,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		if len(tags) < 1 || tags[0] == "" {
 			return
 		}
-		optionInfo := deprecationInfo{Name: field.Name}
+		optionInfo := DeprecationInfo{Name: field.Name}
 		optionInfo.info.Since = tags[0]
 
 		if len(tags) > 1 {
@@ -172,7 +151,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 			panic(fmt.Errorf("plugin %q option %q: %v", info.Name, field.Name, err))
 		}
 
-		if optionInfo.LogLevel != None {
+		if optionInfo.LogLevel != telegraf.None {
 			c.incrementPluginOptionDeprecations(category)
 		}
 
@@ -189,30 +168,17 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 
 func (c *Config) printUserDeprecation(category, name string, plugin interface{}) error {
 	info := c.collectDeprecationInfo(category, name, plugin, false)
+	models.PrintPluginDeprecationNotice(info.LogLevel, info.Name, info.info)
 
-	switch info.LogLevel {
-	case Warn:
-		prefix := "W! " + color.YellowString("DeprecationWarning")
-		printPluginDeprecationNotice(prefix, info.Name, info.info)
-		// We will not check for any deprecated options as the whole plugin is deprecated anyway.
-		return nil
-	case Error:
-		prefix := "E! " + color.RedString("DeprecationError")
-		printPluginDeprecationNotice(prefix, info.Name, info.info)
-		// We are past the grace period
+	if info.LogLevel == telegraf.Error {
 		return fmt.Errorf("plugin deprecated")
 	}
 
 	// Print deprecated options
 	deprecatedOptions := make([]string, 0)
 	for _, option := range info.Options {
-		switch option.LogLevel {
-		case Warn:
-			prefix := "W! " + color.YellowString("DeprecationWarning")
-			printOptionDeprecationNotice(prefix, info.Name, option.Name, option.info)
-		case Error:
-			prefix := "E! " + color.RedString("DeprecationError")
-			printOptionDeprecationNotice(prefix, info.Name, option.Name, option.info)
+		models.PrintOptionDeprecationNotice(option.LogLevel, info.Name, option.Name, option.info)
+		if option.LogLevel == telegraf.Error {
 			deprecatedOptions = append(deprecatedOptions, option.Name)
 		}
 	}
@@ -224,10 +190,10 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	return nil
 }
 
-func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFilter []string) map[string][]pluginDeprecationInfo {
-	infos := make(map[string][]pluginDeprecationInfo)
+func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFilter []string) map[string][]PluginDeprecationInfo {
+	infos := make(map[string][]PluginDeprecationInfo)
 
-	infos["inputs"] = make([]pluginDeprecationInfo, 0)
+	infos["inputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range inputs.Inputs {
 		if len(inFilter) > 0 && !sliceContains(name, inFilter) {
 			continue
@@ -236,12 +202,12 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		plugin := creator()
 		info := c.collectDeprecationInfo("inputs", name, plugin, true)
 
-		if info.LogLevel != None || len(info.Options) > 0 {
+		if info.LogLevel != telegraf.None || len(info.Options) > 0 {
 			infos["inputs"] = append(infos["inputs"], info)
 		}
 	}
 
-	infos["outputs"] = make([]pluginDeprecationInfo, 0)
+	infos["outputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range outputs.Outputs {
 		if len(outFilter) > 0 && !sliceContains(name, outFilter) {
 			continue
@@ -250,12 +216,12 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		plugin := creator()
 		info := c.collectDeprecationInfo("outputs", name, plugin, true)
 
-		if info.LogLevel != None || len(info.Options) > 0 {
+		if info.LogLevel != telegraf.None || len(info.Options) > 0 {
 			infos["outputs"] = append(infos["outputs"], info)
 		}
 	}
 
-	infos["processors"] = make([]pluginDeprecationInfo, 0)
+	infos["processors"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range processors.Processors {
 		if len(procFilter) > 0 && !sliceContains(name, procFilter) {
 			continue
@@ -264,12 +230,12 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		plugin := creator()
 		info := c.collectDeprecationInfo("processors", name, plugin, true)
 
-		if info.LogLevel != None || len(info.Options) > 0 {
+		if info.LogLevel != telegraf.None || len(info.Options) > 0 {
 			infos["processors"] = append(infos["processors"], info)
 		}
 	}
 
-	infos["aggregators"] = make([]pluginDeprecationInfo, 0)
+	infos["aggregators"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range aggregators.Aggregators {
 		if len(aggFilter) > 0 && !sliceContains(name, aggFilter) {
 			continue
@@ -278,7 +244,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		plugin := creator()
 		info := c.collectDeprecationInfo("aggregators", name, plugin, true)
 
-		if info.LogLevel != None || len(info.Options) > 0 {
+		if info.LogLevel != telegraf.None || len(info.Options) > 0 {
 			infos["aggregators"] = append(infos["aggregators"], info)
 		}
 	}
@@ -286,12 +252,12 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 	return infos
 }
 
-func (c *Config) PrintDeprecationList(plugins []pluginDeprecationInfo) {
+func (c *Config) PrintDeprecationList(plugins []PluginDeprecationInfo) {
 	sort.Slice(plugins, func(i, j int) bool { return plugins[i].Name < plugins[j].Name })
 
 	for _, plugin := range plugins {
 		switch plugin.LogLevel {
-		case Warn, Error:
+		case telegraf.Warn, telegraf.Error:
 			_, _ = fmt.Printf(
 				"  %-40s %-5s since %-5s removal in %-5s %s\n",
 				plugin.Name, plugin.LogLevel, plugin.info.Since, plugin.info.RemovalIn, plugin.info.Notice,
@@ -316,20 +282,6 @@ func printHistoricPluginDeprecationNotice(category, name string, info telegraf.D
 	log.Printf(
 		"%s: Plugin %q deprecated since version %s and removed: %s",
 		prefix, category+"."+name, info.Since, info.Notice,
-	)
-}
-
-func printPluginDeprecationNotice(prefix, name string, info telegraf.DeprecationInfo) {
-	log.Printf(
-		"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
-		prefix, name, info.Since, info.RemovalIn, info.Notice,
-	)
-}
-
-func printOptionDeprecationNotice(prefix, plugin, option string, info telegraf.DeprecationInfo) {
-	log.Printf(
-		"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
-		prefix, option, plugin, info.Since, info.RemovalIn, info.Notice,
 	)
 }
 

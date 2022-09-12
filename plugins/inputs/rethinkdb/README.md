@@ -4,9 +4,6 @@ Collect metrics from [RethinkDB](https://www.rethinkdb.com/).
 
 ## Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage rethinkdb`.
-
 ```toml @sample.conf
 # Read metrics from one or many RethinkDB servers
 [[inputs.rethinkdb]]

@@ -1,9 +1,11 @@
 # HAProxy Input Plugin
 
-The [HAProxy](http://www.haproxy.org/) input plugin gathers
-[statistics](https://cbonte.github.io/haproxy-dconv/1.9/intro.html#3.3.16)
-using the [stats socket](https://cbonte.github.io/haproxy-dconv/1.9/management.html#9.3)
-or [HTTP statistics page](https://cbonte.github.io/haproxy-dconv/1.9/management.html#9) of a HAProxy server.
+The [HAProxy](http://www.haproxy.org/) input plugin gathers [statistics][1]
+using the [stats socket][2] or [HTTP statistics page][3] of a HAProxy server.
+
+[1]: https://cbonte.github.io/haproxy-dconv/1.9/intro.html#3.3.16
+[2]: https://cbonte.github.io/haproxy-dconv/1.9/management.html#9.3
+[3]: https://cbonte.github.io/haproxy-dconv/1.9/management.html#9
 
 ## Configuration
 
@@ -42,27 +44,28 @@ or [HTTP statistics page](https://cbonte.github.io/haproxy-dconv/1.9/management.
 
 ### HAProxy Configuration
 
-The following information may be useful when getting started, but please
-consult the HAProxy documentation for complete and up to date instructions.
+The following information may be useful when getting started, but please consult
+the HAProxy documentation for complete and up to date instructions.
 
-The [`stats enable`](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4-stats%20enable)
-option can be used to add unauthenticated access over HTTP using the default
-settings.  To enable the unix socket begin by reading about the
-[`stats socket`](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#3.1-stats%20socket)
-option.
+The [`stats enable`][4] option can be used to add unauthenticated access over
+HTTP using the default settings.  To enable the unix socket begin by reading
+about the [`stats socket`][5] option.
+
+[4]: https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4-stats%20enable
+[5]: https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#3.1-stats%20socket
 
 ### servers
 
 Server addresses must explicitly start with 'http' if you wish to use HAProxy
-status page.  Otherwise, addresses will be assumed to be an UNIX socket and
-any protocol (if present) will be discarded.
+status page.  Otherwise, addresses will be assumed to be an UNIX socket and any
+protocol (if present) will be discarded.
 
 When using socket names, wildcard expansion is supported so plugin can gather
 stats from multiple sockets at once.
 
-To use HTTP Basic Auth add the username and password in the userinfo section
-of the URL: `http://user:password@1.2.3.4/haproxy?stats`.  The credentials are
-sent via the `Authorization` header and not using the request URL.
+To use HTTP Basic Auth add the username and password in the userinfo section of
+the URL: `http://user:password@1.2.3.4/haproxy?stats`.  The credentials are sent
+via the `Authorization` header and not using the request URL.
 
 ### keep_field_names
 
@@ -88,7 +91,7 @@ The following renames are made:
 ## Metrics
 
 For more details about collected metrics reference the [HAProxy CSV format
-documentation](https://cbonte.github.io/haproxy-dconv/1.8/management.html#9.1).
+documentation][6].
 
 - haproxy
   - tags:
@@ -108,6 +111,8 @@ documentation](https://cbonte.github.io/haproxy-dconv/1.8/management.html#9.1).
     - `cookie` (string)
     - `lastsess` (int)
     - **all other stats** (int)
+
+[6]: https://cbonte.github.io/haproxy-dconv/1.8/management.html#9.1
 
 ## Example Output
 

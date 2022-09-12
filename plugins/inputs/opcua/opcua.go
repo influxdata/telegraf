@@ -22,6 +22,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -205,7 +206,7 @@ func tagsSliceToMap(tags [][]string) (map[string]string, error) {
 	return m, nil
 }
 
-//InitNodes Method on OpcUA
+// InitNodes Method on OpcUA
 func (o *OpcUA) InitNodes() error {
 	for _, node := range o.RootNodes {
 		o.nodes = append(o.nodes, Node{
@@ -295,7 +296,7 @@ func newMP(n *Node) metricParts {
 
 func (o *OpcUA) validateOPCTags() error {
 	nameEncountered := map[metricParts]struct{}{}
-	for _, node := range o.nodes {
+	for i, node := range o.nodes {
 		mp := newMP(&node)
 		//check empty name
 		if node.tag.FieldName == "" {
@@ -312,16 +313,20 @@ func (o *OpcUA) validateOPCTags() error {
 
 		//search identifier type
 		switch node.tag.IdentifierType {
-		case "s", "i", "g", "b":
+		case "i":
+			if _, err := strconv.Atoi(node.tag.Identifier); err != nil {
+				return fmt.Errorf("identifier type '%s' does not match the type of identifier '%s'", node.tag.IdentifierType, node.tag.Identifier)
+			}
+		case "s", "g", "b":
 			// Valid identifier type - do nothing.
 		default:
 			return fmt.Errorf("invalid identifier type '%s' in '%s'", node.tag.IdentifierType, node.tag.FieldName)
 		}
 
-		node.idStr = BuildNodeID(node.tag)
+		o.nodes[i].idStr = BuildNodeID(node.tag)
 
 		//parse NodeIds and NodeIds errors
-		nid, niderr := ua.ParseNodeID(node.idStr)
+		nid, niderr := ua.ParseNodeID(o.nodes[i].idStr)
 		// build NodeIds and Errors
 		o.nodeIDs = append(o.nodeIDs, nid)
 		o.nodeIDerror = append(o.nodeIDerror, niderr)

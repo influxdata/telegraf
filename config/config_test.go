@@ -23,13 +23,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
 	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
-	c.LoadConfig("./testdata/single_plugin_env_vars.toml")
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin_env_vars.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
@@ -146,18 +147,13 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedConfigs[0].Tags = make(map[string]string)
 
 	expectedPlugins[1] = inputs.Inputs["exec"]().(*MockupInputPlugin)
-	parserConfig := &parsers.Config{
+	parser := &json.Parser{
 		MetricName: "exec",
-		DataFormat: "json",
-		JSONStrict: true,
+		Strict:     true,
 	}
-	p, err := parsers.NewParser(parserConfig)
-	require.NoError(t, err)
+	require.NoError(t, parser.Init())
 
-	// Inject logger to have proper struct for comparison
-	models.SetLoggerOnPlugin(p, models.NewLogger("parsers", parserConfig.DataFormat, parserConfig.MetricName))
-
-	expectedPlugins[1].SetParser(p)
+	expectedPlugins[1].SetParser(parser)
 	expectedPlugins[1].Command = "/usr/bin/myothercollector --foo=bar"
 	expectedConfigs[1] = &models.InputConfig{
 		Name:              "exec",
@@ -208,10 +204,26 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		require.NotNil(t, input.Log)
 		input.Log = nil
 
-		// Ignore the parser if not expected
-		if expectedPlugins[i].parser == nil {
-			input.parser = nil
+		// Check the parsers if any
+		if expectedPlugins[i].parser != nil {
+			runningParser, ok := input.parser.(*models.RunningParser)
+			require.True(t, ok)
+
+			// We only use the JSON parser here
+			parser, ok := runningParser.Parser.(*json.Parser)
+			require.True(t, ok)
+
+			// Prepare parser for comparison
+			require.NoError(t, parser.Init())
+			parser.Log = nil
+
+			// Compare the parser
+			require.Equalf(t, expectedPlugins[i].parser, parser, "Plugin %d: incorrect parser produced", i)
 		}
+
+		// Ignore the parsers for further comparisons
+		input.parser = nil
+		expectedPlugins[i].parser = nil
 
 		require.Equalf(t, expectedPlugins[i], plugin.Input, "Plugin %d: incorrect struct produced", i)
 		require.Equalf(t, expectedConfigs[i], plugin.Config, "Plugin %d: incorrect config produced", i)
@@ -406,7 +418,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	}
 
 	override := map[string]struct {
-		cfg   *parsers.Config
 		param map[string]interface{}
 		mask  []string
 	}{
@@ -414,17 +425,9 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
-			mask: []string{"TimeFunc"},
-		},
-		"logfmt": {
-			mask: []string{"Now"},
+			mask: []string{"TimeFunc", "ResetMode"},
 		},
 		"xpath_protobuf": {
-			cfg: &parsers.Config{
-				MetricName:        "parser_test_new",
-				XPathProtobufFile: "testdata/addressbook.proto",
-				XPathProtobufType: "addressbook.AddressBook",
-			},
 			param: map[string]interface{}{
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
@@ -435,46 +438,26 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
 		formatCfg := &cfg
-		settings, hasOverride := override[format]
-		if hasOverride && settings.cfg != nil {
-			formatCfg = settings.cfg
-		}
 		formatCfg.DataFormat = format
 
 		logger := models.NewLogger("parsers", format, cfg.MetricName)
 
-		// Try with the new format
-		if creator, found := parsers.Parsers[format]; found {
-			t.Logf("using new format parser for %q...", format)
-			parserNew := creator(formatCfg.MetricName)
-			if settings, found := override[format]; found {
-				s := reflect.Indirect(reflect.ValueOf(parserNew))
-				for key, value := range settings.param {
-					v := reflect.ValueOf(value)
-					s.FieldByName(key).Set(v)
-				}
-			}
-			models.SetLoggerOnPlugin(parserNew, logger)
-			if p, ok := parserNew.(telegraf.Initializer); ok {
-				require.NoError(t, p.Init())
-			}
-			expected = append(expected, parserNew)
-			continue
-		}
+		creator, found := parsers.Parsers[format]
+		require.Truef(t, found, "No parser for format %q", format)
 
-		// Try with the old format
-		parserOld, err := parsers.NewParser(formatCfg)
-		if err == nil {
-			t.Logf("using old format parser for %q...", format)
-			models.SetLoggerOnPlugin(parserOld, logger)
-			if p, ok := parserOld.(telegraf.Initializer); ok {
-				require.NoError(t, p.Init())
+		parser := creator(formatCfg.MetricName)
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(parser))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
 			}
-			expected = append(expected, parserOld)
-			continue
 		}
-		require.Containsf(t, err.Error(), "invalid data format:", "setup %q failed: %v", format, err)
-		require.Failf(t, "%q neither found in old nor new format", format)
+		models.SetLoggerOnPlugin(parser, logger)
+		if p, ok := parser.(telegraf.Initializer); ok {
+			require.NoError(t, p.Init())
+		}
+		expected = append(expected, parser)
 	}
 	require.Len(t, expected, len(formats))
 
@@ -485,6 +468,7 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 		require.True(t, ok)
 		// Get the parser set with 'SetParser()'
 		if p, ok := input.Parser.(*models.RunningParser); ok {
+			require.NoError(t, p.Init())
 			actual = append(actual, p.Parser)
 		} else {
 			actual = append(actual, input.Parser)
@@ -555,7 +539,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	}
 
 	override := map[string]struct {
-		cfg   *parsers.Config
 		param map[string]interface{}
 		mask  []string
 	}{
@@ -563,17 +546,9 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
-			mask: []string{"TimeFunc"},
-		},
-		"logfmt": {
-			mask: []string{"Now"},
+			mask: []string{"TimeFunc", "ResetMode"},
 		},
 		"xpath_protobuf": {
-			cfg: &parsers.Config{
-				MetricName:        "parser_test_new",
-				XPathProtobufFile: "testdata/addressbook.proto",
-				XPathProtobufType: "addressbook.AddressBook",
-			},
 			param: map[string]interface{}{
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
@@ -584,46 +559,26 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
 		formatCfg := &cfg
-		settings, hasOverride := override[format]
-		if hasOverride && settings.cfg != nil {
-			formatCfg = settings.cfg
-		}
 		formatCfg.DataFormat = format
 
 		logger := models.NewLogger("parsers", format, cfg.MetricName)
 
-		// Try with the new format
-		if creator, found := parsers.Parsers[format]; found {
-			t.Logf("using new format parser for %q...", format)
-			parserNew := creator(formatCfg.MetricName)
-			if settings, found := override[format]; found {
-				s := reflect.Indirect(reflect.ValueOf(parserNew))
-				for key, value := range settings.param {
-					v := reflect.ValueOf(value)
-					s.FieldByName(key).Set(v)
-				}
-			}
-			models.SetLoggerOnPlugin(parserNew, logger)
-			if p, ok := parserNew.(telegraf.Initializer); ok {
-				require.NoError(t, p.Init())
-			}
-			expected = append(expected, parserNew)
-			continue
-		}
+		creator, found := parsers.Parsers[format]
+		require.Truef(t, found, "No parser for format %q", format)
 
-		// Try with the old format
-		parserOld, err := parsers.NewParser(formatCfg)
-		if err == nil {
-			t.Logf("using old format parser for %q...", format)
-			models.SetLoggerOnPlugin(parserOld, logger)
-			if p, ok := parserOld.(telegraf.Initializer); ok {
-				require.NoError(t, p.Init())
+		parser := creator(formatCfg.MetricName)
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(parser))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
 			}
-			expected = append(expected, parserOld)
-			continue
 		}
-		require.Containsf(t, err.Error(), "invalid data format:", "setup %q failed: %v", format, err)
-		require.Failf(t, "%q neither found in old nor new format", format)
+		models.SetLoggerOnPlugin(parser, logger)
+		if p, ok := parser.(telegraf.Initializer); ok {
+			require.NoError(t, p.Init())
+		}
+		expected = append(expected, parser)
 	}
 	require.Len(t, expected, len(formats))
 
@@ -634,6 +589,7 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 		require.True(t, ok)
 		// Get the parser set with 'SetParser()'
 		if p, ok := input.Parser.(*models.RunningParser); ok {
+			require.NoError(t, p.Init())
 			actual = append(actual, p.Parser)
 		} else {
 			actual = append(actual, input.Parser)
@@ -662,7 +618,7 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected[i], actual[i], options...)
 		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)

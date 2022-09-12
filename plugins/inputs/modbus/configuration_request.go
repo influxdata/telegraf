@@ -2,11 +2,13 @@ package modbus
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"hash/maphash"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample_request.conf
 var sampleConfigPartPerRequest string
 
@@ -63,6 +65,12 @@ func (c *ConfigurationPerRequest) Check() error {
 		// Set the default for measurement if required
 		if def.Measurement == "" {
 			def.Measurement = "modbus"
+		}
+
+		// Reject any configuration without fields as it
+		// makes no sense to not define anything but a request.
+		if len(def.Fields) == 0 {
+			return errors.New("found request section without fields")
 		}
 
 		// Check the fields

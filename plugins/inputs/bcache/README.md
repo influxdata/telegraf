@@ -2,7 +2,7 @@
 
 Get bcache stat from stats_total directory and dirty_data file.
 
-## Measurements
+## Metrics
 
 Meta:
 
@@ -53,8 +53,6 @@ cache_readaheads
 
 ## Configuration
 
-Using this configuration:
-
 ```toml @sample.conf
 # Read metrics of bcache from stats_total and dirty_data
 [[inputs.bcache]]
@@ -68,13 +66,11 @@ Using this configuration:
   bcacheDevs = ["bcache0"]
 ```
 
-When run with:
+## Example Output
 
 ```shell
 ./telegraf --config telegraf.conf --input-filter bcache --test
 ```
-
-It produces:
 
 ```shell
 * Plugin: bcache, Collection 1

@@ -5,9 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +19,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -32,7 +31,7 @@ const (
 type KubernetesInventory struct {
 	URL               string          `toml:"url"`
 	BearerToken       string          `toml:"bearer_token"`
-	BearerTokenString string          `toml:"bearer_token_string"`
+	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 	Namespace         string          `toml:"namespace"`
 	ResponseTimeout   config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
 	ResourceExclude   []string        `toml:"resource_exclude"`
@@ -60,16 +59,12 @@ func (ki *KubernetesInventory) Init() error {
 		ki.BearerToken = defaultServiceAccountPath
 	}
 
-	if ki.BearerToken != "" {
-		token, err := os.ReadFile(ki.BearerToken)
-		if err != nil {
-			return err
-		}
-		ki.BearerTokenString = strings.TrimSpace(string(token))
+	if ki.BearerTokenString != "" {
+		ki.Log.Warn("Telegraf cannot auto-refresh a bearer token string, use BearerToken file instead")
 	}
 
 	var err error
-	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerTokenString, time.Duration(ki.ResponseTimeout), ki.ClientConfig)
+	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerToken, ki.BearerTokenString, time.Duration(ki.ResponseTimeout), ki.ClientConfig)
 
 	if err != nil {
 		return err

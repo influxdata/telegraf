@@ -4,9 +4,9 @@ import (
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 )
 
-//------------------------------------------------------------------------------------------------
-//------------------ Azure SQL Database ----------------------------------------------------------
-//------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// ------------------ Azure SQL Database ----------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Only executed if AzureDB flag is set
 const sqlAzureDBResourceStats string = `
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
@@ -604,7 +604,7 @@ FROM (
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 		,DB_NAME() as [database_name]
 		,s.[session_id]
-		,ISNULL(r.[request_id], 0) as [request_id]
+		,r.[request_id]
 		,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
 		,COALESCE(r.[status], s.[status]) AS [status]
 		,COALESCE(r.[cpu_time], s.[cpu_time]) AS [cpu_time_ms]
@@ -661,6 +661,7 @@ WHERE
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
 		)
+		AND [session_id] <> @@SPID		
 	)  
 OPTION(MAXDOP 1);
 `

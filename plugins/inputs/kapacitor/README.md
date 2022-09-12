@@ -31,10 +31,11 @@ The Kapacitor plugin collects metrics from the given Kapacitor instances.
   - [num_subscriptions](#num_subscriptions) _(integer)_
   - [num_tasks](#num_tasks) _(integer)_
 - [kapacitor_alert](#kapacitor_alert)
-  - [notification_dropped](#notification_dropped) _(integer)_
+  - [notification_dropped](#notification-dropped) _(integer)_
   - [primary-handle-count](#primary-handle-count) _(integer)_
   - [secondary-handle-count](#secondary-handle-count) _(integer)_
-- (Kapacitor Enterprise only) [kapacitor_cluster](#kapacitor_cluster) _(integer)_
+- (Kapacitor Enterprise only) [kapacitor_cluster](#kapacitor_cluster)
+  _(integer)_
   - [dropped_member_events](#dropped_member_events) _(integer)_
   - [dropped_user_events](#dropped_user_events) _(integer)_
   - [query_handler_errors](#query_handler_errors) _(integer)_
@@ -91,8 +92,11 @@ The Kapacitor plugin collects metrics from the given Kapacitor instances.
 ## kapacitor
 
 The `kapacitor` measurement stores fields with information related to
-[Kapacitor tasks](https://docs.influxdata.com/kapacitor/latest/introduction/getting-started/#kapacitor-tasks)
-and [subscriptions](https://docs.influxdata.com/kapacitor/latest/administration/subscription-management/).
+[Kapacitor tasks][tasks] and [subscriptions][subs].
+
+[tasks]: https://docs.influxdata.com/kapacitor/latest/introduction/getting-started/#kapacitor-tasks
+
+[subs]: https://docs.influxdata.com/kapacitor/latest/administration/subscription-management/
 
 ### num_enabled_tasks
 
@@ -115,23 +119,30 @@ The `kapacitor_alert` measurement stores fields with information related to
 
 ### notification-dropped
 
-The number of internal notifications dropped because they arrive too late from another Kapacitor node.
-If this count is increasing, Kapacitor Enterprise nodes aren't able to communicate fast enough
-to keep up with the volume of alerts.
+The number of internal notifications dropped because they arrive too late from
+another Kapacitor node.  If this count is increasing, Kapacitor Enterprise nodes
+aren't able to communicate fast enough to keep up with the volume of alerts.
 
 ### primary-handle-count
 
-The number of times this node handled an alert as the primary. This count should increase under normal conditions.
+The number of times this node handled an alert as the primary. This count should
+increase under normal conditions.
 
 ### secondary-handle-count
 
-The number of times this node handled an alert as the secondary. An increase in this counter indicates that the primary is failing to handle alerts in a timely manner.
+The number of times this node handled an alert as the secondary. An increase in
+this counter indicates that the primary is failing to handle alerts in a timely
+manner.
 
 ---
 
 ## kapacitor_cluster
 
-The `kapacitor_cluster` measurement reflects the ability of [Kapacitor nodes to communicate](https://docs.influxdata.com/enterprise_kapacitor/v1.5/administration/configuration/#cluster-communications) with one another. Specifically, these metrics track the gossip communication between the Kapacitor nodes.
+The `kapacitor_cluster` measurement reflects the ability of [Kapacitor nodes to
+communicate][cluster] with one another. Specifically, these metrics track the
+gossip communication between the Kapacitor nodes.
+
+[cluster]: https://docs.influxdata.com/enterprise_kapacitor/v1.5/administration/configuration/#cluster-communications
 
 ### dropped_member_events
 
@@ -141,13 +152,18 @@ The number of gossip member events that were dropped.
 
 The number of gossip user events that were dropped.
 
+### query_handler_errors
+
+The number of errors from event handlers.
+
 ---
 
 ## kapacitor_edges
 
 The `kapacitor_edges` measurement stores fields with information related to
-[edges](https://docs.influxdata.com/kapacitor/latest/tick/introduction/#pipelines)
-in Kapacitor TICKscripts.
+[edges][] in Kapacitor TICKscripts.
+
+[edges]: https://docs.influxdata.com/kapacitor/latest/tick/introduction/#pipelines
 
 ### collected
 
@@ -161,8 +177,8 @@ The number of messages emitted by TICKscript edges.
 
 ## kapacitor_ingress
 
-The `kapacitor_ingress` measurement stores fields with information related to data
-coming into Kapacitor.
+The `kapacitor_ingress` measurement stores fields with information related to
+data coming into Kapacitor.
 
 ### points_received
 
@@ -173,7 +189,9 @@ The number of points received by Kapacitor.
 ## kapacitor_load
 
 The `kapacitor_load` measurement stores fields with information related to the
-[Kapacitor Load Directory service](https://docs.influxdata.com/kapacitor/latest/guides/load_directory/).
+[Kapacitor Load Directory service][load-dir].
+
+[load-dir]: https://docs.influxdata.com/kapacitor/latest/guides/load_directory/
 
 ### errors
 
@@ -183,7 +201,8 @@ The number of errors reported from the load directory service.
 
 ## kapacitor_memstats
 
-The `kapacitor_memstats` measurement stores fields related to Kapacitor memory usage.
+The `kapacitor_memstats` measurement stores fields related to Kapacitor memory
+usage.
 
 ### alloc_bytes
 
@@ -341,14 +360,17 @@ The total number of unique series processed.
 
 #### write_errors
 
-The number of errors that occurred when writing to InfluxDB or other write endpoints.
+The number of errors that occurred when writing to InfluxDB or other write
+endpoints.
 
 ---
 
 ### kapacitor_topics
 
-The `kapacitor_topics` measurement stores fields related to
-Kapacitor topics](<https://docs.influxdata.com/kapacitor/latest/working/using_alert_topics/>).
+The `kapacitor_topics` measurement stores fields related to Kapacitor
+topics][topics].
+
+[topics]: https://docs.influxdata.com/kapacitor/latest/working/using_alert_topics/
 
 #### collected (kapacitor_topics)
 

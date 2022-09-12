@@ -1,10 +1,8 @@
 # PuppetAgent Input Plugin
 
-## Description
-
-The puppetagent plugin collects variables outputted from the 'last_run_summary.yaml' file
-usually located in `/var/lib/puppet/state/`
-[PuppetAgent Runs](https://puppet.com/blog/puppet-monitoring-how-to-monitor-success-or-failure-of-puppet-runs/).
+The puppetagent plugin collects variables outputted from the
+'last_run_summary.yaml' file usually located in `/var/lib/puppet/state/`
+[PuppetAgent Runs][1].
 
 ```sh
 cat /var/lib/puppet/state/last_run_summary.yaml
@@ -76,6 +74,8 @@ jcross@pit-devops-02 ~ >sudo ./telegraf_linux_amd64 --input-filter puppetagent -
 > [] puppetagent_version_config value=1444940121
 > [] puppetagent_version_puppet value=3.7.5
 ```
+
+[1]: https://puppet.com/blog/puppet-monitoring-how-to-monitor-success-or-failure-of-puppet-runs/
 
 ## Configuration
 

@@ -31,10 +31,13 @@ Pull requests welcome.
 - [fritzbox](https://github.com/hdecarne-github/fritzbox-telegraf-plugin) - Gather statistics from [FRITZ!Box](https://avm.de/produkte/fritzbox/) router and repeater
 - [linux-psi-telegraf-plugin](https://github.com/gridscale/linux-psi-telegraf-plugin) - Gather pressure stall information ([PSI](https://facebookmicrosites.github.io/psi/)) from the Linux Kernel
 - [huebridge](https://github.com/hdecarne-github/huebridge-telegraf-plugin) - Gather smart home statistics from [Hue Bridge](https://www.philips-hue.com/) devices
+- [nsdp](https://github.com/hdecarne-github/nsdp-telegraf-plugin) - Gather switch network statistics via [Netgear Switch Discovery Protocol](https://en.wikipedia.org/wiki/Netgear_Switch_Discovery_Protocol)
+- [hwinfo](https://github.com/zachstence/hwinfo-telegraf-plugin) - Gather Windows system hardware information from [HWiNFO](https://www.hwinfo.com/)
 
 ## Outputs
 
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
+- [firehose](https://github.com/muhlba91/telegraf-output-kinesis-data-firehose) - Sends metrics in batches to Amazon Kinesis Data Firehose.
 
 ## Processors
 

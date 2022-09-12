@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEmptyContainer(t *testing.T) {
+func TestEmptyContainerIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -22,7 +22,7 @@ func TestEmptyContainer(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestMappedPortLookup(t *testing.T) {
+func TestMappedPortLookupIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -59,7 +59,7 @@ func TestMappedPortLookup(t *testing.T) {
 	}
 }
 
-func TestBadImageName(t *testing.T) {
+func TestBadImageNameIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

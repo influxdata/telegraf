@@ -412,8 +412,11 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 	for _, entry := range c.GetEntries(c.config.MetricSortOrder) {
 		mf := &dto.MetricFamily{
 			Name: proto.String(entry.Family.Name),
-			Help: proto.String(helpString),
 			Type: MetricType(entry.Family.Type),
+		}
+
+		if !c.config.CompactEncoding {
+			mf.Help = proto.String(helpString)
 		}
 
 		for _, metric := range c.GetMetrics(entry, c.config.MetricSortOrder) {

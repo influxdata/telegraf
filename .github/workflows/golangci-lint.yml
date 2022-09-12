@@ -15,22 +15,23 @@ jobs:
     name: lint-pr-changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v2
-      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.46.2
+          version: v1.48.0
           only-new-issues: true
   golangci-master:
     if: github.ref == 'refs/heads/master'
     name: lint-master-all
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.46.2
+          version: v1.48.0
           only-new-issues: true
           args: --issues-exit-code=0

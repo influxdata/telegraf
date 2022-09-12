@@ -1,6 +1,8 @@
 # TopK Processor Plugin
 
-The TopK processor plugin is a filter designed to get the top series over a period of time. It can be tweaked to calculate the top metrics via different aggregation functions.
+The TopK processor plugin is a filter designed to get the top series over a
+period of time. It can be tweaked to calculate the top metrics via different
+aggregation functions.
 
 This processor goes through these steps when processing a batch of metrics:
 
@@ -77,11 +79,14 @@ Notes:
 
 ### Tags
 
-This processor does not add tags by default. But the setting `add_groupby_tag` will add a tag if set to anything other than ""
+This processor does not add tags by default. But the setting `add_groupby_tag`
+will add a tag if set to anything other than ""
 
 ### Fields
 
-This processor does not add fields by default. But the settings `add_rank_fields` and `add_aggregation_fields` will add one or several fields if set to anything other than ""
+This processor does not add fields by default. But the settings
+`add_rank_fields` and `add_aggregation_fields` will add one or several fields if
+set to anything other than ""
 
 ### Example
 

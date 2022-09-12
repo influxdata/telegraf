@@ -34,8 +34,10 @@ a validating, recursive, and caching DNS resolver.
 
 ### Permissions
 
-It's important to note that this plugin references unbound-control, which may require additional permissions to execute successfully.
-Depending on the user/group permissions of the telegraf user executing this plugin, you may need to alter the group membership, set facls, or use sudo.
+It's important to note that this plugin references unbound-control, which may
+require additional permissions to execute successfully.  Depending on the
+user/group permissions of the telegraf user executing this plugin, you may need
+to alter the group membership, set facls, or use sudo.
 
 **Group membership (Recommended)**:
 
@@ -71,10 +73,11 @@ Please use the solution you see as most appropriate.
 
 ## Metrics
 
-This is the full list of stats provided by unbound-control and potentially collected
-depending of your unbound configuration.  Histogram related statistics will never be collected,
-extended statistics can also be imported ("extended-statistics: yes" in unbound configuration).
-In the output, the dots in the unbound-control stat name are replaced by underscores(see
+This is the full list of stats provided by unbound-control and potentially
+collected depending of your unbound configuration.  Histogram related statistics
+will never be collected, extended statistics can also be imported
+("extended-statistics: yes" in unbound configuration).  In the output, the dots
+in the unbound-control stat name are replaced by underscores(see
 <https://www.unbound.net/documentation/unbound-control.html> for details).
 
 Shown metrics are with `thread_as_tag` enabled.

@@ -13,6 +13,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -31,7 +32,6 @@ func (*InternetSpeed) SampleConfig() string {
 }
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
-
 	// Get closest server
 	s := is.serverCache
 	if s == nil {

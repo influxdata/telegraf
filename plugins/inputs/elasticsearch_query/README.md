@@ -1,14 +1,16 @@
-# Elasticsearch query input plugin
+# Elasticsearch Query Input Plugin
 
-This [elasticsearch](https://www.elastic.co/) query plugin queries endpoints to obtain metrics from data stored in an Elasticsearch cluster.
+This [elasticsearch](https://www.elastic.co/) query plugin queries endpoints
+to obtain metrics from data stored in an Elasticsearch cluster.
 
 The following is supported:
 
 - return number of hits for a search query
-- calculate the avg/max/min/sum for a numeric field, filtered by a query, aggregated per tag
+- calculate the avg/max/min/sum for a numeric field, filtered by a query,
+  aggregated per tag
 - count number of terms for a particular field
 
-## Elasticsearch support
+## Elasticsearch Support
 
 This plugins is tested against Elasticsearch 5.x and 6.x releases.
 Currently it is known to break on 7.x or greater versions.
@@ -78,7 +80,8 @@ Currently it is known to break on 7.x or greater versions.
     # metric_function = "avg"
 
     ## Fields to be used as tags
-    ## Must be text, non-analyzed fields. Metric aggregations are performed per tag
+    ## Must be text, non-analyzed fields. Metric aggregations are performed
+    ## per tag
     # tags = ["field.keyword", "field2.keyword"]
 
     ## Set to true to not ignore documents when the tag(s) above are missing
@@ -91,7 +94,8 @@ Currently it is known to break on 7.x or greater versions.
 
 ## Examples
 
-Please note that the `[[inputs.elasticsearch_query]]` is still required for all of the examples below.
+Please note that the `[[inputs.elasticsearch_query]]` is still required for all
+of the examples below.
 
 ### Search the average response time, per URI and per response status code
 
@@ -151,17 +155,32 @@ Please note that the `[[inputs.elasticsearch_query]]` is still required for all 
 
 ### Required parameters
 
-- `measurement_name`: The target measurement to be stored the results of the aggregation query.
+- `measurement_name`: The target measurement to be stored the results of the
+  aggregation query.
 - `index`: The index name to query on Elasticsearch
-- `query_period`: The time window to query (eg. "1m" to query documents from last minute). Normally should be set to same as collection
+- `query_period`: The time window to query (eg. "1m" to query documents from
+  last minute). Normally should be set to same as collection
 - `date_field`: The date/time field in the Elasticsearch index
 
 ### Optional parameters
 
-- `date_field_custom_format`: Not needed if using one of the built in date/time formats of Elasticsearch, but may be required if using a custom date/time format. The format syntax uses the [Joda date format](https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-aggregations-bucket-daterange-aggregation.html#date-format-pattern).
+- `date_field_custom_format`: Not needed if using one of the built in date/time
+  formats of Elasticsearch, but may be required if using a custom date/time
+  format. The format syntax uses the [Joda date format][joda].
 - `filter_query`: Lucene query to filter the results (default: "\*")
-- `metric_fields`: The list of fields to perform metric aggregation (these must be indexed as numeric fields)
-- `metric_funcion`: The single-value metric aggregation function to be performed on the `metric_fields` defined. Currently supported aggregations are "avg", "min", "max", "sum". (see [https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html)
-- `tags`: The list of fields to be used as tags (these must be indexed as non-analyzed fields). A "terms aggregation" will be done per tag defined
-- `include_missing_tag`: Set to true to not ignore documents where the tag(s) specified above does not exist. (If false, documents without the specified tag field will be ignored in `doc_count` and in the metric aggregation)
-- `missing_tag_value`: The value of the tag that will be set for documents in which the tag field does not exist. Only used when `include_missing_tag` is set to `true`.
+- `metric_fields`: The list of fields to perform metric aggregation (these must
+  be indexed as numeric fields)
+- `metric_funcion`: The single-value metric aggregation function to be performed
+  on the `metric_fields` defined. Currently supported aggregations are "avg",
+  "min", "max", "sum". (see the [aggregation docs][agg]
+- `tags`: The list of fields to be used as tags (these must be indexed as
+  non-analyzed fields). A "terms aggregation" will be done per tag defined
+- `include_missing_tag`: Set to true to not ignore documents where the tag(s)
+  specified above does not exist. (If false, documents without the specified tag
+  field will be ignored in `doc_count` and in the metric aggregation)
+- `missing_tag_value`: The value of the tag that will be set for documents in
+  which the tag field does not exist. Only used when `include_missing_tag` is
+  set to `true`.
+
+[joda]: https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-aggregations-bucket-daterange-aggregation.html#date-format-pattern
+[agg]: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html

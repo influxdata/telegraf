@@ -4,6 +4,7 @@ package stackdriver
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -28,6 +29,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -564,6 +566,73 @@ func (s *Stackdriver) gatherTimeSeries(
 	return nil
 }
 
+type Buckets interface {
+	Amount() int32
+	UpperBound(i int32) float64
+}
+
+type LinearBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Linear
+}
+
+func (l *LinearBuckets) Amount() int32 {
+	return l.NumFiniteBuckets + 2
+}
+
+func (l *LinearBuckets) UpperBound(i int32) float64 {
+	return l.Offset + (l.Width * float64(i))
+}
+
+type ExponentialBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Exponential
+}
+
+func (e *ExponentialBuckets) Amount() int32 {
+	return e.NumFiniteBuckets + 2
+}
+
+func (e *ExponentialBuckets) UpperBound(i int32) float64 {
+	width := math.Pow(e.GrowthFactor, float64(i))
+	return e.Scale * width
+}
+
+type ExplicitBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Explicit
+}
+
+func (e *ExplicitBuckets) Amount() int32 {
+	return int32(len(e.Bounds)) + 1
+}
+
+func (e *ExplicitBuckets) UpperBound(i int32) float64 {
+	return e.Bounds[i]
+}
+
+func NewBucket(dist *distributionpb.Distribution) (Buckets, error) {
+	linearBuckets := dist.BucketOptions.GetLinearBuckets()
+	if linearBuckets != nil {
+		var l LinearBuckets
+		l.Distribution_BucketOptions_Linear = linearBuckets
+		return &l, nil
+	}
+
+	exponentialBuckets := dist.BucketOptions.GetExponentialBuckets()
+	if exponentialBuckets != nil {
+		var e ExponentialBuckets
+		e.Distribution_BucketOptions_Exponential = exponentialBuckets
+		return &e, nil
+	}
+
+	explicitBuckets := dist.BucketOptions.GetExplicitBuckets()
+	if explicitBuckets != nil {
+		var e ExplicitBuckets
+		e.Distribution_BucketOptions_Explicit = explicitBuckets
+		return &e, nil
+	}
+
+	return nil, errors.New("no buckets available")
+}
+
 // AddDistribution adds metrics from a distribution value type.
 func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags map[string]string, ts time.Time,
 	grouper *lockedSeriesGrouper, tsConf *timeSeriesConf,
@@ -590,18 +659,11 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 		}
 	}
 
-	linearBuckets := dist.BucketOptions.GetLinearBuckets()
-	exponentialBuckets := dist.BucketOptions.GetExponentialBuckets()
-	explicitBuckets := dist.BucketOptions.GetExplicitBuckets()
-
-	var numBuckets int32
-	if linearBuckets != nil {
-		numBuckets = linearBuckets.NumFiniteBuckets + 2
-	} else if exponentialBuckets != nil {
-		numBuckets = exponentialBuckets.NumFiniteBuckets + 2
-	} else {
-		numBuckets = int32(len(explicitBuckets.Bounds)) + 1
+	bucket, err := NewBucket(dist)
+	if err != nil {
+		return err
 	}
+	numBuckets := bucket.Amount()
 
 	var i int32
 	var count int64
@@ -611,15 +673,7 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 		if i == numBuckets-1 {
 			tags["lt"] = "+Inf"
 		} else {
-			var upperBound float64
-			if linearBuckets != nil {
-				upperBound = linearBuckets.Offset + (linearBuckets.Width * float64(i))
-			} else if exponentialBuckets != nil {
-				width := math.Pow(exponentialBuckets.GrowthFactor, float64(i))
-				upperBound = exponentialBuckets.Scale * width
-			} else if explicitBuckets != nil {
-				upperBound = explicitBuckets.Bounds[i]
-			}
+			upperBound := bucket.UpperBound(i)
 			tags["lt"] = strconv.FormatFloat(upperBound, 'f', -1, 64)
 		}
 

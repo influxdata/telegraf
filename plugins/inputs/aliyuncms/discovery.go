@@ -52,12 +52,12 @@ type parsedDResp struct {
 	pageNumber int
 }
 
-//getRPCReqFromDiscoveryRequest - utility function to map between aliyun request primitives
-//discoveryRequest represents different type of discovery requests
+// getRPCReqFromDiscoveryRequest - utility function to map between aliyun request primitives
+// discoveryRequest represents different type of discovery requests
 func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, error) {
 	if reflect.ValueOf(req).Type().Kind() != reflect.Ptr ||
 		reflect.ValueOf(req).IsNil() {
-		return nil, errors.Errorf("Not expected type of the discovery request object: %q, %q", reflect.ValueOf(req).Type(), reflect.ValueOf(req).Kind())
+		return nil, errors.Errorf("unexpected type of the discovery request object: %q, %q", reflect.ValueOf(req).Type(), reflect.ValueOf(req).Kind())
 	}
 
 	ptrV := reflect.Indirect(reflect.ValueOf(req))
@@ -65,27 +65,27 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 	for i := 0; i < ptrV.NumField(); i++ {
 		if ptrV.Field(i).Type().String() == "*requests.RpcRequest" {
 			if !ptrV.Field(i).CanInterface() {
-				return nil, errors.Errorf("Can't get interface of %v", ptrV.Field(i))
+				return nil, errors.Errorf("can't get interface of %v", ptrV.Field(i))
 			}
 
 			rpcReq, ok := ptrV.Field(i).Interface().(*requests.RpcRequest)
 
 			if !ok {
-				return nil, errors.Errorf("Cant convert interface of %v to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
+				return nil, errors.Errorf("can't convert interface of %v to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
 			}
 
 			return rpcReq, nil
 		}
 	}
-	return nil, errors.Errorf("Didn't find *requests.RpcRequest embedded struct in %q", ptrV.Type())
+	return nil, errors.Errorf("didn't find *requests.RpcRequest embedded struct in %q", ptrV.Type())
 }
 
-//newDiscoveryTool function returns discovery tool object.
-//The object is used to periodically get data about aliyun objects and send this
-//data into channel. The intention is to enrich reported metrics with discovery data.
-//Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
-//Discovery can be limited by region if not set, then all regions is queried.
-//Request against API can inquire additional costs, consult with aliyun API documentation.
+// newDiscoveryTool function returns discovery tool object.
+// The object is used to periodically get data about aliyun objects and send this
+// data into channel. The intention is to enrich reported metrics with discovery data.
+// Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
+// Discovery can be limited by region if not set, then all regions is queried.
+// Request against API can inquire additional costs, consult with aliyun API documentation.
 func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
 	var (
 		dscReq                = map[string]discoveryRequest{}
@@ -224,7 +224,7 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		case "acs_cds":
 			return nil, noDiscoverySupportErr
 		default:
-			return nil, errors.Errorf("project %q is not recognized by discovery...", project)
+			return nil, errors.Errorf("project %q is not recognized by discovery", project)
 		}
 
 		cli[region], err = sdk.NewClientWithOptions(region, sdk.NewConfig(), credential)
@@ -234,7 +234,7 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 	}
 
 	if len(dscReq) == 0 || len(cli) == 0 {
-		return nil, errors.Errorf("Can't build discovery request for project: %q,\nregions: %v", project, regions)
+		return nil, errors.Errorf("can't build discovery request for project: %q, regions: %v", project, regions)
 	}
 
 	return &discoveryTool{
@@ -261,11 +261,11 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 
 	data = resp.GetHttpContentBytes()
 	if data == nil { //No data
-		return nil, errors.Errorf("No data in response to be parsed")
+		return nil, errors.New("no data in response to be parsed")
 	}
 
 	if err := json.Unmarshal(data, &fullOutput); err != nil {
-		return nil, errors.Errorf("Can't parse JSON from discovery response: %v", err)
+		return nil, errors.Errorf("can't parse JSON from discovery response: %v", err)
 	}
 
 	for key, val := range fullOutput {
@@ -274,7 +274,7 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 			foundRootKey = true
 			rootKeyVal, ok := val.(map[string]interface{})
 			if !ok {
-				return nil, errors.Errorf("Content of root key %q, is not an object: %v", key, val)
+				return nil, errors.Errorf("content of root key %q, is not an object: %v", key, val)
 			}
 
 			//It should contain the array with discovered data
@@ -284,7 +284,7 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 				}
 			}
 			if !foundDataItem {
-				return nil, errors.Errorf("Didn't find array item in root key %q", key)
+				return nil, errors.Errorf("didn't find array item in root key %q", key)
 			}
 		case "TotalCount", "TotalRecordCount":
 			pdResp.totalCount = int(val.(float64))
@@ -295,7 +295,7 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 		}
 	}
 	if !foundRootKey {
-		return nil, errors.Errorf("Didn't find root key %q in discovery response", dt.respRootKey)
+		return nil, errors.Errorf("didn't find root key %q in discovery response", dt.respRootKey)
 	}
 
 	return pdResp, nil
@@ -341,7 +341,7 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 			for _, raw := range discoveryData {
 				elem, ok := raw.(map[string]interface{})
 				if !ok {
-					return nil, errors.Errorf("can't parse input data element, not a map[string]interface{} type")
+					return nil, errors.New("can't parse input data element, not a map[string]interface{} type")
 				}
 				if objectID, ok := elem[dt.respObjectIDKey].(string); ok {
 					preparedData[objectID] = elem
@@ -363,7 +363,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 		//which aliyun object type (project) is used
 		dscReq, ok := dt.req[region]
 		if !ok {
-			return nil, errors.Errorf("Error building common discovery request: not valid region %q", region)
+			return nil, errors.Errorf("error building common discovery request: not valid region %q", region)
 		}
 
 		rpcReq, err := getRPCReqFromDiscoveryRequest(dscReq)

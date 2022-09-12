@@ -18,16 +18,17 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
 	internalMetric "github.com/influxdata/telegraf/metric"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	internalProxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -55,6 +56,7 @@ type CloudWatch struct {
 	CacheTTL       config.Duration `toml:"cache_ttl"`
 	RateLimit      int             `toml:"ratelimit"`
 	RecentlyActive string          `toml:"recently_active"`
+	BatchSize      int             `toml:"batch_size"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -146,12 +148,10 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	results := map[string][]types.MetricDataResult{}
 
 	for namespace, namespacedQueries := range queries {
-		// 500 is the maximum number of metric data queries a `GetMetricData` request can contain.
-		batchSize := 500
 		var batches [][]types.MetricDataQuery
 
-		for batchSize < len(namespacedQueries) {
-			namespacedQueries, batches = namespacedQueries[batchSize:], append(batches, namespacedQueries[0:batchSize:batchSize])
+		for c.BatchSize < len(namespacedQueries) {
+			namespacedQueries, batches = namespacedQueries[c.BatchSize:], append(batches, namespacedQueries[0:c.BatchSize:c.BatchSize])
 		}
 		batches = append(batches, namespacedQueries)
 
@@ -530,6 +530,7 @@ func New() *CloudWatch {
 		CacheTTL:  config.Duration(time.Hour),
 		RateLimit: 25,
 		Timeout:   config.Duration(time.Second * 5),
+		BatchSize: 500,
 	}
 }
 

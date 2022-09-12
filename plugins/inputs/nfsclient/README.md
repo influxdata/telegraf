@@ -1,9 +1,15 @@
 # NFS Client Input Plugin
 
-The NFS Client input plugin collects data from /proc/self/mountstats. By default, only a limited number of general system-level metrics are collected, including basic read/write counts.
-If `fullstat` is set, a great deal of additional metrics are collected, detailed below.
+The NFS Client input plugin collects data from /proc/self/mountstats. By
+default, only a limited number of general system-level metrics are collected,
+including basic read/write counts.  If `fullstat` is set, a great deal of
+additional metrics are collected, detailed below.
 
-__NOTE__ Many of the metrics, even if tagged with a mount point, are really _per-server_.  Thus, if you mount these two shares:  `nfs01:/vol/foo/bar` and `nfs01:/vol/foo/baz`, there will be two near identical entries in /proc/self/mountstats.  This is a limitation of the metrics exposed by the kernel, not the telegraf plugin.
+__NOTE__ Many of the metrics, even if tagged with a mount point, are really
+_per-server_.  Thus, if you mount these two shares: `nfs01:/vol/foo/bar` and
+`nfs01:/vol/foo/baz`, there will be two near identical entries in
+/proc/self/mountstats.  This is a limitation of the metrics exposed by the
+kernel, not the telegraf plugin.
 
 ## Configuration
 
@@ -45,7 +51,9 @@ __NOTE__ Many of the metrics, even if tagged with a mount point, are really _per
 - __include_operations__ list(string): List of specific NFS operations to track.  See /proc/self/mountstats (the "per-op statistics" section) for complete lists of valid options for NFSv3 and NFSV4.  The default is to gather all metrics, but this is almost certainly _not_ what you want (there are 22 operations for NFSv3, and well over 50 for NFSv4).  A suggested 'minimal' list of operations to collect for basic usage:  `['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']`
 - __exclude_operations__ list(string): Gather all metrics, except those listed.  Excludes take precedence over includes.
 
-_N.B._ the `include_mounts` and `exclude_mounts` arguments are both applied to the local mount location (e.g. /mnt/NFS), not the server export (e.g. nfsserver:/vol/NFS).  Go regexp patterns can be used in either.
+_N.B._ the `include_mounts` and `exclude_mounts` arguments are both applied to
+the local mount location (e.g. /mnt/NFS), not the server export
+(e.g. nfsserver:/vol/NFS).  Go regexp patterns can be used in either.
 
 ### References
 
@@ -79,13 +87,16 @@ In addition enabling `fullstat` will make many more metrics available.
 
 ## Additional metrics
 
-When `fullstat` is true, additional measurements are collected.  Tags are the same as above.
+When `fullstat` is true, additional measurements are collected.  Tags are the
+same as above.
 
 ### NFS Operations
 
-Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)] and `nfs_iostat.h`.  Field order and names are the same as in `/proc/self/mountstats` and the Kernel source.
+Most descriptions come from [Reference][ref] and `nfs_iostat.h`.  Field order
+and names are the same as in `/proc/self/mountstats` and the Kernel source.
 
-Please refer to `/proc/self/mountstats` for a list of supported NFS operations, as it changes occasionally.
+Please refer to `/proc/self/mountstats` for a list of supported NFS operations,
+as it changes occasionally.
 
 - nfs_bytes
   - fields:
@@ -149,12 +160,14 @@ Please refer to `/proc/self/mountstats` for a list of supported NFS operations, 
     - ops (int, count): Total operations of this type.
     - trans (int, count): Total transmissions of this type, including retransmissions: `OP_ops - OP_trans = total_retransmissions` (lower is better).
     - timeouts (int, count): Number of major timeouts.
-    - bytes_sent (int, count): Bytes received, including headers (should also be close to on-wire size).
-    - bytes_recv (int, count): Bytes sent, including headers (should be close to on-wire size).
+    - bytes_sent (int, count): Bytes sent, including headers (should also be close to on-wire size).
+    - bytes_recv (int, count): Bytes received, including headers (should be close to on-wire size).
     - queue_time (int, milliseconds): Cumulative time a request waited in the queue before sending this OP type.
     - response_time (int, milliseconds): Cumulative time waiting for a response for this OP type.
     - total_time (int, milliseconds): Cumulative time a request waited in the queue before sending.
     - errors (int, count): Total number operations that complete with tk_status < 0 (usually errors).  This is a new field, present in kernel >=5.3, mountstats version 1.1
+
+[ref]: https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex
 
 ## Example Output
 
@@ -166,9 +179,11 @@ nfsstat,mountpoint=/NFS,operation=WRITE,serverexport=1.2.3.4:/storage/NFS bytes=
 
 ```
 
-For `fullstat=true` metrics, which includes additional measurements for `nfs_bytes`, `nfs_events`, and `nfs_xprt_tcp` (and `nfs_xprt_udp` if present).
-Additionally, per-OP metrics are collected, with examples for READ, LOOKUP, and NULL shown.
-Please refer to `/proc/self/mountstats` for a list of supported NFS operations, as it changes as it changes periodically.
+For `fullstat=true` metrics, which includes additional measurements for
+`nfs_bytes`, `nfs_events`, and `nfs_xprt_tcp` (and `nfs_xprt_udp` if present).
+Additionally, per-OP metrics are collected, with examples for READ, LOOKUP, and
+NULL shown.  Please refer to `/proc/self/mountstats` for a list of supported NFS
+operations, as it changes as it changes periodically.
 
 ```shell
 nfs_bytes,mountpoint=/home,serverexport=nfs01:/vol/home directreadbytes=0i,directwritebytes=0i,normalreadbytes=42648757667i,normalwritebytes=0i,readpages=10404603i,serverreadbytes=42617098139i,serverwritebytes=0i,writepages=0i 1608787697000000000

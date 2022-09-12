@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
@@ -27,6 +29,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -36,11 +39,13 @@ var (
 	defaultMaxBufferedMetrics         = 10000
 	defaultDirectoryDurationThreshold = config.Duration(0 * time.Millisecond)
 	defaultFileQueueSize              = 100000
+	defaultParseMethod                = "line-by-line"
 )
 
 type DirectoryMonitor struct {
 	Directory         string `toml:"directory"`
 	FinishedDirectory string `toml:"finished_directory"`
+	Recursive         bool   `toml:"recursive"`
 	ErrorDirectory    string `toml:"error_directory"`
 	FileTag           string `toml:"file_tag"`
 
@@ -50,6 +55,7 @@ type DirectoryMonitor struct {
 	DirectoryDurationThreshold config.Duration `toml:"directory_duration_threshold"`
 	Log                        telegraf.Logger `toml:"-"`
 	FileQueueSize              int             `toml:"file_queue_size"`
+	ParseMethod                string          `toml:"parse_method"`
 
 	filesInUse          sync.Map
 	cancel              context.CancelFunc
@@ -70,31 +76,62 @@ func (*DirectoryMonitor) SampleConfig() string {
 }
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
-	// Get all files sitting in the directory.
-	files, err := os.ReadDir(monitor.Directory)
-	if err != nil {
-		return fmt.Errorf("unable to monitor the targeted directory: %w", err)
-	}
-
-	for _, file := range files {
-		filePath := monitor.Directory + "/" + file.Name()
-
+	processFile := func(path string, name string) error {
 		// We've been cancelled via Stop().
 		if monitor.context.Err() != nil {
-			//nolint:nilerr // context cancelation is not an error
-			return nil
+			return io.EOF
 		}
 
-		stat, err := times.Stat(filePath)
+		stat, err := times.Stat(path)
 		if err != nil {
-			continue
+			// Don't stop traversing if there is an eror
+			return nil //nolint:nilerr
 		}
 
 		timeThresholdExceeded := time.Since(stat.AccessTime()) >= time.Duration(monitor.DirectoryDurationThreshold)
 
 		// If file is decaying, process it.
 		if timeThresholdExceeded {
-			monitor.processFile(file)
+			monitor.processFile(name, path)
+		}
+		return nil
+	}
+
+	if monitor.Recursive {
+		err := filepath.Walk(monitor.Directory,
+			func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+
+				return processFile(path, info.Name())
+			})
+		// We've been cancelled via Stop().
+		if err == io.EOF {
+			//nolint:nilerr // context cancelation is not an error
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	} else {
+		// Get all files sitting in the directory.
+		files, err := os.ReadDir(monitor.Directory)
+		if err != nil {
+			return fmt.Errorf("unable to monitor the targeted directory: %w", err)
+		}
+
+		for _, file := range files {
+			if file.IsDir() {
+				continue
+			}
+			path := monitor.Directory + "/" + file.Name()
+			err := processFile(path, file.Name())
+			// We've been cancelled via Stop().
+			if err == io.EOF {
+				//nolint:nilerr // context cancelation is not an error
+				return nil
+			}
 		}
 	}
 
@@ -146,25 +183,19 @@ func (monitor *DirectoryMonitor) Monitor() {
 	}
 }
 
-func (monitor *DirectoryMonitor) processFile(file os.DirEntry) {
-	if file.IsDir() {
-		return
-	}
-
-	filePath := monitor.Directory + "/" + file.Name()
-
+func (monitor *DirectoryMonitor) processFile(name string, path string) {
 	// File must be configured to be monitored, if any configuration...
-	if !monitor.isMonitoredFile(file.Name()) {
+	if !monitor.isMonitoredFile(name) {
 		return
 	}
 
 	// ...and should not be configured to be ignored.
-	if monitor.isIgnoredFile(file.Name()) {
+	if monitor.isIgnoredFile(name) {
 		return
 	}
 
 	select {
-	case monitor.filesToProcess <- filePath:
+	case monitor.filesToProcess <- path:
 	default:
 	}
 }
@@ -200,7 +231,7 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 
 	parser, err := monitor.parserFunc()
 	if err != nil {
-		return fmt.Errorf("E! Creating parser: %s", err.Error())
+		return fmt.Errorf("creating parser: %w", err)
 	}
 
 	// Handle gzipped files.
@@ -218,17 +249,25 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 }
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
+	var splitter bufio.SplitFunc
+
+	// Decide on how to split the file
+	switch monitor.ParseMethod {
+	case "at-once":
+		return monitor.parseAtOnce(parser, reader, fileName)
+	case "line-by-line":
+		splitter = bufio.ScanLines
+	default:
+		return fmt.Errorf("unknown parse method %q", monitor.ParseMethod)
+	}
+
 	scanner := bufio.NewScanner(reader)
+	scanner.Split(splitter)
+
 	for scanner.Scan() {
-		metrics, err := monitor.parseLine(parser, scanner.Bytes())
+		metrics, err := monitor.parseMetrics(parser, scanner.Bytes(), fileName)
 		if err != nil {
 			return err
-		}
-
-		if monitor.FileTag != "" {
-			for _, m := range metrics {
-				m.AddTag(monitor.FileTag, filepath.Base(fileName))
-			}
 		}
 
 		if err := monitor.sendMetrics(metrics); err != nil {
@@ -236,23 +275,44 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 		}
 	}
 
-	return nil
+	return scanner.Err()
 }
 
-func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte) ([]telegraf.Metric, error) {
+func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Reader, fileName string) error {
+	bytes, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	metrics, err := monitor.parseMetrics(parser, bytes, fileName)
+	if err != nil {
+		return err
+	}
+
+	return monitor.sendMetrics(metrics)
+}
+
+func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
 	switch parser.(type) {
 	case *csv.Parser:
-		m, err := parser.Parse(line)
+		metrics, err = parser.Parse(line)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return nil, nil
 			}
 			return nil, err
 		}
-		return m, err
 	default:
-		return parser.Parse(line)
+		metrics, err = parser.Parse(line)
 	}
+
+	if monitor.FileTag != "" {
+		for _, m := range metrics {
+			m.AddTag(monitor.FileTag, filepath.Base(fileName))
+		}
+	}
+
+	return metrics, err
 }
 
 func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
@@ -268,8 +328,15 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 }
 
 func (monitor *DirectoryMonitor) moveFile(filePath string, directory string) {
-	err := os.Rename(filePath, directory+"/"+filepath.Base(filePath))
+	basePath := strings.Replace(filePath, monitor.Directory, "", 1)
+	newPath := filepath.Join(directory, basePath)
 
+	err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm)
+	if err != nil {
+		monitor.Log.Errorf("Error creating directory hierachy for " + filePath + ". Error: " + err.Error())
+	}
+
+	err = os.Rename(filePath, newPath)
 	if err != nil {
 		monitor.Log.Errorf("Error while moving file '" + filePath + "' to another directory. Error: " + err.Error())
 	}
@@ -316,7 +383,7 @@ func (monitor *DirectoryMonitor) Init() error {
 
 	// Finished directory can be created if not exists for convenience.
 	if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
-		err = os.Mkdir(monitor.FinishedDirectory, 0777)
+		err = os.Mkdir(monitor.FinishedDirectory, 0755)
 		if err != nil {
 			return err
 		}
@@ -328,7 +395,7 @@ func (monitor *DirectoryMonitor) Init() error {
 	// If an error directory should be used but has not been configured yet, create one ourselves.
 	if monitor.ErrorDirectory != "" {
 		if _, err := os.Stat(monitor.ErrorDirectory); os.IsNotExist(err) {
-			err := os.Mkdir(monitor.ErrorDirectory, 0777)
+			err := os.Mkdir(monitor.ErrorDirectory, 0755)
 			if err != nil {
 				return err
 			}
@@ -357,6 +424,10 @@ func (monitor *DirectoryMonitor) Init() error {
 		monitor.fileRegexesToIgnore = append(monitor.fileRegexesToIgnore, regex)
 	}
 
+	if err := choice.Check(monitor.ParseMethod, []string{"line-by-line", "at-once"}); err != nil {
+		return fmt.Errorf("config option parse_method: %w", err)
+	}
+
 	return nil
 }
 
@@ -368,6 +439,7 @@ func init() {
 			MaxBufferedMetrics:         defaultMaxBufferedMetrics,
 			DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 			FileQueueSize:              defaultFileQueueSize,
+			ParseMethod:                defaultParseMethod,
 		}
 	})
 }

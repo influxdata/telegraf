@@ -14,6 +14,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -21,9 +22,6 @@ var sampleConfig string
 type SysctlFS struct {
 	path string
 }
-
-var sysctlFSDescription = `Provides Linux sysctl fs metrics`
-var sysctlFSSampleConfig = ``
 
 func (sfs *SysctlFS) gatherList(file string, fields map[string]interface{}, fieldNames ...string) error {
 	bs, err := os.ReadFile(sfs.path + "/" + file)

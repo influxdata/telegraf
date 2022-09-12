@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -41,6 +42,7 @@ type Parser struct {
 	MetadataRows       int             `toml:"csv_metadata_rows"`
 	MetadataSeparators []string        `toml:"csv_metadata_separators"`
 	MetadataTrimSet    string          `toml:"csv_metadata_trim_set"`
+	ResetMode          string          `toml:"csv_reset_mode"`
 	Log                telegraf.Logger `toml:"-"`
 
 	metadataSeparatorList metadataPattern
@@ -50,6 +52,11 @@ type Parser struct {
 	TimeFunc     func() time.Time
 	DefaultTags  map[string]string
 	metadataTags map[string]string
+
+	gotInitialColumnNames bool
+	remainingSkipRows     int
+	remainingHeaderRows   int
+	remainingMetadataRows int
 }
 
 type metadataPattern []string
@@ -109,6 +116,19 @@ func (p *Parser) parseMetadataRow(haystack string) map[string]string {
 	return nil
 }
 
+func (p *Parser) Reset() {
+	// Reset the columns if they were not user-specified
+	p.gotColumnNames = p.gotInitialColumnNames
+	if !p.gotInitialColumnNames {
+		p.ColumnNames = nil
+	}
+
+	// Reset the internal counters
+	p.remainingSkipRows = p.SkipRows
+	p.remainingHeaderRows = p.HeaderRowCount
+	p.remainingMetadataRows = p.MetadataRows
+}
+
 func (p *Parser) Init() error {
 	if p.HeaderRowCount == 0 && len(p.ColumnNames) == 0 {
 		return fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
@@ -128,6 +148,7 @@ func (p *Parser) Init() error {
 		}
 	}
 
+	p.gotInitialColumnNames = len(p.ColumnNames) > 0
 	if len(p.ColumnNames) > 0 && len(p.ColumnTypes) > 0 && len(p.ColumnNames) != len(p.ColumnTypes) {
 		return fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
 	}
@@ -136,11 +157,17 @@ func (p *Parser) Init() error {
 		return fmt.Errorf("initializing separators failed: %v", err)
 	}
 
-	p.gotColumnNames = len(p.ColumnNames) > 0
-
 	if p.TimeFunc == nil {
 		p.TimeFunc = time.Now
 	}
+
+	if p.ResetMode == "" {
+		p.ResetMode = "none"
+	}
+	if !choice.Contains(p.ResetMode, []string{"none", "always"}) {
+		return fmt.Errorf("unknown reset mode %q", p.ResetMode)
+	}
+	p.Reset()
 
 	return nil
 }
@@ -164,18 +191,23 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	// Reset the parser according to the specified mode
+	if p.ResetMode == "always" {
+		p.Reset()
+	}
+
 	r := bytes.NewReader(buf)
 	return parseCSV(p, r)
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if len(line) == 0 {
-		if p.SkipRows > 0 {
-			p.SkipRows--
+		if p.remainingSkipRows > 0 {
+			p.remainingSkipRows--
 			return nil, io.EOF
 		}
-		if p.MetadataRows > 0 {
-			p.MetadataRows--
+		if p.remainingMetadataRows > 0 {
+			p.remainingMetadataRows--
 			return nil, io.EOF
 		}
 	}
@@ -196,20 +228,20 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 	lineReader := bufio.NewReader(r)
 	// skip first rows
-	for p.SkipRows > 0 {
+	for p.remainingSkipRows > 0 {
 		line, err := lineReader.ReadString('\n')
 		if err != nil && len(line) == 0 {
 			return nil, err
 		}
-		p.SkipRows--
+		p.remainingSkipRows--
 	}
 	// Parse metadata
-	for p.MetadataRows > 0 {
+	for p.remainingMetadataRows > 0 {
 		line, err := lineReader.ReadString('\n')
 		if err != nil && len(line) == 0 {
 			return nil, err
 		}
-		p.MetadataRows--
+		p.remainingMetadataRows--
 		m := p.parseMetadataRow(line)
 		for k, v := range m {
 			p.metadataTags[k] = v
@@ -221,12 +253,12 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 	// we always reread the header to avoid side effects
 	// in cases where multiple files with different
 	// headers are read
-	for p.HeaderRowCount > 0 {
+	for p.remainingHeaderRows > 0 {
 		header, err := csvReader.Read()
 		if err != nil {
 			return nil, err
 		}
-		p.HeaderRowCount--
+		p.remainingHeaderRows--
 		if p.gotColumnNames {
 			// Ignore header lines if columns are named
 			continue
@@ -440,6 +472,7 @@ func (p *Parser) InitFromConfig(config *parsers.Config) error {
 	p.MetadataRows = config.CSVMetadataRows
 	p.MetadataSeparators = config.CSVMetadataSeparators
 	p.MetadataTrimSet = config.CSVMetadataTrimSet
+	p.ResetMode = "none"
 
 	return p.Init()
 }

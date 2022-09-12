@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
@@ -23,6 +24,15 @@ import (
 var (
 	testdataDir = getTestdataDir()
 )
+
+func NewInfluxParser() (parsers.Parser, error) {
+	parser := &influx.Parser{}
+	err := parser.Init()
+	if err != nil {
+		return nil, err
+	}
+	return parser, nil
+}
 
 func NewTestTail() *Tail {
 	offsetsMutex.Lock()
@@ -67,7 +77,7 @@ func TestTailBadLine(t *testing.T) {
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
+	tt.SetParserFunc(NewInfluxParser)
 
 	err = tt.Init()
 	require.NoError(t, err)
@@ -96,7 +106,7 @@ func TestColoredLine(t *testing.T) {
 	tt.FromBeginning = true
 	tt.Filters = []string{"ansi_color"}
 	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
+	tt.SetParserFunc(NewInfluxParser)
 
 	err = tt.Init()
 	require.NoError(t, err)
@@ -129,7 +139,7 @@ func TestTailDosLineEndings(t *testing.T) {
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
+	tt.SetParserFunc(NewInfluxParser)
 
 	err = tt.Init()
 	require.NoError(t, err)
@@ -306,13 +316,13 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 }
 
 func createGrokParser() (parsers.Parser, error) {
-	grokConfig := &parsers.Config{
-		MetricName:             "tail_grok",
-		GrokPatterns:           []string{"%{TEST_LOG_MULTILINE}"},
-		GrokCustomPatternFiles: []string{filepath.Join(testdataDir, "test-patterns")},
-		DataFormat:             "grok",
+	parser := &grok.Parser{
+		Measurement:        "tail_grok",
+		Patterns:           []string{"%{TEST_LOG_MULTILINE}"},
+		CustomPatternFiles: []string{filepath.Join(testdataDir, "test-patterns")},
+		Log:                testutil.Logger{},
 	}
-	parser, err := parsers.NewParser(grokConfig)
+	err := parser.Init()
 	return parser, err
 }
 
@@ -458,10 +468,9 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.PathTag = "customPathTagMyFile"
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return json.New(
-			&json.Config{
-				MetricName: "cpu",
-			})
+		p := &json.Parser{MetricName: "cpu"}
+		err := p.Init()
+		return p, err
 	})
 
 	err = plugin.Init()
@@ -607,10 +616,7 @@ func TestCharacterEncoding(t *testing.T) {
 				WatchMethod:         watchMethod,
 			}
 
-			plugin.SetParserFunc(func() (parsers.Parser, error) {
-				handler := influx.NewMetricHandler()
-				return influx.NewParser(handler), nil
-			})
+			plugin.SetParserFunc(NewInfluxParser)
 
 			if tt.offset != 0 {
 				plugin.offsets = map[string]int64{
@@ -650,7 +656,7 @@ func TestTailEOF(t *testing.T) {
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
+	tt.SetParserFunc(NewInfluxParser)
 
 	err = tt.Init()
 	require.NoError(t, err)

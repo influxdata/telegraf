@@ -18,10 +18,11 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
-//init initializes the plugin context
+// init initializes the plugin context
 func init() {
 	outputs.Add("signalfx", func() telegraf.Output {
 		return NewSignalFx()

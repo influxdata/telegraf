@@ -1,6 +1,6 @@
 # Contributing to Telegraf
 
-There are many ways to get involved in the Telegraf project! From opening issues, creating pull requests, to joining the conversation in Slack. We would to see you contribute your expertise and join our community. To get started review this document to learn best practices.
+There are many ways to get involved in the Telegraf project! From opening issues, creating pull requests, to joining the conversation in Slack. We would love to see you contribute your expertise and join our community. To get started review this document to learn best practices.
 
 ![tiger](assets/GopherAndTiger.png "tiger")
 
@@ -68,24 +68,18 @@ Telegraf uses Go modules. Assuming you can already build the project, run this i
 
 **Unit Tests:**
 
-Before opening a pull request you should run the linter checks and
-the short tests.
+Before opening a pull request you should run the following checks to make sure the CI will pass.
 
 ```shell
 make check
+make check-deps
 make test
+make docs
 ```
 
 **Execute integration tests:**
 
 (Optional)
-
-Running the integration tests requires several docker containers to be
-running.  You can start the containers with:
-
-```shell
-docker-compose up
-```
 
 To run only the integration tests use:
 
@@ -98,8 +92,6 @@ To run the full test suite use:
 ```shell
 make test-all
 ```
-
-Use `make docker-kill` to stop the containers.
 
 ### For more developer resources
 

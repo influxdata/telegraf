@@ -23,6 +23,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -388,14 +389,6 @@ func (sl *SocketListener) Stop() {
 	sl.wg.Wait()
 }
 
-func newSocketListener() *SocketListener {
-	parser, _ := parsers.NewInfluxParser()
-
-	return &SocketListener{
-		Parser: parser,
-	}
-}
-
 type unixCloser struct {
 	path   string
 	closer io.Closer
@@ -410,5 +403,5 @@ func (uc unixCloser) Close() error {
 }
 
 func init() {
-	inputs.Add("socket_listener", func() telegraf.Input { return newSocketListener() })
+	inputs.Add("socket_listener", func() telegraf.Input { return &SocketListener{} })
 }

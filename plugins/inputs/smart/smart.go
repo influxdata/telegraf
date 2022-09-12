@@ -22,6 +22,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -87,6 +88,14 @@ var (
 		"199": "udma_crc_errors",
 	}
 
+	// There are some fields we're interested in which use the vendor specific device ids
+	// so we need to be able to match on name instead
+	deviceFieldNames = map[string]string{
+		"Percent_Lifetime_Remain": "percent_lifetime_remain",
+		"Wear_Leveling_Count":     "wear_leveling_count",
+		"Media_Wearout_Indicator": "media_wearout_indicator",
+	}
+
 	// to obtain metrics from smartctl
 	sasNVMeAttributes = map[string]struct {
 		ID    string
@@ -147,6 +156,10 @@ var (
 			Parse: parsePercentageInt,
 		},
 		"Percentage Used": {
+			Name:  "Percentage_Used",
+			Parse: parsePercentageInt,
+		},
+		"Percentage used endurance indicator": {
 			Name:  "Percentage_Used",
 			Parse: parsePercentageInt,
 		},
@@ -815,6 +828,16 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			if field, ok := deviceFieldIds[attr[1]]; ok {
 				if val, err := parseRawValue(attr[8]); err == nil {
 					deviceFields[field] = val
+				}
+			}
+
+			if len(attr) > 4 {
+				// If the attribute name matches on in deviceFieldNames
+				// save the value to a field
+				if field, ok := deviceFieldNames[attr[2]]; ok {
+					if val, err := parseRawValue(attr[4]); err == nil {
+						deviceFields[field] = val
+					}
 				}
 			}
 		} else {

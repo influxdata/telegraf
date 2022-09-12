@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/config/aws"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -63,7 +63,7 @@ func (c *mockCloudWatchLogs) PutLogEvents(_ context.Context, input *cloudwatchlo
 	return output, nil
 }
 
-//Ensure mockCloudWatchLogs implement cloudWatchLogs interface
+// Ensure mockCloudWatchLogs implement cloudWatchLogs interface
 var _ cloudWatchLogs = (*mockCloudWatchLogs)(nil)
 
 func RandStringBytes(n int) string {
@@ -207,6 +207,24 @@ func TestInit(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "valid config with EndpointURL",
+			plugin: &CloudWatchLogs{
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:      "eu-central-1",
+					AccessKey:   "dummy",
+					SecretKey:   "dummy",
+					EndpointURL: "https://test.com",
+				},
+				LogGroup:     "TestLogGroup",
+				LogStream:    "tag:source",
+				LDMetricName: "docker_log",
+				LDSource:     "tag:location",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -225,8 +243,8 @@ func TestConnect(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w,
 			`{
-				   "logGroups": [ 
-					  { 
+				   "logGroups": [
+					  {
 						 "arn": "string",
 						 "creationTime": 123456789,
 						 "kmsKeyId": "string",
@@ -265,8 +283,8 @@ func TestWrite(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w,
 			`{
-				   "logGroups": [ 
-					  { 
+				   "logGroups": [
+					  {
 						 "arn": "string",
 						 "creationTime": 123456789,
 						 "kmsKeyId": "string",

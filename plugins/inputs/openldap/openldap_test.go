@@ -71,7 +71,7 @@ func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
 			"LDAP_ADMIN_PASSWORD": "secret",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("Starting slapd"),
+			wait.ForLog("slapd starting"),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
@@ -128,7 +128,7 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 			"/server.key": tlsKey,
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("Starting slapd"),
+			wait.ForLog("slapd starting"),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
@@ -191,7 +191,7 @@ func TestOpenldapLDAPSIntegration(t *testing.T) {
 			"/server.key": tlsKey,
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("Starting slapd"),
+			wait.ForLog("slapd starting"),
 			wait.ForListeningPort(nat.Port(servicePortSecure)),
 		),
 	}
@@ -249,7 +249,7 @@ func TestOpenldapInvalidSSLIntegration(t *testing.T) {
 			"/server.key": tlsKey,
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("Starting slapd"),
+			wait.ForLog("slapd starting"),
 			wait.ForListeningPort(nat.Port(servicePortSecure)),
 		),
 	}
@@ -289,7 +289,7 @@ func TestOpenldapBindIntegration(t *testing.T) {
 			"LDAP_ADMIN_PASSWORD": "secret",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("Starting slapd"),
+			wait.ForLog("slapd starting"),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
@@ -341,7 +341,7 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 			"LDAP_ADMIN_PASSWORD": "secret",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("Starting slapd"),
+			wait.ForLog("slapd starting"),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}

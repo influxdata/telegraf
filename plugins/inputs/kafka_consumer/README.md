@@ -3,8 +3,8 @@
 The [Kafka][kafka] consumer plugin reads from Kafka
 and creates metrics using one of the supported [input data formats][].
 
-For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input plugin
-and use the old zookeeper connection method.
+For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input
+plugin and use the old zookeeper connection method.
 
 ## Configuration
 
@@ -102,6 +102,13 @@ and use the old zookeeper connection method.
   ## Note that the effective timeout could be between 'max_processing_time' and
   ## '2 * max_processing_time'.
   # max_processing_time = "100ms"
+
+  ## The default number of message bytes to fetch from the broker in each
+  ## request (default 1MB). This should be larger than the majority of
+  ## your messages, or else the consumer will spend a lot of time
+  ## negotiating sizes and not actually consuming. Similar to the JVM's
+  ## `fetch.message.max.bytes`.
+  # consumer_fetch_default = "1MB"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

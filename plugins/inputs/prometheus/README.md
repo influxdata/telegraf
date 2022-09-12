@@ -53,6 +53,9 @@ in Prometheus format.
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
+  ## The name of the label for the pod that is being scraped.
+  ## Default is 'namespace' but this can conflict with metrics that have the label 'namespace'
+  # pod_namespace_label_name = "namespace"
   # label selector to target pods which have the label
   # kubernetes_label_selector = "env=dev,app=nginx"
   # field selector to target pods
@@ -98,7 +101,10 @@ in Prometheus format.
   # insecure_skip_verify = false
 ```
 
-`urls` can contain a unix socket as well. If a different path is required (default is `/metrics` for both http[s] and unix) for a unix socket, add `path` as a query parameter as follows: `unix:///var/run/prometheus.sock?path=/custom/metrics`
+`urls` can contain a unix socket as well. If a different path is required
+(default is `/metrics` for both http[s] and unix) for a unix socket, add `path`
+as a query parameter as follows:
+`unix:///var/run/prometheus.sock?path=/custom/metrics`
 
 ### Metric Format Configuration
 
@@ -131,28 +137,41 @@ option in both to ensure metrics are round-tripped without modification.
 
 ### Kubernetes Service Discovery
 
-URLs listed in the `kubernetes_services` parameter will be expanded
-by looking up all A records assigned to the hostname as described in
-[Kubernetes DNS service discovery](https://kubernetes.io/docs/concepts/services-networking/service/#dns).
+URLs listed in the `kubernetes_services` parameter will be expanded by looking
+up all A records assigned to the hostname as described in [Kubernetes DNS
+service discovery][serv-disc].
 
-This method can be used to locate all
-[Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services).
+This method can be used to locate all [Kubernetes headless services][headless].
+
+[serv-disc]: https://kubernetes.io/docs/concepts/services-networking/service/#dns
+
+[headless]: https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
 
 ### Kubernetes scraping
 
-Enabling this option will allow the plugin to scrape for prometheus annotation on Kubernetes
-pods. Currently, you can run this plugin in your kubernetes cluster, or we use the kubeconfig
-file to determine where to monitor.
-Currently the following annotation are supported:
+Enabling this option will allow the plugin to scrape for prometheus annotation
+on Kubernetes pods. Currently, you can run this plugin in your kubernetes
+cluster, or we use the kubeconfig file to determine where to monitor.  Currently
+the following annotation are supported:
 
 * `prometheus.io/scrape` Enable scraping for this pod.
 * `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
 * `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
 * `prometheus.io/port` Used to override the port. (default 9102)
 
-Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
+Using the `monitor_kubernetes_pods_namespace` option allows you to limit which
+pods you are scraping.
 
-Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that either `node_ip` must be specified in the config or the environment variable `NODE_IP` must be set to the host IP. ThisThe latter can be done in the yaml of the pod running telegraf:
+The setting `pod_namespace_label_name` allows you to change the label name for
+the namespace of the pod you are scraping. The default is `namespace`, but this
+will overwrite a label with the name `namespace` from a metric scraped.
+
+Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which
+will scrape pods only in the node that telegraf is running. It will fetch the
+pod list locally from the node's kubelet. This will require running Telegraf in
+every node of the cluster. Note that either `node_ip` must be specified in the
+config or the environment variable `NODE_IP` must be set to the host IP. ThisThe
+latter can be done in the yaml of the pod running telegraf:
 
 ```sh
 env:
@@ -162,11 +181,15 @@ env:
         fieldPath: status.hostIP
  ```
 
-If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated. If not specified, the default is 60 seconds.
+If using node level scrape scope, `pod_scrape_interval` specifies how often (in
+seconds) the pod list for scraping should updated. If not specified, the default
+is 60 seconds.
 
-The pod running telegraf will need to have the proper rbac configuration in order to be allowed to call the k8s api to discover and watch pods in the cluster.
-A typical configuration will create a service account, a cluster role with the appropriate rules and a cluster role binding to tie the cluster role to the service account.
-Example of configuration for cluster level discovery:
+The pod running telegraf will need to have the proper rbac configuration in
+order to be allowed to call the k8s api to discover and watch pods in the
+cluster.  A typical configuration will create a service account, a cluster role
+with the appropriate rules and a cluster role binding to tie the cluster role to
+the service account.  Example of configuration for cluster level discovery:
 
 ```yaml
 ---
@@ -206,10 +229,11 @@ metadata:
 
 ### Consul Service Discovery
 
-Enabling this option and configuring consul `agent` url will allow the plugin to query
-consul catalog for available services. Using `query_interval` the plugin will periodically
-query the consul catalog for services with `name` and `tag` and refresh the list of scraped urls.
-It can use the information from the catalog to build the scraped url and additional tags from a template.
+Enabling this option and configuring consul `agent` url will allow the plugin to
+query consul catalog for available services. Using `query_interval` the plugin
+will periodically query the consul catalog for services with `name` and `tag`
+and refresh the list of scraped urls.  It can use the information from the
+catalog to build the scraped url and additional tags from a template.
 
 Multiple consul queries can be configured, each for different service.
 The following example fields can be used in url or tag templates:

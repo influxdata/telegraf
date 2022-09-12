@@ -2,51 +2,58 @@
 package mqtt
 
 import (
+	// Blank import to support go:embed compile directive
 	_ "embed"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
-	"time"
-
-	paho "github.com/eclipse/paho.mqtt.golang"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
 const (
-	defaultKeepAlive = 0
+	defaultKeepAlive = 30
 )
 
 type MQTT struct {
 	Servers     []string `toml:"servers"`
-	Username    string
-	Password    string
+	Protocol    string   `toml:"protocol"`
+	Username    string   `toml:"username"`
+	Password    string   `toml:"password"`
 	Database    string
-	Timeout     config.Duration
-	TopicPrefix string
-	QoS         int    `toml:"qos"`
-	ClientID    string `toml:"client_id"`
+	Timeout     config.Duration `toml:"timeout"`
+	TopicPrefix string          `toml:"topic_prefix"`
+	QoS         int             `toml:"qos"`
+	ClientID    string          `toml:"client_id"`
 	tls.ClientConfig
 	BatchMessage bool            `toml:"batch"`
 	Retain       bool            `toml:"retain"`
 	KeepAlive    int64           `toml:"keep_alive"`
 	Log          telegraf.Logger `toml:"-"`
 
-	client paho.Client
-	opts   *paho.ClientOptions
-
+	client     Client
 	serializer serializers.Serializer
 
 	sync.Mutex
+}
+
+// Client is a protocol neutral MQTT client for connecting,
+// disconnecting, and publishing data to a topic.
+// The protocol specific clients must implement this interface
+type Client interface {
+	Connect() error
+	Publish(topic string, data []byte) error
+	Close() error
 }
 
 func (*MQTT) SampleConfig() string {
@@ -54,24 +61,22 @@ func (*MQTT) SampleConfig() string {
 }
 
 func (m *MQTT) Connect() error {
-	var err error
 	m.Lock()
 	defer m.Unlock()
 	if m.QoS > 2 || m.QoS < 0 {
 		return fmt.Errorf("MQTT Output, invalid QoS value: %d", m.QoS)
 	}
 
-	m.opts, err = m.createOpts()
-	if err != nil {
-		return err
+	switch m.Protocol {
+	case "", "3.1.1":
+		m.client = newMQTTv311Client(m)
+	case "5":
+		m.client = newMQTTv5Client(m)
+	default:
+		return fmt.Errorf("unsuported protocol %q: must be \"3.1.1\" or \"5\"", m.Protocol)
 	}
 
-	m.client = paho.NewClient(m.opts)
-	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
-		return token.Error()
-	}
-
-	return nil
+	return m.client.Connect()
 }
 
 func (m *MQTT) SetSerializer(serializer serializers.Serializer) {
@@ -79,10 +84,7 @@ func (m *MQTT) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (m *MQTT) Close() error {
-	if m.client.IsConnected() {
-		m.client.Disconnect(20)
-	}
-	return nil
+	return m.client.Close()
 }
 
 func (m *MQTT) Write(metrics []telegraf.Metric) error {
@@ -119,7 +121,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
-			err = m.publish(topic, buf)
+			err = m.client.Publish(topic, buf)
 			if err != nil {
 				return fmt.Errorf("could not write to MQTT server, %s", err)
 			}
@@ -132,69 +134,29 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			return err
 		}
-		publisherr := m.publish(key, buf)
-		if publisherr != nil {
-			return fmt.Errorf("could not write to MQTT server, %s", publisherr)
+		err = m.client.Publish(key, buf)
+		if err != nil {
+			return fmt.Errorf("could not write to MQTT server, %s", err)
 		}
 	}
 
 	return nil
 }
 
-func (m *MQTT) publish(topic string, body []byte) error {
-	token := m.client.Publish(topic, byte(m.QoS), m.Retain, body)
-	token.WaitTimeout(time.Duration(m.Timeout))
-	if token.Error() != nil {
-		return token.Error()
+func parseServers(servers []string) ([]*url.URL, error) {
+	urls := make([]*url.URL, 0, len(servers))
+	for _, svr := range servers {
+		if !strings.Contains(svr, "://") {
+			urls = append(urls, &url.URL{Scheme: "tcp", Host: svr})
+		} else {
+			u, err := url.Parse(svr)
+			if err != nil {
+				return nil, err
+			}
+			urls = append(urls, u)
+		}
 	}
-	return nil
-}
-
-func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
-	opts := paho.NewClientOptions()
-	opts.KeepAlive = m.KeepAlive
-
-	if m.Timeout < config.Duration(time.Second) {
-		m.Timeout = config.Duration(5 * time.Second)
-	}
-	opts.WriteTimeout = time.Duration(m.Timeout)
-
-	if m.ClientID != "" {
-		opts.SetClientID(m.ClientID)
-	} else {
-		opts.SetClientID("Telegraf-Output-" + internal.RandomString(5))
-	}
-
-	tlsCfg, err := m.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	scheme := "tcp"
-	if tlsCfg != nil {
-		scheme = "ssl"
-		opts.SetTLSConfig(tlsCfg)
-	}
-
-	user := m.Username
-	if user != "" {
-		opts.SetUsername(user)
-	}
-	password := m.Password
-	if password != "" {
-		opts.SetPassword(password)
-	}
-
-	if len(m.Servers) == 0 {
-		return opts, fmt.Errorf("could not get host informations")
-	}
-	for _, host := range m.Servers {
-		server := fmt.Sprintf("%s://%s", scheme, host)
-
-		opts.AddBroker(server)
-	}
-	opts.SetAutoReconnect(true)
-	return opts, nil
+	return urls, nil
 }
 
 func init() {

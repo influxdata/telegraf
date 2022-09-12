@@ -14,7 +14,7 @@ import (
 
 const servicePort = "3000"
 
-func launchTestServer(t *testing.T) testutil.Container {
+func launchTestServer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
 		Image:        "aerospike:ce-6.0.0.1",
 		ExposedPorts: []string{servicePort},
@@ -23,7 +23,7 @@ func launchTestServer(t *testing.T) testutil.Container {
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
 
-	return container
+	return &container
 }
 
 func TestAerospikeStatisticsIntegration(t *testing.T) {

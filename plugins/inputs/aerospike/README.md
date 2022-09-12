@@ -1,11 +1,13 @@
 # Aerospike Input Plugin
 
-The aerospike plugin queries aerospike server(s) and get node statistics & stats for
-all the configured namespaces.
+The aerospike plugin queries aerospike server(s) and get node statistics & stats
+for all the configured namespaces.
 
-For what the measurements mean, please consult the [Aerospike Metrics Reference Docs](http://www.aerospike.com/docs/reference/metrics).
+For what the measurements mean, please consult the [Aerospike Metrics Reference
+Docs](http://www.aerospike.com/docs/reference/metrics).
 
-The metric names, to make it less complicated in querying, have replaced all `-` with `_` as Aerospike metrics come in both forms (no idea why).
+The metric names, to make it less complicated in querying, have replaced all `-`
+with `_` as Aerospike metrics come in both forms (no idea why).
 
 All metrics are attempted to be cast to integers, then booleans, then strings.
 
@@ -55,7 +57,7 @@ All metrics are attempted to be cast to integers, then booleans, then strings.
   # num_histogram_buckets = 100 # default: 10
 ```
 
-## Measurements
+## Metrics
 
 The aerospike metrics are under a few measurement names:
 
@@ -90,8 +92,9 @@ are available from the aerospike `sets/<namespace_name>/<set_name>` command.
   ...
 ```
 
-***aerospike_histogram_ttl***: These are aerospike ttl hisogram measurements, which
-is available from the aerospike `histogram:namespace=<namespace_name>;[set=<set_name>;]type=ttl` command.
+***aerospike_histogram_ttl***: These are aerospike ttl hisogram measurements,
+which is available from the aerospike
+`histogram:namespace=<namespace_name>;[set=<set_name>;]type=ttl` command.
 
 ```text
   telnet localhost 3003
@@ -100,7 +103,10 @@ is available from the aerospike `histogram:namespace=<namespace_name>;[set=<set_
   ...
 ```
 
-***aerospike_histogram_object_size_linear***: These are aerospike object size linear histogram measurements, which is available from the aerospike `histogram:namespace=<namespace_name>;[set=<set_name>;]type=object_size_linear` command.
+***aerospike_histogram_object_size_linear***: These are aerospike object size
+linear histogram measurements, which is available from the aerospike
+`histogram:namespace=<namespace_name>;[set=<set_name>;]type=object_size_linear`
+command.
 
 ```text
   telnet localhost 3003

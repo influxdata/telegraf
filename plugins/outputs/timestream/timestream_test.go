@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/config/aws"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -361,7 +361,6 @@ func TestTransformMetricsRequestsAboveLimitAreSplit(t *testing.T) {
 }
 
 func TestTransformMetricsDifferentDimensionsSameTimestampsAreWrittenSeparate(t *testing.T) {
-
 	input1 := testutil.MustMetric(
 		metricName1,
 		map[string]string{"tag1": "value1"},
@@ -691,6 +690,22 @@ func TestTransformMetricsUnsupportedFieldsAreSkipped(t *testing.T) {
 	comparisonTest(t, MappingModeMultiTable,
 		[]telegraf.Metric{metricWithUnsupportedField},
 		[]*timestreamwrite.WriteRecordsInput{expectedResultMultiTable})
+}
+
+func TestCustomEndpoint(t *testing.T) {
+	customEndpoint := "http://test.custom.endpoint.com"
+	plugin := Timestream{
+		MappingMode:      MappingModeMultiTable,
+		DatabaseName:     tsDbName,
+		Log:              testutil.Logger{},
+		CredentialConfig: internalaws.CredentialConfig{EndpointURL: customEndpoint},
+	}
+
+	// validate config correctness
+	err := plugin.Connect()
+	require.Nil(t, err, "Invalid configuration")
+	// Check customURL is used
+	require.Equal(t, plugin.EndpointURL, customEndpoint)
 }
 
 func comparisonTest(t *testing.T,

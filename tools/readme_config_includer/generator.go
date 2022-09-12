@@ -1,8 +1,10 @@
 // This is a tool to embed configuration files into the README.md of all plugins
 // It searches for TOML sections in the plugins' README.md and detects includes specified in the form
-//     ```toml [@includeA.conf[ @includeB[ @...]]
-//         Whatever is in here gets replaced.
-//     ```
+//
+//	```toml [@includeA.conf[ @includeB[ @...]]
+//	    Whatever is in here gets replaced.
+//	```
+//
 // Then it will replace everything in this section by the concatenation of the file `includeA.conf`, `includeB` etc.
 // content. The tool is not stateful, so it can be run multiple time with a stable result as long
 // as the included files do not change.
@@ -57,7 +59,7 @@ func insertInclude(buf *bytes.Buffer, include string) error {
 }
 
 func insertIncludes(buf *bytes.Buffer, b includeBlock) error {
-	// Insert all includes in the order they occured
+	// Insert all includes in the order they occurred
 	for _, include := range b.Includes {
 		if err := insertInclude(buf, include); err != nil {
 			return err
@@ -127,7 +129,7 @@ func main() {
 			block.Includes = append(block.Includes, string(inc[1]))
 		}
 
-		// Extract the block boarders
+		// Extract the block borders
 		block.extractBlockBorders(codeNode)
 		blocksToReplace = append(blocksToReplace, block)
 	}
@@ -153,13 +155,13 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	// Copy the remainings of the original file...
+	// Copy the remaining of the original file...
 	if _, err := output.Write(readme[offset:]); err != nil {
 		log.Fatalf("Writing remaining content failed: %v", err)
 	}
 
 	// Write output with same permission as input
-	file, err := os.OpenFile(inputFilename, os.O_CREATE|os.O_WRONLY, perm)
+	file, err := os.OpenFile(inputFilename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, perm)
 	if err != nil {
 		log.Fatalf("Opening output file failed: %v", err)
 	}

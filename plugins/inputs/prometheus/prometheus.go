@@ -27,6 +27,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -75,15 +76,16 @@ type Prometheus struct {
 	headers map[string]string
 
 	// Should we scrape Kubernetes services for prometheus annotations
-	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
-	PodScrapeScope    string `toml:"pod_scrape_scope"`
-	NodeIP            string `toml:"node_ip"`
-	PodScrapeInterval int    `toml:"pod_scrape_interval"`
-	PodNamespace      string `toml:"monitor_kubernetes_pods_namespace"`
-	lock              sync.Mutex
-	kubernetesPods    map[string]URLAndAddress
-	cancel            context.CancelFunc
-	wg                sync.WaitGroup
+	MonitorPods           bool   `toml:"monitor_kubernetes_pods"`
+	PodScrapeScope        string `toml:"pod_scrape_scope"`
+	NodeIP                string `toml:"node_ip"`
+	PodScrapeInterval     int    `toml:"pod_scrape_interval"`
+	PodNamespace          string `toml:"monitor_kubernetes_pods_namespace"`
+	PodNamespaceLabelName string `toml:"pod_namespace_label_name"`
+	lock                  sync.Mutex
+	kubernetesPods        map[string]URLAndAddress
+	cancel                context.CancelFunc
+	wg                    sync.WaitGroup
 
 	// Only for monitor_kubernetes_pods=true and pod_scrape_scope="node"
 	podLabelSelector  labels.Selector

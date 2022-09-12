@@ -17,7 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+var defaultTimeout = config.Duration(time.Second * 5)
+
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -68,6 +71,7 @@ func init() {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
 			ServiceAddress: "udp://:162",
+			Timeout:        defaultTimeout,
 			Path:           []string{"/usr/share/snmp/mibs"},
 			Version:        "2c",
 		}
@@ -87,7 +91,7 @@ func (s *SnmpTrap) Init() error {
 			return err
 		}
 	case "netsnmp":
-		s.translator = newNetsnmpTranslator()
+		s.translator = newNetsnmpTranslator(s.Timeout)
 	default:
 		return fmt.Errorf("invalid translator value")
 	}

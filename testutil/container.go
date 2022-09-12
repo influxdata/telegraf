@@ -13,6 +13,14 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+type TestLogConsumer struct {
+	Msgs []string
+}
+
+func (g *TestLogConsumer) Accept(l testcontainers.Log) {
+	g.Msgs = append(g.Msgs, string(l.Content))
+}
+
 type Container struct {
 	BindMounts   map[string]string
 	Entrypoint   []string
@@ -25,6 +33,7 @@ type Container struct {
 
 	Address string
 	Ports   map[string]string
+	Logs    TestLogConsumer
 
 	container testcontainers.Container
 	ctx       context.Context
@@ -33,9 +42,15 @@ type Container struct {
 func (c *Container) Start() error {
 	c.ctx = context.Background()
 
+	var containerMounts []testcontainers.ContainerMount
+
+	for k, v := range c.BindMounts {
+		containerMounts = append(containerMounts, testcontainers.BindMount(v, testcontainers.ContainerMountTarget(k)))
+	}
+
 	req := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			BindMounts:   c.BindMounts,
+			Mounts:       testcontainers.Mounts(containerMounts...),
 			Entrypoint:   c.Entrypoint,
 			Env:          c.Env,
 			ExposedPorts: c.ExposedPorts,
@@ -52,6 +67,15 @@ func (c *Container) Start() error {
 		return fmt.Errorf("container failed to start: %s", err)
 	}
 	c.container = container
+
+	c.Logs = TestLogConsumer{
+		Msgs: []string{},
+	}
+	c.container.FollowOutput(&c.Logs)
+	err = c.container.StartLogProducer(c.ctx)
+	if err != nil {
+		return fmt.Errorf("log producer failed: %s", err)
+	}
 
 	c.Address = "localhost"
 
@@ -96,11 +120,30 @@ func (c *Container) LookupMappedPorts() error {
 	return nil
 }
 
-func (c *Container) Terminate() error {
-	err := c.container.Terminate(c.ctx)
-	if err != nil {
-		return fmt.Errorf("failed to terminate the container: %s", err)
+func (c *Container) Exec(cmds []string) (int, error) {
+	return c.container.Exec(c.ctx, cmds)
+}
+
+func (c *Container) PrintLogs() {
+	fmt.Println("--- Container Logs Start ---")
+	for _, msg := range c.Logs.Msgs {
+		fmt.Print(msg)
 	}
+	fmt.Println("--- Container Logs End ---")
+}
+
+func (c *Container) Terminate() error {
+	err := c.container.StopLogProducer()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = c.container.Terminate(c.ctx)
+	if err != nil {
+		fmt.Printf("failed to terminate the container: %s", err)
+	}
+
+	c.PrintLogs()
 
 	return nil
 }
