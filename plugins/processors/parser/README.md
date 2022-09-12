@@ -1,21 +1,25 @@
 # Parser Processor Plugin
 
-This plugin parses defined fields containing the specified data format and
-creates new metrics based on the contents of the field.
+This plugin parses defined fields or tags containing the specified data format
+and creates new metrics based on the contents of the field or tag.
 
 ## Configuration
 
 ```toml @sample.conf
-# Parse a value in a specified field/tag(s) and add the result in a new metric
+# Parse a value in a specified field(s)/tag(s) and add the result in a new metric
 [[processors.parser]]
   ## The name of the fields whose value will be parsed.
   parse_fields = ["message"]
 
+  ## The name of the tags whose value will be parsed.
+  # parse_tags = []
+
   ## If true, incoming metrics are not emitted.
-  drop_original = false
+  # drop_original = false
 
   ## If set to override, emitted metrics will be merged by overriding the
   ## original metric using the newly parsed metrics.
+  ## Only has effect when drop_original is set to false.
   merge = "override"
 
   ## The dataformat to be read from files
