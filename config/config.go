@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+	"golang.org/x/tools/godoc/util"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -581,7 +582,16 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
-	return os.ReadFile(config)
+	buffer, err := os.ReadFile(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if !util.IsText(buffer) {
+		return nil, fmt.Errorf("provided config is not a text file")
+	}
+
+	return buffer, nil
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
