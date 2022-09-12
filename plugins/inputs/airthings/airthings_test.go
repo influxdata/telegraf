@@ -100,7 +100,7 @@ func setupTestServer(m *testing.M) *httptest.Server {
 			fmt.Println(resp.StatusCode)
 			fmt.Println(resp.Header.Get("Content-Type"))
 			fmt.Println(string(body))
-		
+
 		*/
 	}))
 	return ts
@@ -119,12 +119,12 @@ func TestGetDeviceListAndData(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(airthings.Gather)
 	require.NoError(t, err)
-	assertWaveMini(t, acc)
-	assertWavePlus(t, acc)
-	assertGen2(t, acc)
+	assertWaveMini(t, &acc)
+	assertWavePlus(t, &acc)
+	assertGen2(t, &acc)
 }
 
-func assertWaveMini(t *testing.T, acc testutil.Accumulator) {
+func assertWaveMini(t *testing.T, acc *testutil.Accumulator) {
 	acc.AssertContainsTaggedFields(t, "airthings_connector",
 		map[string]interface{}{
 			MesBattery:         float64(78),
@@ -146,7 +146,7 @@ func assertWaveMini(t *testing.T, acc testutil.Accumulator) {
 		})
 }
 
-func assertWavePlus(t *testing.T, acc testutil.Accumulator) {
+func assertWavePlus(t *testing.T, acc *testutil.Accumulator) {
 	acc.AssertContainsTaggedFields(t, "airthings_connector",
 		map[string]interface{}{
 			MesBattery:           float64(100),
@@ -170,7 +170,7 @@ func assertWavePlus(t *testing.T, acc testutil.Accumulator) {
 		})
 }
 
-func assertGen2(t *testing.T, acc testutil.Accumulator) {
+func assertGen2(t *testing.T, acc *testutil.Accumulator) {
 	acc.AssertContainsTaggedFields(t, "airthings_connector",
 		map[string]interface{}{
 			MesBattery:           float64(100),
