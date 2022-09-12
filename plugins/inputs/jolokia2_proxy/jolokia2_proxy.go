@@ -1,4 +1,4 @@
-//go:generate ../../../../tools/readme_config_includer/generator
+//go:generate ../../../tools/readme_config_includer/generator
 package jolokia2_proxy
 
 import (
@@ -7,26 +7,29 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	common "github.com/influxdata/telegraf/plugins/common/jolokia2"
 	"github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
 type JolokiaProxy struct {
-	DefaultFieldPrefix    string
-	DefaultFieldSeparator string
-	DefaultTagPrefix      string
+	DefaultFieldPrefix    string `toml:"default_field_prefix"`
+	DefaultFieldSeparator string `toml:"default_field_separator"`
+	DefaultTagPrefix      string `toml:"default_tag_prefix"`
 
-	URL                   string `toml:"url"`
-	DefaultTargetPassword string
-	DefaultTargetUsername string
+	URL                   string                     `toml:"url"`
+	DefaultTargetPassword string                     `toml:"default_target_password"`
+	DefaultTargetUsername string                     `toml:"default_target_username"`
 	Targets               []JolokiaProxyTargetConfig `toml:"target"`
 
-	Username        string
-	Password        string
+	Username        string          `toml:"username"`
+	Password        string          `toml:"password"`
+	Origin          string          `toml:"origin"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
@@ -37,8 +40,8 @@ type JolokiaProxy struct {
 
 type JolokiaProxyTargetConfig struct {
 	URL      string `toml:"url"`
-	Username string
-	Password string
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 }
 
 func (*JolokiaProxy) SampleConfig() string {
@@ -94,5 +97,14 @@ func (jp *JolokiaProxy) createClient() (*common.Client, error) {
 		ResponseTimeout: time.Duration(jp.ResponseTimeout),
 		ClientConfig:    jp.ClientConfig,
 		ProxyConfig:     proxyConfig,
+	})
+}
+
+func init() {
+	inputs.Add("jolokia2_proxy", func() telegraf.Input {
+		return &JolokiaProxy{
+			Metrics:               []common.MetricConfig{},
+			DefaultFieldSeparator: ".",
+		}
 	})
 }

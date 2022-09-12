@@ -15,6 +15,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -34,7 +35,7 @@ func (l *logger) Output(_ int, s string) error {
 	return nil
 }
 
-//NSQConsumer represents the configuration of the plugin
+// NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
 	Server      string   `toml:"server" deprecated:"1.5.0;use 'nsqd' instead"`
 	Nsqd        []string `toml:"nsqd"`

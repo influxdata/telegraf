@@ -69,7 +69,7 @@ type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
 	FmtValue PDH_FMT_COUNTERVALUE_LONG
 }
 
-//PDH_COUNTER_INFO structure contains information describing the properties of a counter. This information also includes the counter path.
+// PDH_COUNTER_INFO structure contains information describing the properties of a counter. This information also includes the counter path.
 type PDH_COUNTER_INFO struct {
 	//Size of the structure, including the appended strings, in bytes.
 	DwLength uint32

@@ -1,6 +1,7 @@
-//go:generate ../../../tools/readme_config_includer/generator
 // Package uwsgi implements a telegraf plugin for collecting uwsgi stats from
 // the uwsgi stats server.
+//
+//go:generate ../../../tools/readme_config_includer/generator
 package uwsgi
 
 import (
@@ -22,6 +23,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 

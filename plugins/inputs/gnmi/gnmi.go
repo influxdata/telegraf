@@ -32,6 +32,7 @@ import (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -481,7 +482,7 @@ func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[stri
 	return builder.String(), aliasPath, nil
 }
 
-//ParsePath from XPath-like string to gNMI path structure
+// ParsePath from XPath-like string to gNMI path structure
 func parsePath(origin string, pathToParse string, target string) (*gnmiLib.Path, error) {
 	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
 	if err != nil {

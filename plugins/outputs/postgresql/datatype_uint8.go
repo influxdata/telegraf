@@ -1,4 +1,4 @@
-//nolint
+// nolint
 package postgresql
 
 // Copied from https://github.com/jackc/pgtype/blob/master/int8.go and tweaked for uint64

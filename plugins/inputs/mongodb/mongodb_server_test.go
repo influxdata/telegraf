@@ -12,6 +12,7 @@ import (
 )
 
 var ServicePort = "27017"
+var unreachableMongoEndpoint = "mongodb://user:pass@127.0.0.1:27017/nop"
 
 func createTestServer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
@@ -45,6 +46,8 @@ func TestGetDefaultTagsIntegration(t *testing.T) {
 		},
 	}
 	err := m.Init()
+	require.NoError(t, err)
+	err = m.Start()
 	require.NoError(t, err)
 
 	server := m.clients[0]
@@ -81,6 +84,8 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 	}
 	err := m.Init()
 	require.NoError(t, err)
+	err = m.Start()
+	require.NoError(t, err)
 
 	server := m.clients[0]
 
@@ -95,6 +100,55 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 	for key := range defaultStats {
 		require.True(t, acc.HasInt64Field("mongodb", key))
 	}
+}
+
+func TestSkipBehaviorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &MongoDB{
+		Log:     &testutil.CaptureLogger{},
+		Servers: []string{unreachableMongoEndpoint},
+	}
+
+	m.DisconnectedServersBehavior = "skip"
+	err := m.Init()
+	require.NoError(t, err)
+	err = m.Start()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+	require.NotContains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
+}
+
+func TestErrorBehaviorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &MongoDB{
+		Log:     &testutil.CaptureLogger{},
+		Servers: []string{unreachableMongoEndpoint},
+	}
+
+	err := m.Init()
+	require.NoError(t, err)
+	err = m.Start()
+	require.Error(t, err)
+
+	// set to skip to bypass start error
+	m.DisconnectedServersBehavior = "skip"
+	err = m.Start()
+	require.NoError(t, err)
+	m.DisconnectedServersBehavior = "error"
+
+	var acc testutil.Accumulator
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+	require.Contains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
 func TestPoolStatsVersionCompatibility(t *testing.T) {

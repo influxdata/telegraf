@@ -242,8 +242,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.18.5 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.18.5
+	docker build -t quay.io/influxdb/telegraf-ci:1.19.1 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.19.1
 
 .PHONY: install
 install: $(buildbin)
