@@ -9,19 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/require"
 )
-
-//compares metrics without comparing time
-func compareMetrics(t *testing.T, expected, actual []telegraf.Metric) {
-	require.Equal(t, len(expected), len(actual))
-	for i, m := range actual {
-		require.Equal(t, expected[i].Name(), m.Name())
-		require.Equal(t, expected[i].Fields(), m.Fields())
-		require.Equal(t, expected[i].Tags(), m.Tags())
-	}
-}
 
 func TestApply(t *testing.T) {
 	tests := []struct {
@@ -510,7 +498,7 @@ func TestApply(t *testing.T) {
 
 			output := parser.Apply(tt.input)
 			t.Logf("Testing: %s", tt.name)
-			compareMetrics(t, tt.expected, output)
+			testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
 		})
 	}
 }
@@ -581,7 +569,7 @@ func TestBadApply(t *testing.T) {
 
 			output := parser.Apply(tt.input)
 
-			compareMetrics(t, output, tt.expected)
+			testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
 		})
 	}
 }
