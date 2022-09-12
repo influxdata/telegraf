@@ -18,6 +18,7 @@ func TestApply(t *testing.T) {
 	tests := []struct {
 		name         string
 		parseFields  []string
+		parseTags    []string
 		config       parsers.Config
 		dropOriginal bool
 		merge        string
@@ -350,6 +351,93 @@ func TestApply(t *testing.T) {
 			},
 		},
 		{
+			name:         "parse one tag drop original",
+			parseTags:    []string{"sample"},
+			dropOriginal: true,
+			config: parsers.Config{
+				DataFormat: "logfmt",
+			},
+			input: metric.New(
+				"singleTag",
+				map[string]string{
+					"some":   "tag",
+					"sample": `ts=2018-07-24T19:43:40.275Z`,
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"singleTag",
+					map[string]string{},
+					map[string]interface{}{
+						"ts": "2018-07-24T19:43:40.275Z",
+					},
+					time.Unix(0, 0)),
+			},
+		},
+		{
+			name:         "parse one tag with merge",
+			parseTags:    []string{"sample"},
+			dropOriginal: false,
+			merge:        "override",
+			config: parsers.Config{
+				DataFormat: "logfmt",
+			},
+			input: metric.New(
+				"singleTag",
+				map[string]string{
+					"some":   "tag",
+					"sample": `ts=2018-07-24T19:43:40.275Z`,
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"singleTag",
+					map[string]string{
+						"some":   "tag",
+						"sample": `ts=2018-07-24T19:43:40.275Z`,
+					},
+					map[string]interface{}{
+						"ts": "2018-07-24T19:43:40.275Z",
+					},
+					time.Unix(0, 0)),
+			},
+		},
+		{
+			name:         "parse one tag keep",
+			parseTags:    []string{"sample"},
+			dropOriginal: false,
+			config: parsers.Config{
+				DataFormat: "logfmt",
+			},
+			input: metric.New(
+				"singleTag",
+				map[string]string{
+					"some":   "tag",
+					"sample": `ts=2018-07-24T19:43:40.275Z`,
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"singleTag",
+					map[string]string{
+						"some":   "tag",
+						"sample": `ts=2018-07-24T19:43:40.275Z`,
+					},
+					map[string]interface{}{},
+					time.Unix(0, 0)),
+				metric.New(
+					"singleTag",
+					map[string]string{},
+					map[string]interface{}{
+						"ts": "2018-07-24T19:43:40.275Z",
+					},
+					time.Unix(0, 0)),
+			},
+		},
+		{
 			name:         "Fail to parse one field but parses other [keep]",
 			parseFields:  []string{"good", "bad"},
 			dropOriginal: false,
@@ -494,6 +582,7 @@ func TestApply(t *testing.T) {
 			parser := Parser{
 				Config:       tt.config,
 				ParseFields:  tt.parseFields,
+				ParseTags:    tt.parseTags,
 				DropOriginal: tt.dropOriginal,
 				Merge:        tt.merge,
 				Log:          testutil.Logger{Name: "processor.parser"},
