@@ -1,7 +1,7 @@
 # Parser Processor Plugin
 
-This plugin parses defined fields or tags containing the specified data format and
-creates new metrics based on the contents of the field or tag.
+This plugin parses defined fields or tags containing the specified data format
+and creates new metrics based on the contents of the field or tag.
 
 ## Configuration
 
