@@ -65,9 +65,6 @@ func (gcs *GCS) SetParser(parser parsers.Parser) {
 	gcs.parser = parser
 }
 
-func (gcs *GCS) Description() string {
-	return "Read metrics from Google Cloud Storage"
-}
 
 func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 	query := gcs.createQuery()
