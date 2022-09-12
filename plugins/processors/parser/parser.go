@@ -84,6 +84,12 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 					p.Log.Errorf("could not parse tag %s: %v", key, err)
 				}
 
+				for _, m := range fromTagMetric {
+					if m.Name() == "" {
+						m.SetName(metric.Name())
+					}
+				}
+
 				newMetrics = append(newMetrics, fromTagMetric...)
 			}
 		}
