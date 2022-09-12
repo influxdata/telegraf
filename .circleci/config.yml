@@ -263,7 +263,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: darwin-amd64
