@@ -581,7 +581,17 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
-	return os.ReadFile(config)
+	buffer, err := os.ReadFile(config)
+	if err != nil {
+		return nil, err
+	}
+
+	mimeType := http.DetectContentType(buffer)
+	if !strings.Contains(mimeType, "text/plain") {
+		return nil, fmt.Errorf("provided config is not a TOML file: %s", config)
+	}
+
+	return buffer, nil
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
