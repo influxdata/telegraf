@@ -587,6 +587,9 @@ func LoadConfigFile(config string) ([]byte, error) {
 		return nil, err
 	}
 
+	mimeType := http.DetectContentType(buffer)
+	fmt.Println(mimeType) // image/png
+
 	if !util.IsText(buffer) {
 		return nil, fmt.Errorf("provided config is not a TOML file: %s", config)
 	}
