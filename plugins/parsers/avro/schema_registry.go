@@ -3,7 +3,6 @@ package avro
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 )
@@ -23,8 +22,7 @@ func NewSchemaRegistry(url string) *SchemaRegistry {
 
 func (sr *SchemaRegistry) getSchema(id int) (string, error) {
 	resp, err := http.Get(fmt.Sprintf(schemaByID, sr.url, id))
-	if nil != err {
-		log.Printf("E! SchemaRegistry: %s", err)
+	if err != nil {
 		return "", err
 	}
 
@@ -34,14 +32,12 @@ func (sr *SchemaRegistry) getSchema(id int) (string, error) {
 
 	schema, ok := jsonResponse["schema"]
 	if !ok {
-		log.Printf("E! SchemaRegistry: malformed response!")
-		return "", fmt.Errorf("malformed respose from schema registry")
+		return "", fmt.Errorf("malformed respose from schema registry: no 'schema' key")
 	}
 
 	schemaValue, ok := schema.(string)
 	if !ok {
-		log.Printf("E! SchemaRegistry: schema %s is not a string", schema)
-		return "", fmt.Errorf("malformed respose from schema registry")
+		return "", fmt.Errorf("malformed respose from schema registry: %v cannot be cast to string", schema)
 	}
 
 	return schemaValue, nil

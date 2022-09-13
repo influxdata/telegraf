@@ -68,7 +68,7 @@ type ParserCompatibility interface {
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
-	// DataFormat can be one of: json, influx, graphite, value, nagios
+	// DataFormat can be one of: avro, json, influx, graphite, value, nagios
 	DataFormat string `toml:"data_format"`
 
 	// Separator only applied to Graphite data.
@@ -163,12 +163,13 @@ type Config struct {
 	CSVMetadataTrimSet    string   `toml:"csv_metadata_trim_set"`
 
 	// avro configuration
-	AVROSchemaRegistry  string   `toml:"arvo_schema_registry"`
-	AVROMeasurement     string   `toml:"arvo_measurement"`
-	AVROTags            []string `toml:"arvo_tags"`
-	AVROFields          []string `toml:"arvo_fields"`
-	AVROTimestamp       string   `toml:"arvo_timestamp"`
-	AVROTimestampFormat string   `toml:"arvo_timestamp_format"`
+	AVROSchemaRegistry  string   `toml:"avro_schema_registry"`
+	AVROSchema          string   `toml:"avro_schema"`	
+	AVROMeasurement     string   `toml:"avro_measurement"`
+	AVROTags            []string `toml:"avro_tags"`
+	AVROFields          []string `toml:"avro_fields"`
+	AVROTimestamp       string   `toml:"avro_timestamp"`
+	AVROTimestampFormat string   `toml:"avro_timestamp_format"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
