@@ -22,19 +22,22 @@ var sampleConfig string
 const maxTagLength = 254
 
 type Wavefront struct {
-	URL                  string   `toml:"url"`
-	Token                string   `toml:"token"`
-	Prefix               string   `toml:"prefix"`
-	SimpleFields         bool     `toml:"simple_fields"`
-	MetricSeparator      string   `toml:"metric_separator"`
-	ConvertPaths         bool     `toml:"convert_paths"`
-	ConvertBool          bool     `toml:"convert_bool"`
-	HTTPMaximumBatchSize int      `toml:"http_maximum_batch_size"`
-	UseRegex             bool     `toml:"use_regex"`
-	UseStrict            bool     `toml:"use_strict"`
-	TruncateTags         bool     `toml:"truncate_tags"`
-	ImmediateFlush       bool     `toml:"immediate_flush"`
-	SourceOverride       []string `toml:"source_override"`
+	URL                  string                          `toml:"url"`
+	Token                string                          `toml:"token"`
+	Host                 string                          `toml:"host" deprecated:"2.4.0;use url instead"`
+	Port                 int                             `toml:"port" deprecated:"2.4.0;use url instead"`
+	Prefix               string                          `toml:"prefix"`
+	SimpleFields         bool                            `toml:"simple_fields"`
+	MetricSeparator      string                          `toml:"metric_separator"`
+	ConvertPaths         bool                            `toml:"convert_paths"`
+	ConvertBool          bool                            `toml:"convert_bool"`
+	HTTPMaximumBatchSize int                             `toml:"http_maximum_batch_size"`
+	UseRegex             bool                            `toml:"use_regex"`
+	UseStrict            bool                            `toml:"use_strict"`
+	TruncateTags         bool                            `toml:"truncate_tags"`
+	ImmediateFlush       bool                            `toml:"immediate_flush"`
+	SourceOverride       []string                        `toml:"source_override"`
+	StringToNumber       map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`

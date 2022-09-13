@@ -40,6 +40,7 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
+	URL                       string            `toml:"url" deprecated:"0.1.9;2.0.0;use 'urls' instead"`
 	URLs                      []string          `toml:"urls"`
 	Username                  string            `toml:"username"`
 	Password                  string            `toml:"password"`
@@ -58,6 +59,7 @@ type InfluxDB struct {
 	ContentEncoding           string            `toml:"content_encoding"`
 	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
 	InfluxUintSupport         bool              `toml:"influx_uint_support"`
+	Precision                 string            `toml:"precision" deprecated:"1.0.0;option is ignored"`
 	tls.ClientConfig
 
 	clients []Client
