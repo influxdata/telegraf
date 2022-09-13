@@ -113,7 +113,7 @@ import (
     "github.com/influxdata/telegraf/plugins/processors"
 )
 
-go:embed sample.conf
+//go:embed sample.conf
 var sampleConfig string
 
 type Printer struct {
