@@ -609,9 +609,6 @@ workflows:
           requires:
             - 'test-go-linux'
           filters:
-            branches:
-              ignore:
-                - master
             tags:
               only: /.*/
       - 'arm64-package':
