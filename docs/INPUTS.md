@@ -42,7 +42,7 @@ import (
     "github.com/influxdata/telegraf/plugins/inputs"
 )
 
-go:embed sample.conf
+//go:embed sample.conf
 var sampleConfig string
 
 type Simple struct {

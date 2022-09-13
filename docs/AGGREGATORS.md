@@ -39,7 +39,7 @@ import (
     "github.com/influxdata/telegraf/plugins/aggregators"
 )
 
-go:embed sample.conf
+//go:embed sample.conf
 var sampleConfig string
 
 type Min struct {
