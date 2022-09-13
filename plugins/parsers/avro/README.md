@@ -111,6 +111,31 @@ The message is supposed to be encoded as follows:
   ## Measurement string; if not set, determine measurement name from
   ## schema (as "<namespace>.<name>")
   # avro_measurement = "ratings"
+  ## Schema string; only used if schema registry is not set
+  avro_schema = """
+          {
+            "type":"record",
+            "name":"Value",
+            "namespace":"com.example",
+            "fields":[
+                {
+                    "name":"tag",
+                    "type":"string"
+                },
+                {
+                    "name":"field",
+                    "type":"long"
+                },
+                {
+                    "name":"timestamp",
+                    "type":"long"
+                }
+            ]
+        }
+  """
+
+  ## Measurement string
+  avro_measurement = "ratings"
 
   ## Avro fields to be used as tags
   avro_tags = ["CHANNEL", "CLUB_STATUS"]
@@ -143,6 +168,8 @@ The message is supposed to be encoded as follows:
   ## If this were set to "_", then it would be a_0="a", a_1="b".
   # avro_field_separator = "_"
 ```
+
+### avro_timestamp, avro_timestamp_format
 
 ### avro_timestamp, avro_timestamp_format, avro_round_timestamp_to
 
@@ -210,3 +237,6 @@ millisecond, or microsecond.
 
 One metric is created for each message.  The type of each field is
 automatically determined based on the schema.
+## Metrics
+
+One metric is created for message.  The type of the field is automatically determined based on schema.
