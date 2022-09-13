@@ -454,7 +454,7 @@ func (o *OpcUA) getData() error {
 	resp, err := o.client.Read(o.req)
 	if err != nil {
 		o.ReadError.Incr(1)
-		return fmt.Errorf("Read failed: %v", err)
+		return fmt.Errorf("Read failed: %w", err)
 	}
 	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {

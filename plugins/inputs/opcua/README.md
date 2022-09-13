@@ -157,6 +157,8 @@ This example group configuration has two groups with two nodes each:
 
 ## Metrics
 
+Metrics are produced according to the defined node ID and group configuration.
+
 ## Example Output
 
 ```text
