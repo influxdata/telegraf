@@ -221,7 +221,7 @@ func TestHttpJson200(t *testing.T) {
 
 		for _, srv := range service.Servers {
 			tags := map[string]string{"server": srv}
-			mname := "httpjson_" + service.ServerName
+			mname := "httpjson"
 			expectedFields["response_time"] = 1.0
 			acc.AssertContainsTaggedFields(t, mname, expectedFields, tags)
 		}

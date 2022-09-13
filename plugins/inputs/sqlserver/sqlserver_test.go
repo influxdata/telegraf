@@ -30,6 +30,7 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 
 	for _, test := range cases {
 		s := SQLServer{
+			QueryVersion: 2,
 			IncludeQuery: test["IncludeQuery"].([]string),
 			ExcludeQuery: test["ExcludeQuery"].([]string),
 			Log:          testutil.Logger{},

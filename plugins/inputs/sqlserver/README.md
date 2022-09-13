@@ -162,6 +162,12 @@ servers = [
   ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use
   ## the new mechanism of identifying the database_type there by use it's corresponding queries
 
+  ## Optional parameter, setting this to 2 will use a new version
+  ## of the collection queries that break compatibility with the original
+  ## dashboards.
+  ## Version 2 - is compatible from SQL Server 2012 and later versions and also for SQL Azure DB
+  # query_version = 2
+
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
   # azuredb = false
 

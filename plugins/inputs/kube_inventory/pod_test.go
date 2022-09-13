@@ -253,7 +253,6 @@ func TestPod(t *testing.T) {
 						"state_reason":                     "Completed",
 						"resource_requests_millicpu_units": int64(100),
 						"resource_limits_millicpu_units":   int64(100),
-						"terminated_reason":                "Completed",
 					},
 					time.Unix(0, 0),
 				),
