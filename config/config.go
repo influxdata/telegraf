@@ -588,7 +588,7 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	if !util.IsText(buffer) {
-		return nil, fmt.Errorf("provided config is not a text file")
+		return nil, fmt.Errorf("provided config is not a TOML file: %s", config)
 	}
 
 	return buffer, nil

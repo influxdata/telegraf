@@ -30,19 +30,29 @@ import (
 )
 
 func TestReadBinaryFile(t *testing.T) {
-	os.Chdir("../")
+	// Create a temporary binary file using the Telegraf tool custom_builder to pass as a config
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := os.Chdir(wd)
+		require.NoError(t, err)
+	})
+
+	err = os.Chdir("../")
+	require.NoError(t, err)
 	tmpdir := t.TempDir()
 	binaryFile := filepath.Join(tmpdir, "custom_builder")
 	cmd := exec.Command("go", "build", "-o", binaryFile, "./tools/custom_builder")
 	var outb, errb bytes.Buffer
 	cmd.Stdout = &outb
 	cmd.Stderr = &errb
-	err := cmd.Run()
+	err = cmd.Run()
+
 	require.NoError(t, err, fmt.Sprintf("stdout: %s, stderr: %s", outb.String(), errb.String()))
 	c := NewConfig()
 	err = c.LoadConfig(binaryFile)
-	require.ErrorContains(t, err, "provided config is not a text file")
 	require.Error(t, err)
+	require.ErrorContains(t, err, "provided config is not a TOML file")
 }
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
