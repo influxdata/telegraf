@@ -42,3 +42,35 @@ The Google Cloud Storage plugin will collect metrics on the given Google Cloud S
   json_string_fields = ["cosine,sine"]
 
 ```
+
+## Metrics
+
+- Measurements will reside on Google Cloud Storage with the format specified
+
+- example when [[inputs.google_cloud_storage.data_format]] is json
+
+```
+{
+  "metrics": [
+    {
+      "fields": {
+        "cosine": 10,
+        "sine": -1.0975806427415925e-12
+      },
+      "name": "cpu",
+      "tags": {
+        "datacenter": "us-east-1",
+        "host": "localhost"
+      },
+      "timestamp": 1604148850990
+    }
+  ]
+}
+```
+
+## Example Output
+
+The example output
+
+```
+```
