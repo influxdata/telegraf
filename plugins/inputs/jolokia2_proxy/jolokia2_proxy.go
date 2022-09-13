@@ -1,4 +1,4 @@
-//go:generate ../../../../tools/readme_config_includer/generator
+//go:generate ../../../tools/readme_config_includer/generator
 package jolokia2_proxy
 
 import (
@@ -7,12 +7,11 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	common "github.com/influxdata/telegraf/plugins/common/jolokia2"
 	"github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -96,5 +95,14 @@ func (jp *JolokiaProxy) createClient() (*common.Client, error) {
 		ResponseTimeout: time.Duration(jp.ResponseTimeout),
 		ClientConfig:    jp.ClientConfig,
 		ProxyConfig:     proxyConfig,
+	})
+}
+
+func init() {
+	inputs.Add("jolokia2_proxy", func() telegraf.Input {
+		return &JolokiaProxy{
+			Metrics:               []common.MetricConfig{},
+			DefaultFieldSeparator: ".",
+		}
 	})
 }
