@@ -27,6 +27,8 @@ var sampleConfig string
 type SQLServer struct {
 	Servers      []string        `toml:"servers"`
 	AuthMethod   string          `toml:"auth_method"`
+	QueryVersion int             `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
+	AzureDB      bool            `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
 	DatabaseType string          `toml:"database_type"`
 	IncludeQuery []string        `toml:"include_query"`
 	ExcludeQuery []string        `toml:"exclude_query"`

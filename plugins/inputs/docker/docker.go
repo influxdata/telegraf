@@ -35,10 +35,14 @@ var sampleConfig string
 // Docker object
 type Docker struct {
 	Endpoint       string
+	ContainerNames []string `toml:"container_names" deprecated:"1.4.0;use 'container_name_include' instead"`
+
 	GatherServices bool `toml:"gather_services"`
 
 	Timeout          config.Duration
+	PerDevice        bool     `toml:"perdevice" deprecated:"1.18.0;use 'perdevice_include' instead"`
 	PerDeviceInclude []string `toml:"perdevice_include"`
+	Total            bool     `toml:"total" deprecated:"1.18.0;use 'total_include' instead"`
 	TotalInclude     []string `toml:"total_include"`
 	TagEnvironment   []string `toml:"tag_env"`
 	LabelInclude     []string `toml:"docker_label_include"`

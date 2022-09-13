@@ -43,6 +43,7 @@ const DefaultClientTimeout = 4
 // see the sample config for further details
 type RabbitMQ struct {
 	URL      string `toml:"url"`
+	Name     string `toml:"name" deprecated:"1.3.0;use 'tags' instead"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
@@ -51,6 +52,7 @@ type RabbitMQ struct {
 	ClientTimeout         config.Duration `toml:"client_timeout"`
 
 	Nodes     []string `toml:"nodes"`
+	Queues    []string `toml:"queues" deprecated:"1.6.0;use 'queue_name_include' instead"`
 	Exchanges []string `toml:"exchanges"`
 
 	MetricInclude             []string `toml:"metric_include"`

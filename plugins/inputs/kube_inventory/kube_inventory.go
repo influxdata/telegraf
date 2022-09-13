@@ -29,13 +29,14 @@ const (
 
 // KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
-	URL             string          `toml:"url"`
-	BearerToken     string          `toml:"bearer_token"`
-	Namespace       string          `toml:"namespace"`
-	ResponseTimeout config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
-	ResourceExclude []string        `toml:"resource_exclude"`
-	ResourceInclude []string        `toml:"resource_include"`
-	MaxConfigMapAge config.Duration `toml:"max_config_map_age"`
+	URL               string          `toml:"url"`
+	BearerToken       string          `toml:"bearer_token"`
+	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
+	Namespace         string          `toml:"namespace"`
+	ResponseTimeout   config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
+	ResourceExclude   []string        `toml:"resource_exclude"`
+	ResourceInclude   []string        `toml:"resource_include"`
+	MaxConfigMapAge   config.Duration `toml:"max_config_map_age"`
 
 	SelectorInclude []string `toml:"selector_include"`
 	SelectorExclude []string `toml:"selector_exclude"`

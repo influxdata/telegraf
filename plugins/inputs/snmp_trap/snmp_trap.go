@@ -29,10 +29,11 @@ type translator interface {
 }
 
 type SnmpTrap struct {
-	ServiceAddress string   `toml:"service_address"`
-	Version        string   `toml:"version"`
-	Translator     string   `toml:"-"`
-	Path           []string `toml:"path"`
+	ServiceAddress string          `toml:"service_address"`
+	Timeout        config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
+	Version        string          `toml:"version"`
+	Translator     string          `toml:"-"`
+	Path           []string        `toml:"path"`
 
 	// Settings for version 3
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"

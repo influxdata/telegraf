@@ -74,6 +74,7 @@ type MQTTConsumer struct {
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	parser                 parsers.Parser
 
+	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 	PersistentSession bool
 	ClientID          string `toml:"client_id"`
 

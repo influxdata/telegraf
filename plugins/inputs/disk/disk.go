@@ -19,6 +19,8 @@ var sampleConfig string
 type DiskStats struct {
 	ps system.PS
 
+	LegacyMountPoints []string `toml:"mountpoints" deprecated:"0.10.2;2.0.0;use 'mount_points' instead"`
+
 	MountPoints     []string `toml:"mount_points"`
 	IgnoreFS        []string `toml:"ignore_fs"`
 	IgnoreMountOpts []string `toml:"ignore_mount_opts"`

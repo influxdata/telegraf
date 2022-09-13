@@ -24,6 +24,8 @@ import (
 var sampleConfig string
 
 type ActiveMQ struct {
+	Server          string          `toml:"server" deprecated:"1.11.0;use 'url' instead"`
+	Port            int             `toml:"port" deprecated:"1.11.0;use 'url' instead"`
 	URL             string          `toml:"url"`
 	Username        string          `toml:"username"`
 	Password        string          `toml:"password"`

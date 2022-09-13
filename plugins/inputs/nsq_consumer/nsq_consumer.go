@@ -37,6 +37,7 @@ func (l *logger) Output(_ int, s string) error {
 
 // NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
+	Server      string   `toml:"server" deprecated:"1.5.0;use 'nsqd' instead"`
 	Nsqd        []string `toml:"nsqd"`
 	Nsqlookupd  []string `toml:"nsqlookupd"`
 	Topic       string   `toml:"topic"`

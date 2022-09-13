@@ -32,6 +32,7 @@ type Zookeeper struct {
 	Timeout config.Duration
 
 	EnableTLS bool `toml:"enable_tls"`
+	EnableSSL bool `toml:"enable_ssl" deprecated:"1.7.0;use 'enable_tls' instead"`
 	tlsint.ClientConfig
 
 	initialized bool

@@ -80,9 +80,11 @@ type Statsd struct {
 	DeleteCounters bool
 	DeleteSets     bool
 	DeleteTimings  bool
+	ConvertNames   bool `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
 
 	// MetricSeparator is the separator between parts of the metric name.
-	MetricSeparator string
+	MetricSeparator  string
+	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;use 'datadog_extensions' instead"`
 
 	// Parses extensions to statsd in the datadog statsd format
 	// currently supports metrics and datadog tags.

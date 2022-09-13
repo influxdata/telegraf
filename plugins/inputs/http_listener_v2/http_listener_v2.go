@@ -47,6 +47,7 @@ type TimeFunc func() time.Time
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
 	ServiceAddress string            `toml:"service_address"`
+	Path           string            `toml:"path" deprecated:"1.20.0;use 'paths' instead"`
 	Paths          []string          `toml:"paths"`
 	PathTag        bool              `toml:"path_tag"`
 	Methods        []string          `toml:"methods"`

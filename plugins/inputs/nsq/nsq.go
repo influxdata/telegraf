@@ -282,6 +282,7 @@ type ChannelStats struct {
 }
 
 type ClientStats struct {
+	Name                          string `json:"name"` // DEPRECATED 1.x+, still here as the structs are currently being shared for parsing v3.x and 1.x
 	ID                            string `json:"client_id"`
 	Hostname                      string `json:"hostname"`
 	Version                       string `json:"version"`

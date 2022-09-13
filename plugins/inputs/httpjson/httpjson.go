@@ -30,6 +30,7 @@ var (
 
 // HTTPJSON struct
 type HTTPJSON struct {
+	Name            string `toml:"name" deprecated:"1.3.0;use 'name_override', 'name_suffix', 'name_prefix' instead"`
 	Servers         []string
 	Method          string
 	TagKeys         []string

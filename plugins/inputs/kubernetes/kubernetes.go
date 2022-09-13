@@ -27,9 +27,10 @@ type Kubernetes struct {
 	URL string
 
 	// Bearer Token authorization file path
-	BearerToken  string   `toml:"bearer_token"`
-	LabelInclude []string `toml:"label_include"`
-	LabelExclude []string `toml:"label_exclude"`
+	BearerToken       string   `toml:"bearer_token"`
+	BearerTokenString string   `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
+	LabelInclude      []string `toml:"label_include"`
+	LabelExclude      []string `toml:"label_exclude"`
 
 	labelFilter filter.Filter
 
