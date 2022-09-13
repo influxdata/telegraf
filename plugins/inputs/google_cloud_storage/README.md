@@ -1,6 +1,7 @@
 # Google Cloud Storage Input Plugin
 
-The Google Cloud Storage plugin will collect metrics on the given Google Cloud Storage Buckets.
+The Google Cloud Storage plugin will collect metrics 
+on the given Google Cloud Storage Buckets.
 
 ## Configuration
 
