@@ -56,6 +56,7 @@ func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
 		ServiceAddress: "localhost:0",
 		Methods:        []string{"POST"},
 		Parser:         parser,
+		Paths:          []string{"/write"},
 		TimeFunc:       time.Now,
 		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
@@ -84,6 +85,7 @@ func newTestHTTPSListenerV2() (*HTTPListenerV2, error) {
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		Methods:        []string{"POST"},
+		Paths:          []string{"/write"},
 		Parser:         parser,
 		ServerConfig:   *pki.TLSServerConfig(),
 		TimeFunc:       time.Now,
@@ -123,6 +125,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 		Log:            testutil.Logger{},
 		ServiceAddress: "address_without_port",
 		Methods:        []string{"POST"},
+		Paths:          []string{"/write"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
 		MaxBodySize:    config.Size(70000),
@@ -277,7 +280,7 @@ func TestWriteHTTPWithPathTag(t *testing.T) {
 func TestWriteHTTPWithMultiplePaths(t *testing.T) {
 	listener, err := newTestHTTPListenerV2()
 	require.NoError(t, err)
-	listener.Paths = []string{"/alternative_write"}
+	listener.Paths = append(listener.Paths, "/alternative_write")
 	listener.PathTag = true
 
 	acc := &testutil.Accumulator{}
@@ -340,6 +343,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		Methods:        []string{"POST"},
+		Paths:          []string{"/write"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(len(hugeMetric)),
 		TimeFunc:       time.Now,
@@ -365,6 +369,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		Methods:        []string{"POST"},
+		Paths:          []string{"/write"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(4096),
 		TimeFunc:       time.Now,
