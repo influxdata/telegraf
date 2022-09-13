@@ -100,7 +100,7 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 		if !gcs.shoudIgnore(name) {
 			if err := gcs.processMeasurementsInObject(name, bucket, acc); err != nil {
 				gcs.Log.Errorf("Could not process object: %v in bucket: %v", name, bucketName, err)
-				acc.AddError(fmt.Errorf("Could not process object: %v in bucket: %v", name, err))
+				acc.AddError(fmt.Errorf("COULD NOT PROCESS OBJECT: %v IN BUCKET: %v", name, err))
 			}
 		}
 
@@ -238,7 +238,7 @@ func (gcs *GCS) setUpDefaultClient() error {
 
 func (gcs *GCS) setOffset() error {
 	if gcs.client == nil {
-		return fmt.Errorf("Cannot set offset if client is not set")
+		return fmt.Errorf("CANNOT SET OFFSET IF CLIENT IS NOT SET")
 	}
 
 	if gcs.OffsetKey != "" {
