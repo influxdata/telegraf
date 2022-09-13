@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"golang.org/x/tools/godoc/util"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -588,9 +587,7 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	mimeType := http.DetectContentType(buffer)
-	fmt.Println(mimeType) // image/png
-
-	if !util.IsText(buffer) {
+	if !strings.Contains(mimeType, "text/plain") {
 		return nil, fmt.Errorf("provided config is not a TOML file: %s", config)
 	}
 
