@@ -1,6 +1,6 @@
 # Google Cloud Storage Input Plugin
 
-The Google Cloud Storage plugin will collect metrics 
+The Google Cloud Storage plugin will collect metrics
 on the given Google Cloud Storage Buckets.
 
 ## Configuration
@@ -50,7 +50,7 @@ on the given Google Cloud Storage Buckets.
 
 - example when [[inputs.google_cloud_storage.data_format]] is json
 
-```
+```json
 {
   "metrics": [
     {
@@ -73,5 +73,5 @@ on the given Google Cloud Storage Buckets.
 
 The example output
 
-```
+```json
 ```
