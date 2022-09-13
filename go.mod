@@ -9,6 +9,7 @@ require (
 	cloud.google.com/go/bigquery v1.40.0
 	cloud.google.com/go/monitoring v1.5.0
 	cloud.google.com/go/pubsub v1.25.1
+	cloud.google.com/go/storage v1.23.0
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.18
 	github.com/Azure/azure-kusto-go v0.8.0
@@ -185,6 +186,17 @@ require (
 	k8s.io/apimachinery v0.25.0
 	k8s.io/client-go v0.25.0
 	modernc.org/sqlite v1.17.3
+)
+
+require (
+	github.com/googleapis/go-type-adapters v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pkg/sftp v1.13.5 // indirect
+	github.com/rogpeppe/fastuuid v1.2.0 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	gopkg.in/errgo.v1 v1.0.1 // indirect
 )
 
 require (
@@ -387,7 +399,6 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	golang.org/x/tools v0.1.11 // indirect
