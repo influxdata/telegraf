@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"net/http/httptest"
@@ -373,7 +372,7 @@ func serveBlobs(urlPath string, offsetKey string, t *testing.T, w http.ResponseW
 
 func fetchJSON(t *testing.T, boundary string, rc io.ReadCloser) (string, error) {
 	defer rc.Close()
-	bodyBytes, err := ioutil.ReadAll(rc)
+	bodyBytes, err := io.ReadAll(rc)
 
 	if err != nil {
 		t.Fatalf("Could not read bytes from offset action")
