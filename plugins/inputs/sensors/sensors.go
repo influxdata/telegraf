@@ -85,7 +85,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	// Write to a file for debugging
-	err = os.WriteFile(debugFilename, []byte(out), 0666)
+	err = os.WriteFile(debugFilename, out, 0666)
 	if err != nil {
 		return fmt.Errorf("failed to write %s", debugFilename)
 	}
