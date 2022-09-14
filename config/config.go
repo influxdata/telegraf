@@ -699,6 +699,11 @@ func (c *Config) addParser(parentname string, table *ast.Table) (*models.Running
 			dataformat = "influx"
 		}
 	}
+	var influxParserType string
+	c.getFieldString(table, "influx_parser_type", &influxParserType)
+	if dataformat == "influx" && influxParserType == "upstream" {
+		dataformat = "influx_upstream"
+	}
 
 	creator, ok := parsers.Parsers[dataformat]
 	if !ok {
@@ -1213,7 +1218,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
 
 	// Parser options to ignore
-	case "data_type":
+	case "data_type", "influx_parser_type":
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",
