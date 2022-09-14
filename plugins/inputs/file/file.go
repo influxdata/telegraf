@@ -24,6 +24,7 @@ type File struct {
 	FileTag           string   `toml:"file_tag"`
 	CharacterEncoding string   `toml:"character_encoding"`
 
+	parser     telegraf.Parser
 	parserFunc telegraf.ParserFunc
 	filenames  []string
 	decoder    *encoding.Decoder
@@ -36,7 +37,16 @@ func (*File) SampleConfig() string {
 func (f *File) Init() error {
 	var err error
 	f.decoder, err = encoding.NewDecoder(f.CharacterEncoding)
-	return err
+	if err != nil {
+		return err
+	}
+
+	f.parser, err = f.parserFunc()
+	if err != nil {
+		return fmt.Errorf("could not instantiate parser: %w", err)
+	}
+
+	return nil
 }
 
 func (f *File) Gather(acc telegraf.Accumulator) error {
@@ -94,14 +104,11 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not read %q: %w", filename, err)
 	}
-	parser, err := f.parserFunc()
-	if err != nil {
-		return nil, fmt.Errorf("could not instantiate parser: %w", err)
-	}
-	metrics, err := parser.Parse(fileContents)
+	metrics, err := f.parser.Parse(fileContents)
 	if err != nil {
 		return metrics, fmt.Errorf("could not parse %q: %w", filename, err)
 	}
+
 	return metrics, err
 }
 
