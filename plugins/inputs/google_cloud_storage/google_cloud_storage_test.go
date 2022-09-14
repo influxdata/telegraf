@@ -103,7 +103,6 @@ func TestRunGatherOneItem(t *testing.T) {
 		parser: createParser(),
 	}
 
-
 	require.NoError(t, gcs.Init())
 
 	require.NoError(t, gcs.Gather(acc))
