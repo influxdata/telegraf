@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -67,6 +68,8 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 	return s.parse(acc)
 }
 
+var debugFilename = "telegraf-sensors.txt"
+
 // parse forks the command:
 //
 //	sensors -u -A
@@ -80,6 +83,11 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+	}
+	// Write to a file for debugging
+	err = os.WriteFile(debugFilename, []byte(out), 0666)
+	if err != nil {
+		return fmt.Errorf("failed to write %s", debugFilename)
 	}
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	for _, line := range lines {
