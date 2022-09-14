@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nsd
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"net"
 	"os/exec"
@@ -15,6 +17,9 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type runner func(cmdName string, timeout config.Duration, useSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error)
 
@@ -66,6 +71,10 @@ func nsdRunner(cmdName string, timeout config.Duration, useSudo bool, server str
 	return &out, nil
 }
 
+func (*NSD) SampleConfig() string {
+	return sampleConfig
+}
+
 // Gather collects stats from nsd-control and adds them to the Accumulator
 func (s *NSD) Gather(acc telegraf.Accumulator) error {
 	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ConfigFile)
@@ -110,7 +119,7 @@ func (s *NSD) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		} else {
-			field := strings.Replace(stat, ".", "_", -1)
+			field := strings.ReplaceAll(stat, ".", "_")
 			fields[field] = fieldValue
 		}
 	}

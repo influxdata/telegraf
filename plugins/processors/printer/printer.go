@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package printer
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
@@ -9,8 +11,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Printer struct {
 	serializer serializers.Serializer
+}
+
+func (*Printer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {

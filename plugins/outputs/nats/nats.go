@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nats
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 
@@ -11,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type NATS struct {
 	Servers     []string `toml:"servers"`
@@ -27,6 +32,10 @@ type NATS struct {
 
 	conn       *nats.Conn
 	serializer serializers.Serializer
+}
+
+func (*NATS) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NATS) SetSerializer(serializer serializers.Serializer) {

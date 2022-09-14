@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cisco_telemetry_mdt
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -17,30 +19,45 @@ import (
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	_ "google.golang.org/grpc/encoding/gzip" // Register GRPC gzip decoder to support compressed telemetry
+	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// Maximum telemetry payload size (in bytes) to accept for GRPC dialout transport
 	tcpMaxMsgLen uint32 = 1024 * 1024
 )
 
+// default minimum time between successive pings
+// this value is specified in the GRPC docs via GRPC_ARG_HTTP2_MIN_RECV_PING_INTERVAL_WITHOUT_DATA_MS
+const defaultKeepaliveMinTime = config.Duration(time.Second * 300)
+
+type GRPCEnforcementPolicy struct {
+	PermitKeepaliveWithoutCalls bool            `toml:"permit_keepalive_without_calls"`
+	KeepaliveMinTime            config.Duration `toml:"keepalive_minimum_time"`
+}
+
 // CiscoTelemetryMDT plugin for IOS XR, IOS XE and NXOS platforms
 type CiscoTelemetryMDT struct {
 	// Common configuration
-	Transport      string
-	ServiceAddress string            `toml:"service_address"`
-	MaxMsgSize     int               `toml:"max_msg_size"`
-	Aliases        map[string]string `toml:"aliases"`
-	Dmes           map[string]string `toml:"dmes"`
-	EmbeddedTags   []string          `toml:"embedded_tags"`
+	Transport         string
+	ServiceAddress    string                `toml:"service_address"`
+	MaxMsgSize        int                   `toml:"max_msg_size"`
+	Aliases           map[string]string     `toml:"aliases"`
+	Dmes              map[string]string     `toml:"dmes"`
+	EmbeddedTags      []string              `toml:"embedded_tags"`
+	EnforcementPolicy GRPCEnforcementPolicy `toml:"grpc_enforcement_policy"`
 
 	Log telegraf.Logger
 
@@ -72,6 +89,10 @@ type NxPayloadXfromStructure struct {
 		Key   string `json:"Key"`
 		Value string `json:"Value"`
 	} `json:"prop"`
+}
+
+func (*CiscoTelemetryMDT) SampleConfig() string {
+	return sampleConfig
 }
 
 // Start the Cisco MDT service
@@ -136,7 +157,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	// Fill extra tags
 	c.extraTags = make(map[string]map[string]struct{})
 	for _, tag := range c.EmbeddedTags {
-		dir := strings.Replace(path.Dir(tag), "-", "_", -1)
+		dir := strings.ReplaceAll(path.Dir(tag), "-", "_")
 		if _, hasKey := c.extraTags[dir]; !hasKey {
 			c.extraTags[dir] = make(map[string]struct{})
 		}
@@ -165,6 +186,14 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 		if c.MaxMsgSize > 0 {
 			opts = append(opts, grpc.MaxRecvMsgSize(c.MaxMsgSize))
+		}
+
+		if c.EnforcementPolicy.PermitKeepaliveWithoutCalls || (c.EnforcementPolicy.KeepaliveMinTime != 0 && c.EnforcementPolicy.KeepaliveMinTime != defaultKeepaliveMinTime) {
+			// Only set if either parameter does not match defaults
+			opts = append(opts, grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+				MinTime:             time.Duration(c.EnforcementPolicy.KeepaliveMinTime),
+				PermitWithoutStream: c.EnforcementPolicy.PermitKeepaliveWithoutCalls,
+			}))
 		}
 
 		c.grpcServer = grpc.NewServer(opts...)
@@ -441,7 +470,7 @@ func decodeTag(field *telemetry.TelemetryField) string {
 
 // Recursively parse tag fields
 func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemetry.TelemetryField, prefix string) {
-	localname := strings.Replace(field.Name, "-", "_", -1)
+	localname := strings.ReplaceAll(field.Name, "-", "_")
 	name := localname
 	if len(localname) == 0 {
 		name = prefix
@@ -529,7 +558,7 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 
 func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
-	name := strings.Replace(field.Name, "-", "_", -1)
+	name := strings.ReplaceAll(field.Name, "-", "_")
 
 	if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {
 		return
@@ -540,7 +569,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		name = prefix + "/" + name
 	}
 
-	extraTags := c.extraTags[strings.Replace(encodingPath, "-", "_", -1)+"/"+name]
+	extraTags := c.extraTags[strings.ReplaceAll(encodingPath, "-", "_")+"/"+name]
 
 	if value := decodeValue(field); value != nil {
 		// Do alias lookup, to shorten measurement names
@@ -571,7 +600,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	if len(extraTags) > 0 {
 		for _, subfield := range field.Fields {
 			if _, isExtraTag := extraTags[subfield.Name]; isExtraTag {
-				tags[name+"/"+strings.Replace(subfield.Name, "-", "_", -1)] = decodeTag(subfield)
+				tags[name+"/"+strings.ReplaceAll(subfield.Name, "-", "_")] = decodeTag(subfield)
 			}
 		}
 	}

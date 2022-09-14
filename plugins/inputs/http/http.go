@@ -1,9 +1,13 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package http
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -14,6 +18,9 @@ import (
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type HTTP struct {
 	URLs            []string `toml:"urls"`
@@ -38,6 +45,10 @@ type HTTP struct {
 
 	client     *http.Client
 	parserFunc telegraf.ParserFunc
+}
+
+func (*HTTP) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *HTTP) Init() error {
@@ -82,11 +93,13 @@ func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
 
 // Gathers data from a particular URL
 // Parameters:
-//     acc    : The telegraf Accumulator to use
-//     url    : endpoint to send request to
+//
+//	acc    : The telegraf Accumulator to use
+//	url    : endpoint to send request to
 //
 // Returns:
-//     error: Any error that may have occurred
+//
+//	error: Any error that may have occurred
 func (h *HTTP) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
@@ -94,9 +107,6 @@ func (h *HTTP) gatherURL(
 	body, err := makeRequestBodyReader(h.ContentEncoding, h.Body)
 	if err != nil {
 		return err
-	}
-	if body != nil {
-		defer body.Close()
 	}
 
 	request, err := http.NewRequest(h.Method, url, body)
@@ -175,7 +185,7 @@ func (h *HTTP) gatherURL(
 	return nil
 }
 
-func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) {
+func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
 	if body == "" {
 		return nil, nil
 	}
@@ -186,9 +196,14 @@ func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) 
 		if err != nil {
 			return nil, err
 		}
-		return rc, nil
+		data, err := ioutil.ReadAll(rc)
+		if err != nil {
+			return nil, err
+		}
+		return bytes.NewReader(data), nil
 	}
-	return io.NopCloser(reader), nil
+
+	return reader, nil
 }
 
 func init() {

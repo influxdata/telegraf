@@ -1,12 +1,14 @@
 # Webhooks Input Plugin
 
-This is a Telegraf service plugin that start an http server and register multiple webhook listeners.
+This is a Telegraf service plugin that start an http server and register
+multiple webhook listeners.
 
 ```sh
 telegraf config -input-filter webhooks -output-filter influxdb > config.conf.new
 ```
 
-Change the config file to point to the InfluxDB server you are using and adjust the settings to match your environment. Once that is complete:
+Change the config file to point to the InfluxDB server you are using and adjust
+the settings to match your environment. Once that is complete:
 
 ```sh
 cp config.conf.new /etc/telegraf/telegraf.conf
@@ -15,7 +17,7 @@ sudo service telegraf start
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A Webhooks Event collector
 [[inputs.webhooks]]
   ## Address and port to host Webhook listener on
@@ -63,6 +65,9 @@ sudo service telegraf start
     ## HTTP basic auth
     #username = ""
     #password = ""
+  
+  [inputs.webhooks.artifactory]
+    path = "/artifactory"
 ```
 
 ## Available webhooks
@@ -73,6 +78,7 @@ sudo service telegraf start
 - [Rollbar](rollbar/)
 - [Papertrail](papertrail/)
 - [Particle](particle/)
+- [Artifactory](artifactory/)
 
 ## Adding new webhooks plugin
 

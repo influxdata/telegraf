@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package execd
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -17,8 +19,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Execd struct {
 	Command      []string        `toml:"command"`
+	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger
 
@@ -42,6 +48,10 @@ func New() *Execd {
 	}
 }
 
+func (*Execd) SampleConfig() string {
+	return sampleConfig
+}
+
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	var err error
 	e.parser, err = parsers.NewParser(e.parserConfig)
@@ -54,7 +64,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	}
 	e.acc = acc
 
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}

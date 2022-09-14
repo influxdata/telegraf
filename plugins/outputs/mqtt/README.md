@@ -1,6 +1,7 @@
 # MQTT Producer Output Plugin
 
-This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt Producer.
+This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt
+Producer. It supports MQTT protocols `3.1.1` and `5`.
 
 ## Mosquitto v2.0.12+ and `identifier rejected`
 
@@ -9,18 +10,23 @@ In v2.0.12+ of the mosquitto MQTT server, there is a
 `keep_alive` value to be set non-zero in your telegraf configuration. If not
 set, the server will return with `identifier rejected`.
 
-As a reference `eclipse/paho.mqtt.golang` sets the `keep_alive` to 30.
+As a reference `eclipse/paho.golang` sets the `keep_alive` to 30.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for MQTT server to send metrics to
 [[outputs.mqtt]]
   ## MQTT Brokers
   ## The list of brokers should only include the hostname or IP address and the
-  ## port to the broker. This should follow the format '{host}:{port}'. For
-  ## example, "localhost:1883" or "127.0.0.1:8883".
-  servers = ["localhost:1883"]
+  ## port to the broker. This should follow the format `[{scheme}://]{host}:{port}`. For
+  ## example, `localhost:1883` or `mqtt://localhost:1883`.
+  ## Scheme can be any of the following: tcp://, mqtt://, tls://, mqtts://
+  ## non-TLS and TLS servers can not be mix-and-matched.
+  servers = ["localhost:1883", ] # or ["mqtts://tls.example.com:1883"]
+
+  ## Protocol can be `3.1.1` or `5`. Default is `3.1.1`
+  # procotol = "3.1.1"
 
   ## MQTT Topic for Producer Messages
   ## MQTT outputs send metrics to this topic format:

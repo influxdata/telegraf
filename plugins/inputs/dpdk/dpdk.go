@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
 package dpdk
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -15,6 +17,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultPathToSocket        = "/var/run/dpdk/rte/dpdk_telemetry.v2"
@@ -53,6 +58,10 @@ func init() {
 		}
 		return dpdk
 	})
+}
+
+func (*dpdk) SampleConfig() string {
+	return sampleConfig
 }
 
 // Performs validation of all parameters from configuration

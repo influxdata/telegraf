@@ -12,8 +12,8 @@ import (
 	"github.com/influxdata/wlog"
 )
 
-//struct that implements the translator interface. This calls existing
-//code to exec netsnmp's snmptranslate program
+// struct that implements the translator interface. This calls existing
+// code to exec netsnmp's snmptranslate program
 type netsnmpTranslator struct {
 }
 
@@ -58,6 +58,7 @@ var snmpTableCachesLock sync.Mutex
 
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
+//
 //nolint:revive
 func (n *netsnmpTranslator) SnmpTable(oid string) (
 	mibName string, oidNum string, oidText string,
@@ -154,6 +155,7 @@ var snmpTranslateCachesLock sync.Mutex
 var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
+//
 //nolint:revive
 func (n *netsnmpTranslator) SnmpTranslate(oid string) (
 	mibName string, oidNum string, oidText string,

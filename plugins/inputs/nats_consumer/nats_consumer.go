@@ -1,17 +1,23 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nats_consumer
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/nats-io/nats.go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/nats-io/nats.go"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultMaxUndeliveredMessages = 1000
@@ -39,6 +45,7 @@ type natsConsumer struct {
 	Username    string   `toml:"username"`
 	Password    string   `toml:"password"`
 	Credentials string   `toml:"credentials"`
+	JsSubjects  []string `toml:"jetstream_subjects"`
 
 	tls.ClientConfig
 
@@ -51,8 +58,10 @@ type natsConsumer struct {
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 	MetricBuffer           int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 
-	conn *nats.Conn
-	subs []*nats.Subscription
+	conn   *nats.Conn
+	jsConn nats.JetStreamContext
+	subs   []*nats.Subscription
+	jsSubs []*nats.Subscription
 
 	parser parsers.Parser
 	// channel for all incoming NATS messages
@@ -62,6 +71,10 @@ type natsConsumer struct {
 	acc    telegraf.TrackingAccumulator
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
+}
+
+func (*natsConsumer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *natsConsumer) SetParser(parser parsers.Parser) {
@@ -131,6 +144,33 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 
 			n.subs = append(n.subs, sub)
 		}
+
+		if len(n.JsSubjects) > 0 {
+			var connErr error
+			n.jsConn, connErr = n.conn.JetStream(nats.PublishAsyncMaxPending(256))
+			if connErr != nil {
+				return connErr
+			}
+
+			if n.jsConn != nil {
+				for _, jsSub := range n.JsSubjects {
+					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
+						n.in <- m
+					})
+					if err != nil {
+						return err
+					}
+
+					// set the subscription pending limits
+					err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+					if err != nil {
+						return err
+					}
+
+					n.jsSubs = append(n.jsSubs, sub)
+				}
+			}
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -143,8 +183,8 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 		go n.receiver(ctx)
 	}()
 
-	n.Log.Infof("Started the NATS consumer service, nats: %v, subjects: %v, queue: %v",
-		n.conn.ConnectedUrl(), n.Subjects, n.QueueGroup)
+	n.Log.Infof("Started the NATS consumer service, nats: %v, subjects: %v, jssubjects: %v, queue: %v",
+		n.conn.ConnectedUrl(), n.Subjects, n.JsSubjects, n.QueueGroup)
 
 	return nil
 }
@@ -190,7 +230,14 @@ func (n *natsConsumer) clean() {
 	for _, sub := range n.subs {
 		if err := sub.Unsubscribe(); err != nil {
 			n.Log.Errorf("Error unsubscribing from subject %s in queue %s: %s",
-				sub.Subject, sub.Queue, err.Error())
+				sub.Subject, sub.Queue, err)
+		}
+	}
+
+	for _, sub := range n.jsSubs {
+		if err := sub.Unsubscribe(); err != nil {
+			n.Log.Errorf("Error unsubscribing from subject %s in queue %s: %s",
+				sub.Subject, sub.Queue, err)
 		}
 	}
 

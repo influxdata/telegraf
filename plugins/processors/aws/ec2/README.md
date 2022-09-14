@@ -7,7 +7,7 @@ to metrics associated with EC2 instances.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Attach AWS EC2 metadata to metrics
 [[processors.aws_ec2]]
   ## Instance identity document tags to attach to metrics.

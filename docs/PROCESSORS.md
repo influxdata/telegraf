@@ -7,32 +7,44 @@ This section is for developers who want to create a new processor plugin.
 * A processor must conform to the [telegraf.Processor][] interface.
 * Processors should call `processors.Add` in their `init` function to register
   themselves.  See below for a quick example.
-* To be available within Telegraf itself, plugins must add themselves to the
-  `github.com/influxdata/telegraf/plugins/processors/all/all.go` file.
-* Each plugin requires a file called `<plugin_name>_sample_config.go`, where `<plugin_name>` is replaced with the actual plugin name.
-  Copy the [example template](#sample-configuration-template) into this file, also updating `<plugin_name>` were appropriate.
-  This file is automatically updated during the build process to include the sample configuration from the `README.md`.
+* To be available within Telegraf itself, plugins must register themselves
+  using a file in `github.com/influxdata/telegraf/plugins/processors/all`
+  named according to the plugin name. Make sure your also add build-tags to
+  conditionally build the plugin.
+* Each plugin requires a file called `sample.conf` containing the sample
+  configuration  for the plugin in TOML format.
   Please consult the [Sample Config][] page for the latest style guidelines.
+* Each plugin `README.md` file should include the `sample.conf` file in a section
+  describing the configuration by specifying a `toml` section in the form `toml @sample.conf`. The specified file(s) are then injected automatically into the Readme.
 * Follow the recommended [Code Style][].
 
 ## Processor Plugin Example
 
+Content of your plugin file e.g. `printer.go`
+
 ```go
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
+//go:generate ../../../tools/readme_config_includer/generator
 package printer
 
 // printer.go
 
 import (
+    _ "embed"
     "fmt"
 
     "github.com/influxdata/telegraf"
     "github.com/influxdata/telegraf/plugins/processors"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Printer struct {
     Log telegraf.Logger `toml:"-"`
+}
+
+func (*Printer) SampleConfig() string {
+    return sampleConfig
 }
 
 // Init is for setup, and validating config.
@@ -54,18 +66,18 @@ func init() {
 }
 ```
 
-### Sample Configuration Template
+Registration of the plugin on `plugins/processors/all/printer.go`:
 
 ```go
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
-// DON'T EDIT; This file is used as a template by tools/generate_plugindata
-package <plugin_package>
+//go:build !custom || processors || processors.printer
 
-func (k *<plugin_struct>) SampleConfig() string {
-    return `{{ .SampleConfig }}`
-}
+package all
+
+import _ "github.com/influxdata/telegraf/plugins/processors/printer" // register plugin
 ```
+
+The _build-tags_ in the first line allow to selectively include/exclude your
+plugin when customizing Telegraf.
 
 ## Streaming Processors
 
@@ -88,19 +100,28 @@ Some differences from classic Processors:
 ## Streaming Processor Example
 
 ```go
+//go:generate ../../../tools/readme_config_includer/generator
 package printer
 
 // printer.go
 
 import (
+    _ "embed"
     "fmt"
 
     "github.com/influxdata/telegraf"
     "github.com/influxdata/telegraf/plugins/processors"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Printer struct {
     Log telegraf.Logger `toml:"-"`
+}
+
+func (*Printer) SampleConfig() string {
+    return sampleConfig
 }
 
 // Init is for setup, and validating config.

@@ -1,6 +1,8 @@
 # Linux Sysctl FS Input Plugin
 
-The linux_sysctl_fs input provides Linux system level file metrics. The documentation on these fields can be found at <https://www.kernel.org/doc/Documentation/sysctl/fs.txt>.
+The linux_sysctl_fs input provides Linux system level file metrics. The
+documentation on these fields can be found at
+<https://www.kernel.org/doc/Documentation/sysctl/fs.txt>.
 
 Example output:
 
@@ -10,7 +12,7 @@ Example output:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Provides Linux sysctl fs metrics
 [[inputs.linux_sysctl_fs]]
   # no configuration

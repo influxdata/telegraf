@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redfish
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +17,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Redfish struct {
 	Address          string          `toml:"address"`
@@ -108,6 +113,10 @@ type Location struct {
 type Status struct {
 	State  string
 	Health string
+}
+
+func (*Redfish) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *Redfish) Init() error {

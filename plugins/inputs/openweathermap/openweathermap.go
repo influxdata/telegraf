@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package openweathermap
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// https://openweathermap.org/current#severalid
@@ -40,6 +45,10 @@ type OpenWeatherMap struct {
 
 	client        *http.Client
 	baseParsedURL *url.URL
+}
+
+func (*OpenWeatherMap) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {

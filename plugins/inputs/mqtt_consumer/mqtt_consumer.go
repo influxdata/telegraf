@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mqtt_consumer
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"strconv"
@@ -10,13 +12,18 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/selfstat"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	// 30 Seconds is the default used by paho.mqtt.golang
@@ -83,6 +90,12 @@ type MQTTConsumer struct {
 	topicTagParse string
 	ctx           context.Context
 	cancel        context.CancelFunc
+	payloadSize   selfstat.Stat
+	messagesRecv  selfstat.Stat
+}
+
+func (*MQTTConsumer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
@@ -113,7 +126,7 @@ func (m *MQTTConsumer) Init() error {
 	for i, p := range m.TopicParsing {
 		splitMeasurement := strings.Split(p.Measurement, "/")
 		for j := range splitMeasurement {
-			if splitMeasurement[j] != "_" {
+			if splitMeasurement[j] != "_" && splitMeasurement[j] != "" {
 				m.TopicParsing[i].MeasurementIndex = j
 				break
 			}
@@ -135,6 +148,8 @@ func (m *MQTTConsumer) Init() error {
 		}
 	}
 
+	m.payloadSize = selfstat.Register("mqtt_consumer", "payload_size", map[string]string{})
+	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", map[string]string{})
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
@@ -229,6 +244,10 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
+	payloadBytes := len(msg.Payload())
+	m.payloadSize.Incr(int64(payloadBytes))
+	m.messagesRecv.Incr(1)
+
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
 		return err
@@ -332,7 +351,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 // parseFields gets multiple fields from the topic based on the user configuration (TopicParsing.Fields)
 func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
 	for i, k := range keys {
-		if k == "_" {
+		if k == "_" || k == "" {
 			continue
 		}
 

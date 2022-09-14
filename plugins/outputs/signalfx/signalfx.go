@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package signalfx
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -15,7 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-//init initializes the plugin context
+//go:embed sample.conf
+var sampleConfig string
+
+// init initializes the plugin context
 func init() {
 	outputs.Add("signalfx", func() telegraf.Output {
 		return NewSignalFx()
@@ -69,6 +74,10 @@ func NewSignalFx() *SignalFx {
 		cancel:             cancel,
 		client:             sfxclient.NewHTTPSink(),
 	}
+}
+
+func (*SignalFx) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect establishes a connection to SignalFx

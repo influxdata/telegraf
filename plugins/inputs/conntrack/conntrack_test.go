@@ -34,13 +34,11 @@ func TestNoFilesFound(t *testing.T) {
 
 func TestDefaultsUsed(t *testing.T) {
 	defer restoreDflts(dfltFiles, dfltDirs)
-	tmpdir, err := os.MkdirTemp("", "tmp1")
-	require.NoError(t, err)
-	defer os.Remove(tmpdir)
+	tmpdir := t.TempDir()
 
 	tmpFile, err := os.CreateTemp(tmpdir, "ip_conntrack_count")
 	require.NoError(t, err)
-	defer os.Remove(tmpFile.Name())
+	t.Cleanup(func() { require.NoError(t, tmpFile.Close()) })
 
 	dfltDirs = []string{tmpdir}
 	fname := path.Base(tmpFile.Name())
@@ -58,16 +56,15 @@ func TestDefaultsUsed(t *testing.T) {
 
 func TestConfigsUsed(t *testing.T) {
 	defer restoreDflts(dfltFiles, dfltDirs)
-	tmpdir, err := os.MkdirTemp("", "tmp1")
-	require.NoError(t, err)
-	defer os.Remove(tmpdir)
+	tmpdir := t.TempDir()
 
 	cntFile, err := os.CreateTemp(tmpdir, "nf_conntrack_count")
 	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, cntFile.Close()) })
+
 	maxFile, err := os.CreateTemp(tmpdir, "nf_conntrack_max")
 	require.NoError(t, err)
-	defer os.Remove(cntFile.Name())
-	defer os.Remove(maxFile.Name())
+	t.Cleanup(func() { require.NoError(t, maxFile.Close()) })
 
 	dfltDirs = []string{tmpdir}
 	cntFname := path.Base(cntFile.Name())

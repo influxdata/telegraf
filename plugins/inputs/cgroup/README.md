@@ -34,13 +34,13 @@ KEY0 ... VAL0\n
 KEY1 ... VAL1\n
 ```
 
-## Tags
+## Metrics
 
 All measurements have the `path` tag.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read specific statistics per cgroup
 [[inputs.cgroup]]
   ## Directories in which to look for files, globs are supported.
@@ -57,7 +57,7 @@ All measurements have the `path` tag.
   # files = ["memory.*usage*", "memory.limit_in_bytes"]
 ```
 
-## Example
+## Example Configurations
 
 ```toml
 # [[inputs.cgroup]]

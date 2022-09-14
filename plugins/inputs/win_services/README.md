@@ -2,11 +2,12 @@
 
 Reports information about Windows service status.
 
-Monitoring some services may require running Telegraf with administrator privileges.
+Monitoring some services may require running Telegraf with administrator
+privileges.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Input plugin to report Windows services info.
 [[inputs.win_services]]
   ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted. Case sensitive.
@@ -18,7 +19,7 @@ Monitoring some services may require running Telegraf with administrator privile
   excluded_service_names = ['WinRM'] # optional, list of service names to exclude
 ```
 
-### Measurements & Fields
+## Metrics
 
 - win_services
   - state : integer
@@ -48,7 +49,7 @@ The `startup_mode` field can have the following values:
   - service_name
   - display_name
 
-### Example Output
+## Example Output
 
 ```shell
 win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state=4i,startup_mode=2i 1500040669000000000
@@ -57,9 +58,10 @@ win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,hos
 
 ### TICK Scripts
 
-A sample TICK script for a notification about a not running service.
-It sends a notification whenever any service changes its state to be not _running_ and when it changes that state back to _running_.
-The notification is sent via an HTTP POST call.
+A sample TICK script for a notification about a not running service.  It sends a
+notification whenever any service changes its state to be not _running_ and when
+it changes that state back to _running_.  The notification is sent via an HTTP
+POST call.
 
 ```shell
 stream

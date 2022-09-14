@@ -1,13 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build windows
 // +build windows
 
-//revive:disable-next-line:var-naming
 // Package win_eventlog Input plugin to collect Windows Event Log messages
+//
+//revive:disable-next-line:var-naming
 package win_eventlog
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"path/filepath"
@@ -16,10 +19,14 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/windows"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/sys/windows"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // WinEventLog config
 type WinEventLog struct {
@@ -43,6 +50,10 @@ type WinEventLog struct {
 var bufferSize = 1 << 14
 
 var description = "Input plugin to collect Windows Event Log messages"
+
+func (*WinEventLog) SampleConfig() string {
+	return sampleConfig
+}
 
 // Gather Windows Event Log entries
 func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {

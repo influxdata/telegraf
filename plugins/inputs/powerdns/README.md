@@ -4,7 +4,7 @@ The powerdns plugin gathers metrics about PowerDNS using unix socket.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many PowerDNS servers
 [[inputs.powerdns]]
   # An array of sockets to gather stats about.

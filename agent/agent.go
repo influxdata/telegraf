@@ -50,6 +50,7 @@ type inputUnit struct {
 //  ______     ┌───────────┐     ______
 // ()_____)──▶ │ Processor │──▶ ()_____)
 //             └───────────┘
+
 type processorUnit struct {
 	src       <-chan telegraf.Metric
 	dst       chan<- telegraf.Metric
@@ -59,7 +60,7 @@ type processorUnit struct {
 // aggregatorUnit is a group of Aggregators and their source and sink channels.
 // Typically the aggregators write to a processor channel and pass the original
 // metrics to the output channel.  The sink channels may be the same channel.
-//
+
 //                 ┌────────────┐
 //            ┌──▶ │ Aggregator │───┐
 //            │    └────────────┘   │
@@ -71,6 +72,7 @@ type processorUnit struct {
 //            │    └────────────┘
 //            │                           ______
 //            └────────────────────────▶ ()_____)
+
 type aggregatorUnit struct {
 	src         <-chan telegraf.Metric
 	aggC        chan<- telegraf.Metric
@@ -80,7 +82,7 @@ type aggregatorUnit struct {
 
 // outputUnit is a group of Outputs and their source channel.  Metrics on the
 // channel are written to all outputs.
-//
+
 //                            ┌────────┐
 //                       ┌──▶ │ Output │
 //                       │    └────────┘
@@ -90,6 +92,7 @@ type aggregatorUnit struct {
 //                       │    ┌────────┐
 //                       └──▶ │ Output │
 //                            └────────┘
+
 type outputUnit struct {
 	src     <-chan telegraf.Metric
 	outputs []*models.RunningOutput
@@ -824,19 +827,13 @@ func (a *Agent) flushLoop(
 		case <-flushRequested:
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-output.BatchReady:
-			// Favor the ticker over batch ready
-			select {
-			case <-ticker.Elapsed():
-				logError(a.flushOnce(output, ticker, output.Write))
-			default:
-				logError(a.flushOnce(output, ticker, output.WriteBatch))
-			}
+			logError(a.flushBatch(output, output.WriteBatch))
 		}
 	}
 }
 
 // flushOnce runs the output's Write function once, logging a warning each
-// interval it fails to complete before.
+// interval it fails to complete before the flush interval elapses.
 func (a *Agent) flushOnce(
 	output *models.RunningOutput,
 	ticker Ticker,
@@ -858,6 +855,17 @@ func (a *Agent) flushOnce(
 			output.LogBufferStatus()
 		}
 	}
+}
+
+// flushBatch runs the output's Write function once Unlike flushOnce the
+// interval elapsing is not considered during these flushes.
+func (a *Agent) flushBatch(
+	output *models.RunningOutput,
+	writeFunc func() error,
+) error {
+	err := writeFunc()
+	output.LogBufferStatus()
+	return err
 }
 
 // Test runs the inputs, processors and aggregators for a single gather and

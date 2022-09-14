@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
+	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -56,6 +57,15 @@ type Config struct {
 	// Character used for metric name sanitization in Carbon2.
 	Carbon2SanitizeReplaceChar string `toml:"carbon2_sanitize_replace_char"`
 
+	// Separator for CSV
+	CSVSeparator string `toml:"csv_separator"`
+
+	// Output a CSV header for naming the columns
+	CSVHeader bool `toml:"csv_header"`
+
+	// Prefix the tag and field columns for CSV format
+	CSVPrefix bool `toml:"csv_column_prefix"`
+
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
 
@@ -88,8 +98,11 @@ type Config struct {
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration `toml:"timestamp_units"`
 
-	// Timestamp format to use for JSON formatted output
+	// Timestamp format to use for JSON and CSV formatted output
 	TimestampFormat string `toml:"timestamp_format"`
+
+	// Transformation as JSONata expression to use for JSON formatted output
+	Transformation string `toml:"transformation"`
 
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool `toml:"hec_routing"`
@@ -117,6 +130,9 @@ type Config struct {
 	// Output string fields as metric labels; when false string fields are
 	// discarded.
 	PrometheusStringAsLabel bool `toml:"prometheus_string_as_label"`
+
+	// Encode metrics without HELP metadata. This helps reduce the payload size.
+	PrometheusCompactEncoding bool `toml:"prometheus_compact_encoding"`
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -124,12 +140,14 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
+	case "csv":
+		serializer, err = NewCSVSerializer(config)
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
-		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat)
+		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat, config.Transformation)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
 	case "nowmetric":
@@ -148,6 +166,10 @@ func NewSerializer(config *Config) (Serializer, error) {
 		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
+}
+
+func NewCSVSerializer(config *Config) (Serializer, error) {
+	return csv.NewSerializer(config.TimestampFormat, config.CSVSeparator, config.CSVHeader, config.CSVPrefix)
 }
 
 func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
@@ -187,6 +209,7 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 		TimestampExport: exportTimestamp,
 		MetricSortOrder: sortMetrics,
 		StringHandling:  stringAsLabels,
+		CompactEncoding: config.PrometheusCompactEncoding,
 	})
 }
 
@@ -194,8 +217,8 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
 }
 
-func NewJSONSerializer(timestampUnits time.Duration, timestampFormat string) (Serializer, error) {
-	return json.NewSerializer(timestampUnits, timestampFormat)
+func NewJSONSerializer(timestampUnits time.Duration, timestampFormat, transform string) (Serializer, error) {
+	return json.NewSerializer(timestampUnits, timestampFormat, transform)
 }
 
 func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {

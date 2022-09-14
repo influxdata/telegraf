@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package azure_data_explorer
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -13,12 +15,16 @@ import (
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
 	"github.com/Azure/azure-kusto-go/kusto/unsafe"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type AzureDataExplorer struct {
 	Endpoint        string          `toml:"endpoint_url"`
@@ -54,6 +60,10 @@ type ingestorFactory func(localClient, string, string) (localIngestor, error)
 
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+
+func (*AzureDataExplorer) SampleConfig() string {
+	return sampleConfig
+}
 
 func (adx *AzureDataExplorer) Connect() error {
 	authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(adx.Endpoint)
@@ -209,7 +219,7 @@ func (adx *AzureDataExplorer) Init() error {
 		return errors.New("Metrics grouping type is not valid")
 	}
 
-	serializer, err := json.NewSerializer(time.Nanosecond, time.RFC3339Nano)
+	serializer, err := json.NewSerializer(time.Nanosecond, time.RFC3339Nano, "")
 	if err != nil {
 		return err
 	}

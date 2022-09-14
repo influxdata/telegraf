@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ping
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"math"
@@ -18,6 +20,9 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultPingDataBytesSize = 56
@@ -95,6 +100,10 @@ type stats struct {
 	recv  int
 	ttl   int
 	roundTripTimeStats
+}
+
+func (*Ping) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {

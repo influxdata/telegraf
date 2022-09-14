@@ -1,15 +1,21 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nsq_consumer
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"sync"
+
+	nsq "github.com/nsqio/go-nsq"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	nsq "github.com/nsqio/go-nsq"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxUndeliveredMessages = 1000
@@ -27,7 +33,7 @@ func (l *logger) Output(_ int, s string) error {
 	return nil
 }
 
-//NSQConsumer represents the configuration of the plugin
+// NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
 	Server      string   `toml:"server" deprecated:"1.5.0;use 'nsqd' instead"`
 	Nsqd        []string `toml:"nsqd"`
@@ -47,6 +53,10 @@ type NSQConsumer struct {
 	messages map[telegraf.TrackingID]*nsq.Message
 	wg       sync.WaitGroup
 	cancel   context.CancelFunc
+}
+
+func (*NSQConsumer) SampleConfig() string {
+	return sampleConfig
 }
 
 // SetParser takes the data_format from the config and finds the right parser for that format

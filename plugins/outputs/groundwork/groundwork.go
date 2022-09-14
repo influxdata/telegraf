@@ -1,12 +1,15 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package groundwork
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gwos/tcg/sdk/clients"
 	"github.com/gwos/tcg/sdk/logper"
@@ -16,6 +19,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type metricMeta struct {
 	group    string
@@ -27,6 +33,7 @@ type Groundwork struct {
 	AgentID             string          `toml:"agent_id"`
 	Username            string          `toml:"username"`
 	Password            string          `toml:"password"`
+	DefaultAppType      string          `toml:"default_app_type"`
 	DefaultHost         string          `toml:"default_host"`
 	DefaultServiceState string          `toml:"default_service_state"`
 	GroupTag            string          `toml:"group_tag"`
@@ -35,32 +42,39 @@ type Groundwork struct {
 	client              clients.GWClient
 }
 
+func (*Groundwork) SampleConfig() string {
+	return sampleConfig
+}
+
 func (g *Groundwork) Init() error {
 	if g.Server == "" {
-		return errors.New("no 'url' provided")
+		return errors.New(`no "url" provided`)
 	}
 	if g.AgentID == "" {
-		return errors.New("no 'agent_id' provided")
+		return errors.New(`no "agent_id" provided`)
 	}
 	if g.Username == "" {
-		return errors.New("no 'username' provided")
+		return errors.New(`no "username" provided`)
 	}
 	if g.Password == "" {
-		return errors.New("no 'password' provided")
+		return errors.New(`no "password" provided`)
+	}
+	if g.DefaultAppType == "" {
+		return errors.New(`no "default_app_type" provided`)
 	}
 	if g.DefaultHost == "" {
-		return errors.New("no 'default_host' provided")
+		return errors.New(`no "default_host" provided`)
 	}
 	if g.ResourceTag == "" {
-		return errors.New("no 'resource_tag' provided")
+		return errors.New(`no "resource_tag" provided`)
 	}
 	if !validStatus(g.DefaultServiceState) {
-		return errors.New("invalid 'default_service_state' provided")
+		return errors.New(`invalid "default_service_state" provided`)
 	}
 
 	g.client = clients.GWClient{
 		AppName: "telegraf",
-		AppType: "TELEGRAF",
+		AppType: g.DefaultAppType,
 		GWConnection: &clients.GWConnection{
 			HostName:           g.Server,
 			UserName:           g.Username,
@@ -162,7 +176,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	}
 	requestJSON, err := json.Marshal(transit.ResourcesWithServicesRequest{
 		Context: &transit.TracerContext{
-			AppType:    "TELEGRAF",
+			AppType:    g.DefaultAppType,
 			AgentID:    g.AgentID,
 			TraceToken: traceToken,
 			TimeStamp:  transit.NewTimestamp(),
@@ -190,6 +204,7 @@ func init() {
 			GroupTag:            "group",
 			ResourceTag:         "host",
 			DefaultHost:         "telegraf",
+			DefaultAppType:      "TELEGRAF",
 			DefaultServiceState: string(transit.ServiceOk),
 		}
 	})
@@ -199,114 +214,167 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 	group, _ := metric.GetTag(g.GroupTag)
 
 	resource := g.DefaultHost
-	if value, present := metric.GetTag(g.ResourceTag); present {
-		resource = value
+	if v, ok := metric.GetTag(g.ResourceTag); ok {
+		resource = v
 	}
 
 	service := metric.Name()
-	if value, present := metric.GetTag("service"); present {
-		service = value
+	if v, ok := metric.GetTag("service"); ok {
+		service = v
 	}
-
-	status := g.DefaultServiceState
-	value, statusPresent := metric.GetTag("status")
-	if validStatus(value) {
-		status = value
-	}
-
-	message, _ := metric.GetTag("message")
 
 	unitType := string(transit.UnitCounter)
-	if value, present := metric.GetTag("unitType"); present {
-		unitType = value
-	}
-
-	var critical float64
-	value, criticalPresent := metric.GetTag("critical")
-	if criticalPresent {
-		if s, err := strconv.ParseFloat(value, 64); err == nil {
-			critical = s
-		}
-	}
-
-	var warning float64
-	value, warningPresent := metric.GetTag("warning")
-	if warningPresent {
-		if s, err := strconv.ParseFloat(value, 64); err == nil {
-			warning = s
-		}
+	if v, ok := metric.GetTag("unitType"); ok {
+		unitType = v
 	}
 
 	lastCheckTime := transit.NewTimestamp()
 	lastCheckTime.Time = metric.Time()
 	serviceObject := transit.MonitoredService{
 		BaseInfo: transit.BaseInfo{
-			Name:  service,
-			Type:  transit.ResourceTypeService,
-			Owner: resource,
+			Name:       service,
+			Type:       transit.ResourceTypeService,
+			Owner:      resource,
+			Properties: make(map[string]transit.TypedValue),
 		},
 		MonitoredInfo: transit.MonitoredInfo{
-			Status:           transit.MonitorStatus(status),
-			LastCheckTime:    lastCheckTime,
-			NextCheckTime:    lastCheckTime, // if not added, GW will make this as LastCheckTime + 5 mins
-			LastPluginOutput: message,
+			Status:        transit.MonitorStatus(g.DefaultServiceState),
+			LastCheckTime: lastCheckTime,
+			NextCheckTime: lastCheckTime, // if not added, GW will make this as LastCheckTime + 5 mins
 		},
 		Metrics: nil,
 	}
 
-	for _, value := range metric.FieldList() {
-		var thresholds []transit.ThresholdValue
-		if warningPresent {
-			thresholds = append(thresholds, transit.ThresholdValue{
-				SampleType: transit.Warning,
-				Label:      value.Key + "_wn",
-				Value: &transit.TypedValue{
-					ValueType:   transit.DoubleType,
-					DoubleValue: &warning,
-				},
-			})
+	knownKey := func(t string) bool {
+		if strings.HasSuffix(t, "_cr") ||
+			strings.HasSuffix(t, "_wn") ||
+			t == "critical" ||
+			t == "warning" ||
+			t == g.GroupTag ||
+			t == g.ResourceTag ||
+			t == "service" ||
+			t == "status" ||
+			t == "message" ||
+			t == "unitType" {
+			return true
 		}
-		if criticalPresent {
-			thresholds = append(thresholds, transit.ThresholdValue{
-				SampleType: transit.Critical,
-				Label:      value.Key + "_cr",
-				Value: &transit.TypedValue{
-					ValueType:   transit.DoubleType,
-					DoubleValue: &critical,
-				},
-			})
+		return false
+	}
+
+	for _, tag := range metric.TagList() {
+		if knownKey(tag.Key) {
+			continue
+		}
+		serviceObject.Properties[tag.Key] = *transit.NewTypedValue(tag.Value)
+	}
+
+	for _, field := range metric.FieldList() {
+		if knownKey(field.Key) {
+			continue
 		}
 
-		typedValue := transit.NewTypedValue(value.Value)
-		if typedValue == nil {
-			g.Log.Warnf("could not convert type %T, skipping field %s: %v", value.Value, value.Key, value.Value)
+		switch field.Value.(type) {
+		case string, []byte:
+			g.Log.Warnf("string values are not supported, skipping field %s: %q", field.Key, field.Value)
 			continue
 		}
-		if typedValue.ValueType == transit.StringType {
-			g.Log.Warnf("string values are not supported, skipping field %s: %q", value.Key, value.Value)
+
+		typedValue := transit.NewTypedValue(field.Value)
+		if typedValue == nil {
+			g.Log.Warnf("could not convert type %T, skipping field %s: %v", field.Value, field.Key, field.Value)
 			continue
+		}
+
+		var thresholds []transit.ThresholdValue
+		addCriticalThreshold := func(v interface{}) {
+			if tv := transit.NewTypedValue(v); tv != nil {
+				thresholds = append(thresholds, transit.ThresholdValue{
+					SampleType: transit.Critical,
+					Label:      field.Key + "_cr",
+					Value:      tv,
+				})
+			}
+		}
+		addWarningThreshold := func(v interface{}) {
+			if tv := transit.NewTypedValue(v); tv != nil {
+				thresholds = append(thresholds, transit.ThresholdValue{
+					SampleType: transit.Warning,
+					Label:      field.Key + "_wn",
+					Value:      tv,
+				})
+			}
+		}
+		if v, ok := metric.GetTag(field.Key + "_cr"); ok {
+			if v, err := strconv.ParseFloat(v, 64); err == nil {
+				addCriticalThreshold(v)
+			}
+		} else if v, ok := metric.GetTag("critical"); ok {
+			if v, err := strconv.ParseFloat(v, 64); err == nil {
+				addCriticalThreshold(v)
+			}
+		} else if v, ok := metric.GetField(field.Key + "_cr"); ok {
+			addCriticalThreshold(v)
+		}
+		if v, ok := metric.GetTag(field.Key + "_wn"); ok {
+			if v, err := strconv.ParseFloat(v, 64); err == nil {
+				addWarningThreshold(v)
+			}
+		} else if v, ok := metric.GetTag("warning"); ok {
+			if v, err := strconv.ParseFloat(v, 64); err == nil {
+				addWarningThreshold(v)
+			}
+		} else if v, ok := metric.GetField(field.Key + "_wn"); ok {
+			addWarningThreshold(v)
 		}
 
 		serviceObject.Metrics = append(serviceObject.Metrics, transit.TimeSeries{
-			MetricName: value.Key,
+			MetricName: field.Key,
 			SampleType: transit.Value,
-			Interval: &transit.TimeInterval{
-				EndTime: lastCheckTime,
-			},
+			Interval:   &transit.TimeInterval{EndTime: lastCheckTime},
 			Value:      typedValue,
 			Unit:       transit.UnitType(unitType),
 			Thresholds: thresholds,
 		})
 	}
 
-	if !statusPresent {
-		serviceStatus, err := transit.CalculateServiceStatus(&serviceObject.Metrics)
+	if m, ok := metric.GetTag("message"); ok {
+		serviceObject.LastPluginOutput = m
+	} else if m, ok := metric.GetField("message"); ok {
+		switch m := m.(type) {
+		case string:
+			serviceObject.LastPluginOutput = m
+		case []byte:
+			serviceObject.LastPluginOutput = string(m)
+		default:
+			serviceObject.LastPluginOutput = fmt.Sprintf("%v", m)
+		}
+	}
+
+	func() {
+		if s, ok := metric.GetTag("status"); ok && validStatus(s) {
+			serviceObject.Status = transit.MonitorStatus(s)
+			return
+		}
+		if s, ok := metric.GetField("status"); ok {
+			status := g.DefaultServiceState
+			switch s := s.(type) {
+			case string:
+				status = s
+			case []byte:
+				status = string(s)
+			}
+			if validStatus(status) {
+				serviceObject.Status = transit.MonitorStatus(status)
+				return
+			}
+		}
+		status, err := transit.CalculateServiceStatus(&serviceObject.Metrics)
 		if err != nil {
 			g.Log.Infof("could not calculate service status, reverting to default_service_state: %v", err)
-			serviceObject.Status = transit.MonitorStatus(g.DefaultServiceState)
+			status = transit.MonitorStatus(g.DefaultServiceState)
 		}
-		serviceObject.Status = serviceStatus
-	}
+		serviceObject.Status = status
+	}()
 
 	return metricMeta{resource: resource, group: group}, &serviceObject, nil
 }

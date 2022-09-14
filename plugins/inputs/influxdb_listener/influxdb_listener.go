@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package influxdb_listener
 
 import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -19,6 +21,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// defaultMaxBodySize is the default maximum request body size, in bytes.
@@ -61,6 +66,10 @@ type InfluxDBListener struct {
 	Log telegraf.Logger `toml:"-"`
 
 	mux http.ServeMux
+}
+
+func (*InfluxDBListener) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
@@ -213,9 +222,9 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		if h.ParserType == "upstream" {
 			h.handleWriteUpstreamParser(res, req)
+		} else {
+			h.handleWriteInternalParser(res, req)
 		}
-
-		h.handleWriteInternalParser(res, req)
 	}
 }
 

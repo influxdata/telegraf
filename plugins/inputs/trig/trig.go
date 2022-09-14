@@ -1,15 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package trig
 
 import (
+	_ "embed"
 	"math"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Trig struct {
 	x         float64
 	Amplitude float64
+}
+
+func (*Trig) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Trig) Gather(acc telegraf.Accumulator) error {

@@ -42,7 +42,8 @@ func (eh *mockEventHub) SendBatch(ctx context.Context, iterator eventhub.BatchIt
 /* End wrapper interface */
 
 func TestInitAndWrite(t *testing.T) {
-	serializer, _ := json.NewSerializer(time.Second, "")
+	serializer, err := json.NewSerializer(time.Second, "", "")
+	require.NoError(t, err)
 	mockHub := &mockEventHub{}
 	e := &EventHubs{
 		Hub:              mockHub,
@@ -52,8 +53,7 @@ func TestInitAndWrite(t *testing.T) {
 	}
 
 	mockHub.On("GetHub", mock.Anything).Return(nil).Once()
-	err := e.Init()
-	require.NoError(t, err)
+	require.NoError(t, e.Init())
 	mockHub.AssertExpectations(t)
 
 	metrics := testutil.MockMetrics()
@@ -100,8 +100,8 @@ func TestInitAndWriteIntegration(t *testing.T) {
 	testHubCS := os.Getenv("EVENTHUB_CONNECTION_STRING") + ";EntityPath=" + entity.Name
 
 	// Configure the plugin to target the newly created hub
-	serializer, _ := json.NewSerializer(time.Second, "")
-
+	serializer, err := json.NewSerializer(time.Second, "", "")
+	require.NoError(t, err)
 	e := &EventHubs{
 		Hub:              &eventHub{},
 		ConnectionString: testHubCS,
@@ -110,13 +110,11 @@ func TestInitAndWriteIntegration(t *testing.T) {
 	}
 
 	// Verify that we can connect to Event Hubs
-	err = e.Init()
-	require.NoError(t, err)
+	require.NoError(t, e.Init())
 
 	// Verify that we can successfully write data to Event Hubs
 	metrics := testutil.MockMetrics()
-	err = e.Write(metrics)
-	require.NoError(t, err)
+	require.NoError(t, e.Write(metrics))
 
 	/*
 	** Verify we can read data back from the test hub

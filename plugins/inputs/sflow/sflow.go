@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sflow
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -13,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	maxPacketSize = 64 * 1024
@@ -28,6 +33,10 @@ type SFlow struct {
 	decoder *PacketDecoder
 	closer  io.Closer
 	wg      sync.WaitGroup
+}
+
+func (*SFlow) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *SFlow) Init() error {

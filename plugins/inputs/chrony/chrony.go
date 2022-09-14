@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package chrony
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -13,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 var (
 	execCommand = exec.Command // execCommand is used to mock commands in tests.
 )
@@ -20,6 +25,10 @@ var (
 type Chrony struct {
 	DNSLookup bool `toml:"dns_lookup"`
 	path      string
+}
+
+func (*Chrony) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *Chrony) Init() error {
@@ -53,19 +62,19 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 
 // processChronycOutput takes in a string output from the chronyc command, like:
 //
-//     Reference ID    : 192.168.1.22 (ntp.example.com)
-//     Stratum         : 3
-//     Ref time (UTC)  : Thu May 12 14:27:07 2016
-//     System time     : 0.000020390 seconds fast of NTP time
-//     Last offset     : +0.000012651 seconds
-//     RMS offset      : 0.000025577 seconds
-//     Frequency       : 16.001 ppm slow
-//     Residual freq   : -0.000 ppm
-//     Skew            : 0.006 ppm
-//     Root delay      : 0.001655 seconds
-//     Root dispersion : 0.003307 seconds
-//     Update interval : 507.2 seconds
-//     Leap status     : Normal
+//	Reference ID    : 192.168.1.22 (ntp.example.com)
+//	Stratum         : 3
+//	Ref time (UTC)  : Thu May 12 14:27:07 2016
+//	System time     : 0.000020390 seconds fast of NTP time
+//	Last offset     : +0.000012651 seconds
+//	RMS offset      : 0.000025577 seconds
+//	Frequency       : 16.001 ppm slow
+//	Residual freq   : -0.000 ppm
+//	Skew            : 0.006 ppm
+//	Root delay      : 0.001655 seconds
+//	Root dispersion : 0.003307 seconds
+//	Update interval : 507.2 seconds
+//	Leap status     : Normal
 //
 // The value on the left side of the colon is used as field name, if the first field on
 // the right side is a float. If it cannot be parsed as float, it is a tag name.
@@ -82,7 +91,7 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 		if len(stats) < 2 {
 			return nil, nil, fmt.Errorf("unexpected output from chronyc, expected ':' in %s", out)
 		}
-		name := strings.ToLower(strings.Replace(strings.TrimSpace(stats[0]), " ", "_", -1))
+		name := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(stats[0]), " ", "_"))
 		// ignore reference time
 		if strings.Contains(name, "ref_time") {
 			continue

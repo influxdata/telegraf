@@ -17,7 +17,7 @@ limited set of values.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Count the occurrence of values in fields.
 [[aggregators.valuecounter]]
   ## General Aggregator Arguments:

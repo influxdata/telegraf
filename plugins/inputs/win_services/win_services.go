@@ -1,18 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build windows
 // +build windows
 
 package win_services
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
+
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type ServiceErr struct {
 	Message string
@@ -79,7 +85,7 @@ func (rmr *MgProvider) Connect() (WinServiceManager, error) {
 	}
 }
 
-//WinServices is an implementation if telegraf.Input interface, providing info about Windows Services
+// WinServices is an implementation if telegraf.Input interface, providing info about Windows Services
 type WinServices struct {
 	Log telegraf.Logger
 
@@ -95,6 +101,10 @@ type ServiceInfo struct {
 	DisplayName string
 	State       int
 	StartUpMode int
+}
+
+func (*WinServices) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *WinServices) Init() error {

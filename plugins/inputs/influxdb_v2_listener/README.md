@@ -5,15 +5,15 @@ according to the [InfluxDB HTTP API][influxdb_http_api].  The intent of the
 plugin is to allow Telegraf to serve as a proxy/router for the `/api/v2/write`
 endpoint of the InfluxDB HTTP API.
 
-The `/api/v2/write` endpoint supports the `precision` query parameter and can be set
-to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and
-defer to the output plugins configuration.
+The `/api/v2/write` endpoint supports the `precision` query parameter and can be
+set to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and defer
+to the output plugins configuration.
 
 Telegraf minimum version: Telegraf 1.16.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Accept metrics over InfluxDB 2.x HTTP API
 [[inputs.influxdb_v2_listener]]
   ## Address and port to host InfluxDB listener on

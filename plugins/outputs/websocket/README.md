@@ -2,11 +2,13 @@
 
 This plugin can write to a WebSocket endpoint.
 
-It can output data in any of the [supported output formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md).
+It can output data in any of the [supported output formats][formats].
+
+[formats]: ../../../docs/DATA_FORMATS_OUTPUT.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can transmit metrics over WebSocket.
 [[outputs.websocket]]
   ## URL is the address to send metrics to. Make sure ws or wss scheme is used.
@@ -32,6 +34,10 @@ It can output data in any of the [supported output formats](https://github.com/i
   # socks5_address = "127.0.0.1:1080"
   # socks5_username = "alice"
   # socks5_password = "pass123"
+
+  ## Optional HTTP proxy to use
+  # use_system_proxy = false
+  # http_proxy_url = "http://localhost:8888"
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read

@@ -1,4 +1,4 @@
-# Mock Data
+# Mock Data Input Plugin
 
 The mock input plugin generates random data based on a selection of different
 algorithms. For example, it can produce random data between a set of values,
@@ -9,14 +9,7 @@ required to mock their situation.
 
 ## Configuration
 
-The mock plugin only requires that:
-
-1) Metric name is set
-2) One of the below data field algorithms is defined
-
-Below is a sample config to generate one of each of the four types:
-
-```toml
+```toml @sample.conf
 # Generate metrics for test and demonstration purposes
 [[inputs.mock]]
   ## Set the metric name to use for reporting
@@ -28,6 +21,9 @@ Below is a sample config to generate one of each of the four types:
 
   ## One or more mock data fields *must* be defined.
   ##
+  ## [[inputs.mock.constant]]
+  ##   name = "constant"
+  ##   value = value_of_any_type
   ## [[inputs.mock.random]]
   ##   name = "rand"
   ##   min = 1.0
@@ -46,10 +42,17 @@ Below is a sample config to generate one of each of the four types:
   ##   volatility = 0.2
 ```
 
+The mock plugin only requires that:
+
+1) Metric name is set
+2) One of the data field algorithms is defined
+
 ## Available Algorithms
 
 The available algorithms for generating mock data include:
 
+* Constant - generate a field with the given value of type string, float, int
+  or bool
 * Random Float - generate a random float, inclusive of min and max
 * Sine Wave - produce a sine wave with a certain amplitude and period
 * Step - always add the step value, negative values accepted

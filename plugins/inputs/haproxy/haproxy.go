@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package haproxy
 
 import (
+	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -18,6 +20,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 //CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
 
 type haproxy struct {
@@ -28,6 +33,10 @@ type haproxy struct {
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+func (*haproxy) SampleConfig() string {
+	return sampleConfig
 }
 
 // Reads stats from all configured servers accumulates stats.

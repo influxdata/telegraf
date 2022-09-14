@@ -1,6 +1,7 @@
 # Strings Processor Plugin
 
-The `strings` plugin maps certain go string functions onto measurement, tag, and field values.  Values can be modified in place or stored in another key.
+The `strings` plugin maps certain go string functions onto measurement, tag, and
+field values.  Values can be modified in place or stored in another key.
 
 Implemented functions are:
 
@@ -17,17 +18,25 @@ Implemented functions are:
 - base64decode
 - valid_utf8
 
-Please note that in this implementation these are processed in the order that they appear above.
+Please note that in this implementation these are processed in the order that
+they appear above.
 
-Specify the `measurement`, `tag`, `tag_key`, `field`, or `field_key` that you want processed in each section and optionally a `dest` if you want the result stored in a new tag or field. You can specify lots of transformations on data with a single strings processor.
+Specify the `measurement`, `tag`, `tag_key`, `field`, or `field_key` that you
+want processed in each section and optionally a `dest` if you want the result
+stored in a new tag or field. You can specify lots of transformations on data
+with a single strings processor.
 
-If you'd like to apply the change to every `tag`, `tag_key`, `field`, `field_key`, or `measurement`, use the value `"*"` for each respective field. Note that the `dest` field will be ignored if `"*"` is used.
+If you'd like to apply the change to every `tag`, `tag_key`, `field`,
+`field_key`, or `measurement`, use the value `"*"` for each respective
+field. Note that the `dest` field will be ignored if `"*"` is used.
 
-If you'd like to apply multiple processings to the same `tag_key` or `field_key`, note the process order stated above. See the second example below for an example.
+If you'd like to apply multiple processings to the same `tag_key` or
+`field_key`, note the process order stated above. See the second example below
+for an example.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Perform string processing on tags, fields, and measurements
 [[processors.strings]]
   ## Convert a field value to lowercase and store in a new field
@@ -91,12 +100,14 @@ If you'd like to apply multiple processings to the same `tag_key` or `field_key`
 
 ### Trim, TrimLeft, TrimRight
 
-The `trim`, `trim_left`, and `trim_right` functions take an optional parameter: `cutset`.  This value is a string containing the characters to remove from the value.
+The `trim`, `trim_left`, and `trim_right` functions take an optional parameter:
+`cutset`.  This value is a string containing the characters to remove from the
+value.
 
 ### TrimPrefix, TrimSuffix
 
-The `trim_prefix` and `trim_suffix` functions remote the given `prefix` or `suffix`
-respectively from the string.
+The `trim_prefix` and `trim_suffix` functions remote the given `prefix` or
+`suffix` respectively from the string.
 
 ### Replace
 

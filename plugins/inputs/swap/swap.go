@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package swap
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
@@ -8,8 +10,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type SwapStats struct {
 	ps system.PS
+}
+
+func (*SwapStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ss *SwapStats) Gather(acc telegraf.Accumulator) error {

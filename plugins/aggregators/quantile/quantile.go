@@ -1,11 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package quantile
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Quantile struct {
 	Quantiles     []float64 `toml:"quantiles"`
@@ -25,6 +30,10 @@ type aggregate struct {
 }
 
 type newAlgorithmFunc func(compression float64) (algorithm, error)
+
+func (*Quantile) SampleConfig() string {
+	return sampleConfig
+}
 
 func (q *Quantile) Add(in telegraf.Metric) {
 	id := in.HashID()

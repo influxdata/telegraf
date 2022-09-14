@@ -1,10 +1,12 @@
 # LeoFS Input Plugin
 
-The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using SNMP. See [LeoFS Documentation / System Administration / System Monitoring](https://leo-project.net/leofs/docs/admin/system_admin/monitoring/).
+The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using
+SNMP. See [LeoFS Documentation / System Administration / System
+Monitoring](https://leo-project.net/leofs/docs/admin/system_admin/monitoring/).
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from a LeoFS Server via SNMP
 [[inputs.leofs]]
   ## An array of URLs of the form:

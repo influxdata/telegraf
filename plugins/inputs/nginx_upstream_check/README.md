@@ -1,16 +1,20 @@
 # Nginx Upstream Check Input Plugin
 
-Read the status output of the nginx_upstream_check (<https://github.com/yaoweibin/nginx_upstream_check_module>).
-This module can periodically check the servers in the Nginx's upstream with configured request and interval to determine
-if the server is still available. If checks are failed the server is marked as "down" and will not receive any requests
-until the check will pass and a server will be marked as "up" again.
+Read the status output of the [nginx_upstream_check][1].  This module can
+periodically check the servers in the Nginx's upstream with configured request
+and interval to determine if the server is still available. If checks are failed
+the server is marked as "down" and will not receive any requests until the check
+will pass and a server will be marked as "up" again.
 
-The status page displays the current status of all upstreams and servers as well as number of the failed and successful
-checks. This information can be exported in JSON format and parsed by this input.
+The status page displays the current status of all upstreams and servers as well
+as number of the failed and successful checks. This information can be exported
+in JSON format and parsed by this input.
+
+[1]: https://github.com/yaoweibin/nginx_upstream_check_module
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read nginx_upstream_check module status information (https://github.com/yaoweibin/nginx_upstream_check_module)
 [[inputs.nginx_upstream_check]]
   ## An URL where Nginx Upstream check module is enabled
@@ -41,7 +45,7 @@ checks. This information can be exported in JSON format and parsed by this input
   # insecure_skip_verify = false
 ```
 
-## Measurements & Fields
+## Metrics
 
 - Measurement
   - fall (The number of failed server check attempts, counter)
@@ -49,11 +53,13 @@ checks. This information can be exported in JSON format and parsed by this input
   - status (The reporter server status as a string)
   - status_code (The server status code. 1 - up, 2 - down, 0 - other)
 
-The "status_code" field most likely will be the most useful one because it allows you to determine the current
-state of every server and, possible, add some monitoring to watch over it. InfluxDB can use string values and the
-"status" field can be used instead, but for most other monitoring solutions the integer code will be appropriate.
+The "status_code" field most likely will be the most useful one because it
+allows you to determine the current state of every server and, possible, add
+some monitoring to watch over it. InfluxDB can use string values and the
+"status" field can be used instead, but for most other monitoring solutions the
+integer code will be appropriate.
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - name (The hostname or IP of the upstream server)

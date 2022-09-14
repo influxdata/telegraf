@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package proxmox
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -13,6 +15,13 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
+
+func (*Proxmox) SampleConfig() string {
+	return sampleConfig
+}
 
 func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 	err := getNodeSearchDomain(px)

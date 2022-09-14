@@ -14,11 +14,10 @@ type Filter interface {
 // for matching a given string against the filter list. The filter list
 // supports glob matching too, ie:
 //
-//   f, _ := Compile([]string{"cpu", "mem", "net*"})
-//   f.Match("cpu")     // true
-//   f.Match("network") // true
-//   f.Match("memory")  // false
-//
+//	f, _ := Compile([]string{"cpu", "mem", "net*"})
+//	f.Match("cpu")     // true
+//	f.Match("network") // true
+//	f.Match("memory")  // false
 func Compile(filters []string) (Filter, error) {
 	// return if there is nothing to compile
 	if len(filters) == 0 {
@@ -43,6 +42,14 @@ func Compile(filters []string) (Filter, error) {
 	default:
 		return glob.Compile("{" + strings.Join(filters, ",") + "}")
 	}
+}
+
+func MustCompile(filters []string) Filter {
+	f, err := Compile(filters)
+	if err != nil {
+		panic(err)
+	}
+	return f
 }
 
 // hasMeta reports whether path contains any magic glob characters.

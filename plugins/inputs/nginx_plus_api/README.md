@@ -1,10 +1,14 @@
 # Nginx Plus API Input Plugin
 
-Nginx Plus is a commercial version of the open source web server Nginx. The use this plugin you will need a license. For more information about the differences between Nginx (F/OSS) and Nginx Plus, [click here](https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/).
+Nginx Plus is a commercial version of the open source web server Nginx. The use
+this plugin you will need a license. For more information about the differences
+between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
+
+[diff-doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Nginx Plus API advanced status information
 [[inputs.nginx_plus_api]]
   ## An array of Nginx API URIs to gather stats.
@@ -46,6 +50,8 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
 | nginx_plus_api_processes             | >= 3                      |
 | nginx_plus_api_connections           | >= 3                      |
 | nginx_plus_api_ssl                   | >= 3                      |
+| nginx_plus_api_slabs_pages           | >= 3                      |
+| nginx_plus_api_slabs_slots           | >= 3                      |
 | nginx_plus_api_http_requests         | >= 3                      |
 | nginx_plus_api_http_server_zones     | >= 3                      |
 | nginx_plus_api_http_upstreams        | >= 3                      |
@@ -56,8 +62,9 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
 | nginx_plus_api_stream_server_zones   | >= 3                      |
 | nginx_plus_api_http_location_zones   | >= 5                      |
 | nginx_plus_api_resolver_zones        | >= 5                      |
+| nginx_plus_api_http_limit_reqs       | >= 6                      |
 
-## Measurements & Fields
+## Metrics
 
 - nginx_plus_api_processes
   - respawned
@@ -66,6 +73,14 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
   - dropped
   - active
   - idle
+- nginx_plus_api_slabs_pages
+  - used
+  - free
+- nginx_plus_api_slabs_slots
+  - used
+  - free
+  - reqs
+  - fails
 - nginx_plus_api_ssl
   - handshakes
   - handshakes_failed
@@ -180,8 +195,14 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
   - refused
   - timedout
   - unknown
+- nginx_plus_api_http_limit_reqs
+  - passed
+  - delayed
+  - rejected
+  - delayed_dry_run
+  - rejected_dry_run
 
-## Tags
+### Tags
 
 - nginx_plus_api_processes, nginx_plus_api_connections, nginx_plus_api_ssl, nginx_plus_api_http_requests
   - source
@@ -192,10 +213,16 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
   - source
   - port
 
-- nginx_plus_api_http_server_zones, nginx_plus_api_upstream_server_zones, nginx_plus_api_http_location_zones, nginx_plus_api_resolver_zones
+- nginx_plus_api_http_server_zones, nginx_plus_api_upstream_server_zones, nginx_plus_api_http_location_zones, nginx_plus_api_resolver_zones, nginx_plus_api_slabs_pages
   - source
   - port
   - zone
+
+- nginx_plus_api_slabs_slots
+  - source
+  - port
+  - zone
+  - slot
 
 - nginx_plus_api_upstream_peers, nginx_plus_api_stream_upstream_peers
   - id
@@ -207,6 +234,11 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
 - nginx_plus_api_http_caches
   - source
   - port
+
+- nginx_plus_api_http_limit_reqs
+  - source
+  - port
+  - limit
 
 ## Example Output
 
@@ -229,6 +261,12 @@ It produces:
 ```text
 > nginx_plus_api_processes,port=80,source=demo.nginx.com respawned=0i 1570696321000000000
 > nginx_plus_api_connections,port=80,source=demo.nginx.com accepted=68998606i,active=7i,dropped=0i,idle=57i 1570696322000000000
+> nginx_plus_api_slabs_pages,port=80,source=demo.nginx.com,zone=hg.nginx.org used=1i,free=503i 1570696322000000000
+> nginx_plus_api_slabs_pages,port=80,source=demo.nginx.com,zone=trac.nginx.org used=3i,free=500i 1570696322000000000
+> nginx_plus_api_slabs_slots,port=80,source=demo.nginx.com,zone=hg.nginx.org,slot=8 used=1i,free=503i,reqs=10i,fails=0i 1570696322000000000
+> nginx_plus_api_slabs_slots,port=80,source=demo.nginx.com,zone=hg.nginx.org,slot=16 used=3i,free=500i,reqs=1024i,fails=0i 1570696322000000000
+> nginx_plus_api_slabs_slots,port=80,source=demo.nginx.com,zone=trac.nginx.org,slot=8 used=1i,free=503i,reqs=10i,fails=0i 1570696322000000000
+> nginx_plus_api_slabs_slots,port=80,source=demo.nginx.com,zone=trac.nginx.org,slot=16 used=0i,free=1520i,reqs=0i,fails=1i 1570696322000000000
 > nginx_plus_api_ssl,port=80,source=demo.nginx.com handshakes=9398978i,handshakes_failed=289353i,session_reuses=1004389i 1570696322000000000
 > nginx_plus_api_http_requests,port=80,source=demo.nginx.com current=51i,total=264649353i 1570696322000000000
 > nginx_plus_api_http_server_zones,port=80,source=demo.nginx.com,zone=hg.nginx.org discarded=5i,processing=0i,received=24123604i,requests=60138i,responses_1xx=0i,responses_2xx=59353i,responses_3xx=531i,responses_4xx=249i,responses_5xx=0i,responses_total=60133i,sent=830165221i 1570696322000000000
@@ -261,8 +299,11 @@ It produces:
 > nginx_plus_api_http_location_zones,port=80,source=demo.nginx.com,zone=swagger discarded=0i,received=1622i,requests=8i,responses_1xx=0i,responses_2xx=7i,responses_3xx=0i,responses_4xx=1i,responses_5xx=0i,responses_total=8i,sent=638333i 1570696323000000000
 > nginx_plus_api_http_location_zones,port=80,source=demo.nginx.com,zone=api-calls discarded=64i,received=337530181i,requests=1726513i,responses_1xx=0i,responses_2xx=1726428i,responses_3xx=0i,responses_4xx=21i,responses_5xx=0i,responses_total=1726449i,sent=1902577668i 1570696323000000000
 > nginx_plus_api_resolver_zones,port=80,source=demo.nginx.com,zone=resolver1 addr=0i,formerr=0i,name=0i,noerror=0i,notimp=0i,nxdomain=0i,refused=0i,servfail=0i,srv=0i,timedout=0i,unknown=0i 1570696324000000000
+> nginx_plus_api_http_limit_reqs,port=80,source=demo.nginx.com,limit=limit_1 delayed=0i,delayed_dry_run=0i,passed=6i,rejected=9i,rejected_dry_run=0i 1570696322000000000
+> nginx_plus_api_http_limit_reqs,port=80,source=demo.nginx.com,limit=limit_2 delayed=13i,delayed_dry_run=3i,passed=6i,rejected=1i,rejected_dry_run=31i 1570696322000000000
 ```
 
 ### Reference material
 
-[api documentation](http://demo.nginx.com/swagger-ui/#/)
+- [api documentation](http://demo.nginx.com/swagger-ui/#/)
+- [nginx_api_module documentation](http://nginx.org/en/docs/http/ngx_http_api_module.html)

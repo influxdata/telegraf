@@ -1,8 +1,11 @@
 // Package neptune_apex implements an input plugin for the Neptune Apex
 // aquarium controller.
+//
+//go:generate ../../../tools/readme_config_includer/generator
 package neptune_apex
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -17,6 +20,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Measurement is constant across all metrics.
 const Measurement = "neptune_apex"
@@ -55,6 +61,10 @@ type NeptuneApex struct {
 	httpClient      *http.Client
 }
 
+func (*NeptuneApex) SampleConfig() string {
+	return sampleConfig
+}
+
 // Gather implements telegraf.Input.Gather
 func (n *NeptuneApex) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
@@ -79,7 +89,7 @@ func (n *NeptuneApex) gatherServer(
 }
 
 // parseXML is strict on the input and does not do best-effort parsing.
-//This is because of the life-support nature of the Neptune Apex.
+// This is because of the life-support nature of the Neptune Apex.
 func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	r := xmlReply{}
 	err := xml.Unmarshal(data, &r)

@@ -1,18 +1,19 @@
 # Raindrops Input Plugin
 
-The [raindrops](http://raindrops.bogomips.org/) plugin reads from
-specified raindops [middleware](http://raindrops.bogomips.org/Raindrops/Middleware.html) URI and adds stats to InfluxDB.
+The [raindrops](http://raindrops.bogomips.org/) plugin reads from specified
+raindops [middleware](http://raindrops.bogomips.org/Raindrops/Middleware.html)
+URI and adds stats to InfluxDB.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read raindrops stats (raindrops - real-time stats for preforking Rack servers)
 [[inputs.raindrops]]
   ## An array of raindrops middleware URI to gather stats.
   urls = ["http://localhost:8080/_raindrops"]
 ```
 
-## Measurements & Fields
+## Metrics
 
 - raindrops
   - calling (integer, count)
@@ -21,7 +22,7 @@ specified raindops [middleware](http://raindrops.bogomips.org/Raindrops/Middlewa
   - active (integer, bytes)
   - queued (integer, bytes)
 
-## Tags
+### Tags
 
 - Raindops calling/writing of all the workers:
   - server

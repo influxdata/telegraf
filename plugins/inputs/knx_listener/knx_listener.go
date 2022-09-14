@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package knx_listener
 
 import (
+	_ "embed"
 	"fmt"
 	"reflect"
 	"sync"
@@ -11,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type KNXInterface interface {
 	Inbound() <-chan knx.GroupEvent
@@ -40,6 +45,10 @@ type KNXListener struct {
 
 	acc telegraf.Accumulator
 	wg  sync.WaitGroup
+}
+
+func (*KNXListener) SampleConfig() string {
+	return sampleConfig
 }
 
 func (kl *KNXListener) Gather(_ telegraf.Accumulator) error {
@@ -74,8 +83,18 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	// Connect to the KNX-IP interface
 	kl.Log.Infof("Trying to connect to %q at %q", kl.ServiceType, kl.ServiceAddress)
 	switch kl.ServiceType {
-	case "tunnel":
-		c, err := knx.NewGroupTunnel(kl.ServiceAddress, knx.DefaultTunnelConfig)
+	case "tunnel", "tunnel_udp":
+		tunnelconfig := knx.DefaultTunnelConfig
+		tunnelconfig.UseTCP = false
+		c, err := knx.NewGroupTunnel(kl.ServiceAddress, tunnelconfig)
+		if err != nil {
+			return err
+		}
+		kl.client = &c
+	case "tunnel_tcp":
+		tunnelconfig := knx.DefaultTunnelConfig
+		tunnelconfig.UseTCP = true
+		c, err := knx.NewGroupTunnel(kl.ServiceAddress, tunnelconfig)
 		if err != nil {
 			return err
 		}

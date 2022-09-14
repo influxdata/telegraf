@@ -13,7 +13,7 @@ path onto the global path variable
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Receive SNMP traps
 [[inputs.snmp_trap]]
   ## Transport, local address, and port to listen on.  Transport must
@@ -76,7 +76,7 @@ setcap cap_net_bind_service=+ep /usr/bin/telegraf
 On Mac OS, listening on privileged ports is unrestricted on versions
 10.14 and later.
 
-### Metrics
+## Metrics
 
 - snmp_trap
   - tags:
@@ -93,7 +93,7 @@ On Mac OS, listening on privileged ports is unrestricted on versions
       the trap variable names after MIB lookup. Field values are trap
       variable values.
 
-### Example Output
+## Example Output
 
 ```shell
 snmp_trap,mib=SNMPv2-MIB,name=coldStart,oid=.1.3.6.1.6.3.1.1.5.1,source=192.168.122.102,version=2c,community=public snmpTrapEnterprise.0="linux",sysUpTimeInstance=1i 1574109187723429814

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kafka_consumer
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"sync"
@@ -16,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxUndeliveredMessages = 1000
@@ -37,6 +42,7 @@ type KafkaConsumer struct {
 	BalanceStrategy        string          `toml:"balance_strategy"`
 	Topics                 []string        `toml:"topics"`
 	TopicTag               string          `toml:"topic_tag"`
+	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
 
 	kafka.ReadConfig
 
@@ -65,6 +71,10 @@ type SaramaCreator struct{}
 
 func (*SaramaCreator) Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error) {
 	return sarama.NewConsumerGroup(brokers, group, cfg)
+}
+
+func (*KafkaConsumer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *KafkaConsumer) SetParser(parser parsers.Parser) {
@@ -116,6 +126,10 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	cfg.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime)
+
+	if k.ConsumerFetchDefault != 0 {
+		cfg.Consumer.Fetch.Default = int32(k.ConsumerFetchDefault)
+	}
 
 	k.config = cfg
 	return nil

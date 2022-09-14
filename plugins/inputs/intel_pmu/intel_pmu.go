@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux && amd64
 // +build linux,amd64
 
 package intel_pmu
 
 import (
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -13,10 +15,14 @@ import (
 	"strings"
 	"syscall"
 
+	ia "github.com/intel/iaevents"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	ia "github.com/intel/iaevents"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Linux availability: https://www.kernel.org/doc/Documentation/sysctl/fs.txt
 const fileMaxPath = "/proc/sys/fs/file-max"
@@ -115,6 +121,10 @@ type eventWithQuals struct {
 // Necessary initialization and config checking are done in Init.
 func (IntelPMU) Start(_ telegraf.Accumulator) error {
 	return nil
+}
+
+func (*IntelPMU) SampleConfig() string {
+	return sampleConfig
 }
 
 func (i *IntelPMU) Init() error {

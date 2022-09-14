@@ -5,7 +5,7 @@ known to work with Filebeat and Kafkabeat.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics exposed by Beat
 [[inputs.beat]]
   ## An URL from which to read Beat-formatted JSON
@@ -41,7 +41,7 @@ known to work with Filebeat and Kafkabeat.
   # insecure_skip_verify = false
 ```
 
-## Measurements & Fields
+## Metrics
 
 - **beat**
   - Fields:
@@ -135,7 +135,7 @@ known to work with Filebeat and Kafkabeat.
     - beat_name
     - beat_version
 
-## Example
+## Example Output
 
 ```shell
 $ telegraf --input-filter beat --test

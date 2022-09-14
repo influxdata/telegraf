@@ -1,6 +1,7 @@
 # AMQP Output Plugin
 
-This plugin writes to a AMQP 0-9-1 Exchange, a prominent implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
+This plugin writes to a AMQP 0-9-1 Exchange, a prominent implementation of this
+protocol being [RabbitMQ](https://www.rabbitmq.com/).
 
 This plugin does not bind the exchange to a queue.
 
@@ -11,7 +12,7 @@ For an introduction to AMQP see:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Publishes metrics to an AMQP broker
 [[outputs.amqp]]
   ## Broker to publish to.
@@ -89,6 +90,10 @@ For an introduction to AMQP see:
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional Proxy Configuration
+  # use_proxy = false
+  # proxy_url = "localhost:8888"
+
   ## If true use batch serialization format instead of line based delimiting.
   ## Only applies to data formats which are not line based such as JSON.
   ## Recommended to set to true.
@@ -111,11 +116,18 @@ For an introduction to AMQP see:
 
 ### Routing
 
-If `routing_tag` is set, and the tag is defined on the metric, the value of
-the tag is used as the routing key.  Otherwise the value of `routing_key` is
-used directly.  If both are unset the empty string is used.
+If `routing_tag` is set, and the tag is defined on the metric, the value of the
+tag is used as the routing key.  Otherwise the value of `routing_key` is used
+directly.  If both are unset the empty string is used.
 
-Exchange types that do not use a routing key, `direct` and `header`, always
-use the empty string as the routing key.
+Exchange types that do not use a routing key, `direct` and `header`, always use
+the empty string as the routing key.
 
 Metrics are published in batches based on the final routing key.
+
+### Proxy
+
+If you want to use a proxy, you need to set `use_proxy = true`. This will
+use the system's proxy settings to determine the proxy URL. If you need to
+specify a proxy URL manually, you can do so by using `proxy_url`, overriding
+the system settings.

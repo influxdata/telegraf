@@ -1,11 +1,12 @@
 # Fibaro Input Plugin
 
-The Fibaro plugin makes HTTP calls to the Fibaro controller API to gather values of hooked devices.
-Those values could be true (1) or false (0) for switches, percentage for dimmers, temperature, etc.
+The Fibaro plugin makes HTTP calls to the Fibaro controller API to gather values
+of hooked devices. Those values could be true (1) or false (0) for switches,
+percentage for dimmers, temperature, etc.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read devices value(s) from a Fibaro controller
 [[inputs.fibaro]]
   ## Required Fibaro controller address/hostname.

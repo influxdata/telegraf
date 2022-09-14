@@ -11,7 +11,7 @@
   - [Windows Service][winsvc]
   - [FAQ][faq]
 - Developer Builds
-  - [Nightlies](nightlies)
+  - [Nightlies][nightlies]
 
 [conf]: /docs/CONFIGURATION.md
 [metrics]: /docs/METRICS.md

@@ -424,8 +424,11 @@ rpc_duration_seconds_count 2693
 				URLTag:        "",
 				MetricVersion: 2,
 			}
+			err := input.Init()
+			require.NoError(t, err)
+
 			var acc testutil.Accumulator
-			err := input.Start(&acc)
+			err = input.Start(&acc)
 			require.NoError(t, err)
 			err = input.Gather(&acc)
 			require.NoError(t, err)

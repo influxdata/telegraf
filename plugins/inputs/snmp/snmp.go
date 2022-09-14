@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package snmp
 
 import (
+	_ "embed"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -18,6 +20,9 @@ import (
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Translator interface {
 	SnmpTranslate(oid string) (
@@ -61,6 +66,10 @@ type Snmp struct {
 
 func (s *Snmp) SetTranslator(name string) {
 	s.Translator = name
+}
+
+func (*Snmp) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Snmp) Init() error {
@@ -289,22 +298,6 @@ func (e *walkError) Error() string {
 
 func (e *walkError) Unwrap() error {
 	return e.err
-}
-
-func init() {
-	inputs.Add("snmp", func() telegraf.Input {
-		return &Snmp{
-			Name: "snmp",
-			ClientConfig: snmp.ClientConfig{
-				Retries:        3,
-				MaxRepetitions: 10,
-				Timeout:        config.Duration(5 * time.Second),
-				Version:        2,
-				Path:           []string{"/usr/share/snmp/mibs"},
-				Community:      "public",
-			},
-		}
-	})
 }
 
 // Gather retrieves all the configured fields and tables.
@@ -566,6 +559,7 @@ type snmpConnection interface {
 	//BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
 	Walk(string, gosnmp.WalkFunc) error
 	Get(oids []string) (*gosnmp.SnmpPacket, error)
+	Reconnect() error
 }
 
 // getConnection creates a snmpConnection (*gosnmp.GoSNMP) object and caches the
@@ -574,6 +568,10 @@ type snmpConnection interface {
 // more than one goroutine.
 func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	if gs := s.connectionCache[idx]; gs != nil {
+		if err := gs.Reconnect(); err != nil {
+			return gs, fmt.Errorf("reconnecting: %w", err)
+		}
+
 		return gs, nil
 	}
 
@@ -755,4 +753,20 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
+}
+
+func init() {
+	inputs.Add("snmp", func() telegraf.Input {
+		return &Snmp{
+			Name: "snmp",
+			ClientConfig: snmp.ClientConfig{
+				Retries:        3,
+				MaxRepetitions: 10,
+				Timeout:        config.Duration(5 * time.Second),
+				Version:        2,
+				Path:           []string{"/usr/share/snmp/mibs"},
+				Community:      "public",
+			},
+		}
+	})
 }

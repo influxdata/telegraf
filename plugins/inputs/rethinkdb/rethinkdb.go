@@ -1,21 +1,30 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package rethinkdb
 
 import (
+	_ "embed"
 	"fmt"
 	"net/url"
 	"sync"
 
+	"gopkg.in/gorethink/gorethink.v3"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"gopkg.in/gorethink/gorethink.v3"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type RethinkDB struct {
 	Servers []string
 }
 
 var localhost = &Server{URL: &url.URL{Host: "127.0.0.1:28015"}}
+
+func (*RethinkDB) SampleConfig() string {
+	return sampleConfig
+}
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).

@@ -1,13 +1,12 @@
 # Mailchimp Input Plugin
 
-Pulls campaign reports from the [Mailchimp API](https://developer.mailchimp.com/).
+Pulls campaign reports from the [Mailchimp API][1].
+
+[1]: https://developer.mailchimp.com/
 
 ## Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage mailchimp`.
-
-```toml
+```toml @sample.conf
 # Gathers metrics from the /3.0/reports MailChimp API
 [[inputs.mailchimp]]
   ## MailChimp API key

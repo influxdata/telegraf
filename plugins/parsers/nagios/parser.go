@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -14,7 +13,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// unknownExitCode is the nagios unknown status code
+// the exit code should be used if an error occurs or something unexpected happens
+const unknownExitCode = 3
 
 // getExitCode get the exit code from an error value which is the result
 // of running a command through exec package api.
@@ -25,10 +29,7 @@ func getExitCode(err error) (int, error) {
 
 	ee, ok := err.(*exec.ExitError)
 	if !ok {
-		// If it is not an *exec.ExitError, then it must be
-		// an io error, but docs do not say anything about the
-		// exit code in this case.
-		return 0, err
+		return unknownExitCode, err
 	}
 
 	ws, ok := ee.Sys().(syscall.WaitStatus)
@@ -39,19 +40,35 @@ func getExitCode(err error) (int, error) {
 	return ws.ExitStatus(), nil
 }
 
-// TryAddState attempts to add a state derived from the runErr.
-// If any error occurs, it is guaranteed to be returned along with
-// the initial metric slice.
-func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, error) {
-	state, err := getExitCode(runErr)
-	if err != nil {
-		return metrics, fmt.Errorf("exec: get exit code: %s", err)
+// AddState adds a state derived from the runErr. Unknown state will be set as fallback.
+// If any error occurs, it is guaranteed to be added to the service output.
+// An updated slice of metrics will be returned.
+func AddState(runErr error, errMessage []byte, metrics []telegraf.Metric) []telegraf.Metric {
+	state, exitErr := getExitCode(runErr)
+	// This will ensure that in every error case the valid nagios state 'unknown' will be returned.
+	// No error needs to be thrown because the output will contain the error information.
+	// Description found at 'Plugin Return Codes' https://nagios-plugins.org/doc/guidelines.html
+	if exitErr != nil || state < 0 || state > unknownExitCode {
+		state = unknownExitCode
 	}
 
 	for _, m := range metrics {
 		if m.Name() == "nagios_state" {
 			m.AddField("state", state)
-			return metrics, nil
+
+			if state == unknownExitCode {
+				errorMessage := string(errMessage)
+				if exitErr != nil && exitErr.Error() != "" {
+					errorMessage = exitErr.Error()
+				}
+				value, ok := m.GetField("service_output")
+				if !ok || value == "" {
+					// By adding the error message as output, the metric contains all needed information to understand
+					// the problem and fix it
+					m.AddField("service_output", errorMessage)
+				}
+			}
+			return metrics
 		}
 	}
 
@@ -66,14 +83,14 @@ func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, er
 	}
 	m := metric.New("nagios_state", nil, f, ts)
 
-	metrics = append(metrics, m)
-	return metrics, nil
+	return append(metrics, m)
 }
 
-type NagiosParser struct {
-	MetricName  string
-	DefaultTags map[string]string
-	Log         telegraf.Logger `toml:"-"`
+type Parser struct {
+	DefaultTags map[string]string `toml:"-"`
+	Log         telegraf.Logger   `toml:"-"`
+
+	metricName string
 }
 
 // Got from Alignak
@@ -83,16 +100,16 @@ var (
 	nagiosRegExp    = regexp.MustCompile(`^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*);?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*`)
 )
 
-func (p *NagiosParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	return metrics[0], err
 }
 
-func (p *NagiosParser) SetDefaultTags(tags map[string]string) {
+func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	ts := time.Now().UTC()
 
 	s := bufio.NewScanner(bytes.NewReader(buf))
@@ -292,4 +309,20 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 	}
 
 	return min, max, err
+}
+
+func init() {
+	// Register parser
+	parsers.Add("nagios",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{metricName: defaultMetricName}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.metricName = config.MetricName
+	p.DefaultTags = config.DefaultTags
+	return nil
 }

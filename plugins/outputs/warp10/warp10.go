@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package warp10
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"math"
@@ -17,6 +19,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultClientTimeout = 15 * time.Second
@@ -62,6 +67,10 @@ func (w *Warp10) createClient() (*http.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (*Warp10) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect to warp10
@@ -162,7 +171,7 @@ func buildValue(v interface{}) (string, error) {
 	case int64:
 		retv = intToString(p)
 	case string:
-		retv = fmt.Sprintf("'%s'", strings.Replace(p, "'", "\\'", -1))
+		retv = fmt.Sprintf("'%s'", strings.ReplaceAll(p, "'", "\\'"))
 	case bool:
 		retv = boolToString(p)
 	case uint64:

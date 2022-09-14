@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package bind
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Bind struct {
 	Urls                 []string
 	GatherMemoryContexts bool
@@ -19,6 +24,10 @@ type Bind struct {
 	Timeout              config.Duration `toml:"timeout"`
 
 	client http.Client
+}
+
+func (*Bind) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *Bind) Init() error {

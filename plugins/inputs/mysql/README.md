@@ -18,9 +18,14 @@ This plugin gathers the statistic data from MySQL server
 * File events statistics
 * Table schema statistics
 
+In order to gather metrics from the performance schema, it must first be enabled
+in mySQL configuration. See the performance schema [quick start][quick-start].
+
+[quick-start]: https://dev.mysql.com/doc/refman/8.0/en/performance-schema-quick-start.html
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many mysql servers
 [[inputs.mysql]]
   ## specify servers via a url matching:
@@ -49,7 +54,8 @@ This plugin gathers the statistic data from MySQL server
   ## if the list is empty, then metrics are gathered from all database tables
   # table_schema_databases = []
 
-  ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list
+  ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided
+  ## in the list above
   # gather_table_schema = false
 
   ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
@@ -115,7 +121,7 @@ This plugin gathers the statistic data from MySQL server
   ##   example: interval_slow = "30m"
   # interval_slow = ""
 
-  ## Optional TLS Config (will be used if tls=custom parameter specified in server uri)
+  ## Optional TLS Config (used if tls=custom parameter specified in server uri)
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
@@ -231,9 +237,11 @@ differences.
 Requires to be turned on in configuration.
   * binary_size_bytes(int, number)
   * binary_files_count(int, number)
-* Process list - connection metrics from processlist for each user. It has the following tags
+* Process list - connection metrics from processlist for each user. It has the
+  following tags
   * connections(int, number)
-* User Statistics - connection metrics from user statistics for each user. It has the following fields
+* User Statistics - connection metrics from user statistics for each user.
+  It has the following fields
   * access_denied
   * binlog_bytes_written
   * busy_time
@@ -281,7 +289,8 @@ and process. It has following fields:
 for them. It has following fields:
   * auto_increment_column(int, number)
   * auto_increment_column_max(int, number)
-* InnoDB metrics - all metrics of information_schema.INNODB_METRICS with a status "enabled"
+* InnoDB metrics - all metrics of information_schema.INNODB_METRICS with a
+  status "enabled". For MariaDB, `mariadb_dialect = true` to use `ENABLED=1`.
 * Perf table lock waits - gathers total number and time for SQL and external
 lock waits events for each table and operation. It has following fields.
 The unit of fields varies by the tags.
@@ -315,7 +324,7 @@ The unit of fields varies by the tags.
   * events_statements_sort_merge_passes_totals(float, number)
   * events_statements_sort_rows_total(float, number)
   * events_statements_no_index_used_total(float, number)
-* Table schema - gathers statistics of each schema. It has following measurements
+* Table schema - gathers statistics per schema. It has following measurements
   * info_schema_table_rows(float, number)
   * info_schema_table_size_data_length(float, number)
   * info_schema_table_size_index_length(float, number)
@@ -347,7 +356,8 @@ The unit of fields varies by the tags.
   * sql_lock_waits_total(fields including this tag have numeric unit)
   * external_lock_waits_total(fields including this tag have numeric unit)
   * sql_lock_waits_seconds_total(fields including this tag have millisecond unit)
-  * external_lock_waits_seconds_total(fields including this tag have millisecond unit)
+  * external_lock_waits_seconds_total(fields including this tag have
+    millisecond unit)
 * Perf events statements has following tags
   * event_name
 * Perf file events statuses has following tags

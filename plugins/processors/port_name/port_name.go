@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package port_name
 
 import (
 	"bufio"
+	_ "embed"
 	"io"
 	"os"
 	"strconv"
@@ -10,6 +12,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type sMap map[string]map[int]string // "https" == services["tcp"][443]
 
@@ -76,6 +81,10 @@ func readServices(r io.Reader) sMap {
 		protoMap[port] = service
 	}
 	return services
+}
+
+func (*PortName) SampleConfig() string {
+	return sampleConfig
 }
 
 func (pn *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {

@@ -1,19 +1,25 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amqp
 
 import (
 	"bytes"
+	_ "embed"
 	"strings"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	DefaultURL             = "amqp://localhost:5672/influxdb"
@@ -57,6 +63,7 @@ type AMQP struct {
 	ContentEncoding    string            `toml:"content_encoding"`
 	Log                telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
+	proxy.TCPProxy
 
 	serializer   serializers.Serializer
 	connect      func(*ClientConfig) (Client, error)
@@ -69,6 +76,10 @@ type AMQP struct {
 type Client interface {
 	Publish(key string, body []byte) error
 	Close() error
+}
+
+func (*AMQP) SampleConfig() string {
+	return sampleConfig
 }
 
 func (q *AMQP) SetSerializer(serializer serializers.Serializer) {
@@ -273,6 +284,12 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 	}
 	clientConfig.tlsConfig = tlsConfig
 
+	dialer, err := q.TCPProxy.Proxy()
+	if err != nil {
+		return nil, err
+	}
+	clientConfig.dialer = dialer
+
 	var auth []amqp.Authentication
 	if strings.ToUpper(q.AuthMethod) == "EXTERNAL" {
 		auth = []amqp.Authentication{&externalAuth{}}
@@ -290,7 +307,7 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 }
 
 func connect(clientConfig *ClientConfig) (Client, error) {
-	return Connect(clientConfig)
+	return newClient(clientConfig)
 }
 
 func init() {

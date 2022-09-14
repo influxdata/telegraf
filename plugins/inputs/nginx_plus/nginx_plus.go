@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nginx_plus
 
 import (
 	"bufio"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -18,12 +20,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type NginxPlus struct {
 	Urls            []string        `toml:"urls"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+func (*NginxPlus) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NginxPlus) Gather(acc telegraf.Accumulator) error {

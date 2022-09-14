@@ -1,16 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package application_insights
 
 import (
+	_ "embed"
 	"fmt"
 	"math"
 	"time"
 	"unsafe"
 
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type TelemetryTransmitter interface {
 	Track(appinsights.Telemetry)
@@ -38,6 +44,10 @@ var (
 	is32Bit        bool
 	is32BitChecked bool
 )
+
+func (*ApplicationInsights) SampleConfig() string {
+	return sampleConfig
+}
 
 func (a *ApplicationInsights) Connect() error {
 	if a.InstrumentationKey == "" {

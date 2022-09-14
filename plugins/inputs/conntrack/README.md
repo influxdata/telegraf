@@ -20,7 +20,7 @@ For more information on conntrack-tools, see the
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collects conntrack stats from the configured directories and files.
 [[inputs.conntrack]]
   ## The following defaults would work with multiple versions of conntrack.
@@ -37,13 +37,13 @@ For more information on conntrack-tools, see the
   dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 ```
 
-## Measurements & Fields
+## Metrics
 
 - conntrack
   - ip_conntrack_count (int, count): the number of entries in the conntrack table
   - ip_conntrack_max (int, size): the max capacity of the conntrack table
 
-## Tags
+### Tags
 
 This input does not use tags.
 

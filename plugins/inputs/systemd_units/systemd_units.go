@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package systemd_units
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -13,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // SystemdUnits is a telegraf plugin to gather systemd unit status
 type SystemdUnits struct {
@@ -118,6 +123,10 @@ var (
 	defaultUnitType = "service"
 	defaultPattern  = ""
 )
+
+func (*SystemdUnits) SampleConfig() string {
+	return sampleConfig
+}
 
 // Gather parses systemctl outputs and adds counters to the Accumulator
 func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {

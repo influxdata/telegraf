@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -8,6 +9,7 @@
 package lustre2
 
 import (
+	_ "embed"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,6 +19,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type tags struct {
 	name, job, client string
@@ -32,9 +37,12 @@ type Lustre2 struct {
 	allFields map[tags]map[string]interface{}
 }
 
-/* The wanted fields would be a []string if not for the
+/*
+	The wanted fields would be a []string if not for the
+
 lines that start with read_bytes/write_bytes and contain
-   both the byte count and the function call count
+
+	both the byte count and the function call count
 */
 type mapping struct {
 	inProc   string // What to look for at the start of a line in /proc/fs/lustre/*
@@ -341,6 +349,10 @@ var wantedMdtJobstatsFields = []*mapping{
 	},
 }
 
+func (*Lustre2) SampleConfig() string {
+	return sampleConfig
+}
+
 func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) error {
 	files, err := filepath.Glob(fileglob)
 	if err != nil {
@@ -350,7 +362,6 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 	fieldSplitter := regexp.MustCompile(`[ :]+`)
 
 	for _, file := range files {
-
 		/* From /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
 		 * extract the object store target name,
 		 * and for per-client files under

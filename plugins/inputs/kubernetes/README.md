@@ -6,13 +6,15 @@ is running as part of a `daemonset` within a kubernetes installation. This
 means that telegraf is running on every node within the cluster. Therefore, you
 should configure this plugin to talk to its locally running kubelet.
 
-To find the ip address of the host you are running on you can issue a command like the following:
+To find the ip address of the host you are running on you can issue a command
+like the following:
 
 ```sh
 curl -s $API_URL/api/v1/namespaces/$POD_NAMESPACE/pods/$HOSTNAME --header "Authorization: Bearer $TOKEN" --insecure | jq -r '.status.hostIP'
 ```
 
-In this case we used the downward API to pass in the `$POD_NAMESPACE` and `$HOSTNAME` is the hostname of the pod which is set by the kubernetes API.
+In this case we used the downward API to pass in the `$POD_NAMESPACE` and
+`$HOSTNAME` is the hostname of the pod which is set by the kubernetes API.
 
 Kubernetes is a fast moving project, with a new minor release every 3 months. As
 such, we will aim to maintain support only for versions that are supported by
@@ -34,7 +36,7 @@ avoid cardinality issues:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from the kubernetes kubelet api
 [[inputs.kubernetes]]
   ## URL for the kubelet
@@ -43,7 +45,11 @@ avoid cardinality issues:
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ## If both of these are empty, we'll use the default serviceaccount:
   ## at: /run/secrets/kubernetes.io/serviceaccount/token
-  # bearer_token = "/path/to/bearer/token"
+  ##
+  ## To re-read the token at each interval, please use a file with the
+  ## bearer_token option. If given a string, Telegraf will always use that
+  ## token.
+  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
   # bearer_token_string = "abc_123"
 
@@ -65,8 +71,8 @@ avoid cardinality issues:
 
 ## DaemonSet
 
-For recommendations on running Telegraf as a DaemonSet see [Monitoring Kubernetes
-Architecture][k8s-telegraf] or view the Helm charts:
+For recommendations on running Telegraf as a DaemonSet see [Monitoring
+Kubernetes Architecture][k8s-telegraf] or view the Helm charts:
 
 - [Telegraf][]
 - [InfluxDB][]

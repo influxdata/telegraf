@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package net
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"strings"
@@ -11,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type NetIOStats struct {
 	filter filter.Filter
 	ps     system.PS
@@ -18,6 +23,10 @@ type NetIOStats struct {
 	skipChecks          bool
 	IgnoreProtocolStats bool
 	Interfaces          []string
+}
+
+func (*NetIOStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package wireguard
 
 import (
+	_ "embed"
 	"fmt"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -9,6 +11,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	measurementDevice = "wireguard_device"
@@ -30,6 +35,10 @@ type Wireguard struct {
 	Log     telegraf.Logger `toml:"-"`
 
 	client *wgctrl.Client
+}
+
+func (*Wireguard) SampleConfig() string {
+	return sampleConfig
 }
 
 func (wg *Wireguard) Init() error {

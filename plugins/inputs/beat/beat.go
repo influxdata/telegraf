@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package beat
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const suffixInfo = "/"
 const suffixStats = "/stats"
@@ -57,6 +62,10 @@ func NewBeat() *Beat {
 		Headers:  make(map[string]string),
 		Timeout:  config.Duration(time.Second * 5),
 	}
+}
+
+func (*Beat) SampleConfig() string {
+	return sampleConfig
 }
 
 func (beat *Beat) Init() error {

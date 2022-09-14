@@ -1,10 +1,11 @@
 # OpenTelemetry Input Plugin
 
-This plugin receives traces, metrics and logs from [OpenTelemetry](https://opentelemetry.io) clients and agents via gRPC.
+This plugin receives traces, metrics and logs from
+[OpenTelemetry](https://opentelemetry.io) clients and agents via gRPC.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Receive OpenTelemetry traces, metrics, and logs over gRPC
 [[inputs.opentelemetry]]
   ## Override the default (0.0.0.0:4317) destination OpenTelemetry gRPC service
@@ -33,22 +34,26 @@ This plugin receives traces, metrics and logs from [OpenTelemetry](https://opent
 
 ### Schema
 
-The OpenTelemetry->InfluxDB conversion [schema](https://github.com/influxdata/influxdb-observability/blob/main/docs/index.md)
-and [implementation](https://github.com/influxdata/influxdb-observability/tree/main/otel2influx)
-are hosted at <https://github.com/influxdata/influxdb-observability> .
+The OpenTelemetry->InfluxDB conversion [schema][1] and [implementation][2] are
+hosted at <https://github.com/influxdata/influxdb-observability> .
 
 Spans are stored in measurement `spans`.
 Logs are stored in measurement `logs`.
 
-For metrics, two output schemata exist.
-Metrics received with `metrics_schema=prometheus-v1` are assigned measurement from the OTel field `Metric.name`.
-Metrics received with `metrics_schema=prometheus-v2` are stored in measurement `prometheus`.
+For metrics, two output schemata exist.  Metrics received with
+`metrics_schema=prometheus-v1` are assigned measurement from the OTel field
+`Metric.name`.  Metrics received with `metrics_schema=prometheus-v2` are stored
+in measurement `prometheus`.
 
 Also see the OpenTelemetry output plugin for Telegraf.
 
-### Example Output
+[1]: https://github.com/influxdata/influxdb-observability/blob/main/docs/index.md
 
-#### Tracing Spans
+[2]: https://github.com/influxdata/influxdb-observability/tree/main/otel2influx
+
+## Example Output
+
+### Tracing Spans
 
 ```text
 spans end_time_unix_nano="2021-02-19 20:50:25.6893952 +0000 UTC",instrumentation_library_name="tracegen",kind="SPAN_KIND_INTERNAL",name="okey-dokey",net.peer.ip="1.2.3.4",parent_span_id="d5270e78d85f570f",peer.service="tracegen-client",service.name="tracegen",span.kind="server",span_id="4c28227be6a010e1",status_code="STATUS_CODE_OK",trace_id="7d4854815225332c9834e6dbf85b9380" 1613767825689169000
@@ -58,7 +63,9 @@ spans end_time_unix_nano="2021-02-19 20:50:25.6895667 +0000 UTC",instrumentation
 spans end_time_unix_nano="2021-02-19 20:50:25.6896741 +0000 UTC",instrumentation_library_name="tracegen",kind="SPAN_KIND_INTERNAL",name="okey-dokey",net.peer.ip="1.2.3.4",parent_span_id="6a8e6a0edcc1c966",peer.service="tracegen-client",service.name="tracegen",span.kind="server",span_id="d68f7f3b41eb8075",status_code="STATUS_CODE_OK",trace_id="651dadde186b7834c52b13a28fc27bea" 1613767825689480300
 ```
 
-### Metrics - `prometheus-v1`
+## Metrics
+
+### `prometheus-v1`
 
 ```shell
 cpu_temp,foo=bar gauge=87.332
@@ -68,7 +75,7 @@ http_request_duration_seconds 0.05=24054,0.1=33444,0.2=100392,0.5=129389,1=13398
 rpc_duration_seconds 0.01=3102,0.05=3272,0.5=4773,0.9=9001,0.99=76656,sum=1.7560473e+07,count=2693
 ```
 
-### Metrics - `prometheus-v2`
+### `prometheus-v2`
 
 ```shell
 prometheus,foo=bar cpu_temp=87.332

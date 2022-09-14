@@ -339,5 +339,11 @@ func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time) 
 		Name:  "__name__",
 		Value: name,
 	})
+
+	// we sort the labels since Prometheus TSDB does not like out of order labels
+	sort.Slice(labels, func(i, j int) bool {
+		return labels[i].Name < labels[j].Name
+	})
+
 	return MakeMetricKey(labels), prompb.TimeSeries{Labels: labels, Samples: sample}
 }

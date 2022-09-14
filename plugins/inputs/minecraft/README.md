@@ -44,7 +44,7 @@ View the current scores with a command, substituting your player name:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collects scores from a Minecraft server's scoreboard using the RCON protocol
 [[inputs.minecraft]]
   ## Address of the Minecraft server.

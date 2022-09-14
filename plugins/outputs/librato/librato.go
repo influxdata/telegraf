@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package librato
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Librato structure for configuration and client
 type Librato struct {
@@ -53,6 +58,10 @@ func NewLibrato(apiURL string) *Librato {
 		APIUrl:   apiURL,
 		Template: "host",
 	}
+}
+
+func (*Librato) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect is the default output plugin connection function who make sure it
@@ -223,7 +232,7 @@ func (g *Gauge) setValue(v interface{}) error {
 	return nil
 }
 
-//Close is used to close the connection to librato Output
+// Close is used to close the connection to librato Output
 func (l *Librato) Close() error {
 	return nil
 }

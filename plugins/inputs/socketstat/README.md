@@ -1,14 +1,17 @@
-# SocketStat plugin
+# SocketStat Input Plugin
 
-The socketstat plugin gathers indicators from established connections, using iproute2's `ss` command.
+The socketstat plugin gathers indicators from established connections, using
+iproute2's `ss` command.
 
 The `ss` command does not require specific privileges.
 
-**WARNING: The output format will produce series with very high cardinality.** You should either store those by an engine which doesn't suffer from it, use a short retention policy or do appropriate filtering.
+**WARNING: The output format will produce series with very high cardinality.**
+You should either store those by an engine which doesn't suffer from it, use a
+short retention policy or do appropriate filtering.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather indicators from established connections, using iproute2's ss command.
 [[inputs.socketstat]]
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets

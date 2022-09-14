@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amon
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Amon struct {
 	ServerKey    string          `toml:"server_key"`
@@ -32,6 +37,10 @@ type Metric struct {
 }
 
 type Point [2]float64
+
+func (*Amon) SampleConfig() string {
+	return sampleConfig
+}
 
 func (a *Amon) Connect() error {
 	if a.ServerKey == "" || a.AmonInstance == "" {
@@ -55,11 +64,11 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	metricCounter := 0
 
 	for _, m := range metrics {
-		mname := strings.Replace(m.Name(), "_", ".", -1)
+		mname := strings.ReplaceAll(m.Name(), "_", ".")
 		if amonPts, err := buildMetrics(m); err == nil {
 			for fieldName, amonPt := range amonPts {
 				metric := &Metric{
-					Metric: mname + "_" + strings.Replace(fieldName, "_", ".", -1),
+					Metric: mname + "_" + strings.ReplaceAll(fieldName, "_", "."),
 				}
 				metric.Points[0] = amonPt
 				tempSeries = append(tempSeries, metric)

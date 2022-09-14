@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package jti_openconfig_telemetry
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"regexp"
@@ -12,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
 	"github.com/influxdata/telegraf"
@@ -21,6 +24,9 @@ import (
 	authentication "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	telemetry "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type OpenConfigTelemetry struct {
 	Servers         []string        `toml:"servers"`
@@ -45,6 +51,10 @@ var (
 	// Regex to match and extract data points from path value in received key
 	keyPathRegex = regexp.MustCompile(`/([^/]*)\[([A-Za-z0-9\-/]*=[^\[]*)]`)
 )
+
+func (*OpenConfigTelemetry) SampleConfig() string {
+	return sampleConfig
+}
 
 func (m *OpenConfigTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil
@@ -74,7 +84,7 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 			// we must emit multiple tags
 			for _, kv := range strings.Split(sub[2], " and ") {
 				key := tagKey + strings.TrimSpace(strings.Split(kv, "=")[0])
-				tagValue := strings.Replace(strings.Split(kv, "=")[1], "'", "", -1)
+				tagValue := strings.ReplaceAll(strings.Split(kv, "=")[1], "'", "")
 				tags[key] = tagValue
 			}
 
@@ -291,16 +301,17 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Parse TLS config
-	var opts []grpc.DialOption
+	var creds credentials.TransportCredentials
 	if m.EnableTLS {
 		tlscfg, err := m.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
+		creds = credentials.NewTLS(tlscfg)
 	} else {
-		opts = append(opts, grpc.WithInsecure())
+		creds = insecure.NewCredentials()
 	}
+	opt := grpc.WithTransportCredentials(creds)
 
 	// Connect to given list of servers and start collecting data
 	var grpcClientConn *grpc.ClientConn
@@ -315,7 +326,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		grpcClientConn, err = grpc.Dial(server, opts...)
+		grpcClientConn, err = grpc.Dial(server, opt)
 		if err != nil {
 			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
 		} else {

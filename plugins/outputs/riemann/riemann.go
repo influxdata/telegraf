@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package riemann
 
 import (
+	_ "embed"
 	"fmt"
 	"net/url"
 	"os"
@@ -15,6 +17,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Riemann struct {
 	URL                    string          `toml:"url"`
 	TTL                    float32         `toml:"ttl"`
@@ -28,6 +33,10 @@ type Riemann struct {
 	Log                    telegraf.Logger `toml:"-"`
 
 	client *raidman.Client
+}
+
+func (*Riemann) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *Riemann) Connect() error {

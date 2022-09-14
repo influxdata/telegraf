@@ -1,4 +1,4 @@
-//nolint
+// nolint
 package influxdb_test
 
 import (
@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"path"
 	"testing"
 	"time"
@@ -618,11 +617,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 }
 
 func TestHTTP_UnixSocket(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf-test")
-	if err != nil {
-		require.NoError(t, err)
-	}
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	sock := path.Join(tmpdir, "test.sock")
 	listener, err := net.Listen("unix", sock)

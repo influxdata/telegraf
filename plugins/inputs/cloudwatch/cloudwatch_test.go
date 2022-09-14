@@ -3,6 +3,7 @@ package cloudwatch
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -12,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
-	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -105,6 +106,7 @@ func TestGather(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
+		BatchSize: 500,
 	}
 
 	var acc testutil.Accumulator
@@ -136,6 +138,7 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 		Delay:      internalDuration,
 		Period:     internalDuration,
 		RateLimit:  200,
+		BatchSize:  500,
 	}
 
 	var acc testutil.Accumulator
@@ -212,6 +215,7 @@ func TestSelectMetrics(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
+		BatchSize: 500,
 		Metrics: []*Metric{
 			{
 				MetricNames: []string{"Latency", "RequestCount"},
@@ -257,6 +261,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Namespaces: []string{namespace},
 		Delay:      internalDuration,
 		Period:     internalDuration,
+		BatchSize:  500,
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -296,6 +301,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Namespaces: []string{namespace},
 		Delay:      internalDuration,
 		Period:     internalDuration,
+		BatchSize:  500,
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -335,6 +341,7 @@ func TestUpdateWindow(t *testing.T) {
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
+		BatchSize: 500,
 	}
 
 	now := time.Now()
@@ -360,19 +367,29 @@ func TestUpdateWindow(t *testing.T) {
 
 func TestProxyFunction(t *testing.T) {
 	c := &CloudWatch{
-		HTTPProxy: proxy.HTTPProxy{HTTPProxyURL: "http://www.penguins.com"},
+		HTTPProxy: proxy.HTTPProxy{
+			HTTPProxyURL: "http://www.penguins.com",
+		},
+		BatchSize: 500,
 	}
 
 	proxyFunction, err := c.HTTPProxy.Proxy()
 	require.NoError(t, err)
 
-	proxyResult, err := proxyFunction(&http.Request{})
+	u, err := url.Parse("https://monitoring.us-west-1.amazonaws.com/")
+	require.NoError(t, err)
+
+	proxyResult, err := proxyFunction(&http.Request{URL: u})
 	require.NoError(t, err)
 	require.Equal(t, "www.penguins.com", proxyResult.Host)
 }
 
 func TestCombineNamespaces(t *testing.T) {
-	c := &CloudWatch{Namespace: "AWS/ELB", Namespaces: []string{"AWS/EC2", "AWS/Billing"}}
+	c := &CloudWatch{
+		Namespace:  "AWS/ELB",
+		Namespaces: []string{"AWS/EC2", "AWS/Billing"},
+		BatchSize:  500,
+	}
 
 	require.NoError(t, c.Init())
 	require.Equal(t, []string{"AWS/EC2", "AWS/Billing", "AWS/ELB"}, c.Namespaces)

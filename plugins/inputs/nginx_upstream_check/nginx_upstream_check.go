@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nginx_upstream_check
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type NginxUpstreamCheck struct {
 	URL string `toml:"url"`
@@ -123,6 +128,10 @@ func (check *NginxUpstreamCheck) gatherJSONData(address string, value interface{
 	}
 
 	return nil
+}
+
+func (*NginxUpstreamCheck) SampleConfig() string {
+	return sampleConfig
 }
 
 func (check *NginxUpstreamCheck) Gather(accumulator telegraf.Accumulator) error {

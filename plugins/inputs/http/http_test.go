@@ -16,8 +16,10 @@ import (
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/oauth"
 	httpplugin "github.com/influxdata/telegraf/plugins/inputs/http"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -39,10 +41,9 @@ func TestHTTPWithJSONFormat(t *testing.T) {
 	metricName := "metricName"
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -83,10 +84,42 @@ func TestHTTPHeaders(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
+	})
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Init())
+	require.NoError(t, acc.GatherError(plugin.Gather))
+}
+
+func TestHTTPContentLengthHeader(t *testing.T) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/endpoint" {
+			if r.Header.Get("Content-Length") != "" {
+				_, _ = w.Write([]byte(simpleJSON))
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+			}
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer fakeServer.Close()
+
+	address := fakeServer.URL + "/endpoint"
+	plugin := &httpplugin.HTTP{
+		URLs:    []string{address},
+		Headers: map[string]string{},
+		Body:    "{}",
+		Log:     testutil.Logger{},
+	}
+
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -107,10 +140,9 @@ func TestInvalidStatusCode(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -132,10 +164,9 @@ func TestSuccessStatusCodes(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -160,10 +191,9 @@ func TestMethod(t *testing.T) {
 	}
 
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		return parsers.NewParser(&parsers.Config{
-			DataFormat: "json",
-			MetricName: "metricName",
-		})
+		p := &json.Parser{MetricName: "metricName"}
+		err := p.Init()
+		return p, err
 	})
 
 	var acc testutil.Accumulator
@@ -265,7 +295,9 @@ func TestBodyAndContentEncoding(t *testing.T) {
 			})
 
 			tt.plugin.SetParserFunc(func() (telegraf.Parser, error) {
-				return parsers.NewParser(&parsers.Config{DataFormat: "influx"})
+				parser := &influx.Parser{}
+				err := parser.Init()
+				return parser, err
 			})
 
 			var acc testutil.Accumulator
@@ -345,7 +377,12 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			})
 
 			tt.plugin.SetParserFunc(func() (telegraf.Parser, error) {
-				return parsers.NewValueParser("metric", "string", "", nil)
+				p := &value.Parser{
+					MetricName: "metric",
+					DataType:   "string",
+				}
+				err := p.Init()
+				return p, err
 			})
 
 			err = tt.plugin.Init()

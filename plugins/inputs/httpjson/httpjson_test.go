@@ -156,11 +156,13 @@ func (c *mockHTTPClient) HTTPClient() *http.Client {
 
 // Generates a pointer to an HTTPJSON object that uses a mock HTTP client.
 // Parameters:
-//     response  : Body of the response that the mock HTTP client should return
-//     statusCode: HTTP status code the mock HTTP client should return
+//
+//	response  : Body of the response that the mock HTTP client should return
+//	statusCode: HTTP status code the mock HTTP client should return
 //
 // Returns:
-//     *HTTPJSON: Pointer to an HTTPJSON object that uses the generated mock HTTP client
+//
+//	*HTTPJSON: Pointer to an HTTPJSON object that uses the generated mock HTTP client
 func genMockHTTPJSON(response string, statusCode int) []*HTTPJSON {
 	return []*HTTPJSON{
 		{

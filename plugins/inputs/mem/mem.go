@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mem
 
 import (
+	_ "embed"
 	"fmt"
 	"runtime"
 
@@ -9,9 +11,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type MemStats struct {
 	ps       system.PS
 	platform string
+}
+
+func (*MemStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ms *MemStats) Init() error {

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package pf
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -12,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 const measurement = "pf"
 const pfctlCommand = "pfctl"
 
@@ -21,6 +26,10 @@ type PF struct {
 	UseSudo      bool
 	StateTable   []*Entry
 	infoFunc     func() (string, error)
+}
+
+func (*PF) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather is the entrypoint for the plugin.
@@ -208,7 +217,7 @@ func (pf *PF) buildPfctlCmd() (string, []string, error) {
 
 func init() {
 	inputs.Add("pf", func() telegraf.Input {
-		pf := new(PF)
+		pf := &PF{}
 		pf.infoFunc = pf.callPfctl
 		return pf
 	})

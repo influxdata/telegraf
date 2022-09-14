@@ -1,14 +1,14 @@
 # sysstat Input Plugin
 
-Collect [sysstat](https://github.com/sysstat/sysstat) metrics - requires the sysstat
-package installed.
+Collect [sysstat](https://github.com/sysstat/sysstat) metrics - requires the
+sysstat package installed.
 
-This plugin collects system metrics with the sysstat collector utility `sadc` and parses
-the created binary data file with the `sadf` utility.
+This plugin collects system metrics with the sysstat collector utility `sadc`
+and parses the created binary data file with the `sadf` utility.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Sysstat metrics collector
 [[inputs.sysstat]]
   ## Path to the sadc command.
@@ -63,7 +63,7 @@ the created binary data file with the `sadf` utility.
   #  vg = "rootvg"
 ```
 
-## Measurements & Fields
+## Metrics
 
 ### If group=true
 
@@ -117,7 +117,7 @@ And much more, depending on the options you configure.
 
 And much more, depending on the options you configure.
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - device

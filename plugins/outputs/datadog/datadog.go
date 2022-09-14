@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package datadog
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -16,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Datadog struct {
 	Apikey      string          `toml:"apikey"`
@@ -33,15 +38,21 @@ type TimeSeries struct {
 }
 
 type Metric struct {
-	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
-	Host   string   `json:"host"`
-	Tags   []string `json:"tags,omitempty"`
+	Metric   string   `json:"metric"`
+	Points   [1]Point `json:"points"`
+	Host     string   `json:"host"`
+	Type     string   `json:"type,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	Interval int64    `json:"interval"`
 }
 
 type Point [2]float64
 
 const datadogAPI = "https://app.datadoghq.com/api/v1/series"
+
+func (*Datadog) SampleConfig() string {
+	return sampleConfig
+}
 
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
@@ -85,10 +96,21 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				} else {
 					dname = m.Name() + "." + fieldName
 				}
+				var tname string
+				switch m.Type() {
+				case telegraf.Counter:
+					tname = "count"
+				case telegraf.Gauge:
+					tname = "gauge"
+				default:
+					tname = ""
+				}
 				metric := &Metric{
-					Metric: dname,
-					Tags:   metricTags,
-					Host:   host,
+					Metric:   dname,
+					Tags:     metricTags,
+					Host:     host,
+					Type:     tname,
+					Interval: 1,
 				}
 				metric.Points[0] = dogM
 				tempSeries = append(tempSeries, metric)
@@ -135,13 +157,13 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
+		return fmt.Errorf("unable to create http.Request, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
+		return fmt.Errorf("error POSTing metrics, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
 	}
 	defer resp.Body.Close()
 

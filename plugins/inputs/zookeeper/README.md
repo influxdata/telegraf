@@ -3,9 +3,15 @@
 The zookeeper plugin collects variables outputted from the 'mntr' command
 [Zookeeper Admin](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html).
 
+If in Zookeper, the Prometheus Metric provider is enabled, instead use the
+`prometheus` input plugin. By default, the Prometheus metrics are exposed at
+`http://<ip>:7000/metrics` URL. Using the `prometheus` input plugin provides a
+native solution to read and process Prometheus metrics, while this plugin is
+specific to using `mntr` to collect the Java Properties format.
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Reads 'mntr' stats from one or many zookeeper servers
 [[inputs.zookeeper]]
   ## An array of address to gather stats about. Specify an ip or hostname

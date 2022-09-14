@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package starlark
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
@@ -9,10 +11,17 @@ import (
 	"go.starlark.net/starlark"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Starlark struct {
 	common.StarlarkCommon
 
 	results []telegraf.Metric
+}
+
+func (*Starlark) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Starlark) Init() error {

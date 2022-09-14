@@ -7,7 +7,7 @@ Currently supports Linux and Windows.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about temperature
 [[inputs.temp]]
   # no configuration

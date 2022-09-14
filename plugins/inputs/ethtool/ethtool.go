@@ -1,10 +1,14 @@
 package ethtool
 
 import (
+	_ "embed"
 	"net"
 
 	"github.com/influxdata/telegraf"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Command interface {
 	Init() error
@@ -27,6 +31,10 @@ type Ethtool struct {
 
 	// the ethtool command
 	command Command
+}
+
+func (*Ethtool) SampleConfig() string {
+	return sampleConfig
 }
 
 const (

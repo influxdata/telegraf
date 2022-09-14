@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package socket_listener
 
 import (
 	"bufio"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -19,6 +21,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type setReadBufferer interface {
 	SetReadBuffer(bytes int) error
@@ -212,6 +217,10 @@ type SocketListener struct {
 	io.Closer
 }
 
+func (*SocketListener) SampleConfig() string {
+	return sampleConfig
+}
+
 func (sl *SocketListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
@@ -378,14 +387,6 @@ func (sl *SocketListener) Stop() {
 	sl.wg.Wait()
 }
 
-func newSocketListener() *SocketListener {
-	parser, _ := parsers.NewInfluxParser()
-
-	return &SocketListener{
-		Parser: parser,
-	}
-}
-
 type unixCloser struct {
 	path   string
 	closer io.Closer
@@ -400,5 +401,5 @@ func (uc unixCloser) Close() error {
 }
 
 func init() {
-	inputs.Add("socket_listener", func() telegraf.Input { return newSocketListener() })
+	inputs.Add("socket_listener", func() telegraf.Input { return &SocketListener{} })
 }

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nfsclient
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"regexp"
@@ -12,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type NFSClient struct {
 	Fullstat          bool            `toml:"fullstat"`
@@ -283,6 +288,10 @@ func (n *NFSClient) getMountStatsPath() string {
 	}
 	n.Log.Debugf("using [%s] for mountstats", path)
 	return path
+}
+
+func (*NFSClient) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {

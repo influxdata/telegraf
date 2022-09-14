@@ -1,13 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package teamspeak
 
 import (
-	"github.com/multiplay/go-ts3"
-
+	_ "embed"
 	"strconv"
+
+	"github.com/multiplay/go-ts3"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Teamspeak struct {
 	Server         string
@@ -47,6 +52,10 @@ func (ts *Teamspeak) connect() error {
 	ts.connected = true
 
 	return nil
+}
+
+func (*Teamspeak) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {

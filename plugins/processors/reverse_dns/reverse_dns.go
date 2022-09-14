@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package reverse_dns
 
 import (
+	_ "embed"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -8,6 +10,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type lookupEntry struct {
 	Tag   string `toml:"tag"`
@@ -26,6 +31,10 @@ type ReverseDNS struct {
 	MaxParallelLookups int             `toml:"max_parallel_lookups"`
 	Ordered            bool            `toml:"ordered"`
 	Log                telegraf.Logger `toml:"-"`
+}
+
+func (*ReverseDNS) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *ReverseDNS) Start(acc telegraf.Accumulator) error {

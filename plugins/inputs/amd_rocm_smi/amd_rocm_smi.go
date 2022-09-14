@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amd_rocm_smi
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,11 +17,18 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 const measurement = "amd_rocm_smi"
 
 type ROCmSMI struct {
 	BinPath string
 	Timeout config.Duration
+}
+
+func (*ROCmSMI) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather implements the telegraf interface
@@ -141,7 +150,7 @@ func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 			setTagIfUsed(tags, "gpu_id", payload.GpuID)
 			setTagIfUsed(tags, "gpu_unique_id", payload.GpuUniqueID)
 
-			setIfUsed("int", fields, "driver_version", strings.Replace(system["system"].DriverVersion, ".", "", -1))
+			setIfUsed("int", fields, "driver_version", strings.ReplaceAll(system["system"].DriverVersion, ".", ""))
 			setIfUsed("int", fields, "fan_speed", payload.GpuFanSpeedPercentage)
 			setIfUsed("int64", fields, "memory_total", payload.GpuVRAMTotalMemory)
 			setIfUsed("int64", fields, "memory_used", payload.GpuVRAMTotalUsedMemory)

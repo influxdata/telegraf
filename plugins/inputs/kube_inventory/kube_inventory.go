@@ -1,11 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kube_inventory
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
-	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
 )
@@ -26,7 +29,7 @@ const (
 type KubernetesInventory struct {
 	URL               string          `toml:"url"`
 	BearerToken       string          `toml:"bearer_token"`
-	BearerTokenString string          `toml:"bearer_token_string"`
+	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 	Namespace         string          `toml:"namespace"`
 	ResponseTimeout   config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
 	ResourceExclude   []string        `toml:"resource_exclude"`
@@ -44,22 +47,22 @@ type KubernetesInventory struct {
 	selectorFilter filter.Filter
 }
 
+func (*KubernetesInventory) SampleConfig() string {
+	return sampleConfig
+}
+
 func (ki *KubernetesInventory) Init() error {
 	// If neither are provided, use the default service account.
 	if ki.BearerToken == "" && ki.BearerTokenString == "" {
 		ki.BearerToken = defaultServiceAccountPath
 	}
 
-	if ki.BearerToken != "" {
-		token, err := os.ReadFile(ki.BearerToken)
-		if err != nil {
-			return err
-		}
-		ki.BearerTokenString = strings.TrimSpace(string(token))
+	if ki.BearerTokenString != "" {
+		ki.Log.Warn("Telegraf cannot auto-refresh a bearer token string, use BearerToken file instead")
 	}
 
 	var err error
-	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerTokenString, time.Duration(ki.ResponseTimeout), ki.ClientConfig)
+	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerToken, ki.BearerTokenString, time.Duration(ki.ResponseTimeout), ki.ClientConfig)
 
 	if err != nil {
 		return err

@@ -1,8 +1,11 @@
-//nolint
+// nolint
+//
+//go:generate ../../../tools/readme_config_includer/generator
 package influxdb
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -15,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultURL = "http://localhost:8086"
@@ -61,6 +67,10 @@ type InfluxDB struct {
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
 
 	Log telegraf.Logger
+}
+
+func (*InfluxDB) SampleConfig() string {
+	return sampleConfig
 }
 
 func (i *InfluxDB) Connect() error {

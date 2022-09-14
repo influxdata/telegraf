@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kubernetes
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,13 +17,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 // Kubernetes represents the config object for the plugin
 type Kubernetes struct {
 	URL string
 
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`
-	BearerTokenString string `toml:"bearer_token_string"`
+	BearerTokenString string `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 
 	LabelInclude []string `toml:"label_include"`
 	LabelExclude []string `toml:"label_exclude"`
@@ -49,18 +54,14 @@ func init() {
 	})
 }
 
+func (*Kubernetes) SampleConfig() string {
+	return sampleConfig
+}
+
 func (k *Kubernetes) Init() error {
 	// If neither are provided, use the default service account.
 	if k.BearerToken == "" && k.BearerTokenString == "" {
 		k.BearerToken = defaultServiceAccountPath
-	}
-
-	if k.BearerToken != "" {
-		token, err := os.ReadFile(k.BearerToken)
-		if err != nil {
-			return err
-		}
-		k.BearerTokenString = strings.TrimSpace(string(token))
 	}
 
 	labelFilter, err := filter.NewIncludeExcludeFilter(k.LabelInclude, k.LabelExclude)
@@ -72,7 +73,7 @@ func (k *Kubernetes) Init() error {
 	return nil
 }
 
-//Gather collects kubernetes metrics from a given URL
+// Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	acc.AddError(k.gatherSummary(k.URL, acc))
 	return nil
@@ -175,6 +176,13 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 			TLSClientConfig:       tlsCfg,
 			ResponseHeaderTimeout: time.Duration(k.ResponseTimeout),
 		}
+	}
+	if k.BearerToken != "" {
+		token, err := os.ReadFile(k.BearerToken)
+		if err != nil {
+			return err
+		}
+		k.BearerTokenString = strings.TrimSpace(string(token))
 	}
 	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
 	req.Header.Add("Accept", "application/json")

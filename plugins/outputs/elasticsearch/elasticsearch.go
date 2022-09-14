@@ -1,8 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package elasticsearch
 
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	_ "embed"
 	"fmt"
 	"math"
 	"net/http"
@@ -12,8 +15,6 @@ import (
 	"text/template"
 	"time"
 
-	"crypto/sha256"
-
 	"github.com/olivere/elastic"
 
 	"github.com/influxdata/telegraf"
@@ -21,6 +22,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Elasticsearch struct {
 	AuthBearerToken     string          `toml:"auth_bearer_token"`
@@ -125,6 +129,10 @@ const telegrafTemplate = `
 type templatePart struct {
 	TemplatePattern string
 	Version         int
+}
+
+func (*Elasticsearch) SampleConfig() string {
+	return sampleConfig
 }
 
 func (a *Elasticsearch) Connect() error {

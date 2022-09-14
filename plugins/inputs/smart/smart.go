@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package smart
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +20,9 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const intelVID = "0x8086"
 
@@ -81,6 +86,14 @@ var (
 		"199": "udma_crc_errors",
 	}
 
+	// There are some fields we're interested in which use the vendor specific device ids
+	// so we need to be able to match on name instead
+	deviceFieldNames = map[string]string{
+		"Percent_Lifetime_Remain": "percent_lifetime_remain",
+		"Wear_Leveling_Count":     "wear_leveling_count",
+		"Media_Wearout_Indicator": "media_wearout_indicator",
+	}
+
 	// to obtain metrics from smartctl
 	sasNVMeAttributes = map[string]struct {
 		ID    string
@@ -141,6 +154,10 @@ var (
 			Parse: parsePercentageInt,
 		},
 		"Percentage Used": {
+			Name:  "Percentage_Used",
+			Parse: parsePercentageInt,
+		},
+		"Percentage used endurance indicator": {
 			Name:  "Percentage_Used",
 			Parse: parsePercentageInt,
 		},
@@ -352,6 +369,10 @@ func newSmart() *Smart {
 		Timeout:    config.Duration(time.Second * 30),
 		ReadMethod: "concurrent",
 	}
+}
+
+func (*Smart) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init performs one time setup of the plugin and returns an error if the configuration is invalid.
@@ -730,12 +751,12 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 
 		wwn := wwnInfo.FindStringSubmatch(line)
 		if len(wwn) > 1 {
-			deviceTags["wwn"] = strings.Replace(wwn[1], " ", "", -1)
+			deviceTags["wwn"] = strings.ReplaceAll(wwn[1], " ", "")
 		}
 
 		capacity := userCapacityInfo.FindStringSubmatch(line)
 		if len(capacity) > 1 {
-			deviceTags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
+			deviceTags["capacity"] = strings.ReplaceAll(capacity[1], ",", "")
 		}
 
 		enabled := smartEnabledInfo.FindStringSubmatch(line)
@@ -807,6 +828,16 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					deviceFields[field] = val
 				}
 			}
+
+			if len(attr) > 4 {
+				// If the attribute name matches on in deviceFieldNames
+				// save the value to a field
+				if field, ok := deviceFieldNames[attr[2]]; ok {
+					if val, err := parseRawValue(attr[4]); err == nil {
+						deviceFields[field] = val
+					}
+				}
+			}
 		} else {
 			// what was found is not a vendor attribute
 			if matches := sasNVMeAttr.FindStringSubmatch(line); len(matches) > 2 {
@@ -822,6 +853,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					}
 
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
+						acc.AddError(fmt.Errorf("error parsing %s: '%s': %s", attr.Name, matches[2], err.Error()))
 						continue
 					}
 					// if the field is classified as an attribute, only add it
@@ -969,8 +1001,20 @@ func parseInt(str string) int64 {
 }
 
 func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error {
-	str = strings.Join(strings.Fields(str), "")
-	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
+	// remove any non-utf8 values
+	// '1\xa0292' --> 1292
+	value := strings.ToValidUTF8(strings.Join(strings.Fields(str), ""), "")
+
+	// remove any non-alphanumeric values
+	// '16,626,888' --> 16626888
+	// '16 829 004' --> 16829004
+	numRegex, err := regexp.Compile(`[^0-9\-]+`)
+	if err != nil {
+		return fmt.Errorf("failed to compile numeric regex")
+	}
+	value = numRegex.ReplaceAllString(value, "")
+
+	i, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return err
 	}
@@ -985,12 +1029,13 @@ func parsePercentageInt(fields, deviceFields map[string]interface{}, str string)
 }
 
 func parseDataUnits(fields, deviceFields map[string]interface{}, str string) error {
-	units := strings.Fields(str)[0]
+	// Remove everything after '['
+	units := strings.Split(str, "[")[0]
 	return parseCommaSeparatedInt(fields, deviceFields, units)
 }
 
 func parseCommaSeparatedIntWithAccumulator(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
-	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
+	i, err := strconv.ParseInt(strings.ReplaceAll(str, ",", ""), 10, 64)
 	if err != nil {
 		return err
 	}

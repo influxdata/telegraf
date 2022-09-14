@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package execd
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -17,8 +19,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Execd struct {
 	Command      []string        `toml:"command"`
+	Environment  []string        `toml:"environment"`
 	Signal       string          `toml:"signal"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger `toml:"-"`
@@ -28,6 +34,10 @@ type Execd struct {
 	parser  parsers.Parser
 }
 
+func (*Execd) SampleConfig() string {
+	return sampleConfig
+}
+
 func (e *Execd) SetParser(parser parsers.Parser) {
 	e.parser = parser
 }
@@ -35,7 +45,7 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
 	var err error
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}

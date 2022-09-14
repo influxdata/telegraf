@@ -1,22 +1,19 @@
 # Prometheus Output Plugin
 
-This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes
-all metrics on `/metrics` (default) to be polled by a Prometheus server.
+This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
+metrics on `/metrics` (default) to be polled by a Prometheus server.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the Prometheus client to spawn
 [[outputs.prometheus_client]]
   ## Address to listen on.
   listen = ":9273"
 
-  ## Metric version controls the mapping from Telegraf metrics into
-  ## Prometheus format.  When using the prometheus input, use the same value in
-  ## both plugins to ensure metrics are round-tripped without modification.
-  ##
-  ##   example: metric_version = 1;
-  ##            metric_version = 2; recommended version
+  ## Metric version controls the mapping from Prometheus metrics into Telegraf metrics.
+  ## See "Metric Format Configuration" in plugins/inputs/prometheus/README.md for details.
+  ## Valid options: 1, 2
   # metric_version = 1
 
   ## Use HTTP Basic Authentication.
@@ -55,6 +52,7 @@ all metrics on `/metrics` (default) to be polled by a Prometheus server.
 
 ## Metrics
 
-Prometheus metrics are produced in the same manner as the [prometheus serializer][].
+Prometheus metrics are produced in the same manner as the [prometheus
+serializer][].
 
 [prometheus serializer]: /plugins/serializers/prometheus/README.md#Metrics

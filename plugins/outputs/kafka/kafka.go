@@ -1,8 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kafka
 
 import (
+	_ "embed"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -15,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 var ValidTopicSuffixMethods = []string{
 	"",
@@ -62,22 +66,21 @@ type TopicSuffix struct {
 
 // DebugLogger logs messages from sarama at the debug level.
 type DebugLogger struct {
+	Log telegraf.Logger
 }
 
-func (*DebugLogger) Print(v ...interface{}) {
+func (l *DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(append(args, "D! [sarama] "), v...)
-	log.Print(args...)
+	args = append(append(args, "[sarama] "), v...)
+	l.Log.Debug(args...)
 }
 
-func (*DebugLogger) Printf(format string, v ...interface{}) {
-	log.Printf("D! [sarama] "+format, v...)
+func (l *DebugLogger) Printf(format string, v ...interface{}) {
+	l.Log.Debugf("[sarama] "+format, v...)
 }
 
-func (*DebugLogger) Println(v ...interface{}) {
-	args := make([]interface{}, 0, len(v)+1)
-	args = append(append(args, "D! [sarama] "), v...)
-	log.Println(args...)
+func (l *DebugLogger) Println(v ...interface{}) {
+	l.Print(v)
 }
 
 func ValidateTopicSuffixMethod(method string) error {
@@ -87,6 +90,10 @@ func ValidateTopicSuffixMethod(method string) error {
 		}
 	}
 	return fmt.Errorf("unknown topic suffix method provided: %s", method)
+}
+
+func (*Kafka) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
@@ -130,6 +137,8 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (k *Kafka) Init() error {
+	sarama.Logger = &DebugLogger{Log: k.Log}
+
 	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
 	if err != nil {
 		return err
@@ -249,7 +258,6 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
 			WriteConfig: kafka.WriteConfig{

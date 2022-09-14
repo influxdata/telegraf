@@ -2,8 +2,11 @@ package parsers_test
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -15,6 +18,9 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 	cfg := &parsers.Config{
 		MetricName:        "parser_compatibility_test",
 		CSVHeaderRowCount: 42,
+		XPathProtobufFile: "xpath/testcases/protos/addressbook.proto",
+		XPathProtobufType: "addressbook.AddressBook",
+		JSONStrict:        true,
 	}
 
 	// Some parsers need certain settings to not error. Furthermore, we
@@ -28,6 +34,12 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
 			mask: []string{"TimeFunc"},
+		},
+		"xpath_protobuf": {
+			param: map[string]interface{}{
+				"ProtobufMessageDef":  cfg.XPathProtobufFile,
+				"ProtobufMessageType": cfg.XPathProtobufType,
+			},
 		},
 	}
 
@@ -52,19 +64,23 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 		actual, err := parsers.NewParser(cfg)
 		require.NoError(t, err)
 
-		// Compare with mask
-		if settings, found := override[name]; found {
-			a := reflect.Indirect(reflect.ValueOf(actual))
-			e := reflect.Indirect(reflect.ValueOf(expected))
-			for _, key := range settings.mask {
-				af := a.FieldByName(key)
-				ef := e.FieldByName(key)
-
-				v := reflect.Zero(ef.Type())
-				af.Set(v)
-				ef.Set(v)
-			}
+		// Determine the underlying type of the parser
+		stype := reflect.Indirect(reflect.ValueOf(expected)).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreTypes(sync.Mutex{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
 		}
-		require.EqualValuesf(t, expected, actual, "format %q", name)
+
+		// Add overrides and masks to compare options
+		if settings, found := override[name]; found {
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
+		}
+
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected, actual, options...)
+		require.Emptyf(t, diff, "Difference for %q", name)
 	}
 }

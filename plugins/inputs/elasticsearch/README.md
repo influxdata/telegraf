@@ -1,29 +1,35 @@
 # Elasticsearch Input Plugin
 
 The [elasticsearch](https://www.elastic.co/) plugin queries endpoints to obtain
-[Node Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
-and optionally
-[Cluster-Health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
-metrics.
+[Node Stats][1] and optionally [Cluster-Health][2] metrics.
 
 In addition, the following optional queries are only made by the master node:
- [Cluster Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html)
- [Indices Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
- [Shard Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
+ [Cluster Stats][3] [Indices Stats][4] [Shard Stats][5]
 
 Specific Elasticsearch endpoints that are queried:
 
-- Node: either /_nodes/stats or /_nodes/_local/stats depending on 'local' configuration setting
-- Cluster Heath:  /_cluster/health?level=indices
-- Cluster Stats:  /_cluster/stats
-- Indices Stats:  /_all/_stats
-- Shard Stats:  /_all/_stats?level=shards
+- Node: either /_nodes/stats or /_nodes/_local/stats depending on 'local'
+  configuration setting
+- Cluster Heath: /_cluster/health?level=indices
+- Cluster Stats: /_cluster/stats
+- Indices Stats: /_all/_stats
+- Shard Stats: /_all/_stats?level=shards
 
-Note that specific statistics information can change between Elasticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
+Note that specific statistics information can change between Elasticsearch
+versions. In general, this plugin attempts to stay as version-generic as
+possible by tagging high-level categories only and using a generic json parser
+to make unique field names of whatever statistics names are provided at the
+mid-low level.
+
+[1]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html
+[2]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html
+[3]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html
+[4]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
+[5]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read stats from one or more Elasticsearch servers or clusters
 [[inputs.elasticsearch]]
   ## specify a list of one or more Elasticsearch servers
@@ -51,20 +57,22 @@ Note that specific statistics information can change between Elasticsearch versi
   ## Set cluster_stats to true when you want to obtain cluster stats.
   cluster_stats = false
 
-  ## Only gather cluster_stats from the master node. To work this require local = true
+  ## Only gather cluster_stats from the master node.
+  ## To work this require local = true
   cluster_stats_only_from_master = true
 
   ## Indices to collect; can be one or more indices names or _all
-  ## Use of wildcards is allowed. Use a wildcard at the end to retrieve index names that end with a changing value, like a date.
+  ## Use of wildcards is allowed. Use a wildcard at the end to retrieve index
+  ## names that end with a changing value, like a date.
   indices_include = ["_all"]
 
   ## One of "shards", "cluster", "indices"
   ## Currently only "shards" is implemented
   indices_level = "shards"
 
-  ## node_stats is a list of sub-stats that you want to have gathered. Valid options
-  ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
-  ## "breaker". Per default, all stats are gathered.
+  ## node_stats is a list of sub-stats that you want to have gathered.
+  ## Valid options are "indices", "os", "process", "jvm", "thread_pool",
+  ## "fs", "transport", "http", "breaker". Per default, all stats are gathered.
   # node_stats = ["jvm", "http"]
 
   ## HTTP Basic Authentication username and password.
@@ -78,10 +86,12 @@ Note that specific statistics information can change between Elasticsearch versi
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Sets the number of most recent indices to return for indices that are configured with a date-stamped suffix.
-  ## Each 'indices_include' entry ending with a wildcard (*) or glob matching pattern will group together all indices that match it, and 
-  ## sort them by the date or number after the wildcard. Metrics then are gathered for only the 'num_most_recent_indices' amount of most 
-  ## recent indices.
+  ## Sets the number of most recent indices to return for indices that are
+  ## configured with a date-stamped suffix. Each 'indices_include' entry
+  ## ending with a wildcard (*) or glob matching pattern will group together
+  ## all indices that match it, and  sort them by the date or number after
+  ## the wildcard. Metrics then are gathered for only the
+  ## 'num_most_recent_indices' amount of most  recent indices.
   # num_most_recent_indices = 0
 ```
 
@@ -820,7 +830,8 @@ Emitted when the appropriate `shards_stats` options are set.
     - request_cache_miss_count (float)
     - retention_leases_primary_term (float)
     - retention_leases_version (float)
-    - routing_state (int) (UNASSIGNED = 1, INITIALIZING = 2, STARTED = 3, RELOCATING = 4, other = 0)
+    - routing_state (int)
+      (UNASSIGNED = 1, INITIALIZING = 2, STARTED = 3, RELOCATING = 4, other = 0)
     - search_fetch_current (float)
     - search_fetch_time_in_millis (float)
     - search_fetch_total (float)

@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -6,6 +7,7 @@ package varnish
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +23,9 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	measurementNamespace = "varnish"
@@ -89,6 +94,10 @@ func varnishRunner(cmdName string, useSudo bool, cmdArgs []string, timeout confi
 	}
 
 	return &out, nil
+}
+
+func (*Varnish) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Varnish) Init() error {

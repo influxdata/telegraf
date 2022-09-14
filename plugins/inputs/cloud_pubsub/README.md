@@ -5,7 +5,7 @@ and creates metrics using one of the supported [input data formats][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from Google PubSub
 [[inputs.cloud_pubsub]]
   ## Required. Name of Google Cloud Platform (GCP) Project that owns
@@ -85,7 +85,8 @@ and creates metrics using one of the supported [input data formats][].
 ### Multiple Subscriptions and Topics
 
 This plugin assumes you have already created a PULL subscription for a given
-PubSub topic. To learn how to do so, see [how to create a subscription][pubsub create sub].
+PubSub topic. To learn how to do so, see [how to create a subscription][pubsub
+create sub].
 
 Each plugin agent can listen to one subscription at a time, so you will
 need to run multiple instances of the plugin to pull messages from multiple

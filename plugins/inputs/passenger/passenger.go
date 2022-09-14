@@ -1,17 +1,23 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package passenger
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
 
+	"golang.org/x/net/html/charset"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/net/html/charset"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type passenger struct {
 	Command string
@@ -123,6 +129,10 @@ func (p *process) getUptime() int64 {
 	}
 
 	return uptime
+}
+
+func (*passenger) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *passenger) Gather(acc telegraf.Accumulator) error {

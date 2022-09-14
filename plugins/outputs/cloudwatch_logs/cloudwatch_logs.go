@@ -1,18 +1,26 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cloudwatch_logs
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/config/aws"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type messageBatch struct {
 	logEvents    []types.InputLogEvent
@@ -25,7 +33,7 @@ type logStreamContainer struct {
 	sequenceToken         string
 }
 
-//Cloudwatch Logs service interface
+// Cloudwatch Logs service interface
 type cloudWatchLogs interface {
 	DescribeLogGroups(context.Context, *cloudwatchlogs.DescribeLogGroupsInput, ...func(options *cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
 	DescribeLogStreams(context.Context, *cloudwatchlogs.DescribeLogStreamsInput, ...func(options *cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogStreamsOutput, error)
@@ -72,6 +80,10 @@ const (
 	//maxTimeSpanInBatch = time.Hour * 24 // A batch of log events in a single request cannot span more than 24 hours.
 	// Otherwise, the operation fails.
 )
+
+func (*CloudWatchLogs) SampleConfig() string {
+	return sampleConfig
+}
 
 // Init initialize plugin with checking configuration parameters
 func (c *CloudWatchLogs) Init() error {
@@ -120,10 +132,31 @@ func (c *CloudWatchLogs) Connect() error {
 	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
 	var err error
 
-	cfg, err := c.CredentialConfig.Credentials()
+	awsCreds, awsErr := c.CredentialConfig.Credentials()
+	if awsErr != nil {
+		return awsErr
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return err
 	}
+	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				PartitionID:   "aws",
+				URL:           c.CredentialConfig.EndpointURL,
+				SigningRegion: c.CredentialConfig.Region,
+			}, nil
+		})
+
+		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
+		if err != nil {
+			return err
+		}
+	}
+
+	cfg.Credentials = awsCreds.Credentials
 	c.svc = cloudwatchlogs.NewFromConfig(cfg)
 
 	//Find log group with name 'c.LogGroup'

@@ -1,13 +1,13 @@
 # Logstash Input Plugin
 
-This plugin reads metrics exposed by
-[Logstash Monitoring API](https://www.elastic.co/guide/en/logstash/current/monitoring-logstash.html).
+This plugin reads metrics exposed by [Logstash Monitoring
+API](https://www.elastic.co/guide/en/logstash/current/monitoring-logstash.html).
 
 Logstash 5 and later is supported.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics exposed by Logstash
 [[inputs.logstash]]
   ## The URL of the exposed Logstash API endpoint.
@@ -43,7 +43,8 @@ Logstash 5 and later is supported.
 
 ## Metrics
 
-Additional plugin stats may be collected (because logstash doesn't consistently expose all stats)
+Additional plugin stats may be collected (because logstash doesn't consistently
+expose all stats)
 
 - logstash_jvm
   - tags:
@@ -128,6 +129,7 @@ Additional plugin stats may be collected (because logstash doesn't consistently 
     - duration_in_millis
     - in
     - out
+    - failures(if exists)
     - bulk_requests_failures (for Logstash 7+)
     - bulk_requests_with_errors (for Logstash 7+)
     - documents_successes (for logstash 7+)

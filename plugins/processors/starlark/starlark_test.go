@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -3183,6 +3183,68 @@ def apply(metric):
 				),
 			},
 		},
+		{
+			name: "concatenate 2 tags",
+			source: `
+def apply(metric):
+	metric.tags["result"] = '_'.join(metric.tags.values())
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"tag_1": "a",
+						"tag_2": "b",
+					},
+					map[string]interface{}{"value": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "concatenate 4 tags",
+			source: `
+def apply(metric):
+	metric.tags["result"] = '_'.join(metric.tags.values())
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"tag_1": "a",
+						"tag_2": "b",
+						"tag_3": "c",
+						"tag_4": "d",
+					},
+					map[string]interface{}{"value": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "concatenate 8 tags",
+			source: `
+def apply(metric):
+	metric.tags["result"] = '_'.join(metric.tags.values())
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"tag_1": "a",
+						"tag_2": "b",
+						"tag_3": "c",
+						"tag_4": "d",
+						"tag_5": "e",
+						"tag_6": "f",
+						"tag_7": "g",
+						"tag_8": "h",
+					},
+					map[string]interface{}{"value": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -3258,10 +3320,11 @@ func TestAllScriptTestData(t *testing.T) {
 	}
 }
 
-var parser, _ = parsers.NewInfluxParser() // literally never returns errors.
-
 // parses metric lines out of line protocol following a header, with a trailing blank line
 func parseMetricsFrom(t *testing.T, lines []string, header string) (metrics []telegraf.Metric) {
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
 	require.NotZero(t, len(lines), "Expected some lines to parse from .star file, found none")
 	startIdx := -1
 	endIdx := len(lines)

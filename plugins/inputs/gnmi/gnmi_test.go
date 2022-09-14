@@ -26,17 +26,16 @@ func TestParsePath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "theorigin", parsed.Origin)
 	require.Equal(t, "thetarget", parsed.Target)
-	require.Equal(t, []string{"foo", "bar", "bla[shoo=woo][shoop=/woop/]", "z"}, parsed.Element)
 	require.Equal(t, []*gnmiLib.PathElem{{Name: "foo"}, {Name: "bar"},
 		{Name: "bla", Key: map[string]string{"shoo": "woo", "shoop": "/woop/"}}, {Name: "z"}}, parsed.Elem)
 
 	parsed, err = parsePath("", "", "")
 	require.NoError(t, err)
-	require.Equal(t, gnmiLib.Path{}, *parsed)
+	require.Equal(t, &gnmiLib.Path{}, parsed)
 
 	parsed, err = parsePath("", "/foo[[", "")
 	require.Nil(t, parsed)
-	require.Equal(t, errors.New("Invalid gNMI path: /foo[[/"), err)
+	require.NotNil(t, err)
 }
 
 type MockServer struct {
@@ -372,7 +371,7 @@ func TestNotification(t *testing.T) {
 			},
 		},
 		{
-			name: "tagged update pair",
+			name: "legacy tagged update pair",
 			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
@@ -479,13 +478,171 @@ func TestNotification(t *testing.T) {
 				testutil.MustMetric(
 					"oc-intf-counters",
 					map[string]string{
-						"path":                     "",
-						"source":                   "127.0.0.1",
-						"name":                     "Ethernet1",
-						"oc-intf-desc/description": "foo",
+						"path":         "",
+						"source":       "127.0.0.1",
+						"name":         "Ethernet1",
+						"oc-intf-desc": "foo",
 					},
 					map[string]interface{}{
 						"in_broadcast_pkts": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "iss #11011",
+			plugin: &GNMI{
+				Log:      testutil.Logger{},
+				Encoding: "proto",
+				Redial:   config.Duration(1 * time.Second),
+				TagSubscriptions: []TagSubscription{
+					{
+						Subscription: Subscription{
+							Name:             "oc-neigh-desc",
+							Origin:           "openconfig",
+							Path:             "/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state/description",
+							SubscriptionMode: "on_change",
+						},
+						Elements: []string{"network-instance", "protocol", "neighbor"},
+					},
+				},
+				Subscriptions: []Subscription{
+					{
+						Name:             "oc-neigh-state",
+						Origin:           "openconfig",
+						Path:             "/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state/session-state",
+						SubscriptionMode: "on_change",
+					},
+				},
+			},
+			server: &MockServer{
+				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+					tagResponse := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
+								Timestamp: 1543236571000000000,
+								Prefix:    &gnmiLib.Path{},
+								Update: []*gnmiLib.Update{
+									{
+										Path: &gnmiLib.Path{
+											Origin: "",
+											Elem: []*gnmiLib.PathElem{
+												{
+													Name: "network-instances",
+												},
+												{
+													Name: "network-instance",
+													Key:  map[string]string{"name": "default"},
+												},
+												{
+													Name: "protocols",
+												},
+												{
+													Name: "protocol",
+													Key:  map[string]string{"name": "BGP", "identifier": "BGP"},
+												},
+												{
+													Name: "bgp",
+												},
+												{
+													Name: "neighbors",
+												},
+												{
+													Name: "neighbor",
+													Key:  map[string]string{"neighbor_address": "192.0.2.1"},
+												},
+												{
+													Name: "state",
+												},
+												{
+													Name: "description",
+												},
+											},
+											Target: "",
+										},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_StringVal{StringVal: "EXAMPLE-PEER"},
+										},
+									},
+								},
+							},
+						},
+					}
+					if err := server.Send(tagResponse); err != nil {
+						return err
+					}
+					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+						return err
+					}
+					taggedResponse := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
+								Timestamp: 1543236572000000000,
+								Prefix:    &gnmiLib.Path{},
+								Update: []*gnmiLib.Update{
+									{
+										Path: &gnmiLib.Path{
+											Origin: "",
+											Elem: []*gnmiLib.PathElem{
+												{
+													Name: "network-instances",
+												},
+												{
+													Name: "network-instance",
+													Key:  map[string]string{"name": "default"},
+												},
+												{
+													Name: "protocols",
+												},
+												{
+													Name: "protocol",
+													Key:  map[string]string{"name": "BGP", "identifier": "BGP"},
+												},
+												{
+													Name: "bgp",
+												},
+												{
+													Name: "neighbors",
+												},
+												{
+													Name: "neighbor",
+													Key:  map[string]string{"neighbor_address": "192.0.2.1"},
+												},
+												{
+													Name: "state",
+												},
+												{
+													Name: "session-state",
+												},
+											},
+											Target: "",
+										},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_StringVal{StringVal: "ESTABLISHED"},
+										},
+									},
+								},
+							},
+						},
+					}
+					return server.Send(taggedResponse)
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"oc-neigh-state",
+					map[string]string{
+						"path":             "",
+						"source":           "127.0.0.1",
+						"neighbor_address": "192.0.2.1",
+						"name":             "default",
+						"oc-neigh-desc":    "EXAMPLE-PEER",
+						"/network-instances/network-instance/protocols/protocol/name": "BGP",
+						"identifier": "BGP",
+					},
+					map[string]interface{}{
+						"session_state": "ESTABLISHED",
 					},
 					time.Unix(0, 0),
 				),
@@ -545,7 +702,7 @@ func TestSubscribeResponseError(t *testing.T) {
 	plugin := &GNMI{Log: ml}
 	// TODO: FIX SA1019: gnmi.Error is deprecated: Do not use.
 	errorResponse := &gnmiLib.SubscribeResponse_Error{Error: &gnmiLib.Error{Message: me, Code: mc}}
-	plugin.handleSubscribeResponse("127.0.0.1:0", &gnmiLib.SubscribeResponse{Response: errorResponse})
+	plugin.handleSubscribeResponse(&Worker{address: "127.0.0.1:0"}, &gnmiLib.SubscribeResponse{Response: errorResponse})
 	require.NotEmpty(t, ml.lastFormat)
 	require.Equal(t, []interface{}{mc, me}, ml.lastArgs)
 }
@@ -615,4 +772,195 @@ func TestRedial(t *testing.T) {
 	plugin.Stop()
 	grpcServer.Stop()
 	wg.Wait()
+}
+
+func TestTagNode(t *testing.T) {
+	type insertOp struct {
+		keys  []*gnmiLib.PathElem
+		name  string
+		value *gnmiLib.TypedValue
+	}
+	interfaceElemSingleKey := &gnmiLib.PathElem{
+		Name: "interface",
+		Key:  map[string]string{"name": "Management0"},
+	}
+	networkInstanceSingleKey := &gnmiLib.PathElem{
+		Name: "network-instance",
+		Key:  map[string]string{"name": "default"},
+	}
+	protocolDoubleKey := &gnmiLib.PathElem{
+		Name: "protocol",
+		Key:  map[string]string{"name": "BGP", "protocol": "BGP"},
+	}
+	neighborSingleKey := &gnmiLib.PathElem{
+		Name: "neighbor",
+		Key:  map[string]string{"neighbor_address": "192.0.2.1"},
+	}
+	tests := []struct {
+		name      string
+		insertOps []insertOp
+		expected  *tagNode
+	}{
+		{
+			name: "single elem single key insert",
+			insertOps: []insertOp{
+				{
+					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey},
+					name:  "tagFoo",
+					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 1}},
+				},
+			},
+			expected: &tagNode{
+				tagStore: map[string][]*tagNode{
+					"interface": {
+						{
+							elem:    interfaceElemSingleKey,
+							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 1}},
+							tagName: "tagFoo",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "double elem single key insert",
+			insertOps: []insertOp{
+				{
+					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey, networkInstanceSingleKey},
+					name:  "tagBar",
+					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "rocks"}},
+				},
+			},
+			expected: &tagNode{
+				tagStore: map[string][]*tagNode{
+					"interface": {
+						{
+							elem: interfaceElemSingleKey,
+							tagStore: map[string][]*tagNode{
+								"network-instance": {
+									{
+										elem:    networkInstanceSingleKey,
+										value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "rocks"}},
+										tagName: "tagBar",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single elem double key insert",
+			insertOps: []insertOp{
+				{
+					keys:  []*gnmiLib.PathElem{protocolDoubleKey},
+					name:  "doubleKey",
+					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte("{}")}},
+				},
+			},
+			expected: &tagNode{
+				tagStore: map[string][]*tagNode{
+					"protocol": {
+						{
+							elem:    protocolDoubleKey,
+							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte("{}")}},
+							tagName: "doubleKey",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multi elem unrelated insert",
+			insertOps: []insertOp{
+				{
+					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey},
+					name:  "intf_desc",
+					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "mgmt"}},
+				},
+				{
+					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey, protocolDoubleKey, neighborSingleKey},
+					name:  "bgp_neigh_desc",
+					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "example-neighbor"}},
+				},
+			},
+			expected: &tagNode{
+				tagStore: map[string][]*tagNode{
+					"interface": {
+						{
+							elem:    interfaceElemSingleKey,
+							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "mgmt"}},
+							tagName: "intf_desc",
+						},
+					},
+					"network-instance": {
+						{
+							elem: networkInstanceSingleKey,
+							tagStore: map[string][]*tagNode{
+								"protocol": {
+									{
+										elem: protocolDoubleKey,
+										tagStore: map[string][]*tagNode{
+											"neighbor": {
+												{
+													elem:    neighborSingleKey,
+													value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "example-neighbor"}},
+													tagName: "bgp_neigh_desc",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "values at multiple levels",
+			insertOps: []insertOp{
+				{
+					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey},
+					name:  "vrf_stuff",
+					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"}},
+				},
+				{
+					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey, protocolDoubleKey},
+					name:  "protocol_stuff",
+					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "bar"}},
+				},
+			},
+			expected: &tagNode{
+				tagStore: map[string][]*tagNode{
+					"network-instance": {
+						{
+							elem:    networkInstanceSingleKey,
+							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"}},
+							tagName: "vrf_stuff",
+							tagStore: map[string][]*tagNode{
+								"protocol": {
+									{
+										elem:    protocolDoubleKey,
+										value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "bar"}},
+										tagName: "protocol_stuff",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rootNode := new(tagNode)
+			for _, s := range tt.insertOps {
+				rootNode.insert(s.keys, s.name, s.value)
+			}
+			require.Equal(t, rootNode, tt.expected)
+		})
+	}
 }

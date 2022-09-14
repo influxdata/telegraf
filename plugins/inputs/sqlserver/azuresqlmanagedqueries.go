@@ -4,9 +4,9 @@ import (
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 )
 
-//------------------------------------------------------------------------------------------------
-//------------------ Azure Managed Instance ------------------------------------------------------
-//------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// ------------------ Azure Managed Instance ------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 const sqlAzureMIProperties = `
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
@@ -102,6 +102,7 @@ END
 SELECT
 	'sqlserver_database_io' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,DB_NAME(mf.[database_id]) AS [database_name]
 	,COALESCE(mf.[physical_name],'RBPEX') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
 	,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
 	,mf.[type_desc] AS [file_type]
@@ -470,7 +471,7 @@ FROM (
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 		,DB_NAME() as [database_name]
 		,s.[session_id]
-		,ISNULL(r.[request_id], 0) as [request_id]	
+		,r.[request_id]
 		,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
 		,COALESCE(r.[status], s.[status]) AS [status]
 		,COALESCE(r.[cpu_time], s.[cpu_time]) AS [cpu_time_ms]
@@ -527,6 +528,7 @@ WHERE
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
 		)
+		AND [session_id] <> @@SPID
 	)  
 OPTION(MAXDOP 1);
 `

@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package graylog
 
 import (
@@ -5,6 +6,7 @@ import (
 	"compress/zlib"
 	"crypto/rand"
 	"crypto/tls"
+	_ "embed"
 	"encoding/binary"
 	ejson "encoding/json"
 	"fmt"
@@ -20,6 +22,9 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultEndpoint        = "127.0.0.1:12201"
@@ -315,6 +320,10 @@ type Graylog struct {
 
 	writer  io.Writer
 	closers []io.WriteCloser
+}
+
+func (*Graylog) SampleConfig() string {
+	return sampleConfig
 }
 
 func (g *Graylog) Connect() error {

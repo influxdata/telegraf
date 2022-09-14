@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const (
@@ -59,31 +60,21 @@ func (e *ParseError) Error() string {
 // Parser is an InfluxDB Line Protocol parser that implements the
 // parsers.Parser interface.
 type Parser struct {
-	DefaultTags map[string]string
+	DefaultTags map[string]string `toml:"-"`
+	// If set to "series" a series machine will be initialized, defaults to regular machine
+	Type string `toml:"-"`
 
 	sync.Mutex
 	*machine
 	handler *MetricHandler
 }
 
-// NewParser returns a Parser than accepts line protocol
-func NewParser(handler *MetricHandler) *Parser {
-	return &Parser{
-		machine: NewMachine(handler),
-		handler: handler,
-	}
-}
-
-// NewSeriesParser returns a Parser than accepts a measurement and tagset
-func NewSeriesParser(handler *MetricHandler) *Parser {
-	return &Parser{
-		machine: NewSeriesMachine(handler),
-		handler: handler,
-	}
-}
-
 func (p *Parser) SetTimeFunc(f TimeFunc) {
 	p.handler.SetTimeFunc(f)
+}
+
+func (p *Parser) SetTimePrecision(u time.Duration) {
+	p.handler.SetTimePrecision(u)
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
@@ -158,6 +149,32 @@ func (p *Parser) applyDefaultTagsSingle(metric telegraf.Metric) {
 			metric.AddTag(k, v)
 		}
 	}
+}
+
+func (p *Parser) Init() error {
+	p.handler = NewMetricHandler()
+	if p.Type == "series" {
+		p.machine = NewSeriesMachine(p.handler)
+	} else {
+		p.machine = NewMachine(p.handler)
+	}
+
+	return nil
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.DefaultTags = config.DefaultTags
+
+	return p.Init()
+}
+
+func init() {
+	parsers.Add("influx",
+		func(_ string) telegraf.Parser {
+			return &Parser{}
+		},
+	)
 }
 
 // StreamParser is an InfluxDB Line Protocol parser.  It is not safe for

@@ -1,19 +1,27 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package opentelemetry
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
+	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"go.opentelemetry.io/collector/model/otlpgrpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type OpenTelemetry struct {
 	ServiceAddress string `toml:"service_address"`
@@ -28,6 +36,10 @@ type OpenTelemetry struct {
 	grpcServer *grpc.Server
 
 	wg sync.WaitGroup
+}
+
+func (*OpenTelemetry) SampleConfig() string {
+	return sampleConfig
 }
 
 func (o *OpenTelemetry) Gather(_ telegraf.Accumulator) error {
@@ -49,13 +61,13 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 	influxWriter := &writeToAccumulator{accumulator}
 	o.grpcServer = grpc.NewServer(grpcOptions...)
 
-	otlpgrpc.RegisterTracesServer(o.grpcServer, newTraceService(logger, influxWriter))
+	ptraceotlp.RegisterServer(o.grpcServer, newTraceService(logger, influxWriter))
 	ms, err := newMetricsService(logger, influxWriter, o.MetricsSchema)
 	if err != nil {
 		return err
 	}
-	otlpgrpc.RegisterMetricsServer(o.grpcServer, ms)
-	otlpgrpc.RegisterLogsServer(o.grpcServer, newLogsService(logger, influxWriter))
+	pmetricotlp.RegisterServer(o.grpcServer, ms)
+	plogotlp.RegisterServer(o.grpcServer, newLogsService(logger, influxWriter))
 
 	if o.listener == nil {
 		o.listener, err = net.Listen("tcp", o.ServiceAddress)

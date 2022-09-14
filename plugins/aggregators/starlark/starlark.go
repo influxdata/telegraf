@@ -1,14 +1,25 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package starlark
 
 import (
+	_ "embed"
+
+	"go.starlark.net/starlark"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
-	"go.starlark.net/starlark"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Starlark struct {
 	common.StarlarkCommon
+}
+
+func (*Starlark) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Starlark) Init() error {
