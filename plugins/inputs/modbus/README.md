@@ -378,26 +378,29 @@ The following algorithms are available
 
 ##### `none` (_default_)
 
-Do not perform any optimization. Please note that the requests are still obeying the maximum
-request sizes. Furthermore, completely empty requests, i.e. all fields specify `omit=true`,
-are removed. Otherwise, the requests are sent as specified by the user including request
-of omitted fields. This setting should be used if you want full control over the requests
+Do not perform any optimization. Please note that the requests are still
+obeying the maximum request sizes. Furthermore, completely empty requests,
+i.e. all fields specify `omit=true`, are removed. Otherwise, the requests
+are sent as specified by the user including request of omitted fields.
+This setting should be used if you want full control over the requests
 e.g. to accommodate for device constraints.
 
 ##### `shrink`
 
-This optimization allows to remove leading and trailing fields from requests if those fields
-are omitted. This can shrink the request number and sizes in cases where you specify large
-amounts of omitted fields, e.g. for documentation purposes.
+This optimization allows to remove leading and trailing fields from requests
+if those fields are omitted. This can shrink the request number and sizes in
+cases where you specify large amounts of omitted fields, e.g. for documentation
+purposes.
 
 ##### `rearrange`
 
-Requests are processed similar to `shrink` but the request boundaries are rearranged such
-that usually less registers are being read while keeping the number of requests. This
-optimization algorithm only works on consecutive address ranges and respects user-defined
-gaps in the field addresses.
+Requests are processed similar to `shrink` but the request boundaries are
+rearranged such that usually less registers are being read while keeping
+the number of requests. This optimization algorithm only works on consecutive
+address ranges and respects user-defined gaps in the field addresses.
 
-__Please note:__ This optimization might take long in case of many non-consecutive, non-ommitted fields!
+__Please note:__ This optimization might take long in case of many 
+non-consecutive, non-ommitted fields!
 
 ##### `aggressive`
 
@@ -414,20 +417,30 @@ addresses are filled automatically. This usually reduces the number of requests,
 will increase the number of registers read due to larger requests.
 This algorithm might be usefull if you only want to specify the fields you are
 interested in but want to minimize the number of requests sent to the device.
+Requests are processed similar to `rearrange` but user-defined gaps in the
+field addresses are filled automatically. This usually reduces the number of
+requests, but will increase the number of registers read due to larger
+requests. This algorithm might be usefull if you only want to specify the
+fields you are interested in but want to minimize the number of requests
+sent to the device.
 
-__Please note:__ This optimization might take long in case of many non-consecutive, non-ommitted fields!
+__Please note:__ This optimization might take long in case of many
+non-consecutive, non-ommitted fields!
 
 ##### `max_insert`
 
-With this optimization, user defined omitted fields are ignored, which allows composing
-shorter configuration files in the case of devices with many available registers.
-Every request is build considering the cost of adding a new register (including the gap between this one
-and the previous one of the request) compared to the cost of creating a new request.
+With this optimization, user defined omitted fields are ignored, which
+allows composing shorter configuration files in the case of devices with
+many available registers. Every request is build considering the cost of
+adding a new register (including the gap between this one and the previous
+one of the request) compared to the cost of creating a new request.
 
-__Please note:__ The optimal value for `max_extra_registers` will depend on the network and the queried
-device. It is hence recommended to test several values and assess performance in order to find the best value.
-When running telegraf with the `--test` flag, you can check the number of requests and the number of touched
-registers that your configuration results to.
+__Please note:__ The optimal value for `max_extra_registers` will depend
+on the network and the queried device. It is hence recommended to test
+several values and assess performance in order to find the best value.
+When running telegraf with the `--test` flag, you can check the number
+of requests and the number of touched registers that your configuration
+results to.
 
 #### Field definitions
 
