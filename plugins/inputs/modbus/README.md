@@ -399,7 +399,7 @@ rearranged such that usually less registers are being read while keeping
 the number of requests. This optimization algorithm only works on consecutive
 address ranges and respects user-defined gaps in the field addresses.
 
-__Please note:__ This optimization might take long in case of many 
+__Please note:__ This optimization might take long in case of many
 non-consecutive, non-ommitted fields!
 
 ##### `aggressive`
