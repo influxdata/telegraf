@@ -160,7 +160,6 @@ func init() {
 		func(defaultMetricName string) telegraf.Parser {
 			return &Parser{MetricName: defaultMetricName}
 		})
-
 }
 
 func (p *Parser) Init() error {
