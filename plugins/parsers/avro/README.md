@@ -176,10 +176,20 @@ automatically determined based on the schema.
 
 ### avro_timestamp, avro_timestamp_format
 
-By default the current time will be used for all created metrics, to set the time using the Avro message you can use the `avro_timestamp` and `avro_timestamp_format` options together to set the time to a value in the parsed document.
+By default the current time will be used for all created metrics, to set
+the time using the Avro message you can use the `avro_timestamp` and
+`avro_timestamp_format` options together to set the time to a value in
+the parsed document.
 
-The `avro_timestamp` option specifies the field containing the time value and `avro_timestamp_format` must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`.
+The `avro_timestamp` option specifies the field containing the time
+value and `avro_timestamp_format` must be set to `unix`, `unix_ms`,
+`unix_us`, `unix_ns`, `unix_float_ms`, `unix_float_us`, or
+`unix_float_ns`.  The `unix` and `unix_float_ns` formats are identical
+and can parse a timestamp in a floating-point type to nanoseconds.  The
+other two `unix_float` timestamps round the time to the nearest
+millisecond or microsecond.
 
 ## Metrics
 
-One metric is created for message.  The type of the field is automatically determined based on schema.
+One metric is created for each message.  The type of the field is
+automatically determined based on schema.
