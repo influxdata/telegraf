@@ -149,13 +149,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##  |                 allow to request registers not specified by the user to
     ##  |                 fill gaps. This usually reduces the number of requests at the
     ##  |                 cost of more requested registers.
-    ##  |---max_insert -- Rearrange request keeping the number of extra fields below the value 
+    ##  |---max_insert -- Rearrange request keeping the number of extra fields below the value
     ##                    provided in "max_extra_registers". It is not necessary to define 'omitted'
     ##                    fields as the optimisation will add such field only where needed.
     # optimization = "none"
-    
-    ## Max extra register. For the 'max_insert' optimization only. Set the maximum size by which 
-    # a request can be extended in order to keep the number of requests lower. This needs to be 
+
+    ## Max extra register. For the 'max_insert' optimization only. Set the maximum size by which
+    # a request can be extended in order to keep the number of requests lower. This needs to be
     # a positive integer lower than the maximum number of recoil fields per query: 125
     # max_extra_registers = 50
 
