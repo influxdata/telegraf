@@ -35,6 +35,9 @@ to use them.
   ## Topics to consume.
   topics = ["telegraf"]
 
+  ## Topic regular expressions to consume.  Matches will be added to topics.
+  # topic_regexps = [ "*test", "metric[0-9A-z]*" ]
+
   ## When set this tag will be added to all metrics with the topic as the value.
   # topic_tag = ""
 
