@@ -1,0 +1,3 @@
+devices ok=true,phases_0_load=34,phases_0_voltage=231,phases_1_load=35,phases_1_voltage=231,phases_2_load=36,phases_2_voltage=231,rpm=423,type="Motor" 1662730607000000000
+devices flow=3.1414,hours=8762,ok=true,type="Pump" 1662730607000000000
+devices ok=true,phases_0_load=341,phases_0_voltage=231,phases_1_load=352,phases_1_voltage=231,phases_2_load=363,phases_2_voltage=231,throughput=1026,type="Machine" 1662730607000000000
