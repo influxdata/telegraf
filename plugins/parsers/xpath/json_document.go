@@ -1,6 +1,8 @@
 package xpath
 
 import (
+	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/antchfx/jsonquery"
@@ -42,7 +44,14 @@ func (d *jsonDocument) GetNodePath(node, relativeTo dataNode, sep string) string
 	// Climb up the tree and collect the node names
 	n := nativeNode.Parent
 	for n != nil && n != nativeRelativeTo {
-		names = append(names, n.Data)
+		switch reflect.TypeOf(n.Parent.Value()).Kind() {
+		case reflect.Slice, reflect.Array:
+			// Determine the index for array elements
+			names = append(names, d.index(n))
+		default:
+			// Use the name if not an array
+			names = append(names, n.Data)
+		}
 		n = n.Parent
 	}
 
@@ -62,4 +71,14 @@ func (d *jsonDocument) GetNodePath(node, relativeTo dataNode, sep string) string
 func (d *jsonDocument) OutputXML(node dataNode) string {
 	native := node.(*jsonquery.Node)
 	return native.OutputXML()
+}
+
+func (d *jsonDocument) index(node *jsonquery.Node) string {
+	idx := 0
+
+	for n := node; n.PrevSibling != nil; n = n.PrevSibling {
+		idx++
+	}
+
+	return strconv.Itoa(idx)
 }
