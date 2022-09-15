@@ -1,9 +1,53 @@
-
 # Telegraf
 
-![tiger](assets/TelegrafTiger.png "tiger")
+<div align="center">
+  <img width="600" src="assets/telegraf-logo.png" alt="Telegraf Logo">
+</div>
 
-[![Contribute](https://img.shields.io/badge/Contribute%20To%20Telegraf-orange.svg?logo=influx&style=for-the-badge)](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md) [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=for-the-badge)](https://www.influxdata.com/slack) [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![GoDoc](https://godoc.org/github.com/influxdata/telegraf?status.svg)](https://godoc.org/github.com/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/) [![Go Report Card](https://goreportcard.com/badge/github.com/influxdata/telegraf)](https://goreportcard.com/report/github.com/influxdata/telegraf)
+
+
+<p align="center">
+  <a href="https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md">
+  <img alt="Contribute" src="https://img.shields.io/badge/Contribute%20To%20Telegraf-orange.svg?logo=influx&style=for-the-badge" />
+  </a>
+  
+  <a href="https://www.influxdata.com/slack">
+  <img alt="Slack Status" src="https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=for-the-badge" />
+  </a>
+    
+  <a href="https://circleci.com/gh/influxdata/telegraf">
+  <img alt="Circle CI" src="https://circleci.com/gh/influxdata/telegraf.svg?style=svg" />
+  </a>
+  
+  <a href="https://hub.docker.com/_/telegraf/">
+  <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/library/telegraf.svg" />
+  </a>
+    
+  <a href="https://godoc.org/github.com/influxdata/telegraf">
+  <img alt="GoDoc" src="https://godoc.org/github.com/influxdata/telegraf?status.svg" />
+  </a>
+  
+  <a href="https://github.com/influxdata/telegraf/blob/master/LICENSE">
+  <img alt="License" src="https://img.shields.io/github/license/influxdata/influxdb" />
+  </a>
+</p>
+<h3 align="center">
+    <a href="https://www.influxdata.com/">Website</a>
+    •
+    <a href="https://docs.influxdata.com/telegraf">Documentation</a>
+    •
+    <a href="https://university.influxdata.com/">InfluxDB University</a>
+    •
+    <a href="https://www.influxdata.com/blog/">Blog</a>
+</h3>
+
+
+
+---
+
+<p align="center">
+   <img src="assets/TelegrafTiger.png" "tiger"/>
+</p>
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics. Based on a
 plugin system to enable developers in the community to easily add support for additional
@@ -17,6 +61,7 @@ metric collection. There are four distinct types of plugins:
 New plugins are designed to be easy to contribute, pull requests are welcomed, and we work to
 incorporate as many pull requests as possible. Consider looking at the
 [list of external plugins](EXTERNAL_PLUGINS.md) as well.
+
 
 ## Minimum Requirements
 
@@ -107,6 +152,10 @@ get in touch with the package author if support is needed:
 
 ## Getting Started
 
+<a href="https://university.influxdata.com/catalog/">
+    <img src="assets/influxdbU-telegraf-banner.png" width="600"/>
+</a>
+
 See usage with:
 
 ```shell
@@ -159,3 +208,8 @@ For documentation on the latest development code see the [documentation index](/
 - [Output Plugins](/docs/OUTPUTS.md)
 - [Processor Plugins](/docs/PROCESSORS.md)
 - [Aggregator Plugins](/docs/AGGREGATORS.md)
+
+## Additional Resources
+- [Telegraf Tips and Tutorials](https://www.influxdata.com/blog/category/tech/telegraf/)
+- [Telegraf Basics Course](https://university.influxdata.com/courses/telegraf-basics-tutorial/)
+- [Data Collection with Telegraf Course](https://university.influxdata.com/courses/data-collection-with-telegraf-tutorial/)
