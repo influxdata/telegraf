@@ -235,11 +235,8 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 		// Check the parsers if any
 		if expectedPlugins[i].parser != nil {
-			runningParser, ok := input.parser.(*models.RunningParser)
-			require.True(t, ok)
-
 			// We only use the JSON parser here
-			parser, ok := runningParser.Parser.(*json.Parser)
+			parser, ok := input.parser.(*json.Parser)
 			require.True(t, ok)
 
 			// Prepare parser for comparison
@@ -616,21 +613,11 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	for _, plugin := range c.Inputs {
 		input, ok := plugin.Input.(*MockupInputPluginParserOld)
 		require.True(t, ok)
-		// Get the parser set with 'SetParser()'
-		if p, ok := input.Parser.(*models.RunningParser); ok {
-			require.NoError(t, p.Init())
-			actual = append(actual, p.Parser)
-		} else {
-			actual = append(actual, input.Parser)
-		}
+		actual = append(actual, input.Parser)
 		// Get the parser set with 'SetParserFunc()'
 		g, err := input.ParserFunc()
 		require.NoError(t, err)
-		if rp, ok := g.(*models.RunningParser); ok {
-			generated = append(generated, rp.Parser)
-		} else {
-			generated = append(generated, g)
-		}
+		generated = append(generated, g)
 	}
 	require.Len(t, actual, len(formats))
 
