@@ -4,6 +4,15 @@ The `snmp` input plugin uses polling to gather metrics from SNMP agents.
 Support for gathering individual OIDs as well as complete SNMP tables is
 included.
 
+## Install SNMP MIBS in Telegraf Container Image
+
+If you are using the Telegraf container image with a container orchestration tool, such as Docker, Podman, or Kubernetes, you will need to install the SNMP MIB files.
+Add the following line to your Dockerfile, to enable the `non-free` apt repositories and install the SNMP MIB files.
+
+```Dockerfile
+RUN sed -i '/^\([^#].*main\)/s/main/& contrib non-free/' /etc/apt/sources.list && apt-get update && apt-get install snmp-mibs-downloader --yes
+```
+
 ## Note about Paths
 
 Path is a global variable, separate snmp instances will append the specified
