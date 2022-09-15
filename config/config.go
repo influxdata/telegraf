@@ -870,7 +870,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
 		}
-		t.SetParser(parser)
+		t.SetParser(parser.Parser)
 	}
 
 	// Keep the old interface for backward compatibility
@@ -880,7 +880,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
 		}
-		t.SetParser(parser)
+		t.SetParser(parser.Parser)
 	}
 
 	if t, ok := input.(telegraf.ParserFuncInput); ok {
@@ -893,7 +893,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 				return nil, err
 			}
 			err = parser.Init()
-			return parser, err
+			return parser.Parser, err
 		})
 	}
 
@@ -908,7 +908,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 				return nil, err
 			}
 			err = parser.Init()
-			return parser, err
+			return parser.Parser, err
 		})
 	}
 
