@@ -39,8 +39,64 @@ func NewRiak() *Riak {
 
 // Type riakStats represents the data that is received from Riak
 type riakStats struct {
+	CPUAvg1                           int64    `json:"cpu_avg1"`
+	CPUAvg15                          int64    `json:"cpu_avg15"`
+	CPUAvg5                           int64    `json:"cpu_avg5"`
+	CPUNprocs                         int64    `json:"cpu_nprocs"`
+	ClusterAaeFsmActive               int64    `json:"clusteraae_fsm_active"`
+	ClusterAaeFsmCreate               int64    `json:"clusteraae_fsm_create"`
+	ClusterAaeFsmCreateError          int64    `json:"clusteraae_fsm_create_error"`
 	ConnectedNodes                    []string `json:"connected_nodes"`
+	ConsistentGetObjsize100           int64    `json:"consistent_get_objsize_100"`
+	ConsistentGetObjsize95            int64    `json:"consistent_get_objsize_95"`
+	ConsistentGetObjsize99            int64    `json:"consistent_get_objsize_99"`
+	ConsistentGetObjsizeMean          int64    `json:"consistent_get_objsize_mean"`
+	ConsistentGetObjsizeMedian        int64    `json:"consistent_get_objsize_median"`
+	ConsistentGetTime100              int64    `json:"consistent_get_time_100"`
+	ConsistentGetTime95               int64    `json:"consistent_get_time_95"`
+	ConsistentGetTime99               int64    `json:"consistent_get_time_99"`
+	ConsistentGetTimeMean             int64    `json:"consistent_get_time_mean"`
+	ConsistentGetTimeMedian           int64    `json:"consistent_get_time_median"`
+	ConsistentGets                    int64    `json:"consistent_gets"`
+	ConsistentGetsTotal               int64    `json:"consistent_gets_total"`
+	ConsistentPutObjsize100           int64    `json:"consistent_put_objsize_100"`
+	ConsistentPutObjsize95            int64    `json:"consistent_put_objsize_95"`
+	ConsistentPutObjsize99            int64    `json:"consistent_put_objsize_99"`
+	ConsistentPutObjsizeMean          int64    `json:"consistent_put_objsize_mean"`
+	ConsistentPutObjsizeMedian        int64    `json:"consistent_put_objsize_median"`
+	ConsistentPutTime100              int64    `json:"consistent_put_time_100"`
+	ConsistentPutTime95               int64    `json:"consistent_put_time_95"`
+	ConsistentPutTime99               int64    `json:"consistent_put_time_99"`
+	ConsistentPutTimeMean             int64    `json:"consistent_put_time_mean"`
+	ConsistentPutTimeMedian           int64    `json:"consistent_put_time_median"`
+	ConsistentPuts                    int64    `json:"consistent_puts"`
+	ConsistentPutsTotal               int64    `json:"consistent_puts_total"`
+	ConvergeDelayLast                 int64    `json:"converge_delay_last"`
+	ConvergeDelayMax                  int64    `json:"converge_delay_max"`
+	ConvergeDelayMean                 int64    `json:"converge_delay_mean"`
+	ConvergeDelayMin                  int64    `json:"converge_delay_min"`
+	CoordLocalSoftLoadedTotal         int64    `json:"coord_local_soft_loaded_total"`
+	CoordLocalUnloadedTotal           int64    `json:"coord_local_unloaded_total"`
+	CoordRedirLeastLoadedTotal        int64    `json:"coord_redir_least_loaded_total"`
+	CoordRedirLoadedLocalTotal        int64    `json:"coord_redir_loaded_local_total"`
+	CoordRedirUnloadedTotal           int64    `json:"coord_redir_unloaded_total"`
 	CoordRedirsTotal                  int64    `json:"coord_redirs_total"`
+	CounterActorCounts100             int64    `json:"counter_actor_counts_100"`
+	CounterActorCounts95              int64    `json:"counter_actor_counts_95"`
+	CounterActorCounts99              int64    `json:"counter_actor_counts_99"`
+	CounterActorCountsMean            int64    `json:"counter_actor_counts_mean"`
+	CounterActorCountsMedian          int64    `json:"counter_actor_counts_median"`
+	DroppedVnodeRequestsTotals        int64    `json:"dropped_vnode_requests_totals"`
+	ExecutingMappers                  int64    `json:"executing_mappers"`
+	GossipReceived                    int64    `json:"gossip_received"`
+	HandoffTimeouts                   int64    `json:"handoff_timeouts"`
+	HllBytes                          int64    `json:"hll_bytes"`
+	HllBytes100                       int64    `json:"hll_bytes_100"`
+	HllBytes95                        int64    `json:"hll_bytes_95"`
+	HllBytes99                        int64    `json:"hll_bytes_99"`
+	HllBytesMean                      int64    `json:"hll_bytes_mean"`
+	HllBytesMedian                    int64    `json:"hll_bytes_median"`
+	HllBytesTotal                     int64    `json:"hll_bytes_total"`
 	IgnoredGossipTotal                int64    `json:"ignored_gossip_total"`
 	IndexFsmActive                    int64    `json:"index_fsm_active"`
 	IndexFsmComplete                  int64    `json:"index_fsm_complete"`
@@ -73,7 +129,12 @@ type riakStats struct {
 	MemoryAtom                        int64    `json:"memory_atom"`
 	MemoryAtomUsed                    int64    `json:"memory_atom_used"`
 	MemoryBinary                      int64    `json:"memory_binary"`
+	MemoryCode                        int64    `json:"memory_code"`
+	MemoryEts                         int64    `json:"memory_ets"`
+	MemoryProcesses                   int64    `json:"memory_processes"`
 	MemoryProcessesUsed               int64    `json:"memory_processes_used"`
+	MemorySystem                      int64    `json:"memory_system"`
+	MemoryTotal                       int64    `json:"memory_total"`
 	NgrfetchNofetch                   int64    `json:"ngrfetch_nofetch"`
 	NgrfetchNofetchTotal              int64    `json:"ngrfetch_nofetch_total"`
 	NgrfetchPrefetch                  int64    `json:"ngrfetch_prefetch"`
@@ -138,6 +199,11 @@ type riakStats struct {
 	NodeGetFsmMapTime99               int64    `json:"node_get_fsm_map_time_99"`
 	NodeGetFsmMapTimeMean             int64    `json:"node_get_fsm_map_time_mean"`
 	NodeGetFsmMapTimeMedian           int64    `json:"node_get_fsm_map_time_median"`
+	NodeGetFsmObjsize100              int64    `json:"node_get_fsm_objsize_100"`
+	NodeGetFsmObjsize95               int64    `json:"node_get_fsm_objsize_95"`
+	NodeGetFsmObjsize99               int64    `json:"node_get_fsm_objsize_99"`
+	NodeGetFsmObjsizeMean             int64    `json:"node_get_fsm_objsize_mean"`
+	NodeGetFsmObjsizeMedian           int64    `json:"node_get_fsm_objsize_median"`
 	NodeGetFsmOutRate                 int64    `json:"node_get_fsm_out_rate"`
 	NodeGetFsmRejected                int64    `json:"node_get_fsm_rejected"`
 	NodeGetFsmRejected60s             int64    `json:"node_get_fsm_rejected_60s"`
@@ -157,6 +223,17 @@ type riakStats struct {
 	NodeGetFsmSetTime99               int64    `json:"node_get_fsm_set_time_99"`
 	NodeGetFsmSetTimeMean             int64    `json:"node_get_fsm_set_time_mean"`
 	NodeGetFsmSetTimeMedian           int64    `json:"node_get_fsm_set_time_median"`
+	NodeGetFsmSiblings100             int64    `json:"node_get_fsm_siblings_100"`
+	NodeGetFsmSiblings95              int64    `json:"node_get_fsm_siblings_95"`
+	NodeGetFsmSiblings99              int64    `json:"node_get_fsm_siblings_99"`
+	NodeGetFsmSiblingsMean            int64    `json:"node_get_fsm_siblings_mean"`
+	NodeGetFsmSiblingsMedian          int64    `json:"node_get_fsm_siblings_median"`
+	NodeGetFsmTime100                 int64    `json:"node_get_fsm_time_100"`
+	NodeGetFsmTime95                  int64    `json:"node_get_fsm_time_95"`
+	NodeGetFsmTime99                  int64    `json:"node_get_fsm_time_99"`
+	NodeGetFsmTimeMean                int64    `json:"node_get_fsm_time_mean"`
+	NodeGetFsmTimeMedian              int64    `json:"node_get_fsm_time_median"`
+	NodeGets                          int64    `json:"node_gets"`
 	NodeGetsCounter                   int64    `json:"node_gets_counter"`
 	NodeGetsCounterTotal              int64    `json:"node_gets_counter_total"`
 	NodeGetsHll                       int64    `json:"node_gets_hll"`
@@ -165,6 +242,7 @@ type riakStats struct {
 	NodeGetsMapTotal                  int64    `json:"node_gets_map_total"`
 	NodeGetsSet                       int64    `json:"node_gets_set"`
 	NodeGetsSetTotal                  int64    `json:"node_gets_set_total"`
+	NodeGetsTotal                     int64    `json:"node_gets_total"`
 	NodePutFsmActive                  int64    `json:"node_put_fsm_active"`
 	NodePutFsmActive60s               int64    `json:"node_put_fsm_active_60s"`
 	NodePutFsmCounterTime100          int64    `json:"node_put_fsm_counter_time_100"`
@@ -192,6 +270,12 @@ type riakStats struct {
 	NodePutFsmSetTime99               int64    `json:"node_put_fsm_set_time_99"`
 	NodePutFsmSetTimeMean             int64    `json:"node_put_fsm_set_time_mean"`
 	NodePutFsmSetTimeMedian           int64    `json:"node_put_fsm_set_time_median"`
+	NodePutFsmTime100                 int64    `json:"node_put_fsm_time_100"`
+	NodePutFsmTime95                  int64    `json:"node_put_fsm_time_95"`
+	NodePutFsmTime99                  int64    `json:"node_put_fsm_time_99"`
+	NodePutFsmTimeMean                int64    `json:"node_put_fsm_time_mean"`
+	NodePutFsmTimeMedian              int64    `json:"node_put_fsm_time_median"`
+	NodePuts                          int64    `json:"node_puts"`
 	NodePutsCounter                   int64    `json:"node_puts_counter"`
 	NodePutsCounterTotal              int64    `json:"node_puts_counter_total"`
 	NodePutsHll                       int64    `json:"node_puts_hll"`
@@ -200,6 +284,8 @@ type riakStats struct {
 	NodePutsMapTotal                  int64    `json:"node_puts_map_total"`
 	NodePutsSet                       int64    `json:"node_puts_set"`
 	NodePutsSetTotal                  int64    `json:"node_puts_set_total"`
+	NodePutsTotal                     int64    `json:"node_puts_total"`
+	Nodename                          string   `json:"nodename"`
 	ObjectCounterMerge                int64    `json:"object_counter_merge"`
 	ObjectCounterMergeTime100         int64    `json:"object_counter_merge_time_100"`
 	ObjectCounterMergeTime95          int64    `json:"object_counter_merge_time_95"`
@@ -235,6 +321,9 @@ type riakStats struct {
 	ObjectSetMergeTimeMean            int64    `json:"object_set_merge_time_mean"`
 	ObjectSetMergeTimeMedian          int64    `json:"object_set_merge_time_median"`
 	ObjectSetMergeTotal               int64    `json:"object_set_merge_total"`
+	PbcActive                         int64    `json:"pbc_active"`
+	PbcConnects                       int64    `json:"pbc_connects"`
+	PbcConnectsTotal                  int64    `json:"pbc_connects_total"`
 	PipelineActive                    int64    `json:"pipeline_active"`
 	PipelineCreateCount               int64    `json:"pipeline_create_count"`
 	PipelineCreateErrorCount          int64    `json:"pipeline_create_error_count"`
@@ -242,6 +331,7 @@ type riakStats struct {
 	PipelineCreateOne                 int64    `json:"pipeline_create_one"`
 	PostcommitFail                    int64    `json:"postcommit_fail"`
 	PrecommitFail                     int64    `json:"precommit_fail"`
+	ReadRepairs                       int64    `json:"read_repairs"`
 	ReadRepairsCounter                int64    `json:"read_repairs_counter"`
 	ReadRepairsCounterTotal           int64    `json:"read_repairs_counter_total"`
 	ReadRepairsFallbackNotfoundCount  int64    `json:"read_repairs_fallback_notfound_count"`
@@ -258,6 +348,7 @@ type riakStats struct {
 	ReadRepairsPrimaryOutofdateOne    int64    `json:"read_repairs_primary_outofdate_one"`
 	ReadRepairsSet                    int64    `json:"read_repairs_set"`
 	ReadRepairsSetTotal               int64    `json:"read_repairs_set_total"`
+	ReadRepairsTotal                  int64    `json:"read_repairs_total"`
 	RebalanceDelayLast                int64    `json:"rebalance_delay_last"`
 	RebalanceDelayMax                 int64    `json:"rebalance_delay_max"`
 	RebalanceDelayMean                int64    `json:"rebalance_delay_mean"`
@@ -348,6 +439,8 @@ type riakStats struct {
 	VnodeGetFsmTime99                 int64    `json:"vnode_get_fsm_time_99"`
 	VnodeGetFsmTimeMean               int64    `json:"vnode_get_fsm_time_mean"`
 	VnodeGetFsmTimeMedian             int64    `json:"vnode_get_fsm_time_median"`
+	VnodeGets                         int64    `json:"vnode_gets"`
+	VnodeGetsTotal                    int64    `json:"vnode_gets_total"`
 	VnodeHeadFsmTime100               int64    `json:"vnode_head_fsm_time_100"`
 	VnodeHeadFsmTime95                int64    `json:"vnode_head_fsm_time_95"`
 	VnodeHeadFsmTime99                int64    `json:"vnode_head_fsm_time_99"`
@@ -366,10 +459,14 @@ type riakStats struct {
 	VnodeIndexDeletesPostings         int64    `json:"vnode_index_deletes_postings"`
 	VnodeIndexDeletesPostingsTotal    int64    `json:"vnode_index_deletes_postings_total"`
 	VnodeIndexDeletesTotal            int64    `json:"vnode_index_deletes_total"`
+	VnodeIndexReads                   int64    `json:"vnode_index_reads"`
+	VnodeIndexReadsTotal              int64    `json:"vnode_index_reads_total"`
 	VnodeIndexRefreshes               int64    `json:"vnode_index_refreshes"`
 	VnodeIndexRefreshesTotal          int64    `json:"vnode_index_refreshes_total"`
+	VnodeIndexWrites                  int64    `json:"vnode_index_writes"`
 	VnodeIndexWritesPostings          int64    `json:"vnode_index_writes_postings"`
 	VnodeIndexWritesPostingsTotal     int64    `json:"vnode_index_writes_postings_total"`
+	VnodeIndexWritesTotal             int64    `json:"vnode_index_writes_total"`
 	VnodeMapUpdate                    int64    `json:"vnode_map_update"`
 	VnodeMapUpdateTime100             int64    `json:"vnode_map_update_time_100"`
 	VnodeMapUpdateTime95              int64    `json:"vnode_map_update_time_95"`
@@ -383,6 +480,8 @@ type riakStats struct {
 	VnodePutFsmTime99                 int64    `json:"vnode_put_fsm_time_99"`
 	VnodePutFsmTimeMean               int64    `json:"vnode_put_fsm_time_mean"`
 	VnodePutFsmTimeMedian             int64    `json:"vnode_put_fsm_time_median"`
+	VnodePuts                         int64    `json:"vnode_puts"`
+	VnodePutsTotal                    int64    `json:"vnode_puts_total"`
 	VnodeSetUpdate                    int64    `json:"vnode_set_update"`
 	VnodeSetUpdateTime100             int64    `json:"vnode_set_update_time_100"`
 	VnodeSetUpdateTime95              int64    `json:"vnode_set_update_time_95"`
@@ -443,105 +542,6 @@ type riakStats struct {
 	WriteOncePutTimeMedian            int64    `json:"write_once_put_time_median"`
 	WriteOncePuts                     int64    `json:"write_once_puts"`
 	WriteOncePutsTotal                int64    `json:"write_once_puts_total"`
-	ClusterAaeFsmActive        int64  `json:"clusteraae_fsm_active"`
-	ClusterAaeFsmCreate        int64  `json:"clusteraae_fsm_create"`
-	ClusterAaeFsmCreateError   int64  `json:"clusteraae_fsm_create_error"`
-	CPUAvg1                    int64  `json:"cpu_avg1"`
-	CPUAvg15                   int64  `json:"cpu_avg15"`
-	CPUAvg5                    int64  `json:"cpu_avg5"`
-	CPUNprocs                  int64  `json:"cpu_nprocs"`
-	ConsistentGetObjsize100    int64  `json:"consistent_get_objsize_100"`
-	ConsistentGetObjsize95     int64  `json:"consistent_get_objsize_95"`
-	ConsistentGetObjsize99     int64  `json:"consistent_get_objsize_99"`
-	ConsistentGetObjsizeMean   int64  `json:"consistent_get_objsize_mean"`
-	ConsistentGetObjsizeMedian int64  `json:"consistent_get_objsize_median"`
-	ConsistentGetTime100       int64  `json:"consistent_get_time_100"`
-	ConsistentGetTime95        int64  `json:"consistent_get_time_95"`
-	ConsistentGetTime99        int64  `json:"consistent_get_time_99"`
-	ConsistentGetTimeMean      int64  `json:"consistent_get_time_mean"`
-	ConsistentGetTimeMedian    int64  `json:"consistent_get_time_median"`
-	ConsistentGets             int64  `json:"consistent_gets"`
-	ConsistentGetsTotal        int64  `json:"consistent_gets_total"`
-	ConsistentPutObjsize100    int64  `json:"consistent_put_objsize_100"`
-	ConsistentPutObjsize95     int64  `json:"consistent_put_objsize_95"`
-	ConsistentPutObjsize99     int64  `json:"consistent_put_objsize_99"`
-	ConsistentPutObjsizeMean   int64  `json:"consistent_put_objsize_mean"`
-	ConsistentPutObjsizeMedian int64  `json:"consistent_put_objsize_median"`
-	ConsistentPutTime100       int64  `json:"consistent_put_time_100"`
-	ConsistentPutTime95        int64  `json:"consistent_put_time_95"`
-	ConsistentPutTime99        int64  `json:"consistent_put_time_99"`
-	ConsistentPutTimeMean      int64  `json:"consistent_put_time_mean"`
-	ConsistentPutTimeMedian    int64  `json:"consistent_put_time_median"`
-	ConsistentPuts             int64  `json:"consistent_puts"`
-	ConsistentPutsTotal        int64  `json:"consistent_puts_total"`
-	ConvergeDelayLast          int64  `json:"converge_delay_last"`
-	ConvergeDelayMax           int64  `json:"converge_delay_max"`
-	ConvergeDelayMean          int64  `json:"converge_delay_mean"`
-	ConvergeDelayMin           int64  `json:"converge_delay_min"`
-	CoordLocalSoftLoadedTotal  int64  `json:"coord_local_soft_loaded_total"`
-	CoordLocalUnloadedTotal    int64  `json:"coord_local_unloaded_total"`
-	CoordRedirLeastLoadedTotal int64  `json:"coord_redir_least_loaded_total"`
-	CoordRedirLoadedLocalTotal int64  `json:"coord_redir_loaded_local_total"`
-	CoordRedirUnloadedTotal    int64  `json:"coord_redir_unloaded_total"`
-	CounterActorCounts100      int64  `json:"counter_actor_counts_100"`
-	CounterActorCounts95       int64  `json:"counter_actor_counts_95"`
-	CounterActorCounts99       int64  `json:"counter_actor_counts_99"`
-	CounterActorCountsMean     int64  `json:"counter_actor_counts_mean"`
-	CounterActorCountsMedian   int64  `json:"counter_actor_counts_median"`
-	DroppedVnodeRequestsTotals int64  `json:"dropped_vnode_requests_totals"`
-	ExecutingMappers           int64  `json:"executing_mappers"`
-	GossipReceived             int64  `json:"gossip_received"`
-	HandoffTimeouts            int64  `json:"handoff_timeouts"`
-	HllBytes                   int64  `json:"hll_bytes"`
-	HllBytes100                int64  `json:"hll_bytes_100"`
-	HllBytes95                 int64  `json:"hll_bytes_95"`
-	HllBytes99                 int64  `json:"hll_bytes_99"`
-	HllBytesMean               int64  `json:"hll_bytes_mean"`
-	HllBytesMedian             int64  `json:"hll_bytes_median"`
-	HllBytesTotal              int64  `json:"hll_bytes_total"`
-	MemoryCode                 int64  `json:"memory_code"`
-	MemoryEts                  int64  `json:"memory_ets"`
-	MemoryProcesses            int64  `json:"memory_processes"`
-	MemorySystem               int64  `json:"memory_system"`
-	MemoryTotal                int64  `json:"memory_total"`
-	NodeGetFsmObjsize100       int64  `json:"node_get_fsm_objsize_100"`
-	NodeGetFsmObjsize95        int64  `json:"node_get_fsm_objsize_95"`
-	NodeGetFsmObjsize99        int64  `json:"node_get_fsm_objsize_99"`
-	NodeGetFsmObjsizeMean      int64  `json:"node_get_fsm_objsize_mean"`
-	NodeGetFsmObjsizeMedian    int64  `json:"node_get_fsm_objsize_median"`
-	NodeGetFsmSiblings100      int64  `json:"node_get_fsm_siblings_100"`
-	NodeGetFsmSiblings95       int64  `json:"node_get_fsm_siblings_95"`
-	NodeGetFsmSiblings99       int64  `json:"node_get_fsm_siblings_99"`
-	NodeGetFsmSiblingsMean     int64  `json:"node_get_fsm_siblings_mean"`
-	NodeGetFsmSiblingsMedian   int64  `json:"node_get_fsm_siblings_median"`
-	NodeGetFsmTime100          int64  `json:"node_get_fsm_time_100"`
-	NodeGetFsmTime95           int64  `json:"node_get_fsm_time_95"`
-	NodeGetFsmTime99           int64  `json:"node_get_fsm_time_99"`
-	NodeGetFsmTimeMean         int64  `json:"node_get_fsm_time_mean"`
-	NodeGetFsmTimeMedian       int64  `json:"node_get_fsm_time_median"`
-	NodeGets                   int64  `json:"node_gets"`
-	NodeGetsTotal              int64  `json:"node_gets_total"`
-	Nodename                   string `json:"nodename"`
-	NodePutFsmTime100          int64  `json:"node_put_fsm_time_100"`
-	NodePutFsmTime95           int64  `json:"node_put_fsm_time_95"`
-	NodePutFsmTime99           int64  `json:"node_put_fsm_time_99"`
-	NodePutFsmTimeMean         int64  `json:"node_put_fsm_time_mean"`
-	NodePutFsmTimeMedian       int64  `json:"node_put_fsm_time_median"`
-	NodePuts                   int64  `json:"node_puts"`
-	NodePutsTotal              int64  `json:"node_puts_total"`
-	PbcActive                  int64  `json:"pbc_active"`
-	PbcConnects                int64  `json:"pbc_connects"`
-	PbcConnectsTotal           int64  `json:"pbc_connects_total"`
-	VnodeGets                  int64  `json:"vnode_gets"`
-	VnodeGetsTotal             int64  `json:"vnode_gets_total"`
-	VnodeIndexReads            int64  `json:"vnode_index_reads"`
-	VnodeIndexReadsTotal       int64  `json:"vnode_index_reads_total"`
-	VnodeIndexWrites           int64  `json:"vnode_index_writes"`
-	VnodeIndexWritesTotal      int64  `json:"vnode_index_writes_total"`
-	VnodePuts                  int64  `json:"vnode_puts"`
-	VnodePutsTotal             int64  `json:"vnode_puts_total"`
-	ReadRepairs                int64  `json:"read_repairs"`
-	ReadRepairsTotal           int64  `json:"read_repairs_total"`
 }
 
 func (*Riak) SampleConfig() string {
