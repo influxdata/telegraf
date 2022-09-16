@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 //go:embed sample.conf
@@ -83,16 +82,10 @@ func (e *Execd) Stop() {
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
-	_, isPrometheus := e.parser.(*prometheus.Parser)
-
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if isPrometheus {
-			data = append(data, []byte("\n")...)
-		}
-
 		metrics, err := e.parser.Parse(data)
 		if err != nil {
 			e.acc.AddError(fmt.Errorf("parse error: %w", err))
