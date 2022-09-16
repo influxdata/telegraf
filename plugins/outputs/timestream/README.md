@@ -252,15 +252,13 @@ and store each field in a separate table row. In that case:
       | 2016-06-13 17:43:50 | us-west | NULL | airquality | no2 | 5 |
       | 2016-06-13 17:43:50 | us-west | NULL | airquality | pm25 | 16 |
 
-    NOTE:
-    `<single_table_name>` represents the actual value of that property.
-    `<single_table_dimension_name_for_telegraf_measurement_name>` represents the actual value
-    of that property.
-    `<measure_name_for_multi_measure_records>` represents the actual value of that property.
+   NOTE:
+   `<single_table_name>` represents the actual value of that property.
+   `<single_table_dimension_name_for_telegraf_measurement_name>` represents the actual value of that property.
+   `<measure_name_for_multi_measure_records>` represents the actual value of that property.
 
 ### References
-
-    [Amazon Timestream]: https://aws.amazon.com/timestream/
+    [Amazon Timestream]: https://aws.amazon.com/timestream/  
     [Assumed credentials via STS]: https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/credentials/stscreds
     [Environment Variables]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables
     [Shared Credentials]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file
