@@ -336,8 +336,8 @@ type riakStats struct {
 	ReadRepairsCounterTotal           int64    `json:"read_repairs_counter_total"`
 	ReadRepairsFallbackNotfoundCount  int64    `json:"read_repairs_fallback_notfound_count"`
 	ReadRepairsFallbackNotfoundOne    int64    `json:"read_repairs_fallback_notfound_one"`
-	ReadRepairsFallbackOutofdateCount int64    `json:"read_repairs_fallback_outofdate_count"` // REVIEW-TYPE: undefined
-	ReadRepairsFallbackOutofdateOne   int64    `json:"read_repairs_fallback_outofdate_one"`   // REVIEW-TYPE: undefined
+	ReadRepairsFallbackOutofdateCount int64    `json:"read_repairs_fallback_outofdate_count"`
+	ReadRepairsFallbackOutofdateOne   int64    `json:"read_repairs_fallback_outofdate_one"`
 	ReadRepairsHll                    int64    `json:"read_repairs_hll"`
 	ReadRepairsHllTotal               int64    `json:"read_repairs_hll_total"`
 	ReadRepairsMap                    int64    `json:"read_repairs_map"`
@@ -380,10 +380,10 @@ type riakStats struct {
 	SkippedReadRepairs                int64    `json:"skipped_read_repairs"`
 	SkippedReadRepairsTotal           int64    `json:"skipped_read_repairs_total"`
 	SoftLoadedVnodeMboxTotal          int64    `json:"soft_loaded_vnode_mbox_total"`
-	StorageBackend                    int64    `json:"storage_backend"` // REVIEW-TYPE: atom
+	StorageBackend                    string   `json:"storage_backend"`
 	SysDriverVersion                  string   `json:"sys_driver_version"`
-	SysGlobalHeapsSize                int64    `json:"sys_global_heaps_size"` // REVIEW-TYPE: deprecated
-	SysHeapType                       int64    `json:"sys_heap_type"`         // REVIEW-TYPE: private
+	SysGlobalHeapsSize                string   `json:"sys_global_heaps_size"`
+	SysHeapType                       string   `json:"sys_heap_type"`
 	SysLogicalProcessors              int64    `json:"sys_logical_processors"`
 	SysMonitorCount                   int64    `json:"sys_monitor_count"`
 	SysOtpRelease                     string   `json:"sys_otp_release"`
@@ -393,7 +393,7 @@ type riakStats struct {
 	SysSystemArchitecture             string   `json:"sys_system_architecture"`
 	SysSystemVersion                  string   `json:"sys_system_version"`
 	SysThreadPoolSize                 int64    `json:"sys_thread_pool_size"`
-	SysThreadsEnabled                 int64    `json:"sys_threads_enabled"` // REVIEW-TYPE: true
+	SysThreadsEnabled                 bool     `json:"sys_threads_enabled"`
 	SysWordsize                       int64    `json:"sys_wordsize"`
 	TictacaaeBranchCompare            int64    `json:"tictacaae_branch_compare"`
 	TictacaaeBranchCompareTotal       int64    `json:"tictacaae_branch_compare_total"`
