@@ -51,10 +51,7 @@ X-RateLimit-Retry-After: 100 // A new request can be performed after this many s
   # token_url = "https://accounts-api.airthings.com/v1/token"
   # scopes = ["read:device:current_values"] 
 
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
+  # Sets the time zone that should be stamp to the measurement
+  # Use "Locale" if want the locale of the local machine
+  timeZone = "Europe/Stockholm"
 ```

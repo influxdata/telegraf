@@ -56,24 +56,27 @@ const (
 	TagSegmentName    = Segment + ".name"
 	TagSegmentActive  = Segment + ".active"
 	TagSegmentStarted = Segment + ".started"
+
+	timeParseFormat = "2006-01-02T15:04:05"
+	timeZonedFormat = time.RFC3339
 )
 
 type Airthings struct {
 	Log telegraf.Logger `toml:"-"`
 
-	URL           string          `toml:"url"`
-	ShowInactive  bool            `toml:"showInactive"`
-	ClientId      string          `toml:"client_id"`
-	ClientSecret  string          `toml:"client_secret"`
-	InsecureHttps bool            `toml:"insecureHttps"`
-	TokenUrl      string          `toml:"token_url"`
-	Scopes        []string        `toml:"scopes"`
-	Timeout       config.Duration `toml:"timeout"`
-
+	URL          string          `toml:"url"`
+	ShowInactive bool            `toml:"showInactive"`
+	ClientId     string          `toml:"client_id"`
+	ClientSecret string          `toml:"client_secret"`
+	TokenUrl     string          `toml:"token_url"`
+	Scopes       []string        `toml:"scopes"`
+	Timeout      config.Duration `toml:"timeout"`
+	TimeZone     string          `toml:"timeZone"`
 	tls.ClientConfig
 	cfg        *clientcredentials.Config
 	httpClient *http.Client
 	timer      time.Time
+	location   *time.Location
 }
 
 func (m *Airthings) SampleConfig() string {
@@ -86,8 +89,16 @@ func (m *Airthings) Description() string {
 
 func (m *Airthings) Init() error {
 
-	m.Log.Info("Init")
-	m.timer = time.Now()
+	m.location, _ = time.LoadLocation("Local")
+	if len(m.TimeZone) > 1 {
+		location, err := time.LoadLocation(m.TimeZone)
+		if err != nil {
+			return err
+		}
+		m.location = location
+	}
+	m.timer = time.Now().In(m.location)
+	m.Log.Infof("Init with locale: %v", m.location)
 
 	if m.cfg == nil {
 		m.cfg = &clientcredentials.Config{
@@ -105,12 +116,23 @@ func (m *Airthings) Init() error {
 
 func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 	m.Log.Infof("Gather duration since last run %s", time.Since(m.timer))
-	m.timer = time.Now()
+	m.timer = time.Now().In(m.location)
 	deviceList, err := m.deviceList()
 	if err != nil {
 		return err
 	}
 	for _, device := range deviceList.Devices {
+
+		var segStartedTime = ""
+		zonedTime, err := enforceTimeZone(device.Segment.Started, m.location)
+		if err != nil {
+			m.Log.Errorf("time stamp: '%s' not parsable with format '%s' error: %v",
+				device.Segment.Started, timeParseFormat, err)
+			segStartedTime = device.Segment.Started
+		} else {
+			segStartedTime = zonedTime.In(m.location).Format(timeZonedFormat)
+		}
+
 		var airTags = map[string]string{
 			TagName:           "airthings",
 			TagId:             device.Id,
@@ -118,9 +140,9 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 			TagSegmentId:      device.Segment.Id,
 			TagSegmentName:    device.Segment.Name,
 			TagSegmentActive:  strconv.FormatBool(device.Segment.Active),
-			TagSegmentStarted: device.Segment.Started,
+			TagSegmentStarted: segStartedTime,
 		}
-		var ts = time.Now()
+		var ts = time.Now().In(m.location)
 		air, ts, err := m.deviceSamples(device.Id)
 		if err != nil {
 			return err
@@ -147,7 +169,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 }
 
 func (m *Airthings) deviceSamples(deviceId string) (map[string]interface{}, time.Time, error) {
-	var ts = time.Now()
+	var ts = time.Now().In(m.location)
 	resp, err := m.doHttpRequest(http.MethodGet, m.URL, "/devices/", deviceId, "/latest-samples")
 	if err != nil {
 		return nil, ts, err
@@ -168,7 +190,7 @@ func (m *Airthings) deviceSamples(deviceId string) (map[string]interface{}, time
 			switch k {
 			case "time":
 				// Get the time of the sample
-				ts = time.Unix(int64(v.(float64)), 0)
+				ts = time.Unix(int64(v.(float64)), 0).In(m.location)
 			default:
 				air[k] = v
 			}
@@ -236,6 +258,15 @@ func (m *Airthings) doHttpRequest(httpMethod string, baseUrl string, pathCompone
 	buf := &bytes.Buffer{}
 	buf.ReadFrom(resp.Body)
 	return buf.Bytes(), nil
+}
+
+func enforceTimeZone(inTime string, location *time.Location) (*time.Time, error) {
+	t0, err := time.Parse(timeParseFormat, inTime)
+	if err != nil {
+		return nil, err
+	}
+	t0 = time.Date(t0.Year(), t0.Month(), t0.Day(), t0.Hour(), t0.Minute(), t0.Second(), t0.Nanosecond(), location)
+	return &t0, nil
 }
 
 func init() {

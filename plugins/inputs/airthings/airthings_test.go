@@ -190,3 +190,26 @@ func assertGen2(t *testing.T, acc *testutil.Accumulator) {
 			TagSegmentStarted: "2122-11-11T17:52:43",
 		})
 }
+func TestEnforceTimeZone(t *testing.T) {
+	timeUTC := time.Now().UTC()
+	location, err := time.LoadLocation("Europe/Stockholm")
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeUTCStr := timeUTC.Format(time.RFC3339)
+	timeUTCStr = timeUTCStr[:len(timeUTCStr)-1] // Trim away the 'Z' TimeZone
+	timeZoned, err := enforceTimeZone(timeUTCStr, location)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, offset := timeZoned.Zone()
+	t.Logf("Test: inDate: '%s' zoned date: '%s' offset: '%v'\n", timeUTCStr, timeZoned, offset)
+
+	if 0 != timeUTC.Unix()-(timeZoned.Unix()+int64(offset)) {
+		t.Logf("Fail: Date: '%s' not equal to: '%s' \n", timeUTC.In(location).Format(time.RFC3339),
+			timeZoned.In(location).Format(time.RFC3339))
+		t.Fail()
+	}
+}
