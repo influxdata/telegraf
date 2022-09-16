@@ -156,6 +156,7 @@ The message is supposed to be encoded as follows:
   ## rounded.  Legal values are "s", "ms", and "us".  Otherwise "unix"
   ## format with fractional seconds will use nanosecond precision.
   # avro_round_timestamp_to = "ms"
+  avro_timestamp_format = "unix_ms"
 
   ## If true, any array values received by Avro will be silently
   ## discarded; otherwise they will be converted into a series of
@@ -167,6 +168,7 @@ The message is supposed to be encoded as follows:
   ## is the empty string, so a=["a", "b"] becomes a0="a", a1="b".
   ## If this were set to "_", then it would be a_0="a", a_1="b".
   # avro_field_separator = "_"
+
 ```
 
 ### avro_timestamp, avro_timestamp_format
