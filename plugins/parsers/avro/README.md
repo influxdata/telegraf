@@ -170,7 +170,8 @@ automatically determined based on the schema.
   ## used as tags
   avro_fields = ["STARS"]
 
-  ## Avro fields to be used as timestamp
+  ## Avro fields to be used as timestamp; if empty, current time will
+  ## be used for the measurement timestamp.
   avro_timestamp = "TIMESTAMP"
 
   ## Timestamp format
