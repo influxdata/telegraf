@@ -171,7 +171,8 @@ data is written by default as follows:
  ```
 
  For example, consider the following data in line protocol format:
- >weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200 airquality,location=us-west no2=5,pm25=16 1465839830100400200
+> weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200
+> airquality,location=us-west no2=5,pm25=16 1465839830100400200
 
 where:    
   `weather` and `airquality` are the measurement names,
