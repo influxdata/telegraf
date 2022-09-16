@@ -113,7 +113,8 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		// measurement name (from telegraf metric) is used as multi-measure name in TS
 		Log: testutil.Logger{},
 	}
-	require.Contains(t, invalidConfigMultiMeasureSingleTableMode.Connect().Error(), "MeasureNameForMultiMeasureRecords")
+	err := invalidConfigMultiMeasureSingleTableMode.Connect()
+	require.ErrorContains(r, err, "MeasureNameForMultiMeasureRecords")
 
 	// multi-table arguments
 	validMappingModeMultiTable := Timestream{
