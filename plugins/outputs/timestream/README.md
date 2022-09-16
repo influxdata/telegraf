@@ -256,15 +256,13 @@ and store each field in a separate table row. In that case:
    `<single_table_name>` represents the actual value of that property.
    `<single_table_dimension_name_for_telegraf_measurement_name>` represents the
    actual value of that property.
-   `<measure_name_for_multi_measure_records>` represents the actual value of that property.
+   `<measure_name_for_multi_measure_records>` represents the actual value of
+   that property.
 
 ### References
 
-```
-[Amazon Timestream]: https://aws.amazon.com/timestream/  
-[Assumed credentials via STS]: https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/credentials/stscreds
-[Environment Variables]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables
-[Shared Credentials]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file
-[EC2 Instance Profile]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
-
-```
+- [Amazon Timestream](https://aws.amazon.com/timestream/)
+- [Assumed credentials via STS](https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/credentials/stscreds)
+- [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
+- [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
+- [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
