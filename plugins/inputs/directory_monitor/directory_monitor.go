@@ -24,7 +24,6 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -293,17 +292,12 @@ func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Re
 }
 
 func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
-	switch parser.(type) {
-	case *csv.Parser:
-		metrics, err = parser.Parse(line)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil, nil
-			}
-			return nil, err
+	metrics, err = parser.Parse(line)
+	if err != nil {
+		if errors.Is(err, parsers.ErrNotEnoughData) {
+			return nil, nil
 		}
-	default:
-		metrics, err = parser.Parse(line)
+		return nil, err
 	}
 
 	if monitor.FileTag != "" {
