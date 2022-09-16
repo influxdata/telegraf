@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -118,6 +119,43 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 			require.Equal(t, test.Value, val)
 		})
 	}
+}
+
+func TestParsesPrometheus(t *testing.T) {
+	parser := models.NewRunningParser(&prometheus.Parser{}, &models.ParserConfig{})
+	require.NoError(t, parser.Init())
+
+	metrics := make(chan telegraf.Metric, 10)
+	defer close(metrics)
+
+	var acc testutil.Accumulator
+
+	e := &Execd{
+		RestartDelay: config.Duration(5 * time.Second),
+		Signal:       "STDIN",
+		acc:          &acc,
+		Log:          testutil.Logger{},
+	}
+	e.SetParser(parser)
+
+	lines := `# HELP This is just a test metric.
+# TYPE test summary
+test{handler="execd",quantile="0.5"} 42.0
+`
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{"handler": "execd", "quantile": "0.5"},
+			map[string]interface{}{"test": float64(42.0)},
+			time.Unix(0, 0),
+		),
+	}
+
+	e.outputReader(strings.NewReader(lines))
+	check := func() bool { return acc.NMetrics() == uint64(len(expected)) }
+	require.Eventually(t, check, 1*time.Second, 100*time.Millisecond)
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
 func readChanWithTimeout(t *testing.T, metrics chan telegraf.Metric, timeout time.Duration) telegraf.Metric {
