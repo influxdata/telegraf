@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -189,105 +192,16 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 	}
 
 	// Build a map of field values
-	fields := map[string]interface{}{
-		"cluster_fms_active":             stats.ClusterAaeFsmActive,
-		"cluster_fms_create":             stats.ClusterAaeFsmCreate,
-		"cluster_fms_create_error":       stats.ClusterAaeFsmCreateError,
-		"cpu_avg1":                       stats.CPUAvg1,
-		"cpu_avg15":                      stats.CPUAvg15,
-		"cpu_avg5":                       stats.CPUAvg5,
-		"cpu_nprocs":                     stats.CPUNprocs,
-		"consistent_get_objsize_100":     stats.ConsistentGetObjsize100,
-		"consistent_get_objsize_95":      stats.ConsistentGetObjsize95,
-		"consistent_get_objsize_99":      stats.ConsistentGetObjsize99,
-		"consistent_get_objsize_mean":    stats.ConsistentGetObjsizeMean,
-		"consistent_get_objsize_median":  stats.ConsistentGetObjsizeMedian,
-		"consistent_get_time_100":        stats.ConsistentGetTime100,
-		"consistent_get_time_95":         stats.ConsistentGetTime95,
-		"consistent_get_time_99":         stats.ConsistentGetTime99,
-		"consistent_get_time_mean":       stats.ConsistentGetTimeMean,
-		"consistent_get_time_median":     stats.ConsistentGetTimeMedian,
-		"consistent_gets":                stats.ConsistentGets,
-		"consistent_gets_total":          stats.ConsistentGetsTotal,
-		"consistent_put_objsize_100":     stats.ConsistentPutObjsize100,
-		"consistent_put_objsize_95":      stats.ConsistentPutObjsize95,
-		"consistent_put_objsize_99":      stats.ConsistentPutObjsize99,
-		"consistent_put_objsize_mean":    stats.ConsistentPutObjsizeMean,
-		"consistent_put_objsize_median":  stats.ConsistentPutObjsizeMedian,
-		"consistent_put_time_100":        stats.ConsistentPutTime100,
-		"consistent_put_time_95":         stats.ConsistentPutTime95,
-		"consistent_put_time_99":         stats.ConsistentPutTime99,
-		"consistent_put_time_mean":       stats.ConsistentPutTimeMean,
-		"consistent_put_time_median":     stats.ConsistentPutTimeMedian,
-		"consistent_puts":                stats.ConsistentPuts,
-		"consistent_puts_total":          stats.ConsistentPutsTotal,
-		"converge_delay_last":            stats.ConvergeDelayLast,
-		"converge_delay_max":             stats.ConvergeDelayMax,
-		"converge_delay_mean":            stats.ConvergeDelayMean,
-		"converge_delay_min":             stats.ConvergeDelayMin,
-		"coord_local_soft_loaded_total":  stats.CoordLocalSoftLoadedTotal,
-		"coord_local_unloaded_total":     stats.CoordLocalUnloadedTotal,
-		"coord_redir_least_loaded_total": stats.CoordRedirLeastLoadedTotal,
-		"coord_redir_loaded_local_total": stats.CoordRedirLoadedLocalTotal,
-		"coord_redir_unloaded_total":     stats.CoordRedirUnloadedTotal,
-		"counter_actor_counts_100":       stats.CounterActorCounts100,
-		"counter_actor_counts_95":        stats.CounterActorCounts95,
-		"counter_actor_counts_99":        stats.CounterActorCounts99,
-		"counter_actor_counts_mean":      stats.CounterActorCountsMean,
-		"counter_actor_counts_median":    stats.CounterActorCountsMedian,
-		"dropped_vnode_requests_totals":  stats.DroppedVnodeRequestsTotals,
-		"executing_mappers":              stats.ExecutingMappers,
-		"gossip_received":                stats.GossipReceived,
-		"handoff_timeouts":               stats.HandoffTimeouts,
-		"hll_bytes":                      stats.HllBytes,
-		"hll_bytes_100":                  stats.HllBytes100,
-		"hll_bytes_95":                   stats.HllBytes95,
-		"hll_bytes_99":                   stats.HllBytes99,
-		"hll_bytes_mean":                 stats.HllBytesMean,
-		"hll_bytes_median":               stats.HllBytesMedian,
-		"hll_bytes_total":                stats.HllBytesTotal,
-		"memory_code":                    stats.MemoryCode,
-		"memory_ets":                     stats.MemoryEts,
-		"memory_processes":               stats.MemoryProcesses,
-		"memory_system":                  stats.MemorySystem,
-		"memory_total":                   stats.MemoryTotal,
-		"node_get_fsm_objsize_100":       stats.NodeGetFsmObjsize100,
-		"node_get_fsm_objsize_95":        stats.NodeGetFsmObjsize95,
-		"node_get_fsm_objsize_99":        stats.NodeGetFsmObjsize99,
-		"node_get_fsm_objsize_mean":      stats.NodeGetFsmObjsizeMean,
-		"node_get_fsm_objsize_median":    stats.NodeGetFsmObjsizeMedian,
-		"node_get_fsm_siblings_100":      stats.NodeGetFsmSiblings100,
-		"node_get_fsm_siblings_95":       stats.NodeGetFsmSiblings95,
-		"node_get_fsm_siblings_99":       stats.NodeGetFsmSiblings99,
-		"node_get_fsm_siblings_mean":     stats.NodeGetFsmSiblingsMean,
-		"node_get_fsm_siblings_median":   stats.NodeGetFsmSiblingsMedian,
-		"node_get_fsm_time_100":          stats.NodeGetFsmTime100,
-		"node_get_fsm_time_95":           stats.NodeGetFsmTime95,
-		"node_get_fsm_time_99":           stats.NodeGetFsmTime99,
-		"node_get_fsm_time_mean":         stats.NodeGetFsmTimeMean,
-		"node_get_fsm_time_median":       stats.NodeGetFsmTimeMedian,
-		"node_gets":                      stats.NodeGets,
-		"node_gets_total":                stats.NodeGetsTotal,
-		"node_put_fsm_time_100":          stats.NodePutFsmTime100,
-		"node_put_fsm_time_95":           stats.NodePutFsmTime95,
-		"node_put_fsm_time_99":           stats.NodePutFsmTime99,
-		"node_put_fsm_time_mean":         stats.NodePutFsmTimeMean,
-		"node_put_fsm_time_median":       stats.NodePutFsmTimeMedian,
-		"node_puts":                      stats.NodePuts,
-		"node_puts_total":                stats.NodePutsTotal,
-		"pbc_active":                     stats.PbcActive,
-		"pbc_connects":                   stats.PbcConnects,
-		"pbc_connects_total":             stats.PbcConnectsTotal,
-		"vnode_gets":                     stats.VnodeGets,
-		"vnode_gets_total":               stats.VnodeGetsTotal,
-		"vnode_index_reads":              stats.VnodeIndexReads,
-		"vnode_index_reads_total":        stats.VnodeIndexReadsTotal,
-		"vnode_index_writes":             stats.VnodeIndexWrites,
-		"vnode_index_writes_total":       stats.VnodeIndexWritesTotal,
-		"vnode_puts":                     stats.VnodePuts,
-		"vnode_puts_total":               stats.VnodePutsTotal,
-		"read_repairs":                   stats.ReadRepairs,
-		"read_repairs_total":             stats.ReadRepairsTotal,
+	fields := make(map[string]interface{})
+	rs := reflect.TypeOf((*riakStats)(nil)).Elem()
+	st := reflect.ValueOf(stats)
+	for i := 0; i < rs.NumField(); i++ {
+		key, err := strconv.Unquote(strings.TrimPrefix(string(rs.Field(i).Tag), "json:"))
+		if err != nil {
+			return fmt.Errorf("unable to build map of field values: %s", err)
+		}
+		value := reflect.Indirect(st).FieldByName(rs.Field(i).Name)
+		fields[key] = value
 	}
 
 	// Accumulate the tags and values
