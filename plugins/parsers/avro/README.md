@@ -176,6 +176,14 @@ automatically determined based on the schema.
 
   ## Timestamp format
   avro_timestamp_format = "unix_ms"
+
+  ## If true, any array values received by Avro will be silently
+  ## discarded; otherwise they will be converted into a series of
+  ## scalars, e.g. a=["a", "b", "c"] would become a0="a", a1="b",
+  ## a2="c".
+  # avro_discard_arrays = true
+
+
 ```
 
 ### avro_timestamp, avro_timestamp_format
