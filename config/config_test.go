@@ -497,7 +497,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 		require.True(t, ok)
 		// Get the parser set with 'SetParser()'
 		if p, ok := input.Parser.(*models.RunningParser); ok {
-			require.NoError(t, p.Init())
 			actual = append(actual, p.Parser)
 		} else {
 			actual = append(actual, input.Parser)
@@ -618,7 +617,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 		require.True(t, ok)
 		// Get the parser set with 'SetParser()'
 		if p, ok := input.Parser.(*models.RunningParser); ok {
-			require.NoError(t, p.Init())
 			actual = append(actual, p.Parser)
 		} else {
 			actual = append(actual, input.Parser)
