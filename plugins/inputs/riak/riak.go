@@ -37,7 +37,13 @@ func NewRiak() *Riak {
 	return &Riak{client: client}
 }
 
-// Type riakStats represents the data that is received from Riak
+// Type riakStats represents the data that is received from Riak.
+//
+// For a complete list of all metrics supported by Riak, see the "[riak_kv_stat]"
+// and "[riak_kv_stat_bc]" modules.
+//
+// [riak_kv_stat]: https://github.com/basho/riak_kv/blob/develop-3.0/src/riak_kv_stat.erl#L179
+// [riak_kv_stat_bc]: https://github.com/basho/riak_kv/blob/develop-3.0/src/riak_kv_stat_bc.erl
 type riakStats struct {
 	CPUAvg1                           int64    `json:"cpu_avg1"`
 	CPUAvg15                          int64    `json:"cpu_avg15"`
