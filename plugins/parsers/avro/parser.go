@@ -2,6 +2,7 @@ package avro
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -59,7 +60,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	m, err := p.createMetric(native)
+	m, err := p.createMetric(native, schema)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +102,7 @@ func (p *Parser) parseTimestamp(timestamp interface{}) (time.Time, error) {
 	return metricTime, nil
 }
 
-func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
+func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metric, error) {
 	deep, ok := native.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("cannot cast native interface {} to map[string]interface{}")
@@ -126,8 +127,17 @@ func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 			p.Log.Infof("tag %s value was %v; not added to tags", tag, value)
 		}
 	}
+	fieldList := []string{}
+	fieldList = append([]string(nil), p.Fields...)
+	if len(fieldList) == 0 { // Get fields from whatever we just unpacked
+		for k := range deep {
+			if value, ok := tags[k]; !ok {
+				fieldList = append(fieldList, value)
+			}
+		}
+	}
 
-	for _, field := range p.Fields {
+	for _, field := range fieldList {
 		if value, ok := deep[field]; ok {
 			fields[field] = nestedValue(value)
 		} else {
@@ -138,11 +148,33 @@ func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 	if len(fields) == 0 {
 		return nil, fmt.Errorf("number of fields is 0; unable to create metric")
 	}
-	name := p.MetricName
+	name := ""
 	if p.Measurement != "" {
 		name = p.Measurement
-	}
+	} else {
+		// get Measurement name from schema
+		var schemaObj map[string]interface{}
 
+		err := json.Unmarshal([]byte(schema), &schemaObj)
+		if err != nil {
+			return nil, err
+		}
+		nsStr, ok := schemaObj["namespace"].(string)
+		if !ok {
+			return nil, fmt.Errorf("could not determine namespace from schema %s", schema)
+		}
+		nStr, ok := schemaObj["name"].(string)
+		if !ok {
+			return nil, fmt.Errorf("could not determine name from schema %s", schema)
+		}
+		name = nsStr + "." + nStr
+	}
+	if name == "" {
+		name = p.MetricName
+	}
+	if name == "" {
+		return nil, fmt.Errorf("could not determine measurement name")
+	}
 	return metric.New(name, tags, fields, metricTime), nil
 }
 

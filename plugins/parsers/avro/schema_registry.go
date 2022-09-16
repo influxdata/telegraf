@@ -24,7 +24,7 @@ func (sr *SchemaRegistry) getSchema(id int) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	
+
 	var jsonResponse map[string]interface{}
 
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)

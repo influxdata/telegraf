@@ -53,13 +53,15 @@ The message is supposed to be encoded as follows:
         }
   """
 
-  ## Measurement string
-  avro_measurement = "ratings"
+  ## Measurement string; if not set, determine measurement name from
+  ## schema (as "<namespace>.<name>")
+  # avro_measurement = "ratings"
 
   ## Avro fields to be used as tags
   avro_tags = ["CHANNEL", "CLUB_STATUS"]
 
-  ## Avro fields to be used as fields
+  ## Avro fields to be used as fields; if empty, any Avro fields not
+  ## used as tags
   avro_fields = ["STARS"]
 
   ## Avro fields to be used as timestamp
@@ -86,5 +88,5 @@ millisecond or microsecond.
 
 ## Metrics
 
-One metric is created for each message.  The type of the field is
-automatically determined based on schema.
+One metric is created for each message.  The type of each field is
+automatically determined based on the schema.
