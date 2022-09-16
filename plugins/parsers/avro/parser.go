@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/jeremywohl/flatten"
 	"github.com/linkedin/goavro/v2"
 	"time"
 )
@@ -21,6 +22,7 @@ type Parser struct {
 	Fields          []string `toml:"avro_fields"`
 	Timestamp       string   `toml:"avro_timestamp"`
 	TimestampFormat string   `toml:"avro_timestamp_format"`
+	DiscardArrays   bool     `toml:"avro_discard_arrays"`
 	DefaultTags     map[string]string
 	TimeFunc        func() time.Time
 
@@ -143,7 +145,12 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 			p.Log.Infof("field %s value was %v; not added to fields", field, value)
 		}
 	}
+	var schemaObj map[string]interface{}
 
+	err = json.Unmarshal([]byte(schema), &schemaObj)
+	if err != nil {
+		return nil, err
+	}
 	if len(fields) == 0 {
 		return nil, fmt.Errorf("number of fields is 0; unable to create metric")
 	}
@@ -152,12 +159,6 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 		name = p.Measurement
 	} else {
 		// get Measurement name from schema
-		var schemaObj map[string]interface{}
-
-		err := json.Unmarshal([]byte(schema), &schemaObj)
-		if err != nil {
-			return nil, err
-		}
 		nsStr, ok := schemaObj["namespace"].(string)
 		if !ok {
 			return nil, fmt.Errorf("could not determine namespace from schema %s", schema)
@@ -174,7 +175,20 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 	if name == "" {
 		return nil, fmt.Errorf("could not determine measurement name")
 	}
-	return metric.New(name, tags, fields, metricTime), nil
+	if p.DiscardArrays {
+		// Any non-scalars end up being a nil field
+		return metric.New(name, tags, fields, metricTime), nil
+	}
+	// But if we do it this way, we flatten any compound structures,
+	// including arrays.  Goavro is only going to hand us back
+	// arrays, not maps.
+	flat, err := flatten.Flatten(fields, "", flatten.UnderscoreStyle)
+	// To emulate streamreactor, you'd want:
+	// flatten.SeparatorStyle{Before: "", Middle: "", After: ""}
+	if err != nil {
+		return nil, err
+	}
+	return metric.New(name, tags, flat, metricTime), nil
 }
 
 func nestedValue(deep interface{}) interface{} {
