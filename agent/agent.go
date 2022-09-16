@@ -200,13 +200,6 @@ func (a *Agent) initPlugins() error {
 				input.LogName(), err)
 		}
 	}
-	for _, parser := range a.Config.Parsers {
-		err := parser.Init()
-		if err != nil {
-			return fmt.Errorf("could not initialize parser %s::%s: %v",
-				parser.Config.DataFormat, parser.Config.Parent, err)
-		}
-	}
 	for _, processor := range a.Config.Processors {
 		err := processor.Init()
 		if err != nil {
