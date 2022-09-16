@@ -1,10 +1,11 @@
 # Customization
 
-You can build customized versions of Telegraf with a specific plugin set
-using [build-tags](https://pkg.go.dev/cmd/go#hdr-Build_constraints).
-The plugins can be selected either category-wise, i.e. `inputs`, `outputs`,
-`processors`, `aggregators` and `parsers` or individually, e.g. `inputs.modbus`
-or `outputs.influxdb`.
+You can build customized versions of Telegraf with a specific plugin set using 
+the [custom builder](/tools/custom_builder) tool or 
+[build-tags](https://pkg.go.dev/cmd/go#hdr-Build_constraints).
+For build tags, the plugins can be selected either category-wise, i.e. 
+`inputs`, `outputs`,`processors`, `aggregators` and `parsers` or 
+individually, e.g. `inputs.modbus` or `outputs.influxdb`.
 
 Usually the build tags correspond to the plugin names used in the Telegraf
 configuration. To be sure, check the files in the corresponding
