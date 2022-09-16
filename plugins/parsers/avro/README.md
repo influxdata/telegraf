@@ -60,11 +60,13 @@ The message is supposed to be encoded as follows:
   ## Avro fields to be used as tags
   avro_tags = ["CHANNEL", "CLUB_STATUS"]
 
-  ## Avro fields to be used as fields; if empty, any Avro fields not
-  ## used as tags
-  avro_fields = ["STARS"]
+  ## Avro fields to be used as fields; if empty, any Avro fields
+  ## detected from the schema, not used as tags, will be used as
+  ## measurement fields.
+  # avro_fields = ["STARS"]
 
-  ## Avro fields to be used as timestamp
+  ## Avro fields to be used as timestamp; if empty, current time will
+  ## be used for the measurement timestamp.
   avro_timestamp = "TIMESTAMP"
 
   ## Timestamp format

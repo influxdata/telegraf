@@ -127,16 +127,15 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 			p.Log.Infof("tag %s value was %v; not added to tags", tag, value)
 		}
 	}
-	fieldList := []string{}
-	fieldList = append([]string(nil), p.Fields...)
+	fieldList := make([]string, len(p.Fields), (cap(p.Fields)+1)*2)
+	copy(fieldList, p.Fields)
 	if len(fieldList) == 0 { // Get fields from whatever we just unpacked
 		for k := range deep {
-			if value, ok := tags[k]; !ok {
-				fieldList = append(fieldList, value)
+			if _, ok := tags[k]; !ok {
+				fieldList = append(fieldList, k)
 			}
 		}
 	}
-
 	for _, field := range fieldList {
 		if value, ok := deep[field]; ok {
 			fields[field] = nestedValue(value)
