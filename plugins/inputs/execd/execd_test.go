@@ -42,7 +42,7 @@ func TestSettingConfigWorks(t *testing.T) {
 }
 
 func TestExternalInputWorks(t *testing.T) {
-	influxParser := &influx.Parser{}
+	influxParser := models.NewRunningParser(&influx.Parser{}, &models.ParserConfig{})
 	require.NoError(t, influxParser.Init())
 
 	exe, err := os.Executable()
@@ -52,10 +52,10 @@ func TestExternalInputWorks(t *testing.T) {
 		Command:      []string{exe, "-counter"},
 		Environment:  []string{"PLUGINS_INPUTS_EXECD_MODE=application", "METRIC_NAME=counter"},
 		RestartDelay: config.Duration(5 * time.Second),
-		parser:       influxParser,
 		Signal:       "STDIN",
 		Log:          testutil.Logger{},
 	}
+	e.SetParser(influxParser)
 
 	metrics := make(chan telegraf.Metric, 10)
 	defer close(metrics)
@@ -76,7 +76,7 @@ func TestExternalInputWorks(t *testing.T) {
 }
 
 func TestParsesLinesContainingNewline(t *testing.T) {
-	parser := &influx.Parser{}
+	parser := models.NewRunningParser(&influx.Parser{}, &models.ParserConfig{})
 	require.NoError(t, parser.Init())
 
 	metrics := make(chan telegraf.Metric, 10)
@@ -85,11 +85,11 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 
 	e := &Execd{
 		RestartDelay: config.Duration(5 * time.Second),
-		parser:       parser,
 		Signal:       "STDIN",
 		acc:          acc,
 		Log:          testutil.Logger{},
 	}
+	e.SetParser(parser)
 
 	cases := []struct {
 		Name  string
@@ -108,7 +108,7 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			line := fmt.Sprintf("event message=\"%v\" 1587128639239000000", test.Value)
 
-			e.cmdReadOut(strings.NewReader(line))
+			e.outputReader(strings.NewReader(line))
 
 			m := readChanWithTimeout(t, metrics, 1*time.Second)
 
