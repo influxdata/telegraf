@@ -114,7 +114,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		Log: testutil.Logger{},
 	}
 	err := invalidConfigMultiMeasureSingleTableMode.Connect()
-	require.ErrorContains(r, err, "MeasureNameForMultiMeasureRecords")
+	require.ErrorContains(t, err, "MeasureNameForMultiMeasureRecords")
 
 	// multi-table arguments
 	validMappingModeMultiTable := Timestream{
@@ -260,7 +260,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	// Expected 101 records
 	require.Equal(t, recordCount+1, len(transformedRecords), "Expected 101 records after transforming")
 	// validate write to TS
-	err = plugin.Write(inputs)
+	err := plugin.Write(inputs)
 	require.Nil(t, err, "Write to Timestream failed")
 	require.Equal(t, mockClient.WriteRecordsRequestCount, 2, "Expected 2 WriteRecords calls")
 }

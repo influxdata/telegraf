@@ -141,6 +141,8 @@ func (t *Timestream) Connect() error {
 				MappingModeSingleTable)
 		}
 
+		// When using MappingModeSingleTable with UseMultiMeasureRecords enabled,
+		// measurementName ( from line protocol ) is mapped to multiMeasure name in timestream.
 		if t.UseMultiMeasureRecords && t.MeasureNameForMultiMeasureRecords != "" {
 			return fmt.Errorf("in '%s' mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is invalid", MappingModeMultiTable)
 		}
@@ -155,6 +157,9 @@ func (t *Timestream) Connect() error {
 			return fmt.Errorf("in '%s' mapping mode, do not specify SingleTableDimensionNameForTelegrafMeasurementName key", MappingModeMultiTable)
 		}
 
+		// When using MappingModeMultiTable ( data is ingested to multiple tables ) with
+		// UseMultiMeasureRecords enabled, measurementName is used as tableName in timestream and
+		// we require MeasureNameForMultiMeasureRecords to be configured.
 		if t.UseMultiMeasureRecords && t.MeasureNameForMultiMeasureRecords == "" {
 			return fmt.Errorf("in '%s' mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is required", MappingModeMultiTable)
 		}
@@ -285,11 +290,8 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 		var rejected *types.RejectedRecordsException
 		if errors.As(err, &rejected) {
 			t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
-			var rre *types.RejectedRecordsException
-			if errors.As(err, &rre) {
-				for _, rr := range rre.RejectedRecords {
-					t.Log.Errorf("reject reason: '%s', record index: '%d'", aws.ToString(rr.Reason), rr.RecordIndex)
-				}
+			for _, rr := range rejected.RejectedRecords {
+				t.Log.Errorf("reject reason: '%s', record index: '%d'", aws.ToString(rr.Reason), rr.RecordIndex)
 			}
 			return nil
 		}
@@ -490,8 +492,6 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 	if t.MappingMode == MappingModeSingleTable {
 		multiMeasureName = point.Name()
 	}
-
-	//list of Multi measure value.
 
 	var multiMeasures []types.MeasureValue
 
