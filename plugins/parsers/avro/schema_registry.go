@@ -7,7 +7,8 @@ import (
 )
 
 type SchemaRegistry struct {
-	url string
+	url   string
+	cache map[int]string
 }
 
 const (
@@ -15,10 +16,13 @@ const (
 )
 
 func NewSchemaRegistry(url string) *SchemaRegistry {
-	return &SchemaRegistry{url: url}
+	return &SchemaRegistry{url: url, cache: make(map[int]string)}
 }
 
 func (sr *SchemaRegistry) getSchema(id int) (string, error) {
+	if v, ok := sr.cache[id]; ok {
+		return v, nil
+	}
 	resp, err := http.Get(fmt.Sprintf(schemaByID, sr.url, id))
 	if err != nil {
 		return "", err
@@ -41,6 +45,6 @@ func (sr *SchemaRegistry) getSchema(id int) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("malformed respose from schema registry: %v cannot be cast to string", schema)
 	}
-
+	sr.cache[id] = schemaValue
 	return schemaValue, nil
 }
