@@ -243,8 +243,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	}
 
 	// validate config correctness
-	err := plugin.Connect()
-	require.Nil(t, err)
+	require.NoError(t, plugin.Connect())
 
 	// validate multi-record generation
 	result := plugin.TransformMetrics(inputs)
