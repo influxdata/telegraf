@@ -183,7 +183,6 @@ More details about metrics can be found at the links below:
 || perf.page_faults_min | page_faults_min | the count of minor page faults |
 || perf.page_faults_maj | page_faults_maj | the count of major page faults |
 || perf.alignment_faults | alignment_faults | the count of alignment faults |
-
 || perf.emulation_faults | emulation_faults | the count of emulation faults |
 | **block** | block.count | count | number of block devices being listed |
 || block.\<num\>.name | name | name of the target of the block device  \<num\> (the same name for multiple entries if --backing is present) |
