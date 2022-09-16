@@ -163,12 +163,10 @@ go test -v ./plugins/outputs/timestream/...
 When writing data from Influx to Timestream,
 data is written by default as follows:
 
-```
  1. The timestamp is written as the time field.
  2. Tags are written as dimensions.
  3. Fields are written as measures.
  4. Measurements are written as table names.
- ```
 
  For example, consider the following data in line protocol format:
 > weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200
