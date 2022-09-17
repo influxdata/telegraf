@@ -26,6 +26,7 @@ const (
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -278,6 +279,7 @@ func init() {
 }
 
 func (gcs *GCS) closeReader(r *storage.Reader) {
-	err := r.Close()
-	gcs.Log.Errorf("Could not close reader", err)
+	if err := r.Close(); err != nil {
+		gcs.Log.Errorf("Could not close reader", err)
+	}
 }
