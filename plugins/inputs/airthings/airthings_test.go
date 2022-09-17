@@ -3,7 +3,6 @@ package airthings
 import (
 	"fmt"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -107,7 +106,7 @@ func setupTestServer(m *testing.M) *httptest.Server {
 }
 
 func readTestData(testdataFilename string) string {
-	content, err := ioutil.ReadFile(testdataFilename)
+	content, err := os.ReadFile(testdataFilename)
 	if err != nil {
 		panic(err)
 	}
