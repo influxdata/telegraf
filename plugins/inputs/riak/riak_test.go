@@ -375,7 +375,7 @@ func TestRiak(t *testing.T) {
 		"soft_loaded_vnode_mbox_total":           int64(8526),
 		"sys_logical_processors":                 int64(56),
 		"sys_monitor_count":                      int64(341),
-		"sys_otp_release":                        int64("22"),
+		"sys_otp_release":                        string("22"),
 		"sys_port_count":                         int64(220),
 		"sys_process_count":                      int64(10984),
 		"sys_thread_pool_size":                   int64(128),
