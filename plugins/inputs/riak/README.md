@@ -15,200 +15,61 @@ The Riak plugin gathers metrics from one or more riak instances.
 
 Riak provides one measurement named "riak", with the following fields:
 
-- cpu_avg1
-- cpu_avg15
-- cpu_avg5
+- cpu_{avg1, avg5, avg15}
 - cpu_nprocs
-- clusteraae_fsm_active
-- clusteraae_fsm_create
-- clusteraae_fsm_create_error
+- clusteraae_fsm_{active, create, create_error}
 - connected_nodes
-- consistent_get_objsize_100
-- consistent_get_objsize_95
-- consistent_get_objsize_99
-- consistent_get_objsize_mean
-- consistent_get_objsize_median
-- consistent_get_time_100
-- consistent_get_time_95
-- consistent_get_time_99
-- consistent_get_time_mean
-- consistent_get_time_median
+- consistent_get_objsize_{100, 99, 95, mean, median}
+- consistent_get_time_{100, 99, 95, mean, median}
 - consistent_gets
 - consistent_gets_total
-- consistent_put_objsize_100
-- consistent_put_objsize_95
-- consistent_put_objsize_99
-- consistent_put_objsize_mean
-- consistent_put_objsize_median
-- consistent_put_time_100
-- consistent_put_time_95
-- consistent_put_time_99
-- consistent_put_time_mean
-- consistent_put_time_median
+- consistent_put_objsize_{100, 99, 95, mean, median}
+- consistent_put_time_{100, 99, 95, mean, median}
 - consistent_puts
 - consistent_puts_total
-- converge_delay_last
-- converge_delay_max
-- converge_delay_mean
-- converge_delay_min
-- coord_local_soft_loaded_total
-- coord_local_unloaded_total
-- coord_redir_least_loaded_total
-- coord_redir_loaded_local_total
-- coord_redir_unloaded_total
+- converge_delay_{last, max, min, mean}
+- coord_local_{soft_loaded, unloaded}_total
+- coord_redir_{least_loaded, loaded_local, unloaded}_total
 - coord_redirs_total
-- counter_actor_counts_100
-- counter_actor_counts_95
-- counter_actor_counts_99
-- counter_actor_counts_mean
-- counter_actor_counts_median
+- counter_actor_counts_{100, 99, 95, mean, median}
 - dropped_vnode_requests_totals
 - executing_mappers
 - gossip_received
 - handoff_timeouts
 - hll_bytes
-- hll_bytes_100
-- hll_bytes_95
-- hll_bytes_99
-- hll_bytes_mean
-- hll_bytes_median
-- hll_bytes_total
+- hll_bytes_{100, 99, 95, mean, median, total}
 - ignored_gossip_total
-- index_fsm_active
-- index_fsm_complete
-- index_fsm_create
-- index_fsm_create_error
-- index_fsm_results_100
-- index_fsm_results_95
-- index_fsm_results_99
-- index_fsm_results_mean
-- index_fsm_results_median
-- index_fsm_time_100
-- index_fsm_time_95
-- index_fsm_time_99
-- index_fsm_time_mean
-- index_fsm_time_median
+- index_fsm_{active, complete, create, create_error}
+- index_fsm_results_{100, 99, 95, mean, median}
+- index_fsm_time_{100, 99, 95, mean, median}
 - late_put_fsm_coordinator_ack
 - leveldb_read_block_error
-- list_fsm_active
-- list_fsm_create
-- list_fsm_create_error
-- list_fsm_create_error_total
-- list_fsm_create_total
-- map_actor_counts_100
-- map_actor_counts_95
-- map_actor_counts_99
-- map_actor_counts_mean
-- map_actor_counts_median
-- mem_allocated
-- mem_total
-- memory_atom
-- memory_atom_used
-- memory_binary
-- memory_code
-- memory_ets
-- memory_processes
-- memory_processes_used
-- memory_system
-- memory_total
-- ngrfetch_nofetch
-- ngrfetch_nofetch_total
-- ngrfetch_prefetch
-- ngrfetch_prefetch_total
-- ngrfetch_tofetch
-- ngrfetch_tofetch_total
-- ngrrepl_empty
-- ngrrepl_empty_total
-- ngrrepl_error
-- ngrrepl_error_total
-- ngrrepl_object
-- ngrrepl_object_total
-- ngrrepl_srcdiscard
-- ngrrepl_srcdiscard_total
-- node_get_fsm_active
-- node_get_fsm_active_60s
-- node_get_fsm_counter_objsize_100
-- node_get_fsm_counter_objsize_95
-- node_get_fsm_counter_objsize_99
-- node_get_fsm_counter_objsize_mean
-- node_get_fsm_counter_objsize_median
-- node_get_fsm_counter_siblings_100
-- node_get_fsm_counter_siblings_95
-- node_get_fsm_counter_siblings_99
-- node_get_fsm_counter_siblings_mean
-- node_get_fsm_counter_siblings_median
-- node_get_fsm_counter_time_100
-- node_get_fsm_counter_time_95
-- node_get_fsm_counter_time_99
-- node_get_fsm_counter_time_mean
-- node_get_gsm_counter_time_median
-- node_get_fsm_errors
-- node_get_fsm_errors_total
-- node_get_fsm_hll_objsize_100
-- node_get_fsm_hll_objsize_95
-- node_get_fsm_hll_objsize_99
-- node_get_fsm_hll_objsize_mean
-- node_get_fsm_hll_objsize_median
-- node_get_fsm_hll_siblings_100
-- node_get_fsm_hll_siblings_95
-- node_get_fsm_hll_siblings_99
-- node_get_fsm_hll_siblings_mean
-- node_get_fsm_hll_siblings_median
-- node_get_fsm_hll_time_100
-- node_get_fsm_hll_time_95
-- node_get_fsm_hll_time_99
-- node_get_fsm_hll_time_mean
-- node_get_fsm_hll_time_median
+- list_fsm_{active, create, create_total, create_error, create_error_total}
+- map_actor_counts_{100, 99, 95, mean, median}
+- mem_{allocated, total}
+- memory_{atom, atom_used, binary, code, ets, processes, processes_used, system, total}
+- ngrfetch_{nofetch, nofetch_total, prefetch, prefetch_total, tofetch, tofetch_total}
+- ngrrepl_{empty, empty_total, error, error_total, object, object_total, srcdiscard, srcdiscard_total}
+- node_get_fsm_{active, active_60s}
+- node_get_fsm_counter_objsize_{100, 99, 95, mean, median}
+- node_get_fsm_counter_siblings_{100, 99, 95, mean, median}
+- node_get_fsm_counter_time_{100, 99, 95, mean, median}
+- node_get_fsm_{errors, errors_total}
+- node_get_fsm_hll_objsize_{100, 99, 95, mean, median}
+- node_get_fsm_hll_siblings_{100, 99, 95, mean, median}
+- node_get_fsm_hll_time_{100, 99, 95, mean, median}
 - node_get_fsm_in_rate
-- node_get_fsm_map_objsize_100
-- node_get_fsm_map_objsize_95
-- node_get_fsm_map_objsize_99
-- node_get_fsm_map_objsize_mean
-- node_get_fsm_map_objsize_median
-- node_get_fsm_map_siblings_100
-- node_get_fsm_map_siblings_95
-- node_get_fsm_map_siblings_99
-- node_get_fsm_map_siblings_mean
-- node_get_fsm_map_siblings_median
-- node_get_fsm_map_time_100
-- node_get_fsm_map_time_95
-- node_get_fsm_map_time_99
-- node_get_fsm_map_time_mean
-- node_get_fsm_map_time_median
-- node_get_fsm_objsize_100
-- node_get_fsm_objsize_95
-- node_get_fsm_objsize_99
-- node_get_fsm_objsize_mean
-- node_get_fsm_objsize_median
+- node_get_fsm_map_objsize_{100, 99, 95, mean, median}
+- node_get_fsm_map_siblings_{100, 99, 95, mean, median}
+- node_get_fsm_map_time_{100, 99, 95, mean, median}
+- node_get_fsm_objsize_{100, 99, 95, mean, median}
 - node_get_fsm_out_rate
-- node_get_fsm_rejected
-- node_get_fsm_rejected_60s
-- node_get_fsm_rejected_total
-- node_get_fsm_set_objsize_100
-- node_get_fsm_set_objsize_95
-- node_get_fsm_set_objsize_99
-- node_get_fsm_set_objsize_mean
-- node_get_fsm_set_objsize_median
-- node_get_fsm_set_siblings_100
-- node_get_fsm_set_siblings_95
-- node_get_fsm_set_siblings_99
-- node_get_fsm_set_siblings_mean
-- node_get_fsm_set_siblings_median
-- node_get_fsm_set_time_100
-- node_get_fsm_set_time_95
-- node_get_fsm_set_time_99
-- node_get_fsm_set_time_mean
-- node_get_fsm_set_time_median
-- node_get_fsm_siblings_100
-- node_get_fsm_siblings_95
-- node_get_fsm_siblings_99
-- node_get_fsm_siblings_mean
-- node_get_fsm_siblings_median
-- node_get_fsm_time_100
-- node_get_fsm_time_95
-- node_get_fsm_time_99
-- node_get_fsm_time_mean
-- node_get_fsm_time_median
+- node_get_fsm_{rejected, rejected_60s, rejected_total}
+- node_get_fsm_set_objsize_{100, 99, 95, mean, median}
+- node_get_fsm_set_siblings_{100, 99, 95, mean, median}
+- node_get_fsm_set_time_{100, 99, 95, mean, median}
+- node_get_fsm_siblings_{100, 99, 95, mean, median}
+- node_get_fsm_time_{100, 99, 95, mean, median}
 - node_gets
 - node_gets_counter
 - node_gets_counter_total
@@ -221,36 +82,16 @@ Riak provides one measurement named "riak", with the following fields:
 - node_gets_total
 - node_put_fsm_active
 - node_put_fsm_active_60s
-- node_put_fsm_counter_time_100
-- node_put_fsm_counter_time_95
-- node_put_fsm_counter_time_99
-- node_put_fsm_counter_time_mean
-- node_put_fsm_counter_time_median
-- node_put_fsm_hll_time_100
-- node_put_fsm_hll_time_95
-- node_put_fsm_hll_time_99
-- node_put_fsm_hll_time_mean
-- node_put_fsm_hll_time_median
+- node_put_fsm_counter_time_{100, 99, 95, mean, median}
+- node_put_fsm_hll_time_{100, 99, 95, mean, median}
 - node_put_fsm_in_rate
-- node_put_fsm_map_time_100
-- node_put_fsm_map_time_95
-- node_put_fsm_map_time_99
-- node_put_fsm_map_time_mean
-- node_put_fsm_map_time_median
+- node_put_fsm_map_time_{100, 99, 95, mean, median}
 - node_put_fsm_out_rate
 - node_put_fsm_rejected
 - node_put_fsm_rejected_60s
 - node_put_fsm_rejected_total
-- node_put_fsm_set_time_100
-- node_put_fsm_set_time_95
-- node_put_fsm_set_time_99
-- node_put_fsm_set_time_mean
-- node_put_fsm_set_time_median
-- node_put_fsm_time_100
-- node_put_fsm_time_95
-- node_put_fsm_time_99
-- node_put_fsm_time_mean
-- node_put_fsm_time_median
+- node_put_fsm_set_time_{100, 99, 95, mean, median}
+- node_put_fsm_time_{100, 99, 95, mean, median}
 - node_puts
 - node_puts_counter
 - node_puts_counter_total
@@ -263,96 +104,42 @@ Riak provides one measurement named "riak", with the following fields:
 - node_puts_total
 - nodename
 - object_counter_merge
-- object_counter_merge_time_100
-- object_counter_merge_time_95
-- object_counter_merge_time_99
-- object_counter_merge_time_mean
-- object_counter_merge_time_median
+- object_counter_merge_time_{100, 99, 95, mean, median}
 - object_counter_merge_total
 - object_hll_merge
-- object_hll_merge_time_100
-- object_hll_merge_time_95
-- object_hll_merge_time_99
-- object_hll_merge_time_mean
-- object_hll_merge_time_median
+- object_hll_merge_time_{100, 99, 95, mean, median}
 - object_hll_merge_total
 - object_map_merge
-- object_map_merge_time_100
-- object_map_merge_time_95
-- object_map_merge_time_99
-- object_map_merge_time_mean
-- object_map_merge_time_median
+- object_map_merge_time_{100, 99, 95, mean, median}
 - object_map_merge_total
 - object_merge
-- object_merge_time_100
-- object_merge_time_95
-- object_merge_time_99
-- object_merge_time_mean
-- object_merge_time_median
+- object_merge_time_{100, 99, 95, mean, median}
 - object_merge_total
 - object_set_merge
-- object_set_merge_time_100
-- object_set_merge_time_95
-- object_set_merge_time_99
-- object_set_merge_time_mean
-- object_set_merge_time_median
+- object_set_merge_time_{100, 99, 95, mean, median}
 - object_set_merge_total
-- pbc_active
-- pbc_connects
-- pbc_connects_total
-- pipeline_active
-- pipeline_create_count
-- pipeline_create_error_count
-- pipeline_create_error_one
-- pipeline_create_one
+- pbc_{active, connects, connects_total}
+- pipeline_{active, create_count, create_one, create_error_count, create_error_one}
 - postcommit_fail
 - precommit_fail
 - read_repairs
-- read_repairs_counter
-- read_repairs_counter_total
-- read_repairs_fallback_notfound_count
-- read_repairs_fallback_notfound_one
-- read_repairs_fallback_outofdate_count
-- read_repairs_fallback_outofdate_one
-- read_repairs_hll
-- read_repairs_hll_total
-- read_repairs_map
-- read_repairs_map_total
-- read_repairs_primary_notfound_count
-- read_repairs_primary_notfound_one
-- read_repairs_primary_outofdate_count
-- read_repairs_primary_outofdate_one
-- read_repairs_set
-- read_repairs_set_total
+- read_repairs_{counter, counter_total}
+- read_repairs_fallback_{notfound_count, notfound_one, outofdate_count, outofdate_one}
+- read_repairs_{hll, hll_total}
+- read_repairs_{map, map_total}
+- read_repairs_primary_{notfound_count, notfound_one, outofdate_count, outofdate_one}
+- read_repairs_{set, set_total}
 - read_repairs_total
-- rebalance_delay_last
-- rebalance_delay_max
-- rebalance_delay_mean
-- rebalance_delay_min
+- rebalance_delay_{last, max, min, mean}
 - rejected_handoffs
-- riak_kv_vnodeq_max
-- riak_kv_vnodeq_mean
-- riak_kv_vnodeq_median
-- riak_kv_vnodeq_min
-- riak_kv_vnodeq_total
+- riak_kv_vnodeq_{max, min, mean, median, total}
 - riak_kv_vnodes_running
-- riak_pipe_vnodeq_max
-- riak_pipe_vnodeq_mean
-- riak_pipe_vnodeq_median
-- riak_pipe_vnodeq_min
-- riak_pipe_vnodeq_total
+- riak_pipe_vnodeq_{max, min, mean, median, total}
 - riak_pipe_vnodes_running
 - ring_creation_size
-- ring_members
-- ring_num_partitions
-- ring_ownership
-- rings_reconciled
-- rings_reconciled_total
-- set_actor_counts_100
-- set_actor_counts_95
-- set_actor_counts_99
-- set_actor_counts_mean
-- set_actor_counts_median
+- ring_{members, num_partition, ownership}
+- rings_{reconciled, reconciled_total}
+- set_actor_counts_{100, 99, 95, mean, median}
 - skipped_read_repairs
 - skipped_read_repairs_total
 - soft_loaded_vnode_mbox_total
@@ -404,32 +191,16 @@ Riak provides one measurement named "riak", with the following fields:
 - ttaaefs_sync_time_100
 - ttaaefs_sync_total
 - vnode_counter_update
-- vnode_counter_update_time_100
-- vnode_counter_update_time_95
-- vnode_counter_update_time_99
-- vnode_counter_update_time_mean
-- vnode_counter_update_time_median
+- vnode_counter_update_time_{100, 99, 95, mean, median}
 - vnode_counter_update_total
-- vnode_get_fsm_time_100
-- vnode_get_fsm_time_95
-- vnode_get_fsm_time_99
-- vnode_get_fsm_time_mean
-- vnode_get_fsm_time_median
+- vnode_get_fsm_time_{100, 99, 95, mean, median}
 - vnode_gets
 - vnode_gets_total
-- vnode_head_fsm_time_100
-- vnode_head_fsm_time_95
-- vnode_head_fsm_time_99
-- vnode_head_fsm_time_mean
-- vnode_head_fsm_time_median
+- vnode_head_fsm_time_{100, 99, 95, mean, median}
 - vnode_heads
 - vnode_heads_total
 - vnode_hll_update
-- vnode_hll_update_time_100
-- vnode_hll_update_time_95
-- vnode_hll_update_time_99
-- vnode_hll_update_time_mean
-- vnode_hll_update_time_median
+- vnode_hll_update_time_{100, 99, 95, mean, median}
 - vnode_hll_update_total
 - vnode_index_deletes
 - vnode_index_deletes_postings
@@ -444,78 +215,42 @@ Riak provides one measurement named "riak", with the following fields:
 - vnode_index_writes_postings_total
 - vnode_index_writes_total
 - vnode_map_update
-- vnode_map_update_time_100
-- vnode_map_update_time_95
-- vnode_map_update_time_99
-- vnode_map_update_time_mean
-- vnode_map_update_time_median
+- vnode_map_update_time_{100, 99, 95, mean, median}
 - vnode_map_update_total
 - vnode_mbox_check_timeout_total
-- vnode_put_fsm_time_100
-- vnode_put_fsm_time_95
-- vnode_put_fsm_time_99
-- vnode_put_fsm_time_mean
-- vnode_put_fsm_time_median
+- vnode_put_fsm_time_{100, 99, 95, mean, median}
 - vnode_puts
 - vnode_puts_total
 - vnode_set_update
-- vnode_set_update_time_100
-- vnode_set_update_time_95
-- vnode_set_update_time_99
-- vnode_set_update_time_mean
-- vnode_set_update_time_median
+- vnode_set_update_time_{100, 99, 95, mean, median}
 - vnode_set_update_total
-- worker_af1_pool_queuetime_100
-- worker_af1_pool_queuetime_mean
+- worker_af1_pool_queuetime_{100, mean}
 - worker_af1_pool_total
-- worker_af1_pool_worktime_100
-- worker_af1_pool_worktime_mean
-- worker_af2_pool_queuetime_100
-- worker_af2_pool_queuetime_mean
+- worker_af1_pool_worktime_{100, mean}
+- worker_af2_pool_queuetime_{100, mean}
 - worker_af2_pool_total
-- worker_af2_pool_worktime_100
-- worker_af2_pool_worktime_mean
-- worker_af3_pool_queuetime_100
-- worker_af3_pool_queuetime_mean
+- worker_af2_pool_worktime_{100, mean}
+- worker_af3_pool_queuetime_{100, mean}
 - worker_af3_pool_total
-- worker_af3_pool_worktime_100
-- worker_af3_pool_worktime_mean
-- worker_af4_pool_queuetime_100
-- worker_af4_pool_queuetime_mean
+- worker_af3_pool_worktime_{100, mean}
+- worker_af4_pool_queuetime_{100, mean}
 - worker_af4_pool_total
-- worker_af4_pool_worktime_100
-- worker_af4_pool_worktime_mean
-- worker_be_pool_queuetime_100
-- worker_be_pool_queuetime_mean
+- worker_af4_pool_worktime_{100, mean}
+- worker_be_pool_queuetime_{100, mean}
 - worker_be_pool_total
-- worker_be_pool_worktime_100
-- worker_be_pool_worktime_mean
-- worker_node_worker_pool_queuetime_100
-- worker_node_worker_pool_queuetime_mean
+- worker_be_pool_worktime_{100, mean}
+- worker_node_worker_pool_queuetime_{100, mean}
 - worker_node_worker_pool_total
-- worker_node_worker_pool_worktime_100
-- worker_node_worker_pool_worktime_mean
-- worker_unregistered_queuetime_100
-- worker_unregistered_queuetime_mean
+- worker_node_worker_pool_worktime_{100, mean}
+- worker_unregistered_queuetime_{100, mean}
 - worker_unregistered_total
-- worker_unregistered_worktime_100
-- worker_unregistered_worktime_mean
-- worker_vnode_pool_queuetime_100
-- worker_vnode_pool_queuetime_mean
+- worker_unregistered_worktime_{100, mean}
+- worker_vnode_pool_queuetime_{100, mean}
 - worker_vnode_pool_total
-- worker_vnode_pool_worktime_100
-- worker_vnode_pool_worktime_mean
+- worker_vnode_pool_worktime_{100, mean}
 - write_once_merge
-- write_once_put_objsize_100
-- write_once_put_objsize_95
-- write_once_put_objsize_99
-- write_once_put_objsize_mean
-- write_once_put_objsize_median
-- write_once_put_time_100
-- write_once_put_time_95
-- write_once_put_time_99
-- write_once_put_time_mean
-- write_once_put_time_median
+- write_once_put_objsize_{100, 99, 95, mean, median}
+- write_once_put_time_{100, 99, 95, mean, median}
 - write_once_puts
 - write_once_puts_total
 
