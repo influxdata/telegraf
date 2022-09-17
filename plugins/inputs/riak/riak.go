@@ -611,7 +611,7 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 			return fmt.Errorf("unable to build map of field values: %s", err)
 		}
 		value := reflect.Indirect(st).FieldByName(rs.Field(i).Name)
-		fields[key] = value
+		fields[key] = value.Interface()
 	}
 
 	// Accumulate the tags and values
