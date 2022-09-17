@@ -526,7 +526,7 @@ func TestRiak(t *testing.T) {
 		"write_once_put_time_mean":               int64(0),
 		"write_once_put_time_median":             int64(0),
 		"write_once_puts":                        int64(0),
-		"write_once_puts_total":                  int64(0)
+		"write_once_puts_total":                  int64(0),
 	}
 
 	// Expect the correct values for all tags
