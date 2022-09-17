@@ -73,5 +73,13 @@ on the given Google Cloud Storage Buckets.
 
 The example output
 
-```json
+```shell
+2022-09-17T17:52:19Z I! Starting Telegraf 1.25.0-a93ec9a0
+2022-09-17T17:52:19Z I! Available plugins: 209 inputs, 9 aggregators, 26 processors, 20 parsers, 57 outputs
+2022-09-17T17:52:19Z I! Loaded inputs: google_cloud_storage
+2022-09-17T17:52:19Z I! Loaded aggregators: 
+2022-09-17T17:52:19Z I! Loaded processors: 
+2022-09-17T17:52:19Z I! Loaded outputs: influxdb
+2022-09-17T17:52:19Z I! Tags enabled: host=user-N9RXNWKWY3
+2022-09-17T17:52:19Z I! [agent] Config: Interval:10s, Quiet:false, Hostname:"user-N9RXNWKWY3", Flush Interval:10s
 ```
