@@ -139,6 +139,7 @@ following works:
 - github.com/google/uuid [BSD 3-Clause "New" or "Revised" License](https://github.com/google/uuid/blob/master/LICENSE)
 - github.com/googleapis/enterprise-certificate-proxy [Apache License 2.0](https://github.com/googleapis/enterprise-certificate-proxy/blob/main/LICENSE)
 - github.com/googleapis/gax-go [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/gax-go/blob/master/LICENSE)
+- github.com/googleapis/go-type-adapters [Apache License 2.0](https://github.com/googleapis/go-type-adapters/blob/main/LICENSE)
 - github.com/gopcua/opcua [MIT License](https://github.com/gopcua/opcua/blob/master/LICENSE)
 - github.com/gophercloud/gophercloud [Apache License 2.0](https://github.com/gophercloud/gophercloud/blob/master/LICENSE)
 - github.com/gorilla/mux [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/mux/blob/master/LICENSE)
