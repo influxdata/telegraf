@@ -42,6 +42,7 @@ type KafkaConsumer struct {
 	Offset                 string          `toml:"offset"`
 	BalanceStrategy        string          `toml:"balance_strategy"`
 	Topics                 []string        `toml:"topics"`
+	TopicRefreshInterval   config.Duration `toml:"topic_refresh_interval"`
 	TopicRegexps           []string        `toml:"topic_regexps"`
 	TopicTag               string          `toml:"topic_tag"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
@@ -58,6 +59,7 @@ type KafkaConsumer struct {
 	config          *sarama.Config
 
 	parser parsers.Parser
+	mu     sync.Mutex
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 }
@@ -172,10 +174,30 @@ func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	var err error
 
-	// Check topic regexps and extend topic if needed
-	err = k.addTopicRegexps()
-	if err != nil {
-		return err
+	// If TopicRegexps is set, add matches to Topics
+	if len(k.TopicRegexps) > 0 {
+		k.Log.Infof("adding topic regexps %+v", k.TopicRegexps)
+		err = k.addTopicRegexps()
+		if err != nil {
+			return err
+		}
+		// If, additionally, TopicRefreshInterval is set,
+		// schedule the refresh.
+		if k.TopicRefreshInterval != 0 {
+			k.Log.Infof("refreshing topics every %f s",
+				float64(k.TopicRefreshInterval)/float64(1e9))
+			tick := time.Duration(k.TopicRefreshInterval)
+			ticker := time.NewTicker(tick)
+			go func() {
+				for range ticker.C {
+					k.Log.Infof("refreshing topics")
+					err = k.addTopicRegexps()
+					if err != nil {
+						k.Log.Errorf("topic refresh failed: %v", err)
+					}
+				}
+			}()
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -244,9 +266,6 @@ func (k *KafkaConsumer) addTopicRegexps() error {
 	var regexps []regexp.Regexp
 	var exists = struct{}{}
 
-	if len(k.TopicRegexps) == 0 {
-		return nil
-	}
 	kafkaClient, err := sarama.NewClient(k.Brokers, k.config)
 	if err != nil {
 		return err
@@ -262,12 +281,16 @@ func (k *KafkaConsumer) addTopicRegexps() error {
 	}
 	topicSet := make(map[string]struct{})
 	for _, t := range k.Topics {
+		// Get our preexisting topics
 		topicSet[t] = exists
 	}
 	for _, r := range regexps {
 		for _, t := range allTopics {
 			if r.MatchString(t) {
-				topicSet[t] = exists
+				if _, ok := topicSet[t]; !ok {
+					k.Log.Infof("adding new topic %s", t)
+					topicSet[t] = exists
+				}
 			}
 		}
 	}
@@ -275,7 +298,9 @@ func (k *KafkaConsumer) addTopicRegexps() error {
 	for t := range topicSet {
 		topicList = append(topicList, t)
 	}
-	k.Topics = topicList
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.Topics = topicList // Not sure we really need the mutex
 	return nil
 }
 
