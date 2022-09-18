@@ -36,10 +36,10 @@ func TestRiak(t *testing.T) {
 
 	// Expect the correct values for all known keys
 	expectFields := map[string]interface{}{
-		"clusteraae_fsm_active":       int64(0),
-		"clusteraae_fsm_create":       int64(0),
-		"clusteraae_fsm_create_error": int64(0),
-		// "connected_nodes":
+		"clusteraae_fsm_active":                 int64(0),
+		"clusteraae_fsm_create":                 int64(0),
+		"clusteraae_fsm_create_error":           int64(0),
+		"connected_nodes":                       []string{"riak@127.0.0.1"},
 		"consistent_get_objsize_100":            int64(0),
 		"consistent_get_objsize_95":             int64(0),
 		"consistent_get_objsize_99":             int64(0),
