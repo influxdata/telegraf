@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,24 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+func BenchmarkParseStatsDynamic(b *testing.B) {
+	stats := &riakStats{}
+	json.Unmarshal([]byte(response), stats)
+
+	for n := 0; n < b.N; n++ {
+		parseStatsDynamic(stats)
+	}
+}
+
+func BenchmarkParseStatsStatic(b *testing.B) {
+	stats := &riakStats{}
+	json.Unmarshal([]byte(response), stats)
+
+	for n := 0; n < b.N; n++ {
+		parseStatsStatic(stats)
+	}
+}
 
 func TestRiak(t *testing.T) {
 	// Create a test server with the const response JSON
