@@ -78,8 +78,6 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 	bucket := gcs.client.Bucket(bucketName)
 	it := bucket.Objects(gcs.ctx, &query)
 
-	gcs.Log.Debugf("Reading Data from Bucket ", bucketName)
-
 	processed := 0
 
 	var name string
@@ -124,7 +122,7 @@ func (gcs *GCS) createQuery() storage.Query {
 }
 
 func (gcs *GCS) shoudIgnore(name string) bool {
-	return gcs.offSet.OffSet == name
+	return gcs.offSet.OffSet == name || gcs.OffsetKey == name
 }
 
 func (gcs *GCS) processMeasurementsInObject(name string, bucket *storage.BucketHandle, acc telegraf.Accumulator) error {
@@ -144,7 +142,6 @@ func (gcs *GCS) processMeasurementsInObject(name string, bucket *storage.BucketH
 
 	for _, metric := range metrics {
 		acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
-		gcs.Log.Debug("the metrics", metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
 	}
 
 	return nil
@@ -164,6 +161,10 @@ func (gcs *GCS) reachedThreshlod(processed int) bool {
 }
 
 func (gcs *GCS) updateOffset(bucket *storage.BucketHandle, name string) error {
+	if gcs.shoudIgnore(name) {
+		return nil
+	}
+
 	offsetModel := NewOffset(name)
 	marshalled, err := json.Marshal(offsetModel)
 
