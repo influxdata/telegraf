@@ -110,4 +110,20 @@ confirmed to be an issue on an EVGA 2080 Ti.
 **NOTE:** For use with docker either generate your own custom docker image based
 on nvidia/cuda which also installs a telegraf package or use [volume mount
 binding](https://docs.docker.com/storage/bind-mounts/) to inject the required
-binary into the docker container.
+binary into the docker container. In particular you will need to pass through
+the /dev/nvidia* devices, the nvidia-smi binary and the nvidia libraries.
+An minimal docker-compose example of how to do this is:
+```text
+  telegraf:
+    image: telegraf
+    runtime: nvidia
+    devices:
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia0:/dev/nvidia0
+    volumes:
+      - ./telegraf/etc/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
+      - /usr/lib/x86_64-linux-gnu/nvidia:/usr/lib/x86_64-linux-gnu/nvidia:ro
+    environment:
+      - LD_PRELOAD=/usr/lib/x86_64-linux-gnu/nvidia/current/libnvidia-ml.so
+```
