@@ -235,7 +235,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
 	m, err := parser.Parse([]byte(line))
 	if err != nil {
-		if errors.Is(err, parsers.EOF) {
+		if errors.Is(err, parsers.ErrEOF) {
 			return nil, nil
 		}
 		return nil, err

@@ -392,7 +392,7 @@ hello,80,test_name2`
 	testCSVRows := []string{"garbage nonsense\r\n", "line1,line2,line3\r\n", "hello,80,test_name2\r\n"}
 
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
-	require.ErrorIs(t, err, parsers.EOF)
+	require.ErrorIs(t, err, parsers.ErrEOF)
 	require.Nil(t, metrics)
 	m, err := p.ParseLine(testCSVRows[1])
 	require.NoError(t, err)
@@ -466,7 +466,7 @@ func TestMultiHeader(t *testing.T) {
 	require.NoError(t, err)
 
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
-	require.ErrorIs(t, err, parsers.EOF)
+	require.ErrorIs(t, err, parsers.ErrEOF)
 	require.Nil(t, metrics)
 	m, err := p.ParseLine(testCSVRows[1])
 	require.NoError(t, err)
@@ -992,7 +992,7 @@ timestamp,type,name,status
 	rowIndex := 0
 	for ; rowIndex < 6; rowIndex++ {
 		m, err := p.ParseLine(testCSVRows[rowIndex])
-		require.ErrorIs(t, err, parsers.EOF)
+		require.ErrorIs(t, err, parsers.ErrEOF)
 		require.Nil(t, m)
 	}
 	m, err := p.ParseLine(testCSVRows[rowIndex])
@@ -1028,7 +1028,7 @@ func TestOverwriteDefaultTagsAndMetaDataTags(t *testing.T) {
 	require.NoError(t, err)
 	p.SetDefaultTags(map[string]string{"third": "bye", "fourth": "car"})
 	m, err := p.ParseLine("second=orange")
-	require.ErrorIs(t, err, parsers.EOF)
+	require.ErrorIs(t, err, parsers.ErrEOF)
 	require.Nil(t, m)
 	m, err = p.ParseLine("fourth=plain")
 	require.NoError(t, err)
@@ -1210,7 +1210,7 @@ func TestParseCSVLinewiseResetModeNone(t *testing.T) {
 		m, err := p.ParseLine(r)
 		// Header lines should return "not enough data"
 		if i < p.SkipRows+p.MetadataRows {
-			require.ErrorIs(t, err, parsers.EOF)
+			require.ErrorIs(t, err, parsers.ErrEOF)
 			require.Nil(t, m)
 			continue
 		}
@@ -1313,7 +1313,7 @@ timestamp,type,name,status
 	// Parsing another data line should fail as it is interpreted as header
 	additionalCSV := "2021-12-01T19:01:00+00:00,Reader,R009,5\r\n"
 	metrics, err = p.Parse([]byte(additionalCSV))
-	require.ErrorIs(t, err, parsers.EOF)
+	require.ErrorIs(t, err, parsers.ErrEOF)
 	require.Nil(t, metrics)
 
 	// Prepare a second CSV with different column names
@@ -1433,7 +1433,7 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 		m, err := p.ParseLine(r)
 		// Header lines should return "not enough data"
 		if i < p.SkipRows+p.MetadataRows {
-			require.ErrorIs(t, err, parsers.EOF)
+			require.ErrorIs(t, err, parsers.ErrEOF)
 			require.Nil(t, m)
 			continue
 		}

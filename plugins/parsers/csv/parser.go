@@ -200,7 +200,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	r := bytes.NewReader(buf)
 	metrics, err := parseCSV(p, r)
 	if err != nil && errors.Is(err, io.EOF) {
-		return nil, parsers.EOF
+		return nil, parsers.ErrEOF
 	}
 	return metrics, err
 }
@@ -209,18 +209,18 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if len(line) == 0 {
 		if p.remainingSkipRows > 0 {
 			p.remainingSkipRows--
-			return nil, parsers.EOF
+			return nil, parsers.ErrEOF
 		}
 		if p.remainingMetadataRows > 0 {
 			p.remainingMetadataRows--
-			return nil, parsers.EOF
+			return nil, parsers.ErrEOF
 		}
 	}
 	r := bytes.NewReader([]byte(line))
 	metrics, err := parseCSV(p, r)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			return nil, parsers.EOF
+			return nil, parsers.ErrEOF
 		}
 		return nil, err
 	}
