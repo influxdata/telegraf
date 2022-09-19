@@ -30,8 +30,13 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var parser expfmt.TextParser
 	var metrics []telegraf.Metric
 	var err error
-	// parse even if the buffer begins with a newline
+
+	// Make sure we have a finishing newline but no trailing one
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
+	if !bytes.HasSuffix(buf, []byte("\n")) {
+		buf = append(buf, []byte("\n")...)
+	}
+
 	// Read raw data
 	buffer := bytes.NewBuffer(buf)
 	reader := bufio.NewReader(buffer)
