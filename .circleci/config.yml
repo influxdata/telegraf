@@ -74,6 +74,7 @@ commands:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: rm -rf /c/Go
+            - run: choco feature enable -n allowGlobalConfirmation
             - restore_cache:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
