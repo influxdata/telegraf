@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -602,35 +599,6 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 	}
 
 	// Build a map of field values
-	fields, err := parseStatsDynamic(stats)
-	if err != nil {
-		return fmt.Errorf("unable to build map of field values: %s", err)
-	}
-
-	// Accumulate the tags and values
-	acc.AddFields("riak", fields, tags)
-
-	return nil
-}
-
-func parseStatsDynamic(stats *riakStats) (map[string]interface{}, error) {
-	// Build a map of field values
-	fields := make(map[string]interface{})
-	rs := reflect.TypeOf((*riakStats)(nil)).Elem()
-	st := reflect.ValueOf(stats)
-	for i := 0; i < rs.NumField(); i++ {
-		key, err := strconv.Unquote(strings.TrimPrefix(string(rs.Field(i).Tag), "json:"))
-		if err != nil {
-			return nil, fmt.Errorf("unable to build map of field values: %s", err)
-		}
-		value := reflect.Indirect(st).FieldByName(rs.Field(i).Name)
-		fields[key] = value.Interface()
-	}
-
-	return fields, nil
-}
-
-func parseStatsStatic(stats *riakStats) map[string]interface{} {
 	fields := map[string]interface{}{
 		"clusteraae_fsm_active":                  stats.ClusterAaeFsmActive,
 		"clusteraae_fsm_create":                  stats.ClusterAaeFsmCreate,
@@ -1137,7 +1105,14 @@ func parseStatsStatic(stats *riakStats) map[string]interface{} {
 		"write_once_puts_total":                  stats.WriteOncePutsTotal,
 	}
 
-	return fields
+	if err != nil {
+		return fmt.Errorf("unable to build map of field values: %s", err)
+	}
+
+	// Accumulate the tags and values
+	acc.AddFields("riak", fields, tags)
+
+	return nil
 }
 
 func init() {
