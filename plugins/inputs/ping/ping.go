@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-ping/ping"
+	probing "github.com/prometheus-community/pro-bing"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -127,7 +127,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 }
 
 type pingStats struct {
-	ping.Statistics
+	probing.Statistics
 	ttl int
 }
 
@@ -136,7 +136,7 @@ type NativePingFunc func(destination string) (*pingStats, error)
 func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	ps := &pingStats{}
 
-	pinger, err := ping.NewPinger(destination)
+	pinger, err := probing.NewPinger(destination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new pinger: %w", err)
 	}
@@ -163,9 +163,9 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	// Get Time to live (TTL) of first response, matching original implementation
 	once := &sync.Once{}
-	pinger.OnRecv = func(pkt *ping.Packet) {
+	pinger.OnRecv = func(pkt *probing.Packet) {
 		once.Do(func() {
-			ps.ttl = pkt.Ttl
+			ps.ttl = pkt.TTL
 		})
 	}
 
@@ -179,7 +179,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 			return nil, fmt.Errorf("permission changes required, refer to the ping plugin's README.md for more info")
 		}
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	ps.Statistics = *pinger.Statistics()
