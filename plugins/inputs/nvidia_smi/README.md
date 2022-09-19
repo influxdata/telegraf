@@ -113,6 +113,7 @@ binding](https://docs.docker.com/storage/bind-mounts/) to inject the required
 binary into the docker container. In particular you will need to pass through
 the /dev/nvidia* devices, the nvidia-smi binary and the nvidia libraries.
 An minimal docker-compose example of how to do this is:
+
 ```text
   telegraf:
     image: telegraf
