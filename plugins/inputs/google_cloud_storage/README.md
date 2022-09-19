@@ -6,42 +6,30 @@ on the given Google Cloud Storage Buckets.
 ## Configuration
 
 ```toml @sample.conf
-# Read metrics from Google Cloud Storage
+# Gather metrics by iterating the files located on a Cloud Storage Bucket.
 [[inputs.google_cloud_storage]]
   ## Required. Name of Cloud Storage bucket to ingest metrics from.
-  bucket = "your-cloud-storage-bucket"
+  bucket = "my-bucket"
 
   ## Optional. Prefix of Cloud Storage bucket keys to list metrics from.
-  # key_prefix = "prefix"
+  # key_prefix = "my-bucket"
 
   ## Key that will store the offsets in order to pick up where the ingestion was left.
-  offset_key = "offset_key.json"
+  offset_key = "offset_key"
 
-  ## Number of objects to pull and process per iteration.
+  ## Key that will store the offsets in order to pick up where the ingestion was left.
   objects_per_iteration = 10
 
+  ## Required. Data format to consume.
+  ## Each data format has its own unique set of configuration options.
+  ## Read more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "influx"
+  
   ## Optional. Filepath for GCP credentials JSON file to authorize calls to
   ## Google Cloud Storage APIs. If not set explicitly, Telegraf will attempt to use
   ## Application Default Credentials, which is preferred.
-  credentials_file = "/Users/user/Downloads/service-account.json"
-
-  data_format = "json"
-
-  json_query = "metrics"
-
-  tag_keys = [
-    "tags_datacenter",
-    "tags_host"
-  ]
-
-  json_name_key = "name"
-
-  json_time_key = "timestamp"
-
-  json_time_format = "unix_ms"
-
-  json_string_fields = ["cosine,sine"]
-
+  # credentials_file = "path/to/my/creds.json"
 ```
 
 ## Metrics
