@@ -11,6 +11,7 @@ setup_go () {
     git config --system core.longpaths true
     rm -rf /c/Go
     cp -r /c/Program\ Files/Go /c/
+    choco install mingw
 }
 
 if command -v go >/dev/null 2>&1; then
