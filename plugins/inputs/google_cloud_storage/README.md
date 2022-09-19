@@ -5,7 +5,7 @@ on the given Google Cloud Storage Buckets.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from Google Cloud Storage
 [[inputs.google_cloud_storage]]
   ## Required. Name of Cloud Storage bucket to ingest metrics from.
