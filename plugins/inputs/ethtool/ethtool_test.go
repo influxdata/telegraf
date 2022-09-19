@@ -12,15 +12,38 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var command *Ethtool
-var interfaceMap map[string]*InterfaceMock
+var (
+	command      *Ethtool
+	interfaceMap map[string]*InterfaceMock
+)
 
 type InterfaceMock struct {
-	Name        string
-	DriverName  string
-	Stat        map[string]uint64
-	LoopBack    bool
-	InterfaceUp bool
+	Name          string
+	DriverName    string
+	NamespaceName string
+	Stat          map[string]uint64
+	LoopBack      bool
+	InterfaceUp   bool
+}
+
+type NamespaceMock struct {
+	name string
+}
+
+func (n *NamespaceMock) Name() string {
+	return n.name
+}
+
+func (n *NamespaceMock) Interfaces() ([]NamespacedInterface, error) {
+	return nil, errors.New("it is a test bug to invoke this function")
+}
+
+func (n *NamespaceMock) DriverName(intf NamespacedInterface) (string, error) {
+	return "", errors.New("it is a test bug to invoke this function")
+}
+
+func (n *NamespaceMock) Stats(intf NamespacedInterface) (map[string]uint64, error) {
+	return nil, errors.New("it is a test bug to invoke this function")
 }
 
 type CommandEthtoolMock struct {
@@ -32,17 +55,23 @@ func (c *CommandEthtoolMock) Init() error {
 	return nil
 }
 
-func (c *CommandEthtoolMock) DriverName(intf string) (string, error) {
-	i := c.InterfaceMap[intf]
+func (c *CommandEthtoolMock) DriverName(intf NamespacedInterface) (string, error) {
+	i := c.InterfaceMap[intf.Name]
 	if i != nil {
 		return i.DriverName, nil
 	}
 	return "", errors.New("interface not found")
 }
 
-func (c *CommandEthtoolMock) Interfaces() ([]net.Interface, error) {
-	interfaceNames := make([]net.Interface, 0)
+func (c *CommandEthtoolMock) Interfaces(includeNamespaces bool) ([]NamespacedInterface, error) {
+	namespaces := map[string]*NamespaceMock{"": {name: ""}}
+
+	interfaces := make([]NamespacedInterface, 0)
 	for k, v := range c.InterfaceMap {
+		if v.NamespaceName != "" && !includeNamespaces {
+			continue
+		}
+
 		var flag net.Flags
 		// When interface is up
 		if v.InterfaceUp {
@@ -61,13 +90,27 @@ func (c *CommandEthtoolMock) Interfaces() ([]net.Interface, error) {
 			HardwareAddr: nil,
 			Flags:        flag,
 		}
-		interfaceNames = append(interfaceNames, iface)
+
+		// Ensure there is a namespace if necessary
+		if _, ok := namespaces[v.NamespaceName]; !ok {
+			namespaces[v.NamespaceName] = &NamespaceMock{
+				name: v.NamespaceName,
+			}
+		}
+
+		interfaces = append(
+			interfaces,
+			NamespacedInterface{
+				Interface: iface,
+				Namespace: namespaces[v.NamespaceName],
+			},
+		)
 	}
-	return interfaceNames, nil
+	return interfaces, nil
 }
 
-func (c *CommandEthtoolMock) Stats(intf string) (map[string]uint64, error) {
-	i := c.InterfaceMap[intf]
+func (c *CommandEthtoolMock) Stats(intf NamespacedInterface) (map[string]uint64, error) {
+	i := c.InterfaceMap[intf.Name]
 	if i != nil {
 		return i.Stat, nil
 	}
@@ -176,7 +219,7 @@ func setup() {
 		"tx_tso_fallbacks":               0,
 		"tx_tso_long_headers":            0,
 	}
-	eth1 := &InterfaceMock{"eth1", "driver1", eth1Stat, false, true}
+	eth1 := &InterfaceMock{"eth1", "driver1", "", eth1Stat, false, true}
 	interfaceMap[eth1.Name] = eth1
 
 	eth2Stat := map[string]uint64{
@@ -278,14 +321,218 @@ func setup() {
 		"tx_tso_fallbacks":               0,
 		"tx_tso_long_headers":            0,
 	}
-	eth2 := &InterfaceMock{"eth2", "driver1", eth2Stat, false, false}
+	eth2 := &InterfaceMock{"eth2", "driver1", "", eth2Stat, false, false}
 	interfaceMap[eth2.Name] = eth2
+
+	eth3Stat := map[string]uint64{
+		"interface_up":                   1,
+		"port_rx_1024_to_15xx":           25167245,
+		"port_rx_128_to_255":             1573526387,
+		"port_rx_15xx_to_jumbo":          137819058,
+		"port_rx_256_to_511":             772038107,
+		"port_rx_512_to_1023":            78294457,
+		"port_rx_64":                     8798065,
+		"port_rx_65_to_127":              450348015,
+		"port_rx_bad":                    0,
+		"port_rx_bad_bytes":              0,
+		"port_rx_bad_gtjumbo":            0,
+		"port_rx_broadcast":              6428250,
+		"port_rx_bytes":                  893460472634,
+		"port_rx_control":                0,
+		"port_rx_dp_di_dropped_packets":  2772680304,
+		"port_rx_dp_hlb_fetch":           0,
+		"port_rx_dp_hlb_wait":            0,
+		"port_rx_dp_q_disabled_packets":  0,
+		"port_rx_dp_streaming_packets":   0,
+		"port_rx_good":                   3045991334,
+		"port_rx_good_bytes":             893460472927,
+		"port_rx_gtjumbo":                0,
+		"port_rx_lt64":                   0,
+		"port_rx_multicast":              1639566045,
+		"port_rx_nodesc_drops":           0,
+		"port_rx_overflow":               0,
+		"port_rx_packets":                3045991334,
+		"port_rx_pause":                  0,
+		"port_rx_pm_discard_bb_overflow": 0,
+		"port_rx_pm_discard_mapping":     0,
+		"port_rx_pm_discard_qbb":         0,
+		"port_rx_pm_discard_vfifo_full":  0,
+		"port_rx_pm_trunc_bb_overflow":   0,
+		"port_rx_pm_trunc_qbb":           0,
+		"port_rx_pm_trunc_vfifo_full":    0,
+		"port_rx_unicast":                1399997040,
+		"port_tx_1024_to_15xx":           236,
+		"port_tx_128_to_255":             275090219,
+		"port_tx_15xx_to_jumbo":          926,
+		"port_tx_256_to_511":             48567221,
+		"port_tx_512_to_1023":            5142016,
+		"port_tx_64":                     113903973,
+		"port_tx_65_to_127":              161935699,
+		"port_tx_broadcast":              8,
+		"port_tx_bytes":                  94357131016,
+		"port_tx_control":                0,
+		"port_tx_lt64":                   0,
+		"port_tx_multicast":              325891647,
+		"port_tx_packets":                604640290,
+		"port_tx_pause":                  0,
+		"port_tx_unicast":                278748635,
+		"ptp_bad_syncs":                  1,
+		"ptp_fast_syncs":                 1,
+		"ptp_filter_matches":             0,
+		"ptp_good_syncs":                 136151,
+		"ptp_invalid_sync_windows":       0,
+		"ptp_no_time_syncs":              1,
+		"ptp_non_filter_matches":         0,
+		"ptp_oversize_sync_windows":      53,
+		"ptp_rx_no_timestamp":            0,
+		"ptp_rx_timestamp_packets":       0,
+		"ptp_sync_timeouts":              1,
+		"ptp_timestamp_packets":          0,
+		"ptp_tx_timestamp_packets":       0,
+		"ptp_undersize_sync_windows":     3,
+		"rx-0.rx_packets":                55659234,
+		"rx-1.rx_packets":                87880538,
+		"rx-2.rx_packets":                26746234,
+		"rx-3.rx_packets":                103026471,
+		"rx-4.rx_packets":                0,
+		"rx_eth_crc_err":                 0,
+		"rx_frm_trunc":                   0,
+		"rx_inner_ip_hdr_chksum_err":     0,
+		"rx_inner_tcp_udp_chksum_err":    0,
+		"rx_ip_hdr_chksum_err":           0,
+		"rx_mcast_mismatch":              0,
+		"rx_merge_events":                0,
+		"rx_merge_packets":               0,
+		"rx_nodesc_trunc":                0,
+		"rx_noskb_drops":                 0,
+		"rx_outer_ip_hdr_chksum_err":     0,
+		"rx_outer_tcp_udp_chksum_err":    0,
+		"rx_reset":                       0,
+		"rx_tcp_udp_chksum_err":          0,
+		"rx_tobe_disc":                   0,
+		"tx-0.tx_packets":                85843565,
+		"tx-1.tx_packets":                108642725,
+		"tx-2.tx_packets":                202596078,
+		"tx-3.tx_packets":                207561010,
+		"tx-4.tx_packets":                0,
+		"tx_cb_packets":                  4,
+		"tx_merge_events":                11025,
+		"tx_pio_packets":                 531928114,
+		"tx_pushes":                      604643378,
+		"tx_tso_bursts":                  0,
+		"tx_tso_fallbacks":               0,
+		"tx_tso_long_headers":            0,
+	}
+	eth3 := &InterfaceMock{"eth3", "driver1", "namespace1", eth3Stat, false, true}
+	interfaceMap[eth3.Name] = eth3
+
+	eth4Stat := map[string]uint64{
+		"interface_up":                   1,
+		"port_rx_1024_to_15xx":           25167245,
+		"port_rx_128_to_255":             1573526387,
+		"port_rx_15xx_to_jumbo":          137819058,
+		"port_rx_256_to_511":             772038107,
+		"port_rx_512_to_1023":            78294457,
+		"port_rx_64":                     8798065,
+		"port_rx_65_to_127":              450348015,
+		"port_rx_bad":                    0,
+		"port_rx_bad_bytes":              0,
+		"port_rx_bad_gtjumbo":            0,
+		"port_rx_broadcast":              6428250,
+		"port_rx_bytes":                  893460472634,
+		"port_rx_control":                0,
+		"port_rx_dp_di_dropped_packets":  2772680304,
+		"port_rx_dp_hlb_fetch":           0,
+		"port_rx_dp_hlb_wait":            0,
+		"port_rx_dp_q_disabled_packets":  0,
+		"port_rx_dp_streaming_packets":   0,
+		"port_rx_good":                   3045991334,
+		"port_rx_good_bytes":             893460472927,
+		"port_rx_gtjumbo":                0,
+		"port_rx_lt64":                   0,
+		"port_rx_multicast":              1639566045,
+		"port_rx_nodesc_drops":           0,
+		"port_rx_overflow":               0,
+		"port_rx_packets":                3045991334,
+		"port_rx_pause":                  0,
+		"port_rx_pm_discard_bb_overflow": 0,
+		"port_rx_pm_discard_mapping":     0,
+		"port_rx_pm_discard_qbb":         0,
+		"port_rx_pm_discard_vfifo_full":  0,
+		"port_rx_pm_trunc_bb_overflow":   0,
+		"port_rx_pm_trunc_qbb":           0,
+		"port_rx_pm_trunc_vfifo_full":    0,
+		"port_rx_unicast":                1399997040,
+		"port_tx_1024_to_15xx":           236,
+		"port_tx_128_to_255":             275090219,
+		"port_tx_15xx_to_jumbo":          926,
+		"port_tx_256_to_511":             48567221,
+		"port_tx_512_to_1023":            5142016,
+		"port_tx_64":                     113903973,
+		"port_tx_65_to_127":              161935699,
+		"port_tx_broadcast":              8,
+		"port_tx_bytes":                  94357131016,
+		"port_tx_control":                0,
+		"port_tx_lt64":                   0,
+		"port_tx_multicast":              325891647,
+		"port_tx_packets":                604640290,
+		"port_tx_pause":                  0,
+		"port_tx_unicast":                278748635,
+		"ptp_bad_syncs":                  1,
+		"ptp_fast_syncs":                 1,
+		"ptp_filter_matches":             0,
+		"ptp_good_syncs":                 136151,
+		"ptp_invalid_sync_windows":       0,
+		"ptp_no_time_syncs":              1,
+		"ptp_non_filter_matches":         0,
+		"ptp_oversize_sync_windows":      53,
+		"ptp_rx_no_timestamp":            0,
+		"ptp_rx_timestamp_packets":       0,
+		"ptp_sync_timeouts":              1,
+		"ptp_timestamp_packets":          0,
+		"ptp_tx_timestamp_packets":       0,
+		"ptp_undersize_sync_windows":     3,
+		"rx-0.rx_packets":                55659234,
+		"rx-1.rx_packets":                87880538,
+		"rx-2.rx_packets":                26746234,
+		"rx-3.rx_packets":                103026471,
+		"rx-4.rx_packets":                0,
+		"rx_eth_crc_err":                 0,
+		"rx_frm_trunc":                   0,
+		"rx_inner_ip_hdr_chksum_err":     0,
+		"rx_inner_tcp_udp_chksum_err":    0,
+		"rx_ip_hdr_chksum_err":           0,
+		"rx_mcast_mismatch":              0,
+		"rx_merge_events":                0,
+		"rx_merge_packets":               0,
+		"rx_nodesc_trunc":                0,
+		"rx_noskb_drops":                 0,
+		"rx_outer_ip_hdr_chksum_err":     0,
+		"rx_outer_tcp_udp_chksum_err":    0,
+		"rx_reset":                       0,
+		"rx_tcp_udp_chksum_err":          0,
+		"rx_tobe_disc":                   0,
+		"tx-0.tx_packets":                85843565,
+		"tx-1.tx_packets":                108642725,
+		"tx-2.tx_packets":                202596078,
+		"tx-3.tx_packets":                207561010,
+		"tx-4.tx_packets":                0,
+		"tx_cb_packets":                  4,
+		"tx_merge_events":                11025,
+		"tx_pio_packets":                 531928114,
+		"tx_pushes":                      604643378,
+		"tx_tso_bursts":                  0,
+		"tx_tso_fallbacks":               0,
+		"tx_tso_long_headers":            0,
+	}
+	eth4 := &InterfaceMock{"eth4", "driver1", "namespace2", eth4Stat, false, true}
+	interfaceMap[eth4.Name] = eth4
 
 	// dummy loopback including dummy stat to ensure that the ignore feature is working
 	lo0Stat := map[string]uint64{
 		"dummy": 0,
 	}
-	lo0 := &InterfaceMock{"lo0", "", lo0Stat, true, true}
+	lo0 := &InterfaceMock{"lo0", "", "", lo0Stat, true, true}
 	interfaceMap[lo0.Name] = lo0
 
 	c := &CommandEthtoolMock{interfaceMap}
@@ -298,7 +545,7 @@ func setup() {
 }
 
 func toStringMapInterface(in map[string]uint64) map[string]interface{} {
-	var m = map[string]interface{}{}
+	m := map[string]interface{}{}
 	for k, v := range in {
 		m[k] = v
 	}
@@ -306,7 +553,7 @@ func toStringMapInterface(in map[string]uint64) map[string]interface{} {
 }
 
 func toStringMapUint(in map[string]interface{}) map[string]uint64 {
-	var m = map[string]uint64{}
+	m := map[string]uint64{}
 	for k, v := range in {
 		t := v.(uint64)
 		m[k] = t
@@ -332,6 +579,7 @@ func TestGather(t *testing.T) {
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
+		"namespace": "",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
@@ -340,6 +588,7 @@ func TestGather(t *testing.T) {
 	expectedTagsEth2 := map[string]string{
 		"driver":    "driver1",
 		"interface": "eth2",
+		"namespace": "",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
 }
@@ -364,6 +613,7 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
+		"namespace": "",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
 
@@ -374,6 +624,7 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 	expectedTagsEth2 := map[string]string{
 		"interface": "eth2",
 		"driver":    "driver1",
+		"namespace": "",
 	}
 	acc.AssertDoesNotContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
 }
@@ -398,6 +649,7 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
+		"namespace": "",
 	}
 	acc.AssertDoesNotContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
 
@@ -408,6 +660,7 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 	expectedTagsEth2 := map[string]string{
 		"interface": "eth2",
 		"driver":    "driver1",
+		"namespace": "",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
 }
@@ -432,8 +685,92 @@ func TestSkipMetricsForInterfaceDown(t *testing.T) {
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
+		"namespace": "",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
+}
+
+func TestGatherIncludeNamespaces(t *testing.T) {
+	setup()
+	var acc testutil.Accumulator
+
+	command.NamespaceInclude = append(command.NamespaceInclude, "namespace1")
+
+	err := command.Init()
+	require.NoError(t, err)
+
+	err = command.Gather(&acc)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 1)
+
+	// Should contain eth3
+	expectedFieldsEth3 := toStringMapInterface(interfaceMap["eth3"].Stat)
+	expectedFieldsEth3["interface_up_counter"] = expectedFieldsEth3["interface_up"]
+	expectedFieldsEth3["interface_up"] = true
+	expectedTagsEth3 := map[string]string{
+		"interface": "eth3",
+		"driver":    "driver1",
+		"namespace": "namespace1",
+	}
+	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth3, expectedTagsEth3)
+
+	// Should not contain eth2
+	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
+	expectedFieldsEth2["interface_up"] = false
+	expectedTagsEth2 := map[string]string{
+		"interface": "eth2",
+		"driver":    "driver1",
+		"namespace": "",
+	}
+	acc.AssertDoesNotContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
+}
+
+func TestGatherIgnoreNamespaces(t *testing.T) {
+	setup()
+	var acc testutil.Accumulator
+
+	command.NamespaceExclude = append(command.NamespaceExclude, "namespace2")
+
+	err := command.Init()
+	require.NoError(t, err)
+
+	err = command.Gather(&acc)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 3)
+
+	// Should not contain eth4
+	expectedFieldsEth4 := toStringMapInterface(interfaceMap["eth4"].Stat)
+	expectedFieldsEth4["interface_up_counter"] = expectedFieldsEth4["interface_up"]
+	expectedFieldsEth4["interface_up"] = true
+	expectedTagsEth4 := map[string]string{
+		"interface": "eth4",
+		"driver":    "driver1",
+		"namespace": "namespace2",
+	}
+	acc.AssertDoesNotContainsTaggedFields(t, pluginName, expectedFieldsEth4, expectedTagsEth4)
+
+	// Should contain eth2
+	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
+	expectedFieldsEth2["interface_up"] = false
+	expectedTagsEth2 := map[string]string{
+		"interface": "eth2",
+		"driver":    "driver1",
+		"namespace": "",
+	}
+	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
+
+	// Should contain eth3
+	expectedFieldsEth3 := toStringMapInterface(interfaceMap["eth3"].Stat)
+	expectedFieldsEth3["interface_up_counter"] = expectedFieldsEth3["interface_up"]
+	expectedFieldsEth3["interface_up"] = true
+	expectedTagsEth3 := map[string]string{
+		"interface": "eth3",
+		"driver":    "driver1",
+		"namespace": "namespace1",
+	}
+	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth3, expectedTagsEth3)
 }
 
 type TestCase struct {
@@ -483,7 +820,8 @@ func TestNormalizedKeys(t *testing.T) {
 				"port_rx":              uint64(1),
 				"port_tx":              uint64(0),
 				"interface_up":         true,
-				"interface_up_counter": uint64(0)},
+				"interface_up_counter": uint64(0),
+			},
 		},
 		{
 			normalization: []string{"underscore", "lower", "snakecase", "trim"},
@@ -542,10 +880,11 @@ func TestNormalizedKeys(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		eth0 := &InterfaceMock{"eth0", "e1000e", toStringMapUint(c.stats), false, true}
+		eth0 := &InterfaceMock{"eth0", "e1000e", "", toStringMapUint(c.stats), false, true}
 		expectedTags := map[string]string{
 			"interface": eth0.Name,
 			"driver":    eth0.DriverName,
+			"namespace": "",
 		}
 
 		interfaceMap = make(map[string]*InterfaceMock)
