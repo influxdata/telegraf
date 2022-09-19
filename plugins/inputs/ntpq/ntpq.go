@@ -223,6 +223,10 @@ func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
 				}
 				fields[col.name] = value
 			case FieldDuration:
+				// Ignore fields only containing a minus
+				if raw == "-" {
+					continue
+				}
 				factor := int64(1)
 				suffix := raw[len(raw)-1:]
 				switch suffix {
