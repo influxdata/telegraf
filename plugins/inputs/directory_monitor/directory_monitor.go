@@ -294,7 +294,7 @@ func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Re
 func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
 	metrics, err = parser.Parse(line)
 	if err != nil {
-		if errors.Is(err, parsers.ErrNotEnoughData) {
+		if errors.Is(err, parsers.EOF) {
 			return nil, nil
 		}
 		return nil, err
