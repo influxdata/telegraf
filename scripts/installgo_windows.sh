@@ -5,13 +5,11 @@ set -eux
 GO_VERSION="1.19.1"
 
 setup_go () {
-    choco feature enable -n allowGlobalConfirmation
     choco upgrade golang --allow-downgrade --version=${GO_VERSION}
     choco install make
     git config --system core.longpaths true
     rm -rf /c/Go
     cp -r /c/Program\ Files/Go /c/
-    choco install mingw
 }
 
 if command -v go >/dev/null 2>&1; then
