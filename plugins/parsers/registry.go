@@ -162,7 +162,7 @@ type Config struct {
 	CSVMetadataSeparators []string `toml:"csv_metadata_separators"`
 	CSVMetadataTrimSet    string   `toml:"csv_metadata_trim_set"`
 
-	// avro configuration
+	// Avro configuration
 	AvroSchemaRegistry  string   `toml:"avro_schema_registry"`
 	AvroSchema          string   `toml:"avro_schema"`
 	AvroMeasurement     string   `toml:"avro_measurement"`
@@ -170,6 +170,7 @@ type Config struct {
 	AvroFields          []string `toml:"avro_fields"`
 	AvroTimestamp       string   `toml:"avro_timestamp"`
 	AvroTimestampFormat string   `toml:"avro_timestamp_format"`
+	AvroFieldSeparator  string   `toml:"avro_field_separator"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`

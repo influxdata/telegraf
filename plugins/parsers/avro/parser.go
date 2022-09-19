@@ -23,6 +23,7 @@ type Parser struct {
 	Timestamp       string   `toml:"avro_timestamp"`
 	TimestampFormat string   `toml:"avro_timestamp_format"`
 	DiscardArrays   bool     `toml:"avro_discard_arrays"`
+	FieldSeparator  string   `toml:"avro_field_separator"`
 	DefaultTags     map[string]string
 	TimeFunc        func() time.Time
 
@@ -182,9 +183,14 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 	// But if we do it this way, we flatten any compound structures,
 	// including arrays.  Goavro is only going to hand us back
 	// arrays, not maps.
-	flat, err := flatten.Flatten(fields, "", flatten.UnderscoreStyle)
-	// To emulate streamreactor, you'd want:
-	// flatten.SeparatorStyle{Before: "", Middle: "", After: ""}
+	// The default (the separator string is empty) is equivalent to
+	// what streamreactor does.
+	sep := flatten.SeparatorStyle{
+		Before: "",
+		Middle: p.FieldSeparator,
+		After:  "",
+	}
+	flat, err := flatten.Flatten(fields, "", sep)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +231,7 @@ func (p *Parser) InitFromConfig(config *parsers.Config) error {
 	p.Fields = config.AvroFields
 	p.Timestamp = config.AvroTimestamp
 	p.TimestampFormat = config.AvroTimestampFormat
+	p.FieldSeparator = config.AvroFieldSeparator
 	p.DefaultTags = config.DefaultTags
 
 	return p.Init()

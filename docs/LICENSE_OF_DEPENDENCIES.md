@@ -198,6 +198,7 @@ following works:
 - github.com/jcmturner/gofork [BSD 3-Clause "New" or "Revised" License](https://github.com/jcmturner/gofork/blob/master/LICENSE)
 - github.com/jcmturner/gokrb5 [Apache License 2.0](https://github.com/jcmturner/gokrb5/blob/master/LICENSE)
 - github.com/jcmturner/rpc [Apache License 2.0](https://github.com/jcmturner/rpc/blob/master/LICENSE)
+- github.com/jeremywohl/flatten [MIT License](https://github.com/jeremywohl/flatten/blob/master/LICENSE)
 - github.com/jhump/protoreflect [Apache License 2.0](https://github.com/jhump/protoreflect/blob/master/LICENSE)
 - github.com/jmespath/go-jmespath [Apache License 2.0](https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
 - github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/LICENSE.md)

@@ -78,7 +78,10 @@ The message is supposed to be encoded as follows:
   ## a2="c".
   # avro_discard_arrays = true
 
-
+  ## Used to separate parts of array structures.  As above, the default
+  ## is the empty string, so a=["a", "b"] becomes a0="a", a1="b".
+  ## If this were set to "_", then it would be a_0="a", a_1="b".
+  # avro_field_separator = "_"
 ```
 
 ### avro_timestamp, avro_timestamp_format
