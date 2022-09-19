@@ -36,11 +36,10 @@ func NewRiak() *Riak {
 
 // Type riakStats represents the data that is received from Riak.
 //
-// For a complete list of all metrics supported by Riak, see the "[riak_kv_stat]"
-// and "[riak_kv_stat_bc]" modules.
-//
-// [riak_kv_stat]: https://github.com/basho/riak_kv/blob/develop-3.0/src/riak_kv_stat.erl#L179
-// [riak_kv_stat_bc]: https://github.com/basho/riak_kv/blob/develop-3.0/src/riak_kv_stat_bc.erl
+// Sadly, Riak's documentation on this aspect is dated and doesn't
+// include the full lists of available metrics.
+// (see https://www.tiot.jp/riak-docs/riak/kv/3.0.4/using/reference/statistics-monitoring/).
+// This list of metrics came from running `riak admin status` in our Riak 3.0.10 cluster.
 type riakStats struct {
 	ClusterAaeFsmActive               int64    `json:"clusteraae_fsm_active"`
 	ClusterAaeFsmCreate               int64    `json:"clusteraae_fsm_create"`
