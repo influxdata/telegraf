@@ -2,7 +2,6 @@ package csv
 
 import (
 	"fmt"
-	"io"
 	"testing"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -392,8 +392,7 @@ hello,80,test_name2`
 	testCSVRows := []string{"garbage nonsense\r\n", "line1,line2,line3\r\n", "hello,80,test_name2\r\n"}
 
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
-	require.Error(t, io.EOF, err)
-	require.Error(t, err)
+	require.ErrorIs(t, err, parsers.ErrEOF)
 	require.Nil(t, metrics)
 	m, err := p.ParseLine(testCSVRows[1])
 	require.NoError(t, err)
@@ -467,8 +466,7 @@ func TestMultiHeader(t *testing.T) {
 	require.NoError(t, err)
 
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
-	require.Error(t, io.EOF, err)
-	require.Error(t, err)
+	require.ErrorIs(t, err, parsers.ErrEOF)
 	require.Nil(t, metrics)
 	m, err := p.ParseLine(testCSVRows[1])
 	require.NoError(t, err)
@@ -994,8 +992,7 @@ timestamp,type,name,status
 	rowIndex := 0
 	for ; rowIndex < 6; rowIndex++ {
 		m, err := p.ParseLine(testCSVRows[rowIndex])
-		require.Error(t, io.EOF, err)
-		require.Error(t, err)
+		require.ErrorIs(t, err, parsers.ErrEOF)
 		require.Nil(t, m)
 	}
 	m, err := p.ParseLine(testCSVRows[rowIndex])
@@ -1031,8 +1028,7 @@ func TestOverwriteDefaultTagsAndMetaDataTags(t *testing.T) {
 	require.NoError(t, err)
 	p.SetDefaultTags(map[string]string{"third": "bye", "fourth": "car"})
 	m, err := p.ParseLine("second=orange")
-	require.Error(t, io.EOF, err)
-	require.Error(t, err)
+	require.ErrorIs(t, err, parsers.ErrEOF)
 	require.Nil(t, m)
 	m, err = p.ParseLine("fourth=plain")
 	require.NoError(t, err)
@@ -1212,13 +1208,16 @@ func TestParseCSVLinewiseResetModeNone(t *testing.T) {
 	var metrics []telegraf.Metric
 	for i, r := range testCSV {
 		m, err := p.ParseLine(r)
-		// Header lines should return EOF
-		if m == nil {
-			require.Error(t, io.EOF, err)
+		// Header lines should return "not enough data"
+		if i < p.SkipRows+p.MetadataRows {
+			require.ErrorIs(t, err, parsers.ErrEOF)
+			require.Nil(t, m)
 			continue
 		}
 		require.NoErrorf(t, err, "failed in row %d", i)
-		metrics = append(metrics, m)
+		if m != nil {
+			metrics = append(metrics, m)
+		}
 	}
 	testutil.RequireMetricsEqual(t, expected, metrics)
 
@@ -1314,8 +1313,8 @@ timestamp,type,name,status
 	// Parsing another data line should fail as it is interpreted as header
 	additionalCSV := "2021-12-01T19:01:00+00:00,Reader,R009,5\r\n"
 	metrics, err = p.Parse([]byte(additionalCSV))
+	require.ErrorIs(t, err, parsers.ErrEOF)
 	require.Nil(t, metrics)
-	require.Error(t, io.EOF, err)
 
 	// Prepare a second CSV with different column names
 	testCSV = `garbage nonsense that needs be skipped
@@ -1432,13 +1431,16 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 	var metrics []telegraf.Metric
 	for i, r := range testCSV {
 		m, err := p.ParseLine(r)
-		// Header lines should return EOF
-		if m == nil {
-			require.Error(t, io.EOF, err)
+		// Header lines should return "not enough data"
+		if i < p.SkipRows+p.MetadataRows {
+			require.ErrorIs(t, err, parsers.ErrEOF)
+			require.Nil(t, m)
 			continue
 		}
 		require.NoErrorf(t, err, "failed in row %d", i)
-		metrics = append(metrics, m)
+		if m != nil {
+			metrics = append(metrics, m)
+		}
 	}
 	testutil.RequireMetricsEqual(t, expected, metrics)
 
