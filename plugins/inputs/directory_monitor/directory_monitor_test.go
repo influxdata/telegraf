@@ -99,6 +99,77 @@ func TestCSVGZImport(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCSVGZImportWithHeader(t *testing.T) {
+	acc := testutil.Accumulator{}
+	testCsvFile := "test.csv"
+	testCsvGzFile := "test.csv.gz"
+
+	// Establish process directory and finished directory.
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
+
+	// Init plugin.
+	r := DirectoryMonitor{
+		Directory:          processDirectory,
+		FinishedDirectory:  finishedDirectory,
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
+	}
+	err := r.Init()
+	require.NoError(t, err)
+
+	r.SetParserFunc(func() (parsers.Parser, error) {
+		parser := csv.Parser{
+			HeaderRowCount: 1,
+			SkipRows:       1,
+		}
+		err := parser.Init()
+		return &parser, err
+	})
+	r.Log = testutil.Logger{}
+
+	// Write csv file to process into the 'process' directory.
+	f, err := os.Create(filepath.Join(processDirectory, testCsvFile))
+	require.NoError(t, err)
+	_, err = f.WriteString("This is some garbage to be skipped\n")
+	require.NoError(t, err)
+	_, err = f.WriteString("thing,color\nsky,blue\ngrass,green\nclifford,red\n")
+	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
+
+	// Write csv.gz file to process into the 'process' directory.
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	_, err = w.Write([]byte("This is some garbage to be skipped\n"))
+	require.NoError(t, err)
+	_, err = w.Write([]byte("thing,color\nsky,blue\ngrass,green\nclifford,red\n"))
+	require.NoError(t, err)
+	err = w.Close()
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(processDirectory, testCsvGzFile), b.Bytes(), 0666)
+	require.NoError(t, err)
+
+	// Start plugin before adding file.
+	err = r.Start(&acc)
+	require.NoError(t, err)
+	err = r.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(6)
+	r.Stop()
+
+	// Verify that we read both files once.
+	require.Equal(t, len(acc.Metrics), 6)
+
+	// File should have gone back to the test directory, as we configured.
+	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
+	require.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvGzFile))
+	require.NoError(t, err)
+}
+
 func TestMultipleJSONFileImports(t *testing.T) {
 	acc := testutil.Accumulator{}
 	testJSONFile := "test.json"
