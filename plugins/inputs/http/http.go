@@ -7,7 +7,6 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -196,7 +195,7 @@ func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
 		if err != nil {
 			return nil, err
 		}
-		data, err := ioutil.ReadAll(rc)
+		data, err := io.ReadAll(rc)
 		if err != nil {
 			return nil, err
 		}
