@@ -59,6 +59,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 		modules, err := os.ReadDir(path)
 		if err != nil {
 			log.Warnf("Can't read directory %v", modules)
+			continue
 		}
 
 		for _, entry := range modules {
