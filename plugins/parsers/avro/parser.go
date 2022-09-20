@@ -14,25 +14,24 @@ import (
 )
 
 type Parser struct {
-	MetricName      string   `toml:"metric_name"`
-	SchemaRegistry  string   `toml:"avro_schema_registry"`
-	Schema          string   `toml:"avro_schema"`
-	Measurement     string   `toml:"avro_measurement"`
-	Tags            []string `toml:"avro_tags"`
-	Fields          []string `toml:"avro_fields"`
-	Timestamp       string   `toml:"avro_timestamp"`
-	TimestampFormat string   `toml:"avro_timestamp_format"`
-	DiscardArrays   bool     `toml:"avro_discard_arrays"`
-	FieldSeparator  string   `toml:"avro_field_separator"`
-	DefaultTags     map[string]string
-	TimeFunc        func() time.Time
+	MetricName       string            `toml:"metric_name"`
+	SchemaRegistry   string            `toml:"avro_schema_registry"`
+	Schema           string            `toml:"avro_schema"`
+	Measurement      string            `toml:"avro_measurement"`
+	Tags             []string          `toml:"avro_tags"`
+	Fields           []string          `toml:"avro_fields"`
+	Timestamp        string            `toml:"avro_timestamp"`
+	TimestampFormat  string            `toml:"avro_timestamp_format"`
+	DiscardArrays    bool              `toml:"avro_discard_arrays"`
+	FieldSeparator   string            `toml:"avro_field_separator"`
+	RoundTimestampTo string            `toml:"avro_round_timestamp_to"`
+	DefaultTags      map[string]string `toml:"-"`
 
-	Log telegraf.Logger `toml:"-"`
+	Log         telegraf.Logger `toml:"-"`
+	registryObj *SchemaRegistry
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	var schema string
-
 	if len(buf) < 5 {
 		err := fmt.Errorf("buf is %d bytes; must be at least 5", len(buf))
 		return nil, err
@@ -40,22 +39,23 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
 	binaryData := buf[5:]
 
-	switch {
-	case p.SchemaRegistry != "":
-		schemaRegistry := NewSchemaRegistry(p.SchemaRegistry)
-		retrSchema, err := schemaRegistry.getSchema(schemaID)
+	var schema string
+	var codec *goavro.Codec
+	var err error
+
+	if p.SchemaRegistry != "" {
+		schemastruct, err := p.registryObj.getSchemaAndCodec(schemaID)
 		if err != nil {
 			return nil, err
 		}
-		schema = retrSchema
-	default:
+		schema = schemastruct.Schema
+		codec = schemastruct.Codec
+	} else {
 		schema = p.Schema
-	}
-
-	codec, err := goavro.NewCodec(schema)
-
-	if err != nil {
-		return nil, err
+		codec, err = goavro.NewCodec(schema)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	native, _, err := codec.NativeFromBinary(binaryData)
@@ -88,32 +88,35 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) parseTimestamp(timestamp interface{}) (time.Time, error) {
-	if timestamp == nil {
-		return p.TimeFunc(), nil
-	}
-
-	if p.TimestampFormat == "" {
-		return p.TimeFunc(), fmt.Errorf("must specify timestamp format")
-	}
-
-	metricTime, err := internal.ParseTimestamp(p.TimestampFormat, timestamp, "UTC")
-	if err != nil {
-		return p.TimeFunc(), err
-	}
-
-	return metricTime, nil
-}
-
 func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metric, error) {
 	deep, ok := native.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("cannot cast native interface {} to map[string]interface{}")
 	}
 
-	metricTime, err := p.parseTimestamp(nestedValue(deep[p.Timestamp]))
+	timestamp := nestedValue(deep[p.Timestamp])
+	if timestamp == nil {
+		timestamp = time.Now()
+	}
+
+	metricTime, err := internal.ParseTimestamp(p.TimestampFormat, timestamp, "UTC")
 	if err != nil {
 		return nil, err
+	}
+
+	if p.RoundTimestampTo != "" {
+		// If we're still using this in 2262, it's gonna break.
+		nanos := metricTime.UnixNano()
+		if p.RoundTimestampTo == "s" {
+			nanos = metricTime.Unix() * 1e9
+		}
+		if p.RoundTimestampTo == "ms" {
+			nanos = metricTime.UnixMilli() * 1e6
+		}
+		if p.RoundTimestampTo == "us" {
+			nanos = metricTime.UnixMicro() * 1e3
+		}
+		metricTime = time.Unix(0, nanos)
 	}
 
 	fields := make(map[string]interface{})
@@ -125,9 +128,12 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 
 	for _, tag := range p.Tags {
 		if value, ok := deep[tag]; ok {
-			tags[tag] = fmt.Sprintf("%v", nestedValue(value))
+			tags[tag], err = internal.ToString(nestedValue(value))
+			if err != nil {
+				p.Log.Warnf("Could not convert %v to string", nestedValue(value))
+			}
 		} else {
-			p.Log.Infof("tag %s value was %v; not added to tags", tag, value)
+			p.Log.Warnf("tag %s value was %v; not added to tags", tag, value)
 		}
 	}
 	fieldList := make([]string, len(p.Fields), (cap(p.Fields)+1)*2)
@@ -143,7 +149,7 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 		if value, ok := deep[field]; ok {
 			fields[field] = nestedValue(value)
 		} else {
-			p.Log.Infof("field %s value was %v; not added to fields", field, value)
+			p.Log.Warnf("field %s value was %v; not added to fields", field, value)
 		}
 	}
 	var schemaObj map[string]interface{}
@@ -214,25 +220,20 @@ func init() {
 }
 
 func (p *Parser) Init() error {
-	p.TimeFunc = time.Now
-	if p.Schema == "" && p.SchemaRegistry == "" {
-		err := fmt.Errorf("one of SchemaRegistry or Schema must be specified")
-		return err
+	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
+		return fmt.Errorf("exactly one of 'schema_registry' or 'schema' must be specified")
+	}
+	if p.SchemaRegistry != "" {
+		p.registryObj = NewSchemaRegistry(p.SchemaRegistry)
+	}
+	if p.TimestampFormat == "" {
+		return fmt.Errorf("must specify 'timestamp_format'")
+	}
+	if p.RoundTimestampTo != "" && p.TimestampFormat != "unix" {
+		return fmt.Errorf("'round_timestamp_to' can only be used with 'timestamp_format' of 'unix'")
+	}
+	if p.RoundTimestampTo != "" && (p.RoundTimestampTo != "s" && p.RoundTimestampTo != "ms" && p.RoundTimestampTo != "us") {
+		return fmt.Errorf("'round_timestamp_to' must be one of 's', 'ms', or 'us'")
 	}
 	return nil
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.MetricName = config.MetricName
-	p.SchemaRegistry = config.AvroSchemaRegistry
-	p.Schema = config.AvroSchema
-	p.Measurement = config.AvroMeasurement
-	p.Tags = config.AvroTags
-	p.Fields = config.AvroFields
-	p.Timestamp = config.AvroTimestamp
-	p.TimestampFormat = config.AvroTimestampFormat
-	p.FieldSeparator = config.AvroFieldSeparator
-	p.DefaultTags = config.DefaultTags
-
-	return p.Init()
 }

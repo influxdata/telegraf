@@ -14,10 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var DefaultTime = func() time.Time {
-	return time.Unix(3600, 0)
-}
-
 func TestBasicAvroMessage(t *testing.T) {
 	schema := `
         {
@@ -59,7 +55,6 @@ func TestBasicAvroMessage(t *testing.T) {
 		Fields:          []string{"field"},
 		Timestamp:       "timestamp",
 		TimestampFormat: "unix_ms",
-		TimeFunc:        DefaultTime,
 	}
 
 	msg, err := makeAvroMessage(schema, message)
@@ -188,7 +183,6 @@ func TestKafkaDemoAvroMessage(t *testing.T) {
 		Fields:          []string{"stars", "message"},
 		Timestamp:       "rating_time",
 		TimestampFormat: "unix_ms",
-		TimeFunc:        DefaultTime,
 	}
 
 	msg, err := makeAvroMessage(schema, message)

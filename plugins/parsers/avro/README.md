@@ -27,31 +27,32 @@ The message is supposed to be encoded as follows:
   ## Avro data format settings
   data_format = "avro"
 
-  ## Url of the schema registry
-  avro_schema_registry = "http://schema-registry:8081"
+  ## Url of the schema registry; exactly one of schema registry and
+  ## schema must be set
+  avro_schema_registry = "http://localhost:8081"
 
-  ## Schema string; only used if schema registry is not set
-  avro_schema = """
-          {
-            "type":"record",
-            "name":"Value",
-            "namespace":"com.example",
-            "fields":[
-                {
-                    "name":"tag",
-                    "type":"string"
-                },
-                {
-                    "name":"field",
-                    "type":"long"
-                },
-                {
-                    "name":"timestamp",
-                    "type":"long"
-                }
-            ]
-        }
-  """
+  ## Schema string; exactly one of schema registry and schema must be set
+  #avro_schema = """
+  #        {
+  #          "type":"record",
+  #          "name":"Value",
+  #          "namespace":"com.example",
+  #          "fields":[
+  #              {
+  #                  "name":"tag",
+  #                  "type":"string"
+  #              },
+  #              {
+  #                  "name":"field",
+  #                  "type":"long"
+  #              },
+  #              {
+  #                  "name":"timestamp",
+  #                  "type":"long"
+  #              }
+  #          ]
+  #      }
+  #"""
 
   ## Measurement string; if not set, determine measurement name from
   ## schema (as "<namespace>.<name>")
@@ -70,7 +71,12 @@ The message is supposed to be encoded as follows:
   avro_timestamp = "TIMESTAMP"
 
   ## Timestamp format
-  avro_timestamp_format = "unix_ms"
+  avro_timestamp_format = "unix"
+  
+  ## If set, and timestamp format is "unix", then timestamps will be
+  ## rounded.  Legal values are "s", "ms", and "us".  Otherwise "unix"
+  ## format with fractional seconds will use nanosecond precision.
+  # avro_round_timestamp_to = "ms"
 
   ## If true, any array values received by Avro will be silently
   ## discarded; otherwise they will be converted into a series of
@@ -84,20 +90,22 @@ The message is supposed to be encoded as follows:
   # avro_field_separator = "_"
 ```
 
-### avro_timestamp, avro_timestamp_format
+### avro_timestamp, avro_timestamp_format, avro_round_timestamp_to
 
 By default the current time will be used for all created metrics, to set
 the time using the Avro message you can use the `avro_timestamp` and
 `avro_timestamp_format` options together to set the time to a value in
-the parsed document.
+the parsed document, and you can use `avro_round_timestamp_to` to round
+the timestamp to seconds, milliseconds, or microseconds if using `unix`
+timestamp format.
 
 The `avro_timestamp` option specifies the field containing the time
 value and `avro_timestamp_format` must be set to `unix`, `unix_ms`,
-`unix_us`, `unix_ns`, `unix_float_ms`, `unix_float_us`, or
-`unix_float_ns`.  The `unix` and `unix_float_ns` formats are identical
-and can parse a timestamp in a floating-point type to nanoseconds.  The
-other two `unix_float` timestamps round the time to the nearest
-millisecond or microsecond.
+`unix_us` or `unix_ns`.
+
+If `avro_timestamp_format` is `unix`, and if your timestamp is a float,
+`avro_round_timestamp_to` will round it to the nearest second,
+millisecond, or microsecond.
 
 ## Metrics
 

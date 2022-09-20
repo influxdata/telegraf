@@ -15,14 +15,18 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 )
 
+var notBackwardsCompatible = map[string]struct{}{
+	// Add any parsers that do not provide backwards-compatibility here
+	"avro": {},
+}
+
 func TestRegistry_BackwardCompatibility(t *testing.T) {
 	cfg := &parsers.Config{
-		MetricName:         "parser_compatibility_test",
-		CSVHeaderRowCount:  42,
-		XPathProtobufFile:  "xpath/testcases/protos/addressbook.proto",
-		XPathProtobufType:  "addressbook.AddressBook",
-		JSONStrict:         true,
-		AvroSchemaRegistry: "https://localhost:8081",
+		MetricName:        "parser_compatibility_test",
+		CSVHeaderRowCount: 42,
+		XPathProtobufFile: "xpath/testcases/protos/addressbook.proto",
+		XPathProtobufType: "addressbook.AddressBook",
+		JSONStrict:        true,
 	}
 
 	// Some parsers need certain settings to not error. Furthermore, we
@@ -31,12 +35,6 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 		param map[string]interface{}
 		mask  []string
 	}{
-		"avro": {
-			param: map[string]interface{}{
-				"SchemaRegistry": cfg.AvroSchemaRegistry,
-			},
-			mask: []string{"TimeFunc"},
-		},
 		"csv": {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
@@ -55,8 +53,8 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 	newStyleOnly := []string{"binary"}
 
 	for name, creator := range parsers.Parsers {
-		if choice.Contains(name, newStyleOnly) {
-			t.Logf("skipping new-style-only %q...", name)
+		if _, ok := notBackwardsCompatible[name]; ok {
+			t.Logf("skipping %q...", name)
 			continue
 		}
 		t.Logf("testing %q...", name)
