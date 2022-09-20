@@ -49,7 +49,7 @@ func ClearCache() {
 	cache = make(map[string]bool)
 }
 
-//will give all found folders to gosmi and load in all modules found in the folders
+// will give all found folders to gosmi and load in all modules found in the folders
 func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) error {
 	folders, err := walkPaths(paths, log)
 	if err != nil {
@@ -89,7 +89,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 	return nil
 }
 
-//should walk the paths given and find all folders
+// should walk the paths given and find all folders
 func walkPaths(paths []string, log telegraf.Logger) ([]string, error) {
 	once.Do(gosmi.Init)
 	folders := []string{}

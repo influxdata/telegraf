@@ -69,10 +69,11 @@ type Config struct {
 	Inputs      []*models.RunningInput
 	Outputs     []*models.RunningOutput
 	Aggregators []*models.RunningAggregator
-	Parsers     []*models.RunningParser
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
+	// Parsers are created by their inputs during gather. Config doesn't keep track of them
+	// like the other plugins because they need to be garbage collected (See issue #11809)
 
 	Deprecations map[string][]int64
 	version      *semver.Version
@@ -98,7 +99,6 @@ func NewConfig() *Config {
 		Tags:          make(map[string]string),
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
-		Parsers:       make([]*models.RunningParser, 0),
 		Processors:    make([]*models.RunningProcessor, 0),
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
@@ -238,15 +238,6 @@ func (c *Config) AggregatorNames() []string {
 	var name []string
 	for _, aggregator := range c.Aggregators {
 		name = append(name, aggregator.Config.Name)
-	}
-	return PluginNameCounts(name)
-}
-
-// ParserNames returns a list of strings of the configured parsers.
-func (c *Config) ParserNames() []string {
-	var name []string
-	for _, parser := range c.Parsers {
-		name = append(name, parser.Config.DataFormat)
 	}
 	return PluginNameCounts(name)
 }
@@ -581,7 +572,17 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
-	return os.ReadFile(config)
+	buffer, err := os.ReadFile(config)
+	if err != nil {
+		return nil, err
+	}
+
+	mimeType := http.DetectContentType(buffer)
+	if !strings.Contains(mimeType, "text/plain") {
+		return nil, fmt.Errorf("provided config is not a TOML file: %s", config)
+	}
+
+	return buffer, nil
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
@@ -715,9 +716,8 @@ func (c *Config) addParser(parentname string, table *ast.Table) (*models.Running
 	}
 
 	running := models.NewRunningParser(parser, conf)
-	c.Parsers = append(c.Parsers, running)
-
-	return running, nil
+	err = running.Init()
+	return running, err
 }
 
 func (c *Config) addProcessor(name string, table *ast.Table) error {
@@ -878,12 +878,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
-			parser, err := c.addParser(name, table)
-			if err != nil {
-				return nil, err
-			}
-			err = parser.Init()
-			return parser, err
+			return c.addParser(name, table)
 		})
 	}
 
@@ -893,12 +888,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
-			parser, err := c.addParser(name, table)
-			if err != nil {
-				return nil, err
-			}
-			err = parser.Init()
-			return parser, err
+			return c.addParser(name, table)
 		})
 	}
 
@@ -1231,7 +1221,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
-		"json_timestamp_format", "json_timestamp_units",
+		"json_timestamp_format", "json_timestamp_units", "json_transformation",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"prometheus_compact_encoding",
 		"splunkmetric_hec_routing", "splunkmetric_multimetric",

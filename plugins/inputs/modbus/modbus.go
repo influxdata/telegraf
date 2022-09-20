@@ -17,11 +17,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample_general_begin.conf
 var sampleConfigStart string
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample_general_end.conf
 var sampleConfigEnd string
 
@@ -148,26 +146,24 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	timestamp := time.Now()
-	for retry := 0; retry <= m.Retries; retry++ {
-		timestamp = time.Now()
-		if err := m.gatherFields(); err != nil {
-			if mberr, ok := err.(*mb.Error); ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
-				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
-				time.Sleep(time.Duration(m.RetriesWaitTime))
-				continue
-			}
-			// Show the disconnect error this way to not shadow the initial error
-			if discerr := m.disconnect(); discerr != nil {
-				m.Log.Errorf("Disconnecting failed: %v", discerr)
-			}
-			return err
-		}
-		// Reading was successful, leave the retry loop
-		break
-	}
-
 	for slaveID, requests := range m.requests {
+		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
+		if err := m.readSlaveData(slaveID, requests); err != nil {
+			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
+			mberr, ok := err.(*mb.Error)
+			if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+				m.Log.Debugf("Reconnecting to %s...", m.Controller)
+				if err := m.disconnect(); err != nil {
+					return fmt.Errorf("disconnecting failed: %w", err)
+				}
+				if err := m.connect(); err != nil {
+					return fmt.Errorf("connecting failed: %w", err)
+				}
+			}
+			continue
+		}
+		timestamp := time.Now()
+
 		tags := map[string]string{
 			"name":     m.Name,
 			"type":     cCoils,
@@ -278,24 +274,40 @@ func (m *Modbus) disconnect() error {
 	return err
 }
 
-func (m *Modbus) gatherFields() error {
-	for slaveID, requests := range m.requests {
-		m.handler.SetSlave(slaveID)
-		if err := m.gatherRequestsCoil(requests.coil); err != nil {
-			return err
-		}
-		if err := m.gatherRequestsDiscrete(requests.discrete); err != nil {
-			return err
-		}
-		if err := m.gatherRequestsHolding(requests.holding); err != nil {
-			return err
-		}
-		if err := m.gatherRequestsInput(requests.input); err != nil {
-			return err
-		}
-	}
+func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
+	m.handler.SetSlave(slaveID)
 
-	return nil
+	for retry := 0; retry < m.Retries; retry++ {
+		err := m.gatherFields(requests)
+		if err == nil {
+			// Reading was successful
+			return nil
+		}
+
+		// Exit in case a non-recoverable error occurred
+		mberr, ok := err.(*mb.Error)
+		if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+			return err
+		}
+
+		// Wait some time and try again reading the slave.
+		m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
+		time.Sleep(time.Duration(m.RetriesWaitTime))
+	}
+	return m.gatherFields(requests)
+}
+
+func (m *Modbus) gatherFields(requests requestSet) error {
+	if err := m.gatherRequestsCoil(requests.coil); err != nil {
+		return err
+	}
+	if err := m.gatherRequestsDiscrete(requests.discrete); err != nil {
+		return err
+	}
+	if err := m.gatherRequestsHolding(requests.holding); err != nil {
+		return err
+	}
+	return m.gatherRequestsInput(requests.input)
 }
 
 func (m *Modbus) gatherRequestsCoil(requests []request) error {

@@ -2,10 +2,9 @@
 
 set -eux
 
-GO_VERSION="1.18.5"
+GO_VERSION="1.19.1"
 
 setup_go () {
-    choco feature enable -n allowGlobalConfirmation
     choco upgrade golang --allow-downgrade --version=${GO_VERSION}
     choco install make
     git config --system core.longpaths true

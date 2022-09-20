@@ -1,4 +1,4 @@
-//go:generate ../../../../tools/readme_config_includer/generator
+//go:generate ../../../tools/readme_config_includer/generator
 package jolokia2_agent
 
 import (
@@ -10,11 +10,11 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	common "github.com/influxdata/telegraf/plugins/common/jolokia2"
 	"github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -23,9 +23,10 @@ type JolokiaAgent struct {
 	DefaultFieldSeparator string
 	DefaultTagPrefix      string
 
-	URLs            []string `toml:"urls"`
-	Username        string
-	Password        string
+	URLs            []string        `toml:"urls"`
+	Username        string          `toml:"username"`
+	Password        string          `toml:"password"`
+	Origin          string          `toml:"origin"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
@@ -91,7 +92,17 @@ func (ja *JolokiaAgent) createClient(url string) (*common.Client, error) {
 	return common.NewClient(url, &common.ClientConfig{
 		Username:        ja.Username,
 		Password:        ja.Password,
+		Origin:          ja.Origin,
 		ResponseTimeout: time.Duration(ja.ResponseTimeout),
 		ClientConfig:    ja.ClientConfig,
+	})
+}
+
+func init() {
+	inputs.Add("jolokia2_agent", func() telegraf.Input {
+		return &JolokiaAgent{
+			Metrics:               []common.MetricConfig{},
+			DefaultFieldSeparator: ".",
+		}
 	})
 }

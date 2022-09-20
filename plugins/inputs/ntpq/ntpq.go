@@ -19,8 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -225,6 +223,10 @@ func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
 				}
 				fields[col.name] = value
 			case FieldDuration:
+				// Ignore fields only containing a minus
+				if raw == "-" {
+					continue
+				}
 				factor := int64(1)
 				suffix := raw[len(raw)-1:]
 				switch suffix {

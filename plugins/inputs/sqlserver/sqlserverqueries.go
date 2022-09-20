@@ -287,8 +287,11 @@ EXEC sp_executesql @SqlStatement
 
 /*
 This string defines a SQL statements to retrieve Performance Counters as documented here -
+
 	SQL Server Performance Objects - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects?view=sql-server-ver15#SQLServerPOs
+
 Some of the specific objects used are -
+
 	MSSQL$*:Access Methods - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object?view=sql-server-ver15
 	MSSQL$*:Buffer Manager - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object?view=sql-server-ver15
 	MSSQL$*:Databases - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-ver15

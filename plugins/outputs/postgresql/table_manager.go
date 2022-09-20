@@ -147,6 +147,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 //
 // If the table cannot be modified, the returned column list is the columns which are missing from the table. This
 // includes when an error is returned.
+//
 //nolint:revive
 func (tm *TableManager) EnsureStructure(
 	ctx context.Context,

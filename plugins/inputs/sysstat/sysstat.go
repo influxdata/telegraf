@@ -23,7 +23,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -138,7 +137,9 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 
 // collect collects sysstat data with the collector utility sadc.
 // It runs the following command:
-//     Sadc -S <Activity1> -S <Activity2> ... <collectInterval> 2 tmpFile
+//
+//	Sadc -S <Activity1> -S <Activity2> ... <collectInterval> 2 tmpFile
+//
 // The above command collects system metrics during <collectInterval> and
 // saves it in binary form to tmpFile.
 func (s *Sysstat) collect(tempfile string) error {
@@ -190,7 +191,9 @@ func withCLocale(cmd *exec.Cmd) *exec.Cmd {
 }
 
 // parse runs Sadf on the previously saved tmpFile:
-//    Sadf -p -- -p <option> tmpFile
+//
+//	Sadf -p -- -p <option> tmpFile
+//
 // and parses the output to add it to the telegraf.Accumulator acc.
 func (s *Sysstat) parse(acc telegraf.Accumulator, option string, tmpfile string, ts time.Time) error {
 	cmd := execCommand(s.Sadf, s.sadfOptions(option, tmpfile)...)
