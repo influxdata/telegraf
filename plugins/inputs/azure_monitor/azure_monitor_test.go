@@ -111,7 +111,6 @@ func (mamdc *mockAzureMetricDefinitionsClient) List(
 	_ context.Context,
 	resourceID string,
 	_ *armmonitor.MetricDefinitionsClientListOptions) (armmonitor.MetricDefinitionsClientListResponse, error) {
-
 	file, err := os.ReadFile("testdata/json/azure_metric_definitions_responses.json")
 	if err != nil {
 		return armmonitor.MetricDefinitionsClientListResponse{}, fmt.Errorf("error reading file: %w", err)
