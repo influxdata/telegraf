@@ -171,7 +171,7 @@ The message is supposed to be encoded as follows:
 
 ```
 
-### avro_timestamp, avro_timestamp_format
+### avro_timestamp, avro_timestamp_format, avro_round_timestamp_to
 
 ### avro_timestamp, avro_timestamp_format, avro_round_timestamp_to
 
