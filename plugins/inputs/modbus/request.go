@@ -144,7 +144,6 @@ func optimitzeGroupWithinLimits(fields []field, maxBatchSize uint16, maxExtraReg
 		// Finish the current request, add it to the list and construct a new one
 		requests = append(requests, currentRequest)
 		currentRequest = newRequest(f)
-
 	}
 	requests = append(requests, currentRequest)
 	return requests
