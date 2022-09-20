@@ -2,14 +2,14 @@ package xtremio
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
@@ -84,13 +84,13 @@ func TestFixedValue(t *testing.T) {
 					_, err := fmt.Fprintln(w, "authentication succeeded")
 					require.NoError(t, err)
 				} else if r.URL.Path == "/api/json/v3/types/bbus" {
-					sampleGetBBUsResponse, err := ioutil.ReadFile(filepath.Join(testdataDir, "sample_get_bbu_response.json"))
+					sampleGetBBUsResponse, err := os.ReadFile(filepath.Join(testdataDir, "sample_get_bbu_response.json"))
 					require.NoError(t, err)
 					w.WriteHeader(http.StatusOK)
 					_, err = fmt.Fprintln(w, string(sampleGetBBUsResponse))
 					require.NoError(t, err)
 				} else if r.URL.Path == "/api/json/v3/types/bbus/987654321abcdef" {
-					sampleBBUResponseOne, err := ioutil.ReadFile(filepath.Join(testdataDir, "sample_bbu_response.json"))
+					sampleBBUResponseOne, err := os.ReadFile(filepath.Join(testdataDir, "sample_bbu_response.json"))
 					require.NoError(t, err)
 					w.WriteHeader(http.StatusOK)
 					_, err = fmt.Fprintln(w, string(sampleBBUResponseOne))
