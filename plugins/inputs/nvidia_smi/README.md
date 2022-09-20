@@ -114,7 +114,7 @@ binary into the docker container. In particular you will need to pass through
 the /dev/nvidia* devices, the nvidia-smi binary and the nvidia libraries.
 An minimal docker-compose example of how to do this is:
 
-```text
+```yaml
   telegraf:
     image: telegraf
     runtime: nvidia
