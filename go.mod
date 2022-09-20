@@ -23,7 +23,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Shopify/sarama v1.36.0
-	github.com/aerospike/aerospike-client-go/v5 v5.9.0
+	github.com/aerospike/aerospike-client-go/v5 v5.10.0
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1727
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
@@ -183,7 +183,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.25.0
-	k8s.io/apimachinery v0.25.0
+	k8s.io/apimachinery v0.25.1
 	k8s.io/client-go v0.25.0
 	modernc.org/sqlite v1.17.3
 )

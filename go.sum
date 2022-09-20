@@ -246,8 +246,8 @@ github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrU
 github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/StackExchange/wmi v1.2.1/go.mod h1:rcmrprowKIVzvc+NUiLncP2uuArMWLCbu9SBzvHz7e8=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
-github.com/aerospike/aerospike-client-go/v5 v5.9.0 h1:x5qdd0jLTPLh8mXIDsMszDoXSJzDo/wSGeo3EOLIdsc=
-github.com/aerospike/aerospike-client-go/v5 v5.9.0/go.mod h1:rJ/KpmClE7kiBPfvAPrGw9WuNOiz8v2uKbQaUyYPXtI=
+github.com/aerospike/aerospike-client-go/v5 v5.10.0 h1:+Vwl4x3Fqx8HHlLAydfDNUbjB4fJ9QvIv5PuiechDP8=
+github.com/aerospike/aerospike-client-go/v5 v5.10.0/go.mod h1:e/zYeIoBg9We63fLKa+h+198+fT1GdoLfKa+Pu4QSpg=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/agnivade/levenshtein v1.0.1/go.mod h1:CURSv5d9Uaml+FovSIICkLbAUZ9S4RqaHDIsdSBg7lM=
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
@@ -1855,7 +1855,7 @@ github.com/onsi/ginkgo v1.12.1/go.mod h1:zj2OWP4+oCPe1qIXoGWkgMRwljMUYCdkwsT2108
 github.com/onsi/ginkgo v1.14.2/go.mod h1:iSB4RoI2tjJc9BBv4NKIKWKya62Rps+oPG/Lv9klQyY=
 github.com/onsi/ginkgo v1.16.4/go.mod h1:dX+/inL/fNMqNlz0e9LfyB9TswhZpCVdJM/Z6Vvnwo0=
 github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
-github.com/onsi/ginkgo/v2 v2.1.4 h1:GNapqRSid3zijZ9H77KrgVG4/8KqiyRsxcSxe+7ApXY=
+github.com/onsi/ginkgo/v2 v2.1.6 h1:Fx2POJZfKRQcM1pH49qSZiYeu319wji004qX+GDovrU=
 github.com/onsi/gomega v0.0.0-20151007035656-2152b45fa28a/go.mod h1:C1qb7wdrVGGVU+Z6iS04AVkA3Q65CEZX59MT0QO5uiA=
 github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGVU+Z6iS04AVkA3Q65CEZX59MT0QO5uiA=
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
@@ -1867,7 +1867,7 @@ github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1y
 github.com/onsi/gomega v1.10.3/go.mod h1:V9xEwhxec5O8UDM77eCW8vLymOMltsqPVYWrpDsH8xc=
 github.com/onsi/gomega v1.10.4/go.mod h1:g/HbgYopi++010VEqkFgJHKC09uJiW9UkXvMUuKHUCQ=
 github.com/onsi/gomega v1.15.0/go.mod h1:cIuvLEne0aoVhAgh/O6ac0Op8WWw9H6eYCriF+tEHG0=
-github.com/onsi/gomega v1.19.0 h1:4ieX6qQjPP/BfC3mpsAtIGGlxTWPeA3Inl/7DtXw1tw=
+github.com/onsi/gomega v1.20.1 h1:PA/3qinGoukvymdIDV8pii6tiZgC8kbmJO6Z5+b002Q=
 github.com/op/go-logging v0.0.0-20160315200505-970db520ece7/go.mod h1:HzydrMdWErDVzsI23lYNej1Htcns9BCg93Dk0bBINWk=
 github.com/openconfig/gnmi v0.0.0-20200414194230-1597cc0f2600/go.mod h1:M/EcuapNQgvzxo1DDXHK4tx3QpYM/uG4l591v33jG2A=
 github.com/openconfig/gnmi v0.0.0-20200508230933-d19cebf5e7be/go.mod h1:M/EcuapNQgvzxo1DDXHK4tx3QpYM/uG4l591v33jG2A=
@@ -3400,8 +3400,8 @@ k8s.io/apimachinery v0.20.1/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRp
 k8s.io/apimachinery v0.20.4/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
 k8s.io/apimachinery v0.20.6/go.mod h1:ejZXtW1Ra6V1O5H8xPBGz+T3+4gfkTCeExAHKU57MAc=
 k8s.io/apimachinery v0.21.0/go.mod h1:jbreFvJo3ov9rj7eWT7+sYiRx+qZuCYXwWT1bcDswPY=
-k8s.io/apimachinery v0.25.0 h1:MlP0r6+3XbkUG2itd6vp3oxbtdQLQI94fD5gCS+gnoU=
-k8s.io/apimachinery v0.25.0/go.mod h1:qMx9eAk0sZQGsXGu86fab8tZdffHbwUfsvzqKn4mfB0=
+k8s.io/apimachinery v0.25.1 h1:t0XrnmCEHVgJlR2arwO8Awp9ylluDic706WePaYCBTI=
+k8s.io/apimachinery v0.25.1/go.mod h1:hqqA1X0bsgsxI6dXsJ4HnNTBOmJNxyPp8dw3u2fSHwA=
 k8s.io/apiserver v0.20.1/go.mod h1:ro5QHeQkgMS7ZGpvf4tSMx6bBOgPfE+f52KwvXfScaU=
 k8s.io/apiserver v0.20.4/go.mod h1:Mc80thBKOyy7tbvFtB4kJv1kbdD0eIH8k8vianJcbFM=
 k8s.io/apiserver v0.20.6/go.mod h1:QIJXNt6i6JB+0YQRNcS0hdRHJlMhflFmsBDeSgT1r8Q=
