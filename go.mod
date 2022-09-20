@@ -23,7 +23,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Shopify/sarama v1.36.0
-	github.com/aerospike/aerospike-client-go/v5 v5.9.0
+	github.com/aerospike/aerospike-client-go/v5 v5.10.0
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1727
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
@@ -141,7 +141,7 @@ require (
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/sensu/sensu-go/api/core/v2 v2.14.0
-	github.com/shirou/gopsutil/v3 v3.22.7
+	github.com/shirou/gopsutil/v3 v3.22.8
 	github.com/showwin/speedtest-go v1.1.5
 	github.com/signalfx/golib/v3 v3.3.45
 	github.com/sirupsen/logrus v1.9.0
