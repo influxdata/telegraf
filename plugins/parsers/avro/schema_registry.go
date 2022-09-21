@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 type SchemaRegistry struct {
@@ -13,7 +12,6 @@ type SchemaRegistry struct {
 
 const (
 	schemaByID = "%s/schemas/ids/%d"
-	timeout    = 2 * time.Second
 )
 
 func NewSchemaRegistry(url string) *SchemaRegistry {
@@ -25,10 +23,14 @@ func (sr *SchemaRegistry) getSchema(id int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	defer resp.Body.Close()
+	
 	var jsonResponse map[string]interface{}
 
-	json.NewDecoder(resp.Body).Decode(&jsonResponse)
+	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
+	if err != nil {
+		return "", err
+	}
 
 	schema, ok := jsonResponse["schema"]
 	if !ok {

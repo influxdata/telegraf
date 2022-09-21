@@ -113,6 +113,7 @@ require (
 	github.com/karrick/godirwalk v1.17.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kolo/xmlrpc v0.0.0-20201022064351-38db28db192b
+	github.com/linkedin/goavro/v2 v2.12.0
 	github.com/logzio/azure-monitor-metrics-receiver v1.0.0
 	github.com/lxc/lxd v0.0.0-20220920163450-e9b4b514106a
 	github.com/matttproud/golang_protobuf_extensions v1.0.4
@@ -333,8 +334,6 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/ragel-machinery v0.0.0-20181214104525-299bdde78165 // indirect
-	github.com/linkedin/goavro v2.1.0+incompatible // indirect
-	github.com/linkedin/goavro/v2 v2.12.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20220913051719-115f729f3c8c // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect

@@ -17,11 +17,12 @@ import (
 
 func TestRegistry_BackwardCompatibility(t *testing.T) {
 	cfg := &parsers.Config{
-		MetricName:        "parser_compatibility_test",
-		CSVHeaderRowCount: 42,
-		XPathProtobufFile: "xpath/testcases/protos/addressbook.proto",
-		XPathProtobufType: "addressbook.AddressBook",
-		JSONStrict:        true,
+		MetricName:         "parser_compatibility_test",
+		CSVHeaderRowCount:  42,
+		XPathProtobufFile:  "xpath/testcases/protos/addressbook.proto",
+		XPathProtobufType:  "addressbook.AddressBook",
+		JSONStrict:         true,
+		AvroSchemaRegistry: "https://localhost:8081",
 	}
 
 	// Some parsers need certain settings to not error. Furthermore, we
@@ -30,6 +31,12 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 		param map[string]interface{}
 		mask  []string
 	}{
+		"avro": {
+			param: map[string]interface{}{
+				"SchemaRegistry": cfg.AvroSchemaRegistry,
+			},
+			mask: []string{"TimeFunc"},
+		},
 		"csv": {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,

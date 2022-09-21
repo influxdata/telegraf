@@ -212,6 +212,7 @@ following works:
 - github.com/kolo/xmlrpc [MIT License](https://github.com/kolo/xmlrpc/blob/master/LICENSE)
 - github.com/kylelemons/godebug [Apache License 2.0](https://github.com/kylelemons/godebug/blob/master/LICENSE)
 - github.com/leodido/ragel-machinery [MIT License](https://github.com/leodido/ragel-machinery/blob/develop/LICENSE)
+- github.com/linkedin/goavro [Apache License 2.0](https://github.com/linkedin/goavro/blob/master/LICENSE)
 - github.com/logzio/azure-monitor-metrics-receiver [MIT License](https://github.com/logzio/azure-monitor-metrics-receiver/blob/master/LICENSE)
 - github.com/magiconair/properties [BSD 2-Clause "Simplified" License](https://github.com/magiconair/properties/blob/main/LICENSE.md)
 - github.com/mailru/easyjson [MIT License](https://github.com/mailru/easyjson/blob/master/LICENSE)

@@ -19,7 +19,6 @@ var DefaultTime = func() time.Time {
 }
 
 func TestBasicAvroMessage(t *testing.T) {
-
 	schema := `
         {
             "type":"record",
@@ -41,7 +40,6 @@ func TestBasicAvroMessage(t *testing.T) {
             ]
         }
     `
-
 	message := `
         {
             "tag":"test_tag",
@@ -87,7 +85,6 @@ func TestBasicAvroMessage(t *testing.T) {
 }
 
 func TestKafkaDemoAvroMessage(t *testing.T) {
-
 	schema := `
         {
             "type":"record",
@@ -230,7 +227,10 @@ func (sr *LocalSchemaRegistry) start() {
 	schema = fmt.Sprintf("{\"schema\": \"%s\"}", schema)
 	sr.ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		w.Write([]byte(schema))
+		_, err := w.Write([]byte(schema))
+		if err != nil {
+			panic(err)
+		}
 	}))
 }
 
@@ -243,7 +243,6 @@ func (sr *LocalSchemaRegistry) url() string {
 }
 
 func makeAvroMessage(schema string, message string) ([]byte, error) {
-
 	codec, err := goavro.NewCodec(schema)
 	if err != nil {
 		return nil, err

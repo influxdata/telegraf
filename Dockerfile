@@ -1,48 +1,60 @@
-FROM quay.io/influxdb/telegraf-ci:1.12.14 AS BUILD
+FROM quay.io/influxdb/telegraf-ci:1.19.1 AS BUILD
 
 WORKDIR /go/src/github.com/influxdata/telegraf
 
-COPY Gopkg.lock .
-COPY Gopkg.toml .
+COPY go.mod .
+COPY go.sum .
 COPY Makefile .
 
 RUN make deps
 
-COPY Gopkg.lock .
-COPY Gopkg.toml .
+COPY go.mod .
+COPY go.sum .
 COPY Makefile .
+COPY build_version.txt .
 
 COPY accumulator.go .
+COPY aggregator.go .
 COPY input.go .
 COPY metric.go .
-COPY processor.go .
-COPY aggregator.go .
 COPY output.go .
+COPY parser.go .
 COPY plugin.go .
-COPY cmd cmd
-COPY filter filter
-COPY metric metric
-COPY plugins plugins
-COPY testutil testutil
+COPY processor.go .
 COPY agent agent
+COPY assets assets
+COPY cmd cmd
+COPY config config
 COPY docs docs
-COPY internal internal
-COPY scripts scripts
 COPY etc etc
+COPY filter filter
+COPY hooks hooks
+COPY internal internal
 COPY logger logger
+COPY metric metric
+COPY models models
+COPY plugins plugins
+COPY scripts scripts
 COPY selfstat selfstat
+COPY testutil testutil
+COPY tools tools
+
 
 COPY .git .git
 
-RUN make check
+ENV CGO_ENABLED=1
 
-RUN make test
+# RUN make check
 
-RUN make package
+# RUN make test
 
-FROM alpine:3.11.3
+RUN make
 
-COPY --from=BUILD /go/src/github.com/influxdata/telegraf/build/linux/static_amd64/telegraf /usr/local/bin
+FROM alpine:3
+
+RUN apk add libc6-compat
+
+COPY --from=BUILD /go/src/github.com/influxdata/telegraf/telegraf /usr/local/bin
 
 WORKDIR /etc/telegraf
 

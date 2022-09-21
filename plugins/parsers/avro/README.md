@@ -4,30 +4,13 @@ The `Avro` parser creates metrics from a message serialized with Avro.
 
 The message is supposed to be encoded as follows:
 
-<table>
-  <tr>
-    <th>Bytes</th>
-    <th>Area</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>0</td>
-    <td>Magic Byte</td>
-    <td>Confluent serialization format version number.</td>
-  </tr>
-  <tr>
-    <td>1-4</td>
-    <td>Schema ID</td>
-    <td>4-byte schema ID as returned by Schema Registry.</td>
-  </tr>
-  <tr>
-    <td>5-...</td>
-    <td>Data</td>
-    <td>Serialized data.</td>
-  </tr>
-</table>
+| Bytes | Area       | Description                                      |
+| ----- | ---------- | ------------------------------------------------ |
+| 0     | Magic Byte | Confluent serialization format version number.   |
+| 1-4   | Schema ID  | 4-byte schema ID as returned by Schema Registry. |
+| 5-    | Data       | Serialized data.                                 |
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.kafka_consumer]]
@@ -47,6 +30,29 @@ The message is supposed to be encoded as follows:
   ## Url of the schema registry
   avro_schema_registry = "http://schema-registry:8081"
 
+  ## Schema string; only used if schema registry is not set
+  avro_schema = """
+          {
+            "type":"record",
+            "name":"Value",
+            "namespace":"com.example",
+            "fields":[
+                {
+                    "name":"tag",
+                    "type":"string"
+                },
+                {
+                    "name":"field",
+                    "type":"long"
+                },
+                {
+                    "name":"timestamp",
+                    "type":"long"
+                }
+            ]
+        }
+  """
+
   ## Measurement string
   avro_measurement = "ratings"
 
@@ -62,12 +68,13 @@ The message is supposed to be encoded as follows:
   ## Timestamp format
   avro_timestamp_format = "unix_ms"
 ```
-#### avro_timestamp, avro_timestamp_format
+
+### avro_timestamp, avro_timestamp_format
 
 By default the current time will be used for all created metrics, to set the time using the Avro message you can use the `avro_timestamp` and `avro_timestamp_format` options together to set the time to a value in the parsed document.
 
 The `avro_timestamp` option specifies the field containing the time value and `avro_timestamp_format` must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`.
 
-### Metrics
+## Metrics
 
 One metric is created for message.  The type of the field is automatically determined based on schema.

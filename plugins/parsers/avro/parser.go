@@ -3,51 +3,49 @@ package avro
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
-	"time"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/linkedin/goavro/v2"
+	"time"
 )
 
 type Parser struct {
-	MetricName      string    `toml:"metric_name"`
-	SchemaRegistry  string    `toml:"avro_schema_registry"`
-	Schema          string    `toml:"avro_schema"`
-	Measurement     string    `toml:"avro_measurement"`
-	Tags            []string  `toml:"avro_tags"`
-	Fields          []string  `toml:"avro_fields"`
-	Timestamp       string    `toml:"avro_timestamp"`
-	TimestampFormat string    `toml:"avro_timestamp_format"`
+	MetricName      string   `toml:"metric_name"`
+	SchemaRegistry  string   `toml:"avro_schema_registry"`
+	Schema          string   `toml:"avro_schema"`
+	Measurement     string   `toml:"avro_measurement"`
+	Tags            []string `toml:"avro_tags"`
+	Fields          []string `toml:"avro_fields"`
+	Timestamp       string   `toml:"avro_timestamp"`
+	TimestampFormat string   `toml:"avro_timestamp_format"`
 	DefaultTags     map[string]string
 	TimeFunc        func() time.Time
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var schema string
 
 	if len(buf) < 5 {
-		err := fmt.Errorf("buf is %d bytes; must be at least 5",len(buf))
+		err := fmt.Errorf("buf is %d bytes; must be at least 5", len(buf))
 		return nil, err
 	}
 	schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
-	binary_data := buf[5:]
+	binaryData := buf[5:]
 
 	switch {
 	case p.SchemaRegistry != "":
 		schemaRegistry := NewSchemaRegistry(p.SchemaRegistry)
-		retr_schema, err := schemaRegistry.getSchema(schemaID)
+		retrSchema, err := schemaRegistry.getSchema(schemaID)
 		if err != nil {
 			return nil, err
 		}
-		schema = retr_schema
-	case p.Schema != "":
-		schema = p.Schema
+		schema = retrSchema
 	default:
-		err := fmt.Errorf("One of SchemaRegistry or Schema must be specified")
-		return nil, err
+		schema = p.Schema
 	}
 
 	codec, err := goavro.NewCodec(schema)
@@ -56,7 +54,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	native, _, err := codec.NativeFromBinary(binary_data)
+	native, _, err := codec.NativeFromBinary(binaryData)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +74,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) != 1 {
-		return nil, fmt.Errorf("Line contains multiple metrics")
+		return nil, fmt.Errorf("line contains multiple metrics")
 	}
 
 	return metrics[0], nil
@@ -92,7 +90,7 @@ func (p *Parser) parseTimestamp(timestamp interface{}) (time.Time, error) {
 	}
 
 	if p.TimestampFormat == "" {
-		return p.TimeFunc(), fmt.Errorf("Must specify timestamp format")
+		return p.TimeFunc(), fmt.Errorf("must specify timestamp format")
 	}
 
 	metricTime, err := internal.ParseTimestamp(p.TimestampFormat, timestamp, "UTC")
@@ -106,7 +104,7 @@ func (p *Parser) parseTimestamp(timestamp interface{}) (time.Time, error) {
 func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 	deep, ok := native.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Cannot cast native interface {} to map[string]interface{}!")
+		return nil, fmt.Errorf("cannot cast native interface {} to map[string]interface{}")
 	}
 
 	metricTime, err := p.parseTimestamp(nestedValue(deep[p.Timestamp]))
@@ -125,7 +123,7 @@ func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 		if value, ok := deep[tag]; ok {
 			tags[tag] = fmt.Sprintf("%v", nestedValue(value))
 		} else {
-			log.Printf("I! AvroParser: tag %s value was %v; not added to tags", tag, value)
+			p.Log.Infof("tag %s value was %v; not added to tags", tag, value)
 		}
 	}
 
@@ -133,26 +131,19 @@ func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 		if value, ok := deep[field]; ok {
 			fields[field] = nestedValue(value)
 		} else {
-			log.Printf("I! AvroParser: field %s value was %v; not added to fields", field, value)
+			p.Log.Infof("field %s value was %v; not added to fields", field, value)
 		}
 	}
 
 	if len(fields) == 0 {
-		return nil, fmt.Errorf("Number of fields is 0, unable to create metric!")
+		return nil, fmt.Errorf("number of fields is 0; unable to create metric")
 	}
 	name := p.MetricName
 	if p.Measurement != "" {
 		name = p.Measurement
 	}
-	
-	m := metric.New(name, tags, fields, metricTime)
 
-	if m == nil {
-		err := fmt.Errorf("Could not create metric")
-		return nil, err
-	}
-
-	return m, nil
+	return metric.New(name, tags, fields, metricTime), nil
 }
 
 func nestedValue(deep interface{}) interface{} {
@@ -162,4 +153,35 @@ func nestedValue(deep interface{}) interface{} {
 		}
 	}
 	return deep
+}
+
+func init() {
+	parsers.Add("avro",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{MetricName: defaultMetricName}
+		})
+
+}
+
+func (p *Parser) Init() error {
+	p.TimeFunc = time.Now
+	if p.Schema == "" && p.SchemaRegistry == "" {
+		err := fmt.Errorf("one of SchemaRegistry or Schema must be specified")
+		return err
+	}
+	return nil
+}
+
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.MetricName = config.MetricName
+	p.SchemaRegistry = config.AvroSchemaRegistry
+	p.Schema = config.AvroSchema
+	p.Measurement = config.AvroMeasurement
+	p.Tags = config.AvroTags
+	p.Fields = config.AvroFields
+	p.Timestamp = config.AvroTimestamp
+	p.TimestampFormat = config.AvroTimestampFormat
+	p.DefaultTags = config.DefaultTags
+
+	return p.Init()
 }
