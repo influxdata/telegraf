@@ -365,30 +365,6 @@ The new (version 2) metrics provide:
   blocking sessions. Telegraf's monitoring request is omitted unless it is a heading blocker. Also includes sleeping sessions with open transactions.
 - *VolumeSpace* - uses `sys.dm_os_volume_stats` to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
 - *Cpu* - uses the buffer ring (`sys.dm_os_ring_buffers`) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
-- *Schedulers* - This captures sys.dm_os_schedulers.
-- *SqlRequests* - This captures a snapshot of dm_exec_requests and
-  dm_exec_sessions that gives you running requests as well as wait types and
-  blocking sessions.
-
-  In order to allow tracking on a per statement basis this query produces a
-  unique tag for each query.  Depending on the database workload, this may
-  result in a high cardinality series.  Reference the FAQ for tips on
-  [managing series cardinality][cardinality].
-- *Azure Managed Instances*
-  - Stats from `sys.server_resource_stats`:
-    - cpu_count
-    - server_memory
-    - sku
-    - engine_edition
-    - hardware_type
-    - total_storage_mb
-    - available_storage_mb
-    - uptime
-  - Resource governance stats from sys.dm_instance_resource_governance
-- *Azure SQL Database*
-  - Stats from sys.dm_db_wait_stats
-  - Resource governance stats from sys.dm_user_db_resource_governance
-  - Stats from sys.dm_db_resource_stats
 
   In order to allow tracking on a per statement basis this query produces a
   unique tag for each query.  Depending on the database workload, this may
@@ -562,6 +538,3 @@ gathered.
 sqlserver_cpu_other_process_cpu{host="servername",measurement_db_type="SQLServer",sql_instance="SERVERNAME:INST"} 9
 sqlserver_performance{counter="Log File(s) Size (KB)",counter_type="65792",host="servername",instance="instance_name",measurement_db_type="SQLServer",object="MSSQL$INSTANCE_NAME:Databases",sql_instance="SERVERNAME:INSTANCE_NAME"} 1.048568e+06
 ```
-- database_name:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
-
-[cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality

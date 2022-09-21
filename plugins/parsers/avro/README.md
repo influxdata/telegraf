@@ -35,7 +35,7 @@ The message is supposed to be encoded as follows:
   </tr>
 </table>
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.kafka_consumer]]
@@ -84,6 +84,29 @@ The message is supposed to be encoded as follows:
   # avro_measurement = "ratings"
   ## Url of the schema registry
   avro_schema_registry = "http://schema-registry:8081"
+
+  ## Schema string; only used if schema registry is not set
+  avro_schema = """
+          {
+            "type":"record",
+            "name":"Value",
+            "namespace":"com.example",
+            "fields":[
+                {
+                    "name":"tag",
+                    "type":"string"
+                },
+                {
+                    "name":"field",
+                    "type":"long"
+                },
+                {
+                    "name":"timestamp",
+                    "type":"long"
+                }
+            ]
+        }
+  """
 
   ## Measurement string
   avro_measurement = "ratings"
@@ -150,12 +173,13 @@ automatically determined based on the schema.
   ## Timestamp format
   avro_timestamp_format = "unix_ms"
 ```
-#### avro_timestamp, avro_timestamp_format
+
+### avro_timestamp, avro_timestamp_format
 
 By default the current time will be used for all created metrics, to set the time using the Avro message you can use the `avro_timestamp` and `avro_timestamp_format` options together to set the time to a value in the parsed document.
 
 The `avro_timestamp` option specifies the field containing the time value and `avro_timestamp_format` must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`.
 
-### Metrics
+## Metrics
 
 One metric is created for message.  The type of the field is automatically determined based on schema.

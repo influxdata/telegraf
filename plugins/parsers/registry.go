@@ -163,13 +163,13 @@ type Config struct {
 	CSVMetadataTrimSet    string   `toml:"csv_metadata_trim_set"`
 
 	// avro configuration
-	AVROSchemaRegistry  string   `toml:"avro_schema_registry"`
-	AVROSchema          string   `toml:"avro_schema"`	
-	AVROMeasurement     string   `toml:"avro_measurement"`
-	AVROTags            []string `toml:"avro_tags"`
-	AVROFields          []string `toml:"avro_fields"`
-	AVROTimestamp       string   `toml:"avro_timestamp"`
-	AVROTimestampFormat string   `toml:"avro_timestamp_format"`
+	AvroSchemaRegistry  string   `toml:"avro_schema_registry"`
+	AvroSchema          string   `toml:"avro_schema"`
+	AvroMeasurement     string   `toml:"avro_measurement"`
+	AvroTags            []string `toml:"avro_tags"`
+	AvroFields          []string `toml:"avro_fields"`
+	AvroTimestamp       string   `toml:"avro_timestamp"`
+	AvroTimestampFormat string   `toml:"avro_timestamp_format"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -204,7 +204,6 @@ func NewParser(config *Config) (Parser, error) {
 	creator, found := Parsers[config.DataFormat]
 	if !found {
 		return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
-
 	}
 
 	// Try to create new-style parsers the old way...

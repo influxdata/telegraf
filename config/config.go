@@ -1454,6 +1454,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",
+		"avro_schema", "avro_schema_registry", "avro_measurement", "avro_tags", "avro_fields", "avro_timestamp", "avro_timestamp_format",
 		"carbon2_format", "carbon2_sanitize_replace_char",
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
