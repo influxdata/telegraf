@@ -94,7 +94,7 @@ func (m *MongoDB) Init() error {
 }
 
 // Start runs after init and setup mongodb connections
-func (m *MongoDB) Start() error {
+func (m *MongoDB) Start(telegraf.Accumulator) error {
 	for _, connURL := range m.Servers {
 		if !strings.HasPrefix(connURL, "mongodb://") && !strings.HasPrefix(connURL, "mongodb+srv://") {
 			// Preserve backwards compatibility for hostnames without a
@@ -143,6 +143,8 @@ func (m *MongoDB) Start() error {
 
 	return nil
 }
+
+func (m *MongoDB) Stop() {}
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
