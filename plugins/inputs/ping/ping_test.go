@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	probing "github.com/prometheus-community/pro-bing"
+	ping "github.com/prometheus-community/pro-bing"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -426,7 +426,7 @@ func TestPingGatherNative(t *testing.T) {
 
 	fakePingFunc := func(destination string) (*pingStats, error) {
 		s := &pingStats{
-			Statistics: probing.Statistics{
+			Statistics: ping.Statistics{
 				PacketsSent: 5,
 				PacketsRecv: 5,
 				Rtts: []time.Duration{
@@ -494,7 +494,7 @@ func TestNoPacketsSent(t *testing.T) {
 		Percentiles: []int{50, 95, 99},
 		nativePingFunc: func(destination string) (*pingStats, error) {
 			s := &pingStats{
-				Statistics: probing.Statistics{
+				Statistics: ping.Statistics{
 					PacketsSent: 0,
 					PacketsRecv: 0,
 				},
