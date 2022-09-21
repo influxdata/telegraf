@@ -26,6 +26,12 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
+// Finds all TOML sections of the form `toml @includefile` and extracts the `includefile` part
+var (
+	tomlIncludesEx   = regexp.MustCompile(`^toml\s+(@.+)+$`)
+	tomlIncludeMatch = regexp.MustCompile(`(?:@([^\s]+))+`)
+)
+
 type includeBlock struct {
 	Includes []string
 	Start    int
@@ -45,6 +51,39 @@ func (b *includeBlock) extractBlockBorders(node *ast.FencedCodeBlock) {
 	}
 }
 
+func extractIncludeBlock(readme []byte, node *ast.Text, root string) *includeBlock {
+	includes := tomlIncludesEx.FindSubmatch(node.Text(readme))
+	if len(includes) != 2 {
+		return nil
+	}
+	block := includeBlock{}
+	for _, inc := range tomlIncludeMatch.FindAllSubmatch(includes[1], -1) {
+		if len(inc) != 2 {
+			continue
+		}
+		include := filepath.FromSlash(string(inc[1]))
+		// Make absolute paths relative to the include-root if any
+		if filepath.IsAbs(include) {
+			if root == "" {
+				log.Printf("Ignoring absolute include %q without include root...", include)
+				continue
+			}
+			include = filepath.Join(root, include)
+		}
+		include, err := filepath.Abs(include)
+		if err != nil {
+			log.Printf("Cannot resolve include %q...", include)
+			continue
+		}
+		if fi, err := os.Stat(include); err != nil || !fi.Mode().IsRegular() {
+			log.Printf("Ignoring include %q as it cannot be found or is not a regular file...", include)
+			continue
+		}
+		block.Includes = append(block.Includes, include)
+	}
+	return &block
+}
+
 func insertInclude(buf *bytes.Buffer, include string) error {
 	file, err := os.Open(include)
 	if err != nil {
@@ -59,7 +98,7 @@ func insertInclude(buf *bytes.Buffer, include string) error {
 	return nil
 }
 
-func insertIncludes(buf *bytes.Buffer, b includeBlock) error {
+func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 	// Insert all includes in the order they occurred
 	for _, include := range b.Includes {
 		if err := insertInclude(buf, include); err != nil {
@@ -96,10 +135,6 @@ func main() {
 		includeRoot = filepath.Join(elements[:i]...)
 	}
 
-	// Finds all TOML sections of the form `toml @includefile` and extracts the `includefile` part
-	tomlIncludesEx := regexp.MustCompile(`^toml\s+(@.+)+$`)
-	tomlIncludeMatch := regexp.MustCompile(`(?:@([^\s]+))+`)
-
 	// Get the file permission of the README for later use
 	inputFilename := "README.md"
 	inputFileInfo, err := os.Lstat(inputFilename)
@@ -117,7 +152,7 @@ func main() {
 	root := parser.Parse(text.NewReader(readme))
 
 	// Walk the markdown to identify the (TOML) parts to replace
-	blocksToReplace := make([]includeBlock, 0)
+	blocksToReplace := make([]*includeBlock, 0)
 	for node := root.FirstChild(); node != nil; node = node.NextSibling() {
 		// Only match TOML code nodes
 		codeNode, ok := node.(*ast.FencedCodeBlock)
@@ -127,34 +162,9 @@ func main() {
 		}
 
 		// Extract the includes from the node
-		includes := tomlIncludesEx.FindSubmatch(codeNode.Info.Text(readme))
-		if len(includes) != 2 {
+		block := extractIncludeBlock(readme, codeNode.Info, includeRoot)
+		if block == nil {
 			continue
-		}
-		block := includeBlock{}
-		for _, inc := range tomlIncludeMatch.FindAllSubmatch(includes[1], -1) {
-			if len(inc) != 2 {
-				continue
-			}
-			include := filepath.FromSlash(string(inc[1]))
-			// Make absolute paths relative to the include-root if any
-			if filepath.IsAbs(include) {
-				if includeRoot == "" {
-					log.Printf("Ignoring absolute include %q without include root...", include)
-					continue
-				}
-				include = filepath.Join(includeRoot, include)
-			}
-			include, err := filepath.Abs(include)
-			if err != nil {
-				log.Printf("Cannot resolve include %q...", include)
-				continue
-			}
-			if fi, err := os.Stat(include); err != nil || !fi.Mode().IsRegular() {
-				log.Printf("Ignoring include %q as it cannot be found or is not a regular file...", include)
-				continue
-			}
-			block.Includes = append(block.Includes, include)
 		}
 
 		// Extract the block borders
