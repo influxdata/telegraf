@@ -17,6 +17,7 @@ import (
 	"io"
 	"log" //nolint:revive
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -76,6 +77,25 @@ func insertIncludes(buf *bytes.Buffer, b includeBlock) error {
 }
 
 func main() {
+	// Estimate Telegraf root to be able to handle absolute paths
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Cannot get working directory: %v", err)
+	}
+	cwd, err = filepath.Abs(cwd)
+	if err != nil {
+		log.Fatalf("Cannot resolve working directory: %v", err)
+	}
+	elements := strings.Split(cwd, string(filepath.Separator))
+	var includeRoot string
+	for i := len(elements) - 1; i > 0; i-- {
+		// Find the plugin subdir
+		if elements[i] != "plugins" {
+			continue
+		}
+		includeRoot = filepath.Join(elements[:i]...)
+	}
+
 	// Finds all TOML sections of the form `toml @includefile` and extracts the `includefile` part
 	tomlIncludesEx := regexp.MustCompile(`^toml\s+(@.+)+$`)
 	tomlIncludeMatch := regexp.MustCompile(`(?:@([^\s]+))+`)
@@ -116,17 +136,25 @@ func main() {
 			if len(inc) != 2 {
 				continue
 			}
-			include := string(inc[1])
-			// Safeguards to avoid directory traversals and other bad things
-			if strings.ContainsRune(include, os.PathSeparator) {
-				log.Printf("Ignoring include %q for containing a path...", include)
+			include := filepath.FromSlash(string(inc[1]))
+			// Make absolute paths relative to the include-root if any
+			if filepath.IsAbs(include) {
+				if includeRoot == "" {
+					log.Printf("Ignoring absolute include %q without include root...", include)
+					continue
+				}
+				include = filepath.Join(includeRoot, include)
+			}
+			include, err := filepath.Abs(include)
+			if err != nil {
+				log.Printf("Cannot resolve include %q...", include)
 				continue
 			}
 			if fi, err := os.Stat(include); err != nil || !fi.Mode().IsRegular() {
 				log.Printf("Ignoring include %q as it cannot be found or is not a regular file...", include)
 				continue
 			}
-			block.Includes = append(block.Includes, string(inc[1]))
+			block.Includes = append(block.Includes, include)
 		}
 
 		// Extract the block borders
