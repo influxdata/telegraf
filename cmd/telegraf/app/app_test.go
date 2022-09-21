@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli/v2"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -513,6 +514,9 @@ func TestFlagsAreSet(t *testing.T) {
 		"--test-wait", strconv.Itoa(expectedInt),
 		"--watch-config", expectedString,
 		"--pidfile", expectedString,
+
+		// custom-flags
+		"--my-flag", "value1",
 	}
 
 	buf := new(bytes.Buffer)
@@ -525,6 +529,16 @@ func TestFlagsAreSet(t *testing.T) {
 		WithPProfServer(NewMockServer()),
 		WithTelegrafConfig(NewMockConfig(buf)),
 		WithTelegrafApp(m),
+		WithCustomFlagSet([]cli.Flag{
+			&cli.StringFlag{
+				Name: "my-flag",
+			},
+		}),
+		WithBeforeAction(func(ctx *cli.Context) error {
+			// custom flags will only be accessed in before action callback
+			require.Equal(t, "value1", ctx.String("my-flag"))
+			return nil
+		}),
 	)
 	err := runner.RunApp()
 	require.NoError(t, err)
