@@ -2,15 +2,16 @@
 
 //go:generate goversioninfo -icon=../../assets/windows/tiger.ico
 
-package main
+package app
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/influxdata/telegraf/logger"
 	"github.com/kardianos/service"
 	"github.com/urfave/cli/v2"
+
+	"github.com/influxdata/telegraf/logger"
 )
 
 func cliFlags() []cli.Flag {

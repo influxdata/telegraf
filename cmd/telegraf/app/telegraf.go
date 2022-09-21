@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/fatih/color"
 	"github.com/influxdata/tail/watch"
+	"gopkg.in/tomb.v1"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
@@ -24,7 +26,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"gopkg.in/tomb.v1"
 )
 
 var stop chan struct{}

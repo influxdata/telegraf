@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package app
 
 import (
 	"bytes"
@@ -26,7 +26,14 @@ func TestWindowsFlagsAreSet(t *testing.T) {
 	args := os.Args[0:1]
 	args = append(args, commands...)
 	m := NewMockTelegraf()
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), m)
+	runner := NewRunner(
+		WithArgs(args),
+		WithOutputWriter(buf),
+		WithPProfServer(NewMockServer()),
+		WithTelegrafConfig(NewMockConfig(buf)),
+		WithTelegrafApp(m),
+	)
+	err := runner.RunApp()
 	require.NoError(t, err)
 
 	require.Equal(t, expectedString, m.service)

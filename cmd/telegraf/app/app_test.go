@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"bytes"
@@ -9,12 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/stretchr/testify/require"
 )
 
 type MockTelegraf struct {
@@ -97,7 +98,14 @@ func TestUsageFlag(t *testing.T) {
 		buf := new(bytes.Buffer)
 		args := os.Args[0:1]
 		args = append(args, "--usage", test.PluginName)
-		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+		runner := NewRunner(
+			WithArgs(args),
+			WithOutputWriter(buf),
+			WithPProfServer(NewMockServer()),
+			WithTelegrafConfig(NewMockConfig(buf)),
+			WithTelegrafApp(NewMockTelegraf()),
+		)
+		err := runner.RunApp()
 		if test.ExpectedError != "" {
 			require.ErrorContains(t, err, test.ExpectedError)
 			continue
@@ -117,7 +125,14 @@ func TestInputListFlag(t *testing.T) {
 	inputs.Inputs = map[string]inputs.Creator{
 		"test": func() telegraf.Input { return nil },
 	}
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+	runner := NewRunner(
+		WithArgs(args),
+		WithOutputWriter(buf),
+		WithPProfServer(NewMockServer()),
+		WithTelegrafConfig(NewMockConfig(buf)),
+		WithTelegrafApp(NewMockTelegraf()),
+	)
+	err := runner.RunApp()
 	require.NoError(t, err)
 	expectedOutput := `Available Input Plugins:
   test
@@ -134,7 +149,14 @@ func TestOutputListFlag(t *testing.T) {
 	outputs.Outputs = map[string]outputs.Creator{
 		"test": func() telegraf.Output { return nil },
 	}
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+	runner := NewRunner(
+		WithArgs(args),
+		WithOutputWriter(buf),
+		WithPProfServer(NewMockServer()),
+		WithTelegrafConfig(NewMockConfig(buf)),
+		WithTelegrafApp(NewMockTelegraf()),
+	)
+	err := runner.RunApp()
 	require.NoError(t, err)
 	expectedOutput := `Available Output Plugins:
   test
@@ -157,7 +179,14 @@ func TestDeprecationListFlag(t *testing.T) {
 			},
 		},
 	}
-	err := runApp(args, buf, mS, mC, NewMockTelegraf())
+	runner := NewRunner(
+		WithArgs(args),
+		WithOutputWriter(buf),
+		WithPProfServer(mS),
+		WithTelegrafConfig(mC),
+		WithTelegrafApp(NewMockTelegraf()),
+	)
+	err := runner.RunApp()
 	require.NoError(t, err)
 	expectedOutput := `Deprecated Input Plugins:
 plugin name: test
@@ -175,7 +204,14 @@ func TestPprofAddressFlag(t *testing.T) {
 	address := "localhost:6060"
 	args = append(args, "--pprof-addr", address)
 	m := NewMockServer()
-	err := runApp(args, buf, m, NewMockConfig(buf), NewMockTelegraf())
+	runner := NewRunner(
+		WithArgs(args),
+		WithOutputWriter(buf),
+		WithPProfServer(m),
+		WithTelegrafConfig(NewMockConfig(buf)),
+		WithTelegrafApp(NewMockTelegraf()),
+	)
+	err := runner.RunApp()
 	require.NoError(t, err)
 	require.Equal(t, address, m.Address)
 }
@@ -186,7 +222,14 @@ func TestPluginDirectoryFlag(t *testing.T) {
 	buf := new(bytes.Buffer)
 	args := os.Args[0:1]
 	args = append(args, "--plugin-directory", ".")
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+	runner := NewRunner(
+		WithArgs(args),
+		WithOutputWriter(buf),
+		WithPProfServer(NewMockServer()),
+		WithTelegrafConfig(NewMockConfig(buf)),
+		WithTelegrafApp(NewMockTelegraf()),
+	)
+	err := runner.RunApp()
 	require.ErrorContains(t, err, "E! go plugin support is not enabled")
 }
 
@@ -297,7 +340,14 @@ func TestCommandConfig(t *testing.T) {
 			buf := new(bytes.Buffer)
 			args := os.Args[0:1]
 			args = append(args, test.commands...)
-			err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+			runner := NewRunner(
+				WithArgs(args),
+				WithOutputWriter(buf),
+				WithPProfServer(NewMockServer()),
+				WithTelegrafConfig(NewMockConfig(buf)),
+				WithTelegrafApp(NewMockTelegraf()),
+			)
+			err := runner.RunApp()
 			require.NoError(t, err)
 			output := buf.String()
 			for _, e := range test.expectedHeaders {
@@ -355,7 +405,14 @@ func TestCommandVersion(t *testing.T) {
 		internal.Version = test.Version
 		internal.Branch = test.Branch
 		internal.Commit = test.Commit
-		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+		runner := NewRunner(
+			WithArgs(args),
+			WithOutputWriter(buf),
+			WithPProfServer(NewMockServer()),
+			WithTelegrafConfig(NewMockConfig(buf)),
+			WithTelegrafApp(NewMockTelegraf()),
+		)
+		err := runner.RunApp()
 		require.NoError(t, err)
 		require.Equal(t, test.ExpectedOutput, buf.String())
 	}
@@ -401,7 +458,14 @@ func TestFlagVersion(t *testing.T) {
 		internal.Version = test.Version
 		internal.Branch = test.Branch
 		internal.Commit = test.Commit
-		err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+		runner := NewRunner(
+			WithArgs(args),
+			WithOutputWriter(buf),
+			WithPProfServer(NewMockServer()),
+			WithTelegrafConfig(NewMockConfig(buf)),
+			WithTelegrafApp(NewMockTelegraf()),
+		)
+		err := runner.RunApp()
 		require.NoError(t, err)
 		require.Equal(t, test.ExpectedOutput, buf.String())
 	}
@@ -419,7 +483,14 @@ func TestGlobablBoolFlags(t *testing.T) {
 	args := os.Args[0:1]
 	args = append(args, commands...)
 	m := NewMockTelegraf()
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), m)
+	runner := NewRunner(
+		WithArgs(args),
+		WithOutputWriter(buf),
+		WithPProfServer(NewMockServer()),
+		WithTelegrafConfig(NewMockConfig(buf)),
+		WithTelegrafApp(m),
+	)
+	err := runner.RunApp()
 	require.NoError(t, err)
 
 	require.Equal(t, true, m.debug)
@@ -448,7 +519,14 @@ func TestFlagsAreSet(t *testing.T) {
 	args := os.Args[0:1]
 	args = append(args, commands...)
 	m := NewMockTelegraf()
-	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), m)
+	runner := NewRunner(
+		WithArgs(args),
+		WithOutputWriter(buf),
+		WithPProfServer(NewMockServer()),
+		WithTelegrafConfig(NewMockConfig(buf)),
+		WithTelegrafApp(m),
+	)
+	err := runner.RunApp()
 	require.NoError(t, err)
 
 	require.Equal(t, []string{expectedString}, m.config)
