@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build windows
-// +build windows
 
 // Package win_eventlog Input plugin to collect Windows Event Log messages
 //
