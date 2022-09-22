@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 // these tests must be run under administrator account
 package win_services
