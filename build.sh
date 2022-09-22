@@ -13,7 +13,7 @@ set -e
 usage()
 {
     echo "usage: $0 arch {build | upload}"
-    echo " . arch  : valid architectures: arm64, x86_64, mips"
+    echo " . arch  : valid architectures: arm, arm64, x86_64, mips"
     echo " . build : build and tar utility for specified architecture"
     echo " . upload: upload specified architecture's tar to Artifactory"
 }
@@ -89,7 +89,7 @@ esac
 
 # perform action
 case $1 in
-    arm64 | mips | x86_64)
+    arm64 | mips | x86_64 | arm)
         $action
         ;;
     *)
