@@ -1050,9 +1050,9 @@ func TestRetryFailExhausted(t *testing.T) {
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
 
-	err := modbus.Gather(&acc)
-	require.Error(t, err)
-	require.Equal(t, "modbus: exception '6' (server device busy), function '129'", err.Error())
+	require.NoError(t, modbus.Gather(&acc))
+	require.Len(t, acc.Errors, 1)
+	require.EqualError(t, acc.FirstError(), "slave 1: modbus: exception '6' (server device busy), function '129'")
 }
 
 func TestRetryFailIllegal(t *testing.T) {
@@ -1072,7 +1072,8 @@ func TestRetryFailIllegal(t *testing.T) {
 			data[1] = byte(0)
 
 			return data, &mbserver.IllegalFunction
-		})
+		},
+	)
 
 	modbus := Modbus{
 		Name:       "TestRetryFailExhausted",
@@ -1092,9 +1093,9 @@ func TestRetryFailIllegal(t *testing.T) {
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
 
-	err := modbus.Gather(&acc)
-	require.Error(t, err)
-	require.Equal(t, "modbus: exception '1' (illegal function), function '129'", err.Error())
+	require.NoError(t, modbus.Gather(&acc))
+	require.Len(t, acc.Errors, 1)
+	require.EqualError(t, acc.FirstError(), "slave 1: modbus: exception '1' (illegal function), function '129'")
 	require.Equal(t, counter, 1)
 }
 
@@ -1866,7 +1867,8 @@ func TestRequestsStartingWithOmits(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 	modbus.Requests = []requestDefinition{
-		{SlaveID: 1,
+		{
+			SlaveID:      1,
 			ByteOrder:    "ABCD",
 			RegisterType: "holding",
 			Fields: []requestFieldDefinition{
@@ -1941,4 +1943,104 @@ func TestRequestsEmptyFields(t *testing.T) {
 	}
 	err := modbus.Init()
 	require.EqualError(t, err, `configuraton invalid: found request section without fields`)
+}
+
+func TestMultipleSlavesOneFail(t *testing.T) {
+	telegraf.Debug = true
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		Retries:           1,
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+			},
+		},
+		{
+			SlaveID:      2,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+			},
+		},
+		{
+			SlaveID:      3,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+			},
+		},
+	}
+	require.NoError(t, modbus.Init())
+
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	serv.RegisterFunctionHandler(3,
+		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+			tcpframe, ok := frame.(*mbserver.TCPFrame)
+			if !ok {
+				return nil, &mbserver.IllegalFunction
+			}
+
+			if tcpframe.Device == 2 {
+				// Simulate device 2 being unavailable
+				return []byte{}, &mbserver.GatewayTargetDeviceFailedtoRespond
+			}
+			return []byte{0x02, 0x00, 0x42}, &mbserver.Success
+		},
+	)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": "1",
+				"name":     modbus.Name,
+			},
+			map[string]interface{}{"holding-0": int16(0x42)},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": "3",
+				"name":     modbus.Name,
+			},
+			map[string]interface{}{"holding-0": int16(0x42)},
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+	require.Len(t, acc.Errors, 1)
+	require.EqualError(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond), function '131'")
 }

@@ -91,6 +91,10 @@ in Prometheus format.
   
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
+
+  ## HTTP Proxy support
+  # use_system_proxy = false
+  # http_proxy_url = ""
   
   ## Optional TLS Config
   # tls_ca = /path/to/cafile

@@ -1,7 +1,9 @@
-package jolokia2_test
+package jolokia2_agent_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,15 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
-	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/jolokia2_agent"
-	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/jolokia2_proxy"
+	common "github.com/influxdata/telegraf/plugins/common/jolokia2"
+	"github.com/influxdata/telegraf/plugins/inputs/jolokia2_agent"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
 
-func TestJolokia2_ScalarValues(t *testing.T) {
+func TestScalarValues(t *testing.T) {
 	config := `
 	[jolokia2_agent]
 		urls = ["%s"]
@@ -117,7 +118,7 @@ func TestJolokia2_ScalarValues(t *testing.T) {
 	})
 }
 
-func TestJolokia2_ObjectValues(t *testing.T) {
+func TestObjectValues(t *testing.T) {
 	config := `
 	[jolokia2_agent]
 		urls = ["%s"]
@@ -288,7 +289,7 @@ func TestJolokia2_ObjectValues(t *testing.T) {
 	})
 }
 
-func TestJolokia2_StatusCodes(t *testing.T) {
+func TestStatusCodes(t *testing.T) {
 	config := `
 	[jolokia2_agent]
 		urls = ["%s"]
@@ -343,7 +344,7 @@ func TestJolokia2_StatusCodes(t *testing.T) {
 	acc.AssertDoesNotContainMeasurement(t, "unknown")
 }
 
-func TestJolokia2_TagRenaming(t *testing.T) {
+func TestTagRenaming(t *testing.T) {
 	config := `
 	[jolokia2_agent]
 		default_tag_prefix = "DEFAULT_PREFIX_"
@@ -400,7 +401,7 @@ func TestJolokia2_TagRenaming(t *testing.T) {
 	})
 }
 
-func TestJolokia2_FieldRenaming(t *testing.T) {
+func TestFieldRenaming(t *testing.T) {
 	config := `
 	[jolokia2_agent]
 		default_field_prefix    = "DEFAULT_PREFIX_"
@@ -503,7 +504,7 @@ func TestJolokia2_FieldRenaming(t *testing.T) {
 	})
 }
 
-func TestJolokia2_MetricMbeanMatching(t *testing.T) {
+func TestMetricMbeanMatching(t *testing.T) {
 	config := `
 	[jolokia2_agent]
 		urls = ["%s"]
@@ -611,7 +612,7 @@ func TestJolokia2_MetricMbeanMatching(t *testing.T) {
 	})
 }
 
-func TestJolokia2_MetricCompaction(t *testing.T) {
+func TestMetricCompaction(t *testing.T) {
 	config := `
 	[jolokia2_agent]
 		urls = ["%s"]
@@ -694,62 +695,40 @@ func TestJolokia2_MetricCompaction(t *testing.T) {
 	})
 }
 
-func TestJolokia2_ProxyTargets(t *testing.T) {
-	config := `
-	[jolokia2_proxy]
-		url = "%s"
+func TestJolokia2_ClientAuthRequest(t *testing.T) {
+	var username string
+	var password string
+	var requests []map[string]interface{}
 
-	[[jolokia2_proxy.target]]
-		url = "service:jmx:rmi:///jndi/rmi://target1:9010/jmxrmi"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, _ = r.BasicAuth()
 
-	[[jolokia2_proxy.target]]
-		url = "service:jmx:rmi:///jndi/rmi://target2:9010/jmxrmi"
+		body, _ := io.ReadAll(r.Body)
+		require.NoError(t, json.Unmarshal(body, &requests))
 
-	[[jolokia2_proxy.metric]]
-		name  = "hello"
-		mbean = "hello:foo=bar"`
-
-	response := `[{
-		"request": {
-			"type": "read",
-			"mbean": "hello:foo=bar",
-			"target": {
-				"url": "service:jmx:rmi:///jndi/rmi://target1:9010/jmxrmi"
-			}
-		},
-		"value": 123,
-		"status": 200
-	}, {
-		"request": {
-			"type": "read",
-			"mbean": "hello:foo=bar",
-			"target": {
-				"url": "service:jmx:rmi:///jndi/rmi://target2:9010/jmxrmi"
-			}
-		},
-		"value": 456,
-		"status": 200
-	}]`
-
-	server := setupServer(response)
+		w.WriteHeader(http.StatusOK)
+	}))
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+
+	plugin := SetupPlugin(t, fmt.Sprintf(`
+		[jolokia2_agent]
+			urls = ["%s/jolokia"]
+			username = "sally"
+			password = "seashore"
+		[[jolokia2_agent.metric]]
+			name  = "hello"
+			mbean = "hello:foo=bar"
+	`, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "hello", map[string]interface{}{
-		"value": 123.0,
-	}, map[string]string{
-		"jolokia_proxy_url": server.URL,
-		"jolokia_agent_url": "service:jmx:rmi:///jndi/rmi://target1:9010/jmxrmi",
-	})
-	acc.AssertContainsTaggedFields(t, "hello", map[string]interface{}{
-		"value": 456.0,
-	}, map[string]string{
-		"jolokia_proxy_url": server.URL,
-		"jolokia_agent_url": "service:jmx:rmi:///jndi/rmi://target2:9010/jmxrmi",
-	})
+	require.EqualValuesf(t, "sally", username, "Expected to post with username %s, but was %s", "sally", username)
+	require.EqualValuesf(t, "seashore", password, "Expected to post with password %s, but was %s", "seashore", password)
+	require.NotZero(t, len(requests), "Expected to post a request body, but was empty.")
+
+	request := requests[0]["mbean"]
+	require.EqualValuesf(t, "hello:foo=bar", request, "Expected to query mbean %s, but was %s", "hello:foo=bar", request)
 }
 
 func TestFillFields(t *testing.T) {
@@ -768,9 +747,7 @@ func TestFillFields(t *testing.T) {
 func setupServer(resp string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		// Ignore the returned error as the tests will fail anyway
-		//nolint:errcheck,revive
-		fmt.Fprintln(w, resp)
+		_, _ = fmt.Fprintln(w, resp)
 	}))
 }
 
@@ -782,8 +759,7 @@ func SetupPlugin(t *testing.T, conf string) telegraf.Input {
 
 	for name := range table.Fields {
 		object := table.Fields[name]
-		switch name {
-		case "jolokia2_agent":
+		if name == "jolokia2_agent" {
 			plugin := jolokia2_agent.JolokiaAgent{
 				Metrics:               []common.MetricConfig{},
 				DefaultFieldSeparator: ".",
@@ -791,18 +767,6 @@ func SetupPlugin(t *testing.T, conf string) telegraf.Input {
 
 			if err := toml.UnmarshalTable(object.(*ast.Table), &plugin); err != nil {
 				t.Fatalf("Unable to parse jolokia_agent plugin config! %v", err)
-			}
-
-			return &plugin
-
-		case "jolokia2_proxy":
-			plugin := jolokia2_proxy.JolokiaProxy{
-				Metrics:               []common.MetricConfig{},
-				DefaultFieldSeparator: ".",
-			}
-
-			if err := toml.UnmarshalTable(object.(*ast.Table), &plugin); err != nil {
-				t.Fatalf("Unable to parse jolokia_proxy plugin config! %v", err)
 			}
 
 			return &plugin

@@ -43,10 +43,11 @@ func MockMetrics() []telegraf.Metric {
 }
 
 // TestMetric Returns a simple test point:
-//     measurement -> "test1" or name
-//     tags -> "tag1":"value1"
-//     value -> value
-//     time -> time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
+//
+//	measurement -> "test1" or name
+//	tags -> "tag1":"value1"
+//	value -> value
+//	time -> time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 func TestMetric(value interface{}, name ...string) telegraf.Metric {
 	if value == nil {
 		panic("Cannot use a nil value")

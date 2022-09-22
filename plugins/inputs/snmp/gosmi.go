@@ -82,6 +82,7 @@ var gosmiSnmpTableCachesLock sync.Mutex
 
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
+//
 //nolint:revive //Too many return variable but necessary
 func (g *gosmiTranslator) SnmpTable(oid string) (
 	mibName string, oidNum string, oidText string,

@@ -18,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -59,7 +58,6 @@ func opensmtpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*by
 
 // Gather collects the configured stats from smtpctl and adds them to the
 // Accumulator
-//
 func (*Opensmtpd) SampleConfig() string {
 	return sampleConfig
 }
