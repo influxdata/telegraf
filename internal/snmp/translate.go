@@ -2,7 +2,6 @@ package snmp
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,12 +56,18 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 	}
 	for _, path := range folders {
 		loader.appendPath(path)
-		modules, err := ioutil.ReadDir(path)
+		modules, err := os.ReadDir(path)
 		if err != nil {
 			log.Warnf("Can't read directory %v", modules)
+			continue
 		}
 
-		for _, info := range modules {
+		for _, entry := range modules {
+			info, err := entry.Info()
+			if err != nil {
+				log.Warnf("Couldn't get info for %v: %v", entry.Name(), err)
+				continue
+			}
 			if info.Mode()&os.ModeSymlink != 0 {
 				symlink := filepath.Join(path, info.Name())
 				target, err := filepath.EvalSymlinks(symlink)

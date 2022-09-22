@@ -47,7 +47,8 @@ func TestGetDefaultTagsIntegration(t *testing.T) {
 	}
 	err := m.Init()
 	require.NoError(t, err)
-	err = m.Start()
+	var acc testutil.Accumulator
+	err = m.Start(&acc)
 	require.NoError(t, err)
 
 	server := m.clients[0]
@@ -84,12 +85,12 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 	}
 	err := m.Init()
 	require.NoError(t, err)
-	err = m.Start()
+	var acc testutil.Accumulator
+	err = m.Start(&acc)
 	require.NoError(t, err)
 
 	server := m.clients[0]
 
-	var acc testutil.Accumulator
 	err = server.gatherData(&acc, false, true, true, true, []string{"local"})
 	require.NoError(t, err)
 
@@ -115,10 +116,10 @@ func TestSkipBehaviorIntegration(t *testing.T) {
 	m.DisconnectedServersBehavior = "skip"
 	err := m.Init()
 	require.NoError(t, err)
-	err = m.Start()
+	var acc testutil.Accumulator
+	err = m.Start(&acc)
 	require.NoError(t, err)
 
-	var acc testutil.Accumulator
 	err = m.Gather(&acc)
 	require.NoError(t, err)
 	require.NotContains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
@@ -136,16 +137,16 @@ func TestErrorBehaviorIntegration(t *testing.T) {
 
 	err := m.Init()
 	require.NoError(t, err)
-	err = m.Start()
+	var acc testutil.Accumulator
+	err = m.Start(&acc)
 	require.Error(t, err)
 
 	// set to skip to bypass start error
 	m.DisconnectedServersBehavior = "skip"
-	err = m.Start()
+	err = m.Start(&acc)
 	require.NoError(t, err)
 	m.DisconnectedServersBehavior = "error"
 
-	var acc testutil.Accumulator
 	err = m.Gather(&acc)
 	require.NoError(t, err)
 	require.Contains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")

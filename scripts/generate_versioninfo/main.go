@@ -5,8 +5,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"log" //nolint:revive
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to marshal json: %v", err)
 	}
-	if err := ioutil.WriteFile("cmd/telegraf/versioninfo.json", file, 0644); err != nil {
+	if err := os.WriteFile("cmd/telegraf/versioninfo.json", file, 0644); err != nil {
 		log.Fatalf("Failed to write versioninfo.json: %v", err)
 	}
 }
