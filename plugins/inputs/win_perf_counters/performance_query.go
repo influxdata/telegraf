@@ -1,6 +1,5 @@
 // Go API over pdh syscalls
 //go:build windows
-// +build windows
 
 package win_perf_counters
 
