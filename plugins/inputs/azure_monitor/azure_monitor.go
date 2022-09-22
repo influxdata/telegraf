@@ -188,10 +188,9 @@ func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
 				am.Log.Info("Did not get any metric value from Azure Monitor API for the metric ID ", notCollectedMetric)
 			}
 		}(target)
-
-		waitGroup.Wait()
 	}
 
+	waitGroup.Wait()
 	return nil
 }
 
