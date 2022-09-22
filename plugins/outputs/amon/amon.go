@@ -18,6 +18,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// making a code change so I get CI artifacts
 type Amon struct {
 	ServerKey    string          `toml:"server_key"`
 	AmonInstance string          `toml:"amon_instance"`
