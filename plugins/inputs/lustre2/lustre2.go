@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
-// +build !windows
 
 // Package lustre2 (doesn't aim for Windows)
 // Lustre 2.x Telegraf plugin
