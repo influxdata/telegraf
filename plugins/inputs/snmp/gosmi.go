@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/sleepinggenius2/gosmi"
+	"github.com/sleepinggenius2/gosmi/models"
 )
 
 type gosmiTranslator struct {
@@ -121,4 +122,21 @@ func (g *gosmiTranslator) SnmpTableCall(oid string) (mibName string, oidNum stri
 	}
 
 	return mibName, oidNum, oidText, fields, err
+}
+
+func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full bool) (string, error) {
+	_, _, _, _, node, err := g.SnmpTranslateFull(oid)
+
+	if err != nil {
+		return "", err
+	}
+
+	var v models.Value
+	if full {
+		v = node.FormatValue(value, models.FormatEnumName, models.FormatEnumValue)
+	} else {
+		v = node.FormatValue(value, models.FormatEnumName)
+	}
+
+	return v.Formatted, err
 }

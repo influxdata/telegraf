@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -583,7 +584,7 @@ func TestFieldConvertGosmi(t *testing.T) {
 	}
 
 	for _, tc := range testTable {
-		act, err := fieldConvert(tc.conv, tc.input)
+		act, err := fieldConvert(getGosmiTr(t), tc.conv, gosnmp.SnmpPDU{Value: tc.input})
 		assert.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 		assert.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 	}
