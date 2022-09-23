@@ -357,13 +357,13 @@ type riakStats struct {
 	RebalanceDelayMin                 int64       `json:"rebalance_delay_min"`
 	RejectedHandoffs                  int64       `json:"rejected_handoffs"`
 	RiakKvVnodeqMax                   int64       `json:"riak_kv_vnodeq_max"`
-	RiakKvVnodeqMean                  int64       `json:"riak_kv_vnodeq_mean"`
+	RiakKvVnodeqMean                  float64     `json:"riak_kv_vnodeq_mean"`
 	RiakKvVnodeqMedian                int64       `json:"riak_kv_vnodeq_median"`
 	RiakKvVnodeqMin                   int64       `json:"riak_kv_vnodeq_min"`
 	RiakKvVnodeqTotal                 int64       `json:"riak_kv_vnodeq_total"`
 	RiakKvVnodesRunning               int64       `json:"riak_kv_vnodes_running"`
 	RiakPipeVnodeqMax                 int64       `json:"riak_pipe_vnodeq_max"`
-	RiakPipeVnodeqMean                int64       `json:"riak_pipe_vnodeq_mean"`
+	RiakPipeVnodeqMean                float64     `json:"riak_pipe_vnodeq_mean"`
 	RiakPipeVnodeqMedian              int64       `json:"riak_pipe_vnodeq_median"`
 	RiakPipeVnodeqMin                 int64       `json:"riak_pipe_vnodeq_min"`
 	RiakPipeVnodeqTotal               int64       `json:"riak_pipe_vnodeq_total"`
