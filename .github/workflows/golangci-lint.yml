@@ -9,6 +9,10 @@ on:
   schedule:
     # Trigger every day at 16:00 UTC
     - cron:  '0 16 * * *'
+permissions:
+  contents: read # to fetch code (actions/checkout)
+  pull-requests: read # to fetch pull requests (golangci/golangci-lint-action)
+
 jobs:
   golangci-pr:
     if: github.ref != 'refs/heads/master'
