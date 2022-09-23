@@ -1,0 +1,19 @@
+{
+    "type":"record",
+    "name":"Value",
+    "namespace":"com.example",
+    "fields":[
+	{
+	    "name":"tag",
+	    "type":"string"
+	},
+	{
+	    "name":"field",
+	    "type":"long"
+	},
+	{
+	    "name":"timestamp",
+	    "type":"long"
+	}
+    ]
+}

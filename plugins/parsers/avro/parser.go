@@ -57,12 +57,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 	}
-
 	native, _, err := codec.NativeFromBinary(binaryData)
 	if err != nil {
 		return nil, err
 	}
-
 	m, err := p.createMetric(native, schema)
 	if err != nil {
 		return nil, err

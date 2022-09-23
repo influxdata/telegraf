@@ -1,263 +1,245 @@
 package avro
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"strings"
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"os"
+	"path/filepath"
+	"sort"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/file"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
 	"github.com/linkedin/goavro/v2"
 	"github.com/stretchr/testify/require"
 )
 
-func TestBasicAvroMessage(t *testing.T) {
-	schema := `
-        {
-            "type":"record",
-            "name":"Value",
-            "namespace":"com.example",
-            "fields":[
-                {
-                    "name":"tag",
-                    "type":"string"
-                },
-                {
-                    "name":"field",
-                    "type":"long"
-                },
-                {
-                    "name":"timestamp",
-                    "type":"long"
-                }
-            ]
-        }
-    `
-	message := `
-        {
-            "tag":"test_tag",
-            "field": 19,
-            "timestamp": 1593002503937
-        }
-    `
-
-	schemaRegistry := LocalSchemaRegistry{schema: schema}
-	schemaRegistry.start()
-	defer schemaRegistry.stop()
-
-	p := Parser{
-		SchemaRegistry:  schemaRegistry.url(),
-		Measurement:     "measurement",
-		Tags:            []string{"tag"},
-		Fields:          []string{"field"},
-		Timestamp:       "timestamp",
-		TimestampFormat: "unix_ms",
-	}
-
-	msg, err := makeAvroMessage(schema, message)
-	require.NoError(t, err)
-
-	metrics, err := p.Parse(msg)
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"measurement",
-			map[string]string{
-				"tag": "test_tag",
-			},
-			map[string]interface{}{
-				"field": 19,
-			},
-			time.Unix(1593002503, 937000000),
-		),
-	}
-
-	testutil.RequireMetricsEqual(t, expected, metrics)
-}
-
-func TestKafkaDemoAvroMessage(t *testing.T) {
-	schema := `
-        {
-            "type":"record",
-            "name":"KsqlDataSourceSchema",
-            "namespace":"io.confluent.ksql.avro_schemas",
-            "fields":[
-                {
-                    "name":"rating_id",
-                    "type":[
-                        "null",
-                        "long"
-                    ],
-                    "default":null
-                },
-                {
-                    "name":"user_id",
-                    "type":[
-                        "null",
-                        "int"
-                    ],
-                    "default":null
-                },
-                {
-                    "name":"stars",
-                    "type":[
-                        "null",
-                        "int"
-                    ],
-                    "default":null
-                },
-                {
-                    "name":"route_id",
-                    "type":[
-                        "null",
-                        "int"
-                    ],
-                    "default":null
-                },
-                {
-                    "name":"rating_time",
-                    "type":[
-                        "null",
-                        "long"
-                    ],
-                    "default":null
-                },
-                {
-                    "name":"channel",
-                    "type":[
-                        "null",
-                        "string"
-                    ],
-                    "default":null
-                },
-                {
-                    "name":"message",
-                    "type":[
-                        "null",
-                        "string"
-                    ],
-                    "default":null
-                }
-            ]
-        }
-    `
-
-	message := `
-        {
-            "rating_id":{
-                "long":1175
-            },
-            "user_id":{
-                "int":14
-            },
-            "stars":{
-                "int":1
-            },
-            "route_id":{
-                "int":3229
-            },
-            "rating_time":{
-                "long":1593009409638
-            },
-            "channel":{
-                "string":"ios"
-            },
-            "message":{
-                "string":"thank you for the most friendly, helpful experience today at your new lounge"
-            }
-        }
-    `
-
-	schemaRegistry := LocalSchemaRegistry{schema: schema}
-	schemaRegistry.start()
-	defer schemaRegistry.stop()
-
-	p := Parser{
-		SchemaRegistry:  schemaRegistry.url(),
-		Measurement:     "ratings",
-		Tags:            []string{"user_id", "route_id", "channel"},
-		Fields:          []string{"stars", "message"},
-		Timestamp:       "rating_time",
-		TimestampFormat: "unix_ms",
-	}
-
-	msg, err := makeAvroMessage(schema, message)
-	require.NoError(t, err)
-
-	metrics, err := p.Parse(msg)
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"ratings",
-			map[string]string{
-				"user_id":  "14",
-				"route_id": "3229",
-				"channel":  "ios",
-			},
-			map[string]interface{}{
-				"stars":   1,
-				"message": "thank you for the most friendly, helpful experience today at your new lounge",
-			},
-			time.Unix(1593009409, 638000000),
-		),
-	}
-
-	testutil.RequireMetricsEqual(t, expected, metrics)
-}
-
-type LocalSchemaRegistry struct {
-	schema string
-	ts     *httptest.Server
-}
-
-func (sr *LocalSchemaRegistry) start() {
-	schema := strings.ReplaceAll(sr.schema, "\"", "\\\"")
-	schema = strings.ReplaceAll(schema, "\n", "\\n")
-	schema = fmt.Sprintf("{\"schema\": \"%s\"}", schema)
-	sr.ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
-		_, err := w.Write([]byte(schema))
-		if err != nil {
-			panic(err)
-		}
-	}))
-}
-
-func (sr *LocalSchemaRegistry) stop() {
-	sr.ts.Close()
-}
-
-func (sr *LocalSchemaRegistry) url() string {
-	return sr.ts.URL
-}
-
-func makeAvroMessage(schema string, message string) ([]byte, error) {
+func JSONToAvroMessage(schemaID int32, schema string, message []byte) ([]byte, error) {
 	codec, err := goavro.NewCodec(schema)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes := []byte(message)
-
-	native, _, err := codec.NativeFromTextual(bytes)
+	// We could use json.Unmarshal, but our codec can do it directly too.
+	native, _, err := codec.NativeFromTextual(message)
 	if err != nil {
 		return nil, err
 	}
 
-	binary, err := codec.BinaryFromNative(nil, native)
+	binaryMsg, err := codec.BinaryFromNative(nil, native)
 	if err != nil {
 		return nil, err
 	}
 
+	// Put schemaID into []byte
+	schemaBytes := new(bytes.Buffer)
+	err = binary.Write(schemaBytes, binary.BigEndian, schemaID)
+	if err != nil {
+		return nil, err
+	}
+	schemaBin := schemaBytes.Bytes()
+
+	// Create serialized Avro binary message
 	magicByte := []byte{0x01}
-	schemaID := []byte{0x00, 0x00, 0x00, 0x01}
-	binary = append(schemaID, binary...)
-	binary = append(magicByte, binary...)
+	binaryMsg = append(schemaBin, binaryMsg...)
+	binaryMsg = append(magicByte, binaryMsg...)
 
-	return binary, nil
+	return binaryMsg, nil
+}
+
+var CommonSchema string
+var CommonMessage []byte
+var CommonAvro []byte
+var CommonConfig *config.Config
+
+type AvroCfg struct {
+	Inputs struct {
+		File []struct {
+			Parser
+			Data_format string
+		}
+	}
+}
+
+func BuildParser(buf []byte) (*Parser, error) {
+	var cfg AvroCfg
+
+	err := toml.Unmarshal(buf, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	pinput := cfg.Inputs.File[0].Parser
+	p := Parser{
+		MetricName:       pinput.MetricName,
+		SchemaRegistry:   pinput.SchemaRegistry,
+		Schema:           pinput.Schema,
+		Measurement:      pinput.Measurement,
+		Tags:             pinput.Tags,
+		Fields:           pinput.Fields,
+		Timestamp:        pinput.Timestamp,
+		TimestampFormat:  pinput.TimestampFormat,
+		DiscardArrays:    pinput.DiscardArrays,
+		FieldSeparator:   pinput.FieldSeparator,
+		RoundTimestampTo: pinput.RoundTimestampTo,
+		DefaultTags:      pinput.DefaultTags,
+	}
+	return &p, nil
+}
+
+func TestCommonLoadConfig(t *testing.T) {
+	// Load our common schema, message, and configuration
+	commonSchemaBytes, err := os.ReadFile("testdata/common/schema.json")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	CommonSchema = string(commonSchemaBytes)
+	CommonMessage, err = os.ReadFile("testdata/common/message.json")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	CommonAvro, err = JSONToAvroMessage(1, CommonSchema, CommonMessage)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	CommonConfig = config.NewConfig()
+	require.NoError(t, CommonConfig.LoadConfig("testdata/common/telegraf.conf"))
+
+}
+
+func TestRoundTrip(t *testing.T) {
+
+}
+
+func TestMultipleConfigs(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testdata")
+	require.NoError(t, err)
+	// Make sure testdata contains data
+	require.Greater(t, len(folders), 0)
+
+	commonPath := filepath.Join("testdata", "common")
+	for _, f := range folders {
+		fname := f.Name()
+		if fname == "common" {
+			continue
+		}
+		testdataPath := filepath.Join("testdata", fname)
+		configFilename := filepath.Join(testdataPath, "telegraf.conf")
+		testSchema := filepath.Join(testdataPath, "schema.json")
+		testJson := filepath.Join(testdataPath, "message.json")
+		expectedFilename := filepath.Join(testdataPath, "expected.out")
+		expectedErrorFilename := filepath.Join(testdataPath, "expected.err")
+
+		t.Run(f.Name(), func(t *testing.T) {
+			inputs.Add("file", func() telegraf.Input {
+				return &file.File{}
+			})
+			// Read the expected output
+			std_parser := &influx.Parser{}
+			require.NoError(t, std_parser.Init())
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, std_parser)
+			require.NoError(t, err)
+
+			// Read the expected errors if any
+			var expectedErrors []string
+
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
+			rawConfig, err := os.ReadFile(configFilename)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					configFilename = filepath.Join(commonPath, "telegraf.conf")
+					rawConfig, err = os.ReadFile(configFilename)
+				} else {
+					require.NoError(t, err) // will fail
+				}
+			}
+			cfg := config.NewConfig()
+			cfg.LoadConfigData(rawConfig)
+			// Gather the metrics from the input file configure
+			// var acc testutil.Accumulator
+			var actualErrorMsgs []string
+			// for _, input := range cfg.Inputs {
+			//        require.NoError(t, input.Init())
+			//        if err := input.Gather(&acc); err != nil {
+			//                actualErrorMsgs = append(actualErrorMsgs, err.Error())
+			//       }
+			//}
+
+			// Load the schema and message; produce the Avro
+			// format message.
+
+			var schema string
+			var message []byte
+			// var rawConfig []byte
+
+			schemaBytes, err := os.ReadFile(testSchema)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					schema = CommonSchema
+				} else {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+			} else {
+				schema = string(schemaBytes)
+			}
+
+			message, err = os.ReadFile(testJson)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					message = CommonMessage
+				} else {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+			}
+			avroMessage, err := JSONToAvroMessage(1, schema, message)
+			if err != nil {
+				actualErrorMsgs = append(actualErrorMsgs, err.Error())
+			}
+
+			// Get a new parser each time, because it may need
+			// reconfiguration.
+			parser, err := BuildParser(rawConfig)
+			require.NoError(t, err)
+			err = parser.Init()
+			var actual []telegraf.Metric
+			if err != nil {
+				actualErrorMsgs = append(actualErrorMsgs, err.Error())
+			} else {
+				// Only parse if the parser actually loaded.
+				actual, err = parser.Parse(avroMessage)
+				if err != nil {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+			}
+
+			// If the test has expected error(s) then compare them
+			if len(expectedErrors) > 0 {
+				sort.Strings(actualErrorMsgs)
+				sort.Strings(expectedErrors)
+				for i, msg := range expectedErrors {
+					require.Contains(t, actualErrorMsgs[i], msg)
+				}
+			} else {
+				require.Empty(t, actualErrorMsgs)
+			}
+
+			// Process expected metrics and compare with resulting metrics
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+
+		})
+	}
 }
