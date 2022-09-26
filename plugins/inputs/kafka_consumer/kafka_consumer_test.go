@@ -136,6 +136,20 @@ func TestInit(t *testing.T) {
 			},
 		},
 		{
+			name: "enabled tls without tls config",
+			plugin: &KafkaConsumer{
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						EnableTLS: func(b bool) *bool { return &b }(true),
+					},
+				},
+				Log: testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.True(t, plugin.config.Net.TLS.Enable)
+			},
+		},
+		{
 			name: "default tls with a tls config",
 			plugin: &KafkaConsumer{
 				ReadConfig: kafka.ReadConfig{
