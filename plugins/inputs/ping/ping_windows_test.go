@@ -1,4 +1,4 @@
-// +build windows
+//go:build windows
 
 package ping
 
@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // Windows ping format ( should support multilanguage ?)
@@ -43,22 +43,22 @@ Approximate round trip times in milli-seconds:
 
 func TestHost(t *testing.T) {
 	trans, recReply, recPacket, avg, min, max, err := processPingOutput(winPLPingOutput)
-	assert.NoError(t, err)
-	assert.Equal(t, 4, trans, "4 packets were transmitted")
-	assert.Equal(t, 4, recReply, "4 packets were reply")
-	assert.Equal(t, 4, recPacket, "4 packets were received")
-	assert.Equal(t, 50, avg, "Average 50")
-	assert.Equal(t, 46, min, "Min 46")
-	assert.Equal(t, 57, max, "max 57")
+	require.NoError(t, err)
+	require.Equal(t, 4, trans, "4 packets were transmitted")
+	require.Equal(t, 4, recReply, "4 packets were reply")
+	require.Equal(t, 4, recPacket, "4 packets were received")
+	require.Equal(t, 50, avg, "Average 50")
+	require.Equal(t, 46, min, "Min 46")
+	require.Equal(t, 57, max, "max 57")
 
 	trans, recReply, recPacket, avg, min, max, err = processPingOutput(winENPingOutput)
-	assert.NoError(t, err)
-	assert.Equal(t, 4, trans, "4 packets were transmitted")
-	assert.Equal(t, 4, recReply, "4 packets were reply")
-	assert.Equal(t, 4, recPacket, "4 packets were received")
-	assert.Equal(t, 50, avg, "Average 50")
-	assert.Equal(t, 50, min, "Min 50")
-	assert.Equal(t, 52, max, "Max 52")
+	require.NoError(t, err)
+	require.Equal(t, 4, trans, "4 packets were transmitted")
+	require.Equal(t, 4, recReply, "4 packets were reply")
+	require.Equal(t, 4, recPacket, "4 packets were received")
+	require.Equal(t, 50, avg, "Average 50")
+	require.Equal(t, 50, min, "Min 50")
+	require.Equal(t, 52, max, "Max 52")
 }
 
 func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
@@ -238,21 +238,21 @@ func TestFatalPingGather(t *testing.T) {
 	}
 
 	acc.GatherError(p.Gather)
-	assert.True(t, acc.HasFloatField("ping", "errors"),
+	require.True(t, acc.HasFloatField("ping", "errors"),
 		"Fatal ping should have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "packets_transmitted"),
+	require.False(t, acc.HasInt64Field("ping", "packets_transmitted"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "packets_received"),
+	require.False(t, acc.HasInt64Field("ping", "packets_received"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasFloatField("ping", "percent_packet_loss"),
+	require.False(t, acc.HasFloatField("ping", "percent_packet_loss"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasFloatField("ping", "percent_reply_loss"),
+	require.False(t, acc.HasFloatField("ping", "percent_reply_loss"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "average_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "average_response_ms"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
 		"Fatal ping should not have packet measurements")
 }
 
@@ -296,13 +296,13 @@ func TestUnreachablePingGather(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
-	assert.False(t, acc.HasFloatField("ping", "errors"),
+	require.False(t, acc.HasFloatField("ping", "errors"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "average_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "average_response_ms"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
 		"Fatal ping should not have packet measurements")
 }
 
@@ -344,13 +344,13 @@ func TestTTLExpiredPingGather(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
-	assert.False(t, acc.HasFloatField("ping", "errors"),
+	require.False(t, acc.HasFloatField("ping", "errors"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "average_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "average_response_ms"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
+	require.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
 		"Fatal ping should not have packet measurements")
 }
 
@@ -361,7 +361,7 @@ func TestPingBinary(t *testing.T) {
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
 		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
-			assert.True(t, binary == "ping6")
+			require.True(t, binary == "ping6")
 			return "", nil
 		},
 	}

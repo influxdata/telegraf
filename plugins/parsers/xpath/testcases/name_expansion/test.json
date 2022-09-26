@@ -1,0 +1,48 @@
+{
+  "devices": [
+    {
+      "type": "Motor",
+      "rpm": 423,
+      "phases": [
+        {
+          "load": 34,
+          "voltage": 231
+        },
+        {
+          "load": 35,
+          "voltage": 231
+        },
+        {
+          "load": 36,
+          "voltage": 231
+        }
+      ],
+      "ok": true
+    },
+    {
+      "type": "Pump",
+      "hours": 8762,
+      "flow": 3.1414,
+      "ok": true
+    },
+    {
+      "type": "Machine",
+      "throughput": 1026,
+      "phases": [
+        {
+          "load": 341,
+          "voltage": 231
+        },
+        {
+          "load": 352,
+          "voltage": 231
+        },
+        {
+          "load": 363,
+          "voltage": 231
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

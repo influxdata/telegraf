@@ -1,11 +1,14 @@
-// Package neptuneapex implements an input plugin for the Neptune Apex
+// Package neptune_apex implements an input plugin for the Neptune Apex
 // aquarium controller.
-package neptuneapex
+//
+//go:generate ../../../tools/readme_config_includer/generator
+package neptune_apex
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -17,6 +20,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Measurement is constant across all metrics.
 const Measurement = "neptune_apex"
@@ -55,26 +61,8 @@ type NeptuneApex struct {
 	httpClient      *http.Client
 }
 
-// Description implements telegraf.Input.Description
-func (*NeptuneApex) Description() string {
-	return "Neptune Apex data collector"
-}
-
-// SampleConfig implements telegraf.Input.SampleConfig
 func (*NeptuneApex) SampleConfig() string {
-	return `
-  ## The Neptune Apex plugin reads the publicly available status.xml data from a local Apex.
-  ## Measurements will be logged under "apex".
-
-  ## The base URL of the local Apex(es). If you specify more than one server, they will
-  ## be differentiated by the "source" tag.
-  servers = [
-    "http://apex.local",
-  ]
-
-  ## The response_timeout specifies how long to wait for a reply from the Apex.
-  #response_timeout = "5s"
-`
+	return sampleConfig
 }
 
 // Gather implements telegraf.Input.Gather
@@ -101,7 +89,7 @@ func (n *NeptuneApex) gatherServer(
 }
 
 // parseXML is strict on the input and does not do best-effort parsing.
-//This is because of the life-support nature of the Neptune Apex.
+// This is because of the life-support nature of the Neptune Apex.
 func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	r := xmlReply{}
 	err := xml.Unmarshal(data, &r)
@@ -245,7 +233,7 @@ func findProbe(probe string, probes []probe) int {
 // returns a time.Time struct.
 func parseTime(val string, tz float64) (time.Time, error) {
 	// Magic time constant from https://golang.org/pkg/time/#Parse
-	const TimeLayout = "01/02/2006 15:04:05 -0700"
+	const timeLayout = "01/02/2006 15:04:05 -0700"
 
 	// Timezone offset needs to be explicit
 	sign := '+'
@@ -256,7 +244,7 @@ func parseTime(val string, tz float64) (time.Time, error) {
 	// Build a time string with the timezone in a format Go can parse.
 	tzs := fmt.Sprintf("%c%04d", sign, int(math.Abs(tz))*100)
 	ts := fmt.Sprintf("%s %s", val, tzs)
-	t, err := time.Parse(TimeLayout, ts)
+	t, err := time.Parse(timeLayout, ts)
 	if err != nil {
 		return time.Now(), fmt.Errorf("unable to parse %q (%v)", ts, err)
 	}
@@ -276,7 +264,7 @@ func (n *NeptuneApex) sendRequest(server string) ([]byte, error) {
 			url, resp.StatusCode, http.StatusText(resp.StatusCode),
 			http.StatusOK, http.StatusText(http.StatusOK))
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read output from %q: %v", url, err)
 	}

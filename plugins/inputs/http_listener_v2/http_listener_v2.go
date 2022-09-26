@@ -1,10 +1,13 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package http_listener_v2
 
 import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
-	"io/ioutil"
+	_ "embed"
+	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,12 +16,17 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
 // if the request body is over this size, we will return an HTTP 413 error.
@@ -26,8 +34,9 @@ import (
 const defaultMaxBodySize = 500 * 1024 * 1024
 
 const (
-	body  = "body"
-	query = "query"
+	body    = "body"
+	query   = "query"
+	pathTag = "http_listener_v2_path"
 )
 
 // TimeFunc provides a timestamp for the metrics
@@ -36,7 +45,9 @@ type TimeFunc func() time.Time
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
 	ServiceAddress string            `toml:"service_address"`
-	Path           string            `toml:"path"`
+	Path           string            `toml:"path" deprecated:"1.20.0;use 'paths' instead"`
+	Paths          []string          `toml:"paths"`
+	PathTag        bool              `toml:"path_tag"`
 	Methods        []string          `toml:"methods"`
 	DataSource     string            `toml:"data_source"`
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
@@ -46,12 +57,15 @@ type HTTPListenerV2 struct {
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
 	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
+
 	tlsint.ServerConfig
+	tlsConf *tls.Config
 
 	TimeFunc
 	Log telegraf.Logger
 
-	wg sync.WaitGroup
+	wg    sync.WaitGroup
+	close chan struct{}
 
 	listener net.Listener
 
@@ -59,60 +73,8 @@ type HTTPListenerV2 struct {
 	acc telegraf.Accumulator
 }
 
-const sampleConfig = `
-  ## Address and port to host HTTP listener on
-  service_address = ":8080"
-
-  ## Path to listen to.
-  # path = "/telegraf"
-
-  ## HTTP methods to accept.
-  # methods = ["POST", "PUT"]
-
-  ## maximum duration before timing out read of the request
-  # read_timeout = "10s"
-  ## maximum duration before timing out write of the response
-  # write_timeout = "10s"
-
-  ## Maximum allowed http request body size in bytes.
-  ## 0 means to use the default of 524,288,00 bytes (500 mebibytes)
-  # max_body_size = "500MB"
-
-  ## Part of the request to consume.  Available options are "body" and
-  ## "query".
-  # data_source = "body"
-
-  ## Set one or more allowed client CA certificate file names to
-  ## enable mutually authenticated TLS connections
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
-  ## Add service certificate and key
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Optional username and password to accept for HTTP basic authentication.
-  ## You probably want to make sure you have TLS configured above for this.
-  # basic_username = "foobar"
-  # basic_password = "barfoo"
-
-  ## Optional setting to map http headers into tags
-  ## If the http header is not present on the request, no corresponding tag will be added
-  ## If multiple instances of the http header are present, only the first value will be used
-  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
-
-func (h *HTTPListenerV2) SampleConfig() string {
+func (*HTTPListenerV2) SampleConfig() string {
 	return sampleConfig
-}
-
-func (h *HTTPListenerV2) Description() string {
-	return "Generic HTTP write listener"
 }
 
 func (h *HTTPListenerV2) Gather(_ telegraf.Accumulator) error {
@@ -136,44 +98,39 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 		h.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
+	// Append h.Path to h.Paths
+	if h.Path != "" && !choice.Contains(h.Path, h.Paths) {
+		h.Paths = append(h.Paths, h.Path)
+	}
+
 	h.acc = acc
 
-	tlsConf, err := h.ServerConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-
-	server := &http.Server{
-		Addr:         h.ServiceAddress,
-		Handler:      h,
-		ReadTimeout:  time.Duration(h.ReadTimeout),
-		WriteTimeout: time.Duration(h.WriteTimeout),
-		TLSConfig:    tlsConf,
-	}
-
-	var listener net.Listener
-	if tlsConf != nil {
-		listener, err = tls.Listen("tcp", h.ServiceAddress, tlsConf)
-	} else {
-		listener, err = net.Listen("tcp", h.ServiceAddress)
-	}
-	if err != nil {
-		return err
-	}
-	h.listener = listener
-	h.Port = listener.Addr().(*net.TCPAddr).Port
+	server := h.createHTTPServer()
 
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
 		if err := server.Serve(h.listener); err != nil {
-			h.Log.Errorf("Serve failed: %v", err)
+			if !errors.Is(err, net.ErrClosed) {
+				h.Log.Errorf("Serve failed: %v", err)
+			}
+			close(h.close)
 		}
 	}()
 
-	h.Log.Infof("Listening on %s", listener.Addr().String())
+	h.Log.Infof("Listening on %s", h.listener.Addr().String())
 
 	return nil
+}
+
+func (h *HTTPListenerV2) createHTTPServer() *http.Server {
+	return &http.Server{
+		Addr:         h.ServiceAddress,
+		Handler:      h,
+		ReadTimeout:  time.Duration(h.ReadTimeout),
+		WriteTimeout: time.Duration(h.WriteTimeout),
+		TLSConfig:    h.tlsConf,
+	}
 }
 
 // Stop cleans up all resources
@@ -186,10 +143,32 @@ func (h *HTTPListenerV2) Stop() {
 	h.wg.Wait()
 }
 
+func (h *HTTPListenerV2) Init() error {
+	tlsConf, err := h.ServerConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	var listener net.Listener
+	if tlsConf != nil {
+		listener, err = tls.Listen("tcp", h.ServiceAddress, tlsConf)
+	} else {
+		listener, err = net.Listen("tcp", h.ServiceAddress)
+	}
+	if err != nil {
+		return err
+	}
+	h.tlsConf = tlsConf
+	h.listener = listener
+	h.Port = listener.Addr().(*net.TCPAddr).Port
+
+	return nil
+}
+
 func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	handler := h.serveWrite
 
-	if req.URL.Path != h.Path {
+	if !choice.Contains(req.URL.Path, h.Paths) {
 		handler = http.NotFound
 	}
 
@@ -197,6 +176,13 @@ func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
+	select {
+	case <-h.close:
+		res.WriteHeader(http.StatusGone)
+		return
+	default:
+	}
+
 	// Check that the content length is not too large for us to handle.
 	if req.ContentLength > int64(h.MaxBodySize) {
 		if err := tooLarge(res); err != nil {
@@ -251,6 +237,10 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 			}
 		}
 
+		if h.PathTag {
+			m.AddTag(pathTag, req.URL.Path)
+		}
+
 		h.acc.AddMetric(m)
 	}
 
@@ -272,7 +262,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		}
 		defer r.Close()
 		maxReader := http.MaxBytesReader(res, r, int64(h.MaxBodySize))
-		bytes, err := ioutil.ReadAll(maxReader)
+		bytes, err := io.ReadAll(maxReader)
 		if err != nil {
 			if err := tooLarge(res); err != nil {
 				h.Log.Debugf("error in too-large: %v", err)
@@ -282,7 +272,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		return bytes, true
 	case "snappy":
 		defer req.Body.Close()
-		bytes, err := ioutil.ReadAll(req.Body)
+		bytes, err := io.ReadAll(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			if err := badRequest(res); err != nil {
@@ -302,7 +292,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		return bytes, true
 	default:
 		defer req.Body.Close()
-		bytes, err := ioutil.ReadAll(req.Body)
+		bytes, err := io.ReadAll(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			if err := badRequest(res); err != nil {
@@ -370,9 +360,10 @@ func init() {
 		return &HTTPListenerV2{
 			ServiceAddress: ":8080",
 			TimeFunc:       time.Now,
-			Path:           "/telegraf",
+			Paths:          []string{"/telegraf"},
 			Methods:        []string{"POST", "PUT"},
 			DataSource:     body,
+			close:          make(chan struct{}),
 		}
 	})
 }

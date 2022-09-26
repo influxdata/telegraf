@@ -1,4 +1,4 @@
-// +build goplugin
+//go:build goplugin
 
 package goplugin
 

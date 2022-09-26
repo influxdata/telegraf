@@ -1,4 +1,4 @@
-// +build !freebsd freebsd,cgo
+//go:build !freebsd || (freebsd && cgo)
 
 package nats
 

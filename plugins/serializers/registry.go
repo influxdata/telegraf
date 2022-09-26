@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
+	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -47,7 +48,7 @@ type Serializer interface {
 // Config is a struct that covers the data types needed for all serializer types,
 // and can be used to instantiate _any_ of the serializers.
 type Config struct {
-	// Dataformat can be one of the serializer types listed in NewSerializer.
+	// DataFormat can be one of the serializer types listed in NewSerializer.
 	DataFormat string `toml:"data_format"`
 
 	// Carbon2 metric format.
@@ -55,6 +56,15 @@ type Config struct {
 
 	// Character used for metric name sanitization in Carbon2.
 	Carbon2SanitizeReplaceChar string `toml:"carbon2_sanitize_replace_char"`
+
+	// Separator for CSV
+	CSVSeparator string `toml:"csv_separator"`
+
+	// Output a CSV header for naming the columns
+	CSVHeader bool `toml:"csv_header"`
+
+	// Prefix the tag and field columns for CSV format
+	CSVPrefix bool `toml:"csv_column_prefix"`
 
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
@@ -88,6 +98,12 @@ type Config struct {
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration `toml:"timestamp_units"`
 
+	// Timestamp format to use for JSON and CSV formatted output
+	TimestampFormat string `toml:"timestamp_format"`
+
+	// Transformation as JSONata expression to use for JSON formatted output
+	Transformation string `toml:"transformation"`
+
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool `toml:"hec_routing"`
 
@@ -101,6 +117,9 @@ type Config struct {
 	// When enabled forward slash (/) and comma (,) will be accepted
 	WavefrontUseStrict bool `toml:"wavefront_use_strict"`
 
+	// Convert "_" in prefixes to "." for Wavefront
+	WavefrontDisablePrefixConversion bool `toml:"wavefront_disable_prefix_conversion"`
+
 	// Include the metric timestamp on each sample.
 	PrometheusExportTimestamp bool `toml:"prometheus_export_timestamp"`
 
@@ -111,6 +130,9 @@ type Config struct {
 	// Output string fields as metric labels; when false string fields are
 	// discarded.
 	PrometheusStringAsLabel bool `toml:"prometheus_string_as_label"`
+
+	// Encode metrics without HELP metadata. This helps reduce the payload size.
+	PrometheusCompactEncoding bool `toml:"prometheus_compact_encoding"`
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -118,12 +140,14 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
+	case "csv":
+		serializer, err = NewCSVSerializer(config)
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
-		serializer, err = NewJSONSerializer(config.TimestampUnits)
+		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat, config.Transformation)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
 	case "nowmetric":
@@ -131,7 +155,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "carbon2":
 		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
 	case "wavefront":
-		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
+		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride, config.WavefrontDisablePrefixConversion)
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
 	case "prometheusremotewrite":
@@ -139,9 +163,13 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "msgpack":
 		serializer, err = NewMsgpackSerializer()
 	default:
-		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
+		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
+}
+
+func NewCSVSerializer(config *Config) (Serializer, error) {
+	return csv.NewSerializer(config.TimestampFormat, config.CSVSeparator, config.CSVHeader, config.CSVPrefix)
 }
 
 func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
@@ -181,15 +209,16 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 		TimestampExport: exportTimestamp,
 		MetricSortOrder: sortMetrics,
 		StringHandling:  stringAsLabels,
+		CompactEncoding: config.PrometheusCompactEncoding,
 	})
 }
 
-func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string) (Serializer, error) {
-	return wavefront.NewSerializer(prefix, useStrict, sourceOverride)
+func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversions bool) (Serializer, error) {
+	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
 }
 
-func NewJSONSerializer(timestampUnits time.Duration) (Serializer, error) {
-	return json.NewSerializer(timestampUnits)
+func NewJSONSerializer(timestampUnits time.Duration, timestampFormat, transform string) (Serializer, error) {
+	return json.NewSerializer(timestampUnits, timestampFormat, transform)
 }
 
 func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {

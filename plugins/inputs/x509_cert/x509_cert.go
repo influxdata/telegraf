@@ -1,66 +1,48 @@
 // Package x509_cert reports metrics from an SSL certificate.
+//
+//go:generate ../../../tools/readme_config_includer/generator
 package x509_cert
 
 import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	_ "embed"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"net/smtp"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/pion/dtls/v2"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## List certificate sources
-  ## Prefix your entry with 'file://' if you intend to use relative paths
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443",
-            "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
-
-  ## Timeout for SSL connection
-  # timeout = "5s"
-
-  ## Pass a different name into the TLS request (Server Name Indication)
-  ##   example: server_name = "myhost.example.org"
-  # server_name = ""
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-`
-const description = "Reads metrics from a SSL certificate"
+//go:embed sample.conf
+var sampleConfig string
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources    []string        `toml:"sources"`
-	Timeout    config.Duration `toml:"timeout"`
-	ServerName string          `toml:"server_name"`
-	tlsCfg     *tls.Config
+	Sources          []string        `toml:"sources"`
+	Timeout          config.Duration `toml:"timeout"`
+	ServerName       string          `toml:"server_name"`
+	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
+	tlsCfg           *tls.Config
 	_tls.ClientConfig
+	proxy.TCPProxy
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
-}
-
-// Description returns description of the plugin.
-func (c *X509Cert) Description() string {
-	return description
-}
-
-// SampleConfig returns configuration sample for the plugin.
-func (c *X509Cert) SampleConfig() string {
-	return sampleConfig
 }
 
 func (c *X509Cert) sourcesToURLs() error {
@@ -104,13 +86,8 @@ func (c *X509Cert) serverName(u *url.URL) (string, error) {
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
 	protocol := u.Scheme
 	switch u.Scheme {
-	case "https":
-		protocol = "tcp"
-		fallthrough
 	case "udp", "udp4", "udp6":
-		fallthrough
-	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
+		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -120,14 +97,59 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		if err != nil {
 			return nil, err
 		}
-		c.tlsCfg.ServerName = serverName
 
-		c.tlsCfg.InsecureSkipVerify = true
-		conn := tls.Client(ipConn, c.tlsCfg)
+		dtlsCfg := &dtls.Config{
+			InsecureSkipVerify: true,
+			Certificates:       c.tlsCfg.Certificates,
+			RootCAs:            c.tlsCfg.RootCAs,
+			ServerName:         serverName,
+		}
+		conn, err := dtls.Client(ipConn, dtlsCfg)
+		if err != nil {
+			return nil, err
+		}
 		defer conn.Close()
 
-		// reset SNI between requests
-		defer func() { c.tlsCfg.ServerName = "" }()
+		rawCerts := conn.ConnectionState().PeerCertificates
+		var certs []*x509.Certificate
+		for _, rawCert := range rawCerts {
+			parsed, err := x509.ParseCertificate(rawCert)
+			if err != nil {
+				return nil, err
+			}
+
+			if parsed != nil {
+				certs = append(certs, parsed)
+			}
+		}
+
+		return certs, nil
+	case "https":
+		protocol = "tcp"
+		fallthrough
+	case "tcp", "tcp4", "tcp6":
+		dialer, err := c.Proxy()
+		if err != nil {
+			return nil, err
+		}
+
+		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer ipConn.Close()
+
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
+		}
+
+		downloadTLSCfg := c.tlsCfg.Clone()
+		downloadTLSCfg.ServerName = serverName
+		downloadTLSCfg.InsecureSkipVerify = true
+
+		conn := tls.Client(ipConn, downloadTLSCfg)
+		defer conn.Close()
 
 		hsErr := conn.Handshake()
 		if hsErr != nil {
@@ -138,7 +160,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, nil
 	case "file":
-		content, err := ioutil.ReadFile(u.Path)
+		content, err := os.ReadFile(u.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -161,6 +183,55 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			}
 			content = rest
 		}
+		return certs, nil
+	case "smtp":
+		ipConn, err := net.DialTimeout("tcp", u.Host, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer ipConn.Close()
+
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
+		}
+
+		downloadTLSCfg := c.tlsCfg.Clone()
+		downloadTLSCfg.ServerName = serverName
+		downloadTLSCfg.InsecureSkipVerify = true
+
+		smtpConn, err := smtp.NewClient(ipConn, u.Host)
+		if err != nil {
+			return nil, err
+		}
+
+		err = smtpConn.Hello(downloadTLSCfg.ServerName)
+		if err != nil {
+			return nil, err
+		}
+
+		id, err := smtpConn.Text.Cmd("STARTTLS")
+		if err != nil {
+			return nil, err
+		}
+
+		smtpConn.Text.StartResponse(id)
+		defer smtpConn.Text.EndResponse(id)
+		_, _, err = smtpConn.Text.ReadResponse(220)
+		if err != nil {
+			return nil, fmt.Errorf("did not get 220 after STARTTLS: %s", err.Error())
+		}
+
+		tlsConn := tls.Client(ipConn, downloadTLSCfg)
+		defer tlsConn.Close()
+
+		hsErr := tlsConn.Handshake()
+		if hsErr != nil {
+			return nil, hsErr
+		}
+
+		certs := tlsConn.ConnectionState().PeerCertificates
+
 		return certs, nil
 	default:
 		return nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())
@@ -245,6 +316,10 @@ func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 	return urls, nil
 }
 
+func (*X509Cert) SampleConfig() string {
+	return sampleConfig
+}
+
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
@@ -289,12 +364,24 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				tags["verification"] = "valid"
 				fields["verification_code"] = 0
 			} else {
+				c.Log.Debugf("Invalid certificate at index %2d!", i)
+				c.Log.Debugf("  cert DNS names:    %v", cert.DNSNames)
+				c.Log.Debugf("  cert IP addresses: %v", cert.IPAddresses)
+				c.Log.Debugf("  opts.DNSName:      %v", opts.DNSName)
+				c.Log.Debugf("  verify options:    %v", opts)
+				c.Log.Debugf("  verify error:      %v", err)
+				c.Log.Debugf("  location:          %v", location)
+				c.Log.Debugf("  tlsCfg.ServerName: %v", c.tlsCfg.ServerName)
+				c.Log.Debugf("  ServerName:        %v", c.ServerName)
 				tags["verification"] = "invalid"
 				fields["verification_code"] = 1
 				fields["verification_error"] = err.Error()
 			}
 
 			acc.AddFields("x509_cert", fields, tags)
+			if c.ExcludeRootCerts {
+				break
+			}
 		}
 	}
 

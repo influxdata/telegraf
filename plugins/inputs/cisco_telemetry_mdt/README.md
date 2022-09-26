@@ -1,18 +1,21 @@
 # Cisco Model-Driven Telemetry (MDT) Input Plugin
 
-Cisco model-driven telemetry (MDT) is an input plugin that consumes
-telemetry data from Cisco IOS XR, IOS XE and NX-OS platforms. It supports TCP & GRPC dialout transports.
-RPC-based transport can utilize TLS for authentication and encryption.
-Telemetry data is expected to be GPB-KV (self-describing-gpb) encoded.
+Cisco model-driven telemetry (MDT) is an input plugin that consumes telemetry
+data from Cisco IOS XR, IOS XE and NX-OS platforms. It supports TCP & GRPC
+dialout transports.  RPC-based transport can utilize TLS for authentication and
+encryption.  Telemetry data is expected to be GPB-KV (self-describing-gpb)
+encoded.
 
-The GRPC dialout transport is supported on various IOS XR (64-bit) 6.1.x and later, IOS XE 16.10 and later, as well as NX-OS 7.x and later platforms.
+The GRPC dialout transport is supported on various IOS XR (64-bit) 6.1.x and
+later, IOS XE 16.10 and later, as well as NX-OS 7.x and later platforms.
 
-The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and later.
+The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and
+later.
 
+## Configuration
 
-### Configuration:
-
-```toml
+```toml @sample.conf
+# Cisco model-driven telemetry (MDT) input plugin for IOS XR, IOS XE and NX-OS platforms
 [[inputs.cisco_telemetry_mdt]]
  ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
  ## using the grpc transport.
@@ -22,7 +25,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  service_address = ":57000"
 
  ## Grpc Maximum Message Size, default is 4MB, increase the size.
- max_msg_size = 20000000
+ max_msg_size = 4000000
 
  ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
@@ -38,6 +41,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
+ ## Define Property Xformation, please refer README and https://pubhub.devnetcloud.com/media/dme-docs-9-3-3/docs/appendix/ for Model details.
  [inputs.cisco_telemetry_mdt.dmes]
 #    Global Property Xformation.
 #    prop1 = "uint64 to int"
@@ -51,16 +55,44 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
 #    dnpath = '{"Name": "show ip route summary","prop": [{"Key": "routes","Value": "string"}, {"Key": "best-paths","Value": "string"}]}'
 #    dnpath2 = '{"Name": "show processes cpu","prop": [{"Key": "kernel_percent","Value": "float"}, {"Key": "idle_percent","Value": "float"}, {"Key": "process","Value": "string"}, {"Key": "user_percent","Value": "float"}, {"Key": "onesec","Value": "float"}]}'
 #    dnpath3 = '{"Name": "show processes memory physical","prop": [{"Key": "processname","Value": "string"}]}'
+
+ ## Additional GRPC connection settings.
+ [inputs.cisco_telemetry_mdt.grpc_enforcement_policy]
+  ## GRPC permit keepalives without calls, set to true if your clients are
+  ## sending pings without calls in-flight. This can sometimes happen on IOS-XE
+  ## devices where the GRPC connection is left open but subscriptions have been
+  ## removed, and adding subsequent subscriptions does not keep a stable session.
+  # permit_keepalive_without_calls = false
+
+  ## GRPC minimum timeout between successive pings, decreasing this value may 
+  ## help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
+  # keepalive_minimum_time = "5m"
 ```
 
-### Example Output:
-```
+## Metrics
+
+Metrics are named by the encoding path that generated the data, or by the alias
+if the `inputs.cisco_telemetry_mdt.aliases` config section is defined.
+Metric fields are dependent on the device type and path.
+
+Tags included in all metrics:
+
+- source
+- path
+- subscription
+
+Additional tags (such as interface_name) may be included depending on the path.
+
+## Example Output
+
+```shell
 ifstats,path=ietf-interfaces:interfaces-state/interface/statistics,host=linux,name=GigabitEthernet2,source=csr1kv,subscription=101 in-unicast-pkts=27i,in-multicast-pkts=0i,discontinuity-time="2019-05-23T07:40:23.000362+00:00",in-octets=5233i,in-errors=0i,out-multicast-pkts=0i,out-discards=0i,in-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,out-unicast-pkts=0i,out-broadcast-pkts=0i,out-octets=0i,out-errors=0i 1559150462624000000
 ifstats,path=ietf-interfaces:interfaces-state/interface/statistics,host=linux,name=GigabitEthernet1,source=csr1kv,subscription=101 in-octets=3394770806i,in-broadcast-pkts=0i,in-multicast-pkts=0i,out-broadcast-pkts=0i,in-unknown-protos=0i,out-octets=350212i,in-unicast-pkts=9477273i,in-discards=0i,out-unicast-pkts=2726i,out-discards=0i,discontinuity-time="2019-05-23T07:40:23.000363+00:00",in-errors=30i,out-multicast-pkts=0i,out-errors=0i 1559150462624000000
 ```
 
-### NX-OS Configuration Example:
-```
+### NX-OS Configuration Example
+
+```text
 Requirement      DATA-SOURCE   Configuration
 -----------------------------------------
 Environment      DME           path sys/ch query-condition query-target=subtree&target-subtree-class=eqptPsuSlot,eqptFtSlot,eqptSupCSlot,eqptPsu,eqptFt,eqptSensor,eqptLCSlot
@@ -92,13 +124,11 @@ multicast igmp   NXAPI         show ip igmp snooping groups
 multicast igmp   NXAPI         show ip igmp snooping groups detail
 multicast igmp   NXAPI         show ip igmp snooping groups summary
 multicast igmp   NXAPI         show ip igmp snooping mrouter
-multicast igmp   NXAPI         show ip igmp snooping statistics        
+multicast igmp   NXAPI         show ip igmp snooping statistics
 multicast pim    NXAPI         show ip pim interface vrf all
 multicast pim    NXAPI         show ip pim neighbor vrf all
 multicast pim    NXAPI         show ip pim route vrf all
 multicast pim    NXAPI         show ip pim rp vrf all
 multicast pim    NXAPI         show ip pim statistics vrf all
 multicast pim    NXAPI         show ip pim vrf all
-
-
 ```

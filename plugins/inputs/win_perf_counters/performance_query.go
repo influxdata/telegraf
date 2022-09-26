@@ -1,5 +1,5 @@
 // Go API over pdh syscalls
-// +build windows
+//go:build windows
 
 package win_perf_counters
 
@@ -10,13 +10,13 @@ import (
 	"unsafe"
 )
 
-//PerformanceQuery is abstraction for PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
+// PerformanceQuery is abstraction for PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
 type CounterValue struct {
 	InstanceName string
-	Value        float64
+	Value        interface{}
 }
 
-//PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
+// PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
 type PerformanceQuery interface {
 	Open() error
 	Close() error
@@ -25,13 +25,15 @@ type PerformanceQuery interface {
 	GetCounterPath(counterHandle PDH_HCOUNTER) (string, error)
 	ExpandWildCardPath(counterPath string) ([]string, error)
 	GetFormattedCounterValueDouble(hCounter PDH_HCOUNTER) (float64, error)
+	GetRawCounterValue(hCounter PDH_HCOUNTER) (int64, error)
 	GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error)
+	GetRawCounterArray(hCounter PDH_HCOUNTER) ([]CounterValue, error)
 	CollectData() error
 	CollectDataWithTime() (time.Time, error)
 	IsVistaOrNewer() bool
 }
 
-//PdhError represents error returned from Performance Counters API
+// PdhError represents error returned from Performance Counters API
 type PdhError struct {
 	ErrorCode uint32
 	errorText string
@@ -48,7 +50,7 @@ func NewPdhError(code uint32) error {
 	}
 }
 
-//PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
+// PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
 type PerformanceQueryImpl struct {
 	query PDH_HQUERY
 }
@@ -107,7 +109,7 @@ func (m *PerformanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (PDH
 	return counterHandle, nil
 }
 
-//GetCounterPath return counter information for given handle
+// GetCounterPath return counter information for given handle
 func (m *PerformanceQueryImpl) GetCounterPath(counterHandle PDH_HCOUNTER) (string, error) {
 	var bufSize uint32
 	var buff []byte
@@ -141,7 +143,7 @@ func (m *PerformanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string,
 	return nil, NewPdhError(ret)
 }
 
-//GetFormattedCounterValueDouble computes a displayable value for the specified counter
+// GetFormattedCounterValueDouble computes a displayable value for the specified counter
 func (m *PerformanceQueryImpl) GetFormattedCounterValueDouble(hCounter PDH_HCOUNTER) (float64, error) {
 	var counterType uint32
 	var value PDH_FMT_COUNTERVALUE_DOUBLE
@@ -181,6 +183,29 @@ func (m *PerformanceQueryImpl) GetFormattedCounterArrayDouble(hCounter PDH_HCOUN
 	return nil, NewPdhError(ret)
 }
 
+func (m *PerformanceQueryImpl) GetRawCounterArray(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
+	var buffSize uint32
+	var itemCount uint32
+	var ret uint32
+
+	if ret = PdhGetRawCounterArray(hCounter, &buffSize, &itemCount, nil); ret == PDH_MORE_DATA {
+		buff := make([]byte, buffSize)
+
+		if ret = PdhGetRawCounterArray(hCounter, &buffSize, &itemCount, &buff[0]); ret == ERROR_SUCCESS {
+			items := (*[1 << 20]PDH_RAW_COUNTER_ITEM)(unsafe.Pointer(&buff[0]))[:itemCount]
+			values := make([]CounterValue, 0, itemCount)
+			for _, item := range items {
+				if item.RawValue.CStatus == PDH_CSTATUS_VALID_DATA || item.RawValue.CStatus == PDH_CSTATUS_NEW_DATA {
+					val := CounterValue{UTF16PtrToString(item.SzName), item.RawValue.FirstValue}
+					values = append(values, val)
+				}
+			}
+			return values, nil
+		}
+	}
+	return nil, NewPdhError(ret)
+}
+
 func (m *PerformanceQueryImpl) CollectData() error {
 	var ret uint32
 	if m.query == 0 {
@@ -206,6 +231,27 @@ func (m *PerformanceQueryImpl) CollectDataWithTime() (time.Time, error) {
 
 func (m *PerformanceQueryImpl) IsVistaOrNewer() bool {
 	return PdhAddEnglishCounterSupported()
+}
+
+func (m *PerformanceQueryImpl) GetRawCounterValue(hCounter PDH_HCOUNTER) (int64, error) {
+	if m.query == 0 {
+		return 0, errors.New("uninitialised query")
+	}
+
+	var counterType uint32
+	var value PDH_RAW_COUNTER
+	var ret uint32
+
+	if ret = PdhGetRawCounterValue(hCounter, &counterType, &value); ret == ERROR_SUCCESS {
+		if value.CStatus == PDH_CSTATUS_VALID_DATA || value.CStatus == PDH_CSTATUS_NEW_DATA {
+			return value.FirstValue, nil
+		} else {
+			return 0, NewPdhError(value.CStatus)
+		}
+	} else {
+		return 0, NewPdhError(ret)
+	}
+
 }
 
 // UTF16PtrToString converts Windows API LPTSTR (pointer to string) to go string

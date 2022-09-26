@@ -28,7 +28,7 @@
 // Joseph Watson <jtwatson@linux-consulting.us>
 // Kevin Pors <krpors@gmail.com>
 
-// +build windows
+//go:build windows
 
 package win_perf_counters
 
@@ -73,7 +73,7 @@ type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
 	FmtValue PDH_FMT_COUNTERVALUE_LONG
 }
 
-//PDH_COUNTER_INFO structure contains information describing the properties of a counter. This information also includes the counter path.
+// PDH_COUNTER_INFO structure contains information describing the properties of a counter. This information also includes the counter path.
 type PDH_COUNTER_INFO struct {
 	//Size of the structure, including the appended strings, in bytes.
 	DwLength uint32
@@ -118,4 +118,27 @@ type PDH_COUNTER_INFO struct {
 	SzExplainText *uint16 // pointer to a string
 	//Start of the string data that is appended to the structure.
 	DataBuffer [1]uint32 // pointer to an extra space
+}
+
+// The PDH_RAW_COUNTER structure returns the data as it was collected from the counter provider. No translation, formatting, or other interpretation is performed on the data
+type PDH_RAW_COUNTER struct {
+	// Counter status that indicates if the counter value is valid. Check this member before using the data in a calculation or displaying its value. For a list of possible values,
+	// see https://docs.microsoft.com/windows/desktop/PerfCtrs/checking-pdh-interface-return-values
+	CStatus uint32
+	// Local time for when the data was collected
+	TimeStamp FILETIME
+	// First raw counter value.
+	FirstValue int64
+	// Second raw counter value. Rate counters require two values in order to compute a displayable value.
+	SecondValue int64
+	// If the counter type contains the PERF_MULTI_COUNTER flag, this member contains the additional counter data used in the calculation.
+	// For example, the PERF_100NSEC_MULTI_TIMER counter type contains the PERF_MULTI_COUNTER flag.
+	MultiCount uint32
+}
+
+type PDH_RAW_COUNTER_ITEM struct {
+	// Pointer to a null-terminated string that specifies the instance name of the counter. The string is appended to the end of this structure.
+	SzName *uint16
+	//A PDH_RAW_COUNTER structure that contains the raw counter value of the instance
+	RawValue PDH_RAW_COUNTER
 }

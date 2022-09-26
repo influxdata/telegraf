@@ -1,17 +1,20 @@
 package prometheus
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/require"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
@@ -46,6 +49,32 @@ apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="+Inf"} 20
 apiserver_request_latencies_sum{resource="bindings",verb="POST"} 1.02726334e+08
 apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
 `
+	validUniqueHistogramJSON = `{
+		"name": "apiserver_request_latencies",
+		"help": "Response latency distribution in microseconds for each verb, resource and client.",
+		"type": "HISTOGRAM",
+		"metric": [
+			{
+				"label": [
+					{"name": "resource", "value": "bindings"},
+					{"name": "verb", "value": "POST"}
+				],
+				"histogram": {
+					"sample_count": 2025,
+					"sample_sum": 1.02726334e+08,
+					"bucket": [
+						{"cumulative_count": 1994,"upper_bound": 125000},
+						{"cumulative_count": 1997,"upper_bound": 250000},
+						{"cumulative_count": 2000,"upper_bound": 500000},
+						{"cumulative_count": 2005,"upper_bound": 1e+06},
+						{"cumulative_count": 2012,"upper_bound": 2e+06},
+						{"cumulative_count": 2017,"upper_bound": 4e+06},
+						{"cumulative_count": 2024,"upper_bound": 8e+06}
+					]
+				}
+			}
+		]
+	}`
 )
 
 func TestParsingValidGauge(t *testing.T) {
@@ -69,12 +98,12 @@ func TestParsingValidGauge(t *testing.T) {
 
 	metrics, err := parse([]byte(validUniqueGauge))
 
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestParsingValieCounter(t *testing.T) {
+func TestParsingValidCounter(t *testing.T) {
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
 			"prometheus",
@@ -89,8 +118,8 @@ func TestParsingValieCounter(t *testing.T) {
 
 	metrics, err := parse([]byte(validUniqueCounter))
 
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
@@ -148,8 +177,8 @@ func TestParsingValidSummary(t *testing.T) {
 
 	metrics, err := parse([]byte(validUniqueSummary))
 
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 4)
+	require.NoError(t, err)
+	require.Len(t, metrics, 4)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
@@ -276,8 +305,8 @@ func TestParsingValidHistogram(t *testing.T) {
 
 	metrics, err := parse([]byte(validUniqueHistogram))
 
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 9)
+	require.NoError(t, err)
+	require.Len(t, metrics, 9)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
@@ -309,8 +338,8 @@ func TestDefautTags(t *testing.T) {
 	}
 	metrics, err := parser.Parse([]byte(validUniqueGauge))
 
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
@@ -338,6 +367,32 @@ test_counter{label="test"} 1 %d
 	metrics, _ := parse([]byte(metricsWithTimestamps))
 
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
+}
+
+func TestMetricsWithoutIgnoreTimestamp(t *testing.T) {
+	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
+	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
+	metricsWithTimestamps := fmt.Sprintf(`
+# TYPE test_counter counter
+test_counter{label="test"} 1 %d
+`, testTimeUnix)
+	expected := testutil.MustMetric(
+		"prometheus",
+		map[string]string{
+			"label": "test",
+		},
+		map[string]interface{}{
+			"test_counter": float64(1.0),
+		},
+		testTime,
+		telegraf.Counter,
+	)
+
+	parser := Parser{IgnoreTimestamp: true}
+	metric, _ := parser.ParseLine(metricsWithTimestamps)
+
+	testutil.RequireMetricEqual(t, expected, metric, testutil.IgnoreTime(), testutil.SortMetrics())
+	require.WithinDuration(t, time.Now(), metric.Time(), 5*time.Second)
 }
 
 func parse(buf []byte) ([]telegraf.Metric, error) {
@@ -422,7 +477,8 @@ func TestParserProtobufHeader(t *testing.T) {
 	sampleProtoBufData := []uint8{67, 10, 9, 115, 119, 97, 112, 95, 102, 114, 101, 101, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116, 101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 1, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 18, 9, 9, 0, 0, 0, 0, 224, 36, 205, 65, 65, 10, 7, 115, 119, 97, 112, 95, 105, 110, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116, 101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 0, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 26, 9, 9, 0, 0, 0, 0, 0, 0, 63, 65, 66, 10, 8, 115, 119, 97, 112, 95, 111, 117, 116, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116, 101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 0, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 26, 9, 9, 0, 0, 0, 0, 0, 30, 110, 65, 68, 10, 10, 115, 119, 97, 112, 95, 116, 111, 116, 97, 108, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116, 101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 1, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 18, 9, 9, 0, 0, 0, 0, 104, 153, 205, 65, 67, 10, 9, 115, 119, 97, 112, 95, 117, 115, 101, 100, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116, 101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 1, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 18, 9, 9, 0, 0, 0, 0, 0, 34, 109, 65, 75, 10, 17, 115, 119, 97, 112, 95, 117, 115, 101, 100, 95, 112, 101, 114, 99, 101, 110, 116, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116, 101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 1, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 18, 9, 9, 109, 234, 180, 197, 37, 155, 248, 63}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/vnd.google.protobuf; proto=io.prometheus.client.MetricFamily; encoding=delimited")
-		w.Write(sampleProtoBufData)
+		_, err := w.Write(sampleProtoBufData)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 	req, err := http.NewRequest("GET", ts.URL, nil)
@@ -435,7 +491,7 @@ func TestParserProtobufHeader(t *testing.T) {
 		t.Fatalf("error making HTTP request to %s: %s", ts.URL, err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("error reading body: %s", err)
 	}
@@ -444,5 +500,137 @@ func TestParserProtobufHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error reading metrics for %s: %s", ts.URL, err)
 	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestHistogramInfBucketPresence(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_count": float64(2025.0),
+				"apiserver_request_latencies_sum":   float64(1.02726334e+08),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "125000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(1994.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "250000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(1997.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "500000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2000.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "1e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2005.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "2e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2012.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "4e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2017.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "8e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2024.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "+Inf",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2025.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+	}
+
+	var metricFamily dto.MetricFamily
+	err := json.Unmarshal([]byte(validUniqueHistogramJSON), &metricFamily)
+	require.NoError(t, err)
+
+	m := metricFamily.Metric[0]
+	tags := common.MakeLabels(m, map[string]string{})
+	metrics := makeBuckets(m, tags, *metricFamily.Name, metricFamily.GetType(), time.Now())
+
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }

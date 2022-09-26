@@ -1,3 +1,3 @@
-// +build solaris
+//go:build solaris
 
 package logparser

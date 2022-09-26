@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package apcupsd
 
 import (
 	"context"
+	_ "embed"
 	"net/url"
 	"strconv"
 	"strings"
@@ -14,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 const defaultAddress = "tcp://127.0.0.1:3551"
 
 var defaultTimeout = config.Duration(5 * time.Second)
@@ -22,19 +27,6 @@ type ApcUpsd struct {
 	Servers []string
 	Timeout config.Duration
 }
-
-func (*ApcUpsd) Description() string {
-	return "Monitor APC UPSes connected to apcupsd"
-}
-
-var sampleConfig = `
-  # A list of running apcupsd server to connect to.
-  # If not provided will default to tcp://127.0.0.1:3551
-  servers = ["tcp://127.0.0.1:3551"]
-
-  ## Timeout for dialing server.
-  timeout = "5s"
-`
 
 func (*ApcUpsd) SampleConfig() string {
 	return sampleConfig

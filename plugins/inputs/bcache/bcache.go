@@ -1,13 +1,14 @@
-// +build !windows
+//go:generate ../../../tools/readme_config_includer/generator
+//go:build !windows
 
 // bcache doesn't aim for Windows
 
 package bcache
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,28 +18,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Bcache struct {
 	BcachePath string
 	BcacheDevs []string
-}
-
-var sampleConfig = `
-  ## Bcache sets path
-  ## If not specified, then default is:
-  bcachePath = "/sys/fs/bcache"
-
-  ## By default, Telegraf gather stats for all bcache devices
-  ## Setting devices will restrict the stats to the specified
-  ## bcache devices.
-  bcacheDevs = ["bcache0"]
-`
-
-func (b *Bcache) SampleConfig() string {
-	return sampleConfig
-}
-
-func (b *Bcache) Description() string {
-	return "Read metrics of bcache from stats_total and dirty_data"
 }
 
 func getTags(bdev string) map[string]string {
@@ -84,7 +69,7 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	if len(metrics) == 0 {
 		return errors.New("can't read any stats file")
 	}
-	file, err := ioutil.ReadFile(bdev + "/dirty_data")
+	file, err := os.ReadFile(bdev + "/dirty_data")
 	if err != nil {
 		return err
 	}
@@ -96,7 +81,7 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 
 	for _, path := range metrics {
 		key := filepath.Base(path)
-		file, err := ioutil.ReadFile(path)
+		file, err := os.ReadFile(path)
 		rawValue := strings.TrimSpace(string(file))
 		if err != nil {
 			return err
@@ -111,6 +96,10 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	}
 	acc.AddFields("bcache", fields, tags)
 	return nil
+}
+
+func (*Bcache) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *Bcache) Gather(acc telegraf.Accumulator) error {

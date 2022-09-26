@@ -1,12 +1,17 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package derivative
 
 import (
+	_ "embed"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Derivative struct {
 	Variable    string          `toml:"variable"`
@@ -38,54 +43,8 @@ func NewDerivative() *Derivative {
 	return derivative
 }
 
-var sampleConfig = `
-	## The period in which to flush the aggregator.
-	period = "30s"
-	##
-	## If true, the original metric will be dropped by the
-	## aggregator and will not get sent to the output plugins.
-	drop_original = false
-	##
-	## This aggregator will estimate a derivative for each field, which is
-	## contained in both the first and last metric of the aggregation interval.
-	## Without further configuration the derivative will be calculated with
-	## respect to the time difference between these two measurements in seconds.
-	## The formula applied is for every field:
-	##
-	##               value_last - value_first
-	## derivative = --------------------------
-	##              time_difference_in_seconds
-	##
-	## The resulting derivative will be named *fieldname_rate*. The suffix
-	## "_rate" can be configured by the *suffix* parameter. When using a 
-	## derivation variable you can include its name for more clarity. 
-	# suffix = "_rate"
-	##
-	## As an abstraction the derivative can be calculated not only by the time
-	## difference but by the difference of a field, which is contained in the
-	## measurement. This field is assumed to be monotonously increasing. This
-	## feature is used by specifying a *variable*.
-	## Make sure the specified variable is not filtered and exists in the metrics 
-	## passed to this aggregator!
-	# variable = ""
-	##
-	## When using a field as the derivation parameter the name of that field will
-	## be used for the resulting derivative, e.g. *fieldname_by_parameter*.
-	##
-	## Note, that the calculation is based on the actual timestamp of the
-	## measurements. When there is only one measurement during that period, the
-	## measurement will be rolled over to the next period. The maximum number of
-	## such roll-overs can be configured with a default of 10.
-	# max_roll_over = 10
-	##
-`
-
-func (d *Derivative) SampleConfig() string {
+func (*Derivative) SampleConfig() string {
 	return sampleConfig
-}
-
-func (d *Derivative) Description() string {
-	return "Calculates a derivative for every field."
 }
 
 func (d *Derivative) Add(in telegraf.Metric) {

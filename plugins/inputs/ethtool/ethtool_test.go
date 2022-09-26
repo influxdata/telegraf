@@ -1,4 +1,4 @@
-// +build linux
+//go:build linux
 
 package ethtool
 
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -304,24 +304,38 @@ func toStringMapInterface(in map[string]uint64) map[string]interface{} {
 	return m
 }
 
+func toStringMapUint(in map[string]interface{}) map[string]uint64 {
+	var m = map[string]uint64{}
+	for k, v := range in {
+		t := v.(uint64)
+		m[k] = t
+	}
+	return m
+}
+
 func TestGather(t *testing.T) {
 	setup()
 	var acc testutil.Accumulator
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 2)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 2)
 
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
+	expectedFieldsEth1["interface_up"] = true
+
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
+	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
-		"interface": "eth2",
 		"driver":    "driver1",
+		"interface": "eth2",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
 }
@@ -333,11 +347,13 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 	command.InterfaceInclude = append(command.InterfaceInclude, "eth1")
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 1)
 
 	// Should contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
+	expectedFieldsEth1["interface_up"] = true
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
@@ -346,6 +362,8 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 
 	// Should not contain eth2
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
+	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
 		"interface": "eth2",
 		"driver":    "driver1",
@@ -360,11 +378,13 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 	command.InterfaceExclude = append(command.InterfaceExclude, "eth1")
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 1)
 
 	// Should not contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
+	expectedFieldsEth1["interface_up"] = true
 	expectedTagsEth1 := map[string]string{
 		"interface": "eth1",
 		"driver":    "driver1",
@@ -373,9 +393,145 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 
 	// Should contain eth2
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
+	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
 		"interface": "eth2",
 		"driver":    "driver1",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
+}
+
+type TestCase struct {
+	normalization  []string
+	stats          map[string]interface{}
+	expectedFields map[string]interface{}
+}
+
+func TestNormalizedKeys(t *testing.T) {
+	cases := []TestCase{
+		{
+			normalization: []string{"underscore"},
+			stats: map[string]interface{}{
+				"port rx":      uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
+			},
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"_Port_tx":             uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
+			},
+		},
+		{
+			normalization: []string{"underscore", "lower"},
+			stats: map[string]interface{}{
+				"Port rx":      uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
+			},
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"_port_tx":             uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
+			},
+		},
+		{
+			normalization: []string{"underscore", "lower", "trim"},
+			stats: map[string]interface{}{
+				"  Port RX ":   uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
+			},
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"port_tx":              uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0)},
+		},
+		{
+			normalization: []string{"underscore", "lower", "snakecase", "trim"},
+			stats: map[string]interface{}{
+				"  Port RX ":   uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
+			},
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"port_tx":              uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
+			},
+		},
+		{
+			normalization: []string{"snakecase"},
+			stats: map[string]interface{}{
+				"  PortRX ":    uint64(1),
+				" PortTX":      uint64(0),
+				"interface_up": uint64(0),
+			},
+			expectedFields: map[string]interface{}{
+				"port_rx":              uint64(1),
+				"port_tx":              uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
+			},
+		},
+		{
+			normalization: []string{},
+			stats: map[string]interface{}{
+				"  Port RX ":   uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": uint64(0),
+			},
+			expectedFields: map[string]interface{}{
+				"  Port RX ":           uint64(1),
+				" Port_tx":             uint64(0),
+				"interface_up":         true,
+				"interface_up_counter": uint64(0),
+			},
+		},
+		{
+			normalization: []string{},
+			stats: map[string]interface{}{
+				"  Port RX ": uint64(1),
+				" Port_tx":   uint64(0),
+			},
+			expectedFields: map[string]interface{}{
+				"  Port RX ":   uint64(1),
+				" Port_tx":     uint64(0),
+				"interface_up": true,
+			},
+		},
+	}
+
+	for _, c := range cases {
+		eth0 := &InterfaceMock{"eth0", "e1000e", toStringMapUint(c.stats), false, true}
+		expectedTags := map[string]string{
+			"interface": eth0.Name,
+			"driver":    eth0.DriverName,
+		}
+
+		interfaceMap = make(map[string]*InterfaceMock)
+		interfaceMap[eth0.Name] = eth0
+
+		cmd := &CommandEthtoolMock{interfaceMap}
+		command = &Ethtool{
+			InterfaceInclude: []string{},
+			InterfaceExclude: []string{},
+			NormalizeKeys:    c.normalization,
+			command:          cmd,
+		}
+
+		var acc testutil.Accumulator
+		err := command.Gather(&acc)
+
+		require.NoError(t, err)
+		require.Len(t, acc.Metrics, 1)
+
+		acc.AssertContainsFields(t, pluginName, c.expectedFields)
+		acc.AssertContainsTaggedFields(t, pluginName, c.expectedFields, expectedTags)
+	}
 }

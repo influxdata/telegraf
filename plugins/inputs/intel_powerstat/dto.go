@@ -7,8 +7,8 @@ type msrData struct {
 	c3                    uint64
 	c6                    uint64
 	c7                    uint64
-	throttleTemp          uint64
-	temp                  uint64
+	throttleTemp          int64
+	temp                  int64
 	mperfDelta            uint64
 	aperfDelta            uint64
 	timeStampCounterDelta uint64

@@ -1,6 +1,7 @@
 # Kubernetes Inventory Input Plugin
 
-This plugin generates metrics derived from the state of the following Kubernetes resources:
+This plugin generates metrics derived from the state of the following
+Kubernetes resources:
 
 - daemonsets
 - deployments
@@ -13,13 +14,13 @@ This plugin generates metrics derived from the state of the following Kubernetes
 - services
 - statefulsets
 
-Kubernetes is a fast moving project, with a new minor release every 3 months. As
-such, we will aim to maintain support only for versions that are supported by
-the major cloud providers; this is roughly 4 release / 2 years.
+Kubernetes is a fast moving project, with a new minor release every 3 months.
+As such, we will aim to maintain support only for versions that are supported
+by the major cloud providers; this is roughly 4 release / 2 years.
 
 **This plugin supports Kubernetes 1.11 and later.**
 
-#### Series Cardinality Warning
+## Series Cardinality Warning
 
 This plugin may produce a high number of series which, when not controlled
 for, will cause high load on your database. Use the following techniques to
@@ -29,23 +30,30 @@ avoid cardinality issues:
 - Write to a database with an appropriate [retention policy][].
 - Consider using the [Time Series Index][tsi].
 - Monitor your databases [series cardinality][].
-- Consult the [InfluxDB documentation][influx-docs] for the most up-to-date techniques.
+- Consult the [InfluxDB documentation][influx-docs] for the most up-to-date
+  techniques.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from the Kubernetes api
 [[inputs.kube_inventory]]
   ## URL for the Kubernetes API
-  url = "https://$HOSTIP:6443"
+  url = "https://127.0.0.1"
 
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ##
   ## If both of these are empty, we'll use the default serviceaccount:
   ## at: /run/secrets/kubernetes.io/serviceaccount/token
-  # bearer_token = "/path/to/bearer/token"
+  ##
+  ## To auto-refresh the token, please use a file with the bearer_token option.
+  ## If given a string, Telegraf cannot refresh the token periodically.
+  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
+  ## deprecated in 1.24.0; use bearer_token with a file
   # bearer_token_string = "abc_123"
 
   ## Set response_timeout (default 5 seconds)
@@ -53,8 +61,9 @@ avoid cardinality issues:
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
-  ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress",
+  ## "nodes", "persistentvolumes", "persistentvolumeclaims", "pods", "services",
+  ## "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -64,8 +73,8 @@ avoid cardinality issues:
   ## selectors to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all selectors as tags
   ## selector_exclude overrides selector_include if both set.
-  selector_include = []
-  selector_exclude = ["*"]
+  # selector_include = []
+  # selector_exclude = ["*"]
 
   ## Optional TLS Config
   ## Trusted root certificates for server
@@ -74,6 +83,8 @@ avoid cardinality issues:
   # tls_cert = "/path/to/certfile"
   ## Used for TLS client certificate authentication
   # tls_key = "/path/to/keyfile"
+  ## Send the specified TLS server name via SNI
+  # tls_server_name = "kubernetes.example.com"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
@@ -81,9 +92,15 @@ avoid cardinality issues:
   # fielddrop = ["terminated_reason"]
 ```
 
-#### Kubernetes Permissions
+## Kubernetes Permissions
 
-If using [RBAC authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), you will need to create a cluster role to list "persistentvolumes" and "nodes". You will then need to make an [aggregated ClusterRole](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles) that will eventually be bound to a user or group.
+If using [RBAC authorization][rbac], you will need to create a cluster role to
+list "persistentvolumes" and "nodes". You will then need to make an [aggregated
+ClusterRole][agg] that will eventually be bound to a user or group.
+
+[rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+
+[agg]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
 
 ```yaml
 ---
@@ -112,7 +129,8 @@ aggregationRule:
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
 
-Bind the newly created aggregated ClusterRole with the following config file, updating the subjects as needed.
+Bind the newly created aggregated ClusterRole with the following config file,
+updating the subjects as needed.
 
 ```yaml
 ---
@@ -132,8 +150,9 @@ subjects:
 
 ## Quickstart in k3s
 
-When monitoring [k3s](https://k3s.io) server instances one can re-use already generated administration token.
-This is less secure than using the more restrictive dedicated telegraf user but more convienient to set up.
+When monitoring [k3s](https://k3s.io) server instances one can re-use already
+generated administration token.  This is less secure than using the more
+restrictive dedicated telegraf user but more convienient to set up.
 
 ```console
 # an empty token will make telegraf use the client cert/key files instead
@@ -150,7 +169,7 @@ tls_cert = "/run/telegraf-kubernetes-cert"
 tls_key = "/run/telegraf-kubernetes-key"
 ```
 
-### Metrics:
+## Metrics
 
 - kubernetes_daemonset
   - tags:
@@ -167,7 +186,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - number_unavailable
     - updated_number_scheduled
 
-* kubernetes_deployment
+- kubernetes_deployment
   - tags:
     - deployment_name
     - namespace
@@ -192,7 +211,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - ready
     - port
 
-* kubernetes_ingress
+- kubernetes_ingress
   - tags:
     - ingress_name
     - namespace
@@ -220,7 +239,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - allocatable_memory_bytes
     - allocatable_pods
 
-* kubernetes_persistentvolume
+- kubernetes_persistentvolume
   - tags:
     - pv_name
     - phase
@@ -238,7 +257,7 @@ tls_key = "/run/telegraf-kubernetes-key"
   - fields:
     - phase_type (int, [see below](#pvc-phase_type))
 
-* kubernetes_pod_container
+- kubernetes_pod_container
   - tags:
     - container_name
     - namespace
@@ -274,7 +293,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - port
     - target_port
 
-* kubernetes_statefulset
+- kubernetes_statefulset
   - tags:
     - statefulset_name
     - namespace
@@ -289,9 +308,10 @@ tls_key = "/run/telegraf-kubernetes-key"
     - spec_replicas
     - observed_generation
 
-#### pv `phase_type`
+### pv `phase_type`
 
-The persistentvolume "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
+The persistentvolume "phase" is saved in the `phase` tag with a correlated
+numeric field called `phase_type` corresponding with that tag value.
 
 | Tag value | Corresponding field value |
 | --------- | ------------------------- |
@@ -302,9 +322,10 @@ The persistentvolume "phase" is saved in the `phase` tag with a correlated numer
 | available | 4                         |
 | unknown   | 5                         |
 
-#### pvc `phase_type`
+### pvc `phase_type`
 
-The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
+The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated
+numeric field called `phase_type` corresponding with that tag value.
 
 | Tag value | Corresponding field value |
 | --------- | ------------------------- |
@@ -313,9 +334,9 @@ The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated 
 | pending   | 2                         |
 | unknown   | 3                         |
 
-### Example Output:
+## Example Output
 
-```
+```shell
 kubernetes_configmap,configmap_name=envoy-config,namespace=default,resource_version=56593031 created=1544103867000000000i 1547597616000000000
 kubernetes_daemonset,daemonset_name=telegraf,selector_select1=s1,namespace=logging number_unavailable=0i,desired_number_scheduled=11i,number_available=11i,number_misscheduled=8i,number_ready=11i,updated_number_scheduled=11i,created=1527758699000000000i,generation=16i,current_number_scheduled=11i 1547597616000000000
 kubernetes_deployment,deployment_name=deployd,selector_select1=s1,namespace=default replicas_unavailable=0i,created=1544103082000000000i,replicas_available=1i 1547597616000000000
@@ -333,4 +354,3 @@ kubernetes_statefulset,namespace=default,selector_select1=s1,statefulset_name=et
 [tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/
-[k8s-telegraf]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/

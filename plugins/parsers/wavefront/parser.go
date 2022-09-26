@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"log"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const MaxBufferSize = 2
@@ -23,9 +23,10 @@ type Point struct {
 	Tags      map[string]string
 }
 
-type WavefrontParser struct {
+type Parser struct {
 	parsers     *sync.Pool
-	defaultTags map[string]string
+	DefaultTags map[string]string `toml:"-"`
+	Log         telegraf.Logger   `toml:"-"`
 }
 
 // PointParser is a thread-unsafe parser and must be kept in a pool.
@@ -39,10 +40,10 @@ type PointParser struct {
 	scanBuf  bytes.Buffer // buffer reused for scanning tokens
 	writeBuf bytes.Buffer // buffer reused for parsing elements
 	Elements []ElementParser
-	parent   *WavefrontParser
+	parent   *Parser
 }
 
-// Returns a slice of ElementParser's for the Graphite format
+// NewWavefrontElements returns a slice of ElementParser's for the Graphite format
 func NewWavefrontElements() []ElementParser {
 	var elements []ElementParser
 	wsParser := WhiteSpaceParser{}
@@ -53,22 +54,17 @@ func NewWavefrontElements() []ElementParser {
 	return elements
 }
 
-func NewWavefrontParser(defaultTags map[string]string) *WavefrontParser {
-	wp := &WavefrontParser{defaultTags: defaultTags}
-	wp.parsers = &sync.Pool{
+func (p *Parser) Init() error {
+	p.parsers = &sync.Pool{
 		New: func() interface{} {
-			return NewPointParser(wp)
+			elements := NewWavefrontElements()
+			return &PointParser{Elements: elements, parent: p}
 		},
 	}
-	return wp
+	return nil
 }
 
-func NewPointParser(parent *WavefrontParser) *PointParser {
-	elements := NewWavefrontElements()
-	return &PointParser{Elements: elements, parent: parent}
-}
-
-func (p *WavefrontParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	buf := []byte(line)
 
 	metrics, err := p.Parse(buf)
@@ -83,7 +79,7 @@ func (p *WavefrontParser) ParseLine(line string) (telegraf.Metric, error) {
 	return nil, nil
 }
 
-func (p *WavefrontParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	pp := p.parsers.Get().(*PointParser)
 	defer p.parsers.Put(pp)
 	return pp.Parse(buf)
@@ -127,8 +123,8 @@ func (p *PointParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func (p *WavefrontParser) SetDefaultTags(tags map[string]string) {
-	p.defaultTags = tags
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
 }
 
 func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.Metric, error) {
@@ -140,7 +136,7 @@ func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.M
 			tags[k] = v
 		}
 		// apply default tags after parsed tags
-		for k, v := range p.parent.defaultTags {
+		for k, v := range p.parent.DefaultTags {
 			tags[k] = v
 		}
 
@@ -200,7 +196,7 @@ func (p *PointParser) unscan() {
 func (p *PointParser) unscanTokens(n int) {
 	if n > MaxBufferSize {
 		// just log for now
-		log.Printf("cannot unscan more than %d tokens", MaxBufferSize)
+		p.parent.Log.Infof("Cannot unscan more than %d tokens", MaxBufferSize)
 	}
 	p.buf.n += n
 }
@@ -208,7 +204,7 @@ func (p *PointParser) unscanTokens(n int) {
 func (p *PointParser) reset(buf []byte) {
 	// reset the scan buffer and write new byte
 	p.scanBuf.Reset()
-	p.scanBuf.Write(buf)
+	p.scanBuf.Write(buf) //nolint:revive // from buffer.go: "err is always nil"
 
 	if p.s == nil {
 		p.s = NewScanner(&p.scanBuf)
@@ -217,4 +213,15 @@ func (p *PointParser) reset(buf []byte) {
 		p.s.r.Reset(&p.scanBuf)
 	}
 	p.buf.n = 0
+}
+
+func (p *Parser) InitFromConfig(_ *parsers.Config) error {
+	return p.Init()
+}
+
+func init() {
+	parsers.Add("wavefront",
+		func(_ string) telegraf.Parser {
+			return &Parser{}
+		})
 }

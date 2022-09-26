@@ -1,6 +1,8 @@
-file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party"
-file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="The Shadow of the Past"
-file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",name="Bilbo",species="hobbit"
-file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",name="Frodo",species="hobbit"
-file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",random=1
-file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",random=2
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party",name="Bilbo",random=1,species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="The Shadow of the Past",name="Bilbo",random=1,species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party",name="Frodo",random=1,species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="The Shadow of the Past",name="Frodo",random=1,species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party",name="Bilbo",random=2,species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="The Shadow of the Past",name="Bilbo",random=2,species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party",name="Frodo",random=2,species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="The Shadow of the Past",name="Frodo",random=2,species="hobbit"

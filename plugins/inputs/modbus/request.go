@@ -6,9 +6,27 @@ type request struct {
 	address uint16
 	length  uint16
 	fields  []field
+	tags    map[string]string
 }
 
-func newRequestsFromFields(fields []field, slaveID byte, registerType string, maxBatchSize uint16) []request {
+func newRequest(f field, tags map[string]string) request {
+	r := request{
+		address: f.address,
+		length:  f.length,
+		fields:  []field{},
+		tags:    map[string]string{},
+	}
+	if !f.omit {
+		r.fields = append(r.fields, f)
+	}
+	// Copy the tags
+	for k, v := range tags {
+		r.tags[k] = v
+	}
+	return r
+}
+
+func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16) []request {
 	if len(fields) == 0 {
 		return nil
 	}
@@ -26,33 +44,26 @@ func newRequestsFromFields(fields []field, slaveID byte, registerType string, ma
 	// and the given maximum chunk sizes.
 	var requests []request
 
-	current := request{
-		address: fields[0].address,
-		length:  fields[0].length,
-		fields:  []field{fields[0]},
-	}
-
+	current := newRequest(fields[0], tags)
 	for _, f := range fields[1:] {
 		// Check if we need to interrupt the current chunk and require a new one
 		needInterrupt := f.address != current.address+current.length            // not consecutive
 		needInterrupt = needInterrupt || f.length+current.length > maxBatchSize // too large
 
 		if !needInterrupt {
-			// Still save to add the field to the current request
+			// Still safe to add the field to the current request
 			current.length += f.length
-			current.fields = append(current.fields, f) // TODO: omit the field with a future flag
+			if !f.omit {
+				// Omit adding the field but use it for constructing the request.
+				current.fields = append(current.fields, f)
+			}
 			continue
 		}
 
 		// Finish the current request, add it to the list and construct a new one
 		requests = append(requests, current)
-		current = request{
-			address: f.address,
-			length:  f.length,
-			fields:  []field{f},
-		}
+		current = newRequest(f, tags)
 	}
 	requests = append(requests, current)
-
 	return requests
 }

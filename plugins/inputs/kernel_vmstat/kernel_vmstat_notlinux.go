@@ -1,3 +1,3 @@
-// +build !linux
+//go:build !linux
 
 package kernel_vmstat

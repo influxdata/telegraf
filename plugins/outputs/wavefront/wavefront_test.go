@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -243,6 +244,11 @@ func TestBuildTagsWithSource(t *testing.T) {
 			"r-@l\"Ho/st",
 			map[string]string{"something": "abc"},
 		},
+		{
+			map[string]string{"hostagent": "realHost", "env": "qa", "tag": "val"},
+			"realHost",
+			map[string]string{"env": "qa", "tag": "val"},
+		},
 	}
 
 	for _, tt := range tagtests {
@@ -347,6 +353,22 @@ func TestTagLimits(t *testing.T) {
 	_, tags = w.buildTags(template)
 	require.Contains(t, tags, longKey, "Should contain non truncated long key")
 	require.Equal(t, longKey, tags[longKey])
+}
+
+func TestSenderURLFromHostAndPort(t *testing.T) {
+	require.Equal(t, "http://localhost:2878", senderURLFromHostAndPort("localhost", 2878))
+}
+
+func TestSenderURLFromURLAndToken(t *testing.T) {
+	url, err := senderURLFromURLAndToken("https://surf.wavefront.com", "11111111-2222-3333-4444-555555555555")
+	require.Nil(t, err)
+	require.Equal(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com",
+		url)
+}
+
+func TestDefaults(t *testing.T) {
+	defaultWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
+	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
 }
 
 // Benchmarks to test performance of string replacement via Regex and Replacer

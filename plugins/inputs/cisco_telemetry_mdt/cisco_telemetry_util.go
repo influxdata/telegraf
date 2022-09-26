@@ -1,12 +1,13 @@
 package cisco_telemetry_mdt
 
 import (
-	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"strconv"
 	"strings"
+
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 )
 
-//xform Field to string
+// xform Field to string
 func xformValueString(field *telemetry.TelemetryField) string {
 	var str string
 	switch val := field.ValueByType.(type) {
@@ -30,7 +31,7 @@ func xformValueString(field *telemetry.TelemetryField) string {
 	return ""
 }
 
-//xform Uint64 to int64
+// xform Uint64 to int64
 func nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interface{}) interface{} {
 	if field.GetUint64Value() != 0 {
 		return int64(value.(uint64))
@@ -38,7 +39,7 @@ func nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interfac
 	return nil
 }
 
-//xform string to float
+// xform string to float
 func nxosValueXformStringTofloat(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//convert property to float from string.
 	vals := field.GetStringValue()
@@ -50,7 +51,7 @@ func nxosValueXformStringTofloat(field *telemetry.TelemetryField, _ interface{})
 	return nil
 }
 
-//xform string to uint64
+// xform string to uint64
 func nxosValueXformStringToUint64(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//string to uint64
 	vals := field.GetStringValue()
@@ -62,7 +63,7 @@ func nxosValueXformStringToUint64(field *telemetry.TelemetryField, _ interface{}
 	return nil
 }
 
-//xform string to int64
+// xform string to int64
 func nxosValueXformStringToInt64(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//string to int64
 	vals := field.GetStringValue()
@@ -74,7 +75,7 @@ func nxosValueXformStringToInt64(field *telemetry.TelemetryField, _ interface{})
 	return nil
 }
 
-//auto-xform float properties
+// auto-xform float properties
 func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//check if we want auto xformation
 	vals := field.GetStringValue()
@@ -86,7 +87,7 @@ func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, _ interface{})
 	return nil
 }
 
-//xform uint64 to string
+// xform uint64 to string
 func nxosValueXformUint64ToString(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	switch val := field.ValueByType.(type) {
 	case *telemetry.TelemetryField_StringValue:
@@ -99,7 +100,7 @@ func nxosValueXformUint64ToString(field *telemetry.TelemetryField, _ interface{}
 	return nil
 }
 
-//Xform value field.
+// Xform value field.
 func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, value interface{}, path string) interface{} {
 	if strings.ContainsRune(path, ':') {
 		// not NXOS

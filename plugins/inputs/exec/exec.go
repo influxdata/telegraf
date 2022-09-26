@@ -1,9 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package exec
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
+	"os"
 	osExec "os/exec"
 	"path/filepath"
 	"runtime"
@@ -16,43 +19,33 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
 
-const sampleConfig = `
-  ## Commands array
-  commands = [
-    "/tmp/test.sh",
-    "/usr/bin/mycollector --foo=bar",
-    "/tmp/collect_*.sh"
-  ]
-
-  ## Timeout for each command to complete.
-  timeout = "5s"
-
-  ## measurement name suffix (for separating different commands)
-  name_suffix = "_mycollector"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
+//go:embed sample.conf
+var sampleConfig string
 
 const MaxStderrBytes int = 512
 
+type exitcodeHandlerFunc func([]telegraf.Metric, error, []byte) []telegraf.Metric
+
 type Exec struct {
-	Commands []string        `toml:"commands"`
-	Command  string          `toml:"command"`
-	Timeout  config.Duration `toml:"timeout"`
+	Commands    []string        `toml:"commands"`
+	Command     string          `toml:"command"`
+	Environment []string        `toml:"environment"`
+	Timeout     config.Duration `toml:"timeout"`
+	Log         telegraf.Logger `toml:"-"`
 
 	parser parsers.Parser
 
 	runner Runner
-	Log    telegraf.Logger `toml:"-"`
+
+	// Allow post processing of command exit codes
+	exitcodeHandler   exitcodeHandlerFunc
+	parseDespiteError bool
 }
 
 func NewExec() *Exec {
@@ -63,13 +56,14 @@ func NewExec() *Exec {
 }
 
 type Runner interface {
-	Run(string, time.Duration) ([]byte, []byte, error)
+	Run(string, []string, time.Duration) ([]byte, []byte, error)
 }
 
 type CommandRunner struct{}
 
 func (c CommandRunner) Run(
 	command string,
+	environments []string,
 	timeout time.Duration,
 ) ([]byte, []byte, error) {
 	splitCmd, err := shellquote.Split(command)
@@ -78,6 +72,10 @@ func (c CommandRunner) Run(
 	}
 
 	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
+
+	if len(environments) > 0 {
+		cmd.Env = append(os.Environ(), environments...)
+	}
 
 	var (
 		out    bytes.Buffer
@@ -137,13 +135,16 @@ func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 	return b
 }
 
+func (*Exec) SampleConfig() string {
+	return sampleConfig
+}
+
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
-	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, errbuf, runErr := e.runner.Run(command, time.Duration(e.Timeout))
-	if !isNagios && runErr != nil {
-		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
+	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
+	if !e.parseDespiteError && runErr != nil {
+		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
 	}
@@ -154,11 +155,8 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 		return
 	}
 
-	if isNagios {
-		metrics, err = nagios.TryAddState(runErr, metrics)
-		if err != nil {
-			e.Log.Errorf("Failed to add nagios state: %s", err)
-		}
+	if e.exitcodeHandler != nil {
+		metrics = e.exitcodeHandler(metrics, runErr, errBuf)
 	}
 
 	for _, m := range metrics {
@@ -166,16 +164,15 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	}
 }
 
-func (e *Exec) SampleConfig() string {
-	return sampleConfig
-}
-
-func (e *Exec) Description() string {
-	return "Read metrics from one or more commands that can output to stdout"
-}
-
 func (e *Exec) SetParser(parser parsers.Parser) {
 	e.parser = parser
+	unwrapped, ok := parser.(*models.RunningParser)
+	if ok {
+		if _, ok := unwrapped.Parser.(*nagios.Parser); ok {
+			e.exitcodeHandler = nagiosHandler
+			e.parseDespiteError = true
+		}
+	}
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
@@ -227,6 +224,10 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 
 func (e *Exec) Init() error {
 	return nil
+}
+
+func nagiosHandler(metrics []telegraf.Metric, err error, msg []byte) []telegraf.Metric {
+	return nagios.AddState(err, msg, metrics)
 }
 
 func init() {

@@ -3,7 +3,6 @@ package aliyuncms
 import (
 	"encoding/json"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -53,12 +52,12 @@ type parsedDResp struct {
 	pageNumber int
 }
 
-//getRPCReqFromDiscoveryRequest - utility function to map between aliyun request primitives
-//discoveryRequest represents different type of discovery requests
+// getRPCReqFromDiscoveryRequest - utility function to map between aliyun request primitives
+// discoveryRequest represents different type of discovery requests
 func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, error) {
 	if reflect.ValueOf(req).Type().Kind() != reflect.Ptr ||
 		reflect.ValueOf(req).IsNil() {
-		return nil, errors.Errorf("Not expected type of the discovery request object: %q, %q", reflect.ValueOf(req).Type(), reflect.ValueOf(req).Kind())
+		return nil, errors.Errorf("unexpected type of the discovery request object: %q, %q", reflect.ValueOf(req).Type(), reflect.ValueOf(req).Kind())
 	}
 
 	ptrV := reflect.Indirect(reflect.ValueOf(req))
@@ -66,32 +65,31 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 	for i := 0; i < ptrV.NumField(); i++ {
 		if ptrV.Field(i).Type().String() == "*requests.RpcRequest" {
 			if !ptrV.Field(i).CanInterface() {
-				return nil, errors.Errorf("Can't get interface of %v", ptrV.Field(i))
+				return nil, errors.Errorf("can't get interface of %v", ptrV.Field(i))
 			}
 
 			rpcReq, ok := ptrV.Field(i).Interface().(*requests.RpcRequest)
 
 			if !ok {
-				return nil, errors.Errorf("Cant convert interface of %v to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
+				return nil, errors.Errorf("can't convert interface of %v to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
 			}
 
 			return rpcReq, nil
 		}
 	}
-	return nil, errors.Errorf("Didn't find *requests.RpcRequest embedded struct in %q", ptrV.Type())
+	return nil, errors.Errorf("didn't find *requests.RpcRequest embedded struct in %q", ptrV.Type())
 }
 
-//newDiscoveryTool function returns discovery tool object.
-//The object is used to periodically get data about aliyun objects and send this
-//data into channel. The intention is to enrich reported metrics with discovery data.
-//Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
-//Discovery can be limited by region if not set, then all regions is queried.
-//Request against API can inquire additional costs, consult with aliyun API documentation.
+// newDiscoveryTool function returns discovery tool object.
+// The object is used to periodically get data about aliyun objects and send this
+// data into channel. The intention is to enrich reported metrics with discovery data.
+// Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
+// Discovery can be limited by region if not set, then all regions is queried.
+// Request against API can inquire additional costs, consult with aliyun API documentation.
 func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
 	var (
 		dscReq                = map[string]discoveryRequest{}
 		cli                   = map[string]aliyunSdkClient{}
-		parseRootKey          = regexp.MustCompile(`Describe(.*)`)
 		responseRootKey       string
 		responseObjectIDKey   string
 		err                   error
@@ -112,12 +110,15 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		switch project {
 		case "acs_ecs_dashboard":
 			dscReq[region] = ecs.CreateDescribeInstancesRequest()
+			responseRootKey = "Instances"
 			responseObjectIDKey = "InstanceId"
 		case "acs_rds_dashboard":
 			dscReq[region] = rds.CreateDescribeDBInstancesRequest()
+			responseRootKey = "Items"
 			responseObjectIDKey = "DBInstanceId"
 		case "acs_slb_dashboard":
 			dscReq[region] = slb.CreateDescribeLoadBalancersRequest()
+			responseRootKey = "LoadBalancers"
 			responseObjectIDKey = "LoadBalancerId"
 		case "acs_memcache":
 			return nil, noDiscoverySupportErr
@@ -137,6 +138,7 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 			//req.InitWithApiInfo("oss", "2014-08-15", "DescribeDBInstances", "oss", "openAPI")
 		case "acs_vpc_eip":
 			dscReq[region] = vpc.CreateDescribeEipAddressesRequest()
+			responseRootKey = "EipAddresses"
 			responseObjectIDKey = "AllocationId"
 		case "acs_kvstore":
 			return nil, noDiscoverySupportErr
@@ -222,7 +224,7 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		case "acs_cds":
 			return nil, noDiscoverySupportErr
 		default:
-			return nil, errors.Errorf("project %q is not recognized by discovery...", project)
+			return nil, errors.Errorf("project %q is not recognized by discovery", project)
 		}
 
 		cli[region], err = sdk.NewClientWithOptions(region, sdk.NewConfig(), credential)
@@ -232,37 +234,8 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 	}
 
 	if len(dscReq) == 0 || len(cli) == 0 {
-		return nil, errors.Errorf("Can't build discovery request for project: %q,\nregions: %v", project, regions)
+		return nil, errors.Errorf("can't build discovery request for project: %q, regions: %v", project, regions)
 	}
-
-	//Getting response root key (if not set already). This is to be able to parse discovery responses
-	//As they differ per object type
-	//Discovery requests are of the same type per every region, so pick the first one
-	rpcReq, err := getRPCReqFromDiscoveryRequest(dscReq[regions[0]])
-	//This means that the discovery request is not of proper type/kind
-	if err != nil {
-		return nil, errors.Errorf("Can't parse rpc request object from  discovery request %v", dscReq[regions[0]])
-	}
-
-	/*
-		The action name is of the following format Describe<Project related title for managed instances>,
-		For example: DescribeLoadBalancers -> for SLB project, or DescribeInstances for ECS project
-		We will use it to construct root key name in the discovery API response.
-		It follows the following logic: for 'DescribeLoadBalancers' action in discovery request we get the response
-		in json of the following structure:
-		{
-			 ...
-			 "LoadBalancers": {
-				 "LoadBalancer": [ here comes objects, one per every instance]
-			}
-		}
-		As we can see, the root key is a part of action name, except first word (part) 'Describe'
-	*/
-	result := parseRootKey.FindStringSubmatch(rpcReq.GetActionName())
-	if result == nil || len(result) != 2 {
-		return nil, errors.Errorf("Can't parse the discovery response root key from request action name %q", rpcReq.GetActionName())
-	}
-	responseRootKey = result[1]
 
 	return &discoveryTool{
 		req:                dscReq,
@@ -288,11 +261,11 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 
 	data = resp.GetHttpContentBytes()
 	if data == nil { //No data
-		return nil, errors.Errorf("No data in response to be parsed")
+		return nil, errors.New("no data in response to be parsed")
 	}
 
 	if err := json.Unmarshal(data, &fullOutput); err != nil {
-		return nil, errors.Errorf("Can't parse JSON from discovery response: %v", err)
+		return nil, errors.Errorf("can't parse JSON from discovery response: %v", err)
 	}
 
 	for key, val := range fullOutput {
@@ -301,7 +274,7 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 			foundRootKey = true
 			rootKeyVal, ok := val.(map[string]interface{})
 			if !ok {
-				return nil, errors.Errorf("Content of root key %q, is not an object: %v", key, val)
+				return nil, errors.Errorf("content of root key %q, is not an object: %v", key, val)
 			}
 
 			//It should contain the array with discovered data
@@ -311,18 +284,18 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 				}
 			}
 			if !foundDataItem {
-				return nil, errors.Errorf("Didn't find array item in root key %q", key)
+				return nil, errors.Errorf("didn't find array item in root key %q", key)
 			}
-		case "TotalCount":
+		case "TotalCount", "TotalRecordCount":
 			pdResp.totalCount = int(val.(float64))
-		case "PageSize":
+		case "PageSize", "PageRecordCount":
 			pdResp.pageSize = int(val.(float64))
 		case "PageNumber":
 			pdResp.pageNumber = int(val.(float64))
 		}
 	}
 	if !foundRootKey {
-		return nil, errors.Errorf("Didn't find root key %q in discovery response", dt.respRootKey)
+		return nil, errors.Errorf("didn't find root key %q in discovery response", dt.respRootKey)
 	}
 
 	return pdResp, nil
@@ -368,7 +341,7 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 			for _, raw := range discoveryData {
 				elem, ok := raw.(map[string]interface{})
 				if !ok {
-					return nil, errors.Errorf("can't parse input data element, not a map[string]interface{} type")
+					return nil, errors.New("can't parse input data element, not a map[string]interface{} type")
 				}
 				if objectID, ok := elem[dt.respObjectIDKey].(string); ok {
 					preparedData[objectID] = elem
@@ -390,7 +363,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 		//which aliyun object type (project) is used
 		dscReq, ok := dt.req[region]
 		if !ok {
-			return nil, errors.Errorf("Error building common discovery request: not valid region %q", region)
+			return nil, errors.Errorf("error building common discovery request: not valid region %q", region)
 		}
 
 		rpcReq, err := getRPCReqFromDiscoveryRequest(dscReq)

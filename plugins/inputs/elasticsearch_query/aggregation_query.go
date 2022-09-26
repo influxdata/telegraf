@@ -2,6 +2,7 @@ package elasticsearch_query
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -32,7 +33,17 @@ func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregatio
 
 	query := elastic5.NewBoolQuery()
 	query = query.Filter(elastic5.NewQueryStringQuery(filterQuery))
-	query = query.Filter(elastic5.NewRangeQuery(aggregation.DateField).From(from).To(now))
+	query = query.Filter(elastic5.NewRangeQuery(aggregation.DateField).From(from).To(now).Format(aggregation.DateFieldFormat))
+
+	src, err := query.Source()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get query source - %v", err)
+	}
+	data, err := json.Marshal(src)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response - %v", err)
+	}
+	e.Log.Debugf("{\"query\": %s}", string(data))
 
 	search := e.esClient.Search().Index(aggregation.Index).Query(query).Size(0)
 
@@ -142,7 +153,7 @@ func (aggregation *esAggregation) buildAggregationQuery() error {
 				measurement: aggregation.MeasurementName,
 				function:    aggregation.MetricFunction,
 				field:       k,
-				name:        strings.Replace(k, ".", "_", -1) + "_" + aggregation.MetricFunction,
+				name:        strings.ReplaceAll(k, ".", "_") + "_" + aggregation.MetricFunction,
 			},
 			isParent:    true,
 			aggregation: agg,
@@ -174,7 +185,7 @@ func (aggregation *esAggregation) buildAggregationQuery() error {
 				measurement: aggregation.MeasurementName,
 				function:    "terms",
 				field:       term,
-				name:        strings.Replace(term, ".", "_", -1),
+				name:        strings.ReplaceAll(term, ".", "_"),
 			},
 			isParent:    true,
 			aggregation: agg,

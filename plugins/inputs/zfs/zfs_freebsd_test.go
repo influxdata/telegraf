@@ -1,4 +1,4 @@
-// +build freebsd
+//go:build freebsd
 
 package zfs
 

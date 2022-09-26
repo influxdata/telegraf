@@ -1,11 +1,15 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package websocket
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
+
+	ws "github.com/gorilla/websocket"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -13,39 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
-	ws "github.com/gorilla/websocket"
 )
 
-var sampleConfig = `
-  ## URL is the address to send metrics to. Make sure ws or wss scheme is used.
-  url = "ws://127.0.0.1:8080/telegraf"
-
-  ## Timeouts (make sure read_timeout is larger than server ping interval or set to zero).
-  # connect_timeout = "30s"
-  # write_timeout = "30s"
-  # read_timeout = "30s"
-
-  ## Optionally turn on using text data frames (binary by default).
-  # use_text_frames = false
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "influx"
-
-  ## Additional HTTP Upgrade headers
-  # [outputs.websocket.headers]
-  #   Authorization = "Bearer <TOKEN>"
-`
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultConnectTimeout = 30 * time.Second
@@ -63,25 +38,20 @@ type WebSocket struct {
 	UseTextFrames  bool              `toml:"use_text_frames"`
 	Log            telegraf.Logger   `toml:"-"`
 	proxy.HTTPProxy
+	proxy.Socks5ProxyConfig
 	tls.ClientConfig
 
 	conn       *ws.Conn
 	serializer serializers.Serializer
 }
 
+func (*WebSocket) SampleConfig() string {
+	return sampleConfig
+}
+
 // SetSerializer implements serializers.SerializerOutput.
 func (w *WebSocket) SetSerializer(serializer serializers.Serializer) {
 	w.serializer = serializer
-}
-
-// Description of plugin.
-func (w *WebSocket) Description() string {
-	return "Generic WebSocket output writer."
-}
-
-// SampleConfig returns plugin config sample.
-func (w *WebSocket) SampleConfig() string {
-	return sampleConfig
 }
 
 var errInvalidURL = errors.New("invalid websocket URL")
@@ -110,6 +80,14 @@ func (w *WebSocket) Connect() error {
 		Proxy:            dialProxy,
 		HandshakeTimeout: time.Duration(w.ConnectTimeout),
 		TLSClientConfig:  tlsCfg,
+	}
+
+	if w.Socks5ProxyEnabled {
+		netDialer, err := w.Socks5ProxyConfig.GetDialer()
+		if err != nil {
+			return fmt.Errorf("error connecting to socks5 proxy: %v", err)
+		}
+		dialer.NetDial = netDialer.Dial
 	}
 
 	headers := http.Header{}

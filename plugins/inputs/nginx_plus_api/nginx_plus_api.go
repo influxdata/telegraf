@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nginx_plus_api
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type NginxPlusAPI struct {
 	Urls            []string        `toml:"urls"`
@@ -29,6 +34,7 @@ const (
 	// Paths
 	processesPath   = "processes"
 	connectionsPath = "connections"
+	slabsPath       = "slabs"
 	sslPath         = "ssl"
 
 	httpRequestsPath      = "http/requests"
@@ -36,37 +42,15 @@ const (
 	httpLocationZonesPath = "http/location_zones"
 	httpUpstreamsPath     = "http/upstreams"
 	httpCachesPath        = "http/caches"
-
-	resolverZonesPath = "resolvers"
+	httpLimitReqsPath     = "http/limit_reqs"
+	resolverZonesPath     = "resolvers"
 
 	streamServerZonesPath = "stream/server_zones"
 	streamUpstreamsPath   = "stream/upstreams"
 )
 
-var sampleConfig = `
-  ## An array of API URI to gather stats.
-  urls = ["http://localhost/api"]
-
-  # Nginx API version, default: 3
-  # api_version = 3
-
-  # HTTP response timeout (default: 5s)
-  response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (n *NginxPlusAPI) SampleConfig() string {
+func (*NginxPlusAPI) SampleConfig() string {
 	return sampleConfig
-}
-
-func (n *NginxPlusAPI) Description() string {
-	return "Read Nginx Plus Api documentation"
 }
 
 func (n *NginxPlusAPI) Gather(acc telegraf.Accumulator) error {

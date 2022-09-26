@@ -1,12 +1,17 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package hddtemp
 
 import (
+	_ "embed"
 	"net"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	gohddtemp "github.com/influxdata/telegraf/plugins/inputs/hddtemp/go-hddtemp"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const defaultAddress = "127.0.0.1:7634"
 
@@ -20,24 +25,8 @@ type Fetcher interface {
 	Fetch(address string) ([]gohddtemp.Disk, error)
 }
 
-func (h *HDDTemp) Description() string {
-	return "Monitor disks' temperatures using hddtemp"
-}
-
-var hddtempSampleConfig = `
-  ## By default, telegraf gathers temps data from all disks detected by the
-  ## hddtemp.
-  ##
-  ## Only collect temps from the selected disks.
-  ##
-  ## A * as the device name will return the temperature values of all disks.
-  ##
-  # address = "127.0.0.1:7634"
-  # devices = ["sda", "*"]
-`
-
-func (h *HDDTemp) SampleConfig() string {
-	return hddtempSampleConfig
+func (*HDDTemp) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {

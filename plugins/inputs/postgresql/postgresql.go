@@ -1,11 +1,13 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package postgresql
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 
-	// register in driver.
+	// Blank import required to register driver
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
@@ -13,58 +15,29 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Postgresql struct {
 	Service
-	Databases        []string
-	IgnoredDatabases []string
+	Databases          []string `toml:"databases"`
+	IgnoredDatabases   []string `toml:"ignored_databases"`
+	PreparedStatements bool     `toml:"prepared_statements"`
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
-var sampleConfig = `
-  ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
-  ##       ?sslmode=[disable|verify-ca|verify-full]
-  ## or a simple string:
-  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
-  ##
-  ## All connection parameters are optional.
-  ##
-  ## Without the dbname parameter, the driver will default to a database
-  ## with the same name as the user. This dbname is just for instantiating a
-  ## connection with the server and doesn't restrict the databases we are trying
-  ## to grab metrics for.
-  ##
-  address = "host=localhost user=postgres sslmode=disable"
-  ## A custom name for the database that will be used as the "server" tag in the
-  ## measurement output. If not specified, a default one generated from
-  ## the connection address is used.
-  # outputaddress = "db01"
-
-  ## connection configuration.
-  ## maxlifetime - specify the maximum lifetime of a connection.
-  ## default is forever (0s)
-  max_lifetime = "0s"
-
-  ## A  list of databases to explicitly ignore.  If not specified, metrics for all
-  ## databases are gathered.  Do NOT use with the 'databases' option.
-  # ignored_databases = ["postgres", "template0", "template1"]
-
-  ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.  Do NOT use with the 'ignored_databases' option.
-  # databases = ["app_production", "testing"]
-`
-
-func (p *Postgresql) SampleConfig() string {
+func (*Postgresql) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *Postgresql) Description() string {
-	return "Read metrics from one or many postgresql servers"
 }
 
 func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
+}
+
+func (p *Postgresql) Init() error {
+	p.Service.IsPgBouncer = !p.PreparedStatements
+	return nil
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
@@ -198,8 +171,8 @@ func init() {
 				MaxIdle:     1,
 				MaxOpen:     1,
 				MaxLifetime: config.Duration(0),
-				IsPgBouncer: false,
 			},
+			PreparedStatements: true,
 		}
 	})
 }

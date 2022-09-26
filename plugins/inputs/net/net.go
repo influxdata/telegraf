@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package net
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"strings"
@@ -11,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type NetIOStats struct {
 	filter filter.Filter
 	ps     system.PS
@@ -20,26 +25,8 @@ type NetIOStats struct {
 	Interfaces          []string
 }
 
-func (n *NetIOStats) Description() string {
-	return "Read metrics about network interface usage"
-}
-
-var netSampleConfig = `
-  ## By default, telegraf gathers stats from any up interface (excluding loopback)
-  ## Setting interfaces will tell it to gather these explicit interfaces,
-  ## regardless of status.
-  ##
-  # interfaces = ["eth0"]
-  ##
-  ## On linux systems telegraf also collects protocol stats.
-  ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
-  ##
-  # ignore_protocol_stats = false
-  ##
-`
-
-func (n *NetIOStats) SampleConfig() string {
-	return netSampleConfig
+func (*NetIOStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {

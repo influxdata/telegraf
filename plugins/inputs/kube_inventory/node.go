@@ -28,24 +28,24 @@ func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulato
 	for resourceName, val := range n.Status.Capacity {
 		switch resourceName {
 		case "cpu":
-			fields["capacity_cpu_cores"] = convertQuantity(string(val.Format), 1)
-			fields["capacity_millicpu_cores"] = convertQuantity(string(val.Format), 1000)
+			fields["capacity_cpu_cores"] = ki.convertQuantity(val.String(), 1)
+			fields["capacity_millicpu_cores"] = ki.convertQuantity(val.String(), 1000)
 		case "memory":
-			fields["capacity_memory_bytes"] = convertQuantity(string(val.Format), 1)
+			fields["capacity_memory_bytes"] = ki.convertQuantity(val.String(), 1)
 		case "pods":
-			fields["capacity_pods"] = atoi(string(val.Format))
+			fields["capacity_pods"] = atoi(val.String())
 		}
 	}
 
 	for resourceName, val := range n.Status.Allocatable {
 		switch resourceName {
 		case "cpu":
-			fields["allocatable_cpu_cores"] = convertQuantity(string(val.Format), 1)
-			fields["allocatable_millicpu_cores"] = convertQuantity(string(val.Format), 1000)
+			fields["allocatable_cpu_cores"] = ki.convertQuantity(val.String(), 1)
+			fields["allocatable_millicpu_cores"] = ki.convertQuantity(val.String(), 1000)
 		case "memory":
-			fields["allocatable_memory_bytes"] = convertQuantity(string(val.Format), 1)
+			fields["allocatable_memory_bytes"] = ki.convertQuantity(val.String(), 1)
 		case "pods":
-			fields["allocatable_pods"] = atoi(string(val.Format))
+			fields["allocatable_pods"] = atoi(val.String())
 		}
 	}
 

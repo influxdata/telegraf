@@ -1,11 +1,14 @@
 package nsq
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestConnectAndWriteIntegration(t *testing.T) {
@@ -13,7 +16,20 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	server := []string{testutil.GetLocalHost() + ":4150"}
+	servicePort := "4150"
+	container := testutil.Container{
+		Image:        "nsqio/nsq",
+		ExposedPorts: []string{servicePort},
+		Entrypoint:   []string{"/nsqd"},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	server := []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])}
 	s, _ := serializers.NewInfluxSerializer()
 	n := &NSQ{
 		Server:     server[0],
@@ -22,7 +38,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	// Verify that we can connect to the NSQ daemon
-	err := n.Connect()
+	err = n.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the NSQ daemon

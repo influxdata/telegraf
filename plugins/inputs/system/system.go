@@ -1,33 +1,32 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package system
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/load"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/load"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type SystemStats struct {
 	Log telegraf.Logger
 }
 
-func (*SystemStats) Description() string {
-	return "Read metrics about system load & uptime"
-}
-
 func (*SystemStats) SampleConfig() string {
-	return `
-  ## Uncomment to remove deprecated metrics.
-  # fielddrop = ["uptime_format"]
-`
+	return sampleConfig
 }
 
 func (s *SystemStats) Gather(acc telegraf.Accumulator) error {

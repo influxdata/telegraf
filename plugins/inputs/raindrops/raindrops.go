@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package raindrops
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,22 +17,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Raindrops struct {
 	Urls       []string
 	httpClient *http.Client
 }
 
-var sampleConfig = `
-  ## An array of raindrops middleware URI to gather stats.
-  urls = ["http://localhost:8080/_raindrops"]
-`
-
-func (r *Raindrops) SampleConfig() string {
+func (*Raindrops) SampleConfig() string {
 	return sampleConfig
-}
-
-func (r *Raindrops) Description() string {
-	return "Read raindrops stats (raindrops - real-time stats for preforking Rack servers)"
 }
 
 func (r *Raindrops) Gather(acc telegraf.Accumulator) error {
@@ -116,7 +112,6 @@ func (r *Raindrops) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 		}
 		activeLineStr, activeErr = buf.ReadString('\n')
 		if activeErr != nil {
-			iterate = false
 			break
 		}
 		if strings.Compare(activeLineStr, "\n") == 0 {
@@ -154,7 +149,7 @@ func (r *Raindrops) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 		}
 		acc.AddFields("raindrops_listen", lis, tags)
 	}
-	return nil
+	return nil //nolint:nilerr // nil returned on purpose
 }
 
 // Get tag(s) for the raindrops calling/writing plugin

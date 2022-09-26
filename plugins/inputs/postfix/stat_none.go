@@ -1,4 +1,4 @@
-// +build !dragonfly,!linux,!netbsd,!openbsd,!solaris,!darwin,!freebsd
+//go:build !dragonfly && !linux && !netbsd && !openbsd && !solaris && !darwin && !freebsd
 
 package postfix
 

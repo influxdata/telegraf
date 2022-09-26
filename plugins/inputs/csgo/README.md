@@ -2,8 +2,9 @@
 
 The `csgo` plugin gather metrics from Counter-Strike: Global Offensive servers.
 
-#### Configuration
-```toml
+## Configuration
+
+```toml @sample.conf
 # Fetch metrics from a CSGO SRCDS
 [[inputs.csgo]]
   ## Specify servers using the following format:
@@ -16,9 +17,10 @@ The `csgo` plugin gather metrics from Counter-Strike: Global Offensive servers.
   servers = []
 ```
 
-### Metrics
+## Metrics
 
-The plugin retrieves the output of the `stats` command that is executed via rcon.
+The plugin retrieves the output of the `stats` command that is executed via
+rcon.
 
 If no servers are specified, no data will be collected
 

@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/influxdata/telegraf"
 	dto "github.com/prometheus/client_model/go"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/influxdata/telegraf"
 )
 
 const helpString = "Telegraf collected metric"
@@ -86,10 +87,10 @@ type MetricKey uint64
 func MakeMetricKey(labels []LabelPair) MetricKey {
 	h := fnv.New64a()
 	for _, label := range labels {
-		h.Write([]byte(label.Name))
-		h.Write([]byte("\x00"))
-		h.Write([]byte(label.Value))
-		h.Write([]byte("\x00"))
+		h.Write([]byte(label.Name))  //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte("\x00"))      //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(label.Value)) //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte("\x00"))      //nolint:revive // from hash.go: "It never returns an error"
 	}
 	return MetricKey(h.Sum64())
 }
@@ -241,6 +242,9 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 					AddTime:   now,
 					Histogram: &Histogram{},
 				}
+			} else {
+				m.Time = metric.Time()
+				m.AddTime = now
 			}
 			switch {
 			case strings.HasSuffix(field.Key, "_bucket"):
@@ -289,6 +293,9 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 					AddTime: now,
 					Summary: &Summary{},
 				}
+			} else {
+				m.Time = metric.Time()
+				m.AddTime = now
 			}
 			switch {
 			case strings.HasSuffix(field.Key, "_sum"):
@@ -351,8 +358,7 @@ func (c *Collection) GetEntries(order MetricSortOrder) []Entry {
 		entries = append(entries, entry)
 	}
 
-	switch order {
-	case SortMetrics:
+	if order == SortMetrics {
 		sort.Slice(entries, func(i, j int) bool {
 			lhs := entries[i].Family
 			rhs := entries[j].Family
@@ -372,8 +378,7 @@ func (c *Collection) GetMetrics(entry Entry, order MetricSortOrder) []*Metric {
 		metrics = append(metrics, metric)
 	}
 
-	switch order {
-	case SortMetrics:
+	if order == SortMetrics {
 		sort.Slice(metrics, func(i, j int) bool {
 			lhs := metrics[i].Labels
 			rhs := metrics[j].Labels
@@ -407,8 +412,11 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 	for _, entry := range c.GetEntries(c.config.MetricSortOrder) {
 		mf := &dto.MetricFamily{
 			Name: proto.String(entry.Family.Name),
-			Help: proto.String(helpString),
 			Type: MetricType(entry.Family.Type),
+		}
+
+		if !c.config.CompactEncoding {
+			mf.Help = proto.String(helpString)
 		}
 
 		for _, metric := range c.GetMetrics(entry, c.config.MetricSortOrder) {

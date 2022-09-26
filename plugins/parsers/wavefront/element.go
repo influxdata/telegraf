@@ -9,10 +9,9 @@ import (
 
 var (
 	ErrEOF              = errors.New("EOF")
-	ErrInvalidTimestamp = errors.New("Invalid timestamp")
+	ErrInvalidTimestamp = errors.New("invalid timestamp")
 )
 
-// Interface for parsing line elements.
 type ElementParser interface {
 	parse(p *PointParser, pt *Point) error
 }
@@ -53,19 +52,22 @@ func (ep *ValueParser) parse(p *PointParser, pt *Point) error {
 
 	p.writeBuf.Reset()
 	if tok == MinusSign {
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 	}
 
 	for tok != EOF && (tok == Letter || tok == Number || tok == Dot || tok == MinusSign) {
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 	}
 	p.unscan()
 
 	pt.Value = p.writeBuf.String()
-	_, err := strconv.ParseFloat(pt.Value, 64)
-	if err != nil {
+	if _, err := strconv.ParseFloat(pt.Value, 64); err != nil {
 		return fmt.Errorf("invalid metric value %s", pt.Value)
 	}
 	return nil
@@ -91,7 +93,9 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 
 	p.writeBuf.Reset()
 	for tok != EOF && tok == Number {
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 	}
 	p.unscan()
@@ -116,11 +120,10 @@ func setTimestamp(pt *Point, ts int64, numDigits int) error {
 		ts = ts / 1e3
 	} else if numDigits != 10 {
 		// must be in seconds, return error if not 0
-		if ts == 0 {
-			ts = getCurrentTime()
-		} else {
+		if ts != 0 {
 			return ErrInvalidTimestamp
 		}
+		ts = getCurrentTime()
 	}
 	pt.Timestamp = ts
 	return nil
@@ -189,7 +192,9 @@ func parseQuotedLiteral(p *PointParser) (string, error) {
 	for tok != EOF && (tok != Quotes || (tok == Quotes && escaped)) {
 		// let everything through
 		escaped = tok == Backslash
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return "", fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 	}
 	if tok == EOF {
@@ -210,7 +215,9 @@ func parseLiteral(p *PointParser) (string, error) {
 
 	p.writeBuf.Reset()
 	for tok != EOF && tok > literalBeg && tok < literalEnd {
-		p.writeBuf.WriteString(lit)
+		if _, err := p.writeBuf.WriteString(lit); err != nil {
+			return "", fmt.Errorf("unable to write: %w", err)
+		}
 		tok, lit = p.scan()
 		if tok == Delta {
 			return "", errors.New("found delta inside metric name")

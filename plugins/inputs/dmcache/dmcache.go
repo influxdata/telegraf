@@ -1,26 +1,23 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package dmcache
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type DMCache struct {
 	PerDevice        bool `toml:"per_device"`
 	getCurrentStatus func() ([]string, error)
 }
 
-var sampleConfig = `
-  ## Whether to report per-device stats or not
-  per_device = true
-`
-
-func (c *DMCache) SampleConfig() string {
+func (*DMCache) SampleConfig() string {
 	return sampleConfig
-}
-
-func (c *DMCache) Description() string {
-	return "Provide a native collection for dmsetup based statistics for dm-cache"
 }
 
 func init() {

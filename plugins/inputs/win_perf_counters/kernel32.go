@@ -28,7 +28,7 @@
 // Joseph Watson <jtwatson@linux-consulting.us>
 // Kevin Pors <krpors@gmail.com>
 
-// +build windows
+//go:build windows
 
 package win_perf_counters
 

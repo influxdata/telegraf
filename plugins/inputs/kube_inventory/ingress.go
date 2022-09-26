@@ -20,7 +20,8 @@ func collectIngress(ctx context.Context, acc telegraf.Accumulator, ki *Kubernete
 }
 
 func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accumulator) {
-	if i.GetCreationTimestamp().Second() == 0 && i.GetCreationTimestamp().Nanosecond() == 0 {
+	creationTs := i.GetCreationTimestamp()
+	if creationTs.IsZero() {
 		return
 	}
 
@@ -39,11 +40,17 @@ func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accum
 		tags["ip"] = ingress.IP
 
 		for _, rule := range i.Spec.Rules {
+			if rule.IngressRuleValue.HTTP == nil {
+				continue
+			}
 			for _, path := range rule.IngressRuleValue.HTTP.Paths {
-				fields["backend_service_port"] = path.Backend.Service.Port.Number
+				if path.Backend.Service != nil {
+					tags["backend_service_name"] = path.Backend.Service.Name
+					fields["backend_service_port"] = path.Backend.Service.Port.Number
+				}
+
 				fields["tls"] = i.Spec.TLS != nil
 
-				tags["backend_service_name"] = path.Backend.Service.Name
 				tags["path"] = path.Path
 				tags["host"] = rule.Host
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	cpuUtil "github.com/shirou/gopsutil/cpu"
+	cpuUtil "github.com/shirou/gopsutil/v3/cpu"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/system"
@@ -103,14 +103,15 @@ func TestCPUStats(t *testing.T) {
 // if the measurement is of the wrong type, or if no matching measurements are found
 //
 // Parameters:
-//     t *testing.T            : Testing object to use
-//     acc testutil.Accumulator: Accumulator to examine
-//     field string            : Name of field to examine
-//     expectedValue float64   : Value to search for within the measurement
-//     delta float64           : Maximum acceptable distance of an accumulated value
-//                               from the expectedValue parameter. Useful when
-//                               floating-point arithmetic imprecision makes looking
-//                               for an exact match impractical
+//
+//	t *testing.T            : Testing object to use
+//	acc testutil.Accumulator: Accumulator to examine
+//	field string            : Name of field to examine
+//	expectedValue float64   : Value to search for within the measurement
+//	delta float64           : Maximum acceptable distance of an accumulated value
+//	                          from the expectedValue parameter. Useful when
+//	                          floating-point arithmetic imprecision makes looking
+//	                          for an exact match impractical
 func assertContainsTaggedFloat(
 	t *testing.T,
 	acc *testutil.Accumulator,

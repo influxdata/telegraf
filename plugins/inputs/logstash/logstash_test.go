@@ -32,7 +32,8 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -76,7 +77,8 @@ func Test_Logstash6GatherProcessStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -121,7 +123,8 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -218,7 +221,8 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -318,6 +322,24 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 			"duration_in_millis": float64(13149.0),
 			"in":                 float64(180659.0),
 			"out":                float64(177549.0),
+		},
+		map[string]string{
+			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
+			"node_name":    string("node-6-test"),
+			"source":       string("node-6"),
+			"node_version": string("6.4.2"),
+			"pipeline":     string("main"),
+			"plugin_name":  string("date"),
+			"plugin_id":    string("d079424bb6b7b8c7c61d9c5e0ddae445e92fa9ffa2e8690b0a669f7c690542f0"),
+			"plugin_type":  string("filter"),
+		},
+	)
+
+	logstash6accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"failures": int64(2),
 		},
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
@@ -541,7 +563,8 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -604,7 +627,8 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -671,7 +695,8 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 	if err != nil {
 		test.Logf("Can't connect to: %s", logstashTest.URL)
 	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(test, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -705,6 +730,64 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 			"source":       string("HOST01.local"),
 			"node_version": string("7.4.2"),
 			"pipeline":     string("infra"),
+		},
+	)
+
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"duration_in_millis": float64(2802177.0),
+			"in":                 float64(2665549.0),
+			"out":                float64(2665549.0),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
+		},
+	)
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"bulk_requests_successes":     float64(2870),
+			"bulk_requests_responses_200": float64(2870),
+			"bulk_requests_failures":      float64(262),
+			"bulk_requests_with_errors":   float64(9089),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
+		},
+	)
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"documents_successes":          float64(2665549),
+			"documents_retryable_failures": float64(13733),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
 		},
 	)
 

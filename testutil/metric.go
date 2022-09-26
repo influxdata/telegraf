@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	telegrafMetric "github.com/influxdata/telegraf/metric"
 )
 
 type metricDiff struct {
@@ -18,6 +18,10 @@ type metricDiff struct {
 	Fields      []*telegraf.Field
 	Type        telegraf.ValueType
 	Time        time.Time
+}
+
+type helper interface {
+	Helper()
 }
 
 func lessFunc(lhs, rhs *metricDiff) bool {
@@ -140,8 +144,10 @@ func MetricEqual(expected, actual telegraf.Metric, opts ...cmp.Option) bool {
 
 // RequireMetricEqual halts the test with an error if the metrics are not
 // equal.
-func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric, opts ...cmp.Option) {
-	t.Helper()
+func RequireMetricEqual(t testing.TB, expected, actual telegraf.Metric, opts ...cmp.Option) {
+	if x, ok := t.(helper); ok {
+		x.Helper()
+	}
 
 	var lhs, rhs *metricDiff
 	if expected != nil {
@@ -159,8 +165,10 @@ func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric, opts ...
 
 // RequireMetricsEqual halts the test with an error if the array of metrics
 // are not equal.
-func RequireMetricsEqual(t *testing.T, expected, actual []telegraf.Metric, opts ...cmp.Option) {
-	t.Helper()
+func RequireMetricsEqual(t testing.TB, expected, actual []telegraf.Metric, opts ...cmp.Option) {
+	if x, ok := t.(helper); ok {
+		x.Helper()
+	}
 
 	lhs := make([]*metricDiff, 0, len(expected))
 	for _, m := range expected {
@@ -177,7 +185,7 @@ func RequireMetricsEqual(t *testing.T, expected, actual []telegraf.Metric, opts 
 	}
 }
 
-// Metric creates a new metric or panics on error.
+// MustMetric creates a new metric.
 func MustMetric(
 	name string,
 	tags map[string]string,
@@ -185,11 +193,11 @@ func MustMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-	m := metric.New(name, tags, fields, tm, tp...)
+	m := telegrafMetric.New(name, tags, fields, tm, tp...)
 	return m
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m := metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
+	m := telegrafMetric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	return m
 }

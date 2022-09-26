@@ -20,7 +20,8 @@ func collectServices(ctx context.Context, acc telegraf.Accumulator, ki *Kubernet
 }
 
 func (ki *KubernetesInventory) gatherService(s corev1.Service, acc telegraf.Accumulator) {
-	if s.GetCreationTimestamp().Second() == 0 && s.GetCreationTimestamp().Nanosecond() == 0 {
+	creationTs := s.GetCreationTimestamp()
+	if creationTs.IsZero() {
 		return
 	}
 

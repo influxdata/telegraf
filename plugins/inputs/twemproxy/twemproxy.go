@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package twemproxy
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net"
 	"time"
 
@@ -11,24 +13,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Twemproxy struct {
 	Addr  string
 	Pools []string
 }
 
-var sampleConfig = `
-  ## Twemproxy stats address and port (no scheme)
-  addr = "localhost:22222"
-  ## Monitor pool name
-  pools = ["redis_pool", "mc_pool"]
-`
-
-func (t *Twemproxy) SampleConfig() string {
+func (*Twemproxy) SampleConfig() string {
 	return sampleConfig
-}
-
-func (t *Twemproxy) Description() string {
-	return "Read Twemproxy stats data"
 }
 
 // Gather data from all Twemproxy instances
@@ -37,14 +31,14 @@ func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	body, err := ioutil.ReadAll(conn)
+	body, err := io.ReadAll(conn)
 	if err != nil {
 		return err
 	}
 
 	var stats map[string]interface{}
 	if err = json.Unmarshal(body, &stats); err != nil {
-		return errors.New("Error decoding JSON response")
+		return errors.New("error decoding JSON response")
 	}
 
 	tags := make(map[string]string)
@@ -124,11 +118,8 @@ func (t *Twemproxy) processServer(
 ) {
 	fields := make(map[string]interface{})
 	for key, value := range data {
-		switch key {
-		default:
-			if val, ok := value.(float64); ok {
-				fields[key] = val
-			}
+		if val, ok := value.(float64); ok {
+			fields[key] = val
 		}
 	}
 	acc.AddFields("twemproxy_pool_server", fields, tags)

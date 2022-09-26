@@ -1,4 +1,4 @@
-// +build !windows
+//go:build !windows
 
 package processes
 
@@ -8,17 +8,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestProcesses(t *testing.T) {
 	tester := tester{}
 	processes := &Processes{
-		Log: testutil.Logger{},
-		execPS: testExecPS("STAT\n		Ss  \n		S   \n		Z   \n		R   \n		S<  \n		SNs \n		Ss+ \n		\n		\n"),
+		Log:          testutil.Logger{},
+		execPS:       testExecPS("STAT\n		Ss  \n		S   \n		Z   \n		R   \n		S<  \n		SNs \n		Ss+ \n		\n		\n"),
 		readProcFile: tester.testProcFile,
 	}
 	var acc testutil.Accumulator
@@ -26,13 +26,13 @@ func TestProcesses(t *testing.T) {
 	err := processes.Gather(&acc)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasInt64Field("processes", "running"))
-	assert.True(t, acc.HasInt64Field("processes", "sleeping"))
-	assert.True(t, acc.HasInt64Field("processes", "stopped"))
-	assert.True(t, acc.HasInt64Field("processes", "total"))
+	require.True(t, acc.HasInt64Field("processes", "running"))
+	require.True(t, acc.HasInt64Field("processes", "sleeping"))
+	require.True(t, acc.HasInt64Field("processes", "stopped"))
+	require.True(t, acc.HasInt64Field("processes", "total"))
 	total, ok := acc.Get("processes")
 	require.True(t, ok)
-	assert.True(t, total.Fields["total"].(int64) > 0)
+	require.True(t, total.Fields["total"].(int64) > 0)
 }
 
 func TestFromPS(t *testing.T) {

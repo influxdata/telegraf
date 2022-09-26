@@ -1,4 +1,4 @@
-// +build !windows
+//go:build !windows
 
 package intel_rdt
 
@@ -51,18 +51,18 @@ func TestSplitCSVLineIntoValues(t *testing.T) {
 	expectedMetricsValue := []string{"0.00", "0", "0.0", "0.0", "0.0", "0.0"}
 	expectedCoreOrPidsValue := []string{"\"45417", "29170\"", "37", "44"}
 
-	timeValue, metricsValue, coreOrPidsValue, err := splitCSVLineIntoValues(line)
+	splitCSV, err := splitCSVLineIntoValues(line)
 	assert.Nil(t, err)
-	assert.Equal(t, expectedTimeValue, timeValue)
-	assert.Equal(t, expectedMetricsValue, metricsValue)
-	assert.Equal(t, expectedCoreOrPidsValue, coreOrPidsValue)
+	assert.Equal(t, expectedTimeValue, splitCSV.timeValue)
+	assert.Equal(t, expectedMetricsValue, splitCSV.metricsValues)
+	assert.Equal(t, expectedCoreOrPidsValue, splitCSV.coreOrPIDsValues)
 
 	wrongLine := "2020-08-12 13:34:36,37,44,0.00,0,0.0"
-	timeValue, metricsValue, coreOrPidsValue, err = splitCSVLineIntoValues(wrongLine)
+	splitCSV, err = splitCSVLineIntoValues(wrongLine)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", timeValue)
-	assert.Nil(t, nil, metricsValue)
-	assert.Nil(t, nil, coreOrPidsValue)
+	assert.Equal(t, "", splitCSV.timeValue)
+	assert.Nil(t, nil, splitCSV.metricsValues)
+	assert.Nil(t, nil, splitCSV.coreOrPIDsValues)
 }
 
 func TestFindPIDsInMeasurement(t *testing.T) {
@@ -106,7 +106,6 @@ func TestCreateArgsCores(t *testing.T) {
 	assert.EqualValues(t, expected, result)
 
 	cores = []string{"1,2,3", "4,5,6"}
-	expected = "--mon-core="
 	expectedPrefix := "--mon-core="
 	expectedSubstring := "all:[1,2,3];mbt:[1,2,3];"
 	expectedSubstring2 := "all:[4,5,6];mbt:[4,5,6];"

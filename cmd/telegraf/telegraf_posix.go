@@ -1,11 +1,14 @@
-// +build !windows
+//go:build !windows
 
 package main
 
-func run(inputFilters, outputFilters []string) {
+import "github.com/urfave/cli/v2"
+
+func (t *Telegraf) Run() error {
 	stop = make(chan struct{})
-	reloadLoop(
-		inputFilters,
-		outputFilters,
-	)
+	return t.reloadLoop()
+}
+
+func cliFlags() []cli.Flag {
+	return []cli.Flag{}
 }

@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/cgi"
@@ -112,16 +111,16 @@ func (r *response) WriteHeader(code int) {
 		r.header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	}
 
-	fmt.Fprintf(r.w, "Status: %d %s\r\n", code, http.StatusText(code))
-	r.header.Write(r.w)
-	r.w.WriteString("\r\n")
+	_, _ = fmt.Fprintf(r.w, "Status: %d %s\r\n", code, http.StatusText(code))
+	_ = r.header.Write(r.w)
+	_, _ = r.w.WriteString("\r\n")
 }
 
 func (r *response) Flush() {
 	if !r.wroteHeader {
 		r.WriteHeader(http.StatusOK)
 	}
-	r.w.Flush()
+	_ = r.w.Flush()
 }
 
 func (r *response) Close() error {
@@ -161,7 +160,7 @@ func (c *child) serve() {
 
 var errCloseConn = errors.New("fcgi: connection should be closed")
 
-var emptyBody = ioutil.NopCloser(strings.NewReader(""))
+var emptyBody = io.NopCloser(strings.NewReader(""))
 
 // ErrRequestAborted is returned by Read when a handler attempts to read the
 // body of a request that has been aborted by the web server.
@@ -295,7 +294,7 @@ func (c *child) serveRequest(req *request, body io.ReadCloser) {
 	// can properly cut off the client sending all the data.
 	// For now just bound it a little and
 	//nolint:errcheck,revive
-	io.CopyN(ioutil.Discard, body, 100<<20)
+	io.CopyN(io.Discard, body, 100<<20)
 	//nolint:errcheck,revive
 	body.Close()
 

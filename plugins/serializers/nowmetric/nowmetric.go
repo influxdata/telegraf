@@ -46,9 +46,9 @@ func NewSerializer() (*serializer, error) {
 func (s *serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
 	serialized, err := s.createObject(metric)
 	if err != nil {
-		return []byte{}, nil
+		return []byte{}, err
 	}
-	return serialized, err
+	return serialized, nil
 }
 
 func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
@@ -56,7 +56,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err 
 	for _, metric := range metrics {
 		m, err := s.createObject(metric)
 		if err != nil {
-			return nil, fmt.Errorf("D! [serializer.nowmetric] Dropping invalid metric: %s", metric.Name())
+			return nil, fmt.Errorf("dropping invalid metric: %s", metric.Name())
 		} else if m != nil {
 			objects = append(objects, m...)
 		}
@@ -97,7 +97,7 @@ func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	}
 
 	// Format timestamp to UNIX epoch
-	oimetric.Timestamp = (metric.Time().UnixNano() / int64(time.Millisecond))
+	oimetric.Timestamp = metric.Time().UnixNano() / int64(time.Millisecond)
 
 	// Loop of fields value pair and build datapoint for each of them
 	for _, field := range metric.FieldList() {
@@ -129,9 +129,6 @@ func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 }
 
 func verifyValue(v interface{}) bool {
-	switch v.(type) {
-	case string:
-		return false
-	}
-	return true
+	_, ok := v.(string)
+	return !ok
 }

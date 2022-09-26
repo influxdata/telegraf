@@ -1,7 +1,6 @@
 package leofs
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"runtime"
@@ -132,15 +131,18 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 
 	// Build the fake snmpwalk for test
 	src := os.TempDir() + "/test.go"
-	require.NoError(t, ioutil.WriteFile(src, []byte(code), 0600))
+	require.NoError(t, os.WriteFile(src, []byte(code), 0600))
 	defer os.Remove(src)
 
 	require.NoError(t, exec.Command("go", "build", "-o", executable, src).Run())
 	defer os.Remove("./" + executable)
 
+	currentWorkingDirectory, err := os.Getwd()
+	require.NoError(t, err)
+
 	envPathOrigin := os.Getenv("PATH")
 	// Refer to the fake snmpwalk
-	require.NoError(t, os.Setenv("PATH", "."))
+	require.NoError(t, os.Setenv("PATH", currentWorkingDirectory))
 	defer os.Setenv("PATH", envPathOrigin)
 
 	l := &LeoFS{
@@ -150,7 +152,7 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
 
-	err := acc.GatherError(l.Gather)
+	err = acc.GatherError(l.Gather)
 	require.NoError(t, err)
 
 	floatMetrics := KeyMapping[serverType]
@@ -160,18 +162,34 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 	}
 }
 
-func TestLeoFSManagerMasterMetrics(t *testing.T) {
+func TestLeoFSManagerMasterMetricsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Manager, "localhost:4020", ServerTypeManagerMaster)
 }
 
-func TestLeoFSManagerSlaveMetrics(t *testing.T) {
+func TestLeoFSManagerSlaveMetricsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Manager, "localhost:4021", ServerTypeManagerSlave)
 }
 
-func TestLeoFSStorageMetrics(t *testing.T) {
+func TestLeoFSStorageMetricsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Storage, "localhost:4010", ServerTypeStorage)
 }
 
-func TestLeoFSGatewayMetrics(t *testing.T) {
+func TestLeoFSGatewayMetricsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Gateway, "localhost:4000", ServerTypeGateway)
 }

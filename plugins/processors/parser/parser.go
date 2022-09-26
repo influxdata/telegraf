@@ -1,45 +1,30 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package parser
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Parser struct {
 	parsers.Config
 	DropOriginal bool            `toml:"drop_original"`
 	Merge        string          `toml:"merge"`
 	ParseFields  []string        `toml:"parse_fields"`
+	ParseTags    []string        `toml:"parse_tags"`
 	Log          telegraf.Logger `toml:"-"`
-	parser       parsers.Parser
+	parser       telegraf.Parser
 }
 
-var SampleConfig = `
-  ## The name of the fields whose value will be parsed.
-  parse_fields = []
-
-  ## If true, incoming metrics are not emitted.
-  drop_original = false
-
-  ## If set to override, emitted metrics will be merged by overriding the
-  ## original metric using the newly parsed metrics.
-  merge = "override"
-
-  ## The dataformat to be read from files
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
-
-func (p *Parser) SampleConfig() string {
-	return SampleConfig
-}
-
-func (p *Parser) Description() string {
-	return "Parse a value in a specified field/tag(s) and add the result in a new metric"
+func (*Parser) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
@@ -61,12 +46,13 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			newMetrics = append(newMetrics, metric)
 		}
 
+		// parse fields
 		for _, key := range p.ParseFields {
 			for _, field := range metric.FieldList() {
 				if field.Key == key {
 					switch value := field.Value.(type) {
 					case string:
-						fromFieldMetric, err := p.parseField(value)
+						fromFieldMetric, err := p.parseValue(value)
 						if err != nil {
 							p.Log.Errorf("could not parse field %s: %v", key, err)
 						}
@@ -85,6 +71,24 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						p.Log.Errorf("field '%s' not a string, skipping", key)
 					}
 				}
+			}
+		}
+
+		// parse tags
+		for _, key := range p.ParseTags {
+			if value, ok := metric.GetTag(key); ok {
+				fromTagMetric, err := p.parseValue(value)
+				if err != nil {
+					p.Log.Errorf("could not parse tag %s: %v", key, err)
+				}
+
+				for _, m := range fromTagMetric {
+					if m.Name() == "" {
+						m.SetName(metric.Name())
+					}
+				}
+
+				newMetrics = append(newMetrics, fromTagMetric...)
 			}
 		}
 
@@ -114,7 +118,7 @@ func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
 	return base
 }
 
-func (p *Parser) parseField(value string) ([]telegraf.Metric, error) {
+func (p *Parser) parseValue(value string) ([]telegraf.Metric, error) {
 	return p.parser.Parse([]byte(value))
 }
 

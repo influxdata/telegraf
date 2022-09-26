@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package riak
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +12,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Type Riak gathers statistics from one or more Riak instances
 type Riak struct {
@@ -79,20 +84,8 @@ type riakStats struct {
 	ReadRepairsTotal         int64  `json:"read_repairs_total"`
 }
 
-// A sample configuration to only gather stats from localhost, default port.
-const sampleConfig = `
-  # Specify a list of one or more riak http servers
-  servers = ["http://localhost:8098"]
-`
-
-// Returns a sample configuration for the plugin
-func (r *Riak) SampleConfig() string {
+func (*Riak) SampleConfig() string {
 	return sampleConfig
-}
-
-// Returns a description of the plugin
-func (r *Riak) Description() string {
-	return "Read metrics one or many Riak servers"
 }
 
 // Reads stats from all configured servers.

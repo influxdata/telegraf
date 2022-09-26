@@ -4,6 +4,7 @@ import (
 	"log"
 	"reflect"
 
+	"github.com/fatih/color"
 	"github.com/influxdata/telegraf"
 )
 
@@ -79,7 +80,7 @@ func logName(pluginType, name, alias string) string {
 	return pluginType + "." + name + "::" + alias
 }
 
-func SetLoggerOnPlugin(i interface{}, log telegraf.Logger) {
+func SetLoggerOnPlugin(i interface{}, logger telegraf.Logger) {
 	valI := reflect.ValueOf(i)
 
 	if valI.Type().Kind() != reflect.Ptr {
@@ -94,10 +95,43 @@ func SetLoggerOnPlugin(i interface{}, log telegraf.Logger) {
 	switch field.Type().String() {
 	case "telegraf.Logger":
 		if field.CanSet() {
-			field.Set(reflect.ValueOf(log))
+			field.Set(reflect.ValueOf(logger))
 		}
 	default:
-		log.Debugf("Plugin %q defines a 'Log' field on its struct of an unexpected type %q. Expected telegraf.Logger",
+		logger.Debugf("Plugin %q defines a 'Log' field on its struct of an unexpected type %q. Expected telegraf.Logger",
 			valI.Type().Name(), field.Type().String())
+	}
+}
+
+func deprecationPrefix(level telegraf.Escalation) string {
+	switch level {
+	case telegraf.Warn:
+		return "W! " + color.YellowString("DeprecationWarning")
+	case telegraf.Error:
+		return "E! " + color.RedString("DeprecationError")
+	}
+	return ""
+}
+
+func PrintPluginDeprecationNotice(level telegraf.Escalation, name string, info telegraf.DeprecationInfo) {
+	switch level {
+	case telegraf.Warn, telegraf.Error:
+		prefix := deprecationPrefix(level)
+
+		log.Printf(
+			"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
+			prefix, name, info.Since, info.RemovalIn, info.Notice,
+		)
+	}
+}
+
+func PrintOptionDeprecationNotice(level telegraf.Escalation, plugin, option string, info telegraf.DeprecationInfo) {
+	switch level {
+	case telegraf.Warn, telegraf.Error:
+		prefix := deprecationPrefix(level)
+		log.Printf(
+			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
+			prefix, option, plugin, info.Since, info.RemovalIn, info.Notice,
+		)
 	}
 }

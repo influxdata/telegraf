@@ -1,5 +1,4 @@
-// +build linux,freebsd,darwin
-// +build !mips !mips64
+//go:build linux && freebsd && darwin && (!mips || !mips64)
 
 package sql
 

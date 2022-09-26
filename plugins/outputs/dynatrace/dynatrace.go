@@ -1,22 +1,27 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package dynatrace
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-
-	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
-	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
-	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
@@ -38,44 +43,9 @@ type Dynatrace struct {
 	loggedMetrics map[string]bool // New empty set
 }
 
-const sampleConfig = `
-  ## For usage with the Dynatrace OneAgent you can omit any configuration,
-  ## the only requirement is that the OneAgent is running on the same host.
-  ## Only setup environment url and token if you want to monitor a Host without the OneAgent present.
-  ##
-  ## Your Dynatrace environment URL.
-  ## For Dynatrace OneAgent you can leave this empty or set it to "http://127.0.0.1:14499/metrics/ingest" (default)
-  ## For Dynatrace SaaS environments the URL scheme is "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
-  ## For Dynatrace Managed environments the URL scheme is "https://{your-domain}/e/{your-environment-id}/api/v2/metrics/ingest"
-  url = ""
-
-  ## Your Dynatrace API token. 
-  ## Create an API token within your Dynatrace environment, by navigating to Settings > Integration > Dynatrace API
-  ## The API token needs data ingest scope permission. When using OneAgent, no API token is required.
-  api_token = "" 
-
-  ## Optional prefix for metric names (e.g.: "telegraf")
-  prefix = "telegraf"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Optional flag for ignoring tls certificate check
-  # insecure_skip_verify = false
-
-
-  ## Connection timeout, defaults to "5s" if not set.
-  timeout = "5s"
-
-  ## If you want to convert values represented as gauges to counters, add the metric names here
-  additional_counters = [ ]
-
-  ## Optional dimensions to be added to every metric
-  # [outputs.dynatrace.default_dimensions]
-  # default_key = "default value"
-`
+func (*Dynatrace) SampleConfig() string {
+	return sampleConfig
+}
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
 func (d *Dynatrace) Connect() error {
@@ -86,16 +56,6 @@ func (d *Dynatrace) Connect() error {
 func (d *Dynatrace) Close() error {
 	d.client = nil
 	return nil
-}
-
-// SampleConfig Returns a sample configuration for the Dynatrace output plugin
-func (d *Dynatrace) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the description for the Dynatrace output plugin
-func (d *Dynatrace) Description() string {
-	return "Send telegraf metrics to a Dynatrace environment"
 }
 
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
@@ -122,16 +82,10 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			dims = append(dims, dimensions.NewDimension(tag.Key, tag.Value))
 		}
 
-		metricType := tm.Type()
 		for _, field := range tm.FieldList() {
 			metricName := tm.Name() + "." + field.Key
-			for _, i := range d.AddCounterMetrics {
-				if metricName == i {
-					metricType = telegraf.Counter
-				}
-			}
 
-			typeOpt := getTypeOption(metricType, field)
+			typeOpt := d.getTypeOption(tm, field)
 
 			if typeOpt == nil {
 				// Unsupported type. Log only once per unsupported metric name
@@ -210,17 +164,18 @@ func (d *Dynatrace) send(msg string) error {
 	}
 	defer resp.Body.Close()
 
-	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusBadRequest {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			d.Log.Errorf("Dynatrace error reading response")
-		}
-		bodyString := string(bodyBytes)
-		d.Log.Debugf("Dynatrace returned: %s", bodyString)
-	} else {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusBadRequest {
 		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
+
+	// print metric line results as info log
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		d.Log.Errorf("Dynatrace error reading response")
+	}
+	bodyString := string(bodyBytes)
+	d.Log.Debugf("Dynatrace returned: %s", bodyString)
+
 	return nil
 }
 
@@ -253,6 +208,7 @@ func (d *Dynatrace) Init() error {
 	}
 	d.normalizedDefaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
 	d.normalizedStaticDimensions = dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf"))
+	d.loggedMetrics = make(map[string]bool)
 
 	return nil
 }
@@ -265,15 +221,19 @@ func init() {
 	})
 }
 
-func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetric.MetricOption {
-	if metricType == telegraf.Counter {
+func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
+	metricName := metric.Name() + "." + field.Key
+	for _, i := range d.AddCounterMetrics {
+		if metricName != i {
+			continue
+		}
 		switch v := field.Value.(type) {
 		case float64:
-			return dtMetric.WithFloatCounterValueTotal(v)
+			return dtMetric.WithFloatCounterValueDelta(v)
 		case uint64:
-			return dtMetric.WithIntCounterValueTotal(int64(v))
+			return dtMetric.WithIntCounterValueDelta(int64(v))
 		case int64:
-			return dtMetric.WithIntCounterValueTotal(v)
+			return dtMetric.WithIntCounterValueDelta(v)
 		default:
 			return nil
 		}
@@ -285,7 +245,7 @@ func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetri
 	case uint64:
 		return dtMetric.WithIntGaugeValue(int64(v))
 	case int64:
-		return dtMetric.WithIntGaugeValue(32)
+		return dtMetric.WithIntGaugeValue(v)
 	case bool:
 		if v {
 			return dtMetric.WithIntGaugeValue(1)

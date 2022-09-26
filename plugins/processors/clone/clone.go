@@ -1,20 +1,15 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package clone
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-var sampleConfig = `
-  ## All modifications on inputs and aggregators can be overridden:
-  # name_override = "new_name"
-  # name_prefix = "new_name_prefix"
-  # name_suffix = "new_name_suffix"
-
-  ## Tags to be added (all values must be strings)
-  # [processors.clone.tags]
-  #   additional_tag = "tag_value"
-`
+//go:embed sample.conf
+var sampleConfig string
 
 type Clone struct {
 	NameOverride string
@@ -23,12 +18,8 @@ type Clone struct {
 	Tags         map[string]string
 }
 
-func (c *Clone) SampleConfig() string {
+func (*Clone) SampleConfig() string {
 	return sampleConfig
-}
-
-func (c *Clone) Description() string {
-	return "Clone metrics and apply modifications."
 }
 
 func (c *Clone) Apply(in ...telegraf.Metric) []telegraf.Metric {

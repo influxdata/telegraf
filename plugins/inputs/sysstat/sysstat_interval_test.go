@@ -1,5 +1,4 @@
-// +build !race
-// +build linux
+//go:build !race && linux
 
 package sysstat
 
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 // TestInterval verifies that the correct interval is created. It is not
@@ -23,22 +23,31 @@ func TestInterval(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
-	s.interval = 0
-	wantedInterval := 3
-
-	err := acc.GatherError(s.Gather)
-	if err != nil {
-		t.Fatal(err)
+	s := &Sysstat{
+		Log:        testutil.Logger{},
+		interval:   0,
+		Sadc:       "/usr/lib/sa/sadc",
+		Sadf:       "/usr/bin/sadf",
+		Group:      false,
+		Activities: []string{"DISK", "SNMP"},
+		Options: map[string]string{
+			"C": "cpu",
+			"d": "disk",
+		},
+		DeviceTags: map[string][]map[string]string{
+			"sda": {
+				{
+					"vg": "rootvg",
+				},
+			},
+		},
 	}
+	require.NoError(t, s.Init())
+	require.NoError(t, acc.GatherError(s.Gather))
 
+	wantedInterval := 3
 	time.Sleep(time.Duration(wantedInterval) * time.Second)
 
-	err = acc.GatherError(s.Gather)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if s.interval != wantedInterval {
-		t.Errorf("wrong interval: got %d, want %d", s.interval, wantedInterval)
-	}
+	require.NoError(t, acc.GatherError(s.Gather))
+	require.Equalf(t, wantedInterval, s.interval, "wrong interval: got %d, want %d", s.interval, wantedInterval)
 }

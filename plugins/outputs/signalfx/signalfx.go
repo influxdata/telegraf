@@ -1,20 +1,26 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package signalfx
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dpsink"
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/sfxclient"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-//init initializes the plugin context
+//go:embed sample.conf
+var sampleConfig string
+
+// init initializes the plugin context
 func init() {
 	outputs.Add("signalfx", func() telegraf.Output {
 		return NewSignalFx()
@@ -36,24 +42,6 @@ type SignalFx struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 }
-
-var sampleConfig = `
-    ## SignalFx Org Access Token
-    access_token = "my-secret-token"
-
-    ## The SignalFx realm that your organization resides in
-    signalfx_realm = "us9"  # Required if ingest_url is not set
-
-    ## You can optionally provide a custom ingest url instead of the
-    ## signalfx_realm option above if you are using a gateway or proxy
-    ## instance.  This option takes precident over signalfx_realm.
-    ingest_url = "https://my-custom-ingest/"
-
-    ## Event typed metrics are omitted by default,
-    ## If you require an event typed metric you must specify the
-    ## metric name in the following list.
-    included_event_names = ["plugin.metric_name"]
-`
 
 // GetMetricType returns the equivalent telegraf ValueType for a signalfx metric type
 func GetMetricType(mtype telegraf.ValueType) (metricType datapoint.MetricType) {
@@ -88,13 +76,7 @@ func NewSignalFx() *SignalFx {
 	}
 }
 
-// Description returns a description for the plugin
-func (s *SignalFx) Description() string {
-	return "Send metrics and events to SignalFx"
-}
-
-// SampleConfig returns the sample configuration for the plugin
-func (s *SignalFx) SampleConfig() string {
+func (*SignalFx) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -106,7 +88,7 @@ func (s *SignalFx) Connect() error {
 	if s.IngestURL != "" {
 		client.DatapointEndpoint = datapointEndpointForIngestURL(s.IngestURL)
 		client.EventEndpoint = eventEndpointForIngestURL(s.IngestURL)
-	} else if s.SignalFxRealm != "" {
+	} else if s.SignalFxRealm != "" { //nolint: revive // "Simplifying" if c {...} else {... return } would not simplify anything at all in this case
 		client.DatapointEndpoint = datapointEndpointForRealm(s.SignalFxRealm)
 		client.EventEndpoint = eventEndpointForRealm(s.SignalFxRealm)
 	} else {
@@ -144,7 +126,7 @@ func (s *SignalFx) ConvertToSignalFx(metrics []telegraf.Metric) ([]*datapoint.Da
 			if metricValue, err := datapoint.CastMetricValueWithBool(val); err == nil {
 				var dp = datapoint.New(metricName,
 					metricDims,
-					metricValue.(datapoint.Value),
+					metricValue,
 					metricType,
 					timestamp)
 

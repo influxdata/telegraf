@@ -1,14 +1,17 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package postgresql_extensible
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"time"
 
-	_ "github.com/jackc/pgx/v4/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
+	// Required for SQL framework driver
+	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -16,13 +19,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Postgresql struct {
 	postgresql.Service
-	Databases      []string
-	AdditionalTags []string
-	Timestamp      string
-	Query          query
-	Debug          bool
+	Databases          []string `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
+	AdditionalTags     []string
+	Timestamp          string
+	Query              query
+	Debug              bool
+	PreparedStatements bool `toml:"prepared_statements"`
 
 	Log telegraf.Logger
 }
@@ -31,7 +38,7 @@ type query []struct {
 	Sqlquery    string
 	Script      string
 	Version     int
-	Withdbname  bool
+	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Tagvalue    string
 	Measurement string
 	Timestamp   string
@@ -39,81 +46,9 @@ type query []struct {
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
-var sampleConfig = `
-  ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
-  ##       ?sslmode=[disable|verify-ca|verify-full]
-  ## or a simple string:
-  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
-  #
-  ## All connection parameters are optional.  #
-  ## Without the dbname parameter, the driver will default to a database
-  ## with the same name as the user. This dbname is just for instantiating a
-  ## connection with the server and doesn't restrict the databases we are trying
-  ## to grab metrics for.
-  #
-  address = "host=localhost user=postgres sslmode=disable"
-
-  ## connection configuration.
-  ## maxlifetime - specify the maximum lifetime of a connection.
-  ## default is forever (0s)
-  max_lifetime = "0s"
-
-  ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.
-  ## databases = ["app_production", "testing"]
-  #
-  ## A custom name for the database that will be used as the "server" tag in the
-  ## measurement output. If not specified, a default one generated from
-  ## the connection address is used.
-  # outputaddress = "db01"
-  #
-  ## Define the toml config where the sql queries are stored
-  ## New queries can be added, if the withdbname is set to true and there is no
-  ## databases defined in the 'databases field', the sql query is ended by a
-  ## 'is not null' in order to make the query succeed.
-  ## Example :
-  ## The sqlquery : "SELECT * FROM pg_stat_database where datname" become
-  ## "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
-  ## because the databases variable was set to ['postgres', 'pgbench' ] and the
-  ## withdbname was true. Be careful that if the withdbname is set to false you
-  ## don't have to define the where clause (aka with the dbname) the tagvalue
-  ## field is used to define custom tags (separated by commas)
-  ## The optional "measurement" value can be used to override the default
-  ## output measurement name ("postgresql").
-  ##
-  ## The script option can be used to specify the .sql file path.
-  ## If script and sqlquery options specified at same time, sqlquery will be used
-  ##
-  ## the tagvalue field is used to define custom tags (separated by comas).
-  ## the query is expected to return columns which match the names of the
-  ## defined tags. The values in these columns must be of a string-type,
-  ## a number-type or a blob-type.
-  ##
-  ## The timestamp field is used to override the data points timestamp value. By
-  ## default, all rows inserted with current time. By setting a timestamp column,
-  ## the row will be inserted with that column's value.
-  ##
-  ## Structure :
-  ## [[inputs.postgresql_extensible.query]]
-  ##   sqlquery string
-  ##   version string
-  ##   withdbname boolean
-  ##   tagvalue string (comma separated)
-  ##   measurement string
-  ##   timestamp string
-  [[inputs.postgresql_extensible.query]]
-    sqlquery="SELECT * FROM pg_stat_database"
-    version=901
-    withdbname=false
-    tagvalue=""
-    measurement=""
-  [[inputs.postgresql_extensible.query]]
-    sqlquery="SELECT * FROM pg_stat_bgwriter"
-    version=901
-    withdbname=false
-    tagvalue="postgresql.stats"
-`
+func (*Postgresql) SampleConfig() string {
+	return sampleConfig
+}
 
 func (p *Postgresql) Init() error {
 	var err error
@@ -125,15 +60,8 @@ func (p *Postgresql) Init() error {
 			}
 		}
 	}
+	p.Service.IsPgBouncer = !p.PreparedStatements
 	return nil
-}
-
-func (p *Postgresql) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Postgresql) Description() string {
-	return "Read metrics from one or many postgresql servers"
 }
 
 func (p *Postgresql) IgnoredColumns() map[string]bool {
@@ -147,7 +75,7 @@ func ReadQueryFromFile(filePath string) (string, error) {
 	}
 	defer file.Close()
 
-	query, err := ioutil.ReadAll(file)
+	query, err := io.ReadAll(file)
 	if err != nil {
 		return "", err
 	}
@@ -161,10 +89,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		queryAddon string
 		dbVersion  int
 		query      string
-		tagValue   string
 		measName   string
-		timestamp  string
-		columns    []string
 	)
 
 	// Retrieving the database version
@@ -177,8 +102,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// Query is not run if Database version does not match the query version.
 	for i := range p.Query {
 		sqlQuery = p.Query[i].Sqlquery
-		tagValue = p.Query[i].Tagvalue
-		timestamp = p.Query[i].Timestamp
 
 		if p.Query[i].Measurement != "" {
 			measName = p.Query[i].Measurement
@@ -198,40 +121,46 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		sqlQuery += queryAddon
 
 		if p.Query[i].Version <= dbVersion {
-			rows, err := p.DB.Query(sqlQuery)
-			if err != nil {
-				p.Log.Error(err.Error())
-				continue
-			}
-
-			defer rows.Close()
-
-			// grab the column information from the result
-			if columns, err = rows.Columns(); err != nil {
-				p.Log.Error(err.Error())
-				continue
-			}
-
-			p.AdditionalTags = nil
-			if tagValue != "" {
-				tagList := strings.Split(tagValue, ",")
-				for t := range tagList {
-					p.AdditionalTags = append(p.AdditionalTags, tagList[t])
-				}
-			}
-
-			p.Timestamp = timestamp
-
-			for rows.Next() {
-				err = p.accRow(measName, rows, acc, columns)
-				if err != nil {
-					p.Log.Error(err.Error())
-					break
-				}
-			}
+			p.gatherMetricsFromQuery(acc, sqlQuery, p.Query[i].Tagvalue, p.Query[i].Timestamp, measName)
 		}
 	}
 	return nil
+}
+
+func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery string, tagValue string, timestamp string, measName string) {
+	var columns []string
+
+	rows, err := p.DB.Query(sqlQuery)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	defer rows.Close()
+
+	// grab the column information from the result
+	if columns, err = rows.Columns(); err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	p.AdditionalTags = nil
+	if tagValue != "" {
+		tagList := strings.Split(tagValue, ",")
+		for t := range tagList {
+			p.AdditionalTags = append(p.AdditionalTags, tagList[t])
+		}
+	}
+
+	p.Timestamp = timestamp
+
+	for rows.Next() {
+		err = p.accRow(measName, rows, acc, columns)
+		if err != nil {
+			acc.AddError(err)
+			break
+		}
+	}
 }
 
 type scanner interface {
@@ -347,6 +276,7 @@ func init() {
 				MaxLifetime: config.Duration(0),
 				IsPgBouncer: false,
 			},
+			PreparedStatements: true,
 		}
 	})
 }

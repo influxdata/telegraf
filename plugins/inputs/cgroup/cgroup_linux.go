@@ -1,10 +1,9 @@
-// +build linux
+//go:build linux
 
 package cgroup
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -45,7 +44,7 @@ func (g *CGroup) gatherDir(acc telegraf.Accumulator, dir string) error {
 			return file.err
 		}
 
-		raw, err := ioutil.ReadFile(file.path)
+		raw, err := os.ReadFile(file.path)
 		if err != nil {
 			return err
 		}

@@ -761,40 +761,42 @@ func TestInvalidDellJSON(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !checkAuth(r, "test", "test") {
-				http.Error(w, "Unauthorized.", 401)
-				return
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if !checkAuth(r, "test", "test") {
+					http.Error(w, "Unauthorized.", 401)
+					return
+				}
+
+				switch r.URL.Path {
+				case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
+					http.ServeFile(w, r, tt.thermalfilename)
+				case "/redfish/v1/Chassis/System.Embedded.1/Power":
+					http.ServeFile(w, r, tt.powerfilename)
+				case "/redfish/v1/Chassis/System.Embedded.1":
+					http.ServeFile(w, r, tt.chassisfilename)
+				case "/redfish/v1/Systems/System.Embedded.1":
+					http.ServeFile(w, r, tt.hostnamefilename)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer ts.Close()
+
+			plugin := &Redfish{
+				Address:          ts.URL,
+				Username:         "test",
+				Password:         "test",
+				ComputerSystemID: "System.Embedded.1",
 			}
 
-			switch r.URL.Path {
-			case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-				http.ServeFile(w, r, tt.thermalfilename)
-			case "/redfish/v1/Chassis/System.Embedded.1/Power":
-				http.ServeFile(w, r, tt.powerfilename)
-			case "/redfish/v1/Chassis/System.Embedded.1":
-				http.ServeFile(w, r, tt.chassisfilename)
-			case "/redfish/v1/Systems/System.Embedded.1":
-				http.ServeFile(w, r, tt.hostnamefilename)
-			default:
-				w.WriteHeader(http.StatusNotFound)
-			}
-		}))
-		defer ts.Close()
+			require.NoError(t, plugin.Init())
 
-		plugin := &Redfish{
-			Address:          ts.URL,
-			Username:         "test",
-			Password:         "test",
-			ComputerSystemID: "System.Embedded.1",
-		}
-
-		require.NoError(t, plugin.Init())
-
-		var acc testutil.Accumulator
-		err := plugin.Gather(&acc)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "error parsing input:")
+			var acc testutil.Accumulator
+			err := plugin.Gather(&acc)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "error parsing input:")
+		})
 	}
 }
 

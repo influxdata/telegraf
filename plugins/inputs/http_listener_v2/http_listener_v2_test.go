@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -14,10 +14,12 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
@@ -43,8 +45,11 @@ var (
 	pki = testutil.NewPKI("../../../testutil/pki")
 )
 
-func newTestHTTPListenerV2() *HTTPListenerV2 {
-	parser, _ := parsers.NewInfluxParser()
+func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
+	parser := &influx.Parser{}
+	if err := parser.Init(); err != nil {
+		return nil, err
+	}
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -55,19 +60,26 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 		TimeFunc:       time.Now,
 		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
+		close:          make(chan struct{}),
 	}
-	return listener
+	return listener, nil
 }
 
-func newTestHTTPAuthListener() *HTTPListenerV2 {
-	listener := newTestHTTPListenerV2()
+func newTestHTTPAuthListener() (*HTTPListenerV2, error) {
+	listener, err := newTestHTTPListenerV2()
+	if err != nil {
+		return nil, err
+	}
 	listener.BasicUsername = basicUsername
 	listener.BasicPassword = basicPassword
-	return listener
+	return listener, nil
 }
 
-func newTestHTTPSListenerV2() *HTTPListenerV2 {
-	parser, _ := parsers.NewInfluxParser()
+func newTestHTTPSListenerV2() (*HTTPListenerV2, error) {
+	parser := &influx.Parser{}
+	if err := parser.Init(); err != nil {
+		return nil, err
+	}
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -77,9 +89,10 @@ func newTestHTTPSListenerV2() *HTTPListenerV2 {
 		Parser:         parser,
 		ServerConfig:   *pki.TLSServerConfig(),
 		TimeFunc:       time.Now,
+		close:          make(chan struct{}),
 	}
 
-	return listener
+	return listener, nil
 }
 
 func getHTTPSClient() *http.Client {
@@ -105,7 +118,8 @@ func createURL(listener *HTTPListenerV2, scheme string, path string, rawquery st
 }
 
 func TestInvalidListenerConfig(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -116,20 +130,22 @@ func TestInvalidListenerConfig(t *testing.T) {
 		TimeFunc:       time.Now,
 		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
+		close:          make(chan struct{}),
 	}
 
-	acc := &testutil.Accumulator{}
-	require.Error(t, listener.Start(acc))
+	require.Error(t, listener.Init())
 
 	// Stop is called when any ServiceInput fails to start; it must succeed regardless of state
 	listener.Stop()
 }
 
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
-	listener := newTestHTTPSListenerV2()
+	listener, err := newTestHTTPSListenerV2()
+	require.NoError(t, err)
 	listener.TLSAllowedCACerts = nil
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -151,9 +167,11 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 }
 
 func TestWriteHTTPSWithClientAuth(t *testing.T) {
-	listener := newTestHTTPSListenerV2()
+	listener, err := newTestHTTPSListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -165,9 +183,11 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 }
 
 func TestWriteHTTPBasicAuth(t *testing.T) {
-	listener := newTestHTTPAuthListener()
+	listener, err := newTestHTTPAuthListener()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -183,9 +203,11 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 }
 
 func TestWriteHTTP(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -230,11 +252,73 @@ func TestWriteHTTP(t *testing.T) {
 	)
 }
 
-// http listener should add a newline at the end of the buffer if it's not there
-func TestWriteHTTPNoNewline(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+// http listener should add request path as configured path_tag
+func TestWriteHTTPWithPathTag(t *testing.T) {
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
+	listener.PathTag = true
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
+	)
+}
+
+// http listener should add request path as configured path_tag (trimming it before)
+func TestWriteHTTPWithMultiplePaths(t *testing.T) {
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
+	listener.Paths = []string{"/alternative_write"}
+	listener.PathTag = true
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to /write
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	// post single message to /alternative_write
+	resp, err = http.Post(createURL(listener, "http", "/alternative_write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
+	)
+
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/alternative_write"},
+	)
+}
+
+// http listener should add a newline at the end of the buffer if it's not there
+func TestWriteHTTPNoNewline(t *testing.T) {
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -252,7 +336,8 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 }
 
 func TestWriteHTTPExactMaxBodySize(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -262,9 +347,11 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 		Parser:         parser,
 		MaxBodySize:    config.Size(len(hugeMetric)),
 		TimeFunc:       time.Now,
+		close:          make(chan struct{}),
 	}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -275,7 +362,8 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 }
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
@@ -285,9 +373,11 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 		Parser:         parser,
 		MaxBodySize:    config.Size(4096),
 		TimeFunc:       time.Now,
+		close:          make(chan struct{}),
 	}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -299,13 +389,16 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 
 // test that writing gzipped data works
 func TestWriteHTTPGzippedData(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	data, err := ioutil.ReadFile("./testdata/testmsgs.gz")
+	data, err := os.ReadFile("./testdata/testmsgs.gz")
 	require.NoError(t, err)
 
 	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(data))
@@ -315,6 +408,7 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	hostTags := []string{"server02", "server03",
@@ -330,9 +424,11 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 
 // test that writing snappy data works
 func TestWriteHTTPSnappyData(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -368,9 +464,11 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("Skipping due to hang on darwin")
 	}
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -403,9 +501,11 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -417,9 +517,11 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 }
 
 func TestWriteHTTPInvalid(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -431,9 +533,11 @@ func TestWriteHTTPInvalid(t *testing.T) {
 }
 
 func TestWriteHTTPEmpty(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -445,10 +549,12 @@ func TestWriteHTTPEmpty(t *testing.T) {
 }
 
 func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 	listener.HTTPHeaderTags = map[string]string{"Present_http_header_1": "presentMeasurementKey1", "present_http_header_2": "presentMeasurementKey2", "NOT_PRESENT_HEADER": "notPresentMeasurementKey"}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -483,10 +589,12 @@ func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 }
 
 func TestWriteHTTPTransformHeaderValuesToTagsBulkWrite(t *testing.T) {
-	listener := newTestHTTPListenerV2()
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 	listener.HTTPHeaderTags = map[string]string{"Present_http_header_1": "presentMeasurementKey1", "Present_http_header_2": "presentMeasurementKey2", "NOT_PRESENT_HEADER": "notPresentMeasurementKey"}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -512,12 +620,18 @@ func TestWriteHTTPTransformHeaderValuesToTagsBulkWrite(t *testing.T) {
 }
 
 func TestWriteHTTPQueryParams(t *testing.T) {
-	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"})
-	listener := newTestHTTPListenerV2()
+	parser := form_urlencoded.Parser{
+		MetricName: "query_measurement",
+		TagKeys:    []string{"tagKey"},
+	}
+
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
 	listener.DataSource = "query"
-	listener.Parser = parser
+	listener.Parser = &parser
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -534,11 +648,17 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 }
 
 func TestWriteHTTPFormData(t *testing.T) {
-	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"})
-	listener := newTestHTTPListenerV2()
-	listener.Parser = parser
+	parser := form_urlencoded.Parser{
+		MetricName: "query_measurement",
+		TagKeys:    []string{"tagKey"},
+	}
+
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
+	listener.Parser = &parser
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 

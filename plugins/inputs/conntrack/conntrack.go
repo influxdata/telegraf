@@ -1,18 +1,22 @@
-// +build linux
+//go:generate ../../../tools/readme_config_includer/generator
+//go:build linux
 
 package conntrack
 
 import (
+	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"path/filepath"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Conntrack struct {
 	Path  string
@@ -46,26 +50,7 @@ func (c *Conntrack) setDefaults() {
 	}
 }
 
-func (c *Conntrack) Description() string {
-	return "Collects conntrack stats from the configured directories and files."
-}
-
-var sampleConfig = `
-   ## The following defaults would work with multiple versions of conntrack.
-   ## Note the nf_ and ip_ filename prefixes are mutually exclusive across
-   ## kernel versions, as are the directory locations.
-
-   ## Superset of filenames to look for within the conntrack dirs.
-   ## Missing files will be ignored.
-   files = ["ip_conntrack_count","ip_conntrack_max",
-            "nf_conntrack_count","nf_conntrack_max"]
-
-   ## Directories to search within for the conntrack files above.
-   ## Missing directories will be ignored.
-   dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
-`
-
-func (c *Conntrack) SampleConfig() string {
+func (*Conntrack) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -90,7 +75,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 
-			contents, err := ioutil.ReadFile(fName)
+			contents, err := os.ReadFile(fName)
 			if err != nil {
 				acc.AddError(fmt.Errorf("E! failed to read file '%s': %v", fName, err))
 				continue

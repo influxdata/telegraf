@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/docker/go-connections/nat"
+	"github.com/go-redis/redis/v8"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type testClient struct {
@@ -28,12 +29,28 @@ func (t *testClient) Do(_ string, _ ...interface{}) (interface{}, error) {
 	return 2, nil
 }
 
+func (t *testClient) Close() error {
+	return nil
+}
+
 func TestRedisConnectIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := fmt.Sprintf(testutil.GetLocalHost() + ":6379")
+	servicePort := "6379"
+	container := testutil.Container{
+		Image:        "redis:alpine",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	addr := fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
 
 	r := &Redis{
 		Log:     testutil.Logger{},
@@ -42,7 +59,7 @@ func TestRedisConnectIntegration(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 }
 
@@ -165,7 +182,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"total_writes_processed":          int64(17),
 		"lazyfree_pending_objects":        int64(0),
 		"maxmemory":                       int64(0),
-		"maxmemory_policy":                string("noeviction"),
+		"maxmemory_policy":                "noeviction",
 		"mem_aof_buffer":                  int64(0),
 		"mem_clients_normal":              int64(17440),
 		"mem_clients_slaves":              int64(0),
@@ -202,7 +219,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 			}
 		}
 	}
-	assert.InDelta(t,
+	require.InDelta(t,
 		time.Now().Unix()-fields["rdb_last_save_time"].(int64),
 		fields["rdb_last_save_time_elapsed"].(int64),
 		2) // allow for 2 seconds worth of offset

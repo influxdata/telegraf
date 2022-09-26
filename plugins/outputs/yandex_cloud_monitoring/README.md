@@ -1,11 +1,12 @@
-# Yandex Cloud Monitoring
+# Yandex Cloud Monitoring Output Plugin
 
-This plugin will send custom metrics to Yandex Cloud Monitoring. 
-https://cloud.yandex.com/services/monitoring
+This plugin will send custom metrics to [Yandex Cloud
+Monitoring](https://cloud.yandex.com/services/monitoring).
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Send aggregated metrics to Yandex.Cloud Monitoring
 [[outputs.yandex_cloud_monitoring]]
   ## Timeout for HTTP writes.
   # timeout = "20s"
@@ -21,6 +22,7 @@ https://cloud.yandex.com/services/monitoring
 
 This plugin currently support only YC.Compute metadata based authentication.
 
-When plugin is working inside a YC.Compute instance it will take IAM token and Folder ID from instance metadata.
+When plugin is working inside a YC.Compute instance it will take IAM token and
+Folder ID from instance metadata.
 
 Other authentication methods will be added later.

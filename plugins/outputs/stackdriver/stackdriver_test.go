@@ -11,17 +11,20 @@ import (
 	"testing"
 	"time"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3"
-	"github.com/golang/protobuf/proto"
-	emptypb "github.com/golang/protobuf/ptypes/empty"
-	googlepb "github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
+	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // clientOpt is the option tests should use to connect to the test server.
@@ -65,9 +68,13 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Ignore the returned error as the tests will fail anyway
+	//nolint:errcheck,revive
 	go serv.Serve(lis)
 
-	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure())
+	opt := grpc.WithTransportCredentials(insecure.NewCredentials())
+	conn, err := grpc.Dial(lis.Addr().String(), opt)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,6 +97,7 @@ func TestWrite(t *testing.T) {
 	s := &Stackdriver{
 		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 		Namespace: "test",
+		Log:       testutil.Logger{},
 		client:    c,
 	}
 
@@ -121,6 +129,7 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 		ResourceLabels: map[string]string{
 			"mylabel": "myvalue",
 		},
+		Log:    testutil.Logger{},
 		client: c,
 	}
 
@@ -149,6 +158,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	s := &Stackdriver{
 		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 		Namespace: "test",
+		Log:       testutil.Logger{},
 		client:    c,
 	}
 
@@ -181,7 +191,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 1,
 		},
 	})
@@ -196,7 +206,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	ts = request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 2,
 		},
 	})
@@ -221,6 +231,7 @@ func TestWriteBatchable(t *testing.T) {
 	s := &Stackdriver{
 		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 		Namespace: "test",
+		Log:       testutil.Logger{},
 		client:    c,
 	}
 
@@ -311,7 +322,7 @@ func TestWriteBatchable(t *testing.T) {
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 3,
 		},
 	})
@@ -324,7 +335,7 @@ func TestWriteBatchable(t *testing.T) {
 	ts = request.TimeSeries[1]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 1,
 		},
 	})
@@ -337,7 +348,7 @@ func TestWriteBatchable(t *testing.T) {
 	ts = request.TimeSeries[2]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 3,
 		},
 	})
@@ -350,7 +361,7 @@ func TestWriteBatchable(t *testing.T) {
 	ts = request.TimeSeries[4]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 5,
 		},
 	})
@@ -398,6 +409,7 @@ func TestWriteIgnoredErrors(t *testing.T) {
 			s := &Stackdriver{
 				Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 				Namespace: "test",
+				Log:       testutil.Logger{},
 				client:    c,
 			}
 
@@ -431,6 +443,104 @@ func TestGetStackdriverLabels(t *testing.T) {
 		{Key: "valuequota", Value: "icym5wcpejnhljcvy2vwk15svmhrtueoppwlvix61vlbaeedufn1g6u4jgwjoekwew9s2dboxtgrkiyuircnl8h1lbzntt9gzcf60qunhxurhiz0g2bynzy1v6eyn4ravndeiiugobsrsj2bfaguahg4gxn7nx4irwfknunhkk6jdlldevawj8levebjajcrcbeugewd14fa8o34ycfwx2ymalyeqxhfqrsksxnii2deqq6cghrzi6qzwmittkzdtye3imoygqmjjshiskvnzz1e4ipd9c6wfor5jsygn1kvcg6jm4clnsl1fnxotbei9xp4swrkjpgursmfmkyvxcgq9hoy435nwnolo3ipnvdlhk6pmlzpdjn6gqi3v9gv7jn5ro2p1t5ufxzfsvqq1fyrgoi7gvmttil1banh3cftkph1dcoaqfhl7y0wkvhwwvrmslmmxp1wedyn8bacd7akmjgfwdvcmrymbzvmrzfvq1gs1xnmmg8rsfxci2h6r1ralo3splf4f3bdg4c7cy0yy9qbxzxhcmdpwekwc7tdjs8uj6wmofm2aor4hum8nwyfwwlxy3yvsnbjy32oucsrmhcnu6l2i8laujkrhvsr9fcix5jflygznlydbqw5uhw1rg1g5wiihqumwmqgggemzoaivm3ut41vjaff4uqtqyuhuwblmuiphfkd7si49vgeeswzg7tpuw0oxmkesgibkcjtev2h9ouxzjs3eb71jffhdacyiuyhuxwvm5bnrjewbm4x2kmhgbirz3eoj7ijgplggdkx5vixufg65ont8zi1jabsuxx0vsqgprunwkugqkxg2r7iy6fmgs4lob4dlseinowkst6gp6x1ejreauyzjz7atzm3hbmr5rbynuqp4lxrnhhcbuoun69mavvaaki0bdz5ybmbbbz5qdv0odtpjo2aezat5uosjuhzbvic05jlyclikynjgfhencdkz3qcqzbzhnsynj1zdke0sk4zfpvfyryzsxv9pu0qm"},
 	}
 
-	labels := getStackdriverLabels(tags)
+	s := &Stackdriver{
+		Log: testutil.Logger{},
+	}
+
+	labels := s.getStackdriverLabels(tags)
 	require.Equal(t, QuotaLabelsPerMetricDescriptor, len(labels))
+}
+
+func TestGetStackdriverIntervalEndpoints(t *testing.T) {
+	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Stackdriver{
+		Project:      fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Namespace:    "test",
+		Log:          testutil.Logger{},
+		client:       c,
+		counterCache: NewCounterCache(testutil.Logger{}),
+	}
+
+	now := time.Now().UTC()
+	later := time.Now().UTC().Add(time.Second * 10)
+
+	// Metrics in descending order of timestamp
+	metrics := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			now,
+			telegraf.Gauge,
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"foo": "foo",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			later,
+			telegraf.Gauge,
+		),
+		testutil.MustMetric("uptime",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			now,
+			telegraf.Counter,
+		),
+		testutil.MustMetric("uptime",
+			map[string]string{
+				"foo": "foo",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			later,
+			telegraf.Counter,
+		),
+	}
+
+	for idx, m := range metrics {
+		for _, f := range m.FieldList() {
+			value, err := getStackdriverTypedValue(f.Value)
+			require.NoError(t, err)
+			require.NotNilf(t, value, "Got nil value for metric %q field %q", m, f)
+
+			metricKind, err := getStackdriverMetricKind(m.Type())
+			require.NoErrorf(t, err, "Get kind for metric %q (%T) field %q failed: %v", m.Name(), m.Type(), f, err)
+
+			startTime, endTime := getStackdriverIntervalEndpoints(metricKind, value, m, f, s.counterCache)
+
+			// we only generate startTimes for counters
+			if metricKind != metricpb.MetricDescriptor_CUMULATIVE {
+				require.Nilf(t, startTime, "startTime for non-counter metric %q (%T) field %q should be nil, was: %v", m.Name(), m.Type(), f, startTime)
+			} else {
+				if idx%2 == 0 {
+					// greaterorequal because we might pass a second boundary while the test is running
+					// and new startTimes are backdated 1ms from the endTime.
+					require.GreaterOrEqual(t, startTime.AsTime().UTC().Unix(), now.UTC().Unix())
+				} else {
+					require.GreaterOrEqual(t, startTime.AsTime().UTC().Unix(), later.UTC().Unix())
+				}
+			}
+
+			if idx%2 == 0 {
+				require.Equal(t, now, endTime.AsTime())
+			} else {
+				require.Equal(t, later, endTime.AsTime())
+			}
+		}
+	}
 }

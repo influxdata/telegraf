@@ -1,9 +1,8 @@
-// +build linux
+//go:build linux
 
 package kernel
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -168,7 +167,7 @@ const entropyStatFilePartial = `1024`
 const entropyStatFileInvalid = ``
 
 func makeFakeStatFile(t *testing.T, content []byte) string {
-	tmpfile, err := ioutil.TempFile("", "kernel_test")
+	tmpfile, err := os.CreateTemp("", "kernel_test")
 	require.NoError(t, err)
 
 	_, err = tmpfile.Write(content)

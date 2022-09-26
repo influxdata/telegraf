@@ -30,12 +30,12 @@ fi
 #compare dotted versions
 #see https://stackoverflow.com/questions/4023830/how-to-compare-two-strings-in-dot-separated-version-format-in-bash
 vercomp () {
-    if [[ $1 == $2 ]]
+    if [[ $1 == "$2" ]]
     then
         return 0
     fi
     local IFS=.
-    local i ver1=($1) ver2=($2)
+    local i ver1=("$1") ver2=("$2")
     # fill empty fields in ver1 with zeros
     for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
     do
@@ -68,7 +68,7 @@ fi
 objdump -T "$prog" | # get the dynamic symbol table
     sed -n "s/.* GLIBC_\([0-9.]\+\).*/\1/p" | # find the entries for glibc and grab the version
     sort | uniq | # remove duplicates
-    while read v; do
+    while read -r v; do
         set +e
         vercomp "$v" "$max" # fail if any version is newer than our max
         comp=$?

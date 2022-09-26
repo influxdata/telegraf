@@ -103,11 +103,12 @@ func TestNFSClientProcessStat(t *testing.T) {
 	require.NoError(t, err)
 
 	fieldsReadstat := map[string]interface{}{
-		"ops":     uint64(600),
-		"retrans": uint64(1),
-		"bytes":   uint64(1207),
-		"rtt":     uint64(606),
-		"exe":     uint64(607),
+		"ops":        uint64(600),
+		"retrans":    uint64(1),
+		"bytes":      uint64(1207),
+		"rtt":        uint64(606),
+		"exe":        uint64(607),
+		"rtt_per_op": float64(1.01),
 	}
 
 	readTags := map[string]string{
@@ -119,11 +120,12 @@ func TestNFSClientProcessStat(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "nfsstat", fieldsReadstat, readTags)
 
 	fieldsWritestat := map[string]interface{}{
-		"ops":     uint64(700),
-		"retrans": uint64(1),
-		"bytes":   uint64(1407),
-		"rtt":     uint64(706),
-		"exe":     uint64(707),
+		"ops":        uint64(700),
+		"retrans":    uint64(1),
+		"bytes":      uint64(1407),
+		"rtt":        uint64(706),
+		"exe":        uint64(707),
+		"rtt_per_op": float64(1.0085714285714287),
 	}
 
 	writeTags := map[string]string{

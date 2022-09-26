@@ -12,8 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type statServer struct{}
@@ -134,7 +135,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 		}
 
 		sockets[i] = sock
-		defer sock.Close()
+		defer sock.Close() //nolint:revive // done on purpose, closing will be executed properly
 
 		s := statServer{}
 		go s.serverSocket(sock)
@@ -169,8 +170,8 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	require.NotEmpty(t, acc.Errors)
 }
 
-//When not passing server config, we default to localhost
-//We just want to make sure we did request stat from localhost
+// When not passing server config, we default to localhost
+// We just want to make sure we did request stat from localhost
 func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
 	r := &haproxy{}
 

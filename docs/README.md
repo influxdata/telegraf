@@ -10,6 +10,8 @@
   - [Profiling][profiling]
   - [Windows Service][winsvc]
   - [FAQ][faq]
+- Developer Builds
+  - [Nightlies][nightlies]
 
 [conf]: /docs/CONFIGURATION.md
 [metrics]: /docs/METRICS.md
@@ -19,3 +21,4 @@
 [profiling]: /docs/PROFILING.md
 [winsvc]: /docs/WINDOWS_SERVICE.md
 [faq]: /docs/FAQ.md
+[nightlies]: /docs/NIGHTLIES.md

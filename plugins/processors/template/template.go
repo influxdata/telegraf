@@ -1,12 +1,17 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package template
 
 import (
+	_ "embed"
 	"strings"
 	"text/template"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type TemplateProcessor struct {
 	Tag      string          `toml:"tag"`
@@ -15,22 +20,8 @@ type TemplateProcessor struct {
 	tmpl     *template.Template
 }
 
-const sampleConfig = `
-  ## Tag to set with the output of the template.
-  tag = "topic"
-
-  ## Go template used to create the tag value.  In order to ease TOML
-  ## escaping requirements, you may wish to use single quotes around the
-  ## template string.
-  template = '{{ .Tag "hostname" }}.{{ .Tag "level" }}'
-`
-
-func (r *TemplateProcessor) SampleConfig() string {
+func (*TemplateProcessor) SampleConfig() string {
 	return sampleConfig
-}
-
-func (r *TemplateProcessor) Description() string {
-	return "Uses a Go template to create a new tag"
 }
 
 func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {

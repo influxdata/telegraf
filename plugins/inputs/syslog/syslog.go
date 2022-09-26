@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package syslog
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -13,17 +15,21 @@ import (
 	"time"
 	"unicode"
 
-	syslog "github.com/influxdata/go-syslog/v3"
+	"github.com/influxdata/go-syslog/v3"
 	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/go-syslog/v3/octetcounting"
 	"github.com/influxdata/go-syslog/v3/rfc3164"
 	"github.com/influxdata/go-syslog/v3/rfc5424"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type syslogRFC string
 
@@ -61,68 +67,8 @@ type Syslog struct {
 	udpListener net.PacketConn
 }
 
-var sampleConfig = `
-  ## Specify an ip or hostname with port - eg., tcp://localhost:6514, tcp://10.0.0.1:6514
-  ## Protocol, address and port to host the syslog receiver.
-  ## If no host is specified, then localhost is used.
-  ## If no port is specified, 6514 is used (RFC5425#section-4.1).
-  server = "tcp://:6514"
-
-  ## TLS Config
-  # tls_allowed_cacerts = ["/etc/telegraf/ca.pem"]
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Period between keep alive probes.
-  ## 0 disables keep alive probes.
-  ## Defaults to the OS configuration.
-  ## Only applies to stream sockets (e.g. TCP).
-  # keep_alive_period = "5m"
-
-  ## Maximum number of concurrent connections (default = 0).
-  ## 0 means unlimited.
-  ## Only applies to stream sockets (e.g. TCP).
-  # max_connections = 1024
-
-  ## Read timeout is the maximum time allowed for reading a single message (default = 5s).
-  ## 0 means unlimited.
-  # read_timeout = "5s"
-
-  ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
-  ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
-  ## or the non-transparent framing technique (RFC6587#section-3.4.2).
-  ## Must be one of "octet-counting", "non-transparent".
-  # framing = "octet-counting"
-
-  ## The trailer to be expected in case of non-transparent framing (default = "LF").
-  ## Must be one of "LF", or "NUL".
-  # trailer = "LF"
-
-  ## Whether to parse in best effort mode or not (default = false).
-  ## By default best effort parsing is off.
-  # best_effort = false
-
-  ## The RFC standard to use for message parsing
-  ## By default RFC5424 is used. RFC3164 only supports UDP transport (no streaming support)
-  ## Must be one of "RFC5424", or "RFC3164".
-  # syslog_standard = "RFC5424"
-
-  ## Character to prepend to SD-PARAMs (default = "_").
-  ## A syslog message can contain multiple parameters and multiple identifiers within structured data section.
-  ## Eg., [id1 name1="val1" name2="val2"][id2 name1="val1" nameA="valA"]
-  ## For each combination a field is created.
-  ## Its name is created concatenating identifier, sdparam_separator, and parameter name.
-  # sdparam_separator = "_"
-`
-
-// SampleConfig returns sample configuration message
-func (s *Syslog) SampleConfig() string {
+func (*Syslog) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns the plugin description
-func (s *Syslog) Description() string {
-	return "Accepts syslog messages following RFC5424 format with transports as per RFC5426, RFC5425, or RFC6587"
 }
 
 // Gather ...
@@ -205,7 +151,7 @@ func (s *Syslog) Stop() {
 // getAddressParts returns the address scheme and host
 // it also sets defaults for them when missing
 // when the input address does not specify the protocol it returns an error
-func getAddressParts(a string) (string, string, error) {
+func getAddressParts(a string) (scheme string, host string, err error) {
 	parts := strings.SplitN(a, "://", 2)
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("missing protocol within address '%s'", a)
@@ -220,7 +166,6 @@ func getAddressParts(a string) (string, string, error) {
 		return parts[0], parts[1], nil
 	}
 
-	var host string
 	if u.Hostname() != "" {
 		host = u.Hostname()
 	}
@@ -249,7 +194,7 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 		p = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}), rfc3164.WithBestEffort())
 	}
 	for {
-		n, _, err := s.udpListener.ReadFrom(b)
+		n, sourceAddr, err := s.udpListener.ReadFrom(b)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 				acc.AddError(err)
@@ -259,7 +204,7 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 
 		message, err := p.Parse(b[:n])
 		if message != nil {
-			acc.AddFields("syslog", fields(message, s), tags(message), s.time())
+			acc.AddFields("syslog", fields(message, s), tags(message, sourceAddr), s.currentTime())
 		}
 		if err != nil {
 			acc.AddError(err)
@@ -329,7 +274,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 	var p syslog.Parser
 
 	emit := func(r *syslog.Result) {
-		s.store(*r, acc)
+		s.store(*r, conn.RemoteAddr(), acc)
 		if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
 			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
 				acc.AddError(fmt.Errorf("setting read deadline failed: %v", err))
@@ -378,16 +323,16 @@ func (s *Syslog) setKeepAlive(c *net.TCPConn) error {
 	return c.SetKeepAlivePeriod(time.Duration(*s.KeepAlivePeriod))
 }
 
-func (s *Syslog) store(res syslog.Result, acc telegraf.Accumulator) {
+func (s *Syslog) store(res syslog.Result, remoteAddr net.Addr, acc telegraf.Accumulator) {
 	if res.Error != nil {
 		acc.AddError(res.Error)
 	}
 	if res.Message != nil {
-		acc.AddFields("syslog", fields(res.Message, s), tags(res.Message), s.time())
+		acc.AddFields("syslog", fields(res.Message, s), tags(res.Message, remoteAddr), s.currentTime())
 	}
 }
 
-func tags(msg syslog.Message) map[string]string {
+func tags(msg syslog.Message, sourceAddr net.Addr) map[string]string {
 	ts := map[string]string{}
 
 	// Not checking assuming a minimally valid message
@@ -400,6 +345,13 @@ func tags(msg syslog.Message) map[string]string {
 	case *rfc3164.SyslogMessage:
 		populateCommonTags(&m.Base, ts)
 	}
+
+	if sourceAddr != nil {
+		if source, _, err := net.SplitHostPort(sourceAddr.String()); err == nil {
+			ts["source"] = source
+		}
+	}
+
 	return ts
 }
 
@@ -473,7 +425,7 @@ func (uc unixCloser) Close() error {
 	return err
 }
 
-func (s *Syslog) time() time.Time {
+func (s *Syslog) currentTime() time.Time {
 	t := s.now()
 	if t == s.lastTime {
 		t = t.Add(time.Nanosecond)

@@ -1,14 +1,21 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nsq_consumer
 
 import (
 	"context"
+	_ "embed"
+	"fmt"
 	"sync"
+
+	nsq "github.com/nsqio/go-nsq"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	nsq "github.com/nsqio/go-nsq"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxUndeliveredMessages = 1000
@@ -26,9 +33,9 @@ func (l *logger) Output(_ int, s string) error {
 	return nil
 }
 
-//NSQConsumer represents the configuration of the plugin
+// NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
-	Server      string   `toml:"server"`
+	Server      string   `toml:"server" deprecated:"1.5.0;use 'nsqd' instead"`
 	Nsqd        []string `toml:"nsqd"`
 	Nsqlookupd  []string `toml:"nsqlookupd"`
 	Topic       string   `toml:"topic"`
@@ -48,49 +55,13 @@ type NSQConsumer struct {
 	cancel   context.CancelFunc
 }
 
-var sampleConfig = `
-  ## Server option still works but is deprecated, we just prepend it to the nsqd array.
-  # server = "localhost:4150"
-
-  ## An array representing the NSQD TCP HTTP Endpoints
-  nsqd = ["localhost:4150"]
-
-  ## An array representing the NSQLookupd HTTP Endpoints
-  nsqlookupd = ["localhost:4161"]
-  topic = "telegraf"
-  channel = "consumer"
-  max_in_flight = 100
-
-  ## Maximum messages to read from the broker that have not been written by an
-  ## output.  For best throughput set based on the number of metrics within
-  ## each message and the size of the output's metric_batch_size.
-  ##
-  ## For example, if each message from the queue contains 10 metrics and the
-  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
-  ## full batch is collected and the write is triggered immediately without
-  ## waiting until the next flush_interval.
-  # max_undelivered_messages = 1000
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
+func (*NSQConsumer) SampleConfig() string {
+	return sampleConfig
+}
 
 // SetParser takes the data_format from the config and finds the right parser for that format
 func (n *NSQConsumer) SetParser(parser parsers.Parser) {
 	n.parser = parser
-}
-
-// SampleConfig returns config values for generating a sample configuration file
-func (n *NSQConsumer) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description prints description string
-func (n *NSQConsumer) Description() string {
-	return "Read NSQ topic for metrics."
 }
 
 // Start pulls data from nsq
@@ -134,15 +105,28 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 		return nil
 	}))
 
+	// For backward compatibility
+	if n.Server != "" {
+		n.Nsqd = append(n.Nsqd, n.Server)
+	}
+
+	// Check if we have anything to connect to
+	if len(n.Nsqlookupd) == 0 && len(n.Nsqd) == 0 {
+		return fmt.Errorf("either 'nsqd' or 'nsqlookupd' needs to be specified")
+	}
+
 	if len(n.Nsqlookupd) > 0 {
 		err := n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
 		if err != nil && err != nsq.ErrAlreadyConnected {
 			return err
 		}
 	}
-	err := n.consumer.ConnectToNSQDs(append(n.Nsqd, n.Server))
-	if err != nil && err != nsq.ErrAlreadyConnected {
-		return err
+
+	if len(n.Nsqd) > 0 {
+		err := n.consumer.ConnectToNSQDs(n.Nsqd)
+		if err != nil && err != nsq.ErrAlreadyConnected {
+			return err
+		}
 	}
 
 	n.wg.Add(1)

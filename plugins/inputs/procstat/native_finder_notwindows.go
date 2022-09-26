@@ -1,4 +1,4 @@
-// +build !windows
+//go:build !windows
 
 package procstat
 
@@ -6,7 +6,7 @@ import (
 	"regexp"
 )
 
-//Pattern matches on the process name
+// Pattern matches on the process name
 func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 	var pids []PID
 	regxPattern, err := regexp.Compile(pattern)

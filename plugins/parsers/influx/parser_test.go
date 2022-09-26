@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var DefaultTime = func() time.Time {
@@ -567,8 +568,8 @@ var ptests = []struct {
 func TestParser(t *testing.T) {
 	for _, tt := range ptests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewMetricHandler()
-			parser := NewParser(handler)
+			parser := Parser{}
+			require.NoError(t, parser.Init())
 			parser.SetTimeFunc(DefaultTime)
 			if tt.timeFunc != nil {
 				parser.SetTimeFunc(tt.timeFunc)
@@ -591,8 +592,8 @@ func TestParser(t *testing.T) {
 func BenchmarkParser(b *testing.B) {
 	for _, tt := range ptests {
 		b.Run(tt.name, func(b *testing.B) {
-			handler := NewMetricHandler()
-			parser := NewParser(handler)
+			parser := Parser{}
+			require.NoError(b, parser.Init())
 			for n := 0; n < b.N; n++ {
 				metrics, err := parser.Parse(tt.input)
 				_ = err
@@ -697,8 +698,10 @@ func TestSeriesParser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewMetricHandler()
-			parser := NewSeriesParser(handler)
+			parser := Parser{
+				Type: "series",
+			}
+			require.NoError(t, parser.Init())
 			if tt.timeFunc != nil {
 				parser.SetTimeFunc(tt.timeFunc)
 			}
@@ -748,8 +751,8 @@ func TestParserErrorString(t *testing.T) {
 
 	for _, tt := range ptests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewMetricHandler()
-			parser := NewParser(handler)
+			parser := Parser{}
+			require.NoError(t, parser.Init())
 
 			_, err := parser.Parse(tt.input)
 			require.Equal(t, tt.errString, err.Error())
@@ -849,7 +852,10 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 	parser := NewStreamParser(r)
 	parser.SetTimeFunc(DefaultTime)
 
-	go w.Write([]byte("metric value=1\nmetric2 value=1\n"))
+	go func() {
+		_, err := w.Write([]byte("metric value=1\nmetric2 value=1\n"))
+		require.NoError(t, err)
+	}()
 
 	_, err := parser.Next()
 	require.NoError(t, err)

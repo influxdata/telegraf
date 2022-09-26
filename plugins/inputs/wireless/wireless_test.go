@@ -1,11 +1,13 @@
-// +build linux
+//go:build linux
 
 package wireless
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var testInput = []byte(`Inter-| sta-|   Quality        |   Discarded packets               | Missed | WE
@@ -42,11 +44,13 @@ func TestLoadWirelessTable(t *testing.T) {
 			Beacon:    int64(0),
 		},
 	}
-	metrics, err := loadWirelessTable(testInput)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	as := assert.New(t)
+	w := Wireless{
+		Log: testutil.Logger{},
+	}
+	metrics, err := w.loadWirelessTable(testInput)
+	require.NoError(t, err)
+
+	as := require.New(t)
 	as.Equal(metrics, expectedMetrics)
 }

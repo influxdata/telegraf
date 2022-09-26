@@ -1,9 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package bond
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,39 +14,38 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 // default host proc path
 const defaultHostProc = "/proc"
+const defaultHostSys = "/sys"
 
 // env host proc variable name
 const envProc = "HOST_PROC"
+const envSys = "HOST_SYS"
 
 type Bond struct {
 	HostProc       string   `toml:"host_proc"`
+	HostSys        string   `toml:"host_sys"`
+	SysDetails     bool     `toml:"collect_sys_details"`
 	BondInterfaces []string `toml:"bond_interfaces"`
+	BondType       string
 }
 
-var sampleConfig = `
-  ## Sets 'proc' directory path
-  ## If not specified, then default is /proc
-  # host_proc = "/proc"
-
-  ## By default, telegraf gather stats for all bond interfaces
-  ## Setting interfaces will restrict the stats to the specified
-  ## bond interfaces.
-  # bond_interfaces = ["bond0"]
-`
-
-func (bond *Bond) Description() string {
-	return "Collect bond interface status, slaves statuses and failures count"
+type sysFiles struct {
+	ModeFile    string
+	SlaveFile   string
+	ADPortsFile string
 }
 
-func (bond *Bond) SampleConfig() string {
+func (*Bond) SampleConfig() string {
 	return sampleConfig
 }
 
 func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 	// load proc path, get default value if config value and env variable are empty
-	bond.loadPath()
+	bond.loadPaths()
 	// list bond interfaces from bonding directory or gather all interfaces.
 	bondNames, err := bond.listInterfaces()
 	if err != nil {
@@ -53,15 +53,27 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 	}
 	for _, bondName := range bondNames {
 		bondAbsPath := bond.HostProc + "/net/bonding/" + bondName
-		file, err := ioutil.ReadFile(bondAbsPath)
+		file, err := os.ReadFile(bondAbsPath)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondAbsPath, err))
+			acc.AddError(fmt.Errorf("error inspecting %q interface: %v", bondAbsPath, err))
 			continue
 		}
-		rawFile := strings.TrimSpace(string(file))
-		err = bond.gatherBondInterface(bondName, rawFile, acc)
+		rawProcFile := strings.TrimSpace(string(file))
+		err = bond.gatherBondInterface(bondName, rawProcFile, acc)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondName, err))
+			acc.AddError(fmt.Errorf("error inspecting %q interface: %v", bondName, err))
+		}
+
+		/*
+			Some details about bonds only exist in /sys/class/net/
+			In particular, LACP bonds track upstream port state here
+		*/
+		if bond.SysDetails {
+			files, err := bond.readSysFiles(bond.HostSys + "/class/net/" + bondName)
+			if err != nil {
+				acc.AddError(err)
+			}
+			bond.gatherSysDetails(bondName, files, acc)
 		}
 	}
 	return nil
@@ -91,8 +103,14 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	tags := map[string]string{
 		"bond": bondName,
 	}
-
 	scanner := bufio.NewScanner(strings.NewReader(rawFile))
+	/*
+		/proc/bond/... files are formatted in a way that is difficult
+		to use regexes to parse. Because of that, we scan through
+		the file one line at a time and rely on specific lines to
+		mark "ends" of blocks. It's a hack that should be resolved,
+		but for now, it works.
+	*/
 	for scanner.Scan() {
 		line := scanner.Text()
 		stats := strings.Split(line, ":")
@@ -101,6 +119,9 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 		}
 		name := strings.TrimSpace(stats[0])
 		value := strings.TrimSpace(stats[1])
+		if name == "Bonding Mode" {
+			bond.BondType = value
+		}
 		if strings.Contains(name, "Currently Active Slave") {
 			fields["active_slave"] = value
 		}
@@ -119,9 +140,86 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	return fmt.Errorf("Couldn't find status info for '%s' ", bondName)
 }
 
+func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
+	/*
+		Files we may need
+		bonding/mode
+		bonding/slaves
+		bonding/ad_num_ports
+
+		We load files here first to allow for easier testing
+	*/
+	var output sysFiles
+
+	file, err := os.ReadFile(bondDir + "/bonding/mode")
+	if err != nil {
+		return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/mode", err)
+	}
+	output.ModeFile = strings.TrimSpace(string(file))
+	file, err = os.ReadFile(bondDir + "/bonding/slaves")
+	if err != nil {
+		return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/slaves", err)
+	}
+	output.SlaveFile = strings.TrimSpace(string(file))
+	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
+		file, err = os.ReadFile(bondDir + "/bonding/ad_num_ports")
+		if err != nil {
+			return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/ad_num_ports", err)
+		}
+		output.ADPortsFile = strings.TrimSpace(string(file))
+	}
+	return output, nil
+}
+
+func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) {
+	var slaves []string
+	var adPortCount int
+
+	// To start with, we get the bond operating mode
+	mode := strings.TrimSpace(strings.Split(files.ModeFile, " ")[0])
+
+	tags := map[string]string{
+		"bond": bondName,
+		"mode": mode,
+	}
+
+	// Next we collect the number of bond slaves the system expects
+	slavesTmp := strings.Split(files.SlaveFile, " ")
+	for _, slave := range slavesTmp {
+		if slave != "" {
+			slaves = append(slaves, slave)
+		}
+	}
+	if mode == "802.3ad" {
+		/*
+			If we're in LACP mode, we should check on how the bond ports are
+			interacting with the upstream switch ports
+			a failed conversion can be treated as 0 ports
+		*/
+		adPortCount, _ = strconv.Atoi(strings.TrimSpace(files.ADPortsFile))
+	} else {
+		adPortCount = len(slaves)
+	}
+
+	fields := map[string]interface{}{
+		"slave_count":   len(slaves),
+		"ad_port_count": adPortCount,
+	}
+	acc.AddFields("bond_sys", fields, tags)
+}
+
 func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
-	var slave string
-	var status int
+	var slaveCount int
+	tags := map[string]string{
+		"bond": bondName,
+	}
+	fields := map[string]interface{}{
+		"status": 0,
+	}
+	var scanPast bool
+	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
+		scanPast = true
+	}
 
 	scanner := bufio.NewScanner(strings.NewReader(rawFile))
 	for scanner.Scan() {
@@ -133,39 +231,58 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 		name := strings.TrimSpace(stats[0])
 		value := strings.TrimSpace(stats[1])
 		if strings.Contains(name, "Slave Interface") {
-			slave = value
+			tags["interface"] = value
+			slaveCount++
 		}
-		if strings.Contains(name, "MII Status") {
-			status = 0
-			if value == "up" {
-				status = 1
-			}
+		if strings.Contains(name, "MII Status") && value == "up" {
+			fields["status"] = 1
 		}
 		if strings.Contains(name, "Link Failure Count") {
 			count, err := strconv.Atoi(value)
 			if err != nil {
 				return err
 			}
-			fields := map[string]interface{}{
-				"status":   status,
-				"failures": count,
+			fields["failures"] = count
+			if !scanPast {
+				acc.AddFields("bond_slave", fields, tags)
 			}
-			tags := map[string]string{
-				"bond":      bondName,
-				"interface": slave,
+		}
+		if strings.Contains(name, "Actor Churned Count") {
+			count, err := strconv.Atoi(value)
+			if err != nil {
+				return err
 			}
+			fields["actor_churned"] = count
+		}
+		if strings.Contains(name, "Partner Churned Count") {
+			count, err := strconv.Atoi(value)
+			if err != nil {
+				return err
+			}
+			fields["partner_churned"] = count
+			fields["total_churned"] = fields["actor_churned"].(int) + fields["partner_churned"].(int)
 			acc.AddFields("bond_slave", fields, tags)
 		}
 	}
+	tags = map[string]string{
+		"bond": bondName,
+	}
+	fields = map[string]interface{}{
+		"count": slaveCount,
+	}
+	acc.AddFields("bond_slave", fields, tags)
 
 	return scanner.Err()
 }
 
-// loadPath can be used to read path firstly from config
+// loadPaths can be used to read path firstly from config
 // if it is empty then try read from env variable
-func (bond *Bond) loadPath() {
+func (bond *Bond) loadPaths() {
 	if bond.HostProc == "" {
 		bond.HostProc = proc(envProc, defaultHostProc)
+	}
+	if bond.HostSys == "" {
+		bond.HostSys = proc(envSys, defaultHostSys)
 	}
 }
 

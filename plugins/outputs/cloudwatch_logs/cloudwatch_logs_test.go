@@ -1,6 +1,7 @@
 package cloudwatch_logs
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -8,32 +9,35 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
+	cloudwatchlogsV2 "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type mockCloudWatchLogs struct {
 	logStreamName   string
-	pushedLogEvents []cloudwatchlogs.InputLogEvent
+	pushedLogEvents []types.InputLogEvent
 }
 
 func (c *mockCloudWatchLogs) Init(lsName string) {
 	c.logStreamName = lsName
-	c.pushedLogEvents = make([]cloudwatchlogs.InputLogEvent, 0)
+	c.pushedLogEvents = make([]types.InputLogEvent, 0)
 }
 
-func (c *mockCloudWatchLogs) DescribeLogGroups(*cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+func (c *mockCloudWatchLogs) DescribeLogGroups(context.Context, *cloudwatchlogsV2.DescribeLogGroupsInput, ...func(options *cloudwatchlogsV2.Options)) (*cloudwatchlogsV2.DescribeLogGroupsOutput, error) {
 	return nil, nil
 }
 
-func (c *mockCloudWatchLogs) DescribeLogStreams(*cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+func (c *mockCloudWatchLogs) DescribeLogStreams(context.Context, *cloudwatchlogsV2.DescribeLogStreamsInput, ...func(options *cloudwatchlogsV2.Options)) (*cloudwatchlogsV2.DescribeLogStreamsOutput, error) {
 	arn := "arn"
 	creationTime := time.Now().Unix()
 	sequenceToken := "arbitraryToken"
-	output := &cloudwatchlogs.DescribeLogStreamsOutput{
-		LogStreams: []*cloudwatchlogs.LogStream{
+	output := &cloudwatchlogsV2.DescribeLogStreamsOutput{
+		LogStreams: []types.LogStream{
 			{
 				Arn:                 &arn,
 				CreationTime:        &creationTime,
@@ -47,21 +51,19 @@ func (c *mockCloudWatchLogs) DescribeLogStreams(*cloudwatchlogs.DescribeLogStrea
 	}
 	return output, nil
 }
-func (c *mockCloudWatchLogs) CreateLogStream(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+func (c *mockCloudWatchLogs) CreateLogStream(context.Context, *cloudwatchlogsV2.CreateLogStreamInput, ...func(options *cloudwatchlogsV2.Options)) (*cloudwatchlogsV2.CreateLogStreamOutput, error) {
 	return nil, nil
 }
-func (c *mockCloudWatchLogs) PutLogEvents(input *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+func (c *mockCloudWatchLogs) PutLogEvents(_ context.Context, input *cloudwatchlogsV2.PutLogEventsInput, _ ...func(options *cloudwatchlogsV2.Options)) (*cloudwatchlogsV2.PutLogEventsOutput, error) {
 	sequenceToken := "arbitraryToken"
-	output := &cloudwatchlogs.PutLogEventsOutput{NextSequenceToken: &sequenceToken}
+	output := &cloudwatchlogsV2.PutLogEventsOutput{NextSequenceToken: &sequenceToken}
 	//Saving messages
-	for _, event := range input.LogEvents {
-		c.pushedLogEvents = append(c.pushedLogEvents, *event)
-	}
+	c.pushedLogEvents = append(c.pushedLogEvents, input.LogEvents...)
 
 	return output, nil
 }
 
-//Ensure mockCloudWatchLogs implement cloudWatchLogs interface
+// Ensure mockCloudWatchLogs implement cloudWatchLogs interface
 var _ cloudWatchLogs = (*mockCloudWatchLogs)(nil)
 
 func RandStringBytes(n int) string {
@@ -82,9 +84,11 @@ func TestInit(t *testing.T) {
 			name:                "log group is not set",
 			expectedErrorString: "log group is not set",
 			plugin: &CloudWatchLogs{
-				Region:       "eu-central-1",
-				AccessKey:    "dummy",
-				SecretKey:    "dummy",
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:    "eu-central-1",
+					AccessKey: "dummy",
+					SecretKey: "dummy",
+				},
 				LogGroup:     "",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -98,9 +102,11 @@ func TestInit(t *testing.T) {
 			name:                "log stream is not set",
 			expectedErrorString: "log stream is not set",
 			plugin: &CloudWatchLogs{
-				Region:       "eu-central-1",
-				AccessKey:    "dummy",
-				SecretKey:    "dummy",
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:    "eu-central-1",
+					AccessKey: "dummy",
+					SecretKey: "dummy",
+				},
 				LogGroup:     "TestLogGroup",
 				LogStream:    "",
 				LDMetricName: "docker_log",
@@ -114,9 +120,11 @@ func TestInit(t *testing.T) {
 			name:                "log data metrics name is not set",
 			expectedErrorString: "log data metrics name is not set",
 			plugin: &CloudWatchLogs{
-				Region:       "eu-central-1",
-				AccessKey:    "dummy",
-				SecretKey:    "dummy",
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:    "eu-central-1",
+					AccessKey: "dummy",
+					SecretKey: "dummy",
+				},
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "",
@@ -130,9 +138,11 @@ func TestInit(t *testing.T) {
 			name:                "log data source is not set",
 			expectedErrorString: "log data source is not set",
 			plugin: &CloudWatchLogs{
-				Region:       "eu-central-1",
-				AccessKey:    "dummy",
-				SecretKey:    "dummy",
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:    "eu-central-1",
+					AccessKey: "dummy",
+					SecretKey: "dummy",
+				},
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -147,9 +157,11 @@ func TestInit(t *testing.T) {
 			expectedErrorString: "log data source is not properly formatted, ':' is missed.\n" +
 				"Should be 'tag:<tag_mame>' or 'field:<field_name>'",
 			plugin: &CloudWatchLogs{
-				Region:       "eu-central-1",
-				AccessKey:    "dummy",
-				SecretKey:    "dummy",
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:    "eu-central-1",
+					AccessKey: "dummy",
+					SecretKey: "dummy",
+				},
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -164,9 +176,11 @@ func TestInit(t *testing.T) {
 			expectedErrorString: "log data source is not properly formatted.\n" +
 				"Should be 'tag:<tag_mame>' or 'field:<field_name>'",
 			plugin: &CloudWatchLogs{
-				Region:       "eu-central-1",
-				AccessKey:    "dummy",
-				SecretKey:    "dummy",
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:    "eu-central-1",
+					AccessKey: "dummy",
+					SecretKey: "dummy",
+				},
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -179,9 +193,29 @@ func TestInit(t *testing.T) {
 		{
 			name: "valid config",
 			plugin: &CloudWatchLogs{
-				Region:       "eu-central-1",
-				AccessKey:    "dummy",
-				SecretKey:    "dummy",
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:    "eu-central-1",
+					AccessKey: "dummy",
+					SecretKey: "dummy",
+				},
+				LogGroup:     "TestLogGroup",
+				LogStream:    "tag:source",
+				LDMetricName: "docker_log",
+				LDSource:     "tag:location",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
+		{
+			name: "valid config with EndpointURL",
+			plugin: &CloudWatchLogs{
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:      "eu-central-1",
+					AccessKey:   "dummy",
+					SecretKey:   "dummy",
+					EndpointURL: "https://test.com",
+				},
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -209,8 +243,8 @@ func TestConnect(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w,
 			`{
-				   "logGroups": [ 
-					  { 
+				   "logGroups": [
+					  {
 						 "arn": "string",
 						 "creationTime": 123456789,
 						 "kmsKeyId": "string",
@@ -225,10 +259,12 @@ func TestConnect(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &CloudWatchLogs{
-		Region:       "eu-central-1",
-		AccessKey:    "dummy",
-		SecretKey:    "dummy",
-		EndpointURL:  ts.URL,
+		CredentialConfig: internalaws.CredentialConfig{
+			Region:      "eu-central-1",
+			AccessKey:   "dummy",
+			SecretKey:   "dummy",
+			EndpointURL: ts.URL,
+		},
 		LogGroup:     "TestLogGroup",
 		LogStream:    "tag:source",
 		LDMetricName: "docker_log",
@@ -247,8 +283,8 @@ func TestWrite(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w,
 			`{
-				   "logGroups": [ 
-					  { 
+				   "logGroups": [
+					  {
 						 "arn": "string",
 						 "creationTime": 123456789,
 						 "kmsKeyId": "string",
@@ -263,10 +299,12 @@ func TestWrite(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &CloudWatchLogs{
-		Region:       "eu-central-1",
-		AccessKey:    "dummy",
-		SecretKey:    "dummy",
-		EndpointURL:  ts.URL,
+		CredentialConfig: internalaws.CredentialConfig{
+			Region:      "eu-central-1",
+			AccessKey:   "dummy",
+			SecretKey:   "dummy",
+			EndpointURL: ts.URL,
+		},
 		LogGroup:     "TestLogGroup",
 		LogStream:    "tag:source",
 		LDMetricName: "docker_log",

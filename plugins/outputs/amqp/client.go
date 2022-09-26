@@ -4,12 +4,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 )
 
 type ClientConfig struct {
@@ -25,6 +27,8 @@ type ClientConfig struct {
 	tlsConfig         *tls.Config
 	timeout           time.Duration
 	auth              []amqp.Authentication
+	dialer            *proxy.ProxiedDialer
+	log               telegraf.Logger
 }
 
 type client struct {
@@ -33,8 +37,8 @@ type client struct {
 	config  *ClientConfig
 }
 
-// Connect opens a connection to one of the brokers at random
-func Connect(config *ClientConfig) (*client, error) {
+// newClient opens a connection to one of the brokers at random
+func newClient(config *ClientConfig) (*client, error) {
 	client := &client{
 		config: config,
 	}
@@ -42,21 +46,21 @@ func Connect(config *ClientConfig) (*client, error) {
 	p := rand.Perm(len(config.brokers))
 	for _, n := range p {
 		broker := config.brokers[n]
-		log.Printf("D! Output [amqp] connecting to %q", broker)
+		config.log.Debugf("Connecting to %q", broker)
 		conn, err := amqp.DialConfig(
 			broker, amqp.Config{
 				TLSClientConfig: config.tlsConfig,
 				SASL:            config.auth, // if nil, it will be PLAIN taken from url
 				Dial: func(network, addr string) (net.Conn, error) {
-					return net.DialTimeout(network, addr, config.timeout)
+					return config.dialer.DialTimeout(network, addr, config.timeout)
 				},
 			})
 		if err == nil {
 			client.conn = conn
-			log.Printf("D! Output [amqp] connected to %q", broker)
+			config.log.Debugf("Connected to %q", broker)
 			break
 		}
-		log.Printf("D! Output [amqp] error connecting to %q - %s", broker, err.Error())
+		config.log.Debugf("Error connecting to %q - %v", broker, err.Error())
 	}
 
 	if client.conn == nil {

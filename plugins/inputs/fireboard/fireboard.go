@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package fireboard
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Fireboard gathers statistics from the fireboard.io servers
 type Fireboard struct {
@@ -45,26 +50,8 @@ type fireboardStats struct {
 	Latesttemps []RTT  `json:"latest_temps"`
 }
 
-// A sample configuration to only gather stats from localhost, default port.
-const sampleConfig = `
-  ## Specify auth token for your account
-  auth_token = "invalidAuthToken"
-  ## You can override the fireboard server URL if necessary
-  # url = https://fireboard.io/api/v1/devices.json
-  ## You can set a different http_timeout if you need to
-  ## You should set a string using an number and time indicator
-  ## for example "12s" for 12 seconds.
-  # http_timeout = "4s"
-`
-
-// SampleConfig Returns a sample configuration for the plugin
-func (r *Fireboard) SampleConfig() string {
+func (*Fireboard) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description Returns a description of the plugin
-func (r *Fireboard) Description() string {
-	return "Read real time temps from fireboard.io servers"
 }
 
 // Init the things

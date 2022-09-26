@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"crypto/rand"
 	"io"
-	"io/ioutil"
 	"log"
 	"os/exec"
 	"regexp"
@@ -182,7 +181,7 @@ func TestCompressWithGzip(t *testing.T) {
 	assert.NoError(t, err)
 	defer gzipReader.Close()
 
-	output, err := ioutil.ReadAll(gzipReader)
+	output, err := io.ReadAll(gzipReader)
 	assert.NoError(t, err)
 
 	assert.Equal(t, testData, string(output))
@@ -203,7 +202,7 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 	rc, err := CompressWithGzip(mr)
 	assert.NoError(t, err)
 
-	n, err := io.CopyN(ioutil.Discard, rc, 10000)
+	n, err := io.CopyN(io.Discard, rc, 10000)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(10000), n)
 
@@ -211,25 +210,13 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 	err = rc.Close()
 	assert.NoError(t, err)
 
-	n, err = io.CopyN(ioutil.Discard, rc, 10000)
+	n, err = io.CopyN(io.Discard, rc, 10000)
 	assert.Error(t, io.EOF, err)
 	assert.Equal(t, int64(0), n)
 
 	r2 := mr.readN
 	// no more read to the source after closing
 	assert.Equal(t, r1, r2)
-}
-
-func TestVersionAlreadySet(t *testing.T) {
-	err := SetVersion("foo")
-	assert.NoError(t, err)
-
-	err = SetVersion("bar")
-
-	assert.Error(t, err)
-	assert.IsType(t, ErrorVersionAlreadySet, err)
-
-	assert.Equal(t, "foo", Version())
 }
 
 func TestAlignDuration(t *testing.T) {
@@ -515,6 +502,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "UnixDate",
 			timestamp: "Mon Jan 2 15:04:05 MST 2006",
 			expected:  unixdate("Mon Jan 2 15:04:05 MST 2006"),
+			location:  "Local",
 		},
 
 		{
@@ -522,6 +510,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RubyDate",
 			timestamp: "Mon Jan 02 15:04:05 -0700 2006",
 			expected:  rubydate("Mon Jan 02 15:04:05 -0700 2006"),
+			location:  "Local",
 		},
 
 		{
@@ -529,6 +518,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC822",
 			timestamp: "02 Jan 06 15:04 MST",
 			expected:  rfc822("02 Jan 06 15:04 MST"),
+			location:  "Local",
 		},
 
 		{
@@ -536,6 +526,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC822Z",
 			timestamp: "02 Jan 06 15:04 -0700",
 			expected:  rfc822z("02 Jan 06 15:04 -0700"),
+			location:  "Local",
 		},
 
 		{
@@ -543,6 +534,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC850",
 			timestamp: "Monday, 02-Jan-06 15:04:05 MST",
 			expected:  rfc850("Monday, 02-Jan-06 15:04:05 MST"),
+			location:  "Local",
 		},
 
 		{
@@ -550,6 +542,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC1123",
 			timestamp: "Mon, 02 Jan 2006 15:04:05 MST",
 			expected:  rfc1123("Mon, 02 Jan 2006 15:04:05 MST"),
+			location:  "Local",
 		},
 
 		{
@@ -557,6 +550,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC1123Z",
 			timestamp: "Mon, 02 Jan 2006 15:04:05 -0700",
 			expected:  rfc1123z("Mon, 02 Jan 2006 15:04:05 -0700"),
+			location:  "Local",
 		},
 
 		{
@@ -564,6 +558,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC3339Nano",
 			timestamp: "2006-01-02T15:04:05.999999999-07:00",
 			expected:  rfc3339nano("2006-01-02T15:04:05.999999999-07:00"),
+			location:  "Local",
 		},
 
 		{

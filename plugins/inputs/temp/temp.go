@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package temp
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 
@@ -9,17 +11,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Temperature struct {
 	ps system.PS
 }
 
-func (t *Temperature) Description() string {
-	return "Read metrics about temperature"
-}
-
-const sampleConfig = ""
-
-func (t *Temperature) SampleConfig() string {
+func (*Temperature) SampleConfig() string {
 	return sampleConfig
 }
 

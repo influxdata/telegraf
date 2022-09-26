@@ -1,11 +1,11 @@
-// +build !windows
+//go:generate ../../../tools/readme_config_includer/generator
+//go:build !windows
 
 package processes
 
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -151,7 +151,7 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 
 		stats := bytes.Fields(data)
 		if len(stats) < 3 {
-			return fmt.Errorf("Something is terribly wrong with %s", filename)
+			return fmt.Errorf("something is terribly wrong with %s", filename)
 		}
 		switch stats[0][0] {
 		case 'R':
@@ -191,7 +191,7 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 }
 
 func readProcFile(filename string) ([]byte, error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

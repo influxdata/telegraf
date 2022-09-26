@@ -1,4 +1,4 @@
-// +build !windows
+//go:build !windows
 
 // TODO: Windows - should be enabled for Windows when https://github.com/influxdata/telegraf/issues/8451 is fixed
 
@@ -7,7 +7,7 @@ package http_response
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -15,12 +15,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Receives a list with fields that are expected to be absent
@@ -122,7 +122,7 @@ func setUpTestMux() http.Handler {
 		fmt.Fprintf(w, "used post correctly!")
 	})
 	mux.HandleFunc("/musthaveabody", func(w http.ResponseWriter, req *http.Request) {
-		body, err := ioutil.ReadAll(req.Body)
+		body, err := io.ReadAll(req.Body)
 		//nolint:errcheck,revive
 		req.Body.Close()
 		if err != nil {
@@ -167,8 +167,8 @@ func checkOutput(t *testing.T, acc *testutil.Accumulator, presentFields map[stri
 func TestHeaders(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cHeader := r.Header.Get("Content-Type")
-		assert.Equal(t, "Hello", r.Host)
-		assert.Equal(t, "application/json", cHeader)
+		require.Equal(t, "Hello", r.Host)
+		require.Equal(t, "application/json", cHeader)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
@@ -1099,7 +1099,7 @@ func TestRedirect(t *testing.T) {
 func TestBasicAuth(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		aHeader := r.Header.Get("Authorization")
-		assert.Equal(t, "Basic bWU6bXlwYXNzd29yZA==", aHeader)
+		require.Equal(t, "Basic bWU6bXlwYXNzd29yZA==", aHeader)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
@@ -1276,7 +1276,7 @@ func TestStatusCodeAndStringMatchFail(t *testing.T) {
 
 func TestSNI(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "super-special-hostname.example.com", r.TLS.ServerName)
+		require.Equal(t, "super-special-hostname.example.com", r.TLS.ServerName)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()

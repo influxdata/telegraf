@@ -1,23 +1,15 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package minecraft
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## Address of the Minecraft server.
-  # server = "localhost"
-
-  ## Server RCON Port.
-  # port = "25575"
-
-  ## Server RCON Password.
-  password = ""
-
-  ## Uncomment to remove deprecated metric components.
-  # tagdrop = ["server"]
-`
+//go:embed sample.conf
+var sampleConfig string
 
 // Client is a client for the Minecraft server.
 type Client interface {
@@ -40,11 +32,7 @@ type Minecraft struct {
 	client Client
 }
 
-func (s *Minecraft) Description() string {
-	return "Collects scores from a Minecraft server's scoreboard using the RCON protocol"
-}
-
-func (s *Minecraft) SampleConfig() string {
+func (*Minecraft) SampleConfig() string {
 	return sampleConfig
 }
 

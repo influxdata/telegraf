@@ -2,14 +2,17 @@ package kinesis_consumer
 
 import (
 	"encoding/base64"
-	"github.com/aws/aws-sdk-go/aws"
+	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	consumer "github.com/harlow/kinesis-consumer"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestKinesisConsumer_onMessage(t *testing.T) {
@@ -20,11 +23,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 	{"id":"","timestamp":1510254469274,"message":"{\"bob\":\"CWL CONTROL MESSAGE: Checking health of destination Firehose.\", \"timestamp\":\"2021-02-22T22:15:26.794854Z\"},"},
 	{"id":"","timestamp":1510254469274,"message":"{\"bob\":\"CWL CONTROL MESSAGE: Checking health of destination Firehose.\", \"timestamp\":\"2021-02-22T22:15:26.794854Z\"}"}
 ]}`)
-	parser, _ := json.New(&json.Config{
+	parser := &json.Parser{
 		MetricName:   "json_test",
 		Query:        "logEvents",
 		StringFields: []string{"message"},
-	})
+	}
+	require.NoError(t, parser.Init())
 
 	type fields struct {
 		ContentEncoding string
@@ -53,7 +57,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           notZippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -69,7 +78,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           notZippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -85,7 +99,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           notZippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -100,7 +119,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records: make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           notZippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -116,7 +140,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: gzippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           gzippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -132,7 +161,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: zlibBytpes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           zlibBytpes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -146,7 +180,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		ContentEncoding: "notsupported",
 	}
 	err := k.Init()
-	assert.NotNil(t, err)
+	require.NotNil(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -156,18 +190,18 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         tt.fields.records,
 			}
 			err := k.Init()
-			assert.Nil(t, err)
+			require.Nil(t, err)
 
 			acc := testutil.Accumulator{}
 			if err := k.onMessage(acc.WithTracking(tt.expected.numberOfMetrics), tt.args.r); (err != nil) != tt.wantErr {
 				t.Errorf("onMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			assert.Equal(t, tt.expected.numberOfMetrics, len(acc.Metrics))
+			require.Equal(t, tt.expected.numberOfMetrics, len(acc.Metrics))
 
 			for _, metric := range acc.Metrics {
 				if logEventMessage, ok := metric.Fields["message"]; ok {
-					assert.Contains(t, logEventMessage.(string), tt.expected.messageContains)
+					require.Contains(t, logEventMessage.(string), tt.expected.messageContains)
 				} else {
 					t.Errorf("Expect logEvents to be present")
 				}

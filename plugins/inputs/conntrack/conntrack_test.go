@@ -1,9 +1,8 @@
-// +build linux
+//go:build linux
 
 package conntrack
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -34,20 +33,18 @@ func TestNoFilesFound(t *testing.T) {
 
 func TestDefaultsUsed(t *testing.T) {
 	defer restoreDflts(dfltFiles, dfltDirs)
-	tmpdir, err := ioutil.TempDir("", "tmp1")
-	require.NoError(t, err)
-	defer os.Remove(tmpdir)
+	tmpdir := t.TempDir()
 
-	tmpFile, err := ioutil.TempFile(tmpdir, "ip_conntrack_count")
+	tmpFile, err := os.CreateTemp(tmpdir, "ip_conntrack_count")
 	require.NoError(t, err)
-	defer os.Remove(tmpFile.Name())
+	t.Cleanup(func() { require.NoError(t, tmpFile.Close()) })
 
 	dfltDirs = []string{tmpdir}
 	fname := path.Base(tmpFile.Name())
 	dfltFiles = []string{fname}
 
 	count := 1234321
-	require.NoError(t, ioutil.WriteFile(tmpFile.Name(), []byte(strconv.Itoa(count)), 0660))
+	require.NoError(t, os.WriteFile(tmpFile.Name(), []byte(strconv.Itoa(count)), 0660))
 	c := &Conntrack{}
 	acc := &testutil.Accumulator{}
 
@@ -58,16 +55,15 @@ func TestDefaultsUsed(t *testing.T) {
 
 func TestConfigsUsed(t *testing.T) {
 	defer restoreDflts(dfltFiles, dfltDirs)
-	tmpdir, err := ioutil.TempDir("", "tmp1")
-	require.NoError(t, err)
-	defer os.Remove(tmpdir)
+	tmpdir := t.TempDir()
 
-	cntFile, err := ioutil.TempFile(tmpdir, "nf_conntrack_count")
+	cntFile, err := os.CreateTemp(tmpdir, "nf_conntrack_count")
 	require.NoError(t, err)
-	maxFile, err := ioutil.TempFile(tmpdir, "nf_conntrack_max")
+	t.Cleanup(func() { require.NoError(t, cntFile.Close()) })
+
+	maxFile, err := os.CreateTemp(tmpdir, "nf_conntrack_max")
 	require.NoError(t, err)
-	defer os.Remove(cntFile.Name())
-	defer os.Remove(maxFile.Name())
+	t.Cleanup(func() { require.NoError(t, maxFile.Close()) })
 
 	dfltDirs = []string{tmpdir}
 	cntFname := path.Base(cntFile.Name())
@@ -76,8 +72,8 @@ func TestConfigsUsed(t *testing.T) {
 
 	count := 1234321
 	max := 9999999
-	require.NoError(t, ioutil.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0660))
-	require.NoError(t, ioutil.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0660))
+	require.NoError(t, os.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0660))
+	require.NoError(t, os.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0660))
 	c := &Conntrack{}
 	acc := &testutil.Accumulator{}
 

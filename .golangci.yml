@@ -4,7 +4,6 @@ linters:
     # - telegraflinter
     - bodyclose
     - dogsled
-    - errcheck
     - goprintffuncname
     - gosimple
     - govet
@@ -21,10 +20,6 @@ linters:
     - varcheck
 
 linters-settings:
-  # custom:
-  #   telegraflinter:
-  #     path: telegraflinter.so
-  #     description: "Find Telegraf specific review criteria, more info: https://github.com/influxdata/telegraf/wiki/Review"
   revive:
     rules:
       - name: argument-limit
@@ -75,6 +70,7 @@ linters-settings:
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unhandled-error
+        arguments: ["outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print"]
       - name: unnecessary-stmt
       - name: unreachable-code
       # - name: unused-parameter
@@ -128,6 +124,11 @@ issues:
 
     - path: _test\.go
       text: "parameter.*seems to be a control flag, avoid control coupling"
+
+    - path: (^agent/|^cmd/|^config/|^filter/|^internal/|^logger/|^metric/|^models/|^selfstat/|^testutil/|^tools|^plugins/serializers/|^plugins/inputs/zipkin/cmd)
+      text: "imports-blacklist: should not use the following blacklisted import: \"log\""
+      linters:
+        - revive
 
 output:
   format: tab

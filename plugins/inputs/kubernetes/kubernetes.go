@@ -1,10 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kubernetes
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -15,13 +17,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 // Kubernetes represents the config object for the plugin
 type Kubernetes struct {
 	URL string
 
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`
-	BearerTokenString string `toml:"bearer_token_string"`
+	BearerTokenString string `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 
 	LabelInclude []string `toml:"label_include"`
 	LabelExclude []string `toml:"label_exclude"`
@@ -36,33 +41,6 @@ type Kubernetes struct {
 	RoundTripper http.RoundTripper
 }
 
-var sampleConfig = `
-  ## URL for the kubelet
-  url = "http://127.0.0.1:10255"
-
-  ## Use bearer token for authorization. ('bearer_token' takes priority)
-  ## If both of these are empty, we'll use the default serviceaccount:
-  ## at: /run/secrets/kubernetes.io/serviceaccount/token
-  # bearer_token = "/path/to/bearer/token"
-  ## OR
-  # bearer_token_string = "abc_123"
-
-  ## Pod labels to be added as tags.  An empty array for both include and
-  ## exclude will include all labels.
-  # label_include = []
-  # label_exclude = ["*"]
-
-  ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = /path/to/cafile
-  # tls_cert = /path/to/certfile
-  # tls_key = /path/to/keyfile
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
 const (
 	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
 )
@@ -76,28 +54,14 @@ func init() {
 	})
 }
 
-//SampleConfig returns a sample config
-func (k *Kubernetes) SampleConfig() string {
+func (*Kubernetes) SampleConfig() string {
 	return sampleConfig
-}
-
-//Description returns the description of this plugin
-func (k *Kubernetes) Description() string {
-	return "Read metrics from the kubernetes kubelet api"
 }
 
 func (k *Kubernetes) Init() error {
 	// If neither are provided, use the default service account.
 	if k.BearerToken == "" && k.BearerTokenString == "" {
 		k.BearerToken = defaultServiceAccountPath
-	}
-
-	if k.BearerToken != "" {
-		token, err := ioutil.ReadFile(k.BearerToken)
-		if err != nil {
-			return err
-		}
-		k.BearerTokenString = strings.TrimSpace(string(token))
 	}
 
 	labelFilter, err := filter.NewIncludeExcludeFilter(k.LabelInclude, k.LabelExclude)
@@ -109,7 +73,7 @@ func (k *Kubernetes) Init() error {
 	return nil
 }
 
-//Gather collects kubernetes metrics from a given URL
+// Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	acc.AddError(k.gatherSummary(k.URL, acc))
 	return nil
@@ -213,6 +177,13 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 			ResponseHeaderTimeout: time.Duration(k.ResponseTimeout),
 		}
 	}
+	if k.BearerToken != "" {
+		token, err := os.ReadFile(k.BearerToken)
+		if err != nil {
+			return err
+		}
+		k.BearerTokenString = strings.TrimSpace(string(token))
+	}
 	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
 	req.Header.Add("Accept", "application/json")
 	resp, err = k.RoundTripper.RoundTrip(req)
@@ -234,6 +205,17 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 
 func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
+		podLabels := make(map[string]string)
+		for _, info := range podInfo {
+			if info.Name == pod.PodRef.Name && info.Namespace == pod.PodRef.Namespace {
+				for k, v := range info.Labels {
+					if labelFilter.Match(k) {
+						podLabels[k] = v
+					}
+				}
+			}
+		}
+
 		for _, container := range pod.Containers {
 			tags := map[string]string{
 				"node_name":      summaryMetrics.Node.NodeName,
@@ -241,16 +223,9 @@ func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFi
 				"container_name": container.Name,
 				"pod_name":       pod.PodRef.Name,
 			}
-			for _, info := range podInfo {
-				if info.Name == pod.PodRef.Name && info.Namespace == pod.PodRef.Namespace {
-					for k, v := range info.Labels {
-						if labelFilter.Match(k) {
-							tags[k] = v
-						}
-					}
-				}
+			for k, v := range podLabels {
+				tags[k] = v
 			}
-
 			fields := make(map[string]interface{})
 			fields["cpu_usage_nanocores"] = container.CPU.UsageNanoCores
 			fields["cpu_usage_core_nanoseconds"] = container.CPU.UsageCoreNanoSeconds
@@ -275,6 +250,9 @@ func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFi
 				"namespace":   pod.PodRef.Namespace,
 				"volume_name": volume.Name,
 			}
+			for k, v := range podLabels {
+				tags[k] = v
+			}
 			fields := make(map[string]interface{})
 			fields["available_bytes"] = volume.AvailableBytes
 			fields["capacity_bytes"] = volume.CapacityBytes
@@ -286,6 +264,9 @@ func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFi
 			"node_name": summaryMetrics.Node.NodeName,
 			"pod_name":  pod.PodRef.Name,
 			"namespace": pod.PodRef.Namespace,
+		}
+		for k, v := range podLabels {
+			tags[k] = v
 		}
 		fields := make(map[string]interface{})
 		fields["rx_bytes"] = pod.Network.RXBytes

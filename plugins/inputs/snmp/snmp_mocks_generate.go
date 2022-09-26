@@ -1,4 +1,4 @@
-// +build generate
+//go:build generate
 
 package main
 
