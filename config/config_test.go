@@ -736,7 +736,6 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 
 		// Get the parser set with 'SetParser()'
 		if p, ok := processor.Parser.(*models.RunningParser); ok {
-			require.NoError(t, p.Init())
 			actual = append(actual, p.Parser)
 		} else {
 			actual = append(actual, processor.Parser)

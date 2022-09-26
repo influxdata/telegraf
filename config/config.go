@@ -774,12 +774,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
-			parser, err := c.addParser("processors", name, table)
-			if err != nil {
-				return nil, err
-			}
-			err = parser.Init()
-			return parser, err
+			return c.addParser("processors", name, table)
 		})
 	}
 
@@ -919,12 +914,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
-			parser, err := c.addParser("inputs", name, table)
-			if err != nil {
-				return nil, err
-			}
-			err = parser.Init()
-			return parser, err
+			return c.addParser("inputs", name, table)
 		})
 	}
 
@@ -934,12 +924,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
-			parser, err := c.addParser("inputs", name, table)
-			if err != nil {
-				return nil, err
-			}
-			err = parser.Init()
-			return parser, err
+			return c.addParser("inputs", name, table)
 		})
 	}
 
