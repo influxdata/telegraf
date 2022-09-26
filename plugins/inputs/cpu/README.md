@@ -6,7 +6,7 @@ The `cpu` plugin gather metrics on the system CPUs.
 
 The [gopsutil][1] library, which is used to collect CPU data, does not support
 gathering CPU metrics without CGO on macOS. The user will see a "not
-implimented" message in this case. Builds provided by InfluxData do not build
+implemented" message in this case. Builds provided by InfluxData do not build
 with CGO.
 
 Users can use the builds provided by [Homebrew][2], which build with CGO, to
