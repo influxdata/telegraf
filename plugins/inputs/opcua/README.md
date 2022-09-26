@@ -95,6 +95,9 @@ Plugin minimum tested version: 1.16
   # [inputs.opcua.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
     # additional_valid_status_codes = ["0xC0"]
+
+    ## Use regular reads instead of registered reads
+    # use_regular_reads = false
 ```
 
 ## Node Configuration
@@ -151,6 +154,10 @@ This example group configuration has two groups with two nodes each:
     {name="sin", identifier="1004"},
   ]
 ```
+
+## Metrics
+
+Metrics are produced according to the defined node ID and group configuration.
 
 ## Example Output
 
