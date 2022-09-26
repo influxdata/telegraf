@@ -113,6 +113,7 @@ Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
   # max_message_bytes = 1000000
 
   ## Optional TLS Config
+  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
