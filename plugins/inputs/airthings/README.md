@@ -1,13 +1,18 @@
 # Airthings Input Plugin
 
-The [Airthings](https://www.airthings.com) plugin collects metrics from Airthings devices.
-The metrics is accessed via the Airthings API.
-See the [Airthings API](https://developer.airthings.com/docs/api-getting-started/index.html) for details.
+The [Airthings](https://www.airthings.com) plugin collects 
+metrics from Airthings devices. The metrics is accessed via 
+the Airthings API.
+See the [Airthings API
+](https://developer.airthings.com/docs/api-getting-started/index.html) 
+for details.
 
 ## Airthings for Consumers
 
-A consumer can create one Airthings API-client, with Client Credentials Grant authorization.
-The client can be used to fetch air quality data uploaded by the customer's own device.
+A consumer can create one Airthings API-client, 
+with Client Credentials Grant authorization.
+The client can be used to fetch air quality 
+data uploaded by the customer's own device.
 The API is limited to 120 requests per hour
 
 ## Airthings for Business
@@ -58,7 +63,9 @@ X-RateLimit-Retry-After: 100 // A new request can be performed after this many s
 ```
 
 ## Metrics
-Metrics changes depending on device type and what is exported via the Airthinsg API.
+Metrics changes depending on device type 
+and what is exported via the Airthinsg API.
+
 Metrics may include:
 - battery
 - humidity
