@@ -97,7 +97,7 @@ Plugin minimum tested version: 1.16
     # additional_valid_status_codes = ["0xC0"]
 
     ## Use regular reads instead of registered reads
-    # use_unregistered_reads = false
+    # use_regular_reads = false
 ```
 
 ## Node Configuration
