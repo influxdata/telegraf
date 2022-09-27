@@ -26,17 +26,17 @@ var sampleConfig string
 
 type DeviceList struct {
 	Devices []struct {
-		Id         string        `json:"id"`
+		ID         string        `json:"id"`
 		DeviceType string        `json:"deviceType"`
 		Sensors    []interface{} `json:"sensors"`
 		Segment    struct {
-			Id      string `json:"id"`
+			ID      string `json:"id"`
 			Name    string `json:"name"`
 			Started string `json:"started"`
 			Active  bool   `json:"active"`
 		} `json:"segment"`
 		Location struct {
-			Id   string `json:"id"`
+			ID   string `json:"id"`
 			Name string `json:"name"`
 		} `json:"location"`
 	} `json:"devices"`
@@ -68,7 +68,7 @@ type Airthings struct {
 	ShowInactive bool            `toml:"showInactive"`
 	ClientID     string          `toml:"client_id"`
 	ClientSecret string          `toml:"client_secret"`
-	TokenUrl     string          `toml:"token_url"`
+	TokenURL     string          `toml:"token_url"`
 	Scopes       []string        `toml:"scopes"`
 	Timeout      config.Duration `toml:"timeout"`
 	TimeZone     string          `toml:"timeZone"`
@@ -98,13 +98,13 @@ func (m *Airthings) Init() error {
 		m.location = location
 	}
 	m.timer = time.Now().In(m.location)
-	m.Log.Infof("Init with locale: %v", m.location)
+	m.Log.Infof("Init with location: %v", m.location)
 
 	if m.cfg == nil {
 		m.cfg = &clientcredentials.Config{
 			ClientID:     m.ClientID,
 			ClientSecret: m.ClientSecret,
-			TokenURL:     m.TokenUrl,
+			TokenURL:     m.TokenURL,
 			Scopes:       m.Scopes,
 		}
 	}
@@ -123,7 +123,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 	}
 	for _, device := range deviceList.Devices {
 
-		var segStartedTime = ""
+		var segStartedTime string
 		zonedTime, err := enforceTimeZone(device.Segment.Started, m.location)
 		if err != nil {
 			m.Log.Errorf("time stamp: '%s' not parsable with format '%s' error: %v",
@@ -135,19 +135,19 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 
 		var airTags = map[string]string{
 			TagName:           "airthings",
-			TagID:             device.Id,
+			TagID:             device.ID,
 			TagDeviceType:     device.DeviceType,
-			TagSegmentID:      device.Segment.Id,
+			TagSegmentID:      device.Segment.ID,
 			TagSegmentName:    device.Segment.Name,
 			TagSegmentActive:  strconv.FormatBool(device.Segment.Active),
 			TagSegmentStarted: segStartedTime,
 		}
-		var ts = time.Now().In(m.location)
-		air, ts, err := m.deviceSamples(device.Id)
+		var ts = time.Time{}
+		air, ts, err := m.deviceSamples(device.ID)
 		if err != nil {
 			return err
 		}
-		details, err := m.deviceDetails(device.Id)
+		details, err := m.deviceDetails(device.ID)
 		if err != nil {
 			return err
 		}
@@ -163,7 +163,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 		m.Log.Debugf("Add tags and fields %v <-> %v", airTags, air)
-		acc.AddFields("airthings_connector", air, airTags, ts)
+		acc.AddFields("airthings", air, airTags, ts)
 	}
 	return nil
 }
@@ -220,7 +220,9 @@ func (m *Airthings) deviceList() (*DeviceList, error) {
 		return nil, err
 	}
 
-	u.Query().Add("showInactive", strconv.FormatBool(m.ShowInactive))
+	values := u.Query()
+	values.Add("showInactive", strconv.FormatBool(m.ShowInactive))
+	u.RawQuery = values.Encode()
 
 	resp, err := m.doHTTPRequest(http.MethodGet, u.String(), "/devices")
 	if err != nil {
@@ -234,8 +236,8 @@ func (m *Airthings) deviceList() (*DeviceList, error) {
 	return &dl, nil
 }
 
-func (m *Airthings) doHTTPRequest(httpMethod string, baseUrl string, pathComponents ...string) ([]byte, error) {
-	u, err := url.Parse(baseUrl)
+func (m *Airthings) doHTTPRequest(httpMethod string, baseURL string, pathComponents ...string) ([]byte, error) {
+	u, err := url.Parse(baseURL)
 	if err != nil {
 		m.Log.Errorf("error parsing url %v, %v", m.URL, err)
 		return nil, err
@@ -244,6 +246,10 @@ func (m *Airthings) doHTTPRequest(httpMethod string, baseUrl string, pathCompone
 		u.Path = path.Join(u.Path, pc)
 	}
 	r, err := http.NewRequest(httpMethod, u.String(), nil)
+	if err != nil {
+		m.Log.Errorf("error creating request: %v, %v", m.URL, err)
+		return nil, err
+	}
 	m.Log.Debugf("%s request to %s", r.Proto, u)
 	r.Header.Add("Accept", "application/json")
 	resp, err := m.httpClient.Do(r)

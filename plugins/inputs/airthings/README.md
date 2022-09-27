@@ -68,19 +68,23 @@ and what is exported via the Airthinsg API.
 
 Metrics may include:
 - battery
+- co2
 - humidity
+- pressure
 - radonShortTermAvg
 - relayDeviceType
 - rssi
 - temp
+- voc
+
 
 ## Tags
+- deviceType
 - id
 - name
-- deviceType
+- segment.active
 - segment.id
 - segment.name
-- segment.active
 - segment.started
 
 ## Example Output
@@ -88,5 +92,5 @@ Metrics may include:
 Here is example output of this plugin:
 
 ```shell
-airthings_connector,deviceType=WAVE_GEN2,host=local,id=2950045693,name=airthings,segment.active=true,segment.id=3f2f2e23-f81d-46dd-8da6-9c5ed051b6e5,segment.name=Basement,segment.started=2022-03-28T07:50:44+02:00 battery=76,humidity=56,radonShortTermAvg=68,relayDeviceType="hub",rssi=-37,temp=19.2 1664307786000000000
+airthings,deviceType=WAVE_GEN2,host=local,id=2950045693,name=airthings,segment.active=true,segment.id=3f2f2e23-f81d-46dd-8da6-9c5ed051b6e5,segment.name=Basement,segment.started=2022-03-28T07:50:44+02:00 battery=76,humidity=56,radonShortTermAvg=68,relayDeviceType="hub",rssi=-37,temp=19.2 1664307786000000000
 ```

@@ -50,12 +50,17 @@ func TestMain(m *testing.M) {
 		ShowInactive: true,
 		ClientID:     "clientid",
 		ClientSecret: "clientsecret",
-		TokenUrl:     ts.URL + "/v1/token",
+		TokenURL:     ts.URL + "/v1/token",
 		Scopes:       []string{"read:device:current_values"},
 		Timeout:      config.Duration(5 * time.Second),
 		Log:          testutil.Logger{},
+		TimeZone:     "UTC",
 	}
-	airthings.Init()
+	err := airthings.Init()
+	if err != nil {
+		airthings.Log.Errorf("Test error in init(): %v", err)
+		return
+	}
 	airthings.Log.Debugf("Server listen to %s", ts.URL)
 	code := m.Run()
 
@@ -115,7 +120,7 @@ func TestGetDeviceListAndData(t *testing.T) {
 }
 
 func assertWaveMini(t *testing.T, acc *testutil.Accumulator) {
-	acc.AssertContainsTaggedFields(t, "airthings_connector",
+	acc.AssertContainsTaggedFields(t, "airthings",
 		map[string]interface{}{
 			MesBattery:         float64(78),
 			MesHumidity:        float64(24),
@@ -132,12 +137,12 @@ func assertWaveMini(t *testing.T, acc *testutil.Accumulator) {
 			TagSegmentID:      "c6ddc7f5-e052-4969-8cca-f79f6a96b4f1",
 			TagSegmentName:    "VOC",
 			TagSegmentActive:  "true",
-			TagSegmentStarted: "2120-09-12T07:20:28",
+			TagSegmentStarted: "2120-09-12T07:20:28Z",
 		})
 }
 
 func assertWavePlus(t *testing.T, acc *testutil.Accumulator) {
-	acc.AssertContainsTaggedFields(t, "airthings_connector",
+	acc.AssertContainsTaggedFields(t, "airthings",
 		map[string]interface{}{
 			MesBattery:           float64(100),
 			MesCo2:               float64(1456),
@@ -156,12 +161,12 @@ func assertWavePlus(t *testing.T, acc *testutil.Accumulator) {
 			TagSegmentActive:  "true",
 			TagSegmentID:      "2bd162ce-4470-429f-8eff-4680ed5c6197",
 			TagSegmentName:    "Bedroom",
-			TagSegmentStarted: "2122-10-22T20:19:18",
+			TagSegmentStarted: "2122-10-22T20:19:18Z",
 		})
 }
 
 func assertGen2(t *testing.T, acc *testutil.Accumulator) {
-	acc.AssertContainsTaggedFields(t, "airthings_connector",
+	acc.AssertContainsTaggedFields(t, "airthings",
 		map[string]interface{}{
 			MesBattery:           float64(100),
 			MesHumidity:          float64(23),
@@ -177,7 +182,7 @@ func assertGen2(t *testing.T, acc *testutil.Accumulator) {
 			TagSegmentActive:  "true",
 			TagSegmentID:      "3f2f2e23-f81d-46dd-8da6-9c5ed051b6e5",
 			TagSegmentName:    "Basement",
-			TagSegmentStarted: "2122-11-11T17:52:43",
+			TagSegmentStarted: "2122-11-11T17:52:43Z",
 		})
 }
 func TestEnforceTimeZone(t *testing.T) {
