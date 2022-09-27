@@ -96,8 +96,8 @@ Plugin minimum tested version: 1.16
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
     # additional_valid_status_codes = ["0xC0"]
 
-    ## Use regular reads instead of registered reads
-    # use_regular_reads = false
+    ## Use unregistered reads instead of registered reads
+    # use_unregistered_reads = false
 ```
 
 ## Node Configuration
