@@ -43,16 +43,16 @@ type DeviceList struct {
 }
 
 const (
-	Id         = "id"
+	ID         = "id"
 	DeviceType = "deviceType"
 	Location   = "location"
 	Segment    = "segment"
 	Sensors    = "sensors"
 
 	TagName           = "name"
-	TagId             = Id
+	TagID             = ID
 	TagDeviceType     = DeviceType
-	TagSegmentId      = Segment + ".id"
+	TagSegmentID      = Segment + ".id"
 	TagSegmentName    = Segment + ".name"
 	TagSegmentActive  = Segment + ".active"
 	TagSegmentStarted = Segment + ".started"
@@ -66,7 +66,7 @@ type Airthings struct {
 
 	URL          string          `toml:"url"`
 	ShowInactive bool            `toml:"showInactive"`
-	ClientId     string          `toml:"client_id"`
+	ClientID     string          `toml:"client_id"`
 	ClientSecret string          `toml:"client_secret"`
 	TokenUrl     string          `toml:"token_url"`
 	Scopes       []string        `toml:"scopes"`
@@ -102,7 +102,7 @@ func (m *Airthings) Init() error {
 
 	if m.cfg == nil {
 		m.cfg = &clientcredentials.Config{
-			ClientID:     m.ClientId,
+			ClientID:     m.ClientID,
 			ClientSecret: m.ClientSecret,
 			TokenURL:     m.TokenUrl,
 			Scopes:       m.Scopes,
@@ -135,9 +135,9 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 
 		var airTags = map[string]string{
 			TagName:           "airthings",
-			TagId:             device.Id,
+			TagID:             device.Id,
 			TagDeviceType:     device.DeviceType,
-			TagSegmentId:      device.Segment.Id,
+			TagSegmentID:      device.Segment.Id,
 			TagSegmentName:    device.Segment.Name,
 			TagSegmentActive:  strconv.FormatBool(device.Segment.Active),
 			TagSegmentStarted: segStartedTime,
@@ -153,7 +153,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		}
 		for k, v := range *details {
 			switch k {
-			case Id:
+			case ID:
 			case DeviceType:
 			case Location:
 			case Segment:
@@ -168,9 +168,9 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *Airthings) deviceSamples(deviceId string) (map[string]interface{}, time.Time, error) {
+func (m *Airthings) deviceSamples(deviceID string) (map[string]interface{}, time.Time, error) {
 	var ts = time.Now().In(m.location)
-	resp, err := m.doHttpRequest(http.MethodGet, m.URL, "/devices/", deviceId, "/latest-samples")
+	resp, err := m.doHTTPRequest(http.MethodGet, m.URL, "/devices/", deviceID, "/latest-samples")
 	if err != nil {
 		return nil, ts, err
 	}
@@ -197,12 +197,12 @@ func (m *Airthings) deviceSamples(deviceId string) (map[string]interface{}, time
 		}
 		return air, ts, nil
 	}
-	return nil, ts, fmt.Errorf("No key 'data' in json data from sensor %s", deviceId)
+	return nil, ts, fmt.Errorf("No key 'data' in json data from sensor %s", deviceID)
 }
 
-func (m *Airthings) deviceDetails(deviceId string) (*map[string]interface{}, error) {
+func (m *Airthings) deviceDetails(deviceID string) (*map[string]interface{}, error) {
 	var objmap map[string]interface{}
-	resp, err := m.doHttpRequest(http.MethodGet, m.URL, "/devices", deviceId)
+	resp, err := m.doHTTPRequest(http.MethodGet, m.URL, "/devices", deviceID)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func (m *Airthings) deviceList() (*DeviceList, error) {
 
 	u.Query().Add("showInactive", strconv.FormatBool(m.ShowInactive))
 
-	resp, err := m.doHttpRequest(http.MethodGet, u.String(), "/devices")
+	resp, err := m.doHTTPRequest(http.MethodGet, u.String(), "/devices")
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func (m *Airthings) deviceList() (*DeviceList, error) {
 	return &dl, nil
 }
 
-func (m *Airthings) doHttpRequest(httpMethod string, baseUrl string, pathComponents ...string) ([]byte, error) {
+func (m *Airthings) doHTTPRequest(httpMethod string, baseUrl string, pathComponents ...string) ([]byte, error) {
 	u, err := url.Parse(baseUrl)
 	if err != nil {
 		m.Log.Errorf("error parsing url %v, %v", m.URL, err)

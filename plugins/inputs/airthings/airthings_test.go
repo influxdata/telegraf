@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	HttpContentTypeKey  = "Content-Type"
-	HttpContentTypeForm = "application/x-www-form-urlencoded"
-	HttpContentTypeJson = "application/json"
+	HTTPContentTypeKey  = "Content-Type"
+	HTTPContentTypeForm = "application/x-www-form-urlencoded"
+	HTTPContentTypeJSON = "application/json"
 
 	MesBattery           = "battery"
 	MesHumidity          = "humidity"
@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 	airthings = Airthings{
 		URL:          ts.URL,
 		ShowInactive: true,
-		ClientId:     "clientid",
+		ClientID:     "clientid",
 		ClientSecret: "clientsecret",
 		TokenUrl:     ts.URL + "/v1/token",
 		Scopes:       []string{"read:device:current_values"},
@@ -67,40 +67,31 @@ func setupTestServer(m *testing.M) *httptest.Server {
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		airthings.Log.Debugf("request to: %v", r.URL)
 		airthings.Log.Debugf("headers to: %v", r.Header)
-		var deviceId = func() string {
-			devIdTmp := rexp.FindStringSubmatch(r.URL.Path)
-			if devIdTmp != nil && len(devIdTmp) > 1 {
-				return devIdTmp[1]
+		var deviceID = func() string {
+			devIDTmp := rexp.FindStringSubmatch(r.URL.Path)
+			if devIDTmp != nil && len(devIDTmp) > 1 {
+				return devIDTmp[1]
 			}
 			return ""
 		}()
 
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/token" {
-			w.Header().Set(HttpContentTypeKey, HttpContentTypeForm)
+			w.Header().Set(HTTPContentTypeKey, HTTPContentTypeForm)
 			fmt.Fprint(w, "access_token=acc35570d3n&scope=user&token_type=bearer")
 		} else if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/devices") {
-			w.Header().Set(HttpContentTypeKey, HttpContentTypeJson)
+			w.Header().Set(HTTPContentTypeKey, HTTPContentTypeJSON)
 			fmt.Fprint(w, readTestData("testdata/device_list.json"))
 		} else if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/latest-samples") {
 			_, serialNumber := path.Split(path.Dir(r.URL.Path))
-			w.Header().Set(HttpContentTypeKey, HttpContentTypeJson)
+			w.Header().Set(HTTPContentTypeKey, HTTPContentTypeJSON)
 			fmt.Fprint(w, readTestData("testdata/sample_"+serialNumber+".json"))
-		} else if r.Method == http.MethodGet && len(deviceId) > 0 {
-			w.Header().Set(HttpContentTypeKey, HttpContentTypeJson)
-			fmt.Fprint(w, readTestData("testdata/device_"+deviceId+".json"))
+		} else if r.Method == http.MethodGet && len(deviceID) > 0 {
+			w.Header().Set(HTTPContentTypeKey, HTTPContentTypeJSON)
+			fmt.Fprint(w, readTestData("testdata/device_"+deviceID+".json"))
 		} else {
 			fmt.Printf("request --> %v", r)
 			fmt.Fprintln(w, readTestData("testdata/error.json"))
 		}
-		/*
-			resp := w.Result()
-			body, _ := io.ReadAll(resp.Body)
-
-			fmt.Println(resp.StatusCode)
-			fmt.Println(resp.Header.Get("Content-Type"))
-			fmt.Println(string(body))
-
-		*/
 	}))
 	return ts
 }
@@ -136,9 +127,9 @@ func assertWaveMini(t *testing.T, acc *testutil.Accumulator) {
 		},
 		map[string]string{
 			TagName:           "airthings",
-			TagId:             "9990019182",
+			TagID:             "9990019182",
 			TagDeviceType:     "WAVE_MINI",
-			TagSegmentId:      "c6ddc7f5-e052-4969-8cca-f79f6a96b4f1",
+			TagSegmentID:      "c6ddc7f5-e052-4969-8cca-f79f6a96b4f1",
 			TagSegmentName:    "VOC",
 			TagSegmentActive:  "true",
 			TagSegmentStarted: "2120-09-12T07:20:28",
@@ -160,10 +151,10 @@ func assertWavePlus(t *testing.T, acc *testutil.Accumulator) {
 		},
 		map[string]string{
 			TagDeviceType:     "WAVE_PLUS",
-			TagId:             "9990131459",
+			TagID:             "9990131459",
 			TagName:           "airthings",
 			TagSegmentActive:  "true",
-			TagSegmentId:      "2bd162ce-4470-429f-8eff-4680ed5c6197",
+			TagSegmentID:      "2bd162ce-4470-429f-8eff-4680ed5c6197",
 			TagSegmentName:    "Bedroom",
 			TagSegmentStarted: "2122-10-22T20:19:18",
 		})
@@ -181,10 +172,10 @@ func assertGen2(t *testing.T, acc *testutil.Accumulator) {
 		},
 		map[string]string{
 			TagDeviceType:     "WAVE_GEN2",
-			TagId:             "9990012993",
+			TagID:             "9990012993",
 			TagName:           "airthings",
 			TagSegmentActive:  "true",
-			TagSegmentId:      "3f2f2e23-f81d-46dd-8da6-9c5ed051b6e5",
+			TagSegmentID:      "3f2f2e23-f81d-46dd-8da6-9c5ed051b6e5",
 			TagSegmentName:    "Basement",
 			TagSegmentStarted: "2122-11-11T17:52:43",
 		})
