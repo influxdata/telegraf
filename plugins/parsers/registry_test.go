@@ -15,11 +15,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 )
 
-var notBackwardsCompatible = map[string]struct{}{
-	// Add any parsers that do not provide backwards-compatibility here
-	"avro": {},
-}
-
 func TestRegistry_BackwardCompatibility(t *testing.T) {
 	cfg := &parsers.Config{
 		MetricName:        "parser_compatibility_test",
@@ -53,7 +48,8 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 	newStyleOnly := []string{"binary"}
 
 	for name, creator := range parsers.Parsers {
-		if _, ok := notBackwardsCompatible[name]; ok {
+		if name == "avro" {
+			// Avro has no backwards-compatibility accommodation
 			t.Logf("skipping %q...", name)
 			continue
 		}
