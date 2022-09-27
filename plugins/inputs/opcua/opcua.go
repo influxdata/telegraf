@@ -26,7 +26,7 @@ var sampleConfig string
 
 type OpcuaWorkarounds struct {
 	AdditionalValidStatusCodes []string `toml:"additional_valid_status_codes"`
-	UseRegularReads            bool     `toml:"use_regular_reads"`
+	UseUnregisteredReads       bool     `toml:"use_unregistered_reads"`
 }
 
 // OpcUA type
@@ -366,7 +366,7 @@ func Connect(o *OpcUA) error {
 			return fmt.Errorf("error in Client Connection: %s", err)
 		}
 
-		if !o.Workarounds.UseRegularReads {
+		if !o.Workarounds.UseUnregisteredReads {
 			regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
 				NodesToRegister: o.nodeIDs,
 			})
