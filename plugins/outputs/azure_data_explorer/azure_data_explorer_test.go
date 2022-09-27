@@ -255,9 +255,7 @@ func TestWriteWithType(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
 			serializer, err := telegrafJson.NewSerializer(time.Second, "", "")
 			require.NoError(t, err)
 			for tableName, jsonValue := range testCase.tableNameToExpectedResult {

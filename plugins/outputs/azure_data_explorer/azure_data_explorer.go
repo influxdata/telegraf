@@ -241,7 +241,7 @@ func (adx *AzureDataExplorer) getMetricIngestor(ctx context.Context, tableName s
 	return ingestor, nil
 }
 
-//Deprecated: getMetricIngestor introduced to use inget.Ingestor instead of localIngestor
+// Deprecated: getMetricIngestor introduced to use inget.Ingestor instead of localIngestor
 func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string) (localIngestor, error) {
 	ingestor := adx.ingesters[tableName]
 
@@ -334,7 +334,7 @@ func init() {
 	})
 }
 
-//Deprecated: createIngestorByTable should be used with ingestionType and ingest.Ingestor
+// Deprecated: createIngestorByTable should be used with ingestionType and ingest.Ingestor
 func createRealIngestor(client localClient, database string, tableName string) (localIngestor, error) {
 	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
 	if ingestor != nil {
