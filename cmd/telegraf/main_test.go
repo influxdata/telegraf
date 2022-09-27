@@ -199,9 +199,8 @@ func TestCommandConfig(t *testing.T) {
 		expectedPlugins []string
 		removedPlugins  []string
 	}{
-		// Deprecated flag replaced with command "config"
 		{
-			name:     "no filters",
+			name:     "deprecated flag --sample-config",
 			commands: []string{"--sample-config"},
 			expectedHeaders: []string{
 				outputHeader,
@@ -288,6 +287,27 @@ func TestCommandConfig(t *testing.T) {
 			},
 			removedPlugins: []string{
 				"[[aggregators.minmax]]",
+			},
+		},
+		{
+			name:     "test filters before config",
+			commands: []string{"--input-filter", "cpu:file", "config"},
+			expectedPlugins: []string{
+				"[[inputs.cpu]]",
+				"[[inputs.file]]",
+			},
+			removedPlugins: []string{
+				"[[inputs.disk]]",
+			},
+		},
+		{
+			name:     "test filters before and after config",
+			commands: []string{"--input-filter", "file", "config", "--input-filter", "cpu"},
+			expectedPlugins: []string{
+				"[[inputs.cpu]]",
+			},
+			removedPlugins: []string{
+				"[[inputs.file]]",
 			},
 		},
 	}

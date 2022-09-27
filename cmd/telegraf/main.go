@@ -309,14 +309,50 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				Usage: "print out full sample configuration to stdout",
 				Flags: pluginFilterFlags,
 				Action: func(cCtx *cli.Context) error {
+					allCtx := cCtx.Lineage()
+
+					var section, input, output, aggregator, processor string
+
+					// The old style was:
+					// ./telegraf --section-filter inputs --input-filter cpu config >test.conf
+					// The new style is:
+					// ./telegraf config --section-filter inputs --input-filter cpu >test.conf
+					// To support the old style, check if the parent context has the filter flags defined
+					if len(allCtx) >= 2 {
+						parent := allCtx[1]
+						section = parent.String("section-filter")
+						input = parent.String("input-filter")
+						output = parent.String("output-filter")
+						aggregator = parent.String("aggregator-filter")
+						processor = parent.String("processor-filter")
+					}
+
+					// If both the global and subcommand filters are defined
+					// Prefer to use the subcommand filters
+					if sub := cCtx.String("section-filter"); sub == "" {
+						section = sub
+					}
+					if sub := cCtx.String("input-filter"); sub != "" {
+						input = sub
+					}
+					if sub := cCtx.String("output-filter"); sub != "" {
+						output = sub
+					}
+					if sub := cCtx.String("aggregator-filter"); sub != "" {
+						aggregator = sub
+					}
+					if sub := cCtx.String("processor-filter"); sub != "" {
+						processor = sub
+					}
+
 					// The sub_Filters are populated when the filter flags are set after the subcommand config
 					// e.g. telegraf config --section-filter inputs
 					filters := processFilterFlags(
-						cCtx.String("section-filter"),
-						cCtx.String("input-filter"),
-						cCtx.String("output-filter"),
-						cCtx.String("aggregator-filter"),
-						cCtx.String("processor-filter"),
+						section,
+						input,
+						output,
+						aggregator,
+						processor,
 					)
 
 					printSampleConfig(
