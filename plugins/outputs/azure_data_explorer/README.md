@@ -41,7 +41,19 @@ of logs, metrics and time series data.
   ## Creates tables and relevant mapping if set to true(default).
   ## Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role.
   # create_tables = true
+
+  ##  Ingestion method to use.
+  ##  Available options are
+  ##    - managed  --  streaming ingestion with fallback to batched ingestion or the "queued" method below
+  ##    - queued   --  queue up metrics data and process sequentially
+  # ingestion_type = "queued"
 ```
+
+## Deprecations
+
+- `localClient` and `localIngestor` has been deprecated since the introduction of [`kusto.Client`](https://github.com/Azure/azure-kusto-go/blob/master/kusto/kusto.go#L111) and [`ingest.Ingestor`](https://github.com/Azure/azure-kusto-go/blob/master/kusto/ingest/ingest.go#L18) respectively in [Auzre Kusto Go SDK](https://github.com/Azure/azure-kusto-go). The change is done to maintain the consistency.
+- Because the deprications are internal, changes will not impact public usage,
+- The related deprecated code will be removed in the next update.
 
 ## Metrics Grouping
 
@@ -92,6 +104,18 @@ The corresponding table mapping would be like the following:
 
 **Note**: This plugin will automatically create Azure Data Explorer tables and
 corresponding table mapping as per the above mentioned commands.
+
+## Ingestion type
+
+**Note**:
+[Streaming ingestion](https://aka.ms/AAhlg6s)
+has to be enabled on ADX [configure the ADX cluster]
+in case of `managed` option.
+Refer the query below to check if streaming is enabled
+
+```kql
+.show database <DB-Name> policy streamingingestion
+```
 
 ## Authentiation
 
