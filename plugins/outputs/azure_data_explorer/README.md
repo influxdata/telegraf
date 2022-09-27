@@ -49,12 +49,6 @@ of logs, metrics and time series data.
   # ingestion_type = "queued"
 ```
 
-## Deprecations
-
-- `localClient` and `localIngestor` has been deprecated since the introduction of [`kusto.Client`](https://github.com/Azure/azure-kusto-go/blob/master/kusto/kusto.go#L111) and [`ingest.Ingestor`](https://github.com/Azure/azure-kusto-go/blob/master/kusto/ingest/ingest.go#L18) respectively in [Auzre Kusto Go SDK](https://github.com/Azure/azure-kusto-go). The change is done to maintain the consistency.
-- Because the deprications are internal, changes will not impact public usage,
-- The related deprecated code will be removed in the next update.
-
 ## Metrics Grouping
 
 Metrics can be grouped in two ways to be sent to Azure Data Explorer. To specify
