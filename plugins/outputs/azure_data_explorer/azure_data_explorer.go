@@ -36,6 +36,7 @@ type AzureDataExplorer struct {
 	MetricsGrouping string          `toml:"metrics_grouping_type"`
 	TableName       string          `toml:"table_name"`
 	CreateTables    bool            `toml:"create_tables"`
+	IngestionType   string          `toml:"ingestion_type"`
 	//Deprecated: client of type *kusto.Client, ingestors of type ingest.Ingestor introduced
 	client    localClient
 	ingesters map[string]localIngestor
@@ -44,7 +45,6 @@ type AzureDataExplorer struct {
 	//Deprecated
 	createIngestor ingestorFactory
 	/***/
-	IngestionType   string `toml:"ingestion_type"`
 	kustoClient     *kusto.Client
 	metricIngestors map[string]ingest.Ingestor
 }
@@ -345,32 +345,13 @@ func createRealIngestor(client localClient, database string, tableName string) (
 
 // For each table create the ingestor
 func createIngestorByTable(client *kusto.Client, database string, tableName string, ingestionType string) (ingest.Ingestor, error) {
-	var ingestor ingest.Ingestor
-	var err error
 	switch strings.ToLower(ingestionType) {
 	case managedIngestion:
-		{
-			mi, err := ingest.NewManaged(client, database, tableName)
-			if err != nil {
-				return nil, err
-			}
-			ingestor = mi
-		}
+		mi, err := ingest.NewManaged(client, database, tableName)
+		return mi, err
 	case queuedIngestion:
-		{
-			qi, err := ingest.New(client, database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
-			if err != nil {
-				return nil, err
-			}
-			ingestor = qi
-		}
-	default:
-		{
-			err = fmt.Errorf(`ingestion_type has to be one of %q or %q`, managedIngestion, queuedIngestion)
-		}
+		qi, err := ingest.New(client, database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
+		return qi, err
 	}
-	if ingestor != nil {
-		return ingestor, nil
-	}
-	return nil, err
+	return nil, fmt.Errorf(`ingestion_type has to be one of %q or %q`, managedIngestion, queuedIngestion)
 }

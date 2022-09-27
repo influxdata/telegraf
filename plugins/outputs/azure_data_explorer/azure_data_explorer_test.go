@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +22,6 @@ import (
 const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
-//Deprecated
 func TestWrite(t *testing.T) {
 	testCases := []struct {
 		name               string
@@ -204,11 +202,10 @@ func TestWriteWithType(t *testing.T) {
 	expectedResultMap := map[string]string{metricName: `{"fields":{"value":1},"name":"test1","tags":{"tag1":"value1"},"timestamp":1257894000}`}
 	mockMetrics := testutil.MockMetrics()
 	// Multi tables
-	mockMetrics2 := testutil.TestMetric(1.0, "test2")
-	mockMetrics3 := testutil.TestMetric(2.0, "test3")
-	mockMetricsMulti := make([]telegraf.Metric, 2)
-	mockMetricsMulti[0] = mockMetrics2
-	mockMetricsMulti[1] = mockMetrics3
+	mockMetricsMulti := []telegraf.Metric{
+		testutil.TestMetric(1.0, "test2"),
+		testutil.TestMetric(2.0, "test3"),
+	}
 	expectedResultMap2 := map[string]string{"test2": `{"fields":{"value":1.0},"name":"test2","tags":{"tag1":"value1"},"timestamp":1257894000}`, "test3": `{"fields":{"value":2.0},"name":"test3","tags":{"tag1":"value1"},"timestamp":1257894000}`}
 	// List of tests
 	testCases := []struct {
@@ -260,7 +257,7 @@ func TestWriteWithType(t *testing.T) {
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 			serializer, err := telegrafJson.NewSerializer(time.Second, "", "")
 			require.NoError(t, err)
 			for tableName, jsonValue := range testCase.tableNameToExpectedResult {
@@ -283,19 +280,19 @@ func TestWriteWithType(t *testing.T) {
 					},
 					serializer: serializer,
 				}
-				errorInWrite := plugin.Write(testCase.inputMetric)
+				err := plugin.Write(testCase.inputMetric)
 				if testCase.expectedWriteError != "" {
-					require.EqualError(t, errorInWrite, testCase.expectedWriteError)
-				} else {
-					require.NoError(t, errorInWrite)
-					createdIngestor := plugin.metricIngestors[tableName]
-					if testCase.metricsGrouping == singleTable {
-						createdIngestor = plugin.metricIngestors[tableName]
-					}
-					records := mockIngestor.records[0] // the first element
-					require.NotNil(t, createdIngestor)
-					require.JSONEq(t, jsonValue, records)
+					require.EqualError(t, err, testCase.expectedWriteError)
+					continue
 				}
+				require.NoError(t, err)
+				createdIngestor := plugin.metricIngestors[tableName]
+				if testCase.metricsGrouping == singleTable {
+					createdIngestor = plugin.metricIngestors[tableName]
+				}
+				records := mockIngestor.records[0] // the first element
+				require.NotNil(t, createdIngestor)
+				require.JSONEq(t, jsonValue, records)
 			}
 		})
 	}
@@ -346,7 +343,7 @@ type mockIngestor struct {
 }
 
 func (m *mockIngestor) FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error) {
-	bufbytes, _ := ioutil.ReadAll(reader)
+	bufbytes, _ := io.ReadAll(reader)
 	metricjson := string(bufbytes)
 	m.SetRecords(strings.Split(metricjson, "\n"))
 	return &ingest.Result{}, nil
