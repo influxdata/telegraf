@@ -137,8 +137,8 @@ func TestClient1Integration(t *testing.T) {
 		}
 	}
 
-	// test regular reads workaround
-	o.Workarounds.UseRegularReads = true
+	// test unregistered reads workaround
+	o.Workarounds.UseUnregisteredReads = true
 
 	for i := range o.nodeData {
 		o.nodeData[i] = OPCData{}
