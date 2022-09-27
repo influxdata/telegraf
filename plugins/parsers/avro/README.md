@@ -173,8 +173,6 @@ The message is supposed to be encoded as follows:
 
 ### avro_timestamp, avro_timestamp_format, avro_round_timestamp_to
 
-### avro_timestamp, avro_timestamp_format, avro_round_timestamp_to
-
 By default the current time will be used for all created metrics, to set
 the time using the Avro message you can use the `avro_timestamp` and
 `avro_timestamp_format` options together to set the time to a value in

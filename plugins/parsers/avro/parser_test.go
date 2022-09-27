@@ -62,7 +62,7 @@ type AvroCfg struct {
 	Inputs struct {
 		File []struct {
 			Parser
-			Data_format string
+			DataFormat string
 		}
 	}
 }
@@ -110,7 +110,6 @@ func TestCommonLoadConfig(t *testing.T) {
 	}
 	CommonConfig = config.NewConfig()
 	require.NoError(t, CommonConfig.LoadConfig("testdata/common/telegraf.conf"))
-
 }
 
 func TestRoundTrip(t *testing.T) {
@@ -133,7 +132,7 @@ func TestMultipleConfigs(t *testing.T) {
 		testdataPath := filepath.Join("testdata", fname)
 		configFilename := filepath.Join(testdataPath, "telegraf.conf")
 		testSchema := filepath.Join(testdataPath, "schema.json")
-		testJson := filepath.Join(testdataPath, "message.json")
+		testJSON := filepath.Join(testdataPath, "message.json")
 		expectedFilename := filepath.Join(testdataPath, "expected.out")
 		expectedErrorFilename := filepath.Join(testdataPath, "expected.err")
 
@@ -142,9 +141,9 @@ func TestMultipleConfigs(t *testing.T) {
 				return &file.File{}
 			})
 			// Read the expected output
-			std_parser := &influx.Parser{}
-			require.NoError(t, std_parser.Init())
-			expected, err := testutil.ParseMetricsFromFile(expectedFilename, std_parser)
+			stdParser := &influx.Parser{}
+			require.NoError(t, stdParser.Init())
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, stdParser)
 			require.NoError(t, err)
 
 			// Read the expected errors if any
@@ -163,6 +162,9 @@ func TestMultipleConfigs(t *testing.T) {
 				if errors.Is(err, os.ErrNotExist) {
 					configFilename = filepath.Join(commonPath, "telegraf.conf")
 					rawConfig, err = os.ReadFile(configFilename)
+					if err != nil {
+						require.NoError(t, err) // will fail
+					}
 				} else {
 					require.NoError(t, err) // will fail
 				}
@@ -197,7 +199,7 @@ func TestMultipleConfigs(t *testing.T) {
 				schema = string(schemaBytes)
 			}
 
-			message, err = os.ReadFile(testJson)
+			message, err = os.ReadFile(testJSON)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
 					message = CommonMessage
@@ -239,7 +241,6 @@ func TestMultipleConfigs(t *testing.T) {
 
 			// Process expected metrics and compare with resulting metrics
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
-
 		})
 	}
 }
