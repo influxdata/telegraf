@@ -1,15 +1,15 @@
 # Airthings Input Plugin
 
 The [Airthings](https://www.airthings.com) plugin collects
-metrics from Airthings devices. The metrics is accessed via 
+metrics from Airthings devices. The metrics is accessed via
 the Airthings API.
 See the [Airthings API
-](https://developer.airthings.com/docs/api-getting-started/index.html) 
+](https://developer.airthings.com/docs/api-getting-started/index.html)
 for details.
 
 ## Airthings for Consumers
 
-A consumer can create one Airthings API-client, 
+A consumer can create one Airthings API-client,
 with Client Credentials Grant authorization.
 The client can be used to fetch air quality
 data uploaded by the customer's own device.
@@ -65,7 +65,7 @@ X-RateLimit-Retry-After: 100 // A new request can be performed after this many s
 
 ## Metrics
 
-Metrics changes depending on device type 
+Metrics changes depending on device type
 and what is exported via the Airthinsg API.
 
 Metrics may include:
@@ -93,6 +93,7 @@ Metrics may include:
 ## Example Output
 
 Here is example output of this plugin:
-```
+
+```shell
 airthings,deviceType=WAVE_GEN2,host=local,id=2950045693,name=airthings,segment.active=true,segment.id=3f2f2e23-f81d-46dd-8da6-9c5ed051b6e5,segment.name=Basement,segment.started=2022-03-28T07:50:44+02:00 battery=76,humidity=56,radonShortTermAvg=68,relayDeviceType="hub",rssi=-37,temp=19.2 1664307786000000000
 ```
