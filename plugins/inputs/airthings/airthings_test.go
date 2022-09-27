@@ -74,7 +74,7 @@ func setupTestServer(m *testing.M) *httptest.Server {
 		airthings.Log.Debugf("headers to: %v", r.Header)
 		var deviceID = func() string {
 			devIDTmp := rexp.FindStringSubmatch(r.URL.Path)
-			if devIDTmp != nil && len(devIDTmp) > 1 {
+			if len(devIDTmp) > 1 {
 				return devIDTmp[1]
 			}
 			return ""

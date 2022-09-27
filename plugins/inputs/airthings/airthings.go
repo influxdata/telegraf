@@ -88,7 +88,6 @@ func (m *Airthings) Description() string {
 }
 
 func (m *Airthings) Init() error {
-
 	m.location, _ = time.LoadLocation("Local")
 	if len(m.TimeZone) > 1 {
 		location, err := time.LoadLocation(m.TimeZone)
@@ -122,7 +121,6 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	for _, device := range deviceList.Devices {
-
 		var segStartedTime string
 		zonedTime, err := enforceTimeZone(device.Segment.Started, m.location)
 		if err != nil {
@@ -142,11 +140,13 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 			TagSegmentActive:  strconv.FormatBool(device.Segment.Active),
 			TagSegmentStarted: segStartedTime,
 		}
-		var ts = time.Time{}
+
+		var ts time.Time
 		air, ts, err := m.deviceSamples(device.ID)
 		if err != nil {
 			return err
 		}
+
 		details, err := m.deviceDetails(device.ID)
 		if err != nil {
 			return err
@@ -162,6 +162,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 				air[k] = v
 			}
 		}
+		
 		m.Log.Debugf("Add tags and fields %v <-> %v", airTags, air)
 		acc.AddFields("airthings", air, airTags, ts)
 	}
