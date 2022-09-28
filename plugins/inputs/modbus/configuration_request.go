@@ -47,15 +47,14 @@ func (c *ConfigurationPerRequest) Check() error {
 
 	for _, def := range c.Requests {
 		// Check for valid optimization
-		validOptimizations := []string{"", "none", "shrink", "rearrange", "aggressive", "max_insert"}
-		if !choice.Contains(def.Optimization, validOptimizations) {
+		switch def.Optimization {
+		case "", "none", "shrink", "rearrange", "aggressive":
+		case "max_insert":
+			if def.MaxExtraRegisters <= 0 || def.MaxExtraRegisters > maxQuantityHoldingRegisters {
+				return fmt.Errorf("max_extra_registers has to be between 1 and %d", maxQuantityHoldingRegisters,)
+			}
+		default:
 			return fmt.Errorf("unknown optimization %q", def.Optimization)
-		}
-		if def.Optimization == "max_insert" && def.MaxExtraRegisters > maxQuantityHoldingRegisters {
-			return fmt.Errorf("max_insert optimization requires max_extra_registers to be smaller than %v but %v was provided", maxQuantityHoldingRegisters, def.MaxExtraRegisters)
-		}
-		if def.Optimization == "max_insert" && def.MaxExtraRegisters == 0 {
-			return fmt.Errorf("max_insert optimization requires max_extra_registers to be larger than 0 but %v was provided or was not set", def.MaxExtraRegisters)
 		}
 		// Check byte order of the data
 		switch def.ByteOrder {
