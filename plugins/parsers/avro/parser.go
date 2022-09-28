@@ -29,19 +29,14 @@ type Parser struct {
 
 	Log         telegraf.Logger `toml:"-"`
 	registryObj *SchemaRegistry
+	createMetric func(interface{}, string) (telegraf.Metric, error)
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	if len(buf) < 5 {
-		err := fmt.Errorf("buf is %d bytes; must be at least 5", len(buf))
-		return nil, err
-	}
-	schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
-	binaryData := buf[5:]
+	schemaID, binaryData, err := p.extractSchemaAndMessage(buf)
 
 	var schema string
 	var codec *goavro.Codec
-	var err error
 
 	if p.SchemaRegistry != "" {
 		schemastruct, err := p.registryObj.getSchemaAndCodec(schemaID)
@@ -69,6 +64,17 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return []telegraf.Metric{m}, nil
 }
 
+func (p *Parser) extractSchemaAndMessage(buf []byte) (int, []byte, error) {
+	if len(buf) < 5 {
+		err := fmt.Errorf("buf is %d bytes; must be at least 5", len(buf))
+		return 0, nil, err
+	}
+	schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
+	binaryData := buf[5:]
+	return schemaID, binaryData, nil
+}
+
+
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	if err != nil {
@@ -86,10 +92,10 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metric, error) {
+func (p *Parser) setupMetric(native interface{}, schema string) (string, map[string]string, map[string]interface{}, time.Time, error) {
 	deep, ok := native.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("cannot cast native interface {} to map[string]interface{}")
+		return "", nil, nil, time.Time{}, fmt.Errorf("cannot cast native interface {} to map[string]interface{}")
 	}
 
 	timestamp := nestedValue(deep[p.Timestamp])
@@ -99,7 +105,7 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 
 	metricTime, err := internal.ParseTimestamp(p.TimestampFormat, timestamp, "UTC")
 	if err != nil {
-		return nil, err
+		return "", nil, nil, time.Time{}, err
 	}
 
 	if p.RoundTimestampTo != "" {
@@ -117,13 +123,15 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 		metricTime = time.Unix(0, nanos)
 	}
 
+
+	// Tags differ from fields, in that tags are inherently strings.
+	// fields can be of any type.
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
 	for k, v := range p.DefaultTags {
 		tags[k] = v
 	}
-
 	for _, tag := range p.Tags {
 		if value, ok := deep[tag]; ok {
 			tags[tag], err = internal.ToString(nestedValue(value))
@@ -131,10 +139,13 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 				p.Log.Warnf("Could not convert %v to string", nestedValue(value))
 			}
 		} else {
+			// It wouldn't unpack.  Probably not fatal, but does
+			// mean we can't get this column.  This should
+			// be very rare, since the tag is a string.
 			p.Log.Warnf("tag %s value was %v; not added to tags", tag, value)
 		}
 	}
-	fieldList := make([]string, len(p.Fields), (cap(p.Fields)+1)*2)
+	fieldList := make([]string, len(p.Fields), (cap(p.Fields)))
 	copy(fieldList, p.Fields)
 	if len(fieldList) == 0 { // Get fields from whatever we just unpacked
 		for k := range deep {
@@ -147,6 +158,8 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 		if value, ok := deep[field]; ok {
 			fields[field] = nestedValue(value)
 		} else {
+			// It wouldn't unpack.  Probably not fatal, but does
+			// mean we can't get this column.
 			p.Log.Warnf("field %s value was %v; not added to fields", field, value)
 		}
 	}
@@ -154,39 +167,59 @@ func (p *Parser) createMetric(native interface{}, schema string) (telegraf.Metri
 
 	err = json.Unmarshal([]byte(schema), &schemaObj)
 	if err != nil {
-		return nil, err
+		return "", nil, nil, time.Time{}, err
 	}
 	if len(fields) == 0 {
-		return nil, fmt.Errorf("number of fields is 0; unable to create metric")
+		// A telegraf metric needs at least one field.
+		return "", nil, nil, time.Time{}, fmt.Errorf("number of fields is 0; unable to create metric")
 	}
+	// Now some fancy stuff to extract the measurement.
+	// If it's set in the configuration, use that.
 	name := ""
+	separator := "."
 	if p.Measurement != "" {
 		name = p.Measurement
 	} else {
-		// get Measurement name from schema
+		// get Measurement name from schema.  Try using the
+		// namespace concatenated to the name, but if no namespace,
+		// just use the name.
 		nsStr, ok := schemaObj["namespace"].(string)
+		// namespace is optional
 		if !ok {
-			return nil, fmt.Errorf("could not determine namespace from schema %s", schema)
+			separator = ""
 		}
+		
 		nStr, ok := schemaObj["name"].(string)
 		if !ok {
-			return nil, fmt.Errorf("could not determine name from schema %s", schema)
+			return "", nil, nil, time.Time{}, fmt.Errorf("could not determine name from schema %s", schema)
 		}
-		name = nsStr + "." + nStr
+		name = nsStr + separator + nStr
 	}
+	// Still don't have a name?  Guess we should use the metric name if
+	// it's set.
 	if name == "" {
 		name = p.MetricName
 	}
+	// Nothing?  Give up.
 	if name == "" {
-		return nil, fmt.Errorf("could not determine measurement name")
+		return "", nil, nil, time.Time{}, fmt.Errorf("could not determine measurement name")
 	}
-	if p.DiscardArrays {
-		// Any non-scalars end up being a nil field
-		return metric.New(name, tags, fields, metricTime), nil
+	return name, tags, fields, metricTime, nil
+}
+
+func (p *Parser) createScalarMetric(native interface{}, schema string) (telegraf.Metric, error) {
+	name, tags, fields, metricTime, err := p.setupMetric(native, schema)
+	if err != nil {
+		return nil, err
 	}
-	// But if we do it this way, we flatten any compound structures,
-	// including arrays.  Goavro is only going to hand us back
-	// arrays, not maps.
+	return metric.New(name, tags, fields, metricTime), nil
+}
+
+func (p *Parser) createComplexMetric(native interface{}, schema string) (telegraf.Metric, error) {
+	name, tags, fields, metricTime, err := p.setupMetric(native, schema)
+	if err != nil {
+		return nil, err
+	}
 	// The default (the separator string is empty) is equivalent to
 	// what streamreactor does.
 	sep := flatten.SeparatorStyle{
@@ -232,6 +265,11 @@ func (p *Parser) Init() error {
 	}
 	if p.RoundTimestampTo != "" && (p.RoundTimestampTo != "s" && p.RoundTimestampTo != "ms" && p.RoundTimestampTo != "us") {
 		return fmt.Errorf("'round_timestamp_to' must be one of 's', 'ms', or 'us'")
+	}
+
+	p.createMetric = p.createComplexMetric
+	if p.DiscardArrays {
+		p.createMetric = p.createScalarMetric
 	}
 	return nil
 }
