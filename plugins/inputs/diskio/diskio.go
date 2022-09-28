@@ -57,9 +57,11 @@ func (d *DiskIO) Init() error {
 }
 
 func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
-	devices := []string{}
+	var devices []string
 	if d.deviceFilter == nil {
-		devices = d.Devices
+		for _, dev := range d.Devices {
+			devices = append(devices, resolveName(dev))
+		}
 	}
 
 	diskio, err := d.ps.DiskIO(devices)
@@ -76,6 +78,10 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{}
 		var devLinks []string
 		tags["name"], devLinks = d.diskName(io.Name)
+
+		if wwid := getDeviceWWID(io.Name); wwid != "" {
+			tags["wwid"] = wwid
+		}
 
 		if d.deviceFilter != nil && !match {
 			for _, devLink := range devLinks {
