@@ -1846,6 +1846,46 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 			},
 			errormsg: "configuration invalid: field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
 		},
+		{
+			name: "MaxExtraRegister too large",
+			requests: []requestDefinition{
+				{
+					SlaveID:           1,
+					ByteOrder:         "ABCD",
+					RegisterType:      "input",
+					Optimization:      "max_insert",
+					MaxExtraRegisters: 5000,
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "input-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: max_extra_registers has to be between 1 and 125",
+		},
+		{
+			name: "MaxExtraRegister too small",
+			requests: []requestDefinition{
+				{
+					SlaveID:           1,
+					ByteOrder:         "ABCD",
+					RegisterType:      "input",
+					Optimization:      "max_insert",
+					MaxExtraRegisters: 0,
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "input-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: max_extra_registers has to be between 1 and 125",
+		},
 	}
 
 	for _, tt := range tests {

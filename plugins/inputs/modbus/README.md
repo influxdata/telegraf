@@ -154,9 +154,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##                    fields as the optimisation will add such field only where needed.
     # optimization = "none"
 
-    ## Max extra register. For the 'max_insert' optimization only. Set the maximum size by which
-    # a request can be extended in order to keep the number of requests lower. This needs to be
-    # a positive integer lower than the maximum number of recoil fields per query: 125
+    ## Max extra register. For the 'max_insert' optimization only. Maximum size by which a request 
+    # can be extended in order to reduce the number of requests. This needs to be
+    # a positive integer lower than the maximum number of fields per query.
     # max_extra_registers = 50
 
     ## Field definitions

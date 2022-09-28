@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
-
-	"github.com/influxdata/telegraf/internal/choice"
 )
 
 //go:embed sample_request.conf
@@ -51,7 +49,7 @@ func (c *ConfigurationPerRequest) Check() error {
 		case "", "none", "shrink", "rearrange", "aggressive":
 		case "max_insert":
 			if def.MaxExtraRegisters <= 0 || def.MaxExtraRegisters > maxQuantityHoldingRegisters {
-				return fmt.Errorf("max_extra_registers has to be between 1 and %d", maxQuantityHoldingRegisters,)
+				return fmt.Errorf("max_extra_registers has to be between 1 and %d", maxQuantityHoldingRegisters)
 			}
 		default:
 			return fmt.Errorf("unknown optimization %q", def.Optimization)
