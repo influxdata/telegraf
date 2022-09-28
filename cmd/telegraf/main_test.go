@@ -305,9 +305,10 @@ func TestCommandConfig(t *testing.T) {
 			commands: []string{"--input-filter", "file", "config", "--input-filter", "cpu"},
 			expectedPlugins: []string{
 				"[[inputs.cpu]]",
+				"[[inputs.file]]",
 			},
 			removedPlugins: []string{
-				"[[inputs.file]]",
+				"[[inputs.disk]]",
 			},
 		},
 	}
