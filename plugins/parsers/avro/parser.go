@@ -24,7 +24,6 @@ type Parser struct {
 	TimestampFormat  string            `toml:"avro_timestamp_format"`
 	DiscardArrays    bool              `toml:"avro_discard_arrays"`
 	FieldSeparator   string            `toml:"avro_field_separator"`
-	RoundTimestampTo string            `toml:"avro_round_timestamp_to"`
 	DefaultTags      map[string]string `toml:"-"`
 
 	Log          telegraf.Logger `toml:"-"`
@@ -122,21 +121,6 @@ func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, er
 	metricTime, err := internal.ParseTimestamp(p.TimestampFormat, timestamp, "UTC")
 	if err != nil {
 		return badReturn, err
-	}
-
-	if p.RoundTimestampTo != "" {
-		// If we're still using this in 2262, it's gonna break.
-		nanos := metricTime.UnixNano()
-		if p.RoundTimestampTo == "s" {
-			nanos = metricTime.Unix() * 1e9
-		}
-		if p.RoundTimestampTo == "ms" {
-			nanos = metricTime.UnixMilli() * 1e6
-		}
-		if p.RoundTimestampTo == "us" {
-			nanos = metricTime.UnixMicro() * 1e3
-		}
-		metricTime = time.Unix(0, nanos)
 	}
 
 	// Tags differ from fields, in that tags are inherently strings.
@@ -279,12 +263,6 @@ func (p *Parser) Init() error {
 	}
 	if p.TimestampFormat == "" {
 		return fmt.Errorf("must specify 'timestamp_format'")
-	}
-	if p.RoundTimestampTo != "" && p.TimestampFormat != "unix" {
-		return fmt.Errorf("'round_timestamp_to' can only be used with 'timestamp_format' of 'unix'")
-	}
-	if p.RoundTimestampTo != "" && (p.RoundTimestampTo != "s" && p.RoundTimestampTo != "ms" && p.RoundTimestampTo != "us") {
-		return fmt.Errorf("'round_timestamp_to' must be one of 's', 'ms', or 'us'")
 	}
 
 	p.createMetric = p.createComplexMetric

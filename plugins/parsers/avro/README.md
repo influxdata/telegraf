@@ -73,11 +73,6 @@ The message is supposed to be encoded as follows:
   ## Timestamp format
   avro_timestamp_format = "unix"
   
-  ## If set, and timestamp format is "unix", then timestamps will be
-  ## rounded.  Legal values are "s", "ms", and "us".  Otherwise "unix"
-  ## format with fractional seconds will use nanosecond precision.
-  # avro_round_timestamp_to = "ms"
-
   ## If true, any array values received by Avro will be silently
   ## discarded; otherwise they will be converted into a series of
   ## scalars, e.g. a=["a", "b", "c"] would become a0="a", a1="b",
@@ -91,7 +86,7 @@ The message is supposed to be encoded as follows:
 
 ```
 
-### avro_timestamp, avro_timestamp_format, avro_round_timestamp_to
+### avro_timestamp and avro_timestamp_format
 
 By default the current time will be used for all created metrics; to set
 the time using the Avro message you can use the `avro_timestamp` and
@@ -102,11 +97,6 @@ timestamp format.
 
 The `avro_timestamp` option specifies the field containing the time
 value.  It must be set to `unix`, `unix_ms`, `unix_us` or `unix_ns`.
-
-If `avro_timestamp_format` is `unix`, and if your timestamp is a float,
-`avro_round_timestamp_to` will round it to the nearest second,
-millisecond, or microsecond, with `s`, `ms`, or `us` respectively.  The
-default precision is nanoseconds.
 
 ## Metrics
 

@@ -87,7 +87,6 @@ func BuildParser(buf []byte) (*Parser, error) {
 		TimestampFormat:  pinput.TimestampFormat,
 		DiscardArrays:    pinput.DiscardArrays,
 		FieldSeparator:   pinput.FieldSeparator,
-		RoundTimestampTo: pinput.RoundTimestampTo,
 		DefaultTags:      pinput.DefaultTags,
 	}
 	return &p, nil
