@@ -27,15 +27,15 @@ type Parser struct {
 	RoundTimestampTo string            `toml:"avro_round_timestamp_to"`
 	DefaultTags      map[string]string `toml:"-"`
 
-	Log         telegraf.Logger `toml:"-"`
-	registryObj *SchemaRegistry
+	Log          telegraf.Logger `toml:"-"`
+	registryObj  *SchemaRegistry
 	createMetric func(interface{}, string) (telegraf.Metric, error)
 }
 
 type metricInput struct {
-	Name string
-	Tags map[string]string
-	Fields map[string]interface{}
+	Name      string
+	Tags      map[string]string
+	Fields    map[string]interface{}
 	Timestamp time.Time
 }
 
@@ -84,7 +84,6 @@ func (p *Parser) extractSchemaAndMessage(buf []byte) (int, []byte, error) {
 	return schemaID, binaryData, nil
 }
 
-
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	if err != nil {
@@ -104,12 +103,12 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 
 func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, error) {
 	badReturn := metricInput{
-		Name: "",
-		Tags: nil,
-		Fields: nil,
+		Name:      "",
+		Tags:      nil,
+		Fields:    nil,
 		Timestamp: time.Time{},
 	}
-			
+
 	deep, ok := native.(map[string]interface{})
 	if !ok {
 		return badReturn, fmt.Errorf("cannot cast native interface {} to map[string]interface{}")
@@ -139,7 +138,6 @@ func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, er
 		}
 		metricTime = time.Unix(0, nanos)
 	}
-
 
 	// Tags differ from fields, in that tags are inherently strings.
 	// fields can be of any type.
@@ -205,7 +203,7 @@ func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, er
 		if !ok {
 			separator = ""
 		}
-		
+
 		nStr, ok := schemaObj["name"].(string)
 		if !ok {
 			return badReturn, fmt.Errorf("could not determine name from schema %s", schema)
@@ -222,9 +220,9 @@ func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, er
 		return badReturn, fmt.Errorf("could not determine measurement name")
 	}
 	return metricInput{
-		Name: name,
-		Tags: tags,
-		Fields: fields,
+		Name:      name,
+		Tags:      tags,
+		Fields:    fields,
 		Timestamp: metricTime,
 	}, nil
 }
