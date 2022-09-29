@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -17,6 +18,26 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+var secrets = map[string]map[string]string{
+	"yoda": {
+		"episode1": "member",
+		"episode2": "member",
+		"episode3": "member",
+	},
+	"mace_windu": {
+		"episode1": "member",
+		"episode2": "member",
+		"episode3": "member",
+	},
+	"oppo_rancisis": {
+		"episode1": "member",
+		"episode2": "member",
+	},
+	"coleman_kcaj": {
+		"episode3": "member",
+	},
+}
 
 type MockTelegraf struct {
 	GlobalFlags
@@ -34,6 +55,65 @@ func (m *MockTelegraf) Init(_ <-chan error, _ Filters, g GlobalFlags, w WindowFl
 
 func (m *MockTelegraf) Run() error {
 	return nil
+}
+
+func (m *MockTelegraf) ListSecretStores() ([]string, error) {
+	var ids []string
+	for k := range secrets {
+		ids = append(ids, k)
+	}
+	return ids, nil
+}
+
+func (m *MockTelegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
+	v, found := secrets[id]
+	if !found {
+		return nil, errors.New("unknown secret store")
+	}
+	s := &MockSecretStore{Secrets: v}
+	return s, nil
+}
+
+type MockSecretStore struct {
+	Secrets map[string]string
+}
+
+func (s *MockSecretStore) Init() error {
+	return nil
+}
+
+func (s *MockSecretStore) SampleConfig() string {
+	return "I'm just a dummy"
+}
+
+func (s *MockSecretStore) Get(key string) (string, error) {
+	v, found := s.Secrets[key]
+	if !found {
+		return "", errors.New("not found")
+	}
+	return v, nil
+}
+
+func (s *MockSecretStore) Set(key, value string) error {
+	if strings.HasPrefix(key, "darth") {
+		return errors.New("don't join the dark side")
+	}
+	s.Secrets[key] = value
+	return nil
+}
+func (s *MockSecretStore) List() ([]string, error) {
+	var keys []string
+	for k := range s.Secrets {
+		keys = append(keys, k)
+	}
+	return keys, nil
+}
+
+func (s *MockSecretStore) GetResolver(key string) (telegraf.ResolveFunc, error) {
+	return func() (string, bool, error) {
+		v, err := s.Get(key)
+		return v, false, err
+	}, nil
 }
 
 type MockConfig struct {

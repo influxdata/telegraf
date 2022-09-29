@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -9,7 +10,9 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
+	"golang.org/x/term"
 
+	"github.com/awnumar/memguard"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
@@ -21,6 +24,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	_ "github.com/influxdata/telegraf/plugins/secretstores/all"
 )
 
 type TelegrafConfig interface {
@@ -29,11 +33,12 @@ type TelegrafConfig interface {
 }
 
 type Filters struct {
-	section    []string
-	input      []string
-	output     []string
-	aggregator []string
-	processor  []string
+	section     []string
+	input       []string
+	output      []string
+	aggregator  []string
+	processor   []string
+	secretstore []string
 }
 
 func appendFilter(a, b string) string {
@@ -47,7 +52,7 @@ func appendFilter(a, b string) string {
 }
 
 func processFilterFlags(ctx *cli.Context) Filters {
-	var section, input, output, aggregator, processor string
+	var section, input, output, aggregator, processor, secretstore string
 
 	// Support defining filters before and after the command
 	// The old style was:
@@ -62,6 +67,7 @@ func processFilterFlags(ctx *cli.Context) Filters {
 		output = parent.String("output-filter")
 		aggregator = parent.String("aggregator-filter")
 		processor = parent.String("processor-filter")
+		secretstore = parent.String("secretstore-filter")
 	}
 
 	// If both the parent and command filters are defined, append them together
@@ -70,13 +76,15 @@ func processFilterFlags(ctx *cli.Context) Filters {
 	output = appendFilter(output, ctx.String("output-filter"))
 	aggregator = appendFilter(aggregator, ctx.String("aggregator-filter"))
 	processor = appendFilter(processor, ctx.String("processor-filter"))
+	secretstore = appendFilter(processor, ctx.String("secretstore-filter"))
 
 	sectionFilters := deleteEmpty(strings.Split(section, ":"))
 	inputFilters := deleteEmpty(strings.Split(input, ":"))
 	outputFilters := deleteEmpty(strings.Split(output, ":"))
 	aggregatorFilters := deleteEmpty(strings.Split(aggregator, ":"))
 	processorFilters := deleteEmpty(strings.Split(processor, ":"))
-	return Filters{sectionFilters, inputFilters, outputFilters, aggregatorFilters, processorFilters}
+	secretstoreFilters := deleteEmpty(strings.Split(secretstore, ":"))
+	return Filters{sectionFilters, inputFilters, outputFilters, aggregatorFilters, processorFilters, secretstoreFilters}
 }
 
 func deleteEmpty(s []string) []string {
@@ -113,6 +121,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		&cli.StringFlag{
 			Name:  "processor-filter",
 			Usage: "filter the processors to enable, separator is ':'",
+		},
+		&cli.StringFlag{
+			Name:  "secretstore-filter",
+			Usage: "filter the secret-stores to enable, separator is ':'",
 		},
 	}
 
@@ -199,6 +211,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				filters.output,
 				filters.aggregator,
 				filters.processor,
+				filters.secretstore,
 			)
 			return nil
 		}
@@ -343,7 +356,276 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 						filters.output,
 						filters.aggregator,
 						filters.processor,
+						filters.secretstore,
 					)
+					return nil
+				},
+			},
+			{
+				Name:  "list-secretstores",
+				Usage: "list all known secret-stores",
+				Description: `
+The 'list-secretstores' command requires passing in your configuration file
+containing the secret-store definitions you want to access. To get a
+list of available secret-store plugins, please have a look at
+https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
+
+For help on how to define secret-stores, check the documentation of the
+different plugins.
+
+Assuming you use the default configuration file location, you can run
+the following commands to list all available secret-stores
+
+> telegraf list-secretstores
+
+It will print a list of all known secret-store IDs that can be used	for
+accessing the secrets in that store.`,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "secretstore-filter",
+						Usage: "filter the secret-stores to enable, separator is ':'",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					// Only load the secret-stores
+					cCtx.Set("section-filter", "inputs:outpus:processors:aggregators")
+					filters := processFilterFlags(cCtx)
+					g := GlobalFlags{
+						config:     cCtx.StringSlice("config"),
+						configDir:  cCtx.StringSlice("config-directory"),
+						plugindDir: cCtx.String("plugin-directory"),
+						debug:      cCtx.Bool("debug"),
+					}
+					w := WindowFlags{}
+					m.Init(nil, filters, g, w)
+
+					ids, err := m.ListSecretStores()
+					if err != nil {
+						return err
+					}
+					sort.Strings(ids)
+
+					_, _ = fmt.Println("Known secret stores:")
+					for _, id := range ids {
+						_, _ = fmt.Printf("    %s\n", id)
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "list-secrets",
+				Usage: "list known secrets in the given store(s)",
+				Description: `
+The 'list-secrets' command requires passing in your configuration file
+containing the secret-store definitions you want to access. To get a
+list of available secret-store plugins, please have a look at
+https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
+and use 'list-secretstores' to get the IDs of available stores.
+
+For help on how to define secret-stores, check the documentation of the
+different plugins.
+
+Assuming you use the default configuration file location, you can run
+the following command to list the keys of all known secrets in ALL
+available stores
+
+> telegraf list-secrets
+
+To get the keys of all known secrets in a particular store, you can run
+
+> telegraf list-secrets mystore
+
+To also reveal the actual secret, i.e. the value, you can pass the
+'--reveal-secret' flag.
+`,
+				ArgsUsage: "[secret-store ID]...[secret-store ID]",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "reveal-secret",
+						Usage: "also print the secret value",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					// Only load the secret-stores
+					cCtx.Set("section-filter", "inputs:outpus:processors:aggregators")
+					filters := processFilterFlags(cCtx)
+					g := GlobalFlags{
+						config:     cCtx.StringSlice("config"),
+						configDir:  cCtx.StringSlice("config-directory"),
+						plugindDir: cCtx.String("plugin-directory"),
+						debug:      cCtx.Bool("debug"),
+					}
+					w := WindowFlags{}
+					m.Init(nil, filters, g, w)
+
+					args := cCtx.Args()
+					var storeIDs []string
+					if args.Present() {
+						storeIDs = args.Slice()
+					} else {
+						ids, err := m.ListSecretStores()
+						if err != nil {
+							return fmt.Errorf("unable to determine secret-store IDs: %w", err)
+						}
+						storeIDs = ids
+					}
+					sort.Strings(storeIDs)
+
+					reveal := cCtx.Bool("reveal-secret")
+					for _, storeID := range storeIDs {
+						store, err := m.GetSecretStore(storeID)
+						if err != nil {
+							return fmt.Errorf("unable to get secret-store %q: %w", storeID, err)
+						}
+						keys, err := store.List()
+						if err != nil {
+							return fmt.Errorf("unable to get secrets from store %q: %w", storeID, err)
+						}
+						sort.Strings(keys)
+
+						_, _ = fmt.Printf("Known secrets for store %q:\n", storeID)
+						for _, k := range keys {
+							var v string
+							if reveal {
+								if v, err = store.Get(k); err != nil {
+									return fmt.Errorf("unable to get value of secret %q from store %q: %w", k, storeID, err)
+								}
+							}
+							_, _ = fmt.Printf("    %-30s  %s\n", k, v)
+						}
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "get-secret",
+				Usage: "retrieves value of given secret from given store",
+				Description: `
+The 'get-secret' command requires passing in your configuration file
+containing the secret-store definitions you want to access. To get a
+list of available secret-store plugins, please have a look at
+https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
+and use 'list-secretstores' to get the IDs of available stores and
+'list-secret' to get the key(s) of available secrets.
+
+For help on how to define secret-stores, check the documentation of the
+different plugins.
+
+Assuming you use the default configuration file location, you can run
+the following command to retrieve a secret from a secret store
+available stores
+
+> telegraf get-secret mystore mysecretkey
+
+This will fetch the secret with the key 'mysecretkey' from the secret-store
+with the ID 'mystore'.
+`,
+				ArgsUsage: "<secret-store ID> <secret key>",
+				Action: func(cCtx *cli.Context) error {
+					// Only load the secret-stores
+					cCtx.Set("section-filter", "inputs:outpus:processors:aggregators")
+					filters := processFilterFlags(cCtx)
+					g := GlobalFlags{
+						config:     cCtx.StringSlice("config"),
+						configDir:  cCtx.StringSlice("config-directory"),
+						plugindDir: cCtx.String("plugin-directory"),
+						debug:      cCtx.Bool("debug"),
+					}
+					w := WindowFlags{}
+					m.Init(nil, filters, g, w)
+
+					args := cCtx.Args()
+					if !args.Present() || args.Len() != 2 {
+						return errors.New("invalid number of arguments")
+					}
+
+					storeID := args.First()
+					key := args.Get(1)
+
+					store, err := m.GetSecretStore(storeID)
+					if err != nil {
+						return fmt.Errorf("unable to get secret-store: %w", err)
+					}
+					value, err := store.Get(key)
+					if err != nil {
+						return fmt.Errorf("unable to get secret: %w", err)
+					}
+					_, _ = fmt.Printf("%s:%s = %s\n", storeID, key, value)
+
+					return nil
+				},
+			},
+			{
+				Name:  "set-secret",
+				Usage: "create or modify a secret in the given store",
+				Description: `
+The 'set-secret' command requires passing in your configuration file
+containing the secret-store definitions you want to access. To get a
+list of available secret-store plugins, please have a look at
+https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
+and use 'list-secretstores' to get the IDs of available stores.
+
+For help on how to define secret-stores, check the documentation of the
+different plugins.
+
+Assuming you use the default configuration file location, you can run
+the following command to create a secret in anm available secret-store
+
+> telegraf set-secret mystore mysecretkey mysecretvalue
+
+This will create a secret with the key 'mysecretkey' in the secret-store
+with the ID 'mystore' with the value being set to 'mysecretvalue'. If a
+secret with that key ('mysecretkey') already existed in that store, its
+value will be modified.
+
+When you leave out the value of the secret like
+
+> telegraf set-secret mystore mysecretkey
+
+you will be prompted to enter the value of the secret.
+`,
+				ArgsUsage: "<secret-store ID> <secret key>",
+				Action: func(cCtx *cli.Context) error {
+					// Only load the secret-stores
+					cCtx.Set("section-filter", "inputs:outpus:processors:aggregators")
+					filters := processFilterFlags(cCtx)
+					g := GlobalFlags{
+						config:     cCtx.StringSlice("config"),
+						configDir:  cCtx.StringSlice("config-directory"),
+						plugindDir: cCtx.String("plugin-directory"),
+						debug:      cCtx.Bool("debug"),
+					}
+					w := WindowFlags{}
+					m.Init(nil, filters, g, w)
+
+					args := cCtx.Args()
+					if !args.Present() || args.Len() < 2 {
+						return errors.New("invalid number of arguments")
+					}
+
+					storeID := args.First()
+					key := args.Get(1)
+					value := args.Get(2)
+					if value == "" {
+						fmt.Printf("enter secret: ")
+						b, err := term.ReadPassword(int(os.Stdin.Fd()))
+						if err != nil {
+							return err
+						}
+						fmt.Println()
+						value = string(b)
+					}
+
+					store, err := m.GetSecretStore(storeID)
+					if err != nil {
+						return fmt.Errorf("unable to get secret-store: %w", err)
+					}
+					if err := store.Set(key, value); err != nil {
+						return fmt.Errorf("unable to set secret: %w", err)
+					}
+
 					return nil
 				},
 			},
@@ -357,6 +639,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			},
 		},
 	}
+
+	// Make sure we safely erase secrets
+	memguard.CatchInterrupt()
+	defer memguard.Purge()
 
 	return app.Run(args)
 }

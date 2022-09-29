@@ -12,12 +12,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/plugins/secretstores"
 )
 
 var (
 	// Default sections
-	sectionDefaults = []string{"global_tags", "agent", "outputs",
-		"processors", "aggregators", "inputs"}
+	sectionDefaults = []string{"global_tags", "agent", "secretstores",
+		"outputs", "processors", "aggregators", "inputs"}
 
 	// Default input plugins
 	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
@@ -57,6 +58,13 @@ var globalTagsConfig = `
 //
 //go:embed agent.conf
 var agentConfig string
+
+var secretstoreHeader = `
+###############################################################################
+#                            SECRETSTORE PLUGINS                              #
+###############################################################################
+
+`
 
 var outputHeader = `
 ###############################################################################
@@ -110,6 +118,7 @@ func printSampleConfig(
 	outputFilters []string,
 	aggregatorFilters []string,
 	processorFilters []string,
+	secretstoreFilters []string,
 ) {
 	// print headers
 	outputBuffer.Write([]byte(header))
@@ -118,6 +127,42 @@ func printSampleConfig(
 		sectionFilters = sectionDefaults
 	}
 	printFilteredGlobalSections(sectionFilters, outputBuffer)
+
+	// print secretstore plugins
+	if sliceContains("secretstores", sectionFilters) {
+		if len(secretstoreFilters) != 0 {
+			if len(secretstoreFilters) >= 3 && secretstoreFilters[1] != "none" {
+				fmt.Print(secretstoreHeader)
+			}
+			printFilteredSecretstores(secretstoreFilters, false, outputBuffer)
+		} else {
+			fmt.Print(secretstoreHeader)
+			snames := []string{}
+			for sname := range secretstores.SecretStores {
+				snames = append(snames, sname)
+			}
+			sort.Strings(snames)
+			printFilteredSecretstores(snames, true, outputBuffer)
+		}
+	}
+
+	// print secretstore plugins
+	if sliceContains("secretstores", sectionFilters) {
+		if len(secretstoreFilters) != 0 {
+			if len(secretstoreFilters) >= 3 && secretstoreFilters[1] != "none" {
+				fmt.Print(secretstoreHeader)
+			}
+			printFilteredSecretstores(secretstoreFilters, false, outputBuffer)
+		} else {
+			fmt.Print(secretstoreHeader)
+			snames := []string{}
+			for sname := range secretstores.SecretStores {
+				snames = append(snames, sname)
+			}
+			sort.Strings(snames)
+			printFilteredSecretstores(snames, true, outputBuffer)
+		}
+	}
 
 	// print output plugins
 	if sliceContains("outputs", sectionFilters) {
@@ -306,6 +351,24 @@ func printFilteredOutputs(outputFilters []string, commented bool, outputBuffer i
 		creator := outputs.Outputs[oname]
 		output := creator()
 		printConfig(oname, output, "outputs", commented, outputs.Deprecations[oname], outputBuffer)
+	}
+}
+
+func printFilteredSecretstores(secretstoreFilters []string, commented bool, outputBuffer io.Writer) {
+	// Filter secretstores
+	var snames []string
+	for sname := range secretstores.SecretStores {
+		if sliceContains(sname, secretstoreFilters) {
+			snames = append(snames, sname)
+		}
+	}
+	sort.Strings(snames)
+
+	// Print SecretStores
+	for _, sname := range snames {
+		creator := secretstores.SecretStores[sname]
+		store := creator("dummy")
+		printConfig(sname, store, "secretstores", commented, secretstores.Deprecations[sname], outputBuffer)
 	}
 }
 
