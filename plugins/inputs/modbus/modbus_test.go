@@ -2,6 +2,8 @@ package modbus
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -11,6 +13,8 @@ import (
 	"github.com/tbrandon/mbserver"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -2043,4 +2047,48 @@ func TestMultipleSlavesOneFail(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 	require.Len(t, acc.Errors, 1)
 	require.EqualError(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond), function '131'")
+}
+
+func TestConfigurationsValidation(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("modbus", func() telegraf.Input { return &Modbus{} })
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the expected error if any
+			var expected string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				expectedErrors, err := testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.Len(t, expectedErrors, 1)
+				expected = expectedErrors[0]
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Run init and compare the error.
+			plugin := cfg.Inputs[0].Input.(*Modbus)
+			err := plugin.Init()
+			if expected == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, expected)
+			}
+		})
+	}
 }
