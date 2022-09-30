@@ -10,6 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// In docker, access to the keyring is disabled by default see
+// https://docs.docker.com/engine/security/seccomp/.
+// You will see the following error then.
+const dockerErr = "opening keyring failed: Specified keyring backend not available"
+
 func TestSampleConfig(t *testing.T) {
 	plugin := &OS{}
 	require.NotEmpty(t, plugin.SampleConfig())
@@ -37,7 +42,14 @@ func TestInitFail(t *testing.T) {
 
 func TestResolverInvalid(t *testing.T) {
 	plugin := &OS{ID: "test"}
-	require.NoError(t, plugin.Init())
+
+	// In docker, access to the keyring is disabled by default
+	// see https://docs.docker.com/engine/security/seccomp/.
+	err := plugin.Init()
+	if err != nil && err.Error() == dockerErr {
+		t.Skip("Kernel keyring not available!")
+	}
+	require.NoError(t, err)
 
 	// Make sure the key does not exist and try to read that key
 	testKey := "foobar secret key"
@@ -56,7 +68,14 @@ func TestResolverInvalid(t *testing.T) {
 
 func TestGetNonExisting(t *testing.T) {
 	plugin := &OS{ID: "test"}
-	require.NoError(t, plugin.Init())
+
+	// In docker, access to the keyring is disabled by default
+	// see https://docs.docker.com/engine/security/seccomp/.
+	err := plugin.Init()
+	if err != nil && err.Error() == dockerErr {
+		t.Skip("Kernel keyring not available!")
+	}
+	require.NoError(t, err)
 
 	// Make sure the key does not exist and try to read that key
 	testKey := "foobar secret key"

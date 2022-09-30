@@ -27,6 +27,16 @@ Telegraf. I.e. when set to `true`, the secret will be read from the secret-store
 on every access by a plugin. If set to `false`, all secrets in the secret store
 are assumed to be static and are only read once at startup of Telegraf.
 
+### Docker
+
+Access to the kernel keyring is __disabled by default__ in docker containers
+(see [documentation](https://docs.docker.com/engine/security/seccomp/)).
+In this case you will get an
+`opening keyring failed: Specified keyring backend not available` error!
+
+You can enable access to the kernel keyring, but as the keyring is __not__
+namespaced, you should be aware of the security implication!
+
 ### Windows
 
 ```toml @sample_windows.conf
