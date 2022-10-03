@@ -3,11 +3,10 @@ package config
 import (
 	"bytes"
 	"crypto/tls"
-	_ "embed"
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log" //nolint:revive
 	"net/http"
 	"net/url"
 	"os"
@@ -30,7 +29,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -599,21 +597,33 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 
 	retries := 3
 	for i := 0; i <= retries; i++ {
-		resp, err := http.DefaultClient.Do(req)
+		body, err, retry := func() ([]byte, error, bool) {
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return nil, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err), false
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				if i < retries {
+					log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
+					return nil, nil, true
+				}
+				return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status), false
+			}
+			body, err := io.ReadAll(resp.Body)
+			return body, err, false
+		}()
+
 		if err != nil {
-			return nil, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err)
+			return nil, err
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			if i < retries {
-				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
-				time.Sleep(httpLoadConfigRetryInterval)
-				continue
-			}
-			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
+		if retry {
+			time.Sleep(httpLoadConfigRetryInterval)
+			continue
 		}
-		defer resp.Body.Close()
-		return io.ReadAll(resp.Body)
+
+		return body, err
 	}
 
 	return nil, nil
@@ -1109,44 +1119,6 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	return cp, nil
 }
 
-func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
-	var fields []json_v2.DataSet
-
-	if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
-		if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
-			for _, fieldconfig := range fieldConfigs {
-				var f json_v2.DataSet
-				c.getFieldString(fieldconfig, "path", &f.Path)
-				c.getFieldString(fieldconfig, "rename", &f.Rename)
-				c.getFieldString(fieldconfig, "type", &f.Type)
-				c.getFieldBool(fieldconfig, "optional", &f.Optional)
-				fields = append(fields, f)
-			}
-		}
-	}
-
-	return fields
-}
-
-func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
-	var tags []json_v2.DataSet
-
-	if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
-		if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
-			for _, fieldconfig := range fieldConfigs {
-				var t json_v2.DataSet
-				c.getFieldString(fieldconfig, "path", &t.Path)
-				c.getFieldString(fieldconfig, "rename", &t.Rename)
-				t.Type = "string"
-				tags = append(tags, t)
-				c.getFieldBool(fieldconfig, "optional", &t.Optional)
-			}
-		}
-	}
-
-	return tags
-}
-
 // buildSerializer grabs the necessary entries from the ast.Table for creating
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
@@ -1402,21 +1374,6 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 						}
 					}
 					*target = append(*target, tagFilter)
-				}
-			}
-		}
-	}
-}
-
-func (c *Config) getFieldStringMap(tbl *ast.Table, fieldName string, target *map[string]string) {
-	*target = map[string]string{}
-	if node, ok := tbl.Fields[fieldName]; ok {
-		if subtbl, ok := node.(*ast.Table); ok {
-			for name, val := range subtbl.Fields {
-				if kv, ok := val.(*ast.KeyValue); ok {
-					if str, ok := kv.Value.(*ast.String); ok {
-						(*target)[name] = str.Value
-					}
 				}
 			}
 		}

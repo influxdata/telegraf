@@ -100,7 +100,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := NewConfig()
-	c.LoadConfig("./testdata/single_plugin.toml")
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -783,10 +783,18 @@ type MockupInputPluginParserOld struct {
 	ParserFunc parsers.ParserFunc
 }
 
-func (m *MockupInputPluginParserOld) SampleConfig() string                  { return "Mockup old parser test plugin" }
-func (m *MockupInputPluginParserOld) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser)       { m.Parser = parser }
-func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc)    { m.ParserFunc = f }
+func (m *MockupInputPluginParserOld) SampleConfig() string {
+	return "Mockup old parser test plugin"
+}
+func (m *MockupInputPluginParserOld) Gather(acc telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser) {
+	m.Parser = parser
+}
+func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc) {
+	m.ParserFunc = f
+}
 
 /*** Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserNew struct {
@@ -794,10 +802,18 @@ type MockupInputPluginParserNew struct {
 	ParserFunc telegraf.ParserFunc
 }
 
-func (m *MockupInputPluginParserNew) SampleConfig() string                  { return "Mockup old parser test plugin" }
-func (m *MockupInputPluginParserNew) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser)      { m.Parser = parser }
-func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc)   { m.ParserFunc = f }
+func (m *MockupInputPluginParserNew) SampleConfig() string {
+	return "Mockup old parser test plugin"
+}
+func (m *MockupInputPluginParserNew) Gather(acc telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser) {
+	m.Parser = parser
+}
+func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc) {
+	m.ParserFunc = f
+}
 
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
@@ -817,9 +833,15 @@ type MockupInputPlugin struct {
 	parser telegraf.Parser
 }
 
-func (m *MockupInputPlugin) SampleConfig() string                  { return "Mockup test input plugin" }
-func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPlugin) SetParser(parser telegraf.Parser)      { m.parser = parser }
+func (m *MockupInputPlugin) SampleConfig() string {
+	return "Mockup test input plugin"
+}
+func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupInputPlugin) SetParser(parser telegraf.Parser) {
+	m.parser = parser
+}
 
 /*** Mockup PROCESSOR plugin for testing to avoid cyclic dependencies ***/
 type MockupProcessorPluginParser struct {
@@ -827,17 +849,27 @@ type MockupProcessorPluginParser struct {
 	ParserFunc telegraf.ParserFunc
 }
 
-func (m *MockupProcessorPluginParser) Start(acc telegraf.Accumulator) error { return nil }
-func (m *MockupProcessorPluginParser) Stop() error                          { return nil }
+func (m *MockupProcessorPluginParser) Start(acc telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupProcessorPluginParser) Stop() error {
+	return nil
+}
 func (m *MockupProcessorPluginParser) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPluginParser) Apply(in ...telegraf.Metric) []telegraf.Metric { return nil }
+func (m *MockupProcessorPluginParser) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	return nil
+}
 func (m *MockupProcessorPluginParser) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 	return nil
 }
-func (m *MockupProcessorPluginParser) SetParser(parser telegraf.Parser)    { m.Parser = parser }
-func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) { m.ParserFunc = f }
+func (m *MockupProcessorPluginParser) SetParser(parser telegraf.Parser) {
+	m.Parser = parser
+}
+func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) {
+	m.ParserFunc = f
+}
 
 /*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupOuputPlugin struct {
@@ -849,25 +881,51 @@ type MockupOuputPlugin struct {
 	tls.ClientConfig
 }
 
-func (m *MockupOuputPlugin) Connect() error                        { return nil }
-func (m *MockupOuputPlugin) Close() error                          { return nil }
-func (m *MockupOuputPlugin) SampleConfig() string                  { return "Mockup test output plugin" }
-func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error { return nil }
+func (m *MockupOuputPlugin) Connect() error {
+	return nil
+}
+func (m *MockupOuputPlugin) Close() error {
+	return nil
+}
+func (m *MockupOuputPlugin) SampleConfig() string {
+	return "Mockup test output plugin"
+}
+func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error {
+	return nil
+}
 
 // Register the mockup plugin on loading
 func init() {
 	// Register the mockup input plugin for the required names
-	inputs.Add("parser_test_new", func() telegraf.Input { return &MockupInputPluginParserNew{} })
-	inputs.Add("parser_test_old", func() telegraf.Input { return &MockupInputPluginParserOld{} })
-	inputs.Add("exec", func() telegraf.Input { return &MockupInputPlugin{Timeout: Duration(time.Second * 5)} })
-	inputs.Add("http_listener_v2", func() telegraf.Input { return &MockupInputPlugin{} })
-	inputs.Add("memcached", func() telegraf.Input { return &MockupInputPlugin{} })
-	inputs.Add("procstat", func() telegraf.Input { return &MockupInputPlugin{} })
+	inputs.Add("parser_test_new", func() telegraf.Input {
+		return &MockupInputPluginParserNew{}
+	})
+	inputs.Add("parser_test_old", func() telegraf.Input {
+		return &MockupInputPluginParserOld{}
+	})
+	inputs.Add("exec", func() telegraf.Input {
+		return &MockupInputPlugin{Timeout: Duration(time.Second * 5)}
+	})
+	inputs.Add("http_listener_v2", func() telegraf.Input {
+		return &MockupInputPlugin{}
+	})
+	inputs.Add("memcached", func() telegraf.Input {
+		return &MockupInputPlugin{}
+	})
+	inputs.Add("procstat", func() telegraf.Input {
+		return &MockupInputPlugin{}
+	})
 
 	// Register the mockup output plugin for the required names
-	processors.Add("parser_test", func() telegraf.Processor { return &MockupProcessorPluginParser{} })
+	processors.Add("parser_test", func() telegraf.Processor {
+		return &MockupProcessorPluginParser{}
+	})
 
 	// Register the mockup output plugin for the required names
-	outputs.Add("azure_monitor", func() telegraf.Output { return &MockupOuputPlugin{NamespacePrefix: "Telegraf/"} })
-	outputs.Add("http", func() telegraf.Output { return &MockupOuputPlugin{} })
+	outputs.Add("azure_monitor", func() telegraf.Output {
+		return &MockupOuputPlugin{NamespacePrefix: "Telegraf/"}
+	})
+	outputs.Add("http", func() telegraf.Output {
+		return &MockupOuputPlugin{}
+	})
 }
