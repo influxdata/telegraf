@@ -1,6 +1,32 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.24.2 [2022-10-03]
+
+### Bugfixes
+
+- [#11806](https://github.com/influxdata/telegraf/pull/11806) Re-allow specifying the influx parser type
+- [#11861](https://github.com/influxdata/telegraf/pull/11861) Update dependencies for OpenBSD support
+- [#11896](https://github.com/influxdata/telegraf/pull/11896) `cli` Support old style of filtering sample configs
+- [#11519](https://github.com/influxdata/telegraf/pull/11519) `common.kafka` Enable TLS in Kafka plugins without custom config
+- [#11866](https://github.com/influxdata/telegraf/pull/11866) `inputs.influxdb_listener` Error on invalid precision
+- [#11877](https://github.com/influxdata/telegraf/pull/11877) `inputs.internet_speed` Rename enable_file_download to match upstream intent
+- [#11849](https://github.com/influxdata/telegraf/pull/11849) `inputs.mongodb` Actually start plugin correctly
+- [#10696](https://github.com/influxdata/telegraf/pull/10696) `inputs.mqtt_consumer` Rework connection and message tracking
+- [#11696](https://github.com/influxdata/telegraf/pull/11696) `internal.ethtool` Avoid internal name conflict with aws
+- [#11875](https://github.com/influxdata/telegraf/pull/11875) `parser.xpath` Handle floating-point times correctly
+
+### Dependency Updates
+
+- [#11840](https://github.com/influxdata/telegraf/pull/11840) `deps` Bump k8s.io/apimachinery from 0.25.0 to 0.25.1
+- [#11844](https://github.com/influxdata/telegraf/pull/11844) `deps` Bump github.com/aerospike/aerospike-client-go/v5 from 5.9.0 to 5.10.0
+- [#11839](https://github.com/influxdata/telegraf/pull/11839) `deps` Bump github.com/nats-io/nats.go from 1.16.0 to 1.17.0
+- [#11836](https://github.com/influxdata/telegraf/pull/11836) `deps` Replace go-ping by pro-bing
+- [#11887](https://github.com/influxdata/telegraf/pull/11887) `deps` Bump go.mongodb.org/mongo-driver from 1.10.1 to 1.10.2
+- [#11890](https://github.com/influxdata/telegraf/pull/11890) `deps` Bump github.com/aws/smithy-go from 1.13.2 to 1.13.3
+- [#11891](https://github.com/influxdata/telegraf/pull/11891) `deps` Bump github.com/rabbitmq/amqp091-go from 1.4.0 to 1.5.0
+- [#11893](https://github.com/influxdata/telegraf/pull/11893) `deps` Github.com/docker/distribution from v2.7.1 ti v2.8.1
+
 ## v1.24.1 [2022-09-19]
 
 ### Bugfixes
