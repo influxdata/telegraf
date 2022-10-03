@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
-// +build linux
 
 package ethtool
 
@@ -107,6 +106,10 @@ func (e *Ethtool) normalizeKey(key string) string {
 	}
 	if inStringSlice(e.NormalizeKeys, "underscore") {
 		key = strings.ReplaceAll(key, " ", "_")
+	}
+	// aws has a conflicting name that needs to be renamed
+	if key == "interface_up" {
+		key = "interface_up_counter"
 	}
 
 	return key

@@ -1,6 +1,58 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.24.2 [2022-10-03]
+
+### Bugfixes
+
+- [#11806](https://github.com/influxdata/telegraf/pull/11806) Re-allow specifying the influx parser type
+- [#11896](https://github.com/influxdata/telegraf/pull/11896) `cli` Support old style of filtering sample configs
+- [#11519](https://github.com/influxdata/telegraf/pull/11519) `common.kafka` Enable TLS in Kafka plugins without custom config
+- [#11866](https://github.com/influxdata/telegraf/pull/11866) `inputs.influxdb_listener` Error on invalid precision
+- [#11877](https://github.com/influxdata/telegraf/pull/11877) `inputs.internet_speed` Rename enable_file_download to match upstream intent
+- [#11849](https://github.com/influxdata/telegraf/pull/11849) `inputs.mongodb` Start plugin correctly
+- [#10696](https://github.com/influxdata/telegraf/pull/10696) `inputs.mqtt_consumer` Rework connection and message tracking
+- [#11696](https://github.com/influxdata/telegraf/pull/11696) `internal.ethtool` Avoid internal name conflict with aws
+- [#11875](https://github.com/influxdata/telegraf/pull/11875) `parser.xpath` Handle floating-point times correctly
+
+### Dependency Updates
+
+- [#11861](https://github.com/influxdata/telegraf/pull/11861) Update dependencies for OpenBSD support
+- [#11840](https://github.com/influxdata/telegraf/pull/11840) `deps` Bump k8s.io/apimachinery from 0.25.0 to 0.25.1
+- [#11844](https://github.com/influxdata/telegraf/pull/11844) `deps` Bump github.com/aerospike/aerospike-client-go/v5 from 5.9.0 to 5.10.0
+- [#11839](https://github.com/influxdata/telegraf/pull/11839) `deps` Bump github.com/nats-io/nats.go from 1.16.0 to 1.17.0
+- [#11836](https://github.com/influxdata/telegraf/pull/11836) `deps` Replace go-ping by pro-bing
+- [#11887](https://github.com/influxdata/telegraf/pull/11887) `deps` Bump go.mongodb.org/mongo-driver from 1.10.1 to 1.10.2
+- [#11890](https://github.com/influxdata/telegraf/pull/11890) `deps` Bump github.com/aws/smithy-go from 1.13.2 to 1.13.3
+- [#11891](https://github.com/influxdata/telegraf/pull/11891) `deps` Bump github.com/rabbitmq/amqp091-go from 1.4.0 to 1.5.0
+- [#11893](https://github.com/influxdata/telegraf/pull/11893) `deps` Bump github.com/docker/distribution from v2.7.1 to v2.8.1
+
+## v1.24.1 [2022-09-19]
+
+### Bugfixes
+
+- [#11787](https://github.com/influxdata/telegraf/pull/11787) Clear error message when provided config is not a text file
+- [#11835](https://github.com/influxdata/telegraf/pull/11835) Enable global confirmation for installing mingw
+- [#10797](https://github.com/influxdata/telegraf/pull/10797) `inputs.ceph` Modernize Ceph input plugin metrics
+- [#11785](https://github.com/influxdata/telegraf/pull/11785) `inputs.modbus` Do not fail if a single slave reports errors
+- [#11827](https://github.com/influxdata/telegraf/pull/11827) `inputs.ntpq` Handle pools with &#34;-&#34; when
+- [#11825](https://github.com/influxdata/telegraf/pull/11825) `parsers.csv` Remove direct checks for the parser type
+- [#11781](https://github.com/influxdata/telegraf/pull/11781) `parsers.xpath` Add array index when expanding names.
+- [#11815](https://github.com/influxdata/telegraf/pull/11815) `parsers` Memory leak for plugins using ParserFunc.
+- [#11826](https://github.com/influxdata/telegraf/pull/11826) `parsers` Unwrap parser and remove some special handling
+
+### Features
+
+- [#11228](https://github.com/influxdata/telegraf/pull/11228) `processors.parser` Add option to parse tags
+
+### Dependency Updates
+
+- [#11788](https://github.com/influxdata/telegraf/pull/11788) `deps` Bump cloud.google.com/go/pubsub from 1.24.0 to 1.25.1
+- [#11794](https://github.com/influxdata/telegraf/pull/11794) `deps` Bump github.com/urfave/cli/v2 from 2.14.1 to 2.16.3
+- [#11789](https://github.com/influxdata/telegraf/pull/11789) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2
+- [#11799](https://github.com/influxdata/telegraf/pull/11799) `deps` Bump github.com/wavefronthq/wavefront-sdk-go
+- [#11796](https://github.com/influxdata/telegraf/pull/11796) `deps` Bump cloud.google.com/go/bigquery from 1.33.0 to 1.40.0
+
 ## v1.24.0 [2022-09-12]
 
 ### Bugfixes

@@ -26,6 +26,7 @@ var sampleConfig string
 
 type OpcuaWorkarounds struct {
 	AdditionalValidStatusCodes []string `toml:"additional_valid_status_codes"`
+	UseUnregisteredReads       bool     `toml:"use_unregistered_reads"`
 }
 
 // OpcUA type
@@ -365,17 +366,31 @@ func Connect(o *OpcUA) error {
 			return fmt.Errorf("error in Client Connection: %s", err)
 		}
 
-		regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
-			NodesToRegister: o.nodeIDs,
-		})
-		if err != nil {
-			return fmt.Errorf("registerNodes failed: %v", err)
-		}
+		if !o.Workarounds.UseUnregisteredReads {
+			regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
+				NodesToRegister: o.nodeIDs,
+			})
+			if err != nil {
+				return fmt.Errorf("registerNodes failed: %v", err)
+			}
 
-		o.req = &ua.ReadRequest{
-			MaxAge:             2000,
-			NodesToRead:        readvalues(regResp.RegisteredNodeIDs),
-			TimestampsToReturn: ua.TimestampsToReturnBoth,
+			o.req = &ua.ReadRequest{
+				MaxAge:             2000,
+				TimestampsToReturn: ua.TimestampsToReturnBoth,
+				NodesToRead:        readvalues(regResp.RegisteredNodeIDs),
+			}
+		} else {
+			var nodesToRead []*ua.ReadValueID
+
+			for _, nid := range o.nodeIDs {
+				nodesToRead = append(nodesToRead, &ua.ReadValueID{NodeID: nid})
+			}
+
+			o.req = &ua.ReadRequest{
+				MaxAge:             2000,
+				TimestampsToReturn: ua.TimestampsToReturnBoth,
+				NodesToRead:        nodesToRead,
+			}
 		}
 
 		err = o.getData()
@@ -438,7 +453,7 @@ func (o *OpcUA) getData() error {
 	resp, err := o.client.Read(o.req)
 	if err != nil {
 		o.ReadError.Incr(1)
-		return fmt.Errorf("RegisterNodes Read failed: %v", err)
+		return fmt.Errorf("Read failed: %w", err)
 	}
 	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {

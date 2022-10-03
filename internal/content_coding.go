@@ -82,6 +82,32 @@ func NewContentEncoder(encoding string) (ContentEncoder, error) {
 	}
 }
 
+type AutoDecoder struct {
+	encoding string
+	gzip     *GzipDecoder
+	identity *IdentityDecoder
+}
+
+func (a *AutoDecoder) SetEnconding(encoding string) {
+	a.encoding = encoding
+}
+
+func (a *AutoDecoder) Decode(data []byte) ([]byte, error) {
+	if a.encoding == "gzip" {
+		return a.gzip.Decode(data)
+	}
+	return a.identity.Decode(data)
+}
+
+func NewAutoContentDecoder() (*AutoDecoder, error) {
+	var a AutoDecoder
+	var err error
+
+	a.identity = NewIdentityDecoder()
+	a.gzip, err = NewGzipDecoder()
+	return &a, err
+}
+
 // NewContentDecoder returns a ContentDecoder for the encoding type.
 func NewContentDecoder(encoding string) (ContentDecoder, error) {
 	switch encoding {
@@ -91,6 +117,8 @@ func NewContentDecoder(encoding string) (ContentDecoder, error) {
 		return NewZlibDecoder()
 	case "identity", "":
 		return NewIdentityDecoder(), nil
+	case "auto":
+		return NewAutoContentDecoder()
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
@@ -171,6 +199,7 @@ func (*IdentityEncoder) Encode(data []byte) ([]byte, error) {
 
 // ContentDecoder removes a wrapper encoding from byte buffers.
 type ContentDecoder interface {
+	SetEnconding(string)
 	Decode([]byte) ([]byte, error)
 }
 
@@ -186,6 +215,8 @@ func NewGzipDecoder() (*GzipDecoder, error) {
 		buf:    new(bytes.Buffer),
 	}, nil
 }
+
+func (*GzipDecoder) SetEnconding(string) {}
 
 func (d *GzipDecoder) Decode(data []byte) ([]byte, error) {
 	d.reader.Reset(bytes.NewBuffer(data))
@@ -212,6 +243,8 @@ func NewZlibDecoder() (*ZlibDecoder, error) {
 	}, nil
 }
 
+func (*ZlibDecoder) SetEnconding(string) {}
+
 func (d *ZlibDecoder) Decode(data []byte) ([]byte, error) {
 	d.buf.Reset()
 
@@ -237,6 +270,8 @@ type IdentityDecoder struct{}
 func NewIdentityDecoder() *IdentityDecoder {
 	return &IdentityDecoder{}
 }
+
+func (*IdentityDecoder) SetEnconding(string) {}
 
 func (*IdentityDecoder) Decode(data []byte) ([]byte, error) {
 	return data, nil

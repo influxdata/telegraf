@@ -1,0 +1,2 @@
+ntpq,remote=0.eu.pool.ntp.o,refid=.POOL.,stratum=16,type=p poll=64i,reach=0i,delay=0.0,offset=0.0,jitter=0.0 0
+ntpq,remote=195.201.19.162,refid=187.182.182.166,stratum=3,type=u poll=64i,reach=1i,delay=12.692,offset=1.283,jitter=0.0 0

@@ -1,13 +1,11 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build linux && amd64
-// +build linux,amd64
 
 package intel_pmu
 
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/big"
 	"os"
@@ -36,7 +34,7 @@ type fileInfoProvider interface {
 type fileHelper struct{}
 
 func (fileHelper) readFile(path string) ([]byte, error) {
-	return ioutil.ReadFile(path)
+	return os.ReadFile(path)
 }
 
 func (fileHelper) lstat(path string) (os.FileInfo, error) {

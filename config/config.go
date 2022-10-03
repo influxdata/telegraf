@@ -69,10 +69,11 @@ type Config struct {
 	Inputs      []*models.RunningInput
 	Outputs     []*models.RunningOutput
 	Aggregators []*models.RunningAggregator
-	Parsers     []*models.RunningParser
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
+	// Parsers are created by their inputs during gather. Config doesn't keep track of them
+	// like the other plugins because they need to be garbage collected (See issue #11809)
 
 	Deprecations map[string][]int64
 	version      *semver.Version
@@ -98,7 +99,6 @@ func NewConfig() *Config {
 		Tags:          make(map[string]string),
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
-		Parsers:       make([]*models.RunningParser, 0),
 		Processors:    make([]*models.RunningProcessor, 0),
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
@@ -238,15 +238,6 @@ func (c *Config) AggregatorNames() []string {
 	var name []string
 	for _, aggregator := range c.Aggregators {
 		name = append(name, aggregator.Config.Name)
-	}
-	return PluginNameCounts(name)
-}
-
-// ParserNames returns a list of strings of the configured parsers.
-func (c *Config) ParserNames() []string {
-	var name []string
-	for _, parser := range c.Parsers {
-		name = append(name, parser.Config.DataFormat)
 	}
 	return PluginNameCounts(name)
 }
@@ -696,17 +687,22 @@ func (c *Config) probeParser(table *ast.Table) bool {
 	return ok
 }
 
-func (c *Config) addParser(parentname string, table *ast.Table) (*models.RunningParser, error) {
+func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) (*models.RunningParser, error) {
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
 
 	if dataformat == "" {
-		if parentname == "exec" {
+		if parentcategory == "inputs" && parentname == "exec" {
 			// Legacy support, exec plugin originally parsed JSON by default.
 			dataformat = "json"
 		} else {
 			dataformat = "influx"
 		}
+	}
+	var influxParserType string
+	c.getFieldString(table, "influx_parser_type", &influxParserType)
+	if dataformat == "influx" && influxParserType == "upstream" {
+		dataformat = "influx_upstream"
 	}
 
 	creator, ok := parsers.Parsers[dataformat]
@@ -725,9 +721,8 @@ func (c *Config) addParser(parentname string, table *ast.Table) (*models.Running
 	}
 
 	running := models.NewRunningParser(parser, conf)
-	c.Parsers = append(c.Parsers, running)
-
-	return running, nil
+	err = running.Init()
+	return running, err
 }
 
 func (c *Config) addProcessor(name string, table *ast.Table) error {
@@ -740,51 +735,82 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		}
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
+	streamingProcessor := creator()
+
+	// For processors with parsers we need to compute the set of
+	// options that is not covered by both, the parser and the processor.
+	// We achieve this by keeping a local book of missing entries
+	// that counts the number of misses. In case we have a parser
+	// for the input both need to miss the entry. We count the
+	// missing entries at the end.
+	missCount := make(map[string]int)
+	c.setLocalMissingTomlFieldTracker(missCount)
+	defer c.resetMissingTomlFieldTracker()
 
 	processorConfig, err := c.buildProcessor(name, table)
 	if err != nil {
 		return err
 	}
 
-	rf, err := c.newRunningProcessor(creator, processorConfig, table)
-	if err != nil {
+	var processor interface{}
+	processor = streamingProcessor
+	if p, ok := streamingProcessor.(unwrappable); ok {
+		processor = p.Unwrap()
+	}
+
+	// If the (underlying) processor has a SetParser or SetParserFunc function,
+	// it can accept arbitrary data-formats, so build the requested parser and
+	// set it.
+	if t, ok := processor.(telegraf.ParserPlugin); ok {
+		parser, err := c.addParser("processors", name, table)
+		if err != nil {
+			return fmt.Errorf("adding parser failed: %w", err)
+		}
+		t.SetParser(parser)
+	}
+
+	if t, ok := processor.(telegraf.ParserFuncPlugin); ok {
+		if !c.probeParser(table) {
+			return errors.New("parser not found")
+		}
+		t.SetParserFunc(func() (telegraf.Parser, error) {
+			return c.addParser("processors", name, table)
+		})
+	}
+
+	// Setup the processor
+	if err := c.setupProcessorOptions(processorConfig.Name, streamingProcessor, table); err != nil {
 		return err
 	}
+
+	rf := models.NewRunningProcessor(streamingProcessor, processorConfig)
 	c.Processors = append(c.Processors, rf)
 
-	// save a copy for the aggregator
-	rf, err = c.newRunningProcessor(creator, processorConfig, table)
-	if err != nil {
+	// Save a copy for the aggregator
+	if err := c.setupProcessorOptions(processorConfig.Name, streamingProcessor, table); err != nil {
 		return err
 	}
+
+	rf = models.NewRunningProcessor(streamingProcessor, processorConfig)
 	c.AggProcessors = append(c.AggProcessors, rf)
 
 	return nil
 }
 
-func (c *Config) newRunningProcessor(
-	creator processors.StreamingCreator,
-	processorConfig *models.ProcessorConfig,
-	table *ast.Table,
-) (*models.RunningProcessor, error) {
-	processor := creator()
-
+func (c *Config) setupProcessorOptions(name string, processor telegraf.StreamingProcessor, table *ast.Table) error {
 	if p, ok := processor.(unwrappable); ok {
-		if err := c.toml.UnmarshalTable(table, p.Unwrap()); err != nil {
-			return nil, err
+		unwrapped := p.Unwrap()
+		if err := c.toml.UnmarshalTable(table, unwrapped); err != nil {
+			return fmt.Errorf("unmarshalling unwrappable failed: %w", err)
 		}
-	} else {
-		if err := c.toml.UnmarshalTable(table, processor); err != nil {
-			return nil, err
-		}
+		return c.printUserDeprecation("processors", name, unwrapped)
 	}
 
-	if err := c.printUserDeprecation("processors", processorConfig.Name, processor); err != nil {
-		return nil, err
+	if err := c.toml.UnmarshalTable(table, processor); err != nil {
+		return fmt.Errorf("unmarshalling failed: %w", err)
 	}
 
-	rf := models.NewRunningProcessor(processor, processorConfig)
-	return rf, nil
+	return c.printUserDeprecation("processors", name, processor)
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -865,8 +891,8 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// If the input has a SetParser or SetParserFunc function, it can accept
 	// arbitrary data-formats, so build the requested parser and set it.
-	if t, ok := input.(telegraf.ParserInput); ok {
-		parser, err := c.addParser(name, table)
+	if t, ok := input.(telegraf.ParserPlugin); ok {
+		parser, err := c.addParser("inputs", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
 		}
@@ -875,40 +901,30 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// Keep the old interface for backward compatibility
 	if t, ok := input.(parsers.ParserInput); ok {
-		// DEPRECATED: Please switch your plugin to telegraf.ParserInput.
-		parser, err := c.addParser(name, table)
+		// DEPRECATED: Please switch your plugin to telegraf.ParserPlugin.
+		parser, err := c.addParser("inputs", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
 		}
 		t.SetParser(parser)
 	}
 
-	if t, ok := input.(telegraf.ParserFuncInput); ok {
+	if t, ok := input.(telegraf.ParserFuncPlugin); ok {
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
-			parser, err := c.addParser(name, table)
-			if err != nil {
-				return nil, err
-			}
-			err = parser.Init()
-			return parser, err
+			return c.addParser("inputs", name, table)
 		})
 	}
 
 	if t, ok := input.(parsers.ParserFuncInput); ok {
-		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncInput.
+		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncPlugin.
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
-			parser, err := c.addParser(name, table)
-			if err != nil {
-				return nil, err
-			}
-			err = parser.Init()
-			return parser, err
+			return c.addParser("inputs", name, table)
 		})
 	}
 
@@ -1233,7 +1249,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
 
 	// Parser options to ignore
-	case "data_type":
+	case "data_type", "influx_parser_type":
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",

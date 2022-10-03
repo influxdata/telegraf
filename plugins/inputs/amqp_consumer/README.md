@@ -82,8 +82,11 @@ For an introduction to AMQP see:
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Content encoding for message payloads, can be set to "gzip" to or
-  ## "identity" to apply no encoding.
+  ## Content encoding for message payloads, can be set to
+  ## "gzip", "identity" or "auto"
+  ## - Use "gzip" to decode gzip
+  ## - Use "identity" to apply no encoding
+  ## - Use "auto" determine the encoding using the ContentEncoding header
   # content_encoding = "identity"
 
   ## Data format to consume.
@@ -92,3 +95,11 @@ For an introduction to AMQP see:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
+
+## Metrics
+
+TODO
+
+## Example Output
+
+TODO

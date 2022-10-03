@@ -360,6 +360,7 @@ $(include_packages):
 			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
+			--rpm-os ${GOOS} \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \

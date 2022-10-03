@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
-// +build linux
 
 package sysstat
 

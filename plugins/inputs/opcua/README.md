@@ -60,7 +60,7 @@ Plugin minimum tested version: 1.16
   ## identifier        - OPC UA ID (tag as shown in opcua browser)
   ## tags              - extra tags to be added to the output metric (optional)
   ## Example:
-  ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262", tags=[["tag1","value1"],["tag2","value2]]}
+  ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262", tags=[["tag1","value1"],["tag2","value2"]]}
   # nodes = [
   #  {name="", namespace="", identifier_type="", identifier=""},
   #  {name="", namespace="", identifier_type="", identifier=""},
@@ -95,6 +95,9 @@ Plugin minimum tested version: 1.16
   # [inputs.opcua.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
     # additional_valid_status_codes = ["0xC0"]
+
+    ## Use unregistered reads instead of registered reads
+    # use_unregistered_reads = false
 ```
 
 ## Node Configuration
@@ -151,6 +154,10 @@ This example group configuration has two groups with two nodes each:
     {name="sin", identifier="1004"},
   ]
 ```
+
+## Metrics
+
+Metrics are produced according to the defined node ID and group configuration.
 
 ## Example Output
 

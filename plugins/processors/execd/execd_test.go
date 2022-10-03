@@ -20,6 +20,10 @@ func TestExternalProcessorWorks(t *testing.T) {
 	e := New()
 	e.Log = testutil.Logger{}
 
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	e.SetParser(parser)
+
 	exe, err := os.Executable()
 	require.NoError(t, err)
 	t.Log(exe)
@@ -80,6 +84,10 @@ func TestExternalProcessorWorks(t *testing.T) {
 func TestParseLinesWithNewLines(t *testing.T) {
 	e := New()
 	e.Log = testutil.Logger{}
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	e.SetParser(parser)
 
 	exe, err := os.Executable()
 	require.NoError(t, err)

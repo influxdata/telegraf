@@ -17,7 +17,6 @@ linters:
     - typecheck
     - unconvert
     - unused
-    - varcheck
 
 linters-settings:
   revive:

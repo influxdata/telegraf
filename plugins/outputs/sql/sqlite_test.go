@@ -1,7 +1,4 @@
 //go:build linux && freebsd && (!mips || !mips64)
-// +build linux
-// +build freebsd
-// +build !mips !mips64
 
 package sql
 

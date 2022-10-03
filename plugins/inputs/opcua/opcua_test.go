@@ -136,6 +136,31 @@ func TestClient1Integration(t *testing.T) {
 			t.Errorf("Tag: %s has value: %v", o.nodes[i].tag.FieldName, v.Value)
 		}
 	}
+
+	// test unregistered reads workaround
+	o.Workarounds.UseUnregisteredReads = true
+
+	for i := range o.nodeData {
+		o.nodeData[i] = OPCData{}
+	}
+
+	err = Connect(&o)
+	if err != nil {
+		t.Fatalf("Connect Error: %s", err)
+	}
+
+	for i, v := range o.nodeData {
+		if v.Value != nil {
+			types := reflect.TypeOf(v.Value)
+			value := reflect.ValueOf(v.Value)
+			compare := fmt.Sprintf("%v", value.Interface())
+			if compare != testopctags[i].Want {
+				t.Errorf("Tag %s: Values %v for type %s  does not match record", o.nodes[i].tag.FieldName, value.Interface(), types)
+			}
+		} else if testopctags[i].Want != nil {
+			t.Errorf("Tag: %s has value: %v", o.nodes[i].tag.FieldName, v.Value)
+		}
+	}
 }
 
 func MapOPCTag(tags OPCTags) (out NodeSettings) {

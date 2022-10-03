@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 //go:generate goversioninfo -icon=../../assets/windows/tiger.ico
 
