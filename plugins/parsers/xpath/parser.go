@@ -119,6 +119,17 @@ func (p *Parser) Init() error {
 		return errors.New("missing default metric name")
 	}
 
+	// Update the configs with default values
+	for i, config := range p.Configs {
+		if config.Selection == "" {
+			config.Selection = "/"
+		}
+		if config.TimestampFmt == "" {
+			config.TimestampFmt = "unix"
+		}
+		p.Configs[i] = config
+	}
+
 	return nil
 }
 
@@ -138,9 +149,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 	p.Log.Debugf("Number of configs: %d", len(p.Configs))
 	for _, config := range p.Configs {
-		if len(config.Selection) == 0 {
-			config.Selection = "/"
-		}
 		selectedNodes, err := p.document.QueryAll(doc, config.Selection)
 		if err != nil {
 			return nil, err
@@ -213,42 +221,11 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		if err != nil {
 			return nil, fmt.Errorf("failed to query timestamp: %v", err)
 		}
-		switch v := v.(type) {
-		case string:
-			// Parse the string with the given format or assume the string to contain
-			// a unix timestamp in seconds if no format is given.
-			if len(config.TimestampFmt) < 1 || strings.HasPrefix(config.TimestampFmt, "unix") {
-				var nanoseconds int64
-
-				t, err := strconv.ParseFloat(v, 64)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse unix timestamp: %v", err)
-				}
-
-				switch config.TimestampFmt {
-				case "unix_ns":
-					nanoseconds = int64(t)
-				case "unix_us":
-					nanoseconds = int64(t * 1e3)
-				case "unix_ms":
-					nanoseconds = int64(t * 1e6)
-				default:
-					nanoseconds = int64(t * 1e9)
-				}
-				timestamp = time.Unix(0, nanoseconds)
-			} else {
-				timestamp, err = time.Parse(config.TimestampFmt, v)
-				if err != nil {
-					return nil, fmt.Errorf("failed to query timestamp format: %v", err)
-				}
+		if v != nil {
+			timestamp, err = internal.ParseTimestamp(config.TimestampFmt, v, "")
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse timestamp: %w", err)
 			}
-		case float64:
-			// Assume the value to contain a timestamp in seconds and fractions thereof.
-			timestamp = time.Unix(0, int64(v*1e9))
-		case nil:
-			// No timestamp found. Just ignore the time and use "starttime"
-		default:
-			return nil, fmt.Errorf("unknown format '%T' for timestamp query '%v'", v, config.Timestamp)
 		}
 	}
 
