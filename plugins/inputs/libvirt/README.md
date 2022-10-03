@@ -228,7 +228,7 @@ More details about metrics can be found at the links below:
 
 ## Example Output
 
-```shell
+```text
 libvirt_cpu_affinity,domain_name=U22,host=localhost,vcpu_id=0 cpu_id="1,2,3" 1662383707000000000
 libvirt_cpu_affinity,domain_name=U22,host=localhost,vcpu_id=1 cpu_id="1,2,3,4,5,6,7,8,9,10" 1662383707000000000
 libvirt_balloon,domain_name=U22,host=localhost current=4194304i,maximum=4194304i,swap_in=0i,swap_out=0i,major_fault=0i,minor_fault=0i,unused=3928628i,available=4018480i,rss=1036012i,usable=3808724i,last_update=1654611373i,disk_caches=68820i,hugetlb_pgalloc=0i,hugetlb_pgfail=0i 1662383709000000000
