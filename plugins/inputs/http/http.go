@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dimchansky/utfbom"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
@@ -159,7 +161,8 @@ func (h *HTTP) gatherURL(
 			h.SuccessStatusCodes)
 	}
 
-	b, err := io.ReadAll(resp.Body)
+	body, _ = utfbom.Skip(resp.Body)
+	b, err := io.ReadAll(body)
 	if err != nil {
 		return fmt.Errorf("reading body failed: %v", err)
 	}
