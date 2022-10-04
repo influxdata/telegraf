@@ -23,6 +23,7 @@ type protobufDocument struct {
 	MessageDefinition string
 	MessageType       string
 	ImportPaths       []string
+	SkipBytes         int64
 	Log               telegraf.Logger
 	msg               *dynamicpb.Message
 }
@@ -94,7 +95,7 @@ func (d *protobufDocument) Parse(buf []byte) (dataNode, error) {
 	msg := d.msg.New()
 
 	// Unmarshal the received buffer
-	if err := proto.Unmarshal(buf, msg.Interface()); err != nil {
+	if err := proto.Unmarshal(buf[d.SkipBytes:], msg.Interface()); err != nil {
 		return nil, err
 	}
 
