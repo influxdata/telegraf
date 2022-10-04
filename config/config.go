@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log" //nolint:revive
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -600,7 +600,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 		body, err, retry := func() ([]byte, error, bool) {
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				return nil, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err), false
+				return nil, fmt.Errorf("retry %d of %d failed connecting to HTTP config server %s", i, retries, err), false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
@@ -608,7 +608,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 					log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
 					return nil, nil, true
 				}
-				return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status), false
+				return nil, fmt.Errorf("retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status), false
 			}
 			body, err := io.ReadAll(resp.Body)
 			return body, err, false
