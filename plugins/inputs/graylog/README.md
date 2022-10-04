@@ -1,5 +1,7 @@
 # GrayLog Input Plugin
 
+## Plugin Deprecated
+
 **Deprecated in version 1.25. Use the Prometheus input plugin**
 
 Graylog supports exporting metrics as Prometheus format, which the Prometheus
@@ -66,3 +68,7 @@ call.
 
 Please refer to GrayLog metrics api browser for full metric end points:
 `http://host:9000/api/api-browser`
+
+## Metrics
+
+## Example Output
