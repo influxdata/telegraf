@@ -1,114 +1,151 @@
-# Elasticsearch Output Plugin
+# Opensearch Output Plugin
 
-This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using
+This plugin writes to [Opensearch](https://opensearch.org/) via HTTP using
 Elastic (<http://olivere.github.io/elastic/).>
 
-It supports Elasticsearch releases from 5.x up to 7.x.
+It supports Opensearch releases from 1.x up to 2.x.
 
-## Elasticsearch indexes and templates
+## Opensearch indexes and templates
 
 ### Indexes per time-frame
 
 This plugin can manage indexes per time-frame, as commonly done in other tools
-with Elasticsearch.
+with Opensearch.
 
 The timestamp of the metric collected will be used to decide the index
 destination.
 
-For more information about this usage on Elasticsearch, check [the
+For more information about this usage on Opensearch, check [the
 docs][1].
 
-[1]: https://www.elastic.co/guide/en/elasticsearch/guide/master/time-based.html#index-per-timeframe
+[1]: https://opensearch.org/docs/latest/
 
 ### Template management
 
-Index templates are used in Elasticsearch to define settings and mappings for
+Index templates are used in Opensearch to define settings and mappings for
 the indexes and how the fields should be analyzed.  For more information on how
 this works, see [the docs][2].
 
 This plugin can create a working template for use with telegraf metrics. It uses
-Elasticsearch dynamic templates feature to set proper types for the tags and
+Opensearch dynamic templates feature to set proper types for the tags and
 metrics fields.  If the template specified already exists, it will not overwrite
 unless you configure this plugin to do so. Thus you can customize this template
 after its creation if necessary.
 
-Example of an index template created by telegraf on Elasticsearch 5.x:
+Example of an index template created by telegraf on Opensearch 2.x:
 
 ```json
 {
-  "order": 0,
-  "template": "telegraf-*",
-  "settings": {
-    "index": {
-      "mapping": {
-        "total_fields": {
-          "limit": "5000"
-        }
-      },
-      "auto_expand_replicas" : "0-1",
-      "codec" : "best_compression",
-      "refresh_interval": "10s"
-    }
-  },
-  "mappings": {
-    "_default_": {
-      "dynamic_templates": [
-        {
-          "tags": {
-            "path_match": "tag.*",
-            "mapping": {
-              "ignore_above": 512,
-              "type": "keyword"
+  "telegraf-2022.10.02" : {
+    "aliases" : { },
+    "mappings" : {
+      "properties" : {
+        "@timestamp" : {
+          "type" : "date"
+        },
+        "disk" : {
+          "properties" : {
+            "free" : {
+              "type" : "long"
             },
-            "match_mapping_type": "string"
+            "inodes_free" : {
+              "type" : "long"
+            },
+            "inodes_total" : {
+              "type" : "long"
+            },
+            "inodes_used" : {
+              "type" : "long"
+            },
+            "total" : {
+              "type" : "long"
+            },
+            "used" : {
+              "type" : "long"
+            },
+            "used_percent" : {
+              "type" : "float"
+            }
           }
         },
-        {
-          "metrics_long": {
-            "mapping": {
-              "index": false,
-              "type": "float"
-            },
-            "match_mapping_type": "long"
+        "measurement_name" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
           }
         },
-        {
-          "metrics_double": {
-            "mapping": {
-              "index": false,
-              "type": "float"
+        "tag" : {
+          "properties" : {
+            "cpu" : {
+              "type" : "text",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword",
+                  "ignore_above" : 256
+                }
+              }
             },
-            "match_mapping_type": "double"
-          }
-        },
-        {
-          "text_fields": {
-            "mapping": {
-              "norms": false
+            "device" : {
+              "type" : "text",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword",
+                  "ignore_above" : 256
+                }
+              }
             },
-            "match": "*"
+            "host" : {
+              "type" : "text",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword",
+                  "ignore_above" : 256
+                }
+              }
+            },
+            "mode" : {
+              "type" : "text",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword",
+                  "ignore_above" : 256
+                }
+              }
+            },
+            "path" : {
+              "type" : "text",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword",
+                  "ignore_above" : 256
+                }
+              }
+            }
           }
-        }
-      ],
-      "_all": {
-        "enabled": false
-      },
-      "properties": {
-        "@timestamp": {
-          "type": "date"
-        },
-        "measurement_name": {
-          "type": "keyword"
         }
       }
+    },
+    "settings" : {
+      "index" : {
+        "creation_date" : "1664693522789",
+        "number_of_shards" : "1",
+        "number_of_replicas" : "1",
+        "uuid" : "TYugdmvsQfmxjzbGRJ8FIw",
+        "version" : {
+          "created" : "136247827"
+        },
+        "provided_name" : "telegraf-2022.10.02"
+      }
     }
-  },
-  "aliases": {}
+  }
 }
 
 ```
 
-[2]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+[2]: https://opensearch.org/docs/latest/opensearch/index-templates/
 
 ### Example events
 
@@ -132,7 +169,7 @@ This plugin will format the events in the following way:
   },
   "tag": {
     "cpu": "cpu-total",
-    "host": "elastichost",
+    "host": "opensearhhost",
     "dc": "datacenter1"
   }
 }
@@ -150,68 +187,29 @@ This plugin will format the events in the following way:
     "n_users": 2
   },
   "tag": {
-    "host": "elastichost",
+    "host": "opensearhhost",
     "dc": "datacenter1"
   }
 }
 ```
 
-## OpenSearch Support
-
-OpenSearch is a fork of Elasticsearch hosted by AWS. The OpenSearch server will
-report itself to clients with an AWS specific-version (e.g. v1.0). In reality,
-the actual underlying Elasticsearch version is v7.1. This breaks Telegraf and
-other Elasticsearch clients that need to know what major version they are
-interfacing with.
-
-Amazon has created a [compatibility mode][3] to allow existing Elasticsearch
-clients to properly work when the version needs to be checked. To enable
-compatibility mode users need to set the `override_main_response_version` to
-`true`.
-
-On existing clusters run:
-
-```json
-PUT /_cluster/settings
-{
-  "persistent" : {
-    "compatibility.override_main_response_version" : true
-  }
-}
-```
-
-And on new clusters set the option to true under advanced options:
-
-```json
-POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
-{
-  "DomainName": "domain-name",
-  "TargetVersion": "OpenSearch_1.0",
-  "AdvancedOptions": {
-    "override_main_response_version": "true"
-   }
-}
-```
-
-[3]: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade
-
 ## Configuration
 
 ```toml @sample.conf
-# Configuration for Elasticsearch to send metrics to.
-[[outputs.elasticsearch]]
-  ## The full HTTP endpoint URL for your Elasticsearch instance
+# Configuration for Opensearch to send metrics to.
+[[outputs.opensearch]]
+  ## The full HTTP endpoint URL for your Opensearch instance
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval
   urls = [ "http://node1.es.example.com:9200" ] # required.
-  ## Elasticsearch client timeout, defaults to "5s" if not set.
+  ## Opensearch client timeout, defaults to "5s" if not set.
   timeout = "5s"
-  ## Set to true to ask Elasticsearch a list of all cluster nodes,
+  ## Set to true to ask Opensearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
   enable_sniffer = false
   ## Set to true to enable gzip compression
   enable_gzip = false
-  ## Set the interval to check if the Elasticsearch nodes are available
+  ## Set the interval to check if the Opensearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
   ## Set the timeout for periodic health checks.
@@ -224,7 +222,7 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
   # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
   ## Index Config
-  ## The target index for metrics (Elasticsearch will create if it not exists).
+  ## The target index for metrics (Opensearch will create if it not exists).
   ## You can use the date specifiers below to create indexes per time frame.
   ## The metric timestamp will be used to decide the destination index name
   # %Y - year (2016)
@@ -281,16 +279,16 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
 
 ### Permissions
 
-If you are using authentication within your Elasticsearch cluster, you need to
+If you are using authentication within your Opensearch cluster, you need to
 create a account and create a role with at least the manage role in the Cluster
 Privileges category.  Overwise, your account will not be able to connect to your
-Elasticsearch cluster and send logs to your cluster.  After that, you need to
+Opensearch cluster and send logs to your cluster.  After that, you need to
 add "create_indice" and "write" permission to your specific index pattern.
 
 ### Required parameters
 
 * `urls`: A list containing the full HTTP URL of one or more nodes from your
-  Elasticsearch instance.
+  Opensearch instance.
 * `index_name`: The target index for metrics. You can use the date specifiers
   below to create indexes per time frame.
 
@@ -309,8 +307,8 @@ the `default_tag_value` will be used instead.
 
 ### Optional parameters
 
-* `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
-* `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster
+* `timeout`: Opensearch client timeout, defaults to "5s" if not set.
+* `enable_sniffer`: Set to true to ask Opensearch a list of all cluster
   nodes, thus it is not necessary to list all nodes in the urls config option.
 * `health_check_interval`: Set the interval to check if the nodes are available,
   in seconds. Setting to 0 will disable the health check (not recommended in
@@ -337,7 +335,7 @@ the `default_tag_value` will be used instead.
   replaced by the negative value in this number to respect the sign of the
   field's original value.
 * `use_pipeline`: If set, the set value will be used as the pipeline to call
-  when sending events to elasticsearch. Additionally, you can specify dynamic
+  when sending events to opensearch. Additionally, you can specify dynamic
   pipeline names by using tags with the notation ```{{tag_name}}```.  If the tag
   does not exist in a particular metric, the `default_pipeline` will be used
   instead.
@@ -348,19 +346,19 @@ the `default_tag_value` will be used instead.
 
 Integer values collected that are bigger than 2^63 and smaller than 1e21 (or in
 this exact same window of their negative counterparts) are encoded by golang
-JSON encoder in decimal format and that is not fully supported by Elasticsearch
+JSON encoder in decimal format and that is not fully supported by Opensearch
 dynamic field mapping. This causes the metrics with such values to be dropped in
 case a field mapping has not been created yet on the telegraf index. If that's
-the case you will see an exception on Elasticsearch side like this:
+the case you will see an exception on Opensearch side like this:
 
 ```json
 {"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed to parse"}],"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token for number_type [BIG_INTEGER]"}},"status":400}
 ```
 
 The correct field mapping will be created on the telegraf index as soon as a
-supported JSON value is received by Elasticsearch, and subsequent insertions
+supported JSON value is received by Opensearch, and subsequent insertions
 will work because the field mapping will already exist.
 
-This issue is caused by the way Elasticsearch tries to detect integer fields,
+This issue is caused by the way Opensearch tries to detect integer fields,
 and by how golang encodes numbers in JSON. There is no clear workaround for this
 at the moment.
