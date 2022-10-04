@@ -1,0 +1,3 @@
+modbus,slave_id=1,name=Device,type=holding_register,location=Zone\ 1 humidity=1,temperature=4,active=7
+modbus,slave_id=1,name=Device,type=holding_register,location=Zone\ 2 humidity=2,temperature=5,active=8
+modbus,slave_id=1,name=Device,type=holding_register,location=Zone\ 3 humidity=3,temperature=6,active=9
