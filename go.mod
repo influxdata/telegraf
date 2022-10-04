@@ -136,7 +136,7 @@ require (
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
-	github.com/sensu/sensu-go/api/core/v2 v2.14.0
+	github.com/sensu/sensu-go/api/core/v2 v2.15.0
 	github.com/shirou/gopsutil/v3 v3.22.9
 	github.com/showwin/speedtest-go v1.1.5
 	github.com/signalfx/golib/v3 v3.3.45
