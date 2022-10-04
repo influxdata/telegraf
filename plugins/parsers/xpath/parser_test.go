@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -1408,6 +1409,12 @@ func TestMultipleConfigs(t *testing.T) {
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
 
+	// Compare options
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
 	for _, f := range folders {
 		// Only handle folders
 		if !f.IsDir() || f.Name() == "protos" {
@@ -1442,15 +1449,29 @@ func TestMultipleConfigs(t *testing.T) {
 			require.NotEmpty(t, cfg.Inputs)
 
 			// Gather the metrics from the input file configure
-			acc := testutil.Accumulator{}
+			var acc testutil.Accumulator
+			var errs []error
 			for _, input := range cfg.Inputs {
 				require.NoError(t, input.Init())
-				require.NoError(t, input.Gather(&acc))
+				err := input.Gather(&acc)
+				if err != nil {
+					errs = append(errs, err)
+				}
+			}
+
+			// Check for errors if we expect any
+			if len(expectedErrors) > 0 {
+				require.Len(t, errs, len(expectedErrors))
+				for i, err := range errs {
+					require.ErrorContains(t, err, expectedErrors[i])
+				}
+			} else {
+				require.Empty(t, errs)
 			}
 
 			// Process expected metrics and compare with resulting metrics
 			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
 		})
 	}
 }
