@@ -1,5 +1,13 @@
 # GrayLog Input Plugin
 
+**Deprecated in version 1.25. Use the Prometheus input plugin**
+
+Graylog supports exporting metrics as Prometheus format, which the Prometheus
+input plugin can collect and parse. See the [Prometheus metric exporting][1]
+page for information to turn this on.
+
+[1]: https://docs.graylog.org/docs/metrics#prometheus-metric-exporting
+
 The Graylog plugin can collect data from remote Graylog service URLs.
 
 Plugin currently support two type of end points:-
