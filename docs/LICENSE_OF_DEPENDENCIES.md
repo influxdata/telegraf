@@ -106,6 +106,7 @@ following works:
 - github.com/emicklei/go-restful [MIT License](https://github.com/emicklei/go-restful/blob/v3/LICENSE)
 - github.com/fatih/color [MIT License](https://github.com/fatih/color/blob/master/LICENSE.md)
 - github.com/form3tech-oss/jwt-go [MIT License](https://github.com/form3tech-oss/jwt-go/blob/master/LICENSE)
+- github.com/gabriel-vasile/mimetype [MIT License](https://github.com/gabriel-vasile/mimetype/blob/master/LICENSE)
 - github.com/go-asn1-ber/asn1-ber [MIT License](https://github.com/go-asn1-ber/asn1-ber/blob/v1.3/LICENSE)
 - github.com/go-ldap/ldap [MIT License](https://github.com/go-ldap/ldap/blob/v3.4.1/LICENSE)
 - github.com/go-logfmt/logfmt [MIT License](https://github.com/go-logfmt/logfmt/blob/master/LICENSE)
