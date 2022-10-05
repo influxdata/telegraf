@@ -246,7 +246,7 @@ func (r *RunningOutput) write(metrics []telegraf.Metric) error {
 	r.WriteTime.Incr(elapsed.Nanoseconds())
 
 	if err == nil {
-		r.log.Debugf("Wrote batch of %d metrics in %s", len(metrics), elapsed)
+		r.log.Debugf("Output accepted batch of %d metrics in %s", len(metrics), elapsed)
 	}
 	return err
 }
