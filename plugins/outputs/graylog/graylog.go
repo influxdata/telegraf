@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"encoding/binary"
 	ejson "encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -27,12 +28,13 @@ import (
 var sampleConfig string
 
 const (
-	defaultEndpoint        = "127.0.0.1:12201"
-	defaultConnection      = "wan"
-	defaultMaxChunkSizeWan = 1420
-	defaultMaxChunkSizeLan = 8154
-	defaultScheme          = "udp"
-	defaultTimeout         = 5 * time.Second
+	defaultEndpoint         = "127.0.0.1:12201"
+	defaultConnection       = "wan"
+	defaultMaxChunkSizeWan  = 1420
+	defaultMaxChunkSizeLan  = 8154
+	defaultScheme           = "udp"
+	defaultTimeout          = 5 * time.Second
+	defaultReconnectionTime = 100 * time.Millisecond
 )
 
 var defaultSpecFields = []string{"version", "host", "short_message", "full_message", "timestamp", "level", "facility", "line", "file"}
@@ -312,10 +314,13 @@ func (g *gelfTCP) send(b []byte) error {
 }
 
 type Graylog struct {
-	Servers           []string        `toml:"servers"`
-	ShortMessageField string          `toml:"short_message_field"`
-	NameFieldNoPrefix bool            `toml:"name_field_noprefix"`
-	Timeout           config.Duration `toml:"timeout"`
+	Servers              []string        `toml:"servers"`
+	ShortMessageField    string          `toml:"short_message_field"`
+	NameFieldNoPrefix    bool            `toml:"name_field_noprefix"`
+	Timeout              config.Duration `toml:"timeout"`
+	ReconnectionAttempts int64           `toml:"reconnection_attempts"`
+	ReconnectionTime     config.Duration `toml:"reconnection_wait_time"`
+	Log                  telegraf.Logger `toml:"-"`
 	tlsint.ClientConfig
 
 	writer  io.Writer
@@ -327,8 +332,6 @@ func (*Graylog) SampleConfig() string {
 }
 
 func (g *Graylog) Connect() error {
-	dialer := &net.Dialer{Timeout: time.Duration(g.Timeout)}
-
 	if len(g.Servers) == 0 {
 		g.Servers = append(g.Servers, "localhost:12201")
 	}
@@ -338,19 +341,71 @@ func (g *Graylog) Connect() error {
 		return err
 	}
 
-	writers := make([]io.Writer, 0, len(g.Servers))
-	for _, server := range g.Servers {
-		w := newGelfWriter(gelfConfig{Endpoint: server}, dialer, tlsCfg)
-		err := w.Connect()
-		if err != nil {
-			return fmt.Errorf("failed to connect to server [%s]: %v", server, err)
+	if g.ReconnectionAttempts == 0 {
+		unconnected, gelfs := g.connectEndpoints(g.Servers, tlsCfg)
+		if len(unconnected) > 0 {
+			servers := strings.Join(unconnected, ",")
+			return fmt.Errorf("connect: connection refused for %s", servers)
 		}
-		writers = append(writers, w)
-		g.closers = append(g.closers, w)
+		writers := make([]io.Writer, 0, len(gelfs))
+		closers := make([]io.WriteCloser, 0, len(gelfs))
+		for _, w := range gelfs {
+			writers = append(writers, w)
+			closers = append(closers, w)
+		}
+		g.writer = io.MultiWriter(writers...)
+		g.closers = closers
+	} else {
+		go g.connectRetry(tlsCfg)
 	}
 
-	g.writer = io.MultiWriter(writers...)
 	return nil
+}
+
+func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
+	var writers []io.Writer
+	var closers []io.WriteCloser
+	var attempt int64
+
+	disconnected := append([]string{}, g.Servers...)
+	for {
+		disconnected, gelfs := g.connectEndpoints(disconnected, tlsCfg)
+		for _, w := range gelfs {
+			writers = append(writers, w)
+			closers = append(closers, w)
+		}
+		if len(disconnected) == 0 {
+			break
+		}
+		attempt++
+		servers := strings.Join(disconnected, ",")
+		g.Log.Infof("Not connected to endpoints %s after attempt #%d...", servers, attempt)
+		if attempt > g.ReconnectionAttempts && g.ReconnectionAttempts >= 0 {
+			g.Log.Errorf("Giving up on connecting to %s, attempts exceeded.", servers)
+			return
+		}
+		time.Sleep(time.Duration(g.ReconnectionTime))
+	}
+	g.Log.Info("Connected!")
+
+	g.writer = io.MultiWriter(writers...)
+	g.closers = closers
+}
+
+func (g *Graylog) connectEndpoints(servers []string, tlsCfg *tls.Config) ([]string, []gelf) {
+	var writers []gelf
+	var unconnected []string
+	dialer := &net.Dialer{Timeout: time.Duration(g.Timeout)}
+	for _, server := range servers {
+		w := newGelfWriter(gelfConfig{Endpoint: server}, dialer, tlsCfg)
+		if err := w.Connect(); err != nil {
+			g.Log.Warnf("failed to connect to server [%s]: %v", server, err)
+			unconnected = append(unconnected, server)
+			continue
+		}
+		writers = append(writers, w)
+	}
+	return unconnected, writers
 }
 
 func (g *Graylog) Close() error {
@@ -361,6 +416,9 @@ func (g *Graylog) Close() error {
 }
 
 func (g *Graylog) Write(metrics []telegraf.Metric) error {
+	if g.writer == nil {
+		return errors.New("not connected")
+	}
 	for _, metric := range metrics {
 		values, err := g.serialize(metric)
 		if err != nil {
@@ -444,7 +502,8 @@ func fieldInSpec(field string) bool {
 func init() {
 	outputs.Add("graylog", func() telegraf.Output {
 		return &Graylog{
-			Timeout: config.Duration(defaultTimeout),
+			Timeout:          config.Duration(defaultTimeout),
+			ReconnectionTime: config.Duration(defaultReconnectionTime),
 		}
 	})
 }
