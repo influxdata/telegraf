@@ -3,6 +3,7 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
+
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
@@ -16,7 +17,7 @@ type traceService struct {
 	writer    *writeToAccumulator
 }
 
-var _ ptraceotlp.Server = (*traceService)(nil)
+var _ ptraceotlp.GRPCServer = (*traceService)(nil)
 
 func newTraceService(logger common.Logger, writer *writeToAccumulator) *traceService {
 	converter := otel2influx.NewOtelTracesToLineProtocol(logger)
@@ -36,7 +37,7 @@ type metricsService struct {
 	writer    *writeToAccumulator
 }
 
-var _ pmetricotlp.Server = (*metricsService)(nil)
+var _ pmetricotlp.GRPCServer = (*metricsService)(nil)
 
 var metricsSchemata = map[string]common.MetricsSchema{
 	"prometheus-v1": common.MetricsSchemaTelegrafPrometheusV1,
@@ -69,7 +70,7 @@ type logsService struct {
 	writer    *writeToAccumulator
 }
 
-var _ plogotlp.Server = (*logsService)(nil)
+var _ plogotlp.GRPCServer = (*logsService)(nil)
 
 func newLogsService(logger common.Logger, writer *writeToAccumulator) *logsService {
 	converter := otel2influx.NewOtelLogsToLineProtocol(logger)
