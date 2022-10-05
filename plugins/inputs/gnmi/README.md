@@ -30,7 +30,7 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
   redial = "10s"
 
   ## enable client-side TLS and define CA to authenticate the device
-  # enable_tls = true
+  # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
   ## Minimal TLS version to accept by the client
   # tls_min_version = "TLS12"
