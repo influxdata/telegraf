@@ -258,8 +258,8 @@ func (m *Airthings) doHTTPRequest(httpMethod string, baseURL string, pathCompone
 	if err != nil {
 		return nil, err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
 			m.Log.Errorf("error closing reader (%v)", err)
 		}
