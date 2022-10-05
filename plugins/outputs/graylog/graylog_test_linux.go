@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -199,23 +201,10 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan s
 	}
 
 	// in UDP scenario all 4 messages are received
-
-	err = recv()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = recv()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = recv()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = recv()
-	if err != nil {
-		fmt.Println(err)
-	}
+	require.NoError(t, recv())
+	require.NoError(t, recv())
+	require.NoError(t, recv())
+	require.NoError(t, recv())
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address chan string, errs chan error) {
@@ -331,6 +320,7 @@ func TestWriteUDPServerDown(t *testing.T) {
 	plugin := Graylog{
 		NameFieldNoPrefix: true,
 		Servers:           []string{"udp://" + dummy.LocalAddr().String()},
+		Log:               testutil.Logger{},
 	}
 	require.NoError(t, dummy.Close())
 	require.NoError(t, plugin.Connect())
@@ -343,6 +333,7 @@ func TestWriteUDPServerUnavailableOnWrite(t *testing.T) {
 	plugin := Graylog{
 		NameFieldNoPrefix: true,
 		Servers:           []string{"udp://" + dummy.LocalAddr().String()},
+		Log:               testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
 	require.NoError(t, dummy.Close())
@@ -356,6 +347,7 @@ func TestWriteTCPServerDown(t *testing.T) {
 	plugin := Graylog{
 		NameFieldNoPrefix: true,
 		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Log:               testutil.Logger{},
 	}
 	require.NoError(t, dummy.Close())
 	require.ErrorContains(t, plugin.Connect(), "connect: connection refused")
@@ -368,9 +360,96 @@ func TestWriteTCPServerUnavailableOnWrite(t *testing.T) {
 	plugin := Graylog{
 		NameFieldNoPrefix: true,
 		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Log:               testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
 	require.NoError(t, dummy.Close())
 	err = plugin.Write(testutil.MockMetrics())
 	require.ErrorContains(t, err, "error writing message")
+}
+
+func TestWriteUDPServerDownRetry(t *testing.T) {
+	dummy, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix:    true,
+		Servers:              []string{"udp://" + dummy.LocalAddr().String()},
+		ReconnectionAttempts: 5,
+		Log:                  testutil.Logger{},
+	}
+	require.NoError(t, dummy.Close())
+	require.NoError(t, plugin.Connect())
+}
+
+func TestWriteUDPServerUnavailableOnWriteRetry(t *testing.T) {
+	dummy, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix:    true,
+		Servers:              []string{"udp://" + dummy.LocalAddr().String()},
+		ReconnectionAttempts: 5,
+		Log:                  testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, dummy.Close())
+	err = plugin.Write(testutil.MockMetrics())
+	require.ErrorContains(t, err, "not connected")
+}
+
+func TestWriteTCPServerDownRetry(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	logger := &testutil.CaptureLogger{}
+	plugin := Graylog{
+		NameFieldNoPrefix:    true,
+		Servers:              []string{"tcp://" + dummy.Addr().String()},
+		ReconnectionAttempts: 5,
+		ReconnectionTime:     config.Duration(100 * time.Millisecond),
+		Log:                  logger,
+	}
+	require.NoError(t, dummy.Close())
+	require.NoError(t, plugin.Connect())
+	require.Eventually(t, func() bool {
+		return strings.Contains(logger.LastError(), "attempts exceeded")
+	}, 5*time.Second, 100*time.Millisecond)
+}
+
+func TestWriteTCPServerUnavailableOnWriteRetry(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix:    true,
+		Servers:              []string{"tcp://" + dummy.Addr().String()},
+		ReconnectionAttempts: 5,
+		Log:                  testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, dummy.Close())
+	err = plugin.Write(testutil.MockMetrics())
+	require.ErrorContains(t, err, "not connected")
+}
+
+func TestWriteTCPRetryStopping(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	logger := &testutil.CaptureLogger{}
+	plugin := Graylog{
+		NameFieldNoPrefix:    true,
+		Servers:              []string{"tcp://" + dummy.Addr().String()},
+		ReconnectionAttempts: -1,
+		ReconnectionTime:     config.Duration(10 * time.Millisecond),
+		Log:                  logger,
+	}
+	require.NoError(t, dummy.Close())
+	require.NoError(t, plugin.Connect())
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, plugin.Close())
+	// require.Eventually(t, func() bool {
+	// 	return strings.Contains(logger.LastError, "attempts exceeded")
+	// }, 5*time.Second, 100*time.Millisecond)
 }
