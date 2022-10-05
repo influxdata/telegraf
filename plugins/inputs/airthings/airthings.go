@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/oauth2/clientcredentials"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -162,7 +163,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 				air[k] = v
 			}
 		}
-		
+
 		m.Log.Debugf("Add tags and fields %v <-> %v", airTags, air)
 		acc.AddFields("airthings", air, airTags, ts)
 	}
@@ -198,7 +199,7 @@ func (m *Airthings) deviceSamples(deviceID string) (map[string]interface{}, time
 		}
 		return air, ts, nil
 	}
-	return nil, ts, fmt.Errorf("No key 'data' in json data from sensor %s", deviceID)
+	return nil, ts, fmt.Errorf("no key 'data' in json data from sensor %s", deviceID)
 }
 
 func (m *Airthings) deviceDetails(deviceID string) (*map[string]interface{}, error) {
@@ -257,13 +258,21 @@ func (m *Airthings) doHTTPRequest(httpMethod string, baseURL string, pathCompone
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			fmt.Errorf("error closing reader (%v)", err)
+		}
+	}(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("received HTTP status code %d from %q; expected 200",
 			resp.StatusCode, m.URL)
 	}
 	buf := &bytes.Buffer{}
-	buf.ReadFrom(resp.Body)
+	_, err = buf.ReadFrom(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	return buf.Bytes(), nil
 }
 
