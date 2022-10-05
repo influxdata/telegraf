@@ -29,7 +29,7 @@ plugin and use the old zookeeper connection method.
   # version = ""
 
   ## Optional TLS Config
-  # enable_tls = true
+  # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
