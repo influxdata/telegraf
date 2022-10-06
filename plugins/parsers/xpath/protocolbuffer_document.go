@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
@@ -96,6 +97,8 @@ func (d *protobufDocument) Parse(buf []byte) (dataNode, error) {
 
 	// Unmarshal the received buffer
 	if err := proto.Unmarshal(buf[d.SkipBytes:], msg.Interface()); err != nil {
+		hexbuf := hex.EncodeToString(buf)
+		d.Log.Debugf("raw data (hex): %q (skip %d bytes)", hexbuf, d.SkipBytes)
 		return nil, err
 	}
 
