@@ -447,7 +447,6 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		return err
 	}
 
-
 	// get the vSphere API version
 	e.apiVersion = client.Client.ServiceContent.About.ApiVersion
 

@@ -221,7 +221,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 	end := time.Now().UTC()
 
 	// We're using a fake metric key, since we only store one highwater mark per resource
-	start, ok := e.hwMarks.Get(hwMarksKeyPrefix + clusterRef.ref.Value, "generic")
+	start, ok := e.hwMarks.Get(hwMarksKeyPrefix+clusterRef.ref.Value, "generic")
 	if !ok {
 		// Look back 3 sampling periods by default
 		start = end.Add(time.Duration(e.Parent.MetricLookback) * time.Duration(-e.resourceKinds["vsan"].sampling) * time.Second)
@@ -325,7 +325,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			count += len(buckets)
 		}
 	}
-	e.hwMarks.Put(hwMarksKeyPrefix+clusterRef.ref.Value,"generic", latest)
+	e.hwMarks.Put(hwMarksKeyPrefix+clusterRef.ref.Value, "generic", latest)
 	return nil
 }
 

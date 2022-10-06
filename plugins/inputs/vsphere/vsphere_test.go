@@ -460,7 +460,7 @@ func TestVsanCmmds(t *testing.T) {
 
 	f := Finder{c}
 	var clusters []mo.ClusterComputeResource
-	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, &clusters)
+	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, []string{}, &clusters)
 	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
 	require.NotPanics(t, func() {
 		getCmmdsMap(ctx, c.Client.Client, clusterObj)

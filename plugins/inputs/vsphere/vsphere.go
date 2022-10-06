@@ -54,24 +54,24 @@ type VSphere struct {
 	DatastoreMetricExclude    []string
 	DatastoreInclude          []string
 	DatastoreExclude          []string
-	VSANMetricInclude       []string `toml:"vsan_metric_include"`
-	VSANMetricExclude       []string `toml:"vsan_metric_exclude"`
-	VSANMetricSkipVerify    bool     `toml:"vsan_metric_skip_verify"`
-	VSANClusterInclude      []string `toml:"vsan_cluster_include"`
+	VSANMetricInclude         []string `toml:"vsan_metric_include"`
+	VSANMetricExclude         []string `toml:"vsan_metric_exclude"`
+	VSANMetricSkipVerify      bool     `toml:"vsan_metric_skip_verify"`
+	VSANClusterInclude        []string `toml:"vsan_cluster_include"`
 	Separator                 string
 	CustomAttributeInclude    []string
 	CustomAttributeExclude    []string
 	UseIntSamples             bool
 	IPAddresses               []string
 	MetricLookback            int
-	MaxQueryObjects         int
-	MaxQueryMetrics         int
-	CollectConcurrency      int
-	DiscoverConcurrency     int
-	ForceDiscoverOnInit     bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
-	ObjectDiscoveryInterval config.Duration
-	Timeout                 config.Duration
-	HistoricalInterval      config.Duration
+	MaxQueryObjects           int
+	MaxQueryMetrics           int
+	CollectConcurrency        int
+	DiscoverConcurrency       int
+	ForceDiscoverOnInit       bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
+	ObjectDiscoveryInterval   config.Duration
+	Timeout                   config.Duration
+	HistoricalInterval        config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -156,7 +156,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters: []string{},
+			Vcenters:                  []string{},
 			DatacenterInstances:       false,
 			DatacenterMetricInclude:   nil,
 			DatacenterMetricExclude:   nil,
@@ -181,24 +181,24 @@ func init() {
 			DatastoreMetricInclude:    nil,
 			DatastoreMetricExclude:    nil,
 			DatastoreInclude:          []string{"/*/datastore/**"},
-			VSANMetricInclude:       nil,
-			VSANMetricExclude:       nil,
-			VSANMetricSkipVerify:    false,
-			VSANClusterInclude:      []string{"/*/host/**"},
+			VSANMetricInclude:         nil,
+			VSANMetricExclude:         nil,
+			VSANMetricSkipVerify:      false,
+			VSANClusterInclude:        []string{"/*/host/**"},
 			Separator:                 "_",
 			CustomAttributeInclude:    []string{},
 			CustomAttributeExclude:    []string{"*"},
 			UseIntSamples:             true,
 			IPAddresses:               []string{},
-			MaxQueryObjects:         256,
-			MaxQueryMetrics:         256,
-			CollectConcurrency:      1,
-			DiscoverConcurrency:     1,
-			MetricLookback:          3,
-			ForceDiscoverOnInit:     true,
-			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
-			Timeout:                 config.Duration(time.Second * 60),
-			HistoricalInterval:      config.Duration(time.Second * 300),
+			MaxQueryObjects:           256,
+			MaxQueryMetrics:           256,
+			CollectConcurrency:        1,
+			DiscoverConcurrency:       1,
+			MetricLookback:            3,
+			ForceDiscoverOnInit:       true,
+			ObjectDiscoveryInterval:   config.Duration(time.Second * 300),
+			Timeout:                   config.Duration(time.Second * 60),
+			HistoricalInterval:        config.Duration(time.Second * 300),
 		}
 	})
 }

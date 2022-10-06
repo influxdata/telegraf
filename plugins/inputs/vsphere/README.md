@@ -159,7 +159,7 @@ Compatibility information is available from the govmomi project
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default
-  
+
   ## VSAN
   vsan_metric_include = [] ## if omitted or empty, all metrics are collected
   vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
