@@ -445,9 +445,54 @@ func TestFolders(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
-func TestCollectionWithClusterMetrics(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping long test in short mode")
+func TestVsanCmmds(t *testing.T) {
+	m, s, err := createSim(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Remove()
+	defer s.Close()
+
+	v := defaultVSphere()
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, s.URL, v)
+
+	f := Finder{c}
+	var clusters []mo.ClusterComputeResource
+	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, &clusters)
+	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
+	require.NotPanics(t, func() {
+		getCmmdsMap(ctx, c.Client.Client, clusterObj)
+	})
+}
+
+func TestVsanTags(t *testing.T) {
+	host := "5b860329-3bc4-a76c-48b6-246e963cfcc0"
+	disk := "52ee3be1-47cc-b50d-ecab-01af0f706381"
+	ssdDisk := "52f26fc8-0b9b-56d8-3a32-a9c3bfbc6148"
+	ssd := "52173131-3384-bb63-4ef8-c00b0ce7e3e7"
+	hostname := "sc2-hs1-b2801.eng.vmware.com"
+	devName := "naa.55cd2e414d82c815:2"
+	var cmmds = map[string]CmmdsEntity{
+		disk:    {UUID: disk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 1.}},
+		ssdDisk: {UUID: ssdDisk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 0., SsdUuid: ssd}},
+		host:    {UUID: host, Type: "HOSTNAME", Owner: host, Content: CmmdsContent{Hostname: hostname}},
+	}
+	tags := populateCMMDSTags(make(map[string]string), "capacity-disk", disk, cmmds)
+	require.Equal(t, 2, len(tags))
+	tags = populateCMMDSTags(make(map[string]string), "cache-disk", ssdDisk, cmmds)
+	require.Equal(t, 3, len(tags))
+	tags = populateCMMDSTags(make(map[string]string), "host-domclient", host, cmmds)
+	require.Equal(t, 1, len(tags))
+}
+
+func TestAll(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
 	}
 
 	testCollection(t, false)

@@ -54,13 +54,16 @@ type VSphere struct {
 	DatastoreMetricExclude    []string
 	DatastoreInclude          []string
 	DatastoreExclude          []string
+	VSANMetricInclude       []string `toml:"vsan_metric_include"`
+	VSANMetricExclude       []string `toml:"vsan_metric_exclude"`
+	VSANMetricSkipVerify    bool     `toml:"vsan_metric_skip_verify"`
+	VSANClusterInclude      []string `toml:"vsan_cluster_include"`
 	Separator                 string
 	CustomAttributeInclude    []string
 	CustomAttributeExclude    []string
 	UseIntSamples             bool
 	IPAddresses               []string
 	MetricLookback            int
-
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
 	CollectConcurrency      int
@@ -79,7 +82,7 @@ type VSphere struct {
 	Log telegraf.Logger
 }
 
-func (*VSphere) SampleConfig() string {
+func (v *VSphere) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -154,7 +157,6 @@ func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
 			Vcenters: []string{},
-
 			DatacenterInstances:       false,
 			DatacenterMetricInclude:   nil,
 			DatacenterMetricExclude:   nil,
@@ -179,12 +181,15 @@ func init() {
 			DatastoreMetricInclude:    nil,
 			DatastoreMetricExclude:    nil,
 			DatastoreInclude:          []string{"/*/datastore/**"},
+			VSANMetricInclude:       nil,
+			VSANMetricExclude:       nil,
+			VSANMetricSkipVerify:    false,
+			VSANClusterInclude:      []string{"/*/host/**"},
 			Separator:                 "_",
 			CustomAttributeInclude:    []string{},
 			CustomAttributeExclude:    []string{"*"},
 			UseIntSamples:             true,
 			IPAddresses:               []string{},
-
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,

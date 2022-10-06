@@ -60,6 +60,7 @@ type Endpoint struct {
 	metricNameLookup  map[int32]string
 	metricNameMux     sync.RWMutex
 	log               telegraf.Logger
+	apiVersion        string
 }
 
 type resourceKind struct {
@@ -236,6 +237,23 @@ func NewEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
 			parent:           "",
+		},
+		"vsan": {
+			name:             "vsan",
+			vcName:           "ClusterComputeResource",
+			pKey:             "clustername",
+			parentTag:        "dcname",
+			enabled:          anythingEnabled(parent.VSANMetricExclude),
+			realTime:         false,
+			sampling:         300,
+			objects:          make(objectMap),
+			filters:          newFilterOrPanic(parent.VSANMetricInclude, parent.VSANMetricExclude),
+			paths:            parent.VSANClusterInclude,
+			simple:           parent.VSANMetricSkipVerify,
+			include:          parent.VSANMetricInclude,
+			collectInstances: false,
+			getObjects:       getClusters,
+			parent:           "datacenter",
 		},
 	}
 
@@ -429,7 +447,11 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		return err
 	}
 
-	e.log.Debugf("Discover new objects for %s", e.URL.Host)
+
+	// get the vSphere API version
+	e.apiVersion = client.Client.ServiceContent.About.ApiVersion
+
+	e.Parent.Log.Debugf("Discover new objects for %s", e.URL.Host)
 	dcNameCache := make(map[string]string)
 
 	numRes := int64(0)
@@ -439,7 +461,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	for k, res := range e.resourceKinds {
 		e.log.Debugf("Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled
-		if res.enabled || k != "vm" {
+		if res.enabled || (k != "vm" && k != "vsan") {
 			rf := ResourceFilter{
 				finder:       &Finder{client},
 				resType:      res.vcName,
@@ -464,7 +486,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 			}
 
 			// No need to collect metric metadata if resource type is not enabled
-			if res.enabled {
+			// VSAN is also skipped since vSAN metadata follow it's own format
+			if res.enabled && k != "vsan" {
 				if res.simple {
 					e.simpleMetadataSelect(ctx, client, res)
 				} else {
@@ -912,7 +935,12 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 			wg.Add(1)
 			go func(k string) {
 				defer wg.Done()
-				err := e.collectResource(ctx, k, acc)
+				var err error
+				if k == "vsan" {
+					err = e.collectVsan(ctx, k, acc)
+				} else {
+					err = e.collectResource(ctx, k, acc)
+				}
 				if err != nil {
 					acc.AddError(err)
 				}

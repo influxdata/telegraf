@@ -8,8 +8,10 @@ vCenter servers.
 * Resource Pools
 * VMs
 * Datastores
+* [vSAN](README-VSAN.md)
 
 ## Supported versions of vSphere
+This plugin supports vSphere version 5.5 through 7.0.
 
 This plugin supports vSphere version 6.5, 6.7 and 7.0. It may work with versions
 5.1, 5.5 and 6.0, but neither are officially supported.
@@ -157,6 +159,12 @@ Compatibility information is available from the govmomi project
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default
+  
+  ## VSAN
+  vsan_metric_include = [] ## if omitted or empty, all metrics are collected
+  vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
+  ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
+  vsan_metric_skip_verify = false ## false by default.
 
   ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
@@ -375,6 +383,7 @@ instance. For example:
   cluster_metric_exclude = ["*"]
   datacenter_metric_exclude = ["*"]
   resourcepool_metric_exclude = ["*"]
+  vsan_metric_exclude = ["*"]
 
   collect_concurrency = 5
   discover_concurrency = 5
