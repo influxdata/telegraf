@@ -58,7 +58,7 @@ type processorUnit struct {
 }
 
 // aggregatorUnit is a group of Aggregators and their source and sink channels.
-// Typically the aggregators write to a processor channel and pass the original
+// Typically, the aggregators write to a processor channel and pass the original
 // metrics to the output channel.  The sink channels may be the same channel.
 
 //                 ┌────────────┐
@@ -281,46 +281,7 @@ func (a *Agent) runInputs(
 ) {
 	var wg sync.WaitGroup
 	for _, input := range unit.inputs {
-		// Overwrite agent interval if this plugin has its own.
-		interval := time.Duration(a.Config.Agent.Interval)
-		if input.Config.Interval != 0 {
-			interval = input.Config.Interval
-		}
-
-		// Overwrite agent precision if this plugin has its own.
-		precision := time.Duration(a.Config.Agent.Precision)
-		if input.Config.Precision != 0 {
-			precision = input.Config.Precision
-		}
-
-		// Overwrite agent collection_jitter if this plugin has its own.
-		jitter := time.Duration(a.Config.Agent.CollectionJitter)
-		if input.Config.CollectionJitter != 0 {
-			jitter = input.Config.CollectionJitter
-		}
-
-		// Overwrite agent collection_offset if this plugin has its own.
-		offset := time.Duration(a.Config.Agent.CollectionOffset)
-		if input.Config.CollectionOffset != 0 {
-			offset = input.Config.CollectionOffset
-		}
-
-		var ticker Ticker
-		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter, offset)
-		} else {
-			ticker = NewUnalignedTicker(interval, jitter, offset)
-		}
-		defer ticker.Stop()
-
-		acc := NewAccumulator(input, unit.dst)
-		acc.SetPrecision(getPrecision(precision, interval))
-
-		wg.Add(1)
-		go func(input *models.RunningInput) {
-			defer wg.Done()
-			a.gatherLoop(ctx, acc, input, ticker, interval)
-		}(input)
+		a.runInput(ctx, startTime, unit, input, &wg)
 	}
 
 	wg.Wait()
@@ -330,6 +291,49 @@ func (a *Agent) runInputs(
 
 	close(unit.dst)
 	log.Printf("D! [agent] Input channel closed")
+}
+
+func (a *Agent) runInput(ctx context.Context, startTime time.Time, unit *inputUnit, input *models.RunningInput, wg *sync.WaitGroup) {
+	// Overwrite agent interval if this plugin has its own.
+	interval := time.Duration(a.Config.Agent.Interval)
+	if input.Config.Interval != 0 {
+		interval = input.Config.Interval
+	}
+
+	// Overwrite agent precision if this plugin has its own.
+	precision := time.Duration(a.Config.Agent.Precision)
+	if input.Config.Precision != 0 {
+		precision = input.Config.Precision
+	}
+
+	// Overwrite agent collection_jitter if this plugin has its own.
+	jitter := time.Duration(a.Config.Agent.CollectionJitter)
+	if input.Config.CollectionJitter != 0 {
+		jitter = input.Config.CollectionJitter
+	}
+
+	// Overwrite agent collection_offset if this plugin has its own.
+	offset := time.Duration(a.Config.Agent.CollectionOffset)
+	if input.Config.CollectionOffset != 0 {
+		offset = input.Config.CollectionOffset
+	}
+
+	var ticker Ticker
+	if a.Config.Agent.RoundInterval {
+		ticker = NewAlignedTicker(startTime, interval, jitter, offset)
+	} else {
+		ticker = NewUnalignedTicker(interval, jitter, offset)
+	}
+	defer ticker.Stop()
+
+	acc := NewAccumulator(input, unit.dst)
+	acc.SetPrecision(getPrecision(precision, interval))
+
+	wg.Add(1)
+	go func(input *models.RunningInput) {
+		defer wg.Done()
+		a.gatherLoop(ctx, acc, input, ticker, interval)
+	}(input)
 }
 
 // testStartInputs is a variation of startInputs for use in --test and --once
@@ -377,6 +381,7 @@ func (a *Agent) testRunInputs(
 
 	nul := make(chan telegraf.Metric)
 	go func() {
+		//nolint:revive // empty block needed here
 		for range nul {
 		}
 	}()
@@ -721,7 +726,7 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 
 		err = output.Output.Connect()
 		if err != nil {
-			return fmt.Errorf("Error connecting to output %q: %w", output.LogName(), err)
+			return fmt.Errorf("error connecting to output %q: %w", output.LogName(), err)
 		}
 	}
 	log.Printf("D! [agent] Successfully connected to %s", output.LogName())
@@ -882,7 +887,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 		}
 	}()
 
-	err := a.test(ctx, wait, src)
+	err := a.runTest(ctx, wait, src)
 	if err != nil {
 		return err
 	}
@@ -895,10 +900,10 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	return nil
 }
 
-// Test runs the agent and performs a single gather sending output to the
-// outputF.  After gathering pauses for the wait duration to allow service
+// runTest runs the agent and performs a single gather sending output to the
+// outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
-func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
+func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
 	log.Printf("D! [agent] Initializing plugins")
 	err := a.initPlugins()
 	if err != nil {
@@ -971,7 +976,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 
 // Once runs the full agent for a single gather.
 func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
-	err := a.once(ctx, wait)
+	err := a.runOnce(ctx, wait)
 	if err != nil {
 		return err
 	}
@@ -990,10 +995,10 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 	return nil
 }
 
-// On runs the agent and performs a single gather sending output to the
-// outputF.  After gathering pauses for the wait duration to allow service
+// runOnce runs the agent and performs a single gather sending output to the
+// outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
-func (a *Agent) once(ctx context.Context, wait time.Duration) error {
+func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	log.Printf("D! [agent] Initializing plugins")
 	err := a.initPlugins()
 	if err != nil {
@@ -1094,6 +1099,7 @@ func getPrecision(precision, interval time.Duration) time.Duration {
 
 // panicRecover displays an error if an input panics.
 func panicRecover(input *models.RunningInput) {
+	//nolint:revive // recover is called inside a deferred function
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
