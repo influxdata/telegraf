@@ -26,7 +26,7 @@ func (s *Shim) RunOutput() error {
 	parser := influx.Parser{}
 	err := parser.Init()
 	if err != nil {
-		return fmt.Errorf("Failed to create new parser: %w", err)
+		return fmt.Errorf("failed to create new parser: %w", err)
 	}
 
 	err = s.Output.Connect()
@@ -41,11 +41,11 @@ func (s *Shim) RunOutput() error {
 	for scanner.Scan() {
 		m, err = parser.ParseLine(scanner.Text())
 		if err != nil {
-			fmt.Fprintf(s.stderr, "Failed to parse metric: %s\n", err)
+			_, _ = fmt.Fprintf(s.stderr, "Failed to parse metric: %s\n", err)
 			continue
 		}
 		if err = s.Output.Write([]telegraf.Metric{m}); err != nil {
-			fmt.Fprintf(s.stderr, "Failed to write metric: %s\n", err)
+			_, _ = fmt.Fprintf(s.stderr, "Failed to write metric: %s\n", err)
 		}
 	}
 

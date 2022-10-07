@@ -56,10 +56,10 @@ func (s *Shim) RunProcessor() error {
 				break // stream ended
 			}
 			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
-				fmt.Fprintf(s.stderr, "Failed to parse metric: %s\b", parseErr)
+				_, _ = fmt.Fprintf(s.stderr, "Failed to parse metric: %s\b", parseErr)
 				continue
 			}
-			fmt.Fprintf(s.stderr, "Failure during reading stdin: %s\b", err)
+			_, _ = fmt.Fprintf(s.stderr, "Failure during reading stdin: %s\b", err)
 			continue
 		}
 

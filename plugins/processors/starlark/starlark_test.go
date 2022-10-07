@@ -3388,7 +3388,7 @@ func testNow(_ *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []star
 
 func newStarlarkFromSource(source string) *Starlark {
 	return &Starlark{
-		StarlarkCommon: common.StarlarkCommon{
+		Common: common.Common{
 			StarlarkLoadFunc: testLoadFunc,
 			Log:              testutil.Logger{},
 			Source:           source,
@@ -3398,7 +3398,7 @@ func newStarlarkFromSource(source string) *Starlark {
 
 func newStarlarkFromScript(script string) *Starlark {
 	return &Starlark{
-		StarlarkCommon: common.StarlarkCommon{
+		Common: common.Common{
 			StarlarkLoadFunc: testLoadFunc,
 			Log:              testutil.Logger{},
 			Script:           script,
@@ -3408,7 +3408,7 @@ func newStarlarkFromScript(script string) *Starlark {
 
 func newStarlarkNoScript() *Starlark {
 	return &Starlark{
-		StarlarkCommon: common.StarlarkCommon{
+		Common: common.Common{
 			StarlarkLoadFunc: testLoadFunc,
 			Log:              testutil.Logger{},
 		},
