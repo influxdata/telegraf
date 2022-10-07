@@ -90,6 +90,13 @@ type Prometheus struct {
 	podFieldSelector  fields.Selector
 	isNodeScrapeScope bool
 
+	ScrapeConfig struct {
+		Enabled bool   `toml:"enabled"`
+		Scheme  string `toml:"scheme"`
+		Path    string `toml:"path"`
+		Port    int    `toml:"port"`
+	} `toml:"scrape_config"`
+
 	// Only for monitor_kubernetes_pods=true
 	CacheRefreshInterval int `toml:"cache_refresh_interval"`
 
@@ -137,6 +144,10 @@ func (p *Prometheus) Init() error {
 		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
 	}
+
+	p.ScrapeConfig.Scheme = "http"
+	p.ScrapeConfig.Path = "/metrics"
+	p.ScrapeConfig.Port = 9102
 
 	ctx := context.Background()
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)

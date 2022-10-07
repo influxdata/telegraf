@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -97,12 +98,28 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 }
 
 func shouldScrapePod(pod *corev1.Pod, p *Prometheus) bool {
-	return pod.Annotations != nil &&
-		pod.Annotations["prometheus.io/scrape"] == "true" &&
-		podReady(pod.Status.ContainerStatuses) &&
+	isCandidate := podReady(pod.Status.ContainerStatuses) &&
 		podHasMatchingNamespace(pod, p) &&
 		podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
 		podHasMatchingFieldSelector(pod, p.podFieldSelector)
+
+	// Annotations always win over configuration. If annotation is not set
+	// scrape only if scrape_config is set
+	shouldScrape := func() bool {
+		if pod.Annotations != nil {
+			if pod.Annotations["prometheus.io/scrape"] == "true" {
+				return true
+			} else if pod.Annotations["prometheus.io/scrape"] == "false" {
+				return false
+			} else {
+				return p.ScrapeConfig.Enabled
+			}
+		} else {
+			return p.ScrapeConfig.Enabled
+		}
+	}()
+
+	return isCandidate && shouldScrape
 }
 
 // An edge case exists if a pod goes offline at the same time a new pod is created
@@ -343,7 +360,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	if p.kubernetesPods == nil {
 		p.kubernetesPods = map[string]URLAndAddress{}
 	}
-	targetURL, err := getScrapeURL(pod)
+	targetURL, err := getScrapeURL(pod, p)
 	if err != nil {
 		p.Log.Errorf("could not parse URL: %s", err)
 		return
@@ -385,7 +402,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 }
 
-func getScrapeURL(pod *corev1.Pod) (*url.URL, error) {
+func getScrapeURL(pod *corev1.Pod, p *Prometheus) (*url.URL, error) {
 	ip := pod.Status.PodIP
 	if ip == "" {
 		// return as if scrape was disabled, we will be notified again once the pod
@@ -397,12 +414,25 @@ func getScrapeURL(pod *corev1.Pod) (*url.URL, error) {
 	pathAndQuery := pod.Annotations["prometheus.io/path"]
 	port := pod.Annotations["prometheus.io/port"]
 
+	if scheme == "" && p.ScrapeConfig.Enabled {
+		scheme = p.ScrapeConfig.Scheme
+	}
 	if scheme == "" {
 		scheme = "http"
 	}
+
+	if port == "" && p.ScrapeConfig.Enabled {
+		port = strconv.Itoa(p.ScrapeConfig.Port)
+	}
+
 	if port == "" {
 		port = "9102"
 	}
+
+	if pathAndQuery == "" && p.ScrapeConfig.Enabled {
+		pathAndQuery = p.ScrapeConfig.Path
+	}
+
 	if pathAndQuery == "" {
 		pathAndQuery = "/metrics"
 	}
@@ -419,7 +449,7 @@ func getScrapeURL(pod *corev1.Pod) (*url.URL, error) {
 }
 
 func unregisterPod(pod *corev1.Pod, p *Prometheus) {
-	targetURL, err := getScrapeURL(pod)
+	targetURL, err := getScrapeURL(pod, p)
 	if err != nil {
 		p.Log.Errorf("failed to parse url: %s", err)
 		return

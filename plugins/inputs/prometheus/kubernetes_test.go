@@ -12,67 +12,114 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func initPromWithScrapeConfig() *Prometheus {
+	prom := &Prometheus{Log: testutil.Logger{}}
+	prom.ScrapeConfig.Scheme = "http"
+	prom.ScrapeConfig.Port = 9102
+	prom.ScrapeConfig.Path = "/metrics"
+	return prom
+}
+
 func TestScrapeURLNoAnnotations(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
 	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}}
 	p.Annotations = map[string]string{}
-	url, err := getScrapeURL(p)
+	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
 	require.Nil(t, url)
 }
 
-func TestScrapeURLAnnotationsNoScrape(t *testing.T) {
-	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}}
-	p.Name = "myPod"
-	p.Annotations = map[string]string{"prometheus.io/scrape": "false"}
-	url, err := getScrapeURL(p)
+func TestScrapeURLNoAnnotationsScrapeConfig(t *testing.T) {
+	prom := initPromWithScrapeConfig()
+	prom.ScrapeConfig.Enabled = true
+
+	p := pod()
+	p.Annotations = map[string]string{}
+	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
-	require.Nil(t, url)
+	require.Equal(t, "http://127.0.0.1:9102/metrics", url.String())
+}
+
+func TestScrapeURLScrapeConfigCustom(t *testing.T) {
+	prom := initPromWithScrapeConfig()
+	prom.ScrapeConfig.Enabled = true
+	prom.ScrapeConfig.Scheme = "https"
+	prom.ScrapeConfig.Port = 9999
+	prom.ScrapeConfig.Path = "/svc/metrics"
+	p := pod()
+	url, err := getScrapeURL(p, prom)
+	require.NoError(t, err)
+	require.Equal(t, "https://127.0.0.1:9999/svc/metrics", url.String())
 }
 
 func TestScrapeURLAnnotations(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
 	p := pod()
-	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
-	url, err := getScrapeURL(p)
+	url, err := getScrapeURL(p, prom)
+	require.NoError(t, err)
+	require.Equal(t, "http://127.0.0.1:9102/metrics", url.String())
+}
+
+func TestScrapeURLAnnotationsScrapeConfig(t *testing.T) {
+	prom := initPromWithScrapeConfig()
+	prom.ScrapeConfig.Enabled = true
+	p := pod()
+	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
 	require.Equal(t, "http://127.0.0.1:9102/metrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPort(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
 	p := pod()
-	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/port": "9000"}
-	url, err := getScrapeURL(p)
+	p.Annotations = map[string]string{"prometheus.io/port": "9000"}
+	url, err := getScrapeURL(p, prom)
+	require.NoError(t, err)
+	require.Equal(t, "http://127.0.0.1:9000/metrics", url.String())
+}
+
+func TestScrapeURLAnnotationsCustomPortScrapeConfig(t *testing.T) {
+	prom := initPromWithScrapeConfig()
+	prom.ScrapeConfig.Enabled = true
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/port": "9000"}
+	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
 	require.Equal(t, "http://127.0.0.1:9000/metrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPath(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
 	p := pod()
-	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "mymetrics"}
-	url, err := getScrapeURL(p)
+	p.Annotations = map[string]string{"prometheus.io/path": "mymetrics"}
+	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
 	require.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
 	p := pod()
-	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/mymetrics"}
-	url, err := getScrapeURL(p)
+	p.Annotations = map[string]string{"prometheus.io/path": "/mymetrics"}
+	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
 	require.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPathWithQueryParameters(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
 	p := pod()
-	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/v1/agent/metrics?format=prometheus"}
-	url, err := getScrapeURL(p)
+	p.Annotations = map[string]string{"prometheus.io/path": "/v1/agent/metrics?format=prometheus"}
+	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
 	require.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics?format=prometheus", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPathWithFragment(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
 	p := pod()
-	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/v1/agent/metrics#prometheus"}
-	url, err := getScrapeURL(p)
+	p.Annotations = map[string]string{"prometheus.io/path": "/v1/agent/metrics#prometheus"}
+	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
 	require.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics#prometheus", url.String())
 }
@@ -82,6 +129,16 @@ func TestAddPod(t *testing.T) {
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	registerPod(p, prom)
+	require.Equal(t, 1, len(prom.kubernetesPods))
+}
+
+func TestAddPodScrapeConfig(t *testing.T) {
+	prom := initPromWithScrapeConfig()
+	prom.ScrapeConfig.Enabled = true
+
+	p := pod()
+	p.Annotations = map[string]string{}
 	registerPod(p, prom)
 	require.Equal(t, 1, len(prom.kubernetesPods))
 }
