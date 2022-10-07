@@ -201,7 +201,7 @@ This plugin will format the events in the following way:
   ## The full HTTP endpoint URL for your Opensearch instance
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval
-  urls = [ "http://node1.es.example.com:9200" ] # required.
+  urls = [ "http://node1.os.example.com:9200" ] # required.
   ## Opensearch client timeout, defaults to "5s" if not set.
   timeout = "5s"
   ## Set to true to ask Opensearch a list of all cluster nodes,
