@@ -96,6 +96,15 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 	return nil
 }
 
+func shouldScrapePod(pod *corev1.Pod, p *Prometheus) bool {
+	return pod.Annotations != nil &&
+		pod.Annotations["prometheus.io/scrape"] == "true" &&
+		podReady(pod.Status.ContainerStatuses) &&
+		podHasMatchingNamespace(pod, p) &&
+		podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
+		podHasMatchingFieldSelector(pod, p.podFieldSelector)
+}
+
 // An edge case exists if a pod goes offline at the same time a new pod is created
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
 // pod, causing errors in the logs. This is only true if the pod going offline is not
@@ -126,11 +135,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 			pod, _ := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 
-			if pod.Annotations["prometheus.io/scrape"] == "true" &&
-				podReady(pod.Status.ContainerStatuses) &&
-				podHasMatchingNamespace(pod, p) &&
-				podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
-				podHasMatchingFieldSelector(pod, p.podFieldSelector) {
+			if shouldScrapePod(pod, p) {
 				registerPod(pod, p)
 			}
 		},
@@ -147,11 +152,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 			newPod, _ := clientset.CoreV1().Pods(newNamespace).Get(ctx, newName, metav1.GetOptions{})
 
-			if newPod.Annotations["prometheus.io/scrape"] == "true" &&
-				podReady(newPod.Status.ContainerStatuses) &&
-				podHasMatchingNamespace(newPod, p) &&
-				podHasMatchingLabelSelector(newPod, p.podLabelSelector) &&
-				podHasMatchingFieldSelector(newPod, p.podFieldSelector) {
+			if shouldScrapePod(newPod, p) {
 				if newPod.GetDeletionTimestamp() == nil {
 					registerPod(newPod, p)
 				}
@@ -169,11 +170,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 			oldPod, _ := clientset.CoreV1().Pods(oldNamespace).Get(ctx, oldName, metav1.GetOptions{})
 
-			if oldPod.Annotations["prometheus.io/scrape"] == "true" &&
-				podReady(oldPod.Status.ContainerStatuses) &&
-				podHasMatchingNamespace(oldPod, p) &&
-				podHasMatchingLabelSelector(oldPod, p.podLabelSelector) &&
-				podHasMatchingFieldSelector(oldPod, p.podFieldSelector) {
+			if shouldScrapePod(oldPod, p) {
 				if oldPod.GetDeletionTimestamp() != nil {
 					unregisterPod(oldPod, p)
 				}
@@ -192,11 +189,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 			pod, _ := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 
-			if pod.Annotations["prometheus.io/scrape"] == "true" &&
-				podReady(pod.Status.ContainerStatuses) &&
-				podHasMatchingNamespace(pod, p) &&
-				podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
-				podHasMatchingFieldSelector(pod, p.podFieldSelector) {
+			if shouldScrapePod(pod, p) {
 				if pod.GetDeletionTimestamp() != nil {
 					unregisterPod(pod, p)
 				}
@@ -276,12 +269,7 @@ func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 	// Register pod only if it has an annotation to scrape, if it is ready,
 	// and if namespace and selectors are specified and match
 	for _, pod := range pods {
-		if necessaryPodFieldsArePresent(pod) &&
-			pod.Annotations["prometheus.io/scrape"] == "true" &&
-			podReady(pod.Status.ContainerStatuses) &&
-			podHasMatchingNamespace(pod, p) &&
-			podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
-			podHasMatchingFieldSelector(pod, p.podFieldSelector) {
+		if necessaryPodFieldsArePresent(pod) && shouldScrapePod(pod, p) {
 			registerPod(pod, p)
 		}
 	}
