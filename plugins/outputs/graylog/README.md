@@ -55,7 +55,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Number of attempts to reconnect to the enpoints. If zero, only
   ## a single connection attempt will be made. For negative values,
   ## the plugin will try infinite number of times.
-  # reconnection_attemps = 0
+  # reconnection_attempts = 0
   ## Time to wait between reconnection attempts.
   # reconnection_wait_time = "100ms"
 
