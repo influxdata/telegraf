@@ -111,7 +111,7 @@ func ReadLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
 // RandomString returns a random string of alphanumeric characters
 func RandomString(n int) string {
 	var bytes = make([]byte, n)
-	rand.Read(bytes)
+	rand.Read(bytes) //nolint:revive // from math/rand/rand.go: "It always returns len(p) and a nil error."
 	for i, b := range bytes {
 		bytes[i] = alphanum[b%byte(len(alphanum))]
 	}
