@@ -3,12 +3,16 @@ orbs:
   win: circleci/windows@5.0.0
   aws-cli: circleci/aws-cli@3.1.1
 
+variables:
+  - name: goversion
+    value: 1.19.2
+
 executors:
   telegraf-ci:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.19.2'
+      - image: 'quay.io/influxdb/telegraf-ci:${{ variables.goversion }}'
     environment:
       GOFLAGS: -p=4
   mac:
