@@ -47,13 +47,13 @@ func main() {
 	// Check for settings from a config toml file,
 	// (or just use whatever plugins were imported above)
 	if err = shimLayer.LoadConfig(configFile); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Err loading input: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Err loading input: %s\n", err)
 		os.Exit(1)
 	}
 
 	// run a single plugin until stdin closes, or we receive a termination signal
 	if err = shimLayer.Run(*pollInterval); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Err: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
 		os.Exit(1)
 	}
 }

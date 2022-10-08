@@ -89,11 +89,11 @@ func (s *Shim) startGathering(ctx context.Context, input telegraf.Input, acc tel
 			return
 		case <-s.gatherPromptCh:
 			if err := input.Gather(acc); err != nil {
-				_, _ = fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
+				fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
 			}
 		case <-t.C:
 			if err := input.Gather(acc); err != nil {
-				_, _ = fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
+				fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
 			}
 		}
 	}

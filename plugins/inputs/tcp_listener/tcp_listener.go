@@ -187,7 +187,6 @@ func (t *TCPListener) tcpListen() {
 // refuser refuses a TCP connection
 func (t *TCPListener) refuser(conn *net.TCPConn) {
 	// Tell the connection why we are closing.
-	//nolint:errcheck,revive
 	fmt.Fprintf(conn, "Telegraf maximum concurrent TCP connections (%d)"+
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)

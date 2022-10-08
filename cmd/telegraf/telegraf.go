@@ -273,7 +273,7 @@ func (t *Telegraf) runAgent(ctx context.Context) error {
 		if err != nil {
 			log.Printf("E! Unable to create pidfile: %s", err)
 		} else {
-			_, _ = fmt.Fprintf(f, "%d\n", os.Getpid())
+			fmt.Fprintf(f, "%d\n", os.Getpid())
 
 			err = f.Close()
 			if err != nil {
