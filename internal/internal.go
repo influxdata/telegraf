@@ -75,7 +75,7 @@ func ReadLines(filename string) ([]string, error) {
 	return ReadLinesOffsetN(filename, 0, -1)
 }
 
-// ReadLines reads contents from file and splits them by new line.
+// ReadLinesOffsetN reads contents from file and splits them by new line.
 // The offset tells at which line number to start.
 // The count determines the number of lines to read (starting from offset):
 //
@@ -94,7 +94,10 @@ func ReadLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
 	for i := 0; i < n+int(offset) || n < 0; i++ {
 		line, err := r.ReadString('\n')
 		if err != nil {
-			break
+			if err == io.EOF {
+				break
+			}
+			return []string{""}, err
 		}
 		if i < int(offset) {
 			continue
@@ -105,7 +108,7 @@ func ReadLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
 	return ret, nil
 }
 
-// RandomString returns a random string of alpha-numeric characters
+// RandomString returns a random string of alphanumeric characters
 func RandomString(n int) string {
 	var bytes = make([]byte, n)
 	rand.Read(bytes)
@@ -249,7 +252,7 @@ func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
 // The format can be one of "unix", "unix_ms", "unix_us", "unix_ns", or a Go
 // time layout suitable for time.Parse.
 //
-// When using the "unix" format, a optional fractional component is allowed.
+// When using the "unix" format, an optional fractional component is allowed.
 // Specific unix time precisions cannot have a fractional component.
 //
 // Unix times may be an int64, float64, or string.  When using a Go format
@@ -344,17 +347,17 @@ func timeFromFraction(f *big.Rat, factor int64) time.Time {
 
 // sanitizeTimestamp removes thousand separators and uses dot as
 // decimal separator. Returns also a boolean indicating success.
-func sanitizeTimestamp(timestamp string, decimalSeparartor []string) string {
+func sanitizeTimestamp(timestamp string, decimalSeparator []string) string {
 	// Remove thousand-separators that are not used for decimal separation
 	sanitized := timestamp
 	for _, s := range []string{" ", ",", "."} {
-		if !choice.Contains(s, decimalSeparartor) {
+		if !choice.Contains(s, decimalSeparator) {
 			sanitized = strings.ReplaceAll(sanitized, s, "")
 		}
 	}
 
 	// Replace decimal separators by dot to have a standard, parsable format
-	for _, s := range decimalSeparartor {
+	for _, s := range decimalSeparator {
 		// Make sure we replace only the first occurrence of any separator.
 		if strings.Contains(sanitized, s) {
 			return strings.Replace(sanitized, s, ".", 1)

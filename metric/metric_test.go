@@ -78,17 +78,17 @@ func TestRemoveTagNoEffectOnMissingTags(t *testing.T) {
 func TestGetTag(t *testing.T) {
 	m := baseMetric()
 
-	value, ok := m.GetTag("host")
+	_, ok := m.GetTag("host")
 	require.False(t, ok)
 
 	m.AddTag("host", "localhost")
 
-	value, ok = m.GetTag("host")
+	value, ok := m.GetTag("host")
 	require.True(t, ok)
 	require.Equal(t, "localhost", value)
 
 	m.RemoveTag("host")
-	value, ok = m.GetTag("host")
+	_, ok = m.GetTag("host")
 	require.False(t, ok)
 }
 
@@ -143,17 +143,17 @@ func TestRemoveFieldNoEffectOnMissingFields(t *testing.T) {
 func TestGetField(t *testing.T) {
 	m := baseMetric()
 
-	value, ok := m.GetField("foo")
+	_, ok := m.GetField("foo")
 	require.False(t, ok)
 
 	m.AddField("foo", "bar")
 
-	value, ok = m.GetField("foo")
+	value, ok := m.GetField("foo")
 	require.True(t, ok)
 	require.Equal(t, "bar", value)
 
 	m.RemoveTag("foo")
-	value, ok = m.GetTag("foo")
+	_, ok = m.GetTag("foo")
 	require.False(t, ok)
 }
 

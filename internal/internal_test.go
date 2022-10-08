@@ -125,6 +125,7 @@ func TestCombinedOutputError(t *testing.T) {
 	}
 	cmd := exec.Command(shell, "-c", "false")
 	expected, err := cmd.CombinedOutput()
+	assert.Error(t, err)
 
 	cmd2 := exec.Command(shell, "-c", "false")
 	actual, err := CombinedOutputTimeout(cmd2, time.Second)
