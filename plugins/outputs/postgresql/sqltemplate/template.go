@@ -1,9 +1,10 @@
+// Package sqltemplate /*
 /*
 Templates are used for creation of the SQL used when creating and modifying tables. These templates are specified within
-the configuration as the parameters 'create_templates', 'add_column_templates, 'tag_table_create_templates', and
+the configuration as the parameters 'create_templates', 'add_column_templates', 'tag_table_create_templates', and
 'tag_table_add_column_templates'.
 
-The templating functionality behaves the same in all cases. However the variables will differ.
+The templating functionality behaves the same in all cases. However, the variables will differ.
 
 # Variables
 
@@ -119,9 +120,9 @@ import (
 	"text/template"
 	"unsafe"
 
-	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
-
 	"github.com/Masterminds/sprig"
+
+	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 )
 
 var templateFuncs = map[string]interface{}{
@@ -235,7 +236,8 @@ func (tc Column) Identifier() string {
 	return QuoteIdentifier(tc.Name)
 }
 
-// Selector returns the selector for the column. For most cases this is the same as Identifier. However in some cases, such as a UNION, this may return a statement such as `NULL AS "foo"`.
+// Selector returns the selector for the column. For most cases this is the same as Identifier.
+// However, in some cases, such as a UNION, this may return a statement such as `NULL AS "foo"`.
 func (tc Column) Selector() string {
 	if tc.Type != "" {
 		return tc.Identifier()
@@ -243,12 +245,12 @@ func (tc Column) Selector() string {
 	return "NULL AS " + tc.Identifier()
 }
 
-// IsTag returns true if the column is a tag column. Otherwise false.
+// IsTag returns true if the column is a tag column. Otherwise, false.
 func (tc Column) IsTag() bool {
 	return tc.Role == utils.TagColType
 }
 
-// IsField returns true if the column is a field column. Otherwise false.
+// IsField returns true if the column is a field column. Otherwise, false.
 func (tc Column) IsField() bool {
 	return tc.Role == utils.FieldColType
 }
@@ -381,8 +383,8 @@ func (cols Columns) Fields() Columns {
 func (cols Columns) Hash() string {
 	hash := fnv.New32a()
 	for _, tc := range cols.Sorted() {
-		_, _ = hash.Write([]byte(tc.Name))
-		_, _ = hash.Write([]byte{0})
+		hash.Write([]byte(tc.Name)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		hash.Write([]byte{0})       //nolint:revive // all Write() methods for hash in fnv.go returns nil err
 	}
 	return strings.ToLower(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(hash.Sum(nil)))
 }

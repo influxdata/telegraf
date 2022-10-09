@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/influxdata/telegraf/logger"
 	"github.com/kardianos/service"
 	"github.com/urfave/cli/v2"
+
+	"github.com/influxdata/telegraf/logger"
 )
 
 func cliFlags() []cli.Flag {
@@ -135,7 +136,11 @@ func (t *Telegraf) runAsWindowsService() error {
 			return fmt.Errorf("E! " + err.Error())
 		}
 	} else {
-		logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
+		err = logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
+		if err != nil {
+			return fmt.Errorf("E! " + err.Error())
+		}
+
 		err = s.Run()
 		if err != nil {
 			return fmt.Errorf("E! " + err.Error())

@@ -14,6 +14,8 @@ import (
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/fatih/color"
 	"github.com/influxdata/tail/watch"
+	"gopkg.in/tomb.v1"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
@@ -24,7 +26,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"gopkg.in/tomb.v1"
 )
 
 var stop chan struct{}
@@ -187,18 +188,18 @@ func (t *Telegraf) runAgent(ctx context.Context) error {
 	}
 
 	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
+		return errors.New("error: no outputs found, did you provide a valid config file?")
 	}
 	if t.plugindDir == "" && len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
+		return errors.New("error: no inputs found, did you provide a valid config file?")
 	}
 
 	if int64(c.Agent.Interval) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
+		return fmt.Errorf("agent interval must be positive, found %v", c.Agent.Interval)
 	}
 
 	if int64(c.Agent.FlushInterval) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.Interval)
+		return fmt.Errorf("agent flush_interval must be positive; found %v", c.Agent.Interval)
 	}
 
 	// Setup logging as configured.
@@ -214,7 +215,10 @@ func (t *Telegraf) runAgent(ctx context.Context) error {
 		LogWithTimezone:     c.Agent.LogWithTimezone,
 	}
 
-	logger.SetupLogging(logConfig)
+	err = logger.SetupLogging(logConfig)
+	if err != nil {
+		return err
+	}
 
 	log.Printf("I! Starting Telegraf %s%s", internal.Version, internal.Customized)
 	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs",
