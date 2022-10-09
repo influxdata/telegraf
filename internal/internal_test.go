@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,9 +60,9 @@ func TestRunTimeout(t *testing.T) {
 	err := RunTimeout(cmd, time.Millisecond*20)
 	elapsed := time.Since(start)
 
-	assert.Equal(t, ErrTimeout, err)
+	require.Equal(t, ErrTimeout, err)
 	// Verify that command gets killed in 20ms, with some breathing room
-	assert.True(t, elapsed < time.Millisecond*75)
+	require.True(t, elapsed < time.Millisecond*75)
 }
 
 // Verifies behavior of a command that doesn't get killed.
@@ -83,7 +82,7 @@ func TestRunTimeoutFastExit(t *testing.T) {
 
 	require.NoError(t, err)
 	// Verify that command gets killed in 20ms, with some breathing room
-	assert.True(t, elapsed < time.Millisecond*75)
+	require.True(t, elapsed < time.Millisecond*75)
 
 	// Verify "process already finished" log doesn't occur.
 	time.Sleep(time.Millisecond * 75)
@@ -101,9 +100,9 @@ func TestCombinedOutputTimeout(t *testing.T) {
 	_, err := CombinedOutputTimeout(cmd, time.Millisecond*20)
 	elapsed := time.Since(start)
 
-	assert.Equal(t, ErrTimeout, err)
+	require.Equal(t, ErrTimeout, err)
 	// Verify that command gets killed in 20ms, with some breathing room
-	assert.True(t, elapsed < time.Millisecond*75)
+	require.True(t, elapsed < time.Millisecond*75)
 }
 
 func TestCombinedOutput(t *testing.T) {
@@ -113,8 +112,8 @@ func TestCombinedOutput(t *testing.T) {
 	cmd := exec.Command(echobin, "foo")
 	out, err := CombinedOutputTimeout(cmd, time.Second)
 
-	assert.NoError(t, err)
-	assert.Equal(t, "foo\n", string(out))
+	require.NoError(t, err)
+	require.Equal(t, "foo\n", string(out))
 }
 
 // test that CombinedOutputTimeout and exec.Cmd.CombinedOutput return
@@ -125,13 +124,13 @@ func TestCombinedOutputError(t *testing.T) {
 	}
 	cmd := exec.Command(shell, "-c", "false")
 	expected, err := cmd.CombinedOutput()
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	cmd2 := exec.Command(shell, "-c", "false")
 	actual, err := CombinedOutputTimeout(cmd2, time.Second)
 
-	assert.Error(t, err)
-	assert.Equal(t, expected, actual)
+	require.Error(t, err)
+	require.Equal(t, expected, actual)
 }
 
 func TestRunError(t *testing.T) {
@@ -141,7 +140,7 @@ func TestRunError(t *testing.T) {
 	cmd := exec.Command(shell, "-c", "false")
 	err := RunTimeout(cmd, time.Second)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestRandomSleep(t *testing.T) {
@@ -151,13 +150,13 @@ func TestRandomSleep(t *testing.T) {
 	s := time.Now()
 	RandomSleep(time.Duration(0), make(chan struct{}))
 	elapsed := time.Since(s)
-	assert.True(t, elapsed < time.Millisecond)
+	require.True(t, elapsed < time.Millisecond)
 
 	// test that max sleep is respected
 	s = time.Now()
 	RandomSleep(time.Millisecond*50, make(chan struct{}))
 	elapsed = time.Since(s)
-	assert.True(t, elapsed < time.Millisecond*100)
+	require.True(t, elapsed < time.Millisecond*100)
 
 	// test that shutdown is respected
 	s = time.Now()
@@ -168,7 +167,7 @@ func TestRandomSleep(t *testing.T) {
 	}()
 	RandomSleep(time.Second, shutdown)
 	elapsed = time.Since(s)
-	assert.True(t, elapsed < time.Millisecond*150)
+	require.True(t, elapsed < time.Millisecond*150)
 }
 
 func TestCompressWithGzip(t *testing.T) {
@@ -176,16 +175,16 @@ func TestCompressWithGzip(t *testing.T) {
 	inputBuffer := bytes.NewBuffer([]byte(testData))
 
 	outputBuffer, err := CompressWithGzip(inputBuffer)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	gzipReader, err := gzip.NewReader(outputBuffer)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer gzipReader.Close()
 
 	output, err := io.ReadAll(gzipReader)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Equal(t, testData, string(output))
+	require.Equal(t, testData, string(output))
 }
 
 type mockReader struct {
@@ -201,23 +200,23 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 	mr := &mockReader{}
 
 	rc, err := CompressWithGzip(mr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	n, err := io.CopyN(io.Discard, rc, 10000)
-	assert.NoError(t, err)
-	assert.Equal(t, int64(10000), n)
+	require.NoError(t, err)
+	require.Equal(t, int64(10000), n)
 
 	r1 := mr.readN
 	err = rc.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	n, err = io.CopyN(io.Discard, rc, 10000)
-	assert.Error(t, io.EOF, err)
-	assert.Equal(t, int64(0), n)
+	require.Error(t, io.EOF, err)
+	require.Equal(t, int64(0), n)
 
 	r2 := mr.readN
 	// no more read to the source after closing
-	assert.Equal(t, r1, r2)
+	require.Equal(t, r1, r2)
 }
 
 func TestAlignDuration(t *testing.T) {
