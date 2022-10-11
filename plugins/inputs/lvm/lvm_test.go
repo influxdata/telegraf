@@ -110,16 +110,12 @@ func TestHelperProcess(_ *testing.T) {
 	args := os.Args
 	cmd := args[3]
 	if cmd == "/usr/sbin/pvs" {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, mockPVSData)
 	} else if cmd == "/usr/sbin/vgs" {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, mockVGSData)
 	} else if cmd == "/usr/sbin/lvs" {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, mockLVSData)
 	} else {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
@@ -194,16 +190,12 @@ func TestHelperProcessNoLVM(_ *testing.T) {
 	args := os.Args
 	cmd := args[3]
 	if cmd == "/usr/sbin/pvs" {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, mockPVSData)
 	} else if cmd == "/usr/sbin/vgs" {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, mockVGSData)
 	} else if cmd == "/usr/sbin/lvs" {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, mockLVSData)
 	} else {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)

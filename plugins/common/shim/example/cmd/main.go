@@ -17,7 +17,7 @@ var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "set to tr
 var configFile = flag.String("config", "", "path to the config file for this plugin")
 var err error
 
-// This is designed to be simple; Just change the import above and you're good.
+// This is designed to be simple; Just change the import above, and you're good.
 //
 // However, if you want to do all your config in code, you can like so:
 //
@@ -46,14 +46,13 @@ func main() {
 	// otherwise, follow what the config asks for.
 	// Check for settings from a config toml file,
 	// (or just use whatever plugins were imported above)
-	err = shimLayer.LoadConfig(configFile)
-	if err != nil {
+	if err = shimLayer.LoadConfig(configFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Err loading input: %s\n", err)
 		os.Exit(1)
 	}
 
-	// run a single plugin until stdin closes or we receive a termination signal
-	if err := shimLayer.Run(*pollInterval); err != nil {
+	// run a single plugin until stdin closes, or we receive a termination signal
+	if err = shimLayer.Run(*pollInterval); err != nil {
 		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
 		os.Exit(1)
 	}

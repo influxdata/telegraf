@@ -154,7 +154,6 @@ func BenchmarkUDP(b *testing.B) {
 func sendRequests(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for i := 0; i < 25000; i++ {
-		//nolint:errcheck,revive
 		fmt.Fprint(conn, testMsg)
 	}
 }
