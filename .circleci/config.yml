@@ -519,6 +519,9 @@ jobs:
 workflows:
   version: 2
   check:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - 'test-go-linux':
           filters:
@@ -658,9 +661,6 @@ workflows:
             tags:
               only: /.*/
       - 'generate-config':
-          when:
-            not:
-              equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
           requires:
             - 'amd64-package'
           filters:
@@ -668,9 +668,6 @@ workflows:
               only:
                 - master
       - 'generate-config-win':
-          when:
-            not:
-              equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
           requires:
             - 'windows-package'
           filters:
@@ -737,32 +734,112 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
-      - nightly:
-          when:
-              equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+
+  nightly:
+    when:
+      equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - 'test-go-linux'
+      - 'test-go-linux-386'
+      - 'test-go-mac'
+      - 'test-go-windows'
+      - 'test-licenses'
+      - 'windows-package':
+          name: 'windows-package-nightly'
+          nightly: true
           requires:
-            - 'i386-package'
-            - 'ppc64le-package'
-            - 's390x-package'
-            - 'armel-package'
-            - 'amd64-package'
-            - 'mipsel-package'
-            - 'mips-package'
-            - 'static-package'
-            - 'arm64-package'
-            - 'armhf-package'
-            - 'riscv64-package'
-            - 'package-sign-mac'
-            - 'package-sign-windows'
+            - 'test-go-windows'
+      - 'darwin-amd64-package':
+          name: 'darwin-amd64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-mac'
+      - 'darwin-arm64-package':
+          name: 'darwin-arm64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-mac'
+      - 'i386-package':
+          name: 'i386-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux-386'
+      - 'ppc64le-package':
+          name: 'ppc64le-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'riscv64-package':
+          name: 'riscv64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 's390x-package':
+          name: 's390x-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'armel-package':
+          name: 'armel-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'amd64-package':
+          name: 'amd64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'arm64-package':
+          name: 'arm64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'armhf-package':
+          name: 'armhf-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'static-package':
+          name: 'static-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'mipsel-package':
+          name: 'mipsel-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'mips-package':
+          name: 'mips-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'package-sign-windows':
+          requires:
+            - 'windows-package-nightly'
+      - 'package-sign-mac':
+           requires:
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
+      - nightly:
+          requires:
+            - 'amd64-package-test-nightly'
+            - 'arm64-package-nightly'
+            - 'armel-package-nightly'
+            - 'armhf-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
+            - 'i386-package-nightly'
+            - 'mips-package-nightly'
+            - 'mipsel-package-nightly'
+            - 'ppc64le-package-nightly'
+            - 'riscv64-package-nightly'
+            - 's390x-package-nightly'
+            - 'static-package-nightly'
+            - 'windows-package-nightly'
       - docker-nightly:
-          when:
-              equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
           requires:
             - 'nightly'
       - amd64-package-test-nightly:
-          when:
-              equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
           requires:
             - 'amd64-package-nightly'
-
-
