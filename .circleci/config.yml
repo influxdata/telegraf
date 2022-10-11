@@ -402,6 +402,16 @@ jobs:
               --include "*.rpm" \
               --include "*.zip" \
               --acl public-read
+  govulncheck:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - run:
+          name: Install latest govulncheck
+          command: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run:
+          name: Scan master with govulncheck
+          command: govulncheck ./...
   docker-nightly:
     machine:
       image: ubuntu-2004:current
@@ -838,6 +848,9 @@ workflows:
       - amd64-package-test-nightly:
           requires:
             - 'amd64-package-nightly'
+      - govulncheck:
+          requires:
+            - 'nightly'
     triggers:
       - schedule:
           cron: "0 7 * * *"
