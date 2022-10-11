@@ -1,3 +1,5 @@
+//go:build !windows
+
 package cloud_pubsub_push
 
 import (
