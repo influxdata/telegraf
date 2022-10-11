@@ -69,7 +69,7 @@ linters-settings:
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unhandled-error
-        arguments: ["outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print"]
+        arguments: ["outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln"]
       - name: unnecessary-stmt
       - name: unreachable-code
       # - name: unused-parameter

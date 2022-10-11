@@ -146,7 +146,6 @@ func setupServer(resp string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		// Ignore the returned error as the tests will fail anyway
-		//nolint:errcheck,revive
 		fmt.Fprintln(w, resp)
 	}))
 }

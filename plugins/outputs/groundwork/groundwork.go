@@ -391,7 +391,7 @@ func validStatus(status string) bool {
 func adaptLog(fields interface{}, format string, a ...interface{}) string {
 	buf := &bytes.Buffer{}
 	if format != "" {
-		_, _ = fmt.Fprintf(buf, format, a...)
+		fmt.Fprintf(buf, format, a...)
 	}
 	fmtField := func(k string, v interface{}) {
 		format := " %s:"
@@ -403,7 +403,7 @@ func adaptLog(fields interface{}, format string, a ...interface{}) string {
 		} else {
 			format += "%q"
 		}
-		_, _ = fmt.Fprintf(buf, format, k, v)
+		fmt.Fprintf(buf, format, k, v)
 	}
 	if ff, ok := fields.(interface {
 		LogFields() (map[string]interface{}, map[string][]byte)
