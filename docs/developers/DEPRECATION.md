@@ -49,7 +49,7 @@ Mark the option as deprecated in the sample config, include the deprecation
 version and any replacement.
 
 ```toml
-  ## Broker URL
+  ## Broker to publish to.
   ##   deprecated in 1.7; use the brokers option
   # url = "amqp://localhost:5672/influxdb"
 ```
@@ -57,16 +57,21 @@ version and any replacement.
 In the plugins configuration struct, add a `deprecated` tag to the option:
 
 ```go
-type AMQPConsumer struct {
-    URL string `toml:"url" deprecated:"1.7.0;use brokers"`
+type AMQP struct {
+    URL       string `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
+    Precision string `toml:"precision" deprecated:"1.2.0;option is ignored"`
 }
 ```
 
 The `deprecated` tag has the format `<since version>[;removal version];<notice>` where the `removal version` is optional. The specified deprecation info will automatically displayed by Telegraf if the option is used in the config
 
 ```text
-2022-01-26T20:08:15Z W! DeprecationWarning: Option "url" of plugin "inputs.amqp_consumer" deprecated since version 1.7.0 and will be removed in 2.0.0: use brokers
+2022-01-26T20:08:15Z W! DeprecationWarning: Option "url" of plugin "outputs.amqp" deprecated since version 1.7.0 and will be removed in 2.0.0: use 'brokers' instead
 ```
+
+### Option value
+
+In the case a specific option value is being deprecated, the method `models.PrintOptionValueDeprecationNotice` needs to be called in the plugin's `Init` method.
 
 ## Deprecate metrics
 
