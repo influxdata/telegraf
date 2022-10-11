@@ -1,4 +1,4 @@
-// Package sqltemplate /*
+// Package sqltemplate
 /*
 Templates are used for creation of the SQL used when creating and modifying tables. These templates are specified within
 the configuration as the parameters 'create_templates', 'add_column_templates', 'tag_table_create_templates', and
