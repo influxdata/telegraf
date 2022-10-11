@@ -26,7 +26,7 @@ func (s *Shim) RunOutput() error {
 	parser := influx.Parser{}
 	err := parser.Init()
 	if err != nil {
-		return fmt.Errorf("Failed to create new parser: %w", err)
+		return fmt.Errorf("failed to create new parser: %w", err)
 	}
 
 	err = s.Output.Connect()

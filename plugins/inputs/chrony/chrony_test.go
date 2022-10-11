@@ -94,14 +94,11 @@ Leap status     : Not synchronized
 
 	if cmd == "chronyc" {
 		if args[0] == "tracking" {
-			//nolint:errcheck,revive // test will fail anyway
 			fmt.Fprint(os.Stdout, lookup+mockData)
 		} else {
-			//nolint:errcheck,revive // test will fail anyway
 			fmt.Fprint(os.Stdout, noLookup+mockData)
 		}
 	} else {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)

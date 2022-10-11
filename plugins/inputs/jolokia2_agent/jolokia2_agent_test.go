@@ -747,7 +747,7 @@ func TestFillFields(t *testing.T) {
 func setupServer(resp string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = fmt.Fprintln(w, resp)
+		fmt.Fprintln(w, resp)
 	}))
 }
 

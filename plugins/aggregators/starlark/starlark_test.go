@@ -403,7 +403,7 @@ def reset():
 
 func newStarlarkFromSource(source string) (*Starlark, error) {
 	plugin := &Starlark{
-		StarlarkCommon: common.StarlarkCommon{
+		Common: common.Common{
 			StarlarkLoadFunc: common.LoadFunc,
 			Log:              testutil.Logger{},
 			Source:           source,
@@ -418,7 +418,7 @@ func newStarlarkFromSource(source string) (*Starlark, error) {
 
 func newStarlarkFromScript(script string) (*Starlark, error) {
 	plugin := &Starlark{
-		StarlarkCommon: common.StarlarkCommon{
+		Common: common.Common{
 			StarlarkLoadFunc: common.LoadFunc,
 			Log:              testutil.Logger{},
 			Script:           script,
