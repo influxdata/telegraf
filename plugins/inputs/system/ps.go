@@ -24,6 +24,7 @@ type PS interface {
 	VMStat() (*mem.VirtualMemoryStat, error)
 	SwapStat() (*mem.SwapMemoryStat, error)
 	NetConnections() ([]net.ConnectionStat, error)
+	NetConntrack(perCPU bool) ([]net.ConntrackStat, error)
 	Temperature() ([]host.TemperatureStat, error)
 }
 
@@ -189,6 +190,10 @@ func (s *SystemPS) NetIO() ([]net.IOCountersStat, error) {
 
 func (s *SystemPS) NetConnections() ([]net.ConnectionStat, error) {
 	return net.Connections("all")
+}
+
+func (s *SystemPS) NetConntrack(perCPU bool) ([]net.ConntrackStat, error) {
+	return net.ConntrackStats(perCPU)
 }
 
 func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
