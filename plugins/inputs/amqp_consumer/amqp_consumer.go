@@ -395,7 +395,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 		}
 	}
 
-	a.decoder.SetEnconding(d.ContentEncoding)
+	a.decoder.SetEncoding(d.ContentEncoding)
 	body, err := a.decoder.Decode(d.Body)
 	if err != nil {
 		onError()
