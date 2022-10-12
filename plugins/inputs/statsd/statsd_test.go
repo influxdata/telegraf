@@ -1771,7 +1771,7 @@ func TestParseNoSanitize(t *testing.T) {
 	}
 }
 
-func TestParse_InvalidAndRecover(t *testing.T) {
+func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 	statsd := Statsd{
 		Log:                    testutil.Logger{},
 		Protocol:               "tcp",
