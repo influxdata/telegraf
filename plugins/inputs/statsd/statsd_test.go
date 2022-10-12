@@ -1770,3 +1770,55 @@ func TestParseNoSanitize(t *testing.T) {
 		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
 	}
 }
+
+func TestParse_InvalidAndRecover(t *testing.T) {
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "tcp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      250,
+		TCPKeepAlive:           true,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, statsd.Start(acc))
+	defer statsd.Stop()
+
+	addr := statsd.TCPlistener.Addr().String()
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+
+	// first write an invalid line
+	_, err = conn.Write([]byte("test.service.stat.missing_value:|h\n"))
+	require.NoError(t, err)
+
+	// pause to let statsd to parse the metric and force a collection interval
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, statsd.Gather(acc))
+
+	// then verify we can write a valid line, service recovered
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, statsd.Gather(acc))
+	acc.Wait(1)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu_time_idle",
+			map[string]string{
+				"metric_type": "counter",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+	require.NoError(t, conn.Close())
+}
