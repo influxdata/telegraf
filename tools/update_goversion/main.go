@@ -12,22 +12,22 @@ import (
 	"golang.org/x/net/html"
 )
 
-type Updater struct {
+type FileInfo struct {
 	FileName string
 	Regex    string
 	Replace  string
 }
 
-func (u Updater) Update() error {
-	b, err := os.ReadFile(u.FileName)
+func (f FileInfo) Update() error {
+	b, err := os.ReadFile(f.FileName)
 	if err != nil {
 		return err
 	}
 
-	re := regexp.MustCompile(u.Regex)
-	newContents := re.ReplaceAll(b, []byte(u.Replace))
+	re := regexp.MustCompile(f.Regex)
+	newContents := re.ReplaceAll(b, []byte(f.Replace))
 
-	err = os.WriteFile(u.FileName, newContents, 0664)
+	err = os.WriteFile(f.FileName, newContents, 0664)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func main() {
 		log.Panic(err)
 	}
 
-	updates := []Updater{
+	files := []FileInfo{
 		{
 			FileName: ".circleci/config.yml",
 			Regex:    `(quay\.io\/influxdb\/telegraf-ci):(\d.\d*.\d)`,
@@ -170,8 +170,8 @@ func main() {
 		},
 	}
 
-	for _, u := range updates {
-		err := u.Update()
+	for _, f := range files {
+		err := f.Update()
 		if err != nil {
 			log.Panic(err)
 		}
