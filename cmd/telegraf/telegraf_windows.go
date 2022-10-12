@@ -108,7 +108,7 @@ func (t *Telegraf) runAsWindowsService() error {
 	}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
-		return fmt.Errorf("E! " + err.Error())
+		return err
 	}
 	// Handle the --service flag here to prevent any issues with tooling that
 	// may not have an interactive session, e.g. installing from Ansible.
@@ -133,17 +133,17 @@ func (t *Telegraf) runAsWindowsService() error {
 
 		err := service.Control(s, t.service)
 		if err != nil {
-			return fmt.Errorf("E! " + err.Error())
+			return err
 		}
 	} else {
 		err = logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
 		if err != nil {
-			return fmt.Errorf("E! " + err.Error())
+			return err
 		}
 
 		err = s.Run()
 		if err != nil {
-			return fmt.Errorf("E! " + err.Error())
+			return err
 		}
 	}
 	return nil

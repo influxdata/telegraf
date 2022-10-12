@@ -121,7 +121,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	action := func(cCtx *cli.Context) error {
 		err := logger.SetupLogging(logger.LogConfig{})
 		if err != nil {
-			return fmt.Errorf("E! %w", err)
+			return err
 		}
 
 		// Deprecated: Use execd instead
@@ -129,7 +129,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		if cCtx.String("plugin-directory") != "" {
 			log.Printf("I! Loading external plugins from: %s", cCtx.String("plugin-directory"))
 			if err := goplugin.LoadExternalPlugins(cCtx.String("plugin-directory")); err != nil {
-				return fmt.Errorf("E! %w", err)
+				return err
 			}
 		}
 
@@ -179,7 +179,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
 			err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
 			if err != nil && err2 != nil {
-				return fmt.Errorf("E! %s and %s", err, err2)
+				return fmt.Errorf("%s and %s", err, err2)
 			}
 			return nil
 		// DEPRECATED
