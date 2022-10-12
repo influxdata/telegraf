@@ -35,8 +35,8 @@ func (f FileInfo) Update() error {
 	return nil
 }
 
-// RemoveZeroPatch cleans version in case the user provides the minor version as "1.19.0" but require "1.19"
-func RemoveZeroPatch(version string) string {
+// removeZeroPatch cleans version in case the user provides the minor version as "1.19.0" but require "1.19"
+func removeZeroPatch(version string) string {
 	if strings.HasSuffix(version, ".0") {
 		return strings.Trim(version, ".0")
 	}
@@ -45,7 +45,7 @@ func RemoveZeroPatch(version string) string {
 
 // findHash will search the downloads table for the hashes matching the artifacts list
 func findHashes(body io.Reader, version string) (map[string]string, error) {
-	version = RemoveZeroPatch(version)
+	version = removeZeroPatch(version)
 
 	htmlTokens := html.NewTokenizer(body)
 	artifacts := []string{
@@ -130,7 +130,7 @@ func main() {
 	if strings.HasPrefix(version, "v") {
 		version = strings.TrimLeft(version, "v")
 	}
-	zeroPatchVersion := RemoveZeroPatch(version)
+	zeroPatchVersion := removeZeroPatch(version)
 
 	hashes, err := getHashes(version)
 	if err != nil {
