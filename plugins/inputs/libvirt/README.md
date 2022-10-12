@@ -91,8 +91,11 @@ Example:
 
 ## Metrics
 
-Below the table containing a list of all metrics
-supported by the libvirt plugin is presented.  
+See the table below for a list of metrics produced by the plugin.
+
+The exact metric format depends on the statistics libvirt reports,
+which may vary depending on the version of libvirt on your system.
+
 The metrics are divided into the following groups of statistics:
 
 - state
@@ -222,7 +225,7 @@ More details about metrics can be found at the links below:
 ### Additional statistics
 
 | **Statistics group**           | **Exposed Telegraf tag**      | **Exposed Telegraf field**      |**Description**         |
-|:-------------------------------|:-------------------------:|:-------------------------:|:-------------------------|
+|:-------------------------------|:-----------------------------:|:-------------------------------:|:-----------------------|
 | **vcpu_mapping** | vcpu_id | --- | ID of Virtual CPU |
 || --- | cpu_id | Comma separated list (exposed as a string) of Physical CPU IDs |
 

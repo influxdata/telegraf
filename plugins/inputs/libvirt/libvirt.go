@@ -63,8 +63,7 @@ func (l *Libvirt) Init() error {
 		l.LibvirtURI = defaultLibvirtURI
 	}
 
-	err := l.validateLibvirtURI()
-	if err != nil {
+	if err := l.validateLibvirtURI(); err != nil {
 		return err
 	}
 
@@ -73,13 +72,12 @@ func (l *Libvirt) Init() error {
 		l.Log.Debugf("Setting libvirt to gather all metrics.")
 		l.metricNumber = domainStatsAll
 	} else {
-		if err = l.calculateMetricNumber(); err != nil {
+		if err := l.calculateMetricNumber(); err != nil {
 			return err
 		}
 	}
 
-	err = l.validateAdditionalStatistics()
-	if err != nil {
+	if err := l.validateAdditionalStatistics(); err != nil {
 		return err
 	}
 
