@@ -70,16 +70,16 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 		NamePass:  []string{"metricname1", "ip_192.168.1.1_name"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
-		TagDrop: []models.TagFilter{
+		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
-				Filter: []string{"othertag"},
+				Values: []string{"othertag"},
 			},
 		},
-		TagPass: []models.TagFilter{
+		TagPassFilters: []models.TagFilter{
 			{
 				Name:   "goodtag",
-				Filter: []string{"mytag"},
+				Values: []string{"mytag"},
 			},
 		},
 	}
@@ -100,7 +100,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := NewConfig()
-	c.LoadConfig("./testdata/single_plugin.toml")
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -110,16 +110,16 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 		NamePass:  []string{"metricname1"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
-		TagDrop: []models.TagFilter{
+		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
-				Filter: []string{"othertag"},
+				Values: []string{"othertag"},
 			},
 		},
-		TagPass: []models.TagFilter{
+		TagPassFilters: []models.TagFilter{
 			{
 				Name:   "goodtag",
-				Filter: []string{"mytag"},
+				Values: []string{"mytag"},
 			},
 		},
 	}
@@ -155,16 +155,16 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		NamePass:  []string{"metricname1"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
-		TagDrop: []models.TagFilter{
+		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
-				Filter: []string{"othertag"},
+				Values: []string{"othertag"},
 			},
 		},
-		TagPass: []models.TagFilter{
+		TagPassFilters: []models.TagFilter{
 			{
 				Name:   "goodtag",
-				Filter: []string{"mytag"},
+				Values: []string{"mytag"},
 			},
 		},
 	}
@@ -199,16 +199,16 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		NamePass:  []string{"metricname1"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
-		TagDrop: []models.TagFilter{
+		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
-				Filter: []string{"othertag"},
+				Values: []string{"othertag"},
 			},
 		},
-		TagPass: []models.TagFilter{
+		TagPassFilters: []models.TagFilter{
 			{
 				Name:   "goodtag",
-				Filter: []string{"mytag"},
+				Values: []string{"mytag"},
 			},
 		},
 	}
@@ -288,19 +288,19 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/invalid_field.toml")
 	require.Error(t, err, "invalid field name")
-	require.Equal(t, "Error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
+	require.Equal(t, "error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
 }
 
 func TestConfig_WrongFieldType(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	require.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
+	require.Equal(t, "error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
 
 	c = NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	require.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
+	require.Equal(t, "error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
 
 func TestConfig_InlineTables(t *testing.T) {
@@ -333,7 +333,7 @@ func TestConfig_BadOrdering(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
-	require.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+	require.Equal(t, "error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
 }
 
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
@@ -359,7 +359,7 @@ func TestConfig_URLRetries3Fails(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	expected := fmt.Sprintf("Error loading config file %s: Retry 3 of 3 failed to retrieve remote config: 404 Not Found", ts.URL)
+	expected := fmt.Sprintf("error loading config file %s: retry 3 of 3 failed to retrieve remote config: 404 Not Found", ts.URL)
 
 	c := NewConfig()
 	err := c.LoadConfig(ts.URL)
@@ -408,10 +408,10 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 	require.Error(t, err)
 
 	if runtime.GOOS == "windows" {
-		// The error file not found error message is different on windows
-		require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: The system cannot find the file specified.", err.Error())
+		// The error file not found error message is different on Windows
+		require.Equal(t, "error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: The system cannot find the file specified.", err.Error())
 	} else {
-		require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
+		require.Equal(t, "error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
 	}
 }
 
@@ -783,10 +783,18 @@ type MockupInputPluginParserOld struct {
 	ParserFunc parsers.ParserFunc
 }
 
-func (m *MockupInputPluginParserOld) SampleConfig() string                  { return "Mockup old parser test plugin" }
-func (m *MockupInputPluginParserOld) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser)       { m.Parser = parser }
-func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc)    { m.ParserFunc = f }
+func (m *MockupInputPluginParserOld) SampleConfig() string {
+	return "Mockup old parser test plugin"
+}
+func (m *MockupInputPluginParserOld) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser) {
+	m.Parser = parser
+}
+func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc) {
+	m.ParserFunc = f
+}
 
 /*** Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserNew struct {
@@ -794,10 +802,18 @@ type MockupInputPluginParserNew struct {
 	ParserFunc telegraf.ParserFunc
 }
 
-func (m *MockupInputPluginParserNew) SampleConfig() string                  { return "Mockup old parser test plugin" }
-func (m *MockupInputPluginParserNew) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser)      { m.Parser = parser }
-func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc)   { m.ParserFunc = f }
+func (m *MockupInputPluginParserNew) SampleConfig() string {
+	return "Mockup old parser test plugin"
+}
+func (m *MockupInputPluginParserNew) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser) {
+	m.Parser = parser
+}
+func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc) {
+	m.ParserFunc = f
+}
 
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
@@ -817,9 +833,15 @@ type MockupInputPlugin struct {
 	parser telegraf.Parser
 }
 
-func (m *MockupInputPlugin) SampleConfig() string                  { return "Mockup test input plugin" }
-func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPlugin) SetParser(parser telegraf.Parser)      { m.parser = parser }
+func (m *MockupInputPlugin) SampleConfig() string {
+	return "Mockup test input plugin"
+}
+func (m *MockupInputPlugin) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupInputPlugin) SetParser(parser telegraf.Parser) {
+	m.parser = parser
+}
 
 /*** Mockup PROCESSOR plugin for testing to avoid cyclic dependencies ***/
 type MockupProcessorPluginParser struct {
@@ -827,17 +849,27 @@ type MockupProcessorPluginParser struct {
 	ParserFunc telegraf.ParserFunc
 }
 
-func (m *MockupProcessorPluginParser) Start(acc telegraf.Accumulator) error { return nil }
-func (m *MockupProcessorPluginParser) Stop() error                          { return nil }
+func (m *MockupProcessorPluginParser) Start(_ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupProcessorPluginParser) Stop() error {
+	return nil
+}
 func (m *MockupProcessorPluginParser) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPluginParser) Apply(in ...telegraf.Metric) []telegraf.Metric { return nil }
-func (m *MockupProcessorPluginParser) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+func (m *MockupProcessorPluginParser) Apply(_ ...telegraf.Metric) []telegraf.Metric {
 	return nil
 }
-func (m *MockupProcessorPluginParser) SetParser(parser telegraf.Parser)    { m.Parser = parser }
-func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) { m.ParserFunc = f }
+func (m *MockupProcessorPluginParser) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupProcessorPluginParser) SetParser(parser telegraf.Parser) {
+	m.Parser = parser
+}
+func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) {
+	m.ParserFunc = f
+}
 
 /*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupOuputPlugin struct {
@@ -849,25 +881,51 @@ type MockupOuputPlugin struct {
 	tls.ClientConfig
 }
 
-func (m *MockupOuputPlugin) Connect() error                        { return nil }
-func (m *MockupOuputPlugin) Close() error                          { return nil }
-func (m *MockupOuputPlugin) SampleConfig() string                  { return "Mockup test output plugin" }
-func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error { return nil }
+func (m *MockupOuputPlugin) Connect() error {
+	return nil
+}
+func (m *MockupOuputPlugin) Close() error {
+	return nil
+}
+func (m *MockupOuputPlugin) SampleConfig() string {
+	return "Mockup test output plugin"
+}
+func (m *MockupOuputPlugin) Write(_ []telegraf.Metric) error {
+	return nil
+}
 
 // Register the mockup plugin on loading
 func init() {
 	// Register the mockup input plugin for the required names
-	inputs.Add("parser_test_new", func() telegraf.Input { return &MockupInputPluginParserNew{} })
-	inputs.Add("parser_test_old", func() telegraf.Input { return &MockupInputPluginParserOld{} })
-	inputs.Add("exec", func() telegraf.Input { return &MockupInputPlugin{Timeout: Duration(time.Second * 5)} })
-	inputs.Add("http_listener_v2", func() telegraf.Input { return &MockupInputPlugin{} })
-	inputs.Add("memcached", func() telegraf.Input { return &MockupInputPlugin{} })
-	inputs.Add("procstat", func() telegraf.Input { return &MockupInputPlugin{} })
+	inputs.Add("parser_test_new", func() telegraf.Input {
+		return &MockupInputPluginParserNew{}
+	})
+	inputs.Add("parser_test_old", func() telegraf.Input {
+		return &MockupInputPluginParserOld{}
+	})
+	inputs.Add("exec", func() telegraf.Input {
+		return &MockupInputPlugin{Timeout: Duration(time.Second * 5)}
+	})
+	inputs.Add("http_listener_v2", func() telegraf.Input {
+		return &MockupInputPlugin{}
+	})
+	inputs.Add("memcached", func() telegraf.Input {
+		return &MockupInputPlugin{}
+	})
+	inputs.Add("procstat", func() telegraf.Input {
+		return &MockupInputPlugin{}
+	})
 
 	// Register the mockup output plugin for the required names
-	processors.Add("parser_test", func() telegraf.Processor { return &MockupProcessorPluginParser{} })
+	processors.Add("parser_test", func() telegraf.Processor {
+		return &MockupProcessorPluginParser{}
+	})
 
 	// Register the mockup output plugin for the required names
-	outputs.Add("azure_monitor", func() telegraf.Output { return &MockupOuputPlugin{NamespacePrefix: "Telegraf/"} })
-	outputs.Add("http", func() telegraf.Output { return &MockupOuputPlugin{} })
+	outputs.Add("azure_monitor", func() telegraf.Output {
+		return &MockupOuputPlugin{NamespacePrefix: "Telegraf/"}
+	})
+	outputs.Add("http", func() telegraf.Output {
+		return &MockupOuputPlugin{}
+	})
 }

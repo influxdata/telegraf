@@ -376,10 +376,8 @@ OS RealTime Mod  | 0x00              | ok
 
 	// Ignore the returned errors for the mocked interface as tests will fail anyway
 	if cmd == "ipmitool" {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
@@ -576,10 +574,8 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 
 	// Ignore the returned errors for the mocked interface as tests will fail anyway
 	if cmd == "ipmitool" {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)

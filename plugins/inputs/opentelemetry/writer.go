@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
+
 	"github.com/influxdata/telegraf"
 )
 

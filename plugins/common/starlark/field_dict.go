@@ -141,27 +141,28 @@ func (d FieldDict) Clear() error {
 	return nil
 }
 
-func (d FieldDict) PopItem() (v starlark.Value, err error) {
+func (d FieldDict) PopItem() (starlark.Value, error) {
 	if d.fieldIterCount > 0 {
 		return nil, fmt.Errorf("cannot delete during iteration")
 	}
 
-	for _, field := range d.metric.FieldList() {
-		k := field.Key
-		v := field.Value
-
-		d.metric.RemoveField(k)
-
-		sk := starlark.String(k)
-		sv, err := asStarlarkValue(v)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert to starlark value")
-		}
-
-		return starlark.Tuple{sk, sv}, nil
+	if len(d.metric.FieldList()) == 0 {
+		return nil, errors.New("popitem(): field dictionary is empty")
 	}
 
-	return nil, errors.New("popitem(): field dictionary is empty")
+	field := d.metric.FieldList()[0]
+	k := field.Key
+	v := field.Value
+
+	d.metric.RemoveField(k)
+
+	sk := starlark.String(k)
+	sv, err := asStarlarkValue(v)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert to starlark value")
+	}
+
+	return starlark.Tuple{sk, sv}, nil
 }
 
 func (d FieldDict) Delete(k starlark.Value) (v starlark.Value, found bool, err error) {

@@ -34,6 +34,7 @@ type Parser struct {
 	ProtobufMessageDef  string            `toml:"xpath_protobuf_file"`
 	ProtobufMessageType string            `toml:"xpath_protobuf_type"`
 	ProtobufImportPaths []string          `toml:"xpath_protobuf_import_paths"`
+	ProtobufSkipBytes   int64             `toml:"xpath_protobuf_skip_bytes"`
 	PrintDocument       bool              `toml:"xpath_print_document"`
 	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
 	NativeTypes         bool              `toml:"xpath_native_types"`
@@ -94,6 +95,7 @@ func (p *Parser) Init() error {
 			MessageDefinition: p.ProtobufMessageDef,
 			MessageType:       p.ProtobufMessageType,
 			ImportPaths:       p.ProtobufImportPaths,
+			SkipBytes:         p.ProtobufSkipBytes,
 			Log:               p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {

@@ -26,12 +26,12 @@ func (f Framing) String() string {
 }
 
 // UnmarshalTOML implements ability to unmarshal framing from TOML files.
-func (f *Framing) UnmarshalTOML(data []byte) (err error) {
+func (f *Framing) UnmarshalTOML(data []byte) error {
 	return f.UnmarshalText(data)
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler
-func (f *Framing) UnmarshalText(data []byte) (err error) {
+func (f *Framing) UnmarshalText(data []byte) error {
 	s := string(data)
 	switch strings.ToUpper(s) {
 	case `OCTET-COUNTING`:
@@ -40,21 +40,20 @@ func (f *Framing) UnmarshalText(data []byte) (err error) {
 		fallthrough
 	case `'OCTET-COUNTING'`:
 		*f = OctetCounting
-		return
-
+		return nil
 	case `NON-TRANSPARENT`:
 		fallthrough
 	case `"NON-TRANSPARENT"`:
 		fallthrough
 	case `'NON-TRANSPARENT'`:
 		*f = NonTransparent
-		return
+		return nil
 	}
 	*f = -1
 	return fmt.Errorf("unknown framing")
 }
 
-// MarshalText implements encoding.TextMarshaler
+// MarshalText implements encoding.TextMarshaller
 func (f Framing) MarshalText() ([]byte, error) {
 	s := f.String()
 	if s != "" {
