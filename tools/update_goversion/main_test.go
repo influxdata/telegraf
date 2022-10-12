@@ -52,5 +52,4 @@ func TestFindHash(t *testing.T) {
 
 		require.Equal(t, test.expectedHases, hashes)
 	}
-
 }
