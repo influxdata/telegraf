@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
@@ -19,7 +21,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
-	"github.com/urfave/cli/v2"
 )
 
 type TelegrafConfig interface {
@@ -118,14 +119,17 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 
 	// This function is used when Telegraf is run with only flags
 	action := func(cCtx *cli.Context) error {
-		logger.SetupLogging(logger.LogConfig{})
+		err := logger.SetupLogging(logger.LogConfig{})
+		if err != nil {
+			return err
+		}
 
 		// Deprecated: Use execd instead
 		// Load external plugins, if requested.
 		if cCtx.String("plugin-directory") != "" {
 			log.Printf("I! Loading external plugins from: %s", cCtx.String("plugin-directory"))
 			if err := goplugin.LoadExternalPlugins(cCtx.String("plugin-directory")); err != nil {
-				return fmt.Errorf("E! %w", err)
+				return err
 			}
 		}
 
@@ -175,7 +179,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
 			err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
 			if err != nil && err2 != nil {
-				return fmt.Errorf("E! %s and %s", err, err2)
+				return fmt.Errorf("%s and %s", err, err2)
 			}
 			return nil
 		// DEPRECATED
@@ -311,7 +315,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Name:  "sample-config",
 					Usage: "DEPRECATED: print out full sample configuration",
 				},
-				// Using execd plugin to add external plugins is preffered (less size impact, easier for end user)
+				// Using execd plugin to add external plugins is preferred (less size impact, easier for end user)
 				&cli.StringFlag{
 					Name:  "plugin-directory",
 					Usage: "DEPRECATED: path to directory containing external plugins",
