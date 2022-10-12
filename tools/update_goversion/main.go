@@ -35,8 +35,18 @@ func (f FileInfo) Update() error {
 	return nil
 }
 
+// RemoveZeroPatch cleans version in case the user provides the minor version as "1.19.0" but require "1.19"
+func RemoveZeroPatch(version string) string {
+	if strings.HasSuffix(version, ".0") {
+		return strings.Trim(version, ".0")
+	}
+	return version
+}
+
 // findHash will search the downloads table for the hashes matching the artifacts list
 func findHashes(body io.Reader, version string) (map[string]string, error) {
+	version = RemoveZeroPatch(version)
+
 	htmlTokens := html.NewTokenizer(body)
 	artifacts := []string{
 		fmt.Sprintf("go%s.linux-amd64.tar.gz", version),
@@ -116,6 +126,11 @@ func getHashes(version string) (map[string]string, error) {
 
 func main() {
 	version := os.Args[1]
+	// Handle situation user accidentally provides version as "v1.19.2"
+	if strings.HasPrefix(version, "v") {
+		version = strings.TrimLeft(version, "v")
+	}
+	zeroPatchVersion := RemoveZeroPatch(version)
 
 	hashes, err := getHashes(version)
 	if err != nil {
@@ -136,41 +151,42 @@ func main() {
 		{
 			FileName: "scripts/ci.docker",
 			Regex:    `(FROM golang):(\d.\d*.\d)`,
-			Replace:  fmt.Sprintf("$1:%s", version),
+			Replace:  fmt.Sprintf("$1:%s", zeroPatchVersion),
 		},
 		{
 			FileName: "scripts/installgo_linux.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", version),
+			Replace:  fmt.Sprintf("$1=\"%s\"", zeroPatchVersion),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", version),
+			Replace:  fmt.Sprintf("$1=\"%s\"", zeroPatchVersion),
 		},
 		{
 			FileName: "scripts/installgo_windows.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", version),
+			Replace:  fmt.Sprintf("$1=\"%s\"", zeroPatchVersion),
 		},
 		{
 			FileName: "scripts/installgo_linux.sh",
 			Regex:    `(GO_VERSION_SHA)=".*"`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.linux-amd64.tar.gz", version)]),
+			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.linux-amd64.tar.gz", zeroPatchVersion)]),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION_SHA_arm64)=".*"`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.darwin-arm64.tar.gz", version)]),
+			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.darwin-arm64.tar.gz", zeroPatchVersion)]),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION_SHA_amd64)=".*"`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.darwin-amd64.tar.gz", version)]),
+			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.darwin-amd64.tar.gz", zeroPatchVersion)]),
 		},
 	}
 
 	for _, f := range files {
+		fmt.Printf("Updating %s \n", f.FileName)
 		err := f.Update()
 		if err != nil {
 			log.Panic(err)
