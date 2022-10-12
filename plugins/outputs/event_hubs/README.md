@@ -32,8 +32,9 @@ JSON is probably the easiest to integrate with downstream components.
   # partition_key = ""
 
   ## Set the maximum batch message size in bytes
-  ## Allowable size depends on the Event Hub tier
+  ## The allowable size depends on the Event Hub tier
   ## See: https://learn.microsoft.com/azure/event-hubs/event-hubs-quotas#basic-vs-standard-vs-premium-vs-dedicated-tiers
+  ## Setting this to 0 means using the default from the Azure Event Hubs Client library (1000000)
   # max_message_size = 1000000
 
   ## Data format to output.
