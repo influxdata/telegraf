@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -31,13 +33,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/toml"
-	"github.com/influxdata/toml/ast"
 )
 
 var (
 	// envVarRe is a regex to find environment variables in the config file
-	envVarRe = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
+	envVarRe = regexp.MustCompile(`\${(\w+)}|\$(\w+)`)
 
 	envVarEscaper = strings.NewReplacer(
 		`"`, `\"`,
@@ -134,7 +134,7 @@ type AgentConfig struct {
 	// specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
 	// Valid time units are "ns", "us" (or "µs"), "ms", "s".
 	//
-	// By default or when set to "0s", precision will be set to the same
+	// By default, or when set to "0s", precision will be set to the same
 	// timestamp order as the collection interval, with the maximum being 1s:
 	//   ie, when interval = "10s", precision will be "1s"
 	//       when interval = "250ms", precision will be "1ms"
@@ -150,7 +150,7 @@ type AgentConfig struct {
 	CollectionJitter Duration
 
 	// CollectionOffset is used to shift the collection by the given amount.
-	// This can be be used to avoid many plugins querying constraint devices
+	// This can be used to avoid many plugins querying constraint devices
 	// at the same time by manually scheduling them in time.
 	CollectionOffset Duration
 
@@ -163,7 +163,7 @@ type AgentConfig struct {
 	// ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
 	FlushJitter Duration
 
-	// MetricBatchSize is the maximum number of metrics that is wrote to an
+	// MetricBatchSize is the maximum number of metrics that is written to an
 	// output plugin in one call.
 	MetricBatchSize int
 
@@ -357,7 +357,7 @@ func getDefaultConfigPath() (string, error) {
 	}
 
 	// if we got here, we didn't find a file in a default location
-	return "", fmt.Errorf("No config file specified, and could not find one"+
+	return "", fmt.Errorf("no config file specified, and could not find one"+
 		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
 }
 
@@ -377,11 +377,11 @@ func (c *Config) LoadConfig(path string) error {
 	}
 	data, err := LoadConfigFile(path)
 	if err != nil {
-		return fmt.Errorf("Error loading config file %s: %w", path, err)
+		return fmt.Errorf("error loading config file %s: %w", path, err)
 	}
 
 	if err = c.LoadConfigData(data); err != nil {
-		return fmt.Errorf("Error loading config file %s: %w", path, err)
+		return fmt.Errorf("error loading config file %s: %w", path, err)
 	}
 	return nil
 }
@@ -390,7 +390,7 @@ func (c *Config) LoadConfig(path string) error {
 func (c *Config) LoadConfigData(data []byte) error {
 	tbl, err := parseConfig(data)
 	if err != nil {
-		return fmt.Errorf("Error parsing data: %s", err)
+		return fmt.Errorf("error parsing data: %s", err)
 	}
 
 	// Parse tags tables first:
@@ -485,7 +485,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s",
+					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
@@ -502,7 +502,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s",
+					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
@@ -515,22 +515,22 @@ func (c *Config) LoadConfigData(data []byte) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addAggregator(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
+							return fmt.Errorf("error parsing %s, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s",
+					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
 					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
-		// Assume it's an input input for legacy config file support if no other
+		// Assume it's an input for legacy config file support if no other
 		// identifiers are present
 		default:
 			if err = c.addInput(name, subTable); err != nil {
-				return fmt.Errorf("Error parsing %s, %s", name, err)
+				return fmt.Errorf("error parsing %s, %s", name, err)
 			}
 		}
 	}
@@ -668,7 +668,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 			printHistoricPluginDeprecationNotice("aggregators", name, di)
 			return fmt.Errorf("plugin deprecated")
 		}
-		return fmt.Errorf("Undefined but requested aggregator: %s", name)
+		return fmt.Errorf("undefined but requested aggregator: %s", name)
 	}
 	aggregator := creator()
 
@@ -717,7 +717,7 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 
 	creator, ok := parsers.Parsers[dataformat]
 	if !ok {
-		return nil, fmt.Errorf("Undefined but requested parser: %s", dataformat)
+		return nil, fmt.Errorf("undefined but requested parser: %s", dataformat)
 	}
 	parser := creator(parentname)
 
@@ -743,7 +743,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 			printHistoricPluginDeprecationNotice("processors", name, di)
 			return fmt.Errorf("plugin deprecated")
 		}
-		return fmt.Errorf("Undefined but requested processor: %s", name)
+		return fmt.Errorf("undefined but requested processor: %s", name)
 	}
 	streamingProcessor := creator()
 
@@ -788,7 +788,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		})
 	}
 
-	// Setup the processor
+	// Set up the processor
 	if err := c.setupProcessorOptions(processorConfig.Name, streamingProcessor, table); err != nil {
 		return err
 	}
@@ -895,7 +895,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return fmt.Errorf("plugin deprecated")
 		}
 
-		return fmt.Errorf("Undefined but requested input: %s", name)
+		return fmt.Errorf("undefined but requested input: %s", name)
 	}
 	input := creator()
 
@@ -1067,8 +1067,8 @@ func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
 	c.getFieldStringSlice(tbl, "drop", &f.FieldDrop)
 	c.getFieldStringSlice(tbl, "fielddrop", &f.FieldDrop)
 
-	c.getFieldTagFilter(tbl, "tagpass", &f.TagPass)
-	c.getFieldTagFilter(tbl, "tagdrop", &f.TagDrop)
+	c.getFieldTagFilter(tbl, "tagpass", &f.TagPassFilters)
+	c.getFieldTagFilter(tbl, "tagdrop", &f.TagDropFilters)
 
 	c.getFieldStringSlice(tbl, "tagexclude", &f.TagExclude)
 	c.getFieldStringSlice(tbl, "taginclude", &f.TagInclude)
@@ -1172,7 +1172,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 }
 
 // buildOutput parses output specific items from the ast.Table,
-// builds the filter and returns an
+// builds the filter and returns a
 // models.OutputConfig to be inserted into models.RunningInput
 // Note: error exists in the return for future calls that might require error
 func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
@@ -1370,7 +1370,7 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 					tagFilter := models.TagFilter{Name: name}
 					for _, elem := range ary.Value {
 						if str, ok := elem.(*ast.String); ok {
-							tagFilter.Filter = append(tagFilter.Filter, str.Value)
+							tagFilter.Values = append(tagFilter.Values, str.Value)
 						}
 					}
 					*target = append(*target, tagFilter)

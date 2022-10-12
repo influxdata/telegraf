@@ -10,7 +10,7 @@ import (
 // Other than resetting r.err and r.transformComplete in Read() this
 // was copied from x/text
 
-func newDecoder(t transform.Transformer) *Decoder {
+func createDecoder(t transform.Transformer) *Decoder {
 	return &Decoder{Transformer: t}
 }
 
@@ -73,7 +73,7 @@ type Reader struct {
 	src0, src1 int
 
 	// transformComplete is whether the transformation is complete,
-	// regardless of whether or not it was successful.
+	// regardless of whether it was successful.
 	transformComplete bool
 }
 

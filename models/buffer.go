@@ -104,7 +104,7 @@ func (b *Buffer) metricDropped(metric telegraf.Metric) {
 	metric.Reject()
 }
 
-func (b *Buffer) add(m telegraf.Metric) int {
+func (b *Buffer) addMetric(m telegraf.Metric) int {
 	dropped := 0
 	// Check if Buffer is full
 	if b.size == b.cap {
@@ -137,7 +137,7 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) int {
 
 	dropped := 0
 	for i := range metrics {
-		if n := b.add(metrics[i]); n != 0 {
+		if n := b.addMetric(metrics[i]); n != 0 {
 			dropped += n
 		}
 	}
