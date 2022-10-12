@@ -208,9 +208,16 @@ func tagsSliceToMap(tags [][]string) (map[string]string, error) {
 // InitNodes Method on OpcUA
 func (o *OpcUA) InitNodes() error {
 	for _, node := range o.RootNodes {
+		nodeTags, err := tagsSliceToMap(node.TagsSlice)
+
+		if err != nil {
+			return err
+		}
+
 		o.nodes = append(o.nodes, Node{
 			metricName: o.MetricName,
 			tag:        node,
+			metricTags: nodeTags,
 		})
 	}
 
