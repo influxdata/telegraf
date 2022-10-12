@@ -161,8 +161,8 @@ auth_method = "Anonymous"
 username = ""
 password = ""
 nodes = [
-  {name="name", namespace="1", identifier_type="s", identifier="one"},
-  {name="name2", namespace="2", identifier_type="s", identifier="two"},
+  {name="name", namespace="1", identifier_type="s", identifier="one", tags=[["tag0", "val0"]]},
+  {name="name2", namespace="2", identifier_type="s", identifier="two", tags=[["tag0", "val0"], ["tag00", "val00"]]},
 ]
 [[inputs.opcua.group]]
 name = "foo"
@@ -201,6 +201,8 @@ additional_valid_status_codes = ["0xC0"]
 
 	require.NoError(t, o.InitNodes())
 	require.Len(t, o.nodes, 4)
+	require.Len(t, o.nodes[0].metricTags, 1)
+	require.Len(t, o.nodes[1].metricTags, 2)
 	require.Len(t, o.nodes[2].metricTags, 3)
 	require.Len(t, o.nodes[3].metricTags, 2)
 
