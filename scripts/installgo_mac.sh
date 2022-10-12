@@ -4,10 +4,7 @@ set -eux
 
 ARCH=$(uname -m)
 GO_VERSION="1.19.2"
-# To easily find and replace the hashes
-# shellcheck disable=SC2034
 GO_VERSION_SHA_arm64="35d819df25197c0be45f36ce849b994bba3b0559b76d4538b910d28f6395c00d" # from https://golang.org/dl
-# shellcheck disable=SC2034
 GO_VERSION_SHA_amd64="16f8047d7b627699b3773680098fbaf7cc962b7db02b3e02726f78c4db26dfde" # from https://golang.org/dl
 
 if [ "$ARCH" = 'arm64' ]; then
