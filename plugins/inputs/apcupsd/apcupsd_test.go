@@ -138,7 +138,7 @@ func TestApcupsdGather(t *testing.T) {
 					"battery_voltage":               float64(0),
 					"input_frequency":               float64(0),
 					"time_on_battery_ns":            int64(0),
-					"cumulative_time_on_battery_ns": int64(85),
+					"cumulative_time_on_battery_ns": int64(85000000000),
 					"nominal_input_voltage":         float64(230),
 					"nominal_battery_voltage":       float64(12),
 					"nominal_power":                 865,
