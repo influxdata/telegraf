@@ -284,8 +284,6 @@ func (a *Agent) runInputs(
 		a.runInput(ctx, startTime, unit, input, &wg)
 	}
 
-	wg.Wait()
-
 	log.Printf("D! [agent] Stopping service inputs")
 	stopServiceInputs(unit.inputs)
 
@@ -334,6 +332,8 @@ func (a *Agent) runInput(ctx context.Context, startTime time.Time, unit *inputUn
 		defer wg.Done()
 		a.gatherLoop(ctx, acc, input, ticker, interval)
 	}(input)
+
+	wg.Wait()
 }
 
 // testStartInputs is a variation of startInputs for use in --test and --once
