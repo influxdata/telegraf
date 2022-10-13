@@ -16,6 +16,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -325,6 +326,8 @@ type Graylog struct {
 
 	writer  io.Writer
 	closers []io.WriteCloser
+
+	sync.Mutex
 }
 
 func (*Graylog) SampleConfig() string {
@@ -353,6 +356,8 @@ func (g *Graylog) Connect() error {
 			writers = append(writers, w)
 			closers = append(closers, w)
 		}
+		g.Lock()
+		defer g.Unlock()
 		g.writer = io.MultiWriter(writers...)
 		g.closers = closers
 	} else {
@@ -388,6 +393,8 @@ func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
 	}
 	g.Log.Info("Connected!")
 
+	g.Lock()
+	defer g.Unlock()
 	g.writer = io.MultiWriter(writers...)
 	g.closers = closers
 }
@@ -416,7 +423,11 @@ func (g *Graylog) Close() error {
 }
 
 func (g *Graylog) Write(metrics []telegraf.Metric) error {
-	if g.writer == nil {
+	g.Lock()
+	writer := g.writer
+	g.Unlock()
+
+	if writer == nil {
 		return errors.New("not connected")
 	}
 	for _, metric := range metrics {
@@ -426,7 +437,7 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, value := range values {
-			_, err := g.writer.Write([]byte(value))
+			_, err := writer.Write([]byte(value))
 			if err != nil {
 				return fmt.Errorf("error writing message: %q, %v", value, err)
 			}
