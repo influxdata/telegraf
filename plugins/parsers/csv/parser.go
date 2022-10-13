@@ -34,6 +34,7 @@ type Parser struct {
 	SkipColumns        int             `toml:"csv_skip_columns"`
 	SkipRows           int             `toml:"csv_skip_rows"`
 	TagColumns         []string        `toml:"csv_tag_columns"`
+	TagOverwrite       bool            `toml:"csv_tag_overwrite"`
 	TimestampColumn    string          `toml:"csv_timestamp_column"`
 	TimestampFormat    string          `toml:"csv_timestamp_format"`
 	Timezone           string          `toml:"csv_timezone"`
@@ -314,6 +315,18 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 	recordFields := make(map[string]interface{})
 	tags := make(map[string]string)
 
+	if p.TagOverwrite {
+		// add default tags
+		for k, v := range p.DefaultTags {
+			tags[k] = v
+		}
+
+		// add metadata tags
+		for k, v := range p.metadataTags {
+			tags[k] = v
+		}
+	}
+
 	// skip columns in record
 	record = record[p.SkipColumns:]
 outer:
@@ -391,14 +404,16 @@ outer:
 		}
 	}
 
-	// add metadata tags
-	for k, v := range p.metadataTags {
-		tags[k] = v
-	}
+	if !p.TagOverwrite {
+		// add metadata tags
+		for k, v := range p.metadataTags {
+			tags[k] = v
+		}
 
-	// add default tags
-	for k, v := range p.DefaultTags {
-		tags[k] = v
+		// add default tags
+		for k, v := range p.DefaultTags {
+			tags[k] = v
+		}
 	}
 
 	// will default to plugin name
