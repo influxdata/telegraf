@@ -1,7 +1,7 @@
 # Opensearch Output Plugin
 
 This plugin writes to [Opensearch](https://opensearch.org/) via HTTP using
-Elastic client API (<http://olivere.github.io/elastic/).>
+[Elastic](http://olivere.github.io/elastic/) client API.
 
 It supports Opensearch releases from 1.x up to 2.x.
 

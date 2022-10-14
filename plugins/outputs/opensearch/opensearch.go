@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -47,7 +48,7 @@ type Opensearch struct {
 	UsePipeline         string          `toml:"use_pipeline"`
 	Username            string          `toml:"username"`
 	Log                 telegraf.Logger `toml:"-"`
-	majorReleaseNumber  int
+	version             string
 	pipelineName        string
 	pipelineTagKeys     []string
 	tagKeys             []string
@@ -56,66 +57,12 @@ type Opensearch struct {
 	Client *elastic.Client
 }
 
-const telegrafTemplate = `
-{
-	"index_patterns" : [ "{{.TemplatePattern}}" ],
-	"settings": {
-		"index": {
-			"refresh_interval": "10s",
-			"mapping.total_fields.limit": 5000,
-			"auto_expand_replicas" : "0-1",
-			"codec" : "best_compression"
-		}
-	},
-	"mappings" : {
-		"properties" : {
-			"@timestamp" : { "type" : "date" },
-			"measurement_name" : { "type" : "keyword" }
-		},
-		"dynamic_templates": [
-			{
-				"tags": {
-					"match_mapping_type": "string",
-					"path_match": "tag.*",
-					"mapping": {
-						"ignore_above": 512,
-						"type": "keyword"
-					}
-				}
-			},
-			{
-				"metrics_long": {
-					"match_mapping_type": "long",
-					"mapping": {
-						"type": "float",
-						"index": false
-					}
-				}
-			},
-			{
-				"metrics_double": {
-					"match_mapping_type": "double",
-					"mapping": {
-						"type": "float",
-						"index": false
-					}
-				}
-			},
-			{
-				"text_fields": {
-					"match": "*",
-					"mapping": {
-						"norms": false
-					}
-				}
-			}
-		]
-	}
-}`
+//go:embed telegrafTemplate.json
+var telegrafTemplate string
 
 type templatePart struct {
 	TemplatePattern string
-	Version         int
+	Version         string
 }
 
 func (*Opensearch) SampleConfig() string {
@@ -123,17 +70,13 @@ func (*Opensearch) SampleConfig() string {
 }
 
 func (a *Opensearch) Connect() error {
-	if a.URLs == nil || a.IndexName == "" {
-		return fmt.Errorf("opensearch urls or index_name is not defined")
+	err := a.initClient()
+	if err != nil {
+		return err
 	}
 
-	// Determine if we should process NaN and inf values
-	switch a.FloatHandling {
-	case "", "none":
+	if a.FloatHandling == "" {
 		a.FloatHandling = "none"
-	case "drop", "replace":
-	default:
-		return fmt.Errorf("invalid float_handling type %q", a.FloatHandling)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
@@ -202,17 +145,10 @@ func (a *Opensearch) Connect() error {
 	if err != nil {
 		return fmt.Errorf("opensearch version check failed: %s", err)
 	}
-
-	// quit if ES version is not supported
-	majorReleaseNumber, err := strconv.Atoi(strings.Split(osVersion, ".")[0])
-	if err != nil || majorReleaseNumber < 1 {
-		return fmt.Errorf("opensearch version not supported: %s", osVersion)
-	}
-
 	a.Log.Infof("Opensearch version: %q", osVersion)
 
 	a.Client = client
-	a.majorReleaseNumber = majorReleaseNumber
+	a.version = osVersion
 
 	if a.ManageTemplate {
 		err := a.manageTemplate(ctx)
@@ -240,10 +176,6 @@ func GetPointID(m telegraf.Metric) string {
 }
 
 func (a *Opensearch) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
-
 	bulkRequest := a.Client.Bulk()
 
 	for _, metric := range metrics {
@@ -343,7 +275,7 @@ func (a *Opensearch) manageTemplate(ctx context.Context) error {
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
 		tp := templatePart{
 			TemplatePattern: templatePattern + "*",
-			Version:         a.majorReleaseNumber,
+			Version:         a.version,
 		}
 
 		t := template.Must(template.New("template").Parse(telegrafTemplate))
@@ -455,4 +387,22 @@ func init() {
 			HealthCheckTimeout:  config.Duration(time.Second * 1),
 		}
 	})
+}
+
+func init() {
+
+}
+
+func (os *Opensearch) initClient() error {
+	if os.URLs == nil || os.IndexName == "" {
+		return fmt.Errorf("opensearch urls or index_name is not defined")
+	}
+
+	// Determine if we should process NaN and inf values
+	valOptions := []string{"", "none", "drop", "replace"}
+	if err := choice.Check(os.FloatHandling, valOptions); err != nil {
+		return fmt.Errorf("invalid float_handling type %q", os.FloatHandling)
+	}
+
+	return nil
 }
