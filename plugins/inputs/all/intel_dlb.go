@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.intel_powerstat
+//go:build !custom || inputs || inputs.intel_dlb
 
 package all
 

@@ -20,23 +20,23 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
+var unreachableSocketBehaviors = []string{"error", "ignore"}
+
 type IntelDLB struct {
-	SocketPath       string          `toml:"socket_path"`
-	EventdevCommands []string        `toml:"eventdev_commands"`
-	DLBDeviceIDs     []string        `toml:"dlb_device_types"`
-	Log              telegraf.Logger `toml:"-"`
+	SocketPath                string          `toml:"socket_path"`
+	EventdevCommands          []string        `toml:"eventdev_commands"`
+	DLBDeviceIDs              []string        `toml:"dlb_device_types"`
+	UnreachableSocketBehavior string          `toml:"unreachable_socket_behavior"`
+	Log                       telegraf.Logger `toml:"-"`
 
 	connection           net.Conn
 	devicesDir           []string
 	rasReader            rasReader
 	maxInitMessageLength uint32
-	logOnce              map[string]error
 }
-
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
-//go:embed sample.conf
-var sampleConfig string
 
 const (
 	defaultSocketPath      = "/var/run/dpdk/rte/dpdk_telemetry.v2"
@@ -58,13 +58,26 @@ func (d *IntelDLB) SampleConfig() string {
 func (d *IntelDLB) Init() error {
 	var err error
 
+	if d.UnreachableSocketBehavior == "" {
+		d.UnreachableSocketBehavior = "error"
+	}
+
+	if err = choice.Check(d.UnreachableSocketBehavior, unreachableSocketBehaviors); err != nil {
+		return fmt.Errorf("unreachable_socket_behavior: %w", err)
+	}
+
 	if d.SocketPath == "" {
 		d.SocketPath = defaultSocketPath
 		d.Log.Debugf("Using default '%v' path for socket_path", defaultSocketPath)
 	}
 
 	err = checkSocketPath(d.SocketPath)
-	d.logErrorOnce("socketPathDoesNotExist", err)
+	if err != nil {
+		if d.UnreachableSocketBehavior == "error" {
+			return err
+		}
+		d.Log.Warn(err)
+	}
 
 	if len(d.EventdevCommands) == 0 {
 		eventdevDefaultCommands := []string{"/eventdev/dev_xstats", "/eventdev/port_xstats", "/eventdev/queue_xstats", "/eventdev/queue_links"}
@@ -93,13 +106,19 @@ func (d *IntelDLB) Init() error {
 
 // Gather all unique commands and process each command sequentially.
 func (d *IntelDLB) Gather(acc telegraf.Accumulator) error {
-	// Process commands and add it to accumulator
+	err := d.gatherMetricsFromSocket(acc)
+	if err != nil {
+		socketErr := fmt.Errorf("gathering metrics from socket by given commands failed: %v", err)
+		if d.UnreachableSocketBehavior == "error" {
+			return socketErr
+		}
+		d.Log.Debug(socketErr)
+	}
 
-	err := d.gatherRasMetrics(acc)
-	d.logErrorOnce("gatherRasMetricsError", err)
-
-	err = d.processCommandResult(acc)
-	d.logErrorOnce("processCommandResultError", err)
+	err = d.gatherRasMetrics(acc)
+	if err != nil {
+		return fmt.Errorf("gathering RAS metrics failed: %v", err)
+	}
 
 	return nil
 }
@@ -150,7 +169,7 @@ func (d *IntelDLB) readRasMetrics(devicePath, metricPath string) (map[string]int
 	return rasMetric, nil
 }
 
-func (d *IntelDLB) processCommandResult(acc telegraf.Accumulator) error {
+func (d *IntelDLB) gatherMetricsFromSocket(acc telegraf.Accumulator) error {
 	// Get device indexes and those indexes to available commands
 	commandsWithIndex, err := d.gatherCommandsWithDeviceIndex()
 	if err != nil {
@@ -384,18 +403,6 @@ func (d *IntelDLB) closeSocketAndThrowError(errType string, err error) error {
 	return fmt.Errorf(errMsg, err)
 }
 
-func (d *IntelDLB) logErrorOnce(errorName string, err error) {
-	if err != nil {
-		if val, exists := d.logOnce[errorName]; !exists || val.Error() != err.Error() {
-			d.logOnce[errorName] = err
-			d.Log.Warn(err) // Log warning only one time
-		}
-		d.Log.Debug(err) // Log debug error every time
-	} else {
-		d.logOnce[errorName] = nil
-	}
-}
-
 func (d *IntelDLB) checkAndAddDLBDevice() error {
 	if d.rasReader == nil {
 		return fmt.Errorf("rasreader was not initialized")
@@ -464,7 +471,6 @@ func init() {
 	inputs.Add(pluginName, func() telegraf.Input {
 		return &IntelDLB{
 			rasReader: rasReaderImpl{},
-			logOnce:   make(map[string]error),
 		}
 	})
 }

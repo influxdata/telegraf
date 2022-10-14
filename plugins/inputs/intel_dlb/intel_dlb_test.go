@@ -23,9 +23,7 @@ func TestDLB_Init(t *testing.T) {
 		dlb := IntelDLB{
 			SocketPath: "",
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
-		dlb.logOnce = make(map[string]error)
 		require.Equal(t, "", dlb.SocketPath)
 
 		_ = dlb.Init()
@@ -33,16 +31,42 @@ func TestDLB_Init(t *testing.T) {
 		require.Equal(t, defaultSocketPath, dlb.SocketPath)
 	})
 
-	t.Run("invalid socket path throws error", func(t *testing.T) {
+	t.Run("invalid socket path throws error in Init method when UnreachableSocketBehavior is set to 'error'", func(t *testing.T) {
 		dlb := IntelDLB{
-			SocketPath: "/this/is/wrong/path",
-			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
+			SocketPath:                "/this/is/wrong/path",
+			Log:                       testutil.Logger{},
+			UnreachableSocketBehavior: "error",
 		}
 		err := dlb.Init()
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "rasreader was not initialized") //TODO: think about that
+		require.Contains(t, err.Error(), "provided path does not exist")
+	})
+
+	t.Run("not-existing socket path doesn't throw error in Init method when UnreachableSocketBehavior is set to 'ignore'", func(t *testing.T) {
+		dlb := IntelDLB{
+			SocketPath:                "/socket/is/not/there/yet",
+			Log:                       testutil.Logger{},
+			UnreachableSocketBehavior: "ignore",
+		}
+		err := dlb.Init()
+
+		require.Error(t, err)
+		require.NotContains(t, err.Error(), "provided path does not exist")
+	})
+
+	t.Run("wrong UnreachableSocketBehavior option throws error in Init method", func(t *testing.T) {
+		pathToSocket, socket := createSocketForTest(t)
+		defer socket.Close()
+		dlb := IntelDLB{
+			SocketPath:                pathToSocket,
+			UnreachableSocketBehavior: "DAS BOOT",
+			Log:                       testutil.Logger{},
+		}
+		err := dlb.Init()
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unreachable_socket_behavior: unknown choice DAS BOOT")
 	})
 
 	t.Run("wrong eventdev command throws error in Init method", func(t *testing.T) {
@@ -52,7 +76,6 @@ func TestDLB_Init(t *testing.T) {
 			SocketPath:       pathToSocket,
 			EventdevCommands: []string{"/noteventdev/dev_xstats"},
 			Log:              testutil.Logger{},
-			logOnce:          make(map[string]error),
 		}
 		err := dlb.Init()
 
@@ -63,7 +86,6 @@ func TestDLB_Init(t *testing.T) {
 	t.Run("wrong eventdev command throws error", func(t *testing.T) {
 		dlb := IntelDLB{
 			EventdevCommands: []string{"/noteventdev/dev_xstats"},
-			logOnce:          make(map[string]error),
 		}
 		err := validateEventdevCommands(dlb.EventdevCommands)
 
@@ -74,7 +96,6 @@ func TestDLB_Init(t *testing.T) {
 	t.Run("validate eventdev command", func(t *testing.T) {
 		dlb := IntelDLB{
 			EventdevCommands: []string{"/eventdev/dev_xstats"},
-			logOnce:          make(map[string]error),
 		}
 		err := validateEventdevCommands(dlb.EventdevCommands)
 
@@ -89,7 +110,6 @@ func TestDLB_Init(t *testing.T) {
 			SocketPath: pathToSocket,
 			Log:        testutil.Logger{},
 			rasReader:  fileMock,
-			logOnce:    make(map[string]error),
 		}
 		const globPath = "/sys/devices/pci0000:00/0000:00:00.0/device"
 		fileMock.On("gatherPaths", mock.Anything).Return([]string{globPath}, nil).Once().
@@ -109,7 +129,6 @@ func TestDLB_Init(t *testing.T) {
 			rasReader:  fileMock,
 			SocketPath: pathToSocket,
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
 		const emptyPath = ""
 		fileMock.On("gatherPaths", mock.Anything).Return([]string{emptyPath}, fmt.Errorf("can't find device folder")).Once()
@@ -126,7 +145,6 @@ func TestDLB_writeReadSocketMessage(t *testing.T) {
 		dlb := IntelDLB{
 			connection: mockConn,
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
 		mockConn.On("Write", []byte{}).Return(0, fmt.Errorf("write error")).Once().
 			On("Close").Return(nil).Once()
@@ -143,7 +161,6 @@ func TestDLB_writeReadSocketMessage(t *testing.T) {
 		dlb := IntelDLB{
 			connection: mockConn,
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
 		simulateResponse(mockConn, "", fmt.Errorf("read error"))
 
@@ -159,7 +176,6 @@ func TestDLB_writeReadSocketMessage(t *testing.T) {
 		dlb := IntelDLB{
 			connection: mockConn,
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
 		mockConn.On("Write", []byte{}).Return(0, nil).Once().
 			On("Read", mock.Anything).Return(0, nil).
@@ -191,7 +207,6 @@ func TestDLB_parseJSON(t *testing.T) {
 			dlb := IntelDLB{
 				connection: mockConn,
 				Log:        testutil.Logger{},
-				logOnce:    make(map[string]error),
 			}
 			mockConn.On("Close").Return(nil).Once()
 
@@ -212,7 +227,6 @@ func TestDLB_getInitMessageLength(t *testing.T) {
 			connection: mockConn,
 			Log:        testutil.Logger{},
 			rasReader:  fileMock,
-			logOnce:    make(map[string]error),
 		}
 		mockConn.On("Read", mock.Anything).Run(func(arg mock.Arguments) {
 			elem := arg.Get(0).([]byte)
@@ -232,7 +246,6 @@ func TestDLB_getInitMessageLength(t *testing.T) {
 			connection: mockConn,
 			Log:        testutil.Logger{},
 			rasReader:  fileMock,
-			logOnce:    make(map[string]error),
 		}
 		dlb.maxInitMessageLength = 1024
 		const initMsgResponse = "{\"version\":\"DPDK 20.11.3\",\"pid\":208361,\"max_output_len\":0}"
@@ -258,7 +271,6 @@ func TestDLB_gatherCommandsResult(t *testing.T) {
 			SocketPath: pathToSocket,
 			Log:        testutil.Logger{},
 			rasReader:  fileMock,
-			logOnce:    make(map[string]error),
 		}
 		require.NoError(t, err)
 
@@ -276,7 +288,6 @@ func TestDLB_gatherCommandsWithDeviceIndex(t *testing.T) {
 			connection:       mockConn,
 			Log:              testutil.Logger{},
 			EventdevCommands: []string{"/eventdev/dev_xstats"},
-			logOnce:          make(map[string]error),
 		}
 		response := "/wrong/JSON"
 		dlb.maxInitMessageLength = 1024
@@ -298,7 +309,6 @@ func TestDLB_gatherCommandsWithDeviceIndex(t *testing.T) {
 			Log:                  testutil.Logger{},
 			maxInitMessageLength: 1024,
 			EventdevCommands:     []string{"/eventdev/dev_xstats"},
-			logOnce:              make(map[string]error),
 		}
 		response := fmt.Sprintf(`{"%s": [0, 1]}`, eventdevListCommand)
 		simulateResponse(mockConn, response, nil)
@@ -319,7 +329,6 @@ func TestDLB_gatherCommandsWithDeviceIndex(t *testing.T) {
 			Log:                  testutil.Logger{},
 			maxInitMessageLength: 1024,
 			EventdevCommands:     []string{"/eventdev/queue_links"},
-			logOnce:              make(map[string]error),
 		}
 		responseDevList := fmt.Sprintf(`{"%s": [0]}`, eventdevListCommand)
 		simulateResponse(mockConn, responseDevList, nil)
@@ -342,7 +351,6 @@ func TestDLB_gatherCommandsWithDeviceIndex(t *testing.T) {
 			Log:                  testutil.Logger{},
 			maxInitMessageLength: 1024,
 			EventdevCommands:     []string{"/eventdev/dev_xstats", "/eventdev/wrong"},
-			logOnce:              make(map[string]error),
 		}
 		response := fmt.Sprintf(`{"%s": [0, 1]}`, eventdevListCommand)
 		mockConn.On("Write", mock.Anything).Return(0, nil).Once()
@@ -465,7 +473,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 
 		response = `{"/eventdev/dev_xstats": {"dev_rx_ok": 0}}`
 		simulateResponse(mockConn, response, nil)
-		err := dlb.processCommandResult(mockAcc)
+		err := dlb.gatherMetricsFromSocket(mockAcc)
 		require.NoError(t, err)
 
 		expected := []telegraf.Metric{
@@ -497,7 +505,6 @@ func TestDLB_processCommandResult(t *testing.T) {
 			devicesDir:           []string{"/sys/devices/pci0000:00/0000:00:00.0/device"},
 			rasReader:            fileMock,
 			maxInitMessageLength: 1024,
-			logOnce:              make(map[string]error),
 		}
 		responseGather := fmt.Sprintf(`{"%s": [0]}`, eventdevListCommand)
 		mockConn.On("Write", mock.Anything).Return(0, nil).Twice()
@@ -536,7 +543,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 		simulateResponse(mockConn, "/wrong/json", nil)
 		mockConn.On("Close").Return(nil).Once()
 
-		err := dlb.processCommandResult(mockAcc)
+		err := dlb.gatherMetricsFromSocket(mockAcc)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse json")
@@ -549,7 +556,6 @@ func TestDLB_processCommandResult(t *testing.T) {
 		dlb := IntelDLB{
 			connection: mockConn,
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
 		const response = ""
 		mockConn.On("Write", mock.Anything).Return(0, nil)
@@ -559,7 +565,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 		}).Return(len(response), nil).Once()
 		mockConn.On("Close").Return(nil)
 
-		err := dlb.processCommandResult(mockAcc)
+		err := dlb.gatherMetricsFromSocket(mockAcc)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "got empty response from socket")
 		mockConn.AssertExpectations(t)
@@ -571,7 +577,6 @@ func TestDLB_processCommandResult(t *testing.T) {
 		dlb := IntelDLB{
 			connection: mockConn,
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
 		const response = ""
 		mockConn.On("Write", mock.Anything).Return(0, nil)
@@ -581,7 +586,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 		}).Return(len(response), fmt.Errorf("read error")).Once()
 		mockConn.On("Close").Return(nil)
 
-		err := dlb.processCommandResult(mockAcc)
+		err := dlb.gatherMetricsFromSocket(mockAcc)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to read response of from socket")
 		mockConn.AssertExpectations(t)
@@ -594,11 +599,10 @@ func TestDLB_processCommandResult(t *testing.T) {
 			connection:           mockConn,
 			maxInitMessageLength: 1024,
 			Log:                  testutil.Logger{},
-			logOnce:              make(map[string]error),
 		}
 		simulateResponse(mockConn, "\"string reply\"", nil)
 		mockConn.On("Close").Return(nil).Once()
-		err := dlb.processCommandResult(mockAcc)
+		err := dlb.gatherMetricsFromSocket(mockAcc)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "json: cannot unmarshal string into Go value of type")
@@ -615,7 +619,6 @@ func TestDLB_processCommandResult(t *testing.T) {
 			EventdevCommands:     []string{"/eventdev/dev_xstats"},
 			rasReader:            fileMock,
 			maxInitMessageLength: 1024,
-			logOnce:              make(map[string]error),
 		}
 		mockConn.On("Close").Return(nil)
 
@@ -633,7 +636,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 			copy(elem, wrongResponse)
 		}).Return(len(wrongResponse), nil).Once()
 
-		err := dlb.processCommandResult(mockAcc)
+		err := dlb.gatherMetricsFromSocket(mockAcc)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse json:")
@@ -694,7 +697,6 @@ func Test_checkAndAddDLBDevice(t *testing.T) {
 			Log:          testutil.Logger{},
 			devicesDir:   []string{"/sys/devices/pci0000:00/0000:00:00.0/device"},
 			DLBDeviceIDs: []string{"0x2710"},
-			logOnce:      make(map[string]error),
 		}
 		const globPath = "/sys/devices/pci0000:00/0000:00:00.0/device"
 		fileMock.On("gatherPaths", mock.Anything).Return([]string{globPath}, nil).Once().
@@ -713,7 +715,6 @@ func Test_checkAndAddDLBDevice(t *testing.T) {
 			rasReader:    fileMock,
 			Log:          testutil.Logger{},
 			DLBDeviceIDs: []string{"0x2710"},
-			logOnce:      make(map[string]error),
 		}
 		const globPath = "/sys/devices/pci0000:00/0000:00:00.0/device"
 		fileMock.On("gatherPaths", mock.Anything).Return([]string{globPath}, nil).Once().
@@ -734,7 +735,6 @@ func Test_checkAndAddDLBDevice(t *testing.T) {
 			rasReader:    fileMock,
 			Log:          testutil.Logger{},
 			DLBDeviceIDs: []string{"0x2710", "0x0000"},
-			logOnce:      make(map[string]error),
 		}
 		const globPath = "/sys/devices/pci0000:00/0000:00:00.0/device"
 		fileMock.On("gatherPaths", mock.Anything).Return([]string{globPath}, nil).Once().
@@ -756,7 +756,6 @@ func Test_checkAndAddDLBDevice(t *testing.T) {
 			connection: mockConn,
 			rasReader:  fileMock,
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
 		const globPath = "/sys/devices/pci0000:00/0000:00:00.0/device"
 		fileMock.On("gatherPaths", mock.Anything).Return([]string{globPath}, nil).Once().
@@ -791,7 +790,6 @@ func Test_readRasMetrics(t *testing.T) {
 				connection: mockConn,
 				rasReader:  fileMock,
 				Log:        testutil.Logger{},
-				logOnce:    make(map[string]error),
 			}
 			mockConn.On("Close").Return(nil).Once()
 			fileMock.On("readFromFile", mock.AnythingOfType("string")).Return(test.returnResponse, test.err).Once()
@@ -809,7 +807,6 @@ func Test_readRasMetrics(t *testing.T) {
 		dlb := IntelDLB{
 			rasReader: fileMock,
 			Log:       testutil.Logger{},
-			logOnce:   make(map[string]error),
 		}
 
 		fileMock.On("readFromFile", mock.AnythingOfType("string")).Return([]byte(aerCorrectableData), nil).Once()
@@ -841,7 +838,6 @@ func Test_gatherRasMetrics(t *testing.T) {
 				rasReader:  fileMock,
 				devicesDir: []string{"/sys/devices/pci0000:00/0000:00:00.0/device"},
 				Log:        testutil.Logger{},
-				logOnce:    make(map[string]error),
 			}
 			mockConn.On("Close").Return(nil).Once()
 			fileMock.On("readFromFile", mock.AnythingOfType("string")).Return(test.returnResponse, test.err).Once()
@@ -861,7 +857,6 @@ func Test_gatherRasMetrics(t *testing.T) {
 			rasReader:  fileMock,
 			devicesDir: []string{"/sys/devices/pci0000:00/0000:00:00.0/device"},
 			Log:        testutil.Logger{},
-			logOnce:    make(map[string]error),
 		}
 		fileMock.On("readFromFile", mock.AnythingOfType("string")).Return([]byte(aerCorrectableData), nil).Once().
 			On("readFromFile", mock.AnythingOfType("string")).Return([]byte(aerFatalData), nil).Once().
@@ -1107,9 +1102,6 @@ var (
 	}
 
 	expectedTelegrafMetrics = []telegraf.Metric{
-		expectedRasMetrics[0],
-		expectedRasMetrics[1],
-		expectedRasMetrics[2],
 		testutil.MustMetric(
 			"intel_dlb",
 			map[string]string{
@@ -1120,5 +1112,8 @@ var (
 			},
 			time.Unix(0, 0),
 		),
+		expectedRasMetrics[0],
+		expectedRasMetrics[1],
+		expectedRasMetrics[2],
 	}
 )
