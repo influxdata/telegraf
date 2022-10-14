@@ -73,6 +73,9 @@ values.
   ## will be added as fields.
   csv_tag_columns = []
 
+  ## Set to true to let the column tags overwrite the metadata and default tags.
+  csv_tag_overwrite = false
+
   ## The column to extract the name of the metric from. Will not be
   ## included as field in metric.
   csv_measurement_column = ""
@@ -167,7 +170,7 @@ Config:
   csv_metadata_separators = [":", "="]
   csv_metadata_trim_set = " #"
   csv_header_row_count = 1
-  csv_tag_columns = ["Version","File Created"]
+  csv_tag_columns = ["Version","cpu"]
   csv_timestamp_column = "time"
   csv_timestamp_format = "2006-01-02T15:04:05Z07:00"
 ```
@@ -177,14 +180,46 @@ Input:
 ```csv
 # Version=1.1
 # File Created: 2021-11-17T07:02:45+10:00
-measurement,cpu,time_user,time_system,time_idle,time
-cpu,cpu0,42,42,42,2018-09-13T13:03:28Z
+Version,measurement,cpu,time_user,time_system,time_idle,time
+1.2,cpu,cpu0,42,42,42,2018-09-13T13:03:28Z
 ```
 
 Output:
 
 ```text
-cpu,File\ Created=2021-11-17T07:02:45+10:00,Version=1.1 cpu=cpu0,time_user=42,time_system=42,time_idle=42 1536869008000000000
+cpu,cpu=cpu0,File\ Created=2021-11-17T07:02:45+10:00,Version=1.1 time_user=42,time_system=42,time_idle=42 1536869008000000000
 ```
 
+Config:
+
+```toml
+[[inputs.file]]
+  files = ["example"]
+  data_format = "csv"
+  csv_metadata_rows = 2
+  csv_metadata_separators = [":", "="]
+  csv_metadata_trim_set = " #"
+  csv_header_row_count = 1
+  csv_tag_columns = ["Version","cpu"]
+  csv_tag_overwrite = true
+  csv_timestamp_column = "time"
+  csv_timestamp_format = "2006-01-02T15:04:05Z07:00"
+```
+
+Input:
+
+```csv
+# Version=1.1
+# File Created: 2021-11-17T07:02:45+10:00
+Version,measurement,cpu,time_user,time_system,time_idle,time
+1.2,cpu,cpu0,42,42,42,2018-09-13T13:03:28Z
+```
+
+Output:
+
+```text
+cpu,cpu=cpu0,File\ Created=2021-11-17T07:02:45+10:00,Version=1.2 time_user=42,time_system=42,time_idle=42 1536869008000000000
+```
+
+[time parse]: https://pkg.go.dev/time#Parse
 [metric filtering]: /docs/CONFIGURATION.md#metric-filtering
