@@ -476,6 +476,14 @@ func (o *OpcUA) getData() error {
 			o.nodeData[i].Value = d.Value.Value()
 			o.nodeData[i].DataType = d.Value.Type()
 		}
+
+		if t, ok := d.Value.Value().(time.Time); ok {
+			if o.nodes[i].tag.IdentifierType == "s" {
+				o.nodeData[i].Value = t.String()
+				o.nodeData[i].DataType = ua.TypeIDString
+			}
+		}
+
 		o.nodeData[i].Quality = d.Status
 		o.nodeData[i].ServerTime = d.ServerTimestamp
 		o.nodeData[i].SourceTime = d.SourceTimestamp
