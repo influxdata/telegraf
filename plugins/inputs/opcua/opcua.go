@@ -3,9 +3,10 @@ package opcua
 
 import (
 	_ "embed"
+	"time"
+
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
