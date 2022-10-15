@@ -20,7 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -48,13 +48,12 @@ type Opensearch struct {
 	UsePipeline         string          `toml:"use_pipeline"`
 	Username            string          `toml:"username"`
 	Log                 telegraf.Logger `toml:"-"`
-	version             string
 	pipelineName        string
 	pipelineTagKeys     []string
 	tagKeys             []string
-	tls.ClientConfig
+	httpconfig.HTTPClientConfig
 
-	Client *elastic.Client
+	client *elastic.Client
 }
 
 //go:embed telegrafTemplate.json
@@ -62,7 +61,6 @@ var telegrafTemplate string
 
 type templatePart struct {
 	TemplatePattern string
-	Version         string
 }
 
 func (*Opensearch) SampleConfig() string {
@@ -70,13 +68,9 @@ func (*Opensearch) SampleConfig() string {
 }
 
 func (a *Opensearch) Connect() error {
-	err := a.initClient()
+	err := a.Init()
 	if err != nil {
 		return err
-	}
-
-	if a.FloatHandling == "" {
-		a.FloatHandling = "none"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
@@ -84,17 +78,10 @@ func (a *Opensearch) Connect() error {
 
 	var clientOptions []elastic.ClientOptionFunc
 
-	tlsCfg, err := a.ClientConfig.TLSConfig()
+	ctxt := context.Background()
+	httpclient, err := a.HTTPClientConfig.CreateClient(ctxt, a.Log)
 	if err != nil {
 		return err
-	}
-	tr := &http.Transport{
-		TLSClientConfig: tlsCfg,
-	}
-
-	httpclient := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(a.Timeout),
 	}
 
 	osURL, err := url.Parse(a.URLs[0])
@@ -147,8 +134,7 @@ func (a *Opensearch) Connect() error {
 	}
 	a.Log.Infof("Opensearch version: %q", osVersion)
 
-	a.Client = client
-	a.version = osVersion
+	a.client = client
 
 	if a.ManageTemplate {
 		err := a.manageTemplate(ctx)
@@ -176,7 +162,7 @@ func GetPointID(m telegraf.Metric) string {
 }
 
 func (a *Opensearch) Write(metrics []telegraf.Metric) error {
-	bulkRequest := a.Client.Bulk()
+	bulkRequest := a.client.Bulk()
 
 	for _, metric := range metrics {
 		var name = metric.Name()
@@ -252,7 +238,7 @@ func (a *Opensearch) manageTemplate(ctx context.Context) error {
 		return fmt.Errorf("opensearch template_name configuration not defined")
 	}
 
-	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
+	templateExists, errExists := a.client.IndexTemplateExists(a.TemplateName).Do(ctx)
 
 	if errExists != nil {
 		return fmt.Errorf("opensearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
@@ -275,7 +261,6 @@ func (a *Opensearch) manageTemplate(ctx context.Context) error {
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
 		tp := templatePart{
 			TemplatePattern: templatePattern + "*",
-			Version:         a.version,
 		}
 
 		t := template.Must(template.New("template").Parse(telegrafTemplate))
@@ -284,7 +269,7 @@ func (a *Opensearch) manageTemplate(ctx context.Context) error {
 		if err := t.Execute(&tmpl, tp); err != nil {
 			return err
 		}
-		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl.String()).Do(ctx)
+		_, errCreateTemplate := a.client.IndexPutTemplate(a.TemplateName).BodyString(tmpl.String()).Do(ctx)
 
 		if errCreateTemplate != nil {
 			return fmt.Errorf("opensearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
@@ -375,7 +360,7 @@ func getISOWeek(eventTime time.Time) string {
 }
 
 func (a *Opensearch) Close() error {
-	a.Client = nil
+	a.client = nil
 	return nil
 }
 
@@ -389,19 +374,19 @@ func init() {
 	})
 }
 
-func init() {
-
-}
-
-func (os *Opensearch) initClient() error {
-	if os.URLs == nil || os.IndexName == "" {
+func (a *Opensearch) Init() error {
+	if a.URLs == nil || a.IndexName == "" {
 		return fmt.Errorf("opensearch urls or index_name is not defined")
 	}
 
 	// Determine if we should process NaN and inf values
 	valOptions := []string{"", "none", "drop", "replace"}
-	if err := choice.Check(os.FloatHandling, valOptions); err != nil {
-		return fmt.Errorf("invalid float_handling type %q", os.FloatHandling)
+	if err := choice.Check(a.FloatHandling, valOptions); err != nil {
+		return fmt.Errorf("invalid float_handling type %q", a.FloatHandling)
+	}
+
+	if a.FloatHandling == "" {
+		a.FloatHandling = "none"
 	}
 
 	return nil
