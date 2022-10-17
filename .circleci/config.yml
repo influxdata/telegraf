@@ -529,6 +529,9 @@ jobs:
 workflows:
   version: 2
   check:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - 'test-go-linux':
           filters:
@@ -743,6 +746,8 @@ workflows:
               ignore: /.*/
 
   nightly:
+    when:
+      equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - 'test-go-linux'
       - 'test-go-linux-386'
@@ -851,10 +856,3 @@ workflows:
       - govulncheck:
           requires:
             - 'nightly'
-    triggers:
-      - schedule:
-          cron: "0 7 * * *"
-          filters:
-            branches:
-              only:
-                - master

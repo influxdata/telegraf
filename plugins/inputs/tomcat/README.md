@@ -35,28 +35,23 @@ See the [Tomcat documentation][1] for details of these statistics.
 
 - tomcat_jvm_memory
   - free
-  - total
   - max
+  - total
 - tomcat_jvm_memorypool
-  - max_threads
-  - current_thread_count
-  - current_threads_busy
-  - max_time
-  - processing_time
-  - request_count
-  - error_count
-  - bytes_received
-  - bytes_sent
+  - committed
+  - init
+  - max
+  - used
 - tomcat_connector
-  - max_threads
-  - current_thread_count
+  - bytes_received
+  - bytes_sent
   - current_thread_busy
+  - current_thread_count
+  - error_count
+  - max_threads
   - max_time
   - processing_time
   - request_count
-  - error_count
-  - bytes_received
-  - bytes_sent
 
 ### Tags
 

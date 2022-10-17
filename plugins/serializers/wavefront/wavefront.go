@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs/wavefront" // TODO: this dependency is going the wrong way: Move MetricPoint into the serializer.
 )
 
 // WavefrontSerializer : WavefrontSerializer struct
@@ -40,6 +39,14 @@ var strictSanitizedChars = strings.NewReplacer(
 var tagValueReplacer = strings.NewReplacer("\"", "\\\"", "*", "-")
 
 var pathReplacer = strings.NewReplacer("_", ".")
+
+type MetricPoint struct {
+	Metric    string
+	Value     float64
+	Timestamp int64
+	Source    string
+	Tags      map[string]string
+}
 
 func NewSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversion bool) (*WavefrontSerializer, error) {
 	s := &WavefrontSerializer{
@@ -79,7 +86,7 @@ func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
 			continue
 		}
 		source, tags := buildTags(m.Tags(), s)
-		metric := wavefront.MetricPoint{
+		metric := MetricPoint{
 			Metric:    name,
 			Timestamp: m.Time().Unix(),
 			Value:     metricValue,
@@ -162,7 +169,7 @@ func buildValue(v interface{}, name string) (val float64, valid bool) {
 	}
 }
 
-func formatMetricPoint(b *buffer, metricPoint *wavefront.MetricPoint, s *WavefrontSerializer) []byte {
+func formatMetricPoint(b *buffer, metricPoint *MetricPoint, s *WavefrontSerializer) []byte {
 	b.WriteChar('"')
 	b.WriteString(metricPoint.Metric)
 	b.WriteString(`" `)

@@ -44,14 +44,11 @@ func TestMockExecCommand(_ *testing.T) {
 	mcr, ok := mockedCommandResults[cmd0]
 	if !ok {
 		cv := fmt.Sprintf("%#v", cmd)[8:] // trim `[]string` prefix
-		//nolint:errcheck,revive
 		fmt.Fprintf(os.Stderr, "Unmocked command. Please add the following to `mockedCommands` in snmp_mocks_generate.go, and then run `go generate`:\n\t%s,\n", cv)
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
-	//nolint:errcheck,revive
 	fmt.Printf("%s", mcr.stdout)
-	//nolint:errcheck,revive
 	fmt.Fprintf(os.Stderr, "%s", mcr.stderr)
 	if mcr.exitError {
 		//nolint:revive // error code is important for this "test"

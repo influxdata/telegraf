@@ -169,12 +169,10 @@ func runOutputConsumerProgram() {
 				return // stream ended
 			}
 			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
-				//nolint:errcheck,revive // Test will fail anyway
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				//nolint:revive // error code is important for this "test"
 				os.Exit(1)
 			}
-			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
 			//nolint:revive // error code is important for this "test"
 			os.Exit(1)
@@ -187,7 +185,6 @@ func runOutputConsumerProgram() {
 		)
 
 		if !testutil.MetricEqual(expected, m) {
-			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "metric doesn't match expected\n")
 			//nolint:revive // error code is important for this "test"
 			os.Exit(1)
