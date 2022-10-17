@@ -1,0 +1,20 @@
+[
+    {
+        "file": "message_1.bin"
+    },
+    {
+        "file": "message_2.bin"
+    },
+    {
+        "file": "message_3.bin"
+    },
+    {
+        "file": "message_4.bin"
+    },
+    {
+        "wait": "100ms"
+    },
+    {
+        "file": "message_5.bin"
+    }
+]

@@ -1,0 +1,14 @@
+[
+    {
+        "message": "test,foo=bar v=1i 123456789\n"
+    },
+    {
+        "message": "wild boyz\n"
+    },
+    {
+        "message": "test,foo=baz v=2i 123456790\n"
+    },
+    {
+        "message": "test,foo=zab v=3i 123456791\n"
+    }
+]
