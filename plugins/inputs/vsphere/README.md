@@ -11,6 +11,7 @@ vCenter servers.
 * [vSAN](README-VSAN.md)
 
 ## Supported versions of vSphere
+
 This plugin supports vSphere version 5.5 through 7.0.
 
 This plugin supports vSphere version 6.5, 6.7 and 7.0. It may work with versions

@@ -4,12 +4,14 @@ vSAN resource is a special type of resource that can be collected by the plugin.
 The configuration of vSAN resource is slightly different from hosts, vms and other resources.
 
 ## Prerequisites
+
 * vSphere 5.5 and later environments are needed
 * Clusters with vSAN enabled
 * [Turn on vSAN performance service](https://docs.vmware.com/en/VMware-vSphere/6.0/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html): When you create a vSAN cluster, the performance service is disabled. You will need to enable vSAN performance service first to monitor the performance metrics. 
 
 
 ## Configuration
+
 ```
 [[inputs.vsphere]]
   interval = "300s"
@@ -132,6 +134,7 @@ NOTE: vSAN performance measurements and fields may vary on the vSAN versions.
      	- iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write, bandwidth_total, latency_read, latency_write, latency_total, queue_depth
      	
 ## Tags
+
 - all vSAN metrics
 	- vcenter
 	- dcname
@@ -210,6 +213,7 @@ For performance consideration, it is better to specify two instances of the plug
 
 
 ## Sample output
+
 ```
 vsphere_vsan_performance_hostdomclient,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,hostname=DC0_C0_H0,moid=domain-c8,source=Example-VSAN,vcenter=localhost:8898 iops_read=7,write_congestion=0,unmap_congestion=0,read_count=2199,iops=8,latency_max_write=8964,latency_avg_unmap=0,latency_avg_write=1883,write_count=364,num_oio=12623,throughput=564127,client_cache_hits=0,latency_max_read=17821,latency_max_unmap=0,read_congestion=0,latency_avg=1154,congestion=0,throughput_read=554721,latency_avg_read=1033,throughput_write=9406,client_cache_hit_rate=0,iops_unmap=0,throughput_unmap=0,latency_stddev=1315,io_count=2563,oio=4,iops_write=1,unmap_count=0 1578955200000000000
 vsphere_vsan_performance_clusterdomcompmgr,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,moid=domain-c7,source=Example-VSAN,uuid=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXX,vcenter=localhost:8898 latency_avg_rec_write=0,latency_avg_write=9886,congestion=0,iops_resync_read=0,lat_avg_resync_read=0,iops_read=289,latency_avg_read=1184,throughput_write=50137368,iops_rec_write=0,throughput_rec_write=0,tput_resync_read=0,throughput_read=9043654,iops_write=1272,oio=97 1578954900000000000
