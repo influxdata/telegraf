@@ -146,18 +146,18 @@ func TestSocketListener(t *testing.T) {
 			switch tt.schema {
 			case "tcp":
 				var err error
-				addr := plugin.Closer.(net.Listener).Addr().String()
+				addr := plugin.listener.addr().String()
 				client, err = net.Dial("tcp", addr)
 				require.NoError(t, err)
 			case "tcp+tls":
-				addr := plugin.Closer.(net.Listener).Addr().String()
+				addr := plugin.listener.addr().String()
 				tlscfg, err := pki.TLSClientConfig().TLSConfig()
 				require.NoError(t, err)
 				client, err = tls.Dial("tcp", addr, tlscfg)
 				require.NoError(t, err)
 			case "udp":
 				var err error
-				addr := plugin.Closer.(net.PacketConn).LocalAddr().String()
+				addr := plugin.listener.addr().String()
 				client, err = net.Dial("udp", addr)
 				require.NoError(t, err)
 			case "unix":
