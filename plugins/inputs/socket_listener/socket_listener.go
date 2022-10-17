@@ -2,7 +2,10 @@
 package socket_listener
 
 import (
+	"bufio"
 	_ "embed"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/url"
@@ -26,25 +29,114 @@ type listener interface {
 	close() error
 }
 
+type lengthFieldSpec struct {
+	Offset       int64  `toml:"offset"`
+	Bytes        int64  `toml:"bytes"`
+	Endianess    string `toml:"endianess"`
+	HeaderLength int64  `toml:"header_length"`
+	converter    func([]byte) int
+}
+
 type SocketListener struct {
-	ServiceAddress  string           `toml:"service_address"`
-	MaxConnections  int              `toml:"max_connections"`
-	ReadBufferSize  config.Size      `toml:"read_buffer_size"`
-	ReadTimeout     config.Duration  `toml:"read_timeout"`
-	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
-	SocketMode      string           `toml:"socket_mode"`
-	ContentEncoding string           `toml:"content_encoding"`
-	Log             telegraf.Logger  `toml:"-"`
+	ServiceAddress       string           `toml:"service_address"`
+	MaxConnections       int              `toml:"max_connections"`
+	ReadBufferSize       config.Size      `toml:"read_buffer_size"`
+	ReadTimeout          config.Duration  `toml:"read_timeout"`
+	KeepAlivePeriod      *config.Duration `toml:"keep_alive_period"`
+	SocketMode           string           `toml:"socket_mode"`
+	ContentEncoding      string           `toml:"content_encoding"`
+	SplittingStrategy    string           `toml:"splitting_strategy"`
+	SplittingDelimiter   string           `toml:"splitting_delimiter"`
+	SplittingLength      int              `toml:"splitting_length"`
+	SplittingLengthField lengthFieldSpec  `toml:"splitting_length_field"`
+	Log                  telegraf.Logger  `toml:"-"`
 	tlsint.ServerConfig
 
-	wg     sync.WaitGroup
-	parser parsers.Parser
+	wg       sync.WaitGroup
+	parser   parsers.Parser
+	splitter bufio.SplitFunc
 
 	listener listener
 }
 
 func (*SocketListener) SampleConfig() string {
 	return sampleConfig
+}
+
+func (sl *SocketListener) Init() error {
+	switch sl.SplittingStrategy {
+	case "", "newline":
+		sl.splitter = bufio.ScanLines
+	case "null":
+		sl.splitter = scanNull
+	case "delimiter":
+		re := regexp.MustCompile(`(\s*0?x)`)
+		d := re.ReplaceAllString(strings.ToLower(sl.SplittingDelimiter), "")
+		delimiter, err := hex.DecodeString(d)
+		if err != nil {
+			return fmt.Errorf("decoding delimiter failed: %w", err)
+		}
+		sl.splitter = createScanDelimiter(delimiter)
+	case "fixed length":
+		sl.splitter = createScanFixedLength(sl.SplittingLength)
+	case "variable length":
+		// Create the converter function
+		var order binary.ByteOrder
+		switch strings.ToLower(sl.SplittingLengthField.Endianess) {
+		case "", "be":
+			order = binary.BigEndian
+		case "le":
+			order = binary.LittleEndian
+		default:
+			return fmt.Errorf("invalid 'endianess' %q", sl.SplittingLengthField.Endianess)
+		}
+
+		switch sl.SplittingLengthField.Bytes {
+		case 1:
+			sl.SplittingLengthField.converter = func(b []byte) int {
+				return int(b[0])
+			}
+		case 2:
+			sl.SplittingLengthField.converter = func(b []byte) int {
+				return int(order.Uint16(b))
+			}
+		case 4:
+			sl.SplittingLengthField.converter = func(b []byte) int {
+				return int(order.Uint32(b))
+			}
+		case 8:
+			sl.SplittingLengthField.converter = func(b []byte) int {
+				return int(order.Uint64(b))
+			}
+		default:
+			sl.SplittingLengthField.converter = func(b []byte) int {
+				buf := make([]byte, 8)
+				start := 0
+				if order == binary.BigEndian {
+					start = 8 - len(b)
+				}
+				for i := 0; i < len(b); i++ {
+					buf[start+i] = b[i]
+				}
+				return int(order.Uint64(buf))
+			}
+		}
+
+		// Check if we have enough bytes in the header
+		minlen := sl.SplittingLengthField.Offset
+		minlen += sl.SplittingLengthField.Bytes
+		if sl.SplittingLengthField.HeaderLength == 0 {
+			sl.SplittingLengthField.HeaderLength = minlen
+		}
+		if sl.SplittingLengthField.HeaderLength < minlen {
+			return fmt.Errorf("'header_length' has to be at least %d", minlen)
+		}
+
+		sl.splitter = createScanVariableLength(sl.SplittingLengthField, false)
+	default:
+		return fmt.Errorf("unknown 'splitting_strategy' %q", sl.SplittingStrategy)
+	}
+	return nil
 }
 
 func (sl *SocketListener) Gather(_ telegraf.Accumulator) error {
@@ -84,6 +176,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			KeepAlivePeriod: sl.KeepAlivePeriod,
 			MaxConnections:  sl.MaxConnections,
 			Encoding:        sl.ContentEncoding,
+			Splitter:        sl.splitter,
 			Parser:          sl.parser,
 			Log:             sl.Log,
 		}
@@ -99,6 +192,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			KeepAlivePeriod: sl.KeepAlivePeriod,
 			MaxConnections:  sl.MaxConnections,
 			Encoding:        sl.ContentEncoding,
+			Splitter:        sl.splitter,
 			Parser:          sl.parser,
 			Log:             sl.Log,
 		}
