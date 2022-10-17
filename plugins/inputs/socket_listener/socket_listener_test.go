@@ -2,6 +2,7 @@ package socket_listener
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"os"
 	"runtime"
@@ -100,12 +101,17 @@ func TestSocketListener(t *testing.T) {
 		},
 	}
 
+	serverTLS := pki.TLSServerConfig()
+	clientTLS := pki.TLSClientConfig()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			proto := strings.TrimSuffix(tt.schema, "+tls")
 
 			// Prepare the address and socket if needed
 			var serverAddr string
+			var tlsCfg *tls.Config
+
 			switch proto {
 			case "tcp", "udp":
 				serverAddr = "127.0.0.1:0"
@@ -130,7 +136,10 @@ func TestSocketListener(t *testing.T) {
 				ReadBufferSize:  tt.buffersize,
 			}
 			if strings.HasSuffix(tt.schema, "tls") {
-				plugin.ServerConfig = *pki.TLSServerConfig()
+				plugin.ServerConfig = *serverTLS
+				var err error
+				tlsCfg, err = clientTLS.TLSConfig()
+				require.NoError(t, err)
 			}
 			parser := &influx.Parser{}
 			require.NoError(t, parser.Init())
@@ -142,41 +151,9 @@ func TestSocketListener(t *testing.T) {
 			defer plugin.Stop()
 
 			// Setup the client for submitting data
-			var client net.Conn
-			switch tt.schema {
-			case "tcp":
-				var err error
-				addr := plugin.listener.addr().String()
-				client, err = net.Dial("tcp", addr)
-				require.NoError(t, err)
-			case "tcp+tls":
-				addr := plugin.listener.addr().String()
-				tlscfg, err := pki.TLSClientConfig().TLSConfig()
-				require.NoError(t, err)
-				client, err = tls.Dial("tcp", addr, tlscfg)
-				require.NoError(t, err)
-			case "udp":
-				var err error
-				addr := plugin.listener.addr().String()
-				client, err = net.Dial("udp", addr)
-				require.NoError(t, err)
-			case "unix":
-				var err error
-				client, err = net.Dial("unix", serverAddr)
-				require.NoError(t, err)
-			case "unix+tls":
-				tlscfg, err := pki.TLSClientConfig().TLSConfig()
-				require.NoError(t, err)
-				tlscfg.InsecureSkipVerify = true
-				client, err = tls.Dial("unix", serverAddr, tlscfg)
-				require.NoError(t, err)
-			case "unixgram":
-				var err error
-				client, err = net.Dial("unixgram", serverAddr)
-				require.NoError(t, err)
-			default:
-				require.Failf(t, "schema %q not supported in test", tt.schema)
-			}
+			addr := plugin.listener.addr()
+			client, err := createClient(plugin.ServiceAddress, addr, tlsCfg)
+			require.NoError(t, err)
 
 			// Send the data with the correct encoding
 			encoder, err := internal.NewContentEncoder(tt.encoding)
@@ -190,13 +167,31 @@ func TestSocketListener(t *testing.T) {
 			}
 
 			// Test the resulting metrics and compare against expected results
-			require.Eventually(t, func() bool {
+			require.Eventuallyf(t, func() bool {
 				acc.Lock()
 				defer acc.Unlock()
 				return acc.NMetrics() >= uint64(len(expected))
-			}, time.Second, 100*time.Millisecond, "did not receive metrics")
+			}, time.Second, 100*time.Millisecond, "did not receive metrics (%d)", acc.NMetrics())
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 		})
 	}
+}
+
+func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn, error) {
+	// Determine the protocol in a crude fashion
+	parts := strings.SplitN(endpoint, "://", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid endpoint %q", endpoint)
+	}
+	protocol := parts[0]
+
+	if tlsCfg == nil {
+		return net.Dial(protocol, addr.String())
+	}
+
+	if protocol == "unix" {
+		tlsCfg.InsecureSkipVerify = true
+	}
+	return tls.Dial(protocol, addr.String(), tlsCfg)
 }
