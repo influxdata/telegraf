@@ -118,8 +118,8 @@ func (e *Endpoint) vsanEnabled(ctx context.Context, clusterObj *object.ClusterCo
 	if err != nil {
 		return false
 	}
-	Enabled := config.VsanConfigInfo.Enabled
-	return *Enabled
+	enabled := config.VsanConfigInfo.Enabled
+	return *enabled
 }
 
 // getVsanMetadata returns a string list of the entity types that will be queried.
@@ -228,15 +228,15 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 	e.Parent.Log.Debugf("[vSAN] Query vsan performance for time interval: %s ~ %s", start, end)
 	latest := start
 
-	for entityRefId := range metrics {
-		if !strings.HasPrefix(entityRefId, perfPrefix) {
+	for entityRefID := range metrics {
+		if !strings.HasPrefix(entityRefID, perfPrefix) {
 			continue
 		}
-		entityRefId = strings.TrimPrefix(entityRefId, perfPrefix)
+		entityRefID = strings.TrimPrefix(entityRefID, perfPrefix)
 		var perfSpecs []vsantypes.VsanPerfQuerySpec
 
 		perfSpec := vsantypes.VsanPerfQuerySpec{
-			EntityRefId: fmt.Sprintf("%s:*", entityRefId),
+			EntityRefId: fmt.Sprintf("%s:*", entityRefID),
 			StartTime:   &start,
 			EndTime:     &end,
 		}
@@ -254,9 +254,8 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 				e.Parent.Log.Errorf("[vSAN] Is vSAN performance service enabled for %s? Skipping ...", clusterRef.name)
 				break
 			}
-			e.Parent.Log.Errorf("[vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefId, err)
+			e.Parent.Log.Errorf("[vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefID, err)
 			continue
-
 		}
 		tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 
@@ -450,7 +449,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 			}
 			newTags["devicename"] = e.Content.DevName
 			if int(e.Content.IsSsd) == 0 {
-				newTags["ssduuid"] = e.Content.SsdUuid
+				newTags["ssduuid"] = e.Content.SsdUUID
 			}
 		}
 	} else if strings.Contains(entityName, "host-memory-") {
@@ -535,6 +534,6 @@ type Cmmds struct {
 type CmmdsContent struct {
 	Hostname string  `json:"hostname"`
 	IsSsd    float64 `json:"isSsd"`
-	SsdUuid  string  `json:"ssdUuid"`
+	SsdUUID  string  `json:"ssdUuid"`
 	DevName  string  `json:"devName"`
 }

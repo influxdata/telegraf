@@ -73,12 +73,12 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
   # insecure_skip_verify = false
 ```
 
-* Use `vsan_metric_include = [...]` to define the vSAN metrics you want to collect. 
+* Use `vsan_metric_include = [...]` to define the vSAN metrics you want to collect.
 e.g. `vsan_metric_include = ["summary.*", "performance.host-domclient", "performance.cache-disk", "performance.disk-group", "performance.capacity-disk"]`.
 To include all supported vSAN metrics, use `vsan_metric_include = [ "*" ]`
 To disable all the vSAN metrics, use `vsan_metric_exclude = [ "*" ]`
 
-* `vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes). 
+* `vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes).
 This option is given because some performance entities are not returned by the API, but we want to offer the flexibility if user really need the stats.
 When set false, anything not in supported entity list will be filtered out.
 When set true, queried metrics will be identical to vsan_metric_include and the exclusive array will not be used in this case. By default the value is false.
@@ -89,7 +89,7 @@ vSAN metrics are only collected on cluster level. Therefore, use the same way as
 * Many vCenter environments use self-signed certificates. Be sure to update the bottom portion of the above configuration and provide proper values for all applicable SSL Config settings that apply in your vSphere environment. In some environments, setting insecure_skip_verify = true will be necessary when the SSL certificates are not available.
 
 * To ensure consistent collection in larger vSphere environments you may need to increase concurrency for the plugin. Use the collect_concurrency setting to control concurrency. Set collect_concurrency to the number of virtual machines divided by 1500 and rounded up to the nearest integer. For example, for 1200 VMs use 1 and for 2300 VMs use 2.
- 
+
 ## Measurements & Fields
 
 **NOTE**: vSAN performance measurements and fields may vary on the vSAN versions.

@@ -456,11 +456,11 @@ func TestVsanCmmds(t *testing.T) {
 	v := defaultVSphere()
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, s.URL, v)
+	c, _ := NewClient(ctx, s.URL, v)
 
 	f := Finder{c}
 	var clusters []mo.ClusterComputeResource
-	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, []string{}, &clusters)
+	_ = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, []string{}, &clusters)
 	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
 	require.NotPanics(t, func() {
 		getCmmdsMap(ctx, c.Client.Client, clusterObj)
@@ -476,7 +476,7 @@ func TestVsanTags(t *testing.T) {
 	devName := "naa.55cd2e414d82c815:2"
 	var cmmds = map[string]CmmdsEntity{
 		disk:    {UUID: disk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 1.}},
-		ssdDisk: {UUID: ssdDisk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 0., SsdUuid: ssd}},
+		ssdDisk: {UUID: ssdDisk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 0., SsdUUID: ssd}},
 		host:    {UUID: host, Type: "HOSTNAME", Owner: host, Content: CmmdsContent{Hostname: hostname}},
 	}
 	tags := populateCMMDSTags(make(map[string]string), "capacity-disk", disk, cmmds)
