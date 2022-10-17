@@ -2,20 +2,27 @@ package socket_listener
 
 import (
 	"crypto/tls"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -111,7 +118,6 @@ func TestSocketListener(t *testing.T) {
 			// Prepare the address and socket if needed
 			var serverAddr string
 			var tlsCfg *tls.Config
-
 			switch proto {
 			case "tcp", "udp":
 				serverAddr = "127.0.0.1:0"
@@ -147,6 +153,7 @@ func TestSocketListener(t *testing.T) {
 
 			// Start the plugin
 			var acc testutil.Accumulator
+			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
@@ -176,6 +183,158 @@ func TestSocketListener(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 		})
 	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("socket_listener", func() telegraf.Input {
+		return &SocketListener{}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		inputFilename := filepath.Join(testcasePath, "sequence.json")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+		// Compare options
+		options := []cmp.Option{
+			testutil.IgnoreTime(),
+			testutil.SortMetrics(),
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the input sequence
+			sequence, err := readInputData(inputFilename)
+			require.NoError(t, err)
+			require.NotEmpty(t, sequence)
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Setup and start the plugin
+			var acc testutil.Accumulator
+			plugin := cfg.Inputs[0].Input.(*SocketListener)
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Create a client without TLS
+			addr := plugin.listener.addr()
+			client, err := createClient(plugin.ServiceAddress, addr, nil)
+			require.NoError(t, err)
+
+			// Write the given sequence
+			for i, step := range sequence {
+				if step.Wait > 0 {
+					time.Sleep(time.Duration(step.Wait))
+					continue
+				}
+				require.NotEmpty(t, step.raw, "nothing to send")
+				_, err := client.Write(step.raw)
+				require.NoErrorf(t, err, "writing step %d failed: %v", i, err)
+			}
+			require.NoError(t, client.Close())
+
+			getNErrors := func() int {
+				acc.Lock()
+				defer acc.Unlock()
+				return len(acc.Errors)
+			}
+			require.Eventuallyf(t, func() bool {
+				return getNErrors() >= len(expectedErrors)
+			}, 3*time.Second, 100*time.Millisecond, "did not receive errors (%d/%d)", getNErrors(), len(expectedErrors))
+
+			require.Len(t, acc.Errors, len(expectedErrors))
+			sort.SliceStable(acc.Errors, func(i, j int) bool {
+				return acc.Errors[i].Error() < acc.Errors[j].Error()
+			})
+			for i, err := range acc.Errors {
+				require.ErrorContains(t, err, expectedErrors[i])
+			}
+
+			require.Eventuallyf(t, func() bool {
+				acc.Lock()
+				defer acc.Unlock()
+				return acc.NMetrics() >= uint64(len(expected))
+			}, 3*time.Second, 100*time.Millisecond, "did not receive metrics (%d/%d)", acc.NMetrics(), len(expected))
+
+			// Check the metric nevertheless as we might get some metrics despite errors.
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
+}
+
+// element provides a way to configure the
+// write sequence for the socket.
+type element struct {
+	Message string          `json:"message"`
+	File    string          `json:"file"`
+	Wait    config.Duration `json:"wait"`
+	raw     []byte
+}
+
+func readInputData(filename string) ([]element, error) {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var sequence []element
+	if err := json.Unmarshal(content, &sequence); err != nil {
+		return nil, err
+	}
+
+	for i, step := range sequence {
+		if step.Message != "" && step.File != "" {
+			return nil, errors.New("both message and file set in sequence")
+		} else if step.Message != "" {
+			step.raw = []byte(step.Message)
+		} else if step.File != "" {
+			path := filepath.Dir(filename)
+			path = filepath.Join(path, step.File)
+			step.raw, err = os.ReadFile(path)
+			if err != nil {
+				return nil, err
+			}
+		}
+		sequence[i] = step
+	}
+
+	return sequence, nil
 }
 
 func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn, error) {
