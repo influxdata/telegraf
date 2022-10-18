@@ -301,8 +301,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	} else if p.Username != "" || p.Password != "" {
 		req.SetBasicAuth(p.Username, p.Password)
 	} else if p.CustomHeaderString != "" {
-	    customHeaderMap := make(map[string]interface{})
-	    err := json.Unmarshal([]byte(p.CustomHeaderString), &customHeaderMap)
+		customHeaderMap := make(map[string]interface{})
+		err := json.Unmarshal([]byte(p.CustomHeaderString), &customHeaderMap)
 		if err != nil {
 			return err
 		}
