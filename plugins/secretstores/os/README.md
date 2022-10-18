@@ -35,7 +35,9 @@ In this case you will get an
 `opening keyring failed: Specified keyring backend not available` error!
 
 You can enable access to the kernel keyring, but as the keyring is __not__
-namespaced, you should be aware of the security implication!
+namespaced, you should be aware of the security implication! One implication
+is for example that keys added in one container are accessible by __all__
+other containers running on the same host, not only within the same container.
 
 ### Windows
 
