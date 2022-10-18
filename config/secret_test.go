@@ -144,6 +144,85 @@ func TestSecretConstant(t *testing.T) {
 	require.EqualValues(t, "a secret", secret)
 }
 
+func TestSecretUnquote(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      []byte
+		expected string
+	}{
+		{
+			name: "single quotes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = 'a secret'
+			`),
+			expected: "a secret",
+		},
+		{
+			name: "double quotes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = "a secret"
+			`),
+			expected: "a secret",
+		},
+		{
+			name: "triple single quotes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = '''a secret'''
+			`),
+			expected: "a secret",
+		},
+		{
+			name: "triple double quotes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = """a secret"""
+			`),
+			expected: "a secret",
+		},
+		{
+			name: "escaped double quotes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = "\"a secret\""
+			`),
+			expected: `\"a secret\"`,
+		},
+		{
+			name: "quote mix",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = "'a secret'"
+			`),
+			expected: `'a secret'`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewConfig()
+			require.NoError(t, c.LoadConfigData(tt.cfg))
+			require.Len(t, c.Inputs, 1)
+
+			// Create a mockup secretstore
+			store := &MockupSecretStore{
+				Secrets: map[string]string{},
+			}
+			require.NoError(t, store.Init())
+			c.SecretStores["mock"] = store
+			require.NoError(t, c.LinkSecrets())
+
+			plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
+			secret, err := plugin.Secret.Get()
+			require.NoError(t, err)
+
+			require.EqualValues(t, tt.expected, secret)
+		})
+	}
+}
+
 func TestSecretEnvironmentVariable(t *testing.T) {
 	cfg := []byte(`
 [[inputs.mockup]]

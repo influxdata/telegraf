@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/awnumar/memguard"
@@ -55,10 +54,7 @@ func (s *Secret) UnmarshalTOML(b []byte) error {
 
 // Initialize the secret content
 func (s *Secret) init(b []byte) {
-	secret := b
-	if unquoted, err := strconv.Unquote(string(b)); err == nil {
-		secret = []byte(unquoted)
-	}
+	secret := unquoteTomlString(b)
 
 	// Find all parts that need to be resolved and return them
 	s.unlinked = secretPattern.FindAllString(string(secret), -1)
