@@ -317,7 +317,8 @@ func (c *GNMI) handleSubscribeResponse(worker *Worker, reply *gnmiLib.SubscribeR
 	case *gnmiLib.SubscribeResponse_Update:
 		c.handleSubscribeResponseUpdate(worker, response)
 	case *gnmiLib.SubscribeResponse_Error:
-		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
+		// Deprecated but no clear alternative suggested: https://github.com/openconfig/gnmi/issues/132
+		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message) //nolint:staticcheck
 	}
 }
 

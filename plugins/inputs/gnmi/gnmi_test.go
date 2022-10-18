@@ -700,8 +700,8 @@ func TestSubscribeResponseError(t *testing.T) {
 	var mc uint32 = 7
 	ml := &MockLogger{}
 	plugin := &GNMI{Log: ml}
-	// TODO: FIX SA1019: gnmi.Error is deprecated: Do not use.
-	errorResponse := &gnmiLib.SubscribeResponse_Error{Error: &gnmiLib.Error{Message: me, Code: mc}}
+	// TODO: FIX SA1019: gnmi.Error is deprecated: Do not use. https://github.com/openconfig/gnmi/issues/132
+	errorResponse := &gnmiLib.SubscribeResponse_Error{Error: &gnmiLib.Error{Message: me, Code: mc}} //nolint:staticcheck
 	plugin.handleSubscribeResponse(&Worker{address: "127.0.0.1:0"}, &gnmiLib.SubscribeResponse{Response: errorResponse})
 	require.NotEmpty(t, ml.lastFormat)
 	require.Equal(t, []interface{}{mc, me}, ml.lastArgs)
