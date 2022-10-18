@@ -362,7 +362,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("getting DSN failed: %v", err)
 	}
-	s.Log.Debugf("Connecting to %q...", dsn)
+	s.Log.Debug("Connecting...")
 	s.db, err = dbsql.Open(s.driverName, dsn)
 	if err != nil {
 		return err
@@ -375,7 +375,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	s.db.SetMaxIdleConns(s.MaxIdleConnections)
 
 	// Test if the connection can be established
-	s.Log.Debugf("Testing connectivity...")
+	s.Log.Debug("Testing connectivity...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
 	err = s.db.PingContext(ctx)
 	cancel()
