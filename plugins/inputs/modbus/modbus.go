@@ -24,8 +24,9 @@ var sampleConfigStart string
 var sampleConfigEnd string
 
 type ModbusWorkarounds struct {
-	PollPause        config.Duration `toml:"pause_between_requests"`
-	CloseAfterGather bool            `toml:"close_connection_after_gather"`
+	AfterConnectPause config.Duration `toml:"pause_after_connect"`
+	PollPause         config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather  bool            `toml:"close_connection_after_gather"`
 }
 
 // Modbus holds all data relevant to the plugin
@@ -265,6 +266,10 @@ func (m *Modbus) initClient() error {
 func (m *Modbus) connect() error {
 	err := m.handler.Connect()
 	m.isConnected = err == nil
+	if m.isConnected && m.Workarounds.AfterConnectPause != 0 {
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.AfterConnectPause))
+		time.Sleep(time.Until(nextRequest))
+	}
 	return err
 }
 
