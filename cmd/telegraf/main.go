@@ -76,7 +76,7 @@ func processFilterFlags(ctx *cli.Context) Filters {
 	output = appendFilter(output, ctx.String("output-filter"))
 	aggregator = appendFilter(aggregator, ctx.String("aggregator-filter"))
 	processor = appendFilter(processor, ctx.String("processor-filter"))
-	secretstore = appendFilter(processor, ctx.String("secretstore-filter"))
+	secretstore = appendFilter(secretstore, ctx.String("secretstore-filter"))
 
 	sectionFilters := deleteEmpty(strings.Split(section, ":"))
 	inputFilters := deleteEmpty(strings.Split(input, ":"))
