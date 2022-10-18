@@ -158,7 +158,7 @@ require (
 	github.com/wavefronthq/wavefront-sdk-go v0.10.4
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/xdg/scram v1.0.5
-	github.com/yuin/goldmark v1.4.13
+	github.com/yuin/goldmark v1.5.2
 	go.mongodb.org/mongo-driver v1.10.2
 	go.opentelemetry.io/collector/pdata v0.61.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.32.1
