@@ -32,7 +32,7 @@ type listener interface {
 type lengthFieldSpec struct {
 	Offset       int64  `toml:"offset"`
 	Bytes        int64  `toml:"bytes"`
-	Endianess    string `toml:"endianess"`
+	Endianness   string `toml:"endianness"`
 	HeaderLength int64  `toml:"header_length"`
 	converter    func([]byte) int
 }
@@ -82,13 +82,13 @@ func (sl *SocketListener) Init() error {
 	case "variable length":
 		// Create the converter function
 		var order binary.ByteOrder
-		switch strings.ToLower(sl.SplittingLengthField.Endianess) {
+		switch strings.ToLower(sl.SplittingLengthField.Endianness) {
 		case "", "be":
 			order = binary.BigEndian
 		case "le":
 			order = binary.LittleEndian
 		default:
-			return fmt.Errorf("invalid 'endianess' %q", sl.SplittingLengthField.Endianess)
+			return fmt.Errorf("invalid 'endianess' %q", sl.SplittingLengthField.Endianness)
 		}
 
 		switch sl.SplittingLengthField.Bytes {
