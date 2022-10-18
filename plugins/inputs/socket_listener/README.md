@@ -120,7 +120,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## with variable length. The specification containes the following fields:
   ##  offset        -- start of length field in bytes from beginn of data
   ##  bytes         -- length of length field in bytes
-  ##  endianess     -- endianess of the value, either "be" for big endian or
+  ##  endianness    -- endianness of the value, either "be" for big endian or
   ##                   "le" for little endian
   ##  header_length -- total length of header to be skipped when passing
   ##                   data on to the parser. If zero (default), the header
