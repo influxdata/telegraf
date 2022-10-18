@@ -137,7 +137,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
-	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
+	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 	github.com/sensu/sensu-go/api/core/v2 v2.15.0
 	github.com/shirou/gopsutil/v3 v3.22.9
 	github.com/showwin/speedtest-go v1.1.5
@@ -147,7 +147,7 @@ require (
 	github.com/snowflakedb/gosnowflake v1.6.13
 	github.com/stretchr/testify v1.8.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
-	github.com/testcontainers/testcontainers-go v0.13.0
+	github.com/testcontainers/testcontainers-go v0.14.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.3.4
 	github.com/tidwall/gjson v1.14.3
 	github.com/tinylib/msgp v1.1.6
@@ -246,8 +246,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
 	github.com/containerd/cgroups v1.0.4 // indirect
-	github.com/containerd/containerd v1.6.7 // indirect
-	github.com/containerd/continuity v0.3.0 // indirect
+	github.com/containerd/containerd v1.6.8 // indirect
 	github.com/couchbase/gomemcached v0.1.3 // indirect
 	github.com/couchbase/goutils v0.1.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
@@ -255,7 +254,7 @@ require (
 	github.com/devigned/tab v0.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/go-units v0.4.0 // indirect
+	github.com/docker/go-units v0.5.0 // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
