@@ -100,6 +100,7 @@ func TestClient1Integration(t *testing.T) {
 		{"ManufacturerName", "0", "i", "2263", "open62541"},
 		{"badnode", "1", "i", "1337", nil},
 		{"goodnode", "1", "s", "the.answer", "42"},
+		{"DateTime", "1", "s", "51037", "0001-01-01T00:00:00Z"},
 	}
 
 	var o OpcUA

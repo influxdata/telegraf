@@ -473,14 +473,12 @@ func (o *OpcUA) getData() error {
 		}
 		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
 		if d.Value != nil {
-			o.nodeData[i].Value = d.Value.Value()
 			o.nodeData[i].DataType = d.Value.Type()
-		}
 
-		if t, ok := d.Value.Value().(time.Time); ok {
-			if o.nodes[i].tag.IdentifierType == "s" {
-				o.nodeData[i].Value = t.String()
-				o.nodeData[i].DataType = ua.TypeIDString
+			if o.nodeData[i].DataType == ua.TypeIDDateTime {
+				o.nodeData[i].Value = d.Value.Value().(time.Time).Format(time.RFC3339Nano)
+			} else {
+				o.nodeData[i].Value = d.Value.Value()
 			}
 		}
 
