@@ -300,14 +300,16 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
 	} else if p.Username != "" || p.Password != "" {
 		req.SetBasicAuth(p.Username, p.Password)
-	} else if p.CustomHeaderString != "" {
+	} 
+	
+	if p.CustomHeaderString != "" {
 		customHeaderMap := make(map[string]interface{})
 		err := json.Unmarshal([]byte(p.CustomHeaderString), &customHeaderMap)
 		if err != nil {
 			return err
 		}
 		for key, value := range customHeaderMap {
- 		 req.Header.Set(fmt.Sprint(key), fmt.Sprint(value))                  
+ 		 req.Header.Add(fmt.Sprint(key), fmt.Sprint(value))                  
 		}
 	}
 
