@@ -308,7 +308,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 	    for key, value := range customHeaderMap {
  		 req.Header.Set(fmt.Sprint(key), fmt.Sprint(value))                  
-        }
+		}
 	}
 
 	var resp *http.Response
