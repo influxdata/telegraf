@@ -119,7 +119,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
-			if err, ok := err.(net.Error); !ok {
+			if err, ok := err.(net.Error); ok {
 				// permanent error. close the connection
 				sw.Close() //nolint:revive // There is another error which will be returned here
 				sw.Conn = nil
