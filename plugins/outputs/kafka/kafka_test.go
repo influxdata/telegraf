@@ -212,6 +212,7 @@ func TestRoutingKey(t *testing.T) {
 
 type MockProducer struct {
 	sent []*sarama.ProducerMessage
+	sarama.SyncProducer
 }
 
 func (p *MockProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32, offset int64, err error) {
