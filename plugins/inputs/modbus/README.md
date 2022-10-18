@@ -196,6 +196,8 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.modbus.workarounds]
+    ## Pause after connect delays the first request by the specified time. This might be necessary for (slow) devices.
+    # pause_after_connect = "0ms"
     ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
     # pause_between_requests = "0ms"
     ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
@@ -211,9 +213,9 @@ those debug messages, Telegraf has to be started with debugging enabled
 (i.e. with the `--debug` option). Please be aware that connection tracing will
 produce a lot of messages and should __NOT__ be used in production environments.
 
-Please use `pause_between_requests` with care. Ensure the total gather time,
-including the pause(s), does not exceed the configured collection interval. Note
-that pauses add up if multiple requests are sent!
+Please use `pause_after_connect` / `pause_between_requests` with care. Ensure
+the total gather time, including the pause(s), does not exceed the configured
+collection interval. Note that pauses add up if multiple requests are sent!
 
 ## Configuration styles
 
