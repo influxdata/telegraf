@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestSqlQuoteIntegration(t *testing.T) {
@@ -210,7 +211,7 @@ func TestMysqlIntegration(t *testing.T) {
 
 	//dump the database
 	var rc int
-	rc, err = container.Exec([]string{
+	rc, _, err = container.Exec([]string{
 		"bash",
 		"-c",
 		"mariadb-dump --user=" + username +
@@ -292,7 +293,7 @@ func TestPostgresIntegration(t *testing.T) {
 	//dump the database
 	//psql -u postgres
 	var rc int
-	rc, err = container.Exec([]string{
+	rc, _, err = container.Exec([]string{
 		"bash",
 		"-c",
 		"pg_dump" +
@@ -384,7 +385,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	// dump the database
 	var rc int
 	for _, testMetric := range testMetrics {
-		rc, err = container.Exec([]string{
+		rc, _, err = container.Exec([]string{
 			"bash",
 			"-c",
 			"clickhouse-client" +
