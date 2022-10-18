@@ -51,21 +51,21 @@ func createScanFixedLength(length int) bufio.SplitFunc {
 	}
 }
 
-func createScanVariableLength(spec lengthFieldSpec, withHeader bool) bufio.SplitFunc {
+func createScanVariableLength(spec lengthFieldSpec) bufio.SplitFunc {
+	minlen := int(spec.Offset)
+	minlen += int(spec.Bytes)
+	headerLen := int(spec.HeaderLength)
+
 	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
 			return 0, nil, nil
 		}
 		dataLen := len(data)
-		headerLen := int(spec.HeaderLength)
-		if dataLen >= headerLen {
+		if dataLen >= minlen {
 			// Extract the length field and convert it to a number
 			lf := data[spec.Offset : spec.Offset+spec.Bytes]
 			length := spec.converter(lf)
 			start := headerLen
-			if withHeader {
-				start = 0
-			}
 			end := length + headerLen
 			// If we have enough data return it without the header
 			if end <= dataLen {

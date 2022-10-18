@@ -123,16 +123,7 @@ func (sl *SocketListener) Init() error {
 		}
 
 		// Check if we have enough bytes in the header
-		minlen := sl.SplittingLengthField.Offset
-		minlen += sl.SplittingLengthField.Bytes
-		if sl.SplittingLengthField.HeaderLength == 0 {
-			sl.SplittingLengthField.HeaderLength = minlen
-		}
-		if sl.SplittingLengthField.HeaderLength < minlen {
-			return fmt.Errorf("'header_length' has to be at least %d", minlen)
-		}
-
-		sl.splitter = createScanVariableLength(sl.SplittingLengthField, false)
+		sl.splitter = createScanVariableLength(sl.SplittingLengthField)
 	default:
 		return fmt.Errorf("unknown 'splitting_strategy' %q", sl.SplittingStrategy)
 	}
