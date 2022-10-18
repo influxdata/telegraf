@@ -33,6 +33,52 @@ func (*SystemStats) SampleConfig() string {
 	return sampleConfig
 }
 
+func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
+	loadavg, err := load.Avg()
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		return err
+	}
+
+	loadFields := map[string]interface{}{}
+	users, err := host.Users()
+	if err == nil {
+		loadFields["n_users"] = len(users)
+	} else if os.IsNotExist(err) {
+		s.Log.Debugf("Reading users: %s", err.Error())
+	} else if os.IsPermission(err) {
+		s.Log.Debug(err.Error())
+	}
+
+	numCPUs, err := cpu.Counts(true)
+	if err != nil {
+		return err
+	}
+
+	if loadavg != nil {
+		loadFields["load1"] = loadavg.Load1
+		loadFields["load5"] = loadavg.Load5
+		loadFields["load15"] = loadavg.Load15
+	}
+
+	loadFields["n_cpus"] = numCPUs
+
+	uptime, err := host.Uptime()
+	if err != nil {
+		return err
+	}
+	uptimeFields := map[string]interface{}{
+		"uptime": uptime,
+	}
+
+	uptimeFormatFields := map[string]interface{}{
+		"uptime_format": formatUptime(uptime),
+	}
+
+	s.addFields(acc, loadFields, uptimeFields, uptimeFormatFields)
+
+	return nil
+}
+
 func (s *SystemStats) addFields(acc telegraf.Accumulator, loadFields map[string]interface{}, uptimeFields map[string]interface{}, uptimeFormatFields map[string]interface{}) {
 	now := time.Now()
 
@@ -56,49 +102,6 @@ func (s *SystemStats) addFields(acc telegraf.Accumulator, loadFields map[string]
 	}
 
 	acc.AddFields("system", mergedFields, nil, now)
-}
-
-func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
-	loadavg, err := load.Avg()
-	if err != nil && !strings.Contains(err.Error(), "not implemented") {
-		return err
-	}
-
-	loadFields := map[string]interface{}{}
-	users, err := host.Users()
-	if err == nil {
-		loadFields["n_users"] = len(users)
-	} else if os.IsNotExist(err) {
-		s.Log.Debugf("Reading users: %s", err.Error())
-	} else if os.IsPermission(err) {
-		s.Log.Debug(err.Error())
-	}
-
-	numCPUs, err := cpu.Counts(true)
-	if err != nil {
-		return err
-	}
-
-	loadFields["load1"] = loadavg.Load1
-	loadFields["load5"] = loadavg.Load5
-	loadFields["load15"] = loadavg.Load15
-	loadFields["n_cpus"] = numCPUs
-
-	uptime, err := host.Uptime()
-	if err != nil {
-		return err
-	}
-	uptimeFields := map[string]interface{}{
-		"uptime": uptime,
-	}
-
-	uptimeFormatFields := map[string]interface{}{
-		"uptime_format": formatUptime(uptime),
-	}
-
-	s.addFields(acc, loadFields, uptimeFields, uptimeFormatFields)
-
-	return nil
 }
 
 func formatUptime(uptime uint64) string {
