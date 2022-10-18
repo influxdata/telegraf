@@ -74,9 +74,9 @@ configuration!
 
 To list all available secret-stores run
 
-`telegraf list-secretstores list`
+`telegraf list-secretstores`
 
-this will print a list of all known secret-store IDs that can be used for
+which will print a list of all known secret-store IDs that can be used for
 accessing the secrets in that store
 
 `telegraf list-secrets someid`
@@ -88,12 +88,15 @@ the secrets use
 `telegraf list-secrets --reveal-secret someid`
 
 You can also pass a list of secret-stores and the command will
-print all secrets in those stores. If no secret-store ID is provided
+print all secrets in those stores. If no secret-store ID is provided, i.e.
+
+`telegraf list-secrets`
+
 the command will list the *keys* of all secrets in all known secret-stores.
 
 To access the *value* of a secret you can use the `get-secret` command
 
-`telegraf secret get someid a_secret_key`
+`telegraf get-secret someid a_secret_key`
 
 to output the *value* of the secret `a_secret_key` in the secret-store
 with ID `someid`.
