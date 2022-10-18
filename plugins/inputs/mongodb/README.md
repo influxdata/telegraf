@@ -1,6 +1,7 @@
 # MongoDB Input Plugin
 
-See the [MongoDB Software Lifecycle Schedules][lifecycles] for supported versions.
+See the [MongoDB Software Lifecycle Schedules][lifecycles] for supported
+versions.
 
 [lifecycles]: https://www.mongodb.com/support-policy/lifecycles
 
