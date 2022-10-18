@@ -22,11 +22,40 @@ import (
 var sampleConfig string
 
 type SystemStats struct {
+	// Publishes all metrics at once, opposed to three separate metrics
+	// Enabling this will lose metric type support (used in outputs such as prometheus)
+	MergeMetrics bool `toml:"merge_metrics"`
+
 	Log telegraf.Logger
 }
 
 func (*SystemStats) SampleConfig() string {
 	return sampleConfig
+}
+
+func (s *SystemStats) addFields(acc telegraf.Accumulator, loadFields map[string]interface{}, uptimeFields map[string]interface{}, uptimeFormatFields map[string]interface{}) {
+	now := time.Now()
+
+	if !s.MergeMetrics {
+		acc.AddGauge("system", loadFields, nil, now)
+		acc.AddCounter("system", uptimeFields, nil, now)
+		acc.AddFields("system", uptimeFormatFields, nil, now)
+		return
+	}
+
+	mergedFields := map[string]interface{}{}
+
+	for k, v := range loadFields {
+		mergedFields[k] = v
+	}
+	for k, v := range uptimeFields {
+		mergedFields[k] = v
+	}
+	for k, v := range uptimeFormatFields {
+		mergedFields[k] = v
+	}
+
+	acc.AddFields("system", mergedFields, nil, now)
 }
 
 func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
@@ -35,41 +64,39 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	numCPUs, err := cpu.Counts(true)
-	if err != nil {
-		return err
-	}
-
-	fields := map[string]interface{}{
-		"load1":  loadavg.Load1,
-		"load5":  loadavg.Load5,
-		"load15": loadavg.Load15,
-		"n_cpus": numCPUs,
-	}
-
+	loadFields := map[string]interface{}{}
 	users, err := host.Users()
 	if err == nil {
-		fields["n_users"] = len(users)
+		loadFields["n_users"] = len(users)
 	} else if os.IsNotExist(err) {
 		s.Log.Debugf("Reading users: %s", err.Error())
 	} else if os.IsPermission(err) {
 		s.Log.Debug(err.Error())
 	}
 
-	now := time.Now()
-	acc.AddGauge("system", fields, nil, now)
+	numCPUs, err := cpu.Counts(true)
+	if err != nil {
+		return err
+	}
+
+	loadFields["load1"] = loadavg.Load1
+	loadFields["load5"] = loadavg.Load5
+	loadFields["load15"] = loadavg.Load15
+	loadFields["n_cpus"] = numCPUs
 
 	uptime, err := host.Uptime()
 	if err != nil {
 		return err
 	}
-
-	acc.AddCounter("system", map[string]interface{}{
+	uptimeFields := map[string]interface{}{
 		"uptime": uptime,
-	}, nil, now)
-	acc.AddFields("system", map[string]interface{}{
+	}
+
+	uptimeFormatFields := map[string]interface{}{
 		"uptime_format": formatUptime(uptime),
-	}, nil, now)
+	}
+
+	s.addFields(acc, loadFields, uptimeFields, uptimeFormatFields)
 
 	return nil
 }

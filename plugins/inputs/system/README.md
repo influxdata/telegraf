@@ -10,7 +10,9 @@ Number of CPUs is obtained from the /proc/cpuinfo file.
 ```toml @sample.conf
 # Read metrics about system load & uptime
 [[inputs.system]]
-  # no configuration
+  # Publishes all metrics at once, opposed to three separate metrics
+  # Enabling this will lose metric type support (used in outputs such as prometheus)
+  # merge_metrics = false
 ```
 
 ### Permissions
