@@ -20,11 +20,12 @@ func (o *OS) createKeyringConfig() (keyring.Config, error) {
 	if err != nil {
 		return keyring.Config{}, fmt.Errorf("getting password failed: %v", err)
 	}
+	defer config.ReleaseSecret(passwd)
 
 	// Create the prompt-function in case we need it
 	promptFunc := keyring.TerminalPrompt
-	if passwd != "" {
-		promptFunc = keyring.FixedStringPrompt(passwd)
+	if len(passwd) != 0 {
+		promptFunc = keyring.FixedStringPrompt(string(passwd))
 	}
 
 	return keyring.Config{
