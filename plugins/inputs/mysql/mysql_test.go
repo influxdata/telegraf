@@ -26,7 +26,7 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("/usr/sbin/mysqld: ready for connections"),
+			wait.ForLog("/usr/sbin/mysqld: ready for connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
@@ -63,7 +63,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("/usr/sbin/mysqld: ready for connections"),
+			wait.ForLog("/usr/sbin/mysqld: ready for connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}

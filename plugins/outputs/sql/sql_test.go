@@ -352,7 +352,7 @@ func TestClickHouseIntegration(t *testing.T) {
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'"),
+			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
