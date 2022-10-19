@@ -1,6 +1,7 @@
 package json
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -1355,4 +1356,48 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
 		})
 	}
+}
+
+// This function with the seeds get run during all unit tests
+// To run this in "fuzzing" mode, where the go fuzzer comes up with all sorts
+// of use cases, run: go test -fuzz=Fuzz ./plugins/parsers/json/...
+func FuzzParserJSON(f *testing.F) {
+	parser := &Parser{MetricName: "testing"}
+	require.NoError(f, parser.Init())
+
+	f.Add([]byte(validJSON))
+	f.Add([]byte(validJSONArray))
+	f.Add([]byte(validJSONArrayMultiple))
+	f.Add([]byte(validJSONArrayTags))
+	f.Add([]byte(validJSONNewline))
+	f.Add([]byte(validJSONTags))
+
+	f.Fuzz(func(t *testing.T, input []byte) {
+		// skip invalid JSON
+		var data interface{}
+		err := json.Unmarshal(input, &data)
+		if err != nil {
+			t.Skip()
+		}
+
+		// skip JSON that is not an object or array of objects
+		timestamp := time.Now().UTC()
+		switch v := data.(type) {
+		case map[string]interface{}:
+			_, err := parser.parseObject(v, timestamp)
+			if err != nil {
+				t.Skip()
+			}
+		case []interface{}:
+			_, err := parser.parseArray(v, timestamp)
+			if err != nil {
+				t.Skip()
+			}
+		default:
+			t.Skip()
+		}
+
+		_, err = parser.Parse(input)
+		require.NoError(t, err)
+	})
 }
