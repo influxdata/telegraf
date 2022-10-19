@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"encoding/json"
     
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -59,8 +58,7 @@ type Prometheus struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	
-	// Custom Header e.g CustomHeaderString := `{"header1":"header1Value","header2":header2Value,"header3":"header3Value"}`
-	CustomHeaderString string `toml:"custom_header_string"`
+	ExtraHttpHeaders map[string]string `toml:extra_http_headers`
 
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
@@ -302,13 +300,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.SetBasicAuth(p.Username, p.Password)
 	} 
 	
-	if p.CustomHeaderString != "" {
-		customHeaderMap := make(map[string]interface{})
-		err := json.Unmarshal([]byte(p.CustomHeaderString), &customHeaderMap)
-		if err != nil {
-			return err
-		}
-		for key, value := range customHeaderMap {
+	if p.ExtraHttpHeaders != nil {
+		for key, value := range p.ExtraHttpHeaders {
  		 req.Header.Add(fmt.Sprint(key), fmt.Sprint(value))                  
 		}
 	}
