@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	output "github.com/influxdata/telegraf/plugins/outputs/kafka"
+	kafkaOutput "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -532,7 +532,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	// Make kafka output
 	t.Logf("rt: starting output plugin")
 	creator := outputs.Outputs["kafka"]
-	output, ok := creator().(*output.Kafka)
+	output, ok := creator().(*kafkaOutput.Kafka)
 	require.True(t, ok)
 
 	s, _ := serializers.NewInfluxSerializer()
