@@ -1,6 +1,7 @@
 package amqp
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -117,7 +118,8 @@ func (c *client) DeclareExchange() error {
 func (c *client) Publish(key string, body []byte) error {
 	// Note that since the channel is not in confirm mode, the absence of
 	// an error does not indicate successful delivery.
-	return c.channel.Publish(
+	return c.channel.PublishWithContext(
+		context.Background(),
 		c.config.exchange, // exchange
 		key,               // routing key
 		false,             // mandatory
