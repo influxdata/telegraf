@@ -763,6 +763,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	// for the input both need to miss the entry. We count the
 	// missing entries at the end.
 	missCount := make(map[string]int)
+	missCountThreshold := 0
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
@@ -781,6 +782,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	// it can accept arbitrary data-formats, so build the requested parser and
 	// set it.
 	if t, ok := processor.(telegraf.ParserPlugin); ok {
+		missCountThreshold = 2
 		parser, err := c.addParser("processors", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
@@ -789,6 +791,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	}
 
 	if t, ok := processor.(telegraf.ParserFuncPlugin); ok {
+		missCountThreshold = 2
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
@@ -812,6 +815,16 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 
 	rf = models.NewRunningProcessor(streamingProcessor, processorConfig)
 	c.AggProcessors = append(c.AggProcessors, rf)
+
+	// Check the number of misses against the threshold
+	for key, count := range missCount {
+		if count <= missCountThreshold {
+			continue
+		}
+		if err := c.missingTomlField(nil, key); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
