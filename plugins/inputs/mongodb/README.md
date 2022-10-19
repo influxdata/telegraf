@@ -1,6 +1,9 @@
 # MongoDB Input Plugin
 
-All MongoDB server versions from 2.6 and higher are supported.
+See the [MongoDB Software Lifecycle Schedules][lifecycles] for supported
+versions.
+
+[lifecycles]: https://www.mongodb.com/support-policy/lifecycles
 
 ## Configuration
 
