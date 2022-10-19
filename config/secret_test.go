@@ -14,10 +14,11 @@ import (
 func TestSecretConstantManually(t *testing.T) {
 	mysecret := "a wonderful test"
 	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
 	retrieved, err := s.Get()
 	require.NoError(t, err)
+	defer ReleaseSecret(retrieved)
 	require.EqualValues(t, mysecret, retrieved)
-	s.Destroy()
 }
 
 func TestLinking(t *testing.T) {
@@ -28,11 +29,12 @@ func TestLinking(t *testing.T) {
 		},
 	}
 	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
 	require.NoError(t, s.Link(resolvers))
 	retrieved, err := s.Get()
 	require.NoError(t, err)
+	defer ReleaseSecret(retrieved)
 	require.EqualValues(t, "a resolved secret", retrieved)
-	s.Destroy()
 }
 
 func TestLinkingResolverError(t *testing.T) {
@@ -43,23 +45,23 @@ func TestLinkingResolverError(t *testing.T) {
 		},
 	}
 	s := NewSecret([]byte(mysecret))
-	err := s.Link(resolvers)
+	defer s.Destroy()
 	expected := `linking secrets failed: resolving "@{referenced:secret}" failed: broken`
-	require.EqualError(t, err, expected)
-	s.Destroy()
+	require.EqualError(t, s.Link(resolvers), expected)
 }
 
 func TestGettingUnlinked(t *testing.T) {
 	mysecret := "a @{referenced:secret}"
 	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
 	_, err := s.Get()
 	require.ErrorContains(t, err, "unlinked parts in secret")
-	s.Destroy()
 }
 
 func TestGettingMissingResolver(t *testing.T) {
 	mysecret := "a @{referenced:secret}"
 	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
 	s.unlinked = []string{}
 	s.resolvers = map[string]telegraf.ResolveFunc{
 		"@{a:dummy}": func() ([]byte, bool, error) {
@@ -69,12 +71,12 @@ func TestGettingMissingResolver(t *testing.T) {
 	_, err := s.Get()
 	expected := `replacing secrets failed: no resolver for "@{referenced:secret}"`
 	require.EqualError(t, err, expected)
-	s.Destroy()
 }
 
 func TestGettingResolverError(t *testing.T) {
 	mysecret := "a @{referenced:secret}"
 	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
 	s.unlinked = []string{}
 	s.resolvers = map[string]telegraf.ResolveFunc{
 		"@{referenced:secret}": func() ([]byte, bool, error) {
@@ -84,21 +86,22 @@ func TestGettingResolverError(t *testing.T) {
 	_, err := s.Get()
 	expected := `replacing secrets failed: resolving "@{referenced:secret}" failed: broken`
 	require.EqualError(t, err, expected)
-	s.Destroy()
 }
 
 func TestUninitializedEnclave(t *testing.T) {
 	s := Secret{}
+	defer s.Destroy()
 	require.NoError(t, s.Link(map[string]telegraf.ResolveFunc{}))
 	retrieved, err := s.Get()
 	require.NoError(t, err)
 	require.Empty(t, retrieved)
-	s.Destroy()
+	defer ReleaseSecret(retrieved)
 }
 
 func TestEnclaveOpenError(t *testing.T) {
 	mysecret := "a @{referenced:secret}"
 	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
 	memguard.Purge()
 	err := s.Link(map[string]telegraf.ResolveFunc{})
 	require.ErrorContains(t, err, "opening enclave failed")
@@ -106,15 +109,14 @@ func TestEnclaveOpenError(t *testing.T) {
 	s.unlinked = []string{}
 	_, err = s.Get()
 	require.ErrorContains(t, err, "opening enclave failed")
-	s.Destroy()
 }
 
 func TestMissingResolver(t *testing.T) {
 	mysecret := "a @{referenced:secret}"
 	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
 	err := s.Link(map[string]telegraf.ResolveFunc{})
 	require.ErrorContains(t, err, "linking secrets failed: unlinked part")
-	s.Destroy()
 }
 
 func TestSecretConstant(t *testing.T) {
@@ -158,6 +160,7 @@ func TestSecretConstant(t *testing.T) {
 			plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
 			secret, err := plugin.Secret.Get()
 			require.NoError(t, err)
+			defer ReleaseSecret(secret)
 
 			require.EqualValues(t, tt.expected, string(secret))
 		})
@@ -237,6 +240,7 @@ func TestSecretUnquote(t *testing.T) {
 			plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
 			secret, err := plugin.Secret.Get()
 			require.NoError(t, err)
+			defer ReleaseSecret(secret)
 
 			require.EqualValues(t, tt.expected, secret)
 		})
@@ -266,6 +270,7 @@ func TestSecretEnvironmentVariable(t *testing.T) {
 	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
 	secret, err := plugin.Secret.Get()
 	require.NoError(t, err)
+	defer ReleaseSecret(secret)
 
 	require.EqualValues(t, "an env secret", secret)
 }
@@ -306,6 +311,8 @@ func TestSecretStoreStatic(t *testing.T) {
 		plugin := input.Input.(*MockupSecretPlugin)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
+		defer ReleaseSecret(secret)
+
 		require.EqualValues(t, expected[i], secret)
 	}
 }
@@ -351,6 +358,8 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 		plugin := input.Input.(*MockupSecretPlugin)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
+		defer ReleaseSecret(secret)
+
 		require.EqualValues(t, expected[i], secret)
 	}
 }
@@ -411,12 +420,16 @@ func TestSecretStoreStaticChanging(t *testing.T) {
 	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
 	secret, err := plugin.Secret.Get()
 	require.NoError(t, err)
+	defer ReleaseSecret(secret)
+
 	require.EqualValues(t, "Ood Bnar", secret)
 
 	for _, v := range sequence {
 		store.Secrets["secret"] = []byte(v)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
+		defer ReleaseSecret(secret)
+
 		// The secret should not change as the store is marked non-dyamic!
 		require.EqualValues(t, "Ood Bnar", secret)
 	}
@@ -449,7 +462,9 @@ func TestSecretStoreDynamic(t *testing.T) {
 		store.Secrets["secret"] = []byte(v)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
-		// The secret should not change as the store is marked non-dyamic!
+		defer ReleaseSecret(secret)
+
+		// The secret should not change as the store is marked non-dynamic!
 		require.EqualValues(t, v, secret)
 	}
 }
