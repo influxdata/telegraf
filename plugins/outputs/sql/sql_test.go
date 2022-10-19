@@ -2,9 +2,11 @@ package sql
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -263,7 +265,7 @@ func TestPostgresIntegration(t *testing.T) {
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("database system is ready to accept connections"),
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
@@ -379,8 +381,26 @@ func TestClickHouseIntegration(t *testing.T) {
 	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
-
 	require.NoError(t, p.Write(testMetrics))
+
+	// wait for last test metric to get written
+	require.Eventually(t, func() bool {
+		var out io.Reader
+		_, out, err = container.Exec([]string{
+			"bash",
+			"-c",
+			"clickhouse-client" +
+				" --user=" + username +
+				" --database=" + dbname +
+				" --format=TabSeparatedRaw" +
+				" --multiquery --query=" +
+				"\"SELECT * FROM \\\"metric three\\\"\";",
+		})
+		require.NoError(t, err)
+		bytes, err := io.ReadAll(out)
+		require.NoError(t, err)
+		return strings.Contains(string(bytes), "!2021-05-17 22:04:45	tag4	string2")
+	}, 5*time.Second, 10*time.Millisecond)
 
 	// dump the database
 	var rc int
