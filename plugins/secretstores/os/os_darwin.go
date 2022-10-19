@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	"github.com/99designs/keyring"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 // DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
