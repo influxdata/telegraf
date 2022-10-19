@@ -316,8 +316,6 @@ func (c *GNMI) handleSubscribeResponse(worker *Worker, reply *gnmiLib.SubscribeR
 	switch response := reply.Response.(type) {
 	case *gnmiLib.SubscribeResponse_Update:
 		c.handleSubscribeResponseUpdate(worker, response)
-	case *gnmiLib.SubscribeResponse_Error:
-		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
 	}
 }
 
