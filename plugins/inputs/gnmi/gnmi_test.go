@@ -695,18 +695,6 @@ func (l *MockLogger) Errorf(format string, args ...interface{}) {
 	l.lastArgs = args
 }
 
-func TestSubscribeResponseError(t *testing.T) {
-	me := "mock error message"
-	var mc uint32 = 7
-	ml := &MockLogger{}
-	plugin := &GNMI{Log: ml}
-	// TODO: FIX SA1019: gnmi.Error is deprecated: Do not use. https://github.com/openconfig/gnmi/issues/132
-	errorResponse := &gnmiLib.SubscribeResponse_Error{Error: &gnmiLib.Error{Message: me, Code: mc}} //nolint:staticcheck
-	plugin.handleSubscribeResponse(&Worker{address: "127.0.0.1:0"}, &gnmiLib.SubscribeResponse{Response: errorResponse})
-	require.NotEmpty(t, ml.lastFormat)
-	require.Equal(t, []interface{}{mc, me}, ml.lastArgs)
-}
-
 func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
