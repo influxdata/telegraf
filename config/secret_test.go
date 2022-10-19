@@ -118,30 +118,50 @@ func TestMissingResolver(t *testing.T) {
 }
 
 func TestSecretConstant(t *testing.T) {
-	cfg := []byte(
-		`
-[[inputs.mockup]]
-	secret = "a secret"
-`)
-
-	c := NewConfig()
-	err := c.LoadConfigData(cfg)
-	require.NoError(t, err)
-	require.Len(t, c.Inputs, 1)
-
-	// Create a mockup secretstore
-	store := &MockupSecretStore{
-		Secrets: map[string][]byte{},
+	tests := []struct {
+		name     string
+		cfg      []byte
+		expected string
+	}{
+		{
+			name: "simple string",
+			cfg: []byte(`
+				[[inputs.mockup]]
+				  secret = "a secret"
+			`),
+			expected: "a secret",
+		},
+		{
+			name: "mail address",
+			cfg: []byte(`
+				[[inputs.mockup]]
+				  secret = "someone@mock.org"
+			`),
+			expected: "someone@mock.org",
+		},
 	}
-	require.NoError(t, store.Init())
-	c.SecretStores["mock"] = store
-	require.NoError(t, c.LinkSecrets())
 
-	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
-	secret, err := plugin.Secret.Get()
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewConfig()
+			require.NoError(t, c.LoadConfigData(tt.cfg))
+			require.Len(t, c.Inputs, 1)
 
-	require.EqualValues(t, "a secret", secret)
+			// Create a mockup secretstore
+			store := &MockupSecretStore{
+				Secrets: map[string][]byte{"mock": []byte("fail")},
+			}
+			require.NoError(t, store.Init())
+			c.SecretStores["mock"] = store
+			require.NoError(t, c.LinkSecrets())
+
+			plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
+			secret, err := plugin.Secret.Get()
+			require.NoError(t, err)
+
+			require.EqualValues(t, tt.expected, string(secret))
+		})
+	}
 }
 
 func TestSecretUnquote(t *testing.T) {
