@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"syscall"
 
 	"github.com/awnumar/memguard"
 
@@ -126,8 +125,7 @@ func (s *Secret) Get() ([]byte, error) {
 		return nil, fmt.Errorf("replacing secrets failed: %s", strings.Join(replaceErrs, ";"))
 	}
 
-	err = syscall.Mlock(newsecret)
-	return newsecret, err
+	return newsecret, protect(newsecret)
 }
 
 // GetUnlinked return the parts of the secret that is not yet linked to a resolver
