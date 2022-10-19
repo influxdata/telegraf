@@ -128,6 +128,9 @@ func TestCollectStats(t *testing.T) {
 	cs.Collect = []string{"all"}
 
 	err := cs.Gather(&acc)
+	if err != nil && strings.Contains(err.Error(), "Is the conntrack kernel module loaded?") {
+		t.Skip("Conntrack kernel module not loaded.")
+	}
 	require.NoError(t, err)
 
 	expectedTags := map[string]string{
@@ -214,6 +217,9 @@ func TestCollectStatsPerCpu(t *testing.T) {
 	cs.Collect = []string{"all", "percpu"}
 
 	err := cs.Gather(&acc)
+	if err != nil && strings.Contains(err.Error(), "Is the conntrack kernel module loaded?") {
+		t.Skip("Conntrack kernel module not loaded.")
+	}
 	require.NoError(t, err)
 
 	//cpu0
