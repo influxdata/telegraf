@@ -23,8 +23,8 @@ func TestSecretConstantManually(t *testing.T) {
 func TestLinking(t *testing.T) {
 	mysecret := "a @{referenced:secret}"
 	resolvers := map[string]telegraf.ResolveFunc{
-		"@{referenced:secret}": func() (string, bool, error) {
-			return "resolved secret", false, nil
+		"@{referenced:secret}": func() ([]byte, bool, error) {
+			return []byte("resolved secret"), false, nil
 		},
 	}
 	s := NewSecret([]byte(mysecret))
@@ -38,8 +38,8 @@ func TestLinking(t *testing.T) {
 func TestLinkingResolverError(t *testing.T) {
 	mysecret := "a @{referenced:secret}"
 	resolvers := map[string]telegraf.ResolveFunc{
-		"@{referenced:secret}": func() (string, bool, error) {
-			return "", false, errors.New("broken")
+		"@{referenced:secret}": func() ([]byte, bool, error) {
+			return nil, false, errors.New("broken")
 		},
 	}
 	s := NewSecret([]byte(mysecret))
@@ -62,8 +62,8 @@ func TestGettingMissingResolver(t *testing.T) {
 	s := NewSecret([]byte(mysecret))
 	s.unlinked = []string{}
 	s.resolvers = map[string]telegraf.ResolveFunc{
-		"@{a:dummy}": func() (string, bool, error) {
-			return "", false, nil
+		"@{a:dummy}": func() ([]byte, bool, error) {
+			return nil, false, nil
 		},
 	}
 	_, err := s.Get()
@@ -77,8 +77,8 @@ func TestGettingResolverError(t *testing.T) {
 	s := NewSecret([]byte(mysecret))
 	s.unlinked = []string{}
 	s.resolvers = map[string]telegraf.ResolveFunc{
-		"@{referenced:secret}": func() (string, bool, error) {
-			return "", false, errors.New("broken")
+		"@{referenced:secret}": func() ([]byte, bool, error) {
+			return nil, false, errors.New("broken")
 		},
 	}
 	_, err := s.Get()
@@ -131,7 +131,7 @@ func TestSecretConstant(t *testing.T) {
 
 	// Create a mockup secretstore
 	store := &MockupSecretStore{
-		Secrets: map[string]string{},
+		Secrets: map[string][]byte{},
 	}
 	require.NoError(t, store.Init())
 	c.SecretStores["mock"] = store
@@ -208,7 +208,7 @@ func TestSecretUnquote(t *testing.T) {
 
 			// Create a mockup secretstore
 			store := &MockupSecretStore{
-				Secrets: map[string]string{},
+				Secrets: map[string][]byte{},
 			}
 			require.NoError(t, store.Init())
 			c.SecretStores["mock"] = store
@@ -237,7 +237,7 @@ func TestSecretEnvironmentVariable(t *testing.T) {
 
 	// Create a mockup secretstore
 	store := &MockupSecretStore{
-		Secrets: map[string]string{},
+		Secrets: map[string][]byte{},
 	}
 	require.NoError(t, store.Init())
 	c.SecretStores["mock"] = store
@@ -270,11 +270,11 @@ func TestSecretStoreStatic(t *testing.T) {
 
 	// Create a mockup secretstore
 	store := &MockupSecretStore{
-		Secrets: map[string]string{
-			"secret1":          "Ood Bnar",
-			"secret2":          "Thon",
-			"a_strange_secret": "Obi-Wan Kenobi",
-			"a_wierd_secret":   "Arca Jeth",
+		Secrets: map[string][]byte{
+			"secret1":          []byte("Ood Bnar"),
+			"secret2":          []byte("Thon"),
+			"a_strange_secret": []byte("Obi-Wan Kenobi"),
+			"a_wierd_secret":   []byte("Arca Jeth"),
 		},
 	}
 	require.NoError(t, store.Init())
@@ -310,11 +310,11 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 
 	// Create a mockup secretstore
 	store := &MockupSecretStore{
-		Secrets: map[string]string{
-			"":                 "Ood Bnar",
-			"wild?%go":         "Thon",
-			"a-strange-secret": "Obi-Wan Kenobi",
-			"a wierd secret":   "Arca Jeth",
+		Secrets: map[string][]byte{
+			"":                 []byte("Ood Bnar"),
+			"wild?%go":         []byte("Thon"),
+			"a-strange-secret": []byte("Obi-Wan Kenobi"),
+			"a wierd secret":   []byte("Arca Jeth"),
 		},
 	}
 	require.NoError(t, store.Init())
@@ -351,7 +351,7 @@ func TestSecretStoreInvalidReference(t *testing.T) {
 
 	// Create a mockup secretstore
 	store := &MockupSecretStore{
-		Secrets: map[string]string{"test": "Arca Jeth"},
+		Secrets: map[string][]byte{"test": []byte("Arca Jeth")},
 	}
 	require.NoError(t, store.Init())
 	c.SecretStores["foo"] = store
@@ -380,7 +380,7 @@ func TestSecretStoreStaticChanging(t *testing.T) {
 
 	// Create a mockup secretstore
 	store := &MockupSecretStore{
-		Secrets: map[string]string{"secret": "Ood Bnar"},
+		Secrets: map[string][]byte{"secret": []byte("Ood Bnar")},
 		Dynamic: false,
 	}
 	require.NoError(t, store.Init())
@@ -394,7 +394,7 @@ func TestSecretStoreStaticChanging(t *testing.T) {
 	require.EqualValues(t, "Ood Bnar", secret)
 
 	for _, v := range sequence {
-		store.Secrets["secret"] = v
+		store.Secrets["secret"] = []byte(v)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
 		// The secret should not change as the store is marked non-dyamic!
@@ -416,7 +416,7 @@ func TestSecretStoreDynamic(t *testing.T) {
 
 	// Create a mockup secretstore
 	store := &MockupSecretStore{
-		Secrets: map[string]string{"secret": "Ood Bnar"},
+		Secrets: map[string][]byte{"secret": []byte("Ood Bnar")},
 		Dynamic: true,
 	}
 	require.NoError(t, store.Init())
@@ -426,7 +426,7 @@ func TestSecretStoreDynamic(t *testing.T) {
 	sequence := []string{"Ood Bnar", "Thon", "Obi-Wan Kenobi", "Arca Jeth"}
 	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
 	for _, v := range sequence {
-		store.Secrets["secret"] = v
+		store.Secrets["secret"] = []byte(v)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
 		// The secret should not change as the store is marked non-dyamic!
@@ -443,25 +443,30 @@ func (*MockupSecretPlugin) SampleConfig() string                  { return "Mock
 func (*MockupSecretPlugin) Gather(acc telegraf.Accumulator) error { return nil }
 
 type MockupSecretStore struct {
-	Secrets map[string]string
+	Secrets map[string][]byte
 	Dynamic bool
 }
 
 func (s *MockupSecretStore) Init() error {
 	return nil
 }
-func (*MockupSecretStore) SampleConfig() string { return "Mockup test secret plugin" }
-func (s *MockupSecretStore) Get(key string) (string, error) {
+func (*MockupSecretStore) SampleConfig() string {
+	return "Mockup test secret plugin"
+}
+
+func (s *MockupSecretStore) Get(key string) ([]byte, error) {
 	v, found := s.Secrets[key]
 	if !found {
-		return "", errors.New("not found")
+		return nil, errors.New("not found")
 	}
 	return v, nil
 }
+
 func (s *MockupSecretStore) Set(key, value string) error {
-	s.Secrets[key] = value
+	s.Secrets[key] = []byte(value)
 	return nil
 }
+
 func (s *MockupSecretStore) List() ([]string, error) {
 	keys := []string{}
 	for k := range s.Secrets {
@@ -470,7 +475,7 @@ func (s *MockupSecretStore) List() ([]string, error) {
 	return keys, nil
 }
 func (s *MockupSecretStore) GetResolver(key string) (telegraf.ResolveFunc, error) {
-	return func() (string, bool, error) {
+	return func() ([]byte, bool, error) {
 		v, err := s.Get(key)
 		return v, s.Dynamic, err
 	}, nil

@@ -486,13 +486,14 @@ To also reveal the actual secret, i.e. the value, you can pass the
 
 						_, _ = fmt.Printf("Known secrets for store %q:\n", storeID)
 						for _, k := range keys {
-							var v string
+							var v []byte
 							if reveal {
 								if v, err = store.Get(k); err != nil {
 									return fmt.Errorf("unable to get value of secret %q from store %q: %w", k, storeID, err)
 								}
 							}
-							_, _ = fmt.Printf("    %-30s  %s\n", k, v)
+							_, _ = fmt.Printf("    %-30s  %s\n", k, string(v))
+							config.ReleaseSecret(v)
 						}
 					}
 

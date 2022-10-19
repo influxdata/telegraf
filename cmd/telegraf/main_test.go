@@ -19,23 +19,23 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-var secrets = map[string]map[string]string{
+var secrets = map[string]map[string][]byte{
 	"yoda": {
-		"episode1": "member",
-		"episode2": "member",
-		"episode3": "member",
+		"episode1": []byte("member"),
+		"episode2": []byte("member"),
+		"episode3": []byte("member"),
 	},
 	"mace_windu": {
-		"episode1": "member",
-		"episode2": "member",
-		"episode3": "member",
+		"episode1": []byte("member"),
+		"episode2": []byte("member"),
+		"episode3": []byte("member"),
 	},
 	"oppo_rancisis": {
-		"episode1": "member",
-		"episode2": "member",
+		"episode1": []byte("member"),
+		"episode2": []byte("member"),
 	},
 	"coleman_kcaj": {
-		"episode3": "member",
+		"episode3": []byte("member"),
 	},
 }
 
@@ -75,7 +75,7 @@ func (m *MockTelegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 }
 
 type MockSecretStore struct {
-	Secrets map[string]string
+	Secrets map[string][]byte
 }
 
 func (s *MockSecretStore) Init() error {
@@ -86,10 +86,10 @@ func (s *MockSecretStore) SampleConfig() string {
 	return "I'm just a dummy"
 }
 
-func (s *MockSecretStore) Get(key string) (string, error) {
+func (s *MockSecretStore) Get(key string) ([]byte, error) {
 	v, found := s.Secrets[key]
 	if !found {
-		return "", errors.New("not found")
+		return nil, errors.New("not found")
 	}
 	return v, nil
 }
@@ -98,7 +98,7 @@ func (s *MockSecretStore) Set(key, value string) error {
 	if strings.HasPrefix(key, "darth") {
 		return errors.New("don't join the dark side")
 	}
-	s.Secrets[key] = value
+	s.Secrets[key] = []byte(value)
 	return nil
 }
 func (s *MockSecretStore) List() ([]string, error) {
@@ -110,7 +110,7 @@ func (s *MockSecretStore) List() ([]string, error) {
 }
 
 func (s *MockSecretStore) GetResolver(key string) (telegraf.ResolveFunc, error) {
-	return func() (string, bool, error) {
+	return func() ([]byte, bool, error) {
 		v, err := s.Get(key)
 		return v, false, err
 	}, nil

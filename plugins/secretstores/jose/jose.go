@@ -44,8 +44,8 @@ func (j *Jose) Init() error {
 
 	// Create the prompt-function in case we need it
 	promptFunc := keyring.TerminalPrompt
-	if passwd != "" {
-		promptFunc = keyring.FixedStringPrompt(passwd)
+	if len(passwd) != 0 {
+		promptFunc = keyring.FixedStringPrompt(string(passwd))
 	}
 
 	// Setup the actual keyring
@@ -64,13 +64,13 @@ func (j *Jose) Init() error {
 }
 
 // Get searches for the given key and return the secret
-func (j *Jose) Get(key string) (string, error) {
+func (j *Jose) Get(key string) ([]byte, error) {
 	item, err := j.ring.Get(key)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(item.Data), nil
+	return item.Data, nil
 }
 
 // Set sets the given secret for the given key
@@ -90,7 +90,7 @@ func (j *Jose) List() ([]string, error) {
 
 // GetResolver returns a function to resolve the given key.
 func (j *Jose) GetResolver(key string) (telegraf.ResolveFunc, error) {
-	resolver := func() (string, bool, error) {
+	resolver := func() ([]byte, bool, error) {
 		s, err := j.Get(key)
 		return s, false, err
 	}

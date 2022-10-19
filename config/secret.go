@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"syscall"
 
 	"github.com/awnumar/memguard"
 
@@ -82,30 +83,33 @@ func (s *Secret) Destroy() {
 }
 
 // Get return the string representation of the secret
-func (s *Secret) Get() (string, error) {
+func (s *Secret) Get() ([]byte, error) {
 	if s.enclave == nil {
-		return "", nil
+		return nil, nil
 	}
 
 	if len(s.unlinked) > 0 {
-		return "", fmt.Errorf("unlinked parts in secret: %v", strings.Join(s.unlinked, ";"))
+		return nil, fmt.Errorf("unlinked parts in secret: %v", strings.Join(s.unlinked, ";"))
 	}
 
 	// Decrypt the secret so we can return it
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
-		return "", fmt.Errorf("opening enclave failed: %v", err)
+		return nil, fmt.Errorf("opening enclave failed: %v", err)
 	}
 	defer lockbuf.Destroy()
-	secret := lockbuf.String()
+	secret := lockbuf.Bytes()
 
 	if len(s.resolvers) == 0 {
-		return strings.Clone(secret), nil
+		// Make a copy as we cannot access lockbuf after Destroy, i.e.
+		// after this function finishes.
+		newsecret := append([]byte{}, secret...)
+		return newsecret, protect(newsecret)
 	}
 
 	replaceErrs := make([]string, 0)
-	newsecret := secretPattern.ReplaceAllStringFunc(secret, func(match string) string {
-		resolver, found := s.resolvers[match]
+	newsecret := secretPattern.ReplaceAllFunc(secret, func(match []byte) []byte {
+		resolver, found := s.resolvers[string(match)]
 		if !found {
 			replaceErrs = append(replaceErrs, fmt.Sprintf("no resolver for %q", match))
 			return match
@@ -119,10 +123,11 @@ func (s *Secret) Get() (string, error) {
 		return replacement
 	})
 	if len(replaceErrs) > 0 {
-		return "", fmt.Errorf("replacing secrets failed: %s", strings.Join(replaceErrs, ";"))
+		return nil, fmt.Errorf("replacing secrets failed: %s", strings.Join(replaceErrs, ";"))
 	}
 
-	return newsecret, nil
+	err = syscall.Mlock(newsecret)
+	return newsecret, err
 }
 
 // GetUnlinked return the parts of the secret that is not yet linked to a resolver
@@ -145,13 +150,13 @@ func (s *Secret) Link(resolvers map[string]telegraf.ResolveFunc) error {
 		return fmt.Errorf("opening enclave failed: %v", err)
 	}
 	defer lockbuf.Destroy()
-	secret := lockbuf.String()
+	secret := lockbuf.Bytes()
 
 	// Iterate through the parts and try to resolve them. For static parts
 	// we directly replace them, while for dynamic ones we store the resolver.
 	replaceErrs := make([]string, 0)
-	newsecret := secretPattern.ReplaceAllStringFunc(secret, func(match string) string {
-		resolver, found := resolvers[match]
+	newsecret := secretPattern.ReplaceAllFunc(secret, func(match []byte) []byte {
+		resolver, found := resolvers[string(match)]
 		if !found {
 			replaceErrs = append(replaceErrs, fmt.Sprintf("unlinked part %q", match))
 			return match
@@ -168,7 +173,7 @@ func (s *Secret) Link(resolvers map[string]telegraf.ResolveFunc) error {
 		}
 
 		// Keep the resolver for dynamic secrets
-		s.resolvers[match] = resolver
+		s.resolvers[string(match)] = resolver
 		return match
 	})
 	if len(replaceErrs) > 0 {
@@ -176,8 +181,8 @@ func (s *Secret) Link(resolvers map[string]telegraf.ResolveFunc) error {
 	}
 
 	// Store the secret if it has changed
-	if secret != newsecret {
-		s.enclave = memguard.NewEnclave([]byte(newsecret))
+	if string(secret) != string(newsecret) {
+		s.enclave = memguard.NewEnclave(newsecret)
 	}
 
 	// All linked now

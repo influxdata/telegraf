@@ -225,12 +225,8 @@ func (s *SQL) Init() error {
 		return errors.New("missing SQL driver option")
 	}
 
-	dsn, err := s.Dsn.Get()
-	if err != nil {
-		return fmt.Errorf("getting DSN failed: %v", err)
-	}
-	if dsn == "" {
-		return errors.New("missing data source name (DSN) option")
+	if err := s.checkDSN(); err != nil {
+		return err
 	}
 
 	if s.Timeout <= 0 {
@@ -362,8 +358,9 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("getting DSN failed: %v", err)
 	}
+	defer config.ReleaseSecret(dsn)
 	s.Log.Debug("Connecting...")
-	s.db, err = dbsql.Open(s.driverName, dsn)
+	s.db, err = dbsql.Open(s.driverName, string(dsn))
 	if err != nil {
 		return err
 	}
@@ -468,4 +465,16 @@ func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Quer
 	s.Log.Debugf("Received %d rows and %d columns for query %q", rowCount, len(columnNames), q.Query)
 
 	return err
+}
+
+func (s *SQL) checkDSN() error {
+	dsn, err := s.Dsn.Get()
+	if err != nil {
+		return fmt.Errorf("getting DSN failed: %w", err)
+	}
+	defer config.ReleaseSecret(dsn)
+	if len(dsn) == 0 {
+		return errors.New("missing data source name (DSN) option")
+	}
+	return nil
 }

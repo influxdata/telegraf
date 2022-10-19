@@ -56,13 +56,13 @@ func (o *OS) Init() error {
 }
 
 // Get searches for the given key and return the secret
-func (o *OS) Get(key string) (string, error) {
+func (o *OS) Get(key string) ([]byte, error) {
 	item, err := o.ring.Get(key)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(item.Data), nil
+	return item.Data, nil
 }
 
 // Set sets the given secret for the given key
@@ -82,7 +82,7 @@ func (o *OS) List() ([]string, error) {
 
 // GetResolver returns a function to resolve the given key.
 func (o *OS) GetResolver(key string) (telegraf.ResolveFunc, error) {
-	resolver := func() (string, bool, error) {
+	resolver := func() ([]byte, bool, error) {
 		s, err := o.Get(key)
 		return s, o.Dynamic, err
 	}

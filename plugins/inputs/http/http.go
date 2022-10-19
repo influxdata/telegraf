@@ -135,16 +135,8 @@ func (h *HTTP) gatherURL(
 		}
 	}
 
-	username, err := h.Username.Get()
-	if err != nil {
-		return fmt.Errorf("getting username failed: %v", err)
-	}
-	password, err := h.Password.Get()
-	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
-	}
-	if username != "" || password != "" {
-		request.SetBasicAuth(username, password)
+	if err := h.setRequestAuth(request); err != nil {
+		return err
 	}
 
 	resp, err := h.client.Do(request)
@@ -190,6 +182,23 @@ func (h *HTTP) gatherURL(
 		acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
 	}
 
+	return nil
+}
+
+func (h *HTTP) setRequestAuth(request *http.Request) error {
+	username, err := h.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %v", err)
+	}
+	defer config.ReleaseSecret(username)
+	password, err := h.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %v", err)
+	}
+	defer config.ReleaseSecret(password)
+	if len(username) != 0 || len(password) != 0 {
+		request.SetBasicAuth(string(username), string(password))
+	}
 	return nil
 }
 

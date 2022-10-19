@@ -92,7 +92,7 @@ func TestSetListGet(t *testing.T) {
 		require.NoError(t, err)
 		v, found := secrets[k]
 		require.True(t, found)
-		require.Equal(t, v, value)
+		require.Equal(t, v, string(value))
 	}
 }
 
@@ -121,7 +121,7 @@ func TestResolver(t *testing.T) {
 	s, dynamic, err := resolver()
 	require.NoError(t, err)
 	require.False(t, dynamic)
-	require.Equal(t, secretVal, s)
+	require.Equal(t, secretVal, string(s))
 }
 
 func TestResolverInvalid(t *testing.T) {
