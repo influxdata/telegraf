@@ -285,10 +285,45 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
-	c := NewConfig()
-	err := c.LoadConfig("./testdata/invalid_field.toml")
-	require.Error(t, err, "invalid field name")
-	require.Equal(t, "error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
+	tests := []struct {
+		name     string
+		filename string
+		expected string
+	}{
+		{
+			name:     "in plugin without parser",
+			filename: "./testdata/invalid_field.toml",
+			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+		},
+		{
+			name:     "in plugin with parser",
+			filename: "./testdata/invalid_field_with_parser.toml",
+			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+		},
+		{
+			name:     "in plugin with parser func",
+			filename: "./testdata/invalid_field_with_parserfunc.toml",
+			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+		},
+		{
+			name:     "in parser of plugin",
+			filename: "./testdata/invalid_field_in_parser_table.toml",
+			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+		},
+		{
+			name:     "in parser of plugin with parser-func",
+			filename: "./testdata/invalid_field_in_parserfunc_table.toml",
+			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewConfig()
+			err := c.LoadConfig(tt.filename)
+			require.ErrorContains(t, err, tt.expected)
+		})
+	}
 }
 
 func TestConfig_WrongFieldType(t *testing.T) {
@@ -843,6 +878,36 @@ func (m *MockupInputPlugin) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 
+/*** Mockup INPUT plugin with ParserFunc interface ***/
+type MockupInputPluginParserFunc struct {
+	parserFunc telegraf.ParserFunc
+}
+
+func (m *MockupInputPluginParserFunc) SampleConfig() string {
+	return "Mockup test input plugin"
+}
+func (m *MockupInputPluginParserFunc) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupInputPluginParserFunc) SetParserFunc(pf telegraf.ParserFunc) {
+	m.parserFunc = pf
+}
+
+/*** Mockup INPUT plugin without ParserFunc interface ***/
+type MockupInputPluginParserOnly struct {
+	parser telegraf.Parser
+}
+
+func (m *MockupInputPluginParserOnly) SampleConfig() string {
+	return "Mockup test input plugin"
+}
+func (m *MockupInputPluginParserOnly) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupInputPluginParserOnly) SetParser(p telegraf.Parser) {
+	m.parser = p
+}
+
 /*** Mockup PROCESSOR plugin for testing to avoid cyclic dependencies ***/
 type MockupProcessorPluginParser struct {
 	Parser     telegraf.Parser
@@ -902,6 +967,12 @@ func init() {
 	})
 	inputs.Add("parser_test_old", func() telegraf.Input {
 		return &MockupInputPluginParserOld{}
+	})
+	inputs.Add("parser", func() telegraf.Input {
+		return &MockupInputPluginParserOnly{}
+	})
+	inputs.Add("parser_func", func() telegraf.Input {
+		return &MockupInputPluginParserFunc{}
 	})
 	inputs.Add("exec", func() telegraf.Input {
 		return &MockupInputPlugin{Timeout: Duration(time.Second * 5)}
