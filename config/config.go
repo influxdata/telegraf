@@ -693,8 +693,17 @@ func (c *Config) probeParser(table *ast.Table) bool {
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
 
-	_, ok := parsers.Parsers[dataformat]
-	return ok
+	creator, ok := parsers.Parsers[dataformat]
+	if !ok {
+		return false
+	}
+
+	// Try to parse the options to detect if any of them is misspelled
+	// We don't actually use the parser, so no need to check the error.
+	parser := creator("")
+	_ = c.toml.UnmarshalTable(table, parser)
+
+	return true
 }
 
 func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) (*models.RunningParser, error) {
@@ -884,6 +893,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// for the input both need to miss the entry. We count the
 	// missing entries at the end.
 	missCount := make(map[string]int)
+	missCountThreshold := 0
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
@@ -902,6 +912,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// If the input has a SetParser or SetParserFunc function, it can accept
 	// arbitrary data-formats, so build the requested parser and set it.
 	if t, ok := input.(telegraf.ParserPlugin); ok {
+		missCountThreshold = 1
 		parser, err := c.addParser("inputs", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
@@ -912,6 +923,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// Keep the old interface for backward compatibility
 	if t, ok := input.(parsers.ParserInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserPlugin.
+		missCountThreshold = 1
 		parser, err := c.addParser("inputs", name, table)
 		if err != nil {
 			return fmt.Errorf("adding parser failed: %w", err)
@@ -920,6 +932,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 
 	if t, ok := input.(telegraf.ParserFuncPlugin); ok {
+		missCountThreshold = 1
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
@@ -930,6 +943,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	if t, ok := input.(parsers.ParserFuncInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncPlugin.
+		missCountThreshold = 1
 		if !c.probeParser(table) {
 			return errors.New("parser not found")
 		}
@@ -963,7 +977,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// Check the number of misses against the threshold
 	for key, count := range missCount {
-		if count <= 1 {
+		if count <= missCountThreshold {
 			continue
 		}
 		if err := c.missingTomlField(nil, key); err != nil {
@@ -1243,11 +1257,27 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 }
 
 func (c *Config) setLocalMissingTomlFieldTracker(counter map[string]int) {
-	f := func(_ reflect.Type, key string) error {
-		if c, ok := counter[key]; ok {
-			counter[key] = c + 1
-		} else {
+	f := func(t reflect.Type, key string) error {
+		// Check if we are in a root element that might share options among
+		// each other. Those root elements are plugins of all types.
+		// All other elements are subtables of their respective plugin and
+		// should just be hit once anyway. Therefore, we mark them with a
+		// high number to handle them correctly later.
+		pt := reflect.PtrTo(t)
+		root := pt.Implements(reflect.TypeOf((*telegraf.Input)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.ServiceInput)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.Output)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.Aggregator)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.Processor)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.Parser)(nil)).Elem())
+
+		c, ok := counter[key]
+		if !root {
+			counter[key] = 100
+		} else if !ok {
 			counter[key] = 1
+		} else {
+			counter[key] = c + 1
 		}
 		return nil
 	}
