@@ -311,9 +311,8 @@ func TestSecretStoreStatic(t *testing.T) {
 		plugin := input.Input.(*MockupSecretPlugin)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
-		defer ReleaseSecret(secret)
-
 		require.EqualValues(t, expected[i], secret)
+		require.NoError(t, ReleaseSecret(secret))
 	}
 }
 
@@ -358,9 +357,8 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 		plugin := input.Input.(*MockupSecretPlugin)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
-		defer ReleaseSecret(secret)
-
 		require.EqualValues(t, expected[i], secret)
+		require.NoError(t, ReleaseSecret(secret))
 	}
 }
 
@@ -428,10 +426,10 @@ func TestSecretStoreStaticChanging(t *testing.T) {
 		store.Secrets["secret"] = []byte(v)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
-		defer ReleaseSecret(secret)
 
 		// The secret should not change as the store is marked non-dyamic!
 		require.EqualValues(t, "Ood Bnar", secret)
+		require.NoError(t, ReleaseSecret(secret))
 	}
 }
 
@@ -462,10 +460,10 @@ func TestSecretStoreDynamic(t *testing.T) {
 		store.Secrets["secret"] = []byte(v)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
-		defer ReleaseSecret(secret)
 
 		// The secret should not change as the store is marked non-dynamic!
 		require.EqualValues(t, v, secret)
+		require.NoError(t, ReleaseSecret(secret))
 	}
 }
 
