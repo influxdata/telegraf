@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	output "github.com/influxdata/telegraf/plugins/outputs/kafka"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
@@ -504,6 +505,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}()
 
 	t.Logf("rt: starting broker")
+	topic := "Test"
 	container := testutil.Container{
 		Name:         "telegraf-test-kafka-consumer",
 		Image:        "wurstmeister/kafka",
@@ -512,7 +514,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			"KAFKA_ADVERTISED_HOST_NAME": "localhost",
 			"KAFKA_ADVERTISED_PORT":      "9092",
 			"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
-			"KAFKA_CREATE_TOPICS":        "Test:1:1",
+			"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", topic),
 		},
 		Networks:   []string{networkName},
 		WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
@@ -536,7 +538,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	s, _ := serializers.NewInfluxSerializer()
 	output.SetSerializer(s)
 	output.Brokers = brokers
-	output.Topic = "Test"
+	output.Topic = topic
 	output.Log = testutil.Logger{}
 
 	require.NoError(t, output.Init())
@@ -545,8 +547,14 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	// Make kafka input
 	t.Logf("rt: starting input plugin")
 	input := KafkaConsumer{
-		Brokers: brokers,
+		Brokers:                brokers,
+		Log:                    testutil.Logger{},
+		Topics:                 []string{topic},
+		MaxUndeliveredMessages: 1,
 	}
+	parser := &influx.Parser{}
+	parser.Init()
+	input.SetParser(parser)
 	err = input.Init()
 	require.NoError(t, err)
 
@@ -555,13 +563,14 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Shove some metrics through
-	t.Logf("rt: writing")
 	expected := testutil.MockMetrics()
+	t.Logf("rt: writing")
 	require.NoError(t, output.Write(expected))
 
 	// Check that they were received
 	t.Logf("rt: expecting")
 	acc.Wait(len(expected))
-	actual := acc.Metrics
-	require.Equal(t, expected, actual)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+
+	t.Logf("rt: done")
 }
