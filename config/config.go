@@ -689,9 +689,12 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) probeParser(table *ast.Table) bool {
+func (c *Config) probeParser(parentcategory string, parentname string, table *ast.Table) bool {
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
+	if dataformat == "" {
+		dataformat = setDefaultParser(parentcategory, parentname)
+	}
 
 	creator, ok := parsers.Parsers[dataformat]
 	if !ok {
@@ -709,15 +712,10 @@ func (c *Config) probeParser(table *ast.Table) bool {
 func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) (*models.RunningParser, error) {
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
-
 	if dataformat == "" {
-		if parentcategory == "inputs" && parentname == "exec" {
-			// Legacy support, exec plugin originally parsed JSON by default.
-			dataformat = "json"
-		} else {
-			dataformat = "influx"
-		}
+		dataformat = setDefaultParser(parentcategory, parentname)
 	}
+
 	var influxParserType string
 	c.getFieldString(table, "influx_parser_type", &influxParserType)
 	if dataformat == "influx" && influxParserType == "upstream" {
@@ -828,7 +826,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 	}
 
 	if t, ok := processor.(telegraf.ParserFuncPlugin); ok {
-		if !c.probeParser(table) {
+		if !c.probeParser("processors", name, table) {
 			return nil, false, errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
@@ -946,7 +944,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	if t, ok := input.(telegraf.ParserFuncPlugin); ok {
 		missCountThreshold = 1
-		if !c.probeParser(table) {
+		if !c.probeParser("inputs", name, table) {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
@@ -957,7 +955,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if t, ok := input.(parsers.ParserFuncInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncPlugin.
 		missCountThreshold = 1
-		if !c.probeParser(table) {
+		if !c.probeParser("inputs", name, table) {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
@@ -1429,6 +1427,15 @@ func keys(m map[string]bool) []string {
 		result = append(result, k)
 	}
 	return result
+}
+
+func setDefaultParser(category string, name string) string {
+	// Legacy support, exec plugin originally parsed JSON by default.
+	if category == "inputs" && name == "exec" {
+		return "json"
+	}
+
+	return "influx"
 }
 
 func (c *Config) hasErrs() bool {

@@ -265,6 +265,16 @@ func TestConfig_WrongCertPath(t *testing.T) {
 	require.Error(t, c.LoadConfig("./testdata/wrong_cert_path.toml"))
 }
 
+func TestConfig_DefaultParser(t *testing.T) {
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/default_parser.toml"))
+}
+
+func TestConfig_DefaultExecParser(t *testing.T) {
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/default_parser_exec.toml"))
+}
+
 func TestConfig_LoadSpecialTypes(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/special_types.toml"))
@@ -886,6 +896,7 @@ type MockupInputPlugin struct {
 	Paths        []string `toml:"paths"`
 	Port         int      `toml:"port"`
 	Command      string
+	Files        []string
 	PidFile      string
 	Log          telegraf.Logger `toml:"-"`
 	tls.ServerConfig
@@ -1068,6 +1079,9 @@ func init() {
 	})
 	inputs.Add("exec", func() telegraf.Input {
 		return &MockupInputPlugin{Timeout: Duration(time.Second * 5)}
+	})
+	inputs.Add("file", func() telegraf.Input {
+		return &MockupInputPlugin{}
 	})
 	inputs.Add("http_listener_v2", func() telegraf.Input {
 		return &MockupInputPlugin{}
