@@ -240,6 +240,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build gps")
 			}
 			influx.Gps = append(influx.Gps, &m)
+		case "ublox-data":
+			m := GPS{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build gps")
+			}
+			influx.Gps = append(influx.Gps, &m)
 		case "pp_correction_metrics":
 			m := PPCorrection{
 				FieldsMap: map[string]string{},

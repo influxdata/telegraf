@@ -20,7 +20,7 @@ func (*UbloxDataCollector) Description() string {
 
 func (*UbloxDataCollector) SampleConfig() string {
 	return `
-[[inputs.simple]]
+[[inputs.ublox]]
     ublox_pty = "/tmp/ptyGPSRO_tlg"
 `
 }
@@ -60,5 +60,5 @@ func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("simple", func() telegraf.Input { return &UbloxDataCollector{} })
+	inputs.Add("ublox", func() telegraf.Input { return &UbloxDataCollector{} })
 }
