@@ -81,7 +81,7 @@ take any argument.  The function will be called to reset the plugin, and doesn't
 return anything.
 
 ```python
-def push():
+def reset():
   state.clear()
 ```
 
