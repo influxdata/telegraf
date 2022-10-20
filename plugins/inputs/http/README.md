@@ -44,6 +44,7 @@ configuration.
   # scopes = ["urn:opc:idm:__myscopes__"]
 
   ## HTTP Proxy support
+  # use_system_proxy = false
   # http_proxy_url = ""
 
   ## Optional TLS Config
