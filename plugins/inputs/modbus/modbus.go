@@ -157,7 +157,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 					return fmt.Errorf("disconnecting failed: %w", err)
 				}
 				if err := m.connect(); err != nil {
-					return fmt.Errorf("connecting failed: %w", err)
+					return fmt.Errorf("slave %d: connecting failed: %w", slaveID, err)
 				}
 			}
 			continue
