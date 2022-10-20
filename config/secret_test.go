@@ -214,12 +214,52 @@ func TestSecretUnquote(t *testing.T) {
 			expected: `\"a secret\"`,
 		},
 		{
-			name: "quote mix",
+			name: "mix double-single quotes (single)",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = "'a secret'"
 			`),
 			expected: `'a secret'`,
+		},
+		{
+			name: "mix single-double quotes (single)",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = '"a secret"'
+			`),
+			expected: `"a secret"`,
+		},
+		{
+			name: "mix double-single quotes (triple-single)",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = """'a secret'"""
+			`),
+			expected: `'a secret'`,
+		},
+		{
+			name: "mix single-double quotes (triple-single)",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = '''"a secret"'''
+			`),
+			expected: `"a secret"`,
+		},
+		{
+			name: "mix double-single quotes (triple)",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = """'''a secret'''"""
+			`),
+			expected: `'''a secret'''`,
+		},
+		{
+			name: "mix single-double quotes (triple)",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = '''"""a secret"""'''
+			`),
+			expected: `"""a secret"""`,
 		},
 	}
 
@@ -242,7 +282,7 @@ func TestSecretUnquote(t *testing.T) {
 			require.NoError(t, err)
 			defer ReleaseSecret(secret)
 
-			require.EqualValues(t, tt.expected, secret)
+			require.EqualValues(t, tt.expected, string(secret))
 		})
 	}
 }
