@@ -122,6 +122,7 @@ func (s *Secret) Get() ([]byte, error) {
 		return replacement
 	})
 	if len(replaceErrs) > 0 {
+		memguard.WipeBytes(newsecret)
 		return nil, fmt.Errorf("replacing secrets failed: %s", strings.Join(replaceErrs, ";"))
 	}
 
