@@ -58,7 +58,7 @@ type Prometheus struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	
-	ExtraHttpHeaders map[string]string `toml:extra_http_headers`
+	HTTPHeaders map[string]string `toml:http_headers`
 
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
