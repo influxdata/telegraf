@@ -87,6 +87,26 @@ func processFilterFlags(ctx *cli.Context) Filters {
 	return Filters{sectionFilters, inputFilters, outputFilters, aggregatorFilters, processorFilters, secretstoreFilters}
 }
 
+func processFilterOnlySecretStoreFlags(ctx *cli.Context) Filters {
+	sectionFilters := []string{"inputs", "outputs", "processors", "aggregators"}
+	inputFilters := []string{"-"}
+	outputFilters := []string{"-"}
+	processorFilters := []string{"-"}
+	aggregatorFilters := []string{"-"}
+
+	// Only load the secret-stores
+	var secretstore string
+	if len(ctx.Lineage()) >= 2 {
+		parent := ctx.Lineage()[1] // ancestor contexts in order from child to parent
+		secretstore = parent.String("secretstore-filter")
+	}
+
+	// If both the parent and command filters are defined, append them together
+	secretstore = appendFilter(secretstore, ctx.String("secretstore-filter"))
+	secretstoreFilters := deleteEmpty(strings.Split(secretstore, ":"))
+	return Filters{sectionFilters, inputFilters, outputFilters, aggregatorFilters, processorFilters, secretstoreFilters}
+}
+
 func deleteEmpty(s []string) []string {
 	var r []string
 	for _, str := range s {
@@ -388,8 +408,7 @@ accessing the secrets in that store.`,
 				},
 				Action: func(cCtx *cli.Context) error {
 					// Only load the secret-stores
-					cCtx.Set("section-filter", "inputs:outpus:processors:aggregators")
-					filters := processFilterFlags(cCtx)
+					filters := processFilterOnlySecretStoreFlags(cCtx)
 					g := GlobalFlags{
 						config:     cCtx.StringSlice("config"),
 						configDir:  cCtx.StringSlice("config-directory"),
@@ -448,8 +467,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 				},
 				Action: func(cCtx *cli.Context) error {
 					// Only load the secret-stores
-					cCtx.Set("section-filter", "inputs:outpus:processors:aggregators")
-					filters := processFilterFlags(cCtx)
+					filters := processFilterOnlySecretStoreFlags(cCtx)
 					g := GlobalFlags{
 						config:     cCtx.StringSlice("config"),
 						configDir:  cCtx.StringSlice("config-directory"),
@@ -526,8 +544,7 @@ with the ID 'mystore'.
 				ArgsUsage: "<secret-store ID> <secret key>",
 				Action: func(cCtx *cli.Context) error {
 					// Only load the secret-stores
-					cCtx.Set("section-filter", "inputs:outpus:processors:aggregators")
-					filters := processFilterFlags(cCtx)
+					filters := processFilterOnlySecretStoreFlags(cCtx)
 					g := GlobalFlags{
 						config:     cCtx.StringSlice("config"),
 						configDir:  cCtx.StringSlice("config-directory"),
@@ -590,8 +607,7 @@ you will be prompted to enter the value of the secret.
 				ArgsUsage: "<secret-store ID> <secret key>",
 				Action: func(cCtx *cli.Context) error {
 					// Only load the secret-stores
-					cCtx.Set("section-filter", "inputs:outpus:processors:aggregators")
-					filters := processFilterFlags(cCtx)
+					filters := processFilterOnlySecretStoreFlags(cCtx)
 					g := GlobalFlags{
 						config:     cCtx.StringSlice("config"),
 						configDir:  cCtx.StringSlice("config-directory"),
