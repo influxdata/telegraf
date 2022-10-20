@@ -300,9 +300,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.SetBasicAuth(p.Username, p.Password)
 	} 
 	
-	if p.ExtraHttpHeaders != nil {
-		for key, value := range p.ExtraHttpHeaders {
- 		 req.Header.Add(fmt.Sprint(key), fmt.Sprint(value))                  
+	if p.HTTPHeaders != nil {
+		for key, value := range p.HTTPHeaders {
+ 		    req.Header.Add(key, value)                  
 		}
 	}
 
