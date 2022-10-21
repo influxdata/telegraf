@@ -26,7 +26,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 		Env: map[string]string{
 			"POSTGRES_HOST_AUTH_METHOD": "trust",
 		},
-		WaitingFor: wait.ForLog("database system is ready to accept connections"),
+		WaitingFor: wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 	}
 	err := backend.Start()
 	require.NoError(t, err, "failed to start container")
