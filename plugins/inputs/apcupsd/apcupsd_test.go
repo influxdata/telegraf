@@ -128,7 +128,6 @@ func TestApcupsdGather(t *testing.T) {
 				},
 				fields: map[string]interface{}{
 					"status_flags":                  uint64(8),
-					"status":                        "ONLINE",
 					"input_voltage":                 float64(0),
 					"load_percent":                  float64(13),
 					"battery_charge_percent":        float64(0),

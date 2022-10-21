@@ -29,7 +29,6 @@ apcupsd should be installed and it's daemon should be running.
     - model
   - fields:
     - status_flags ([status-bits][])
-    - status
     - input_voltage
     - load_percent
     - battery_charge_percent

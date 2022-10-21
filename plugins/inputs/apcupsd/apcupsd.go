@@ -67,7 +67,6 @@ func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 
 			fields := map[string]interface{}{
 				"status_flags":                  flags,
-				"status":                        status.Status,
 				"input_voltage":                 status.LineVoltage,
 				"load_percent":                  status.LoadPercent,
 				"battery_charge_percent":        status.BatteryChargePercent,
