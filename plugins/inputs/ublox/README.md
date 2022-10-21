@@ -3,7 +3,7 @@
 ## Configuration
 
 ```toml @sample.conf
-[[inputs.simple]]
+[[inputs.ublox]]
     ublox_pty = "/tmp/ptyGPSRO_tlg"
 ```
 

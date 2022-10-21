@@ -700,6 +700,7 @@ message GPS {
     double lon = 2;
     double heading = 3;
     double pdop = 4;
+    bool active = 5;
   }
 
   message Tags {
