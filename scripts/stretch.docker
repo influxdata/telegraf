@@ -1,10 +1,14 @@
-FROM golang:1.14.15-stretch as builder
+
+FROM golang:1.18 as builder
 WORKDIR /go/src/github.com/influxdata/telegraf
 
 COPY . /go/src/github.com/influxdata/telegraf
-RUN make go-install
+RUN apt-get -y update && apt-get -y install --no-install-recommends cmake libboost-dev && apt-get autoclean
+RUN make deps && make go-install
 
-FROM buildpack-deps:stretch-curl
+FROM buildpack-deps:bullseye-curl
+# install cgo-related dependencies
+
 COPY --from=builder /go/bin/* /usr/bin/
 COPY etc/telegraf.conf /etc/telegraf/telegraf.conf
 

@@ -1,0 +1,3 @@
+[submodule "plugins/inputs/ublox/ublox-utils"]
+	path = plugins/inputs/ublox/ublox-utils
+	url = git@github.com:HaydenAI/ublox-utils.git

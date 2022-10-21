@@ -83,6 +83,10 @@ help:
 .PHONY: deps
 deps:
 	go mod download
+	git submodule update --init --recursive
+	mkdir -p plugins/inputs/ublox/ublox-utils/build
+	cd plugins/inputs/ublox/ublox-utils/build && cmake ..
+	cmake --build plugins/inputs/ublox/ublox-utils/build
 
 .PHONY: telegraf
 telegraf:
