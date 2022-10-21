@@ -280,7 +280,7 @@ func (a *Agent) runInputs(
 	unit *inputUnit,
 ) {
 	var wg sync.WaitGroup
-	tickers := make([]Ticker, len(unit.inputs))
+	tickers := make([]Ticker, 0, len(unit.inputs))
 	for _, input := range unit.inputs {
 		// Overwrite agent interval if this plugin has its own.
 		interval := time.Duration(a.Config.Agent.Interval)
