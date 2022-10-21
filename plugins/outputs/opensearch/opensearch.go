@@ -68,10 +68,6 @@ func (*Opensearch) SampleConfig() string {
 }
 
 func (a *Opensearch) Connect() error {
-	err := a.Init()
-	if err != nil {
-		return err
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
@@ -120,21 +116,10 @@ func (a *Opensearch) Connect() error {
 		a.Log.Debugf("Disabling health check")
 	}
 
-	client, err := elastic.NewClient(clientOptions...)
-
+	a.client, err = elastic.NewClient(clientOptions...)
 	if err != nil {
 		return err
 	}
-
-	// check for OS version on first node
-	osVersion, err := client.ElasticsearchVersion(a.URLs[0])
-
-	if err != nil {
-		return fmt.Errorf("opensearch version check failed: %s", err)
-	}
-	a.Log.Infof("Opensearch version: %q", osVersion)
-
-	a.client = client
 
 	if a.ManageTemplate {
 		err := a.manageTemplate(ctx)
@@ -143,14 +128,11 @@ func (a *Opensearch) Connect() error {
 		}
 	}
 
-	a.IndexName, a.tagKeys = a.GetTagKeys(a.IndexName)
-	a.pipelineName, a.pipelineTagKeys = a.GetTagKeys(a.UsePipeline)
-
 	return nil
 }
 
-// GetPointID generates a unique ID for a Metric Point
-func GetPointID(m telegraf.Metric) string {
+// getPointID generates a unique ID for a Metric Point
+func getPointID(m telegraf.Metric) string {
 	var buffer bytes.Buffer
 	//Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
 
@@ -200,7 +182,7 @@ func (a *Opensearch) Write(metrics []telegraf.Metric) error {
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
 
 		if a.ForceDocumentID {
-			id := GetPointID(metric)
+			id := getPointID(metric)
 			br.Id(id)
 		}
 
@@ -388,6 +370,9 @@ func (a *Opensearch) Init() error {
 	if a.FloatHandling == "" {
 		a.FloatHandling = "none"
 	}
+
+	a.IndexName, a.tagKeys = a.GetTagKeys(a.IndexName)
+	a.pipelineName, a.pipelineTagKeys = a.GetTagKeys(a.UsePipeline)
 
 	return nil
 }
