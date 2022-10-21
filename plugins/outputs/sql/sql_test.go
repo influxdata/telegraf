@@ -394,12 +394,13 @@ func TestClickHouseIntegration(t *testing.T) {
 				" --database=" + dbname +
 				" --format=TabSeparatedRaw" +
 				" --multiquery --query=" +
-				"\"SELECT * FROM \\\"metric three\\\"\";",
+				"\"SELECT * FROM \\\"metric three\\\";" +
+				"SHOW CREATE TABLE \\\"metric three\\\"\"",
 		})
 		require.NoError(t, err)
 		bytes, err := io.ReadAll(out)
 		require.NoError(t, err)
-		return strings.Contains(string(bytes), "!2021-05-17 22:04:45	tag4	string2")
+		return strings.Contains(string(bytes), "`string two` String")
 	}, 5*time.Second, 10*time.Millisecond)
 
 	// dump the database
