@@ -69,7 +69,7 @@ func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
-			wait.ForLog("Waiting for connections"),
+			wait.ForLog("Waiting for connections").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
@@ -174,7 +174,7 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
-			wait.ForLog("Waiting for connections"),
+			wait.ForLog("Waiting for connections").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
