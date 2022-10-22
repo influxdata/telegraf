@@ -5,10 +5,13 @@ import (
 	"net"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+var interfaceDownMetricsOptions = []string{"expose", "skip"}
 
 type Command interface {
 	Init() error
@@ -24,10 +27,15 @@ type Ethtool struct {
 	// This is the list of interface names to ignore
 	InterfaceExclude []string `toml:"interface_exclude"`
 
+	// Behavior regarding metrics for downed interfaces
+	InterfaceDownMetrics string `toml:" interface_down_metrics"`
+
 	// Normalization on the key names
 	NormalizeKeys []string `toml:"normalize_keys"`
 
 	Log telegraf.Logger `toml:"-"`
+
+	interfaceFilter filter.Filter
 
 	// the ethtool command
 	command Command
