@@ -15,7 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log" //nolint:revive
+	"log"
 	"os"
 	"regexp"
 	"strings"

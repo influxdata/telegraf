@@ -53,7 +53,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 	}
 
 	acc.Wait(1)
-	require.NoError(t, e.Stop())
+	e.Stop()
 	acc.Wait(9)
 
 	metrics := acc.GetTelegrafMetrics()
@@ -116,7 +116,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 	require.NoError(t, e.Add(m, acc))
 
 	acc.Wait(1)
-	require.NoError(t, e.Stop())
+	e.Stop()
 
 	processedMetric := acc.GetTelegrafMetrics()[0]
 

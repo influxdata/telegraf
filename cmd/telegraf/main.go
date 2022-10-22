@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
-	"log" //nolint:revive
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -118,6 +118,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	extraFlags := append(pluginFilterFlags, cliFlags()...)
 
 	// This function is used when Telegraf is run with only flags
+
 	action := func(cCtx *cli.Context) error {
 		err := logger.SetupLogging(logger.LogConfig{})
 		if err != nil {

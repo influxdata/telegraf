@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
-	"log" //nolint:revive
+	"log"
 	"net/http"
 	"os"
 	"regexp"

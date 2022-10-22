@@ -239,7 +239,9 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 			if err != nil {
 				return starlark.None, err
 			}
-			dict.SetKey(sKey, sValue)
+			if err = dict.SetKey(sKey, sValue); err != nil {
+				return starlark.None, err
+			}
 		}
 		return dict, nil
 	case reflect.Float32, reflect.Float64:

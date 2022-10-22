@@ -74,7 +74,7 @@ func TestMain(m *testing.M) {
 // cleanly.
 func externalProcess() {
 	wait := make(chan int)
-	_, _ = fmt.Fprintln(os.Stdout, "started")
+	fmt.Fprintln(os.Stdout, "started")
 	<-wait
-	os.Exit(2)
+	os.Exit(2) //nolint:revive // os.Exit called intentionally
 }

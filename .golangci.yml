@@ -4,6 +4,7 @@ linters:
     # - telegraflinter
     - bodyclose
     - dogsled
+    - errcheck
     - goprintffuncname
     - gosimple
     - govet
@@ -44,7 +45,7 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: errorf
-#      - name: flag-parameter #disable for now
+      #      - name: flag-parameter #disable for now
       - name: function-result-limit
         arguments: [ 3 ]
       - name: identical-branches
@@ -69,7 +70,7 @@ linters-settings:
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unhandled-error
-        arguments: ["outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln"]
+        arguments: [ "outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
       - name: unnecessary-stmt
       - name: unreachable-code
       # - name: unused-parameter
@@ -128,6 +129,9 @@ issues:
       text: "imports-blacklist: should not use the following blacklisted import: \"log\""
       linters:
         - revive
+
+    - path: cmd/telegraf/(main|printer).go
+      text: "Error return value of `outputBuffer.Write` is not checked"
 
 output:
   format: tab

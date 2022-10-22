@@ -423,7 +423,9 @@ func (a *Agent) testRunInputs(
 	}
 	wg.Wait()
 
-	internal.SleepContext(ctx, wait)
+	if err := internal.SleepContext(ctx, wait); err != nil {
+		log.Printf("E! [agent] SleepContext finished with: %v", err)
+	}
 
 	log.Printf("D! [agent] Stopping service inputs")
 	stopServiceInputs(unit.inputs)

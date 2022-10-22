@@ -40,7 +40,7 @@ func BenchmarkRunningOutputAddWrite(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		ro.AddMetric(testutil.TestMetric(101, "metric1"))
-		ro.Write() //nolint: revive // skip checking err for benchmark tests
+		ro.Write() //nolint: errcheck,revive // skip checking err for benchmark tests
 	}
 }
 
@@ -56,7 +56,7 @@ func BenchmarkRunningOutputAddWriteEvery100(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		ro.AddMetric(testutil.TestMetric(101, "metric1"))
 		if n%100 == 0 {
-			ro.Write() //nolint: revive // skip checking err for benchmark tests
+			ro.Write() //nolint: errcheck,revive // skip checking err for benchmark tests
 		}
 	}
 }

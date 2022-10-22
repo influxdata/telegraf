@@ -52,10 +52,9 @@ func (r *ReverseDNS) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *ReverseDNS) Stop() error {
+func (r *ReverseDNS) Stop() {
 	r.parallel.Stop()
 	r.reverseDNSCache.Stop()
-	return nil
 }
 
 func (r *ReverseDNS) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
