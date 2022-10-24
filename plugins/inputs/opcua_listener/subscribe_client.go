@@ -35,13 +35,15 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 	if err != nil {
 		return nil, err
 	}
-
 	subClient := &SubscribeClient{
 		OpcUAInputClient:   client,
 		Config:             *sc,
 		monitoredItemsReqs: make([]*ua.MonitoredItemCreateRequest, len(client.NodeIDs)),
-		dataNotifications:  make(chan *opcua.PublishNotificationData, 100), // TODO: Make this a setting or a calculation, maybe?,
-		metrics:            make(chan telegraf.Metric, 100),                // TODO: Make this a setting or a calculation, maybe?,
+		// 100 was chosen to make sure that the channels will not block when multiple changes come in at the same time.
+		// The channel size should be increased if reports come in on Telegraf blocking when many changes come in at
+		// the same time. It could be made dependent on the number of nodes subscribed to and the subscription interval.
+		dataNotifications: make(chan *opcua.PublishNotificationData, 100),
+		metrics:           make(chan telegraf.Metric, 100),
 	}
 
 	log.Debugf("Creating monitored items")
