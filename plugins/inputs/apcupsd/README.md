@@ -24,8 +24,8 @@ apcupsd should be installed and it's daemon should be running.
 - apcupsd
   - tags:
     - serial
-    - status (string representing the set status_flags)
     - ups_name
+    - status (string representing the set status_flags)
     - model
   - fields:
     - status_flags ([status-bits][])
@@ -38,11 +38,14 @@ apcupsd should be installed and it's daemon should be running.
     - battery_voltage
     - input_frequency
     - time_on_battery_ns
-    - battery_date
+    - cumulative_time_on_battery_ns
     - nominal_input_voltage
     - nominal_battery_voltage
     - nominal_power
     - firmware
+    - battery_date
+    - last_transfer
+    - number_transfers
 
 ## Example Output
 
