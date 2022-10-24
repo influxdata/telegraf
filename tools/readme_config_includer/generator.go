@@ -17,6 +17,7 @@ import (
 	"io"
 	"log" //nolint:revive
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -25,23 +26,53 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
+var (
+	// Finds all comment section parts `<-- @includefile -->`
+	commentIncludesEx = regexp.MustCompile(`<!--\s+(@.+)+\s+-->`)
+	// Finds all TOML sections of the form `toml @includefile`
+	tomlIncludesEx = regexp.MustCompile(`[\s"]+(@.+)+"?`)
+	// Extracts the `includefile` part
+	includeMatch = regexp.MustCompile(`(?:@([^\s"]+))+`)
+)
+
 type includeBlock struct {
 	Includes []string
 	Start    int
 	Stop     int
+	Newlines bool
 }
 
-func (b *includeBlock) extractBlockBorders(node *ast.FencedCodeBlock) {
-	// The node info starts at the language tag and stops right behind it
-	b.Start = node.Info.Segment.Stop + 1
-	b.Stop = b.Start
-
-	// To determine the end of the block, we need to iterate to the last line
-	// and take its stop-offset as the end of the block.
-	lines := node.Lines()
-	for i := 0; i < lines.Len(); i++ {
-		b.Stop = lines.At(i).Stop
+func extractIncludeBlock(txt []byte, includesEx *regexp.Regexp, root string) *includeBlock {
+	includes := includesEx.FindSubmatch(txt)
+	if len(includes) != 2 {
+		return nil
 	}
+	block := includeBlock{}
+	for _, inc := range includeMatch.FindAllSubmatch(includes[1], -1) {
+		if len(inc) != 2 {
+			continue
+		}
+		include := filepath.FromSlash(string(inc[1]))
+		// Make absolute paths relative to the include-root if any
+		if filepath.IsAbs(include) {
+			if root == "" {
+				log.Printf("Ignoring absolute include %q without include root...", include)
+				continue
+			}
+			include = filepath.Join(root, include)
+		}
+		include, err := filepath.Abs(include)
+		if err != nil {
+			log.Printf("Cannot resolve include %q...", include)
+			continue
+		}
+		if fi, err := os.Stat(include); err != nil || !fi.Mode().IsRegular() {
+			log.Printf("Ignoring include %q as it cannot be found or is not a regular file...", include)
+			continue
+		}
+		block.Includes = append(block.Includes, include)
+	}
+	return &block
 }
 
 func insertInclude(buf *bytes.Buffer, include string) error {
@@ -58,7 +89,14 @@ func insertInclude(buf *bytes.Buffer, include string) error {
 	return nil
 }
 
-func insertIncludes(buf *bytes.Buffer, b includeBlock) error {
+func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
+	// Insert newlines before and after
+	if b.Newlines {
+		if _, err := buf.Write([]byte("\n")); err != nil {
+			return errors.New("adding newline failed")
+		}
+	}
+
 	// Insert all includes in the order they occurred
 	for _, include := range b.Includes {
 		if err := insertInclude(buf, include); err != nil {
@@ -72,13 +110,31 @@ func insertIncludes(buf *bytes.Buffer, b includeBlock) error {
 		}
 	}
 
+	// Insert newlines before and after
+	if b.Newlines {
+		if _, err := buf.Write([]byte("\n")); err != nil {
+			return errors.New("adding newline failed")
+		}
+	}
+
 	return nil
 }
 
 func main() {
-	// Finds all TOML sections of the form `toml @includefile` and extracts the `includefile` part
-	tomlIncludesEx := regexp.MustCompile(`^toml\s+(@.+)+$`)
-	tomlIncludeMatch := regexp.MustCompile(`(?:@([^\s]+))+`)
+	// Estimate Telegraf root to be able to handle absolute paths
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Cannot get working directory: %v", err)
+	}
+	cwd, err = filepath.Abs(cwd)
+	if err != nil {
+		log.Fatalf("Cannot resolve working directory: %v", err)
+	}
+
+	var includeRoot string
+	if idx := strings.LastIndex(cwd, filepath.FromSlash("/plugins/")); idx > 0 {
+		includeRoot = cwd[:idx]
+	}
 
 	// Get the file permission of the README for later use
 	inputFilename := "README.md"
@@ -97,41 +153,74 @@ func main() {
 	root := parser.Parse(text.NewReader(readme))
 
 	// Walk the markdown to identify the (TOML) parts to replace
-	blocksToReplace := make([]includeBlock, 0)
-	for node := root.FirstChild(); node != nil; node = node.NextSibling() {
+	blocksToReplace := make([]*includeBlock, 0)
+	for rawnode := root.FirstChild(); rawnode != nil; rawnode = rawnode.NextSibling() {
 		// Only match TOML code nodes
-		codeNode, ok := node.(*ast.FencedCodeBlock)
-		if !ok || string(codeNode.Language(readme)) != "toml" {
-			// Ignore any other node type or language
+		var txt []byte
+		var start, stop int
+		var newlines bool
+		var re *regexp.Regexp
+		switch node := rawnode.(type) {
+		case *ast.FencedCodeBlock:
+			if string(node.Language(readme)) != "toml" {
+				// Ignore any other node type or language
+				continue
+			}
+			// Extract the block borders
+			start = node.Info.Segment.Stop + 1
+			stop = start
+			lines := node.Lines()
+			if lines.Len() > 0 {
+				stop = lines.At(lines.Len() - 1).Stop
+			}
+			txt = node.Info.Text(readme)
+			re = tomlIncludesEx
+		case *ast.Heading:
+			if node.ChildCount() < 2 {
+				continue
+			}
+			child, ok := node.LastChild().(*ast.RawHTML)
+			if !ok || child.Segments.Len() == 0 {
+				continue
+			}
+			segment := child.Segments.At(0)
+			if !commentIncludesEx.Match(segment.Value(readme)) {
+				continue
+			}
+			start = segment.Stop + 1
+			stop = len(readme) // necessary for cases with no more headings
+			for rawnode = rawnode.NextSibling(); rawnode != nil; rawnode = rawnode.NextSibling() {
+				if h, ok := rawnode.(*ast.Heading); ok && h.Level <= node.Level {
+					if rawnode.Lines().Len() > 0 {
+						stop = rawnode.Lines().At(0).Start - h.Level - 1
+					} else {
+						log.Printf("heading without lines: %s", string(rawnode.Text(readme)))
+						stop = start // safety measure to prevent removing all text
+					}
+					break
+				}
+			}
+			txt = segment.Value(readme)
+			re = commentIncludesEx
+			newlines = true
+		default:
+			// Ignore everything else
 			continue
 		}
 
 		// Extract the includes from the node
-		includes := tomlIncludesEx.FindSubmatch(codeNode.Info.Text(readme))
-		if len(includes) != 2 {
-			continue
-		}
-		block := includeBlock{}
-		for _, inc := range tomlIncludeMatch.FindAllSubmatch(includes[1], -1) {
-			if len(inc) != 2 {
-				continue
-			}
-			include := string(inc[1])
-			// Safeguards to avoid directory traversals and other bad things
-			if strings.ContainsRune(include, os.PathSeparator) {
-				log.Printf("Ignoring include %q for containing a path...", include)
-				continue
-			}
-			if fi, err := os.Stat(include); err != nil || !fi.Mode().IsRegular() {
-				log.Printf("Ignoring include %q as it cannot be found or is not a regular file...", include)
-				continue
-			}
-			block.Includes = append(block.Includes, string(inc[1]))
+		block := extractIncludeBlock(txt, re, includeRoot)
+		if block != nil {
+			block.Start = start
+			block.Stop = stop
+			block.Newlines = newlines
+			blocksToReplace = append(blocksToReplace, block)
 		}
 
-		// Extract the block borders
-		block.extractBlockBorders(codeNode)
-		blocksToReplace = append(blocksToReplace, block)
+		// Catch the case of heading-end-search exhausted all nodes
+		if rawnode == nil {
+			break
+		}
 	}
 
 	// Replace the content of the TOML blocks with includes
