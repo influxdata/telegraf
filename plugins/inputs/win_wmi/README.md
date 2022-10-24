@@ -101,11 +101,9 @@ By default, the `Name` property is included in the query. However, some classes
 do not contain a `Name` property, in which cases the `ExcludeNameKey`
 configuration should be utilized.
 
-### ExcludeNameKey
+### TagPropertiesInclude
 
-By default, a WMI class's `Name` property is included as a tag value in order
-for each metric to have a unique identifier. However, some WMI classes do not
-have a `Name` property. In such cases, ExcludeNameKey should be set to `True`.
+Properties which should be considered tags instead of fields.
 
 ## Configuration
 
@@ -139,12 +137,13 @@ have a `Name` property. In such cases, ExcludeNameKey should be set to `True`.
   ## If the WMI property's value is a string, then it is used as a tag.
   ## If the WMI property's value is a type of int, then it is used as a field.
   ## [[inputs.win_wmi]]
-  ##   namespace = "root\\cimv2"
-  ##   classname = "Win32_Volume"
-  ##   properties = ["Capacity", "FreeSpace"]
-  ##   filter = 'NOT Name LIKE "\\\\?\\%"'
-  ##   excludenamekey = false
   ##   name_prefix = "win_wmi_"
+  ##   [[inputs.win_wmi.query]]
+  ##     Namespace = "root\\cimv2"
+  ##     ClassName = "Win32_Volume"
+  ##     Properties = ["Name","Capacity","FreeSpace"]
+  ##     Filter = 'NOT Name LIKE "\\\\?\\%"'
+  ##     TagPropertiesInclude = ["Name"]
 ```
 
 ### Generic Queries
@@ -241,12 +240,12 @@ will also contain a tag value describing the model of each CPU.
 
 ```toml
 [[inputs.win_wmi]]
-  namespace = "root\\cimv2"
-  classname = "Win32_Processor"
-  properties = [
-    "NumberOfCores"
-  ]
   name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    Namespace = "root\\cimv2"
+    ClassName = "Win32_Processor"
+    Properties = ["Name","NumberOfCores"]
+    TagPropertiesInclude = ["Name"]
 ```
 
 This query provides metrics for the number of socketted processors, number of
@@ -351,16 +350,21 @@ tagged value to describe whether the installation is 32-bit or 64-bit.
 
 ```toml
 [[inputs.win_wmi]]
-classname = "Win32_OperatingSystem"
-name_prefix = "win_wmi_"
-namespace = "root\\cimv2"
-properties = [
-  "Caption",
-  "FreeSpaceInPagingFiles",
-  "FreeVirtualMemory",
-  "OperatingSystemSKU",
-  "OSArchitecture",
-  "ProductType"
+  name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    ClassName = "Win32_OperatingSystem"
+    Namespace = "root\\cimv2"
+    Properties = [
+      "Name",
+      "Caption",
+      "FreeSpaceInPagingFiles",
+      "FreeVirtualMemory",
+      "OperatingSystemSKU",
+      "OSArchitecture",
+      "ProductType"
+    ]
+    TagPropertiesInclude = ["Name","Caption","OSArchitecture"]
+
 ]
 ```
 
