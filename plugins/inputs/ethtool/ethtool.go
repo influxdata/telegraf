@@ -11,7 +11,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var interfaceDownMetricsOptions = []string{"expose", "skip"}
+var downInterfacesBehaviors = []string{"expose", "skip"}
 
 type Command interface {
 	Init() error
@@ -28,7 +28,7 @@ type Ethtool struct {
 	InterfaceExclude []string `toml:"interface_exclude"`
 
 	// Behavior regarding metrics for downed interfaces
-	InterfaceDownMetrics string `toml:" interface_down_metrics"`
+	DownInterfaces string `toml:" down_interfaces"`
 
 	// Normalization on the key names
 	NormalizeKeys []string `toml:"normalize_keys"`

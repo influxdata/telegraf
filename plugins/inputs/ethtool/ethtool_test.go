@@ -290,10 +290,10 @@ func setup() {
 
 	c := &CommandEthtoolMock{interfaceMap}
 	command = &Ethtool{
-		InterfaceInclude:     []string{},
-		InterfaceExclude:     []string{},
-		InterfaceDownMetrics: "expose",
-		command:              c,
+		InterfaceInclude: []string{},
+		InterfaceExclude: []string{},
+		DownInterfaces:   "expose",
+		command:          c,
 	}
 }
 
@@ -415,7 +415,7 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 func TestSkipMetricsForInterfaceDown(t *testing.T) {
 	setup()
 
-	command.InterfaceDownMetrics = "skip"
+	command.DownInterfaces = "skip"
 
 	err := command.Init()
 	require.NoError(t, err)

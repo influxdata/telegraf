@@ -30,12 +30,12 @@ func (e *Ethtool) Init() error {
 		return err
 	}
 
-	if e.InterfaceDownMetrics == "" {
-		e.InterfaceDownMetrics = "expose"
+	if e.DownInterfaces == "" {
+		e.DownInterfaces = "expose"
 	}
 
-	if err = choice.Check(e.InterfaceDownMetrics, interfaceDownMetricsOptions); err != nil {
-		return fmt.Errorf("interface_down_metrics: %w", err)
+	if err = choice.Check(e.DownInterfaces, downInterfacesBehaviors); err != nil {
+		return fmt.Errorf("down_interfaces: %w", err)
 	}
 
 	return e.command.Init()
@@ -76,7 +76,7 @@ func (e *Ethtool) interfaceEligibleForGather(iface net.Interface) bool {
 
 	// For downed interfaces, gather only for "expose"
 	if !interfaceUp(iface) {
-		return e.InterfaceDownMetrics == "expose"
+		return e.DownInterfaces == "expose"
 	}
 
 	return true
