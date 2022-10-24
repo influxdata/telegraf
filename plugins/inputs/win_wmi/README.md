@@ -31,32 +31,22 @@ A string representing the WMI class to be queried. For example,
 ### Properties
 
 An array of strings representing the properties of the WMI class to be queried.
-By default, the `Name` property is included in the query. However, some classes
-do not contain a `Name` property, in which cases the `ExcludeNameKey`
-configuration should be utilized.
 
-### ExcludeNameKey
+### TagPropertiesInclude
 
-By default, a WMI class's `Name` property is included as a tag value in order
-for each metric to have a unique identifier. However, some WMI classes do not
-have a `Name` property. In such cases, ExcludeNameKey should be set to `True`.
+Properties which should be considered tags instead of fields.
 
 ## Configuration
 
 ```toml @sample.conf
-  ## By default, this plugin returns no results.
-  ## Uncomment the example below or write your own as you see fit.
-  ## The "Name" property of a WMI class is automatically included unless
-  ## excludenamekey is true.
-  ## If the WMI property's value is a string, then it is used as a tag.
-  ## If the WMI property's value is a type of int, then it is used as a field.
   ## [[inputs.win_wmi]]
-  ##   namespace = "root\\cimv2"
-  ##   classname = "Win32_Volume"
-  ##   properties = ["Capacity", "FreeSpace"]
-  ##   filter = 'NOT Name LIKE "\\\\?\\%"'
-  ##   excludenamekey = false
   ##   name_prefix = "win_wmi_"
+  ##   [[inputs.win_wmi.query]]
+  ##     Namespace = "root\\cimv2"
+  ##     ClassName = "Win32_Volume"
+  ##     Properties = ["Name","Capacity","FreeSpace"]
+  ##     Filter = 'NOT Name LIKE "\\\\?\\%"'
+  ##     TagPropertiesInclude = ["Name"]
 ```
 
 ### Generic Queries
@@ -67,16 +57,19 @@ locator of each device.
 
 ```toml
 [[inputs.win_wmi]]
-  namespace = "root\\cimv2"
-  classname = "Win32_PhysicalMemory"
-  properties = [
-    "Capacity",
-    "DeviceLocator",
-    "Manufacturer",
-    "PartNumber",
-    "Speed",
-  ]
   name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    Namespace = "root\\cimv2"
+    ClassName = "Win32_PhysicalMemory"
+    Properties = [
+      "Name",
+      "Capacity",
+      "DeviceLocator",
+      "Manufacturer",
+      "PartNumber",
+      "Speed",
+    ]
+    TagPropertiesInclude = ["Name","DeviceLocator","Manufacturer","PartNumber"]
 ```
 
 This query provides metrics for the number of cores in each physical processor.
@@ -85,12 +78,12 @@ will also contain a tag value describing the model of each CPU.
 
 ```toml
 [[inputs.win_wmi]]
-  namespace = "root\\cimv2"
-  classname = "Win32_Processor"
-  properties = [
-    "NumberOfCores"
-  ]
   name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    Namespace = "root\\cimv2"
+    ClassName = "Win32_Processor"
+    Properties = ["Name","NumberOfCores"]
+    TagPropertiesInclude = ["Name"]
 ```
 
 This query provides metrics for the number of socketted processors, number of
@@ -100,17 +93,20 @@ computer.
 
 ```toml
 [[inputs.win_wmi]]
-  namespace = "root\\cimv2"
-  classname = "Win32_ComputerSystem"
-  properties = [
-    "Domain",
-    "Manufacturer",
-    "Model",
-    "NumberOfLogicalProcessors",
-    "NumberOfProcessors",
-    "TotalPhysicalMemory"
-  ]
   name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    Namespace = "root\\cimv2"
+    ClassName = "Win32_ComputerSystem"
+    Properties = [
+      "Name",
+      "Domain",
+      "Manufacturer",
+      "Model",
+      "NumberOfLogicalProcessors",
+      "NumberOfProcessors",
+      "TotalPhysicalMemory"
+    ]
+    TagPropertiesInclude = ["Name","Domain","Manufacturer","Model"]
 ```
 
 This query provides metrics for the paging file's free space, the operating
@@ -120,16 +116,21 @@ tagged value to describe whether the installation is 32-bit or 64-bit.
 
 ```toml
 [[inputs.win_wmi]]
-classname = "Win32_OperatingSystem"
-name_prefix = "win_wmi_"
-namespace = "root\\cimv2"
-properties = [
-  "Caption",
-  "FreeSpaceInPagingFiles",
-  "FreeVirtualMemory",
-  "OperatingSystemSKU",
-  "OSArchitecture",
-  "ProductType"
+  name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    ClassName = "Win32_OperatingSystem"
+    Namespace = "root\\cimv2"
+    Properties = [
+      "Name",
+      "Caption",
+      "FreeSpaceInPagingFiles",
+      "FreeVirtualMemory",
+      "OperatingSystemSKU",
+      "OSArchitecture",
+      "ProductType"
+    ]
+    TagPropertiesInclude = ["Name","Caption","OSArchitecture"]
+
 ]
 ```
 
@@ -141,13 +142,16 @@ the Windows Server Failover Cluster and the type of Quorum in use.
 
 ```toml
 [[inputs.win_wmi]]
-  namespace = "root\\mscluster"
-  classname = "MSCluster_Cluster"
-  properties = [
-    "QuorumType",
-    "DynamicQuorumEnabled"
-  ]
-  name_prefix = "win_wmi_MSCluster"
+  name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    Namespace = "root\\mscluster"
+    ClassName = "MSCluster_Cluster"
+    Properties = [
+      "Name",
+      "QuorumType",
+      "DynamicQuorumEnabled"
+    ]
+    TagPropertiesInclude = ["Name","QuorumType"]
 ```
 
 ### Bitlocker
@@ -159,14 +163,15 @@ VolumeName property is included in the metric as a tagged value.
 
 ```toml
 [[inputs.win_wmi]]
-  namespace = "root\\Microsoft\\MBAM"
-  classname = "MBAM_Volume"
-  properties = [
-    "Compliant",
-    "VolumeName"
-  ]
-  excludenamekey = true
   name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    Namespace = "root\\Microsoft\\MBAM"
+    ClassName = "MBAM_Volume"
+    Properties = [
+      "Compliant",
+      "VolumeName"
+    ]
+    TagPropertiesInclude = ["VolumeName"]
 ```
 
 ### SQL Server
@@ -178,17 +183,18 @@ is installed.
 
 ```toml
 [[inputs.win_wmi]]
-  namespace = "Root\\microsoft\\sqlserver\\ComputerManagement15"
-  classname = "SqlServiceAdvancedProperty"
-  properties = [
-    "PropertyName",
-    "ServiceName",
-    "PropertyStrValue",
-    "SqlServiceType"
-  ]
-  filter = "ServiceName LIKE 'MSSQLSERVER' AND SqlServiceType = 1 AND (PropertyName LIKE 'FILEVERSION' OR PropertyName LIKE 'SKUNAME')"
-  excludenamekey = true
   name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    Namespace = "Root\\Microsoft\\SqlServer\\ComputerManagement15"
+    ClassName = "SqlServiceAdvancedProperty"
+    Properties = [
+      "PropertyName",
+      "ServiceName",
+      "PropertyStrValue",
+      "SqlServiceType"
+    ]
+    Filter = "ServiceName LIKE 'MSSQLSERVER' AND SqlServiceType = 1 AND (PropertyName LIKE 'FILEVERSION' OR PropertyName LIKE 'SKUNAME')"
+    TagPropertiesInclude = ["PropertyName","ServiceName","PropertyStrValue"]
 ```
 
 ## Troubleshooting
@@ -207,10 +213,7 @@ Get-CimInstance -Namespace root\cimv2 -ClassName Win32_Volume -Property Capacity
 
 ## Metrics
 
-Fields and tags are dynamically generated based on the structure of the queried
-WMI class. If the WMI class property's value is a string, then the name and
-value will be used as a metric tag. If the WMI class property's value is an
-integer, then the name and value will be used as a metric field.
+All WMI class properties are fields unless specified in `TagPropertiesInclude`.
 
 ## Example Output
 

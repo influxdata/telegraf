@@ -6,22 +6,48 @@ package win_wmi
 import (
 	"bytes"
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	ole "github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const sampleConfig = `
+  ## By default, this plugin returns no results.
+  ## Uncomment the example below or write your own as you see fit.
+  ## [[inputs.win_wmi]]
+  ##   name_prefix = "win_wmi_"
+  ##   [[inputs.win_wmi.query]]
+  ##     Namespace = "root\\cimv2"
+  ##     ClassName = "Win32_Volume"
+  ##     Properties = ["Name", "Capacity", "FreeSpace"]
+  ##     Filter = 'NOT Name LIKE "\\\\?\\%"'
+  ##     TagPropertiesInclude = ["Name"]
+`
+
+// Query struct
+type Query struct {
+	Query                string   `toml:"query"`
+	Namespace            string   `toml:"Namespace"`
+	ClassName            string   `toml:"ClassName"`
+	Properties           []string `toml:"Properties"`
+	Filter               string   `toml:"Filter"`
+	TagPropertiesInclude []string `toml:"TagPropertiesInclude"`
+	tagFilter            filter.Filter
+}
+
+var lock sync.Mutex
+
 // Wmi struct
 type Wmi struct {
-	Namespace      string   `toml:"namespace"`
-	ClassName      string   `toml:"classname"`
-	Properties     []string `toml:"properties"`
-	Filter         string   `toml:"filter"`
-	ExcludeNameKey bool     `toml:"excludenamekey"`
+	Queries []Query `toml:"query"`
 }
 
 // S_FALSE is returned by CoInitializeEx if it was already called on this thread.
@@ -45,70 +71,58 @@ func (s *Wmi) Description() string {
 
 // SampleConfig function
 func (s *Wmi) SampleConfig() string {
-	return `
-  ## By default, this plugin returns no results.
-  ## Uncomment the example below or write your own as you see fit.
-  ## The "Name" property of a WMI class is automatically included unless excludenamekey is true.
-  ## If the WMI property's value is a string, then it is used as a tag.
-  ## If the WMI property's value is a type of int, then it is used as a field.
-  ## [[inputs.win_wmi]]
-  ##   namespace = "root\\cimv2"
-  ##   classname = "Win32_Volume"
-  ##   properties = ["Capacity", "FreeSpace"]
-  ##   filter = 'NOT Name LIKE "\\\\?\\%"'
-  ##   excludenamekey = false
-  ##   name_prefix = "win_wmi_"
-`
+	return sampleConfig
 }
 
-func BuildWmiQuery(s *Wmi) (string, error) {
-	// build a WMI query
-	var query string
+// build a WMI query
+func BuildWmiQuery(q Query) (string, error) {
+	var wql string
 	var b bytes.Buffer
 	_, err := b.WriteString("SELECT ")
 	if err != nil {
-		return query, err
+		return wql, err
 	}
 
-	if !s.ExcludeNameKey {
-		_, err := b.WriteString("Name, ")
-		if err != nil {
-			return query, err
-		}
-	}
-
-	_, err = b.WriteString(strings.Join(s.Properties, ", "))
+	_, err = b.WriteString(strings.Join(q.Properties, ", "))
 	if err != nil {
-		return query, err
+		return wql, err
 	}
 
 	_, err = b.WriteString(" FROM ")
 	if err != nil {
-		return query, err
+		return wql, err
 	}
 
-	_, err = b.WriteString(s.ClassName)
+	_, err = b.WriteString(q.ClassName)
 	if err != nil {
-		return query, err
+		return wql, err
 	}
 
-	if len(s.Filter) > 0 {
+	if len(q.Filter) > 0 {
 		_, err = b.WriteString(" WHERE ")
 		if err != nil {
-			return query, err
+			return wql, err
 		}
 
-		_, err = b.WriteString(s.Filter)
+		_, err = b.WriteString(q.Filter)
 		if err != nil {
-			return query, err
+			return wql, err
 		}
 	}
-	query = b.String()
-	return query, nil
+	wql = b.String()
+
+	return wql, nil
 }
 
-// Gather function
-func (s *Wmi) Gather(acc telegraf.Accumulator) error {
+func DoQuery(q Query, acc telegraf.Accumulator) error {
+	lock.Lock()
+	defer lock.Unlock()
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	tags := map[string]string{}
+	fields := map[string]interface{}{}
+
 	// init COM
 	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
@@ -134,14 +148,14 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 	defer wmi.Release()
 
 	// service is a SWbemServices
-	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", nil, s.Namespace)
+	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", nil, q.Namespace)
 	if err != nil {
 		return err
 	}
 	service := serviceRaw.ToIDispatch()
 	defer func() { _ = serviceRaw.Clear() }()
 
-	query, err := BuildWmiQuery(s)
+	query, err := BuildWmiQuery(q)
 	if err != nil {
 		return err
 	}
@@ -159,6 +173,13 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	// Compile the tag filter
+	tagfilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagPropertiesInclude, nil, false, false)
+	if err != nil {
+		return fmt.Errorf("creating tag filter failed: %v", err)
+	}
+	q.tagFilter = tagfilter
+
 	for i := int64(0); i < count; i++ {
 		// item is a SWbemObject
 		itemRaw, err := oleutil.CallMethod(result, "ItemIndex", i)
@@ -166,60 +187,87 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		tags := map[string]string{}
-		fields := map[string]interface{}{}
-
-		e1 := func() error {
+		outerErr := func() error {
 			item := itemRaw.ToIDispatch()
 			defer item.Release()
 
-			if !s.ExcludeNameKey {
-				prop, err := oleutil.GetProperty(item, "Name")
-				if err != nil {
-					return err
-				}
-				tags["Name"] = prop.ToString()
-				defer func() { _ = prop.Clear() }()
-			}
-
-			for _, wmiProperty := range s.Properties {
-				// Skip Name if it was provided by the user because we already query for it by default.
-				if wmiProperty == "Name" && s.ExcludeNameKey {
-					continue
-				}
-
-				e2 := func() error {
+			for _, wmiProperty := range q.Properties {
+				innerErr := func() error {
 					prop, err := oleutil.GetProperty(item, wmiProperty)
 					if err != nil {
 						return err
 					}
 					defer func() { _ = prop.Clear() }()
 
-					// if the property's value is an int, then it is a field.
-					// if the property's value is a string, then it is a tag.
-					valStr := fmt.Sprintf("%v", prop.Value())
-					valInt, err := strconv.ParseInt(valStr, 10, 64)
-					if err != nil {
+					// if an empty property is returned from WMI, then move on
+					if prop.Value() == nil {
+						return nil
+					}
+
+					if q.tagFilter.Match(wmiProperty) {
+						valStr, err := internal.ToString(prop.Value())
+						if err != nil {
+							return fmt.Errorf("converting property %q failed: %v", wmiProperty, err)
+						}
 						tags[wmiProperty] = valStr
 					} else {
-						fields[wmiProperty] = valInt
+						var fieldValue interface{}
+						switch v := prop.Value().(type) {
+						case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+							fieldValue = v
+						case string:
+							// still might be an int because WMI
+							valInt, err := strconv.ParseInt(v, 10, 64)
+							if err == nil {
+								fieldValue = valInt
+							} else {
+								fieldValue = v
+							}
+						case bool:
+							fieldValue = v
+						case []byte:
+							fieldValue = string(v)
+						case fmt.Stringer:
+							fieldValue = v.String()
+						default:
+							return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
+						}
+						fields[wmiProperty] = fieldValue
+
 					}
+
 					return nil
 				}()
 
-				if e2 != nil {
-					return e2
+				if innerErr != nil {
+					return innerErr
 				}
 			}
+			acc.AddFields(q.ClassName, fields, tags)
 			return nil
 		}()
 
-		if e1 != nil {
-			return e1
+		if outerErr != nil {
+			return outerErr
 		}
-
-		acc.AddFields(s.ClassName, fields, tags)
 	}
+	return nil
+}
+
+// Gather function
+func (s *Wmi) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+	for _, query := range s.Queries {
+		wg.Add(1)
+		go func(q Query) {
+			defer wg.Done()
+			err := DoQuery(q, acc)
+			if err != nil {
+				acc.AddError(err)
+			}
+		}(query)
+	}
+	wg.Wait()
 
 	return nil
 }
