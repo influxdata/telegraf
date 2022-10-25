@@ -3,15 +3,16 @@ package input
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // NodeSettings describes how to map from a OPC UA node to a Metric
@@ -356,8 +357,13 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 	}
 
 	if d.Value != nil {
-		o.LastReceivedData[nodeIdx].Value = d.Value.Value()
 		o.LastReceivedData[nodeIdx].DataType = d.Value.Type()
+
+		if o.LastReceivedData[nodeIdx].DataType == ua.TypeIDDateTime {
+			o.LastReceivedData[nodeIdx].Value = d.Value.Value().(time.Time).Format(time.RFC3339Nano)
+		} else {
+			o.LastReceivedData[nodeIdx].Value = d.Value.Value()
+		}
 	}
 	o.LastReceivedData[nodeIdx].ServerTime = d.ServerTimestamp
 	o.LastReceivedData[nodeIdx].SourceTime = d.SourceTimestamp

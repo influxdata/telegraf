@@ -2,6 +2,9 @@ package opcua
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
@@ -9,8 +12,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"testing"
-	"time"
 )
 
 const servicePort = "4840"
@@ -119,6 +120,7 @@ func TestReadClientIntegration(t *testing.T) {
 		{"ManufacturerName", "0", "i", "2263", "open62541"},
 		{"badnode", "1", "i", "1337", nil},
 		{"goodnode", "1", "s", "the.answer", int32(42)},
+		{"DateTime", "1", "s", "51037", "0001-01-01T00:00:00Z"},
 	}
 
 	readConfig := ReadClientConfig{
