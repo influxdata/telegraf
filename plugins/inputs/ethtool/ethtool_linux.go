@@ -4,6 +4,7 @@
 package ethtool
 
 import (
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -14,11 +15,30 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type CommandEthtool struct {
 	ethtool *ethtoolLib.Ethtool
+}
+
+func (e *Ethtool) Init() error {
+	var err error
+	e.interfaceFilter, err = filter.NewIncludeExcludeFilter(e.InterfaceInclude, e.InterfaceExclude)
+	if err != nil {
+		return err
+	}
+
+	if e.DownInterfaces == "" {
+		e.DownInterfaces = "expose"
+	}
+
+	if err = choice.Check(e.DownInterfaces, downInterfacesBehaviors); err != nil {
+		return fmt.Errorf("down_interfaces: %w", err)
+	}
+
+	return e.command.Init()
 }
 
 func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
@@ -29,17 +49,11 @@ func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	interfaceFilter, err := filter.NewIncludeExcludeFilter(e.InterfaceInclude, e.InterfaceExclude)
-	if err != nil {
-		return err
-	}
-
 	// parallelize the ethtool call in event of many interfaces
 	var wg sync.WaitGroup
 
 	for _, iface := range interfaces {
-		// Check this isn't a loop back and that its matched by the filter
-		if (iface.Flags&net.FlagLoopback == 0) && interfaceFilter.Match(iface.Name) {
+		if e.interfaceEligibleForGather(iface) {
 			wg.Add(1)
 
 			go func(i net.Interface) {
@@ -54,9 +68,18 @@ func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Initialise the Command Tool
-func (e *Ethtool) Init() error {
-	return e.command.Init()
+func (e *Ethtool) interfaceEligibleForGather(iface net.Interface) bool {
+	// Don't gather if it is a loop back, or it isn't matched by the filter
+	if isLoopback(iface) || !e.interfaceFilter.Match(iface.Name) {
+		return false
+	}
+
+	// For downed interfaces, gather only for "expose"
+	if !interfaceUp(iface) {
+		return e.DownInterfaces == "expose"
+	}
+
+	return true
 }
 
 // Gather the stats for the interface.
@@ -81,7 +104,7 @@ func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulat
 		return
 	}
 
-	fields[fieldInterfaceUp] = e.interfaceUp(iface)
+	fields[fieldInterfaceUp] = interfaceUp(iface)
 	for k, v := range stats {
 		fields[e.normalizeKey(k)] = v
 	}
@@ -134,7 +157,11 @@ func inStringSlice(slice []string, value string) bool {
 	return false
 }
 
-func (e *Ethtool) interfaceUp(iface net.Interface) bool {
+func isLoopback(iface net.Interface) bool {
+	return (iface.Flags & net.FlagLoopback) != 0
+}
+
+func interfaceUp(iface net.Interface) bool {
 	return (iface.Flags & net.FlagUp) != 0
 }
 

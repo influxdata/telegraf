@@ -292,6 +292,7 @@ func setup() {
 	command = &Ethtool{
 		InterfaceInclude: []string{},
 		InterfaceExclude: []string{},
+		DownInterfaces:   "expose",
 		command:          c,
 	}
 }
@@ -315,9 +316,12 @@ func toStringMapUint(in map[string]interface{}) map[string]uint64 {
 
 func TestGather(t *testing.T) {
 	setup()
-	var acc testutil.Accumulator
 
-	err := command.Gather(&acc)
+	err := command.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = command.Gather(&acc)
 	require.NoError(t, err)
 	require.Len(t, acc.Metrics, 2)
 
@@ -342,11 +346,14 @@ func TestGather(t *testing.T) {
 
 func TestGatherIncludeInterfaces(t *testing.T) {
 	setup()
-	var acc testutil.Accumulator
 
 	command.InterfaceInclude = append(command.InterfaceInclude, "eth1")
 
-	err := command.Gather(&acc)
+	err := command.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = command.Gather(&acc)
 	require.NoError(t, err)
 	require.Len(t, acc.Metrics, 1)
 
@@ -373,11 +380,14 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 
 func TestGatherIgnoreInterfaces(t *testing.T) {
 	setup()
-	var acc testutil.Accumulator
 
 	command.InterfaceExclude = append(command.InterfaceExclude, "eth1")
 
-	err := command.Gather(&acc)
+	err := command.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = command.Gather(&acc)
 	require.NoError(t, err)
 	require.Len(t, acc.Metrics, 1)
 
@@ -400,6 +410,30 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 		"driver":    "driver1",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
+}
+
+func TestSkipMetricsForInterfaceDown(t *testing.T) {
+	setup()
+
+	command.DownInterfaces = "skip"
+
+	err := command.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = command.Gather(&acc)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 1)
+
+	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
+	expectedFieldsEth1["interface_up"] = true
+
+	expectedTagsEth1 := map[string]string{
+		"interface": "eth1",
+		"driver":    "driver1",
+	}
+	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
 }
 
 type TestCase struct {
@@ -525,8 +559,11 @@ func TestNormalizedKeys(t *testing.T) {
 			command:          cmd,
 		}
 
+		err := command.Init()
+		require.NoError(t, err)
+
 		var acc testutil.Accumulator
-		err := command.Gather(&acc)
+		err = command.Gather(&acc)
 
 		require.NoError(t, err)
 		require.Len(t, acc.Metrics, 1)
