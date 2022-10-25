@@ -1,17 +1,17 @@
-# OPC UA Client Reader Input Plugin
+# OPC UA Client Listener Input Plugin
 
-The `opcua` plugin retrieves data from OPC UA Server devices.
+The `opcua_listener` plugin subscribes to data from OPC UA Server devices.
 
-Telegraf minimum version: Telegraf 1.16
-Plugin minimum tested version: 1.16
+Telegraf minimum version: Telegraf 1.25
+Plugin minimum tested version: 1.25
 
 ## Configuration
 
 ```toml @sample.conf
 # Retrieve data from OPCUA devices
-[[inputs.opcua]]
+[[inputs.opcua_listener]]
   ## Metric name
-  # name = "opcua"
+  # name = "opcua_listener"
   #
   ## OPC UA Endpoint URL
   # endpoint = "opc.tcp://localhost:4840"
@@ -21,6 +21,9 @@ Plugin minimum tested version: 1.16
   #
   ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
+  #
+  ## The interval at which the server should at least update its monitored items
+  # subscription_interval = "100ms"
   #
   ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
   ## "Basic256Sha256", or "auto"
@@ -58,26 +61,25 @@ Plugin minimum tested version: 1.16
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
   ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
   ## identifier        - OPC UA ID (tag as shown in opcua browser)
-  ## tags              - extra tags to be added to the output metric (optional); deprecated in 1.25.0; use default_tags
   ## default_tags      - extra tags to be added to the output metric (optional)
   ##
   ## Use either the inline notation or the bracketed notation, not both.
   #
   ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #   {name="", namespace="", identifier_type="", identifier="", tags=[["tag1", "value1"], ["tag2", "value2"]},
+  #   {name="", namespace="", identifier_type="", identifier=""},
   #   {name="", namespace="", identifier_type="", identifier=""},
   # ]
   #
   ## Bracketed notation
-  # [[inputs.opcua.nodes]]
+  # [[inputs.opcua_listener.nodes]]
   #   name = "node1"
   #   namespace = ""
   #   identifier_type = ""
   #   identifier = ""
   #   default_tags = { tag1 = "value1", tag2 = "value2" }
   #
-  # [[inputs.opcua.nodes]]
+  # [[inputs.opcua_listener.nodes]]
   #   name = "node2"
   #   namespace = ""
   #   identifier_type = ""
@@ -92,7 +94,7 @@ Plugin minimum tested version: 1.16
   ## * Default tags
   ##
   ## Multiple node groups are allowed
-  #[[inputs.opcua.group]]
+  #[[inputs.opcua_listener.group]]
   ## Group Metric name. Overrides the top level name.  If unset, the
   ## top level name is used.
   # name =
@@ -120,25 +122,25 @@ Plugin minimum tested version: 1.16
   #]
   #
   ## Bracketed notation
-  # [[inputs.opcua.group.nodes]]
+  # [[inputs.opcua_listener.group.nodes]]
   #   name = "node1"
   #   namespace = ""
   #   identifier_type = ""
   #   identifier = ""
   #   default_tags = { tag1 = "override1", tag2 = "value2" }
   #
-  # [[inputs.opcua.group.nodes]]
+  # [[inputs.opcua_listener.group.nodes]]
   #   name = "node2"
   #   namespace = ""
   #   identifier_type = ""
   #   identifier = ""
 
   ## Enable workarounds required by some devices to work correctly
-  # [inputs.opcua.workarounds]
+  # [inputs.opcua_listener.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
     # additional_valid_status_codes = ["0xC0"]
 
-  # [inputs.opcua.request_workarounds]
+  # [inputs.opcua_listener.request_workarounds]
     ## Use unregistered reads instead of registered reads
     # use_unregistered_reads = false
 ```
@@ -178,7 +180,7 @@ This example group configuration has three groups with two nodes each:
 
 ```toml
   # Group 1
-  [[inputs.opcua.group]]
+  [[inputs.opcua_listener.group]]
     name = "group1_metric_name"
     namespace = "3"
     identifier_type = "i"
@@ -193,7 +195,7 @@ This example group configuration has three groups with two nodes each:
       default_tags = {node1_tag = "val3"}
   
   # Group 2
-  [[inputs.opcua.group]]
+  [[inputs.opcua_listener.group]]
     name = "group2_metric_name"
     namespace = "3"
     identifier_type = "i"
@@ -207,7 +209,7 @@ This example group configuration has three groups with two nodes each:
       identifier = "1004"
   
   # Group 3
-  [[inputs.opcua.group]]
+  [[inputs.opcua_listener.group]]
     name = "group3_metric_name"
     namespace = "3"
     identifier_type = "i"
@@ -220,8 +222,9 @@ This example group configuration has three groups with two nodes each:
 
 ## Connection Service
 
-This plugin actively reads to retrieve data from the OPC server.
-This is done every `interval`.
+This plugin subscribes to the specified nodes to receive data from
+the OPC server. The updates are received at most as fast as the
+`subscription_interval`.
 
 ## Metrics
 
