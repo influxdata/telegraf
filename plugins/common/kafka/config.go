@@ -3,6 +3,7 @@ package kafka
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -133,7 +134,7 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 		config.Metadata.Retry.Backoff = k.MetadataRetryBackoff
 	}
 
-	switch t := k.MetadataRetryType; t {
+	switch strings.ToLower(k.MetadataRetryType) {
 	default:
 		return fmt.Errorf("invalid metadata retry type")
 	case "exponential":
