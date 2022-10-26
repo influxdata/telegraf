@@ -5,10 +5,11 @@ import (
 	_ "embed"
 	"fmt"
 
+	"go.starlark.net/starlark"
+
 	"github.com/influxdata/telegraf"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"go.starlark.net/starlark"
 )
 
 //go:embed sample.conf
@@ -108,8 +109,7 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Starlark) Stop() error {
-	return nil
+func (s *Starlark) Stop() {
 }
 
 func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {

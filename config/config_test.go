@@ -953,8 +953,7 @@ type MockupProcessorPluginParser struct {
 func (m *MockupProcessorPluginParser) Start(_ telegraf.Accumulator) error {
 	return nil
 }
-func (m *MockupProcessorPluginParser) Stop() error {
-	return nil
+func (m *MockupProcessorPluginParser) Stop() {
 }
 func (m *MockupProcessorPluginParser) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
@@ -978,8 +977,7 @@ type MockupProcessorPlugin struct{}
 func (m *MockupProcessorPlugin) Start(_ telegraf.Accumulator) error {
 	return nil
 }
-func (m *MockupProcessorPlugin) Stop() error {
-	return nil
+func (m *MockupProcessorPlugin) Stop() {
 }
 func (m *MockupProcessorPlugin) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
@@ -999,8 +997,7 @@ type MockupProcessorPluginParserOnly struct {
 func (m *MockupProcessorPluginParserOnly) Start(_ telegraf.Accumulator) error {
 	return nil
 }
-func (m *MockupProcessorPluginParserOnly) Stop() error {
-	return nil
+func (m *MockupProcessorPluginParserOnly) Stop() {
 }
 func (m *MockupProcessorPluginParserOnly) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
@@ -1023,8 +1020,7 @@ type MockupProcessorPluginParserFunc struct {
 func (m *MockupProcessorPluginParserFunc) Start(_ telegraf.Accumulator) error {
 	return nil
 }
-func (m *MockupProcessorPluginParserFunc) Stop() error {
-	return nil
+func (m *MockupProcessorPluginParserFunc) Stop() {
 }
 func (m *MockupProcessorPluginParserFunc) SampleConfig() string {
 	return "Mockup test processor plugin with parser"

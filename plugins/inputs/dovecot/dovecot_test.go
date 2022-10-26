@@ -13,9 +13,10 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestDovecotIntegration(t *testing.T) {
@@ -53,9 +54,9 @@ func TestDovecotIntegration(t *testing.T) {
 
 	// Test type=global server=unix
 	addr := "/tmp/socket"
-	wait := make(chan int)
+	waitCh := make(chan int)
 	go func() {
-		defer close(wait)
+		defer close(waitCh)
 
 		la, err := net.ResolveUnixAddr("unix", addr)
 		require.NoError(t, err)
@@ -65,7 +66,7 @@ func TestDovecotIntegration(t *testing.T) {
 		defer l.Close()
 		defer os.Remove(addr)
 
-		wait <- 0
+		waitCh <- 0
 		conn, err := l.Accept()
 		require.NoError(t, err)
 		defer conn.Close()
@@ -80,7 +81,7 @@ func TestDovecotIntegration(t *testing.T) {
 	}()
 
 	// Wait for server to start
-	<-wait
+	<-waitCh
 
 	d := &Dovecot{Servers: []string{addr}, Type: "global"}
 	err := d.Gather(&acc)

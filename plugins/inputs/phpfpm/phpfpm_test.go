@@ -26,7 +26,6 @@ type statServer struct{}
 func (s statServer) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
-	// Ignore the returned error as the tests will fail anyway
 	fmt.Fprint(w, outputSample)
 }
 

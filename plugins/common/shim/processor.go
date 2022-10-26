@@ -63,7 +63,9 @@ func (s *Shim) RunProcessor() error {
 			continue
 		}
 
-		s.Processor.Add(m, acc)
+		if err = s.Processor.Add(m, acc); err != nil {
+			fmt.Fprintf(s.stderr, "Failure during processing metric by processor: %v\b", err)
+		}
 	}
 
 	close(s.metricCh)
