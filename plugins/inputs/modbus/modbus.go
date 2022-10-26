@@ -475,6 +475,9 @@ func init() {
 			RetriesWaitTime:   100,
 			DebugConnection:   false,
 			ConfigurationType: "register",
+			ConfigurationOriginal: ConfigurationOriginal{
+				SlaveID: 1,
+			},
 		}
 	})
 }
