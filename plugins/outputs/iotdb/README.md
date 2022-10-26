@@ -74,6 +74,15 @@ Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2
 - `fields`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"`
 - `device_id`, result: `root.sg.device.private.working, s1=100, s2="hello"`
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
