@@ -110,7 +110,13 @@ func (c *ConfigurationPerRequest) Check() error {
 			def.Fields[fidx] = f
 
 			// Check for duplicate field definitions
-			id, err := c.fieldID(seed, def, f.Name)
+			id, err := c.fieldID(seed, def, f)
+			fmt.Printf("fidx: %d    name: %s    id: %v\n", fidx, f.Name, id)
+			fmt.Printf("    slave_id:    %d\n", def.SlaveID)
+			fmt.Printf("    regtype:     %s\n", def.RegisterType)
+			fmt.Printf("    measurement: %s\n", def.Measurement)
+			fmt.Printf("    name:        %s\n", f.Name)
+			fmt.Printf("    tags:        %v\n", def.Tags)
 			if err != nil {
 				return fmt.Errorf("cannot determine field id for %q: %v", f.Name, err)
 			}
@@ -253,7 +259,7 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 	return f, nil
 }
 
-func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, def requestDefinition, name string) (uint64, error) {
+func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, def requestDefinition, field requestFieldDefinition) (uint64, error) {
 	var mh maphash.Hash
 	mh.SetSeed(seed)
 
@@ -269,13 +275,13 @@ func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, def requestDefiniti
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
 	}
-	if _, err := mh.WriteString(def.Measurement); err != nil {
+	if _, err := mh.WriteString(field.Measurement); err != nil {
 		return 0, err
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
 	}
-	if _, err := mh.WriteString(name); err != nil {
+	if _, err := mh.WriteString(field.Name); err != nil {
 		return 0, err
 	}
 	if err := mh.WriteByte(0); err != nil {
