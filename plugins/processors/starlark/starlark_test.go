@@ -232,9 +232,7 @@ def apply(metric):
 				}
 			}
 
-			err = plugin.Stop()
-			require.NoError(t, err)
-
+			plugin.Stop()
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
@@ -2576,9 +2574,7 @@ def apply(metric):
 				}
 			}
 
-			err = plugin.Stop()
-			require.NoError(t, err)
-
+			plugin.Stop()
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
@@ -2659,9 +2655,7 @@ def apply(metric):
 				require.NoError(t, err)
 			}
 
-			err = plugin.Stop()
-			require.NoError(t, err)
-
+			plugin.Stop()
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
@@ -2935,9 +2929,7 @@ func TestScript(t *testing.T) {
 				}
 			}
 
-			err = tt.plugin.Stop()
-			require.NoError(t, err)
-
+			tt.plugin.Stop()
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
@@ -3267,8 +3259,7 @@ def apply(metric):
 				}
 			}
 
-			err = plugin.Stop()
-			require.NoError(b, err)
+			plugin.Stop()
 		})
 	}
 }
@@ -3309,9 +3300,7 @@ func TestAllScriptTestData(t *testing.T) {
 					}
 				}
 
-				err = plugin.Stop()
-				require.NoError(t, err)
-
+				plugin.Stop()
 				testutil.RequireMetricsEqual(t, outputMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics())
 			})
 			return nil

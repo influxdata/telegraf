@@ -126,7 +126,7 @@ func TestHelperProcess(_ *testing.T) {
 			os.Exit(0)
 		}
 	}
-	//nolint:errcheck,revive // Test will fail anyway
+
 	fmt.Fprint(os.Stdout, "invalid argument")
 	//nolint:revive // os.Exit called intentionally
 	os.Exit(1)

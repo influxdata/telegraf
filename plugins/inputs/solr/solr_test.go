@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGatherStats(t *testing.T) {
@@ -110,19 +111,15 @@ func createMockServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, statusResponse)
 		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, mBeansMainResponse)
 		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, mBeansCore1Response)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, "nope")
 		}
 	}))
@@ -133,19 +130,15 @@ func createMockNoCoreDataServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, statusResponse)
 		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, nodata)
 		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, nodata)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, "nope")
 		}
 	}))
@@ -155,19 +148,15 @@ func createMockSolr3Server() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, statusResponse)
 		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, mBeansSolr3MainResponse)
 		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, mBeansSolr3MainResponse)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, "nope")
 		}
 	}))
@@ -177,15 +166,12 @@ func createMockSolr7Server() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, statusResponse)
 		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
 			w.WriteHeader(http.StatusOK)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, mBeansSolr7Response)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			// Ignore the returned error as the test will fail anyway
 			fmt.Fprintln(w, "nope")
 		}
 	}))

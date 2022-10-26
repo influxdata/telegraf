@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSqlite(t *testing.T) {
@@ -68,7 +69,7 @@ func TestSqlite(t *testing.T) {
 		sql,
 	)
 	require.False(t, rows.Next())
-	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
+	require.NoError(t, rows.Close())
 
 	// sqlite stores dates as strings. They may be in the local
 	// timezone. The test needs to parse them back into a time.Time to
@@ -95,7 +96,7 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, int64(1234), d)
 	require.Equal(t, int64(2345), e)
 	require.False(t, rows.Next())
-	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
+	require.NoError(t, rows.Close())
 
 	rows, err = db.Query("select timestamp, tag_three, string_one from metric_two")
 	require.NoError(t, err)
@@ -110,7 +111,7 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, "tag3", g)
 	require.Equal(t, "string1", h)
 	require.False(t, rows.Next())
-	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
+	require.NoError(t, rows.Close())
 
 	rows, err = db.Query(`select timestamp, "tag four", "string two" from "metric three"`)
 	require.NoError(t, err)
@@ -125,5 +126,5 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, "tag4", j)
 	require.Equal(t, "string2", k)
 	require.False(t, rows.Next())
-	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
+	require.NoError(t, rows.Close())
 }
