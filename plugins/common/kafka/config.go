@@ -140,7 +140,7 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 		if k.MetadataRetryBackoff != 0 {
 			config.Metadata.Retry.BackoffFunc = makeBackoffFunc(k.MetadataRetryBackoff, k.MetadataRetryMaxDuration)
 		}
-	case "none":
+	case "constant":
 		fallthrough
 	case "":
 	}
