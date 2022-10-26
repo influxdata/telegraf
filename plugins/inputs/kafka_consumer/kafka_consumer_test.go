@@ -470,8 +470,6 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 }
 
 func TestKafkaRoundTripIntegration(t *testing.T) {
-	t.Skip("fails race check")
-
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -573,6 +571,10 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	t.Logf("rt: expecting")
 	acc.Wait(len(expected))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+
+	t.Logf("rt: shutdown")
+	require.NoError(t, output.Close())
+	input.Stop()
 
 	t.Logf("rt: done")
 }
