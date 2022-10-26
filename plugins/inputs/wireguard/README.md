@@ -4,6 +4,15 @@ The Wireguard input plugin collects statistics on the local Wireguard server
 using the [`wgctrl`](https://github.com/WireGuard/wgctrl-go) library. It
 reports gauge metrics for Wireguard interface device(s) and its peers.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

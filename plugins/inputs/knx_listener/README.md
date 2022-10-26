@@ -5,6 +5,15 @@ This plugin connects to the KNX bus via a KNX-IP interface.
 Information about supported KNX message datapoint types can be found at the
 underlying "knx-go" project site (<https://github.com/vapourismo/knx-go>).
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
