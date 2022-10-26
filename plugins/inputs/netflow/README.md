@@ -11,6 +11,7 @@ Definitions for IPFIX are according to [IANA assignement document][IPFIX doc].
 [CISCO NF9]:        https://www.cisco.com/en/US/technologies/tk648/tk362/technologies_white_paper09186a00800a3db9.html
 [ASA extensions]:   https://www.cisco.com/c/en/us/td/docs/security/asa/special/netflow/asa_netflow.html
 [IPFIX doc]:        https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-nat-type
+
 ## Configuration
 
 ```toml @sample.conf
@@ -54,24 +55,7 @@ following information
     - flow_create_time_ms (optional, time the flow was created)
     - flow_end_time_ms (optional, time the flow ended)
 
-## Sample Queries
-
-This section can contain some useful InfluxDB queries that can be used to get
-started with the plugin or to generate dashboards.  For each query listed,
-describe at a high level what data is returned.
-
-Get the max, mean, and min for the measurement in the last hour:
-
-```sql
-SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar AND time > now() - 1h GROUP BY tag
-```
-
-## Troubleshooting
-
-This optional section can provide basic troubleshooting steps that a user can
-perform.
-
-## Example
+## Example Output
 
 This section shows example output in Line Protocol format.  You can often use
 `telegraf --input-filter <plugin-name> --test` or use the `file` output to get
