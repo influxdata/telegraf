@@ -1,6 +1,10 @@
 package kafka
 
 import (
+	"fmt"
+	"math"
+	"time"
+
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -53,10 +57,27 @@ type Config struct {
 	CompressionCodec int    `toml:"compression_codec"`
 	EnableTLS        *bool  `toml:"enable_tls"`
 
+	MetadataRetryMax         int           `toml:"metadata_retry_max"`
+	MetadataRetryType        string        `toml:"metadata_retry_type"`
+	MetadataRetryBackoff     time.Duration `toml:"metadata_retry_backoff"`
+	MetadataRetryMaxDuration time.Duration `toml:"metadata_retry_max_duration"`
+
 	Log telegraf.Logger `toml:"-"`
 
 	// Disable full metadata fetching
 	MetadataFull *bool `toml:"metadata_full"`
+}
+
+type BackoffFunc func(retries, maxRetries int) time.Duration
+
+func makeBackoffFunc(backoff, maxDuration time.Duration) BackoffFunc {
+	return func(retries, maxRetries int) time.Duration {
+		d := time.Duration(math.Pow(2, float64(retries))) * backoff
+		if maxDuration != 0 && d > maxDuration {
+			return maxDuration
+		}
+		return d
+	}
 }
 
 // SetConfig on the sarama.Config object from the Config struct.
@@ -100,6 +121,28 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 	if k.MetadataFull != nil {
 		// Defaults to true in Sarama
 		config.Metadata.Full = *k.MetadataFull
+	}
+
+	if k.MetadataRetryMax != 0 {
+		config.Metadata.Retry.Max = k.MetadataRetryMax
+	}
+
+	if k.MetadataRetryBackoff != 0 {
+		// If config.Metadata.Retry.BackoffFunc is set, sarama ignores
+		// config.Metadata.Retry.Backoff
+		config.Metadata.Retry.Backoff = k.MetadataRetryBackoff
+	}
+
+	switch t := k.MetadataRetryType; t {
+	default:
+		return fmt.Errorf("invalid metadata retry type")
+	case "exponential":
+		if k.MetadataRetryBackoff != 0 {
+			config.Metadata.Retry.BackoffFunc = makeBackoffFunc(k.MetadataRetryBackoff, k.MetadataRetryMaxDuration)
+		}
+	case "none":
+		fallthrough
+	case "":
 	}
 
 	return k.SetSASLConfig(config)

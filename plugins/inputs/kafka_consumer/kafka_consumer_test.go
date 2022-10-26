@@ -3,6 +3,8 @@ package kafka_consumer
 import (
 	"context"
 	"fmt"
+	"math"
+	"net"
 	"testing"
 	"time"
 
@@ -578,4 +580,69 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	input.Stop()
 
 	t.Logf("rt: done")
+}
+
+func TestExponentialBackoff(t *testing.T) {
+	var err error
+
+	backoff := 10 * time.Millisecond
+	max := 3
+
+	// get an unused port by listening on next available port, then closing it
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	// try to connect to kafka on that unused port
+	brokers := []string{
+		fmt.Sprintf("localhost:%d", port),
+	}
+
+	input := KafkaConsumer{
+		Brokers:                brokers,
+		Log:                    testutil.Logger{},
+		Topics:                 []string{"topic"},
+		MaxUndeliveredMessages: 1,
+
+		ReadConfig: kafka.ReadConfig{
+			Config: kafka.Config{
+				MetadataRetryMax:     max,
+				MetadataRetryBackoff: backoff,
+				MetadataRetryType:    "exponential",
+			},
+		},
+	}
+	parser := &influx.Parser{}
+	parser.Init()
+	input.SetParser(parser)
+
+	//time how long initialization (connection) takes
+	start := time.Now()
+	err = input.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	err = input.Start(&acc)
+	require.Error(t, err)
+	elapsed := time.Now().Sub(start)
+	t.Logf("elapsed %d", elapsed)
+
+	var expectedRetryDuration time.Duration
+	for i := 0; i < max; i++ {
+		expectedRetryDuration += backoff * time.Duration(math.Pow(2, float64(i)))
+	}
+	t.Logf("expected > %d", expectedRetryDuration)
+
+	// Other than the expected retry delay, initializing and starting the
+	// plugin, including initializing a sarama consumer takes some time.
+	//
+	// It would be nice to check that the actual time is within an expected
+	// range, but we don't know how long the non-retry time should be.
+	//
+	// For now, just check that elapsed time isn't shorter than we expect the
+	// retry delays to be
+	require.GreaterOrEqual(t, elapsed, expectedRetryDuration)
+
+	input.Stop()
 }

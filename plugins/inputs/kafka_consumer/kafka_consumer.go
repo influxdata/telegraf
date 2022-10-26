@@ -137,6 +137,10 @@ func (k *KafkaConsumer) Init() error {
 
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	var err error
+
+	ctx, cancel := context.WithCancel(context.Background())
+	k.cancel = cancel
+
 	k.consumer, err = k.ConsumerCreator.Create(
 		k.Brokers,
 		k.ConsumerGroup,
@@ -145,9 +149,6 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("create consumer: %w", err)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	k.cancel = cancel
 
 	// Start consumer goroutine
 	k.wg.Add(1)
