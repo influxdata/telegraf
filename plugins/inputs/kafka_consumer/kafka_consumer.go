@@ -43,6 +43,7 @@ type KafkaConsumer struct {
 	Topics                 []string        `toml:"topics"`
 	TopicTag               string          `toml:"topic_tag"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
+	ConnectionStrategy     string          `toml:"connection_strategy"`
 
 	kafka.ReadConfig
 
@@ -131,8 +132,38 @@ func (k *KafkaConsumer) Init() error {
 		cfg.Consumer.Fetch.Default = int32(k.ConsumerFetchDefault)
 	}
 
+	switch strings.ToLower(k.ConnectionStrategy) {
+	default:
+		return fmt.Errorf("invalid connection strategy %q", k.ConnectionStrategy)
+	case "defer":
+	case "startup":
+		fallthrough
+	case "":
+	}
+
 	k.config = cfg
 	return nil
+}
+
+func (k *KafkaConsumer) create() error {
+	var err error
+	k.consumer, err = k.ConsumerCreator.Create(
+		k.Brokers,
+		k.ConsumerGroup,
+		k.config,
+	)
+
+	return err
+}
+
+func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
+	k.wg.Add(1)
+	go func() {
+		defer k.wg.Done()
+		for err := range k.consumer.Errors() {
+			acc.AddError(fmt.Errorf("channel: %w", err))
+		}
+	}()
 }
 
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
@@ -141,19 +172,30 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	k.cancel = cancel
 
-	k.consumer, err = k.ConsumerCreator.Create(
-		k.Brokers,
-		k.ConsumerGroup,
-		k.config,
-	)
-	if err != nil {
-		return fmt.Errorf("create consumer: %w", err)
+	if k.ConnectionStrategy != "defer" {
+		err = k.create()
+		if err != nil {
+			return fmt.Errorf("create consumer: %w", err)
+		}
+		k.startErrorAdder(acc)
 	}
 
 	// Start consumer goroutine
 	k.wg.Add(1)
 	go func() {
+		var err error
 		defer k.wg.Done()
+
+		if k.consumer == nil {
+			err = k.create()
+			if err != nil {
+				acc.AddError(fmt.Errorf("create consumer async: %w", err))
+				return
+			}
+		}
+
+		k.startErrorAdder(acc)
+
 		for ctx.Err() == nil {
 			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
@@ -169,14 +211,6 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		err = k.consumer.Close()
 		if err != nil {
 			acc.AddError(fmt.Errorf("close: %w", err))
-		}
-	}()
-
-	k.wg.Add(1)
-	go func() {
-		defer k.wg.Done()
-		for err := range k.consumer.Errors() {
-			acc.AddError(fmt.Errorf("channel: %w", err))
 		}
 	}()
 
