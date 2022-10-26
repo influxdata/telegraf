@@ -477,6 +477,172 @@ func init() {
 			ConfigurationType: "register",
 			ConfigurationOriginal: ConfigurationOriginal{
 				SlaveID: 1,
+				DiscreteInputs: []fieldDefinition{
+					{
+						Name:    "start",
+						Address: []uint16{0},
+					},
+					{
+						Name:    "stop",
+						Address: []uint16{1},
+					},
+					{
+						Name:    "reset",
+						Address: []uint16{2},
+					},
+					{
+						Name:    "emergency_stop",
+						Address: []uint16{3},
+					},
+				},
+				Coils: []fieldDefinition{
+					{
+						Name:    "motor1_run",
+						Address: []uint16{0},
+					},
+					{
+						Name:    "motor1_jog",
+						Address: []uint16{1},
+					},
+					{
+						Name:    "motor1_stop",
+						Address: []uint16{2},
+					},
+				},
+				HoldingRegisters: []fieldDefinition{
+					{
+						Name:      "power_factory",
+						ByteOrder: "AB",
+						DataType:  "FIXED",
+						Scale:     0.01,
+						Address:   []uint16{8},
+					},
+					{
+						Name:      "voltage",
+						ByteOrder: "AB",
+						DataType:  "FIXED",
+						Scale:     0.1,
+						Address:   []uint16{0},
+					},
+					{
+						Name:      "energy",
+						ByteOrder: "ABCD",
+						DataType:  "FIXED",
+						Scale:     0.001,
+						Address:   []uint16{5, 6},
+					},
+					{
+						Name:      "current",
+						ByteOrder: "ABCD",
+						DataType:  "FIXED",
+						Scale:     0.001,
+						Address:   []uint16{1, 2},
+					},
+					{
+						Name:      "frequency",
+						ByteOrder: "AB",
+						DataType:  "UFIXED",
+						Scale:     0.1,
+						Address:   []uint16{7},
+					},
+					{
+						Name:      "power",
+						ByteOrder: "ABCD",
+						DataType:  "UFIXED",
+						Scale:     0.1,
+						Address:   []uint16{3, 4},
+					},
+				},
+				InputRegisters: []fieldDefinition{
+					{
+						Name:      "tank_level",
+						ByteOrder: "AB",
+						DataType:  "INT16",
+						Scale:     1.0,
+						Address:   []uint16{0},
+					},
+					{
+						Name:      "tank_ph",
+						ByteOrder: "AB",
+						DataType:  "INT16",
+						Scale:     1.0,
+						Address:   []uint16{1},
+					},
+					{
+						Name:      "pump1_speed",
+						ByteOrder: "ABCD",
+						DataType:  "INT32",
+						Scale:     1.0,
+						Address:   []uint16{3, 4},
+					},
+				},
+			},
+			ConfigurationPerRequest: ConfigurationPerRequest{
+				Requests: []requestDefinition{
+					{
+						SlaveID:      1,
+						ByteOrder:    "ABCD",
+						RegisterType: "coil",
+						Measurement:  "modbus",
+						Fields: []requestFieldDefinition{
+							{
+								Address: uint16(0),
+								Name:    "motor1_run",
+							},
+							{
+								Address:     uint16(1),
+								Name:        "jog",
+								Measurement: "motor",
+							},
+							{
+								Address: uint16(2),
+								Name:    "motor1_stop",
+								Omit:    true,
+							},
+							{
+								Address: uint16(3),
+								Name:    "motor1_overheating",
+							},
+						},
+						Tags: map[string]string{
+							"machine":  "impresser",
+							"location": "main building",
+						},
+					},
+					{
+						SlaveID:      1,
+						ByteOrder:    "ABCD",
+						RegisterType: "input",
+						Fields: []requestFieldDefinition{
+							{
+								Address:   uint16(0),
+								Name:      "rpm",
+								InputType: "INT16",
+							},
+							{
+								Address:   uint16(1),
+								Name:      "temperature",
+								InputType: "INT16",
+								Scale:     0.1,
+							},
+							{
+								Address:    uint16(2),
+								Name:       "force",
+								InputType:  "INT32",
+								OutputType: "FLOAT64",
+							},
+							{
+								Address:   uint16(4),
+								Name:      "hours",
+								InputType: "UINT32",
+							},
+						},
+						Tags: map[string]string{
+							"machine":  "impresser",
+							"location": "main building",
+						},
+					},
+				},
 			},
 		}
 	})
