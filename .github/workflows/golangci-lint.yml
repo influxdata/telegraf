@@ -28,7 +28,7 @@ jobs:
         with:
           version: v1.50.0
           only-new-issues: true
-          args: --timeout 5m0s --verbose
+          args: --timeout 15m0s --verbose
   golangci-master:
     if: github.ref == 'refs/heads/master'
     name: lint-master-all
@@ -43,4 +43,4 @@ jobs:
         with:
           version: v1.50.0
           only-new-issues: true
-          args: --timeout 5m0s --issues-exit-code=0 --verbose
+          args: --timeout 15m0s --issues-exit-code=0 --verbose
