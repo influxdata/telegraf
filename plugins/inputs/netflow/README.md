@@ -5,11 +5,12 @@ flow information. The Layer 4 protocol numbers are gathered from the
 [official IANA assignments][IANA assignments].
 The internal field mappings for the Netflow v9 fields are defined according to
 [Cisco's Netflow9 documentation][CISCO NF9] and the [ASA extensions][].
+Definitions for IPFIX are according to [IANA assignement document][IPFIX doc].
 
 [IANA assignments]: https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
 [CISCO NF9]:        https://www.cisco.com/en/US/technologies/tk648/tk362/technologies_white_paper09186a00800a3db9.html
 [ASA extensions]:   https://www.cisco.com/c/en/us/td/docs/security/asa/special/netflow/asa_netflow.html
-
+[IPFIX doc]:        https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-nat-type
 ## Configuration
 
 ```toml @sample.conf
