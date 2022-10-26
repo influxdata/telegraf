@@ -41,11 +41,7 @@ func (*NetFlow) SampleConfig() string {
 
 func (n *NetFlow) Init() error {
 	n.decoder = &netflowDecoder{Log: n.Log}
-	if err := n.decoder.Init(); err != nil {
-		return err
-	}
-
-	return nil
+	return n.decoder.Init()
 }
 
 func (n *NetFlow) Start(acc telegraf.Accumulator) error {
@@ -87,7 +83,7 @@ func (n *NetFlow) Start(acc telegraf.Accumulator) error {
 
 func (n *NetFlow) Stop() {
 	if n.conn != nil {
-		n.conn.Close()
+		_ = n.conn.Close()
 	}
 	n.wg.Wait()
 }

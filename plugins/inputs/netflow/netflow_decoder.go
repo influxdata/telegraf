@@ -660,19 +660,19 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 
 	// Checking for reverse elements according to RFC5103
 	var prefix string
-	elementId := field.Type
+	elementID := field.Type
 	if field.Type&0x4000 != 0 {
 		prefix = "rev_"
-		elementId = field.Type & (0x4000 ^ 0xffff)
+		elementID = field.Type & (0x4000 ^ 0xffff)
 	}
 
 	// Check the user-specified mapping
-	if m, found := d.mappingsIPFIX[elementId]; found {
+	if m, found := d.mappingsIPFIX[elementID]; found {
 		return []telegraf.Field{{Key: prefix + m.name, Value: m.decoder(raw)}}
 	}
 
 	// Check the version specific default field mappings
-	if mappings, found := fieldMappingsIPFIX[elementId]; found {
+	if mappings, found := fieldMappingsIPFIX[elementID]; found {
 		var fields []telegraf.Field
 		for _, m := range mappings {
 			fields = append(fields, telegraf.Field{
@@ -684,7 +684,7 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 	}
 
 	// Check the common default field mappings
-	if mappings, found := fieldMappingsNetflowCommon[elementId]; found {
+	if mappings, found := fieldMappingsNetflowCommon[elementID]; found {
 		var fields []telegraf.Field
 		for _, m := range mappings {
 			fields = append(fields, telegraf.Field{

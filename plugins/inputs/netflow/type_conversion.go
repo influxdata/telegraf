@@ -112,11 +112,6 @@ func decodeIP(b []byte) interface{} {
 	return ip.String()
 }
 
-func decodeMask(b []byte) interface{} {
-	mask := net.IPMask(b)
-	return mask.String()
-}
-
 func decodeL4Proto(b []byte) interface{} {
 	id := b[0]
 	name, found := l4ProtoMapping[id]
@@ -282,7 +277,6 @@ func decodeFwdStatus(b []byte) interface{} {
 		return "dropped"
 	case 3:
 		return "consumed"
-
 	}
 	return "invalid"
 }
