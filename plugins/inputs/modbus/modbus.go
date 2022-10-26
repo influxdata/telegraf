@@ -461,5 +461,20 @@ func (m *Modbus) Printf(format string, v ...interface{}) {
 
 // Add this plugin to telegraf
 func init() {
-	inputs.Add("modbus", func() telegraf.Input { return &Modbus{} })
+	inputs.Add("modbus", func() telegraf.Input {
+		return &Modbus{
+			Name:              "Device",
+			Controller:        "tcp://localhost:502",
+			TransmissionMode:  "RTU",
+			Timeout:           1,
+			BaudRate:          9600,
+			DataBits:          8,
+			Parity:            "N",
+			StopBits:          1,
+			Retries:           0,
+			RetriesWaitTime:   100,
+			DebugConnection:   false,
+			ConfigurationType: "register",
+		}
+	})
 }
