@@ -247,6 +247,7 @@ following works:
 - github.com/nats-io/nats.go [Apache License 2.0](https://github.com/nats-io/nats.go/blob/master/LICENSE)
 - github.com/nats-io/nkeys [Apache License 2.0](https://github.com/nats-io/nkeys/blob/master/LICENSE)
 - github.com/nats-io/nuid [Apache License 2.0](https://github.com/nats-io/nuid/blob/master/LICENSE)
+- github.com/netsampler/goflow2 [BSD 3-Clause "New" or "Revised" License](https://github.com/netsampler/goflow2/blob/main/LICENSE)
 - github.com/newrelic/newrelic-telemetry-sdk-go [Apache License 2.0](https://github.com/newrelic/newrelic-telemetry-sdk-go/blob/master/LICENSE.md)
 - github.com/nsqio/go-nsq [MIT License](https://github.com/nsqio/go-nsq/blob/master/LICENSE)
 - github.com/olivere/elastic [MIT License](https://github.com/olivere/elastic/blob/release-branch.v7/LICENSE)
