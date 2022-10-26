@@ -55,8 +55,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 		{"ManufacturerName", "0", "i", "2263", "open62541"},
 		{"badnode", "1", "i", "1337", nil},
 		{"goodnode", "1", "s", "the.answer", int32(42)},
-		{"DateTime2", "1", "s", "some_date_one", "hello"},
-		{"DateTime", "1", "s", "some_date", "0001-01-01T00:00:00Z"},
+		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
 	}
 	var tagsRemaining = make([]string, 0, len(testopctags))
 	for i, tag := range testopctags {
