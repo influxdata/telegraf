@@ -44,7 +44,10 @@ func (s *Shim) RunProcessor() error {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		s.writeProcessedMetrics()
+		err := s.writeProcessedMetrics()
+		if err != nil {
+			s.log.Warnf("%s", err)
+		}
 		wg.Done()
 	}()
 
