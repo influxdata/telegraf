@@ -111,12 +111,6 @@ func (c *ConfigurationPerRequest) Check() error {
 
 			// Check for duplicate field definitions
 			id, err := c.fieldID(seed, def, f)
-			fmt.Printf("fidx: %d    name: %s    id: %v\n", fidx, f.Name, id)
-			fmt.Printf("    slave_id:    %d\n", def.SlaveID)
-			fmt.Printf("    regtype:     %s\n", def.RegisterType)
-			fmt.Printf("    measurement: %s\n", def.Measurement)
-			fmt.Printf("    name:        %s\n", f.Name)
-			fmt.Printf("    tags:        %v\n", def.Tags)
 			if err != nil {
 				return fmt.Errorf("cannot determine field id for %q: %v", f.Name, err)
 			}

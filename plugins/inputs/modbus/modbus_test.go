@@ -2086,7 +2086,6 @@ func TestCases(t *testing.T) {
 		case 4: // 64-bit
 			binary.BigEndian.PutUint64(buf[1:], uint64(register))
 		}
-		fmt.Println(buf)
 		return buf, &mbserver.Success
 	}
 
