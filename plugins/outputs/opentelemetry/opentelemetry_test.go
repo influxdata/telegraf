@@ -27,15 +27,15 @@ func TestOpenTelemetry(t *testing.T) {
 	expect := pmetric.NewMetrics()
 	{
 		rm := expect.ResourceMetrics().AppendEmpty()
-		rm.Resource().Attributes().PutString("host.name", "potato")
-		rm.Resource().Attributes().PutString("attr-key", "attr-val")
+		rm.Resource().Attributes().PutStr("host.name", "potato")
+		rm.Resource().Attributes().PutStr("attr-key", "attr-val")
 		ilm := rm.ScopeMetrics().AppendEmpty()
 		ilm.Scope().SetName("My Library Name")
 		m := ilm.Metrics().AppendEmpty()
 		m.SetName("cpu_temp")
 		m.SetEmptyGauge()
 		dp := m.Gauge().DataPoints().AppendEmpty()
-		dp.Attributes().PutString("foo", "bar")
+		dp.Attributes().PutStr("foo", "bar")
 		dp.SetTimestamp(pcommon.Timestamp(1622848686000000000))
 		dp.SetDoubleValue(87.332)
 	}
@@ -102,7 +102,7 @@ func newMockOtelService(t *testing.T) *mockOtelService {
 		grpcServer: grpcServer,
 	}
 
-	pmetricotlp.RegisterServer(grpcServer, mockOtelService)
+	pmetricotlp.RegisterGRPCServer(grpcServer, mockOtelService)
 	go func() { assert.NoError(t, grpcServer.Serve(listener)) }()
 
 	grpcClient, err := grpc.Dial(listener.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
