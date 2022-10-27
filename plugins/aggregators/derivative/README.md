@@ -24,7 +24,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # suffix = "_rate"
   ##
   ## Field to use for the quotient when computing the derivative.
-  ## By default the timestamps of the metrics are used.
+  ## When using a field as the derivation parameter the name of that field will
+  ## be used for the resulting derivative, e.g. *fieldname_by_parameter*.
+  ## By default the timestamps of the metrics are used and the suffix is omitted.
   # variable = ""
   ##
   ## Maximum number of roll-overs in case only one measurement is found during a period.
