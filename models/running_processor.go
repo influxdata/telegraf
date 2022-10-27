@@ -16,15 +16,41 @@ type RunningProcessor struct {
 
 type RunningProcessors []*RunningProcessor
 
-func (rp RunningProcessors) Len() int           { return len(rp) }
-func (rp RunningProcessors) Swap(i, j int)      { rp[i], rp[j] = rp[j], rp[i] }
-func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp[j].Config.Order }
+func (rp RunningProcessors) Len() int {
+	return len(rp)
+}
+func (rp RunningProcessors) Swap(i, j int) {
+	rp[i], rp[j] = rp[j], rp[i]
+}
+func (rp RunningProcessors) Less(i, j int) bool {
+	// If Order is defined for both processors, sort according to the number set
+	if rp[i].Config.Order != 0 && rp[j].Config.Order != 0 {
+		// If both orders are equal, ensure config order is maintained
+		if rp[i].Config.Order == rp[j].Config.Order {
+			return rp[i].Config.Line < rp[j].Config.Line
+		}
+
+		return rp[i].Config.Order < rp[j].Config.Order
+	}
+
+	// If "Order" is defined for one processor but not another,
+	// the "Order" will always take precedence and be run earlier.
+	if rp[i].Config.Order != 0 {
+		return true
+	}
+	if rp[j].Config.Order != 0 {
+		return false
+	}
+
+	return rp[i].Config.Line < rp[j].Config.Line
+}
 
 // ProcessorConfig containing a name and filter
 type ProcessorConfig struct {
 	Name   string
 	Alias  string
 	Order  int64
+	Line   int
 	Filter Filter
 }
 

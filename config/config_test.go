@@ -725,6 +725,54 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	}
 }
 
+func TestConfig_MultipleProcessorsOrder(t *testing.T) {
+	tests := []struct {
+		filename      string
+		expectedOrder []string
+	}{
+		{
+			filename: "multiple_processors.toml",
+			expectedOrder: []string{
+				"processor",
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+			},
+		},
+		{
+			filename: "multiple_processors_simple_order.toml",
+			expectedOrder: []string{
+				"processor",
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+			},
+		},
+		{
+			filename: "multiple_processors_messy_order.toml",
+			expectedOrder: []string{
+				"processor",
+				"processor_parser",
+				"processor_parser",
+				"processor_parserfunc",
+				"parser_test",
+				"processor_parserfunc",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		c := NewConfig()
+		require.NoError(t, c.LoadConfig(filepath.Join("./testdata", test.filename)))
+
+		require.Equal(t, len(test.expectedOrder), len(c.Processors))
+
+		for i, p := range c.Processors {
+			require.Equal(t, p.Config.Name, test.expectedOrder[i])
+		}
+	}
+}
+
 func TestConfig_ProcessorsWithParsers(t *testing.T) {
 	formats := []string{
 		"collectd",

@@ -1059,7 +1059,10 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (*models.ParserConfig,
 // builds the filter and returns a
 // models.ProcessorConfig to be inserted into models.RunningProcessor
 func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
-	conf := &models.ProcessorConfig{Name: name}
+	conf := &models.ProcessorConfig{
+		Name: name,
+		Line: tbl.Line,
+	}
 
 	c.getFieldInt64(tbl, "order", &conf.Order)
 	c.getFieldString(tbl, "alias", &conf.Alias)

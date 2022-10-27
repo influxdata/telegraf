@@ -429,8 +429,10 @@ input plugins and before any aggregator plugins.
 Parameters that can be used with any processor plugin:
 
 - **alias**: Name an instance of a plugin.
-- **order**: The order in which the processor(s) are executed. If this is not
-  specified then processor execution order will be random.
+- **order**: The order in which the processor(s) are executed. starting with 1.
+  If this is not specified then processor execution order will be the order in
+  the config. Processors with a defined order will take precedence over those
+  without a defined order.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 handled by the processor.  Excluded metrics are passed downstream to the next
