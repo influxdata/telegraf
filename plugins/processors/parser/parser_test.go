@@ -10,10 +10,12 @@ import (
 
 	//Blank import to register all new-style parsers
 
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
+	"github.com/influxdata/telegraf/plugins/parsers/value"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -555,6 +557,50 @@ func TestApply(t *testing.T) {
 						"lvl": "info",
 					},
 					map[string]interface{}{},
+					time.Unix(0, 0)),
+			},
+		},
+		{
+			name:        "parser without metric name (issue #12115)",
+			parseFields: []string{"value"},
+			merge:       "override",
+			// Create parser the config way with the name of the parent plugin.
+			parser: func() telegraf.Parser {
+				p := parsers.Parsers["value"]("parser")
+				vp := p.(*value.Parser)
+				vp.DataType = "float"
+				vp.FieldName = "value"
+				return vp
+			}(),
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{"value": "7.2"},
+				time.Unix(0, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"myname",
+					map[string]string{},
+					map[string]interface{}{"value": float64(7.2)},
+					time.Unix(0, 0)),
+			},
+		},
+		{
+			name:        "parser with metric name (issue #12115)",
+			parseFields: []string{"value"},
+			merge:       "override",
+			// Create parser the config way with the name of the parent plugin.
+			parser: parsers.Parsers["influx"]("parser"),
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{"value": "test value=7.2"},
+				time.Unix(0, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]interface{}{"value": float64(7.2)},
 					time.Unix(0, 0)),
 			},
 		},
