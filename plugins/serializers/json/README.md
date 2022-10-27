@@ -27,7 +27,9 @@ The `json` output data format converts metrics into JSON documents.
   # e.g.: json_timestamp_format = "2006-01-02T15:04:05Z07:00"
   #json_timestamp_format = ""
 
-  ## A [JSONata](https://jsonata.org/) transformation of the JSON in [standard-form](#examples).
+  ## A [JSONata](https://jsonata.org/) transformation of the JSON in
+  ## [standard-form](#examples). Please note that only version 1.5.4 of the
+  ## JSONata is supported due to the underlying library used.
   ## This allows to generate an arbitrary output form based on the metric(s). Please use
   ## multiline strings (starting and ending with three single-quotes) if needed.
   #json_transformation = ""
@@ -99,6 +101,11 @@ metric in the standard-form above.
 **Note**: There is a difference in batch and non-batch serialization mode!
 The former adds a `metrics` field containing the metric array, while the later
 serializes the metric directly.
+
+**Note**: Please note that the JSONata support is limited to version 1.5.4 due
+to the underlying library used by Telegraf. When using the online playground
+below ensure that you have selected 1.5.4 when trying examples or building
+transformations.
 
 In the following sections, some rudimentary examples for transformations are shown.
 For more elaborated JSONata expressions please consult the
