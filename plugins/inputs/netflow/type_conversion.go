@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -86,6 +87,11 @@ func initIPv4OptionMapping() error {
 func decodeUint(b []byte) interface{} {
 	buf := append(make([]byte, 8-len(b)), b...)
 	return binary.BigEndian.Uint64(buf)
+}
+
+func decodeFloat64(b []byte) interface{} {
+	raw := binary.BigEndian.Uint64(b)
+	return math.Float64frombits(raw)
 }
 
 // According to https://www.rfc-editor.org/rfc/rfc5101#section-6.1.5
@@ -501,6 +507,32 @@ func decodeIPNatType(b []byte) interface{} {
 		return "NAT66"
 	case 6:
 		return "IPv6 no NAT"
+	}
+	return "unassigned"
+}
+
+// https://www.iana.org/assignments/psamp-parameters/psamp-parameters.xhtml
+func decodeSelectorAlgorithm(b []byte) interface{} {
+	tech := binary.BigEndian.Uint16(b)
+	switch tech {
+	case 0:
+		return "reserved"
+	case 1:
+		return "systematic count-based sampling"
+	case 2:
+		return "systematic time-based sampling"
+	case 3:
+		return "random n-out-of-N sampling"
+	case 4:
+		return "uniform probabilistic sampling"
+	case 5:
+		return "property match giltering"
+	case 6:
+		return "hash based filtering using BOB"
+	case 7:
+		return "hash based filtering using IPSX"
+	case 8:
+		return "hash based filtering using CRC"
 	}
 	return "unassigned"
 }

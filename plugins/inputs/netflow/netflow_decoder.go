@@ -152,18 +152,18 @@ var fieldMappingsNetflowCommon = map[uint16][]fieldMapping{
 	233: {{"fw_event", decodeFWEvent}},     // NF_F_FW_EVENT / firewallEvent
 	281: {{"xlat_src", decodeIP}},          // NF_F_XLATE_SRC_ADDR_IPV6 / postNATSourceIPv6Address
 	282: {{"xlat_dst", decodeIP}},          // NF_F_XLATE_DST_ADDR_IPV6 / postNATDestinationIPv6Address
+	323: {{"event_time_ms", decodeUint}},   // NF_F_EVENT_TIME_MSEC / observationTimeMilliseconds
+	324: {{"event_time_us", decodeUint}},   // NF_F_EVENT_TIME_USEC / observationTimeMicroseconds
+	325: {{"event_time_ns", decodeUint}},   // NF_F_EVENT_TIME_NSEC / observationTimeNanoseconds
 }
 
 // Default field mappings specific to Netflow version 9
 // From documentation at https://www.cisco.com/c/en/us/td/docs/security/asa/special/netflow/asa_netflow.html
 var fieldMappingsNetflowV9 = map[uint16][]fieldMapping{
-	323:   {{"event_time_ms", decodeUint}}, // NF_F_EVENT_TIME_MSEC
-	324:   {{"event_time_us", decodeUint}}, // NF_F_EVENT_TIME_USEC
-	325:   {{"event_time_ns", decodeUint}}, // NF_F_EVENT_TIME_NSEC
-	33000: {{"in_acl_id", decodeHex}},      // NF_F_INGRESS_ACL_ID
-	33001: {{"out_acl_id", decodeHex}},     // NF_F_EGRESS_ACL_ID
-	33002: {{"fw_event_ext", decodeHex}},   // NF_F_FW_EXT_EVENT
-	40000: {{"username", decodeString}},    // NF_F_USERNAME
+	33000: {{"in_acl_id", decodeHex}},    // NF_F_INGRESS_ACL_ID
+	33001: {{"out_acl_id", decodeHex}},   // NF_F_EGRESS_ACL_ID
+	33002: {{"fw_event_ext", decodeHex}}, // NF_F_FW_EXT_EVENT
+	40000: {{"username", decodeString}},  // NF_F_USERNAME
 }
 
 // Default field mappings specific to Netflow version 9
@@ -324,100 +324,84 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 		{"anon_stability_class", decodeAnonStabilityClass}, // anonymizationFlags
 		{"anon_flags", decodeAnonFlags},
 	},
-	286: {{"anon_technique", decodeAnonTechnique}}, // anonymizationTechnique
-	287: {{"information_element", decodeUint}},     // informationElementIndex
-	288: {{"p2p", decodeTechnology}},               // p2pTechnology
-	289: {{"tunnel", decodeTechnology}},            // tunnelTechnology
-	290: {{"encryption", decodeTechnology}},        // encryptedTechnology
-	291: { /* IGNORED for parse-ability */ },       // basicList
-	292: { /* IGNORED for parse-ability */ },       // subTemplateList
-	293: { /* IGNORED for parse-ability */ },       // subTemplateMultiList
-	294: {{"bgp_validity_state", decodeUint}},      // bgpValidityState
-	295: {{"ipsec_spi", decodeUint}},               // IPSecSPI
-	296: {{"gre_key", decodeUint}},                 // greKey
-	297: {{"nat_type", decodeIPNatType}},           // natType
-	298: {{"initiator_packets", decodeUint}},       // initiatorPackets
-	299: {{"responder_packets", decodeUint}},       // responderPackets
-	//	30:  {{"", decodeUint}},                        //
+	286: {{"anon_technique", decodeAnonTechnique}},         // anonymizationTechnique
+	287: {{"information_element", decodeUint}},             // informationElementIndex
+	288: {{"p2p", decodeTechnology}},                       // p2pTechnology
+	289: {{"tunnel", decodeTechnology}},                    // tunnelTechnology
+	290: {{"encryption", decodeTechnology}},                // encryptedTechnology
+	291: { /* IGNORED for parse-ability */ },               // basicList
+	292: { /* IGNORED for parse-ability */ },               // subTemplateList
+	293: { /* IGNORED for parse-ability */ },               // subTemplateMultiList
+	294: {{"bgp_validity_state", decodeUint}},              // bgpValidityState
+	295: {{"ipsec_spi", decodeUint}},                       // IPSecSPI
+	296: {{"gre_key", decodeUint}},                         // greKey
+	297: {{"nat_type", decodeIPNatType}},                   // natType
+	298: {{"initiator_packets", decodeUint}},               // initiatorPackets
+	299: {{"responder_packets", decodeUint}},               // responderPackets
+	300: {{"observation_domain_name", decodeString}},       // observationDomainName
+	301: {{"observation_seq_id", decodeUint}},              // selectionSequenceId
+	302: {{"selector_id", decodeUint}},                     // selectorId
+	303: {{"information_elem_id", decodeUint}},             // informationElementId
+	304: {{"selector_algo", decodeSelectorAlgorithm}},      // selectorAlgorithm
+	305: {{"sampling_packet_interval", decodeUint}},        // samplingPacketInterval
+	306: {{"sampling_packet_space", decodeUint}},           // samplingPacketSpace
+	307: {{"sampling_time_interval_us", decodeUint}},       // samplingTimeInterval
+	308: {{"sampling_time_space_us", decodeUint}},          // samplingTimeSpace
+	309: {{"sampling_size", decodeUint}},                   // samplingSize
+	310: {{"sampling_population", decodeUint}},             // samplingPopulation
+	311: {{"sampling_probability", decodeFloat64}},         // samplingProbability
+	312: {{"datalink_frame_size", decodeUint}},             // dataLinkFrameSize
+	313: {{"ip_header_packet_section", decodeHex}},         // ipHeaderPacketSection
+	314: {{"ip_payload_packet_section", decodeHex}},        // ipPayloadPacketSection
+	315: {{"datalink_frame_section", decodeHex}},           // dataLinkFrameSection
+	316: {{"mpls_label_stack_section", decodeHex}},         // mplsLabelStackSection
+	317: {{"mpls_payload_packet_section", decodeHex}},      // mplsPayloadPacketSection
+	318: {{"selector_total_packets_observed", decodeUint}}, // selectorIdTotalPktsObserved
+	319: {{"selector_total_packets_selected", decodeUint}}, // selectorIdTotalPktsSelected
+	320: {{"absolute_error", decodeFloat64}},               // absoluteError
+	321: {{"relative_error", decodeFloat64}},               // relativeError
+	322: {{"event_time", decodeUint}},                      // observationTimeSeconds
+	// 323 - 325: common
+	326: {{"hash_digest", decodeHex}},                         // digestHashValue
+	327: {{"hash_ip_payload_offset", decodeUint}},             // hashIPPayloadOffset
+	328: {{"hash_ip_payload_size", decodeUint}},               // hashIPPayloadSize
+	329: {{"hash_out_range_min", decodeUint}},                 // hashOutputRangeMin
+	330: {{"hash_out_range_max", decodeUint}},                 // hashOutputRangeMax
+	331: {{"hash_selected_range_min", decodeUint}},            // hashSelectedRangeMin
+	332: {{"hash_selected_range_max", decodeUint}},            // hashSelectedRangeMax
+	333: {{"hash_digest_out", decodeBool}},                    // hashDigestOutput
+	334: {{"hash_init_val", decodeUint}},                      // hashInitialiserValue
+	335: {{"selector_name", decodeString}},                    // selectorName
+	336: {{"upper_confidence_interval_limit", decodeFloat64}}, // upperCILimit
+	337: {{"lower_confidence_interval_limit", decodeFloat64}}, // upperCILimit
+	338: {{"confidence_level", decodeFloat64}},                // confidenceLevel
+	// 339 - 346: information element fields, do not map for now
+	347: {{"virtual_station_interface_id", decodeHex}},      // virtualStationInterfaceId
+	348: {{"virtual_station_interface_name", decodeString}}, // virtualStationInterfaceName
+	349: {{"virtual_station_uuid", decodeHex}},              // virtualStationUUID
+	350: {{"virtual_station_name", decodeString}},           // virtualStationName
+	351: {{"l2_segment_id", decodeUint}},                    // layer2SegmentId
+	352: {{"l2_bytes", decodeUint}},                         // layer2OctetDeltaCount
+	353: {{"l2_bytes_total", decodeUint}},                   // layer2OctetTotalCount
+	354: {{"in_unicast_packets_total", decodeUint}},         // ingressUnicastPacketTotalCount
+	355: {{"in_mcast_packets_total", decodeUint}},           // ingressMulticastPacketTotalCount
+	356: {{"in_broadcast_packets_total", decodeUint}},       // ingressBroadcastPacketTotalCount
+	357: {{"out_unicast_packets_total", decodeUint}},        // egressUnicastPacketTotalCount
+	358: {{"out_broadcast_packets_total", decodeUint}},      // egressBroadcastPacketTotalCount
+	359: {{"monitoring_interval_start_ms", decodeUint}},     // monitoringIntervalStartMilliSeconds
+	360: {{"monitoring_interval_end_ms", decodeUint}},       // monitoringIntervalEndMilliSeconds
+	361: {{"port_range_start", decodeUint}},                 // portRangeStart
+	362: {{"port_range_end", decodeUint}},                   // portRangeEnd
+	363: {{"port_range_step_size", decodeUint}},             // portRangeStepSize
+	364: {{"port_range_ports", decodeUint}},                 // portRangeNumPorts
+	365: {{"station_mac", decodeHex}},                       // staMacAddress
+	366: {{"station", decodeIP}},                            // staIPv4Address
+	367: {{"wtp_mac", decodeHex}},                           // wtpMacAddress
+	368: {{"in_interface_type", decodeUint}},                // ingressInterfaceType
+	369: {{"out_interface_type", decodeUint}},               // egressInterfaceType
+	// 37:  {{"", decodeUint}},                                 //
 
-	//	138: {{"observation_point_id", decodeUint}},     // observationPointId
 	/*
-	   :                      {{"", decodeUint}},              // 294
-	   :                              {{"", decodeUint}},              // 295
-	   :                                {{"", decodeUint}},              // 296
-	   :                               {{"", decodeUint}},              // 297
-	   :                      {{"", decodeUint}},              // 298
-	   :                      {{"", decodeUint}},              // 299
-	   observationDomainName:                 {{"", decodeUint}},              // 300
-	   selectionSequenceId:                   {{"", decodeUint}},              // 301
-	   selectorId:                            {{"", decodeUint}},              // 302
-	   informationElementId:                  {{"", decodeUint}},              // 303
-	   selectorAlgorithm:                     {{"", decodeUint}},              // 304
-	   samplingPacketInterval:                {{"", decodeUint}},              // 305
-	   samplingPacketSpace:                   {{"", decodeUint}},              // 306
-	   samplingTimeInterval:                  {{"", decodeUint}},              // 307
-	   samplingTimeSpace:                     {{"", decodeUint}},              // 308
-	   samplingSize:                          {{"", decodeUint}},              // 309
-	   samplingPopulation:                    {{"", decodeUint}},              // 310
-	   samplingProbability:                   {{"", decodeUint}},              // 311
-	   dataLinkFrameSize:                     {{"", decodeUint}},              // 312
-	   ipHeaderPacketSection:                 {{"", decodeUint}},              // 313
-	   ipPayloadPacketSection:                {{"", decodeUint}},              // 314
-	   dataLinkFrameSection:                  {{"", decodeUint}},              // 315
-	   mplsLabelStackSection:                 {{"", decodeUint}},              // 316
-	   mplsPayloadPacketSection:              {{"", decodeUint}},              // 317
-	   selectorIdTotalPktsObserved:           {{"", decodeUint}},              // 318
-	   selectorIdTotalPktsSelected:           {{"", decodeUint}},              // 319
-	   absoluteError:                         {{"", decodeUint}},              // 320
-	   relativeError:                         {{"", decodeUint}},              // 321
-	   observationTimeSeconds:                {{"", decodeUint}},              // 322
-	   observationTimeMilliseconds:           {{"", decodeUint}},              // 323
-	   observationTimeMicroseconds:           {{"", decodeUint}},              // 324
-	   observationTimeNanoseconds:            {{"", decodeUint}},              // 325
-	   digestHashValue:                       {{"", decodeUint}},              // 326
-	   hashIPPayloadOffset:                   {{"", decodeUint}},              // 327
-	   hashIPPayloadSize:                     {{"", decodeUint}},              // 328
-	   hashOutputRangeMin:                    {{"", decodeUint}},              // 329
-	   hashOutputRangeMax:                    {{"", decodeUint}},              // 330
-	   hashSelectedRangeMin:                  {{"", decodeUint}},              // 331
-	   hashSelectedRangeMax:                  {{"", decodeUint}},              // 332
-	   hashDigestOutput:                      {{"", decodeUint}},              // 333
-	   hashInitialiserValue:                  {{"", decodeUint}},              // 334
-	   selectorName:                          {{"", decodeUint}},              // 335
-	   upperCILimit:                          {{"", decodeUint}},              // 336
-	   lowerCILimit:                          {{"", decodeUint}},              // 337
-	   confidenceLevel:                       {{"", decodeUint}},              // 338
-	   informationElementDataType:            {{"", decodeUint}},              // 339
-	   informationElementDescription:         {{"", decodeUint}},              // 340
-	   informationElementName:                {{"", decodeUint}},              // 341
-	   informationElementRangeBegin:          {{"", decodeUint}},              // 342
-	   informationElementRangeEnd:            {{"", decodeUint}},              // 343
-	   informationElementSemantics:           {{"", decodeUint}},              // 344
-	   informationElementUnits:               {{"", decodeUint}},              // 345
-	   privateEnterpriseNumber:               {{"", decodeUint}},              // 346
-	   virtualStationInterfaceId:             {{"", decodeUint}},              // 347
-	   virtualStationInterfaceName:           {{"", decodeUint}},              // 348
-	   virtualStationUUID:                    {{"", decodeUint}},              // 349
-	   virtualStationName:                    {{"", decodeUint}},              // 350
-	   layer2SegmentId:                       {{"", decodeUint}},              // 351
-	   layer2OctetDeltaCount:                 {{"", decodeUint}},              // 352
-	   layer2OctetTotalCount:                 {{"", decodeUint}},              // 353
-	   ingressUnicastPacketTotalCount:        {{"", decodeUint}},              // 354
-	   ingressMulticastPacketTotalCount:      {{"", decodeUint}},              // 355
-	   ingressBroadcastPacketTotalCount:      {{"", decodeUint}},              // 356
-	   egressUnicastPacketTotalCount:         {{"", decodeUint}},              // 357
-	   egressBroadcastPacketTotalCount:       {{"", decodeUint}},              // 358
-	   monitoringIntervalStartMilliSeconds:   {{"", decodeUint}},              // 359
-	   monitoringIntervalEndMilliSeconds:     {{"", decodeUint}},              // 360
-	   portRangeStart:                        {{"", decodeUint}},              // 361
-	   portRangeEnd:                          {{"", decodeUint}},              // 362
-	   portRangeStepSize:                     {{"", decodeUint}},              // 363
-	   portRangeNumPorts:                     {{"", decodeUint}},              // 364
-	   staMacAddress:                         {{"", decodeUint}},              // 365
-	   staIPv4Address:                        {{"", decodeUint}},              // 366
-	   wtpMacAddress:                         {{"", decodeUint}},              // 367
-	   ingressInterfaceType:                  {{"", decodeUint}},              // 368
-	   egressInterfaceType:                   {{"", decodeUint}},              // 369
 	   rtpSequenceNumber:                     {{"", decodeUint}},              // 370
 	   userName:                              {{"", decodeUint}},              // 371
 	   applicationCategoryName:               {{"", decodeUint}},              // 372
