@@ -157,7 +157,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	if len(o.Attributes) > 0 {
 		for i := 0; i < md.Metrics().ResourceMetrics().Len(); i++ {
 			for k, v := range o.Attributes {
-				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().PutString(k, v)
+				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().PutStr(k, v)
 			}
 		}
 	}
