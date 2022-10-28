@@ -264,26 +264,27 @@ func (a *Opensearch) manageTemplate(ctx context.Context) error {
 	return nil
 }
 
-func (a *Opensearch) GetTagKeys(indexName string) (string, []string) {
+func (a *Opensearch) GetReplacementKeys(indexName string, key string, replacement string) (string, []string) {
 	tagKeys := []string{}
-	startTag := strings.Index(indexName, "{{")
+	startKey := "{{" + key
+	startTag := strings.Index(indexName, startKey)
 
 	for startTag >= 0 {
-		endTag := strings.Index(indexName, "}}")
+		endTag := startTag + strings.Index(indexName[startTag:], "}}")
 
 		if endTag < 0 {
 			startTag = -1
 		} else {
-			tagName := indexName[startTag+2 : endTag]
+			tagName := indexName[startTag+len(startKey) : endTag]
 
 			var tagReplacer = strings.NewReplacer(
-				"{{"+tagName+"}}", "%s",
+				startKey+tagName+"}}", replacement,
 			)
 
 			indexName = tagReplacer.Replace(indexName)
-			tagKeys = append(tagKeys, strings.TrimSpace(tagName))
+			tagKeys = append(tagKeys, strings.Trim(strings.TrimSpace(tagName), `"`))
 
-			startTag = strings.Index(indexName, "{{")
+			startTag = strings.Index(indexName, startKey)
 		}
 	}
 
@@ -291,19 +292,6 @@ func (a *Opensearch) GetTagKeys(indexName string) (string, []string) {
 }
 
 func (a *Opensearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
-	if strings.Contains(indexName, "%") {
-		var dateReplacer = strings.NewReplacer(
-			"%Y", eventTime.UTC().Format("2006"),
-			"%y", eventTime.UTC().Format("06"),
-			"%m", eventTime.UTC().Format("01"),
-			"%d", eventTime.UTC().Format("02"),
-			"%H", eventTime.UTC().Format("15"),
-			"%V", getISOWeek(eventTime.UTC()),
-		)
-
-		indexName = dateReplacer.Replace(indexName)
-	}
-
 	tagValues := []interface{}{}
 
 	for _, key := range tagKeys {
@@ -315,7 +303,14 @@ func (a *Opensearch) GetIndexName(indexName string, eventTime time.Time, tagKeys
 		}
 	}
 
-	return fmt.Sprintf(indexName, tagValues...)
+	indexName = fmt.Sprintf(indexName, tagValues...)
+
+	if strings.Contains(indexName, "{{.Time.Format") {
+		updatedIndexName, dateStrArr := a.GetReplacementKeys(indexName, ".Time.Format", "%DATE%")
+		indexName = strings.Replace(updatedIndexName, "%DATE%", eventTime.UTC().Format(dateStrArr[0]), 1)
+	}
+
+	return indexName
 }
 
 func (a *Opensearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
@@ -334,11 +329,6 @@ func (a *Opensearch) getPipelineName(pipelineInput string, tagKeys []string, met
 		return a.DefaultPipeline
 	}
 	return fmt.Sprintf(pipelineInput, tagValues...)
-}
-
-func getISOWeek(eventTime time.Time) string {
-	_, week := eventTime.ISOWeek()
-	return strconv.Itoa(week)
 }
 
 func (a *Opensearch) Close() error {
@@ -371,8 +361,8 @@ func (a *Opensearch) Init() error {
 		a.FloatHandling = "none"
 	}
 
-	a.IndexName, a.tagKeys = a.GetTagKeys(a.IndexName)
-	a.pipelineName, a.pipelineTagKeys = a.GetTagKeys(a.UsePipeline)
+	a.IndexName, a.tagKeys = a.GetReplacementKeys(a.IndexName, ".Tag", "%s")
+	a.pipelineName, a.pipelineTagKeys = a.GetReplacementKeys(a.UsePipeline, "", "%s")
 
 	return nil
 }

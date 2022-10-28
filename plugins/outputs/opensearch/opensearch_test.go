@@ -55,7 +55,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
+		IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
 		Timeout:             config.Duration(time.Second * 5),
 		EnableGzip:          true,
 		ManageTemplate:      true,
@@ -91,7 +91,7 @@ func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
+		IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
 		Timeout:             config.Duration(time.Second * 5),
 		ManageTemplate:      true,
 		TemplateName:        "telegraf",
@@ -108,6 +108,8 @@ func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
 	}
 
 	// Verify that we can connect to Opensearch
+	initErr := e.Init()
+	require.NoError(t, initErr)
 	err := e.Connect()
 	require.NoError(t, err)
 
@@ -134,7 +136,7 @@ func TestConnectAndWriteMetricWithNaNValueNoneIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
+		IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
 		Timeout:             config.Duration(time.Second * 5),
 		ManageTemplate:      true,
 		TemplateName:        "telegraf",
@@ -178,7 +180,7 @@ func TestConnectAndWriteMetricWithNaNValueDropIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
+		IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
 		Timeout:             config.Duration(time.Second * 5),
 		ManageTemplate:      true,
 		TemplateName:        "telegraf",
@@ -245,7 +247,7 @@ func TestConnectAndWriteMetricWithNaNValueReplacementIntegration(t *testing.T) {
 	for _, test := range tests {
 		e := &Opensearch{
 			URLs:                urls,
-			IndexName:           "test-%Y.%m.%d",
+			IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
 			Timeout:             config.Duration(time.Second * 5),
 			ManageTemplate:      true,
 			TemplateName:        "telegraf",
@@ -296,7 +298,7 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:              urls,
-		IndexName:         "test-%Y.%m.%d",
+		IndexName:         `test-{{.Time.Format "2006-01-02"}}`,
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        true,
 		ManageTemplate:    true,
@@ -325,7 +327,7 @@ func TestTemplateManagementIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:              urls,
-		IndexName:         "test-%Y.%m.%d",
+		IndexName:         `test-{{.Time.Format "2006-01-02"}}`,
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        true,
 		ManageTemplate:    true,
@@ -360,7 +362,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:              urls,
-		IndexName:         "{{host}}-%Y.%m.%d",
+		IndexName:         `{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        true,
 		ManageTemplate:    true,
@@ -373,7 +375,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestGetTagKeys(t *testing.T) {
+func TestGetReplacementKeys(t *testing.T) {
 	e := &Opensearch{
 		DefaultTagValue: "none",
 		Log:             testutil.Logger{},
@@ -389,41 +391,34 @@ func TestGetTagKeys(t *testing.T) {
 			"indexname",
 			[]string{},
 		}, {
-			"indexname-%Y",
-			"indexname-%Y",
+			`indexname-{{.Time.Format "2006-01"}}`,
+			`indexname-{{.Time.Format "2006-01"}}`,
 			[]string{},
 		}, {
-			"indexname-%Y-%m",
-			"indexname-%Y-%m",
+			`indexname-{{.Time.Format "2006-01-02"}}`,
+			`indexname-{{.Time.Format "2006-01-02"}}`,
 			[]string{},
 		}, {
-			"indexname-%Y-%m-%d",
-			"indexname-%Y-%m-%d",
-			[]string{},
-		}, {
-			"indexname-%Y-%m-%d-%H",
-			"indexname-%Y-%m-%d-%H",
-			[]string{},
-		}, {
-			"indexname-%y-%m",
-			"indexname-%y-%m",
-			[]string{},
-		}, {
-			"indexname-{{tag1}}-%y-%m",
-			"indexname-%s-%y-%m",
+			`indexname-{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+			`indexname-%s-{{.Time.Format "2006-01-02"}}`,
 			[]string{"tag1"},
 		}, {
-			"indexname-{{tag1}}-{{tag2}}-%y-%m",
-			"indexname-%s-%s-%y-%m",
+			`indexname-{{.Tag "tag1"}}-{{.Tag "tag2"}}-{{.Time.Format "2006-01-02"}}`,
+			`indexname-%s-%s-{{.Time.Format "2006-01-02"}}`,
 			[]string{"tag1", "tag2"},
 		}, {
-			"indexname-{{tag1}}-{{tag2}}-{{tag3}}-%y-%m",
-			"indexname-%s-%s-%s-%y-%m",
+			`indexname-{{.Tag "tag1"}}-{{.Tag "tag2"}}-{{.Tag "tag3"}}-{{.Time.Format "2006-01-02"}}`,
+			`indexname-%s-%s-%s-{{.Time.Format "2006-01-02"}}`,
+			[]string{"tag1", "tag2", "tag3"},
+		},
+		{
+			`indexname-{{.Tag "tag1"}}-{{.Tag "tag2"}}-{{.Time.Format "2006-01-02"}}-{{.Tag "tag3"}}`,
+			`indexname-%s-%s-{{.Time.Format "2006-01-02"}}-%s`,
 			[]string{"tag1", "tag2", "tag3"},
 		},
 	}
 	for _, test := range tests {
-		indexName, tagKeys := e.GetTagKeys(test.IndexName)
+		indexName, tagKeys := e.GetReplacementKeys(test.IndexName, ".Tag", "%s")
 		if indexName != test.ExpectedIndexName {
 			t.Errorf("Expected indexname %s, got %s\n", test.ExpectedIndexName, indexName)
 		}
@@ -457,64 +452,43 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
-			"indexname-%Y",
+			`indexname-{{.Time.Format "2006"}}`,
 			"indexname-2014",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
-			"indexname-%Y-%m",
+			`indexname-{{.Time.Format "2006-01"}}`,
 			"indexname-2014-12",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
-			"indexname-%Y-%m-%d",
+			`indexname-{{.Time.Format "2006-01-02"}}`,
 			"indexname-2014-12-01",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%Y-%m-%d-%H",
-			"indexname-2014-12-01-23",
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%y-%m",
-			"indexname-14-12",
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%Y-%V",
-			"indexname-2014-49",
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{"tag1"},
-			"indexname-%s-%y-%m",
-			"indexname-value1-14-12",
+			`indexname-%s-{{.Time.Format "2006-01"}}`,
+			"indexname-value1-2014-12",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{"tag1", "tag2"},
-			"indexname-%s-%s-%y-%m",
-			"indexname-value1-value2-14-12",
+			`indexname-%s-%s-{{.Time.Format "2006-01"}}`,
+			"indexname-value1-value2-2014-12",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{"tag1", "tag2", "tag3"},
-			"indexname-%s-%s-%s-%y-%m",
-			"indexname-value1-value2-none-14-12",
+			`indexname-%s-%s-%s-{{.Time.Format "2006-01"}}`,
+			"indexname-value1-value2-none-2014-12",
 		},
 	}
 	for _, test := range tests {
@@ -531,7 +505,7 @@ func TestGetPipelineName(t *testing.T) {
 		DefaultPipeline: "myDefaultPipeline",
 		Log:             testutil.Logger{},
 	}
-	e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+	e.pipelineName, e.pipelineTagKeys = e.GetReplacementKeys(e.UsePipeline, "", "%s")
 
 	tests := []struct {
 		EventTime       time.Time
@@ -573,7 +547,7 @@ func TestGetPipelineName(t *testing.T) {
 	e = &Opensearch{
 		Log: testutil.Logger{},
 	}
-	e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+	e.pipelineName, e.pipelineTagKeys = e.GetReplacementKeys(e.UsePipeline, "", "%s")
 
 	for _, test := range tests {
 		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
@@ -662,7 +636,7 @@ func TestPipelineConfigs(t *testing.T) {
 
 	for _, test := range tests {
 		e := test.Elastic
-		e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+		e.pipelineName, e.pipelineTagKeys = e.GetReplacementKeys(e.UsePipeline, "", "%s")
 		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
 		require.Equal(t, test.Expected, pipelineName)
 	}
@@ -689,13 +663,14 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:           urls,
-		IndexName:      "{{host}}-%Y.%m.%d",
+		IndexName:      `{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     true,
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
 	}
 
+	e.IndexName, e.tagKeys = e.GetReplacementKeys(e.IndexName, ".Tag", "%s")
 	err := e.Connect()
 	require.NoError(t, err)
 
@@ -723,13 +698,14 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:           urls,
-		IndexName:      "{{host}}-%Y.%m.%d",
+		IndexName:      `{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     false,
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
 	}
 
+	e.IndexName, e.tagKeys = e.GetReplacementKeys(e.IndexName, ".Tag", "%s")
 	err := e.Connect()
 	require.NoError(t, err)
 
@@ -757,7 +733,7 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:            urls,
-		IndexName:       "{{host}}-%Y.%m.%d",
+		IndexName:       `{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:         config.Duration(time.Second * 5),
 		EnableGzip:      false,
 		ManageTemplate:  false,
@@ -765,6 +741,7 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 		AuthBearerToken: "0123456789abcdef",
 	}
 
+	e.IndexName, e.tagKeys = e.GetReplacementKeys(e.IndexName, ".Tag", "%s")
 	err := e.Connect()
 	require.NoError(t, err)
 
