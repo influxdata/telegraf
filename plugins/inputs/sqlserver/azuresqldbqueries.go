@@ -27,9 +27,9 @@ SELECT TOP(1)
 	,cast([max_worker_percent] as float) as [max_worker_percent]
 	,cast([max_session_percent] as float) as [max_session_percent]
 	,[dtu_limit]
-	,cast([avg_login_rate_percent] as float) as [avg_login_rate_percent]  
+	,cast([avg_login_rate_percent] as float) as [avg_login_rate_percent]
 	,[end_time]
-	,cast([avg_instance_memory_percent] as float) as [avg_instance_memory_percent] 
+	,cast([avg_instance_memory_percent] as float) as [avg_instance_memory_percent]
 	,cast([avg_instance_cpu_percent] as float) as [avg_instance_cpu_percent]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM
@@ -82,7 +82,7 @@ SELECT
 	,[volume_pfs_iops]
 	,[volume_type_pfs_iops]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
-FROM 
+FROM
 	sys.dm_user_db_resource_governance WITH (NOLOCK);
 `
 
@@ -177,39 +177,39 @@ SELECT
 		WHEN (vfs.[database_id] = 0) THEN 'RBPEX'
 		ELSE b.[physical_filename]
 	 END as [physical_filename]
-	,CASE 
-		WHEN vfs.[file_id] = 2 THEN 'LOG' 
-		ELSE 'DATA' 
+	,CASE
+		WHEN vfs.[file_id] = 2 THEN 'LOG'
+		ELSE 'DATA'
 	END AS [file_type]
 	,ISNULL([size],0)/128 AS [current_size_mb]
 	,ISNULL(FILEPROPERTY(b.[logical_filename],'SpaceUsed')/128,0) as [space_used_mb]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
-FROM 
+FROM
 	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 	-- needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id
 LEFT OUTER join	(
-	SELECT 
+	SELECT
 		 DB_ID() as [database_id]
 		,[file_id]
 		,[logical_filename]= [name] COLLATE SQL_Latin1_General_CP1_CI_AS
 		,[physical_filename] = [physical_name] COLLATE SQL_Latin1_General_CP1_CI_AS
-		,[size] 
+		,[size]
 	FROM sys.database_files
-	WHERE 
+	WHERE
 		[type] <> 2
 	UNION ALL
-	SELECT 
+	SELECT
 		 2 as [database_id]
 		,[file_id]
-		,[logical_filename] = [name] 
+		,[logical_filename] = [name]
 		,[physical_filename] = [physical_name]
 		,[size]
 	FROM tempdb.sys.database_files
-) b 
+) b
 	ON
-		b.[database_id] = vfs.[database_id] 
+		b.[database_id] = vfs.[database_id]
 		AND b.[file_id] = vfs.[file_id]
-WHERE 
+WHERE
 	vfs.[database_id] IN (DB_ID(),0,2)
 `
 
@@ -220,7 +220,7 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-SELECT	
+SELECT
 	 'sqlserver_server_properties' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,DB_NAME() as [database_name]
@@ -233,21 +233,24 @@ SELECT
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE CAST(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)
 	END AS [total_storage_mb]
-	,CASE
+	,(SELECT SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT) / 128) FROM sys.database_files WHERE type_desc = 'ROWS') AS used_space_data_mb
+	 ,CASE
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE (
-			cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024) -
-			(select SUM([size]/128 - CAST(FILEPROPERTY(name, 'SpaceUsed') AS int)/128) FROM sys.database_files)
+			SELECT (CAST(DATABASEPROPERTYEX(DB_NAME(), 'MaxSizeInBytes') AS BIGINT) / (1024 * 1024) - SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS  INT) / 128))
+			FROM sys.database_files
+			WHERE type_desc = 'ROWS'
 		)
-	END AS [available_storage_mb]
+	  END AS [available_storage_mb]
+	 ,(SELECT SUM(max_size) * 8 / (1024 * 1024) FROM sys.database_files WHERE type_desc = 'LOG') AS total_log_mb
 	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
-	FROM sys.[databases] AS d
-	-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
-	CROSS JOIN sys.[database_service_objectives] AS slo
-	WHERE
-		d.[name] = DB_NAME()
-		AND slo.[database_id] = DB_ID();
+FROM sys.[databases] AS d
+-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
+CROSS JOIN sys.[database_service_objectives] AS slo
+WHERE
+	d.[name] = DB_NAME()
+	AND slo.[database_id] = DB_ID();
 `
 
 const sqlAzureDBOsWaitStats = `
@@ -267,7 +270,7 @@ SELECT
 	,[signal_wait_time_ms]
 	,[max_wait_time_ms]
 	,[waiting_tasks_count]
-	,CASE 
+	,CASE
 		WHEN ws.[wait_type] LIKE 'SOS_SCHEDULER_YIELD' then 'CPU'
 		WHEN ws.[wait_type] = 'THREADPOOL' THEN 'Worker Thread'
 		WHEN ws.[wait_type] LIKE 'LCK[_]%' THEN 'Lock'
@@ -277,7 +280,7 @@ SELECT
 		WHEN ws.[wait_type] LIKE 'RESOURCE_SEMAPHORE_QUERY_COMPILE%' THEN 'Compilation'
 		WHEN ws.[wait_type] LIKE 'CLR[_]%' or ws.[wait_type] like 'SQLCLR%' THEN 'SQL CLR'
 		WHEN ws.[wait_type] LIKE 'DBMIRROR_%' THEN 'Mirroring'
-		WHEN ws.[wait_type] LIKE 'DTC[_]%' or ws.[wait_type] LIKE 'DTCNEW%' or ws.[wait_type] LIKE 'TRAN_%' 
+		WHEN ws.[wait_type] LIKE 'DTC[_]%' or ws.[wait_type] LIKE 'DTCNEW%' or ws.[wait_type] LIKE 'TRAN_%'
      		or ws.[wait_type] LIKE 'XACT%' or ws.[wait_type] like 'MSQL_XACT%' THEN 'Transaction'
 		WHEN ws.[wait_type] LIKE 'SLEEP[_]%'
 			or ws.[wait_type] IN (
@@ -294,7 +297,7 @@ SELECT
 			'WRITELOG','LOGBUFFER','LOGMGR_RESERVE_APPEND',
 			'LOGMGR_FLUSH', 'LOGMGR_PMM_LOG')  THEN 'Tran Log IO'
 		WHEN ws.[wait_type] LIKE 'LOG_RATE%' then 'Log Rate Governor'
-		WHEN ws.[wait_type] LIKE 'HADR_THROTTLE[_]%' 
+		WHEN ws.[wait_type] LIKE 'HADR_THROTTLE[_]%'
 			or ws.[wait_type] = 'THROTTLE_LOG_RATE_LOG_STORAGE' THEN 'HADR Log Rate Governor'
 		WHEN ws.[wait_type] LIKE 'RBIO_RG%' or ws.[wait_type] like 'WAIT_RBIO_RG%' then 'VLDB Log Rate Governor'
 		WHEN ws.[wait_type] LIKE 'RBIO[_]%' or ws.[wait_type] like 'WAIT_RBIO[_]%' then 'VLDB RBIO'
@@ -310,16 +313,16 @@ SELECT
 			'RESERVED_MEMORY_ALLOCATION_EXT', 'MEMORY_GRANT_UPDATE')  THEN 'Memory'
 		WHEN ws.[wait_type] IN ('WAITFOR','WAIT_FOR_RESULTS')  THEN 'User Wait'
 		WHEN ws.[wait_type] LIKE 'HADR[_]%' or ws.[wait_type] LIKE 'PWAIT_HADR%'
-			or ws.[wait_type] LIKE 'REPLICA[_]%' or ws.[wait_type] LIKE 'REPL_%' 
+			or ws.[wait_type] LIKE 'REPLICA[_]%' or ws.[wait_type] LIKE 'REPL_%'
 			or ws.[wait_type] LIKE 'SE_REPL[_]%'
-			or ws.[wait_type] LIKE 'FCB_REPLICA%' THEN 'Replication' 
-		WHEN ws.[wait_type] LIKE 'SQLTRACE[_]%' 
+			or ws.[wait_type] LIKE 'FCB_REPLICA%' THEN 'Replication'
+		WHEN ws.[wait_type] LIKE 'SQLTRACE[_]%'
 			or ws.[wait_type] IN (
 				'TRACEWRITE', 'SQLTRACE_LOCK', 'SQLTRACE_FILE_BUFFER', 'SQLTRACE_FILE_WRITE_IO_COMPLETION',
 				'SQLTRACE_FILE_READ_IO_COMPLETION', 'SQLTRACE_PENDING_BUFFER_WRITERS', 'SQLTRACE_SHUTDOWN',
 				'QUERY_TRACEOUT', 'TRACE_EVTNOTIF') THEN 'Tracing'
 		WHEN ws.[wait_type] IN (
-			'FT_RESTART_CRAWL', 'FULLTEXT GATHERER', 'MSSEARCH', 'FT_METADATA_MUTEX', 
+			'FT_RESTART_CRAWL', 'FULLTEXT GATHERER', 'MSSEARCH', 'FT_METADATA_MUTEX',
   			'FT_IFTSHC_MUTEX', 'FT_IFTSISM_MUTEX', 'FT_IFTS_RWLOCK', 'FT_COMPROWSET_RWLOCK',
   			'FT_MASTER_MERGE', 'FT_PROPERTYLIST_CACHE', 'FT_MASTER_MERGE_COORDINATOR',
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
@@ -384,7 +387,7 @@ SELECT
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 GROUP BY
 	mc.[type]
-HAVING 
+HAVING
 	SUM(mc.[pages_kb]) >= 1024
 OPTION(RECOMPILE);
 `
@@ -420,7 +423,7 @@ WITH PerfCounters AS (
 		OR RTRIM(spi.[object_name]) LIKE '%:Advanced Analytics')
 		AND TRY_CONVERT([uniqueidentifier], spi.[instance_name]) IS NOT NULL -- for cloud only
 			THEN ISNULL(d.[name],RTRIM(spi.instance_name)) -- Elastic Pools counters exist for all databases but sys.databases only has current DB value
-		WHEN 
+		WHEN
 			RTRIM([object_name]) LIKE '%:Availability Replica'
 			AND TRY_CONVERT([uniqueidentifier], spi.[instance_name]) IS NOT NULL -- for cloud only
 				THEN ISNULL(d.[name],RTRIM(spi.[instance_name])) + RTRIM(SUBSTRING(spi.[instance_name], 37, LEN(spi.[instance_name])))
@@ -428,7 +431,7 @@ WITH PerfCounters AS (
 	END AS [instance_name]
 	,CAST(spi.[cntr_value] AS BIGINT) AS [cntr_value]
 	,spi.[cntr_type]
-	FROM sys.dm_os_performance_counters AS spi 
+	FROM sys.dm_os_performance_counters AS spi
 	LEFT JOIN sys.databases AS d
 		ON LEFT(spi.[instance_name], 36) -- some instance_name values have an additional identifier appended after the GUID
 		= CASE
@@ -549,15 +552,15 @@ WITH PerfCounters AS (
 
 INSERT INTO @PCounters select * from PerfCounters
 
-SELECT 
+SELECT
 	'sqlserver_performance' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,DB_NAME() as [database_name]
 	,pc.[object_name] AS [object]
 	,pc.[counter_name] AS [counter]
-	,CASE pc.[instance_name] 
-		WHEN '_Total' THEN 'Total' 
-		ELSE ISNULL(pc.[instance_name],'') 
+	,CASE pc.[instance_name]
+		WHEN '_Total' THEN 'Total'
+		ELSE ISNULL(pc.[instance_name],'')
 	END AS [instance]
 	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
@@ -599,7 +602,7 @@ SELECT
 	,replica_updateability
 	,[session_db_name],[open_transaction]
 FROM (
-	SELECT	
+	SELECT
 		'sqlserver_requests' AS [measurement]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 		,DB_NAME() as [database_name]
@@ -622,18 +625,18 @@ FROM (
 		,s.[login_name]
 		,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
 		,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
-			WHEN 0 THEN '0-Read Committed' 
-			WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
-			WHEN 2 THEN '2-Read Committed' 
-			WHEN 3 THEN '3-Repeatable Read' 
-			WHEN 4 THEN '4-Serializable' 
-			WHEN 5 THEN '5-Snapshot' 
-			ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + '-UNKNOWN' 
+			WHEN 0 THEN '0-Read Committed'
+			WHEN 1 THEN '1-Read Uncommitted (NOLOCK)'
+			WHEN 2 THEN '2-Read Committed'
+			WHEN 3 THEN '3-Repeatable Read'
+			WHEN 4 THEN '4-Serializable'
+			WHEN 5 THEN '5-Snapshot'
+			ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + '-UNKNOWN'
 		END, 30) AS [transaction_isolation_level]
 		,r.[granted_query_memory] AS [granted_query_memory_pages]
 		,r.[percent_complete]
 		,SUBSTRING(
-			qt.[text], 
+			qt.[text],
 			r.[statement_start_offset] / 2 + 1,
 			(CASE WHEN r.[statement_end_offset] = -1
 				THEN DATALENGTH(qt.[text])
@@ -649,7 +652,7 @@ FROM (
 		,s.[is_user_process]
 		,[blocking_or_blocked] = COUNT(*) OVER(PARTITION BY ISNULL(NULLIF(r.[blocking_session_id], 0),s.[session_id]))
 	FROM sys.dm_exec_sessions AS s
-	LEFT OUTER JOIN sys.dm_exec_requests AS r 
+	LEFT OUTER JOIN sys.dm_exec_requests AS r
 		ON s.[session_id] = r.[session_id]
 	OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
 ) AS data
@@ -661,8 +664,8 @@ WHERE
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
 		)
-		AND [session_id] <> @@SPID		
-	)  
+		AND [session_id] <> @@SPID
+	)
 OPTION(MAXDOP 1);
 `
 
