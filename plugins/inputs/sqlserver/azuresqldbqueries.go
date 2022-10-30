@@ -234,14 +234,14 @@ SELECT
 		ELSE CAST(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)
 	END AS [total_storage_mb]
 	,(SELECT SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT) / 128) FROM sys.database_files WHERE type_desc = 'ROWS') AS used_space_data_mb
-	 ,CASE
+	,CASE
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE (
 			SELECT (CAST(DATABASEPROPERTYEX(DB_NAME(), 'MaxSizeInBytes') AS BIGINT) / (1024 * 1024) - SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS  INT) / 128))
 			FROM sys.database_files
 			WHERE type_desc = 'ROWS'
 		)
-	  END AS [available_storage_mb]
+	 END AS [available_storage_mb]
 	 ,(SELECT SUM(max_size) * 8 / (1024 * 1024) FROM sys.database_files WHERE type_desc = 'LOG') AS total_log_mb
 	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
