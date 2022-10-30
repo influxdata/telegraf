@@ -233,35 +233,24 @@ SELECT
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE CAST(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)
 	END AS [total_storage_mb]
-	,CASE
-		WHEN slo.[edition] = 'Hyperscale' then NULL
-		ELSE (SELECT SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT) / 128) FROM sys.database_files WHERE type_desc = 'ROWS')
-	 END AS used_space_data_mb
+	,(SELECT SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT) / 128) FROM sys.database_files WHERE type_desc = 'ROWS') AS used_space_data_mb
 	 ,CASE
-		WHEN slo.[edition] = 'Hyperscale' then NULL
-		ELSE (SELECT total_log_size_in_bytes / (1024 * 1024) FROM sys.dm_db_log_space_usage)
-	 END AS total_log_mb
-	 ,CASE
-		WHEN slo.[edition] = 'Hyperscale' then NULL
-		ELSE (SELECT used_log_space_in_bytes / (1024 * 1024) FROM sys.dm_db_log_space_usage)
-	 END AS used_space_log_mb
-	/*
-	,CASE
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE (
-			cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024) -
-			(select SUM([size]/128 - CAST(FILEPROPERTY(name, 'SpaceUsed') AS int)/128) FROM sys.database_files)
+			SELECT (CAST(DATABASEPROPERTYEX(DB_NAME(), 'MaxSizeInBytes') AS BIGINT) / (1024 * 1024) - SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS  INT) / 128))
+			FROM sys.database_files
+			WHERE type_desc = 'ROWS'
 		)
-	END AS [available_storage_mb]
-	*/
+	  END AS [available_storage_mb]
+	 ,(SELECT SUM(max_size) * 8 / (1024 * 1024) FROM sys.database_files WHERE type_desc = 'LOG') AS total_log_mb
 	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
-	FROM sys.[databases] AS d
-	-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
-	CROSS JOIN sys.[database_service_objectives] AS slo
-	WHERE
-		d.[name] = DB_NAME()
-		AND slo.[database_id] = DB_ID();
+FROM sys.[databases] AS d
+-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
+CROSS JOIN sys.[database_service_objectives] AS slo
+WHERE
+	d.[name] = DB_NAME()
+	AND slo.[database_id] = DB_ID();
 `
 
 const sqlAzureDBOsWaitStats = `
