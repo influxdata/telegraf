@@ -109,9 +109,8 @@ version:
 
 .PHONY: versioninfo
 versioninfo:
-	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
-	go run scripts/generate_versioninfo/main.go; \
-	go generate cmd/telegraf/telegraf_windows.go; \
+	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
+	go generate cmd/telegraf/telegraf_windows.go
 
 build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
@@ -224,6 +223,8 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf cmd/telegraf/resource.syso
+	rm -rf cmd/telegraf/versioninfo.json
 	rm -rf tools/custom_builder/custom_builder
 	rm -rf tools/custom_builder/custom_builder.exe
 	rm -rf tools/readme_config_includer/generator
@@ -337,6 +338,11 @@ package: docs $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
+	if [ "$(suffix $@)" = ".zip" ]; then \
+		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+		go generate cmd/telegraf/telegraf_windows.go; \
+	fi
+
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
 

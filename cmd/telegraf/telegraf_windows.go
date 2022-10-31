@@ -1,6 +1,6 @@
 //go:build windows
 
-//go:generate goversioninfo -icon=../../assets/windows/tiger.ico
+//go:generate ../../scripts/windows-gen-syso.sh $GOARCH
 
 package main
 
