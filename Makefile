@@ -316,7 +316,7 @@ i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gz i386.rpm
 .PHONY: i386
 i386:
 	@ echo $(i386)
-windows += windows_i386.zip windows_amd64.zip
+windows += windows_i386.zip windows_amd64.zip windows_arm64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
@@ -443,6 +443,9 @@ freebsd_armv7.tar.gz: export GOARM := 7
 windows_amd64.zip: export GOOS := windows
 windows_amd64.zip: export GOARCH := amd64
 
+windows_arm64.zip: export GOOS := windows
+windows_arm64.zip: export GOARCH := arm64
+
 darwin_amd64.tar.gz: export GOOS := darwin
 darwin_amd64.tar.gz: export GOARCH := amd64
 
@@ -452,11 +455,11 @@ darwin_arm64.tar.gz: export GOARCH := arm64
 windows_i386.zip: export GOOS := windows
 windows_i386.zip: export GOARCH := 386
 
-windows_i386.zip windows_amd64.zip: export prefix =
-windows_i386.zip windows_amd64.zip: export bindir = $(prefix)
-windows_i386.zip windows_amd64.zip: export sysconfdir = $(prefix)
-windows_i386.zip windows_amd64.zip: export localstatedir = $(prefix)
-windows_i386.zip windows_amd64.zip: export EXEEXT := .exe
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export prefix =
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export bindir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export sysconfdir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export localstatedir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 
 %.deb: export pkg := deb
 %.deb: export prefix := /usr
