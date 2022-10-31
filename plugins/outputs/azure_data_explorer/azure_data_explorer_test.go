@@ -20,9 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
-
 func TestWrite(t *testing.T) {
 	testCases := []struct {
 		name               string
@@ -179,11 +176,11 @@ func TestCreateAzureDataExplorerTable(t *testing.T) {
 		log.SetOutput(os.Stderr)
 	}()
 
-	plugin.createAzureDataExplorerTable(context.Background(), "test1")
+	err := plugin.createAzureDataExplorerTable(context.Background(), "test1")
 
 	output := buf.String()
 
-	if !strings.Contains(output, "skipped table creation") {
+	if err == nil && !strings.Contains(output, "skipped table creation") {
 		t.Logf("FAILED : TestCreateAzureDataExplorerTable:  Should have skipped table creation.")
 		t.Fail()
 	}
@@ -316,11 +313,11 @@ func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...inge
 	return &ingest.Result{}, nil
 }
 
-func (m *fakeIngestor) FromFile(ctx context.Context, fPath string, options ...ingest.FileOption) (*ingest.Result, error) {
+func (f *fakeIngestor) FromFile(ctx context.Context, fPath string, options ...ingest.FileOption) (*ingest.Result, error) {
 	return &ingest.Result{}, nil
 }
 
-func (m *fakeIngestor) Close() error {
+func (f *fakeIngestor) Close() error {
 	return nil
 }
 
