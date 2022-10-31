@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -1405,9 +1404,8 @@ func TestParse(t *testing.T) {
 
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
-	folders, err := ioutil.ReadDir("testcases")
+	folders, err := os.ReadDir("testcases")
 	require.NoError(t, err)
-	// Make sure testdata contains data
 	require.NotEmpty(t, folders)
 
 	// Register the plugin
