@@ -57,7 +57,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## the plugin will try infinite number of times.
   # reconnection_attempts = 0
   ## Time to wait between reconnection attempts.
-  # reconnection_wait_time = "100ms"
+  # reconnection_wait_time = "30s"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
