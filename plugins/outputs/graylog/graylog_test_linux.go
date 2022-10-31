@@ -23,8 +23,8 @@ import (
 
 func TestWriteUDP(t *testing.T) {
 	tests := []struct {
-		name     string
-		instance Graylog
+		name              string
+		namefieldnoprefix bool
 	}{
 		{
 			name: "default without scheme",
@@ -33,42 +33,31 @@ func TestWriteUDP(t *testing.T) {
 			name: "UDP",
 		},
 		{
-			name: "UDP non-standard name field",
-			instance: Graylog{
-				NameFieldNoPrefix: true,
-			},
+			name:              "UDP non-standard name field",
+			namefieldnoprefix: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
-			wg.Add(1)
-			address := make(chan string, 1)
-			errs := make(chan error)
-			go UDPServer(t, &wg, &tt.instance, address, errs)
-			require.NoError(t, <-errs)
-
-			i := tt.instance
-			i.Servers = []string{fmt.Sprintf("udp://%s", <-address)}
-			err := i.Connect()
-			require.NoError(t, err)
-			defer i.Close()
+			address := UDPServer(t, &wg, tt.namefieldnoprefix)
+			plugin := Graylog{
+				NameFieldNoPrefix: tt.namefieldnoprefix,
+				Servers:           []string{"udp://" + address},
+			}
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 			defer wg.Wait()
 
 			metrics := testutil.MockMetrics()
 
 			// UDP scenario:
 			// 4 messages are send
-
-			err = i.Write(metrics)
-			require.NoError(t, err)
-			err = i.Write(metrics)
-			require.NoError(t, err)
-			err = i.Write(metrics)
-			require.NoError(t, err)
-			err = i.Write(metrics)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
 		})
 	}
 }
@@ -148,17 +137,9 @@ func TestWriteTCP(t *testing.T) {
 
 type GelfObject map[string]interface{}
 
-func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan string, errs chan error) {
+func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string {
 	udpServer, err := net.ListenPacket("udp", "127.0.0.1:0")
-	errs <- err
-	if err != nil {
-		return
-	}
-
-	// Send the address with the random port to the channel for the graylog instance to use it
-	address <- udpServer.LocalAddr().String()
-	defer udpServer.Close()
-	defer wg.Done()
+	require.NoError(t, err)
 
 	recv := func() error {
 		bufR := make([]byte, 1024)
@@ -189,7 +170,7 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan s
 			return err
 		}
 		require.Equal(t, obj["short_message"], "telegraf")
-		if config.NameFieldNoPrefix {
+		if namefieldnoprefix {
 			require.Equal(t, obj["name"], "test1")
 		} else {
 			require.Equal(t, obj["_name"], "test1")
@@ -200,11 +181,20 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan s
 		return nil
 	}
 
-	// in UDP scenario all 4 messages are received
-	require.NoError(t, recv())
-	require.NoError(t, recv())
-	require.NoError(t, recv())
-	require.NoError(t, recv())
+	// Send the address with the random port to the channel for the graylog instance to use it
+	address := udpServer.LocalAddr().String()
+	wg.Add(1)
+	go func() {
+		defer udpServer.Close()
+		defer wg.Done()
+
+		// in UDP scenario all 4 messages are received
+		require.NoError(t, recv())
+		require.NoError(t, recv())
+		require.NoError(t, recv())
+		require.NoError(t, recv())
+	}()
+	return address
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address chan string, errs chan error) {
