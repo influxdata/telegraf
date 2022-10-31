@@ -727,11 +727,13 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 
 func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 	tests := []struct {
-		filename      string
+		name          string
+		filename      []string
 		expectedOrder []string
 	}{
 		{
-			filename: "multiple_processors.toml",
+			name:     "Test the order of multiple unique processosr",
+			filename: []string{"multiple_processors.toml"},
 			expectedOrder: []string{
 				"processor",
 				"parser_test",
@@ -740,7 +742,8 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 			},
 		},
 		{
-			filename: "multiple_processors_simple_order.toml",
+			name:     "Test using a single 'order' configuration",
+			filename: []string{"multiple_processors_simple_order.toml"},
 			expectedOrder: []string{
 				"processor",
 				"parser_test",
@@ -749,27 +752,52 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 			},
 		},
 		{
-			filename: "multiple_processors_messy_order.toml",
+			name:     "Test using multiple 'order' configurations",
+			filename: []string{"multiple_processors_messy_order.toml"},
 			expectedOrder: []string{
 				"processor",
 				"processor_parser",
 				"processor_parser",
 				"processor_parserfunc",
 				"parser_test",
+				"processor_parserfunc",
+			},
+		},
+		{
+			name: "Test loading multiple configuration files",
+			filename: []string{
+				"multiple_processors.toml",
+				"multiple_processors_simple_order.toml",
+			},
+			expectedOrder: []string{
+				"processor",
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+				"processor",
+				"parser_test",
+				"processor_parser",
 				"processor_parserfunc",
 			},
 		},
 	}
 
 	for _, test := range tests {
-		c := NewConfig()
-		require.NoError(t, c.LoadConfig(filepath.Join("./testdata", test.filename)))
+		t.Run(test.name, func(t *testing.T) {
+			c := NewConfig()
+			for _, f := range test.filename {
+				require.NoError(t, c.LoadConfig(filepath.Join("./testdata", f)))
+			}
 
-		require.Equal(t, len(test.expectedOrder), len(c.Processors))
+			require.Equal(t, len(test.expectedOrder), len(c.Processors))
 
-		for i, p := range c.Processors {
-			require.Equal(t, p.Config.Name, test.expectedOrder[i])
-		}
+			var order []string
+			for _, p := range c.Processors {
+				order = append(order, p.Config.Name)
+			}
+
+			require.Equal(t, test.expectedOrder, order)
+		})
 	}
 }
 

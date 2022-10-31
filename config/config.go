@@ -439,6 +439,9 @@ func (c *Config) LoadConfigData(data []byte) error {
 		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
 	}
 
+	prevProcessors := c.Processors
+	c.Processors = models.RunningProcessors{}
+
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
@@ -538,6 +541,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if len(c.Processors) > 1 {
 		sort.Sort(c.Processors)
 	}
+
+	c.Processors = append(prevProcessors, c.Processors...)
 
 	return nil
 }
