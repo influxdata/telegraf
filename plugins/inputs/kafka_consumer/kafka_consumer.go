@@ -98,7 +98,7 @@ func (k *KafkaConsumer) Init() error {
 	// Kafka version 0.10.2.0 is required for consumer groups.
 	cfg.Version = sarama.V0_10_2_0
 
-	if err := k.SetConfig(cfg); err != nil {
+	if err := k.SetConfig(cfg, k.Log); err != nil {
 		return fmt.Errorf("SetConfig: %w", err)
 	}
 

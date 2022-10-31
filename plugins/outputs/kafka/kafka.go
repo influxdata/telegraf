@@ -145,7 +145,7 @@ func (k *Kafka) Init() error {
 	}
 	config := sarama.NewConfig()
 
-	if err := k.SetConfig(config); err != nil {
+	if err := k.SetConfig(config, k.Log); err != nil {
 		return err
 	}
 

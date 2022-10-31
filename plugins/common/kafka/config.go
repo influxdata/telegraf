@@ -17,10 +17,10 @@ type ReadConfig struct {
 }
 
 // SetConfig on the sarama.Config object from the ReadConfig struct.
-func (k *ReadConfig) SetConfig(config *sarama.Config) error {
+func (k *ReadConfig) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 	config.Consumer.Return.Errors = true
 
-	return k.Config.SetConfig(config)
+	return k.Config.SetConfig(config, log)
 }
 
 // WriteConfig for kafka clients meaning to write to kafka
@@ -34,7 +34,7 @@ type WriteConfig struct {
 }
 
 // SetConfig on the sarama.Config object from the WriteConfig struct.
-func (k *WriteConfig) SetConfig(config *sarama.Config) error {
+func (k *WriteConfig) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 	config.Producer.Return.Successes = true
 	config.Producer.Idempotent = k.IdempotentWrites
 	config.Producer.Retry.Max = k.MaxRetry
@@ -45,7 +45,7 @@ func (k *WriteConfig) SetConfig(config *sarama.Config) error {
 	if config.Producer.Idempotent {
 		config.Net.MaxOpenRequests = 1
 	}
-	return k.Config.SetConfig(config)
+	return k.Config.SetConfig(config, log)
 }
 
 // Config common to all Kafka clients.
@@ -62,8 +62,6 @@ type Config struct {
 	MetadataRetryType        string        `toml:"metadata_retry_type"`
 	MetadataRetryBackoff     time.Duration `toml:"metadata_retry_backoff"`
 	MetadataRetryMaxDuration time.Duration `toml:"metadata_retry_max_duration"`
-
-	Log telegraf.Logger `toml:"-"`
 
 	// Disable full metadata fetching
 	MetadataFull *bool `toml:"metadata_full"`
@@ -82,7 +80,7 @@ func makeBackoffFunc(backoff, maxDuration time.Duration) BackoffFunc {
 }
 
 // SetConfig on the sarama.Config object from the Config struct.
-func (k *Config) SetConfig(config *sarama.Config) error {
+func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 	if k.Version != "" {
 		version, err := sarama.ParseKafkaVersion(k.Version)
 		if err != nil {
@@ -140,7 +138,7 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 	case "exponential":
 		if k.MetadataRetryBackoff != 0 {
 			k.MetadataRetryBackoff = 250 * time.Millisecond
-			k.Log.Warnf("metadata_retry_backoff is 0, using %s", k.MetadataRetryBackoff)
+			log.Warnf("metadata_retry_backoff is 0, using %s", k.MetadataRetryBackoff)
 		}
 		config.Metadata.Retry.BackoffFunc = makeBackoffFunc(k.MetadataRetryBackoff, k.MetadataRetryMaxDuration)
 	case "constant", "":
