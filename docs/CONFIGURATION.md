@@ -432,7 +432,8 @@ Parameters that can be used with any processor plugin:
 - **order**: The order in which the processor(s) are executed. starting with 1.
   If this is not specified then processor execution order will be the order in
   the config. Processors with a defined order will take precedence over those
-  without a defined order.
+  without a defined order. Processors without a defined order will execute
+  first.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 handled by the processor.  Excluded metrics are passed downstream to the next

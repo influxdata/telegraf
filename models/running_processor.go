@@ -23,6 +23,11 @@ func (rp RunningProcessors) Swap(i, j int) {
 	rp[i], rp[j] = rp[j], rp[i]
 }
 func (rp RunningProcessors) Less(i, j int) bool {
+	// If the processors are defined in separate files only sort based on order
+	if rp[i].Config.ID != rp[j].Config.ID {
+		return rp[i].Config.Order < rp[j].Config.Order
+	}
+
 	// If Order is defined for both processors, sort according to the number set
 	if rp[i].Config.Order != 0 && rp[j].Config.Order != 0 {
 		// If both orders are equal, ensure config order is maintained
@@ -34,12 +39,13 @@ func (rp RunningProcessors) Less(i, j int) bool {
 	}
 
 	// If "Order" is defined for one processor but not another,
-	// the "Order" will always take precedence and be run earlier.
+	// the processor without an "Order" will always take precedence.
+	// This adheres to the original implementation.
 	if rp[i].Config.Order != 0 {
-		return true
+		return false
 	}
 	if rp[j].Config.Order != 0 {
-		return false
+		return true
 	}
 
 	return rp[i].Config.Line < rp[j].Config.Line
@@ -47,6 +53,7 @@ func (rp RunningProcessors) Less(i, j int) bool {
 
 // ProcessorConfig containing a name and filter
 type ProcessorConfig struct {
+	ID     string
 	Name   string
 	Alias  string
 	Order  int64

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/google/uuid"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
@@ -388,6 +389,9 @@ func (c *Config) LoadConfig(path string) error {
 
 // LoadConfigData loads TOML-formatted config data
 func (c *Config) LoadConfigData(data []byte) error {
+	// Create unique identifier to plugins to identify when using multiple configurations
+	id := uuid.New()
+
 	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("error parsing data: %s", err)
@@ -438,9 +442,6 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if len(c.UnusedFields) > 0 {
 		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
 	}
-
-	prevProcessors := c.Processors
-	c.Processors = models.RunningProcessors{}
 
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
@@ -500,7 +501,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addProcessor(pluginName, t); err != nil {
+						if err = c.addProcessor(id.String(), pluginName, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -541,8 +542,6 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if len(c.Processors) > 1 {
 		sort.Sort(c.Processors)
 	}
-
-	c.Processors = append(prevProcessors, c.Processors...)
 
 	return nil
 }
@@ -747,7 +746,7 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 	return running, err
 }
 
-func (c *Config) addProcessor(name string, table *ast.Table) error {
+func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -769,7 +768,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
-	processorConfig, err := c.buildProcessor(name, table)
+	processorConfig, err := c.buildProcessor(id, name, table)
 	if err != nil {
 		return err
 	}
@@ -1063,8 +1062,9 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (*models.ParserConfig,
 // buildProcessor parses Processor specific items from the ast.Table,
 // builds the filter and returns a
 // models.ProcessorConfig to be inserted into models.RunningProcessor
-func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+func (c *Config) buildProcessor(id string, name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{
+		ID:   id,
 		Name: name,
 		Line: tbl.Line,
 	}

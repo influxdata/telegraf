@@ -745,21 +745,21 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 			name:     "Test using a single 'order' configuration",
 			filename: []string{"multiple_processors_simple_order.toml"},
 			expectedOrder: []string{
-				"processor",
 				"parser_test",
 				"processor_parser",
 				"processor_parserfunc",
+				"processor",
 			},
 		},
 		{
 			name:     "Test using multiple 'order' configurations",
 			filename: []string{"multiple_processors_messy_order.toml"},
 			expectedOrder: []string{
+				"parser_test",
+				"processor_parserfunc",
 				"processor",
 				"processor_parser",
 				"processor_parser",
-				"processor_parserfunc",
-				"parser_test",
 				"processor_parserfunc",
 			},
 		},
@@ -774,8 +774,27 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 				"parser_test",
 				"processor_parser",
 				"processor_parserfunc",
-				"processor",
 				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+				"processor",
+			},
+		},
+		{
+			name: "Test loading multiple configuration files both with order",
+			filename: []string{
+				"multiple_processors_simple_order.toml",
+				"multiple_processors_messy_order.toml",
+			},
+			expectedOrder: []string{
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+				"parser_test",
+				"processor_parserfunc",
+				"processor",
+				"processor",
+				"processor_parser",
 				"processor_parser",
 				"processor_parserfunc",
 			},
@@ -786,7 +805,7 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			c := NewConfig()
 			for _, f := range test.filename {
-				require.NoError(t, c.LoadConfig(filepath.Join("./testdata", f)))
+				require.NoError(t, c.LoadConfig(filepath.Join("./testdata/processor_order", f)))
 			}
 
 			require.Equal(t, len(test.expectedOrder), len(c.Processors))
