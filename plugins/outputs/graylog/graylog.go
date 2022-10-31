@@ -35,7 +35,7 @@ const (
 	defaultMaxChunkSizeLan  = 8154
 	defaultScheme           = "udp"
 	defaultTimeout          = 5 * time.Second
-	defaultReconnectionTime = 30 * time.Second
+	defaultReconnectionTime = 15 * time.Second
 )
 
 var defaultSpecFields = []string{"version", "host", "short_message", "full_message", "timestamp", "level", "facility", "line", "file"}
