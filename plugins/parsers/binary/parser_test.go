@@ -1,7 +1,6 @@
 package binary
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -1406,68 +1405,65 @@ func TestParse(t *testing.T) {
 
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
-	folders, err := ioutil.ReadDir("testdata")
+	folders, err := ioutil.ReadDir("testcases")
 	require.NoError(t, err)
 	// Make sure testdata contains data
-	require.Greater(t, len(folders), 0)
+	require.NotEmpty(t, folders)
+
+	// Register the plugin
+	inputs.Add("file", func() telegraf.Input {
+		return &file.File{}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
 	for _, f := range folders {
-		t.Run(f.Name(), func(t *testing.T) {
-			configFilename := filepath.Join("testdata", f.Name(), "telegraf.conf")
-			expectedFilename := filepath.Join("testdata", f.Name(), "expected.out")
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
-			// Process the telegraf config file for the test
-			buf, err := os.ReadFile(configFilename)
-			require.NoError(t, err)
-			inputs.Add("file", func() telegraf.Input {
-				return &file.File{}
-			})
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected errors if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
 			cfg := config.NewConfig()
-			err = cfg.LoadConfigData(buf)
+			require.NoError(t, cfg.LoadConfig(configFilename))
 			require.NoError(t, err)
 
 			// Gather the metrics from the input file configure
-			acc := testutil.Accumulator{}
+			var acc testutil.Accumulator
+			var actualErrors []string
 			for _, input := range cfg.Inputs {
 				require.NoError(t, input.Init())
-				require.NoError(t, input.Gather(&acc))
+				if err := input.Gather(&acc); err != nil {
+					actualErrors = append(actualErrors, err.Error())
+				}
 			}
 
+			// Check for potential errors
+			require.ElementsMatch(t, actualErrors, expectedErrors)
+
 			// Process expected metrics and compare with resulting metrics
-			expected, err := readMetricFile(expectedFilename)
-			require.NoError(t, err)
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual)
 		})
 	}
-}
-
-func readMetricFile(path string) ([]telegraf.Metric, error) {
-	var metrics []telegraf.Metric
-
-	expectedFile, err := os.Open(path)
-	if err != nil {
-		return metrics, err
-	}
-	defer expectedFile.Close()
-
-	parser := &influx.Parser{}
-	if err := parser.Init(); err != nil {
-		return nil, err
-	}
-	scanner := bufio.NewScanner(expectedFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line != "" {
-			m, err := parser.ParseLine(line)
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse metric in %q failed: %v", line, err)
-			}
-			// The timezone needs to be UTC to match the timestamp test results
-			m.SetTime(m.Time().UTC())
-			metrics = append(metrics, m)
-		}
-	}
-
-	return metrics, nil
 }
