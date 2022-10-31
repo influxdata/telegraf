@@ -69,53 +69,49 @@ func TestWriteTCP(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name            string
-		instance        Graylog
-		tlsServerConfig *tls.Config
+		name         string
+		tlsClientCfg tlsint.ClientConfig
 	}{
 		{
 			name: "TCP",
 		},
 		{
 			name: "TLS",
-			instance: Graylog{
-				ClientConfig: tlsint.ClientConfig{
-					ServerName: "localhost",
-					TLSCA:      tlsClientConfig.TLSCA,
-					TLSKey:     tlsClientConfig.TLSKey,
-					TLSCert:    tlsClientConfig.TLSCert,
-				},
+			tlsClientCfg: tlsint.ClientConfig{
+				ServerName: "localhost",
+				TLSCA:      tlsClientConfig.TLSCA,
+				TLSKey:     tlsClientConfig.TLSKey,
+				TLSCert:    tlsClientConfig.TLSCert,
 			},
-			tlsServerConfig: tlsServerConfig,
 		},
 		{
 			name: "TLS no validation",
-			instance: Graylog{
-				ClientConfig: tlsint.ClientConfig{
-					InsecureSkipVerify: true,
-					ServerName:         "localhost",
-					TLSKey:             tlsClientConfig.TLSKey,
-					TLSCert:            tlsClientConfig.TLSCert,
-				},
+			tlsClientCfg: tlsint.ClientConfig{
+				InsecureSkipVerify: true,
+				ServerName:         "localhost",
+				TLSKey:             tlsClientConfig.TLSKey,
+				TLSCert:            tlsClientConfig.TLSCert,
 			},
-			tlsServerConfig: tlsServerConfig,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
-			wg.Add(1)
-			address := make(chan string, 1)
 			errs := make(chan error)
-			go TCPServer(t, &wg, tt.tlsServerConfig, address, errs)
-			require.NoError(t, <-errs)
+			address := TCPServer(t, &wg, tlsServerConfig, errs)
 
-			i := tt.instance
-			i.Servers = []string{fmt.Sprintf("tcp://%s", <-address)}
-			err = i.Connect()
-			require.NoError(t, err)
-			defer i.Close()
+			plugin := Graylog{
+				ClientConfig: tlsint.ClientConfig{
+					InsecureSkipVerify: true,
+					ServerName:         "localhost",
+					TLSKey:             tlsClientConfig.TLSKey,
+					TLSCert:            tlsClientConfig.TLSCert,
+				},
+				Servers: []string{"tcp://" + address},
+			}
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 			defer wg.Wait()
 
 			metrics := testutil.MockMetrics()
@@ -126,11 +122,11 @@ func TestWriteTCP(t *testing.T) {
 			// -> the 3rd write fails with error
 			// -> during the 4th write connection is restored and write is successful
 
-			require.NoError(t, i.Write(metrics))
-			require.NoError(t, i.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
 			require.NoError(t, <-errs)
-			require.ErrorContains(t, i.Write(metrics), "error writing message")
-			require.NoError(t, i.Write(metrics))
+			require.ErrorContains(t, plugin.Write(metrics), "error writing message")
+			require.NoError(t, plugin.Write(metrics))
 		})
 	}
 }
@@ -197,17 +193,12 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 	return address
 }
 
-func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address chan string, errs chan error) {
+func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs chan error) string {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:0")
-	errs <- err
-	if err != nil {
-		return
-	}
+	require.NoError(t, err)
 
 	// Send the address with the random port to the channel for the graylog instance to use it
-	address <- tcpServer.Addr().String()
-	defer tcpServer.Close()
-	defer wg.Done()
+	address := tcpServer.Addr().String()
 
 	accept := func() (net.Conn, error) {
 		conn, err := tcpServer.Accept()
@@ -258,49 +249,56 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address 
 		return nil
 	}
 
-	fmt.Println("server: opening connection")
-	conn, err := accept()
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer conn.Close()
+	wg.Add(1)
+	go func() {
+		defer tcpServer.Close()
+		defer wg.Done()
 
-	// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
+		fmt.Println("server: opening connection")
+		conn, err := accept()
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer conn.Close()
 
-	fmt.Println("server: receving packet 1")
-	err = recv(conn)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("server: receving packet 2")
-	err = recv(conn)
-	if err != nil {
-		fmt.Println(err)
-	}
+		// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
 
-	fmt.Println("server: closing connection")
-	err = conn.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
+		fmt.Println("server: receving packet 1")
+		err = recv(conn)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("server: receving packet 2")
+		err = recv(conn)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	errs <- err
-	if err != nil {
-		return
-	}
+		fmt.Println("server: closing connection")
+		err = conn.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	fmt.Println("server: re-opening connection")
-	conn, err = accept()
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer conn.Close()
+		errs <- err
+		if err != nil {
+			return
+		}
 
-	fmt.Println("server: receving packet 4")
-	err = recv(conn)
-	if err != nil {
-		fmt.Println(err)
-	}
+		fmt.Println("server: re-opening connection")
+		conn, err = accept()
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer conn.Close()
+
+		fmt.Println("server: receving packet 4")
+		err = recv(conn)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+	return address
 }
 
 func TestWriteUDPServerDown(t *testing.T) {
