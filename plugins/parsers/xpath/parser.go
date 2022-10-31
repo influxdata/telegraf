@@ -44,9 +44,9 @@ type Parser struct {
 
 	// Required for backward compatibility
 	ConfigsXML     []xpath.Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsJSON    []xpath.Config `toml:"xpath_json"`
-	ConfigsMsgPack []xpath.Config `toml:"xpath_msgpack"`
-	ConfigsProto   []xpath.Config `toml:"xpath_protobuf"`
+	ConfigsJSON    []xpath.Config `toml:"xpath_json" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsMsgPack []xpath.Config `toml:"xpath_msgpack" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsProto   []xpath.Config `toml:"xpath_protobuf" deprecated:"1.23.1;use 'xpath' instead"`
 
 	document dataDocument
 }
