@@ -599,7 +599,7 @@ func TestExponentialBackoff(t *testing.T) {
 	listener, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	require.NoError(t, listener.Close())
 
 	// try to connect to kafka on that unused port
 	brokers := []string{
@@ -621,7 +621,7 @@ func TestExponentialBackoff(t *testing.T) {
 		},
 	}
 	parser := &influx.Parser{}
-	parser.Init()
+	require.NoError(t, parser.Init())
 	input.SetParser(parser)
 
 	//time how long initialization (connection) takes
@@ -630,7 +630,7 @@ func TestExponentialBackoff(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.Error(t, input.Start(&acc))
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 	t.Logf("elapsed %d", elapsed)
 
 	var expectedRetryDuration time.Duration

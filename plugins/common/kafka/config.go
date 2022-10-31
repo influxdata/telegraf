@@ -139,11 +139,11 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 		return fmt.Errorf("invalid metadata retry type")
 	case "exponential":
 		if k.MetadataRetryBackoff != 0 {
-			config.Metadata.Retry.BackoffFunc = makeBackoffFunc(k.MetadataRetryBackoff, k.MetadataRetryMaxDuration)
+			k.MetadataRetryBackoff = 250 * time.Millisecond
+			k.Log.Warnf("metadata_retry_backoff is 0, using %s", k.MetadataRetryBackoff)
 		}
-	case "constant":
-		fallthrough
-	case "":
+		config.Metadata.Retry.BackoffFunc = makeBackoffFunc(k.MetadataRetryBackoff, k.MetadataRetryMaxDuration)
+	case "constant", "":
 	}
 
 	return k.SetSASLConfig(config)

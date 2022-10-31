@@ -135,10 +135,7 @@ func (k *KafkaConsumer) Init() error {
 	switch strings.ToLower(k.ConnectionStrategy) {
 	default:
 		return fmt.Errorf("invalid connection strategy %q", k.ConnectionStrategy)
-	case "defer":
-	case "startup":
-		fallthrough
-	case "":
+	case "defer", "startup", "":
 	}
 
 	k.config = cfg

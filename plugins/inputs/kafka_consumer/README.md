@@ -156,3 +156,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [kafka]: https://kafka.apache.org
 [kafka_consumer_legacy]: /plugins/inputs/kafka_consumer_legacy/README.md
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
+
+## Metrics
+
+The plugin accepts arbitrary input and parses it according to the `data_format`
+setting. There is no predefined metric format.
+
+## Example Output
+
+There is no predefined metric format, so output depends on plugin input.
