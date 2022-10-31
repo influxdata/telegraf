@@ -389,7 +389,7 @@ func (c *Config) LoadConfig(path string) error {
 
 // LoadConfigData loads TOML-formatted config data
 func (c *Config) LoadConfigData(data []byte) error {
-	// Create unique identifier to plugins to identify when using multiple configurations
+	// Create unique identifier for plugins to identify when using multiple configurations
 	id := uuid.New()
 
 	tbl, err := parseConfig(data)
