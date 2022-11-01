@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	cloud.google.com/go/bigquery v1.42.0
-	cloud.google.com/go/monitoring v1.5.0
+	cloud.google.com/go/monitoring v1.7.0
 	cloud.google.com/go/pubsub v1.25.1
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.18
