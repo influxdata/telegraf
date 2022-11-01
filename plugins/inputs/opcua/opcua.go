@@ -3,12 +3,11 @@ package opcua
 
 import (
 	_ "embed"
-	"github.com/gopcua/opcua/ua"
-	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -21,7 +20,6 @@ type OpcUA struct {
 	Log telegraf.Logger `toml:"-"`
 
 	client *ReadClient
-	codes  []ua.StatusCode
 }
 
 func (*OpcUA) SampleConfig() string {
