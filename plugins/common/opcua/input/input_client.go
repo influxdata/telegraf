@@ -359,10 +359,11 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 	if d.Value != nil {
 		o.LastReceivedData[nodeIdx].DataType = d.Value.Type()
 
+		o.LastReceivedData[nodeIdx].Value = d.Value.Value()
 		if o.LastReceivedData[nodeIdx].DataType == ua.TypeIDDateTime {
-			o.LastReceivedData[nodeIdx].Value = d.Value.Value().(time.Time).Format(time.RFC3339Nano)
-		} else {
-			o.LastReceivedData[nodeIdx].Value = d.Value.Value()
+			if t, ok := d.Value.Value().(time.Time); ok {
+				o.LastReceivedData[nodeIdx].Value = t.Format(time.RFC3339Nano)
+			}
 		}
 	}
 	o.LastReceivedData[nodeIdx].ServerTime = d.ServerTimestamp
