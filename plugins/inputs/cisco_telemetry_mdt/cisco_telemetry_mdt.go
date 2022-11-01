@@ -155,6 +155,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Fill extra tags
+	fmt.Println("creating c.extraTags")
 	c.extraTags = make(map[string]map[string]struct{})
 	for _, tag := range c.EmbeddedTags {
 		dir := strings.ReplaceAll(path.Dir(tag), "-", "_")
@@ -162,6 +163,8 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 			c.extraTags[dir] = make(map[string]struct{})
 		}
 		c.extraTags[dir][path.Base(tag)] = struct{}{}
+		fmt.Printf("  dir: %s\n", dir)
+		fmt.Printf("  tag: %s\n", path.Base(tag))
 	}
 
 	switch c.Transport {
@@ -556,6 +559,7 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
 	name := strings.ReplaceAll(field.Name, "-", "_")
+	fmt.Printf("%s/%s\n", encodingPath, name)
 
 	if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {
 		return
@@ -567,8 +571,10 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	}
 
 	extraTags := c.extraTags[strings.ReplaceAll(encodingPath, "-", "_")+"/"+name]
+	fmt.Printf("looking for extra tags: %s\n", extraTags)
 
 	if value := decodeValue(field); value != nil {
+		fmt.Printf("decoded '%s' with value: %s\n", field, value)
 		// Do alias lookup, to shorten measurement names
 		measurement := encodingPath
 		if alias, ok := c.internalAliases[encodingPath]; ok {
@@ -592,8 +598,11 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 
 	if len(extraTags) > 0 {
 		for _, subfield := range field.Fields {
-			if _, isExtraTag := extraTags[subfield.Name]; isExtraTag {
+			if _, isExtraTag := extraTags[strings.ReplaceAll(subfield.Name, "-", "_")]; isExtraTag {
+				fmt.Printf("  subfield added:   %s as %s\n", subfield.Name, name+"/"+strings.ReplaceAll(subfield.Name, "-", "_"))
 				tags[name+"/"+strings.ReplaceAll(subfield.Name, "-", "_")] = decodeTag(subfield)
+			} else {
+				fmt.Printf("  subfield skipped: %s\n", subfield.Name)
 			}
 		}
 	}
@@ -618,7 +627,9 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			//if nxAttributes == NULL then class based query.
 			if nxAttributes == nil {
 				//call function walking over walking list.
+				fmt.Println("looping through subfields")
 				for _, sub := range subfield.Fields {
+					fmt.Printf("looking at: %s\n", sub.Name)
 					c.parseClassAttributeField(grouper, sub, encodingPath, tags, timestamp)
 				}
 			}
@@ -630,6 +641,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	}
 
 	if nxAttributes == nil && nxRows == nil {
+		fmt.Println("rows and attributes empty, returning")
 		return
 	} else if nxRows != nil {
 		// NXAPI structure: https://developer.cisco.com/docs/cisco-nexus-9000-series-nx-api-cli-reference-release-9-2x/
@@ -637,10 +649,14 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			for i, subfield := range row.Fields {
 				if i == 0 { // First subfield contains the index, promote it from value to tag
 					tags[prefix] = decodeTag(subfield)
+					fmt.Printf("setting prefix '%s' to value: %s\n", prefix, decodeTag(subfield))
+					fmt.Printf("lenght of fields: %d\n", len(row.Fields))
 					//We can have subfield so recursively handle it.
 					if len(row.Fields) == 1 {
 						tags["row_number"] = strconv.FormatInt(int64(i), 10)
 						c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
+					} else {
+						fmt.Printf("more than 1 field, so stopping processing")
 					}
 				} else {
 					c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
@@ -648,6 +664,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 				// Nxapi we can't identify keys always from prefix
 				tags["row_number"] = strconv.FormatInt(int64(i), 10)
 			}
+			fmt.Printf("deleting key '%s' from tags map\n", prefix)
 			delete(tags, prefix)
 		}
 		return
