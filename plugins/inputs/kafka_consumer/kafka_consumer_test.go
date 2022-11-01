@@ -651,3 +651,29 @@ func TestExponentialBackoff(t *testing.T) {
 
 	input.Stop()
 }
+
+func TestExponentialBackoffDefault(t *testing.T) {
+	input := KafkaConsumer{
+		Brokers:                []string{"broker"},
+		Log:                    testutil.Logger{},
+		Topics:                 []string{"topic"},
+		MaxUndeliveredMessages: 1,
+
+		ReadConfig: kafka.ReadConfig{
+			Config: kafka.Config{
+				MetadataRetryType: "exponential",
+			},
+		},
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	input.SetParser(parser)
+
+	require.NoError(t, input.Init())
+
+	// We don't need to start the plugin here since we're only testing
+	// initialization
+
+	// if input.MetadataRetryBackoff isn't set, it should be 250 ms
+	require.Equal(t, input.MetadataRetryBackoff, 250*time.Millisecond)
+}

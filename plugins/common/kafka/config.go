@@ -136,7 +136,7 @@ func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 	default:
 		return fmt.Errorf("invalid metadata retry type")
 	case "exponential":
-		if k.MetadataRetryBackoff != 0 {
+		if k.MetadataRetryBackoff == 0 {
 			k.MetadataRetryBackoff = 250 * time.Millisecond
 			log.Warnf("metadata_retry_backoff is 0, using %s", k.MetadataRetryBackoff)
 		}
