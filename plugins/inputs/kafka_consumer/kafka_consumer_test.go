@@ -553,7 +553,8 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 		MaxUndeliveredMessages: 1,
 	}
 	parser := &influx.Parser{}
-	parser.Init()
+	err = parser.Init()
+	require.NoError(t, err)
 	input.SetParser(parser)
 	err = input.Init()
 	require.NoError(t, err)

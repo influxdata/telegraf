@@ -6,16 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/influxdb-observability/common"
+	"github.com/influxdata/influxdb-observability/influx2otel"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
-	"google.golang.org/grpc/credentials/insecure"
-
-	"github.com/influxdata/influxdb-observability/common"
-	"github.com/influxdata/influxdb-observability/influx2otel"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
@@ -51,7 +49,7 @@ func TestOpenTelemetry(t *testing.T) {
 		Attributes:           map[string]string{"attr-key": "attr-val"},
 		metricsConverter:     metricsConverter,
 		grpcClientConn:       m.GrpcClient(),
-		metricsServiceClient: pmetricotlp.NewClient(m.GrpcClient()),
+		metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
 	}
 
 	input := testutil.MustMetric(
@@ -71,13 +69,14 @@ func TestOpenTelemetry(t *testing.T) {
 
 	got := m.GotMetrics()
 
-	expectJSON, err := pmetric.NewJSONMarshaler().MarshalMetrics(expect)
+	marshaller := pmetric.JSONMarshaler{}
+	expectJSON, err := marshaller.MarshalMetrics(expect)
 	require.NoError(t, err)
 
-	gotJSON, err := pmetric.NewJSONMarshaler().MarshalMetrics(got)
+	gotJSON, err := marshaller.MarshalMetrics(got)
 	require.NoError(t, err)
 
-	assert.JSONEq(t, string(expectJSON), string(gotJSON))
+	require.JSONEq(t, string(expectJSON), string(gotJSON))
 }
 
 var _ pmetricotlp.GRPCServer = (*mockOtelService)(nil)
@@ -103,7 +102,7 @@ func newMockOtelService(t *testing.T) *mockOtelService {
 	}
 
 	pmetricotlp.RegisterGRPCServer(grpcServer, mockOtelService)
-	go func() { assert.NoError(t, grpcServer.Serve(listener)) }()
+	go func() { require.NoError(t, grpcServer.Serve(listener)) }()
 
 	grpcClient, err := grpc.Dial(listener.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	require.NoError(t, err)
@@ -113,7 +112,7 @@ func newMockOtelService(t *testing.T) *mockOtelService {
 }
 
 func (m *mockOtelService) Cleanup() {
-	assert.NoError(m.t, m.grpcClient.Close())
+	require.NoError(m.t, m.grpcClient.Close())
 	m.grpcServer.Stop()
 }
 
@@ -129,11 +128,11 @@ func (m *mockOtelService) Address() string {
 	return m.listener.Addr().String()
 }
 
-func (m *mockOtelService) Export(ctx context.Context, request pmetricotlp.Request) (pmetricotlp.Response, error) {
+func (m *mockOtelService) Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
 	m.metrics = pmetric.NewMetrics()
 	request.Metrics().CopyTo(m.metrics)
 	ctxMetadata, ok := metadata.FromIncomingContext(ctx)
-	assert.Equal(m.t, []string{"header1"}, ctxMetadata.Get("test"))
-	assert.True(m.t, ok)
-	return pmetricotlp.NewResponse(), nil
+	require.Equal(m.t, []string{"header1"}, ctxMetadata.Get("test"))
+	require.True(m.t, ok)
+	return pmetricotlp.NewExportResponse(), nil
 }
