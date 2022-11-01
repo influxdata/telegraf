@@ -2003,7 +2003,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger 
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger v0.57.2/go.mod h1:4rFuWKMbzM9H39RbDvPtJfAp/fxsHydhJhKns6skmK0=
 github.com/openconfig/gnmi v0.0.0-20200414194230-1597cc0f2600/go.mod h1:M/EcuapNQgvzxo1DDXHK4tx3QpYM/uG4l591v33jG2A=
 github.com/openconfig/gnmi v0.0.0-20200508230933-d19cebf5e7be/go.mod h1:M/EcuapNQgvzxo1DDXHK4tx3QpYM/uG4l591v33jG2A=
-github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802 h1:WXFwJlWOJINlwlyAZuNo4GdYZS6qPX36+rRUncLmN8Q=
 github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802/go.mod h1:M/EcuapNQgvzxo1DDXHK4tx3QpYM/uG4l591v33jG2A=
 github.com/openconfig/gnmi v0.0.0-20220920173703-480bf53a74d2 h1:3YLlQFLDsFTvruKoYBbuYqhCgsXMtNewSrLjNXcF/Sg=
 github.com/openconfig/gnmi v0.0.0-20220920173703-480bf53a74d2/go.mod h1:Y9os75GmSkhHw2wX8sMsxfI7qRGAEcDh8NTa5a8vj6E=
