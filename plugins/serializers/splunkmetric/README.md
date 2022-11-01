@@ -94,6 +94,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
     ## Provides time, index, source overrides for the HEC
    splunkmetric_hec_routing = true
    # splunkmetric_multimetric = true
+   # splunkmetric_omit_event_tag = false
 
    ## Additional HTTP headers
     [outputs.http.headers]
@@ -173,6 +174,7 @@ An example configuration of a file based output is:
    data_format = "splunkmetric"
    splunkmetric_hec_routing = false
    splunkmetric_multimetric = true
+   splunkmetric_omit_event_tag = false
 ```
 
 ## Non-numeric metric values
