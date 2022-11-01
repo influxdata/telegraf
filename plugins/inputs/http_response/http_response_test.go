@@ -95,7 +95,6 @@ func setUpTestMux() http.Handler {
 	mux.HandleFunc("/good", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Server", "MyTestServer")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		//nolint:errcheck,revive
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/invalidUTF8", func(w http.ResponseWriter, req *http.Request) {
@@ -103,11 +102,9 @@ func setUpTestMux() http.Handler {
 		w.Write([]byte{0xff, 0xfe, 0xfd})
 	})
 	mux.HandleFunc("/noheader", func(w http.ResponseWriter, req *http.Request) {
-		//nolint:errcheck,revive
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/jsonresponse", func(w http.ResponseWriter, req *http.Request) {
-		//nolint:errcheck,revive
 		fmt.Fprintf(w, "\"service_status\": \"up\", \"healthy\" : \"true\"")
 	})
 	mux.HandleFunc("/badredirect", func(w http.ResponseWriter, req *http.Request) {
@@ -118,7 +115,6 @@ func setUpTestMux() http.Handler {
 			http.Error(w, "method wasn't post", http.StatusMethodNotAllowed)
 			return
 		}
-		//nolint:errcheck,revive
 		fmt.Fprintf(w, "used post correctly!")
 	})
 	mux.HandleFunc("/musthaveabody", func(w http.ResponseWriter, req *http.Request) {
@@ -133,7 +129,6 @@ func setUpTestMux() http.Handler {
 			http.Error(w, "body was empty", http.StatusBadRequest)
 			return
 		}
-		//nolint:errcheck,revive
 		fmt.Fprintf(w, "sent a body!")
 	})
 	mux.HandleFunc("/twosecondnap", func(w http.ResponseWriter, req *http.Request) {

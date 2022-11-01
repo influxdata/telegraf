@@ -3,15 +3,20 @@ package dovecot
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 	"net/textproto"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestDovecotIntegration(t *testing.T) {
@@ -49,9 +54,9 @@ func TestDovecotIntegration(t *testing.T) {
 
 	// Test type=global server=unix
 	addr := "/tmp/socket"
-	wait := make(chan int)
+	waitCh := make(chan int)
 	go func() {
-		defer close(wait)
+		defer close(waitCh)
 
 		la, err := net.ResolveUnixAddr("unix", addr)
 		require.NoError(t, err)
@@ -61,7 +66,7 @@ func TestDovecotIntegration(t *testing.T) {
 		defer l.Close()
 		defer os.Remove(addr)
 
-		wait <- 0
+		waitCh <- 0
 		conn, err := l.Accept()
 		require.NoError(t, err)
 		defer conn.Close()
@@ -76,7 +81,7 @@ func TestDovecotIntegration(t *testing.T) {
 	}()
 
 	// Wait for server to start
-	<-wait
+	<-waitCh
 
 	d := &Dovecot{Servers: []string{addr}, Type: "global"}
 	err := d.Gather(&acc)
@@ -158,3 +163,49 @@ const sampleIP = `ip	reset_timestamp	last_update	num_logins	num_cmds	num_connect
 
 const sampleUser = `user	reset_timestamp	last_update	num_logins	num_cmds	user_cpu	sys_cpu	clock_time	min_faults	maj_faults	vol_cs	invol_cs	disk_input	disk_output	read_count	read_bytes	write_count	write_bytes	mail_lookup_path	mail_lookup_attr	mail_read_count	mail_read_bytes	mail_cache_hits
 user.1@domain.test	1453969886	1454603963.039864	7503897	52595715	100831175.372000	83849071.112000	4326001931528183.495762	763950011	1112443	4120386897	3685239306	41679480946688	1819070669176832	2368906465	2957928122981169	3545389615	1666822498251286	24396105	302845	20155768	669946617705	1557255080`
+
+func TestDovecotContainerIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping dovecot integration tests.")
+	}
+
+	testdata, err := filepath.Abs("testdata/dovecot.conf")
+	require.NoError(t, err, "determining absolute path of test-data failed")
+
+	servicePort := "24242"
+	container := testutil.Container{
+		Image:        "dovecot/dovecot",
+		ExposedPorts: []string{servicePort},
+		BindMounts: map[string]string{
+			"/etc/dovecot/dovecot.conf": testdata,
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("starting up for imap"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
+	}
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+
+	d := &Dovecot{Servers: []string{
+		fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
+	}, Type: "global"}
+
+	var acc testutil.Accumulator
+	require.NoError(t, d.Gather(&acc))
+	require.Eventually(t,
+		func() bool { return acc.HasMeasurement("dovecot") },
+		5*time.Second,
+		10*time.Millisecond,
+	)
+
+	require.True(t, acc.HasTag("dovecot", "type"))
+	require.True(t, acc.HasField("dovecot", "sys_cpu"))
+	require.True(t, acc.HasField("dovecot", "write_count"))
+	require.True(t, acc.HasField("dovecot", "mail_read_count"))
+	require.True(t, acc.HasField("dovecot", "auth_failures"))
+}

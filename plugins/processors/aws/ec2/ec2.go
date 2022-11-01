@@ -137,12 +137,10 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *AwsEc2Processor) Stop() error {
-	if r.parallel == nil {
-		return errors.New("trying to stop unstarted AWS EC2 Processor")
+func (r *AwsEc2Processor) Stop() {
+	if r.parallel != nil {
+		r.parallel.Stop()
 	}
-	r.parallel.Stop()
-	return nil
 }
 
 func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {

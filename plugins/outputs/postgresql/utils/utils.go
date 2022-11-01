@@ -48,7 +48,7 @@ func FullTableName(schema, name string) pgx.Identifier {
 	return pgx.Identifier{name}
 }
 
-// pgxLogger makes telegraf.Logger compatible with pgx.Logger
+// PGXLogger makes telegraf.Logger compatible with pgx.Logger
 type PGXLogger struct {
 	telegraf.Logger
 }
@@ -71,10 +71,10 @@ func (l PGXLogger) Log(_ context.Context, level pgx.LogLevel, msg string, data m
 func GetTagID(metric telegraf.Metric) int64 {
 	hash := fnv.New64a()
 	for _, tag := range metric.TagList() {
-		_, _ = hash.Write([]byte(tag.Key))
-		_, _ = hash.Write([]byte{0})
-		_, _ = hash.Write([]byte(tag.Value))
-		_, _ = hash.Write([]byte{0})
+		hash.Write([]byte(tag.Key))   //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		hash.Write([]byte{0})         //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		hash.Write([]byte(tag.Value)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		hash.Write([]byte{0})         //nolint:revive // all Write() methods for hash in fnv.go returns nil err
 	}
 	// Convert to int64 as postgres does not support uint64
 	return int64(hash.Sum64())

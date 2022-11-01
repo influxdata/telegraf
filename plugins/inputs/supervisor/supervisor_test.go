@@ -143,7 +143,7 @@ func TestIntegration_BasicGathering(t *testing.T) {
 			"/etc/supervisor/supervisord.conf": supervisorConfig,
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("supervisord started with pid"),
+			wait.ForLog("entered RUNNING state").WithOccurrence(6),
 			wait.ForListeningPort(nat.Port(supervisorPort)),
 		),
 	}

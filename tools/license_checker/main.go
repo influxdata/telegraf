@@ -5,17 +5,16 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log" //nolint:revive // We cannot use the Telegraf's logging here
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"golang.org/x/mod/modfile"
-
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
+	"golang.org/x/mod/modfile"
 )
 
 //go:embed data/spdx_mapping.json
@@ -45,14 +44,13 @@ func main() {
 	flag.Parse()
 
 	if help || flag.NArg() > 1 {
-		//nolint:revive // We cannot do anything about possible failures here
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s [options] [telegraf root dir]\n", os.Args[0])
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Options:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s [options] [telegraf root dir]\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "Options:\n")
 		flag.PrintDefaults()
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "\n")
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Arguments:\n")
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "  telegraf root dir (optional)\n")
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "		path to the root directory of telegraf (default: .)\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Arguments:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  telegraf root dir (optional)\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "		path to the root directory of telegraf (default: .)\n")
 		os.Exit(1)
 	}
 

@@ -9,12 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/stretchr/testify/require"
 )
 
 type MockTelegraf struct {
@@ -80,7 +81,7 @@ func TestUsageFlag(t *testing.T) {
 	}{
 		{
 			PluginName:    "example",
-			ExpectedError: "E! input example not found and output example not found",
+			ExpectedError: "input example not found and output example not found",
 		},
 		{
 			PluginName: "temp",
@@ -187,7 +188,7 @@ func TestPluginDirectoryFlag(t *testing.T) {
 	args := os.Args[0:1]
 	args = append(args, "--plugin-directory", ".")
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
-	require.ErrorContains(t, err, "E! go plugin support is not enabled")
+	require.ErrorContains(t, err, "go plugin support is not enabled")
 }
 
 func TestCommandConfig(t *testing.T) {
@@ -199,9 +200,8 @@ func TestCommandConfig(t *testing.T) {
 		expectedPlugins []string
 		removedPlugins  []string
 	}{
-		// Deprecated flag replaced with command "config"
 		{
-			name:     "no filters",
+			name:     "deprecated flag --sample-config",
 			commands: []string{"--sample-config"},
 			expectedHeaders: []string{
 				outputHeader,
@@ -288,6 +288,28 @@ func TestCommandConfig(t *testing.T) {
 			},
 			removedPlugins: []string{
 				"[[aggregators.minmax]]",
+			},
+		},
+		{
+			name:     "test filters before config",
+			commands: []string{"--input-filter", "cpu:file", "config"},
+			expectedPlugins: []string{
+				"[[inputs.cpu]]",
+				"[[inputs.file]]",
+			},
+			removedPlugins: []string{
+				"[[inputs.disk]]",
+			},
+		},
+		{
+			name:     "test filters before and after config",
+			commands: []string{"--input-filter", "file", "config", "--input-filter", "cpu"},
+			expectedPlugins: []string{
+				"[[inputs.cpu]]",
+				"[[inputs.file]]",
+			},
+			removedPlugins: []string{
+				"[[inputs.disk]]",
 			},
 		},
 	}

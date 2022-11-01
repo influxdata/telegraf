@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/sleepinggenius2/gosmi"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/snmp"
-	"github.com/sleepinggenius2/gosmi"
 )
 
 type gosmiTranslator struct {
@@ -113,7 +114,7 @@ func (g *gosmiTranslator) SnmpTableCall(oid string) (mibName string, oidNum stri
 
 	mibPrefix := mibName + "::"
 
-	col, tagOids, err := snmp.GetIndex(oidNum, mibPrefix, node)
+	col, tagOids, err := snmp.GetIndex(mibPrefix, node)
 
 	for _, c := range col {
 		_, isTag := tagOids[mibPrefix+c]

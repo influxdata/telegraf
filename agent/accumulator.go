@@ -37,7 +37,7 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	ac.addFields(measurement, tags, fields, telegraf.Untyped, t...)
+	ac.addMeasurement(measurement, tags, fields, telegraf.Untyped, t...)
 }
 
 func (ac *accumulator) AddGauge(
@@ -46,7 +46,7 @@ func (ac *accumulator) AddGauge(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	ac.addFields(measurement, tags, fields, telegraf.Gauge, t...)
+	ac.addMeasurement(measurement, tags, fields, telegraf.Gauge, t...)
 }
 
 func (ac *accumulator) AddCounter(
@@ -55,7 +55,7 @@ func (ac *accumulator) AddCounter(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	ac.addFields(measurement, tags, fields, telegraf.Counter, t...)
+	ac.addMeasurement(measurement, tags, fields, telegraf.Counter, t...)
 }
 
 func (ac *accumulator) AddSummary(
@@ -64,7 +64,7 @@ func (ac *accumulator) AddSummary(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	ac.addFields(measurement, tags, fields, telegraf.Summary, t...)
+	ac.addMeasurement(measurement, tags, fields, telegraf.Summary, t...)
 }
 
 func (ac *accumulator) AddHistogram(
@@ -73,7 +73,7 @@ func (ac *accumulator) AddHistogram(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	ac.addFields(measurement, tags, fields, telegraf.Histogram, t...)
+	ac.addMeasurement(measurement, tags, fields, telegraf.Histogram, t...)
 }
 
 func (ac *accumulator) AddMetric(m telegraf.Metric) {
@@ -83,7 +83,7 @@ func (ac *accumulator) AddMetric(m telegraf.Metric) {
 	}
 }
 
-func (ac *accumulator) addFields(
+func (ac *accumulator) addMeasurement(
 	measurement string,
 	tags map[string]string,
 	fields map[string]interface{},

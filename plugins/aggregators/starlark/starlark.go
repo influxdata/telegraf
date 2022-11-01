@@ -15,7 +15,7 @@ import (
 var sampleConfig string
 
 type Starlark struct {
-	common.StarlarkCommon
+	common.Common
 }
 
 func (*Starlark) SampleConfig() string {
@@ -24,7 +24,7 @@ func (*Starlark) SampleConfig() string {
 
 func (s *Starlark) Init() error {
 	// Execute source
-	err := s.StarlarkCommon.Init()
+	err := s.Common.Init()
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (s *Starlark) Reset() {
 func init() {
 	aggregators.Add("starlark", func() telegraf.Aggregator {
 		return &Starlark{
-			StarlarkCommon: common.StarlarkCommon{
+			Common: common.Common{
 				StarlarkLoadFunc: common.LoadFunc,
 			},
 		}

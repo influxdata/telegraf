@@ -6,6 +6,15 @@ and creates metrics using one of the supported [input data formats][].
 For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input
 plugin and use the old zookeeper connection method.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -29,7 +38,7 @@ plugin and use the old zookeeper connection method.
   # version = ""
 
   ## Optional TLS Config
-  # enable_tls = true
+  # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"

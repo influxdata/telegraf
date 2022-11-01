@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.19.1'
+      - image: 'quay.io/influxdb/telegraf-ci:1.19.2'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -519,6 +519,9 @@ jobs:
 workflows:
   version: 2
   check:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - 'test-go-linux':
           filters:
@@ -733,6 +736,8 @@ workflows:
               ignore: /.*/
 
   nightly:
+    when:
+      equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - 'test-go-linux'
       - 'test-go-linux-386'
@@ -838,10 +843,3 @@ workflows:
       - amd64-package-test-nightly:
           requires:
             - 'amd64-package-nightly'
-    triggers:
-      - schedule:
-          cron: "0 7 * * *"
-          filters:
-            branches:
-              only:
-                - master

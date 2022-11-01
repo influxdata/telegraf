@@ -313,11 +313,8 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, worker *Worker, tlscfg *tls.Co
 }
 
 func (c *GNMI) handleSubscribeResponse(worker *Worker, reply *gnmiLib.SubscribeResponse) {
-	switch response := reply.Response.(type) {
-	case *gnmiLib.SubscribeResponse_Update:
+	if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
 		c.handleSubscribeResponseUpdate(worker, response)
-	case *gnmiLib.SubscribeResponse_Error:
-		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
 	}
 }
 
@@ -361,7 +358,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 		}
 		aliasPath, fields := c.handleTelemetryField(update, tags, prefix)
 
-		if tagOnlyTags := worker.checkTags(fullPath, c.TagSubscriptions); tagOnlyTags != nil {
+		if tagOnlyTags := worker.checkTags(fullPath); tagOnlyTags != nil {
 			for k, v := range tagOnlyTags {
 				if alias, ok := c.internalAliases[k]; ok {
 					tags[alias] = fmt.Sprint(v)
@@ -636,7 +633,7 @@ func (node *tagNode) retrieve(keys []*gnmiLib.PathElem, tagResults *tagResults) 
 	}
 }
 
-func (w *Worker) checkTags(fullPath *gnmiLib.Path, subscriptions []TagSubscription) map[string]interface{} {
+func (w *Worker) checkTags(fullPath *gnmiLib.Path) map[string]interface{} {
 	results := &tagResults{}
 	w.tagStore.retrieve(pathKeys(fullPath), results)
 	tags := make(map[string]interface{})

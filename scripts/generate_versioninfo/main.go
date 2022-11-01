@@ -5,7 +5,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"log" //nolint:revive
+	"log"
 	"os"
 	"os/exec"
 	"strings"

@@ -1,16 +1,23 @@
 package modbus
 
 import (
+	"encoding/binary"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	mb "github.com/grid-x/modbus"
 	"github.com/stretchr/testify/require"
 	"github.com/tbrandon/mbserver"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -2043,4 +2050,123 @@ func TestMultipleSlavesOneFail(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 	require.Len(t, acc.Errors, 1)
 	require.EqualError(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond), function '131'")
+}
+func TestCases(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	// Compare options
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
+	// Register the plugin
+	inputs.Add("modbus", func() telegraf.Input { return &Modbus{} })
+
+	// Define a function to return the register value as data
+	readFunc := func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+		data := frame.GetData()
+		register := binary.BigEndian.Uint16(data[0:2])
+		numRegs := binary.BigEndian.Uint16(data[2:4])
+
+		// Add the length in bytes and the register to the returned data
+		buf := make([]byte, 2*numRegs+1)
+		buf[0] = byte(2 * numRegs)
+		switch numRegs {
+		case 1: // 16-bit
+			binary.BigEndian.PutUint16(buf[1:], register)
+		case 2: // 32-bit
+			binary.BigEndian.PutUint32(buf[1:], uint32(register))
+		case 4: // 64-bit
+			binary.BigEndian.PutUint64(buf[1:], uint64(register))
+		}
+		return buf, &mbserver.Success
+	}
+
+	// Setup a Modbus server to test against
+	serv := mbserver.NewServer()
+	serv.RegisterFunctionHandler(mb.FuncCodeReadInputRegisters, readFunc)
+	serv.RegisterFunctionHandler(mb.FuncCodeReadHoldingRegisters, readFunc)
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	// Run the test cases
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedOutputFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+		initErrorFilename := filepath.Join(testcasePath, "init.err")
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the expected error for the init call if any
+			var expectedInitError string
+			if _, err := os.Stat(initErrorFilename); err == nil {
+				e, err := testutil.ParseLinesFromFile(initErrorFilename)
+				require.NoError(t, err)
+				require.Len(t, e, 1)
+				expectedInitError = e[0]
+			}
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedOutputFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedOutputFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected error if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				e, err := testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, e)
+				expectedErrors = e
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Extract the plugin and make sure it connects to our dummy
+			// server
+			plugin := cfg.Inputs[0].Input.(*Modbus)
+			plugin.Controller = "tcp://localhost:1502"
+
+			// Init the plugin.
+			err := plugin.Init()
+			if expectedInitError != "" {
+				require.ErrorContains(t, err, expectedInitError)
+				return
+			}
+			require.NoError(t, err)
+
+			// Gather data
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+			if len(acc.Errors) > 0 {
+				var actualErrorMsgs []string
+				for _, err := range acc.Errors {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+			}
+
+			// Check the metric nevertheless as we might get some metrics despite errors.
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
 }

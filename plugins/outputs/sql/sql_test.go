@@ -2,18 +2,21 @@ package sql
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestSqlQuoteIntegration(t *testing.T) {
@@ -210,7 +213,7 @@ func TestMysqlIntegration(t *testing.T) {
 
 	//dump the database
 	var rc int
-	rc, err = container.Exec([]string{
+	rc, _, err = container.Exec([]string{
 		"bash",
 		"-c",
 		"mariadb-dump --user=" + username +
@@ -262,7 +265,7 @@ func TestPostgresIntegration(t *testing.T) {
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("database system is ready to accept connections"),
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
@@ -292,7 +295,7 @@ func TestPostgresIntegration(t *testing.T) {
 	//dump the database
 	//psql -u postgres
 	var rc int
-	rc, err = container.Exec([]string{
+	rc, _, err = container.Exec([]string{
 		"bash",
 		"-c",
 		"pg_dump" +
@@ -351,7 +354,7 @@ func TestClickHouseIntegration(t *testing.T) {
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'"),
+			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
@@ -378,13 +381,32 @@ func TestClickHouseIntegration(t *testing.T) {
 	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
-
 	require.NoError(t, p.Write(testMetrics))
+
+	// wait for last test metric to get written
+	require.Eventually(t, func() bool {
+		var out io.Reader
+		_, out, err = container.Exec([]string{
+			"bash",
+			"-c",
+			"clickhouse-client" +
+				" --user=" + username +
+				" --database=" + dbname +
+				" --format=TabSeparatedRaw" +
+				" --multiquery --query=" +
+				"\"SELECT * FROM \\\"metric three\\\";" +
+				"SHOW CREATE TABLE \\\"metric three\\\"\"",
+		})
+		require.NoError(t, err)
+		bytes, err := io.ReadAll(out)
+		require.NoError(t, err)
+		return strings.Contains(string(bytes), "`string two` String")
+	}, 5*time.Second, 10*time.Millisecond)
 
 	// dump the database
 	var rc int
 	for _, testMetric := range testMetrics {
-		rc, err = container.Exec([]string{
+		rc, _, err = container.Exec([]string{
 			"bash",
 			"-c",
 			"clickhouse-client" +

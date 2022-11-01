@@ -8,14 +8,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	common "github.com/influxdata/telegraf/plugins/common/jolokia2"
 	"github.com/influxdata/telegraf/plugins/inputs/jolokia2_proxy"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
-	"github.com/influxdata/toml/ast"
 )
 
 func TestJolokia2_ProxyTargets(t *testing.T) {
@@ -145,8 +145,6 @@ func TestFillFields(t *testing.T) {
 func setupServer(resp string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		// Ignore the returned error as the tests will fail anyway
-		//nolint:errcheck,revive
 		fmt.Fprintln(w, resp)
 	}))
 }

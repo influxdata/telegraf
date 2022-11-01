@@ -98,7 +98,7 @@ func (k *KafkaConsumer) Init() error {
 	cfg.Version = sarama.V0_10_2_0
 
 	if err := k.SetConfig(cfg); err != nil {
-		return err
+		return fmt.Errorf("SetConfig: %w", err)
 	}
 
 	switch strings.ToLower(k.Offset) {
@@ -112,11 +112,11 @@ func (k *KafkaConsumer) Init() error {
 
 	switch strings.ToLower(k.BalanceStrategy) {
 	case "range", "":
-		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategyRange}
 	case "roundrobin":
-		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategyRoundRobin}
 	case "sticky":
-		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
+		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategySticky}
 	default:
 		return fmt.Errorf("invalid balance strategy %q", k.BalanceStrategy)
 	}
@@ -143,7 +143,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		k.config,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("create consumer: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -159,7 +159,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			handler.TopicTag = k.TopicTag
 			err := k.consumer.Consume(ctx, k.Topics, handler)
 			if err != nil {
-				acc.AddError(err)
+				acc.AddError(fmt.Errorf("consume: %w", err))
 				// Ignore returned error as we cannot do anything about it anyway
 				//nolint:errcheck,revive
 				internal.SleepContext(ctx, reconnectDelay)
@@ -167,7 +167,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		}
 		err = k.consumer.Close()
 		if err != nil {
-			acc.AddError(err)
+			acc.AddError(fmt.Errorf("close: %w", err))
 		}
 	}()
 
@@ -175,7 +175,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer k.wg.Done()
 		for err := range k.consumer.Errors() {
-			acc.AddError(err)
+			acc.AddError(fmt.Errorf("channel: %w", err))
 		}
 	}()
 

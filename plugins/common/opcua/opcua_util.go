@@ -62,7 +62,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"Telegraf OPC UA client"},
+			Organization: []string{"Telegraf OPC UA Client"},
 		},
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
@@ -144,8 +144,7 @@ func pemBlockForKey(priv interface{}) (*pem.Block, error) {
 	}
 }
 
-//revive:disable-next-line
-func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription) ([]opcua.Option, error) {
+func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([]opcua.Option, error) {
 	opts := []opcua.Option{}
 	appuri := "urn:telegraf:gopcua:client"
 	appname := "Telegraf"
@@ -153,12 +152,12 @@ func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription) ([]opcua
 	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
 	opts = append(opts, opcua.ApplicationURI(appuri))
 	opts = append(opts, opcua.ApplicationName(appname))
-	opts = append(opts, opcua.RequestTimeout(time.Duration(o.RequestTimeout)))
+	opts = append(opts, opcua.RequestTimeout(time.Duration(o.Config.RequestTimeout)))
 
-	certFile := o.Certificate
-	keyFile := o.PrivateKey
-	policy := o.SecurityPolicy
-	mode := o.SecurityMode
+	certFile := o.Config.Certificate
+	keyFile := o.Config.PrivateKey
+	policy := o.Config.SecurityPolicy
+	mode := o.Config.SecurityMode
 	var err error
 	if certFile == "" && keyFile == "" {
 		if policy != "None" || mode != "None" {
@@ -199,8 +198,10 @@ func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription) ([]opcua
 		return nil, fmt.Errorf("invalid security policy: %s", policy)
 	}
 
+	o.Log.Debugf("security policy from configuration %s", secPolicy)
+
 	// Select the most appropriate authentication mode from server capabilities and user input
-	authMode, authOption, err := o.generateAuth(o.AuthMethod, cert, o.Username, o.Password)
+	authMode, authOption, err := o.generateAuth(o.Config.AuthMethod, cert, o.Config.Username, o.Config.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -254,9 +255,13 @@ func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription) ([]opcua
 		}
 
 	default: // User cares about both
+		o.Log.Debugf("User cares about both the policy (%s) and security mode (%s)", secPolicy, secMode)
+		o.Log.Debugf("Server has %d endpoints", len(endpoints))
 		for _, e := range endpoints {
+			o.Log.Debugf("Evaluating endpoint %s, policy %s, mode %s, level %d", e.EndpointURL, e.SecurityPolicyURI, e.SecurityMode, e.SecurityLevel)
 			if e.SecurityPolicyURI == secPolicy && e.SecurityMode == secMode && (serverEndpoint == nil || e.SecurityLevel >= serverEndpoint.SecurityLevel) {
 				serverEndpoint = e
+				o.Log.Debugf("Security policy and mode found. Using server endpoint %s for security. Policy %s", serverEndpoint.EndpointURL, serverEndpoint.SecurityPolicyURI)
 			}
 		}
 	}
@@ -278,7 +283,7 @@ func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription) ([]opcua
 	return opts, nil
 }
 
-func (o *OpcUA) generateAuth(a string, cert []byte, un, pw string) (ua.UserTokenType, opcua.Option, error) {
+func (o *OpcUAClient) generateAuth(a string, cert []byte, un, pw string) (ua.UserTokenType, opcua.Option, error) {
 	var err error
 
 	var authMode ua.UserTokenType
