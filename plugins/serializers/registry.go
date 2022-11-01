@@ -110,6 +110,9 @@ type Config struct {
 	// Enable Splunk MultiMetric output (Splunk 8.0+)
 	SplunkmetricMultiMetric bool `toml:"splunkmetric_multi_metric"`
 
+	// Omit the Splunk Event "metric" tag
+	SplunkmetricOmitEventTag bool `toml:"splunkmetric_omit_event_tag"`
+
 	// Point tags to use as the source name for Wavefront (if none found, host will be used).
 	WavefrontSourceOverride []string `toml:"wavefront_source_override"`
 
@@ -149,7 +152,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "json":
 		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat, config.Transformation)
 	case "splunkmetric":
-		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
+		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric, config.SplunkmetricOmitEventTag)
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
 	case "carbon2":
@@ -225,8 +228,8 @@ func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar strin
 	return carbon2.NewSerializer(carbon2format, carbon2SanitizeReplaceChar)
 }
 
-func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool) (Serializer, error) {
-	return splunkmetric.NewSerializer(splunkmetricHecRouting, splunkmetricMultimetric)
+func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) (Serializer, error) {
+	return splunkmetric.NewSerializer(splunkmetricHecRouting, splunkmetricMultimetric, splunkmetricOmitEventTag)
 }
 
 func NewNowSerializer() (Serializer, error) {
