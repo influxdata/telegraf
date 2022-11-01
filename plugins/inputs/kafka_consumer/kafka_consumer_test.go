@@ -615,7 +615,7 @@ func TestExponentialBackoff(t *testing.T) {
 		ReadConfig: kafka.ReadConfig{
 			Config: kafka.Config{
 				MetadataRetryMax:     max,
-				MetadataRetryBackoff: backoff,
+				MetadataRetryBackoff: config.Duration(backoff),
 				MetadataRetryType:    "exponential",
 			},
 		},
@@ -675,5 +675,5 @@ func TestExponentialBackoffDefault(t *testing.T) {
 	// initialization
 
 	// if input.MetadataRetryBackoff isn't set, it should be 250 ms
-	require.Equal(t, input.MetadataRetryBackoff, 250*time.Millisecond)
+	require.Equal(t, input.MetadataRetryBackoff, config.Duration(250*time.Millisecond))
 }

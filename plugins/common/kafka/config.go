@@ -8,6 +8,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
+	tgConf "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
@@ -58,10 +59,10 @@ type Config struct {
 	CompressionCodec int    `toml:"compression_codec"`
 	EnableTLS        *bool  `toml:"enable_tls"`
 
-	MetadataRetryMax         int           `toml:"metadata_retry_max"`
-	MetadataRetryType        string        `toml:"metadata_retry_type"`
-	MetadataRetryBackoff     time.Duration `toml:"metadata_retry_backoff"`
-	MetadataRetryMaxDuration time.Duration `toml:"metadata_retry_max_duration"`
+	MetadataRetryMax         int             `toml:"metadata_retry_max"`
+	MetadataRetryType        string          `toml:"metadata_retry_type"`
+	MetadataRetryBackoff     tgConf.Duration `toml:"metadata_retry_backoff"`
+	MetadataRetryMaxDuration tgConf.Duration `toml:"metadata_retry_max_duration"`
 
 	// Disable full metadata fetching
 	MetadataFull *bool `toml:"metadata_full"`
@@ -129,7 +130,7 @@ func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 	if k.MetadataRetryBackoff != 0 {
 		// If config.Metadata.Retry.BackoffFunc is set, sarama ignores
 		// config.Metadata.Retry.Backoff
-		config.Metadata.Retry.Backoff = k.MetadataRetryBackoff
+		config.Metadata.Retry.Backoff = time.Duration(k.MetadataRetryBackoff)
 	}
 
 	switch strings.ToLower(k.MetadataRetryType) {
@@ -137,10 +138,13 @@ func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 		return fmt.Errorf("invalid metadata retry type")
 	case "exponential":
 		if k.MetadataRetryBackoff == 0 {
-			k.MetadataRetryBackoff = 250 * time.Millisecond
-			log.Warnf("metadata_retry_backoff is 0, using %s", k.MetadataRetryBackoff)
+			k.MetadataRetryBackoff = tgConf.Duration(250 * time.Millisecond)
+			log.Warnf("metadata_retry_backoff is 0, using %s", time.Duration(k.MetadataRetryBackoff))
 		}
-		config.Metadata.Retry.BackoffFunc = makeBackoffFunc(k.MetadataRetryBackoff, k.MetadataRetryMaxDuration)
+		config.Metadata.Retry.BackoffFunc = makeBackoffFunc(
+			time.Duration(k.MetadataRetryBackoff),
+			time.Duration(k.MetadataRetryMaxDuration),
+		)
 	case "constant", "":
 	}
 
