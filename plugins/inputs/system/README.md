@@ -28,6 +28,10 @@ The `n_users` field requires read access to `/var/run/utmp`, and may require the
 `telegraf` user to be added to the `utmp` group on some systems. If this file
 does not exist `n_users` will be skipped.
 
+The `n_unique_users` shows the count of unique usernames logged in. This way if
+a user has multiple sessions open/started they would only get counted once. The
+same requirements for `n_users` apply.
+
 ## Metrics
 
 - system
@@ -36,6 +40,7 @@ does not exist `n_users` will be skipped.
     - load15 (float)
     - load5 (float)
     - n_users (integer)
+    - n_unique_users (integer)
     - n_cpus (integer)
     - uptime (integer, seconds)
     - uptime_format (string, deprecated in 1.10, use `uptime` field)
