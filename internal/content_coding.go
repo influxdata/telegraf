@@ -171,10 +171,6 @@ func (*IdentityEncoder) Encode(data []byte) ([]byte, error) {
 
 // ContentDecoder removes a wrapper encoding from byte buffers.
 type ContentDecoder interface {
-<<<<<<< HEAD
-=======
-	SetEncoding(string)
->>>>>>> 08c1ce9cb (chore: Resolve linter issues for ineffassign, nilerr, gosimple... (#11966))
 	Decode([]byte) ([]byte, error)
 }
 
@@ -191,11 +187,6 @@ func NewGzipDecoder() (*GzipDecoder, error) {
 	}, nil
 }
 
-<<<<<<< HEAD
-=======
-func (*GzipDecoder) SetEncoding(string) {}
-
->>>>>>> 08c1ce9cb (chore: Resolve linter issues for ineffassign, nilerr, gosimple... (#11966))
 func (d *GzipDecoder) Decode(data []byte) ([]byte, error) {
 	err := d.reader.Reset(bytes.NewBuffer(data))
 	if err != nil {
@@ -224,11 +215,6 @@ func NewZlibDecoder() (*ZlibDecoder, error) {
 	}, nil
 }
 
-<<<<<<< HEAD
-=======
-func (*ZlibDecoder) SetEncoding(string) {}
-
->>>>>>> 08c1ce9cb (chore: Resolve linter issues for ineffassign, nilerr, gosimple... (#11966))
 func (d *ZlibDecoder) Decode(data []byte) ([]byte, error) {
 	d.buf.Reset()
 
@@ -255,11 +241,6 @@ func NewIdentityDecoder() *IdentityDecoder {
 	return &IdentityDecoder{}
 }
 
-<<<<<<< HEAD
-=======
-func (*IdentityDecoder) SetEncoding(string) {}
-
->>>>>>> 08c1ce9cb (chore: Resolve linter issues for ineffassign, nilerr, gosimple... (#11966))
 func (*IdentityDecoder) Decode(data []byte) ([]byte, error) {
 	return data, nil
 }
