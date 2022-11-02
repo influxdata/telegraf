@@ -3,13 +3,14 @@ package opcua
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strconv"
+	"time"
+
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"net/url"
-	"strconv"
-	"time"
 )
 
 type OpcUAWorkarounds struct {
@@ -17,16 +18,17 @@ type OpcUAWorkarounds struct {
 }
 
 type OpcUAClientConfig struct {
-	Endpoint       string          `toml:"endpoint"`
-	SecurityPolicy string          `toml:"security_policy"`
-	SecurityMode   string          `toml:"security_mode"`
-	Certificate    string          `toml:"certificate"`
-	PrivateKey     string          `toml:"private_key"`
-	Username       string          `toml:"username"`
-	Password       string          `toml:"password"`
-	AuthMethod     string          `toml:"auth_method"`
-	ConnectTimeout config.Duration `toml:"connect_timeout"`
-	RequestTimeout config.Duration `toml:"request_timeout"`
+	Endpoint        string          `toml:"endpoint"`
+	SecurityPolicy  string          `toml:"security_policy"`
+	SecurityMode    string          `toml:"security_mode"`
+	Certificate     string          `toml:"certificate"`
+	PrivateKey      string          `toml:"private_key"`
+	Username        string          `toml:"username"`
+	Password        string          `toml:"password"`
+	AuthMethod      string          `toml:"auth_method"`
+	ConnectTimeout  config.Duration `toml:"connect_timeout"`
+	RequestTimeout  config.Duration `toml:"request_timeout"`
+	TimestampFormat string          `toml:"timestamp_format"`
 
 	Workarounds OpcUAWorkarounds `toml:"workarounds"`
 }
@@ -55,6 +57,10 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	case "None", "Sign", "SignAndEncrypt", "auto":
 	default:
 		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.Endpoint)
+	}
+
+	if o.TimestampFormat == "" {
+		o.TimestampFormat = time.RFC3339Nano
 	}
 	return nil
 }

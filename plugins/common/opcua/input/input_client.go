@@ -360,7 +360,7 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 		o.LastReceivedData[nodeIdx].DataType = d.Value.Type()
 
 		if o.LastReceivedData[nodeIdx].DataType == ua.TypeIDDateTime {
-			o.LastReceivedData[nodeIdx].Value = d.Value.Value().(time.Time).Format(time.RFC3339Nano)
+			o.LastReceivedData[nodeIdx].Value = d.Value.Value().(time.Time).Format(o.Config.TimestampFormat)
 		} else {
 			o.LastReceivedData[nodeIdx].Value = d.Value.Value()
 		}

@@ -154,6 +154,7 @@ security_mode = "auto"
 certificate = "/etc/telegraf/cert.pem"
 private_key = "/etc/telegraf/key.pem"
 auth_method = "Anonymous"
+timestamp_format = "2006-01-02T15:04:05Z07:00"
 username = ""
 password = ""
 nodes = [
