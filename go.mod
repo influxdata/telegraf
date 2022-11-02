@@ -146,7 +146,6 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.14.0
-	github.com/thomasklein94/packer-plugin-libvirt v0.3.4
 	github.com/tidwall/gjson v1.14.3
 	github.com/tinylib/msgp v1.1.6
 	github.com/urfave/cli/v2 v2.16.3
@@ -282,7 +281,6 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.6.0 // indirect
-	github.com/googleapis/go-type-adapters v1.0.0 // indirect
 	github.com/grid-x/serial v0.0.0-20211107191517-583c7356b3aa // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
