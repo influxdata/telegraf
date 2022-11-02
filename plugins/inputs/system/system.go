@@ -50,6 +50,7 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	users, err := host.Users()
 	if err == nil {
 		fields["n_users"] = len(users)
+		fields["n_unique_users"] = findUniqueUsers(users)
 	} else if os.IsNotExist(err) {
 		s.Log.Debugf("Reading users: %s", err.Error())
 	} else if os.IsPermission(err) {
@@ -72,6 +73,17 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	}, nil, now)
 
 	return nil
+}
+
+func findUniqueUsers(userStats []host.UserStat) int {
+	uniqueUsers := make(map[string]bool)
+	for _, userstat := range userStats {
+		if _, ok := uniqueUsers[userstat.User]; !ok {
+			uniqueUsers[userstat.User] = true
+		}
+	}
+
+	return len(uniqueUsers)
 }
 
 func formatUptime(uptime uint64) string {
