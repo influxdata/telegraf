@@ -227,7 +227,7 @@ func TestMysqlIntegration(t *testing.T) {
 	dumpfile := filepath.Join(outDir, "dump")
 	require.Eventually(t, func() bool {
 		_, err := os.Stat(dumpfile)
-		return os.IsExist(err)
+		return !os.IsNotExist(err)
 	}, 5*time.Second, 10*time.Millisecond)
 
 	//compare the dump to what we expected
