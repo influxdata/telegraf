@@ -9,6 +9,7 @@ linters:
     - gosimple
     - govet
     - ineffassign
+    - interfacebloat
     - nakedret
     - nilerr
     - predeclared
