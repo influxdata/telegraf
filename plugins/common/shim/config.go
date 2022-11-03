@@ -3,10 +3,11 @@ package shim
 import (
 	"errors"
 	"fmt"
-	"log" //nolint:revive // Allow exceptional but valid use of log here.
+	"log" //nolint:depguard // Allow exceptional but valid use of log here.
 	"os"
 
 	"github.com/BurntSushi/toml"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
