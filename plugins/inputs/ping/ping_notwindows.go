@@ -105,7 +105,7 @@ func (p *Ping) args(url string, system string) []string {
 		case "darwin":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "freebsd":
-			if strings.Contains(p.Binary, "ping6") {
+			if strings.Contains(p.Binary, "ping6") && freeBSDMajorVersion() <= 12 {
 				args = append(args, "-x", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 			} else {
 				args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
@@ -250,4 +250,23 @@ func checkRoundTripTimeStats(line string) (roundTripTimeStats, error) {
 		}
 	}
 	return roundTripTimeStats, err
+}
+
+// Due to different behavior in version of freebsd, get the major
+// version number. In the event of an error we assume we return a low number
+// to avoid changing behavior.
+func freeBSDMajorVersion() int {
+	out, err := exec.Command("freebsd-version", "-u").Output()
+
+	if err != nil {
+		return -1
+	}
+
+	majorVersionStr := strings.Split(string(out), ".")[0]
+	majorVersion, err := strconv.Atoi(majorVersionStr)
+	if err != nil {
+		return -1
+	}
+
+	return majorVersion
 }
