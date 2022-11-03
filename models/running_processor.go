@@ -24,6 +24,7 @@ func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp
 type ProcessorConfig struct {
 	Name   string
 	Alias  string
+	ID     string
 	Order  int64
 	Filter Filter
 }

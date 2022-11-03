@@ -68,6 +68,7 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 type AggregatorConfig struct {
 	Name         string
 	Alias        string
+	ID           string
 	DropOriginal bool
 	Period       time.Duration
 	Delay        time.Duration
