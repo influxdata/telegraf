@@ -2,15 +2,16 @@ package yandex_cloud_monitoring
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWrite(t *testing.T) {
@@ -74,6 +75,48 @@ func TestWrite(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 		},
+		{
+			name:   "int64 metric is converted to json value",
+			plugin: &YandexCloudMonitoring{},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cluster",
+					map[string]string{},
+					map[string]interface{}{
+						"value": int64(9223372036854775806),
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				message := readBody(r)
+				require.Len(t, message.Metrics, 1)
+				require.Equal(t, "value", message.Metrics[0].Name)
+				require.Equal(t, float64(9.223372036854776e+18), message.Metrics[0].Value)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+		{
+			name:   "int metric is converted to json value",
+			plugin: &YandexCloudMonitoring{},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cluster",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 9226,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				message := readBody(r)
+				require.Len(t, message.Metrics, 1)
+				require.Equal(t, "value", message.Metrics[0].Name)
+				require.Equal(t, float64(9226), message.Metrics[0].Value)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -92,4 +135,9 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestWrite_InvalidType(t *testing.T) {
+	_, err := setValue("foobar")
+	require.Error(t, err)
 }

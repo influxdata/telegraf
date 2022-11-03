@@ -117,18 +117,35 @@ func (a *YandexCloudMonitoring) Close() error {
 	return nil
 }
 
+func setValue(value any) (float64, error) {
+	switch v := value.(type) {
+	case float64:
+		return v, nil
+	case int64:
+		return float64(v), nil
+	default:
+		return float64(-1), fmt.Errorf("expected float64, received %T: '%s'", value, value)
+	}
+}
+
 // Write writes metrics to the remote endpoint
 func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	var yandexCloudMonitoringMetrics []yandexCloudMonitoringMetric
 	for _, m := range metrics {
 		for _, field := range m.FieldList() {
+			value, err := setValue(field.Value)
+			if err != nil {
+				a.Log.Errorf("skipping value: %w", err.Error())
+				continue
+			}
+
 			yandexCloudMonitoringMetrics = append(
 				yandexCloudMonitoringMetrics,
 				yandexCloudMonitoringMetric{
 					Name:   field.Key,
 					Labels: m.Tags(),
 					TS:     fmt.Sprint(m.Time().Format(time.RFC3339)),
-					Value:  field.Value.(float64),
+					Value:  value,
 				},
 			)
 		}
