@@ -495,6 +495,92 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 		testutil.SortMetrics())
 }
 
+func TestForecastTimestamp(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var rsp string
+		if r.URL.Path == "/data/2.5/forecast" {
+			rsp = sampleStatusResponse
+			w.Header()["Content-Type"] = []string{"application/json"}
+		} else if r.URL.Path == "/data/2.5/group" {
+			rsp = sampleNoContent
+		} else {
+			require.Fail(t, "Cannot handle request")
+		}
+
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	n := &OpenWeatherMap{
+		BaseURL:   ts.URL,
+		AppID:     "noappid",
+		CityID:    []string{"2988507"},
+		Fetch:     []string{"weather", "forecast"},
+		Units:     "metric",
+		Timestamp: "prediction",
+	}
+	require.NoError(t, n.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, n.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "2988507",
+				"forecast":       "3h",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "500",
+				"condition_main": "Rain",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(88),
+				"humidity":              int64(91),
+				"pressure":              1018.65,
+				"temperature":           6.71,
+				"rain":                  0.035,
+				"feels_like":            5.71,
+				"wind_degrees":          228.501,
+				"wind_speed":            3.76,
+				"condition_description": "light rain",
+				"condition_icon":        "10n",
+			},
+			time.Unix(1543633200, 0),
+		),
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "2988507",
+				"forecast":       "6h",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "500",
+				"condition_main": "Rain",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(92),
+				"humidity":              int64(98),
+				"pressure":              1032.18,
+				"temperature":           6.38,
+				"rain":                  0.049999999999997,
+				"feels_like":            5.38,
+				"wind_degrees":          335.005,
+				"wind_speed":            2.66,
+				"condition_description": "light rain",
+				"condition_icon":        "10n",
+			},
+			time.Unix(1544054400, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t,
+		expected, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics())
+}
+
 func TestWeatherGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string

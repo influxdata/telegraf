@@ -32,6 +32,7 @@ const (
 	defaultResponseTimeout = time.Second * 5
 	defaultUnits           = "metric"
 	defaultLang            = "en"
+	defaultTimestamp       = "issue"
 )
 
 type OpenWeatherMap struct {
@@ -42,6 +43,7 @@ type OpenWeatherMap struct {
 	BaseURL         string          `toml:"base_url"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Units           string          `toml:"units"`
+	Timestamp       string          `toml:"timestamp"`
 
 	client        *http.Client
 	baseParsedURL *url.URL
@@ -68,7 +70,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 						return
 					}
 
-					gatherForecast(acc, status)
+					gatherForecast(acc, status, n.Timestamp)
 				}()
 			}
 		} else if fetch == "weather" {
@@ -240,7 +242,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 	}
 }
 
-func gatherForecast(acc telegraf.Accumulator, status *Status) {
+func gatherForecast(acc telegraf.Accumulator, status *Status, timestamp string) {
 	tags := map[string]string{
 		"city_id":  strconv.FormatInt(status.City.ID, 10),
 		"forecast": "*",
@@ -266,6 +268,9 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			tags["condition_main"] = e.Weather[0].Main
 		}
 		tags["forecast"] = fmt.Sprintf("%dh", (i+1)*3)
+		if timestamp == "prediction" {
+			tm = tm.Add(3 * time.Hour)
+		}
 		acc.AddFields("weather", fields, tags, tm)
 	}
 }
@@ -308,6 +313,14 @@ func (n *OpenWeatherMap) Init() error {
 		n.Lang = defaultLang
 	default:
 		return fmt.Errorf("unknown language: %s", n.Lang)
+	}
+
+	switch n.Timestamp {
+	case "issue", "prediction":
+	case "":
+		n.Timestamp = defaultTimestamp
+	default:
+		return fmt.Errorf("unknown timestamp value: %s", n.Timestamp)
 	}
 
 	return nil

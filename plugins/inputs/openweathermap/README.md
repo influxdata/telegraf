@@ -52,6 +52,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Query interval; OpenWeatherMap weather data is updated every 10
   ## minutes.
   interval = "10m"
+
+  ## Timestamp: default to "issue" which is the time the forecast data was
+  ## made. Use "prediction", to instead use the future time of the forecast.
+  ## This is 3 hours later.
+  # timestamp = "issue"
 ```
 
 ## Metrics
