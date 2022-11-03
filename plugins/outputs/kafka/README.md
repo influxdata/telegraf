@@ -20,6 +20,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
+  ## The brokers listed here are used to connect to collect metadata about a
+  ## cluster. However, once the initial metadata collect is completed, telegraf
+  ## will communicate solely with the kafka leader and not all defined brokers.
   topic = "telegraf"
 
   ## The value of this tag will be used as the topic.  If not set the 'topic'
