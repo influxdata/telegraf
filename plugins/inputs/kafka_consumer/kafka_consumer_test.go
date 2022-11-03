@@ -3,6 +3,8 @@ package kafka_consumer
 import (
 	"context"
 	"fmt"
+	"math"
+	"net"
 	"testing"
 	"time"
 
@@ -226,8 +228,7 @@ func TestStartStop(t *testing.T) {
 	require.NoError(t, err)
 
 	var acc testutil.Accumulator
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Start(&acc))
 
 	plugin.Stop()
 }
@@ -474,104 +475,205 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	t.Logf("rt: starting network")
-	ctx := context.Background()
-	networkName := "telegraf-test-kafka-consumer-network"
-	net, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
-		NetworkRequest: testcontainers.NetworkRequest{
-			Name:           networkName,
-			Attachable:     true,
-			CheckDuplicate: true,
-		},
-	})
+	var tests = []struct {
+		name               string
+		connectionStrategy string
+	}{
+		{"connection strategy startup", "startup"},
+		{"connection strategy defer", "defer"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("rt: starting network")
+			ctx := context.Background()
+			networkName := "telegraf-test-kafka-consumer-network"
+			net, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
+				NetworkRequest: testcontainers.NetworkRequest{
+					Name:           networkName,
+					Attachable:     true,
+					CheckDuplicate: true,
+				},
+			})
+			require.NoError(t, err)
+			defer func() {
+				require.NoError(t, net.Remove(ctx), "terminating network failed")
+			}()
+
+			t.Logf("rt: starting zookeeper")
+			zookeeperName := "telegraf-test-kafka-consumer-zookeeper"
+			zookeeper := testutil.Container{
+				Image:        "wurstmeister/zookeeper",
+				ExposedPorts: []string{"2181:2181"},
+				Networks:     []string{networkName},
+				WaitingFor:   wait.ForLog("binding to port"),
+				Name:         zookeeperName,
+			}
+			require.NoError(t, zookeeper.Start(), "failed to start container")
+			defer func() {
+				require.NoError(t, zookeeper.Terminate(), "terminating container failed")
+			}()
+
+			t.Logf("rt: starting broker")
+			topic := "Test"
+			container := testutil.Container{
+				Name:         "telegraf-test-kafka-consumer",
+				Image:        "wurstmeister/kafka",
+				ExposedPorts: []string{"9092:9092"},
+				Env: map[string]string{
+					"KAFKA_ADVERTISED_HOST_NAME": "localhost",
+					"KAFKA_ADVERTISED_PORT":      "9092",
+					"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
+					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", topic),
+				},
+				Networks:   []string{networkName},
+				WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer func() {
+				require.NoError(t, container.Terminate(), "terminating container failed")
+			}()
+
+			brokers := []string{
+				fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
+			}
+
+			// Make kafka output
+			t.Logf("rt: starting output plugin")
+			creator := outputs.Outputs["kafka"]
+			output, ok := creator().(*kafkaOutput.Kafka)
+			require.True(t, ok)
+
+			s, _ := serializers.NewInfluxSerializer()
+			output.SetSerializer(s)
+			output.Brokers = brokers
+			output.Topic = topic
+			output.Log = testutil.Logger{}
+
+			require.NoError(t, output.Init())
+			require.NoError(t, output.Connect())
+
+			// Make kafka input
+			t.Logf("rt: starting input plugin")
+			input := KafkaConsumer{
+				Brokers:                brokers,
+				Log:                    testutil.Logger{},
+				Topics:                 []string{topic},
+				MaxUndeliveredMessages: 1,
+				ConnectionStrategy:     tt.connectionStrategy,
+			}
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			input.SetParser(parser)
+			require.NoError(t, input.Init())
+
+			acc := testutil.Accumulator{}
+			require.NoError(t, input.Start(&acc))
+
+			// Shove some metrics through
+			expected := testutil.MockMetrics()
+			t.Logf("rt: writing")
+			require.NoError(t, output.Write(expected))
+
+			// Check that they were received
+			t.Logf("rt: expecting")
+			acc.Wait(len(expected))
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+
+			t.Logf("rt: shutdown")
+			require.NoError(t, output.Close())
+			input.Stop()
+
+			t.Logf("rt: done")
+		})
+	}
+}
+
+func TestExponentialBackoff(t *testing.T) {
+	var err error
+
+	backoff := 10 * time.Millisecond
+	max := 3
+
+	// get an unused port by listening on next available port, then closing it
+	listener, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, net.Remove(ctx), "terminating network failed")
-	}()
+	port := listener.Addr().(*net.TCPAddr).Port
+	require.NoError(t, listener.Close())
 
-	t.Logf("rt: starting zookeeper")
-	zookeeperName := "telegraf-test-kafka-consumer-zookeeper"
-	zookeeper := testutil.Container{
-		Image:        "wurstmeister/zookeeper",
-		ExposedPorts: []string{"2181:2181"},
-		Networks:     []string{networkName},
-		WaitingFor:   wait.ForLog("binding to port"),
-		Name:         zookeeperName,
-	}
-	err = zookeeper.Start()
-	require.NoError(t, err, "failed to start container")
-	defer zookeeper.Terminate()
-
-	t.Logf("rt: starting broker")
-	topic := "Test"
-	container := testutil.Container{
-		Name:         "telegraf-test-kafka-consumer",
-		Image:        "wurstmeister/kafka",
-		ExposedPorts: []string{"9092:9092"},
-		Env: map[string]string{
-			"KAFKA_ADVERTISED_HOST_NAME": "localhost",
-			"KAFKA_ADVERTISED_PORT":      "9092",
-			"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
-			"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", topic),
-		},
-		Networks:   []string{networkName},
-		WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
-	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
-	defer container.Terminate()
-
+	// try to connect to kafka on that unused port
 	brokers := []string{
-		fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
+		fmt.Sprintf("localhost:%d", port),
 	}
 
-	// Make kafka output
-	t.Logf("rt: starting output plugin")
-	creator := outputs.Outputs["kafka"]
-	output, ok := creator().(*kafkaOutput.Kafka)
-	require.True(t, ok)
-
-	s := serializers.NewInfluxSerializer()
-	output.SetSerializer(s)
-	output.Brokers = brokers
-	output.Topic = topic
-	output.Log = testutil.Logger{}
-
-	require.NoError(t, output.Init())
-	require.NoError(t, output.Connect())
-
-	// Make kafka input
-	t.Logf("rt: starting input plugin")
 	input := KafkaConsumer{
 		Brokers:                brokers,
 		Log:                    testutil.Logger{},
-		Topics:                 []string{topic},
+		Topics:                 []string{"topic"},
 		MaxUndeliveredMessages: 1,
+
+		ReadConfig: kafka.ReadConfig{
+			Config: kafka.Config{
+				MetadataRetryMax:     max,
+				MetadataRetryBackoff: config.Duration(backoff),
+				MetadataRetryType:    "exponential",
+			},
+		},
 	}
 	parser := &influx.Parser{}
-	err = parser.Init()
-	require.NoError(t, err)
+	require.NoError(t, parser.Init())
 	input.SetParser(parser)
-	err = input.Init()
-	require.NoError(t, err)
+
+	//time how long initialization (connection) takes
+	start := time.Now()
+	require.NoError(t, input.Init())
 
 	acc := testutil.Accumulator{}
-	err = input.Start(&acc)
-	require.NoError(t, err)
+	require.Error(t, input.Start(&acc))
+	elapsed := time.Since(start)
+	t.Logf("elapsed %d", elapsed)
 
-	// Shove some metrics through
-	expected := testutil.MockMetrics()
-	t.Logf("rt: writing")
-	require.NoError(t, output.Write(expected))
+	var expectedRetryDuration time.Duration
+	for i := 0; i < max; i++ {
+		expectedRetryDuration += backoff * time.Duration(math.Pow(2, float64(i)))
+	}
+	t.Logf("expected > %d", expectedRetryDuration)
 
-	// Check that they were received
-	t.Logf("rt: expecting")
-	acc.Wait(len(expected))
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+	// Other than the expected retry delay, initializing and starting the
+	// plugin, including initializing a sarama consumer takes some time.
+	//
+	// It would be nice to check that the actual time is within an expected
+	// range, but we don't know how long the non-retry time should be.
+	//
+	// For now, just check that elapsed time isn't shorter than we expect the
+	// retry delays to be
+	require.GreaterOrEqual(t, elapsed, expectedRetryDuration)
 
-	t.Logf("rt: shutdown")
-	require.NoError(t, output.Close())
 	input.Stop()
+}
 
-	t.Logf("rt: done")
+func TestExponentialBackoffDefault(t *testing.T) {
+	input := KafkaConsumer{
+		Brokers:                []string{"broker"},
+		Log:                    testutil.Logger{},
+		Topics:                 []string{"topic"},
+		MaxUndeliveredMessages: 1,
+
+		ReadConfig: kafka.ReadConfig{
+			Config: kafka.Config{
+				MetadataRetryType: "exponential",
+			},
+		},
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	input.SetParser(parser)
+
+	require.NoError(t, input.Init())
+
+	// We don't need to start the plugin here since we're only testing
+	// initialization
+
+	// if input.MetadataRetryBackoff isn't set, it should be 250 ms
+	require.Equal(t, input.MetadataRetryBackoff, config.Duration(250*time.Millisecond))
 }

@@ -696,8 +696,10 @@ func gnmiToFields(name string, updateVal *gnmiLib.TypedValue) (map[string]interf
 	case *gnmiLib.TypedValue_DoubleVal:
 		value = val.DoubleVal
 	case *gnmiLib.TypedValue_DecimalVal:
+		//nolint:staticcheck // to maintain backward compatibility with older gnmi specs
 		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
 	case *gnmiLib.TypedValue_FloatVal:
+		//nolint:staticcheck // to maintain backward compatibility with older gnmi specs
 		value = val.FloatVal
 	case *gnmiLib.TypedValue_IntVal:
 		value = val.IntVal
