@@ -95,6 +95,13 @@ func (r *RunningAggregator) Init() error {
 	return nil
 }
 
+func (r *RunningAggregator) ID() string {
+	if p, ok := r.Aggregator.(telegraf.PluginWithID); ok {
+		return p.ID()
+	}
+	return r.Config.ID
+}
+
 func (r *RunningAggregator) Period() time.Duration {
 	return r.Config.Period
 }

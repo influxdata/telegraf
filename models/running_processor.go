@@ -63,6 +63,13 @@ func (rp *RunningProcessor) Init() error {
 	return nil
 }
 
+func (rp *RunningProcessor) ID() string {
+	if p, ok := rp.Processor.(telegraf.PluginWithID); ok {
+		return p.ID()
+	}
+	return rp.Config.ID
+}
+
 func (rp *RunningProcessor) Log() telegraf.Logger {
 	return rp.log
 }
