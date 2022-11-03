@@ -28,6 +28,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   ex: server = "tcp://localhost:6514"
   ##       server = "udp://:6514"
   ##       server = "unix:///var/run/telegraf-syslog.sock"
+  ## When using tcp, consider using 'tcp4' or 'tcp6' to force the usage of IPv4
+  ## or IPV6 respectively. There are cases, where when not specified, a system
+  ## may force an IPv4 mapped IPv6 address.
   server = "tcp://:6514"
 
   ## TLS Config
