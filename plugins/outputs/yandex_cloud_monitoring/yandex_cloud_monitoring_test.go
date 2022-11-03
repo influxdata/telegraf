@@ -136,8 +136,3 @@ func TestWrite(t *testing.T) {
 		})
 	}
 }
-
-func TestWrite_InvalidType(t *testing.T) {
-	_, err := setValue("foobar")
-	require.Error(t, err)
-}

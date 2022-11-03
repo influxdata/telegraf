@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -117,23 +118,12 @@ func (a *YandexCloudMonitoring) Close() error {
 	return nil
 }
 
-func setValue(value any) (float64, error) {
-	switch v := value.(type) {
-	case float64:
-		return v, nil
-	case int64:
-		return float64(v), nil
-	default:
-		return float64(-1), fmt.Errorf("expected float64, received %T: '%s'", value, value)
-	}
-}
-
 // Write writes metrics to the remote endpoint
 func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	var yandexCloudMonitoringMetrics []yandexCloudMonitoringMetric
 	for _, m := range metrics {
 		for _, field := range m.FieldList() {
-			value, err := setValue(field.Value)
+			value, err := internal.ToFloat64(field.Value)
 			if err != nil {
 				a.Log.Errorf("skipping value: %w", err.Error())
 				continue
