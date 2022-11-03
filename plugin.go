@@ -52,6 +52,35 @@ type PluginDescriber interface {
 	SampleConfig() string
 }
 
+// PluginWithID allows a plugin to overwrite its identifier of the plugin
+// instance by a user specified value. By default the ID is generated
+// using the plugin's configuration.
+type PluginWithID interface {
+	// ID returns the ID of the plugin instance. This function has to be
+	// callable directly after the plugin's Init() function if there is any!
+	ID() string
+}
+
+// StatefulPlugin contains the functions that plugins must implement to
+// persist an internal state across Telegraf runs.
+// Note that plugins may define a persister that is not part of the
+// interface, but can be used to trigger state updates by the plugin if
+// it exists in the plugin struct,
+// eg: Persister telegraf.StatePersister `toml:"-"`
+type StatefulPlugin interface {
+	// GetState returns the current state of the plugin to persist
+	// The returned state can be of any time as long as it can be
+	// serialized to JSON. The best choice is a structure defined in
+	// your plugin.
+	// Note: This function has to be callable directly after the
+	// plugin's Init() function if there is any!
+	GetState() interface{}
+
+	// SetState is called by the Persister once after loading and
+	// initialization (after Init() function).
+	SetState(state interface{}) error
+}
+
 // Logger defines an plugin-related interface for logging.
 type Logger interface {
 	// Errorf logs an error message, patterned after log.Printf.
