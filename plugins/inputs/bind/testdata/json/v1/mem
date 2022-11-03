@@ -1,5 +1,6 @@
 {
   "json-stats-version":"1.2",
+  "version":"9.16.10",
   "boot-time":"2017-07-28T13:24:53Z",
   "config-time":"2017-07-28T13:24:53Z",
   "current-time":"2017-07-28T15:33:07Z",
@@ -8,6 +9,7 @@
     "InUse":3064368,
     "BlockSize":13893632,
     "ContextSize":3685480,
+    "Malloced":178297664,
     "Lost":0,
     "contexts":[
       {

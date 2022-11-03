@@ -22,6 +22,7 @@ type jsonStats struct {
 	SockStats map[string]int
 	Views     map[string]jsonView
 	Memory    jsonMemory
+	Version   string
 }
 
 type jsonMemory struct {
@@ -30,6 +31,7 @@ type jsonMemory struct {
 	BlockSize   int64
 	ContextSize int64
 	Lost        int64
+	Malloced    int64
 	Contexts    []struct {
 		ID    string
 		Name  string
@@ -78,6 +80,10 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	tags["source"] = host
 	tags["port"] = port
 
+	if stats.Version != "" {
+		tags["version"] = stats.Version
+	}
+
 	// Opcodes
 	tags["type"] = "opcode"
 	addJSONCounter(acc, tags, stats.OpCodes)
@@ -109,6 +115,7 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 		"block_size":   stats.Memory.BlockSize,
 		"context_size": stats.Memory.ContextSize,
 		"lost":         stats.Memory.Lost,
+		"malloced":     stats.Memory.Malloced,
 	}
 	acc.AddGauge("bind_memory", fields, map[string]string{"url": urlTag, "source": host, "port": port})
 

@@ -16,6 +16,7 @@ func TestBindJsonStats(t *testing.T) {
 	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
 	url := ts.Listener.Addr().String()
 	host, port, _ := net.SplitHostPort(url)
+	version := "9.16.10"
 	defer ts.Close()
 
 	b := Bind{
@@ -144,10 +145,11 @@ func TestBindJsonStats(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.counterType, func(t *testing.T) {
 			tags := map[string]string{
-				"url":    url,
-				"type":   tc.counterType,
-				"source": host,
-				"port":   port,
+				"url":     url,
+				"type":    tc.counterType,
+				"source":  host,
+				"port":    port,
+				"version": version,
 			}
 
 			fields := map[string]interface{}{}
@@ -174,6 +176,7 @@ func TestBindJsonStats(t *testing.T) {
 			"in_use":       int64(3064368),
 			"lost":         int64(0),
 			"total_use":    int64(18206566),
+			"malloced":     int64(178297664),
 		}
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
 	})
