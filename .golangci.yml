@@ -15,6 +15,7 @@ linters:
     - revive
     - sqlclosecheck
     - staticcheck
+    - tparallel
     - typecheck
     - unconvert
     - unused
