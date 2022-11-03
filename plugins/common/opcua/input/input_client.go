@@ -53,10 +53,11 @@ const (
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
-	MetricName string              `toml:"name"`
-	Timestamp  TimestampSource     `toml:"timestamp"`
-	RootNodes  []NodeSettings      `toml:"nodes"`
-	Groups     []NodeGroupSettings `toml:"group"`
+	MetricName      string              `toml:"name"`
+	Timestamp       TimestampSource     `toml:"timestamp"`
+	TimestampFormat string              `toml:"timestamp_format"`
+	RootNodes       []NodeSettings      `toml:"nodes"`
+	Groups          []NodeGroupSettings `toml:"group"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -67,6 +68,10 @@ func (o *InputClientConfig) Validate() error {
 	err := choice.Check(string(o.Timestamp), []string{"", "gather", "server", "source"})
 	if err != nil {
 		return err
+	}
+
+	if o.TimestampFormat == "" {
+		o.TimestampFormat = time.RFC3339Nano
 	}
 
 	return nil
