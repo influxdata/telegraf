@@ -1017,7 +1017,7 @@ func TestPersisterStoreLoad(t *testing.T) {
 	file, err := os.CreateTemp("", "telegraf_state-*.json")
 	require.NoError(t, err)
 	filename := file.Name()
-	file.Close()
+	require.NoError(t, file.Close())
 	defer os.Remove(filename)
 
 	// Load the plugins
