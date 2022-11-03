@@ -106,10 +106,7 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 		}
 		kl.client = &c
 	case "dummy":
-		c, err := NewDummyInterface()
-		if err != nil {
-			return err
-		}
+		c := NewDummyInterface()
 		kl.client = &c
 	default:
 		return fmt.Errorf("invalid interface type: %s", kl.ServiceAddress)

@@ -153,7 +153,7 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ context.Context, params *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ context.Context, _ *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
 	metrics := []types.Metric{}
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
@@ -200,7 +200,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ context.Context, param
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ context.Context, params *cwClient.GetMetricDataInput, _ ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ context.Context, _ *cwClient.GetMetricDataInput, _ ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
 	return nil, nil
 }
 

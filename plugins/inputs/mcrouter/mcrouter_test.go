@@ -61,9 +61,7 @@ func TestMcrouterGeneratesMetricsIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	m := &Mcrouter{
 		Servers: []string{

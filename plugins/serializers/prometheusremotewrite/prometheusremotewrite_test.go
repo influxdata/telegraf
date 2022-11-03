@@ -10,10 +10,10 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRemoteWriteSerialize(t *testing.T) {
@@ -134,11 +134,10 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewSerializer(FormatConfig{
+			s := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
 				StringHandling:  tt.config.StringHandling,
 			})
-			require.NoError(t, err)
 			data, err := s.Serialize(tt.metric)
 			require.NoError(t, err)
 			actual, err := prompbToText(data)
@@ -639,11 +638,10 @@ rpc_duration_seconds_sum 17560473
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewSerializer(FormatConfig{
+			s := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
 				StringHandling:  tt.config.StringHandling,
 			})
-			require.NoError(t, err)
 			data, err := s.SerializeBatch(tt.metrics)
 			require.NoError(t, err)
 			actual, err := prompbToText(data)

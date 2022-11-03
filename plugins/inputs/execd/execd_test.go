@@ -207,11 +207,7 @@ func TestMain(m *testing.M) {
 func runCounterProgram() error {
 	envMetricName := os.Getenv("METRIC_NAME")
 	i := 0
-	serializer, err := serializers.NewInfluxSerializer()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "ERR InfluxSerializer failed to load")
-		return err
-	}
+	serializer := serializers.NewInfluxSerializer()
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {

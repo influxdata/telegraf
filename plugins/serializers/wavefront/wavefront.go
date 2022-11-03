@@ -48,14 +48,14 @@ type MetricPoint struct {
 	Tags      map[string]string
 }
 
-func NewSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversion bool) (*WavefrontSerializer, error) {
+func NewSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversion bool) *WavefrontSerializer {
 	s := &WavefrontSerializer{
 		Prefix:                   prefix,
 		UseStrict:                useStrict,
 		SourceOverride:           sourceOverride,
 		DisablePrefixConversions: disablePrefixConversion,
 	}
-	return s, nil
+	return s
 }
 
 func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {

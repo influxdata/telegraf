@@ -216,7 +216,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 
 	var err error
 	if p.db.Stat().MaxConns() > 1 {
-		err = p.writeConcurrent(tableSources)
+		p.writeConcurrent(tableSources)
 	} else {
 		err = p.writeSequential(tableSources)
 	}
@@ -274,15 +274,14 @@ func (p *Postgresql) writeSequential(tableSources map[string]*TableSource) error
 	return nil
 }
 
-func (p *Postgresql) writeConcurrent(tableSources map[string]*TableSource) error {
+func (p *Postgresql) writeConcurrent(tableSources map[string]*TableSource) {
 	for _, tableSource := range tableSources {
 		select {
 		case p.writeChan <- tableSource:
 		case <-p.dbContext.Done():
-			return nil
+			return
 		}
 	}
-	return nil
 }
 
 func (p *Postgresql) writeWorker(ctx context.Context) {

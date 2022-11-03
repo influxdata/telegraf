@@ -251,10 +251,7 @@ func (t *Telegraf) runAgent(ctx context.Context) error {
 		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
 	}
 
-	ag, err := agent.NewAgent(c)
-	if err != nil {
-		return err
-	}
+	ag := agent.NewAgent(c)
 
 	// Notify systemd that telegraf is ready
 	// SdNotify() only tries to notify if the NOTIFY_SOCKET environment is set, so it's safe to call when systemd isn't present.

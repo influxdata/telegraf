@@ -52,7 +52,7 @@ func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 		wg.Done()
 	}()
 
-	serializer, _ := serializers.NewInfluxSerializer()
+	serializer := serializers.NewInfluxSerializer()
 	parser := influx.Parser{}
 	require.NoError(t, parser.Init())
 

@@ -35,9 +35,7 @@ func TestGetDefaultTagsIntegration(t *testing.T) {
 	}
 
 	container := createTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	m := &MongoDB{
 		Log: testutil.Logger{},
@@ -73,9 +71,7 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 	}
 
 	container := createTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	m := &MongoDB{
 		Log: testutil.Logger{},

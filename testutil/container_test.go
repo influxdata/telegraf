@@ -18,8 +18,7 @@ func TestEmptyContainerIntegration(t *testing.T) {
 	err := container.Start()
 	require.NoError(t, err)
 
-	err = container.Terminate()
-	require.NoError(t, err)
+	container.Terminate()
 }
 
 func TestMappedPortLookupIntegration(t *testing.T) {
@@ -54,8 +53,7 @@ func TestMappedPortLookupIntegration(t *testing.T) {
 			require.Equal(t, tc.expected, container.Ports["80"])
 		}
 
-		err = container.Terminate()
-		require.NoError(t, err)
+		container.Terminate()
 	}
 }
 

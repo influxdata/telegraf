@@ -13,10 +13,11 @@ import (
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	telegrafJson "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
@@ -340,14 +341,14 @@ type mockIngestor struct {
 	records []string
 }
 
-func (m *mockIngestor) FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error) {
+func (m *mockIngestor) FromReader(_ context.Context, reader io.Reader, _ ...ingest.FileOption) (*ingest.Result, error) {
 	bufbytes, _ := io.ReadAll(reader)
 	metricjson := string(bufbytes)
 	m.SetRecords(strings.Split(metricjson, "\n"))
 	return &ingest.Result{}, nil
 }
 
-func (m *mockIngestor) FromFile(ctx context.Context, fPath string, options ...ingest.FileOption) (*ingest.Result, error) {
+func (m *mockIngestor) FromFile(_ context.Context, _ string, _ ...ingest.FileOption) (*ingest.Result, error) {
 	return &ingest.Result{}, nil
 }
 

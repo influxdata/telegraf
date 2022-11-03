@@ -27,7 +27,7 @@ func NewMockTelegraf() *MockTelegraf {
 	return &MockTelegraf{}
 }
 
-func (m *MockTelegraf) Init(serverErr <-chan error, f Filters, g GlobalFlags, w WindowFlags) {
+func (m *MockTelegraf) Init(_ <-chan error, _ Filters, g GlobalFlags, w WindowFlags) {
 	m.GlobalFlags = g
 	m.WindowFlags = w
 }
@@ -47,7 +47,7 @@ func NewMockConfig(buffer io.Writer) *MockConfig {
 	}
 }
 
-func (m *MockConfig) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFilter []string) map[string][]config.PluginDeprecationInfo {
+func (m *MockConfig) CollectDeprecationInfos(_, _, _, _ []string) map[string][]config.PluginDeprecationInfo {
 	return m.ExpectedDeprecatedPlugins
 }
 
@@ -65,7 +65,7 @@ func NewMockServer() *MockServer {
 	return &MockServer{}
 }
 
-func (m *MockServer) Start(address string) {
+func (m *MockServer) Start(_ string) {
 	m.Address = "localhost:6060"
 }
 

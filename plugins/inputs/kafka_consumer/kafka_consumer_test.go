@@ -500,9 +500,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}
 	err = zookeeper.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, zookeeper.Terminate(), "terminating container failed")
-	}()
+	defer zookeeper.Terminate()
 
 	t.Logf("rt: starting broker")
 	topic := "Test"
@@ -521,9 +519,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	brokers := []string{
 		fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
@@ -535,7 +531,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	output, ok := creator().(*kafkaOutput.Kafka)
 	require.True(t, ok)
 
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	output.SetSerializer(s)
 	output.Brokers = brokers
 	output.Topic = topic

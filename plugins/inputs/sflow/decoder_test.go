@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestIPv4SW(t *testing.T) {
@@ -62,8 +63,7 @@ func TestIPv4SW(t *testing.T) {
 	actual := []telegraf.Metric{}
 	dc := NewDecoder()
 	dc.OnPacket(func(p *V5Format) {
-		metrics, err := makeMetrics(p)
-		require.NoError(t, err)
+		metrics := makeMetrics(p)
 		actual = append(actual, metrics...)
 	})
 	buf := bytes.NewReader(packet)
@@ -166,8 +166,7 @@ func TestExpandFlow(t *testing.T) {
 	dc := NewDecoder()
 	p, err := dc.DecodeOnePacket(bytes.NewBuffer(packet))
 	require.NoError(t, err)
-	actual, err := makeMetrics(p)
-	require.NoError(t, err)
+	actual := makeMetrics(p)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -284,8 +283,7 @@ func TestIPv4SWRT(t *testing.T) {
 	dc := NewDecoder()
 	p, err := dc.DecodeOnePacket(bytes.NewBuffer(packet))
 	require.NoError(t, err)
-	actual, err := makeMetrics(p)
-	require.NoError(t, err)
+	actual := makeMetrics(p)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -507,8 +505,7 @@ func TestIPv6SW(t *testing.T) {
 	dc := NewDecoder()
 	p, err := dc.DecodeOnePacket(bytes.NewBuffer(packet))
 	require.NoError(t, err)
-	actual, err := makeMetrics(p)
-	require.NoError(t, err)
+	actual := makeMetrics(p)
 
 	expected := []telegraf.Metric{
 
@@ -554,8 +551,7 @@ func TestExpandFlowCounter(t *testing.T) {
 	dc := NewDecoder()
 	p, err := dc.DecodeOnePacket(bytes.NewBuffer(packet))
 	require.NoError(t, err)
-	actual, err := makeMetrics(p)
-	require.NoError(t, err)
+	actual := makeMetrics(p)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -749,8 +745,7 @@ func TestFlowExpandCounter(t *testing.T) {
 	dc := NewDecoder()
 	p, err := dc.DecodeOnePacket(bytes.NewBuffer(packet))
 	require.NoError(t, err)
-	actual, err := makeMetrics(p)
-	require.NoError(t, err)
+	actual := makeMetrics(p)
 
 	// we don't do anything with samples yet
 	expected := []telegraf.Metric{}

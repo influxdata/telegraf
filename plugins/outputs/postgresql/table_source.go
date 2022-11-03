@@ -19,13 +19,12 @@ func newColumnList() *columnList {
 	}
 }
 
-func (cl *columnList) Add(column utils.Column) bool {
+func (cl *columnList) Add(column utils.Column) {
 	if _, ok := cl.indices[column.Name]; ok {
-		return false
+		return
 	}
 	cl.columns = append(cl.columns, column)
 	cl.indices[column.Name] = len(cl.columns) - 1
-	return true
 }
 
 func (cl *columnList) Remove(name string) bool {

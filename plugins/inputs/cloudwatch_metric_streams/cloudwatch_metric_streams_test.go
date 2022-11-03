@@ -69,12 +69,12 @@ func getHTTPSClient() *http.Client {
 	}
 }
 
-func createURL(metricStream *CloudWatchMetricStreams, scheme string, path string, rawquery string) string {
+func createURL(scheme string, path string) string {
 	u := url.URL{
 		Scheme:   scheme,
 		Host:     "localhost:8080",
 		Path:     path,
-		RawQuery: rawquery,
+		RawQuery: "",
 	}
 	return u.String()
 }
@@ -110,7 +110,7 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	}
 
 	// post single message to the metric stream listener
-	resp, err := noClientAuthClient.Post(createURL(metricStream, "https", "/write", ""), "", bytes.NewBuffer([]byte(record)))
+	resp, err := noClientAuthClient.Post(createURL("https", "/write"), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
@@ -125,7 +125,7 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post single message to the metric stream listener
-	resp, err := getHTTPSClient().Post(createURL(metricStream, "https", "/write", ""), "", bytes.NewBuffer([]byte(record)))
+	resp, err := getHTTPSClient().Post(createURL("https", "/write"), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
@@ -141,7 +141,7 @@ func TestWriteHTTPSuccessfulAuth(t *testing.T) {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", createURL(metricStream, "http", "/write", ""), bytes.NewBuffer([]byte(record)))
+	req, err := http.NewRequest("POST", createURL("http", "/write"), bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	req.Header.Set("X-Amz-Firehose-Access-Key", accessKey)
 
@@ -162,7 +162,7 @@ func TestWriteHTTPFailedAuth(t *testing.T) {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", createURL(metricStream, "http", "/write", ""), bytes.NewBuffer([]byte(record)))
+	req, err := http.NewRequest("POST", createURL("http", "/write"), bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	req.Header.Set("X-Amz-Firehose-Access-Key", badAccessKey)
 
@@ -182,7 +182,7 @@ func TestWriteHTTP(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post single message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(record)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
@@ -197,7 +197,7 @@ func TestWriteHTTPMultipleRecords(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post multiple records to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(records)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(records)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
@@ -213,7 +213,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post single message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(record)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
@@ -229,7 +229,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post single message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(record)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 413, resp.StatusCode)
@@ -244,7 +244,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post single message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/foobar", ""), "", bytes.NewBuffer([]byte(record)))
+	resp, err := http.Post(createURL("http", "/foobar"), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 404, resp.StatusCode)
@@ -259,7 +259,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post a badly formatted message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(badMsg)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(badMsg)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
@@ -274,7 +274,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post empty message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
@@ -354,7 +354,7 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	data, err := os.ReadFile("./testdata/records.gz")
 	require.NoError(t, err)
 
-	req, err := http.NewRequest("POST", createURL(metricStream, "http", "/write", ""), bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", createURL("http", "/write"), bytes.NewBuffer(data))
 	require.NoError(t, err)
 	req.Header.Set("Content-Encoding", "gzip")
 

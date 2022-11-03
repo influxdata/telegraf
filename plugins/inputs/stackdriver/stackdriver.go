@@ -122,10 +122,10 @@ func (g *lockedSeriesGrouper) Add(
 	tm time.Time,
 	field string,
 	fieldValue interface{},
-) error {
+) {
 	g.Lock()
 	defer g.Unlock()
-	return g.SeriesGrouper.Add(measurement, tags, tm, field, fieldValue)
+	g.SeriesGrouper.Add(measurement, tags, tm, field, fieldValue)
 }
 
 // ListMetricDescriptors implements metricClient interface
@@ -554,9 +554,7 @@ func (s *Stackdriver) gatherTimeSeries(
 					value = p.Value.GetStringValue()
 				}
 
-				if err := grouper.Add(tsConf.measurement, tags, ts, tsConf.fieldKey, value); err != nil {
-					return err
-				}
+				grouper.Add(tsConf.measurement, tags, ts, tsConf.fieldKey, value)
 			}
 		}
 	}
@@ -638,23 +636,13 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 	field := tsConf.fieldKey
 	name := tsConf.measurement
 
-	if err := grouper.Add(name, tags, ts, field+"_count", dist.Count); err != nil {
-		return err
-	}
-	if err := grouper.Add(name, tags, ts, field+"_mean", dist.Mean); err != nil {
-		return err
-	}
-	if err := grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", dist.SumOfSquaredDeviation); err != nil {
-		return err
-	}
+	grouper.Add(name, tags, ts, field+"_count", dist.Count)
+	grouper.Add(name, tags, ts, field+"_mean", dist.Mean)
+	grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", dist.SumOfSquaredDeviation)
 
 	if dist.Range != nil {
-		if err := grouper.Add(name, tags, ts, field+"_range_min", dist.Range.Min); err != nil {
-			return err
-		}
-		if err := grouper.Add(name, tags, ts, field+"_range_max", dist.Range.Max); err != nil {
-			return err
-		}
+		grouper.Add(name, tags, ts, field+"_range_min", dist.Range.Min)
+		grouper.Add(name, tags, ts, field+"_range_max", dist.Range.Max)
 	}
 
 	bucket, err := NewBucket(dist)
@@ -680,9 +668,7 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 		if i < int32(len(dist.BucketCounts)) {
 			count += dist.BucketCounts[i]
 		}
-		if err := grouper.Add(name, tags, ts, field+"_bucket", count); err != nil {
-			return err
-		}
+		grouper.Add(name, tags, ts, field+"_bucket", count)
 	}
 
 	return nil

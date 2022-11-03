@@ -3,7 +3,9 @@ package opcua
 import (
 	"context"
 	"fmt"
+
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
@@ -140,11 +142,4 @@ func (o *ReadClient) read() error {
 		o.UpdateNodeValue(i, d)
 	}
 	return nil
-}
-
-// StartStreamValues does nothing for the read client, as it has to actively fetch values. The channel is closed immediately.
-func (o *ReadClient) StartStreamValues(_ context.Context) (<-chan telegraf.Metric, error) {
-	c := make(chan telegraf.Metric)
-	defer close(c)
-	return c, nil
 }

@@ -24,11 +24,11 @@ type Agent struct {
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(cfg *config.Config) (*Agent, error) {
+func NewAgent(cfg *config.Config) *Agent {
 	a := &Agent{
 		Config: cfg,
 	}
-	return a, nil
+	return a
 }
 
 // inputUnit is a group of input plugins and the shared channel they write to.

@@ -38,11 +38,11 @@ func (h *MetricHandler) SetTimeFunc(f TimeFunc) {
 	h.timeFunc = f
 }
 
-func (h *MetricHandler) Metric() (telegraf.Metric, error) {
+func (h *MetricHandler) Metric() telegraf.Metric {
 	if h.metric.Time().IsZero() {
 		h.metric.SetTime(h.timeFunc().Truncate(h.timePrecision))
 	}
-	return h.metric, nil
+	return h.metric
 }
 
 func (h *MetricHandler) SetMeasurement(name []byte) error {

@@ -151,7 +151,7 @@ func TestMain(m *testing.M) {
 func runCountMultiplierProgram() {
 	fieldName := os.Getenv("FIELD_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
-	serializer, _ := serializers.NewInfluxSerializer()
+	serializer := serializers.NewInfluxSerializer()
 
 	for {
 		m, err := parser.Next()
