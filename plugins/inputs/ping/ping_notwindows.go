@@ -257,7 +257,6 @@ func checkRoundTripTimeStats(line string) (roundTripTimeStats, error) {
 // to avoid changing behavior.
 func freeBSDMajorVersion() int {
 	out, err := exec.Command("freebsd-version", "-u").Output()
-
 	if err != nil {
 		return -1
 	}
