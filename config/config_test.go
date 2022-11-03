@@ -1093,17 +1093,17 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 	require.NotEmpty(t, c.AggProcessors)
 
 	// Initialize the persister for test
-	persister := persister.Persister{
+	dut := persister.Persister{
 		Filename: "/tmp/doesn_t_matter.json",
 	}
-	require.NoError(t, persister.Init())
+	require.NoError(t, dut.Init())
 
 	// Register the processors
 	for _, plugin := range c.Processors {
 		unwrapped := plugin.Processor.(unwrappable).Unwrap()
 
 		p := unwrapped.(*MockupProcessorPlugin)
-		require.NoError(t, persister.Register(plugin.ID(), p))
+		require.NoError(t, dut.Register(plugin.ID(), p))
 	}
 
 	// Register the after-aggregator processors
@@ -1111,7 +1111,7 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 		unwrapped := plugin.Processor.(unwrappable).Unwrap()
 
 		p := unwrapped.(*MockupProcessorPlugin)
-		require.NoError(t, persister.Register(plugin.ID(), p))
+		require.NoError(t, dut.Register(plugin.ID(), p))
 	}
 }
 
