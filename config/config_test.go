@@ -973,7 +973,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 func TestConfigPluginIDsDifferent(t *testing.T) {
 	c := NewConfig()
 	c.Agent.Statefile = "/dev/null"
-	require.NoError(t, c.LoadConfig("./testdata/state_persistence_all_different.toml"))
+	require.NoError(t, c.LoadConfig("./testdata/state_persistence_input_all_different.toml"))
 	require.NotEmpty(t, c.Inputs)
 
 	// Compare generated IDs
@@ -996,7 +996,7 @@ func TestConfigPluginIDsDifferent(t *testing.T) {
 func TestConfigPluginIDsSame(t *testing.T) {
 	c := NewConfig()
 	c.Agent.Statefile = "/dev/null"
-	require.NoError(t, c.LoadConfig("./testdata/state_persistence_all_same.toml"))
+	require.NoError(t, c.LoadConfig("./testdata/state_persistence_input_all_same.toml"))
 	require.NotEmpty(t, c.Inputs)
 
 	// Compare generated IDs
@@ -1012,7 +1012,7 @@ func TestConfigPluginIDsSame(t *testing.T) {
 	}
 }
 
-func TestPersisterStoreLoad(t *testing.T) {
+func TestPersisterInputStoreLoad(t *testing.T) {
 	// Reserve a temporary state file
 	file, err := os.CreateTemp("", "telegraf_state-*.json")
 	require.NoError(t, err)
@@ -1022,7 +1022,7 @@ func TestPersisterStoreLoad(t *testing.T) {
 
 	// Load the plugins
 	cstore := NewConfig()
-	require.NoError(t, cstore.LoadConfig("testdata/state_persistence_store_load.toml"))
+	require.NoError(t, cstore.LoadConfig("testdata/state_persistence_input_store_load.toml"))
 
 	// Initialize the persister for storing the state
 	persisterStore := persister.Persister{
@@ -1054,7 +1054,7 @@ func TestPersisterStoreLoad(t *testing.T) {
 
 	// Load the plugins
 	cload := NewConfig()
-	require.NoError(t, cload.LoadConfig("testdata/state_persistence_store_load.toml"))
+	require.NoError(t, cload.LoadConfig("testdata/state_persistence_input_store_load.toml"))
 	require.Len(t, cload.Inputs, len(expected))
 
 	// Initialize the persister for loading the state
@@ -1082,6 +1082,36 @@ func TestPersisterStoreLoad(t *testing.T) {
 	for _, plugin := range cload.Inputs {
 		p := plugin.Input.(*MockupStatePlugin)
 		require.Equal(t, expected[plugin.ID()], p.GetState())
+	}
+}
+
+func TestPersisterProcessorRegistration(t *testing.T) {
+	// Load the plugins
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("testdata/state_persistence_processors.toml"))
+	require.NotEmpty(t, c.Processors)
+	require.NotEmpty(t, c.AggProcessors)
+
+	// Initialize the persister for test
+	persister := persister.Persister{
+		Filename: "/tmp/doesn_t_matter.json",
+	}
+	require.NoError(t, persister.Init())
+
+	// Register the processors
+	for _, plugin := range c.Processors {
+		unwrapped := plugin.Processor.(unwrappable).Unwrap()
+
+		p := unwrapped.(*MockupProcessorPlugin)
+		require.NoError(t, persister.Register(plugin.ID(), p))
+	}
+
+	// Register the after-aggregator processors
+	for _, plugin := range c.AggProcessors {
+		unwrapped := plugin.Processor.(unwrappable).Unwrap()
+
+		p := unwrapped.(*MockupProcessorPlugin)
+		require.NoError(t, persister.Register(plugin.ID(), p))
 	}
 }
 
@@ -1210,7 +1240,10 @@ func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) {
 }
 
 /*** Mockup PROCESSOR plugin without parser ***/
-type MockupProcessorPlugin struct{}
+type MockupProcessorPlugin struct {
+	Option string `toml:"option"`
+	state  []uint64
+}
 
 func (m *MockupProcessorPlugin) Start(_ telegraf.Accumulator) error {
 	return nil
@@ -1224,6 +1257,18 @@ func (m *MockupProcessorPlugin) Apply(_ ...telegraf.Metric) []telegraf.Metric {
 	return nil
 }
 func (m *MockupProcessorPlugin) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupProcessorPlugin) GetState() interface{} {
+	return m.state
+}
+func (m *MockupProcessorPlugin) SetState(state interface{}) error {
+	s, ok := state.([]uint64)
+	if !ok {
+		return fmt.Errorf("invalid state type %T", state)
+	}
+	m.state = s
+
 	return nil
 }
 
@@ -1400,6 +1445,9 @@ func init() {
 	})
 	processors.Add("processor_parserfunc", func() telegraf.Processor {
 		return &MockupProcessorPluginParserFunc{}
+	})
+	processors.Add("statetest", func() telegraf.Processor {
+		return &MockupProcessorPlugin{}
 	})
 
 	// Register the mockup output plugin for the required names

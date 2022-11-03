@@ -978,13 +978,13 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
-	processorConfig, err := c.buildProcessor(name, table)
+	processorBeforeConfig, err := c.buildProcessor("processors", name, table)
 	if err != nil {
 		return err
 	}
 
 	// Setup the processor running before the aggregators
-	processorBefore, hasParser, err := c.setupProcessor(processorConfig.Name, creator, table)
+	processorBefore, hasParser, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
 	if err != nil {
 		return err
 	}
@@ -992,7 +992,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	c.fileProcessors = append(c.fileProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Setup another (new) processor instance running after the aggregator
-	processorAfter, _, err := c.setupProcessor(processorConfig.Name, creator, table)
+	processorAfterConfig, err := c.buildProcessor("aggprocessors", name, table)
 	if err != nil {
 		return err
 	}
@@ -1275,7 +1275,7 @@ func (c *Config) buildParser(name string, tbl *ast.Table) *models.ParserConfig {
 // buildProcessor parses Processor specific items from the ast.Table,
 // builds the filter and returns a
 // models.ProcessorConfig to be inserted into models.RunningProcessor
-func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
 
 	c.getFieldInt64(tbl, "order", &conf.Order)
@@ -1292,7 +1292,7 @@ func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorC
 	}
 
 	// Generate an ID for the plugin
-	conf.ID, err = generatePluginID("processors."+name, tbl)
+	conf.ID, err = generatePluginID(category+"."+name, tbl)
 	return conf, err
 }
 
