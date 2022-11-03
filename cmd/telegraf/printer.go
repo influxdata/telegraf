@@ -136,7 +136,6 @@ func printSampleConfig(
 					pnames = append(pnames, pname)
 				}
 			}
-			sort.Strings(pnames)
 			printFilteredOutputs(pnames, true, outputBuffer)
 		}
 	}
@@ -154,7 +153,6 @@ func printSampleConfig(
 			for pname := range processors.Processors {
 				pnames = append(pnames, pname)
 			}
-			sort.Strings(pnames)
 			printFilteredProcessors(pnames, true, outputBuffer)
 		}
 	}
@@ -172,7 +170,6 @@ func printSampleConfig(
 			for pname := range aggregators.Aggregators {
 				pnames = append(pnames, pname)
 			}
-			sort.Strings(pnames)
 			printFilteredAggregators(pnames, true, outputBuffer)
 		}
 	}
@@ -194,30 +191,9 @@ func printSampleConfig(
 					pnames = append(pnames, pname)
 				}
 			}
-			sort.Strings(pnames)
 			printFilteredInputs(pnames, true, outputBuffer)
 		}
 	}
-}
-
-// PluginNameCounts returns a list of sorted plugin names and their count
-func PluginNameCounts(plugins []string) []string {
-	names := make(map[string]int)
-	for _, plugin := range plugins {
-		names[plugin]++
-	}
-
-	var namecount []string
-	for name, count := range names {
-		if count == 1 {
-			namecount = append(namecount, name)
-		} else {
-			namecount = append(namecount, fmt.Sprintf("%s (%dx)", name, count))
-		}
-	}
-
-	sort.Strings(namecount)
-	return namecount
 }
 
 func printFilteredProcessors(processorFilters []string, commented bool, outputBuffer io.Writer) {
