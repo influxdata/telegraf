@@ -80,7 +80,7 @@ func (l *DebugLogger) Printf(format string, v ...interface{}) {
 }
 
 func (l *DebugLogger) Println(v ...interface{}) {
-	l.Print(v)
+	l.Print(v...)
 }
 
 func ValidateTopicSuffixMethod(method string) error {

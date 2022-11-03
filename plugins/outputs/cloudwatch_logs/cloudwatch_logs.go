@@ -174,9 +174,10 @@ func (c *CloudWatchLogs) Connect() error {
 			queryToken = logGroupsOutput.NextToken
 
 			for _, logGroup := range logGroupsOutput.LogGroups {
-				if *(logGroup.LogGroupName) == c.LogGroup {
+				lg := logGroup
+				if *(lg.LogGroupName) == c.LogGroup {
 					c.Log.Debugf("Found log group %q", c.LogGroup)
-					c.lg = &logGroup //nolint:revive
+					c.lg = &lg
 				}
 			}
 		}
