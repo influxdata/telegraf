@@ -64,11 +64,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Tags
 
+- tomcat_jvm_memory
+  - source
 - tomcat_jvm_memorypool has the following tags:
   - name
   - type
+  - source
 - tomcat_connector
   - name
+  - source
 
 ## Example Output
 
