@@ -302,7 +302,8 @@ func sliceContains(name string, list []string) bool {
 }
 
 // LoadDirectory loads all toml config files found in the specified path, recursively.
-func (c *Config) LoadDirectory(path string) error {
+func (c *Config) LoadDirectory(path string) ([]string, error) {
+	var loadedConfigs []string
 	walkfn := func(thispath string, info os.FileInfo, _ error) error {
 		if info == nil {
 			log.Printf("W! Telegraf is not permitted to read %s", thispath)
@@ -311,7 +312,7 @@ func (c *Config) LoadDirectory(path string) error {
 
 		if info.IsDir() {
 			if strings.HasPrefix(info.Name(), "..") {
-				// skip Kubernetes mounts, prevening loading the same config twice
+				// skip Kubernetes mounts, preventing loading the same config twice
 				return filepath.SkipDir
 			}
 
@@ -325,9 +326,12 @@ func (c *Config) LoadDirectory(path string) error {
 		if err != nil {
 			return err
 		}
+
+		loadedConfigs = append(loadedConfigs, thispath)
+
 		return nil
 	}
-	return filepath.Walk(path, walkfn)
+	return loadedConfigs, filepath.Walk(path, walkfn)
 }
 
 // Try to find a default config file at these locations (in order):

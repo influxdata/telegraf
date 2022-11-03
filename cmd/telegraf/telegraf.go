@@ -63,6 +63,8 @@ type Telegraf struct {
 	inputFilters  []string
 	outputFilters []string
 
+	LoadedConfigs []string
+
 	GlobalFlags
 	WindowFlags
 }
@@ -86,7 +88,7 @@ func (t *Telegraf) reloadLoop() error {
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
 		if t.watchConfig != "" {
-			for _, fConfig := range t.config {
+			for _, fConfig := range t.LoadedConfigs {
 				if _, err := os.Stat(fConfig); err == nil {
 					go t.watchLocalConfig(signals, fConfig)
 				} else {
@@ -178,13 +180,15 @@ func (t *Telegraf) runAgent(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		t.LoadedConfigs = append(t.LoadedConfigs, fConfig)
 	}
 
 	for _, fConfigDirectory := range t.configDir {
-		err = c.LoadDirectory(fConfigDirectory)
+		loadedConfigs, err := c.LoadDirectory(fConfigDirectory)
 		if err != nil {
 			return err
 		}
+		t.LoadedConfigs = append(t.LoadedConfigs, loadedConfigs...)
 	}
 
 	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {

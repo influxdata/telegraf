@@ -141,7 +141,8 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
-	require.NoError(t, c.LoadDirectory("./testdata/subconfig"))
+	_, err := c.LoadDirectory("./testdata/subconfig")
+	require.NoError(t, err)
 
 	// Create the expected data
 	expectedPlugins := make([]*MockupInputPlugin, 4)
