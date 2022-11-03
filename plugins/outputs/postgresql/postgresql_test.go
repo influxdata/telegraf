@@ -743,7 +743,6 @@ func TestWriteIntegration_UnsignedIntegers(t *testing.T) {
 
 	require.Len(t, dump, 1)
 	require.EqualValues(t, uint64(math.MaxUint64), dump[0]["v"])
-
 }
 
 // Last ditch effort to find any concurrency issues.
