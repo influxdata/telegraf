@@ -72,7 +72,6 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	t.pprofErr = pprofErr
 	t.inputFilters = f.input
 	t.outputFilters = f.output
-	t.configFiles = []string{}
 	t.GlobalFlags = g
 	t.WindowFlags = w
 }
@@ -183,7 +182,6 @@ func (t *Telegraf) runAgent(ctx context.Context) error {
 	c := config.NewConfig()
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
-	var err error
 
 	t.configFiles = configFiles
 	if err := c.LoadAll(configFiles...); err != nil {
@@ -218,7 +216,7 @@ func (t *Telegraf) runAgent(ctx context.Context) error {
 		LogWithTimezone:     c.Agent.LogWithTimezone,
 	}
 
-	err = logger.SetupLogging(logConfig)
+	err := logger.SetupLogging(logConfig)
 	if err != nil {
 		return err
 	}
