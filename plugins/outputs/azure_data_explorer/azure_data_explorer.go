@@ -68,7 +68,11 @@ type localClient interface {
 type ingestorFactory func(localClient, string, string) (localIngestor, error)
 
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", ` +
+	`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", ` +
+	`"Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
+	`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", ` +
+	`"Properties":{"Path":"$[\'timestamp\']"}}]'`
 const managedIngestion = "managed"
 const queuedIngestion = "queued"
 
@@ -278,13 +282,15 @@ func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, 
 		}
 	}
 
-	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
+	createTableMappingStmt :=
+		kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).
+			UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
 	if adx.client != nil {
-		if _, err := adx.client.Mgmt(ctx, adx.Database, createTableMappingstmt); err != nil {
+		if _, err := adx.client.Mgmt(ctx, adx.Database, createTableMappingStmt); err != nil {
 			return err
 		}
 	} else if adx.kustoClient != nil {
-		if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingstmt); err != nil {
+		if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingStmt); err != nil {
 			return err
 		}
 	}

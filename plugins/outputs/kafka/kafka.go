@@ -245,7 +245,10 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					return nil
 				}
 				if prodErr.Err == sarama.ErrInvalidTimestamp {
-					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
+					k.Log.Error(
+						"The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; " +
+							"dropping batch",
+					)
 					return nil
 				}
 				return prodErr //nolint:staticcheck // Return first error encountered

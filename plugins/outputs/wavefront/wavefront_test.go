@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 // default config used by Tests
@@ -64,7 +65,9 @@ func TestBuildMetrics(t *testing.T) {
 		},
 		{
 			testMetric1,
-			[]serializer.MetricPoint{{Metric: w.Prefix + "test.simple.metric", Value: 123, Timestamp: timestamp, Source: "testHost", Tags: map[string]string{"tag1": "value1"}}},
+			[]serializer.MetricPoint{
+				{Metric: w.Prefix + "test.simple.metric", Value: 123, Timestamp: timestamp, Source: "testHost", Tags: map[string]string{"tag1": "value1"}},
+			},
 		},
 	}
 
@@ -101,7 +104,12 @@ func TestBuildMetricsStrict(t *testing.T) {
 		{
 			testutil.TestMetric(float64(1), "testing_just/another,metric:float", "metric2"),
 			[]serializer.MetricPoint{
-				{Metric: w.Prefix + "testing.just/another,metric-float", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag/1": "value1", "tag,2": "value2"}},
+				{
+					Metric:    w.Prefix + "testing.just/another,metric-float",
+					Value:     1,
+					Timestamp: timestamp,
+					Tags:      map[string]string{"tag/1": "value1", "tag,2": "value2"},
+				},
 				{Metric: w.Prefix + "testing.metric2", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag/1": "value1", "tag,2": "value2"}},
 			},
 		},
