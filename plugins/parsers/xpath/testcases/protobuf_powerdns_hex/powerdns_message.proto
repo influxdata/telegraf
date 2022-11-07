@@ -1,0 +1,184 @@
+/*
+ * This file describes the message format used by the protobuf logging feature in PowerDNS and dnsdist.
+ *
+ * MIT License
+ * 
+ * Copyright (c) 2016-now PowerDNS.COM B.V. and its contributors.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+syntax = "proto2";
+
+message PBDNSMessage {
+  enum Type {
+    DNSQueryType = 1;                           // Query received by the service
+    DNSResponseType = 2;                        // Response returned by the service
+    DNSOutgoingQueryType = 3;                   // Query sent out by the service to a remote server
+    DNSIncomingResponseType = 4;                // Response returned by the remote server
+  }
+  enum SocketFamily {
+    INET = 1;                                   // IPv4 (RFC 791)
+    INET6 = 2;                                  // IPv6 (RFC 2460)
+  }
+  enum SocketProtocol {
+    UDP = 1;                                    // User Datagram Protocol (RFC 768)
+    TCP = 2;                                    // Transmission Control Protocol (RFC 793)
+    DOT = 3;                                    // DNS over TLS (RFC 7858)
+    DOH = 4;                                    // DNS over HTTPS (RFC 8484)
+    DNSCryptUDP = 5;                            // DNSCrypt over UDP (https://dnscrypt.info/protocol)
+    DNSCryptTCP = 6;                            // DNSCrypt over TCP (https://dnscrypt.info/protocol)
+  }
+  enum PolicyType {
+    UNKNOWN = 1;                                // No RPZ policy applied, or unknown type
+    QNAME = 2;                                  // Policy matched on the QName
+    CLIENTIP = 3;                               // Policy matched on the client IP
+    RESPONSEIP = 4;                             // Policy matched on one of the IPs contained in the answer
+    NSDNAME = 5;                                // Policy matched on the name of one nameserver involved
+    NSIP = 6;                                   // Policy matched on the IP of one nameserver involved
+  }
+  enum PolicyKind {
+    NoAction = 1;                               // No action taken
+    Drop = 2;                                   // https://tools.ietf.org/html/draft-vixie-dns-rpz-04 3.4
+    NXDOMAIN = 3;                               // https://tools.ietf.org/html/draft-vixie-dns-rpz-04 3.1
+    NODATA = 4;                                 // https://tools.ietf.org/html/draft-vixie-dns-rpz-04 3.2
+    Truncate= 5;                                // https://tools.ietf.org/html/draft-vixie-dns-rpz-04 3.5
+    Custom = 6;                                 // https://tools.ietf.org/html/draft-vixie-dns-rpz-04 3.6
+  }
+  enum VState {
+    Indeterminate = 1;
+    Insecure = 2;
+    Secure = 3;
+    BogusNoValidDNSKEY = 4;
+    BogusInvalidDenial = 5;
+    BogusUnableToGetDSs = 6;
+    BogusUnableToGetDNSKEYs = 7;
+    BogusSelfSignedDS = 8;
+    BogusNoRRSIG = 9;
+    BogusNoValidRRSIG = 10;
+    BogusMissingNegativeIndication = 11;
+    BogusSignatureNotYetValid = 12;
+    BogusSignatureExpired = 13;
+    BogusUnsupportedDNSKEYAlgo = 14;
+    BogusUnsupportedDSDigestType = 15;
+    BogusNoZoneKeyBitSet = 16;
+    BogusRevokedDNSKEY = 17;
+    BogusInvalidDNSKEYProtocol = 18;
+  }
+  required Type type = 1;                       // Type of event
+  optional bytes messageId = 2;                 // UUID, shared by the query and the response
+  optional bytes serverIdentity = 3;            // ID of the server emitting the protobuf message
+  optional SocketFamily socketFamily = 4;
+  optional SocketProtocol socketProtocol = 5;
+  optional bytes from = 6;                      // DNS requestor (client) as 4 (IPv4) or 16 (IPv6) raw bytes in network byte order
+  optional bytes to = 7;                        // DNS responder (server) as 4 (IPv4) or 16 (IPv6) raw bytes in network byte order
+  optional uint64 inBytes = 8;                  // Size of the query or response on the wire
+  optional uint32 timeSec = 9;                  // Time of message reception (seconds since epoch)
+  optional uint32 timeUsec = 10;                // Time of message reception (additional micro-seconds)
+  optional uint32 id = 11;                      // ID of the query/response as found in the DNS header
+
+  message DNSQuestion {
+    optional string qName = 1;                  // Fully qualified DNS name (with trailing dot)
+    optional uint32 qType = 2;                  // https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
+    optional uint32 qClass = 3;                 // Typically 1 (IN), see https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-2
+  }
+  optional DNSQuestion question = 12;           // DNS query received from client
+
+  message DNSResponse {
+    // See exportTypes in https://docs.powerdns.com/recursor/lua-config/protobuf.html#protobufServer
+    // for the list of supported resource record types.
+    message DNSRR {
+      optional string name = 1;                 // Fully qualified DNS name (with trailing dot)
+      optional uint32 type = 2;                 // https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
+      optional uint32 class = 3;                // Typically 1 (IN), see https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-2
+      optional uint32 ttl = 4;                  // TTL in seconds
+      optional bytes rdata = 5;                 // raw address bytes in network byte order for A & AAAA; text representation for others, with fully qualified (trailing dot) domain names
+      optional bool  udr = 6;                   // True if this is the first time this RR has been seen for this question
+    }
+    optional uint32 rcode = 1;                  // DNS Response code, or 65536 for a network error including a timeout
+    repeated DNSRR rrs = 2;                     // DNS resource records in response
+    optional string appliedPolicy = 3;          // Filtering policy (RPZ or Lua) applied
+    repeated string tags = 4;                   // Additional tags applied
+    optional uint32 queryTimeSec = 5;           // Time of the corresponding query reception (seconds since epoch)
+    optional uint32 queryTimeUsec = 6;          // Time of the corresponding query reception (additional micro-seconds)
+    optional PolicyType appliedPolicyType = 7;  // Type of the filtering policy (RPZ or Lua) applied
+    optional string appliedPolicyTrigger = 8;   // The RPZ trigger
+    optional string appliedPolicyHit = 9;       // The value (qname or IP) that caused the hit
+    optional PolicyKind appliedPolicyKind = 10; // The Kind (RPZ action) applied by the hit
+    optional VState validationState = 11;       // The DNSSEC Validation State
+  }
+
+  optional DNSResponse response = 13;
+  optional bytes originalRequestorSubnet = 14;  // EDNS Client Subnet value (4 or 16 raw bytes in network byte order)
+  optional string requestorId = 15;             // Username of the requestor
+  optional bytes initialRequestId = 16;         // UUID of the incoming query that initiated this outgoing query or incoming response
+  optional bytes deviceId = 17;                 // Device ID of the requestor (could be mac address IP address or e.g. IMEI, format implementation dependent)
+  optional bool  newlyObservedDomain = 18;      // True if the domain has not been seen before
+  optional string deviceName = 19;              // Device name of the requestor
+  optional uint32 fromPort = 20;                // Source port of the DNS query (client)
+  optional uint32 toPort = 21;                  // Destination port of the DNS query (server)
+
+  message MetaValue {
+    repeated string stringVal = 1;
+    repeated int64 intVal = 2;
+  }
+
+  message Meta {
+    required string key = 1;                    // MUST be unique, so if you have multiple values they must be aggregated into on Meta
+    required MetaValue value = 2;
+  }
+  repeated Meta meta = 22;                      // Arbitrary meta-data - to be used in future rather than adding new fields all the time
+
+  // The well known EventTrace event numbers
+  enum EventType {
+                                                // Range 0..99: Generic events
+    CustomEvent = 0;                            // A custom event
+    ReqRecv = 1;                                // A request was received
+    PCacheCheck = 2;                            // A packet cache check was initiated or completed; value: bool cacheHit
+    AnswerSent = 3;                             // An answer was sent to the client
+
+                                                // Range 100: Recursor events
+    SyncRes = 100;                              // Recursor Syncres main function has started or completed; value: int rcode
+    LuaGetTag = 101;                            // Events below mark start or end of Lua hook calls; value: return value of hook
+    LuaGetTagFFI = 102;
+    LuaIPFilter = 103;
+    LuaPreRPZ = 104;
+    LuaPreResolve = 105;
+    LuaPreOutQuery = 106;
+    LuaPostResolve = 107;
+    LuaNoData = 108;
+    LuaNXDomain = 109;
+    LuaPostResolveFFI = 110;
+  }
+
+  message Event {
+    required int64 ts = 1;                      // Timestamp in ns relative to time of creation of event trace data structure
+    required EventType event = 2;               // Type of event
+    required bool start = 3;                    // true for "start" events, false for "completed" events
+    optional bool boolVal = 4;                  // Below are optional values associated with events
+    optional int64 intVal = 5;
+    optional string stringVal = 6;
+    optional bytes bytesVal = 7;
+    optional string custom = 8;                 // The name of the event for custom events
+  }
+  repeated Event trace = 23;
+}
+
+message PBDNSMessageList {
+  repeated PBDNSMessage msg = 1;
+}
