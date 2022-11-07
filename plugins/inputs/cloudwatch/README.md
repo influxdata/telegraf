@@ -26,9 +26,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Configuration
 
-Please note, the `namespace` option is deprecated in favor of the `namespaces`
-list option.
-
 ```toml @sample.conf
 # Pull Metric Statistics from Amazon CloudWatch
 [[inputs.cloudwatch]]
@@ -140,10 +137,13 @@ list option.
   #    value = "p-example"
 ```
 
+Please note, the `namespace` option is deprecated in favor of the `namespaces`
+list option.
+
 ## Requirements and Terminology
 
-Plugin Configuration utilizes [CloudWatch concepts][concept] and access pattern to
-allow monitoring of any CloudWatch Metric.
+Plugin Configuration utilizes [CloudWatch concepts][concept] and access
+pattern to allow monitoring of any CloudWatch Metric.
 
 - `region` must be a valid AWS [region][] value
 - `period` must be a valid CloudWatch [period][] value
