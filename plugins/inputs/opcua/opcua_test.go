@@ -40,7 +40,10 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -95,7 +98,6 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 
 	err = readClient.Connect()
 	require.NoError(t, err)
-	require.Contains(t, logger.LastError, "E! [] status not OK for node ProductName")
 }
 
 func TestReadClientIntegration(t *testing.T) {
@@ -106,7 +108,10 @@ func TestReadClientIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -187,7 +192,7 @@ password = ""
   name="name2"
   namespace="2"
   identifier_type="s"
-  identifier="two" 
+  identifier="two"
   tags=[["tag0", "val0"], ["tag00", "val00"]]
   default_tags = {tag6 = "val6"}
 

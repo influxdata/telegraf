@@ -41,7 +41,10 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -87,10 +90,14 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	o, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
 	require.NoError(t, err)
 
-	err = o.Init()
-	require.NoError(t, err, "Initialization")
+	// give init a couple extra attempts, seconds as on CircleCI this can
+	// be attempted to soon
+	require.Eventually(t, func() bool {
+		return o.Init() == nil
+	}, 5*time.Second, 10*time.Millisecond)
+
 	err = o.Connect()
-	require.NoError(t, err, "Connect")
+	require.NoError(t, err, "Connection failed")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
