@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGather(t *testing.T) {
@@ -378,6 +379,8 @@ func TestParseXML(t *testing.T) {
 }
 
 func TestSendRequest(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		statusCode int
@@ -428,6 +431,8 @@ func TestSendRequest(t *testing.T) {
 }
 
 func TestParseTime(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -474,6 +479,8 @@ func TestParseTime(t *testing.T) {
 }
 
 func TestFindProbe(t *testing.T) {
+	t.Parallel()
+
 	fakeProbes := []probe{
 		{
 			Name: "test1",
