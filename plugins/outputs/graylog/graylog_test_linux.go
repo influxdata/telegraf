@@ -361,13 +361,14 @@ func TestWriteUDPServerDownRetry(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := Graylog{
-		NameFieldNoPrefix:    true,
-		Servers:              []string{"udp://" + dummy.LocalAddr().String()},
-		ReconnectionAttempts: 5,
-		Log:                  testutil.Logger{},
+		NameFieldNoPrefix: true,
+		Servers:           []string{"udp://" + dummy.LocalAddr().String()},
+		Reconnection:      true,
+		Log:               testutil.Logger{},
 	}
 	require.NoError(t, dummy.Close())
 	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Close())
 }
 
 func TestWriteUDPServerUnavailableOnWriteRetry(t *testing.T) {
@@ -375,15 +376,16 @@ func TestWriteUDPServerUnavailableOnWriteRetry(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := Graylog{
-		NameFieldNoPrefix:    true,
-		Servers:              []string{"udp://" + dummy.LocalAddr().String()},
-		ReconnectionAttempts: 5,
-		Log:                  testutil.Logger{},
+		NameFieldNoPrefix: true,
+		Servers:           []string{"udp://" + dummy.LocalAddr().String()},
+		Reconnection:      true,
+		Log:               testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
 	require.NoError(t, dummy.Close())
 	err = plugin.Write(testutil.MockMetrics())
 	require.ErrorContains(t, err, "not connected")
+	require.NoError(t, plugin.Close())
 }
 
 func TestWriteTCPServerDownRetry(t *testing.T) {
@@ -392,17 +394,18 @@ func TestWriteTCPServerDownRetry(t *testing.T) {
 
 	logger := &testutil.CaptureLogger{}
 	plugin := Graylog{
-		NameFieldNoPrefix:    true,
-		Servers:              []string{"tcp://" + dummy.Addr().String()},
-		ReconnectionAttempts: 5,
-		ReconnectionTime:     config.Duration(100 * time.Millisecond),
-		Log:                  logger,
+		NameFieldNoPrefix: true,
+		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Reconnection:      true,
+		ReconnectionTime:  config.Duration(100 * time.Millisecond),
+		Log:               logger,
 	}
 	require.NoError(t, dummy.Close())
 	require.NoError(t, plugin.Connect())
 	require.Eventually(t, func() bool {
-		return strings.Contains(logger.LastError(), "attempts exceeded")
+		return strings.Contains(logger.LastError(), "after attempt #5...")
 	}, 5*time.Second, 100*time.Millisecond)
+	require.NoError(t, plugin.Close())
 }
 
 func TestWriteTCPServerUnavailableOnWriteRetry(t *testing.T) {
@@ -410,15 +413,16 @@ func TestWriteTCPServerUnavailableOnWriteRetry(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := Graylog{
-		NameFieldNoPrefix:    true,
-		Servers:              []string{"tcp://" + dummy.Addr().String()},
-		ReconnectionAttempts: 5,
-		Log:                  testutil.Logger{},
+		NameFieldNoPrefix: true,
+		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Reconnection:      true,
+		Log:               testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
 	require.NoError(t, dummy.Close())
 	err = plugin.Write(testutil.MockMetrics())
 	require.ErrorContains(t, err, "not connected")
+	require.NoError(t, plugin.Close())
 }
 
 func TestWriteTCPRetryStopping(t *testing.T) {
@@ -427,17 +431,14 @@ func TestWriteTCPRetryStopping(t *testing.T) {
 
 	logger := &testutil.CaptureLogger{}
 	plugin := Graylog{
-		NameFieldNoPrefix:    true,
-		Servers:              []string{"tcp://" + dummy.Addr().String()},
-		ReconnectionAttempts: -1,
-		ReconnectionTime:     config.Duration(10 * time.Millisecond),
-		Log:                  logger,
+		NameFieldNoPrefix: true,
+		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Reconnection:      true,
+		ReconnectionTime:  config.Duration(10 * time.Millisecond),
+		Log:               logger,
 	}
 	require.NoError(t, dummy.Close())
 	require.NoError(t, plugin.Connect())
 	time.Sleep(100 * time.Millisecond)
 	require.NoError(t, plugin.Close())
-	// require.Eventually(t, func() bool {
-	// 	return strings.Contains(logger.LastError, "attempts exceeded")
-	// }, 5*time.Second, 100*time.Millisecond)
 }

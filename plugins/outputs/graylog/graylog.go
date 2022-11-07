@@ -314,18 +314,20 @@ func (g *gelfTCP) send(b []byte) error {
 }
 
 type Graylog struct {
-	Servers              []string        `toml:"servers"`
-	ShortMessageField    string          `toml:"short_message_field"`
-	NameFieldNoPrefix    bool            `toml:"name_field_noprefix"`
-	Timeout              config.Duration `toml:"timeout"`
-	ReconnectionAttempts int64           `toml:"reconnection_attempts"`
-	ReconnectionTime     config.Duration `toml:"reconnection_wait_time"`
-	Log                  telegraf.Logger `toml:"-"`
+	Servers           []string        `toml:"servers"`
+	ShortMessageField string          `toml:"short_message_field"`
+	NameFieldNoPrefix bool            `toml:"name_field_noprefix"`
+	Timeout           config.Duration `toml:"timeout"`
+	Reconnection      bool            `toml:"connection_retry"`
+	ReconnectionTime  config.Duration `toml:"connection_retry_wait_time"`
+	Log               telegraf.Logger `toml:"-"`
 	tlsint.ClientConfig
 
 	writer      io.Writer
 	closers     []io.WriteCloser
 	unconnected []string
+	stopRetry   bool
+	wg          sync.WaitGroup
 
 	sync.Mutex
 }
@@ -344,25 +346,26 @@ func (g *Graylog) Connect() error {
 		return err
 	}
 
-	if g.ReconnectionAttempts == 0 {
-		unconnected, gelfs := g.connectEndpoints(g.Servers, tlsCfg)
-		if len(unconnected) > 0 {
-			servers := strings.Join(unconnected, ",")
-			return fmt.Errorf("connect: connection refused for %s", servers)
-		}
-		writers := make([]io.Writer, 0, len(gelfs))
-		closers := make([]io.WriteCloser, 0, len(gelfs))
-		for _, w := range gelfs {
-			writers = append(writers, w)
-			closers = append(closers, w)
-		}
-		g.Lock()
-		defer g.Unlock()
-		g.writer = io.MultiWriter(writers...)
-		g.closers = closers
-	} else {
+	if g.Reconnection {
 		go g.connectRetry(tlsCfg)
+		return nil
 	}
+
+	unconnected, gelfs := g.connectEndpoints(g.Servers, tlsCfg)
+	if len(unconnected) > 0 {
+		servers := strings.Join(unconnected, ",")
+		return fmt.Errorf("connect: connection refused for %s", servers)
+	}
+	var writers []io.Writer
+	var closers []io.WriteCloser
+	for _, w := range gelfs {
+		writers = append(writers, w)
+		closers = append(closers, w)
+	}
+	g.Lock()
+	defer g.Unlock()
+	g.writer = io.MultiWriter(writers...)
+	g.closers = closers
 
 	return nil
 }
@@ -371,6 +374,8 @@ func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
 	var writers []io.Writer
 	var closers []io.WriteCloser
 	var attempt int64
+
+	g.wg.Add(1)
 
 	unconnected := append([]string{}, g.Servers...)
 	for {
@@ -381,25 +386,28 @@ func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
 		}
 		g.Lock()
 		g.unconnected = unconnected
+		stopRetry := g.stopRetry
 		g.Unlock()
+		if stopRetry {
+			g.Log.Info("Stopping connection retries...")
+			break
+		}
 		if len(unconnected) == 0 {
 			break
 		}
 		attempt++
 		servers := strings.Join(unconnected, ",")
 		g.Log.Infof("Not connected to endpoints %s after attempt #%d...", servers, attempt)
-		if attempt > g.ReconnectionAttempts && g.ReconnectionAttempts >= 0 {
-			g.Log.Errorf("Giving up on connecting to %s, attempts exceeded.", servers)
-			return
-		}
 		time.Sleep(time.Duration(g.ReconnectionTime))
 	}
 	g.Log.Info("Connected!")
 
 	g.Lock()
-	defer g.Unlock()
 	g.writer = io.MultiWriter(writers...)
 	g.closers = closers
+	g.Unlock()
+
+	g.wg.Done()
 }
 
 func (g *Graylog) connectEndpoints(servers []string, tlsCfg *tls.Config) ([]string, []gelf) {
@@ -419,6 +427,11 @@ func (g *Graylog) connectEndpoints(servers []string, tlsCfg *tls.Config) ([]stri
 }
 
 func (g *Graylog) Close() error {
+	g.Lock()
+	g.stopRetry = true
+	g.Unlock()
+	g.wg.Wait()
+
 	for _, closer := range g.closers {
 		_ = closer.Close()
 	}
