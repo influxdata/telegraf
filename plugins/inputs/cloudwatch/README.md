@@ -26,6 +26,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Configuration
 
+Please note, the `namespace` option is deprecated in favor of the `namespaces`
+list option.
+
 ```toml @sample.conf
 # Pull Metric Statistics from Amazon CloudWatch
 [[inputs.cloudwatch]]
@@ -96,8 +99,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Metric Statistic Namespaces (required)
   namespaces = ["AWS/ELB"]
-  ## Single metric statistic namespace appended to namespaces on startup
-  # namespace = "AWS/ELB"
 
   ## Maximum requests per second. Note that the global default AWS rate limit
   ## is 50 reqs/sec, so if you define multiple namespaces, these should add up
@@ -146,7 +147,7 @@ allow monitoring of any CloudWatch Metric.
 
 - `region` must be a valid AWS [region][] value
 - `period` must be a valid CloudWatch [period][] value
-- `namespace` must be a valid CloudWatch [namespace][] value
+- `namespaces` must be a list of valid CloudWatch [namespace][] value(s)
 - `names` must be valid CloudWatch [metric][] names
 - `dimensions` must be valid CloudWatch [dimension][] name/value pairs
 
