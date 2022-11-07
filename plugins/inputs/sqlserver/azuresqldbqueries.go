@@ -242,7 +242,7 @@ SELECT
 			WHERE type_desc = 'ROWS'
 		)
 	 END AS [available_storage_mb]
-	 ,(SELECT SUM(max_size) * 8 / (1024 * 1024) FROM sys.database_files WHERE type_desc = 'LOG') AS total_log_mb
+	 ,(SELECT SUM(max_size) * 8 / (1024 * 1024) FROM sys.database_files WHERE type_desc = 'LOG') AS available_transaction_log_mb
 	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.[databases] AS d
