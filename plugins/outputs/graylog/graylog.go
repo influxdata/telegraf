@@ -9,7 +9,6 @@ import (
 	_ "embed"
 	"encoding/binary"
 	ejson "encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -324,8 +323,9 @@ type Graylog struct {
 	Log                  telegraf.Logger `toml:"-"`
 	tlsint.ClientConfig
 
-	writer  io.Writer
-	closers []io.WriteCloser
+	writer      io.Writer
+	closers     []io.WriteCloser
+	unconnected []string
 
 	sync.Mutex
 }
@@ -372,18 +372,21 @@ func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
 	var closers []io.WriteCloser
 	var attempt int64
 
-	disconnected := append([]string{}, g.Servers...)
+	unconnected := append([]string{}, g.Servers...)
 	for {
-		disconnected, gelfs := g.connectEndpoints(disconnected, tlsCfg)
+		unconnected, gelfs := g.connectEndpoints(unconnected, tlsCfg)
 		for _, w := range gelfs {
 			writers = append(writers, w)
 			closers = append(closers, w)
 		}
-		if len(disconnected) == 0 {
+		g.Lock()
+		g.unconnected = unconnected
+		g.Unlock()
+		if len(unconnected) == 0 {
 			break
 		}
 		attempt++
-		servers := strings.Join(disconnected, ",")
+		servers := strings.Join(unconnected, ",")
 		g.Log.Infof("Not connected to endpoints %s after attempt #%d...", servers, attempt)
 		if attempt > g.ReconnectionAttempts && g.ReconnectionAttempts >= 0 {
 			g.Log.Errorf("Giving up on connecting to %s, attempts exceeded.", servers)
@@ -428,7 +431,11 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 	g.Unlock()
 
 	if writer == nil {
-		return errors.New("not connected")
+		g.Lock()
+		unconnected := strings.Join(g.unconnected, ",")
+		g.Unlock()
+
+		return fmt.Errorf("not connected to %s", unconnected)
 	}
 	for _, metric := range metrics {
 		values, err := g.serialize(metric)
