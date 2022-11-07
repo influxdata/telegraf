@@ -24,7 +24,7 @@ var (
 		"processes", "disk", "diskio"}
 
 	// Default output plugins
-	outputDefaults = []string{"influxdb"}
+	outputDefaults = []string{}
 )
 
 var header = `# Telegraf Configuration
