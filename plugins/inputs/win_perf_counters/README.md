@@ -679,7 +679,7 @@ your performance counters.
 lodctr /r
 ```
 
-# Example output
+## Example output
 
 TODO
 
