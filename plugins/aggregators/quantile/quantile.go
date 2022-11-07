@@ -21,6 +21,8 @@ type Quantile struct {
 
 	cache    map[uint64]aggregate
 	suffixes []string
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 type aggregate struct {
@@ -42,7 +44,10 @@ func (q *Quantile) Add(in telegraf.Metric) {
 		for k, algo := range cached.fields {
 			if field, ok := fields[k]; ok {
 				if v, isconvertible := convert(field); isconvertible {
-					algo.Add(v)
+					err := algo.Add(v)
+					if err != nil {
+						q.Log.Errorf("adding field %s: %v", k, err)
+					}
 				}
 			}
 		}
