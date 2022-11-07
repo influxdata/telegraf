@@ -641,7 +641,11 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 		// NOTE: we are not going to read/discard r.Body under the assumption we'd prefer
 		// to let the underlying transport close the connection and re-establish a new one for
 		// future calls.
-		return "", fmt.Errorf("elasticsearch: Unable to retrieve master node information. API responded with status-code %d, expected %d", r.StatusCode, http.StatusOK)
+		return "", fmt.Errorf(
+			"elasticsearch: Unable to retrieve master node information. API responded with status-code %d, expected %d",
+			r.StatusCode,
+			http.StatusOK,
+		)
 	}
 	response, err := io.ReadAll(r.Body)
 
