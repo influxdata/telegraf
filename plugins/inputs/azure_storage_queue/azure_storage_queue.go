@@ -62,7 +62,12 @@ func (a *AzureStorageQueue) GetServiceURL() (azqueue.ServiceURL, error) {
 	return *a.serviceURL, nil
 }
 
-func (a *AzureStorageQueue) GatherQueueMetrics(acc telegraf.Accumulator, queueItem azqueue.QueueItem, properties *azqueue.QueueGetPropertiesResponse, peekedMessage *azqueue.PeekedMessage) {
+func (a *AzureStorageQueue) GatherQueueMetrics(
+	acc telegraf.Accumulator,
+	queueItem azqueue.QueueItem,
+	properties *azqueue.QueueGetPropertiesResponse,
+	peekedMessage *azqueue.PeekedMessage,
+) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	tags["queue"] = strings.TrimSpace(queueItem.Name)
