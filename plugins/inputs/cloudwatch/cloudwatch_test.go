@@ -107,6 +107,7 @@ func TestGather(t *testing.T) {
 		Period:    internalDuration,
 		RateLimit: 200,
 		BatchSize: 500,
+		Log:       testutil.Logger{},
 	}
 
 	var acc testutil.Accumulator
@@ -139,6 +140,7 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 		Period:     internalDuration,
 		RateLimit:  200,
 		BatchSize:  500,
+		Log:        testutil.Logger{},
 	}
 
 	var acc testutil.Accumulator
@@ -231,6 +233,7 @@ func TestSelectMetrics(t *testing.T) {
 				},
 			},
 		},
+		Log: testutil.Logger{},
 	}
 	require.NoError(t, c.Init())
 	c.client = &mockSelectMetricsCloudWatchClient{}
@@ -262,6 +265,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Delay:      internalDuration,
 		Period:     internalDuration,
 		BatchSize:  500,
+		Log:        testutil.Logger{},
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -302,6 +306,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Delay:      internalDuration,
 		Period:     internalDuration,
 		BatchSize:  500,
+		Log:        testutil.Logger{},
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -342,6 +347,7 @@ func TestUpdateWindow(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		BatchSize: 500,
+		Log:       testutil.Logger{},
 	}
 
 	now := time.Now()
@@ -371,6 +377,7 @@ func TestProxyFunction(t *testing.T) {
 			HTTPProxyURL: "http://www.penguins.com",
 		},
 		BatchSize: 500,
+		Log:       testutil.Logger{},
 	}
 
 	proxyFunction, err := c.HTTPProxy.Proxy()
@@ -389,6 +396,7 @@ func TestCombineNamespaces(t *testing.T) {
 		Namespace:  "AWS/ELB",
 		Namespaces: []string{"AWS/EC2", "AWS/Billing"},
 		BatchSize:  500,
+		Log:        testutil.Logger{},
 	}
 
 	require.NoError(t, c.Init())
