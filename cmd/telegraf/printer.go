@@ -281,12 +281,25 @@ func printFilteredInputs(inputFilters []string, commented bool, outputBuffer io.
 func printFilteredOutputs(outputFilters []string, commented bool, outputBuffer io.Writer) {
 	// Filter outputs
 	var onames []string
+	var influxdbV2 string
+
 	for oname := range outputs.Outputs {
 		if sliceContains(oname, outputFilters) {
+			// Make influxdb_v2 the exception and have it be first in the list
+			// Store it and add it later
+			if oname == "influxdb_v2" {
+				influxdbV2 = oname
+				continue
+			}
+
 			onames = append(onames, oname)
 		}
 	}
 	sort.Strings(onames)
+
+	if influxdbV2 != "" {
+		onames = append([]string{influxdbV2}, onames...)
+	}
 
 	// Print Outputs
 	for _, oname := range onames {
