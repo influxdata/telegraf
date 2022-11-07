@@ -320,19 +320,15 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
 	metrics := []types.Metric{}
 
-	var token *string
-
-	params := &cwClient.ListMetricsInput{
-		Dimensions: []types.DimensionFilter{},
-		NextToken:  token,
-		MetricName: nil,
-	}
-	if c.RecentlyActive == "PT3H" {
-		params.RecentlyActive = types.RecentlyActivePt3h
-	}
-
 	for _, namespace := range c.Namespaces {
-		params.Namespace = aws.String(namespace)
+		params := &cwClient.ListMetricsInput{
+			Dimensions: []types.DimensionFilter{},
+			Namespace:  aws.String(namespace),
+		}
+		if c.RecentlyActive == "PT3H" {
+			params.RecentlyActive = types.RecentlyActivePt3h
+		}
+
 		for {
 			resp, err := c.client.ListMetrics(context.Background(), params)
 			if err != nil {
@@ -340,12 +336,11 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
 				// skip problem namespace on error and continue to next namespace
 				break
 			}
-
 			metrics = append(metrics, resp.Metrics...)
+
 			if resp.NextToken == nil {
 				break
 			}
-
 			params.NextToken = resp.NextToken
 		}
 	}
