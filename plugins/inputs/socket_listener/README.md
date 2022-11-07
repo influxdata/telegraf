@@ -81,7 +81,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Packet splitting strategy and corresponding settings.
   ## Available strategies are:
   ##   newline         -- split at newlines (default)
-	##   null            -- split at null bytes
+  ##   null            -- split at null bytes
   ##   delimiter       -- split at delimiter byte-sequence in hex-format
   ##                      given in `splitting_delimiter`
   ##   fixed length    -- split after number of bytes given in `splitting_length`
