@@ -46,7 +46,7 @@ func (q *Quantile) Add(in telegraf.Metric) {
 				if v, isconvertible := convert(field); isconvertible {
 					err := algo.Add(v)
 					if err != nil {
-						q.Log.Errorf("adding field %s: %v", k, err)
+						q.Log.Errorf("adding cached field %s: %v", k, err)
 					}
 				}
 			}
@@ -64,7 +64,10 @@ func (q *Quantile) Add(in telegraf.Metric) {
 		if v, isconvertible := convert(field); isconvertible {
 			// This should never error out as we tested it in Init()
 			algo, _ := q.newAlgorithm(q.Compression)
-			algo.Add(v)
+			err := algo.Add(v)
+			if err != nil {
+				q.Log.Errorf("adding field %s: %v", k, err)
+			}
 			a.fields[k] = algo
 		}
 	}
