@@ -182,3 +182,12 @@ sysctl -w kern.ipc.maxsockbuf=9646900
 ```
 
 [1]: https://github.com/freebsd/freebsd/blob/master/sys/kern/uipc_sockbuf.c#L63-L64
+
+## Metrics
+
+The plugin accepts arbitrary input and parses it according to the `data_format`
+setting. There is no predefined metric format.
+
+## Example Output
+
+There is no predefined metric format, so output depends on plugin input.
