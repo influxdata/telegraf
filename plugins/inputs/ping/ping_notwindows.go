@@ -122,7 +122,7 @@ func (p *Ping) args(url string, system string) []string {
 	if p.Deadline > 0 {
 		switch system {
 		case "freebsd":
-			if strings.Contains(p.Binary, "ping6") {
+			if strings.Contains(p.Binary, "ping6") && freeBSDMajorVersion() <= 12 {
 				args = append(args, "-X", strconv.Itoa(p.Deadline))
 			} else {
 				args = append(args, "-t", strconv.Itoa(p.Deadline))
