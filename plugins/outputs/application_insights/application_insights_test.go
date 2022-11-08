@@ -157,7 +157,12 @@ func TestAggregateMetricCreated(t *testing.T) {
 			require.NoError(t, err)
 			transmitter.AssertNumberOfCalls(t, "Track", 1+len(tt.additionalMetricValueFields))
 			var pAggregateTelemetry *appinsights.AggregateMetricTelemetry
-			require.IsType(t, pAggregateTelemetry, transmitter.Calls[len(transmitter.Calls)-1].Arguments.Get(0), "Expected last telemetry to be AggregateMetricTelemetry")
+			require.IsType(
+				t,
+				pAggregateTelemetry,
+				transmitter.Calls[len(transmitter.Calls)-1].Arguments.Get(0),
+				"Expected last telemetry to be AggregateMetricTelemetry",
+			)
 			aggregateTelemetry := transmitter.Calls[len(transmitter.Calls)-1].Arguments.Get(0).(*appinsights.AggregateMetricTelemetry)
 			verifyAggregateTelemetry(t, m, tt.valueField, tt.countField, aggregateTelemetry)
 
@@ -183,7 +188,12 @@ func TestSimpleMetricCreated(t *testing.T) {
 		{"value is of wrong type", map[string]interface{}{"value": "alpha", "count": 15}, "", []string{"count"}},
 		{"count is of wrong type", map[string]interface{}{"value": 23.77, "count": 7.5}, "", []string{"count", "value"}},
 		{"count is out of range", map[string]interface{}{"value": -98.45e4, "count": math.MaxUint64 - uint64(20)}, "", []string{"value", "count"}},
-		{"several additional fields", map[string]interface{}{"alpha": 10, "bravo": "bravo", "charlie": 30, "delta": 40.7}, "", []string{"alpha", "charlie", "delta"}},
+		{
+			"several additional fields",
+			map[string]interface{}{"alpha": 10, "bravo": "bravo", "charlie": 30, "delta": 40.7},
+			"",
+			[]string{"alpha", "charlie", "delta"},
+		},
 	}
 
 	for _, tt := range tests {

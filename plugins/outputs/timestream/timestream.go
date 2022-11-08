@@ -52,7 +52,11 @@ type (
 	WriteClient interface {
 		CreateTable(context.Context, *timestreamwrite.CreateTableInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.CreateTableOutput, error)
 		WriteRecords(context.Context, *timestreamwrite.WriteRecordsInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.WriteRecordsOutput, error)
-		DescribeDatabase(context.Context, *timestreamwrite.DescribeDatabaseInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.DescribeDatabaseOutput, error)
+		DescribeDatabase(
+			context.Context,
+			*timestreamwrite.DescribeDatabaseInput,
+			...func(*timestreamwrite.Options),
+		) (*timestreamwrite.DescribeDatabaseOutput, error)
 	}
 )
 
@@ -325,7 +329,11 @@ func (t *Timestream) logWriteToTimestreamError(err error, tableName *string) {
 
 func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.WriteRecordsInput) error {
 	if t.CreateTableIfNotExists {
-		t.Log.Infof("Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.", *writeRecordsInput.TableName, t.DatabaseName)
+		t.Log.Infof(
+			"Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.",
+			*writeRecordsInput.TableName,
+			t.DatabaseName,
+		)
 		err := t.createTable(writeRecordsInput.TableName)
 		if err == nil {
 			t.Log.Infof("Table '%s' in database '%s' created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
@@ -333,7 +341,8 @@ func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.Writ
 		}
 		t.Log.Errorf("Failed to create table '%s' in database '%s': %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
 	} else {
-		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName)
+		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!",
+			*writeRecordsInput.TableName, t.DatabaseName)
 	}
 	return nil
 }

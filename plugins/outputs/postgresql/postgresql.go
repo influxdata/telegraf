@@ -87,7 +87,9 @@ func newPostgresql() *Postgresql {
 	_ = p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
 	_ = p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
 	_ = p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
-	_ = p.TagTableAddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
+	_ = p.TagTableAddColumnTemplates[0].UnmarshalText(
+		[]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`),
+	)
 
 	return p
 }
@@ -445,7 +447,8 @@ func (p *Postgresql) writeTagTable(ctx context.Context, db dbh, tableSource *Tab
 		return fmt.Errorf("copying into tags temp table: %w", err)
 	}
 
-	if _, err := tx.Exec(ctx, fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ORDER BY tag_id ON CONFLICT (tag_id) DO NOTHING", ident.Sanitize(), identTemp.Sanitize())); err != nil {
+	insert := fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ORDER BY tag_id ON CONFLICT (tag_id) DO NOTHING", ident.Sanitize(), identTemp.Sanitize())
+	if _, err := tx.Exec(ctx, insert); err != nil {
 		return fmt.Errorf("inserting into tags table: %w", err)
 	}
 
