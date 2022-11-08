@@ -23,7 +23,7 @@ fi
 
 $exe_path config > $config_name
 
-DIFF=$(diff -q $config_name etc/$config_name)
+DIFF=$(diff -q $config_name ../etc/$config_name)
 
 if [ "$DIFF" ]
 then
