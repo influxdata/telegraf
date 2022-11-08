@@ -31,6 +31,15 @@ var sampleConfig string
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
 
+type MonitorMethod string
+
+const (
+	MonitorMethodNone                   MonitorMethod = ""
+	MonitorMethodAnnotations            MonitorMethod = "annotations"
+	MonitorMethodSettings               MonitorMethod = "settings"
+	MonitorMethodSettingsAndAnnotations MonitorMethod = "settings+annotations"
+)
+
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
 	URLs []string `toml:"urls"`
@@ -90,12 +99,10 @@ type Prometheus struct {
 	podFieldSelector  fields.Selector
 	isNodeScrapeScope bool
 
-	ScrapeConfig struct {
-		Enabled bool   `toml:"enabled"`
-		Scheme  string `toml:"scheme"`
-		Path    string `toml:"path"`
-		Port    int    `toml:"port"`
-	} `toml:"scrape_config"`
+	MonitorKubernetesPodsMethod MonitorMethod `toml:"monitor_kubernetes_pods_method"`
+	MonitorKubernetesPodsScheme string        `toml:"monitor_kubernetes_pods_scheme"`
+	MonitorKubernetesPodsPath   string        `toml:"monitor_kubernetes_pods_path"`
+	MonitorKubernetesPodsPort   int           `toml:"monitor_kubernetes_pods_port"`
 
 	// Only for monitor_kubernetes_pods=true
 	CacheRefreshInterval int `toml:"cache_refresh_interval"`
@@ -145,9 +152,9 @@ func (p *Prometheus) Init() error {
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
 	}
 
-	p.ScrapeConfig.Scheme = "http"
-	p.ScrapeConfig.Path = "/metrics"
-	p.ScrapeConfig.Port = 9102
+	if p.MonitorKubernetesPodsMethod == MonitorMethodNone {
+		p.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
+	}
 
 	ctx := context.Background()
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)

@@ -12,11 +12,12 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func initPromWithScrapeConfig() *Prometheus {
+func initPrometheus() *Prometheus {
 	prom := &Prometheus{Log: testutil.Logger{}}
-	prom.ScrapeConfig.Scheme = "http"
-	prom.ScrapeConfig.Port = 9102
-	prom.ScrapeConfig.Path = "/metrics"
+	prom.MonitorKubernetesPodsScheme = "http"
+	prom.MonitorKubernetesPodsPort = 9102
+	prom.MonitorKubernetesPodsPath = "/metrics"
+	prom.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
 	return prom
 }
 
@@ -30,8 +31,8 @@ func TestScrapeURLNoAnnotations(t *testing.T) {
 }
 
 func TestScrapeURLNoAnnotationsScrapeConfig(t *testing.T) {
-	prom := initPromWithScrapeConfig()
-	prom.ScrapeConfig.Enabled = true
+	prom := initPrometheus()
+	prom.MonitorKubernetesPodsMethod = MonitorMethodSettingsAndAnnotations
 
 	p := pod()
 	p.Annotations = map[string]string{}
@@ -41,11 +42,12 @@ func TestScrapeURLNoAnnotationsScrapeConfig(t *testing.T) {
 }
 
 func TestScrapeURLScrapeConfigCustom(t *testing.T) {
-	prom := initPromWithScrapeConfig()
-	prom.ScrapeConfig.Enabled = true
-	prom.ScrapeConfig.Scheme = "https"
-	prom.ScrapeConfig.Port = 9999
-	prom.ScrapeConfig.Path = "/svc/metrics"
+	prom := initPrometheus()
+	prom.MonitorKubernetesPodsMethod = MonitorMethodSettingsAndAnnotations
+
+	prom.MonitorKubernetesPodsScheme = "https"
+	prom.MonitorKubernetesPodsPort = 9999
+	prom.MonitorKubernetesPodsPath = "/svc/metrics"
 	p := pod()
 	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
@@ -61,8 +63,8 @@ func TestScrapeURLAnnotations(t *testing.T) {
 }
 
 func TestScrapeURLAnnotationsScrapeConfig(t *testing.T) {
-	prom := initPromWithScrapeConfig()
-	prom.ScrapeConfig.Enabled = true
+	prom := initPrometheus()
+	prom.MonitorKubernetesPodsMethod = MonitorMethodSettingsAndAnnotations
 	p := pod()
 	url, err := getScrapeURL(p, prom)
 	require.NoError(t, err)
@@ -70,7 +72,7 @@ func TestScrapeURLAnnotationsScrapeConfig(t *testing.T) {
 }
 
 func TestScrapeURLAnnotationsCustomPort(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := initPrometheus()
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/port": "9000"}
 	url, err := getScrapeURL(p, prom)
@@ -79,8 +81,8 @@ func TestScrapeURLAnnotationsCustomPort(t *testing.T) {
 }
 
 func TestScrapeURLAnnotationsCustomPortScrapeConfig(t *testing.T) {
-	prom := initPromWithScrapeConfig()
-	prom.ScrapeConfig.Enabled = true
+	prom := initPrometheus()
+	prom.MonitorKubernetesPodsMethod = MonitorMethodSettingsAndAnnotations
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/port": "9000"}
 	url, err := getScrapeURL(p, prom)
@@ -89,7 +91,7 @@ func TestScrapeURLAnnotationsCustomPortScrapeConfig(t *testing.T) {
 }
 
 func TestScrapeURLAnnotationsCustomPath(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := initPrometheus()
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/path": "mymetrics"}
 	url, err := getScrapeURL(p, prom)
@@ -98,7 +100,7 @@ func TestScrapeURLAnnotationsCustomPath(t *testing.T) {
 }
 
 func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := initPrometheus()
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/path": "/mymetrics"}
 	url, err := getScrapeURL(p, prom)
@@ -107,7 +109,7 @@ func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 }
 
 func TestScrapeURLAnnotationsCustomPathWithQueryParameters(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := initPrometheus()
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/path": "/v1/agent/metrics?format=prometheus"}
 	url, err := getScrapeURL(p, prom)
@@ -116,7 +118,7 @@ func TestScrapeURLAnnotationsCustomPathWithQueryParameters(t *testing.T) {
 }
 
 func TestScrapeURLAnnotationsCustomPathWithFragment(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := initPrometheus()
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/path": "/v1/agent/metrics#prometheus"}
 	url, err := getScrapeURL(p, prom)
@@ -134,8 +136,8 @@ func TestAddPod(t *testing.T) {
 }
 
 func TestAddPodScrapeConfig(t *testing.T) {
-	prom := initPromWithScrapeConfig()
-	prom.ScrapeConfig.Enabled = true
+	prom := initPrometheus()
+	prom.MonitorKubernetesPodsMethod = MonitorMethodSettingsAndAnnotations
 
 	p := pod()
 	p.Annotations = map[string]string{}

@@ -106,16 +106,15 @@ func shouldScrapePod(pod *corev1.Pod, p *Prometheus) bool {
 	// Annotations always win over configuration. If annotation is not set
 	// scrape only if scrape_config is set
 	shouldScrape := func() bool {
-		if pod.Annotations != nil {
-			if pod.Annotations["prometheus.io/scrape"] == "true" {
-				return true
-			} else if pod.Annotations["prometheus.io/scrape"] == "false" {
-				return false
-			} else {
-				return p.ScrapeConfig.Enabled
-			}
-		} else {
-			return p.ScrapeConfig.Enabled
+		switch p.MonitorKubernetesPodsMethod {
+		case MonitorMethodAnnotations: // must have 'true' annotation to be scraped
+			return pod.Annotations != nil && pod.Annotations["prometheus.io/scrape"] == "true"
+		case MonitorMethodSettings: // will be scraped regardless of annotation
+			return true
+		case MonitorMethodSettingsAndAnnotations: // will be scraped unless opts out with 'false' annotation
+			return pod.Annotations == nil || pod.Annotations["prometheus.io/scrape"] != "false"
+		default:
+			return true // should not get here
 		}
 	}()
 
@@ -410,27 +409,34 @@ func getScrapeURL(pod *corev1.Pod, p *Prometheus) (*url.URL, error) {
 		return nil, nil
 	}
 
-	scheme := pod.Annotations["prometheus.io/scheme"]
-	pathAndQuery := pod.Annotations["prometheus.io/path"]
-	port := pod.Annotations["prometheus.io/port"]
+	var scheme, pathAndQuery, port string
 
-	if scheme == "" && p.ScrapeConfig.Enabled {
-		scheme = p.ScrapeConfig.Scheme
+	if p.MonitorKubernetesPodsMethod == MonitorMethodSettings ||
+		p.MonitorKubernetesPodsMethod == MonitorMethodSettingsAndAnnotations {
+		scheme = p.MonitorKubernetesPodsScheme
+		pathAndQuery = p.MonitorKubernetesPodsPath
+		port = strconv.Itoa(p.MonitorKubernetesPodsPort)
 	}
+
+	if p.MonitorKubernetesPodsMethod == MonitorMethodAnnotations ||
+		p.MonitorKubernetesPodsMethod == MonitorMethodSettingsAndAnnotations {
+		if ann := pod.Annotations["prometheus.io/scheme"]; ann != "" {
+			scheme = ann
+		}
+		if ann := pod.Annotations["prometheus.io/path"]; ann != "" {
+			pathAndQuery = ann
+		}
+		if ann := pod.Annotations["prometheus.io/port"]; ann != "" {
+			port = ann
+		}
+	}
+
 	if scheme == "" {
 		scheme = "http"
 	}
 
-	if port == "" && p.ScrapeConfig.Enabled {
-		port = strconv.Itoa(p.ScrapeConfig.Port)
-	}
-
 	if port == "" {
 		port = "9102"
-	}
-
-	if pathAndQuery == "" && p.ScrapeConfig.Enabled {
-		pathAndQuery = p.ScrapeConfig.Path
 	}
 
 	if pathAndQuery == "" {
