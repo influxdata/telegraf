@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script is responsible for generating the Telegraf config found under the `etc` directory.
+# This script is responsible for checking if the Telegraf config has been updated
 # This script is meant to be only ran in within the Circle CI pipeline so that the Tiger Bot can update them automatically.
 # It supports Windows and Linux because the configs are different depending on the OS.
 
@@ -23,5 +23,14 @@ fi
 
 $exe_path config > $config_name
 
-mkdir ./new-config
-mv $config_name ./new-config
+DIFF=$(diff -q -$config_name 1>/dev/null)
+
+if [[ "$DIFF" != "" ]]
+then
+    mkdir ./new-config
+    mv $config_name ./new-config
+    echo "The sample configuration has been updated due to this pull request."
+    echo "You can get the new configs here: https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/new-config"
+    echo "Update the sample configurations found under 'etc/' with these new ones in your pull request for this step to pass."
+    return 1
+fi

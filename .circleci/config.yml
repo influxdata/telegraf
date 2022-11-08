@@ -21,7 +21,7 @@ executors:
       GOFLAGS: -p=4
 
 commands:
-  generate-config:
+  check-config:
     parameters:
       os:
         type: string
@@ -30,7 +30,7 @@ commands:
       - checkout
       - attach_workspace:
           at: '/build'
-      - run: ./scripts/generate_config.sh << parameters.os >>
+      - run: ./scripts/check_config.sh << parameters.os >>
       - store_artifacts:
           path: './new-config'
           destination: 'new-config'
@@ -504,16 +504,16 @@ jobs:
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
-  generate-config:
+  check-config:
     executor: telegraf-ci
     steps:
-      - generate-config
-  generate-config-win:
+      - check-config
+  check-config-win:
     executor:
         name: win/default
         shell: bash.exe
     steps:
-      - generate-config:
+      - check-config:
           os: windows
 
 workflows:
@@ -660,19 +660,19 @@ workflows:
                 - master
             tags:
               only: /.*/
-      - 'generate-config':
+      - 'check-config':
           requires:
             - 'amd64-package'
           filters:
             branches:
-              only:
+              ignore:
                 - master
-      - 'generate-config-win':
+      - 'check-config-win':
           requires:
             - 'windows-package'
           filters:
             branches:
-              only:
+              ignore:
                 - master
       - 'share-artifacts':
           requires:
