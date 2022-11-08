@@ -188,7 +188,8 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 			opts = append(opts, grpc.MaxRecvMsgSize(c.MaxMsgSize))
 		}
 
-		if c.EnforcementPolicy.PermitKeepaliveWithoutCalls || (c.EnforcementPolicy.KeepaliveMinTime != 0 && c.EnforcementPolicy.KeepaliveMinTime != defaultKeepaliveMinTime) {
+		if c.EnforcementPolicy.PermitKeepaliveWithoutCalls ||
+			(c.EnforcementPolicy.KeepaliveMinTime != 0 && c.EnforcementPolicy.KeepaliveMinTime != defaultKeepaliveMinTime) {
 			// Only set if either parameter does not match defaults
 			opts = append(opts, grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 				MinTime:             time.Duration(c.EnforcementPolicy.KeepaliveMinTime),

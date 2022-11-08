@@ -21,7 +21,11 @@ import (
 
 type mockGatherCloudWatchClient struct{}
 
-func (m *mockGatherCloudWatchClient) ListMetrics(_ context.Context, params *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
+func (m *mockGatherCloudWatchClient) ListMetrics(
+	_ context.Context,
+	params *cwClient.ListMetricsInput,
+	_ ...func(*cwClient.Options),
+) (*cwClient.ListMetricsOutput, error) {
 	return &cwClient.ListMetricsOutput{
 		Metrics: []types.Metric{
 			{
@@ -38,7 +42,11 @@ func (m *mockGatherCloudWatchClient) ListMetrics(_ context.Context, params *cwCl
 	}, nil
 }
 
-func (m *mockGatherCloudWatchClient) GetMetricData(_ context.Context, params *cwClient.GetMetricDataInput, _ ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
+func (m *mockGatherCloudWatchClient) GetMetricData(
+	_ context.Context,
+	params *cwClient.GetMetricDataInput,
+	_ ...func(*cwClient.Options),
+) (*cwClient.GetMetricDataOutput, error) {
 	return &cwClient.GetMetricDataOutput{
 		MetricDataResults: []types.MetricDataResult{
 			{
@@ -155,7 +163,11 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ context.Context, params *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) ListMetrics(
+	_ context.Context,
+	params *cwClient.ListMetricsInput,
+	_ ...func(*cwClient.Options),
+) (*cwClient.ListMetricsOutput, error) {
 	metrics := []types.Metric{}
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
@@ -202,7 +214,11 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ context.Context, param
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ context.Context, params *cwClient.GetMetricDataInput, _ ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) GetMetricData(
+	_ context.Context,
+	params *cwClient.GetMetricDataInput,
+	_ ...func(*cwClient.Options),
+) (*cwClient.GetMetricDataOutput, error) {
 	return nil, nil
 }
 
