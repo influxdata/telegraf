@@ -22,7 +22,7 @@ require (
 	github.com/Shopify/sarama v1.37.2
 	github.com/aerospike/aerospike-client-go/v5 v5.10.0
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
-	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1818
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1836
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.0
 	github.com/antchfx/xmlquery v1.3.12
@@ -34,14 +34,14 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.17.1
 	github.com/aws/aws-sdk-go-v2/config v1.17.8
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.21
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.17
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.19
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.21.6
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.13
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.17.3
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.54.4
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.15.19
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.19
-	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.13.12
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.14.5
 	github.com/aws/smithy-go v1.13.4
 	github.com/benbjohnson/clock v1.3.0
 	github.com/blues/jsonata-go v1.5.4
@@ -129,7 +129,7 @@ require (
 	github.com/pion/dtls/v2 v2.1.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-community/pro-bing v0.1.0
-	github.com/prometheus/client_golang v1.13.0
+	github.com/prometheus/client_golang v1.13.1
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.37.0
 	github.com/prometheus/procfs v0.8.0
@@ -169,7 +169,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
 	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0
 	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec
-	golang.org/x/text v0.3.7
+	golang.org/x/text v0.3.8
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.12.0
 	google.golang.org/api v0.100.0

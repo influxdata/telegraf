@@ -2,8 +2,13 @@ linters:
   disable-all: true
   enable:
     # - telegraflinter
+    - asciicheck
+    - asasalint
+    - bidichk
     - bodyclose
+    - depguard
     - dogsled
+    - exportloopref
     - errcheck
     - goprintffuncname
     - gosimple
@@ -15,12 +20,52 @@ linters:
     - revive
     - sqlclosecheck
     - staticcheck
+    - tparallel
     - typecheck
     - unconvert
     - unparam
     - unused
 
 linters-settings:
+  depguard:
+    # Kind of list is passed in.
+    # Allowed values: allowlist|denylist
+    # Default: denylist
+    list-type: denylist
+    # Check the list against standard lib.
+    # Default: false
+    include-go-root: true
+    # A list of packages for the list type specified.
+    # Can accept both string prefixes and string glob patterns.
+    # Default: []
+    packages:
+      - log
+    # A list of packages for the list type specified.
+    # Specify an error message to output when a denied package is used.
+    # Default: []
+    packages-with-error-message:
+      - log: 'Use injected telegraf.Logger instead'
+    # Specify rules by which the linter ignores certain files for consideration.
+    # Can accept both string prefixes and string glob patterns.
+    # The ! character in front of the rule is a special character
+    # which signals that the linter should negate the rule.
+    # This allows for more precise control, but it is only available for glob patterns.
+    # Default: []
+    ignore-file-rules:
+      - "**/agent/**"
+      - "**/cmd/**"
+      - "**/config/**"
+      - "**/filter/**"
+      - "**/internal/**"
+      - "**/logger/**"
+      - "**/metric/**"
+      - "**/models/**"
+      - "**/plugins/serializers/**"
+      - "**/scripts/**"
+      - "**/selfstat/**"
+      - "**/testutil/**"
+      - "**/tools/**"
+      - "**/*_test.go"
   revive:
     rules:
       - name: argument-limit
@@ -46,13 +91,10 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: errorf
-      #      - name: flag-parameter #disable for now
       - name: function-result-limit
         arguments: [ 3 ]
       - name: identical-branches
       - name: if-return
-      - name: imports-blacklist
-        arguments: [ "log" ]
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
@@ -96,8 +138,6 @@ run:
     - assets
     - docs
     - etc
-    - scripts
-    # - plugins/parsers/influx/machine.go
 
   # which files to skip: they will be analyzed, but issues from them
   # won't be reported. Default value is empty list, but there is
@@ -122,14 +162,6 @@ issues:
     - path: plugins/parsers/influx
       linters:
         - govet
-
-    - path: _test\.go
-      text: "parameter.*seems to be a control flag, avoid control coupling"
-
-    - path: (^agent/|^cmd/|^config/|^filter/|^internal/|^logger/|^metric/|^models/|^selfstat/|^testutil/|^tools|^plugins/serializers/|^plugins/inputs/zipkin/cmd)
-      text: "imports-blacklist: should not use the following blacklisted import: \"log\""
-      linters:
-        - revive
 
     - path: cmd/telegraf/(main|printer).go
       text: "Error return value of `outputBuffer.Write` is not checked"

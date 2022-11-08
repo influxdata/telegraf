@@ -3,15 +3,16 @@ package input
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // NodeSettings describes how to map from a OPC UA node to a Metric
@@ -52,10 +53,11 @@ const (
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
-	MetricName string              `toml:"name"`
-	Timestamp  TimestampSource     `toml:"timestamp"`
-	RootNodes  []NodeSettings      `toml:"nodes"`
-	Groups     []NodeGroupSettings `toml:"group"`
+	MetricName      string              `toml:"name"`
+	Timestamp       TimestampSource     `toml:"timestamp"`
+	TimestampFormat string              `toml:"timestamp_format"`
+	RootNodes       []NodeSettings      `toml:"nodes"`
+	Groups          []NodeGroupSettings `toml:"group"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -66,6 +68,10 @@ func (o *InputClientConfig) Validate() error {
 	err := choice.Check(string(o.Timestamp), []string{"", "gather", "server", "source"})
 	if err != nil {
 		return err
+	}
+
+	if o.TimestampFormat == "" {
+		o.TimestampFormat = time.RFC3339Nano
 	}
 
 	return nil
@@ -356,8 +362,14 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 	}
 
 	if d.Value != nil {
-		o.LastReceivedData[nodeIdx].Value = d.Value.Value()
 		o.LastReceivedData[nodeIdx].DataType = d.Value.Type()
+
+		o.LastReceivedData[nodeIdx].Value = d.Value.Value()
+		if o.LastReceivedData[nodeIdx].DataType == ua.TypeIDDateTime {
+			if t, ok := d.Value.Value().(time.Time); ok {
+				o.LastReceivedData[nodeIdx].Value = t.Format(o.Config.TimestampFormat)
+			}
+		}
 	}
 	o.LastReceivedData[nodeIdx].ServerTime = d.ServerTimestamp
 	o.LastReceivedData[nodeIdx].SourceTime = d.SourceTimestamp

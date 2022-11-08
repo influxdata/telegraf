@@ -380,52 +380,32 @@ func TestClickHouseIntegration(t *testing.T) {
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(testMetrics))
 
-	// wait for last test metric to get written
-	require.Eventually(t, func() bool {
-		var out io.Reader
-		_, out, err = container.Exec([]string{
-			"bash",
-			"-c",
-			"clickhouse-client" +
-				" --user=" + username +
-				" --database=" + dbname +
-				" --format=TabSeparatedRaw" +
-				" --multiquery --query=" +
-				"\"SELECT * FROM \\\"metric three\\\";" +
-				"SHOW CREATE TABLE \\\"metric three\\\"\"",
-		})
-		require.NoError(t, err)
-		bytes, err := io.ReadAll(out)
-		require.NoError(t, err)
-		return strings.Contains(string(bytes), "`string two` String")
-	}, 5*time.Second, 10*time.Millisecond)
-
-	// dump the database
-	var rc int
-	for _, testMetric := range testMetrics {
-		rc, _, err = container.Exec([]string{
-			"bash",
-			"-c",
-			"clickhouse-client" +
-				" --user=" + username +
-				" --database=" + dbname +
-				" --format=TabSeparatedRaw" +
-				" --multiquery --query=" +
-				"\"SELECT * FROM \\\"" + testMetric.Name() + "\\\";" +
-				"SHOW CREATE TABLE \\\"" + testMetric.Name() + "\\\"\"" +
-				" >> /out/dump 2>&1",
-		})
-		require.NoError(t, err)
-		require.Equal(t, 0, rc)
+	cases := []struct {
+		table    string
+		expected string
+	}{
+		{"metric_one", "`float64_one` Float64"},
+		{"metric_two", "`string_one` String"},
+		{"metric three", "`string two` String"},
 	}
-
-	dumpfile := filepath.Join(outDir, "dump")
-	require.FileExists(t, dumpfile)
-
-	//compare the dump to what we expected
-	expected, err := os.ReadFile("testdata/clickhouse/expected.txt")
-	require.NoError(t, err)
-	actual, err := os.ReadFile(dumpfile)
-	require.NoError(t, err)
-	require.Equal(t, string(expected), string(actual))
+	for _, tc := range cases {
+		require.Eventually(t, func() bool {
+			var out io.Reader
+			_, out, err = container.Exec([]string{
+				"bash",
+				"-c",
+				"clickhouse-client" +
+					" --user=" + username +
+					" --database=" + dbname +
+					" --format=TabSeparatedRaw" +
+					" --multiquery --query=" +
+					"\"SELECT * FROM \\\"" + tc.table + "\\\";" +
+					"SHOW CREATE TABLE \\\"" + tc.table + "\\\"\"",
+			})
+			require.NoError(t, err)
+			bytes, err := io.ReadAll(out)
+			require.NoError(t, err)
+			return strings.Contains(string(bytes), tc.expected)
+		}, 5*time.Second, 10*time.Millisecond)
+	}
 }

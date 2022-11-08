@@ -21,7 +21,11 @@ import (
 )
 
 const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", ` +
+	`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", ` +
+	`"Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
+	`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", ` +
+	`"Properties":{"Path":"$[\'timestamp\']"}}]'`
 
 func TestWrite(t *testing.T) {
 	testCases := []struct {
@@ -207,7 +211,10 @@ func TestWriteWithType(t *testing.T) {
 		testutil.TestMetric(1.0, "test2"),
 		testutil.TestMetric(2.0, "test3"),
 	}
-	expectedResultMap2 := map[string]string{"test2": `{"fields":{"value":1.0},"name":"test2","tags":{"tag1":"value1"},"timestamp":1257894000}`, "test3": `{"fields":{"value":2.0},"name":"test3","tags":{"tag1":"value1"},"timestamp":1257894000}`}
+	expectedResultMap2 := map[string]string{
+		"test2": `{"fields":{"value":1.0},"name":"test2","tags":{"tag1":"value1"},"timestamp":1257894000}`,
+		"test3": `{"fields":{"value":2.0},"name":"test3","tags":{"tag1":"value1"},"timestamp":1257894000}`,
+	}
 	// List of tests
 	testCases := []struct {
 		name                      string

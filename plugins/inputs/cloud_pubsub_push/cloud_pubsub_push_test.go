@@ -52,7 +52,13 @@ func TestServeHTTP(t *testing.T) {
 			method: "POST",
 			path:   "/",
 			status: http.StatusRequestEntityTooLarge,
-			body:   strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
+			body: strings.NewReader(
+				`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry",` +
+					`"deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},` +
+					`"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==",` +
+					`"messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z",` +
+					`"publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`,
+			),
 		},
 		{
 			name:    "post valid data",
@@ -60,7 +66,13 @@ func TestServeHTTP(t *testing.T) {
 			path:    "/",
 			maxsize: 500 * 1024 * 1024,
 			status:  http.StatusNoContent,
-			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
+			body: strings.NewReader(
+				`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry",` +
+					`"deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},` +
+					`"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==",` +
+					`"messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z",` +
+					`"publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`,
+			),
 		},
 		{
 			name:    "fail write",
@@ -68,8 +80,14 @@ func TestServeHTTP(t *testing.T) {
 			path:    "/",
 			maxsize: 500 * 1024 * 1024,
 			status:  http.StatusServiceUnavailable,
-			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
-			fail:    true,
+			body: strings.NewReader(
+				`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry",` +
+					`"deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},` +
+					`"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==",` +
+					`"messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z",` +
+					`"publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`,
+			),
+			fail: true,
 		},
 		{
 			name:    "full buffer",
@@ -77,8 +95,14 @@ func TestServeHTTP(t *testing.T) {
 			path:    "/",
 			maxsize: 500 * 1024 * 1024,
 			status:  http.StatusServiceUnavailable,
-			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
-			full:    true,
+			body: strings.NewReader(
+				`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry",` +
+					`"deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},` +
+					`"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==",` +
+					`"messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z",` +
+					`"publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`,
+			),
+			full: true,
 		},
 		{
 			name:    "post invalid body",
@@ -94,7 +118,12 @@ func TestServeHTTP(t *testing.T) {
 			path:    "/",
 			maxsize: 500 * 1024 * 1024,
 			status:  http.StatusBadRequest,
-			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"not base 64 encoded data","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
+			body: strings.NewReader(
+				`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry",` +
+					`"deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"not base 64 encoded data",` +
+					`"messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z",` +
+					`"publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`,
+			),
 		},
 		{
 			name:    "post invalid data format",
@@ -102,7 +131,13 @@ func TestServeHTTP(t *testing.T) {
 			path:    "/",
 			maxsize: 500 * 1024 * 1024,
 			status:  http.StatusBadRequest,
-			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"bm90IHZhbGlkIGZvcm1hdHRlZCBkYXRh","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
+			body: strings.NewReader(
+				`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry",` +
+					`"deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},` +
+					`"data":"bm90IHZhbGlkIGZvcm1hdHRlZCBkYXRh","messageId":"204004313210337","message_id":"204004313210337",` +
+					`"publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},` +
+					`"subscription":"projects/conference-demos/subscriptions/my-subscription"}`,
+			),
 		},
 		{
 			name:    "post invalid structured body",
@@ -110,7 +145,10 @@ func TestServeHTTP(t *testing.T) {
 			path:    "/",
 			maxsize: 500 * 1024 * 1024,
 			status:  http.StatusBadRequest,
-			body:    strings.NewReader(`{"message":{"attributes":{"thing":1},"data":"bm90IHZhbGlkIGZvcm1hdHRlZCBkYXRh"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
+			body: strings.NewReader(
+				`{"message":{"attributes":{"thing":1},"data":"bm90IHZhbGlkIGZvcm1hdHRlZCBkYXRh"},` +
+					`"subscription":"projects/conference-demos/subscriptions/my-subscription"}`,
+			),
 		},
 	}
 

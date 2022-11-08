@@ -60,7 +60,16 @@ func TestHTTPTomcat8(t *testing.T) {
 		"total": int64(58195968),
 		"max":   int64(620756992),
 	}
-	acc.AssertContainsFields(t, "tomcat_jvm_memory", jvmMemoryFields)
+	jvmMemoryTags := map[string]string{
+		"source": ts.URL,
+	}
+	for _, metric := range acc.Metrics {
+		fmt.Println(metric.Measurement)
+		for k, v := range metric.Tags {
+			fmt.Printf("%s: %s\n", k, v)
+		}
+	}
+	acc.AssertContainsTaggedFields(t, "tomcat_jvm_memory", jvmMemoryFields, jvmMemoryTags)
 
 	// tomcat_jvm_memorypool
 	jvmMemoryPoolFields := map[string]interface{}{
@@ -70,8 +79,9 @@ func TestHTTPTomcat8(t *testing.T) {
 		"used":      int64(17533952),
 	}
 	jvmMemoryPoolTags := map[string]string{
-		"name": "PS Perm Gen",
-		"type": "Non-heap memory",
+		"name":   "PS Perm Gen",
+		"type":   "Non-heap memory",
+		"source": ts.URL,
 	}
 	acc.AssertContainsTaggedFields(t, "tomcat_jvm_memorypool", jvmMemoryPoolFields, jvmMemoryPoolTags)
 
@@ -88,7 +98,8 @@ func TestHTTPTomcat8(t *testing.T) {
 		"bytes_sent":           int64(9286),
 	}
 	connectorTags := map[string]string{
-		"name": "http-apr-8080",
+		"name":   "http-apr-8080",
+		"source": ts.URL,
 	}
 	acc.AssertContainsTaggedFields(t, "tomcat_connector", connectorFields, connectorTags)
 }
@@ -147,7 +158,8 @@ func TestHTTPTomcat6(t *testing.T) {
 		"request_count":        int(436),
 	}
 	connectorTags := map[string]string{
-		"name": "http-8080",
+		"name":   "http-8080",
+		"source": ts.URL,
 	}
 	acc.AssertContainsTaggedFields(t, "tomcat_connector", connectorFields, connectorTags)
 }

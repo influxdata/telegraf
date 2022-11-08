@@ -3,13 +3,14 @@ package opcua
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strconv"
+	"time"
+
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"net/url"
-	"strconv"
-	"time"
 )
 
 type OpcUAWorkarounds struct {
@@ -56,6 +57,7 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	default:
 		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.Endpoint)
 	}
+
 	return nil
 }
 

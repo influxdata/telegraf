@@ -6,16 +6,19 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var (
 	measurement              = "dmcache"
 	badFormatOutput          = []string{"cs-1: 0 4883791872 cache 8 1018/1501122 512 7/464962 139 352643 "}
 	good2DevicesFormatOutput = []string{
-		"cs-1: 0 4883791872 cache 8 1018/1501122 512 7/464962 139 352643 15 46 0 7 0 1 writeback 2 migration_threshold 2048 mq 10 random_threshold 4 sequential_threshold 512 discard_promote_adjustment 1 read_promote_adjustment 4 write_promote_adjustment 8",
-		"cs-2: 0 4294967296 cache 8 72352/1310720 128 26/24327168 2409 286 265 524682 0 0 0 1 writethrough 2 migration_threshold 2048 mq 10 random_threshold 4 sequential_threshold 512 discard_promote_adjustment 1 read_promote_adjustment 4 write_promote_adjustment 8",
+		"cs-1: 0 4883791872 cache 8 1018/1501122 512 7/464962 139 352643 15 46 0 7 0 1 writeback 2 migration_threshold 2048 mq 10 random_threshold 4 " +
+			"sequential_threshold 512 discard_promote_adjustment 1 read_promote_adjustment 4 write_promote_adjustment 8",
+		"cs-2: 0 4294967296 cache 8 72352/1310720 128 26/24327168 2409 286 265 524682 0 0 0 1 writethrough 2 migration_threshold 2048 mq 10 " +
+			"random_threshold 4 sequential_threshold 512 discard_promote_adjustment 1 read_promote_adjustment 4 write_promote_adjustment 8",
 	}
 )
 

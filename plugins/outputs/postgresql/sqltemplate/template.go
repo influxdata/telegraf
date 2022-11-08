@@ -72,7 +72,8 @@ A simple example for usage with TimescaleDB would be:
 
 ...where the defaults for the other templates would be automatically applied.
 
-A very complex example for versions of TimescaleDB which don't support adding columns to compressed hypertables (v<2.1.0), using views and unions to emulate the functionality, would be:
+A very complex example for versions of TimescaleDB which don't support adding columns to compressed hypertables (v<2.1.0),
+using views and unions to emulate the functionality, would be:
 
 	[outputs.postgresql]
 	  schema = "telegraf"

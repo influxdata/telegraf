@@ -8,10 +8,11 @@ import (
 	"regexp"
 	"strings"
 
+	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
-	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
 )
 
 //go:embed sample.conf
@@ -134,7 +135,14 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 					return fmt.Errorf("wavefront sending error: %v", err)
 				}
 				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
-				w.Log.Debugf("Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ", point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
+				w.Log.Debugf(
+					"Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ",
+					point.Metric,
+					point.Value,
+					point.Timestamp,
+					point.Source,
+					point.Tags,
+				)
 			}
 		}
 	}

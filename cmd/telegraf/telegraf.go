@@ -62,6 +62,7 @@ type Telegraf struct {
 
 	inputFilters  []string
 	outputFilters []string
+	configFiles   []string
 
 	GlobalFlags
 	WindowFlags
@@ -86,7 +87,7 @@ func (t *Telegraf) reloadLoop() error {
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
 		if t.watchConfig != "" {
-			for _, fConfig := range t.config {
+			for _, fConfig := range t.configFiles {
 				if _, err := os.Stat(fConfig); err == nil {
 					go t.watchLocalConfig(signals, fConfig)
 				} else {
@@ -161,30 +162,30 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 }
 
 func (t *Telegraf) runAgent(ctx context.Context) error {
+	var configFiles []string
+	// providing no "config" flag should load default config
+	if len(t.config) == 0 {
+		configFiles = append(configFiles, "")
+	} else {
+		configFiles = append(configFiles, t.config...)
+	}
+
+	for _, fConfigDirectory := range t.configDir {
+		files, err := config.WalkDirectory(fConfigDirectory)
+		if err != nil {
+			return err
+		}
+		configFiles = append(configFiles, files...)
+	}
+
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
-	var err error
-	// providing no "config" flag should load default config
-	if len(t.config) == 0 {
-		err = c.LoadConfig("")
-		if err != nil {
-			return err
-		}
-	}
-	for _, fConfig := range t.config {
-		err = c.LoadConfig(fConfig)
-		if err != nil {
-			return err
-		}
-	}
 
-	for _, fConfigDirectory := range t.configDir {
-		err = c.LoadDirectory(fConfigDirectory)
-		if err != nil {
-			return err
-		}
+	t.configFiles = configFiles
+	if err := c.LoadAll(configFiles...); err != nil {
+		return err
 	}
 
 	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {
@@ -215,7 +216,7 @@ func (t *Telegraf) runAgent(ctx context.Context) error {
 		LogWithTimezone:     c.Agent.LogWithTimezone,
 	}
 
-	err = logger.SetupLogging(logConfig)
+	err := logger.SetupLogging(logConfig)
 	if err != nil {
 		return err
 	}

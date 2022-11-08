@@ -28,11 +28,19 @@ func (c *mockCloudWatchLogs) Init(lsName string) {
 	c.pushedLogEvents = make([]types.InputLogEvent, 0)
 }
 
-func (c *mockCloudWatchLogs) DescribeLogGroups(context.Context, *cloudwatchlogsV2.DescribeLogGroupsInput, ...func(options *cloudwatchlogsV2.Options)) (*cloudwatchlogsV2.DescribeLogGroupsOutput, error) {
+func (c *mockCloudWatchLogs) DescribeLogGroups(
+	context.Context,
+	*cloudwatchlogsV2.DescribeLogGroupsInput,
+	...func(options *cloudwatchlogsV2.Options),
+) (*cloudwatchlogsV2.DescribeLogGroupsOutput, error) {
 	return nil, nil
 }
 
-func (c *mockCloudWatchLogs) DescribeLogStreams(context.Context, *cloudwatchlogsV2.DescribeLogStreamsInput, ...func(options *cloudwatchlogsV2.Options)) (*cloudwatchlogsV2.DescribeLogStreamsOutput, error) {
+func (c *mockCloudWatchLogs) DescribeLogStreams(
+	context.Context,
+	*cloudwatchlogsV2.DescribeLogStreamsInput,
+	...func(options *cloudwatchlogsV2.Options),
+) (*cloudwatchlogsV2.DescribeLogStreamsOutput, error) {
 	arn := "arn"
 	creationTime := time.Now().Unix()
 	sequenceToken := "arbitraryToken"
@@ -51,10 +59,20 @@ func (c *mockCloudWatchLogs) DescribeLogStreams(context.Context, *cloudwatchlogs
 	}
 	return output, nil
 }
-func (c *mockCloudWatchLogs) CreateLogStream(context.Context, *cloudwatchlogsV2.CreateLogStreamInput, ...func(options *cloudwatchlogsV2.Options)) (*cloudwatchlogsV2.CreateLogStreamOutput, error) {
+
+func (c *mockCloudWatchLogs) CreateLogStream(
+	context.Context,
+	*cloudwatchlogsV2.CreateLogStreamInput,
+	...func(options *cloudwatchlogsV2.Options),
+) (*cloudwatchlogsV2.CreateLogStreamOutput, error) {
 	return nil, nil
 }
-func (c *mockCloudWatchLogs) PutLogEvents(_ context.Context, input *cloudwatchlogsV2.PutLogEventsInput, _ ...func(options *cloudwatchlogsV2.Options)) (*cloudwatchlogsV2.PutLogEventsOutput, error) {
+
+func (c *mockCloudWatchLogs) PutLogEvents(
+	_ context.Context,
+	input *cloudwatchlogsV2.PutLogEventsInput,
+	_ ...func(options *cloudwatchlogsV2.Options),
+) (*cloudwatchlogsV2.PutLogEventsOutput, error) {
 	sequenceToken := "arbitraryToken"
 	output := &cloudwatchlogsV2.PutLogEventsOutput{NextSequenceToken: &sequenceToken}
 	//Saving messages

@@ -199,7 +199,11 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	// Write csv file to process into the 'process' directory.
 	f, err := os.Create(filepath.Join(processDirectory, testJSONFile))
 	require.NoError(t, err)
-	_, err = f.WriteString("{\"Name\": \"event1\",\"Speed\": 100.1,\"Length\": 20.1}\n{\"Name\": \"event2\",\"Speed\": 500,\"Length\": 1.4}\n{\"Name\": \"event3\",\"Speed\": 200,\"Length\": 10.23}\n{\"Name\": \"event4\",\"Speed\": 80,\"Length\": 250}\n{\"Name\": \"event5\",\"Speed\": 120.77,\"Length\": 25.97}")
+	_, err = f.WriteString(
+		"{\"Name\": \"event1\",\"Speed\": 100.1,\"Length\": 20.1}\n{\"Name\": \"event2\",\"Speed\": 500,\"Length\": 1.4}\n" +
+			"{\"Name\": " + "\"event3\",\"Speed\": 200,\"Length\": 10.23}\n{\"Name\": \"event4\",\"Speed\": 80,\"Length\": 250}\n" +
+			"{\"Name\": \"event5\",\"Speed\": 120.77,\"Length\": 25.97}",
+	)
 	require.NoError(t, err)
 	err = f.Close()
 	require.NoError(t, err)

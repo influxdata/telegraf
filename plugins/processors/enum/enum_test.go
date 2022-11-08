@@ -116,7 +116,11 @@ func TestMappings(t *testing.T) {
 	for _, mapping := range mappings {
 		fieldName := mapping["field_name"][0].(string)
 		for index := range mapping["target_value"] {
-			mapper := EnumMapper{Mappings: []Mapping{{Field: fieldName, ValueMappings: map[string]interface{}{mapping["target_value"][index].(string): mapping["mapped_value"][index]}}}}
+			mapper := EnumMapper{
+				Mappings: []Mapping{
+					{Field: fieldName, ValueMappings: map[string]interface{}{mapping["target_value"][index].(string): mapping["mapped_value"][index]}},
+				},
+			}
 			err := mapper.Init()
 			require.Nil(t, err)
 			fields := calculateProcessedValues(mapper, createTestMetric())

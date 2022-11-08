@@ -67,7 +67,8 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
 
-		KeyUsage:              x509.KeyUsageContentCommitment | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageDataEncipherment | x509.KeyUsageCertSign,
+		KeyUsage: x509.KeyUsageContentCommitment | x509.KeyUsageKeyEncipherment |
+			x509.KeyUsageDigitalSignature | x509.KeyUsageDataEncipherment | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 	}
@@ -191,7 +192,8 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	case strings.HasPrefix(policy, ua.SecurityPolicyURIPrefix):
 		secPolicy = policy
 		policy = ""
-	case policy == "None" || policy == "Basic128Rsa15" || policy == "Basic256" || policy == "Basic256Sha256" || policy == "Aes128_Sha256_RsaOaep" || policy == "Aes256_Sha256_RsaPss":
+	case policy == "None" || policy == "Basic128Rsa15" || policy == "Basic256" || policy == "Basic256Sha256" ||
+		policy == "Aes128_Sha256_RsaOaep" || policy == "Aes256_Sha256_RsaPss":
 		secPolicy = ua.SecurityPolicyURIPrefix + policy
 		policy = ""
 	default:
@@ -261,7 +263,11 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 			o.Log.Debugf("Evaluating endpoint %s, policy %s, mode %s, level %d", e.EndpointURL, e.SecurityPolicyURI, e.SecurityMode, e.SecurityLevel)
 			if e.SecurityPolicyURI == secPolicy && e.SecurityMode == secMode && (serverEndpoint == nil || e.SecurityLevel >= serverEndpoint.SecurityLevel) {
 				serverEndpoint = e
-				o.Log.Debugf("Security policy and mode found. Using server endpoint %s for security. Policy %s", serverEndpoint.EndpointURL, serverEndpoint.SecurityPolicyURI)
+				o.Log.Debugf(
+					"Security policy and mode found. Using server endpoint %s for security. Policy %s",
+					serverEndpoint.EndpointURL,
+					serverEndpoint.SecurityPolicyURI,
+				)
 			}
 		}
 	}
