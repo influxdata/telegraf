@@ -107,11 +107,6 @@ deps:
 version:
 	@echo $(version)-$(commit)
 
-.PHONY: versioninfo
-versioninfo:
-	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
-	go generate cmd/telegraf/telegraf_windows.go
-
 build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
@@ -338,10 +333,7 @@ package: docs $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
-	if [ "$(suffix $@)" = ".zip" ]; then \
-		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
-		go generate cmd/telegraf/telegraf_windows.go; \
-	fi
+	if [ "$(suffix $@)" = ".zip" ]; then go generate cmd/telegraf/telegraf_windows.go; fi
 
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
