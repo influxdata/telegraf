@@ -527,139 +527,139 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-go-linux-386':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-mac':
-          filters:
-            tags: # only runs on tags if you specify this filter
-              only: /.*/
+      # - 'test-go-linux-386':
+      #     filters:
+      #       tags:
+      #         only: /.*/
+      # - 'test-go-mac':
+      #     filters:
+      #       tags: # only runs on tags if you specify this filter
+      #         only: /.*/
       - 'test-go-windows':
           filters:
             tags:
               only: /.*/
-      - 'test-integration':
-          filters:
-            tags:
-              only: /.*/
+      # - 'test-integration':
+      #     filters:
+      #       tags:
+      #         only: /.*/
       - 'windows-package':
           requires:
             - 'test-go-windows'
           filters:
             tags:
               only: /.*/
-      - 'darwin-amd64-package':
-          requires:
-            - 'test-go-mac'
-          filters:
-            tags:
-              only: /.*/
-      - 'darwin-arm64-package':
-          requires:
-            - 'test-go-mac'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 'i386-package':
-          requires:
-            - 'test-go-linux-386'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 'ppc64le-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 'riscv64-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 's390x-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 'armel-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
+      # - 'darwin-amd64-package':
+      #     requires:
+      #       - 'test-go-mac'
+      #     filters:
+      #       tags:
+      #         only: /.*/
+      # - 'darwin-arm64-package':
+      #     requires:
+      #       - 'test-go-mac'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 'i386-package':
+      #     requires:
+      #       - 'test-go-linux-386'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 'ppc64le-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 'riscv64-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 's390x-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 'armel-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
       - 'amd64-package':
           requires:
             - 'test-go-linux'
           filters:
             tags:
               only: /.*/
-      - 'arm64-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 'armhf-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 'static-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 'mipsel-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
-      - 'mips-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
+      # - 'arm64-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 'armhf-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 'static-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 'mipsel-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
+      # - 'mips-package':
+      #     requires:
+      #       - 'test-go-linux'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #       tags:
+      #         only: /.*/
       - 'check-config':
           requires:
             - 'amd64-package'
@@ -674,66 +674,66 @@ workflows:
             branches:
               ignore:
                 - master
-      - 'share-artifacts':
-          requires:
-            - 'i386-package'
-            - 'ppc64le-package'
-            - 'riscv64-package'
-            - 's390x-package'
-            - 'armel-package'
-            - 'amd64-package'
-            - 'mipsel-package'
-            - 'mips-package'
-            - 'darwin-amd64-package'
-            - 'darwin-arm64-package'
-            - 'windows-package'
-            - 'static-package'
-            - 'arm64-package'
-            - 'armhf-package'
-          filters:
-            branches:
-              ignore:
-                - master
-                - release.*
-            tags:
-              ignore: /.*/
-      - 'package-sign-windows':
-          requires:
-            - 'windows-package'
-          filters:
-              tags:
-                only: /.*/
-              branches:
-                ignore: /.*/
-      - 'package-sign-mac':
-           requires:
-            - 'darwin-amd64-package'
-            - 'darwin-arm64-package'
-           filters:
-              tags:
-                only: /.*/
-              branches:
-                ignore: /.*/
-      - 'package-consolidate':
-           requires:
-            - 'i386-package'
-            - 'ppc64le-package'
-            - 's390x-package'
-            - 'armel-package'
-            - 'amd64-package'
-            - 'mipsel-package'
-            - 'mips-package'
-            - 'static-package'
-            - 'arm64-package'
-            - 'armhf-package'
-            - 'riscv64-package'
-            - 'package-sign-mac'
-            - 'package-sign-windows'
-           filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
+      # - 'share-artifacts':
+      #     requires:
+      #       - 'i386-package'
+      #       - 'ppc64le-package'
+      #       - 'riscv64-package'
+      #       - 's390x-package'
+      #       - 'armel-package'
+      #       - 'amd64-package'
+      #       - 'mipsel-package'
+      #       - 'mips-package'
+      #       - 'darwin-amd64-package'
+      #       - 'darwin-arm64-package'
+      #       - 'windows-package'
+      #       - 'static-package'
+      #       - 'arm64-package'
+      #       - 'armhf-package'
+      #     filters:
+      #       branches:
+      #         ignore:
+      #           - master
+      #           - release.*
+      #       tags:
+      #         ignore: /.*/
+      # - 'package-sign-windows':
+      #     requires:
+      #       - 'windows-package'
+      #     filters:
+      #         tags:
+      #           only: /.*/
+      #         branches:
+      #           ignore: /.*/
+      # - 'package-sign-mac':
+      #      requires:
+      #       - 'darwin-amd64-package'
+      #       - 'darwin-arm64-package'
+      #      filters:
+      #         tags:
+      #           only: /.*/
+      #         branches:
+      #           ignore: /.*/
+      # - 'package-consolidate':
+      #      requires:
+      #       - 'i386-package'
+      #       - 'ppc64le-package'
+      #       - 's390x-package'
+      #       - 'armel-package'
+      #       - 'amd64-package'
+      #       - 'mipsel-package'
+      #       - 'mips-package'
+      #       - 'static-package'
+      #       - 'arm64-package'
+      #       - 'armhf-package'
+      #       - 'riscv64-package'
+      #       - 'package-sign-mac'
+      #       - 'package-sign-windows'
+      #      filters:
+      #       tags:
+      #         only: /.*/
+      #       branches:
+      #         ignore: /.*/
 
   nightly:
     when:
