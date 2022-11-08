@@ -211,20 +211,6 @@ func TestMysqlIntegration(t *testing.T) {
 		testMetrics,
 	))
 
-	rc, out, err := container.Exec([]string{
-		"bash",
-		"-c",
-		"mariadb-dump --user=" + username +
-			" --password=" + password +
-			" --compact --skip-opt " +
-			dbname,
-	})
-	require.NoError(t, err)
-	require.Equal(t, 0, rc)
-
-	bytes, err := io.ReadAll(out)
-	require.NoError(t, err)
-
 	cases := []struct {
 		expected string
 	}{
@@ -233,7 +219,23 @@ func TestMysqlIntegration(t *testing.T) {
 		{"INSERT INTO `metric three` VALUES ('2021-05-17 22:04:45','tag4','string2');"},
 	}
 	for _, tc := range cases {
-		require.Contains(t, string(bytes), tc.expected)
+		require.Eventually(t, func() bool {
+			rc, out, err := container.Exec([]string{
+				"bash",
+				"-c",
+				"mariadb-dump --user=" + username +
+					" --password=" + password +
+					" --compact --skip-opt " +
+					dbname,
+			})
+			require.NoError(t, err)
+			require.Equal(t, 0, rc)
+
+			bytes, err := io.ReadAll(out)
+			require.NoError(t, err)
+
+			return strings.Contains(string(bytes), tc.expected)
+		}, 5*time.Second, 10*time.Millisecond)
 	}
 }
 
@@ -297,31 +299,32 @@ func TestPostgresIntegration(t *testing.T) {
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
 
-	rc, out, err := container.Exec([]string{
-		"bash",
-		"-c",
-		"pg_dump" +
-			" --username=" + username +
-			//" --password=" + password +
-			//			" --compact --skip-opt " +
-			" --no-comments" +
-			//" --data-only" +
-			" " + dbname +
-			// pg_dump's output has comments that include build info
-			// of postgres and pg_dump. The build info changes with
-			// each release. To prevent these changes from causing the
-			// test to fail, we strip out comments. Also strip out
-			// blank lines.
-			"|grep -E -v '(^--|^$)'",
-	})
-	require.NoError(t, err)
-	require.Equal(t, 0, rc)
+	require.Eventually(t, func() bool {
+		rc, out, err := container.Exec([]string{
+			"bash",
+			"-c",
+			"pg_dump" +
+				" --username=" + username +
+				//" --password=" + password +
+				//			" --compact --skip-opt " +
+				" --no-comments" +
+				//" --data-only" +
+				" " + dbname +
+				// pg_dump's output has comments that include build info
+				// of postgres and pg_dump. The build info changes with
+				// each release. To prevent these changes from causing the
+				// test to fail, we strip out comments. Also strip out
+				// blank lines.
+				"|grep -E -v '(^--|^$)'",
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, rc)
 
-	bytes, err := io.ReadAll(out)
-	require.NoError(t, err)
-	actual := strings.ReplaceAll(string(bytes), "\x01\x00\x00\x00\x00\x00\x05\xd3", "")
+		bytes, err := io.ReadAll(out)
+		require.NoError(t, err)
 
-	require.Equal(t, string(expected), actual)
+		return strings.Contains(string(bytes), string(expected))
+	}, 5*time.Second, 10*time.Millisecond)
 }
 
 func TestClickHouseIntegration(t *testing.T) {
