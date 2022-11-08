@@ -2,6 +2,7 @@ package tail
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -17,13 +18,16 @@ type Multiline struct {
 	config        *MultilineConfig
 	enabled       bool
 	patternRegexp *regexp.Regexp
+	quote         byte
+	inQuote       bool
 }
 
 type MultilineConfig struct {
-	Pattern        string
+	Pattern        string                  `toml:"pattern"`
 	MatchWhichLine MultilineMatchWhichLine `toml:"match_which_line"`
-	InvertMatch    bool
-	Timeout        *config.Duration
+	InvertMatch    bool                    `toml:"invert_match"`
+	Quotation      string                  `toml:"quotation"`
+	Timeout        *config.Duration        `toml:"timeout"`
 }
 
 const (
@@ -34,25 +38,41 @@ const (
 )
 
 func (m *MultilineConfig) NewMultiline() (*Multiline, error) {
-	enabled := false
 	var r *regexp.Regexp
-	var err error
 
 	if m.Pattern != "" {
-		enabled = true
+		var err error
 		if r, err = regexp.Compile(m.Pattern); err != nil {
 			return nil, err
 		}
-		if m.Timeout == nil || time.Duration(*m.Timeout).Nanoseconds() == int64(0) {
-			d := config.Duration(5 * time.Second)
-			m.Timeout = &d
-		}
+	}
+
+	var quote byte
+	switch m.Quotation {
+	case "", "ignore":
+		m.Quotation = "ignore"
+	case "single-quotes":
+		quote = '\''
+	case "double-quotes":
+		quote = '"'
+	case "backticks":
+		quote = '`'
+	default:
+		return nil, errors.New("invalid 'quotation' setting")
+	}
+
+	enabled := m.Pattern != "" || quote != 0
+	if m.Timeout == nil || time.Duration(*m.Timeout).Nanoseconds() == int64(0) {
+		d := config.Duration(5 * time.Second)
+		m.Timeout = &d
 	}
 
 	return &Multiline{
 		config:        m,
 		enabled:       enabled,
-		patternRegexp: r}, nil
+		patternRegexp: r,
+		quote:         quote,
+	}, nil
 }
 
 func (m *Multiline) IsEnabled() bool {
@@ -98,7 +118,30 @@ func (m *Multiline) Flush(buffer *bytes.Buffer) string {
 }
 
 func (m *Multiline) matchString(text string) bool {
-	return m.patternRegexp.MatchString(text) != m.config.InvertMatch
+	if m.config.Quotation != "ignore" {
+		escaped := false
+		count := 0
+		for i := 0; i < len(text); i++ {
+			if text[i] == '\\' {
+				escaped = !escaped
+				continue
+			}
+
+			if text[i] == m.quote && !escaped {
+				count++
+			}
+			escaped = false
+		}
+		even := count%2 == 0
+		m.inQuote = (m.inQuote && even) || (!m.inQuote && !even)
+		if m.inQuote {
+			return true
+		}
+	}
+	if m.patternRegexp != nil {
+		return m.patternRegexp.MatchString(text) != m.config.InvertMatch
+	}
+	return false
 }
 
 func (w MultilineMatchWhichLine) String() string {
