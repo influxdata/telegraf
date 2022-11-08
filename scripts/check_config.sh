@@ -23,9 +23,9 @@ fi
 
 $exe_path config > $config_name
 
-DIFF=$(diff -q $config_name etc/$config_name 1>/dev/null)
+DIFF=$(diff -q $config_name etc/$config_name)
 
-if [[ "$DIFF" != "" ]]
+if [ "$DIFF" ]
 then
     mkdir ./new-config
     mv $config_name ./new-config
