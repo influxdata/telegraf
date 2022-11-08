@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	configV2 "github.com/aws/aws-sdk-go-v2/config"
 	credentialsV2 "github.com/aws/aws-sdk-go-v2/credentials"
@@ -60,11 +61,16 @@ func (c *CredentialConfig) configWithAssumeCredentials() (awsV2.Config, error) {
 	var provider awsV2.CredentialsProvider
 	stsService := sts.NewFromConfig(defaultConfig)
 	if c.WebIdentityTokenFile != "" {
-		provider = stscredsV2.NewWebIdentityRoleProvider(stsService, c.RoleARN, stscredsV2.IdentityTokenFile(c.WebIdentityTokenFile), func(opts *stscredsV2.WebIdentityRoleOptions) {
-			if c.RoleSessionName != "" {
-				opts.RoleSessionName = c.RoleSessionName
-			}
-		})
+		provider = stscredsV2.NewWebIdentityRoleProvider(
+			stsService,
+			c.RoleARN,
+			stscredsV2.IdentityTokenFile(c.WebIdentityTokenFile),
+			func(opts *stscredsV2.WebIdentityRoleOptions) {
+				if c.RoleSessionName != "" {
+					opts.RoleSessionName = c.RoleSessionName
+				}
+			},
+		)
 	} else {
 		provider = stscredsV2.NewAssumeRoleProvider(stsService, c.RoleARN, func(opts *stscredsV2.AssumeRoleOptions) {
 			if c.RoleSessionName != "" {
