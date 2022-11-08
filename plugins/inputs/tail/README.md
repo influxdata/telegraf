@@ -112,3 +112,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Metrics are produced according to the `data_format` option.  Additionally a
 tag labeled `path` is added to the metric containing the filename being tailed.
+
+## Example Output
+
+There is no predefined metric format, so output depends on plugin input.
