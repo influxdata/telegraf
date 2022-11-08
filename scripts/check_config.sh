@@ -30,7 +30,7 @@ then
     mkdir ./new-config
     mv $config_name ./new-config
     echo "The sample configuration has been updated due to this pull request."
-    echo "You can get the new configs here: https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/new-config"
+    echo "You can get the new configs here: https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/new-config/${config_name}"
     echo "Update the sample configurations found under 'etc/' with these new ones in your pull request for this step to pass."
-    return 1
+    exit 1
 fi
