@@ -80,10 +80,14 @@ func (m *Multiline) IsEnabled() bool {
 }
 
 func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
+	if m.matchQuotation(text) {
+		// Ignore the returned error as we cannot do anything about it anyway
+		_, _ = buffer.WriteString(text + "\n")
+		return ""
+	}
 	if m.matchString(text) {
 		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		buffer.WriteString(text)
+		_, _ = buffer.WriteString(text)
 		return ""
 	}
 
@@ -117,27 +121,29 @@ func (m *Multiline) Flush(buffer *bytes.Buffer) string {
 	return text
 }
 
-func (m *Multiline) matchString(text string) bool {
-	if m.config.Quotation != "ignore" {
-		escaped := false
-		count := 0
-		for i := 0; i < len(text); i++ {
-			if text[i] == '\\' {
-				escaped = !escaped
-				continue
-			}
-
-			if text[i] == m.quote && !escaped {
-				count++
-			}
-			escaped = false
-		}
-		even := count%2 == 0
-		m.inQuote = (m.inQuote && even) || (!m.inQuote && !even)
-		if m.inQuote {
-			return true
-		}
+func (m *Multiline) matchQuotation(text string) bool {
+	if m.config.Quotation == "ignore" {
+		return false
 	}
+	escaped := false
+	count := 0
+	for i := 0; i < len(text); i++ {
+		if text[i] == '\\' {
+			escaped = !escaped
+			continue
+		}
+
+		if text[i] == m.quote && !escaped {
+			count++
+		}
+		escaped = false
+	}
+	even := count%2 == 0
+	m.inQuote = (m.inQuote && even) || (!m.inQuote && !even)
+	return m.inQuote
+}
+
+func (m *Multiline) matchString(text string) bool {
 	if m.patternRegexp != nil {
 		return m.patternRegexp.MatchString(text) != m.config.InvertMatch
 	}
