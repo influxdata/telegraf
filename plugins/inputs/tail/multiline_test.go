@@ -270,6 +270,8 @@ func TestMultiLineQuoted(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			expected := []string{
 				`1660819827410,1,some text without quotes,A`,
+				fmt.Sprintf(`1660819827411,1,%ssome text all quoted%s,A`, tt.quote, tt.quote),
+				fmt.Sprintf(`1660819827412,1,%ssome text all quotedbut wrapped%s,A`, tt.quote, tt.quote),
 				fmt.Sprintf(`1660819827420,2,some text with %squotes%s,B`, tt.quote, tt.quote),
 				"1660819827430,3,some text with 'multiple \"quotes\" in `one` line',C",
 				fmt.Sprintf(`1660819827440,4,some multiline text with %squotesspanning \%smultiple\%slines%s but do not %senddirectly%s,D`, tt.quote, tt.quote, tt.quote, tt.quote, tt.quote, tt.quote),
