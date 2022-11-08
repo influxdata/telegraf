@@ -181,7 +181,11 @@ func (_m *mockEventsActivator) activateGroup(_a0 iaevents.PlacementProvider, _a1
 }
 
 // activateMulti provides a mock function with given fields: _a0, _a1, _a2
-func (_m *mockEventsActivator) activateMulti(_a0 iaevents.MultiActivator, _a1 []iaevents.PlacementProvider, _a2 iaevents.Options) (*iaevents.ActiveMultiEvent, error) {
+func (_m *mockEventsActivator) activateMulti(
+	_a0 iaevents.MultiActivator,
+	_a1 []iaevents.PlacementProvider,
+	_a2 iaevents.Options,
+) (*iaevents.ActiveMultiEvent, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *iaevents.ActiveMultiEvent

@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // =====================================================================================
@@ -15,7 +16,10 @@ import (
 
 func expectCPUAsTags(m *testutil.Accumulator, t *testing.T, measurement string, irq IRQ) {
 	for idx, value := range irq.Cpus {
-		m.AssertContainsTaggedFields(t, measurement, map[string]interface{}{"count": value}, map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device, "cpu": fmt.Sprintf("cpu%d", idx)})
+		m.AssertContainsTaggedFields(t, measurement,
+			map[string]interface{}{"count": value},
+			map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device, "cpu": fmt.Sprintf("cpu%d", idx)},
+		)
 	}
 }
 
