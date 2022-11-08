@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestConnectAndWriteIntegrationNoAuth(t *testing.T) {
@@ -30,9 +31,7 @@ func TestConnectAndWriteIntegrationNoAuth(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Run test
 	plugin := &MongoDB{
@@ -74,9 +73,7 @@ func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	tests := []struct {
 		name        string
@@ -179,9 +176,7 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	tests := []struct {
 		name        string

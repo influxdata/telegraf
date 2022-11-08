@@ -30,9 +30,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	}
 	err := backend.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, backend.Terminate(), "terminating container failed")
-	}()
+	defer backend.Terminate()
 
 	container := testutil.Container{
 		Image:        "z9pascal/pgbouncer-container:1.17.0-latest",
@@ -48,9 +46,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &PgBouncer{
 		Service: postgresql.Service{

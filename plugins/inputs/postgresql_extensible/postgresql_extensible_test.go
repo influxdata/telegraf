@@ -30,9 +30,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &Postgresql{
 		Log: testutil.Logger{},

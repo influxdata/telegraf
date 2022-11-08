@@ -24,8 +24,7 @@ import (
 var now = time.Date(2020, 6, 30, 16, 16, 0, 0, time.UTC)
 
 func TestExternalOutputWorks(t *testing.T) {
-	influxSerializer, err := serializers.NewInfluxSerializer()
-	require.NoError(t, err)
+	influxSerializer := serializers.NewInfluxSerializer()
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -71,8 +70,7 @@ func TestExternalOutputWorks(t *testing.T) {
 }
 
 func TestPartiallyUnserializableThrowError(t *testing.T) {
-	influxSerializer, err := serializers.NewInfluxSerializer()
-	require.NoError(t, err)
+	influxSerializer := serializers.NewInfluxSerializer()
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -108,8 +106,7 @@ func TestPartiallyUnserializableThrowError(t *testing.T) {
 }
 
 func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
-	influxSerializer, err := serializers.NewInfluxSerializer()
-	require.NoError(t, err)
+	influxSerializer := serializers.NewInfluxSerializer()
 
 	exe, err := os.Executable()
 	require.NoError(t, err)

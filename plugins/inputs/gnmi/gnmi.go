@@ -403,9 +403,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 				}
 			}
 
-			if err := grouper.Add(name, tags, timestamp, key, v); err != nil {
-				c.Log.Errorf("cannot add to grouper: %v", err)
-			}
+			grouper.Add(name, tags, timestamp, key, v)
 		}
 
 		lastAliasPath = aliasPath

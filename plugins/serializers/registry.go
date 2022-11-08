@@ -146,25 +146,25 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "csv":
 		serializer, err = NewCSVSerializer(config)
 	case "influx":
-		serializer, err = NewInfluxSerializerConfig(config)
+		serializer, err = NewInfluxSerializerConfig(config), nil
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
 		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat, config.Transformation)
 	case "splunkmetric":
-		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric, config.SplunkmetricOmitEventTag)
+		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric, config.SplunkmetricOmitEventTag), nil
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
 	case "carbon2":
 		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
 	case "wavefront":
-		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride, config.WavefrontDisablePrefixConversion)
+		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride, config.WavefrontDisablePrefixConversion), nil
 	case "prometheus":
-		serializer, err = NewPrometheusSerializer(config)
+		serializer, err = NewPrometheusSerializer(config), nil
 	case "prometheusremotewrite":
-		serializer, err = NewPrometheusRemoteWriteSerializer(config)
+		serializer, err = NewPrometheusRemoteWriteSerializer(config), nil
 	case "msgpack":
-		serializer, err = NewMsgpackSerializer()
+		serializer, err = NewMsgpackSerializer(), nil
 	default:
 		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
@@ -175,7 +175,7 @@ func NewCSVSerializer(config *Config) (Serializer, error) {
 	return csv.NewSerializer(config.TimestampFormat, config.CSVSeparator, config.CSVHeader, config.CSVPrefix)
 }
 
-func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
+func NewPrometheusRemoteWriteSerializer(config *Config) Serializer {
 	sortMetrics := prometheusremotewrite.NoSortMetrics
 	if config.PrometheusExportTimestamp {
 		sortMetrics = prometheusremotewrite.SortMetrics
@@ -192,7 +192,7 @@ func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
 	})
 }
 
-func NewPrometheusSerializer(config *Config) (Serializer, error) {
+func NewPrometheusSerializer(config *Config) Serializer {
 	exportTimestamp := prometheus.NoExportTimestamp
 	if config.PrometheusExportTimestamp {
 		exportTimestamp = prometheus.ExportTimestamp
@@ -216,7 +216,7 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 	})
 }
 
-func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversions bool) (Serializer, error) {
+func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversions bool) Serializer {
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
 }
 
@@ -228,7 +228,7 @@ func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar strin
 	return carbon2.NewSerializer(carbon2format, carbon2SanitizeReplaceChar)
 }
 
-func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) (Serializer, error) {
+func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) Serializer {
 	return splunkmetric.NewSerializer(splunkmetricHecRouting, splunkmetricMultimetric, splunkmetricOmitEventTag)
 }
 
@@ -236,7 +236,7 @@ func NewNowSerializer() (Serializer, error) {
 	return nowmetric.NewSerializer()
 }
 
-func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
+func NewInfluxSerializerConfig(config *Config) Serializer {
 	var sort influx.FieldSortOrder
 	if config.InfluxSortFields {
 		sort = influx.SortFields
@@ -251,11 +251,11 @@ func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
 	s.SetMaxLineBytes(config.InfluxMaxLineBytes)
 	s.SetFieldSortOrder(sort)
 	s.SetFieldTypeSupport(typeSupport)
-	return s, nil
+	return s
 }
 
-func NewInfluxSerializer() (Serializer, error) {
-	return influx.NewSerializer(), nil
+func NewInfluxSerializer() Serializer {
+	return influx.NewSerializer()
 }
 
 func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitizeMode string, separator string, templates []string) (Serializer, error) {
@@ -287,6 +287,6 @@ func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitize
 	}, nil
 }
 
-func NewMsgpackSerializer() (Serializer, error) {
-	return msgpack.NewSerializer(), nil
+func NewMsgpackSerializer() Serializer {
+	return msgpack.NewSerializer()
 }

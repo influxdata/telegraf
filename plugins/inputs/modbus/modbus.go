@@ -441,10 +441,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			if err := grouper.Add(measurement, rtags, timestamp, field.name, field.value); err != nil {
-				acc.AddError(fmt.Errorf("cannot add field %q for measurement %q: %v", field.name, measurement, err))
-				continue
-			}
+			grouper.Add(measurement, rtags, timestamp, field.name, field.value)
 		}
 	}
 

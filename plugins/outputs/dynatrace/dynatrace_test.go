@@ -14,11 +14,12 @@ import (
 
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNilMetrics(t *testing.T) {
@@ -516,7 +517,7 @@ type loggerStub struct {
 	testutil.Logger
 }
 
-func (l loggerStub) Warnf(format string, args ...interface{}) {
+func (l loggerStub) Warnf(_ string, _ ...interface{}) {
 	warnfCalledTimes++
 }
 

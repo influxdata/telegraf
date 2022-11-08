@@ -165,7 +165,7 @@ type mockSelectMetricsCloudWatchClient struct{}
 
 func (m *mockSelectMetricsCloudWatchClient) ListMetrics(
 	_ context.Context,
-	params *cwClient.ListMetricsInput,
+	_ *cwClient.ListMetricsInput,
 	_ ...func(*cwClient.Options),
 ) (*cwClient.ListMetricsOutput, error) {
 	metrics := []types.Metric{}
@@ -216,7 +216,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(
 
 func (m *mockSelectMetricsCloudWatchClient) GetMetricData(
 	_ context.Context,
-	params *cwClient.GetMetricDataInput,
+	_ *cwClient.GetMetricDataInput,
 	_ ...func(*cwClient.Options),
 ) (*cwClient.GetMetricDataOutput, error) {
 	return nil, nil

@@ -31,14 +31,14 @@ type HECTimeSeries struct {
 }
 
 // NewSerializer Setup our new serializer
-func NewSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) (*serializer, error) {
+func NewSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) *serializer {
 	/*	Define output params */
 	s := &serializer{
 		HecRouting:              splunkmetricHecRouting,
 		SplunkmetricMultiMetric: splunkmetricMultimetric,
 		OmitEventTag:            splunkmetricOmitEventTag,
 	}
-	return s, nil
+	return s
 }
 
 func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {

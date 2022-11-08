@@ -2,11 +2,10 @@ package sql
 
 import (
 	"fmt"
-	"testing"
-	"time"
-
 	"math/rand"
 	"path/filepath"
+	"testing"
+	"time"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
@@ -61,9 +60,7 @@ func TestMariaDBIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Define the testset
 	var testset = []struct {
@@ -168,9 +165,7 @@ func TestPostgreSQLIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Define the testset
 	var testset = []struct {
@@ -271,9 +266,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Define the testset
 	var testset = []struct {

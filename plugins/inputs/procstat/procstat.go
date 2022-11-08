@@ -103,11 +103,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		err = p.updateProcesses(pids, tags, p.procs, newProcs)
-		if err != nil {
-			acc.AddError(fmt.Errorf("procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
-				p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
-		}
+		p.updateProcesses(pids, tags, p.procs, newProcs)
 	}
 
 	p.procs = newProcs
@@ -298,7 +294,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process, procs map[PID]Process) error {
+func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process, procs map[PID]Process) {
 	for _, pid := range pids {
 		info, ok := prevInfo[pid]
 		if ok {
@@ -333,7 +329,6 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 			}
 		}
 	}
-	return nil
 }
 
 // Create and return PIDGatherer lazily

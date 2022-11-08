@@ -736,17 +736,13 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 	}
 	parser := creator(parentname)
 
-	conf, err := c.buildParser(parentname, table)
-	if err != nil {
-		return nil, err
-	}
-
+	conf := c.buildParser(parentname, table)
 	if err := c.toml.UnmarshalTable(table, parser); err != nil {
 		return nil, err
 	}
 
 	running := models.NewRunningParser(parser, conf)
-	err = running.Init()
+	err := running.Init()
 	return running, err
 }
 
@@ -1051,16 +1047,16 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 // buildParser parses Parser specific items from the ast.Table,
 // builds the filter and returns a
 // models.ParserConfig to be inserted into models.RunningParser
-func (c *Config) buildParser(name string, tbl *ast.Table) (*models.ParserConfig, error) {
-	var dataformat string
-	c.getFieldString(tbl, "data_format", &dataformat)
+func (c *Config) buildParser(name string, tbl *ast.Table) *models.ParserConfig {
+	var dataFormat string
+	c.getFieldString(tbl, "data_format", &dataFormat)
 
 	conf := &models.ParserConfig{
 		Parent:     name,
-		DataFormat: dataformat,
+		DataFormat: dataFormat,
 	}
 
-	return conf, nil
+	return conf
 }
 
 // buildProcessor parses Processor specific items from the ast.Table,

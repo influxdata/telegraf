@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/stretchr/testify/require"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const masterName = "mymaster"
@@ -31,9 +31,7 @@ func TestRedisSentinelConnectIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	addr := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
 

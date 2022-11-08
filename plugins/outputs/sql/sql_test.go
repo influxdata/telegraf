@@ -191,9 +191,7 @@ func TestMysqlIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	//use the plugin to write to the database
 	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
@@ -273,9 +271,7 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	//use the plugin to write to the database
 	// host, port, username, password, dbname
@@ -362,9 +358,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	//use the plugin to write to the database
 	// host, port, username, password, dbname

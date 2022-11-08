@@ -81,9 +81,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 
 			tags := map[string]string{"url": hostPort, "source": host, "port": port, "type": cg.Type}
 
-			if err := grouper.Add("bind_counter", tags, ts, c.Name, c.Value); err != nil {
-				acc.AddError(fmt.Errorf("adding tags %q to group failed: %v", tags, err))
-			}
+			grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 		}
 	}
 
@@ -120,9 +118,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 						"type":   cg.Type,
 					}
 
-					if err := grouper.Add("bind_counter", tags, ts, c.Name, c.Value); err != nil {
-						acc.AddError(fmt.Errorf("adding tags %q to group failed: %v", tags, err))
-					}
+					grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 				}
 			}
 		}

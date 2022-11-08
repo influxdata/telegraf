@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const servicePort = "4840"
@@ -48,9 +49,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	var testopctags = []OPCTags{
 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},

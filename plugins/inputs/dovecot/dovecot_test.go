@@ -200,9 +200,7 @@ func TestDovecotContainerIntegration(t *testing.T) {
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")

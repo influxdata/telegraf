@@ -488,7 +488,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			t.Logf("rt: starting network")
 			ctx := context.Background()
 			networkName := "telegraf-test-kafka-consumer-network"
-			net, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
+			network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
 				NetworkRequest: testcontainers.NetworkRequest{
 					Name:           networkName,
 					Attachable:     true,
@@ -497,7 +497,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			})
 			require.NoError(t, err)
 			defer func() {
-				require.NoError(t, net.Remove(ctx), "terminating network failed")
+				require.NoError(t, network.Remove(ctx), "terminating network failed")
 			}()
 
 			t.Logf("rt: starting zookeeper")
@@ -510,9 +510,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 				Name:         zookeeperName,
 			}
 			require.NoError(t, zookeeper.Start(), "failed to start container")
-			defer func() {
-				require.NoError(t, zookeeper.Terminate(), "terminating container failed")
-			}()
+			defer zookeeper.Terminate()
 
 			t.Logf("rt: starting broker")
 			topic := "Test"
@@ -530,9 +528,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 				WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
 			}
 			require.NoError(t, container.Start(), "failed to start container")
-			defer func() {
-				require.NoError(t, container.Terminate(), "terminating container failed")
-			}()
+			defer container.Terminate()
 
 			brokers := []string{
 				fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
@@ -544,7 +540,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			output, ok := creator().(*kafkaOutput.Kafka)
 			require.True(t, ok)
 
-			s, _ := serializers.NewInfluxSerializer()
+			s := serializers.NewInfluxSerializer()
 			output.SetSerializer(s)
 			output.Brokers = brokers
 			output.Topic = topic

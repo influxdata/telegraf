@@ -143,7 +143,7 @@ func (sw *SocketWriter) Close() error {
 }
 
 func newSocketWriter() *SocketWriter {
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	return &SocketWriter{
 		Serializer: s,
 	}

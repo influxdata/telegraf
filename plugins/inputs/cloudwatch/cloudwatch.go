@@ -258,10 +258,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 					}
 				}
 			} else {
-				allMetrics, err := c.fetchNamespaceMetrics()
-				if err != nil {
-					return nil, err
-				}
+				allMetrics := c.fetchNamespaceMetrics()
 				for _, name := range m.MetricNames {
 					for _, metric := range allMetrics {
 						if isSelected(name, metric, m.Dimensions) {
@@ -294,11 +291,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 			})
 		}
 	} else {
-		metrics, err := c.fetchNamespaceMetrics()
-		if err != nil {
-			return nil, err
-		}
-
+		metrics := c.fetchNamespaceMetrics()
 		fMetrics = []filteredMetric{
 			{
 				metrics:    metrics,
@@ -317,7 +310,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 }
 
 // fetchNamespaceMetrics retrieves available metrics for a given CloudWatch namespace.
-func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
+func (c *CloudWatch) fetchNamespaceMetrics() []types.Metric {
 	metrics := []types.Metric{}
 
 	for _, namespace := range c.Namespaces {
@@ -344,7 +337,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
 			params.NextToken = resp.NextToken
 		}
 	}
-	return metrics, nil
+	return metrics
 }
 
 func (c *CloudWatch) updateWindow(relativeTo time.Time) {
@@ -497,9 +490,7 @@ func (c *CloudWatch) aggregateMetrics(
 			tags["region"] = c.Region
 
 			for i := range result.Values {
-				if err := grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i]); err != nil {
-					acc.AddError(err)
-				}
+				grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i])
 			}
 		}
 	}

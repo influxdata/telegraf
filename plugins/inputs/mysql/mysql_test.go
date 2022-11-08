@@ -33,9 +33,7 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	m := &Mysql{
 		Servers: []string{fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])},
@@ -70,9 +68,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
 	m := &Mysql{

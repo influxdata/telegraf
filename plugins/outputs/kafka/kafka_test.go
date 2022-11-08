@@ -50,9 +50,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 	err = zookeeper.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, zookeeper.Terminate(), "terminating container failed")
-	}()
+	defer zookeeper.Terminate()
 
 	container := testutil.Container{
 		Image:        "wurstmeister/kafka",
@@ -68,15 +66,13 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	brokers := []string{
 		fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
 	}
 
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	k := &Kafka{
 		Brokers:      brokers,
 		Topic:        "Test",
@@ -334,11 +330,10 @@ func TestTopicTag(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.plugin.Log = testutil.Logger{}
 
-			s, err := serializers.NewInfluxSerializer()
-			require.NoError(t, err)
+			s := serializers.NewInfluxSerializer()
 			tt.plugin.SetSerializer(s)
 
-			err = tt.plugin.Connect()
+			err := tt.plugin.Connect()
 			require.NoError(t, err)
 
 			producer := &MockProducer{}

@@ -573,7 +573,7 @@ func (p *Parser) isExcluded(key string) bool {
 	return false
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(_ string) (telegraf.Metric, error) {
 	return nil, fmt.Errorf("ParseLine is designed for parsing influx line protocol, therefore not implemented for parsing JSON")
 }
 

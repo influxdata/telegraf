@@ -176,7 +176,7 @@ func TrapLookup(oid string) (e MibEntry, err error) {
 
 // The following is for snmp
 
-func GetIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}, err error) {
+func GetIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}) {
 	// first attempt to get the table's tags
 	tagOids = map[string]struct{}{}
 
@@ -190,7 +190,7 @@ func GetIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[s
 	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
 	_, col = node.GetColumns()
 
-	return col, tagOids, nil
+	return col, tagOids
 }
 
 //nolint:revive //Too many return variable but necessary

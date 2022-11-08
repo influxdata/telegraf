@@ -23,6 +23,7 @@ linters:
     - tparallel
     - typecheck
     - unconvert
+    - unparam
     - unused
 
 linters-settings:
@@ -115,7 +116,7 @@ linters-settings:
         arguments: [ "outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
       - name: unnecessary-stmt
       - name: unreachable-code
-      # - name: unused-parameter
+      - name: unused-parameter
       - name: var-declaration
       - name: var-naming
       - name: waitgroup-by-value
