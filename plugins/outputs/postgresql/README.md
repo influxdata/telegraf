@@ -197,12 +197,12 @@ create_templates = [
 ]
 add_column_templates = [
     '''ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}''',
-    '''DROP VIEW {{ .table.WithSchema "public" }} IF EXISTS''',
+    '''DROP VIEW IF EXISTS {{ .table.WithSchema "public" }}''',
     '''CREATE VIEW {{ .table.WithSchema "public" }} AS SELECT time, {{ (.tagTable.Columns.Tags.Concat .allColumns.Fields).Identifiers | join "," }} FROM {{ .table }} t, {{ .tagTable }} tt WHERE t.tag_id = tt.tag_id''',
 ]
 tag_table_add_column_templates = [
     '''ALTER TABLE {{.table}} ADD COLUMN IF NOT EXISTS {{.columns|join ", ADD COLUMN IF NOT EXISTS "}}''',
-    '''DROP VIEW {{ .metricTable.WithSchema "public" }} IF EXISTS''',
+    '''DROP VIEW IF EXISTS {{ .metricTable.WithSchema "public" }}''',
     '''CREATE VIEW {{ .metricTable.WithSchema "public" }} AS SELECT time, {{ (.allColumns.Tags.Concat .metricTable.Columns.Fields).Identifiers | join "," }} FROM {{ .metricTable }} t, {{ .tagTable }} tt WHERE t.tag_id = tt.tag_id''',
 ]
 ```
