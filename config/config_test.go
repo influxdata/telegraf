@@ -728,6 +728,101 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	}
 }
 
+func TestConfig_MultipleProcessorsOrder(t *testing.T) {
+	tests := []struct {
+		name          string
+		filename      []string
+		expectedOrder []string
+	}{
+		{
+			name:     "Test the order of multiple unique processosr",
+			filename: []string{"multiple_processors.toml"},
+			expectedOrder: []string{
+				"processor",
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+			},
+		},
+		{
+			name:     "Test using a single 'order' configuration",
+			filename: []string{"multiple_processors_simple_order.toml"},
+			expectedOrder: []string{
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+				"processor",
+			},
+		},
+		{
+			name:     "Test using multiple 'order' configurations",
+			filename: []string{"multiple_processors_messy_order.toml"},
+			expectedOrder: []string{
+				"parser_test",
+				"processor_parserfunc",
+				"processor",
+				"processor_parser",
+				"processor_parser",
+				"processor_parserfunc",
+			},
+		},
+		{
+			name: "Test loading multiple configuration files",
+			filename: []string{
+				"multiple_processors.toml",
+				"multiple_processors_simple_order.toml",
+			},
+			expectedOrder: []string{
+				"processor",
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+				"processor",
+			},
+		},
+		{
+			name: "Test loading multiple configuration files both with order",
+			filename: []string{
+				"multiple_processors_simple_order.toml",
+				"multiple_processors_messy_order.toml",
+			},
+			expectedOrder: []string{
+				"parser_test",
+				"processor_parser",
+				"processor_parserfunc",
+				"parser_test",
+				"processor_parserfunc",
+				"processor",
+				"processor",
+				"processor_parser",
+				"processor_parser",
+				"processor_parserfunc",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			c := NewConfig()
+			for _, f := range test.filename {
+				require.NoError(t, c.LoadConfig(filepath.Join("./testdata/processor_order", f)))
+			}
+
+			require.Equal(t, len(test.expectedOrder), len(c.Processors))
+
+			var order []string
+			for _, p := range c.Processors {
+				order = append(order, p.Config.Name)
+			}
+
+			require.Equal(t, test.expectedOrder, order)
+		})
+	}
+}
+
 func TestConfig_ProcessorsWithParsers(t *testing.T) {
 	formats := []string{
 		"collectd",

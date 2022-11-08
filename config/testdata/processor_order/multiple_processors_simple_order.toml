@@ -1,0 +1,9 @@
+[[processors.parser_test]]
+
+[[processors.processor_parser]]
+
+[[processors.processor_parserfunc]]
+
+[[processors.processor]]
+    order = 1
+
