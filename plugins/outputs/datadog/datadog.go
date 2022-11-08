@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -168,6 +169,9 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
+		// err can be ignored
+		body, _ := io.ReadAll(resp.Body)
+		d.Log.Debugf("Response from datadog api %s", string(body))
 		return fmt.Errorf("received bad status code, %d", resp.StatusCode)
 	}
 

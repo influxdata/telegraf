@@ -24,6 +24,7 @@ var (
 func NewDatadog(url string) *Datadog {
 	return &Datadog{
 		URL: url,
+		Log: testutil.Logger{},
 	}
 }
 
