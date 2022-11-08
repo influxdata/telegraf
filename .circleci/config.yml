@@ -151,7 +151,7 @@ commands:
           condition:
             equal: [ windows, << parameters.type >> ]
           steps:
-            - run: make versioninfo
+            - run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
       - when:
           condition: << parameters.nightly >>
           steps:
