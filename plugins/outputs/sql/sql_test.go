@@ -211,31 +211,30 @@ func TestMysqlIntegration(t *testing.T) {
 		testMetrics,
 	))
 
-	//dump the database
-	var rc int
-	rc, _, err = container.Exec([]string{
+	rc, out, err := container.Exec([]string{
 		"bash",
 		"-c",
 		"mariadb-dump --user=" + username +
 			" --password=" + password +
 			" --compact --skip-opt " +
-			dbname +
-			" > /out/dump",
+			dbname,
 	})
 	require.NoError(t, err)
 	require.Equal(t, 0, rc)
-	dumpfile := filepath.Join(outDir, "dump")
-	require.Eventually(t, func() bool {
-		_, err := os.Stat(dumpfile)
-		return !os.IsNotExist(err)
-	}, 5*time.Second, 10*time.Millisecond)
 
-	//compare the dump to what we expected
-	expected, err := os.ReadFile("testdata/mariadb/expected.sql")
+	bytes, err := io.ReadAll(out)
 	require.NoError(t, err)
-	actual, err := os.ReadFile(dumpfile)
-	require.NoError(t, err)
-	require.Equal(t, string(expected), string(actual))
+
+	cases := []struct {
+		expected string
+	}{
+		{"INSERT INTO `metric_one` VALUES ('2021-05-17 22:04:45','tag1','tag2',1234,2345,1,0,1000000000,3.1415);"},
+		{"INSERT INTO `metric_two` VALUES ('2021-05-17 22:04:45','tag3','string1');"},
+		{"INSERT INTO `metric three` VALUES ('2021-05-17 22:04:45','tag4','string2');"},
+	}
+	for _, tc := range cases {
+		require.Contains(t, string(bytes), tc.expected)
+	}
 }
 
 func TestPostgresIntegration(t *testing.T) {
@@ -295,10 +294,10 @@ func TestPostgresIntegration(t *testing.T) {
 		testMetrics,
 	))
 
-	//dump the database
-	//psql -u postgres
-	var rc int
-	rc, _, err = container.Exec([]string{
+	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
+	require.NoError(t, err)
+
+	rc, out, err := container.Exec([]string{
 		"bash",
 		"-c",
 		"pg_dump" +
@@ -313,20 +312,16 @@ func TestPostgresIntegration(t *testing.T) {
 			// each release. To prevent these changes from causing the
 			// test to fail, we strip out comments. Also strip out
 			// blank lines.
-			"|grep -E -v '(^--|^$)'" +
-			" > /out/dump 2>&1",
+			"|grep -E -v '(^--|^$)'",
 	})
 	require.NoError(t, err)
 	require.Equal(t, 0, rc)
-	dumpfile := filepath.Join(outDir, "dump")
-	require.FileExists(t, dumpfile)
 
-	//compare the dump to what we expected
-	expected, err := os.ReadFile("testdata/postgres/expected.sql")
+	bytes, err := io.ReadAll(out)
 	require.NoError(t, err)
-	actual, err := os.ReadFile(dumpfile)
-	require.NoError(t, err)
-	require.Equal(t, string(expected), string(actual))
+	actual := strings.ReplaceAll(string(bytes), "\x01\x00\x00\x00\x00\x00\x05\xd3", "")
+
+	require.Equal(t, string(expected), actual)
 }
 
 func TestClickHouseIntegration(t *testing.T) {
