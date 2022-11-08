@@ -1,7 +1,11 @@
 package tail
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -233,4 +237,109 @@ func TestMultilineWhat(t *testing.T) {
 	var w7 MultilineMatchWhichLine
 	require.Error(t, w7.UnmarshalTOML([]byte(`nope`)))
 	require.Equal(t, MultilineMatchWhichLine(-1), w7)
+}
+
+func TestMultiLineQuoted(t *testing.T) {
+	tests := []struct {
+		name      string
+		quotation string
+		quote     string
+		filename  string
+	}{
+		{
+			name:      "single-quotes",
+			quotation: "single-quotes",
+			quote:     `'`,
+			filename:  "multiline_quoted_single.csv",
+		},
+		{
+			name:      "double-quotes",
+			quotation: "double-quotes",
+			quote:     `"`,
+			filename:  "multiline_quoted_double.csv",
+		},
+		{
+			name:      "backticks",
+			quotation: "backticks",
+			quote:     "`",
+			filename:  "multiline_quoted_backticks.csv",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expected := []string{
+				`1660819827410,1,some text without quotes,A`,
+				fmt.Sprintf(`1660819827420,2,some text with %squotes%s,B`, tt.quote, tt.quote),
+				"1660819827430,3,some text with 'multiple \"quotes\" in `one` line',C",
+				fmt.Sprintf(`1660819827440,4,some multiline text with %squotesspanning \%smultiple\%slines%s but do not %senddirectly%s,D`, tt.quote, tt.quote, tt.quote, tt.quote, tt.quote, tt.quote),
+				fmt.Sprintf(`1660819827450,5,all of %sthis%s should %sbasically%s work...,E`, tt.quote, tt.quote, tt.quote, tt.quote),
+			}
+
+			c := &MultilineConfig{
+				MatchWhichLine: Next,
+				Quotation:      tt.quotation,
+			}
+			m, err := c.NewMultiline()
+			require.NoError(t, err)
+
+			f, err := os.Open(filepath.Join("testdata", tt.filename))
+			require.NoError(t, err)
+
+			scanner := bufio.NewScanner(f)
+
+			var buffer bytes.Buffer
+			var result []string
+			for scanner.Scan() {
+				line := scanner.Text()
+
+				text := m.ProcessLine(line, &buffer)
+				if text == "" {
+					continue
+				}
+				result = append(result, text)
+			}
+
+			require.EqualValues(t, expected, result)
+		})
+	}
+}
+
+func TestMultiLineQuotedAndPattern(t *testing.T) {
+	c := &MultilineConfig{
+		Pattern:        "=>$",
+		MatchWhichLine: Next,
+		Quotation:      "double-quotes",
+	}
+	m, err := c.NewMultiline()
+	require.NoError(t, err, "Configuration was OK.")
+	var buffer bytes.Buffer
+
+	text := m.ProcessLine("1=>", &buffer)
+	require.Empty(t, text)
+	require.NotZero(t, buffer.Len())
+
+	text = m.ProcessLine("2=>", &buffer)
+	require.Empty(t, text)
+	require.NotZero(t, buffer.Len())
+
+	text = m.ProcessLine(`"a quoted `, &buffer)
+	require.Empty(t, text)
+	require.NotZero(t, buffer.Len())
+
+	text = m.ProcessLine(`multiline string"=>`, &buffer)
+	require.Empty(t, text)
+	require.NotZero(t, buffer.Len())
+
+	text = m.ProcessLine("3=>", &buffer)
+	require.Empty(t, text)
+	require.NotZero(t, buffer.Len())
+
+	text = m.ProcessLine("4", &buffer)
+	require.Equal(t, `1=>2=>"a quoted multiline string"=>3=>4`, text)
+	require.Zero(t, buffer.Len())
+
+	text = m.ProcessLine("5", &buffer)
+	require.Equal(t, "5", text)
+	require.Zero(t, buffer.Len())
 }
