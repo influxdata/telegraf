@@ -95,6 +95,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
     #invert_match = false
 
+    ## The handling method for quoted text (defaults to 'ignore').
+    ## The following methods are available:
+    ##   ignore  -- do not consider quotation (default)
+    ##   single-quotes -- consider text quoted by single quotes (')
+    ##   double-quotes -- consider text quoted by double quotes (")
+    ##   backticks     -- consider text quoted by backticks (`)
+    ## When handling quotes, escaped quotes (e.g. \") are handled correctly.
+    #quotation = "ignore"
+
     #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
     #timeout = 5s
 ```
