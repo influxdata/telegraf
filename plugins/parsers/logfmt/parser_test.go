@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
@@ -70,8 +71,10 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name:        "logfmt parser parses every line",
-			bytes:       []byte("ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST\nparent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000"),
+			name: "logfmt parser parses every line",
+			bytes: []byte(
+				"ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST\nparent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000",
+			),
 			measurement: "testlog",
 			want: []telegraf.Metric{
 				testutil.MustMetric(
@@ -172,7 +175,8 @@ func TestParseLine(t *testing.T) {
 		{
 			name:        "ParseLine only returns metrics from first string",
 			measurement: "testlog",
-			s:           "ts=2018-07-24T19:43:35.207268Z lvl=5 msg=\"Write failed\" log_id=09R4e4Rl000\nmethod=POST parent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000",
+			s: "ts=2018-07-24T19:43:35.207268Z lvl=5 msg=\"Write failed\" log_id=09R4e4Rl000\nmethod=POST " +
+				"parent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000",
 			want: testutil.MustMetric(
 				"testlog",
 				map[string]string{},
