@@ -84,7 +84,7 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 			// we must emit multiple tags
 			for _, kv := range strings.Split(sub[2], " and ") {
 				key := tagKey + strings.TrimSpace(strings.Split(kv, "=")[0])
-				tagValue := strings.ReplaceAll(strings.Split(kv, "=")[1], "'", "")
+				tagValue := strings.ReplaceAll(strings.SplitN(kv, "=", 2)[1], "'", "")
 				tags[key] = tagValue
 			}
 
