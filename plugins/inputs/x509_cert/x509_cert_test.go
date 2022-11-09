@@ -383,8 +383,14 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 
 func TestSourcesToURLs(t *testing.T) {
 	m := &X509Cert{
-		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "smtp://influxdata.com:25", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
-		Log:     testutil.Logger{},
+		Sources: []string{
+			"https://www.influxdata.com:443",
+			"tcp://influxdata.com:443",
+			"smtp://influxdata.com:25",
+			"file:///dummy_test_path_file.pem",
+			"/tmp/dummy_test_path_glob*.pem",
+		},
+		Log: testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
