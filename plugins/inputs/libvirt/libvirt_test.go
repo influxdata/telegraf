@@ -142,7 +142,14 @@ func TestLibvirt_Gather(t *testing.T) {
 		vcpuMapping     []vcpuAffinity
 	}{
 		{"successfully gather from host that has domains", domains, nil, domainStats, append(expectedMetrics, expectedVcpuAffinityMetrics...), vcpusMapping},
-		{"successfully gather from host for excluded domain", domains, []string{"Droplet-33436"}, domainStats[1:], append(expectedMetrics[1:], expectedVcpuAffinityMetrics[2:]...), vcpusMapping},
+		{
+			"successfully gather from host for excluded domain",
+			domains,
+			[]string{"Droplet-33436"},
+			domainStats[1:],
+			append(expectedMetrics[1:], expectedVcpuAffinityMetrics[2:]...),
+			vcpusMapping,
+		},
 	}
 	for _, test := range successfulTests {
 		t.Run(test.testName, func(t *testing.T) {

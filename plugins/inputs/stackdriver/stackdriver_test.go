@@ -6,15 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	"google.golang.org/genproto/googleapis/api/monitoredres"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type Call struct {
@@ -718,24 +719,27 @@ func TestGather(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
+			listMetricDescriptorsF := func(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest) (<-chan *metricpb.MetricDescriptor, error) {
+				ch := make(chan *metricpb.MetricDescriptor, 1)
+				ch <- tt.descriptor
+				close(ch)
+				return ch, nil
+			}
+			listTimeSeriesF := func(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest) (<-chan *monitoringpb.TimeSeries, error) {
+				ch := make(chan *monitoringpb.TimeSeries, 1)
+				ch <- tt.timeseries
+				close(ch)
+				return ch, nil
+			}
+
 			s := &Stackdriver{
 				Log:                          testutil.Logger{},
 				Project:                      "test",
 				RateLimit:                    10,
 				GatherRawDistributionBuckets: true,
 				client: &MockStackdriverClient{
-					ListMetricDescriptorsF: func(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest) (<-chan *metricpb.MetricDescriptor, error) {
-						ch := make(chan *metricpb.MetricDescriptor, 1)
-						ch <- tt.descriptor
-						close(ch)
-						return ch, nil
-					},
-					ListTimeSeriesF: func(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest) (<-chan *monitoringpb.TimeSeries, error) {
-						ch := make(chan *monitoringpb.TimeSeries, 1)
-						ch <- tt.timeseries
-						close(ch)
-						return ch, nil
-					},
+					ListMetricDescriptorsF: listMetricDescriptorsF,
+					ListTimeSeriesF:        listTimeSeriesF,
 					CloseF: func() error {
 						return nil
 					},
@@ -1090,8 +1094,9 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 					name:   "ListMetricDescriptors",
 					filter: `metric.type = starts_with("telegraf/cpu/usage")`,
 				}, {
-					name:   "ListTimeSeries",
-					filter: `metric.type = "telegraf/cpu/usage" AND (metric.labels.resource_type = "instance" OR metric.labels.resource_id = starts_with("abc-"))`,
+					name: "ListTimeSeries",
+					filter: `metric.type = "telegraf/cpu/usage" AND ` +
+						`(metric.labels.resource_type = "instance" OR metric.labels.resource_id = starts_with("abc-"))`,
 				},
 			},
 		},
@@ -1133,8 +1138,10 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 					name:   "ListMetricDescriptors",
 					filter: `metric.type = starts_with("telegraf/cpu/usage")`,
 				}, {
-					name:   "ListTimeSeries",
-					filter: `metric.type = "telegraf/cpu/usage" AND (resource.labels.instance_name = "localhost" OR resource.labels.zone = starts_with("us-")) AND (metric.labels.resource_type = "instance" OR metric.labels.resource_id = starts_with("abc-"))`,
+					name: "ListTimeSeries",
+					filter: `metric.type = "telegraf/cpu/usage" AND ` +
+						`(resource.labels.instance_name = "localhost" OR resource.labels.zone = starts_with("us-")) AND ` +
+						`(metric.labels.resource_type = "instance" OR metric.labels.resource_id = starts_with("abc-"))`,
 				},
 			},
 		},
