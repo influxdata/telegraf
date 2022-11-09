@@ -368,12 +368,22 @@ func TestConfig_WrongFieldType(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	require.Equal(t, "error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
+	require.Equal(
+		t,
+		"error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: "+
+			"(config.MockupInputPlugin.Port) cannot unmarshal TOML string into int",
+		err.Error(),
+	)
 
 	c = NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	require.Equal(t, "error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
+	require.Equal(
+		t,
+		"error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: "+
+			"(config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string",
+		err.Error(),
+	)
 }
 
 func TestConfig_InlineTables(t *testing.T) {
@@ -406,7 +416,11 @@ func TestConfig_BadOrdering(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
-	require.Equal(t, "error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+	require.Equal(
+		t,
+		"error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)",
+		err.Error(),
+	)
 }
 
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
@@ -482,7 +496,11 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 
 	if runtime.GOOS == "windows" {
 		// The error file not found error message is different on Windows
-		require.Equal(t, "error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: The system cannot find the file specified.", err.Error())
+		require.Equal(
+			t,
+			"error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: The system cannot find the file specified.",
+			err.Error(),
+		)
 	} else {
 		require.Equal(t, "error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
 	}

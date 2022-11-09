@@ -479,7 +479,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used",
+						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
 		case "inputs", "plugins":
@@ -501,7 +502,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used",
+						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
 		case "processors":
@@ -518,7 +520,13 @@ func (c *Config) LoadConfigData(data []byte) error {
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+					return fmt.Errorf(
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used",
+						name,
+						pluginName,
+						subTable.Line,
+						keys(c.UnusedFields),
+					)
 				}
 			}
 		case "aggregators":
@@ -535,7 +543,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used",
+						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
 		// Assume it's an input for legacy config file support if no other

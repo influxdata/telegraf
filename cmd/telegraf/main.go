@@ -94,8 +94,9 @@ func deleteEmpty(s []string) []string {
 func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig, m App) error {
 	pluginFilterFlags := []cli.Flag{
 		&cli.StringFlag{
-			Name:  "section-filter",
-			Usage: "filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'",
+			Name: "section-filter",
+			Usage: "filter the sections to print, separator is ':'. " +
+				"Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'",
 		},
 		&cli.StringFlag{
 			Name:  "input-filter",
@@ -287,8 +288,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Usage: "run in quiet mode",
 				},
 				&cli.BoolFlag{
-					Name:  "test",
-					Usage: "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs",
+					Name: "test",
+					Usage: "enable test mode: gather metrics, print them out, and exit. " +
+						"Note: Test mode only runs inputs, not processors, aggregators, or outputs",
 				},
 				// TODO: Change "deprecation-list, input-list, output-list" flags to become a subcommand "list" that takes
 				// "input,output,aggregator,processor, deprecated" as parameters

@@ -148,7 +148,14 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config), nil
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
+		serializer, err = NewGraphiteSerializer(
+			config.Prefix,
+			config.Template,
+			config.GraphiteTagSupport,
+			config.GraphiteTagSanitizeMode,
+			config.GraphiteSeparator,
+			config.Templates,
+		)
 	case "json":
 		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat, config.Transformation)
 	case "splunkmetric":
@@ -158,7 +165,12 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "carbon2":
 		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
 	case "wavefront":
-		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride, config.WavefrontDisablePrefixConversion), nil
+		serializer, err = NewWavefrontSerializer(
+			config.Prefix,
+			config.WavefrontUseStrict,
+			config.WavefrontSourceOverride,
+			config.WavefrontDisablePrefixConversion,
+		), nil
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config), nil
 	case "prometheusremotewrite":

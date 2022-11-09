@@ -127,7 +127,8 @@ func (t *telegrafLogCreator) CreateLogger(cfg LogConfig) (io.Writer, error) {
 	case LogTargetFile:
 		if cfg.Logfile != "" {
 			var err error
-			if writer, err = rotate.NewFileWriter(cfg.Logfile, time.Duration(cfg.RotationInterval), int64(cfg.RotationMaxSize), cfg.RotationMaxArchives); err != nil {
+			if writer, err =
+				rotate.NewFileWriter(cfg.Logfile, time.Duration(cfg.RotationInterval), int64(cfg.RotationMaxSize), cfg.RotationMaxArchives); err != nil {
 				log.Printf("E! Unable to open %s (%s), using stderr", cfg.Logfile, err)
 				writer = defaultWriter
 			}
