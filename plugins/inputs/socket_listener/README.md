@@ -78,7 +78,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## "identity" to apply no encoding.
   # content_encoding = "identity"
 
-  ## Message splitting strategy and corresponding settings.
+  ## Message splitting strategy and corresponding settings for stream sockets
+  ## (tcp, tcp4, tcp6, unix or unixpacket). The setting is ignored for packet
+  ## listeners such as udp.
   ## Available strategies are:
   ##   newline         -- split at newlines (default)
   ##   null            -- split at null bytes
@@ -91,10 +93,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # splitting_strategy = "newline"
 
   ## Delimiter used to split received data to messages consumed by the parser.
-  ## The delimiter is a byte-sequence marking the end of a message
-  ## e.g. "0x0D0A" marks a Windows line-break (CR LF).
+  ## The delimiter is a hex byte-sequence marking the end of a message
+  ## e.g. "0x0D0A", "x0d0a" or "0d0a" marks a Windows line-break (CR LF).
+  ## The value is case-insensitive and can be specifed with "0x" or "x" prefix
+  ## or withou.
   ## Note: This setting is only used for splitting_strategy = "delimiter".
-  # splitting_delimiter = ""
+  # slitting_delimiter = ""
 
   ## Fixed length of a message in bytes.
   ## Note: This setting is only used for splitting_strategy = "fixed length".
