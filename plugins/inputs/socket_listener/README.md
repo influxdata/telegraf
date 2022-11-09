@@ -78,7 +78,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## "identity" to apply no encoding.
   # content_encoding = "identity"
 
-  ## Packet splitting strategy and corresponding settings.
+  ## Message splitting strategy and corresponding settings.
   ## Available strategies are:
   ##   newline         -- split at newlines (default)
   ##   null            -- split at null bytes
