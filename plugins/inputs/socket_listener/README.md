@@ -94,7 +94,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The delimiter is a byte-sequence marking the end of a message
   ## e.g. "0x0D0A" marks a Windows line-break (CR LF).
   ## Note: This setting is only used for splitting_strategy = "delimiter".
-  # slitting_delimiter = ""
+  # splitting_delimiter = ""
 
   ## Fixed length of a message in bytes.
   ## Note: This setting is only used for splitting_strategy = "fixed length".
