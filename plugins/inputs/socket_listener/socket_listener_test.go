@@ -195,20 +195,11 @@ func TestCases(t *testing.T) {
 		return &SocketListener{}
 	})
 
-	// Prepare the influx parser for expectations
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-
 	for _, f := range folders {
 		// Only handle folders
 		if !f.IsDir() {
 			continue
 		}
-		testcasePath := filepath.Join("testcases", f.Name())
-		configFilename := filepath.Join(testcasePath, "telegraf.conf")
-		inputFilename := filepath.Join(testcasePath, "sequence.json")
-		expectedFilename := filepath.Join(testcasePath, "expected.out")
-		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
 		// Compare options
 		options := []cmp.Option{
@@ -217,6 +208,16 @@ func TestCases(t *testing.T) {
 		}
 
 		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			inputFilename := filepath.Join(testcasePath, "sequence.json")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+			// Prepare the influx parser for expectations
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
 			// Read the input sequence
 			sequence, err := readInputData(inputFilename)
 			require.NoError(t, err)
