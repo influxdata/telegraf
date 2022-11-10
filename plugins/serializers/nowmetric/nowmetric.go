@@ -68,12 +68,12 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err 
 func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	/*  ServiceNow Operational Intelligence supports an array of JSON objects.
 	** Following elements accepted in the request body:
-		 ** metric_type:	The name of the metric
-		 ** resource:		Information about the resource for which metric data is being collected.
+		 ** metric_type: 	The name of the metric
+		 ** resource:   	Information about the resource for which metric data is being collected.
 							In the example below, C:\ is the resource for which metric data is collected
-		 ** node:			IP, FQDN, name of the CI, or host
-		 ** value:			Value of the metric
-		 ** timestamp:		Epoch timestamp of the metric in milliseconds
+		 ** node:       	IP, FQDN, name of the CI, or host
+		 ** value:      	Value of the metric
+		 ** timestamp: 		Epoch timestamp of the metric in milliseconds
 		 ** ci2metric_id:	List of key-value pairs to identify the CI.
 		 ** source:			Data source monitoring the metric type
 	*/
