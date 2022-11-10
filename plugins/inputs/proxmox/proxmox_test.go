@@ -11,12 +11,18 @@ import (
 )
 
 var nodeSearchDomainTestData = `{"data":{"search":"test.example.com","dns1":"1.0.0.1"}}`
-var qemuTestData = `{"data":[{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113","uptime":2159739,"disk":0,"maxmem":2147483648,"mem":1722451796}]}`
+var qemuTestData = `{"data":[{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113","uptime":2159739,` +
+	`"disk":0,"maxmem":2147483648,"mem":1722451796}]}`
 var qemuConfigTestData = `{"data":{"hostname":"qemu1","searchdomain":"test.example.com"}}`
-var lxcTestData = `{"data":[{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"},{"vmid":112,"type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container2"}]}`
+var lxcTestData = `{"data":[{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,` +
+	`"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"},{"vmid":112,"type":"lxc",` +
+	`"uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,` +
+	`"status":"running","maxdisk":"5217320960","name":"container2"}]}`
 var lxcConfigTestData = `{"data":{"hostname":"container1","searchdomain":"test.example.com"}}`
-var lxcCurrentStatusTestData = `{"data":{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"}}`
-var qemuCurrentStatusTestData = `{"data":{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113","uptime":2159739,"disk":0,"maxmem":2147483648,"mem":1722451796}}`
+var lxcCurrentStatusTestData = `{"data":{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,` +
+	`"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"}}`
+var qemuCurrentStatusTestData = `{"data":{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113",` +
+	`"uptime":2159739,"disk":0,"maxmem":2147483648,"mem":1722451796}}`
 
 func performTestRequest(_ *Proxmox, apiURL string, _ string, _ url.Values) ([]byte, error) {
 	var bytedata = []byte("")
