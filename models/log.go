@@ -141,7 +141,7 @@ func PrintOptionValueDeprecationNotice(level telegraf.Escalation, plugin, option
 	case telegraf.Warn, telegraf.Error:
 		prefix := deprecationPrefix(level)
 		log.Printf(
-			"%s: Option value %q for %q of plugin %q deprecated since version %s and will be removed in %s: %s",
+			"%s: Value %q for option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
 			prefix, value, option, plugin, info.Since, info.RemovalIn, info.Notice,
 		)
 	}

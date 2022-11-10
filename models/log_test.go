@@ -192,12 +192,12 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 		{
 			name:     "Error level",
 			level:    telegraf.Error,
-			expected: `Option value "foobar" for "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+			expected: `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
 		},
 		{
 			name:     "Warn level",
 			level:    telegraf.Warn,
-			expected: `Option value "foobar" for "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+			expected: `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
 		},
 		{
 			name:     "None",
