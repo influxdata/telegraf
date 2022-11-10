@@ -68,14 +68,10 @@ func TestCompressionOverride(t *testing.T) {
 }
 
 func TestBadStatusCode(t *testing.T) {
+	errorString := `{"errors": ["Something bad happened to the server.", "Your query made the server very sad."]}`
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		//nolint:errcheck,revive // Ignore the returned error as the test will fail anyway
-		json.NewEncoder(w).Encode(`{ 'errors': [
-    	'Something bad happened to the server.',
-    	'Your query made the server very sad.'
-  		]
-		}`)
+		fmt.Fprint(w, errorString)
 	}))
 	defer ts.Close()
 
@@ -87,7 +83,7 @@ func TestBadStatusCode(t *testing.T) {
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
-		require.EqualError(t, fmt.Errorf("received bad status code, 500"), err.Error())
+		require.EqualError(t, err, fmt.Sprintf("received bad status code, %v: %s", http.StatusInternalServerError, errorString))
 	}
 }
 
