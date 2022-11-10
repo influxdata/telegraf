@@ -38,11 +38,11 @@ func (n *NamespaceMock) Interfaces() ([]NamespacedInterface, error) {
 	return nil, errors.New("it is a test bug to invoke this function")
 }
 
-func (n *NamespaceMock) DriverName(intf NamespacedInterface) (string, error) {
+func (n *NamespaceMock) DriverName(_ NamespacedInterface) (string, error) {
 	return "", errors.New("it is a test bug to invoke this function")
 }
 
-func (n *NamespaceMock) Stats(intf NamespacedInterface) (map[string]uint64, error) {
+func (n *NamespaceMock) Stats(_ NamespacedInterface) (map[string]uint64, error) {
 	return nil, errors.New("it is a test bug to invoke this function")
 }
 
