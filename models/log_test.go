@@ -187,17 +187,38 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 	var tests = []struct {
 		name     string
 		level    telegraf.Escalation
+		value    interface{}
 		expected string
 	}{
 		{
 			name:     "Error level",
 			level:    telegraf.Error,
+			value:    "foobar",
 			expected: `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
 		},
 		{
 			name:     "Warn level",
 			level:    telegraf.Warn,
+			value:    "foobar",
 			expected: `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+		},
+		{
+			name:     "nil value",
+			level:    telegraf.Error,
+			value:    nil,
+			expected: `Value "<nil>" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+		},
+		{
+			name:     "Boolean value",
+			level:    telegraf.Error,
+			value:    true,
+			expected: `Value "true" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+		},
+		{
+			name:     "Integer value",
+			level:    telegraf.Error,
+			value:    123,
+			expected: `Value "123" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
 		},
 		{
 			name:     "None",
@@ -218,7 +239,7 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf.Reset()
-			PrintOptionValueDeprecationNotice(tt.level, "test", "option", "foobar", info)
+			PrintOptionValueDeprecationNotice(tt.level, "test", "option", tt.value, info)
 			// Wait for a newline to arrive and timeout for cases where
 			// we don't see a message.
 			go func() {
