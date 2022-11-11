@@ -103,7 +103,9 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err := m.Connect()
+	err := m.Init()
+	require.NoError(t, err)
+	err = m.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the mqtt broker

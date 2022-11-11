@@ -21,7 +21,6 @@ var sampleConfig string
 
 const (
 	defaultKeepAlive = 30
-	defaultTopic     = "<topic_prefix>/<hostname>/<pluginname>"
 )
 
 type MQTT struct {
@@ -65,7 +64,7 @@ func (m *MQTT) Init() error {
 		return fmt.Errorf("forbidden value for topic prefix")
 	}
 	if m.Topic == "" {
-		m.Topic = defaultTopic
+		m.Topic = "<pluginname>"
 	}
 	for _, p := range strings.Split(m.Topic, "/") {
 		if p == "+" || p == "*" {
@@ -110,9 +109,12 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	}
 
 	metricsmap := make(map[string][]telegraf.Metric)
-
+	hostname, ok := metrics[0].Tags()["host"]
+	if !ok {
+		hostname = ""
+	}
 	for _, metric := range metrics {
-		topic := parse(m, metric)
+		topic := parse(m, metric, hostname)
 
 		if m.BatchMessage {
 			metricsmap[topic] = append(metricsmap[topic], metric)

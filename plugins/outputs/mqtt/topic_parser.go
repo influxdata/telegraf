@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func parse(m *MQTT, metric telegraf.Metric) string {
+func parse(m *MQTT, metric telegraf.Metric, hostname string) string {
 	var t []string
 	if m.Topic != "" {
 		for _, p := range strings.Split(m.Topic, "/") {
@@ -13,7 +13,7 @@ func parse(m *MQTT, metric telegraf.Metric) string {
 			case p == "<topic_prefix>":
 				t = append(t, m.TopicPrefix)
 			case p == "<hostname>":
-				if hostname, ok := metric.GetTag("host"); ok {
+				if hostname != "" {
 					t = append(t, hostname)
 				}
 			case p == "<pluginname>":

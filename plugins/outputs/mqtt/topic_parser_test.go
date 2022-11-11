@@ -4,6 +4,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -36,6 +37,11 @@ func Test_parse(t *testing.T) {
 			pattern: "<topic_prefix>/<tag::tag1>",
 			want:    "prefix/value1",
 		},
+		{
+			name:    "uses the plugin name when no pattern is provided",
+			pattern: "",
+			want:    "metric-name",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -43,11 +49,13 @@ func Test_parse(t *testing.T) {
 			m.TopicPrefix = "prefix"
 			met := metric.New(
 				"metric-name",
-				map[string]string{"tag1": "value1", "host": "hostname"},
+				map[string]string{"tag1": "value1"},
 				map[string]interface{}{"value": 123},
 				time.Date(2022, time.November, 10, 23, 0, 0, 0, time.UTC),
 			)
-			if got := parse(m, met); got != tt.want {
+			err := m.Init()
+			require.NoError(t, err)
+			if got := parse(m, met, "hostname"); got != tt.want {
 				t.Errorf("parse() = %v, want %v", got, tt.want)
 			}
 		})
