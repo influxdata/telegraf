@@ -215,7 +215,8 @@ func TestSerializeBatchHec(t *testing.T) {
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 
-	expS := `{"time":0,"event":"metric","fields":{"_value":42,"metric_name":"cpu.value"}}{"time":0,"event":"metric","fields":{"_value":92,"metric_name":"cpu.value"}}`
+	expS := `{"time":0,"event":"metric","fields":{"_value":42,"metric_name":"cpu.value"}}` +
+		`{"time":0,"event":"metric","fields":{"_value":92,"metric_name":"cpu.value"}}`
 	require.Equal(t, expS, string(buf))
 }
 
