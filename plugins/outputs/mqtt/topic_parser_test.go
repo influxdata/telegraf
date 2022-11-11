@@ -24,7 +24,7 @@ func Test_parse(t *testing.T) {
 	}{
 		{
 			name:    "matches default legacy format",
-			pattern: "<topic_prefix>/<hostname>/<pluginname>",
+			pattern: "*topic_prefix*/*hostname*/*pluginname*",
 			want:    "prefix/hostname/metric-name",
 		},
 		{
@@ -34,13 +34,18 @@ func Test_parse(t *testing.T) {
 		},
 		{
 			name:    "allows the use of tags",
-			pattern: "<topic_prefix>/<tag::tag1>",
+			pattern: "*topic_prefix*/*tag::tag1*",
 			want:    "prefix/value1",
 		},
 		{
 			name:    "uses the plugin name when no pattern is provided",
 			pattern: "",
 			want:    "metric-name",
+		},
+		{
+			name:    "ignores tag when tag does not exists",
+			pattern: "*topic_prefix*/*tag::not-a-tag*",
+			want:    "prefix",
 		},
 	}
 	for _, tt := range tests {

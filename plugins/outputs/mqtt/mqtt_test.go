@@ -134,6 +134,11 @@ func TestMQTT_Init(t *testing.T) {
 			topic:   "this/is/+/invalid",
 			wantErr: true,
 		},
+		{
+			name:    "an pattern having an unknown placeholder is rejected",
+			topic:   "this/is/*invalid*",
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

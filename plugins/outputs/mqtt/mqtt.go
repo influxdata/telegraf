@@ -64,11 +64,22 @@ func (m *MQTT) Init() error {
 		return fmt.Errorf("forbidden value for topic prefix")
 	}
 	if m.Topic == "" {
-		m.Topic = "<pluginname>"
+		m.Topic = "*pluginname*"
+	}
+	allow := map[string]bool{
+		"*topic_prefix*": true,
+		"*hostname*":     true,
+		"*pluginname*":   true,
 	}
 	for _, p := range strings.Split(m.Topic, "/") {
 		if p == "+" || p == "*" {
 			return fmt.Errorf("found forbidden character %s in the topic name %s", p, m.Topic)
+		}
+		if strings.Contains(p, "*") && !strings.Contains(p, "*tag::") {
+			_, ok := allow[p]
+			if !ok {
+				return fmt.Errorf("found unknown placeholder %s", p)
+			}
 		}
 	}
 	return nil

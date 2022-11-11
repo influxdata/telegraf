@@ -10,22 +10,21 @@ func parse(m *MQTT, metric telegraf.Metric, hostname string) string {
 	if m.Topic != "" {
 		for _, p := range strings.Split(m.Topic, "/") {
 			switch {
-			case p == "<topic_prefix>":
+			case p == "*topic_prefix*":
 				t = append(t, m.TopicPrefix)
-			case p == "<hostname>":
+			case p == "*hostname*":
 				if hostname != "" {
 					t = append(t, hostname)
 				}
-			case p == "<pluginname>":
+			case p == "*pluginname*":
 				t = append(t, metric.Name())
-			case strings.Contains(p, "<tag::"):
-				k := strings.TrimSuffix(strings.TrimPrefix(p, "<tag::"), ">")
+			case strings.Contains(p, "*tag::"):
+				k := strings.TrimSuffix(strings.TrimPrefix(p, "*tag::"), "*")
 				var tag string
 				tag, ok := metric.GetTag(k)
-				if !ok {
-					tag = k
+				if ok {
+					t = append(t, tag)
 				}
-				t = append(t, tag)
 			default:
 				t = append(t, p)
 			}
