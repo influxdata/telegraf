@@ -226,7 +226,7 @@ func (sp *StreamParser) SetTimeFunc(f TimeFunc) {
 	sp.defaultTime = f
 }
 
-func (sp *StreamParser) SetTimePrecision(u time.Duration) {
+func (sp *StreamParser) SetTimePrecision(u time.Duration) error {
 	switch u {
 	case time.Nanosecond:
 		sp.precision = lineprotocol.Nanosecond
@@ -236,7 +236,13 @@ func (sp *StreamParser) SetTimePrecision(u time.Duration) {
 		sp.precision = lineprotocol.Millisecond
 	case time.Second:
 		sp.precision = lineprotocol.Second
+	case time.Minute:
+		return fmt.Errorf("time precision 'm' is not supported")
+	case time.Hour:
+		return fmt.Errorf("time precision 'h' is not supported")
 	}
+
+	return nil
 }
 
 // Next parses the next item from the stream.  You can repeat calls to this

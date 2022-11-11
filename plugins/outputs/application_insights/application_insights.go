@@ -15,8 +15,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -124,7 +122,11 @@ func (a *ApplicationInsights) createTelemetry(metric telegraf.Metric) []appinsig
 	return a.createTelemetryForUnusedFields(metric, nil)
 }
 
-func (a *ApplicationInsights) createSimpleMetricTelemetry(metric telegraf.Metric, fieldName string, useFieldNameInTelemetryName bool) *appinsights.MetricTelemetry {
+func (a *ApplicationInsights) createSimpleMetricTelemetry(
+	metric telegraf.Metric,
+	fieldName string,
+	useFieldNameInTelemetryName bool,
+) *appinsights.MetricTelemetry {
 	telemetryValue, err := getFloat64TelemetryPropertyValue([]string{fieldName}, metric, nil)
 	if err != nil {
 		return nil

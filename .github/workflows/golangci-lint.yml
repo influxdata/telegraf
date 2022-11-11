@@ -9,6 +9,10 @@ on:
   schedule:
     # Trigger every day at 16:00 UTC
     - cron:  '0 16 * * *'
+permissions:
+  contents: read # to fetch code (actions/checkout)
+  pull-requests: read # to fetch pull requests (golangci/golangci-lint-action)
+
 jobs:
   golangci-pr:
     if: github.ref != 'refs/heads/master'
@@ -16,22 +20,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
       - uses: actions/checkout@v3
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.48.0
+          version: v1.50.0
           only-new-issues: true
+          args: --timeout 15m0s --verbose
   golangci-master:
     if: github.ref == 'refs/heads/master'
     name: lint-master-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
       - uses: actions/checkout@v3
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.48.0
+          version: v1.50.0
           only-new-issues: true
-          args: --issues-exit-code=0
+          args: --timeout 15m0s --issues-exit-code=0 --verbose

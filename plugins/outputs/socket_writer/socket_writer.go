@@ -17,8 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -121,7 +119,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
-			if err, ok := err.(net.Error); !ok || !err.Temporary() {
+			if err, ok := err.(net.Error); ok {
 				// permanent error. close the connection
 				sw.Close() //nolint:revive // There is another error which will be returned here
 				sw.Conn = nil
@@ -145,7 +143,7 @@ func (sw *SocketWriter) Close() error {
 }
 
 func newSocketWriter() *SocketWriter {
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	return &SocketWriter{
 		Serializer: s,
 	}

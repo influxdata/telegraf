@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdata/wlog"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/rotate"
-	"github.com/influxdata/wlog"
 )
 
 var prefixRegex = regexp.MustCompile("^[DIWE]!")
@@ -31,7 +32,7 @@ type LogConfig struct {
 	LogTarget string
 	// will direct the logging output to a file. Empty string is
 	// interpreted as stderr. If there is an error opening the file the
-	// logger will fallback to stderr
+	// logger will fall back to stderr
 	Logfile string
 	// will rotate when current file at the specified time interval
 	RotationInterval config.Duration
@@ -43,15 +44,15 @@ type LogConfig struct {
 	LogWithTimezone string
 }
 
-type LoggerCreator interface {
+type creator interface {
 	CreateLogger(cfg LogConfig) (io.Writer, error)
 }
 
-var loggerRegistry map[string]LoggerCreator
+var loggerRegistry map[string]creator
 
-func registerLogger(name string, loggerCreator LoggerCreator) {
+func registerLogger(name string, loggerCreator creator) {
 	if loggerRegistry == nil {
-		loggerRegistry = make(map[string]LoggerCreator)
+		loggerRegistry = make(map[string]creator)
 	}
 	loggerRegistry[name] = loggerCreator
 }
@@ -110,8 +111,9 @@ func newTelegrafWriter(w io.Writer, c LogConfig) (io.Writer, error) {
 }
 
 // SetupLogging configures the logging output.
-func SetupLogging(cfg LogConfig) {
-	newLogWriter(cfg)
+func SetupLogging(cfg LogConfig) error {
+	_, err := newLogWriter(cfg)
+	return err
 }
 
 type telegrafLogCreator struct {
@@ -146,7 +148,7 @@ func (t *telegrafLogCreator) CreateLogger(cfg LogConfig) (io.Writer, error) {
 // It allows closing previous writer if re-set and have possibility to test what is actually set
 var actualLogger io.Writer
 
-func newLogWriter(cfg LogConfig) io.Writer {
+func newLogWriter(cfg LogConfig) (io.Writer, error) {
 	log.SetFlags(0)
 	if cfg.Debug {
 		wlog.SetLevel(wlog.DEBUG)
@@ -166,12 +168,15 @@ func newLogWriter(cfg LogConfig) io.Writer {
 	}
 
 	if closer, isCloser := actualLogger.(io.Closer); isCloser {
-		closer.Close()
+		if err := closer.Close(); err != nil {
+			return nil, err
+		}
 	}
+
 	log.SetOutput(logWriter)
 	actualLogger = logWriter
 
-	return logWriter
+	return logWriter, nil
 }
 
 func init() {

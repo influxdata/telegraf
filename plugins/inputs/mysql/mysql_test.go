@@ -26,16 +26,14 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("/usr/sbin/mysqld: ready for connections"),
+			wait.ForLog("/usr/sbin/mysqld: ready for connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
 
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	m := &Mysql{
 		Servers: []string{fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])},
@@ -63,16 +61,14 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("/usr/sbin/mysqld: ready for connections"),
+			wait.ForLog("/usr/sbin/mysqld: ready for connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
 
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
 	m := &Mysql{

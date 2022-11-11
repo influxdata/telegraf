@@ -1,19 +1,19 @@
 package jti_openconfig_telemetry
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
 	"github.com/influxdata/telegraf/config"
 	telemetry "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var cfg = &OpenConfigTelemetry{
@@ -50,7 +50,10 @@ type openConfigTelemetryServer struct {
 	telemetry.UnimplementedOpenConfigTelemetryServer
 }
 
-func (s *openConfigTelemetryServer) TelemetrySubscribe(req *telemetry.SubscriptionRequest, stream telemetry.OpenConfigTelemetry_TelemetrySubscribeServer) error {
+func (s *openConfigTelemetryServer) TelemetrySubscribe(
+	req *telemetry.SubscriptionRequest,
+	stream telemetry.OpenConfigTelemetry_TelemetrySubscribeServer,
+) error {
 	path := req.PathList[0].Path
 	switch path {
 	case "/sensor":
@@ -65,15 +68,24 @@ func (s *openConfigTelemetryServer) TelemetrySubscribe(req *telemetry.Subscripti
 	return nil
 }
 
-func (s *openConfigTelemetryServer) CancelTelemetrySubscription(_ context.Context, _ *telemetry.CancelSubscriptionRequest) (*telemetry.CancelSubscriptionReply, error) {
+func (s *openConfigTelemetryServer) CancelTelemetrySubscription(
+	_ context.Context,
+	_ *telemetry.CancelSubscriptionRequest,
+) (*telemetry.CancelSubscriptionReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetTelemetrySubscriptions(_ context.Context, _ *telemetry.GetSubscriptionsRequest) (*telemetry.GetSubscriptionsReply, error) {
+func (s *openConfigTelemetryServer) GetTelemetrySubscriptions(
+	_ context.Context,
+	_ *telemetry.GetSubscriptionsRequest,
+) (*telemetry.GetSubscriptionsReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetTelemetryOperationalState(_ context.Context, _ *telemetry.GetOperationalStateRequest) (*telemetry.GetOperationalStateReply, error) {
+func (s *openConfigTelemetryServer) GetTelemetryOperationalState(
+	_ context.Context,
+	_ *telemetry.GetOperationalStateRequest,
+) (*telemetry.GetOperationalStateReply, error) {
 	return nil, nil
 }
 

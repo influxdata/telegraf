@@ -6,6 +6,15 @@ server. Different server types are supported and their settings might differ
 drivers](../../../docs/SQL_DRIVERS_INPUT.md) for the `driver` name and options
 for the data-source-name (`dsn`) options.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

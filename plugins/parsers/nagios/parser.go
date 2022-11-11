@@ -97,7 +97,9 @@ type Parser struct {
 // https://github.com/Alignak-monitoring/alignak/blob/develop/alignak/misc/perfdata.py
 var (
 	perfSplitRegExp = regexp.MustCompile(`([^=]+=\S+)`)
-	nagiosRegExp    = regexp.MustCompile(`^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*);?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*`)
+	nagiosRegExp    = regexp.MustCompile(
+		`^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*);?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*`,
+	)
 )
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {

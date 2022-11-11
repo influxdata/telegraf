@@ -395,7 +395,14 @@ func TestHandleNXAPIXformNXAPI(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags1 := map[string]string{"path": "show processes cpu", "foo": "bar", "TABLE_process_cpu": "i1", "row_number": "0", "source": "hostname", "subscription": "subscription"}
+	tags1 := map[string]string{
+		"path":              "show processes cpu",
+		"foo":               "bar",
+		"TABLE_process_cpu": "i1",
+		"row_number":        "0",
+		"source":            "hostname",
+		"subscription":      "subscription",
+	}
 	fields1 := map[string]interface{}{"value": "foo"}
 	acc.AssertContainsTaggedFields(t, "show processes cpu", fields1, tags1)
 }

@@ -40,9 +40,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &Postgresql{
 		Service: Service{
@@ -131,9 +129,7 @@ func TestPostgresqlTagsMetricsWithDatabaseNameIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &Postgresql{
 		Service: Service{
@@ -163,9 +159,7 @@ func TestPostgresqlDefaultsToAllDatabasesIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &Postgresql{
 		Service: Service{
@@ -202,9 +196,7 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &Postgresql{
 		Service: Service{
@@ -231,9 +223,7 @@ func TestPostgresqlDatabaseWhitelistTestIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &Postgresql{
 		Service: Service{
@@ -277,9 +267,7 @@ func TestPostgresqlDatabaseBlacklistTestIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &Postgresql{
 		Service: Service{

@@ -10,10 +10,10 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -188,7 +188,9 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Titlecase {
-		c.fn = strings.Title
+		c.fn = func(s string) string {
+			return cases.Title(language.Und, cases.NoLower).String(s)
+		}
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Trim {

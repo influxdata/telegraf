@@ -9,8 +9,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -23,6 +21,8 @@ type Quantile struct {
 
 	cache    map[uint64]aggregate
 	suffixes []string
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 type aggregate struct {
@@ -44,7 +44,10 @@ func (q *Quantile) Add(in telegraf.Metric) {
 		for k, algo := range cached.fields {
 			if field, ok := fields[k]; ok {
 				if v, isconvertible := convert(field); isconvertible {
-					algo.Add(v)
+					err := algo.Add(v)
+					if err != nil {
+						q.Log.Errorf("adding cached field %s: %v", k, err)
+					}
 				}
 			}
 		}
@@ -61,7 +64,10 @@ func (q *Quantile) Add(in telegraf.Metric) {
 		if v, isconvertible := convert(field); isconvertible {
 			// This should never error out as we tested it in Init()
 			algo, _ := q.newAlgorithm(q.Compression)
-			algo.Add(v)
+			err := algo.Add(v)
+			if err != nil {
+				q.Log.Errorf("adding field %s: %v", k, err)
+			}
 			a.fields[k] = algo
 		}
 	}

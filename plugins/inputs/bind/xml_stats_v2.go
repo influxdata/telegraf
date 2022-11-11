@@ -75,9 +75,7 @@ func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, sta
 			tags[k] = v
 		}
 
-		if err := grouper.Add("bind_counter", tags, ts, c.Name, c.Value); err != nil {
-			acc.AddError(fmt.Errorf("adding field %q to group failed: %v", c.Name, err))
-		}
+		grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 	}
 
 	//Add grouped metrics

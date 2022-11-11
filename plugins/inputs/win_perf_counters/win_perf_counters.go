@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build windows
-// +build windows
 
 package win_perf_counters
 
@@ -16,8 +15,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -123,7 +120,16 @@ func extractCounterInfoFromCounterPath(counterPath string) (object string, insta
 	return
 }
 
-func newCounter(counterHandle PDH_HCOUNTER, counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) *counter {
+func newCounter(
+	counterHandle PDH_HCOUNTER,
+	counterPath string,
+	objectName string,
+	instance string,
+	counterName string,
+	measurement string,
+	includeTotal bool,
+	useRawValue bool,
+) *counter {
 	measurementName := sanitizedChars.Replace(measurement)
 	if measurementName == "" {
 		measurementName = "win_perf_counters"
@@ -140,7 +146,15 @@ func (*Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) error {
+func (m *Win_PerfCounters) AddItem(
+	counterPath string,
+	objectName string,
+	instance string,
+	counterName string,
+	measurement string,
+	includeTotal bool,
+	useRawValue bool,
+) error {
 	origCounterPath := counterPath
 	var err error
 	var counterHandle PDH_HCOUNTER

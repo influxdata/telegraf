@@ -14,8 +14,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -85,8 +83,18 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	// Connect to the KNX-IP interface
 	kl.Log.Infof("Trying to connect to %q at %q", kl.ServiceType, kl.ServiceAddress)
 	switch kl.ServiceType {
-	case "tunnel":
-		c, err := knx.NewGroupTunnel(kl.ServiceAddress, knx.DefaultTunnelConfig)
+	case "tunnel", "tunnel_udp":
+		tunnelconfig := knx.DefaultTunnelConfig
+		tunnelconfig.UseTCP = false
+		c, err := knx.NewGroupTunnel(kl.ServiceAddress, tunnelconfig)
+		if err != nil {
+			return err
+		}
+		kl.client = &c
+	case "tunnel_tcp":
+		tunnelconfig := knx.DefaultTunnelConfig
+		tunnelconfig.UseTCP = true
+		c, err := knx.NewGroupTunnel(kl.ServiceAddress, tunnelconfig)
 		if err != nil {
 			return err
 		}
@@ -98,10 +106,7 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 		}
 		kl.client = &c
 	case "dummy":
-		c, err := NewDummyInterface()
-		if err != nil {
-			return err
-		}
+		c := NewDummyInterface()
 		kl.client = &c
 	default:
 		return fmt.Errorf("invalid interface type: %s", kl.ServiceAddress)

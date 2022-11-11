@@ -20,8 +20,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -397,6 +395,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 		}
 	}
 
+	a.decoder.SetEncoding(d.ContentEncoding)
 	body, err := a.decoder.Decode(d.Body)
 	if err != nil {
 		onError()

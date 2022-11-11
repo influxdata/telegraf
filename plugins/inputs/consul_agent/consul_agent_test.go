@@ -2,9 +2,9 @@ package consul_agent
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -74,7 +74,7 @@ func TestConsulStats(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.RequestURI == "/v1/agent/metrics" {
 					w.WriteHeader(http.StatusOK)
-					responseKeyMetrics, _ := ioutil.ReadFile("testdata/response_key_metrics.json")
+					responseKeyMetrics, _ := os.ReadFile("testdata/response_key_metrics.json")
 					_, err := fmt.Fprintln(w, string(responseKeyMetrics))
 					require.NoError(t, err)
 				}

@@ -21,13 +21,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parserV2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -68,9 +66,9 @@ type Prometheus struct {
 
 	IgnoreTimestamp bool `toml:"ignore_timestamp"`
 
-	tls.ClientConfig
-
 	Log telegraf.Logger
+
+	httpconfig.HTTPClientConfig
 
 	client  *http.Client
 	headers map[string]string
@@ -138,6 +136,17 @@ func (p *Prometheus) Init() error {
 
 		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
+	}
+
+	ctx := context.Background()
+	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
+	if err != nil {
+		return err
+	}
+	p.client = client
+	p.headers = map[string]string{
+		"User-Agent": internal.ProductToken(),
+		"Accept":     acceptHeader,
 	}
 
 	return nil
@@ -217,18 +226,6 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
-	if p.client == nil {
-		client, err := p.createHTTPClient()
-		if err != nil {
-			return err
-		}
-		p.client = client
-		p.headers = map[string]string{
-			"User-Agent": internal.ProductToken(),
-			"Accept":     acceptHeader,
-		}
-	}
-
 	var wg sync.WaitGroup
 
 	allURLs, err := p.GetAllURLs()
@@ -248,23 +245,6 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Prometheus) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := p.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig:   tlsCfg,
-			DisableKeepAlives: true,
-		},
-		Timeout: time.Duration(p.ResponseTimeout),
-	}
-
-	return client, nil
-}
-
 func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error {
 	var req *http.Request
 	var err error
@@ -282,7 +262,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 
 		// ignore error because it's been handled before getting here
-		tlsCfg, _ := p.ClientConfig.TLSConfig()
+		tlsCfg, _ := p.HTTPClientConfig.TLSConfig()
 		uClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig:   tlsCfg,

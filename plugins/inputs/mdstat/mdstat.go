@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
-// +build linux
 
 // Copyright 2018 The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,8 +31,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 

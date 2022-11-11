@@ -16,8 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -50,11 +48,7 @@ func (s *SFlow) Init() error {
 // Start starts this sFlow listener listening on the configured network for sFlow packets
 func (s *SFlow) Start(acc telegraf.Accumulator) error {
 	s.decoder.OnPacket(func(p *V5Format) {
-		metrics, err := makeMetrics(p)
-		if err != nil {
-			s.Log.Errorf("Failed to make metric from packet: %s", err)
-			return
-		}
+		metrics := makeMetrics(p)
 		for _, m := range metrics {
 			acc.AddMetric(m)
 		}

@@ -21,7 +21,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(false, false)
+	s := NewSerializer(false, false, false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func TestSerializeMetricFloatHec(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(true, false)
+	s := NewSerializer(true, false, false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(false, false)
+	s := NewSerializer(false, false, false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestSerializeMetricIntHec(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(true, false)
+	s := NewSerializer(true, false, false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -96,7 +96,7 @@ func TestSerializeMetricBool(t *testing.T) {
 	}
 	m := metric.New("docker", tags, fields, now)
 
-	s, _ := NewSerializer(false, false)
+	s := NewSerializer(false, false, false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -115,7 +115,7 @@ func TestSerializeMetricBoolHec(t *testing.T) {
 	}
 	m := metric.New("docker", tags, fields, now)
 
-	s, _ := NewSerializer(true, false)
+	s := NewSerializer(true, false, false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -135,7 +135,7 @@ func TestSerializeMetricString(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(false, false)
+	s := NewSerializer(false, false, false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -165,7 +165,7 @@ func TestSerializeBatch(t *testing.T) {
 	)
 
 	metrics := []telegraf.Metric{m, n}
-	s, _ := NewSerializer(false, false)
+	s := NewSerializer(false, false, false)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 
@@ -185,7 +185,7 @@ func TestSerializeMulti(t *testing.T) {
 	)
 
 	metrics := []telegraf.Metric{m}
-	s, _ := NewSerializer(false, true)
+	s := NewSerializer(false, true, false)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 
@@ -211,7 +211,7 @@ func TestSerializeBatchHec(t *testing.T) {
 		time.Unix(0, 0),
 	)
 	metrics := []telegraf.Metric{m, n}
-	s, _ := NewSerializer(true, false)
+	s := NewSerializer(true, false, false)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 
@@ -231,10 +231,30 @@ func TestSerializeMultiHec(t *testing.T) {
 	)
 
 	metrics := []telegraf.Metric{m}
-	s, _ := NewSerializer(true, true)
+	s := NewSerializer(true, true, false)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 
 	expS := `{"time":0,"event":"metric","fields":{"metric_name:cpu.system":8,"metric_name:cpu.usage":42}}`
+	require.Equal(t, expS, string(buf))
+}
+
+func TestSerializeOmitEvent(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"usage":  42.0,
+			"system": 8.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := NewSerializer(true, true, true)
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	expS := `{"time":0,"fields":{"metric_name:cpu.system":8,"metric_name:cpu.usage":42}}`
 	require.Equal(t, expS, string(buf))
 }

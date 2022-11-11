@@ -2,15 +2,15 @@ package snmp
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/influxdata/telegraf"
 	"github.com/sleepinggenius2/gosmi"
 	"github.com/sleepinggenius2/gosmi/types"
+
+	"github.com/influxdata/telegraf"
 )
 
 // must init, append path for each directory, load module for every file
@@ -45,10 +45,6 @@ func (*GosmiMibLoader) loadModule(path string) error {
 	return err
 }
 
-func ClearCache() {
-	cache = make(map[string]bool)
-}
-
 // will give all found folders to gosmi and load in all modules found in the folders
 func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) error {
 	folders, err := walkPaths(paths, log)
@@ -57,12 +53,18 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 	}
 	for _, path := range folders {
 		loader.appendPath(path)
-		modules, err := ioutil.ReadDir(path)
+		modules, err := os.ReadDir(path)
 		if err != nil {
 			log.Warnf("Can't read directory %v", modules)
+			continue
 		}
 
-		for _, info := range modules {
+		for _, entry := range modules {
+			info, err := entry.Info()
+			if err != nil {
+				log.Warnf("Couldn't get info for %v: %v", entry.Name(), err)
+				continue
+			}
 			if info.Mode()&os.ModeSymlink != 0 {
 				symlink := filepath.Join(path, info.Name())
 				target, err := filepath.EvalSymlinks(symlink)
@@ -133,7 +135,7 @@ func walkPaths(paths []string, log telegraf.Logger) ([]string, error) {
 			return nil
 		})
 		if err != nil {
-			return folders, fmt.Errorf("Couldn't walk path %q: %v", mibPath, err)
+			return folders, fmt.Errorf("couldn't walk path %q: %v", mibPath, err)
 		}
 	}
 	return folders, nil
@@ -174,7 +176,7 @@ func TrapLookup(oid string) (e MibEntry, err error) {
 
 // The following is for snmp
 
-func GetIndex(oidNum string, mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}, err error) {
+func GetIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}) {
 	// first attempt to get the table's tags
 	tagOids = map[string]struct{}{}
 
@@ -188,7 +190,7 @@ func GetIndex(oidNum string, mibPrefix string, node gosmi.SmiNode) (col []string
 	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
 	_, col = node.GetColumns()
 
-	return col, tagOids, nil
+	return col, tagOids
 }
 
 //nolint:revive //Too many return variable but necessary
@@ -206,7 +208,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			return oid, oid, oid, oid, gosmi.SmiNode{}, err
 		}
 		if s[1] == "" {
-			return "", oid, oid, oid, gosmi.SmiNode{}, fmt.Errorf("cannot parse %v\n", oid)
+			return "", oid, oid, oid, gosmi.SmiNode{}, fmt.Errorf("cannot parse %v", oid)
 		}
 		// node becomes sysUpTime.0
 		node := s[1]

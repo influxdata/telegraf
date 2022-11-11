@@ -6,6 +6,15 @@ creates metrics using one of the supported [input data formats][].
 A [Queue Group][queue group] is used when subscribing to subjects so multiple
 instances of telegraf can read from a NATS cluster in parallel.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

@@ -15,8 +15,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -318,37 +316,63 @@ func (c *Ceph) execute(command string) (string, error) {
 
 // CephStatus is used to unmarshal "ceph -s" output
 type CephStatus struct {
+	FSMap struct {
+		NumIn        float64 `json:"in"`
+		NumMax       float64 `json:"max"`
+		NumUp        float64 `json:"up"`
+		NumUpStandby float64 `json:"up:standby"`
+	} `json:"fsmap"`
 	Health struct {
+		OverallStatus string `json:"overall_status"` // Only valid for ceph version <15
 		Status        string `json:"status"`
-		OverallStatus string `json:"overall_status"`
 	} `json:"health"`
+	MonMap struct {
+		NumMons float64 `json:"num_mons"`
+	} `json:"monmap"`
 	OSDMap struct {
-		OSDMap struct {
+		Epoch          float64  `json:"epoch"`
+		NumInOSDs      float64  `json:"num_in_osds"`
+		NumOSDs        float64  `json:"num_osds"`
+		NumRemappedPGs float64  `json:"num_remapped_pgs"`
+		NumUpOSDs      float64  `json:"num_up_osds"`
+		OSDMap         struct { // nested OSDmap used in ceph version <15
 			Epoch          float64 `json:"epoch"`
-			NumOSDs        float64 `json:"num_osds"`
-			NumUpOSDs      float64 `json:"num_up_osds"`
-			NumInOSDs      float64 `json:"num_in_osds"`
 			Full           bool    `json:"full"`
 			NearFull       bool    `json:"nearfull"`
+			NumInOSDs      float64 `json:"num_in_osds"`
+			NumOSDs        float64 `json:"num_osds"`
 			NumRemappedPGs float64 `json:"num_remapped_pgs"`
+			NumUpOSDs      float64 `json:"num_up_osds"`
 		} `json:"osdmap"`
 	} `json:"osdmap"`
 	PGMap struct {
 		PGsByState []struct {
-			StateName string  `json:"state_name"`
 			Count     float64 `json:"count"`
+			StateName string  `json:"state_name"`
 		} `json:"pgs_by_state"`
-		Version       float64  `json:"version"`
-		NumPGs        float64  `json:"num_pgs"`
-		DataBytes     float64  `json:"data_bytes"`
-		BytesUsed     float64  `json:"bytes_used"`
-		BytesAvail    float64  `json:"bytes_avail"`
-		BytesTotal    float64  `json:"bytes_total"`
-		ReadBytesSec  float64  `json:"read_bytes_sec"`
-		WriteBytesSec float64  `json:"write_bytes_sec"`
-		OpPerSec      *float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
-		ReadOpPerSec  float64  `json:"read_op_per_sec"`
-		WriteOpPerSec float64  `json:"write_op_per_sec"`
+		BytesAvail              float64 `json:"bytes_avail"`
+		BytesTotal              float64 `json:"bytes_total"`
+		BytesUsed               float64 `json:"bytes_used"`
+		DataBytes               float64 `json:"data_bytes"`
+		DegradedObjects         float64 `json:"degraded_objects"`
+		DegradedRatio           float64 `json:"degraded_ratio"`
+		DegraedTotal            float64 `json:"degraded_total"`
+		InactivePGsRatio        float64 `json:"inactive_pgs_ratio"`
+		NumBytesRecovered       float64 `json:"num_bytes_recovered"`
+		NumKeysRecovered        float64 `json:"num_keys_recovered"`
+		NumObjects              float64 `json:"num_objects"`
+		NumOjbectRecovered      float64 `json:"num_objects_recovered"`
+		NumPGs                  float64 `json:"num_pgs"`
+		NumPools                float64 `json:"num_pools"`
+		OpPerSec                float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
+		ReadBytesSec            float64 `json:"read_bytes_sec"`
+		ReadOpPerSec            float64 `json:"read_op_per_sec"`
+		RecoveringBytesPerSec   float64 `json:"recovering_bytes_per_sec"`
+		RecoveringKeysPerSec    float64 `json:"recovering_keys_per_sec"`
+		RecoveringObjectsPerSec float64 `json:"recovering_objects_per_sec"`
+		Version                 float64 `json:"version"`
+		WriteBytesSec           float64 `json:"write_bytes_sec"`
+		WriteOpPerSec           float64 `json:"write_op_per_sec"`
 	} `json:"pgmap"`
 }
 
@@ -360,7 +384,9 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 	}
 
 	decoders := []func(telegraf.Accumulator, *CephStatus) error{
+		decodeStatusFsmap,
 		decodeStatusHealth,
+		decodeStatusMonmap,
 		decodeStatusOsdmap,
 		decodeStatusPgmap,
 		decodeStatusPgmapState,
@@ -375,27 +401,64 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 	return nil
 }
 
+// decodeStatusFsmap decodes the FS map portion of the output of 'ceph -s'
+func decodeStatusFsmap(acc telegraf.Accumulator, data *CephStatus) error {
+	fields := map[string]interface{}{
+		"in":         data.FSMap.NumIn,
+		"max":        data.FSMap.NumMax,
+		"up_standby": data.FSMap.NumUpStandby,
+		"up":         data.FSMap.NumUp,
+	}
+	acc.AddFields("ceph_fsmap", fields, map[string]string{})
+	return nil
+}
+
 // decodeStatusHealth decodes the health portion of the output of 'ceph status'
 func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
+	statusCodes := map[string]float64{
+		"HEALTH_ERR":  0,
+		"HEALTH_WARN": 1,
+		"HEALTH_OK":   2,
+	}
 	fields := map[string]interface{}{
+		"overall_status": data.Health.OverallStatus, // This field is no longer reported in ceph 10 and later
+		"status_code":    statusCodes[data.Health.Status],
 		"status":         data.Health.Status,
-		"overall_status": data.Health.OverallStatus,
 	}
 	acc.AddFields("ceph_health", fields, map[string]string{})
+	return nil
+}
+
+// decodeStatusMonmap decodes the Mon map portion of the output of 'ceph -s'
+func decodeStatusMonmap(acc telegraf.Accumulator, data *CephStatus) error {
+	fields := map[string]interface{}{
+		"num_mons": data.MonMap.NumMons,
+	}
+	acc.AddFields("ceph_monmap", fields, map[string]string{})
 	return nil
 }
 
 // decodeStatusOsdmap decodes the OSD map portion of the output of 'ceph -s'
 func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
-		"epoch":            data.OSDMap.OSDMap.Epoch,
-		"num_osds":         data.OSDMap.OSDMap.NumOSDs,
-		"num_up_osds":      data.OSDMap.OSDMap.NumUpOSDs,
-		"num_in_osds":      data.OSDMap.OSDMap.NumInOSDs,
-		"full":             data.OSDMap.OSDMap.Full,
-		"nearfull":         data.OSDMap.OSDMap.NearFull,
-		"num_remapped_pgs": data.OSDMap.OSDMap.NumRemappedPGs,
+		"epoch":            data.OSDMap.Epoch,
+		"num_in_osds":      data.OSDMap.NumInOSDs,
+		"num_osds":         data.OSDMap.NumOSDs,
+		"num_remapped_pgs": data.OSDMap.NumRemappedPGs,
+		"num_up_osds":      data.OSDMap.NumUpOSDs,
 	}
+	if data.OSDMap.OSDMap.Epoch != 0 && data.OSDMap.OSDMap.NumOSDs != 0 {
+		fields = map[string]interface{}{
+			"epoch":            data.OSDMap.OSDMap.Epoch,
+			"full":             data.OSDMap.OSDMap.Full,
+			"nearfull":         data.OSDMap.OSDMap.NearFull,
+			"num_in_osds":      data.OSDMap.OSDMap.NumInOSDs,
+			"num_osds":         data.OSDMap.OSDMap.NumOSDs,
+			"num_remapped_pgs": data.OSDMap.OSDMap.NumRemappedPGs,
+			"num_up_osds":      data.OSDMap.OSDMap.NumUpOSDs,
+		}
+	}
+
 	acc.AddFields("ceph_osdmap", fields, map[string]string{})
 	return nil
 }
@@ -403,17 +466,29 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 // decodeStatusPgmap decodes the PG map portion of the output of 'ceph -s'
 func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
-		"version":          data.PGMap.Version,
-		"num_pgs":          data.PGMap.NumPGs,
-		"data_bytes":       data.PGMap.DataBytes,
-		"bytes_used":       data.PGMap.BytesUsed,
-		"bytes_avail":      data.PGMap.BytesAvail,
-		"bytes_total":      data.PGMap.BytesTotal,
-		"read_bytes_sec":   data.PGMap.ReadBytesSec,
-		"write_bytes_sec":  data.PGMap.WriteBytesSec,
-		"op_per_sec":       data.PGMap.OpPerSec, // This field is no longer reported in ceph 10 and later
-		"read_op_per_sec":  data.PGMap.ReadOpPerSec,
-		"write_op_per_sec": data.PGMap.WriteOpPerSec,
+		"bytes_avail":                data.PGMap.BytesAvail,
+		"bytes_total":                data.PGMap.BytesTotal,
+		"bytes_used":                 data.PGMap.BytesUsed,
+		"data_bytes":                 data.PGMap.DataBytes,
+		"degraded_objects":           data.PGMap.DegradedObjects,
+		"degraded_ratio":             data.PGMap.DegradedRatio,
+		"degraded_total":             data.PGMap.DegraedTotal,
+		"inactive_pgs_ratio":         data.PGMap.InactivePGsRatio,
+		"num_bytes_recovered":        data.PGMap.NumBytesRecovered,
+		"num_keys_recovered":         data.PGMap.NumKeysRecovered,
+		"num_objects_recovered":      data.PGMap.NumOjbectRecovered,
+		"num_objects":                data.PGMap.NumObjects,
+		"num_pgs":                    data.PGMap.NumPGs,
+		"num_pools":                  data.PGMap.NumPools,
+		"op_per_sec":                 data.PGMap.OpPerSec, // This field is no longer reported in ceph 10 and later
+		"read_bytes_sec":             data.PGMap.ReadBytesSec,
+		"read_op_per_sec":            data.PGMap.ReadOpPerSec,
+		"recovering_bytes_per_sec":   data.PGMap.RecoveringBytesPerSec,
+		"recovering_keys_per_sec":    data.PGMap.RecoveringKeysPerSec,
+		"recovering_objects_per_sec": data.PGMap.RecoveringObjectsPerSec,
+		"version":                    data.PGMap.Version,
+		"write_bytes_sec":            data.PGMap.WriteBytesSec,
+		"write_op_per_sec":           data.PGMap.WriteOpPerSec,
 	}
 	acc.AddFields("ceph_pgmap", fields, map[string]string{})
 	return nil
@@ -436,21 +511,28 @@ func decodeStatusPgmapState(acc telegraf.Accumulator, data *CephStatus) error {
 // CephDF is used to unmarshal 'ceph df' output
 type CephDf struct {
 	Stats struct {
-		TotalSpace      *float64 `json:"total_space"` // pre ceph 0.84
-		TotalUsed       *float64 `json:"total_used"`  // pre ceph 0.84
-		TotalAvail      *float64 `json:"total_avail"` // pre ceph 0.84
-		TotalBytes      *float64 `json:"total_bytes"`
-		TotalUsedBytes  *float64 `json:"total_used_bytes"`
-		TotalAvailBytes *float64 `json:"total_avail_bytes"`
+		NumOSDs            float64 `json:"num_osds"`
+		NumPerPoolOmapOSDs float64 `json:"num_per_pool_omap_osds"`
+		NumPerPoolOSDs     float64 `json:"num_per_pool_osds"`
+		TotalAvail         float64 `json:"total_avail"` // pre ceph 0.84
+		TotalAvailBytes    float64 `json:"total_avail_bytes"`
+		TotalBytes         float64 `json:"total_bytes"`
+		TotalSpace         float64 `json:"total_space"` // pre ceph 0.84
+		TotalUsed          float64 `json:"total_used"`  // pre ceph 0.84
+		TotalUsedBytes     float64 `json:"total_used_bytes"`
+		TotalUsedRawBytes  float64 `json:"total_used_raw_bytes"`
+		TotalUsedRawRatio  float64 `json:"total_used_raw_ratio"`
 	} `json:"stats"`
-	Pools []struct {
+	StatsbyClass map[string]map[string]float64 `json:"stats_by_class"`
+	Pools        []struct {
 		Name  string `json:"name"`
 		Stats struct {
-			KBUsed      float64  `json:"kb_used"`
-			BytesUsed   float64  `json:"bytes_used"`
-			Objects     float64  `json:"objects"`
-			PercentUsed *float64 `json:"percent_used"`
-			MaxAvail    *float64 `json:"max_avail"`
+			BytesUsed   float64 `json:"bytes_used"`
+			KBUsed      float64 `json:"kb_used"`
+			MaxAvail    float64 `json:"max_avail"`
+			Objects     float64 `json:"objects"`
+			PercentUsed float64 `json:"percent_used"`
+			Stored      float64 `json:"stored"`
 		} `json:"stats"`
 	} `json:"pools"`
 }
@@ -464,14 +546,31 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 
 	// ceph.usage: records global utilization and number of objects
 	fields := map[string]interface{}{
-		"total_space":       data.Stats.TotalSpace,
-		"total_used":        data.Stats.TotalUsed,
-		"total_avail":       data.Stats.TotalAvail,
-		"total_bytes":       data.Stats.TotalBytes,
-		"total_used_bytes":  data.Stats.TotalUsedBytes,
-		"total_avail_bytes": data.Stats.TotalAvailBytes,
+		"num_osds":               data.Stats.NumOSDs,
+		"num_per_pool_omap_osds": data.Stats.NumPerPoolOmapOSDs,
+		"num_per_pool_osds":      data.Stats.NumPerPoolOSDs,
+		"total_avail_bytes":      data.Stats.TotalAvailBytes,
+		"total_avail":            data.Stats.TotalAvail, // pre ceph 0.84
+		"total_bytes":            data.Stats.TotalBytes,
+		"total_space":            data.Stats.TotalSpace, // pre ceph 0.84
+		"total_used_bytes":       data.Stats.TotalUsedBytes,
+		"total_used_raw_bytes":   data.Stats.TotalUsedRawBytes,
+		"total_used_raw_ratio":   data.Stats.TotalUsedRawRatio,
+		"total_used":             data.Stats.TotalUsed, // pre ceph 0.84
 	}
 	acc.AddFields("ceph_usage", fields, map[string]string{})
+
+	// ceph.stats_by_class: records per device-class usage
+	for class, stats := range data.StatsbyClass {
+		tags := map[string]string{
+			"class": class,
+		}
+		fields := map[string]interface{}{}
+		for key, value := range stats {
+			fields[key] = value
+		}
+		acc.AddFields("ceph_deviceclass_usage", fields, tags)
+	}
 
 	// ceph.pool.usage: records per pool utilization and number of objects
 	for _, pool := range data.Pools {
@@ -479,11 +578,12 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 			"name": pool.Name,
 		}
 		fields := map[string]interface{}{
-			"kb_used":      pool.Stats.KBUsed,
 			"bytes_used":   pool.Stats.BytesUsed,
+			"kb_used":      pool.Stats.KBUsed,
+			"max_avail":    pool.Stats.MaxAvail,
 			"objects":      pool.Stats.Objects,
 			"percent_used": pool.Stats.PercentUsed,
-			"max_avail":    pool.Stats.MaxAvail,
+			"stored":       pool.Stats.Stored,
 		}
 		acc.AddFields("ceph_pool_usage", fields, tags)
 	}
@@ -495,17 +595,25 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 type CephOSDPoolStats []struct {
 	PoolName     string `json:"pool_name"`
 	ClientIORate struct {
-		ReadBytesSec  float64  `json:"read_bytes_sec"`
-		WriteBytesSec float64  `json:"write_bytes_sec"`
-		OpPerSec      *float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
-		ReadOpPerSec  float64  `json:"read_op_per_sec"`
-		WriteOpPerSec float64  `json:"write_op_per_sec"`
+		OpPerSec      float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
+		ReadBytesSec  float64 `json:"read_bytes_sec"`
+		ReadOpPerSec  float64 `json:"read_op_per_sec"`
+		WriteBytesSec float64 `json:"write_bytes_sec"`
+		WriteOpPerSec float64 `json:"write_op_per_sec"`
 	} `json:"client_io_rate"`
 	RecoveryRate struct {
-		RecoveringObjectsPerSec float64 `json:"recovering_objects_per_sec"`
+		NumBytesRecovered       float64 `json:"num_bytes_recovered"`
+		NumKeysRecovered        float64 `json:"num_keys_recovered"`
+		NumObjectRecovered      float64 `json:"num_objects_recovered"`
 		RecoveringBytesPerSec   float64 `json:"recovering_bytes_per_sec"`
 		RecoveringKeysPerSec    float64 `json:"recovering_keys_per_sec"`
+		RecoveringObjectsPerSec float64 `json:"recovering_objects_per_sec"`
 	} `json:"recovery_rate"`
+	Recovery struct {
+		DegradedObjects float64 `json:"degraded_objects"`
+		DegradedRatio   float64 `json:"degraded_ratio"`
+		DegradedTotal   float64 `json:"degraded_total"`
+	} `json:"recovery"`
 }
 
 // decodeOsdPoolStats decodes the output of 'ceph osd pool stats'
@@ -521,14 +629,20 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 			"name": pool.PoolName,
 		}
 		fields := map[string]interface{}{
-			"read_bytes_sec":             pool.ClientIORate.ReadBytesSec,
-			"write_bytes_sec":            pool.ClientIORate.WriteBytesSec,
+			"degraded_objects":           pool.Recovery.DegradedObjects,
+			"degraded_ratio":             pool.Recovery.DegradedRatio,
+			"degraded_total":             pool.Recovery.DegradedTotal,
+			"num_bytes_recovered":        pool.RecoveryRate.NumBytesRecovered,
+			"num_keys_recovered":         pool.RecoveryRate.NumKeysRecovered,
+			"num_objects_recovered":      pool.RecoveryRate.NumObjectRecovered,
 			"op_per_sec":                 pool.ClientIORate.OpPerSec, // This field is no longer reported in ceph 10 and later
+			"read_bytes_sec":             pool.ClientIORate.ReadBytesSec,
 			"read_op_per_sec":            pool.ClientIORate.ReadOpPerSec,
-			"write_op_per_sec":           pool.ClientIORate.WriteOpPerSec,
-			"recovering_objects_per_sec": pool.RecoveryRate.RecoveringObjectsPerSec,
 			"recovering_bytes_per_sec":   pool.RecoveryRate.RecoveringBytesPerSec,
 			"recovering_keys_per_sec":    pool.RecoveryRate.RecoveringKeysPerSec,
+			"recovering_objects_per_sec": pool.RecoveryRate.RecoveringObjectsPerSec,
+			"write_bytes_sec":            pool.ClientIORate.WriteBytesSec,
+			"write_op_per_sec":           pool.ClientIORate.WriteOpPerSec,
 		}
 		acc.AddFields("ceph_pool_stats", fields, tags)
 	}

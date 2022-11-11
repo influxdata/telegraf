@@ -11,13 +11,11 @@ import (
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
 type Starlark struct {
-	common.StarlarkCommon
+	common.Common
 }
 
 func (*Starlark) SampleConfig() string {
@@ -26,7 +24,7 @@ func (*Starlark) SampleConfig() string {
 
 func (s *Starlark) Init() error {
 	// Execute source
-	err := s.StarlarkCommon.Init()
+	err := s.Common.Init()
 	if err != nil {
 		return err
 	}
@@ -108,7 +106,7 @@ func (s *Starlark) Reset() {
 func init() {
 	aggregators.Add("starlark", func() telegraf.Aggregator {
 		return &Starlark{
-			StarlarkCommon: common.StarlarkCommon{
+			Common: common.Common{
 				StarlarkLoadFunc: common.LoadFunc,
 			},
 		}

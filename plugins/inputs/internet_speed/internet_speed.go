@@ -12,14 +12,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
 // InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
-	EnableFileDownload bool            `toml:"enable_file_download"`
+	EnableFileDownload bool            `toml:"enable_file_download" deprecated:"1.25.0;use 'memory_saving_mode' instead"`
+	MemorySavingMode   bool            `toml:"memory_saving_mode"`
 	Cache              bool            `toml:"cache"`
 	Log                telegraf.Logger `toml:"-"`
 	serverCache        *speedtest.Server
@@ -29,6 +28,12 @@ const measurement = "internet_speed"
 
 func (*InternetSpeed) SampleConfig() string {
 	return sampleConfig
+}
+
+func (is *InternetSpeed) Init() error {
+	is.MemorySavingMode = is.MemorySavingMode || is.EnableFileDownload
+
+	return nil
 }
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
@@ -60,13 +65,15 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("ping test failed: %v", err)
 	}
 	is.Log.Debug("Running Download...")
-	err = s.DownloadTest(is.EnableFileDownload)
+	err = s.DownloadTest(is.MemorySavingMode)
 	if err != nil {
+		is.Log.Debug("try `memory_saving_mode = true` if this fails consistently")
 		return fmt.Errorf("download test failed: %v", err)
 	}
 	is.Log.Debug("Running Upload...")
-	err = s.UploadTest(is.EnableFileDownload)
+	err = s.UploadTest(is.MemorySavingMode)
 	if err != nil {
+		is.Log.Debug("try `memory_saving_mode = true` if this fails consistently")
 		return fmt.Errorf("upload test failed failed: %v", err)
 	}
 

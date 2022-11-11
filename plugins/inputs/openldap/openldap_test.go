@@ -77,9 +77,7 @@ func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
@@ -134,9 +132,7 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
@@ -197,9 +193,7 @@ func TestOpenldapLDAPSIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	port, err := strconv.Atoi(container.Ports[servicePortSecure])
 	require.NoError(t, err)
@@ -255,9 +249,7 @@ func TestOpenldapInvalidSSLIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	port, err := strconv.Atoi(container.Ports[servicePortSecure])
 	require.NoError(t, err)
@@ -295,9 +287,7 @@ func TestOpenldapBindIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
@@ -347,9 +337,7 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)

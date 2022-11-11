@@ -11,8 +11,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -54,10 +52,9 @@ func (r *ReverseDNS) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *ReverseDNS) Stop() error {
+func (r *ReverseDNS) Stop() {
 	r.parallel.Stop()
 	r.reverseDNSCache.Stop()
-	return nil
 }
 
 func (r *ReverseDNS) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {

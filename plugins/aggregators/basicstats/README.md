@@ -4,6 +4,15 @@ The BasicStats aggregator plugin give us count, diff, max, min, mean,
 non_negative_diff, sum, s2(variance), stdev for a set of values, emitting the
 aggregate every `period` seconds.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

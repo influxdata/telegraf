@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
-// +build linux
 
 package intel_powerstat
 
@@ -18,8 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -83,7 +80,8 @@ func (p *PowerStat) Init() error {
 		p.cpuC6StateResidency || p.cpuBusyCycles || p.packageTurboLimit || p.packageUncoreFrequency {
 		p.msr = newMsrServiceWithFs(p.Log, p.fs)
 	}
-	if p.packageCurrentPowerConsumption || p.packageCurrentDramPowerConsumption || p.packageThermalDesignPower || p.packageTurboLimit || p.packageUncoreFrequency {
+	if p.packageCurrentPowerConsumption || p.packageCurrentDramPowerConsumption || p.packageThermalDesignPower || p.packageTurboLimit ||
+		p.packageUncoreFrequency {
 		p.rapl = newRaplServiceWithFs(p.Log, p.fs)
 	}
 
@@ -377,7 +375,8 @@ func (p *PowerStat) addCPUTemperatureMetric(cpuID string, acc telegraf.Accumulat
 }
 
 func calculateTurboRatioGroup(coreCounts uint64, msr uint64, group map[int]uint64) {
-	from := coreCounts & 0xFF // value of number of active cores of bucket 1 is written in the first 8 bits. The next buckets values are saved on the following 8-bit sides
+	// value of number of active cores of bucket 1 is written in the first 8 bits. The next buckets values are saved on the following 8-bit sides
+	from := coreCounts & 0xFF
 	for i := 0; i < 8; i++ {
 		to := (coreCounts >> (i * 8)) & 0xFF
 		if to == 0 {

@@ -1,7 +1,6 @@
 //go:build windows
-// +build windows
 
-//go:generate goversioninfo -icon=../../assets/windows/tiger.ico
+//go:generate ../../scripts/windows-gen-syso.sh $GOARCH
 
 package main
 
@@ -9,9 +8,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/influxdata/telegraf/logger"
 	"github.com/kardianos/service"
 	"github.com/urfave/cli/v2"
+
+	"github.com/influxdata/telegraf/logger"
 )
 
 func cliFlags() []cli.Flag {
@@ -108,7 +108,7 @@ func (t *Telegraf) runAsWindowsService() error {
 	}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
-		return fmt.Errorf("E! " + err.Error())
+		return err
 	}
 	// Handle the --service flag here to prevent any issues with tooling that
 	// may not have an interactive session, e.g. installing from Ansible.
@@ -133,13 +133,17 @@ func (t *Telegraf) runAsWindowsService() error {
 
 		err := service.Control(s, t.service)
 		if err != nil {
-			return fmt.Errorf("E! " + err.Error())
+			return err
 		}
 	} else {
-		logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
+		err = logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
+		if err != nil {
+			return err
+		}
+
 		err = s.Run()
 		if err != nil {
-			return fmt.Errorf("E! " + err.Error())
+			return err
 		}
 	}
 	return nil

@@ -31,8 +31,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -190,7 +188,8 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 			opts = append(opts, grpc.MaxRecvMsgSize(c.MaxMsgSize))
 		}
 
-		if c.EnforcementPolicy.PermitKeepaliveWithoutCalls || (c.EnforcementPolicy.KeepaliveMinTime != 0 && c.EnforcementPolicy.KeepaliveMinTime != defaultKeepaliveMinTime) {
+		if c.EnforcementPolicy.PermitKeepaliveWithoutCalls ||
+			(c.EnforcementPolicy.KeepaliveMinTime != 0 && c.EnforcementPolicy.KeepaliveMinTime != defaultKeepaliveMinTime) {
 			// Only set if either parameter does not match defaults
 			opts = append(opts, grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 				MinTime:             time.Duration(c.EnforcementPolicy.KeepaliveMinTime),
@@ -504,9 +503,7 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 			tags[subfield.Name] = decodeTag(subfield)
 		}
 		if value := decodeValue(subfield); value != nil {
-			if err := grouper.Add(measurement, tags, timestamp, subfield.Name, value); err != nil {
-				c.Log.Errorf("adding field %q to group failed: %v", subfield.Name, err)
-			}
+			grouper.Add(measurement, tags, timestamp, subfield.Name, value)
 		}
 		if subfield.Name != "nextHop" {
 			continue
@@ -521,9 +518,7 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 				}
 				if value := decodeValue(ff); value != nil {
 					name := "nextHop/" + ff.Name
-					if err := grouper.Add(measurement, tags, timestamp, name, value); err != nil {
-						c.Log.Errorf("adding field %q to group failed: %v", name, err)
-					}
+					grouper.Add(measurement, tags, timestamp, name, value)
 				}
 			}
 		}
@@ -588,13 +583,9 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		}
 
 		if val := c.nxosValueXform(field, value, encodingPath); val != nil {
-			if err := grouper.Add(measurement, tags, timestamp, name, val); err != nil {
-				c.Log.Errorf("adding field %q to group failed: %v", name, err)
-			}
+			grouper.Add(measurement, tags, timestamp, name, val)
 		} else {
-			if err := grouper.Add(measurement, tags, timestamp, name, value); err != nil {
-				c.Log.Errorf("adding field %q to group failed: %v", name, err)
-			}
+			grouper.Add(measurement, tags, timestamp, name, value)
 		}
 		return
 	}

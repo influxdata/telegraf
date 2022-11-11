@@ -24,7 +24,7 @@ var (
 		"processes", "disk", "diskio"}
 
 	// Default output plugins
-	outputDefaults = []string{"influxdb"}
+	outputDefaults = []string{}
 )
 
 var header = `# Telegraf Configuration
@@ -136,7 +136,6 @@ func printSampleConfig(
 					pnames = append(pnames, pname)
 				}
 			}
-			sort.Strings(pnames)
 			printFilteredOutputs(pnames, true, outputBuffer)
 		}
 	}
@@ -154,7 +153,6 @@ func printSampleConfig(
 			for pname := range processors.Processors {
 				pnames = append(pnames, pname)
 			}
-			sort.Strings(pnames)
 			printFilteredProcessors(pnames, true, outputBuffer)
 		}
 	}
@@ -172,7 +170,6 @@ func printSampleConfig(
 			for pname := range aggregators.Aggregators {
 				pnames = append(pnames, pname)
 			}
-			sort.Strings(pnames)
 			printFilteredAggregators(pnames, true, outputBuffer)
 		}
 	}
@@ -194,30 +191,9 @@ func printSampleConfig(
 					pnames = append(pnames, pname)
 				}
 			}
-			sort.Strings(pnames)
 			printFilteredInputs(pnames, true, outputBuffer)
 		}
 	}
-}
-
-// PluginNameCounts returns a list of sorted plugin names and their count
-func PluginNameCounts(plugins []string) []string {
-	names := make(map[string]int)
-	for _, plugin := range plugins {
-		names[plugin]++
-	}
-
-	var namecount []string
-	for name, count := range names {
-		if count == 1 {
-			namecount = append(namecount, name)
-		} else {
-			namecount = append(namecount, fmt.Sprintf("%s (%dx)", name, count))
-		}
-	}
-
-	sort.Strings(namecount)
-	return namecount
 }
 
 func printFilteredProcessors(processorFilters []string, commented bool, outputBuffer io.Writer) {
@@ -305,12 +281,25 @@ func printFilteredInputs(inputFilters []string, commented bool, outputBuffer io.
 func printFilteredOutputs(outputFilters []string, commented bool, outputBuffer io.Writer) {
 	// Filter outputs
 	var onames []string
+	var influxdbV2 string
+
 	for oname := range outputs.Outputs {
 		if sliceContains(oname, outputFilters) {
+			// Make influxdb_v2 the exception and have it be first in the list
+			// Store it and add it later
+			if oname == "influxdb_v2" {
+				influxdbV2 = oname
+				continue
+			}
+
 			onames = append(onames, oname)
 		}
 	}
 	sort.Strings(onames)
+
+	if influxdbV2 != "" {
+		onames = append([]string{influxdbV2}, onames...)
+	}
 
 	// Print Outputs
 	for _, oname := range onames {

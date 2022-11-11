@@ -2,11 +2,10 @@ package sql
 
 import (
 	"fmt"
-	"testing"
-	"time"
-
 	"math/rand"
 	"path/filepath"
+	"testing"
+	"time"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
@@ -55,15 +54,13 @@ func TestMariaDBIntegration(t *testing.T) {
 			"/docker-entrypoint-initdb.d": testdata,
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("Buffer pool(s) load completed at"),
+			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(port)),
 		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Define the testset
 	var testset = []struct {
@@ -162,15 +159,13 @@ func TestPostgreSQLIntegration(t *testing.T) {
 			"/docker-entrypoint-initdb.d": testdata,
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("database system is ready to accept connections"),
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(port)),
 		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Define the testset
 	var testset = []struct {
@@ -266,14 +261,12 @@ func TestClickHouseIntegration(t *testing.T) {
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
 			wait.ForListeningPort(nat.Port(port)),
-			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'"),
+			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'.").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Define the testset
 	var testset = []struct {

@@ -21,8 +21,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -409,7 +407,10 @@ func (m *Smart) Init() error {
 	if err != nil {
 		m.PathNVMe = ""
 		//without nvme, plugin will not be able to gather vendor specific attributes (but it can work without it)
-		m.Log.Warnf("nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s", err.Error())
+		m.Log.Warnf(
+			"nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s",
+			err.Error(),
+		)
 	}
 
 	return nil

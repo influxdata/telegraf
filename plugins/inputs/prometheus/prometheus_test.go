@@ -60,10 +60,12 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 		URLs:   []string{ts.URL},
 		URLTag: "url",
 	}
+	err := p.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(p.Gather)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	require.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
@@ -86,12 +88,15 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 		KubernetesServices: []string{ts.URL},
 		URLTag:             "url",
 	}
+	err := p.Init()
+	require.NoError(t, err)
+
 	u, _ := url.Parse(ts.URL)
 	tsAddress := u.Hostname()
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(p.Gather)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	require.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
@@ -118,10 +123,12 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 		URLs:               []string{ts.URL},
 		KubernetesServices: []string{"http://random.telegraf.local:88/metrics"},
 	}
+	err := p.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(p.Gather)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	require.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
@@ -142,10 +149,12 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 		URLTag:        "url",
 		MetricVersion: 2,
 	}
+	err := p.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(p.Gather)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	require.True(t, acc.TagSetValue("prometheus", "quantile") == "0")
@@ -173,10 +182,12 @@ go_gc_duration_seconds_count 42`
 		URLTag:        "",
 		MetricVersion: 2,
 	}
+	err := p.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
-	err := p.Gather(&acc)
+	err = p.Gather(&acc)
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
@@ -230,10 +241,12 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 		URLTag:        "url",
 		MetricVersion: 2,
 	}
+	err := p.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(p.Gather)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	require.True(t, acc.HasFloatField("prometheus", "go_goroutines"))
@@ -254,10 +267,12 @@ func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
 		URLTag:          "url",
 		IgnoreTimestamp: true,
 	}
+	err := p.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(p.Gather)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	m, _ := acc.Get("test_metric")
@@ -290,7 +305,8 @@ func TestInitConfigErrors(t *testing.T) {
 	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0.0"))
 	err := p.Init()
 	require.Error(t, err)
-	expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid; cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+	expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid; " +
+		"cannot get pod list for monitor_kubernetes_pods using node scrape scope"
 	require.Equal(t, expectedMessage, err.Error())
 	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0"))
 

@@ -21,12 +21,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
-const magicIdleCount int = (-int(^uint(0) >> 1))
+const magicIdleCount = -int(^uint(0) >> 1)
 
 type Query struct {
 	Query               string   `toml:"query"`
@@ -55,7 +53,7 @@ type Query struct {
 	fieldFilterString filter.Filter
 }
 
-func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (int, error) {
+func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (int, error) {
 	columnNames, err := rows.Columns()
 	if err != nil {
 		return 0, err
@@ -381,7 +379,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	for i, q := range s.Queries {
 		s.Log.Debugf("Preparing statement %q...", q.Query)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
-		stmt, err := s.db.PrepareContext(ctx, q.Query) //nolint:sqlclosecheck // Closed in Stop()
+		stmt, err := s.db.PrepareContext(ctx, q.Query)
 		cancel()
 		if err != nil {
 			return fmt.Errorf("preparing query %q failed: %v", q.Query, err)
@@ -458,7 +456,7 @@ func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Quer
 	if err != nil {
 		return err
 	}
-	rowCount, err := q.parse(ctx, acc, rows, tquery)
+	rowCount, err := q.parse(acc, rows, tquery)
 	s.Log.Debugf("Received %d rows and %d columns for query %q", rowCount, len(columnNames), q.Query)
 
 	return err

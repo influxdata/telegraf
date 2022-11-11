@@ -7,8 +7,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -21,9 +19,9 @@ type Zfs struct {
 	KstatMetrics   []string
 	PoolMetrics    bool
 	DatasetMetrics bool
-	sysctl         Sysctl          //nolint:varcheck,unused // False positive - this var is used for non-default build tag: freebsd
-	zpool          Zpool           //nolint:varcheck,unused // False positive - this var is used for non-default build tag: freebsd
-	zdataset       Zdataset        //nolint:varcheck,unused // False positive - this var is used for non-default build tag: freebsd
+	sysctl         Sysctl          //nolint:unused // False positive - this var is used for non-default build tag: freebsd
+	zpool          Zpool           //nolint:unused // False positive - this var is used for non-default build tag: freebsd
+	zdataset       Zdataset        //nolint:unused // False positive - this var is used for non-default build tag: freebsd
 	Log            telegraf.Logger `toml:"-"`
 }
 

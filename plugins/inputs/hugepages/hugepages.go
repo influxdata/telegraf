@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
-// +build linux
 
 package hugepages
 
@@ -8,7 +7,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -17,8 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -125,7 +122,7 @@ func (h *Hugepages) gatherRootStats(acc telegraf.Accumulator) error {
 
 // gatherStatsPerNode collects hugepages statistics per NUMA node
 func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
-	nodeDirs, err := ioutil.ReadDir(h.numaNodePath)
+	nodeDirs, err := os.ReadDir(h.numaNodePath)
 	if err != nil {
 		return err
 	}
@@ -154,9 +151,14 @@ func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, fileFilter map[string]string, defaultTags map[string]string) error {
+func (h *Hugepages) gatherFromHugepagePath(
+	acc telegraf.Accumulator,
+	measurement, path string,
+	fileFilter map[string]string,
+	defaultTags map[string]string,
+) error {
 	// read metrics from: hugepages/hugepages-*/*
-	hugepagesDirs, err := ioutil.ReadDir(path)
+	hugepagesDirs, err := os.ReadDir(path)
 	if err != nil {
 		return fmt.Errorf("reading root dir failed: %v", err)
 	}
@@ -173,7 +175,7 @@ func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement
 		}
 
 		metricsPath := filepath.Join(path, hugepagesDir.Name())
-		metricFiles, err := ioutil.ReadDir(metricsPath)
+		metricFiles, err := os.ReadDir(metricsPath)
 		if err != nil {
 			return fmt.Errorf("reading metric dir failed: %v", err)
 		}
@@ -181,12 +183,12 @@ func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement
 		metrics := make(map[string]interface{})
 		for _, metricFile := range metricFiles {
 			metricName, ok := fileFilter[metricFile.Name()]
-			if mode := metricFile.Mode(); !mode.IsRegular() || !ok {
+			if mode := metricFile.Type(); !mode.IsRegular() || !ok {
 				continue
 			}
 
 			metricFullPath := filepath.Join(metricsPath, metricFile.Name())
-			metricBytes, err := ioutil.ReadFile(metricFullPath)
+			metricBytes, err := os.ReadFile(metricFullPath)
 			if err != nil {
 				return err
 			}
@@ -216,7 +218,7 @@ func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement
 
 // gatherStatsFromMeminfo collects hugepages statistics from meminfo file
 func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
-	meminfo, err := ioutil.ReadFile(h.meminfoPath)
+	meminfo, err := os.ReadFile(h.meminfoPath)
 	if err != nil {
 		return err
 	}

@@ -20,8 +20,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -63,13 +61,13 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 	influxWriter := &writeToAccumulator{accumulator}
 	o.grpcServer = grpc.NewServer(grpcOptions...)
 
-	ptraceotlp.RegisterServer(o.grpcServer, newTraceService(logger, influxWriter))
+	ptraceotlp.RegisterGRPCServer(o.grpcServer, newTraceService(logger, influxWriter))
 	ms, err := newMetricsService(logger, influxWriter, o.MetricsSchema)
 	if err != nil {
 		return err
 	}
-	pmetricotlp.RegisterServer(o.grpcServer, ms)
-	plogotlp.RegisterServer(o.grpcServer, newLogsService(logger, influxWriter))
+	pmetricotlp.RegisterGRPCServer(o.grpcServer, ms)
+	plogotlp.RegisterGRPCServer(o.grpcServer, newLogsService(logger, influxWriter))
 
 	if o.listener == nil {
 		o.listener, err = net.Listen("tcp", o.ServiceAddress)

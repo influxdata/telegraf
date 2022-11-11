@@ -19,8 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -45,6 +43,7 @@ type KafkaConsumer struct {
 	Topics                 []string        `toml:"topics"`
 	TopicTag               string          `toml:"topic_tag"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
+	ConnectionStrategy     string          `toml:"connection_strategy"`
 
 	kafka.ReadConfig
 
@@ -99,8 +98,8 @@ func (k *KafkaConsumer) Init() error {
 	// Kafka version 0.10.2.0 is required for consumer groups.
 	cfg.Version = sarama.V0_10_2_0
 
-	if err := k.SetConfig(cfg); err != nil {
-		return err
+	if err := k.SetConfig(cfg, k.Log); err != nil {
+		return fmt.Errorf("SetConfig: %w", err)
 	}
 
 	switch strings.ToLower(k.Offset) {
@@ -114,11 +113,11 @@ func (k *KafkaConsumer) Init() error {
 
 	switch strings.ToLower(k.BalanceStrategy) {
 	case "range", "":
-		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategyRange}
 	case "roundrobin":
-		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategyRoundRobin}
 	case "sticky":
-		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
+		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategySticky}
 	default:
 		return fmt.Errorf("invalid balance strategy %q", k.BalanceStrategy)
 	}
@@ -133,35 +132,74 @@ func (k *KafkaConsumer) Init() error {
 		cfg.Consumer.Fetch.Default = int32(k.ConsumerFetchDefault)
 	}
 
+	switch strings.ToLower(k.ConnectionStrategy) {
+	default:
+		return fmt.Errorf("invalid connection strategy %q", k.ConnectionStrategy)
+	case "defer", "startup", "":
+	}
+
 	k.config = cfg
 	return nil
 }
 
-func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
+func (k *KafkaConsumer) create() error {
 	var err error
 	k.consumer, err = k.ConsumerCreator.Create(
 		k.Brokers,
 		k.ConsumerGroup,
 		k.config,
 	)
-	if err != nil {
-		return err
-	}
+
+	return err
+}
+
+func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
+	k.wg.Add(1)
+	go func() {
+		defer k.wg.Done()
+		for err := range k.consumer.Errors() {
+			acc.AddError(fmt.Errorf("channel: %w", err))
+		}
+	}()
+}
+
+func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
+	var err error
 
 	ctx, cancel := context.WithCancel(context.Background())
 	k.cancel = cancel
 
+	if k.ConnectionStrategy != "defer" {
+		err = k.create()
+		if err != nil {
+			return fmt.Errorf("create consumer: %w", err)
+		}
+		k.startErrorAdder(acc)
+	}
+
 	// Start consumer goroutine
 	k.wg.Add(1)
 	go func() {
+		var err error
 		defer k.wg.Done()
+
+		if k.consumer == nil {
+			err = k.create()
+			if err != nil {
+				acc.AddError(fmt.Errorf("create consumer async: %w", err))
+				return
+			}
+		}
+
+		k.startErrorAdder(acc)
+
 		for ctx.Err() == nil {
 			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
 			err := k.consumer.Consume(ctx, k.Topics, handler)
 			if err != nil {
-				acc.AddError(err)
+				acc.AddError(fmt.Errorf("consume: %w", err))
 				// Ignore returned error as we cannot do anything about it anyway
 				//nolint:errcheck,revive
 				internal.SleepContext(ctx, reconnectDelay)
@@ -169,15 +207,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		}
 		err = k.consumer.Close()
 		if err != nil {
-			acc.AddError(err)
-		}
-	}()
-
-	k.wg.Add(1)
-	go func() {
-		defer k.wg.Done()
-		for err := range k.consumer.Errors() {
-			acc.AddError(err)
+			acc.AddError(fmt.Errorf("close: %w", err))
 		}
 	}()
 

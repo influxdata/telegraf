@@ -4,6 +4,15 @@ This plugin uses a query on the
 [`nvidia-smi`](https://developer.nvidia.com/nvidia-system-management-interface)
 binary to pull GPU stats including memory and GPU usage, temp and other.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -110,4 +119,21 @@ confirmed to be an issue on an EVGA 2080 Ti.
 **NOTE:** For use with docker either generate your own custom docker image based
 on nvidia/cuda which also installs a telegraf package or use [volume mount
 binding](https://docs.docker.com/storage/bind-mounts/) to inject the required
-binary into the docker container.
+binary into the docker container. In particular you will need to pass through
+the /dev/nvidia* devices, the nvidia-smi binary and the nvidia libraries.
+An minimal docker-compose example of how to do this is:
+
+```yaml
+  telegraf:
+    image: telegraf
+    runtime: nvidia
+    devices:
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia0:/dev/nvidia0
+    volumes:
+      - ./telegraf/etc/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
+      - /usr/lib/x86_64-linux-gnu/nvidia:/usr/lib/x86_64-linux-gnu/nvidia:ro
+    environment:
+      - LD_PRELOAD=/usr/lib/x86_64-linux-gnu/nvidia/current/libnvidia-ml.so
+```

@@ -9,6 +9,15 @@ If in Zookeper, the Prometheus Metric provider is enabled, instead use the
 native solution to read and process Prometheus metrics, while this plugin is
 specific to using `mntr` to collect the Java Properties format.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -24,8 +33,14 @@ specific to using `mntr` to collect the Java Properties format.
   ## Timeout for metric collections from all servers.  Minimum timeout is "1s".
   # timeout = "5s"
 
+  ## Float Parsing - the initial implementation forced any value unable to be
+  ## parsed as an int to be a string. Setting this to "float" will attempt to
+  ## parse float values as floats and not strings. This would break existing
+  ## metrics and may cause issues if a value switches between a float and int.
+  # parse_floats = "string"
+
   ## Optional TLS Config
-  # enable_tls = true
+  # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"

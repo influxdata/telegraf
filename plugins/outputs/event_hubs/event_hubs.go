@@ -14,8 +14,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -60,9 +58,11 @@ type EventHubs struct {
 	ConnectionString string          `toml:"connection_string"`
 	Timeout          config.Duration `toml:"timeout"`
 	PartitionKey     string          `toml:"partition_key"`
+	MaxMessageSize   int             `toml:"max_message_size"`
 
-	Hub        EventHubInterface
-	serializer serializers.Serializer
+	Hub          EventHubInterface
+	batchOptions []eventhub.BatchOption
+	serializer   serializers.Serializer
 }
 
 const (
@@ -78,6 +78,10 @@ func (e *EventHubs) Init() error {
 
 	if err != nil {
 		return err
+	}
+
+	if e.MaxMessageSize > 0 {
+		e.batchOptions = append(e.batchOptions, eventhub.BatchWithMaxSizeInBytes(e.MaxMessageSize))
 	}
 
 	return nil
@@ -132,7 +136,7 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
-	err := e.Hub.SendBatch(ctx, eventhub.NewEventBatchIterator(events...))
+	err := e.Hub.SendBatch(ctx, eventhub.NewEventBatchIterator(events...), e.batchOptions...)
 
 	if err != nil {
 		return err

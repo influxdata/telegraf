@@ -23,8 +23,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -325,7 +323,13 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 	if res.Errors {
 		for id, err := range res.Failed() {
-			a.Log.Errorf("Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s", id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"])
+			a.Log.Errorf(
+				"Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s",
+				id,
+				err.Error.Reason,
+				err.Error.CausedBy["reason"],
+				err.Error.CausedBy["type"],
+			)
 			break
 		}
 		return fmt.Errorf("elasticsearch failed to index %d metrics", len(res.Failed()))

@@ -100,11 +100,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 			}
 		}
 
-		metric, err := p.handler.Metric()
-		if err != nil {
-			return nil, err
-		}
-
+		metric := p.handler.Metric()
 		if metric == nil {
 			continue
 		}
@@ -226,12 +222,7 @@ func (sp *StreamParser) Next() (telegraf.Metric, error) {
 		}
 	}
 
-	metric, err := sp.handler.Metric()
-	if err != nil {
-		return nil, err
-	}
-
-	return metric, nil
+	return sp.handler.Metric(), nil
 }
 
 // Position returns the current byte offset into the data.

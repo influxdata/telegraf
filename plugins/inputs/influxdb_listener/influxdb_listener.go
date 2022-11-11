@@ -22,8 +22,6 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -373,7 +371,14 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 	precisionStr := req.URL.Query().Get("precision")
 	if precisionStr != "" {
 		precision := getPrecisionMultiplier(precisionStr)
-		parser.SetTimePrecision(precision)
+		err := parser.SetTimePrecision(precision)
+		if err != nil {
+			h.Log.Debugf("error in upstream parser: %v", err)
+			if err := badRequest(res, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
+			return
+		}
 	}
 
 	if req.ContentLength >= 0 {

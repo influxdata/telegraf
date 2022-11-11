@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build !solaris
-// +build !solaris
 
 package logparser
 
@@ -20,8 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 

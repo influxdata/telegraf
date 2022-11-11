@@ -3,6 +3,15 @@
 The ethtool input plugin pulls ethernet device stats. Fields pulled will depend
 on the network device and driver.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -13,6 +22,12 @@ on the network device and driver.
 
   ## List of interfaces to ignore when pulling metrics.
   # interface_exclude = ["eth1"]
+
+  ## Plugin behavior for downed interfaces
+  ## Available choices:
+  ##   - expose: collect & report metrics for down interfaces
+  ##   - skip: ignore interfaces that are marked down
+  # down_interfaces = "expose"
 
   ## Some drivers declare statistics with extra whitespace, different spacing,
   ## and mix cases. This list, when enabled, can be used to clean the keys.

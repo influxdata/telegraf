@@ -24,12 +24,9 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -76,7 +73,7 @@ func (*DirectoryMonitor) SampleConfig() string {
 }
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
-	processFile := func(path string, name string) error {
+	processFile := func(path string) error {
 		// We've been cancelled via Stop().
 		if monitor.context.Err() != nil {
 			return io.EOF
@@ -92,7 +89,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 
 		// If file is decaying, process it.
 		if timeThresholdExceeded {
-			monitor.processFile(name, path)
+			monitor.processFile(path)
 		}
 		return nil
 	}
@@ -104,7 +101,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 					return err
 				}
 
-				return processFile(path, info.Name())
+				return processFile(path)
 			})
 		// We've been cancelled via Stop().
 		if err == io.EOF {
@@ -126,7 +123,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 				continue
 			}
 			path := monitor.Directory + "/" + file.Name()
-			err := processFile(path, file.Name())
+			err := processFile(path)
 			// We've been cancelled via Stop().
 			if err == io.EOF {
 				//nolint:nilerr // context cancelation is not an error
@@ -183,14 +180,16 @@ func (monitor *DirectoryMonitor) Monitor() {
 	}
 }
 
-func (monitor *DirectoryMonitor) processFile(name string, path string) {
+func (monitor *DirectoryMonitor) processFile(path string) {
+	basePath := strings.Replace(path, monitor.Directory, "", 1)
+
 	// File must be configured to be monitored, if any configuration...
-	if !monitor.isMonitoredFile(name) {
+	if !monitor.isMonitoredFile(basePath) {
 		return
 	}
 
 	// ...and should not be configured to be ignored.
-	if monitor.isIgnoredFile(name) {
+	if monitor.isIgnoredFile(basePath) {
 		return
 	}
 
@@ -293,17 +292,12 @@ func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Re
 }
 
 func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
-	switch parser.(type) {
-	case *csv.Parser:
-		metrics, err = parser.Parse(line)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil, nil
-			}
-			return nil, err
+	metrics, err = parser.Parse(line)
+	if err != nil {
+		if errors.Is(err, parsers.ErrEOF) {
+			return nil, nil
 		}
-	default:
-		metrics, err = parser.Parse(line)
+		return nil, err
 	}
 
 	if monitor.FileTag != "" {
@@ -327,18 +321,36 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (monitor *DirectoryMonitor) moveFile(filePath string, directory string) {
-	basePath := strings.Replace(filePath, monitor.Directory, "", 1)
-	newPath := filepath.Join(directory, basePath)
-
-	err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm)
+func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
+	// Appends any subdirectories in the srcPath to the dstBaseDir and
+	// creates those subdirectories.
+	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
+	dstPath := filepath.Join(dstBaseDir, basePath)
+	err := os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
 	if err != nil {
-		monitor.Log.Errorf("Error creating directory hierachy for " + filePath + ". Error: " + err.Error())
+		monitor.Log.Errorf("Error creating directory hierachy for " + srcPath + ". Error: " + err.Error())
 	}
 
-	err = os.Rename(filePath, newPath)
+	inputFile, err := os.Open(srcPath)
 	if err != nil {
-		monitor.Log.Errorf("Error while moving file '" + filePath + "' to another directory. Error: " + err.Error())
+		monitor.Log.Errorf("Could not open input file: %s", err)
+	}
+	defer inputFile.Close()
+
+	outputFile, err := os.Create(dstPath)
+	if err != nil {
+		monitor.Log.Errorf("Could not open output file: %s", err)
+	}
+	defer outputFile.Close()
+
+	_, err = io.Copy(outputFile, inputFile)
+	if err != nil {
+		monitor.Log.Errorf("Writing to output file failed: %s", err)
+	}
+
+	err = os.Remove(srcPath)
+	if err != nil {
+		monitor.Log.Errorf("Failed removing original file: %s", err)
 	}
 }
 
