@@ -5,7 +5,7 @@ import (
 )
 
 // ValueType is an enumeration of metric types that represent a simple value.
-type ValueType int
+typ
 
 // Possible values for the ValueType enum.
 const (
