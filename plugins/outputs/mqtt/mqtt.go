@@ -21,6 +21,7 @@ var sampleConfig string
 
 const (
 	defaultKeepAlive = 30
+	defaultTopic     = "<topic_prefix>/<hostname>/<pluginname>"
 )
 
 type MQTT struct {
@@ -31,6 +32,7 @@ type MQTT struct {
 	Database    string
 	Timeout     config.Duration `toml:"timeout"`
 	TopicPrefix string          `toml:"topic_prefix"`
+	Topic       string          `toml:"topic"`
 	QoS         int             `toml:"qos"`
 	ClientID    string          `toml:"client_id"`
 	tls.ClientConfig
@@ -56,6 +58,21 @@ type Client interface {
 
 func (*MQTT) SampleConfig() string {
 	return sampleConfig
+}
+
+func (m *MQTT) Init() error {
+	if m.TopicPrefix == "+" || m.TopicPrefix == "*" {
+		return fmt.Errorf("forbidden value for topic prefix")
+	}
+	if m.Topic == "" {
+		m.Topic = defaultTopic
+	}
+	for _, p := range strings.Split(m.Topic, "/") {
+		if p == "+" || p == "*" {
+			return fmt.Errorf("found forbidden character %s in the topic name %s", p, m.Topic)
+		}
+	}
+	return nil
 }
 
 func (m *MQTT) Connect() error {
@@ -91,24 +108,11 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	hostname, ok := metrics[0].Tags()["host"]
-	if !ok {
-		hostname = ""
-	}
 
 	metricsmap := make(map[string][]telegraf.Metric)
 
 	for _, metric := range metrics {
-		var t []string
-		if m.TopicPrefix != "" {
-			t = append(t, m.TopicPrefix)
-		}
-		if hostname != "" {
-			t = append(t, hostname)
-		}
-
-		t = append(t, metric.Name())
-		topic := strings.Join(t, "/")
+		topic := parse(m, metric)
 
 		if m.BatchMessage {
 			metricsmap[topic] = append(metricsmap[topic], metric)

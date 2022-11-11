@@ -39,8 +39,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## MQTT Topic for Producer Messages
   ## MQTT outputs send metrics to this topic format:
-  ## <topic_prefix>/<hostname>/<pluginname>/ (e.g. prefix/web01.example.com/mem)
+  ## <topic_prefix>/<hostname>/<pluginname>/<tag::tag_key> (e.g. prefix/web01.example.com/mem)
+  ## Where each segment accept either a placeholder, an environment variable, or a key.
+  ## The following is the default topic format:
+  # topic = "<topic_prefix>/<hostname>/<pluginname>"
+
+  ## The topic_prefix has been made redundant with the added support to a topic based on patterns, however,
+  ## the variable is left in place for backward compatibility.
   topic_prefix = "telegraf"
+
 
   ## QoS policy for messages
   ## The mqtt QoS policy for sending messages.

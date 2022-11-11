@@ -110,3 +110,37 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 	err = m.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }
+
+func TestMQTT_Init(t *testing.T) {
+	tests := []struct {
+		name    string
+		topic   string
+		wantErr bool
+	}{
+		{
+			name:    "a valid pattern is accepted",
+			topic:   "this/is/valid",
+			wantErr: false,
+		},
+		{
+			name:    "an invalid pattern is rejected",
+			topic:   "this/is/*/invalid",
+			wantErr: true,
+		},
+		{
+			name:    "an invalid pattern is rejected",
+			topic:   "this/is/+/invalid",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MQTT{
+				Topic: tt.topic,
+			}
+			if err := m.Init(); (err != nil) != tt.wantErr {
+				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
