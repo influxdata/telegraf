@@ -101,7 +101,7 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 	var jolokiaURL *url.URL
 	context := j.Context // Usually "/jolokia/"
 
-	var bulkBodyContent []map[string]interface{}
+	bulkBodyContent := make([]map[string]interface{}, 0, len(metrics))
 	for _, metric := range metrics {
 		// Create bodyContent
 		bodyContent := map[string]interface{}{

@@ -65,11 +65,9 @@ func (jp *JolokiaProxy) Gather(acc telegraf.Accumulator) error {
 }
 
 func (jp *JolokiaProxy) createMetrics() []common.Metric {
-	var metrics []common.Metric
-
+	metrics := make([]common.Metric, 0, len(jp.Metrics))
 	for _, metricConfig := range jp.Metrics {
-		metrics = append(metrics, common.NewMetric(metricConfig,
-			jp.DefaultFieldPrefix, jp.DefaultFieldSeparator, jp.DefaultTagPrefix))
+		metrics = append(metrics, common.NewMetric(metricConfig, jp.DefaultFieldPrefix, jp.DefaultFieldSeparator, jp.DefaultTagPrefix))
 	}
 
 	return metrics

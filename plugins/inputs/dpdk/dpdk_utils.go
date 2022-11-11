@@ -70,12 +70,12 @@ func jsonToArray(input []byte, command string) ([]string, error) {
 	}
 
 	var intArray []int64
-	var stringArray []string
 	err = json.Unmarshal(rawMessage[command], &intArray)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshall json response - %v", err)
 	}
 
+	stringArray := make([]string, 0, len(intArray))
 	for _, value := range intArray {
 		stringArray = append(stringArray, strconv.FormatInt(value, 10))
 	}

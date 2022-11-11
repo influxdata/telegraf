@@ -107,11 +107,11 @@ func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error
 			if err != nil {
 				return fmt.Errorf("failed to create core placements for event `%s`: %v", event.name, err)
 			}
-			activeEvent, err := ea.activateEventForPlacements(event, placements)
+			activeEvents, err := ea.activateEventForPlacements(event, placements)
 			if err != nil {
 				return fmt.Errorf("failed to activate core event `%s`: %v", event.name, err)
 			}
-			entity.activeEvents = append(entity.activeEvents, activeEvent...)
+			entity.activeEvents = append(entity.activeEvents, activeEvents...)
 		}
 	}
 	return nil
@@ -158,7 +158,7 @@ func (ea *iaEntitiesActivator) activateCoreEventsGroup(entity *CoreEventEntity) 
 		return fmt.Errorf("missing parsed events")
 	}
 
-	var events []ia.CustomizableEvent
+	events := make([]ia.CustomizableEvent, 0, len(entity.parsedEvents))
 	for _, event := range entity.parsedEvents {
 		if event == nil {
 			return fmt.Errorf("core event is nil")
@@ -189,7 +189,8 @@ func (ea *iaEntitiesActivator) activateEventForPlacements(event *eventWithQuals,
 	if ea.perfActivator == nil {
 		return nil, fmt.Errorf("missing perf activator")
 	}
-	var activeEvents []*ia.ActiveEvent
+
+	activeEvents := make([]*ia.ActiveEvent, 0, len(placements))
 	for _, placement := range placements {
 		perfEvent := event.custom.Event
 		options := event.custom.Options

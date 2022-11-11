@@ -690,8 +690,7 @@ func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
 		wantErr bool
 	}
 
-	var tests []test
-
+	tests := make([]test, 0, len(testEsAggregationData))
 	for _, d := range testEsAggregationData {
 		tests = append(tests, test{
 			"getMetricFields " + d.queryName,
@@ -724,8 +723,8 @@ func TestElasticsearchQuery_buildAggregationQuery(t *testing.T) {
 		want        []aggregationQueryData
 		wantErr     bool
 	}
-	var tests []test
 
+	tests := make([]test, 0, len(testEsAggregationData))
 	for _, d := range testEsAggregationData {
 		tests = append(tests, test{
 			"build " + d.queryName,

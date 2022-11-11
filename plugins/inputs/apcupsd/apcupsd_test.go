@@ -215,7 +215,7 @@ func genOutput() [][]byte {
 		"ALARMDEL : Low Battery",
 	}
 
-	var out [][]byte
+	out := make([][]byte, 0, 2*len(kvs))
 	for _, kv := range kvs {
 		lenb, kvb := kvBytes(kv)
 		out = append(out, lenb)
@@ -230,7 +230,7 @@ func genBadOutput() [][]byte {
 		"STATFLAG : 0x08Status Flag",
 	}
 
-	var out [][]byte
+	out := make([][]byte, 0, 2*len(kvs))
 	for _, kv := range kvs {
 		lenb, kvb := kvBytes(kv)
 		out = append(out, lenb)

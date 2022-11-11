@@ -272,7 +272,7 @@ func TestActivateCoreEventsGroup(t *testing.T) {
 		parsedCores:  nil,
 	}
 
-	var events []ia.CustomizableEvent
+	events := make([]ia.CustomizableEvent, 0, len(parsedEvents))
 	for _, event := range parsedEvents {
 		events = append(events, event.custom)
 	}
@@ -386,7 +386,7 @@ func TestActivateEventForPlacement(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(nil, mPlacements)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "core event is nil")
-		require.Nil(t, activeEvents)
+		require.Len(t, activeEvents, 0)
 	})
 
 	t.Run("perf activator is nil", func(t *testing.T) {
@@ -394,13 +394,13 @@ func TestActivateEventForPlacement(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(mEvent, mPlacements)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing perf activator")
-		require.Nil(t, activeEvents)
+		require.Len(t, activeEvents, 0)
 	})
 
 	t.Run("placements are nil", func(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(mEvent, nil)
 		require.NoError(t, err)
-		require.Nil(t, activeEvents)
+		require.Len(t, activeEvents, 0)
 	})
 
 	t.Run("activation error", func(t *testing.T) {

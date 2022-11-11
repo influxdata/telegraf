@@ -400,10 +400,10 @@ func validatePqosPath(pqosPath string) error {
 }
 
 func parseCoresConfig(cores []string) ([]string, error) {
-	var parsedCores []string
 	var allCores []int
 	configError := fmt.Errorf("wrong cores input config data format")
 
+	parsedCores := make([]string, 0, len(cores))
 	for _, singleCoreGroup := range cores {
 		var actualGroupOfCores []int
 		separatedCores := strings.Split(singleCoreGroup, ",")
@@ -421,6 +421,7 @@ func parseCoresConfig(cores []string) ([]string, error) {
 		}
 		parsedCores = append(parsedCores, arrayToString(actualGroupOfCores))
 	}
+
 	return parsedCores, nil
 }
 
