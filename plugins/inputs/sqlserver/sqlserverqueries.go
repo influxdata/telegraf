@@ -1,4 +1,4 @@
-//nolint:lll,revive // conditionally long lines allowed
+//nolint:lll // conditionally long lines allowed
 package sqlserver
 
 import (

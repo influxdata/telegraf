@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	//nolint:lll,revive // conditionally long lines allowed
+	//nolint:lll // conditionally long lines allowed
 	validUniqueGauge = `# HELP cadvisor_version_info A metric with a constant '1' value labeled by kernel version, OS version, docker version, cadvisor version & cadvisor revision.
 # TYPE cadvisor_version_info gauge
 cadvisor_version_info{cadvisorRevision="",cadvisorVersion="",dockerVersion="1.8.2",kernelVersion="3.10.0-229.20.1.el7.x86_64",osVersion="CentOS Linux 7 (Core)"} 1

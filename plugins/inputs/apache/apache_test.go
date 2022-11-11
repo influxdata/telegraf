@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-//nolint:lll,revive // conditionally long lines allowed
+//nolint:lll // conditionally long lines allowed
 var apacheStatus = `
 Total Accesses: 129811861
 Total kBytes: 5213701865
