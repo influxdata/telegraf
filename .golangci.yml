@@ -15,6 +15,7 @@ linters:
     - govet
     - ineffassign
     - interfacebloat
+    - lll
     - nakedret
     - nilerr
     - predeclared
@@ -67,6 +68,14 @@ linters-settings:
       - "**/testutil/**"
       - "**/tools/**"
       - "**/*_test.go"
+  lll:
+    # Max line length, lines longer will be reported.
+    # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
+    # Default: 120.
+    line-length: 160
+    # Tab width in spaces.
+    # Default: 1
+    tab-width: 4
   revive:
     rules:
       - name: argument-limit
