@@ -1,6 +1,6 @@
 package grok
 
-//nolint:lll,revive // conditionally long lines allowed
+//nolint:lll // conditionally long lines allowed
 const DefaultPatterns = `
 # Example log file pattern, example log looks like this:
 #   [04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs
