@@ -86,7 +86,7 @@ func shrinkGroup(g request, maxBatchSize uint16) []request {
 	return requests
 }
 
-func optimitzeGroup(g request, maxBatchSize uint16) []request {
+func optimizeGroup(g request, maxBatchSize uint16) []request {
 	if len(g.fields) == 0 {
 		return nil
 	}
@@ -103,7 +103,7 @@ func optimitzeGroup(g request, maxBatchSize uint16) []request {
 		// Perform the split and check if it is better
 		// Note: This involves recursive optimization of the right side of the split.
 		current := shrinkGroup(request{fields: g.fields[:i]}, maxBatchSize)
-		current = append(current, optimitzeGroup(request{fields: g.fields[i:]}, maxBatchSize)...)
+		current = append(current, optimizeGroup(request{fields: g.fields[i:]}, maxBatchSize)...)
 		currentLength := countRegisters(current)
 
 		// Do not allow for more requests
@@ -183,7 +183,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 		// registers while keeping the number of requests
 		for _, g := range groups {
 			if len(g.fields) > 0 {
-				requests = append(requests, optimitzeGroup(g, maxBatchSize)...)
+				requests = append(requests, optimizeGroup(g, maxBatchSize)...)
 			}
 		}
 	case "aggressive":
@@ -195,7 +195,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 				total.fields = append(total.fields, g.fields...)
 			}
 		}
-		requests = optimitzeGroup(total, maxBatchSize)
+		requests = optimizeGroup(total, maxBatchSize)
 	default:
 		// no optimization
 		for _, g := range groups {

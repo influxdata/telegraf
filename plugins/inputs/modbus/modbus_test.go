@@ -1494,7 +1494,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: empty field name in request for slave 1",
+			errormsg: "configuration invalid: empty field name in request for slave 1",
 		},
 		{
 			name: "invalid byte-order (coil)",
@@ -1506,7 +1506,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					Fields:       []requestFieldDefinition{},
 				},
 			},
-			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+			errormsg: "configuration invalid: unknown byte-order \"AB\"",
 		},
 		{
 			name: "duplicate fields (coil)",
@@ -1527,7 +1527,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"coil-0\" duplicated in measurement \"modbus\" (slave 1/\"coil\")",
+			errormsg: "configuration invalid: field \"coil-0\" duplicated in measurement \"modbus\" (slave 1/\"coil\")",
 		},
 		{
 			name: "duplicate fields multiple requests (coil)",
@@ -1557,7 +1557,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"coil-0\" duplicated in measurement \"foo\" (slave 1/\"coil\")",
+			errormsg: "configuration invalid: field \"coil-0\" duplicated in measurement \"foo\" (slave 1/\"coil\")",
 		},
 		{
 			name: "invalid byte-order (discrete)",
@@ -1569,7 +1569,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					Fields:       []requestFieldDefinition{},
 				},
 			},
-			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+			errormsg: "configuration invalid: unknown byte-order \"AB\"",
 		},
 		{
 			name: "duplicate fields (discrete)",
@@ -1590,7 +1590,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"discrete-0\" duplicated in measurement \"modbus\" (slave 1/\"discrete\")",
+			errormsg: "configuration invalid: field \"discrete-0\" duplicated in measurement \"modbus\" (slave 1/\"discrete\")",
 		},
 		{
 			name: "duplicate fields multiple requests (discrete)",
@@ -1620,7 +1620,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"discrete-0\" duplicated in measurement \"foo\" (slave 1/\"discrete\")",
+			errormsg: "configuration invalid: field \"discrete-0\" duplicated in measurement \"foo\" (slave 1/\"discrete\")",
 		},
 		{
 			name: "invalid byte-order (holding)",
@@ -1632,7 +1632,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					Fields:       []requestFieldDefinition{},
 				},
 			},
-			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+			errormsg: "configuration invalid: unknown byte-order \"AB\"",
 		},
 		{
 			name: "invalid field name (holding)",
@@ -1647,7 +1647,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: empty field name in request for slave 1",
+			errormsg: "configuration invalid: empty field name in request for slave 1",
 		},
 		{
 			name: "invalid field input type (holding)",
@@ -1663,7 +1663,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuraton: initializing field \"holding-0\" failed: invalid input datatype \"\" for determining field length",
+			errormsg: "cannot process configuration: initializing field \"holding-0\" failed: invalid input datatype \"\" for determining field length",
 		},
 		{
 			name: "invalid field output type (holding)",
@@ -1681,7 +1681,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuraton: initializing field \"holding-0\" failed: unknown output type \"UINT8\"",
+			errormsg: "cannot process configuration: initializing field \"holding-0\" failed: unknown output type \"UINT8\"",
 		},
 		{
 			name: "duplicate fields (holding)",
@@ -1702,7 +1702,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"holding-0\" duplicated in measurement \"modbus\" (slave 1/\"holding\")",
+			errormsg: "configuration invalid: field \"holding-0\" duplicated in measurement \"modbus\" (slave 1/\"holding\")",
 		},
 		{
 			name: "duplicate fields multiple requests (holding)",
@@ -1732,7 +1732,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"holding-0\" duplicated in measurement \"foo\" (slave 1/\"holding\")",
+			errormsg: "configuration invalid: field \"holding-0\" duplicated in measurement \"foo\" (slave 1/\"holding\")",
 		},
 		{
 			name: "invalid byte-order (input)",
@@ -1744,7 +1744,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					Fields:       []requestFieldDefinition{},
 				},
 			},
-			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+			errormsg: "configuration invalid: unknown byte-order \"AB\"",
 		},
 		{
 			name: "invalid field name (input)",
@@ -1759,7 +1759,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: empty field name in request for slave 1",
+			errormsg: "configuration invalid: empty field name in request for slave 1",
 		},
 		{
 			name: "invalid field input type (input)",
@@ -1775,7 +1775,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuraton: initializing field \"input-0\" failed: invalid input datatype \"\" for determining field length",
+			errormsg: "cannot process configuration: initializing field \"input-0\" failed: invalid input datatype \"\" for determining field length",
 		},
 		{
 			name: "invalid field output type (input)",
@@ -1793,7 +1793,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuraton: initializing field \"input-0\" failed: unknown output type \"UINT8\"",
+			errormsg: "cannot process configuration: initializing field \"input-0\" failed: unknown output type \"UINT8\"",
 		},
 		{
 			name: "duplicate fields (input)",
@@ -1814,7 +1814,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"input-0\" duplicated in measurement \"modbus\" (slave 1/\"input\")",
+			errormsg: "configuration invalid: field \"input-0\" duplicated in measurement \"modbus\" (slave 1/\"input\")",
 		},
 		{
 			name: "duplicate fields multiple requests (input)",
@@ -1844,7 +1844,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
+			errormsg: "configuration invalid: field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
 		},
 	}
 
@@ -1949,7 +1949,7 @@ func TestRequestsEmptyFields(t *testing.T) {
 		},
 	}
 	err := modbus.Init()
-	require.EqualError(t, err, `configuraton invalid: found request section without fields`)
+	require.EqualError(t, err, `configuration invalid: found request section without fields`)
 }
 
 func TestMultipleSlavesOneFail(t *testing.T) {
