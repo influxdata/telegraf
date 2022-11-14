@@ -14,7 +14,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.28
 	github.com/Azure/go-autorest/autorest/adal v0.9.21
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
-	github.com/BurntSushi/toml v1.2.0
+	github.com/BurntSushi/toml v1.2.1
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
@@ -151,7 +151,7 @@ require (
 	github.com/thomasklein94/packer-plugin-libvirt v0.3.4
 	github.com/tidwall/gjson v1.14.3
 	github.com/tinylib/msgp v1.1.6
-	github.com/urfave/cli/v2 v2.16.3
+	github.com/urfave/cli/v2 v2.23.5
 	github.com/vapourismo/knx-go v0.0.0-20220829185957-fb5458a5389d
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.28.1-0.20220921224932-b4b508abf208
