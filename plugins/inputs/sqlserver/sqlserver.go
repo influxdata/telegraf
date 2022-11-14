@@ -179,11 +179,11 @@ func (s *SQLServer) initQueries() error {
 		}
 	}
 
-	var querylist []string
+	queryList := make([]string, 0, len(queries))
 	for query := range queries {
-		querylist = append(querylist, query)
+		queryList = append(queryList, query)
 	}
-	s.Log.Infof("Config: Effective Queries: %#v\n", querylist)
+	s.Log.Infof("Config: Effective Queries: %#v\n", queryList)
 
 	return nil
 }

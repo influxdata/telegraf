@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-
 	monpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	tspb "google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/influxdata/telegraf"
 )
 
 type counterCache struct {
@@ -87,7 +87,7 @@ func NewCounterCacheEntry(value *monpb.TypedValue, ts *tspb.Timestamp) *counterC
 
 func GetCounterCacheKey(m telegraf.Metric, f *telegraf.Field) string {
 	// normalize tag list to form a predictable key
-	var tags []string
+	tags := make([]string, 0, len(m.TagList()))
 	for _, t := range m.TagList() {
 		tags = append(tags, strings.Join([]string{t.Key, t.Value}, "="))
 	}
