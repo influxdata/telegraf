@@ -125,18 +125,24 @@ func (m *Multiline) matchQuotation(text string) bool {
 	if m.config.Quotation == "ignore" {
 		return false
 	}
-	escaped := false
+	escaped := 0
 	count := 0
 	for i := 0; i < len(text); i++ {
 		if text[i] == '\\' {
-			escaped = !escaped
+			escaped++
 			continue
 		}
 
-		if text[i] == m.quote && !escaped {
+		// If we do encounter a backslash-quote combination, we interpret this
+		// as an escaped-quoted and should not count the quote. However,
+		// backslash-backslash combinations (or any even number of backslashes)
+		// are interpreted as a literal backslash not escaping the quote.
+		if text[i] == m.quote && escaped%2 == 0 {
 			count++
 		}
-		escaped = false
+		// If we encounter any non-quote, non-backslash character we can
+		// safely reset the escape state.
+		escaped = 0
 	}
 	even := count%2 == 0
 	m.inQuote = (m.inQuote && even) || (!m.inQuote && !even)
