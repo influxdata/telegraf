@@ -122,12 +122,12 @@ func (m *Modbus) Init() error {
 
 	// Check and process the configuration
 	if err := cfg.Check(); err != nil {
-		return fmt.Errorf("configuraton invalid: %v", err)
+		return fmt.Errorf("configuration invalid: %v", err)
 	}
 
 	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process configuraton: %v", err)
+		return fmt.Errorf("cannot process configuration: %v", err)
 	}
 	m.requests = r
 

@@ -138,6 +138,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## Can be overriden by the individual field definitions. Defaults to "modbus"
     # measurement = "modbus"
 
+    ## Request optimization algorithm.
+    ##  |---none       -- Do not perform any optimization and use the given layout(default)
+    ##  |---shrink     -- Shrink requests to actually requested fields
+    ##  |                 by stripping leading and trailing omits
+    ##  |---rearrange  -- Rearrange request boundaries within consecutive address ranges
+    ##  |                 to reduce the number of requested registers by keeping
+    ##  |                 the number of requests.
+    ##  |---aggressive -- Rearrange request boundaries similar to "rearrange" but
+    ##                    allow to request registers not specified by the user to
+    ##                    fill gaps. This usually reduces the number of requests at the
+    ##                    cost of more requested registers.
+    # optimization = "none"
+
     ## Field definitions
     ## Analog Variables, Input Registers and Holding Registers
     ## address        - address of the register to query. For coil and discrete inputs this is the bit address.
@@ -250,7 +263,7 @@ configuration for a single slave-device.
 
 The field `data_type` defines the representation of the data value on input from
 the modbus registers.  The input values are then converted from the given
-`data_type` to a type that is apropriate when sending the value to the output
+`data_type` to a type that is appropriate when sending the value to the output
 plugin. These output types are usually one of string, integer or
 floating-point-number. The size of the output type is assumed to be large enough
 for all supported input types. The mapping from the input type to the output
@@ -289,7 +302,7 @@ conversion from unsigned values).
 
 ### `request` configuration style
 
-This sytle can be used to specify the modbus requests directly. It enables
+This style can be used to specify the modbus requests directly. It enables
 specifying multiple `[[inputs.modbus.request]]` sections including multiple
 slave-devices. This way, _modbus_ gateway devices can be queried. Please note
 that _requests_ might be split for non-consecutive addresses. If you want to
@@ -321,6 +334,49 @@ using the `measurement` setting. If the setting is omitted `modbus` is
 used. Furthermore, the measurement value can be overridden by each field
 individually.
 
+#### Optimization setting
+
+__Please only use request optimization if you do understand the implications!__
+The `optimization` setting can be used to optimize the actual requests sent to
+the device. The following algorithms are available
+
+##### `none` (_default_)
+
+Do not perform any optimization. Please note that the requests are still obeying
+the maximum request sizes. Furthermore, completely empty requests, i.e. all
+fields specify `omit=true`, are removed. Otherwise, the requests are sent as
+specified by the user including request of omitted fields. This setting should
+be used if you want full control over the requests e.g. to accommodate for
+device constraints.
+
+##### `shrink`
+
+This optimization allows to remove leading and trailing fields from requests if
+those fields are omitted. This can shrink the request number and sizes in cases
+where you specify large amounts of omitted fields, e.g. for documentation
+purposes.
+
+##### `rearrange`
+
+Requests are processed similar to `shrink` but the request boundaries are
+rearranged such that usually less registers are being read while keeping the
+number of requests. This optimization algorithm only works on consecutive
+address ranges and respects user-defined gaps in the field addresses.
+
+__Please note:__ This optimization might take long in case of many
+non-consecutive, non-omitted fields!
+
+##### `aggressive`
+
+Requests are processed similar to `rearrange` but user-defined gaps in the field
+addresses are filled automatically. This usually reduces the number of requests,
+but will increase the number of registers read due to larger requests.
+This algorithm might be useful if you only want to specify the fields you are
+interested in but want to minimize the number of requests sent to the device.
+
+__Please note:__ This optimization might take long in case of many
+non-consecutive, non-omitted fields!
+
 #### Field definitions
 
 Each `request` can contain a list of fields to collect from the modbus device.
@@ -328,8 +384,8 @@ Each `request` can contain a list of fields to collect from the modbus device.
 ##### address
 
 A field is identified by an `address` that reflects the modbus register
-address. You can usually find the address values for the different datapoints in
-the datasheet of your modbus device. This is a mandatory setting.
+address. You can usually find the address values for the different data-points
+in the datasheet of your modbus device. This is a mandatory setting.
 
 For _coil_ and _discrete input_ registers this setting specifies the __bit__
 containing the value of the field.
@@ -474,5 +530,5 @@ an issue or submit a pull-request.
 
 ```sh
 $ ./telegraf -config telegraf.conf -input-filter modbus -test
-modbus.InputRegisters,host=orangepizero Current=0,Energy=0,Frecuency=60,Power=0,PowerFactor=0,Voltage=123.9000015258789 1554079521000000000
+modbus.InputRegisters,host=orangepizero Current=0,Energy=0,Frequency=60,Power=0,PowerFactor=0,Voltage=123.9000015258789 1554079521000000000
 ```

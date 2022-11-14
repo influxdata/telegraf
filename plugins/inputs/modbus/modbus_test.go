@@ -1494,7 +1494,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: empty field name in request for slave 1",
+			errormsg: "configuration invalid: empty field name in request for slave 1",
 		},
 		{
 			name: "invalid byte-order (coil)",
@@ -1506,7 +1506,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					Fields:       []requestFieldDefinition{},
 				},
 			},
-			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+			errormsg: "configuration invalid: unknown byte-order \"AB\"",
 		},
 		{
 			name: "duplicate fields (coil)",
@@ -1527,7 +1527,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"coil-0\" duplicated in measurement \"modbus\" (slave 1/\"coil\")",
+			errormsg: "configuration invalid: field \"coil-0\" duplicated in measurement \"modbus\" (slave 1/\"coil\")",
 		},
 		{
 			name: "duplicate fields multiple requests (coil)",
@@ -1557,7 +1557,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"coil-0\" duplicated in measurement \"foo\" (slave 1/\"coil\")",
+			errormsg: "configuration invalid: field \"coil-0\" duplicated in measurement \"foo\" (slave 1/\"coil\")",
 		},
 		{
 			name: "invalid byte-order (discrete)",
@@ -1569,7 +1569,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					Fields:       []requestFieldDefinition{},
 				},
 			},
-			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+			errormsg: "configuration invalid: unknown byte-order \"AB\"",
 		},
 		{
 			name: "duplicate fields (discrete)",
@@ -1590,7 +1590,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"discrete-0\" duplicated in measurement \"modbus\" (slave 1/\"discrete\")",
+			errormsg: "configuration invalid: field \"discrete-0\" duplicated in measurement \"modbus\" (slave 1/\"discrete\")",
 		},
 		{
 			name: "duplicate fields multiple requests (discrete)",
@@ -1620,7 +1620,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"discrete-0\" duplicated in measurement \"foo\" (slave 1/\"discrete\")",
+			errormsg: "configuration invalid: field \"discrete-0\" duplicated in measurement \"foo\" (slave 1/\"discrete\")",
 		},
 		{
 			name: "invalid byte-order (holding)",
@@ -1632,7 +1632,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					Fields:       []requestFieldDefinition{},
 				},
 			},
-			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+			errormsg: "configuration invalid: unknown byte-order \"AB\"",
 		},
 		{
 			name: "invalid field name (holding)",
@@ -1647,7 +1647,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: empty field name in request for slave 1",
+			errormsg: "configuration invalid: empty field name in request for slave 1",
 		},
 		{
 			name: "invalid field input type (holding)",
@@ -1663,7 +1663,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuraton: initializing field \"holding-0\" failed: invalid input datatype \"\" for determining field length",
+			errormsg: "cannot process configuration: initializing field \"holding-0\" failed: invalid input datatype \"\" for determining field length",
 		},
 		{
 			name: "invalid field output type (holding)",
@@ -1681,7 +1681,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuraton: initializing field \"holding-0\" failed: unknown output type \"UINT8\"",
+			errormsg: "cannot process configuration: initializing field \"holding-0\" failed: unknown output type \"UINT8\"",
 		},
 		{
 			name: "duplicate fields (holding)",
@@ -1702,7 +1702,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"holding-0\" duplicated in measurement \"modbus\" (slave 1/\"holding\")",
+			errormsg: "configuration invalid: field \"holding-0\" duplicated in measurement \"modbus\" (slave 1/\"holding\")",
 		},
 		{
 			name: "duplicate fields multiple requests (holding)",
@@ -1732,7 +1732,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"holding-0\" duplicated in measurement \"foo\" (slave 1/\"holding\")",
+			errormsg: "configuration invalid: field \"holding-0\" duplicated in measurement \"foo\" (slave 1/\"holding\")",
 		},
 		{
 			name: "invalid byte-order (input)",
@@ -1744,7 +1744,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					Fields:       []requestFieldDefinition{},
 				},
 			},
-			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+			errormsg: "configuration invalid: unknown byte-order \"AB\"",
 		},
 		{
 			name: "invalid field name (input)",
@@ -1759,7 +1759,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: empty field name in request for slave 1",
+			errormsg: "configuration invalid: empty field name in request for slave 1",
 		},
 		{
 			name: "invalid field input type (input)",
@@ -1775,7 +1775,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuraton: initializing field \"input-0\" failed: invalid input datatype \"\" for determining field length",
+			errormsg: "cannot process configuration: initializing field \"input-0\" failed: invalid input datatype \"\" for determining field length",
 		},
 		{
 			name: "invalid field output type (input)",
@@ -1793,7 +1793,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuraton: initializing field \"input-0\" failed: unknown output type \"UINT8\"",
+			errormsg: "cannot process configuration: initializing field \"input-0\" failed: unknown output type \"UINT8\"",
 		},
 		{
 			name: "duplicate fields (input)",
@@ -1814,7 +1814,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"input-0\" duplicated in measurement \"modbus\" (slave 1/\"input\")",
+			errormsg: "configuration invalid: field \"input-0\" duplicated in measurement \"modbus\" (slave 1/\"input\")",
 		},
 		{
 			name: "duplicate fields multiple requests (input)",
@@ -1844,7 +1844,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuraton invalid: field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
+			errormsg: "configuration invalid: field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
 		},
 	}
 
@@ -1949,7 +1949,7 @@ func TestRequestsEmptyFields(t *testing.T) {
 		},
 	}
 	err := modbus.Init()
-	require.EqualError(t, err, `configuraton invalid: found request section without fields`)
+	require.EqualError(t, err, `configuration invalid: found request section without fields`)
 }
 
 func TestMultipleSlavesOneFail(t *testing.T) {
@@ -2051,6 +2051,7 @@ func TestMultipleSlavesOneFail(t *testing.T) {
 	require.Len(t, acc.Errors, 1)
 	require.EqualError(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond), function '131'")
 }
+
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")
@@ -2167,6 +2168,700 @@ func TestCases(t *testing.T) {
 			// Check the metric nevertheless as we might get some metrics despite errors.
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
+}
+
+type rangeDefinition struct {
+	start     uint16
+	count     uint16
+	increment uint16
+	length    uint16
+	dtype     string
+	omit      bool
+}
+
+type requestExpectation struct {
+	fields []rangeDefinition
+	req    request
+}
+
+func generateRequestDefinitions(ranges []rangeDefinition) []requestFieldDefinition {
+	var fields []requestFieldDefinition
+
+	id := 0
+	for _, r := range ranges {
+		if r.increment == 0 {
+			r.increment = r.length
+		}
+		for i := uint16(0); i < r.count; i++ {
+			f := requestFieldDefinition{
+				Name:      fmt.Sprintf("holding-%d", id),
+				Address:   r.start + i*r.increment,
+				InputType: r.dtype,
+				Omit:      r.omit,
+			}
+			fields = append(fields, f)
+			id++
+		}
+	}
+	return fields
+}
+
+func generateExpectation(defs []requestExpectation) []request {
+	var requests []request
+
+	for _, def := range defs {
+		r := def.req
+		r.fields = make([]field, 0)
+		for _, d := range def.fields {
+			if d.increment == 0 {
+				d.increment = d.length
+			}
+			for i := uint16(0); i < d.count; i++ {
+				f := field{
+					address: d.start + i*d.increment,
+					length:  d.length,
+				}
+				r.fields = append(r.fields, f)
+			}
+		}
+		requests = append(requests, r)
+	}
+	return requests
+}
+
+func requireEqualRequests(t *testing.T, expected, actual []request) {
+	require.Equal(t, len(expected), len(actual), "request size mismatch")
+
+	for i, e := range expected {
+		a := actual[i]
+		require.Equalf(t, e.address, a.address, "address mismatch in request %d", i)
+		require.Equalf(t, e.length, a.length, "length mismatch in request %d", i)
+		require.Equalf(t, len(e.fields), len(a.fields), "no. fields mismatch in request %d", i)
+		for j, ef := range e.fields {
+			af := a.fields[j]
+			require.Equalf(t, ef.address, af.address, "address mismatch in field %d of request %d", j, i)
+			require.Equalf(t, ef.length, af.length, "length mismatch in field %d of request %d", j, i)
+		}
+	}
+}
+
+func TestRequestOptimizationShrink(t *testing.T) {
+	maxsize := maxQuantityHoldingRegisters
+	tests := []struct {
+		name     string
+		inputs   []rangeDefinition
+		expected []requestExpectation
+	}{
+		{
+			name: "no omit",
+			inputs: []rangeDefinition{
+				{0, 2 * maxQuantityHoldingRegisters, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 0, count: maxsize, length: 1}},
+					req:    request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize, count: maxsize, length: 1}},
+					req:    request{address: maxsize, length: maxsize},
+				},
+			},
+		},
+		{
+			name: "borders",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, maxsize - 2, 1, 1, "INT16", true},
+				{maxsize - 1, 2, 1, 1, "INT16", false},
+				{maxsize + 1, maxsize - 2, 1, 1, "INT16", true},
+				{2*maxsize - 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+						{start: maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize, count: 1, length: 1},
+						{start: 2*maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: maxsize, length: maxsize},
+				},
+			},
+		},
+		{
+			name: "borders with gap",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, maxsize - 2, 1, 1, "INT16", true},
+				{maxsize - 1, 2, 1, 1, "INT16", false},
+				{maxsize + 1, 4, 1, 1, "INT16", true},
+				{2*maxsize - 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+						{start: maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize, count: 1, length: 1}},
+					req:    request{address: maxsize, length: 1},
+				},
+				{
+					fields: []rangeDefinition{{start: 2*maxsize - 1, count: 1, length: 1}},
+					req:    request{address: 2*maxsize - 1, length: 1},
+				},
+			},
+		},
+		{
+			name: "large gaps",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize - 2, count: 5, length: 1}},
+					req:    request{address: maxsize - 2, length: 5},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize + 42, count: 2, length: 1}},
+					req:    request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+		{
+			name: "large gaps filled",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, 17, 1, 1, "INT16", true},
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+						{start: 18, count: 3, length: 1},
+						{start: maxsize - 2, count: 2, length: 1},
+					},
+					req: request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize, count: 3, length: 1},
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize, length: 44},
+				},
+			},
+		},
+		{
+			name: "large gaps filled with offset",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 18, count: 3, length: 1},
+						{start: maxsize - 2, count: 5, length: 1},
+					},
+					req: request{address: 18, length: 110},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize + 42, count: 2, length: 1}},
+					req:    request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+		{
+			name: "worst case",
+			inputs: []rangeDefinition{
+				{0, maxsize, 2, 1, "INT16", false},
+				{1, maxsize, 2, 1, "INT16", true},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 0, count: maxsize/2 + 1, increment: 2, length: 1}},
+					req:    request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize + 1, count: maxsize / 2, increment: 2, length: 1}},
+					req:    request{address: maxsize + 1, length: maxsize - 2},
+				},
+			},
+		},
+		{
+			name: "from PR #11106",
+			inputs: []rangeDefinition{
+				{0, 2, 1, 1, "INT16", true},
+				{2, 1, 1, 1, "INT16", false},
+				{3, 2*maxsize + 1, 1, 1, "INT16", true},
+				{2*maxsize + 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 2, count: 1, length: 1}},
+					req:    request{address: 2, length: 1},
+				},
+				{
+					fields: []rangeDefinition{{start: 2*maxsize + 1, count: 1, length: 1}},
+					req:    request{address: 2*maxsize + 1, length: 1},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Generate the input structure and the expectation
+			requestFields := generateRequestDefinitions(tt.inputs)
+			expected := generateExpectation(tt.expected)
+
+			// Setup the plugin
+			slaveID := byte(1)
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = []requestDefinition{
+				{
+					SlaveID:      slaveID,
+					ByteOrder:    "ABCD",
+					RegisterType: "holding",
+					Optimization: "shrink",
+					Fields:       requestFields,
+				},
+			}
+			require.NoError(t, plugin.Init())
+			require.NotEmpty(t, plugin.requests)
+			require.Contains(t, plugin.requests, slaveID)
+			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
+		})
+	}
+}
+
+func TestRequestOptimizationRearrange(t *testing.T) {
+	maxsize := maxQuantityHoldingRegisters
+	tests := []struct {
+		name     string
+		inputs   []rangeDefinition
+		expected []requestExpectation
+	}{
+		{
+			name: "no omit",
+			inputs: []rangeDefinition{
+				{0, 2 * maxQuantityHoldingRegisters, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 0, count: maxsize, length: 1}},
+					req:    request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize, count: maxsize, length: 1}},
+					req:    request{address: maxsize, length: maxsize},
+				},
+			},
+		},
+		{
+			name: "borders",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, maxsize - 2, 1, 1, "INT16", true},
+				{maxsize - 1, 2, 1, 1, "INT16", false},
+				{maxsize + 1, maxsize - 2, 1, 1, "INT16", true},
+				{2*maxsize - 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+						{start: maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize, count: 1, length: 1},
+						{start: 2*maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: maxsize, length: maxsize},
+				},
+			},
+		},
+		{
+			name: "borders with gap",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, maxsize - 2, 1, 1, "INT16", true},
+				{maxsize - 1, 2, 1, 1, "INT16", false},
+				{maxsize + 1, 4, 1, 1, "INT16", true},
+				{2*maxsize - 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 0, count: 1, length: 1}},
+					req:    request{address: 0, length: 1},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 1, count: 1, length: 1},
+						{start: maxsize, count: 1, length: 1},
+					},
+					req: request{address: maxsize - 1, length: 2},
+				},
+				{
+					fields: []rangeDefinition{{start: 2*maxsize - 1, count: 1, length: 1}},
+					req:    request{address: 2*maxsize - 1, length: 1},
+				},
+			},
+		},
+		{
+			name: "large gaps",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize - 2, count: 5, length: 1}},
+					req:    request{address: maxsize - 2, length: 5},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize + 42, count: 2, length: 1}},
+					req:    request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+		{
+			name: "large gaps filled",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, 17, 1, 1, "INT16", true},
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+						{start: 18, count: 3, length: 1},
+					},
+					req: request{address: 0, length: 21},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 46},
+				},
+			},
+		},
+		{
+			name: "large gaps filled with offset",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 46},
+				},
+			},
+		},
+		{
+			name: "from PR #11106",
+			inputs: []rangeDefinition{
+				{0, 2, 1, 1, "INT16", true},
+				{2, 1, 1, 1, "INT16", false},
+				{3, 2*maxsize + 1, 1, 1, "INT16", true},
+				{2*maxsize + 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 2, count: 1, length: 1}},
+					req:    request{address: 2, length: 1},
+				},
+				{
+					fields: []rangeDefinition{{start: 2*maxsize + 1, count: 1, length: 1}},
+					req:    request{address: 2*maxsize + 1, length: 1},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Generate the input structure and the expectation
+			requestFields := generateRequestDefinitions(tt.inputs)
+			expected := generateExpectation(tt.expected)
+
+			// Setup the plugin
+			slaveID := byte(1)
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = []requestDefinition{
+				{
+					SlaveID:      slaveID,
+					ByteOrder:    "ABCD",
+					RegisterType: "holding",
+					Optimization: "rearrange",
+					Fields:       requestFields,
+				},
+			}
+			require.NoError(t, plugin.Init())
+			require.NotEmpty(t, plugin.requests)
+			require.Contains(t, plugin.requests, slaveID)
+			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
+		})
+	}
+}
+
+func TestRequestOptimizationAggressive(t *testing.T) {
+	maxsize := maxQuantityHoldingRegisters
+	tests := []struct {
+		name     string
+		inputs   []rangeDefinition
+		expected []requestExpectation
+	}{
+		{
+			name: "no omit",
+			inputs: []rangeDefinition{
+				{0, 2 * maxQuantityHoldingRegisters, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 0, count: maxsize, length: 1}},
+					req:    request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{{start: maxsize, count: maxsize, length: 1}},
+					req:    request{address: maxsize, length: maxsize},
+				},
+			},
+		},
+		{
+			name: "borders",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, maxsize - 2, 1, 1, "INT16", true},
+				{maxsize - 1, 2, 1, 1, "INT16", false},
+				{maxsize + 1, maxsize - 2, 1, 1, "INT16", true},
+				{2*maxsize - 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+						{start: maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize, count: 1, length: 1},
+						{start: 2*maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: maxsize, length: maxsize},
+				},
+			},
+		},
+		{
+			name: "borders with gap",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, maxsize - 2, 1, 1, "INT16", true},
+				{maxsize - 1, 2, 1, 1, "INT16", false},
+				{maxsize + 1, 4, 1, 1, "INT16", true},
+				{2*maxsize - 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+						{start: maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: 0, length: maxsize},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize, count: 1, length: 1},
+						{start: 2*maxsize - 1, count: 1, length: 1},
+					},
+					req: request{address: maxsize, length: maxsize},
+				},
+			},
+		},
+		{
+			name: "large gaps",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 46},
+				},
+			},
+		},
+		{
+			name: "large gaps filled",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, 17, 1, 1, "INT16", true},
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+						{start: 18, count: 3, length: 1},
+					},
+					req: request{address: 0, length: 21},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 46},
+				},
+			},
+		},
+		{
+			name: "large gaps filled with offset",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 46},
+				},
+			},
+		},
+		{
+			name: "from PR #11106",
+			inputs: []rangeDefinition{
+				{0, 2, 1, 1, "INT16", true},
+				{2, 1, 1, 1, "INT16", false},
+				{3, 2*maxsize + 1, 1, 1, "INT16", true},
+				{2*maxsize + 1, 1, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 2, count: 1, length: 1}},
+					req:    request{address: 2, length: 1},
+				},
+				{
+					fields: []rangeDefinition{{start: 2*maxsize + 1, count: 1, length: 1}},
+					req:    request{address: 2*maxsize + 1, length: 1},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Generate the input structure and the expectation
+			requestFields := generateRequestDefinitions(tt.inputs)
+			expected := generateExpectation(tt.expected)
+
+			// Setup the plugin
+			slaveID := byte(1)
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = []requestDefinition{
+				{
+					SlaveID:      slaveID,
+					ByteOrder:    "ABCD",
+					RegisterType: "holding",
+					Optimization: "aggressive",
+					Fields:       requestFields,
+				},
+			}
+			require.NoError(t, plugin.Init())
+			require.NotEmpty(t, plugin.requests)
+			require.Contains(t, plugin.requests, slaveID)
+			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
 		})
 	}
 }
