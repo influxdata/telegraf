@@ -33,7 +33,8 @@ type requestDefinition struct {
 }
 
 type ConfigurationPerRequest struct {
-	Requests []requestDefinition `toml:"request"`
+	Requests    []requestDefinition `toml:"request"`
+	workarounds ModbusWorkarounds
 }
 
 func (c *ConfigurationPerRequest) SampleConfigPart() string {
@@ -162,16 +163,32 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 
 		switch def.RegisterType {
 		case "coil":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils, def.Optimization)
+			maxQuantity := maxQuantityCoils
+			if c.workarounds.OnRequestPerField {
+				maxQuantity = 1
+			}
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput, def.Optimization)
+			maxQuantity := maxQuantityDiscreteInput
+			if c.workarounds.OnRequestPerField {
+				maxQuantity = 1
+			}
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters, def.Optimization)
+			maxQuantity := maxQuantityHoldingRegisters
+			if c.workarounds.OnRequestPerField {
+				maxQuantity = 1
+			}
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
 			set.holding = append(set.holding, requests...)
 		case "input":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters, def.Optimization)
+			maxQuantity := maxQuantityInputRegisters
+			if c.workarounds.OnRequestPerField {
+				maxQuantity = 1
+			}
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)

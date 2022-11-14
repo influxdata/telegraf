@@ -23,6 +23,7 @@ type ConfigurationOriginal struct {
 	Coils            []fieldDefinition `toml:"coils"`
 	HoldingRegisters []fieldDefinition `toml:"holding_registers"`
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
+	workarounds      ModbusWorkarounds
 }
 
 func (c *ConfigurationOriginal) SampleConfigPart() string {
@@ -46,22 +47,35 @@ func (c *ConfigurationOriginal) Check() error {
 }
 
 func (c *ConfigurationOriginal) Process() (map[byte]requestSet, error) {
-	coil, err := c.initRequests(c.Coils, maxQuantityCoils)
+	maxQuantity := uint16(1)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityCoils
+	}
+	coil, err := c.initRequests(c.Coils, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantityDiscreteInput)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityDiscreteInput
+	}
+	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	holding, err := c.initRequests(c.HoldingRegisters, maxQuantityHoldingRegisters)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityHoldingRegisters
+	}
+	holding, err := c.initRequests(c.HoldingRegisters, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	input, err := c.initRequests(c.InputRegisters, maxQuantityInputRegisters)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityInputRegisters
+	}
+	input, err := c.initRequests(c.InputRegisters, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
