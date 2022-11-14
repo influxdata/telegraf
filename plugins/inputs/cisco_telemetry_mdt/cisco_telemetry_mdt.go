@@ -406,7 +406,14 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 
 		// Parse values
 		for _, subfield := range content.Fields {
-			c.parseContentField(grouper, subfield, "", msg.EncodingPath, tags, timestamp)
+			prefix := ""
+			if subfield.Name == "operation-metric" {
+				prefix = subfield.Fields[0].Fields[0].GetStringValue()
+			}
+			if subfield.Name == "class-stats" {
+				prefix = subfield.Fields[0].Fields[1].GetStringValue()
+			}
+			c.parseContentField(grouper, subfield, prefix, msg.EncodingPath, tags, timestamp)
 		}
 	}
 
