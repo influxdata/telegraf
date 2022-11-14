@@ -212,11 +212,11 @@ func TestMysqlIntegration(t *testing.T) {
 	))
 
 	cases := []struct {
-		expected string
+		expectedFile string
 	}{
-		{"INSERT INTO `metric_one` VALUES ('2021-05-17 22:04:45','tag1','tag2',1234,2345,1,0,1000000000,3.1415);"},
-		{"INSERT INTO `metric_two` VALUES ('2021-05-17 22:04:45','tag3','string1');"},
-		{"INSERT INTO `metric three` VALUES ('2021-05-17 22:04:45','tag4','string2');"},
+		{"./testdata/mariadb/expected_metric_one.sql"},
+		{"./testdata/mariadb/expected_metric_two.sql"},
+		{"./testdata/mariadb/expected_metric_three.sql"},
 	}
 	for _, tc := range cases {
 		require.Eventually(t, func() bool {
@@ -234,7 +234,10 @@ func TestMysqlIntegration(t *testing.T) {
 			bytes, err := io.ReadAll(out)
 			require.NoError(t, err)
 
-			return strings.Contains(string(bytes), tc.expected)
+			expected, err := os.ReadFile(tc.expectedFile)
+			require.NoError(t, err)
+
+			return strings.Contains(string(bytes), string(expected))
 		}, 5*time.Second, 10*time.Millisecond)
 	}
 }
