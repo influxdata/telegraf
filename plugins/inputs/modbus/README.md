@@ -218,14 +218,25 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.modbus.workarounds]
-    ## Pause after connect delays the first request by the specified time. This might be necessary for (slow) devices.
+    ## Pause after connect delays the first request by the specified time.
+    ## This might be necessary for (slow) devices.
     # pause_after_connect = "0ms"
-    ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
+
+    ## Pause between read requests sent to the device.
+    ## This might be necessary for (slow) serial devices.
     # pause_between_requests = "0ms"
-    ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
-    ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
-    ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
+
+    ## Close the connection after every gather cycle.
+    ## Usually the plugin closes the connection after a certain idle-timeout,
+    ## however, if you query a device with limited simultaneous connectivity
+    ## (e.g. serial devices) from multiple instances you might want to only
+    ## stay connected during gather and disconnect afterwards.
     # close_connection_after_gather = false
+
+    ## Force the plugin to read each field in a separate request.
+    ## This might be necessary for devices not conforming to the spec,
+    ## see https://github.com/influxdata/telegraf/issues/12071.
+    # one_request_per_field = false
 ```
 
 ## Notes
