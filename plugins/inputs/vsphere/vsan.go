@@ -165,9 +165,9 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 		return make(map[string]CmmdsEntity), nil
 	}
 
-	queries := []types.HostVsanInternalSystemCmmdsQuery {
-		types.HostVsanInternalSystemCmmdsQuery{Type: "HOSTNAME"},
-		types.HostVsanInternalSystemCmmdsQuery{Type: "DISK"},
+	queries := []types.HostVsanInternalSystemCmmdsQuery{
+		{Type: "HOSTNAME"},
+		{Type: "DISK"},
 	}
 
 	//Some esx host can be down or in maintenance mode. Hence cmmds query might fail on such hosts.
@@ -328,7 +328,7 @@ func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 		return err
 	}
 	fields := map[string]interface{}{
-		"free_capacity_byte": resp.Returnval.FreeCapacityB,
+		"free_capacity_byte":  resp.Returnval.FreeCapacityB,
 		"total_capacity_byte": resp.Returnval.TotalCapacityB,
 	}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
