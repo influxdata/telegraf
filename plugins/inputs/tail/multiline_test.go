@@ -307,6 +307,63 @@ func TestMultiLineQuoted(t *testing.T) {
 	}
 }
 
+func TestMultiLineQuotedError(t *testing.T) {
+	tests := []struct {
+		name      string
+		filename  string
+		quotation string
+		quote     string
+		expected  []string
+	}{
+		{
+			name:      "messed up quoting",
+			filename:  "multiline_quoted_messed_up.csv",
+			quotation: "single-quotes",
+			quote:     `'`,
+			expected: []string{
+				"1660819827410,1,some text without quotes,A",
+				"1660819827411,1,'some text all quoted,A\n1660819827412,1,'some text all quoted",
+				"but wrapped,A"},
+		},
+		{
+			name:      "missing closing quote",
+			filename:  "multiline_quoted_missing_close.csv",
+			quotation: "single-quotes",
+			quote:     `'`,
+			expected:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &MultilineConfig{
+				MatchWhichLine: Next,
+				Quotation:      tt.quotation,
+			}
+			m, err := c.NewMultiline()
+			require.NoError(t, err)
+
+			f, err := os.Open(filepath.Join("testdata", tt.filename))
+			require.NoError(t, err)
+
+			scanner := bufio.NewScanner(f)
+
+			var buffer bytes.Buffer
+			var result []string
+			for scanner.Scan() {
+				line := scanner.Text()
+
+				text := m.ProcessLine(line, &buffer)
+				if text == "" {
+					continue
+				}
+				result = append(result, text)
+			}
+			require.EqualValues(t, tt.expected, result)
+		})
+	}
+}
+
 func TestMultiLineQuotedAndPattern(t *testing.T) {
 	c := &MultilineConfig{
 		Pattern:        "=>$",
