@@ -116,7 +116,7 @@ little-endian format (`"le"`).
 
 If `true`, the input data is interpreted as a string containing hex-encoded
 data like `C0 C7 21 A9`. The value is _case insensitive_ and can handle spaces,
-however prefixes like ` 0x` or `x` are _not_ allowed.
+however prefixes like `0x` or `x` are _not_ allowed.
 
 ### Non-byte aligned value extraction
 
