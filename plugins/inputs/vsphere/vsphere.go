@@ -82,7 +82,7 @@ type VSphere struct {
 	Log telegraf.Logger
 }
 
-func (v *VSphere) SampleConfig() string {
+func (*VSphere) SampleConfig() string {
 	return sampleConfig
 }
 

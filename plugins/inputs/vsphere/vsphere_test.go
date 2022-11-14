@@ -447,24 +447,23 @@ func TestFolders(t *testing.T) {
 
 func TestVsanCmmds(t *testing.T) {
 	m, s, err := createSim(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer m.Remove()
 	defer s.Close()
 
 	v := defaultVSphere()
 	ctx := context.Background()
 
-	c, _ := NewClient(ctx, s.URL, v)
+	c, err := NewClient(ctx, s.URL, v)
+	require.NoError(t, err)
 
 	f := Finder{c}
 	var clusters []mo.ClusterComputeResource
-	_ = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, []string{}, &clusters)
+	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, []string{}, &clusters)
+	require.NoError(t, err)
+
 	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
-	require.NotPanics(t, func() {
-		getCmmdsMap(ctx, c.Client.Client, clusterObj)
-	})
+	getCmmdsMap(ctx, c.Client.Client, clusterObj)
 }
 
 func TestVsanTags(t *testing.T) {
@@ -485,17 +484,6 @@ func TestVsanTags(t *testing.T) {
 	require.Equal(t, 3, len(tags))
 	tags = populateCMMDSTags(make(map[string]string), "host-domclient", host, cmmds)
 	require.Equal(t, 1, len(tags))
-}
-
-func TestAll(t *testing.T) {
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
-
-	testCollection(t, false)
 }
 
 func TestCollectionNoClusterMetrics(t *testing.T) {
