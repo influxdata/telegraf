@@ -96,15 +96,31 @@ func (c *Container) Install(packageName ...string) error {
 
 func (c *Container) CheckStatus(serviceName string) error {
 	// the RPM does not start automatically service on install
+	// write valid, but simple config file and start
 	if c.packageManager != "apt" {
-		err := c.client.Exec(c.Name, "systemctl", "start", serviceName)
+		err := c.client.Exec(
+			c.Name,
+			"bash",
+			"-c",
+			"--",
+			"echo '[[inputs.cpu]]\n[[outputs.file]]' | "+
+				"tee /etc/telegraf/telegraf.conf",
+		)
 		if err != nil {
+			return err
+		}
+
+		err = c.client.Exec(c.Name, "systemctl", "start", serviceName)
+		if err != nil {
+			_ = c.client.Exec(c.Name, "systemctl", "status", serviceName)
+			_ = c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
 			return err
 		}
 	}
 
 	err := c.client.Exec(c.Name, "systemctl", "status", serviceName)
 	if err != nil {
+		_ = c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
 		return err
 	}
 
