@@ -99,6 +99,8 @@ func TestAddDefaultStatsIntegration(t *testing.T) {
 	}
 }
 
+// Verify that when set to skip, telegraf will init, start, and collect while
+// ignoring connection errors.
 func TestSkipBehaviorIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -118,17 +120,18 @@ func TestSkipBehaviorIntegration(t *testing.T) {
 
 	err = m.Gather(&acc)
 	require.NoError(t, err)
-	require.NotContains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
+// Verify that when set to error, telegraf will error out on start as expected
 func TestErrorBehaviorIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	m := &MongoDB{
-		Log:     &testutil.CaptureLogger{},
-		Servers: []string{unreachableMongoEndpoint},
+		Log:                         &testutil.CaptureLogger{},
+		Servers:                     []string{unreachableMongoEndpoint},
+		DisconnectedServersBehavior: "error",
 	}
 
 	err := m.Init()
@@ -136,16 +139,6 @@ func TestErrorBehaviorIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 	err = m.Start(&acc)
 	require.Error(t, err)
-
-	// set to skip to bypass start error
-	m.DisconnectedServersBehavior = "skip"
-	err = m.Start(&acc)
-	require.NoError(t, err)
-	m.DisconnectedServersBehavior = "error"
-
-	err = m.Gather(&acc)
-	require.NoError(t, err)
-	require.Contains(t, m.Log.(*testutil.CaptureLogger).LastError, "failed to gather data: ")
 }
 
 func TestPoolStatsVersionCompatibility(t *testing.T) {
