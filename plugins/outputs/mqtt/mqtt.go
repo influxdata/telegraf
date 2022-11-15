@@ -111,7 +111,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		hostname = ""
 	}
 	for _, metric := range metrics {
-		tt := &TemplateTopic{hostname, m.TopicPrefix, metric}
+		tt := &TemplateTopic{Hostname: hostname, metric: metric}
 		topic := tt.Parse(m)
 
 		if m.BatchMessage {

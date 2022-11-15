@@ -7,13 +7,18 @@ import (
 )
 
 type TemplateTopic struct {
-	Hostname, TopicPrefix string
-	metric                telegraf.Metric
+	Hostname    string
+	metric      telegraf.Metric
+	topicPrefix string
 }
 
 func (t *TemplateTopic) Tag(key string) string {
 	tagString, _ := t.metric.GetTag(key)
 	return tagString
+}
+
+func (t *TemplateTopic) TopicPrefix() string {
+	return t.topicPrefix
 }
 
 func (t *TemplateTopic) PluginName() string {
@@ -22,6 +27,7 @@ func (t *TemplateTopic) PluginName() string {
 
 func (t *TemplateTopic) Parse(m *MQTT) string {
 	var b strings.Builder
+	t.topicPrefix = m.TopicPrefix
 	err := m.template.Execute(&b, t)
 	if err != nil {
 		panic("err")

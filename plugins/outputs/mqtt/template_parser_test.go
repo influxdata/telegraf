@@ -68,7 +68,7 @@ func Test_parse(t *testing.T) {
 			)
 			err := m.Init()
 			require.NoError(t, err)
-			topic := &TemplateTopic{"hostname", tp, met}
+			topic := &TemplateTopic{Hostname: "hostname", metric: met}
 			if got := topic.Parse(m); got != tt.want {
 				t.Errorf("parse() = %v, want %v", got, tt.want)
 			}
