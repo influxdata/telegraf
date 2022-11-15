@@ -52,7 +52,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## the variable is left in place for backward compatibility.
   topic_prefix = "telegraf"
 
-
   ## QoS policy for messages
   ## The mqtt QoS policy for sending messages.
   ## See https://www.ibm.com/support/knowledgecenter/en/SSFKSJ_9.0.0/com.ibm.mq.dev.doc/q029090_.htm
