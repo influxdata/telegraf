@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"text/template"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -30,7 +31,7 @@ type MQTT struct {
 	Password    string   `toml:"password"`
 	Database    string
 	Timeout     config.Duration `toml:"timeout"`
-	TopicPrefix string          `toml:"topic_prefix"`
+	TopicPrefix string          `toml:"topic_prefix" deprecated:"1.25.0;use 'topic' instead"`
 	Topic       string          `toml:"topic"`
 	QoS         int             `toml:"qos"`
 	ClientID    string          `toml:"client_id"`
@@ -42,6 +43,7 @@ type MQTT struct {
 
 	client     Client
 	serializer serializers.Serializer
+	template   *template.Template
 
 	sync.Mutex
 }
@@ -60,26 +62,10 @@ func (*MQTT) SampleConfig() string {
 }
 
 func (m *MQTT) Init() error {
-	if m.TopicPrefix == "+" || m.TopicPrefix == "*" {
-		return fmt.Errorf("forbidden value for topic prefix")
-	}
-	if m.Topic == "" {
-		m.Topic = "*pluginname*"
-	}
-	allow := map[string]bool{
-		"*topic_prefix*": true,
-		"*hostname*":     true,
-		"*pluginname*":   true,
-	}
+	m.template = template.Must(template.New("topic_name").Parse(m.Topic))
 	for _, p := range strings.Split(m.Topic, "/") {
-		if p == "+" || p == "*" {
+		if strings.ContainsAny(p, "#+") {
 			return fmt.Errorf("found forbidden character %s in the topic name %s", p, m.Topic)
-		}
-		if strings.Contains(p, "*") && !strings.Contains(p, "*tag::") {
-			_, ok := allow[p]
-			if !ok {
-				return fmt.Errorf("found unknown placeholder %s", p)
-			}
 		}
 	}
 	return nil
@@ -125,7 +111,8 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		hostname = ""
 	}
 	for _, metric := range metrics {
-		topic := parse(m, metric, hostname)
+		tt := &TemplateTopic{hostname, m.TopicPrefix, metric}
+		topic := tt.Parse(m)
 
 		if m.BatchMessage {
 			metricsmap[topic] = append(metricsmap[topic], metric)

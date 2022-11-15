@@ -1,12 +1,14 @@
 package mqtt
 
 import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func Test_parse(t *testing.T) {
@@ -24,7 +26,7 @@ func Test_parse(t *testing.T) {
 	}{
 		{
 			name:    "matches default legacy format",
-			pattern: "*topic_prefix*/*hostname*/*pluginname*",
+			pattern: "{{ .TopicPrefix }}/{{ .Hostname }}/{{ .PluginName }}",
 			want:    "prefix/hostname/metric-name",
 		},
 		{
@@ -34,7 +36,7 @@ func Test_parse(t *testing.T) {
 		},
 		{
 			name:    "allows the use of tags",
-			pattern: "*topic_prefix*/*tag::tag1*",
+			pattern: "{{ .TopicPrefix }}/{{ .Tag \"tag1\" }}",
 			want:    "prefix/value1",
 		},
 		{
@@ -44,14 +46,20 @@ func Test_parse(t *testing.T) {
 		},
 		{
 			name:    "ignores tag when tag does not exists",
-			pattern: "*topic_prefix*/*tag::not-a-tag*",
+			pattern: "{{ .TopicPrefix }}/{{ .Tag \"not-a-tag\" }}",
 			want:    "prefix",
+		},
+		{
+			name:    "ignores empty forward slashes",
+			pattern: "double//slashes//are//ignored",
+			want:    "double/slashes/are/ignored",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m.Topic = tt.pattern
-			m.TopicPrefix = "prefix"
+			tp := "prefix"
+			m.TopicPrefix = tp
 			met := metric.New(
 				"metric-name",
 				map[string]string{"tag1": "value1"},
@@ -60,7 +68,8 @@ func Test_parse(t *testing.T) {
 			)
 			err := m.Init()
 			require.NoError(t, err)
-			if got := parse(m, met, "hostname"); got != tt.want {
+			topic := &TemplateTopic{"hostname", tp, met}
+			if got := topic.Parse(m); got != tt.want {
 				t.Errorf("parse() = %v, want %v", got, tt.want)
 			}
 		})

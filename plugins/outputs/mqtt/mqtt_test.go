@@ -49,7 +49,11 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err := m.Connect()
+	err := m.Init()
+	require.NoError(t, err)
+
+	// Verify that we can connect to the MQTT broker
+	err = m.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the mqtt broker
@@ -76,7 +80,11 @@ func TestConnectAndWriteIntegrationMQTTv3(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err := m.Connect()
+	err := m.Init()
+	require.NoError(t, err)
+
+	// Verify that we can connect to the MQTT broker
+	err = m.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the mqtt broker
@@ -126,17 +134,12 @@ func TestMQTT_Init(t *testing.T) {
 		},
 		{
 			name:    "an invalid pattern is rejected",
-			topic:   "this/is/*/invalid",
+			topic:   "this/is/#/invalid",
 			wantErr: true,
 		},
 		{
 			name:    "an invalid pattern is rejected",
 			topic:   "this/is/+/invalid",
-			wantErr: true,
-		},
-		{
-			name:    "an pattern having an unknown placeholder is rejected",
-			topic:   "this/is/*invalid*",
 			wantErr: true,
 		},
 	}
