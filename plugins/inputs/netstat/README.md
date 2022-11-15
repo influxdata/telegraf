@@ -69,3 +69,9 @@ Meta:
 Measurement names:
 
 - udp_socket
+
+## Example Output
+
+```text
+netstat tcp_close=0i,tcp_close_wait=0i,tcp_closing=0i,tcp_established=14i,tcp_fin_wait1=0i,tcp_fin_wait2=0i,tcp_last_ack=0i,tcp_listen=1i,tcp_none=46i,tcp_syn_recv=0i,tcp_syn_sent=0i,tcp_time_wait=0i,udp_socket=10i 1668520568000000000
+```
