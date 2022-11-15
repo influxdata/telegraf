@@ -13,12 +13,13 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 	elastic5 "gopkg.in/olivere/elastic.v5"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
@@ -604,9 +605,7 @@ func TestElasticsearchQueryIntegration(t *testing.T) {
 
 	container, err := setupIntegrationTest(t)
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	var acc testutil.Accumulator
 	e := &ElasticsearchQuery{
@@ -665,9 +664,7 @@ func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
 
 	container, err := setupIntegrationTest(t)
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	type args struct {
 		ctx         context.Context

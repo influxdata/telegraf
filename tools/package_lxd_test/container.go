@@ -96,15 +96,31 @@ func (c *Container) Install(packageName ...string) error {
 
 func (c *Container) CheckStatus(serviceName string) error {
 	// the RPM does not start automatically service on install
+	// write valid, but simple config file and start
 	if c.packageManager != "apt" {
-		err := c.client.Exec(c.Name, "systemctl", "start", serviceName)
+		err := c.client.Exec(
+			c.Name,
+			"bash",
+			"-c",
+			"--",
+			"echo '[[inputs.cpu]]\n[[outputs.file]]' | "+
+				"tee /etc/telegraf/telegraf.conf",
+		)
 		if err != nil {
+			return err
+		}
+
+		err = c.client.Exec(c.Name, "systemctl", "start", serviceName)
+		if err != nil {
+			_ = c.client.Exec(c.Name, "systemctl", "status", serviceName)
+			_ = c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
 			return err
 		}
 	}
 
 	err := c.client.Exec(c.Name, "systemctl", "status", serviceName)
 	if err != nil {
+		_ = c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
 		return err
 	}
 
@@ -141,16 +157,23 @@ func (c *Container) configureApt() error {
 
 	err = c.client.Exec(
 		c.Name,
-		"bash", "-c", "--",
-		"echo '23a1c8836f0afc5ed24e0486339d7cc8f6790b83886c4c96995b88a061c5bb5d influxdb.key' | sha256sum -c && cat influxdb.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdb.gpg > /dev/null",
+		"bash",
+		"-c",
+		"--",
+		"echo '23a1c8836f0afc5ed24e0486339d7cc8f6790b83886c4c96995b88a061c5bb5d influxdb.key' | "+
+			"sha256sum -c && cat influxdb.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdb.gpg > /dev/null",
 	)
 	if err != nil {
 		return err
 	}
 
-	err = c.client.Exec(c.Name,
-		"bash", "-c", "--",
-		"echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdb.gpg] https://repos.influxdata.com/debian stable main' | tee /etc/apt/sources.list.d/influxdata.list",
+	err = c.client.Exec(
+		c.Name,
+		"bash",
+		"-c",
+		"--",
+		"echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdb.gpg] https://repos.influxdata.com/debian stable main' | "+
+			"tee /etc/apt/sources.list.d/influxdata.list",
 	)
 	if err != nil {
 		return err

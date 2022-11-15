@@ -1,0 +1,62 @@
+{
+  "status": {
+    "core1": {
+      "index": {
+        "size": "1.66 GB",
+        "sizeInBytes": 1784635686,
+        "lastModified": "2017-01-14T10:30:07.419Z",
+        "userData": {
+          "commitTimeMSec": "1484389807419"
+        },
+        "numDocs": 7517488,
+        "maxDoc": 7620303,
+        "deletedDocs": 102815,
+        "version": 267485,
+        "segmentCount": 21,
+        "current": true,
+        "hasDeletions": true,
+        "directory": "org.apache.lucene.store.MMapDirectory:org.apache.lucene.store.MMapDirectory@/srv/solr-core1/index.20160607000000124 lockFactory=org.apache.lucene.store.SingleInstanceLockFactory@646d42ce"
+      },
+      "name": "core1",
+      "isDefaultCore": false,
+      "instanceDir": "solr/core1/",
+      "dataDir": "/srv/solr-core1/",
+      "config": "solrconfig.xml",
+      "schema": "schema.xml",
+      "startTime": "2016-12-20T18:41:10.449Z",
+      "uptime": 2314746645
+    },
+    "main": {
+      "index": {
+        "size": "230.5 GB",
+        "sizeInBytes": 247497521642,
+        "lastModified": "2017-01-16T11:59:18.189Z",
+        "userData": {
+          "commitTimeMSec": "1484567958189"
+        },
+        "numDocs": 168943425,
+        "maxDoc": 169562700,
+        "deletedDocs": 619275,
+        "version": 70688464,
+        "segmentCount": 33,
+        "current": true,
+        "hasDeletions": true,
+        "directory": "org.apache.lucene.store.MMapDirectory:org.apache.lucene.store.MMapDirectory@/srv/solr/index.20161110090000012 lockFactory=org.apache.lucene.store.SingleInstanceLockFactory@15088f05"
+      },
+      "name": "main",
+      "isDefaultCore": true,
+      "instanceDir": "solr/main/",
+      "dataDir": "/srv/solr/",
+      "config": "solrconfig.xml",
+      "schema": "schema.xml",
+      "startTime": "2016-12-20T18:41:10.796Z",
+      "uptime": 2314746294
+    }
+  },
+  "initFailures": {},
+  "defaultCoreName": "main",
+  "responseHeader": {
+    "QTime": 13,
+    "status": 0
+  }
+}

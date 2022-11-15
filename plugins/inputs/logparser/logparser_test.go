@@ -115,7 +115,8 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 	// === RUN   TestGrokParseLogFilesAppearLater
 	//2022/04/16 11:05:13 D! [] Tail added for file: C:\Users\circleci\AppData\Local\Temp\TestGrokParseLogFilesAppearLater3687440534\001\test_a.log
 	//2022/04/16 11:05:13 D! [] Tail dropped for file: C:\Users\circleci\AppData\Local\Temp\TestGrokParseLogFilesAppearLater3687440534\001\test_a.log
-	//    testing.go:1090: TempDir RemoveAll cleanup: CreateFile C:\Users\circleci\AppData\Local\Temp\TestGrokParseLogFilesAppearLater3687440534\001: Access is denied.
+	//    testing.go:1090: TempDir RemoveAll cleanup:
+	//                             CreateFile C:\Users\circleci\AppData\Local\Temp\TestGrokParseLogFilesAppearLater3687440534\001: Access is denied.
 	//--- FAIL: TestGrokParseLogFilesAppearLater (1.68s)
 	emptydir, err := os.MkdirTemp("", "TestGrokParseLogFilesAppearLater")
 	require.NoError(t, err)

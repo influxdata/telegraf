@@ -111,7 +111,7 @@ func (r *response) WriteHeader(code int) {
 		r.header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	}
 
-	_, _ = fmt.Fprintf(r.w, "Status: %d %s\r\n", code, http.StatusText(code))
+	fmt.Fprintf(r.w, "Status: %d %s\r\n", code, http.StatusText(code))
 	_ = r.header.Write(r.w)
 	_, _ = r.w.WriteString("\r\n")
 }

@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package varnish
 
@@ -508,13 +507,17 @@ func TestV2ParseVarnishNames(t *testing.T) {
 			activeVcl: "1111",
 		},
 		{
-			vName:     "VBE.VCL_1023_DIS_VOD_SHIELD_V1629295401194_1629295437531.goto.00000000.(111.112.113.114).(http://abc-ede.xyz.yyy.com:80).(ttl:3600.000000).is_healthy",
-			tags:      map[string]string{"section": "VBE", "serial_1": "0", "backend_1": "111.112.113.114", "server_1": "http://abc-ede.xyz.yyy.com:80", "ttl": "3600.000000"},
+			vName: "VBE.VCL_1023_DIS_VOD_SHIELD_V1629295401194_1629295437531.goto.00000000.(111.112.113.114)." +
+				"(http://abc-ede.xyz.yyy.com:80).(ttl:3600.000000).is_healthy",
+			tags: map[string]string{"section": "VBE", "serial_1": "0", "backend_1": "111.112.113.114",
+				"server_1": "http://abc-ede.xyz.yyy.com:80", "ttl": "3600.000000"},
 			field:     "is_healthy",
 			activeVcl: "VCL_1023_DIS_VOD_SHIELD_V1629295401194_1629295437531",
 			customRegexps: []string{
-				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_1>[[:alnum:]])+\.\((?P<backend_1>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_1>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
-				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_2>[[:alnum:]])+\.\((?P<backend_2>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_2>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
+				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_1>[[:alnum:]])+\.` +
+					`\((?P<backend_1>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_1>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
+				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_2>[[:alnum:]])+\.` +
+					`\((?P<backend_2>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_2>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
 			},
 		},
 	} {

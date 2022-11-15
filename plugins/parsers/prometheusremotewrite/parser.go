@@ -5,12 +5,12 @@ import (
 	"math"
 	"time"
 
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/prompb"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
-
-	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/prompb"
 )
 
 type Parser struct {
@@ -84,7 +84,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
+func (p *Parser) InitFromConfig(_ *parsers.Config) error {
 	return nil
 }
 

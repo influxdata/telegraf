@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package process
 
@@ -10,15 +9,19 @@ import (
 	"time"
 )
 
-func gracefulStop(ctx context.Context, cmd *exec.Cmd, timeout time.Duration) {
+func (p *Process) gracefulStop(ctx context.Context, cmd *exec.Cmd, timeout time.Duration) {
 	select {
 	case <-time.After(timeout):
-		cmd.Process.Signal(syscall.SIGTERM)
+		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			p.Log.Errorf("Error after sending SIGTERM signal to process: %v", err)
+		}
 	case <-ctx.Done():
 	}
 	select {
 	case <-time.After(timeout):
-		cmd.Process.Kill()
+		if err := cmd.Process.Kill(); err != nil {
+			p.Log.Errorf("Error after killing process: %v", err)
+		}
 	case <-ctx.Done():
 	}
 }

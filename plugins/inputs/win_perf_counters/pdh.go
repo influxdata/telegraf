@@ -29,7 +29,6 @@
 // Kevin Pors <krpors@gmail.com>
 
 //go:build windows
-// +build windows
 
 package win_perf_counters
 

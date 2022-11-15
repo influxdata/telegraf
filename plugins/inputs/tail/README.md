@@ -19,6 +19,15 @@ see <http://man7.org/linux/man-pages/man1/tail.1.html> for more details.
 The plugin expects messages in one of the [Telegraf Input Data
 Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

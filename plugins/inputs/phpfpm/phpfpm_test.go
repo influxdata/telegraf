@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 // TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
 // https://github.com/influxdata/telegraf/issues/6248
@@ -27,8 +26,6 @@ type statServer struct{}
 func (s statServer) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
-	// Ignore the returned error as the tests will fail anyway
-	//nolint:errcheck,revive
 	fmt.Fprint(w, outputSample)
 }
 

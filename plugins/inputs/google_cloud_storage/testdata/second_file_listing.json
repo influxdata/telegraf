@@ -1,0 +1,19 @@
+{
+  "kind": "storage#object",
+  "id": "test-iteration-bucket/prefix/1604148850992/1604148851414237",
+  "selfLink": "https://www.googleapis.com/storage/v1/b/test-iteration-bucket/o/1604148850992",
+  "mediaLink": "https://content-storage.googleapis.com/download/storage/v1/b/test-iteration-bucket/o/1604148850992?generation=1604148851414237&alt=media",
+  "name": "prefix/1604148850992",
+  "bucket": "test-iteration-bucket",
+  "generation": "1604148851414237",
+  "metageneration": "1",
+  "contentType": "text/plain; charset=utf-8",
+  "storageClass": "STANDARD",
+  "size": "161",
+  "md5Hash": "y59iuRCTpkm7wpvU5YHUYw==",
+  "crc32c": "y57reA==",
+  "etag": "CN2p0pPw3uwCEAE=",
+  "timeCreated": "2020-10-31T12:54:11.414Z",
+  "updated": "2020-10-31T12:54:11.414Z",
+  "timeStorageClassUpdated": "2020-10-31T12:54:11.414Z"
+}

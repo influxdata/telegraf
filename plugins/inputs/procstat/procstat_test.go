@@ -27,7 +27,7 @@ func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
 	return cmd
 }
 func TestMockExecCommand(_ *testing.T) {
-	var cmd []string
+	var cmd []string //nolint:prealloc // Pre-allocated this slice would break the algorithm
 	for _, arg := range os.Args {
 		if arg == "--" {
 			cmd = []string{}
@@ -44,7 +44,6 @@ func TestMockExecCommand(_ *testing.T) {
 	cmdline := strings.Join(cmd, " ")
 
 	if cmdline == "systemctl show TestGather_systemdUnitPIDs" {
-		//nolint:errcheck,revive
 		fmt.Printf(`PIDFile=
 GuessMainPID=yes
 MainPID=11408
@@ -55,7 +54,6 @@ ExecMainPID=11408
 		os.Exit(0)
 	}
 
-	//nolint:errcheck,revive
 	fmt.Printf("command not found\n")
 	//nolint:revive // error code is important for this "test"
 	os.Exit(1)

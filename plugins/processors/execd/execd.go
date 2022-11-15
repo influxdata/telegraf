@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/process"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -28,8 +27,7 @@ type Execd struct {
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger
 
-	parserConfig     *parsers.Config
-	parser           parsers.Parser
+	parser           telegraf.Parser
 	serializerConfig *serializers.Config
 	serializer       serializers.Serializer
 	acc              telegraf.Accumulator
@@ -39,13 +37,14 @@ type Execd struct {
 func New() *Execd {
 	return &Execd{
 		RestartDelay: config.Duration(10 * time.Second),
-		parserConfig: &parsers.Config{
-			DataFormat: "influx",
-		},
 		serializerConfig: &serializers.Config{
 			DataFormat: "influx",
 		},
 	}
+}
+
+func (e *Execd) SetParser(p telegraf.Parser) {
+	e.parser = p
 }
 
 func (*Execd) SampleConfig() string {
@@ -54,10 +53,6 @@ func (*Execd) SampleConfig() string {
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	var err error
-	e.parser, err = parsers.NewParser(e.parserConfig)
-	if err != nil {
-		return fmt.Errorf("error creating parser: %w", err)
-	}
 	e.serializer, err = serializers.NewSerializer(e.serializerConfig)
 	if err != nil {
 		return fmt.Errorf("error creating serializer: %w", err)
@@ -105,9 +100,8 @@ func (e *Execd) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Execd) Stop() error {
+func (e *Execd) Stop() {
 	e.process.Stop()
-	return nil
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {

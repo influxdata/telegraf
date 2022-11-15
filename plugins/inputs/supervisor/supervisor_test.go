@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestShort_SampleData(t *testing.T) {
@@ -143,15 +144,13 @@ func TestIntegration_BasicGathering(t *testing.T) {
 			"/etc/supervisor/supervisord.conf": supervisorConfig,
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("supervisord started with pid"),
+			wait.ForLog("entered RUNNING state").WithOccurrence(6),
 			wait.ForListeningPort(nat.Port(supervisorPort)),
 		),
 	}
 	err = ctr.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, ctr.Terminate(), "terminating container failed")
-	}()
+	defer ctr.Terminate()
 	s := &Supervisor{
 		Server:     "http://login:pass@" + testutil.GetLocalHost() + ":" + ctr.Ports[supervisorPort] + "/RPC2",
 		MetricsInc: []string{},

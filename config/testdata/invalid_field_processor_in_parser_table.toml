@@ -1,0 +1,5 @@
+[[processors.processor_parser]]
+  data_format = "xpath_json"
+
+  [[processors.processor_parser.xpath]]
+    not_a_field = true

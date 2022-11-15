@@ -2,7 +2,7 @@ package shim
 
 import (
 	"fmt"
-	"log" //nolint:revive // Allow exceptional but valid use of log here.
+	"log" //nolint:depguard // Allow exceptional but valid use of log here.
 	"os"
 	"reflect"
 

@@ -102,36 +102,31 @@ func TestHelperProcess(_ *testing.T) {
 	cmd, args := args[3], args[4:]
 
 	if !strings.HasSuffix(cmd, "fail2ban-client") {
-		//nolint:errcheck,revive // Test will fail anyway
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // os.Exit called intentionally
 		os.Exit(1)
 	}
 
 	if len(args) == 1 && args[0] == "status" {
-		//nolint:errcheck,revive // Test will fail anyway
 		fmt.Fprint(os.Stdout, execStatusOutput)
 		//nolint:revive // os.Exit called intentionally
 		os.Exit(0)
 	} else if len(args) == 2 && args[0] == "status" {
 		if args[1] == "sshd" {
-			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprint(os.Stdout, execStatusSshdOutput)
 			//nolint:revive // os.Exit called intentionally
 			os.Exit(0)
 		} else if args[1] == "postfix" {
-			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprint(os.Stdout, execStatusPostfixOutput)
 			//nolint:revive // os.Exit called intentionally
 			os.Exit(0)
 		} else if args[1] == "dovecot" {
-			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprint(os.Stdout, execStatusDovecotOutput)
 			//nolint:revive // os.Exit called intentionally
 			os.Exit(0)
 		}
 	}
-	//nolint:errcheck,revive // Test will fail anyway
+
 	fmt.Fprint(os.Stdout, "invalid argument")
 	//nolint:revive // os.Exit called intentionally
 	os.Exit(1)

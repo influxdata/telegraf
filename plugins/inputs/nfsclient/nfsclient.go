@@ -33,7 +33,7 @@ type NFSClient struct {
 func convertToUint64(line []string) ([]uint64, error) {
 	/* A "line" of input data (a pre-split array of strings) is
 	   processed one field at a time.  Each field is converted to
-	   an uint64 value, and appened to an array of return values.
+	   an uint64 value, and appended to an array of return values.
 	   On an error, check for ErrRange, and returns an error
 	   if found.  This situation indicates a pretty major issue in
 	   the /proc/self/mountstats file, and returning faulty data
@@ -41,12 +41,11 @@ func convertToUint64(line []string) ([]uint64, error) {
 	   whatever we got in the first place (probably 0).
 	   Yes, this is ugly. */
 
-	var nline []uint64
-
 	if len(line) < 2 {
-		return nline, nil
+		return nil, nil
 	}
 
+	nline := make([]uint64, 0, len(line[1:]))
 	// Skip the first field; it's handled specially as the "first" variable
 	for _, l := range line[1:] {
 		val, err := strconv.ParseUint(l, 10, 64)

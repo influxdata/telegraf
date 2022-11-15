@@ -5,8 +5,6 @@ import (
 	_ "embed"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -14,7 +12,6 @@ import (
 var sampleConfig string
 
 type Parser struct {
-	parsers.Config
 	DropOriginal bool            `toml:"drop_original"`
 	Merge        string          `toml:"merge"`
 	ParseFields  []string        `toml:"parse_fields"`
@@ -27,17 +24,11 @@ func (*Parser) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	if p.parser == nil {
-		var err error
-		p.parser, err = parsers.NewParser(&p.Config)
-		if err != nil {
-			p.Log.Errorf("could not create parser: %v", err)
-			return metrics
-		}
-		models.SetLoggerOnPlugin(p.parser, p.Log)
-	}
+func (p *Parser) SetParser(parser telegraf.Parser) {
+	p.parser = parser
+}
 
+func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	results := []telegraf.Metric{}
 
 	for _, metric := range metrics {
@@ -58,7 +49,13 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						}
 
 						for _, m := range fromFieldMetric {
-							if m.Name() == "" {
+							// The parser get the parent plugin's name as
+							// default measurement name. Thus, in case the
+							// parsed metric does not provide a name itself,
+							// the parser  will return 'parser' as we are in
+							// processors.parser. In those cases we want to
+							// keep the original metric name.
+							if m.Name() == "" || m.Name() == "parser" {
 								m.SetName(metric.Name())
 							}
 						}

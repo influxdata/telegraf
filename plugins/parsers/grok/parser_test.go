@@ -104,7 +104,10 @@ func TestCustomInfluxdbHttpd(t *testing.T) {
 	require.NoError(t, p.Compile())
 
 	// Parse an influxdb POST request
-	m, err := p.ParseLine(`[httpd] ::1 - - [14/Jun/2016:11:33:29 +0100] "POST /write?consistency=any&db=telegraf&precision=ns&rp= HTTP/1.1" 204 0 "-" "InfluxDBClient" 6f61bc44-321b-11e6-8050-000000000000 2513`)
+	m, err := p.ParseLine(
+		`[httpd] ::1 - - [14/Jun/2016:11:33:29 +0100] ` +
+			`"POST /write?consistency=any&db=telegraf&precision=ns&rp= HTTP/1.1" 204 0 "-" "InfluxDBClient" 6f61bc44-321b-11e6-8050-000000000000 2513`,
+	)
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
@@ -123,18 +126,25 @@ func TestCustomInfluxdbHttpd(t *testing.T) {
 	require.Equal(t, map[string]string{"verb": "POST", "resp_code": "204"}, m.Tags())
 
 	// Parse an influxdb GET request
-	m, err = p.ParseLine(`[httpd] ::1 - - [14/Jun/2016:12:10:02 +0100] "GET /query?db=telegraf&q=SELECT+bytes%2Cresponse_time_us+FROM+logparser_grok+WHERE+http_method+%3D+%27GET%27+AND+response_time_us+%3E+0+AND+time+%3E+now%28%29+-+1h HTTP/1.1" 200 578 "http://localhost:8083/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36" 8a3806f1-3220-11e6-8006-000000000000 988`)
+	m, err = p.ParseLine(
+		`[httpd] ::1 - - [14/Jun/2016:12:10:02 +0100] ` +
+			`"GET /query?db=telegraf&q=SELECT+bytes%2Cresponse_time_us+FROM+logparser_grok+` +
+			`WHERE+http_method+%3D+%27GET%27+AND+response_time_us+%3E+0+AND+time+%3E+now%28%29+-+1h HTTP/1.1" 200 578 ` +
+			`"http://localhost:8083/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) ` +
+			`Chrome/51.0.2704.84 Safari/537.36" 8a3806f1-3220-11e6-8006-000000000000 988`,
+	)
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
 		map[string]interface{}{
-			"resp_bytes":       int64(578),
-			"auth":             "-",
-			"client_ip":        "::1",
-			"http_version":     float64(1.1),
-			"ident":            "-",
-			"referrer":         "http://localhost:8083/",
-			"request":          "/query?db=telegraf&q=SELECT+bytes%2Cresponse_time_us+FROM+logparser_grok+WHERE+http_method+%3D+%27GET%27+AND+response_time_us+%3E+0+AND+time+%3E+now%28%29+-+1h",
+			"resp_bytes":   int64(578),
+			"auth":         "-",
+			"client_ip":    "::1",
+			"http_version": float64(1.1),
+			"ident":        "-",
+			"referrer":     "http://localhost:8083/",
+			"request": "/query?db=telegraf&q=" +
+				"SELECT+bytes%2Cresponse_time_us+FROM+logparser_grok+WHERE+http_method+%3D+%27GET%27+AND+response_time_us+%3E+0+AND+time+%3E+now%28%29+-+1h",
 			"response_time_us": int64(988),
 			"agent":            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36",
 		},
@@ -1092,7 +1102,9 @@ func TestMeasurementModifierNoName(t *testing.T) {
 
 func TestEmptyYearInTimestamp(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{`%{APPLE_SYSLOG_TIME_SHORT:timestamp:ts-"Jan 2 15:04:05"} %{HOSTNAME} %{APP_NAME:app_name}\[%{NUMBER:pid:int}\]%{GREEDYDATA:message}`},
+		Patterns: []string{
+			`%{APPLE_SYSLOG_TIME_SHORT:timestamp:ts-"Jan 2 15:04:05"} %{HOSTNAME} %{APP_NAME:app_name}\[%{NUMBER:pid:int}\]%{GREEDYDATA:message}`,
+		},
 		CustomPatterns: `
 		APPLE_SYSLOG_TIME_SHORT %{MONTH} +%{MONTHDAY} %{TIME}
 		APP_NAME [a-zA-Z0-9\.]+

@@ -407,7 +407,10 @@ func (m *Smart) Init() error {
 	if err != nil {
 		m.PathNVMe = ""
 		//without nvme, plugin will not be able to gather vendor specific attributes (but it can work without it)
-		m.Log.Warnf("nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s", err.Error())
+		m.Log.Warnf(
+			"nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s",
+			err.Error(),
+		)
 	}
 
 	return nil
@@ -584,8 +587,7 @@ func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 }
 
 func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme string, timeout config.Duration, useSudo bool) []nvmeDevice {
-	var nvmeDevices []nvmeDevice
-
+	nvmeDevices := make([]nvmeDevice, 0, len(devices))
 	for _, device := range devices {
 		newDevice, err := gatherNVMeDeviceInfo(nvme, device, timeout, useSudo)
 		if err != nil {

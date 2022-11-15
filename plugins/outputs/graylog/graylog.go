@@ -327,7 +327,6 @@ func (*Graylog) SampleConfig() string {
 }
 
 func (g *Graylog) Connect() error {
-	var writers []io.Writer
 	dialer := &net.Dialer{Timeout: time.Duration(g.Timeout)}
 
 	if len(g.Servers) == 0 {
@@ -339,6 +338,7 @@ func (g *Graylog) Connect() error {
 		return err
 	}
 
+	writers := make([]io.Writer, 0, len(g.Servers))
 	for _, server := range g.Servers {
 		w := newGelfWriter(gelfConfig{Endpoint: server}, dialer, tlsCfg)
 		err := w.Connect()

@@ -14,6 +14,15 @@ string value to a numeric type, precision may be lost if the number is too
 large. The largest numeric type this plugin supports is `float64`, and if a
 string 'number' exceeds its size limit, accuracy may be lost.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

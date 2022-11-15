@@ -2,7 +2,7 @@ package logrus
 
 import (
 	"io"
-	"log" //nolint:revive // Allow exceptional but valid use of log here.
+	"log" //nolint:depguard // Allow exceptional but valid use of log here.
 	"strings"
 	"sync"
 

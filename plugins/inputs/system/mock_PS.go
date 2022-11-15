@@ -119,6 +119,15 @@ func (m *MockPS) NetConnections() ([]net.ConnectionStat, error) {
 	return r0, r1
 }
 
+func (m *MockPS) NetConntrack(perCPU bool) ([]net.ConntrackStat, error) {
+	ret := m.Called(perCPU)
+
+	r0 := ret.Get(0).([]net.ConntrackStat)
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
+
 func (m *MockDiskUsage) Partitions(all bool) ([]disk.PartitionStat, error) {
 	ret := m.Called(all)
 
