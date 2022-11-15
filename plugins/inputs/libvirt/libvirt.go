@@ -1,10 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package libvirt
 
 import (
 	_ "embed"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"sync"
+
+	"golang.org/x/sync/errgroup"
 
 	golibvirt "github.com/digitalocean/go-libvirt"
 	libvirtutils "github.com/thomasklein94/packer-plugin-libvirt/libvirt-utils"
