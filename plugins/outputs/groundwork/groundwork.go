@@ -149,7 +149,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 		})
 	}
 
-	var resources []transit.MonitoredResource
+	resources := make([]transit.MonitoredResource, 0, len(resourceToServicesMap))
 	for resourceName, services := range resourceToServicesMap {
 		resources = append(resources, transit.MonitoredResource{
 			BaseResource: transit.BaseResource{

@@ -179,7 +179,7 @@ func (tm *TableManager) EnsureStructure(
 
 	// check that the missing columns are columns that can be added
 	addColumns := make([]utils.Column, 0, len(missingCols))
-	var invalidColumns []utils.Column
+	invalidColumns := make([]utils.Column, 0, len(missingCols))
 	for _, col := range missingCols {
 		if tm.validateColumnName(col.Name) {
 			addColumns = append(addColumns, col)

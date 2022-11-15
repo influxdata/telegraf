@@ -27,7 +27,7 @@ func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
 	return cmd
 }
 func TestMockExecCommand(_ *testing.T) {
-	var cmd []string
+	var cmd []string //nolint:prealloc // Pre-allocated this slice would break the algorithm
 	for _, arg := range os.Args {
 		if arg == "--" {
 			cmd = []string{}

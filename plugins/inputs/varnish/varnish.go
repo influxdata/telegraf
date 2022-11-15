@@ -103,7 +103,7 @@ func (*Varnish) SampleConfig() string {
 }
 
 func (s *Varnish) Init() error {
-	var customRegexps []*regexp.Regexp
+	customRegexps := make([]*regexp.Regexp, 0, len(s.Regexps))
 	for _, re := range s.Regexps {
 		compiled, err := regexp.Compile(re)
 		if err != nil {

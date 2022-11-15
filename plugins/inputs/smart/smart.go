@@ -587,8 +587,7 @@ func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 }
 
 func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme string, timeout config.Duration, useSudo bool) []nvmeDevice {
-	var nvmeDevices []nvmeDevice
-
+	nvmeDevices := make([]nvmeDevice, 0, len(devices))
 	for _, device := range devices {
 		newDevice, err := gatherNVMeDeviceInfo(nvme, device, timeout, useSudo)
 		if err != nil {

@@ -412,14 +412,14 @@ func (p *Procstat) systemdUnitPIDs() []PidsTags {
 }
 
 func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
-	var pids []PID
-
-	cmd := execCommand("systemctl", "show", p.SystemdUnit)
-	out, err := cmd.Output()
+	out, err := execCommand("systemctl", "show", p.SystemdUnit).Output()
 	if err != nil {
 		return nil, err
 	}
-	for _, line := range bytes.Split(out, []byte{'\n'}) {
+
+	lines := bytes.Split(out, []byte{'\n'})
+	pids := make([]PID, 0, len(lines))
+	for _, line := range lines {
 		kv := bytes.SplitN(line, []byte{'='}, 2)
 		if len(kv) != 2 {
 			continue
@@ -441,17 +441,17 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 }
 
 func (p *Procstat) cgroupPIDs() []PidsTags {
-	var pidTags []PidsTags
-
 	procsPath := p.CGroup
 	if procsPath[0] != '/' {
 		procsPath = "/sys/fs/cgroup/" + procsPath
 	}
+
 	items, err := filepath.Glob(procsPath)
 	if err != nil {
-		pidTags = append(pidTags, PidsTags{nil, nil, fmt.Errorf("glob failed '%s'", err)})
-		return pidTags
+		return []PidsTags{{nil, nil, fmt.Errorf("glob failed '%s'", err)}}
 	}
+
+	pidTags := make([]PidsTags, 0, len(items))
 	for _, item := range items {
 		pids, err := p.singleCgroupPIDs(item)
 		tags := map[string]string{"cgroup": p.CGroup, "cgroup_full": item}
@@ -462,8 +462,6 @@ func (p *Procstat) cgroupPIDs() []PidsTags {
 }
 
 func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
-	var pids []PID
-
 	ok, err := isDir(path)
 	if err != nil {
 		return nil, err
@@ -476,7 +474,10 @@ func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, pidBS := range bytes.Split(out, []byte{'\n'}) {
+
+	lines := bytes.Split(out, []byte{'\n'})
+	pids := make([]PID, 0, len(lines))
+	for _, pidBS := range lines {
 		if len(pidBS) == 0 {
 			continue
 		}
