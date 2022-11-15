@@ -14,7 +14,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Configuration
 
-``` toml
+```toml @sample.conf
 # Read TCP metrics such as established, time wait and sockets counts.
 [[inputs.netstat]]
   # no configuration
