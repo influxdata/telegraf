@@ -29,7 +29,7 @@ fi
 # Check for the generator
 generator="//go:generate ../../../tools/readme_config_includer/generator"
 found=false
-for filename in $(ls "${plugin}/"*.go); do
+for filename in "${plugin}/"*.go; do
     if [[ "${filename}" == *_test.go ]]; then
         continue
     fi
@@ -51,7 +51,7 @@ fi
 # Check for the embedding
 embedding="//go:embed sample.*\.conf"
 found=false
-for filename in $(ls "${plugin}/"*.go); do
+for filename in "${plugin}/"*.go; do
     if [[ "${filename}" == *_test.go ]]; then
         continue
     fi
