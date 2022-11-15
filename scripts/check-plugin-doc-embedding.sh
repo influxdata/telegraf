@@ -19,6 +19,13 @@ if [ ! -f "${plugin}/sample.conf" ] && [ "${pluginname}" != "modbus" ]; then
     exit 1
 fi
 
+# Check for the sample.conf embedding into the README.md
+readme="^\`\`\`toml @sample.*\.conf\b"
+if  ! grep -q "${readme}" "${plugin}/README.md" ; then
+    echo "ERR: ${plugin} is missing embedding in README"
+    exit 1
+fi
+
 # Check for the generator
 generator="//go:generate ../../../tools/readme_config_includer/generator"
 found=false
