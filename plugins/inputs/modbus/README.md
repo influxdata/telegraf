@@ -385,12 +385,12 @@ interested in but want to minimize the number of requests sent to the device.
 __Please note:__ This optimization might take long in case of many
 non-consecutive, non-omitted fields!
 
-addresses are filled automatically. This usually reduces the number of 
+addresses are filled automatically. This usually reduces the number of
 requests, but will increase the number of registers read due to larger requests.
 This algorithm might be usefull if you only want to specify the fields you are
 interested in but want to minimize the number of requests sent to the device.
 Requests are processed similar to `rearrange` but user-defined gaps in the
-field addresses are filled automatically. 
+field addresses are filled automatically.
 
 __Please note:__ This optimization might take long in case of many
 non-consecutive, non-ommitted fields!
@@ -411,7 +411,8 @@ of requests and the number of touched registers that your configuration
 results to.
 You can use the following strategy to find the most suitable value of
 `max_extra_registers` for your setup:
-1. use the `--test --debug` flags to identify a list of 
+
+1. use the `--test --debug` flags to identify a list of
 `max_extra_registers` values leading to unique number of requests
 2. set the acquisition interval to a very low value (_e.g._ 10ms)
 3. acquire the data for 5min with each value of `max_extra_registers`
