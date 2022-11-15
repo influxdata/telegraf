@@ -29,7 +29,7 @@ func ParseTLSVersion(version string) (uint16, error) {
 		return v, nil
 	}
 
-	var available []string
+	available := make([]string, 0, len(tlsVersionMap))
 	for n := range tlsVersionMap {
 		available = append(available, n)
 	}

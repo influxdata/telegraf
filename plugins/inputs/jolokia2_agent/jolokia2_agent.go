@@ -78,11 +78,9 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 }
 
 func (ja *JolokiaAgent) createMetrics() []common.Metric {
-	var metrics []common.Metric
-
+	metrics := make([]common.Metric, 0, len(ja.Metrics))
 	for _, metricConfig := range ja.Metrics {
-		metrics = append(metrics, common.NewMetric(metricConfig,
-			ja.DefaultFieldPrefix, ja.DefaultFieldSeparator, ja.DefaultTagPrefix))
+		metrics = append(metrics, common.NewMetric(metricConfig, ja.DefaultFieldPrefix, ja.DefaultFieldSeparator, ja.DefaultTagPrefix))
 	}
 
 	return metrics

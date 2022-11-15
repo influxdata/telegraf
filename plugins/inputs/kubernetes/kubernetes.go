@@ -150,7 +150,7 @@ func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	var podInfos []Metadata
+	podInfos := make([]Metadata, 0, len(podAPI.Items))
 	for _, podMetadata := range podAPI.Items {
 		podInfos = append(podInfos, podMetadata.Metadata)
 	}

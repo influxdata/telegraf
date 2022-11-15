@@ -138,7 +138,7 @@ func parsePlayers(input string) []string {
 		names = append(head, strings.SplitN(tail, " and ", 2)...)
 	}
 
-	var players []string
+	players := make([]string, 0, len(names))
 	for _, name := range names {
 		name := strings.TrimSpace(name)
 		if name == "" {
@@ -168,8 +168,8 @@ func parseScores(input string) []Score {
 		re = scoreboardRegex
 	}
 
-	var scores []Score
 	matches := re.FindAllStringSubmatch(input, -1)
+	scores := make([]Score, 0, len(matches))
 	for _, match := range matches {
 		score := Score{}
 		for i, subexp := range re.SubexpNames() {
