@@ -215,7 +215,7 @@ func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, 
 	}
 
 	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).
-	UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
+		UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
 	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingstmt); err != nil {
 		return err
 	}
