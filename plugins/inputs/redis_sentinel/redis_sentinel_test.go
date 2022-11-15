@@ -362,6 +362,7 @@ func createRedisContainer() testutil.Container {
 		Name:     "telegraf-test-redis-sentinel-redis",
 		Networks: []string{networkName},
 		WaitingFor: wait.ForAll(
+			wait.ForLog("Ready to accept connections"),
 			wait.ForExposedPort(),
 		),
 	}
