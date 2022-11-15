@@ -2,7 +2,7 @@
 
 The `libvirt` plugin collects statistics about virtualized
 guests on a system by using virtualization libvirt API,
-created by RedHat's Emerging Technology group.  
+created by RedHat's Emerging Technology group.
 Metrics are gathered directly from the hypervisor on a host
 system, which means that Telegraf doesn't have to be installed
 and configured on a guest system.
@@ -33,7 +33,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # The libvirt plugin collects statistics from virtualized guests using virtualization libvirt API.
 [[inputs.libvirt]]
      ## Domain names from which libvirt gather statistics.
@@ -62,6 +62,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
      ## Supported additional statistics: vcpu_mapping
      ## By default (empty or missing array) the plugin will not collect additional statistics.
      # additional_statistics = []
+
 ```
 
 Useful links:
@@ -73,7 +74,7 @@ In cases when one or more of the following occur:
 
 - the global Telegraf variable `interval` is set to a low value (e.g. 1s),
 - a significant number of VMs are monitored,
-- the medium connecting the plugin to the hypervisor is inefficient,  
+- the medium connecting the plugin to the hypervisor is inefficient,
 
 It is possible that following warning in the logs appears:
 `Collection took longer than expected`.
@@ -120,7 +121,7 @@ The metrics are divided into the following groups of statistics:
 - vcpu_mapping - additional statistics
 
 Statistics groups from the plugin corresponds to the grouping of
-metrics directly read from libvirtd using the `virsh domstats` command.  
+metrics directly read from libvirtd using the `virsh domstats` command.
 More details about metrics can be found at the links below:
 
 - [Domain statistics](https://libvirt.org/manpages/virsh.html#domstats)
