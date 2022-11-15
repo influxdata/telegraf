@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestConnectAndWriteIntegration(t *testing.T) {
@@ -25,12 +26,10 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	server := []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])}
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	n := &NSQ{
 		Server:     server[0],
 		Topic:      "telegraf",

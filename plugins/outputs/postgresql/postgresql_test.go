@@ -11,17 +11,14 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/testcontainers/testcontainers-go/wait"
-
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type Log struct {
@@ -227,9 +224,7 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
-	tb.Cleanup(func() {
-		require.NoError(tb, container.Terminate(), "terminating container failed")
-	})
+	tb.Cleanup(container.Terminate)
 
 	err := container.Start()
 	require.NoError(tb, err, "failed to start container")
@@ -261,13 +256,13 @@ func TestPostgresqlConnectIntegration(t *testing.T) {
 
 	p := newPostgresqlTest(t)
 	require.NoError(t, p.Connect())
-	assert.EqualValues(t, 1, p.db.Stat().MaxConns())
+	require.EqualValues(t, 1, p.db.Stat().MaxConns())
 
 	p = newPostgresqlTest(t)
 	p.Connection += " pool_max_conns=2"
 	_ = p.Init()
 	require.NoError(t, p.Connect())
-	assert.EqualValues(t, 2, p.db.Stat().MaxConns())
+	require.EqualValues(t, 2, p.db.Stat().MaxConns())
 }
 
 func newMetric(
@@ -319,13 +314,12 @@ func TestWriteIntegration_sequential(t *testing.T) {
 	dumpA := dbTableDump(t, p.db, "_a")
 	dumpB := dbTableDump(t, p.db, "_b")
 
-	if assert.Len(t, dumpA, 2) {
-		assert.EqualValues(t, 1, dumpA[0]["v"])
-		assert.EqualValues(t, 3, dumpA[1]["v"])
-	}
-	if assert.Len(t, dumpB, 1) {
-		assert.EqualValues(t, 2, dumpB[0]["v"])
-	}
+	require.Len(t, dumpA, 2)
+	require.EqualValues(t, 1, dumpA[0]["v"])
+	require.EqualValues(t, 3, dumpA[1]["v"])
+
+	require.Len(t, dumpB, 1)
+	require.EqualValues(t, 2, dumpB[0]["v"])
 
 	p.Logger.Clear()
 	require.NoError(t, p.Write(metrics))
@@ -336,7 +330,7 @@ func TestWriteIntegration_sequential(t *testing.T) {
 			stmtCount++
 		}
 	}
-	assert.Equal(t, 6, stmtCount) // BEGIN, SAVEPOINT, COPY table _a, SAVEPOINT, COPY table _b, COMMIT
+	require.Equal(t, 6, stmtCount) // BEGIN, SAVEPOINT, COPY table _a, SAVEPOINT, COPY table _b, COMMIT
 }
 
 func TestWriteIntegration_concurrent(t *testing.T) {
@@ -386,16 +380,15 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 	dumpA := dbTableDump(t, p.db, "_a")
 	dumpB := dbTableDump(t, p.db, "_b")
 
-	if assert.Len(t, dumpA, 2) {
-		assert.EqualValues(t, 1, dumpA[0]["v"])
-		assert.EqualValues(t, 2, dumpA[1]["v"])
-	}
-	if assert.Len(t, dumpB, 1) {
-		assert.EqualValues(t, 3, dumpB[0]["v"])
-	}
+	require.Len(t, dumpA, 2)
+	require.EqualValues(t, 1, dumpA[0]["v"])
+	require.EqualValues(t, 2, dumpA[1]["v"])
+
+	require.Len(t, dumpB, 1)
+	require.EqualValues(t, 3, dumpB[0]["v"])
 
 	// We should have had 3 connections. One for the lock, and one for each table.
-	assert.EqualValues(t, 3, p.db.Stat().TotalConns())
+	require.EqualValues(t, 3, p.db.Stat().TotalConns())
 }
 
 // Test that the bad metric is dropped, and the rest of the batch succeeds.
@@ -421,8 +414,8 @@ func TestWriteIntegration_sequentialPermError(t *testing.T) {
 
 	dumpA := dbTableDump(t, p.db, "_a")
 	dumpB := dbTableDump(t, p.db, "_b")
-	assert.Len(t, dumpA, 1)
-	assert.Len(t, dumpB, 2)
+	require.Len(t, dumpA, 1)
+	require.Len(t, dumpB, 2)
 
 	haveError := false
 	for _, l := range p.Logger.Logs() {
@@ -431,7 +424,7 @@ func TestWriteIntegration_sequentialPermError(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, haveError, "write error not found in log")
+	require.True(t, haveError, "write error not found in log")
 }
 
 // Test that in a bach with only 1 sub-batch, that we don't return an error.
@@ -482,8 +475,8 @@ func TestWriteIntegration_concurrentPermError(t *testing.T) {
 
 	dumpA := dbTableDump(t, p.db, "_a")
 	dumpB := dbTableDump(t, p.db, "_b")
-	assert.Len(t, dumpA, 1)
-	assert.Len(t, dumpB, 1)
+	require.Len(t, dumpA, 1)
+	require.Len(t, dumpB, 1)
 }
 
 // Verify that in sequential mode, errors are returned allowing telegraf agent to handle & retry
@@ -516,11 +509,11 @@ func TestWriteIntegration_sequentialTempError(t *testing.T) {
 			conf := p.db.Config().ConnConfig
 			conf.Logger = nil
 			c, err := pgx.ConnectConfig(context.Background(), conf)
-			if !assert.NoError(t, err) {
+			if err != nil {
 				return true
 			}
 			_, err = c.Exec(context.Background(), "SELECT pg_terminate_backend($1)", pid)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			return true
 		}, false)
 	}()
@@ -565,11 +558,11 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 			conf := p.db.Config().ConnConfig
 			conf.Logger = nil
 			c, err := pgx.ConnectConfig(context.Background(), conf)
-			if !assert.NoError(t, err) {
+			if err != nil {
 				return true
 			}
 			_, err = c.Exec(context.Background(), "SELECT pg_terminate_backend($1)", pid)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			return true
 		}, false)
 	}()
@@ -583,7 +576,7 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 
 	p.Logger.WaitForCopy(t.Name()+"_a", false)
 	dumpA := dbTableDump(t, p.db, "_a")
-	assert.Len(t, dumpA, 1)
+	require.Len(t, dumpA, 1)
 
 	haveError := false
 	for _, l := range p.Logger.Logs() {
@@ -592,7 +585,7 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, haveError, "write error not found in log")
+	require.True(t, haveError, "write error not found in log")
 }
 
 func TestWriteTagTableIntegration(t *testing.T) {
@@ -611,12 +604,12 @@ func TestWriteTagTableIntegration(t *testing.T) {
 
 	dump := dbTableDump(t, p.db, "")
 	require.Len(t, dump, 1)
-	assert.EqualValues(t, 1, dump[0]["v"])
+	require.EqualValues(t, 1, dump[0]["v"])
 
 	dumpTags := dbTableDump(t, p.db, p.TagTableSuffix)
 	require.Len(t, dumpTags, 1)
-	assert.EqualValues(t, dump[0]["tag_id"], dumpTags[0]["tag_id"])
-	assert.EqualValues(t, "foo", dumpTags[0]["tag"])
+	require.EqualValues(t, dump[0]["tag_id"], dumpTags[0]["tag_id"])
+	require.EqualValues(t, "foo", dumpTags[0]["tag"])
 
 	p.Logger.Clear()
 	require.NoError(t, p.Write(metrics))
@@ -627,7 +620,7 @@ func TestWriteTagTableIntegration(t *testing.T) {
 			stmtCount++
 		}
 	}
-	assert.Equal(t, 3, stmtCount) // BEGIN, COPY metrics table, COMMIT
+	require.Equal(t, 3, stmtCount) // BEGIN, COPY metrics table, COMMIT
 }
 
 // Verify that when using TagsAsForeignKeys and a tag can't be written, that we still add the metrics.
@@ -656,8 +649,8 @@ func TestWriteIntegration_tagError(t *testing.T) {
 
 	dump := dbTableDump(t, p.db, "")
 	require.Len(t, dump, 2)
-	assert.EqualValues(t, 1, dump[0]["v"])
-	assert.EqualValues(t, 2, dump[1]["v"])
+	require.EqualValues(t, 1, dump[0]["v"])
+	require.EqualValues(t, 2, dump[1]["v"])
 }
 
 // Verify that when using TagsAsForeignKeys and ForeignTagConstraing and a tag can't be written, that we drop the metrics.
@@ -683,7 +676,7 @@ func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "bar"}, MSI{"v": 2}),
 	}
-	assert.NoError(t, p.Write(metrics))
+	require.NoError(t, p.Write(metrics))
 	haveError := false
 	for _, l := range p.Logger.Logs() {
 		if strings.Contains(l.String(), "write error") {
@@ -691,11 +684,11 @@ func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, haveError, "write error not found in log")
+	require.True(t, haveError, "write error not found in log")
 
 	dump := dbTableDump(t, p.db, "")
 	require.Len(t, dump, 1)
-	assert.EqualValues(t, 1, dump[0]["v"])
+	require.EqualValues(t, 1, dump[0]["v"])
 }
 
 func TestWriteIntegration_utf8(t *testing.T) {
@@ -713,16 +706,16 @@ func TestWriteIntegration_utf8(t *testing.T) {
 			MSI{"АḂⲤ𝗗": "𝘢ƀ𝖼ḋếᵮℊ𝙝Ꭵ𝕛кιṃդⱺ𝓅𝘲𝕣𝖘ŧ𝑢ṽẉ𝘅ყž𝜡"},
 		),
 	}
-	assert.NoError(t, p.Write(metrics))
+	require.NoError(t, p.Write(metrics))
 
 	dump := dbTableDump(t, p.db, "Ѧ𝙱Ƈᗞ")
 	require.Len(t, dump, 1)
-	assert.EqualValues(t, "𝘢ƀ𝖼ḋếᵮℊ𝙝Ꭵ𝕛кιṃդⱺ𝓅𝘲𝕣𝖘ŧ𝑢ṽẉ𝘅ყž𝜡", dump[0]["АḂⲤ𝗗"])
+	require.EqualValues(t, "𝘢ƀ𝖼ḋếᵮℊ𝙝Ꭵ𝕛кιṃդⱺ𝓅𝘲𝕣𝖘ŧ𝑢ṽẉ𝘅ყž𝜡", dump[0]["АḂⲤ𝗗"])
 
 	dumpTags := dbTableDump(t, p.db, "Ѧ𝙱Ƈᗞ"+p.TagTableSuffix)
 	require.Len(t, dumpTags, 1)
-	assert.EqualValues(t, dump[0]["tag_id"], dumpTags[0]["tag_id"])
-	assert.EqualValues(t, "𝘈Ḇ𝖢𝕯٤ḞԍНǏ𝙅ƘԸⲘ𝙉০Ρ𝗤Ɍ𝓢ȚЦ𝒱Ѡ𝓧ƳȤ", dumpTags[0]["ăѣ𝔠ծ"])
+	require.EqualValues(t, dump[0]["tag_id"], dumpTags[0]["tag_id"])
+	require.EqualValues(t, "𝘈Ḇ𝖢𝕯٤ḞԍНǏ𝙅ƘԸⲘ𝙉০Ρ𝗤Ɍ𝓢ȚЦ𝒱Ѡ𝓧ƳȤ", dumpTags[0]["ăѣ𝔠ծ"])
 }
 
 func TestWriteIntegration_UnsignedIntegers(t *testing.T) {
@@ -748,9 +741,8 @@ func TestWriteIntegration_UnsignedIntegers(t *testing.T) {
 
 	dump := dbTableDump(t, p.db, "")
 
-	if assert.Len(t, dump, 1) {
-		assert.EqualValues(t, uint64(math.MaxUint64), dump[0]["v"])
-	}
+	require.Len(t, dump, 1)
+	require.EqualValues(t, uint64(math.MaxUint64), dump[0]["v"])
 }
 
 // Last ditch effort to find any concurrency issues.
@@ -790,9 +782,9 @@ func TestStressConcurrencyIntegration(t *testing.T) {
 				wgStart.Wait()
 
 				err := p.Write(mShuf)
-				assert.NoError(t, err)
-				assert.NoError(t, p.Close())
-				assert.False(t, p.Logger.HasLevel(pgx.LogLevelWarn))
+				require.NoError(t, err)
+				require.NoError(t, p.Close())
+				require.False(t, p.Logger.HasLevel(pgx.LogLevelWarn))
 				wgDone.Done()
 			}()
 		}

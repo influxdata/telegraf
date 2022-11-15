@@ -30,39 +30,58 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
-	z := &Zookeeper{
-		Servers: []string{
-			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
+	var testset = []struct {
+		name      string
+		zookeeper Zookeeper
+	}{
+		{
+			name: "floats as strings",
+			zookeeper: Zookeeper{
+				Servers: []string{
+					fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
+				},
+			},
+		},
+		{
+			name: "floats as floats",
+			zookeeper: Zookeeper{
+				Servers: []string{
+					fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
+				},
+				ParseFloats: "float",
+			},
 		},
 	}
+	for _, tt := range testset {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+			require.NoError(t, acc.GatherError(tt.zookeeper.Gather))
 
-	var acc testutil.Accumulator
+			intMetrics := []string{
+				"max_latency",
+				"min_latency",
+				"packets_received",
+				"packets_sent",
+				"outstanding_requests",
+				"znode_count",
+				"watch_count",
+				"ephemerals_count",
+				"approximate_data_size",
+				"open_file_descriptor_count",
+				"max_file_descriptor_count",
+			}
 
-	require.NoError(t, acc.GatherError(z.Gather))
+			for _, metric := range intMetrics {
+				require.True(t, acc.HasInt64Field("zookeeper", metric), metric)
+			}
 
-	intMetrics := []string{
-		"max_latency",
-		"min_latency",
-		"packets_received",
-		"packets_sent",
-		"outstanding_requests",
-		"znode_count",
-		"watch_count",
-		"ephemerals_count",
-		"approximate_data_size",
-		"open_file_descriptor_count",
-		"max_file_descriptor_count",
+			if tt.zookeeper.ParseFloats == "float" {
+				require.True(t, acc.HasFloatField("zookeeper", "avg_latency"), "avg_latency not a float")
+			} else {
+				require.True(t, acc.HasStringField("zookeeper", "avg_latency"), "avg_latency not a string")
+			}
+		})
 	}
-
-	for _, metric := range intMetrics {
-		require.True(t, acc.HasInt64Field("zookeeper", metric), metric)
-	}
-
-	// Currently we output floats as strings (see #8863), but the desired behavior is to have floats
-	require.True(t, acc.HasStringField("zookeeper", "avg_latency"), "avg_latency")
-	// require.True(t, acc.HasFloat64Field("zookeeper", "avg_latency"), "avg_latency")
 }

@@ -47,17 +47,17 @@ possible.
 `
 
 func usage() {
-	_, _ = fmt.Fprint(flag.CommandLine.Output(), description)
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "Usage:")
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "  custom_builder [flags]")
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "Flags:")
+	fmt.Fprint(flag.CommandLine.Output(), description)
+	fmt.Fprintln(flag.CommandLine.Output(), "")
+	fmt.Fprintln(flag.CommandLine.Output(), "Usage:")
+	fmt.Fprintln(flag.CommandLine.Output(), "  custom_builder [flags]")
+	fmt.Fprintln(flag.CommandLine.Output(), "")
+	fmt.Fprintln(flag.CommandLine.Output(), "Flags:")
 	flag.PrintDefaults()
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "Examples:")
-	_, _ = fmt.Fprint(flag.CommandLine.Output(), examples)
-	_, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
+	fmt.Fprintln(flag.CommandLine.Output(), "")
+	fmt.Fprintln(flag.CommandLine.Output(), "Examples:")
+	fmt.Fprint(flag.CommandLine.Output(), examples)
+	fmt.Fprintln(flag.CommandLine.Output(), "")
 }
 
 func main() {
@@ -113,10 +113,7 @@ func main() {
 
 	// Process the plugin list with the given config. This will
 	// only keep the plugins that adhere to the filtering criteria.
-	enabled, err := cfg.Filter(packages)
-	if err != nil {
-		log.Fatalf("Filtering plugins failed: %v", err)
-	}
+	enabled := cfg.Filter(packages)
 	if !quiet {
 		enabled.Print()
 	}

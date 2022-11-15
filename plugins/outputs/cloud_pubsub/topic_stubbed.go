@@ -2,6 +2,7 @@ package cloud_pubsub
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"runtime"
@@ -9,16 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"encoding/base64"
-
 	"cloud.google.com/go/pubsub"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/api/support/bundler"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/api/support/bundler"
 )
 
 const (
@@ -62,7 +62,7 @@ type (
 )
 
 func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []testMetric) (*PubSub, *stubTopic, []telegraf.Metric) {
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 
 	metrics := make([]telegraf.Metric, len(testM))
 	t := &stubTopic{

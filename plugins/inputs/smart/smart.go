@@ -407,7 +407,10 @@ func (m *Smart) Init() error {
 	if err != nil {
 		m.PathNVMe = ""
 		//without nvme, plugin will not be able to gather vendor specific attributes (but it can work without it)
-		m.Log.Warnf("nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s", err.Error())
+		m.Log.Warnf(
+			"nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s",
+			err.Error(),
+		)
 	}
 
 	return nil

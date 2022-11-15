@@ -65,7 +65,9 @@ func TestTagTemplateConcatenate(t *testing.T) {
 	actual := tmp.Apply(input[0])
 
 	// assert
-	expected := []telegraf.Metric{testutil.MustMetric("Tags", map[string]string{"hostname": "localhost", "level": "debug", "topic": "localhost.debug"}, nil, now)}
+	expected := []telegraf.Metric{
+		testutil.MustMetric("Tags", map[string]string{"hostname": "localhost", "level": "debug", "topic": "localhost.debug"}, nil, now),
+	}
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
@@ -112,7 +114,14 @@ func TestTagAndFieldConcatenate(t *testing.T) {
 	actual := tmp.Apply(m1)
 
 	// assert
-	expected := []telegraf.Metric{testutil.MustMetric("weather", map[string]string{"location": "us-midwest", "LocalTemp": "us-midwest is too warm"}, map[string]interface{}{"temperature": "too warm"}, now)}
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"weather",
+			map[string]string{"location": "us-midwest", "LocalTemp": "us-midwest is too warm"},
+			map[string]interface{}{"temperature": "too warm"},
+			now,
+		),
+	}
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 

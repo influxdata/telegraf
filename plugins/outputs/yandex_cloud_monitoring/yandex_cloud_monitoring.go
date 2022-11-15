@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -122,13 +123,19 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	var yandexCloudMonitoringMetrics []yandexCloudMonitoringMetric
 	for _, m := range metrics {
 		for _, field := range m.FieldList() {
+			value, err := internal.ToFloat64(field.Value)
+			if err != nil {
+				a.Log.Errorf("skipping value: %w", err.Error())
+				continue
+			}
+
 			yandexCloudMonitoringMetrics = append(
 				yandexCloudMonitoringMetrics,
 				yandexCloudMonitoringMetric{
 					Name:   field.Key,
 					Labels: m.Tags(),
 					TS:     fmt.Sprint(m.Time().Format(time.RFC3339)),
-					Value:  field.Value.(float64),
+					Value:  value,
 				},
 			)
 		}

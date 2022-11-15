@@ -7,14 +7,13 @@ import (
 
 	"github.com/coocood/freecache"
 	"github.com/jackc/pgx/v4"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 )
 
-func TestTableSource(t *testing.T) {
+func TestTableSource(_ *testing.T) {
 }
 
 type source interface {
@@ -53,11 +52,11 @@ func TestTableSourceIntegration_tagJSONB(t *testing.T) {
 	row := nextSrcRow(tsrc)
 	require.NoError(t, tsrc.Err())
 
-	assert.IsType(t, time.Time{}, row["time"])
+	require.IsType(t, time.Time{}, row["time"])
 	var tags MSI
 	require.NoError(t, json.Unmarshal(row["tags"].([]byte), &tags))
-	assert.EqualValues(t, MSI{"a": "one", "b": "two"}, tags)
-	assert.EqualValues(t, 1, row["v"])
+	require.EqualValues(t, MSI{"a": "one", "b": "two"}, tags)
+	require.EqualValues(t, 1, row["v"])
 }
 
 func TestTableSourceIntegration_tagTable(t *testing.T) {
@@ -76,11 +75,11 @@ func TestTableSourceIntegration_tagTable(t *testing.T) {
 	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
 	ttsrc := NewTagTableSource(tsrc)
 	ttrow := nextSrcRow(ttsrc)
-	assert.EqualValues(t, "one", ttrow["a"])
-	assert.EqualValues(t, "two", ttrow["b"])
+	require.EqualValues(t, "one", ttrow["a"])
+	require.EqualValues(t, "two", ttrow["b"])
 
 	row := nextSrcRow(tsrc)
-	assert.Equal(t, row["tag_id"], ttrow["tag_id"])
+	require.Equal(t, row["tag_id"], ttrow["tag_id"])
 }
 
 func TestTableSourceIntegration_tagTableJSONB(t *testing.T) {
@@ -102,7 +101,7 @@ func TestTableSourceIntegration_tagTableJSONB(t *testing.T) {
 	ttrow := nextSrcRow(ttsrc)
 	var tags MSI
 	require.NoError(t, json.Unmarshal(ttrow["tags"].([]byte), &tags))
-	assert.EqualValues(t, MSI{"a": "one", "b": "two"}, tags)
+	require.EqualValues(t, MSI{"a": "one", "b": "two"}, tags)
 }
 
 func TestTableSourceIntegration_fieldsJSONB(t *testing.T) {
@@ -122,7 +121,7 @@ func TestTableSourceIntegration_fieldsJSONB(t *testing.T) {
 	var fields MSI
 	require.NoError(t, json.Unmarshal(row["fields"].([]byte), &fields))
 	// json unmarshals numbers as floats
-	assert.EqualValues(t, MSI{"a": 1.0, "b": 2.0}, fields)
+	require.EqualValues(t, MSI{"a": 1.0, "b": 2.0}, fields)
 }
 
 // TagsAsForeignKeys=false
@@ -151,9 +150,9 @@ func TestTableSourceIntegration_DropColumn_tag(t *testing.T) {
 	_ = tsrc.DropColumn(col)
 
 	row := nextSrcRow(tsrc)
-	assert.EqualValues(t, "one", row["a"])
-	assert.EqualValues(t, 2, row["v"])
-	assert.False(t, tsrc.Next())
+	require.EqualValues(t, "one", row["a"])
+	require.EqualValues(t, 2, row["v"])
+	require.False(t, tsrc.Next())
 }
 
 // TagsAsForeignKeys=true, ForeignTagConstraint=true
@@ -186,12 +185,12 @@ func TestTableSourceIntegration_DropColumn_tag_fkTrue_fcTrue(t *testing.T) {
 
 	ttsrc := NewTagTableSource(tsrc)
 	row := nextSrcRow(ttsrc)
-	assert.EqualValues(t, "one", row["a"])
-	assert.False(t, ttsrc.Next())
+	require.EqualValues(t, "one", row["a"])
+	require.False(t, ttsrc.Next())
 
 	row = nextSrcRow(tsrc)
-	assert.EqualValues(t, 2, row["v"])
-	assert.False(t, tsrc.Next())
+	require.EqualValues(t, 2, row["v"])
+	require.False(t, tsrc.Next())
 }
 
 // TagsAsForeignKeys=true, ForeignTagConstraint=false
@@ -224,13 +223,13 @@ func TestTableSourceIntegration_DropColumn_tag_fkTrue_fcFalse(t *testing.T) {
 
 	ttsrc := NewTagTableSource(tsrc)
 	row := nextSrcRow(ttsrc)
-	assert.EqualValues(t, "one", row["a"])
-	assert.False(t, ttsrc.Next())
+	require.EqualValues(t, "one", row["a"])
+	require.False(t, ttsrc.Next())
 
 	row = nextSrcRow(tsrc)
-	assert.EqualValues(t, 1, row["v"])
+	require.EqualValues(t, 1, row["v"])
 	row = nextSrcRow(tsrc)
-	assert.EqualValues(t, 2, row["v"])
+	require.EqualValues(t, 2, row["v"])
 }
 
 // Test that when a field is dropped, only the field is dropped, and all rows remain, unless it was the only field.
@@ -258,9 +257,9 @@ func TestTableSourceIntegration_DropColumn_field(t *testing.T) {
 	_ = tsrc.DropColumn(col)
 
 	row := nextSrcRow(tsrc)
-	assert.EqualValues(t, "foo", row["tag"])
-	assert.EqualValues(t, 3, row["b"])
-	assert.False(t, tsrc.Next())
+	require.EqualValues(t, "foo", row["tag"])
+	require.EqualValues(t, 3, row["b"])
+	require.False(t, tsrc.Next())
 }
 
 func TestTableSourceIntegration_InconsistentTags(t *testing.T) {
@@ -277,12 +276,12 @@ func TestTableSourceIntegration_InconsistentTags(t *testing.T) {
 	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
 
 	trow := nextSrcRow(tsrc)
-	assert.EqualValues(t, "1", trow["a"])
-	assert.EqualValues(t, nil, trow["c"])
+	require.EqualValues(t, "1", trow["a"])
+	require.EqualValues(t, nil, trow["c"])
 
 	trow = nextSrcRow(tsrc)
-	assert.EqualValues(t, nil, trow["a"])
-	assert.EqualValues(t, "3", trow["c"])
+	require.EqualValues(t, nil, trow["a"])
+	require.EqualValues(t, "3", trow["c"])
 }
 
 func TestTagTableSourceIntegration_InconsistentTags(t *testing.T) {
@@ -313,5 +312,5 @@ func TestTagTableSourceIntegration_InconsistentTags(t *testing.T) {
 		actual = append(actual, row)
 	}
 
-	assert.ElementsMatch(t, expected, actual)
+	require.ElementsMatch(t, expected, actual)
 }

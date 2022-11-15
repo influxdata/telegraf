@@ -50,7 +50,11 @@ const (
 )
 
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", ` +
+	`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", ` +
+	`"Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
+	`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", ` +
+	`"Properties":{"Path":"$[\'timestamp\']"}}]'`
 const managedIngestion = "managed"
 const queuedIngestion = "queued"
 

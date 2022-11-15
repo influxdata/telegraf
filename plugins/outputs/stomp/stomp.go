@@ -55,7 +55,11 @@ func (q *STOMP) Connect() error {
 		}
 	}
 
-	q.stomp, err = stomp.Connect(q.conn, stomp.ConnOpt.HeartBeat(time.Duration(q.HeartBeatSend), time.Duration(q.HeartBeatRec)), stomp.ConnOpt.Login(q.Username, q.Password))
+	q.stomp, err = stomp.Connect(
+		q.conn,
+		stomp.ConnOpt.HeartBeat(time.Duration(q.HeartBeatSend), time.Duration(q.HeartBeatRec)),
+		stomp.ConnOpt.Login(q.Username, q.Password),
+	)
 	if err != nil {
 		return err
 	}

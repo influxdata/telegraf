@@ -72,9 +72,9 @@ func (r *GzipReader) Read(b []byte) (int, error) {
 func NewContentEncoder(encoding string) (ContentEncoder, error) {
 	switch encoding {
 	case "gzip":
-		return NewGzipEncoder()
+		return NewGzipEncoder(), nil
 	case "zlib":
-		return NewZlibEncoder()
+		return NewZlibEncoder(), nil
 	case "identity", "":
 		return NewIdentityEncoder(), nil
 	default:
@@ -88,7 +88,7 @@ type AutoDecoder struct {
 	identity *IdentityDecoder
 }
 
-func (a *AutoDecoder) SetEnconding(encoding string) {
+func (a *AutoDecoder) SetEncoding(encoding string) {
 	a.encoding = encoding
 }
 
@@ -99,26 +99,25 @@ func (a *AutoDecoder) Decode(data []byte) ([]byte, error) {
 	return a.identity.Decode(data)
 }
 
-func NewAutoContentDecoder() (*AutoDecoder, error) {
+func NewAutoContentDecoder() *AutoDecoder {
 	var a AutoDecoder
-	var err error
 
 	a.identity = NewIdentityDecoder()
-	a.gzip, err = NewGzipDecoder()
-	return &a, err
+	a.gzip = NewGzipDecoder()
+	return &a
 }
 
 // NewContentDecoder returns a ContentDecoder for the encoding type.
 func NewContentDecoder(encoding string) (ContentDecoder, error) {
 	switch encoding {
 	case "gzip":
-		return NewGzipDecoder()
+		return NewGzipDecoder(), nil
 	case "zlib":
-		return NewZlibDecoder()
+		return NewZlibDecoder(), nil
 	case "identity", "":
 		return NewIdentityDecoder(), nil
 	case "auto":
-		return NewAutoContentDecoder()
+		return NewAutoContentDecoder(), nil
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
@@ -135,12 +134,12 @@ type GzipEncoder struct {
 	buf    *bytes.Buffer
 }
 
-func NewGzipEncoder() (*GzipEncoder, error) {
+func NewGzipEncoder() *GzipEncoder {
 	var buf bytes.Buffer
 	return &GzipEncoder{
 		writer: gzip.NewWriter(&buf),
 		buf:    &buf,
-	}, nil
+	}
 }
 
 func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
@@ -163,12 +162,12 @@ type ZlibEncoder struct {
 	buf    *bytes.Buffer
 }
 
-func NewZlibEncoder() (*ZlibEncoder, error) {
+func NewZlibEncoder() *ZlibEncoder {
 	var buf bytes.Buffer
 	return &ZlibEncoder{
 		writer: zlib.NewWriter(&buf),
 		buf:    &buf,
-	}, nil
+	}
 }
 
 func (e *ZlibEncoder) Encode(data []byte) ([]byte, error) {
@@ -199,7 +198,7 @@ func (*IdentityEncoder) Encode(data []byte) ([]byte, error) {
 
 // ContentDecoder removes a wrapper encoding from byte buffers.
 type ContentDecoder interface {
-	SetEnconding(string)
+	SetEncoding(string)
 	Decode([]byte) ([]byte, error)
 }
 
@@ -209,20 +208,23 @@ type GzipDecoder struct {
 	buf    *bytes.Buffer
 }
 
-func NewGzipDecoder() (*GzipDecoder, error) {
+func NewGzipDecoder() *GzipDecoder {
 	return &GzipDecoder{
 		reader: new(gzip.Reader),
 		buf:    new(bytes.Buffer),
-	}, nil
+	}
 }
 
-func (*GzipDecoder) SetEnconding(string) {}
+func (*GzipDecoder) SetEncoding(string) {}
 
 func (d *GzipDecoder) Decode(data []byte) ([]byte, error) {
-	d.reader.Reset(bytes.NewBuffer(data))
+	err := d.reader.Reset(bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
 	d.buf.Reset()
 
-	_, err := d.buf.ReadFrom(d.reader)
+	_, err = d.buf.ReadFrom(d.reader)
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
@@ -237,13 +239,13 @@ type ZlibDecoder struct {
 	buf *bytes.Buffer
 }
 
-func NewZlibDecoder() (*ZlibDecoder, error) {
+func NewZlibDecoder() *ZlibDecoder {
 	return &ZlibDecoder{
 		buf: new(bytes.Buffer),
-	}, nil
+	}
 }
 
-func (*ZlibDecoder) SetEnconding(string) {}
+func (*ZlibDecoder) SetEncoding(string) {}
 
 func (d *ZlibDecoder) Decode(data []byte) ([]byte, error) {
 	d.buf.Reset()
@@ -271,7 +273,7 @@ func NewIdentityDecoder() *IdentityDecoder {
 	return &IdentityDecoder{}
 }
 
-func (*IdentityDecoder) SetEnconding(string) {}
+func (*IdentityDecoder) SetEncoding(string) {}
 
 func (*IdentityDecoder) Decode(data []byte) ([]byte, error) {
 	return data, nil

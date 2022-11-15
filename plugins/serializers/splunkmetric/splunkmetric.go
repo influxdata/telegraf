@@ -10,6 +10,7 @@ import (
 type serializer struct {
 	HecRouting              bool
 	SplunkmetricMultiMetric bool
+	OmitEventTag            bool
 }
 
 type CommonTags struct {
@@ -22,7 +23,7 @@ type CommonTags struct {
 
 type HECTimeSeries struct {
 	Time   float64                `json:"time"`
-	Event  string                 `json:"event"`
+	Event  string                 `json:"event,omitempty"`
 	Host   string                 `json:"host,omitempty"`
 	Index  string                 `json:"index,omitempty"`
 	Source string                 `json:"source,omitempty"`
@@ -30,13 +31,14 @@ type HECTimeSeries struct {
 }
 
 // NewSerializer Setup our new serializer
-func NewSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool) (*serializer, error) {
+func NewSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) *serializer {
 	/*	Define output params */
 	s := &serializer{
 		HecRouting:              splunkmetricHecRouting,
 		SplunkmetricMultiMetric: splunkmetricMultimetric,
+		OmitEventTag:            splunkmetricOmitEventTag,
 	}
-	return s, nil
+	return s
 }
 
 func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -66,7 +68,9 @@ func (s *serializer) createMulti(metric telegraf.Metric, dataGroup HECTimeSeries
 	var metricJSON []byte
 
 	// Set the event data from the commonTags above.
-	dataGroup.Event = "metric"
+	if !s.OmitEventTag {
+		dataGroup.Event = "metric"
+	}
 	dataGroup.Time = commonTags.Time
 	dataGroup.Host = commonTags.Host
 	dataGroup.Index = commonTags.Index
@@ -123,7 +127,9 @@ func (s *serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSerie
 		dataGroup.Time = commonTags.Time
 
 		// Apply the common tags from above to every record.
-		dataGroup.Event = "metric"
+		if !s.OmitEventTag {
+			dataGroup.Event = "metric"
+		}
 		dataGroup.Host = commonTags.Host
 		dataGroup.Index = commonTags.Index
 		dataGroup.Source = commonTags.Source

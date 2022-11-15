@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
+
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -137,7 +138,7 @@ func NewUnalignedTicker(interval, jitter, offset time.Duration) *UnalignedTicker
 	return t
 }
 
-func (t *UnalignedTicker) start(clk clock.Clock) *UnalignedTicker {
+func (t *UnalignedTicker) start(clk clock.Clock) {
 	t.ch = make(chan time.Time, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.cancel = cancel
@@ -153,8 +154,6 @@ func (t *UnalignedTicker) start(clk clock.Clock) *UnalignedTicker {
 		defer t.wg.Done()
 		t.run(ctx, ticker, clk)
 	}()
-
-	return t
 }
 
 func sleep(ctx context.Context, duration time.Duration, clk clock.Clock) error {
@@ -234,7 +233,7 @@ func NewRollingTicker(interval, jitter time.Duration) *RollingTicker {
 	return t
 }
 
-func (t *RollingTicker) start(clk clock.Clock) *RollingTicker {
+func (t *RollingTicker) start(clk clock.Clock) {
 	t.ch = make(chan time.Time, 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -248,8 +247,6 @@ func (t *RollingTicker) start(clk clock.Clock) *RollingTicker {
 		defer t.wg.Done()
 		t.run(ctx, timer)
 	}()
-
-	return t
 }
 
 func (t *RollingTicker) next() time.Duration {

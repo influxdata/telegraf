@@ -2,23 +2,80 @@ linters:
   disable-all: true
   enable:
     # - telegraflinter
+    - asciicheck
+    - asasalint
+    - bidichk
     - bodyclose
+    - depguard
     - dogsled
+    - exportloopref
+    - errcheck
     - goprintffuncname
     - gosimple
     - govet
     - ineffassign
+    - interfacebloat
+    - lll
     - nakedret
     - nilerr
     - predeclared
     - revive
     - sqlclosecheck
     - staticcheck
+    - tparallel
     - typecheck
     - unconvert
+    - unparam
     - unused
 
 linters-settings:
+  depguard:
+    # Kind of list is passed in.
+    # Allowed values: allowlist|denylist
+    # Default: denylist
+    list-type: denylist
+    # Check the list against standard lib.
+    # Default: false
+    include-go-root: true
+    # A list of packages for the list type specified.
+    # Can accept both string prefixes and string glob patterns.
+    # Default: []
+    packages:
+      - log
+    # A list of packages for the list type specified.
+    # Specify an error message to output when a denied package is used.
+    # Default: []
+    packages-with-error-message:
+      - log: 'Use injected telegraf.Logger instead'
+    # Specify rules by which the linter ignores certain files for consideration.
+    # Can accept both string prefixes and string glob patterns.
+    # The ! character in front of the rule is a special character
+    # which signals that the linter should negate the rule.
+    # This allows for more precise control, but it is only available for glob patterns.
+    # Default: []
+    ignore-file-rules:
+      - "**/agent/**"
+      - "**/cmd/**"
+      - "**/config/**"
+      - "**/filter/**"
+      - "**/internal/**"
+      - "**/logger/**"
+      - "**/metric/**"
+      - "**/models/**"
+      - "**/plugins/serializers/**"
+      - "**/scripts/**"
+      - "**/selfstat/**"
+      - "**/testutil/**"
+      - "**/tools/**"
+      - "**/*_test.go"
+  lll:
+    # Max line length, lines longer will be reported.
+    # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
+    # Default: 120.
+    line-length: 160
+    # Tab width in spaces.
+    # Default: 1
+    tab-width: 4
   revive:
     rules:
       - name: argument-limit
@@ -44,13 +101,10 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: errorf
-#      - name: flag-parameter #disable for now
       - name: function-result-limit
         arguments: [ 3 ]
       - name: identical-branches
       - name: if-return
-      - name: imports-blacklist
-        arguments: [ "log" ]
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
@@ -69,10 +123,10 @@ linters-settings:
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unhandled-error
-        arguments: ["outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print"]
+        arguments: [ "outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
       - name: unnecessary-stmt
       - name: unreachable-code
-      # - name: unused-parameter
+      - name: unused-parameter
       - name: var-declaration
       - name: var-naming
       - name: waitgroup-by-value
@@ -94,8 +148,6 @@ run:
     - assets
     - docs
     - etc
-    - scripts
-    # - plugins/parsers/influx/machine.go
 
   # which files to skip: they will be analyzed, but issues from them
   # won't be reported. Default value is empty list, but there is
@@ -121,13 +173,8 @@ issues:
       linters:
         - govet
 
-    - path: _test\.go
-      text: "parameter.*seems to be a control flag, avoid control coupling"
-
-    - path: (^agent/|^cmd/|^config/|^filter/|^internal/|^logger/|^metric/|^models/|^selfstat/|^testutil/|^tools|^plugins/serializers/|^plugins/inputs/zipkin/cmd)
-      text: "imports-blacklist: should not use the following blacklisted import: \"log\""
-      linters:
-        - revive
+    - path: cmd/telegraf/(main|printer).go
+      text: "Error return value of `outputBuffer.Write` is not checked"
 
 output:
   format: tab

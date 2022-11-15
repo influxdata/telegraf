@@ -43,9 +43,8 @@ type Serializer struct {
 	config FormatConfig
 }
 
-func NewSerializer(config FormatConfig) (*Serializer, error) {
-	s := &Serializer{config: config}
-	return s, nil
+func NewSerializer(config FormatConfig) *Serializer {
+	return &Serializer{config: config}
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {

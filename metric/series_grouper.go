@@ -42,7 +42,7 @@ func (g *SeriesGrouper) Add(
 	tm time.Time,
 	field string,
 	fieldValue interface{},
-) error {
+) {
 	taglist := make([]*telegraf.Tag, 0, len(tags))
 	for k, v := range tags {
 		taglist = append(taglist,
@@ -59,7 +59,6 @@ func (g *SeriesGrouper) Add(
 	} else {
 		m.AddField(field, fieldValue)
 	}
-	return nil
 }
 
 // AddMetric adds a metric to the series, merging with any previous matching metrics.
@@ -88,20 +87,20 @@ func groupID(seed maphash.Seed, measurement string, taglist []*telegraf.Tag, tm 
 	var mh maphash.Hash
 	mh.SetSeed(seed)
 
-	mh.WriteString(measurement)
-	mh.WriteByte(0)
+	mh.WriteString(measurement) //nolint:errcheck,revive // all Write***() methods for hash in maphash.go returns nil err
+	mh.WriteByte(0)             //nolint:errcheck,revive // all Write***() methods for hash in maphash.go returns nil err
 
 	for _, tag := range taglist {
-		mh.WriteString(tag.Key)
-		mh.WriteByte(0)
-		mh.WriteString(tag.Value)
-		mh.WriteByte(0)
+		mh.WriteString(tag.Key)   //nolint:errcheck,revive // all Write***() methods for hash in maphash.go returns nil err
+		mh.WriteByte(0)           //nolint:errcheck,revive // all Write***() methods for hash in maphash.go returns nil err
+		mh.WriteString(tag.Value) //nolint:errcheck,revive // all Write***() methods for hash in maphash.go returns nil err
+		mh.WriteByte(0)           //nolint:errcheck,revive // all Write***() methods for hash in maphash.go returns nil err
 	}
-	mh.WriteByte(0)
+	mh.WriteByte(0) //nolint:errcheck,revive // all Write***() methods for hash in maphash.go returns nil err
 
 	var tsBuf [8]byte
 	binary.BigEndian.PutUint64(tsBuf[:], uint64(tm.UnixNano()))
-	mh.Write(tsBuf[:])
+	mh.Write(tsBuf[:]) //nolint:errcheck,revive // all Write***() methods for hash in maphash.go returns nil err
 
 	return mh.Sum64()
 }

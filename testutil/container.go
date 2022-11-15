@@ -5,6 +5,7 @@ package testutil
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/docker/go-connections/nat"
@@ -80,14 +81,14 @@ func (c *Container) Start() error {
 
 	err = c.LookupMappedPorts()
 	if err != nil {
-		_ = c.Terminate()
+		c.Terminate()
 		return fmt.Errorf("port lookup failed: %s", err)
 	}
 
 	return nil
 }
 
-// create a lookup table of exposed ports to mapped ports
+// LookupMappedPorts creates a lookup table of exposed ports to mapped ports
 func (c *Container) LookupMappedPorts() error {
 	if len(c.ExposedPorts) == 0 {
 		return nil
@@ -119,7 +120,7 @@ func (c *Container) LookupMappedPorts() error {
 	return nil
 }
 
-func (c *Container) Exec(cmds []string) (int, error) {
+func (c *Container) Exec(cmds []string) (int, io.Reader, error) {
 	return c.container.Exec(c.ctx, cmds)
 }
 
@@ -131,7 +132,7 @@ func (c *Container) PrintLogs() {
 	fmt.Println("--- Container Logs End ---")
 }
 
-func (c *Container) Terminate() error {
+func (c *Container) Terminate() {
 	err := c.container.StopLogProducer()
 	if err != nil {
 		fmt.Println(err)
@@ -143,6 +144,4 @@ func (c *Container) Terminate() error {
 	}
 
 	c.PrintLogs()
-
-	return nil
 }

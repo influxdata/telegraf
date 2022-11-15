@@ -14,12 +14,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 )
 
@@ -369,7 +369,13 @@ func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache 
 	return e.getAncestorName(ctx, client, "Datacenter", cache, r)
 }
 
-func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resourceType string, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
+func (e *Endpoint) getAncestorName(
+	ctx context.Context,
+	client *Client,
+	resourceType string,
+	cache map[string]string,
+	r types.ManagedObjectReference,
+) (string, bool) {
 	path := make([]string, 0)
 	returnVal := ""
 	here := r
@@ -1139,7 +1145,13 @@ func (e *Endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, int
 	return rInfo, rValues
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resourceKind, acc telegraf.Accumulator, interval time.Duration) (int, time.Time, error) {
+func (e *Endpoint) collectChunk(
+	ctx context.Context,
+	pqs queryChunk,
+	res *resourceKind,
+	acc telegraf.Accumulator,
+	interval time.Duration,
+) (int, time.Time, error) {
 	e.log.Debugf("Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0

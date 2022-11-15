@@ -199,11 +199,10 @@ func loadCertificate(config *tls.Config, certFile, keyFile string) error {
 	}
 
 	config.Certificates = []tls.Certificate{cert}
-	config.BuildNameToCertificate()
 	return nil
 }
 
-func (c *ServerConfig) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+func (c *ServerConfig) verifyPeerCertificate(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 	// The certificate chain is client + intermediate + root.
 	// Let's review the client certificate.
 	cert, err := x509.ParseCertificate(rawCerts[0])

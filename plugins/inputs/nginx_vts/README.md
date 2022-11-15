@@ -7,6 +7,15 @@ status such as servers, upstreams, caches. This is similar to the live activity
 monitoring of Nginx plus.  For module configuration details please see its
 [documentation](https://github.com/vozlt/nginx-module-vts#synopsis).
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
