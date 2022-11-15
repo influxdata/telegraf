@@ -135,7 +135,24 @@ func (m *Modbus) Init() error {
 	if err := m.initClient(); err != nil {
 		return fmt.Errorf("initializing client failed: %v", err)
 	}
-
+	numberOfRequests := 0
+	totalTouchedFields := uint16(0)
+	for k := range m.requests {
+		numberOfRequests += len(m.requests[k].coil) + len(m.requests[k].discrete) + len(m.requests[k].holding) + len(m.requests[k].input)
+		for _, r := range m.requests[k].coil {
+			totalTouchedFields += r.length / r.fields[0].length
+		}
+		for _, r := range m.requests[k].discrete {
+			totalTouchedFields += r.length / r.fields[0].length
+		}
+		for _, r := range m.requests[k].holding {
+			totalTouchedFields += r.length / r.fields[0].length
+		}
+		for _, r := range m.requests[k].input {
+			totalTouchedFields += r.length / r.fields[0].length
+		}
+	}
+	m.Log.Debugf("For %v: sending %d request(s), touching %d registers", m.Name, numberOfRequests, totalTouchedFields)
 	return nil
 }
 

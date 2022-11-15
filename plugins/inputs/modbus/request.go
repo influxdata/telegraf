@@ -1,9 +1,6 @@
 package modbus
 
-import (
-	"fmt"
-	"sort"
-)
+import "sort"
 
 type request struct {
 	address uint16
@@ -258,11 +255,5 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 			requests[i].tags[k] = v
 		}
 	}
-	fmt.Printf("[Modbus] Number of requests %d\n", len(requests))
-	totalTouchedFields := uint16(0)
-	for _, r := range requests {
-		totalTouchedFields += r.length / r.fields[0].length
-	}
-	fmt.Printf("[Modbus] Total number of touched Registers %d\n", totalTouchedFields)
 	return requests
 }

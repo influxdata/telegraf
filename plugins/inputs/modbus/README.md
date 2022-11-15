@@ -376,32 +376,6 @@ non-consecutive, non-omitted fields!
 The `optimization` setting can be used to optimize the actual requests sent to the device.
 The following algorithms are available
 
-##### `none` (_default_)
-
-Do not perform any optimization. Please note that the requests are still
-obeying the maximum request sizes. Furthermore, completely empty requests,
-i.e. all fields specify `omit=true`, are removed. Otherwise, the requests
-are sent as specified by the user including request of omitted fields.
-This setting should be used if you want full control over the requests
-e.g. to accommodate for device constraints.
-
-##### `shrink`
-
-This optimization allows to remove leading and trailing fields from requests
-if those fields are omitted. This can shrink the request number and sizes in
-cases where you specify large amounts of omitted fields, e.g. for documentation
-purposes.
-
-##### `rearrange`
-
-Requests are processed similar to `shrink` but the request boundaries are
-rearranged such that usually less registers are being read while keeping
-the number of requests. This optimization algorithm only works on consecutive
-address ranges and respects user-defined gaps in the field addresses.
-
-__Please note:__ This optimization might take long in case of many
-non-consecutive, non-ommitted fields!
-
 ##### `aggressive`
 
 Requests are processed similar to `rearrange` but user-defined gaps in the field
@@ -418,11 +392,7 @@ will increase the number of registers read due to larger requests.
 This algorithm might be usefull if you only want to specify the fields you are
 interested in but want to minimize the number of requests sent to the device.
 Requests are processed similar to `rearrange` but user-defined gaps in the
-field addresses are filled automatically. This usually reduces the number of
-requests, but will increase the number of registers read due to larger
-requests. This algorithm might be usefull if you only want to specify the
-fields you are interested in but want to minimize the number of requests
-sent to the device.
+field addresses are filled automatically. 
 
 __Please note:__ This optimization might take long in case of many
 non-consecutive, non-ommitted fields!
@@ -431,16 +401,26 @@ non-consecutive, non-ommitted fields!
 
 With this optimization, user defined omitted fields are ignored, which
 allows composing shorter configuration files in the case of devices with
-many available registers. Every request is build considering the cost of
+many available registers. Every request is built considering the cost of
 adding a new register (including the gap between this one and the previous
 one of the request) compared to the cost of creating a new request.
 
 __Please note:__ The optimal value for `max_extra_registers` will depend
 on the network and the queried device. It is hence recommended to test
 several values and assess performance in order to find the best value.
-When running telegraf with the `--test` flag, you can check the number
+When running telegraf with the `--debug` flag, you can check the number
 of requests and the number of touched registers that your configuration
 results to.
+You can use the following strategy to find the most suitable value of
+`max_extra_registers` for your setup:
+1. use the `--test --debug` flags to identify a list of 
+`max_extra_registers` values leading to unique number of requests
+2. set the acquisition interval to a very low value (_e.g._ 10ms)
+3. acquire the data for 5min with each value of `max_extra_registers`
+4. check the actually recorded data period, for instance in influx call
+    `SELECT MEAN(dt) FROM (SELECT ELAPSED(<oneSignaName>,1ms) AS dt FROM <MeasurementName>)`
+5. select the `max_extra_registers` that gives the lowest actually
+    recorded data period
 
 #### Field definitions
 
