@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redistimeseries
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 
@@ -10,21 +12,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const sampleConfig = `
-  ## The address of the RedisTimeSeries server.
-  address = "127.0.0.1:6379"
-
-  ## Redis ACL credentials
-  # username = ""
-  # password = ""
-  # database = 0
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  # insecure_skip_verify = false
-`
+//go:embed sample.conf
+var sampleConfig string
 
 type RedisTimeSeries struct {
 	Address  string          `toml:"address"`
