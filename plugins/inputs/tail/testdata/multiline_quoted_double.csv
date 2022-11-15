@@ -1,0 +1,12 @@
+1660819827410,1,some text without quotes,A
+1660819827411,1,"some text all quoted",A
+1660819827412,1,"some text all quoted
+but wrapped",A
+1660819827420,2,some text with "quotes",B
+1660819827430,3,some text with 'multiple "quotes" in `one` line',C
+1660819827440,4,some multiline text with "quotes
+spanning \"multiple\"
+lines" but do not "end
+directly",D
+1660819827450,5,all of "this" should "basically" work...,E
+
