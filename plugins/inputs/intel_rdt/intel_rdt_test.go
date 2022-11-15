@@ -43,7 +43,7 @@ func TestAssociateProcessesWithPIDs(t *testing.T) {
 	processes = []string{"process1"}
 	result, err = rdt.associateProcessesWithPIDs(processes)
 	require.Nil(t, err)
-	require.Len(t, result, 0)
+	require.Empty(t, result)
 }
 
 func TestSplitCSVLineIntoValues(t *testing.T) {
@@ -121,35 +121,35 @@ func TestParseCoresConfig(t *testing.T) {
 		var configCores []string
 		result, err := parseCoresConfig(configCores)
 		require.Nil(t, err)
-		require.Len(t, result, 0)
+		require.Empty(t, result)
 	})
 
 	t.Run("empty string in slice", func(t *testing.T) {
 		configCores := []string{""}
 		result, err := parseCoresConfig(configCores)
 		require.NotNil(t, err)
-		require.Len(t, result, 0)
+		require.Empty(t, result)
 	})
 
 	t.Run("not correct string", func(t *testing.T) {
 		configCores := []string{"wrong string"}
 		result, err := parseCoresConfig(configCores)
 		require.NotNil(t, err)
-		require.Len(t, result, 0)
+		require.Empty(t, result)
 	})
 
 	t.Run("not correct string", func(t *testing.T) {
 		configCores := []string{"1,2", "wasd:#$!;"}
 		result, err := parseCoresConfig(configCores)
 		require.NotNil(t, err)
-		require.Len(t, result, 0)
+		require.Empty(t, result)
 	})
 
 	t.Run("not correct string", func(t *testing.T) {
 		configCores := []string{"1,2,2"}
 		result, err := parseCoresConfig(configCores)
 		require.NotNil(t, err)
-		require.Len(t, result, 0)
+		require.Empty(t, result)
 	})
 
 	t.Run("coma separated cores - positive", func(t *testing.T) {

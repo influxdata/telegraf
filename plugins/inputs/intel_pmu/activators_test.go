@@ -386,7 +386,7 @@ func TestActivateEventForPlacement(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(nil, mPlacements)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "core event is nil")
-		require.Len(t, activeEvents, 0)
+		require.Empty(t, activeEvents)
 	})
 
 	t.Run("perf activator is nil", func(t *testing.T) {
@@ -394,13 +394,13 @@ func TestActivateEventForPlacement(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(mEvent, mPlacements)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing perf activator")
-		require.Len(t, activeEvents, 0)
+		require.Empty(t, activeEvents)
 	})
 
 	t.Run("placements are nil", func(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(mEvent, nil)
 		require.NoError(t, err)
-		require.Len(t, activeEvents, 0)
+		require.Empty(t, activeEvents)
 	})
 
 	t.Run("activation error", func(t *testing.T) {
