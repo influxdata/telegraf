@@ -23,28 +23,31 @@ import (
 
 type TimeFunc func() time.Time
 
+var forceDelimiter = "\u007C"
+
 type Parser struct {
-	ColumnNames        []string        `toml:"csv_column_names"`
-	ColumnTypes        []string        `toml:"csv_column_types"`
-	Comment            string          `toml:"csv_comment"`
-	Delimiter          string          `toml:"csv_delimiter"`
-	HeaderRowCount     int             `toml:"csv_header_row_count"`
-	MeasurementColumn  string          `toml:"csv_measurement_column"`
-	MetricName         string          `toml:"metric_name"`
-	SkipColumns        int             `toml:"csv_skip_columns"`
-	SkipRows           int             `toml:"csv_skip_rows"`
-	TagColumns         []string        `toml:"csv_tag_columns"`
-	TimestampColumn    string          `toml:"csv_timestamp_column"`
-	TimestampFormat    string          `toml:"csv_timestamp_format"`
-	Timezone           string          `toml:"csv_timezone"`
-	TrimSpace          bool            `toml:"csv_trim_space"`
-	SkipValues         []string        `toml:"csv_skip_values"`
-	SkipErrors         bool            `toml:"csv_skip_errors"`
-	MetadataRows       int             `toml:"csv_metadata_rows"`
-	MetadataSeparators []string        `toml:"csv_metadata_separators"`
-	MetadataTrimSet    string          `toml:"csv_metadata_trim_set"`
-	ResetMode          string          `toml:"csv_reset_mode"`
-	Log                telegraf.Logger `toml:"-"`
+	ColumnNames           []string        `toml:"csv_column_names"`
+	ColumnTypes           []string        `toml:"csv_column_types"`
+	Comment               string          `toml:"csv_comment"`
+	Delimiter             string          `toml:"csv_delimiter"`
+	HeaderRowCount        int             `toml:"csv_header_row_count"`
+	MeasurementColumn     string          `toml:"csv_measurement_column"`
+	MetricName            string          `toml:"metric_name"`
+	SkipColumns           int             `toml:"csv_skip_columns"`
+	SkipRows              int             `toml:"csv_skip_rows"`
+	TagColumns            []string        `toml:"csv_tag_columns"`
+	TimestampColumn       string          `toml:"csv_timestamp_column"`
+	TimestampFormat       string          `toml:"csv_timestamp_format"`
+	Timezone              string          `toml:"csv_timezone"`
+	TrimSpace             bool            `toml:"csv_trim_space"`
+	SkipValues            []string        `toml:"csv_skip_values"`
+	SkipErrors            bool            `toml:"csv_skip_errors"`
+	MetadataRows          int             `toml:"csv_metadata_rows"`
+	MetadataSeparators    []string        `toml:"csv_metadata_separators"`
+	MetadataTrimSet       string          `toml:"csv_metadata_trim_set"`
+	ResetMode             string          `toml:"csv_reset_mode"`
+	Log                   telegraf.Logger `toml:"-"`
+	ForceReplaceDelimiter string          `toml:"csv_force_replace_delimiter"`
 
 	metadataSeparatorList metadataPattern
 
@@ -135,6 +138,10 @@ func (p *Parser) Init() error {
 		return fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
 	}
 
+	if p.Delimiter != "" && p.ForceReplaceDelimiter != "" {
+		return fmt.Errorf("`csv_delimiter` must be empty if `csv_force_replace_delimiter` is used")
+	}
+
 	if p.Delimiter != "" {
 		runeStr := []rune(p.Delimiter)
 		if len(runeStr) > 1 {
@@ -184,6 +191,10 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 	if p.Delimiter != "" {
 		csvReader.Comma = []rune(p.Delimiter)[0]
 	}
+	// ensure set of the forceDelimiter (default '|')
+	if p.ForceReplaceDelimiter != "" {
+		csvReader.Comma = []rune(forceDelimiter)[0]
+	}
 	if p.Comment != "" {
 		csvReader.Comment = []rune(p.Comment)[0]
 	}
@@ -196,7 +207,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if p.ResetMode == "always" {
 		p.Reset()
 	}
-
+	// Replace blacklisted delimiter bytes
+	if p.ForceReplaceDelimiter != "" {
+		buf = bytes.Replace(buf, []byte(p.ForceReplaceDelimiter), []byte(forceDelimiter), -1)
+	}
 	r := bytes.NewReader(buf)
 	metrics, err := parseCSV(p, r)
 	if err != nil && errors.Is(err, io.EOF) {

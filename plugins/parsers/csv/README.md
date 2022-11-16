@@ -106,6 +106,11 @@ values.
   ##    "always" -- reset the parser with each call (ignored in line-wise parsing)
   ##                Helpful when e.g. reading whole files in each gather-cycle.
   # csv_reset_mode = "none"
+  
+  ## This option will change all selected bytes to pipeline ('|', \u007C) before csv parsing.
+  ## Use this option if ypur csv delimiter is blacklisted (e.g. "\u0000")
+  ## Cannot be used together with "csv_delimiter" option.
+  #csv_force_replace_delimiter = "\u0000"
   ```
 
 ### csv_timestamp_column, csv_timestamp_format
