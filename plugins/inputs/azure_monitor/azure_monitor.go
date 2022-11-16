@@ -52,10 +52,6 @@ type azureClientsCreator interface {
 //go:embed sample.conf
 var sampleConfig string
 
-func (am *AzureMonitor) Description() string {
-	return "Gather Azure resources metrics using Azure Monitor API"
-}
-
 func (am *AzureMonitor) SampleConfig() string {
 	return sampleConfig
 }
