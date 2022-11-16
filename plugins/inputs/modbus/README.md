@@ -155,10 +155,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     # optimization = "none"
 
     ## Maximum number register the optimizer is allowed to insert between two fields to 
-    save requests.
+    ## save requests.
     ## This option is only used for the 'max_insert' optimization strategy.
     ## NOTE: All omitted fields are ignored, so this option denotes the effective hole 
-    size to fill.
+    ## size to fill.
     # optimization_max_register_fill = 50
 
     ## Field definitions
