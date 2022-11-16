@@ -70,7 +70,7 @@ const sampleConfig = `
     # can be 'Total', 'Count', 'Average', 'Minimum', 'Maximum'
     # leave the array empty to collect all aggregation types values for each metric
     aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-    
+
   # resource target #2 to collect metrics of
   [[inputs.azure_monitor.resource_target]]
     resource_id = "<<RESOURCE_ID>>"
@@ -88,13 +88,13 @@ const sampleConfig = `
       resource_type = "<<RESOURCE_TYPE>>"
       metrics = [ "<<METRIC>>", "<<METRIC>>" ]
       aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-    
+
     # defines the resources to collect metrics from
     [[inputs.azure_monitor.resource_group_target.resource]]
       resource_type = "<<RESOURCE_TYPE>>"
       metrics = [ "<<METRIC>>", "<<METRIC>>" ]
       aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-      
+
   # resource group target #2 to collect metrics of resources under it with resource type
   [[inputs.azure_monitor.resource_group_target]]
     resource_group = "<<RESOURCE_GROUP_NAME>>"
@@ -103,14 +103,14 @@ const sampleConfig = `
       resource_type = "<<RESOURCE_TYPE>>"
       metrics = [ "<<METRIC>>", "<<METRIC>>" ]
       aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-  
-  # subscription target #1 to collect metrics of resources under it with resource type    
+
+  # subscription target #1 to collect metrics of resources under it with resource type
   [[inputs.azure_monitor.subscription_target]]
     resource_type = "<<RESOURCE_TYPE>>"
     metrics = [ "<<METRIC>>", "<<METRIC>>" ]
     aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-    
-  # subscription target #2 to collect metrics of resources under it with resource type    
+
+  # subscription target #2 to collect metrics of resources under it with resource type
   [[inputs.azure_monitor.subscription_target]]
     resource_type = "<<RESOURCE_TYPE>>"
     metrics = [ "<<METRIC>>", "<<METRIC>>" ]
@@ -222,7 +222,12 @@ func (am *AzureMonitor) setReceiver() error {
 	return err
 }
 
-func (acm *azureClientsManager) createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string) (*receiver.AzureClients, error) {
+func (acm *azureClientsManager) createAzureClients(
+	subscriptionID string,
+	clientID string,
+	clientSecret string,
+	tenantID string,
+) (*receiver.AzureClients, error) {
 	azureClients, err := receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("error creating Azure clients: %w", err)
