@@ -219,6 +219,9 @@ func TestMysqlIntegration(t *testing.T) {
 		{"./testdata/mariadb/expected_metric_three.sql"},
 	}
 	for _, tc := range cases {
+		expected, err := os.ReadFile(tc.expectedFile)
+		require.NoError(t, err)
+
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
 				"bash",
@@ -234,11 +237,8 @@ func TestMysqlIntegration(t *testing.T) {
 			bytes, err := io.ReadAll(out)
 			require.NoError(t, err)
 
-			expected, err := os.ReadFile(tc.expectedFile)
-			require.NoError(t, err)
-
 			return strings.Contains(string(bytes), string(expected))
-		}, 5*time.Second, 10*time.Millisecond)
+		}, 5*time.Second, 500*time.Millisecond)
 	}
 }
 
@@ -327,7 +327,7 @@ func TestPostgresIntegration(t *testing.T) {
 		require.NoError(t, err)
 
 		return strings.Contains(string(bytes), string(expected))
-	}, 5*time.Second, 10*time.Millisecond)
+	}, 5*time.Second, 500*time.Millisecond)
 }
 
 func TestClickHouseIntegration(t *testing.T) {
@@ -413,6 +413,6 @@ func TestClickHouseIntegration(t *testing.T) {
 			bytes, err := io.ReadAll(out)
 			require.NoError(t, err)
 			return strings.Contains(string(bytes), tc.expected)
-		}, 5*time.Second, 10*time.Millisecond)
+		}, 5*time.Second, 500*time.Millisecond)
 	}
 }
