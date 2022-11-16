@@ -1846,26 +1846,51 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 			},
 			errormsg: "configuration invalid: field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
 		},
-		{
-			name: "MaxExtraRegister too large",
-			requests: []requestDefinition{
-				{
-					SlaveID:           1,
-					ByteOrder:         "ABCD",
-					RegisterType:      "input",
-					Optimization:      "max_insert",
-					MaxExtraRegisters: 5000,
-					Fields: []requestFieldDefinition{
-						{
-							Name:        "input-0",
-							Address:     uint16(0),
-							Measurement: "foo",
-						},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = tt.requests
+
+			err := plugin.Init()
+			require.Error(t, err)
+			require.Equal(t, tt.errormsg, err.Error())
+			require.Empty(t, plugin.requests)
+		})
+	}
+}
+
+func TestConfigurationMaxExtraRegisterFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		requests []requestDefinition
+		errormsg string
+	}{{
+		name: "MaxExtraRegister too large",
+		requests: []requestDefinition{
+			{
+				SlaveID:           1,
+				ByteOrder:         "ABCD",
+				RegisterType:      "input",
+				Optimization:      "max_insert",
+				MaxExtraRegisters: 5000,
+				Fields: []requestFieldDefinition{
+					{
+						Name:        "input-0",
+						Address:     uint16(0),
+						Measurement: "foo",
 					},
 				},
 			},
-			errormsg: "configuration invalid: max_extra_registers has to be between 1 and 125",
 		},
+		errormsg: "configuration invalid: optimization_max_register_fill has to be between 1 and 125",
+	},
 		{
 			name: "MaxExtraRegister too small",
 			requests: []requestDefinition{
@@ -1884,9 +1909,8 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: max_extra_registers has to be between 1 and 125",
-		},
-	}
+			errormsg: "configuration invalid: optimization_max_register_fill has to be between 1 and 125",
+		}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1972,6 +1996,244 @@ func TestRequestsStartingWithOmits(t *testing.T) {
 	require.NoError(t, modbus.Gather(&acc))
 	acc.Wait(len(expected))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestRequestsEmptyFields(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+		},
+	}
+	err := modbus.Init()
+	require.EqualError(t, err, `configuration invalid: found request section without fields`)
+}
+
+func TestMultipleSlavesOneFail(t *testing.T) {
+	telegraf.Debug = true
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		Retries:           1,
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+			},
+		},
+		{
+			SlaveID:      2,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+			},
+		},
+		{
+			SlaveID:      3,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+			},
+		},
+	}
+	require.NoError(t, modbus.Init())
+
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	serv.RegisterFunctionHandler(3,
+		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+			tcpframe, ok := frame.(*mbserver.TCPFrame)
+			if !ok {
+				return nil, &mbserver.IllegalFunction
+			}
+
+			if tcpframe.Device == 2 {
+				// Simulate device 2 being unavailable
+				return []byte{}, &mbserver.GatewayTargetDeviceFailedtoRespond
+			}
+			return []byte{0x02, 0x00, 0x42}, &mbserver.Success
+		},
+	)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": "1",
+				"name":     modbus.Name,
+			},
+			map[string]interface{}{"holding-0": int16(0x42)},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": "3",
+				"name":     modbus.Name,
+			},
+			map[string]interface{}{"holding-0": int16(0x42)},
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+	require.Len(t, acc.Errors, 1)
+	require.EqualError(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond), function '131'")
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	// Compare options
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
+	// Register the plugin
+	inputs.Add("modbus", func() telegraf.Input { return &Modbus{} })
+
+	// Define a function to return the register value as data
+	readFunc := func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+		data := frame.GetData()
+		register := binary.BigEndian.Uint16(data[0:2])
+		numRegs := binary.BigEndian.Uint16(data[2:4])
+
+		// Add the length in bytes and the register to the returned data
+		buf := make([]byte, 2*numRegs+1)
+		buf[0] = byte(2 * numRegs)
+		switch numRegs {
+		case 1: // 16-bit
+			binary.BigEndian.PutUint16(buf[1:], register)
+		case 2: // 32-bit
+			binary.BigEndian.PutUint32(buf[1:], uint32(register))
+		case 4: // 64-bit
+			binary.BigEndian.PutUint64(buf[1:], uint64(register))
+		}
+		return buf, &mbserver.Success
+	}
+
+	// Setup a Modbus server to test against
+	serv := mbserver.NewServer()
+	serv.RegisterFunctionHandler(mb.FuncCodeReadInputRegisters, readFunc)
+	serv.RegisterFunctionHandler(mb.FuncCodeReadHoldingRegisters, readFunc)
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	// Run the test cases
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedOutputFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+		initErrorFilename := filepath.Join(testcasePath, "init.err")
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the expected error for the init call if any
+			var expectedInitError string
+			if _, err := os.Stat(initErrorFilename); err == nil {
+				e, err := testutil.ParseLinesFromFile(initErrorFilename)
+				require.NoError(t, err)
+				require.Len(t, e, 1)
+				expectedInitError = e[0]
+			}
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedOutputFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedOutputFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected error if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				e, err := testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, e)
+				expectedErrors = e
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Extract the plugin and make sure it connects to our dummy
+			// server
+			plugin := cfg.Inputs[0].Input.(*Modbus)
+			plugin.Controller = "tcp://localhost:1502"
+
+			// Init the plugin.
+			err := plugin.Init()
+			if expectedInitError != "" {
+				require.ErrorContains(t, err, expectedInitError)
+				return
+			}
+			require.NoError(t, err)
+
+			// Gather data
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+			if len(acc.Errors) > 0 {
+				var actualErrorMsgs []string
+				for _, err := range acc.Errors {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+			}
+
+			// Check the metric nevertheless as we might get some metrics despite errors.
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
 }
 
 type rangeDefinition struct {
@@ -2668,134 +2930,6 @@ func TestRequestOptimizationAggressive(t *testing.T) {
 	}
 }
 
-func TestRequestOptimizationMaxInsertLarge(t *testing.T) {
-	maxsize := maxQuantityHoldingRegisters
-	maxExtraRegisters := uint16(125)
-	tests := []struct {
-		name     string
-		inputs   []rangeDefinition
-		expected []requestExpectation
-	}{
-		{
-			name: "no omit",
-			inputs: []rangeDefinition{
-				{0, 2 * maxQuantityHoldingRegisters, 1, 1, "INT16", false},
-			},
-			expected: []requestExpectation{
-				{
-					fields: []rangeDefinition{{start: 0, count: maxsize, length: 1}},
-					req:    request{address: 0, length: maxsize},
-				},
-				{
-					fields: []rangeDefinition{{start: maxsize, count: maxsize, length: 1}},
-					req:    request{address: maxsize, length: maxsize},
-				},
-			},
-		},
-		{
-			name: "borders",
-			inputs: []rangeDefinition{
-				{0, 1, 1, 1, "INT16", false},
-				{1, maxsize - 2, 1, 1, "INT16", true},
-				{maxsize - 1, 2, 1, 1, "INT16", false},
-				{maxsize + 1, maxsize - 2, 1, 1, "INT16", true},
-				{2*maxsize - 1, 1, 1, 1, "INT16", false},
-			},
-			expected: []requestExpectation{
-				{
-					fields: []rangeDefinition{
-						{start: 0, count: 1, length: 1},
-						{start: maxsize - 1, count: 1, length: 1},
-					},
-					req: request{address: 0, length: maxsize},
-				},
-				{
-					fields: []rangeDefinition{
-						{start: maxsize, count: 1, length: 1},
-						{start: 2*maxsize - 1, count: 1, length: 1},
-					},
-					req: request{address: maxsize, length: maxsize},
-				},
-			},
-		},
-		{
-			name: "borders with gap",
-			inputs: []rangeDefinition{
-				{0, 1, 1, 1, "INT16", false},
-				{1, maxsize - 2, 1, 1, "INT16", true},
-				{maxsize - 1, 2, 1, 1, "INT16", false},
-				{maxsize + 1, 4, 1, 1, "INT16", true},
-				{2*maxsize - 1, 1, 1, 1, "INT16", false},
-			},
-			expected: []requestExpectation{
-				{
-					fields: []rangeDefinition{
-						{start: 0, count: 1, length: 1},
-						{start: maxsize - 1, count: 1, length: 1},
-					},
-					req: request{address: 0, length: maxsize},
-				},
-				{
-					fields: []rangeDefinition{
-						{start: maxsize, count: 1, length: 1},
-						{start: 2*maxsize - 1, count: 1, length: 1},
-					},
-					req: request{address: maxsize, length: maxsize},
-				},
-			},
-		},
-		{
-			name: "from PR #11106",
-			inputs: []rangeDefinition{
-				{0, 2, 1, 1, "INT16", true},
-				{2, 1, 1, 1, "INT16", false},
-				{3, 2*maxsize + 1, 1, 1, "INT16", true},
-				{2*maxsize + 1, 1, 1, 1, "INT16", false},
-			},
-			expected: []requestExpectation{
-				{
-					fields: []rangeDefinition{{start: 2, count: 1, length: 1}},
-					req:    request{address: 2, length: 1},
-				},
-				{
-					fields: []rangeDefinition{{start: 2*maxsize + 1, count: 1, length: 1}},
-					req:    request{address: 2*maxsize + 1, length: 1},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Generate the input structure and the expectation
-			requestFields := generateRequestDefinitions(tt.inputs)
-			expected := generateExpectation(tt.expected)
-
-			// Setup the plugin
-			slaveID := byte(1)
-			plugin := Modbus{
-				Name:              "Test",
-				Controller:        "tcp://localhost:1502",
-				ConfigurationType: "request",
-				Log:               testutil.Logger{},
-			}
-			plugin.Requests = []requestDefinition{
-				{
-					SlaveID:           slaveID,
-					ByteOrder:         "ABCD",
-					RegisterType:      "holding",
-					Optimization:      "max_insert",
-					MaxExtraRegisters: maxExtraRegisters,
-					Fields:            requestFields,
-				},
-			}
-			require.NoError(t, plugin.Init())
-			require.NotEmpty(t, plugin.requests)
-			require.Contains(t, plugin.requests, slaveID)
-			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
-		})
-	}
-}
 func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 	maxsize := maxQuantityHoldingRegisters
 	maxExtraRegisters := uint16(5)
@@ -2926,244 +3060,6 @@ func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 			require.NotEmpty(t, plugin.requests)
 			require.Contains(t, plugin.requests, slaveID)
 			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
-		})
-	}
-}
-
-func TestRequestsEmptyFields(t *testing.T) {
-	modbus := Modbus{
-		Name:              "Test",
-		Controller:        "tcp://localhost:1502",
-		ConfigurationType: "request",
-		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-		},
-	}
-	err := modbus.Init()
-	require.EqualError(t, err, `configuration invalid: found request section without fields`)
-}
-
-func TestMultipleSlavesOneFail(t *testing.T) {
-	telegraf.Debug = true
-	modbus := Modbus{
-		Name:              "Test",
-		Controller:        "tcp://localhost:1502",
-		Retries:           1,
-		ConfigurationType: "request",
-		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-				},
-			},
-		},
-		{
-			SlaveID:      2,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-				},
-			},
-		},
-		{
-			SlaveID:      3,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-				},
-			},
-		},
-	}
-	require.NoError(t, modbus.Init())
-
-	serv := mbserver.NewServer()
-	require.NoError(t, serv.ListenTCP("localhost:1502"))
-	defer serv.Close()
-
-	serv.RegisterFunctionHandler(3,
-		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
-			tcpframe, ok := frame.(*mbserver.TCPFrame)
-			if !ok {
-				return nil, &mbserver.IllegalFunction
-			}
-
-			if tcpframe.Device == 2 {
-				// Simulate device 2 being unavailable
-				return []byte{}, &mbserver.GatewayTargetDeviceFailedtoRespond
-			}
-			return []byte{0x02, 0x00, 0x42}, &mbserver.Success
-		},
-	)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"modbus",
-			map[string]string{
-				"type":     cHoldingRegisters,
-				"slave_id": "1",
-				"name":     modbus.Name,
-			},
-			map[string]interface{}{"holding-0": int16(0x42)},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"modbus",
-			map[string]string{
-				"type":     cHoldingRegisters,
-				"slave_id": "3",
-				"name":     modbus.Name,
-			},
-			map[string]interface{}{"holding-0": int16(0x42)},
-			time.Unix(0, 0),
-		),
-	}
-
-	var acc testutil.Accumulator
-	require.NoError(t, modbus.Gather(&acc))
-	acc.Wait(len(expected))
-	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
-	require.Len(t, acc.Errors, 1)
-	require.EqualError(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond), function '131'")
-}
-
-func TestCases(t *testing.T) {
-	// Get all directories in testdata
-	folders, err := os.ReadDir("testcases")
-	require.NoError(t, err)
-
-	// Prepare the influx parser for expectations
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-
-	// Compare options
-	options := []cmp.Option{
-		testutil.IgnoreTime(),
-		testutil.SortMetrics(),
-	}
-
-	// Register the plugin
-	inputs.Add("modbus", func() telegraf.Input { return &Modbus{} })
-
-	// Define a function to return the register value as data
-	readFunc := func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
-		data := frame.GetData()
-		register := binary.BigEndian.Uint16(data[0:2])
-		numRegs := binary.BigEndian.Uint16(data[2:4])
-
-		// Add the length in bytes and the register to the returned data
-		buf := make([]byte, 2*numRegs+1)
-		buf[0] = byte(2 * numRegs)
-		switch numRegs {
-		case 1: // 16-bit
-			binary.BigEndian.PutUint16(buf[1:], register)
-		case 2: // 32-bit
-			binary.BigEndian.PutUint32(buf[1:], uint32(register))
-		case 4: // 64-bit
-			binary.BigEndian.PutUint64(buf[1:], uint64(register))
-		}
-		return buf, &mbserver.Success
-	}
-
-	// Setup a Modbus server to test against
-	serv := mbserver.NewServer()
-	serv.RegisterFunctionHandler(mb.FuncCodeReadInputRegisters, readFunc)
-	serv.RegisterFunctionHandler(mb.FuncCodeReadHoldingRegisters, readFunc)
-	require.NoError(t, serv.ListenTCP("localhost:1502"))
-	defer serv.Close()
-
-	// Run the test cases
-	for _, f := range folders {
-		// Only handle folders
-		if !f.IsDir() {
-			continue
-		}
-		testcasePath := filepath.Join("testcases", f.Name())
-		configFilename := filepath.Join(testcasePath, "telegraf.conf")
-		expectedOutputFilename := filepath.Join(testcasePath, "expected.out")
-		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
-		initErrorFilename := filepath.Join(testcasePath, "init.err")
-
-		t.Run(f.Name(), func(t *testing.T) {
-			// Read the expected error for the init call if any
-			var expectedInitError string
-			if _, err := os.Stat(initErrorFilename); err == nil {
-				e, err := testutil.ParseLinesFromFile(initErrorFilename)
-				require.NoError(t, err)
-				require.Len(t, e, 1)
-				expectedInitError = e[0]
-			}
-
-			// Read the expected output if any
-			var expected []telegraf.Metric
-			if _, err := os.Stat(expectedOutputFilename); err == nil {
-				var err error
-				expected, err = testutil.ParseMetricsFromFile(expectedOutputFilename, parser)
-				require.NoError(t, err)
-			}
-
-			// Read the expected error if any
-			var expectedErrors []string
-			if _, err := os.Stat(expectedErrorFilename); err == nil {
-				e, err := testutil.ParseLinesFromFile(expectedErrorFilename)
-				require.NoError(t, err)
-				require.NotEmpty(t, e)
-				expectedErrors = e
-			}
-
-			// Configure the plugin
-			cfg := config.NewConfig()
-			require.NoError(t, cfg.LoadConfig(configFilename))
-			require.Len(t, cfg.Inputs, 1)
-
-			// Extract the plugin and make sure it connects to our dummy
-			// server
-			plugin := cfg.Inputs[0].Input.(*Modbus)
-			plugin.Controller = "tcp://localhost:1502"
-
-			// Init the plugin.
-			err := plugin.Init()
-			if expectedInitError != "" {
-				require.ErrorContains(t, err, expectedInitError)
-				return
-			}
-			require.NoError(t, err)
-
-			// Gather data
-			var acc testutil.Accumulator
-			require.NoError(t, plugin.Gather(&acc))
-			if len(acc.Errors) > 0 {
-				var actualErrorMsgs []string
-				for _, err := range acc.Errors {
-					actualErrorMsgs = append(actualErrorMsgs, err.Error())
-				}
-				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
-			}
-
-			// Check the metric nevertheless as we might get some metrics despite errors.
-			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, expected, actual, options...)
 		})
 	}
 }

@@ -150,14 +150,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##  |                 fill gaps. This usually reduces the number of requests at the
     ##  |                 cost of more requested registers.
     ##  |---max_insert -- Rearrange request keeping the number of extra fields below the value
-    ##                    provided in "max_extra_registers". It is not necessary to define 'omitted'
+    ##                    provided in "optimization_max_register_fill". It is not necessary to define 'omitted'
     ##                    fields as the optimisation will add such field only where needed.
     # optimization = "none"
 
-    ## Max extra register. For the 'max_insert' optimization only. Maximum size by which a request 
-    # can be extended in order to reduce the number of requests. This needs to be
-    # a positive integer lower than the maximum number of fields per query.
-    # max_extra_registers = 50
+    ## Maximum number register the optimizer is allowed to insert between two fields to 
+    save requests.
+    ## This option is only used for the 'max_insert' optimization strategy.
+    ## NOTE: All omitted fields are ignored, so this option denotes the effective hole 
+    size to fill.
+    # optimization_max_register_fill = 50
 
     ## Field definitions
     ## Analog Variables, Input Registers and Holding Registers
@@ -385,41 +387,22 @@ interested in but want to minimize the number of requests sent to the device.
 __Please note:__ This optimization might take long in case of many
 non-consecutive, non-omitted fields!
 
-addresses are filled automatically. This usually reduces the number of
-requests, but will increase the number of registers read due to larger requests.
-This algorithm might be usefull if you only want to specify the fields you are
-interested in but want to minimize the number of requests sent to the device.
-Requests are processed similar to `rearrange` but user-defined gaps in the
-field addresses are filled automatically.
-
-__Please note:__ This optimization might take long in case of many
-non-consecutive, non-ommitted fields!
-
 ##### `max_insert`
 
-With this optimization, user defined omitted fields are ignored, which
-allows composing shorter configuration files in the case of devices with
-many available registers. Every request is built considering the cost of
-adding a new register (including the gap between this one and the previous
-one of the request) compared to the cost of creating a new request.
+Fields are assigned to the same request as long as the hole between the fields
+do not exceed the maximum fill size given in `optimization_max_register_fill`.
+User-defined omitted fields are ignored and interpreted as holes, so the best
+practice is to not manually insert omitted fields for this optimizer. This
+allows to specify only actually used fields and let the optimizer figure out
+the request organization which can dramatically improve query time. The
+trade-off here is between the cost of reading additional registers trashed
+later and the cost of many requests.
 
-__Please note:__ The optimal value for `max_extra_registers` will depend
-on the network and the queried device. It is hence recommended to test
-several values and assess performance in order to find the best value.
-When running telegraf with the `--debug` flag, you can check the number
-of requests and the number of touched registers that your configuration
-results to.
-You can use the following strategy to find the most suitable value of
-`max_extra_registers` for your setup:
-
-1. use the `--test --debug` flags to identify a list of
-`max_extra_registers` values leading to unique number of requests
-2. set the acquisition interval to a very low value (_e.g._ 10ms)
-3. acquire the data for 5min with each value of `max_extra_registers`
-4. check the actually recorded data period, for instance in influx call
-    `SELECT MEAN(dt) FROM (SELECT ELAPSED(<oneSignaName>,1ms) AS dt FROM <MeasurementName>)`
-5. select the `max_extra_registers` that gives the lowest actually
-    recorded data period
+__Please note:__ The optimal value for `optimization_max_register_fill` depends
+on the network and the queried device. It is hence recommended to test several
+values and assess performance in order to find the best value. Use the
+`--test --debug` flags to monitor how may requests are sent and the number of
+touched registers.
 
 #### Field definitions
 

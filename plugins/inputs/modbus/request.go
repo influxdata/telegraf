@@ -136,9 +136,9 @@ func optimitzeGroupWithinLimits(g request, maxBatchSize uint16, maxExtraRegister
 	}
 	for i := 1; i <= len(g.fields)-1; i++ {
 		// Check if we need to interrupt the current chunk and require a new one
-		extraLength := g.fields[i].address + g.fields[i].length - (currentRequest.address + currentRequest.length)
-		needInterrupt := extraLength > maxExtraRegisters                                  // too far appart
-		needInterrupt = needInterrupt || currentRequest.length+extraLength > maxBatchSize // too large
+		holeSize := g.fields[i].address + g.fields[i].length - g.fields[i-1].address
+		needInterrupt := holeSize > maxExtraRegisters                                                     // too far apart
+		needInterrupt = needInterrupt || currentRequest.length+holeSize+g.fields[i].length > maxBatchSize // too large
 		if !needInterrupt {
 			// Still safe to add the field to the current request
 			currentRequest.length = g.fields[i].address + g.fields[i].length - currentRequest.address
@@ -157,7 +157,7 @@ func optimitzeGroupWithinLimits(g request, maxBatchSize uint16, maxExtraRegister
 	return requests
 }
 
-func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16, optimization string, maxTouchedRegisters uint16) []request {
+func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16, optimization string, maxExtraRegisters uint16) []request {
 	if len(fields) == 0 {
 		return nil
 	}
@@ -238,7 +238,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 				total.fields = append(total.fields, g.fields...)
 			}
 		}
-		requests = optimitzeGroupWithinLimits(total, maxBatchSize, maxTouchedRegisters)
+		requests = optimitzeGroupWithinLimits(total, maxBatchSize, maxExtraRegisters)
 	default:
 		// no optimization
 		for _, g := range groups {
