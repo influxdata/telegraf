@@ -316,9 +316,9 @@ func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, def requestDefiniti
 func (c *ConfigurationPerRequest) determineOutputDatatype(input string) (string, error) {
 	// Handle our special types
 	switch input {
-	case "INT16", "INT32", "INT64":
+	case "INT8L", "INT8H", "INT16", "INT32", "INT64":
 		return "INT64", nil
-	case "UINT16", "UINT32", "UINT64":
+	case "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
 		return "UINT64", nil
 	case "FLOAT32", "FLOAT64":
 		return "FLOAT64", nil
@@ -329,6 +329,8 @@ func (c *ConfigurationPerRequest) determineOutputDatatype(input string) (string,
 func (c *ConfigurationPerRequest) determineFieldLength(input string) (uint16, error) {
 	// Handle our special types
 	switch input {
+	case "INT8L", "INT8H", "UINT8L", "UINT8H":
+		return 1, nil
 	case "INT16", "UINT16":
 		return 1, nil
 	case "INT32", "UINT32", "FLOAT32":

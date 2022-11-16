@@ -163,7 +163,9 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
+			case "INT8L", "INT8H", "UINT8L", "UINT8H",
+				"UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64",
+				"FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, registerType, item.Name)
 			}

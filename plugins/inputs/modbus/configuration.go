@@ -31,7 +31,9 @@ func removeDuplicates(elements []uint16) []uint16 {
 
 func normalizeInputDatatype(dataType string) (string, error) {
 	switch dataType {
-	case "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64", "FLOAT32", "FLOAT64":
+	case "INT8L", "INT8H", "UINT8L", "UINT8H",
+		"INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64",
+		"FLOAT32", "FLOAT64":
 		return dataType, nil
 	}
 	return "unknown", fmt.Errorf("unknown input type %q", dataType)
