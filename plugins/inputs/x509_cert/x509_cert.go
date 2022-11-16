@@ -88,7 +88,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 	collectedUrls, err := c.collectCertURLs()
 	if err != nil {
-		acc.AddError(fmt.Errorf("cannot get file: %s", err.Error()))
+		acc.AddError(fmt.Errorf("getting some certificates failed: %w", err))
 	}
 
 	for _, location := range append(c.locations, collectedUrls...) {
@@ -96,7 +96,11 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
-
+		dnsName, err := c.serverName(location)
+		if err != nil {
+			acc.AddError(fmt.Errorf("resolving name of %q failed: %w", location, err))
+			continue
+		}
 		for i, cert := range certs {
 			fields := getFields(cert, now)
 			tags := getTags(cert, location.String())
@@ -107,19 +111,20 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				Intermediates: x509.NewCertPool(),
 				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 				Roots:         c.tlsCfg.RootCAs,
+				DNSName:       dnsName,
 			}
-			if i == 0 {
-				opts.DNSName, err = c.serverName(location)
-				if err != nil {
-					return err
-				}
-				for _, c := range certs[1:] {
+			// Reset DNS name to only use it for the leaf node
+			dnsName = ""
+
+			// Add all returned certs to the pool if intermediates except for
+			// the leaf node and ourself
+			for j, c := range certs[1:] {
+				if i != j {
 					opts.Intermediates.AddCert(c)
 				}
 			}
 
-			_, err = cert.Verify(opts)
-			if err == nil {
+			if _, err := cert.Verify(opts); err == nil {
 				tags["verification"] = "valid"
 				fields["verification_code"] = 0
 			} else {
