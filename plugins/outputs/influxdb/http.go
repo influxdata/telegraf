@@ -59,8 +59,8 @@ type DatabaseNotFoundError struct {
 	Database string
 }
 
-// QueryResponse is the response body from the /query endpoint
-type QueryResponse struct {
+// QueryResponseError is the response body from the /query endpoint
+type QueryResponseError struct {
 	Results []QueryResult `json:"results"`
 }
 
@@ -68,19 +68,19 @@ type QueryResult struct {
 	Err string `json:"error,omitempty"`
 }
 
-func (r QueryResponse) Error() string {
+func (r QueryResponseError) Error() string {
 	if len(r.Results) > 0 {
 		return r.Results[0].Err
 	}
 	return ""
 }
 
-// WriteResponse is the response body from the /write endpoint
-type WriteResponse struct {
+// WriteResponseError is the response body from the /write endpoint
+type WriteResponseError struct {
 	Err string `json:"error,omitempty"`
 }
 
-func (r WriteResponse) Error() string {
+func (r WriteResponseError) Error() string {
 	return r.Err
 }
 
@@ -229,7 +229,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 		}
 	}
 
-	queryResp := &QueryResponse{}
+	queryResp := &QueryResponseError{}
 	dec := json.NewDecoder(body)
 	err = dec.Decode(queryResp)
 
@@ -365,7 +365,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 		}
 	}
 
-	writeResp := &WriteResponse{}
+	writeResp := &WriteResponseError{}
 	dec := json.NewDecoder(body)
 
 	var desc string
