@@ -317,7 +317,7 @@ func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...inge
 	return &ingest.Result{}, nil
 }
 
-func (f *fakeIngestor) FromFile(ctx context.Context, fPath string, options ...ingest.FileOption) (*ingest.Result, error) {
+func (f *fakeIngestor) FromFile(_ context.Context, _ string, options ...ingest.FileOption) (*ingest.Result, error) {
 	return &ingest.Result{}, nil
 }
 
