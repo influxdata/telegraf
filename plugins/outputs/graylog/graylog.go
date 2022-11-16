@@ -354,7 +354,7 @@ func (g *Graylog) Connect() error {
 	unconnected, gelfs := g.connectEndpoints(g.Servers, tlsCfg)
 	if len(unconnected) > 0 {
 		servers := strings.Join(unconnected, ",")
-		return fmt.Errorf("connect: connection refused for %s", servers)
+		return fmt.Errorf("connect: connection failed for %s", servers)
 	}
 	var writers []io.Writer
 	var closers []io.WriteCloser
