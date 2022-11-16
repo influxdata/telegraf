@@ -411,8 +411,8 @@ func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
 }
 
 func (g *Graylog) connectEndpoints(servers []string, tlsCfg *tls.Config) ([]string, []gelf) {
-	var writers []gelf
-	var unconnected []string
+	writers := make([]gelf, 0, len(servers))
+	unconnected := make([]string, 0, len(servers))
 	dialer := &net.Dialer{Timeout: time.Duration(g.Timeout)}
 	for _, server := range servers {
 		w := newGelfWriter(gelfConfig{Endpoint: server}, dialer, tlsCfg)
