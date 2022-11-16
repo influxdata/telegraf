@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package azure_monitor
 
 import (
+	_ "embed"
 	"fmt"
 	"sync"
 
@@ -47,75 +49,8 @@ type azureClientsCreator interface {
 	createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string) (*receiver.AzureClients, error)
 }
 
-const sampleConfig = `
-  # can be found under Overview->Essentials in the Azure portal for your application/service
-  subscription_id = "<<SUBSCRIPTION_ID>>"
-  # can be obtained by registering an application under Azure Active Directory
-  client_id = "<<CLIENT_ID>>"
-  # can be obtained by registering an application under Azure Active Directory
-  client_secret = "<<CLIENT_SECRET>>"
-  # can be found under Azure Active Directory->Properties
-  tenant_id = "<<TENANT_ID>>"
-
-  # resource target #1 to collect metrics of
-  [[inputs.azure_monitor.resource_target]]
-    # can be found undet Overview->Essentials->JSON View in the Azure portal for your application/service
-    # must start with 'resourceGroups/...' ('/subscriptions/xxxxxxxx-xxxx-xxxx-xxx-xxxxxxxxxxxx'
-    # must be removed from the beginning of Resource ID property value)
-    resource_id = "<<RESOURCE_ID>>"
-    # the metric names to collect
-    # leave the array empty to use all metrics available to this resource
-    metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-    # metrics aggregation type value to collect
-    # can be 'Total', 'Count', 'Average', 'Minimum', 'Maximum'
-    # leave the array empty to collect all aggregation types values for each metric
-    aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-
-  # resource target #2 to collect metrics of
-  [[inputs.azure_monitor.resource_target]]
-    resource_id = "<<RESOURCE_ID>>"
-    metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-    aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-
-  # resource group target #1 to collect metrics of resources under it with resource type
-  [[inputs.azure_monitor.resource_group_target]]
-    # the resource group name
-    resource_group = "<<RESOURCE_GROUP_NAME>>"
-
-    # defines the resources to collect metrics from
-    [[inputs.azure_monitor.resource_group_target.resource]]
-      # the resource type
-      resource_type = "<<RESOURCE_TYPE>>"
-      metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-      aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-
-    # defines the resources to collect metrics from
-    [[inputs.azure_monitor.resource_group_target.resource]]
-      resource_type = "<<RESOURCE_TYPE>>"
-      metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-      aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-
-  # resource group target #2 to collect metrics of resources under it with resource type
-  [[inputs.azure_monitor.resource_group_target]]
-    resource_group = "<<RESOURCE_GROUP_NAME>>"
-
-    [[inputs.azure_monitor.resource_group_target.resource]]
-      resource_type = "<<RESOURCE_TYPE>>"
-      metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-      aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-
-  # subscription target #1 to collect metrics of resources under it with resource type
-  [[inputs.azure_monitor.subscription_target]]
-    resource_type = "<<RESOURCE_TYPE>>"
-    metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-    aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-
-  # subscription target #2 to collect metrics of resources under it with resource type
-  [[inputs.azure_monitor.subscription_target]]
-    resource_type = "<<RESOURCE_TYPE>>"
-    metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-    aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
-`
+//go:embed sample.conf
+var sampleConfig string
 
 func (am *AzureMonitor) Description() string {
 	return "Gather Azure resources metrics using Azure Monitor API"
