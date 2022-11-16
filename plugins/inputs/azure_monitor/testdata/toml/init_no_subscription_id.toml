@@ -1,0 +1,8 @@
+client_id = "clientID"
+client_secret = "clientSecret"
+tenant_id = "tenantID"
+
+  [[resource_target]]
+    resource_id = "resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1"
+    metrics = []
+    aggregations = []

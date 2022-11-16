@@ -1,0 +1,12 @@
+subscription_id = "subscriptionID"
+client_id = "clientID"
+client_secret = "clientSecret"
+tenant_id = "tenantID"
+
+  [[resource_group_target]]
+    resource_group = "invalid"
+
+    [[resource_group_target.resource]]
+      resource_type = "Microsoft.Test/type1"
+      metrics = ["metric1", "metric2", "metric3"]
+      aggregations = ["Total", "Average"]
