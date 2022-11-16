@@ -961,7 +961,6 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			}
 			start, ok := e.hwMarks.Get(obj.ref.Value, metricName)
 			if !ok {
-				e.log.Debugf("Cache miss for metric %s, %s", obj.ref.Value, metricName)
 				start = latest.Add(time.Duration(-res.sampling) * time.Second * (time.Duration(e.Parent.MetricLookback) - 1))
 			}
 
@@ -1123,12 +1122,6 @@ func (e *Endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, int
 		}
 		ts := info[idx].Timestamp
 		roundedTs := ts.Truncate(interval)
-		if roundedTs != ts {
-			e.log.Debugf("Rounding took place: %s -> %s", ts, roundedTs)
-		}
-		//if roundedTs != ts {
-		//	e.log.Debugf("Sample index: %d, Original: %s, truncated: %s", idx, ts, roundedTs)
-		//}
 
 		// Are we still working on the same bucket?
 		if roundedTs == lastBucket {
@@ -1242,7 +1235,6 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resour
 
 				// Update hiwater marks
 				adjTs := ts.Add(interval).Truncate(interval).Add(-time.Second)
-				e.log.Debugf("Storing hwmark: %s, %s, Raw: %s, Adjusted: %s", moid, name, ts, adjTs)
 				e.hwMarks.Put(moid, name, adjTs) // Add a second so avoid seeing same sample again
 			}
 			if nValues == 0 {
