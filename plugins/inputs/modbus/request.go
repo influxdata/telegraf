@@ -136,7 +136,7 @@ func optimitzeGroupWithinLimits(g request, maxBatchSize uint16, maxExtraRegister
 	}
 	for i := 1; i <= len(g.fields)-1; i++ {
 		// Check if we need to interrupt the current chunk and require a new one
-		holeSize := g.fields[i].address + g.fields[i].length - g.fields[i-1].address
+		holeSize := g.fields[i].address - (g.fields[i-1].address + g.fields[i-1].length)
 		needInterrupt := holeSize > maxExtraRegisters                                                     // too far apart
 		needInterrupt = needInterrupt || currentRequest.length+holeSize+g.fields[i].length > maxBatchSize // too large
 		if !needInterrupt {
