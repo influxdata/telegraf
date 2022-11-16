@@ -81,12 +81,6 @@ linters-settings:
     # Report pre-allocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
     # Default: true
     simple: false
-    # Report pre-allocation suggestions on range loops.
-    # Default: true
-    range-loops: true
-    # Report pre-allocation suggestions on for loops.
-    # Default: false
-    for-loops: false
   revive:
     rules:
       - name: argument-limit
