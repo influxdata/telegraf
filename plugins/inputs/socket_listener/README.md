@@ -98,7 +98,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The value is case-insensitive and can be specifed with "0x" or "x" prefix
   ## or withou.
   ## Note: This setting is only used for splitting_strategy = "delimiter".
-  # slitting_delimiter = ""
+  # splitting_delimiter = ""
 
   ## Fixed length of a message in bytes.
   ## Note: This setting is only used for splitting_strategy = "fixed length".
