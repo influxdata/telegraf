@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-    
+
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -57,7 +57,7 @@ type Prometheus struct {
 	// Basic authentication credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	
+
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
 	ResponseTimeout config.Duration `toml:"response_timeout"`
@@ -298,11 +298,11 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
 	} else if p.Username != "" || p.Password != "" {
 		req.SetBasicAuth(p.Username, p.Password)
-	} 
-	
+	}
+
 	if p.HTTPHeaders != nil {
 		for key, value := range p.HTTPHeaders {
- 		    req.Header.Add(key, value)                  
+			req.Header.Add(key, value)
 		}
 	}
 
