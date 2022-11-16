@@ -3,9 +3,7 @@
 This plugin gather queues, topics & subscribers metrics using ActiveMQ Console
 API.
 
-
-# fake bad change
-dfdfd
+## Configuration
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
