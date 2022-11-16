@@ -243,6 +243,7 @@ func (client *RedisSentinelClient) gatherMasterStats(acc telegraf.Accumulator) (
 		if !ok {
 			return masterNames, fmt.Errorf("unable to resolve master name")
 		}
+		masterNames = append(masterNames, masterName)
 
 		quorumCmd := redis.NewStringCmd("sentinel", "ckquorum", masterName)
 		quorumErr := client.sentinel.Process(quorumCmd)
