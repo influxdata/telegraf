@@ -29,16 +29,17 @@ in Prometheus format.
   ## Kubernetes config file to create client from.
   # kube_config = "/path/to/kubernetes.config"
 
-  ## Explicit scrape configuration for pods matched by label, field and namespace selectors
-  # Values can't be overridden by the `prometheus.io/` pod annotations. Not specified or
-  # enabled = false, then scraping config is entirely governed by pod annotations.
+  ## Explicit scrape configuration for pods matched by label, field and
+  ## namespace selectors. Values cannot be overridden by the `prometheus.io/`
+  ## pod annotations. Not specified or enabled = false, then scraping config is
+  ## entirely governed by pod annotations.
 
   ## Scrape Method
-  ## annotations: default, looks for specific pod annotations documented below.
+  ## annotations: default, looks for specific pod annotations documented below
   ## settings: only look for pods matching the settings provided, not
   ##   annotations
   ## settings+annotations: looks at pods that match annotations using the user
-  ##   defined settings.
+  ##   defined settings
   # monitor_kubernetes_pods_method = "annotations"
 
   ## Scrape 'annotations' method notes
@@ -47,9 +48,9 @@ in Prometheus format.
   ## - prometheus.io/scrape: Required to enable scraping for this pod. Can also
   ##     use 'prometheus.io/scrape=false' annotation to opt-out entirely.
   ## - prometheus.io/scheme: If the metrics endpoint is secured then you will
-  ##     need to set this to 'https' & most likely set the tls config.
+  ##     need to set this to 'https' & most likely set the tls config
   ## - prometheus.io/path: If the metrics path is not /metrics, define it with
-  ##     this annotation.
+  ##     this annotation
   ## - prometheus.io/port: If port is not 9102 use this annotation
 
   ## Scrape 'settings' method options
