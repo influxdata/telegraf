@@ -28,7 +28,6 @@ func (h *hddtemp) Fetch(address string) ([]Disk, error) {
 		err    error
 		conn   net.Conn
 		buffer bytes.Buffer
-		disks  []Disk
 	)
 
 	if conn, err = net.Dial("tcp", address); err != nil {
@@ -41,7 +40,9 @@ func (h *hddtemp) Fetch(address string) ([]Disk, error) {
 
 	fields := strings.Split(buffer.String(), "|")
 
-	for index := 0; index < len(fields)/5; index++ {
+	size := len(fields) / 5
+	disks := make([]Disk, 0, size)
+	for index := 0; index < size; index++ {
 		status := ""
 		offset := index * 5
 		device := fields[offset+1]

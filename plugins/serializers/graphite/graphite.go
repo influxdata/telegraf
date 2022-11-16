@@ -205,9 +205,8 @@ func SerializeBucketName(
 }
 
 func InitGraphiteTemplates(templates []string) ([]*GraphiteTemplate, string, error) {
-	var graphiteTemplates []*GraphiteTemplate
 	defaultTemplate := ""
-
+	graphiteTemplates := make([]*GraphiteTemplate, 0, len(templates))
 	for i, t := range templates {
 		parts := strings.Fields(t)
 
@@ -299,7 +298,7 @@ func InsertField(bucket, fieldName string) string {
 }
 
 func buildTags(tags map[string]string) string {
-	var keys []string
+	keys := make([]string, 0, len(tags))
 	for k := range tags {
 		keys = append(keys, k)
 	}

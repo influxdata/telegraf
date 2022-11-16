@@ -2172,7 +2172,7 @@ func TestStreamMachine(t *testing.T) {
 		err     error
 	}
 
-	var tc []testcase
+	tc := make([]testcase, 0, len(tests))
 	for _, tt := range tests {
 		tc = append(tc, testcase{
 			name:    tt.name,
@@ -2211,7 +2211,7 @@ func TestStreamMachinePosition(t *testing.T) {
 		column int
 	}
 
-	var tc []testcase
+	tc := make([]testcase, 0, len(positionTests))
 	for _, tt := range positionTests {
 		tc = append(tc, testcase{
 			name:   tt.name,

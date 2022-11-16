@@ -18,6 +18,7 @@ linters:
     - lll
     - nakedret
     - nilerr
+    - prealloc
     - predeclared
     - revive
     - sqlclosecheck
@@ -76,6 +77,16 @@ linters-settings:
     # Tab width in spaces.
     # Default: 1
     tab-width: 4
+  prealloc:
+    # Report pre-allocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
+    # Default: true
+    simple: false
+    # Report pre-allocation suggestions on range loops.
+    # Default: true
+    range-loops: true
+    # Report pre-allocation suggestions on for loops.
+    # Default: false
+    for-loops: false
   revive:
     rules:
       - name: argument-limit

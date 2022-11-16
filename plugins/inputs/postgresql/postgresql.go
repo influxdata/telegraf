@@ -105,7 +105,6 @@ type scanner interface {
 }
 
 func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []string) error {
-	var columnVars []interface{}
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
@@ -115,6 +114,7 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []str
 		columnMap[column] = new(interface{})
 	}
 
+	columnVars := make([]interface{}, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])

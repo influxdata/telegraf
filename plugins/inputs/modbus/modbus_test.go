@@ -2209,8 +2209,7 @@ func generateRequestDefinitions(ranges []rangeDefinition) []requestFieldDefiniti
 }
 
 func generateExpectation(defs []requestExpectation) []request {
-	var requests []request
-
+	requests := make([]request, 0, len(defs))
 	for _, def := range defs {
 		r := def.req
 		r.fields = make([]field, 0)

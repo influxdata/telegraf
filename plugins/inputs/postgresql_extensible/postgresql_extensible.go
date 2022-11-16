@@ -170,7 +170,6 @@ type scanner interface {
 func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulator, columns []string) error {
 	var (
 		err        error
-		columnVars []interface{}
 		dbname     bytes.Buffer
 		tagAddress string
 		timestamp  time.Time
@@ -183,6 +182,7 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 		columnMap[column] = new(interface{})
 	}
 
+	columnVars := make([]interface{}, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])

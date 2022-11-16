@@ -31,6 +31,7 @@ import (
 	"os"
 
 	"github.com/apache/thrift/lib/go/thrift"
+
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift/gen-go/zipkincore"
 )
 
@@ -122,31 +123,27 @@ func jsonToZipkinThrift(jsonRaw []byte) ([]byte, error) {
 func thriftToJSONSpans(thriftData []byte) ([]byte, error) {
 	buffer := thrift.NewTMemoryBuffer()
 	if _, err := buffer.Write(thriftData); err != nil {
-		err = fmt.Errorf("error in buffer write: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("error in buffer write: %w", err)
 	}
 
 	transport := thrift.NewTBinaryProtocolConf(buffer, nil)
 	_, size, err := transport.ReadListBegin(context.Background())
 	if err != nil {
-		err = fmt.Errorf("error in ReadListBegin: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("error in ReadListBegin: %w", err)
 	}
 
-	var spans []*zipkincore.Span
+	spans := make([]*zipkincore.Span, 0, size)
 	for i := 0; i < size; i++ {
 		zs := &zipkincore.Span{}
 		if err = zs.Read(context.Background(), transport); err != nil {
-			err = fmt.Errorf("Error reading into zipkin struct: %v", err)
-			return nil, err
+			return nil, fmt.Errorf("error reading into zipkin struct: %w", err)
 		}
 		spans = append(spans, zs)
 	}
 
 	err = transport.ReadListEnd(context.Background())
 	if err != nil {
-		err = fmt.Errorf("error ending thrift read: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("error ending thrift read: %w", err)
 	}
 
 	out, _ := json.MarshalIndent(spans, "", "    ")

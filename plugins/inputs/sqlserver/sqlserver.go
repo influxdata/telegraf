@@ -325,7 +325,6 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 }
 
 func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) error {
-	var columnVars []interface{}
 	var fields = make(map[string]interface{})
 
 	// store the column name with its *interface{}
@@ -333,6 +332,8 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 	for _, column := range query.OrderedColumns {
 		columnMap[column] = new(interface{})
 	}
+
+	columnVars := make([]interface{}, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[query.OrderedColumns[i]])

@@ -138,7 +138,6 @@ type scanner interface {
 
 func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 	map[string]*interface{}, error) {
-	var columnVars []interface{}
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
@@ -148,6 +147,7 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 		columnMap[column] = new(interface{})
 	}
 
+	columnVars := make([]interface{}, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])
