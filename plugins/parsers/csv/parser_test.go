@@ -243,7 +243,7 @@ func TestNullDelimiter(t *testing.T) {
 func TestDelimiterConfiguration(t *testing.T) {
 	p := &Parser{
 		HeaderRowCount:        0,
-		Delimiter:			   "%",
+		Delimiter:             "%",
 		ForceReplaceDelimiter: "\u0000",
 		ColumnNames:           []string{"first", "second", "third"},
 		TimeFunc:              DefaultTime,
