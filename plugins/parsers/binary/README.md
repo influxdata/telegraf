@@ -18,10 +18,13 @@ user-specified configurations.
   ## Do not error-out if none of the filter expressions below matches.
   # allow_no_match = false
 
-  ## Specify the endianess of the data.
+  ## Specify the endianness of the data.
   ## Available values are "be" (big-endian), "le" (little-endian) and "host",
-  ## where "host" means the same endianess as the machine running Telegraf.
+  ## where "host" means the same endianness as the machine running Telegraf.
   # endianess = "host"
+
+  ## Interpret input as string containing hex-encoded data.
+  # hex_encoding = false
 
   ## Multiple parsing sections are allowed
   [[inputs.file.binary]]
@@ -30,7 +33,7 @@ user-specified configurations.
 
     ## Definition of the message format and the extracted data.
     ## Please note that you need to define all elements of the data in the
-    ## correct order with the correct length as the data is parsed in the order 
+    ## correct order with the correct length as the data is parsed in the order
     ## given.
     ## An entry can have the following properties:
     ##  name        --  Name of the element (e.g. field or tag). Can be omitted
@@ -59,7 +62,7 @@ user-specified configurations.
       { name = "address", type = "uint16", assignment = "tag" },
       { name = "value",   type = "float64" },
       { type = "unix", assignment = "time" },
-    ]   
+    ]
 
     ## Optional: Filter evaluated before applying the configuration.
     ## This option can be used to mange multiple configuration specific for
@@ -101,13 +104,19 @@ By specifying `allow_no_match` you allow the parser to silently ignore data
 that does not match _any_ given configuration filter. This can be useful if
 you only want to collect a subset of the available messages.
 
-#### `endianess` (optional)
+#### `endianness` (optional)
 
-This specifies the endianess of the data. If not specified, the parser will
-fallback to the "host" endianess, assuming that the message and Telegraf
-machine share the same endianess.
+This specifies the endianness of the data. If not specified, the parser will
+fallback to the "host" endianness, assuming that the message and Telegraf
+machine share the same endianness.
 Alternatively, you can explicitly specify big-endian format (`"be"`) or
 little-endian format (`"le"`).
+
+#### `hex_encoding` (optional)
+
+If `true`, the input data is interpreted as a string containing hex-encoded
+data like `C0 C7 21 A9`. The value is _case insensitive_ and can handle spaces,
+however prefixes like `0x` or `x` are _not_ allowed.
 
 ### Non-byte aligned value extraction
 
