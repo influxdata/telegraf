@@ -237,9 +237,9 @@ func (fc *FileCount) onlyDirectories(directories []string) []string {
 }
 
 func (fc *FileCount) getDirs() []string {
-	dirs := make([]string, len(fc.Directories))
-	for i, dir := range fc.Directories {
-		dirs[i] = filepath.Clean(dir)
+	dirs := make([]string, 0, len(fc.Directories)+1)
+	for _, dir := range fc.Directories {
+		dirs = append(dirs, filepath.Clean(dir))
 	}
 
 	if fc.Directory != "" {

@@ -102,9 +102,8 @@ func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
 		return nil, err
 	}
 
-	out := make([]byte, s.buf.Len())
-	copy(out, s.buf.Bytes())
-	return out, nil
+	out := make([]byte, 0, s.buf.Len())
+	return append(out, s.buf.Bytes()...), nil
 }
 
 // SerializeBatch writes the slice of metrics and returns a byte slice of the
@@ -120,9 +119,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			return nil, err
 		}
 	}
-	out := make([]byte, s.buf.Len())
-	copy(out, s.buf.Bytes())
-	return out, nil
+	out := make([]byte, 0, s.buf.Len())
+	return append(out, s.buf.Bytes()...), nil
 }
 func (s *Serializer) Write(w io.Writer, m telegraf.Metric) error {
 	return s.writeMetric(w, m)

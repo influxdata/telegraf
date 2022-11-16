@@ -486,8 +486,8 @@ func splitLastPathElement(query string) []string {
 		base = "/"
 	}
 
-	elements := make([]string, 1)
-	elements[0] = base
+	elements := make([]string, 0, 3)
+	elements = append(elements, base)
 
 	offset := seperatorIdx
 	if i := strings.Index(query[offset:], "::"); i >= 0 {

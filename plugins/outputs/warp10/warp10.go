@@ -151,16 +151,13 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 }
 
 func buildTags(tags []*telegraf.Tag) []string {
-	tagsString := make([]string, len(tags)+1)
-	indexSource := 0
-	for index, tag := range tags {
+	tagsString := make([]string, 0, len(tags)+1)
+	for _, tag := range tags {
 		key := url.QueryEscape(tag.Key)
 		value := url.QueryEscape(tag.Value)
-		tagsString[index] = fmt.Sprintf("%s=%s", key, value)
-		indexSource = index
+		tagsString = append(tagsString, fmt.Sprintf("%s=%s", key, value))
 	}
-	indexSource++
-	tagsString[indexSource] = "source=telegraf"
+	tagsString = append(tagsString, "source=telegraf")
 	sort.Strings(tagsString)
 	return tagsString
 }

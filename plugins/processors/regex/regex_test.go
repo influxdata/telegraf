@@ -273,9 +273,9 @@ func TestMetricNameConversions(t *testing.T) {
 
 	for _, test := range tests {
 		// Copy the inputs as they will be modified by the processor
-		input := make([]telegraf.Metric, len(inputTemplate))
-		for i, m := range inputTemplate {
-			input[i] = m.Copy()
+		input := make([]telegraf.Metric, 0, len(inputTemplate))
+		for _, m := range inputTemplate {
+			input = append(input, m.Copy())
 		}
 
 		t.Run(test.name, func(t *testing.T) {
@@ -483,9 +483,9 @@ func TestFieldRenameConversions(t *testing.T) {
 
 	for _, test := range tests {
 		// Copy the inputs as they will be modified by the processor
-		input := make([]telegraf.Metric, len(inputTemplate))
-		for i, m := range inputTemplate {
-			input[i] = m.Copy()
+		input := make([]telegraf.Metric, 0, len(inputTemplate))
+		for _, m := range inputTemplate {
+			input = append(input, m.Copy())
 		}
 
 		t.Run(test.name, func(t *testing.T) {
@@ -691,9 +691,9 @@ func TestTagRenameConversions(t *testing.T) {
 
 	for _, test := range tests {
 		// Copy the inputs as they will be modified by the processor
-		input := make([]telegraf.Metric, len(inputTemplate))
-		for i, m := range inputTemplate {
-			input[i] = m.Copy()
+		input := make([]telegraf.Metric, 0, len(inputTemplate))
+		for _, m := range inputTemplate {
+			input = append(input, m.Copy())
 		}
 
 		t.Run(test.name, func(t *testing.T) {

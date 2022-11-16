@@ -79,8 +79,7 @@ func RegisterTiming(measurement, field string, tags map[string]string) Stat {
 func Metrics() []telegraf.Metric {
 	registry.mu.Lock()
 	now := time.Now()
-	metrics := make([]telegraf.Metric, len(registry.stats))
-	i := 0
+	metrics := make([]telegraf.Metric, 0, len(registry.stats))
 	for _, stats := range registry.stats {
 		if len(stats) > 0 {
 			var tags map[string]string
@@ -96,8 +95,7 @@ func Metrics() []telegraf.Metric {
 				j++
 			}
 			m := metric.New(name, tags, fields, now)
-			metrics[i] = m
-			i++
+			metrics = append(metrics, m)
 		}
 	}
 	registry.mu.Unlock()
@@ -179,11 +177,9 @@ func key(measurement string, tags map[string]string) uint64 {
 	h := fnv.New64a()
 	h.Write([]byte(measurement)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
 
-	tmp := make([]string, len(tags))
-	i := 0
+	tmp := make([]string, 0, len(tags))
 	for k, v := range tags {
-		tmp[i] = k + v
-		i++
+		tmp = append(tmp, k+v)
 	}
 	sort.Strings(tmp)
 
