@@ -484,7 +484,10 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 
 			if len(target.Metrics) == 1 {
 				require.Equal(t, []string{"metric3"}, target.Metrics)
-				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}, target.Aggregations)
+				require.Equal(t, []string{
+					string(armmonitor.AggregationTypeEnumTotal),
+					string(armmonitor.AggregationTypeEnumAverage),
+				}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
 				require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
@@ -492,15 +495,33 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 			}
 			if len(target.Metrics) == 3 {
 				require.Equal(t, []string{"metric2", "metric2", "metric2"}, target.Metrics)
-				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{
+					string(armmonitor.AggregationTypeEnumAverage),
+					string(armmonitor.AggregationTypeEnumCount),
+					string(armmonitor.AggregationTypeEnumMaximum),
+					string(armmonitor.AggregationTypeEnumMinimum),
+					string(armmonitor.AggregationTypeEnumTotal),
+				}, target.Aggregations)
 			}
 			if len(target.Metrics) == 4 {
 				require.Equal(t, []string{"metric3", "metric3", "metric3", "metric3"}, target.Metrics)
-				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{
+					string(armmonitor.AggregationTypeEnumAverage),
+					string(armmonitor.AggregationTypeEnumCount),
+					string(armmonitor.AggregationTypeEnumMaximum),
+					string(armmonitor.AggregationTypeEnumMinimum),
+					string(armmonitor.AggregationTypeEnumTotal),
+				}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
 				require.Equal(t, expectedResourceMetrics, target.Metrics)
-				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{
+					string(armmonitor.AggregationTypeEnumAverage),
+					string(armmonitor.AggregationTypeEnumCount),
+					string(armmonitor.AggregationTypeEnumMaximum),
+					string(armmonitor.AggregationTypeEnumMinimum),
+					string(armmonitor.AggregationTypeEnumTotal),
+				}, target.Aggregations)
 			}
 		}
 		if target.ResourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
@@ -508,7 +529,13 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 
 			if len(target.Metrics) == 1 {
 				require.Equal(t, []string{"metric2"}, target.Metrics)
-				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{
+					string(armmonitor.AggregationTypeEnumAverage),
+					string(armmonitor.AggregationTypeEnumCount),
+					string(armmonitor.AggregationTypeEnumMaximum),
+					string(armmonitor.AggregationTypeEnumMinimum),
+					string(armmonitor.AggregationTypeEnumTotal),
+				}, target.Aggregations)
 			}
 			if len(target.Metrics) == 2 {
 				require.Contains(t, []int{1, 5}, len(target.Aggregations))
@@ -519,7 +546,13 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 				}
 				if len(target.Aggregations) == 5 {
 					require.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
-					require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+					require.Equal(t, []string{
+						string(armmonitor.AggregationTypeEnumAverage),
+						string(armmonitor.AggregationTypeEnumCount),
+						string(armmonitor.AggregationTypeEnumMaximum),
+						string(armmonitor.AggregationTypeEnumMinimum),
+						string(armmonitor.AggregationTypeEnumTotal),
+					}, target.Aggregations)
 				}
 			}
 		}
@@ -532,11 +565,23 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 			}
 			if len(target.Metrics) == 7 {
 				require.Equal(t, []string{"metric2", "metric2", "metric2", "metric3", "metric3", "metric3", "metric3"}, target.Metrics)
-				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{
+					string(armmonitor.AggregationTypeEnumAverage),
+					string(armmonitor.AggregationTypeEnumCount),
+					string(armmonitor.AggregationTypeEnumMaximum),
+					string(armmonitor.AggregationTypeEnumMinimum),
+					string(armmonitor.AggregationTypeEnumTotal),
+				}, target.Aggregations)
 			}
 			if len(target.Metrics) == receiver.MaxMetricsPerRequest {
 				require.Equal(t, expectedResourceMetrics, target.Metrics)
-				require.Equal(t, []string{string(armmonitor.AggregationTypeEnumAverage), string(armmonitor.AggregationTypeEnumCount), string(armmonitor.AggregationTypeEnumMaximum), string(armmonitor.AggregationTypeEnumMinimum), string(armmonitor.AggregationTypeEnumTotal)}, target.Aggregations)
+				require.Equal(t, []string{
+					string(armmonitor.AggregationTypeEnumAverage),
+					string(armmonitor.AggregationTypeEnumCount),
+					string(armmonitor.AggregationTypeEnumMaximum),
+					string(armmonitor.AggregationTypeEnumMinimum),
+					string(armmonitor.AggregationTypeEnumTotal),
+				}, target.Aggregations)
 			}
 		}
 	}
