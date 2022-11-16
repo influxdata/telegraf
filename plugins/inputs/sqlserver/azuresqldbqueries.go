@@ -233,7 +233,7 @@ SELECT
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE CAST(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)
 	END AS [total_storage_mb]
-	,(SELECT SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT) / 128) FROM sys.database_files WHERE type_desc = 'ROWS') AS used_space_data_mb
+	,(SELECT SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT) / 128) FROM sys.database_files WHERE type_desc = 'ROWS') AS used_storage_mb
 	,CASE
 		WHEN slo.[edition] = 'Hyperscale' then NULL
 		ELSE (
