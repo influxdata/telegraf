@@ -36,6 +36,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   example: server_name = "myhost.example.org"
   # server_name = "myhost.example.org"
 
+  ## Only output the leaf certificates and omit the root ones.
+  # exclude_root_certs = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
