@@ -10,27 +10,45 @@ import (
 	jsonata "github.com/blues/jsonata-go"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 )
+
+type FormatConfig struct {
+	TimestampUnits      time.Duration
+	TimestampFormat     string
+	Transformation      string
+	NestedFieldsInclude []string
+	NestedFieldsExclude []string
+}
 
 type Serializer struct {
 	TimestampUnits  time.Duration
 	TimestampFormat string
 
 	transformation *jsonata.Expr
+	nestedfields   filter.Filter
 }
 
-func NewSerializer(timestampUnits time.Duration, timestampFormat, transform string) (*Serializer, error) {
+func NewSerializer(cfg FormatConfig) (*Serializer, error) {
 	s := &Serializer{
-		TimestampUnits:  truncateDuration(timestampUnits),
-		TimestampFormat: timestampFormat,
+		TimestampUnits:  truncateDuration(cfg.TimestampUnits),
+		TimestampFormat: cfg.TimestampFormat,
 	}
 
-	if transform != "" {
-		e, err := jsonata.Compile(transform)
+	if cfg.Transformation != "" {
+		e, err := jsonata.Compile(cfg.Transformation)
 		if err != nil {
 			return nil, err
 		}
 		s.transformation = e
+	}
+
+	if len(cfg.NestedFieldsInclude) > 0 || len(cfg.NestedFieldsExclude) > 0 {
+		f, err := filter.NewIncludeExcludeFilter(cfg.NestedFieldsInclude, cfg.NestedFieldsExclude)
+		if err != nil {
+			return nil, err
+		}
+		s.nestedfields = f
 	}
 
 	return s, nil
@@ -99,13 +117,27 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{}
 
 	fields := make(map[string]interface{}, len(metric.FieldList()))
 	for _, field := range metric.FieldList() {
-		if fv, ok := field.Value.(float64); ok {
+		val := field.Value
+		switch fv := field.Value.(type) {
+		case float64:
 			// JSON does not support these special values
 			if math.IsNaN(fv) || math.IsInf(fv, 0) {
 				continue
 			}
+		case string:
+			// Check for nested fields if any
+			if s.nestedfields != nil && s.nestedfields.Match(field.Key) {
+				bv := []byte(fv)
+				if json.Valid(bv) {
+					var nested interface{}
+					if err := json.Unmarshal(bv, &nested); err == nil {
+						val = nested
+					}
+				}
+			}
+
 		}
-		fields[field.Key] = field.Value
+		fields[field.Key] = val
 	}
 	m["fields"] = fields
 
