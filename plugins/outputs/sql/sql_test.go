@@ -42,7 +42,7 @@ func pwgen(n int) string {
 
 	nchars := len(charset)
 	buffer := make([]byte, 0, n)
-	for range n {
+	for i := 0; i < n; i++ {
 		buffer = append(buffer, charset[rand.Intn(nchars)])
 	}
 
