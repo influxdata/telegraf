@@ -135,7 +135,6 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{}
 					}
 				}
 			}
-
 		}
 		fields[field.Key] = val
 	}
