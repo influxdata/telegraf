@@ -26,20 +26,23 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Socket permissions for the receive socket.
   # socket_mode = "0666"
 
-  ## The version of the powerdns control protocol to use. You will have to
+  ## The version of the PowerDNS control protocol to use. You will have to
   ## change this based on your PowerDNS Recursor version, see below:
-  ## PowerDNS <4.5.0 => Protocol Version 1
-  ## PowerDNS 4.5.0 - 4.5.9 => Protocol Version 2
-  ## PowerDNS >=4.6.0 => Protocol Version 3
+  ## Version 1: PowerDNS <4.5.0
+  ## Version 2: PowerDNS 4.5.0 - 4.5.11
+  ## Version 3: PowerDNS >=4.6.0
   ## By default this is set to 1.
   # control_protocol_version = 1
 ```
 
 ### Newer PowerDNS Recursor versions
 
-The control protocol was updated in PowerDNS Recursor 4.5.0. If you're using
-version 4.5.0 and newer you need to set `new_control_protocol` to `true` in
-your config. If you don't, you will get an `i/o timeout` error.
+By default, this plugin is compatible with PowerDNS Recursor versions older
+than `4.5.0`. If you are using a newer version then you'll need to adjust the
+`control_protocol_version` configuration option based on your version. For 
+versions between `4.5.0` and `4.5.11` set it to `2` and for versions `4.6.0` 
+and newer set it to `3`. If you don't, you will get an `i/o timeout` or a 
+`protocol wrong type for socket` error.
 
 ### Permissions
 
