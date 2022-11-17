@@ -10,21 +10,21 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-type GelfObject map[string]interface{}
-
 func TestWriteUDP(t *testing.T) {
 	tests := []struct {
-		name     string
-		instance Graylog
+		name              string
+		namefieldnoprefix bool
 	}{
 		{
 			name: "default without scheme",
@@ -33,42 +33,31 @@ func TestWriteUDP(t *testing.T) {
 			name: "UDP",
 		},
 		{
-			name: "UDP non-standard name field",
-			instance: Graylog{
-				NameFieldNoPrefix: true,
-			},
+			name:              "UDP non-standard name field",
+			namefieldnoprefix: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
-			wg.Add(1)
-			address := make(chan string, 1)
-			errs := make(chan error)
-			go UDPServer(t, &wg, &tt.instance, address, errs)
-			require.NoError(t, <-errs)
-
-			i := tt.instance
-			i.Servers = []string{fmt.Sprintf("udp://%s", <-address)}
-			err := i.Connect()
-			require.NoError(t, err)
-			defer i.Close()
+			address := UDPServer(t, &wg, tt.namefieldnoprefix)
+			plugin := Graylog{
+				NameFieldNoPrefix: tt.namefieldnoprefix,
+				Servers:           []string{"udp://" + address},
+			}
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 			defer wg.Wait()
 
 			metrics := testutil.MockMetrics()
 
 			// UDP scenario:
 			// 4 messages are send
-
-			err = i.Write(metrics)
-			require.NoError(t, err)
-			err = i.Write(metrics)
-			require.NoError(t, err)
-			err = i.Write(metrics)
-			require.NoError(t, err)
-			err = i.Write(metrics)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
 		})
 	}
 }
@@ -80,56 +69,49 @@ func TestWriteTCP(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name            string
-		instance        Graylog
-		tlsServerConfig *tls.Config
+		name         string
+		tlsClientCfg tlsint.ClientConfig
 	}{
 		{
 			name: "TCP",
 		},
 		{
 			name: "TLS",
-			instance: Graylog{
-				ClientConfig: tlsint.ClientConfig{
-					ServerName: "localhost",
-					TLSCA:      tlsClientConfig.TLSCA,
-					TLSKey:     tlsClientConfig.TLSKey,
-					TLSCert:    tlsClientConfig.TLSCert,
-				},
+			tlsClientCfg: tlsint.ClientConfig{
+				ServerName: "localhost",
+				TLSCA:      tlsClientConfig.TLSCA,
+				TLSKey:     tlsClientConfig.TLSKey,
+				TLSCert:    tlsClientConfig.TLSCert,
 			},
-			tlsServerConfig: tlsServerConfig,
 		},
 		{
 			name: "TLS no validation",
-			instance: Graylog{
-				ClientConfig: tlsint.ClientConfig{
-					InsecureSkipVerify: true,
-					ServerName:         "localhost",
-					TLSKey:             tlsClientConfig.TLSKey,
-					TLSCert:            tlsClientConfig.TLSCert,
-				},
+			tlsClientCfg: tlsint.ClientConfig{
+				InsecureSkipVerify: true,
+				ServerName:         "localhost",
+				TLSKey:             tlsClientConfig.TLSKey,
+				TLSCert:            tlsClientConfig.TLSCert,
 			},
-			tlsServerConfig: tlsServerConfig,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
-			wg.Add(1)
-			address := make(chan string, 1)
 			errs := make(chan error)
-			fmt.Println("test: staring TCP server")
-			go TCPServer(t, &wg, tt.tlsServerConfig, address, errs)
-			require.NoError(t, <-errs)
+			address := TCPServer(t, &wg, tlsServerConfig, errs)
 
-			i := tt.instance
-			i.Servers = []string{fmt.Sprintf("tcp://%s", <-address)}
-			fmt.Println("client: connecting to TCP server")
-			err = i.Connect()
-			require.NoError(t, err)
-			fmt.Println("client: connected")
-			defer i.Close()
+			plugin := Graylog{
+				ClientConfig: tlsint.ClientConfig{
+					InsecureSkipVerify: true,
+					ServerName:         "localhost",
+					TLSKey:             tlsClientConfig.TLSKey,
+					TLSCert:            tlsClientConfig.TLSCert,
+				},
+				Servers: []string{"tcp://" + address},
+			}
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 			defer wg.Wait()
 
 			metrics := testutil.MockMetrics()
@@ -140,38 +122,20 @@ func TestWriteTCP(t *testing.T) {
 			// -> the 3rd write fails with error
 			// -> during the 4th write connection is restored and write is successful
 
-			fmt.Println("client: writting packet 1")
-			err = i.Write(metrics)
-			require.NoError(t, err)
-
-			fmt.Println("client: writting packet 2")
-			err = i.Write(metrics)
-			require.NoError(t, err)
-
-			fmt.Println("client: checking for errors")
+			require.NoError(t, plugin.Write(metrics))
+			require.NoError(t, plugin.Write(metrics))
 			require.NoError(t, <-errs)
-
-			fmt.Println("client: writting packet 3")
-			err = i.Write(metrics)
-
-			fmt.Println("client: writting packet 4")
-			err = i.Write(metrics)
-			require.NoError(t, err)
+			require.ErrorContains(t, plugin.Write(metrics), "error writing message")
+			require.NoError(t, plugin.Write(metrics))
 		})
 	}
 }
 
-func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan string, errs chan error) {
-	udpServer, err := net.ListenPacket("udp", "127.0.0.1:0")
-	errs <- err
-	if err != nil {
-		return
-	}
+type GelfObject map[string]interface{}
 
-	// Send the address with the random port to the channel for the graylog instance to use it
-	address <- udpServer.LocalAddr().String()
-	defer udpServer.Close()
-	defer wg.Done()
+func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string {
+	udpServer, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
 
 	recv := func() error {
 		bufR := make([]byte, 1024)
@@ -202,7 +166,7 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan s
 			return err
 		}
 		require.Equal(t, obj["short_message"], "telegraf")
-		if config.NameFieldNoPrefix {
+		if namefieldnoprefix {
 			require.Equal(t, obj["name"], "test1")
 		} else {
 			require.Equal(t, obj["_name"], "test1")
@@ -213,37 +177,28 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan s
 		return nil
 	}
 
-	// in UDP scenario all 4 messages are received
+	// Send the address with the random port to the channel for the graylog instance to use it
+	address := udpServer.LocalAddr().String()
+	wg.Add(1)
+	go func() {
+		defer udpServer.Close()
+		defer wg.Done()
 
-	err = recv()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = recv()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = recv()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = recv()
-	if err != nil {
-		fmt.Println(err)
-	}
+		// in UDP scenario all 4 messages are received
+		require.NoError(t, recv())
+		require.NoError(t, recv())
+		require.NoError(t, recv())
+		require.NoError(t, recv())
+	}()
+	return address
 }
 
-func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address chan string, errs chan error) {
+func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs chan error) string {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:0")
-	errs <- err
-	if err != nil {
-		return
-	}
+	require.NoError(t, err)
 
 	// Send the address with the random port to the channel for the graylog instance to use it
-	address <- tcpServer.Addr().String()
-	defer tcpServer.Close()
-	defer wg.Done()
+	address := tcpServer.Addr().String()
 
 	accept := func() (net.Conn, error) {
 		conn, err := tcpServer.Accept()
@@ -294,47 +249,196 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address 
 		return nil
 	}
 
-	fmt.Println("server: opening connection")
-	conn, err := accept()
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer conn.Close()
+	wg.Add(1)
+	go func() {
+		defer tcpServer.Close()
+		defer wg.Done()
 
-	// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
+		fmt.Println("server: opening connection")
+		conn, err := accept()
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer conn.Close()
 
-	fmt.Println("server: receving packet 1")
-	err = recv(conn)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("server: receving packet 2")
-	err = recv(conn)
-	if err != nil {
-		fmt.Println(err)
-	}
+		// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
 
-	fmt.Println("server: closing connection")
-	err = conn.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
+		fmt.Println("server: receving packet 1")
+		err = recv(conn)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("server: receving packet 2")
+		err = recv(conn)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	errs <- err
-	if err != nil {
-		return
-	}
+		fmt.Println("server: closing connection")
+		err = conn.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	fmt.Println("server: re-opening connection")
-	conn, err = accept()
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer conn.Close()
+		errs <- err
+		if err != nil {
+			return
+		}
 
-	fmt.Println("server: receving packet 4")
-	err = recv(conn)
-	if err != nil {
-		fmt.Println(err)
+		fmt.Println("server: re-opening connection")
+		conn, err = accept()
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer conn.Close()
+
+		fmt.Println("server: receving packet 4")
+		err = recv(conn)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+	return address
+}
+
+func TestWriteUDPServerDown(t *testing.T) {
+	dummy, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"udp://" + dummy.LocalAddr().String()},
+		Log:               testutil.Logger{},
 	}
+	require.NoError(t, dummy.Close())
+	require.NoError(t, plugin.Connect())
+}
+
+func TestWriteUDPServerUnavailableOnWrite(t *testing.T) {
+	dummy, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"udp://" + dummy.LocalAddr().String()},
+		Log:               testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, dummy.Close())
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
+}
+
+func TestWriteTCPServerDown(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Log:               testutil.Logger{},
+	}
+	require.NoError(t, dummy.Close())
+	require.ErrorContains(t, plugin.Connect(), "connect: connection refused")
+}
+
+func TestWriteTCPServerUnavailableOnWrite(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Log:               testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, dummy.Close())
+	err = plugin.Write(testutil.MockMetrics())
+	require.ErrorContains(t, err, "error writing message")
+}
+
+func TestWriteUDPServerDownRetry(t *testing.T) {
+	dummy, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"udp://" + dummy.LocalAddr().String()},
+		Reconnection:      true,
+		Log:               testutil.Logger{},
+	}
+	require.NoError(t, dummy.Close())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Close())
+}
+
+func TestWriteUDPServerUnavailableOnWriteRetry(t *testing.T) {
+	dummy, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"udp://" + dummy.LocalAddr().String()},
+		Reconnection:      true,
+		Log:               testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, dummy.Close())
+	err = plugin.Write(testutil.MockMetrics())
+	require.ErrorContains(t, err, "not connected")
+	require.NoError(t, plugin.Close())
+}
+
+func TestWriteTCPServerDownRetry(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	logger := &testutil.CaptureLogger{}
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Reconnection:      true,
+		ReconnectionTime:  config.Duration(100 * time.Millisecond),
+		Log:               logger,
+	}
+	require.NoError(t, dummy.Close())
+	require.NoError(t, plugin.Connect())
+	require.Eventually(t, func() bool {
+		return strings.Contains(logger.LastError(), "after attempt #5...")
+	}, 5*time.Second, 100*time.Millisecond)
+	require.NoError(t, plugin.Close())
+}
+
+func TestWriteTCPServerUnavailableOnWriteRetry(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Reconnection:      true,
+		Log:               testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, dummy.Close())
+	err = plugin.Write(testutil.MockMetrics())
+	require.ErrorContains(t, err, "not connected")
+	require.NoError(t, plugin.Close())
+}
+
+func TestWriteTCPRetryStopping(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	logger := &testutil.CaptureLogger{}
+	plugin := Graylog{
+		NameFieldNoPrefix: true,
+		Servers:           []string{"tcp://" + dummy.Addr().String()},
+		Reconnection:      true,
+		ReconnectionTime:  config.Duration(10 * time.Millisecond),
+		Log:               logger,
+	}
+	require.NoError(t, dummy.Close())
+	require.NoError(t, plugin.Connect())
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, plugin.Close())
 }
