@@ -60,7 +60,7 @@ func getEndianness() binary.ByteOrder {
 func writeNativeUIntToConn(conn net.Conn, value uint) error {
 	intData := make([]byte, uintSizeInBytes)
 
-	switch uintSizeInBytes { 
+	switch uintSizeInBytes {
 	case 4:
 		getEndianness().PutUint32(intData, uint32(value))
 	case 8:
