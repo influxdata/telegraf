@@ -5,6 +5,15 @@ Rest API. Documentation can be found [here][1].
 
 [1]: https://dl.dell.com/content/docu96624_xtremio-storage-array-x1-and-x2-cluster-types-with-xms-6-3-0-to-6-3-3-and-xios-4-0-15-to-4-0-31-and-6-0-0-to-6-3-3-restful-api-3-x-guide.pdf?language=en_us
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

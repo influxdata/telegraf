@@ -112,7 +112,7 @@ func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	s.buf.Reset()
 	for _, m := range metrics {
-		_, err := s.Write(&s.buf, m)
+		err := s.Write(&s.buf, m)
 		if err != nil {
 			if _, ok := err.(*MetricError); ok {
 				continue
@@ -124,9 +124,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	copy(out, s.buf.Bytes())
 	return out, nil
 }
-func (s *Serializer) Write(w io.Writer, m telegraf.Metric) (int, error) {
-	err := s.writeMetric(w, m)
-	return s.bytesWritten, err
+func (s *Serializer) Write(w io.Writer, m telegraf.Metric) error {
+	return s.writeMetric(w, m)
 }
 
 func (s *Serializer) writeString(w io.Writer, str string) error {

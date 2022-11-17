@@ -1,15 +1,14 @@
 package regex
 
 import (
-	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func newM1() telegraf.Metric {
@@ -880,8 +879,8 @@ func TestAnyTagConversion(t *testing.T) {
 			"request": "/users/42/",
 		}
 
-		assert.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
-		assert.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
-		assert.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+		require.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
+		require.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
+		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }

@@ -615,7 +615,9 @@ func TestZipkinPlugin(t *testing.T) {
 			if err := postThriftData(tt.datafile, z.address, tt.contentType); err != nil {
 				t.Fatalf("Posting data to http endpoint /api/v1/spans failed. Error: %s\n", err)
 			}
-			mockAcc.Wait(len(tt.want)) //Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
+			mockAcc.Wait(
+				len(tt.want),
+			) //Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
 			if len(mockAcc.Errors) > 0 != tt.wantErr {
 				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tt.wantErr, mockAcc.Errors)
 			}

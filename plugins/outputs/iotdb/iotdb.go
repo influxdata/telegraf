@@ -158,12 +158,12 @@ func (s *IoTDB) convertTimestampOfMetric(m telegraf.Metric) (int64, error) {
 
 // convert Metrics to Records with tags
 func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*recordsWithTags, error) {
-	var deviceidList []string
-	var measurementsList [][]string
-	var valuesList [][]interface{}
-	var dataTypesList [][]client.TSDataType
-	var timestampList []int64
-	var tagsList [][]*telegraf.Tag
+	timestampList := make([]int64, 0, len(metrics))
+	deviceidList := make([]string, 0, len(metrics))
+	measurementsList := make([][]string, 0, len(metrics))
+	valuesList := make([][]interface{}, 0, len(metrics))
+	dataTypesList := make([][]client.TSDataType, 0, len(metrics))
+	tagsList := make([][]*telegraf.Tag, 0, len(metrics))
 
 	for _, metric := range metrics {
 		// write `metric` to the output sink here

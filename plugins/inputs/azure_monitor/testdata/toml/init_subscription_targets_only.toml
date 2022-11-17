@@ -1,0 +1,29 @@
+subscription_id = "subscriptionID"
+client_id = "clientID"
+client_secret = "clientSecret"
+tenant_id = "tenantID"
+
+  [[subscription_target]]
+    resource_type = "Microsoft.Test/type1"
+    metrics = ["metric1", "metric2", "metric3"]
+    aggregations = ["Total", "Average"]
+
+  [[subscription_target]]
+    resource_type = "Microsoft.Test/type2"
+    metrics = []
+    aggregations = ["Average"]
+
+  [[subscription_target]]
+    resource_type = "Microsoft.Test/type2"
+    metrics = ["metric2"]
+    aggregations = []
+
+  [[subscription_target]]
+    resource_type = "Microsoft.Test/type2"
+    metrics = []
+    aggregations = []
+
+  [[subscription_target]]
+    resource_type = "Microsoft.Test/type1"
+    metrics = []
+    aggregations = []

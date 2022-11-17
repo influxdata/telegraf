@@ -77,6 +77,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.Lock()
 	defer c.Unlock()
 
+	// Expire metrics, doing this on Collect ensure metrics are removed even if no
+	// new metrics are added to the output.
 	c.Expire(time.Now(), c.ExpirationInterval)
 
 	for name, family := range c.fam {
@@ -366,6 +368,10 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 				c.addMetricFamily(point, sample, mname, sampleID)
 			}
 		}
+
+		// Expire metrics, doing this on Add ensure metrics are removed even if no
+		// one is querying the data.
+		c.Expire(time.Now(), c.ExpirationInterval)
 	}
 	return nil
 }

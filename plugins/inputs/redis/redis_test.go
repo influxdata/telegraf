@@ -9,9 +9,10 @@ import (
 
 	"github.com/docker/go-connections/nat"
 	"github.com/go-redis/redis/v8"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type testClient struct {
@@ -46,9 +47,7 @@ func TestRedisConnectIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	addr := fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
 

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
+
+	"github.com/influxdata/telegraf/internal/choice"
 )
 
 //go:embed sample_request.conf
@@ -25,6 +27,7 @@ type requestDefinition struct {
 	ByteOrder    string                   `toml:"byte_order"`
 	RegisterType string                   `toml:"register"`
 	Measurement  string                   `toml:"measurement"`
+	Optimization string                   `toml:"optimization"`
 	Fields       []requestFieldDefinition `toml:"fields"`
 	Tags         map[string]string        `toml:"tags"`
 }
@@ -42,6 +45,12 @@ func (c *ConfigurationPerRequest) Check() error {
 	seenFields := make(map[uint64]bool)
 
 	for _, def := range c.Requests {
+		// Check for valid optimization
+		validOptimizations := []string{"", "none", "shrink", "rearrange", "aggressive"}
+		if !choice.Contains(def.Optimization, validOptimizations) {
+			return fmt.Errorf("unknown optimization %q", def.Optimization)
+		}
+
 		// Check byte order of the data
 		switch def.ByteOrder {
 		case "":
@@ -110,7 +119,7 @@ func (c *ConfigurationPerRequest) Check() error {
 			def.Fields[fidx] = f
 
 			// Check for duplicate field definitions
-			id, err := c.fieldID(seed, def.SlaveID, def.RegisterType, def.Measurement, f.Name)
+			id, err := c.fieldID(seed, def, f)
 			if err != nil {
 				return fmt.Errorf("cannot determine field id for %q: %v", f.Name, err)
 			}
@@ -153,16 +162,16 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 
 		switch def.RegisterType {
 		case "coil":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils, def.Optimization)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput, def.Optimization)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters, def.Optimization)
 			set.holding = append(set.holding, requests...)
 		case "input":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters, def.Optimization)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
@@ -253,30 +262,49 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 	return f, nil
 }
 
-func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, slave byte, register, measurement, name string) (uint64, error) {
+func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, def requestDefinition, field requestFieldDefinition) (uint64, error) {
 	var mh maphash.Hash
 	mh.SetSeed(seed)
 
-	if err := mh.WriteByte(slave); err != nil {
+	if err := mh.WriteByte(def.SlaveID); err != nil {
 		return 0, err
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
 	}
-	if _, err := mh.WriteString(register); err != nil {
+	if _, err := mh.WriteString(def.RegisterType); err != nil {
 		return 0, err
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
 	}
-	if _, err := mh.WriteString(measurement); err != nil {
+	if _, err := mh.WriteString(field.Measurement); err != nil {
 		return 0, err
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
 	}
-	if _, err := mh.WriteString(name); err != nil {
+	if _, err := mh.WriteString(field.Name); err != nil {
 		return 0, err
+	}
+	if err := mh.WriteByte(0); err != nil {
+		return 0, err
+	}
+
+	// Tags
+	for k, v := range def.Tags {
+		if _, err := mh.WriteString(k); err != nil {
+			return 0, err
+		}
+		if err := mh.WriteByte('='); err != nil {
+			return 0, err
+		}
+		if _, err := mh.WriteString(v); err != nil {
+			return 0, err
+		}
+		if err := mh.WriteByte(':'); err != nil {
+			return 0, err
+		}
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err

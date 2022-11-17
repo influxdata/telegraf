@@ -50,6 +50,7 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	users, err := host.Users()
 	if err == nil {
 		fields["n_users"] = len(users)
+		fields["n_unique_users"] = findUniqueUsers(users)
 	} else if os.IsNotExist(err) {
 		s.Log.Debugf("Reading users: %s", err.Error())
 	} else if os.IsPermission(err) {
@@ -74,6 +75,17 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func findUniqueUsers(userStats []host.UserStat) int {
+	uniqueUsers := make(map[string]bool)
+	for _, userstat := range userStats {
+		if _, ok := uniqueUsers[userstat.User]; !ok {
+			uniqueUsers[userstat.User] = true
+		}
+	}
+
+	return len(uniqueUsers)
+}
+
 func formatUptime(uptime uint64) string {
 	buf := new(bytes.Buffer)
 	w := bufio.NewWriter(buf)
@@ -85,8 +97,6 @@ func formatUptime(uptime uint64) string {
 		if days > 1 {
 			s = "s"
 		}
-		// This will always succeed, so skip checking the error
-		//nolint:errcheck,revive
 		fmt.Fprintf(w, "%d day%s, ", days, s)
 	}
 
@@ -95,8 +105,6 @@ func formatUptime(uptime uint64) string {
 	hours %= 24
 	minutes %= 60
 
-	// This will always succeed, so skip checking the error
-	//nolint:errcheck,revive
 	fmt.Fprintf(w, "%2d:%02d", hours, minutes)
 
 	// This will always succeed, so skip checking the error

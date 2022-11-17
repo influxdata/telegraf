@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 )
@@ -43,7 +44,14 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 		},
 	}
 
+	// Define parsers that do not have an old-school init
+	newStyleOnly := []string{"binary"}
+
 	for name, creator := range parsers.Parsers {
+		if choice.Contains(name, newStyleOnly) {
+			t.Logf("skipping new-style-only %q...", name)
+			continue
+		}
 		t.Logf("testing %q...", name)
 		cfg.DataFormat = name
 

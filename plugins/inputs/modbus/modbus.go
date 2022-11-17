@@ -24,8 +24,9 @@ var sampleConfigStart string
 var sampleConfigEnd string
 
 type ModbusWorkarounds struct {
-	PollPause        config.Duration `toml:"pause_between_requests"`
-	CloseAfterGather bool            `toml:"close_connection_after_gather"`
+	AfterConnectPause config.Duration `toml:"pause_after_connect"`
+	PollPause         config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather  bool            `toml:"close_connection_after_gather"`
 }
 
 // Modbus holds all data relevant to the plugin
@@ -121,12 +122,12 @@ func (m *Modbus) Init() error {
 
 	// Check and process the configuration
 	if err := cfg.Check(); err != nil {
-		return fmt.Errorf("configuraton invalid: %v", err)
+		return fmt.Errorf("configuration invalid: %v", err)
 	}
 
 	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process configuraton: %v", err)
+		return fmt.Errorf("cannot process configuration: %v", err)
 	}
 	m.requests = r
 
@@ -157,7 +158,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 					return fmt.Errorf("disconnecting failed: %w", err)
 				}
 				if err := m.connect(); err != nil {
-					return fmt.Errorf("connecting failed: %w", err)
+					return fmt.Errorf("slave %d: connecting failed: %w", slaveID, err)
 				}
 			}
 			continue
@@ -265,6 +266,10 @@ func (m *Modbus) initClient() error {
 func (m *Modbus) connect() error {
 	err := m.handler.Connect()
 	m.isConnected = err == nil
+	if m.isConnected && m.Workarounds.AfterConnectPause != 0 {
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.AfterConnectPause))
+		time.Sleep(time.Until(nextRequest))
+	}
 	return err
 }
 
@@ -436,10 +441,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			if err := grouper.Add(measurement, rtags, timestamp, field.name, field.value); err != nil {
-				acc.AddError(fmt.Errorf("cannot add field %q for measurement %q: %v", field.name, measurement, err))
-				continue
-			}
+			grouper.Add(measurement, rtags, timestamp, field.name, field.value)
 		}
 	}
 

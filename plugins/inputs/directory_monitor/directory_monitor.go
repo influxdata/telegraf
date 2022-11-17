@@ -321,18 +321,36 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (monitor *DirectoryMonitor) moveFile(filePath string, directory string) {
-	basePath := strings.Replace(filePath, monitor.Directory, "", 1)
-	newPath := filepath.Join(directory, basePath)
-
-	err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm)
+func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
+	// Appends any subdirectories in the srcPath to the dstBaseDir and
+	// creates those subdirectories.
+	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
+	dstPath := filepath.Join(dstBaseDir, basePath)
+	err := os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
 	if err != nil {
-		monitor.Log.Errorf("Error creating directory hierachy for " + filePath + ". Error: " + err.Error())
+		monitor.Log.Errorf("Error creating directory hierachy for " + srcPath + ". Error: " + err.Error())
 	}
 
-	err = os.Rename(filePath, newPath)
+	inputFile, err := os.Open(srcPath)
 	if err != nil {
-		monitor.Log.Errorf("Error while moving file '" + filePath + "' to another directory. Error: " + err.Error())
+		monitor.Log.Errorf("Could not open input file: %s", err)
+	}
+	defer inputFile.Close()
+
+	outputFile, err := os.Create(dstPath)
+	if err != nil {
+		monitor.Log.Errorf("Could not open output file: %s", err)
+	}
+	defer outputFile.Close()
+
+	_, err = io.Copy(outputFile, inputFile)
+	if err != nil {
+		monitor.Log.Errorf("Writing to output file failed: %s", err)
+	}
+
+	err = os.Remove(srcPath)
+	if err != nil {
+		monitor.Log.Errorf("Failed removing original file: %s", err)
 	}
 }
 

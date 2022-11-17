@@ -525,10 +525,7 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
 			return err3
 		}
 		// Handle response
-		_, err = h.HandleResponse(oidsList, result, acc, initNode)
-		if err != nil {
-			return err
-		}
+		h.HandleResponse(oidsList, result, acc, initNode)
 	}
 	return nil
 }
@@ -568,10 +565,7 @@ func (h *Host) SNMPBulk(acc telegraf.Accumulator, initNode Node) error {
 				return err3
 			}
 			// Handle response
-			lastOid, err := h.HandleResponse(oidsList, result, acc, initNode)
-			if err != nil {
-				return err
-			}
+			lastOid := h.HandleResponse(oidsList, result, acc, initNode)
 			// Determine if we need more requests
 			if strings.HasPrefix(lastOid, oidAsked) {
 				needMoreRequests = true
@@ -628,7 +622,7 @@ func (h *Host) HandleResponse(
 	result *gosnmp.SnmpPacket,
 	acc telegraf.Accumulator,
 	initNode Node,
-) (string, error) {
+) string {
 	var lastOid string
 	for _, variable := range result.Variables {
 		lastOid = variable.Name
@@ -708,7 +702,7 @@ func (h *Host) HandleResponse(
 			}
 		}
 	}
-	return lastOid, nil
+	return lastOid
 }
 
 func init() {

@@ -45,14 +45,12 @@ const (
 	maxPad   = 255
 )
 
-//nolint:varcheck // For having proper order
 const (
 	roleResponder = iota + 1 // only Responders are implemented.
 	roleAuthorizer
 	roleFilter
 )
 
-//nolint:varcheck // For having proper order
 const (
 	statusRequestComplete = iota
 	statusCantMultiplex

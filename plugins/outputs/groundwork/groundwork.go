@@ -121,11 +121,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	groupMap := make(map[string][]transit.ResourceRef)
 	resourceToServicesMap := make(map[string][]transit.MonitoredService)
 	for _, metric := range metrics {
-		meta, service, err := g.parseMetric(metric)
-		if err != nil {
-			g.Log.Errorf("%v", err)
-			continue
-		}
+		meta, service := g.parseMetric(metric)
 		resource := meta.resource
 		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], *service)
 
@@ -153,7 +149,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 		})
 	}
 
-	var resources []transit.MonitoredResource
+	resources := make([]transit.MonitoredResource, 0, len(resourceToServicesMap))
 	for resourceName, services := range resourceToServicesMap {
 		resources = append(resources, transit.MonitoredResource{
 			BaseResource: transit.BaseResource{
@@ -210,7 +206,7 @@ func init() {
 	})
 }
 
-func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.MonitoredService, error) {
+func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.MonitoredService) {
 	group, _ := metric.GetTag(g.GroupTag)
 
 	resource := g.DefaultHost
@@ -376,7 +372,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		serviceObject.Status = status
 	}()
 
-	return metricMeta{resource: resource, group: group}, &serviceObject, nil
+	return metricMeta{resource: resource, group: group}, &serviceObject
 }
 
 func validStatus(status string) bool {
@@ -391,7 +387,7 @@ func validStatus(status string) bool {
 func adaptLog(fields interface{}, format string, a ...interface{}) string {
 	buf := &bytes.Buffer{}
 	if format != "" {
-		_, _ = fmt.Fprintf(buf, format, a...)
+		fmt.Fprintf(buf, format, a...)
 	}
 	fmtField := func(k string, v interface{}) {
 		format := " %s:"
@@ -403,7 +399,7 @@ func adaptLog(fields interface{}, format string, a ...interface{}) string {
 		} else {
 			format += "%q"
 		}
-		_, _ = fmt.Fprintf(buf, format, k, v)
+		fmt.Fprintf(buf, format, k, v)
 	}
 	if ff, ok := fields.(interface {
 		LogFields() (map[string]interface{}, map[string][]byte)

@@ -12,6 +12,15 @@ later, IOS XE 16.10 and later, as well as NX-OS 7.x and later platforms.
 The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and
 later.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

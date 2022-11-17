@@ -1,9 +1,6 @@
 package xpath
 
 import (
-	"bufio"
-	"errors"
-	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -11,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -1402,71 +1400,80 @@ func TestMultipleConfigs(t *testing.T) {
 	// Make sure the folder contains data
 	require.NotEmpty(t, folders)
 
+	// Register the wrapper plugin
+	inputs.Add("file", func() telegraf.Input {
+		return &file.File{}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	// Compare options
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
 	for _, f := range folders {
-		if !f.IsDir() {
+		// Only handle folders
+		if !f.IsDir() || f.Name() == "protos" {
 			continue
 		}
-		t.Run(f.Name(), func(t *testing.T) {
-			configFilename := filepath.Join("testcases", f.Name(), "telegraf.conf")
-			expectedFilename := filepath.Join("testcases", f.Name(), "expected.out")
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
-			// Process the telegraf config file for the test
-			buf, err := os.ReadFile(configFilename)
-			if err != nil && errors.Is(err, os.ErrNotExist) {
-				return
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
 			}
-			require.NoError(t, err)
-			inputs.Add("file", func() telegraf.Input {
-				return &file.File{}
-			})
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
 			cfg := config.NewConfig()
-			require.NoError(t, cfg.LoadConfigData(buf))
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.NotEmpty(t, cfg.Inputs)
 
 			// Gather the metrics from the input file configure
-			acc := testutil.Accumulator{}
+			var acc testutil.Accumulator
+			var errs []error
 			for _, input := range cfg.Inputs {
 				require.NoError(t, input.Init())
-				require.NoError(t, input.Gather(&acc))
+				err := input.Gather(&acc)
+				if err != nil {
+					errs = append(errs, err)
+				}
+			}
+
+			// Check for errors if we expect any
+			if len(expectedErrors) > 0 {
+				require.Len(t, errs, len(expectedErrors))
+				for i, err := range errs {
+					require.ErrorContains(t, err, expectedErrors[i])
+				}
+			} else {
+				require.Empty(t, errs)
 			}
 
 			// Process expected metrics and compare with resulting metrics
-			expected, err := readMetricFile(expectedFilename)
-			require.NoError(t, err)
 			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
 		})
 	}
-}
-
-func readMetricFile(filename string) ([]telegraf.Metric, error) {
-	var metrics []telegraf.Metric
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return metrics, err
-	}
-	defer f.Close()
-
-	parser := &influx.Parser{}
-	if err := parser.Init(); err != nil {
-		return nil, err
-	}
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line != "" {
-			m, err := parser.ParseLine(line)
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse metric in %q failed: %v", line, err)
-			}
-			// The timezone needs to be UTC to match the timestamp test results
-			m.SetTime(m.Time().UTC())
-			metrics = append(metrics, m)
-		}
-	}
-
-	return metrics, nil
 }
 
 func loadTestConfiguration(filename string) (*xpath.Config, []string, error) {

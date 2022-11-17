@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const servicePort = "5432"
@@ -43,9 +44,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	container := createTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Ports[servicePort])
 
 	fmt.Println(url)
@@ -155,9 +154,7 @@ func Test_escapeValueIntegration(t *testing.T) {
 	}
 
 	container := createTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Ports[servicePort])
 
 	db, err := sql.Open("pgx", url)

@@ -2,18 +2,21 @@ package sql
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestSqlQuoteIntegration(t *testing.T) {
@@ -188,9 +191,7 @@ func TestMysqlIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	//use the plugin to write to the database
 	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
@@ -210,7 +211,7 @@ func TestMysqlIntegration(t *testing.T) {
 
 	//dump the database
 	var rc int
-	rc, err = container.Exec([]string{
+	rc, _, err = container.Exec([]string{
 		"bash",
 		"-c",
 		"mariadb-dump --user=" + username +
@@ -222,7 +223,10 @@ func TestMysqlIntegration(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, rc)
 	dumpfile := filepath.Join(outDir, "dump")
-	require.FileExists(t, dumpfile)
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(dumpfile)
+		return !os.IsNotExist(err)
+	}, 5*time.Second, 10*time.Millisecond)
 
 	//compare the dump to what we expected
 	expected, err := os.ReadFile("testdata/mariadb/expected.sql")
@@ -262,14 +266,12 @@ func TestPostgresIntegration(t *testing.T) {
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("database system is ready to accept connections"),
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	//use the plugin to write to the database
 	// host, port, username, password, dbname
@@ -292,7 +294,7 @@ func TestPostgresIntegration(t *testing.T) {
 	//dump the database
 	//psql -u postgres
 	var rc int
-	rc, err = container.Exec([]string{
+	rc, _, err = container.Exec([]string{
 		"bash",
 		"-c",
 		"pg_dump" +
@@ -351,14 +353,12 @@ func TestClickHouseIntegration(t *testing.T) {
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'"),
+			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	//use the plugin to write to the database
 	// host, port, username, password, dbname
@@ -378,35 +378,34 @@ func TestClickHouseIntegration(t *testing.T) {
 	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
-
 	require.NoError(t, p.Write(testMetrics))
 
-	// dump the database
-	var rc int
-	for _, testMetric := range testMetrics {
-		rc, err = container.Exec([]string{
-			"bash",
-			"-c",
-			"clickhouse-client" +
-				" --user=" + username +
-				" --database=" + dbname +
-				" --format=TabSeparatedRaw" +
-				" --multiquery --query=" +
-				"\"SELECT * FROM \\\"" + testMetric.Name() + "\\\";" +
-				"SHOW CREATE TABLE \\\"" + testMetric.Name() + "\\\"\"" +
-				" >> /out/dump 2>&1",
-		})
-		require.NoError(t, err)
-		require.Equal(t, 0, rc)
+	cases := []struct {
+		table    string
+		expected string
+	}{
+		{"metric_one", "`float64_one` Float64"},
+		{"metric_two", "`string_one` String"},
+		{"metric three", "`string two` String"},
 	}
-
-	dumpfile := filepath.Join(outDir, "dump")
-	require.FileExists(t, dumpfile)
-
-	//compare the dump to what we expected
-	expected, err := os.ReadFile("testdata/clickhouse/expected.txt")
-	require.NoError(t, err)
-	actual, err := os.ReadFile(dumpfile)
-	require.NoError(t, err)
-	require.Equal(t, string(expected), string(actual))
+	for _, tc := range cases {
+		require.Eventually(t, func() bool {
+			var out io.Reader
+			_, out, err = container.Exec([]string{
+				"bash",
+				"-c",
+				"clickhouse-client" +
+					" --user=" + username +
+					" --database=" + dbname +
+					" --format=TabSeparatedRaw" +
+					" --multiquery --query=" +
+					"\"SELECT * FROM \\\"" + tc.table + "\\\";" +
+					"SHOW CREATE TABLE \\\"" + tc.table + "\\\"\"",
+			})
+			require.NoError(t, err)
+			bytes, err := io.ReadAll(out)
+			require.NoError(t, err)
+			return strings.Contains(string(bytes), tc.expected)
+		}, 5*time.Second, 10*time.Millisecond)
+	}
 }

@@ -41,14 +41,28 @@ type mockTimestreamClient struct {
 	WriteRecordsRequestCount int
 }
 
-func (m *mockTimestreamClient) CreateTable(context.Context, *timestreamwrite.CreateTableInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.CreateTableOutput, error) {
+func (m *mockTimestreamClient) CreateTable(
+	context.Context,
+	*timestreamwrite.CreateTableInput,
+	...func(*timestreamwrite.Options),
+) (*timestreamwrite.CreateTableOutput, error) {
 	return nil, nil
 }
-func (m *mockTimestreamClient) WriteRecords(context.Context, *timestreamwrite.WriteRecordsInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.WriteRecordsOutput, error) {
+
+func (m *mockTimestreamClient) WriteRecords(
+	context.Context,
+	*timestreamwrite.WriteRecordsInput,
+	...func(*timestreamwrite.Options),
+) (*timestreamwrite.WriteRecordsOutput, error) {
 	m.WriteRecordsRequestCount++
 	return nil, nil
 }
-func (m *mockTimestreamClient) DescribeDatabase(context.Context, *timestreamwrite.DescribeDatabaseInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.DescribeDatabaseOutput, error) {
+
+func (m *mockTimestreamClient) DescribeDatabase(
+	context.Context,
+	*timestreamwrite.DescribeDatabaseInput,
+	...func(*timestreamwrite.Options),
+) (*timestreamwrite.DescribeDatabaseOutput, error) {
 	return nil, fmt.Errorf("hello from DescribeDatabase")
 }
 
@@ -474,13 +488,27 @@ type mockTimestreamErrorClient struct {
 	ErrorToReturnOnWriteRecords error
 }
 
-func (m *mockTimestreamErrorClient) CreateTable(context.Context, *timestreamwrite.CreateTableInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.CreateTableOutput, error) {
+func (m *mockTimestreamErrorClient) CreateTable(
+	context.Context,
+	*timestreamwrite.CreateTableInput,
+	...func(*timestreamwrite.Options),
+) (*timestreamwrite.CreateTableOutput, error) {
 	return nil, nil
 }
-func (m *mockTimestreamErrorClient) WriteRecords(context.Context, *timestreamwrite.WriteRecordsInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.WriteRecordsOutput, error) {
+
+func (m *mockTimestreamErrorClient) WriteRecords(
+	context.Context,
+	*timestreamwrite.WriteRecordsInput,
+	...func(*timestreamwrite.Options),
+) (*timestreamwrite.WriteRecordsOutput, error) {
 	return nil, m.ErrorToReturnOnWriteRecords
 }
-func (m *mockTimestreamErrorClient) DescribeDatabase(context.Context, *timestreamwrite.DescribeDatabaseInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.DescribeDatabaseOutput, error) {
+
+func (m *mockTimestreamErrorClient) DescribeDatabase(
+	context.Context,
+	*timestreamwrite.DescribeDatabaseInput,
+	...func(*timestreamwrite.Options),
+) (*timestreamwrite.DescribeDatabaseOutput, error) {
 	return nil, nil
 }
 

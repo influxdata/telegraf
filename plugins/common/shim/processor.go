@@ -44,7 +44,10 @@ func (s *Shim) RunProcessor() error {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		s.writeProcessedMetrics()
+		err := s.writeProcessedMetrics()
+		if err != nil {
+			s.log.Warnf("%s", err)
+		}
 		wg.Done()
 	}()
 
@@ -63,7 +66,9 @@ func (s *Shim) RunProcessor() error {
 			continue
 		}
 
-		s.Processor.Add(m, acc)
+		if err = s.Processor.Add(m, acc); err != nil {
+			fmt.Fprintf(s.stderr, "Failure during processing metric by processor: %v\b", err)
+		}
 	}
 
 	close(s.metricCh)
