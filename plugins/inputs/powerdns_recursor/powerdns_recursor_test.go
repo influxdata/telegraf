@@ -191,7 +191,6 @@ func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 		for {
 			status := make([]byte, 4)
 			n, _, err := socket.ReadFromUnix(status)
-
 			if err != nil || n != 4 {
 				// Ignore the returned error as we cannot do anything about it anyway
 				//nolint:errcheck,revive
@@ -267,27 +266,23 @@ func TestV3PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 
 		for {
 			conn, err := socket.Accept()
-
 			if err != nil {
 				return
 			}
 
 			status := make([]byte, 4)
 			n, err := conn.Read(status)
-
 			if err != nil || n != 4 {
 				return
 			}
 
 			dataLen, err := readNativeUIntFromConn(conn)
-
 			if err != nil || dataLen == 0 || dataLen >= 16384 {
 				return
 			}
 
 			buf := make([]byte, dataLen)
 			n, err = conn.Read(buf)
-
 			if err != nil || uint(n) != dataLen {
 				return
 			}

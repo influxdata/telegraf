@@ -16,13 +16,11 @@ func parseResponse(metrics string) map[string]interface{} {
 
 	for _, metric := range s[:len(s)-1] {
 		m := strings.Split(metric, "\t")
-
 		if len(m) < 2 {
 			continue
 		}
 
 		i, err := strconv.ParseInt(m[1], 10, 64)
-
 		if err != nil {
 			continue
 		}
