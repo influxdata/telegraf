@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package process
 
@@ -47,7 +46,7 @@ func TestRestartingRebindsPipes(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 	}
 
-	syscall.Kill(p.Pid(), syscall.SIGKILL)
+	require.NoError(t, syscall.Kill(p.Pid(), syscall.SIGKILL))
 
 	for atomic.LoadInt64(&linesRead) < 2 {
 		time.Sleep(1 * time.Millisecond)
@@ -77,5 +76,5 @@ func externalProcess() {
 	wait := make(chan int)
 	fmt.Fprintln(os.Stdout, "started")
 	<-wait
-	os.Exit(2)
+	os.Exit(2) //nolint:revive // os.Exit called intentionally
 }

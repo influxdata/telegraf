@@ -4,6 +4,15 @@ The `execd` plugin runs an external program as a daemon.
 
 Telegraf minimum version: Telegraf 1.15.0
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -21,6 +30,11 @@ Telegraf minimum version: Telegraf 1.15.0
 
   ## Delay before the process is restarted after an unexpected termination
   restart_delay = "10s"
+
+  ## Flag to determine whether execd should throw error when part of metrics is unserializable
+  ## Setting this to true will skip the unserializable metrics and process the rest of metrics
+  ## Setting this to false will throw error when encountering unserializable metrics and none will be processed
+  # ignore_serialization_error = false
 
   ## Data format to export.
   ## Each data format has its own unique set of configuration options, read

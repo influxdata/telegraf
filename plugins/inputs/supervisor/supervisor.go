@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package supervisor
 
 import (
@@ -45,7 +46,6 @@ type supervisorInfo struct {
 	Ident     string
 }
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 

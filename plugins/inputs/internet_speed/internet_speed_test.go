@@ -12,8 +12,8 @@ func TestGathering(t *testing.T) {
 		t.Skip("Skipping network-dependent test in short mode.")
 	}
 	internetSpeed := &InternetSpeed{
-		EnableFileDownload: true,
-		Log:                testutil.Logger{},
+		MemorySavingMode: true,
+		Log:              testutil.Logger{},
 	}
 
 	acc := &testutil.Accumulator{}
@@ -26,8 +26,8 @@ func TestDataGen(t *testing.T) {
 		t.Skip("Skipping network-dependent test in short mode.")
 	}
 	internetSpeed := &InternetSpeed{
-		EnableFileDownload: true,
-		Log:                testutil.Logger{},
+		MemorySavingMode: true,
+		Log:              testutil.Logger{},
 	}
 
 	acc := &testutil.Accumulator{}

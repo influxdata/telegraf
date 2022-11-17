@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/bsonx"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Server struct {
@@ -35,6 +36,13 @@ type oplogEntry struct {
 
 func IsAuthorization(err error) bool {
 	return strings.Contains(err.Error(), "not authorized")
+}
+
+func (s *Server) ping() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	return s.client.Ping(ctx, nil)
 }
 
 func (s *Server) authLog(err error) {
@@ -262,7 +270,14 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, gatherTopStat bool, colStatsDbs []string) error {
+func (s *Server) gatherData(
+	acc telegraf.Accumulator,
+	gatherClusterStatus bool,
+	gatherDbStats bool,
+	gatherColStats bool,
+	gatherTopStat bool,
+	colStatsDbs []string,
+) error {
 	serverStatus, err := s.gatherServerStatus()
 	if err != nil {
 		return err

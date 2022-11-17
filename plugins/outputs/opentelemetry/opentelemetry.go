@@ -3,12 +3,9 @@ package opentelemetry
 
 import (
 	"context"
-	_ "embed"
-	"fmt"
-	"runtime"
-	"time"
-
 	ntls "crypto/tls"
+	_ "embed"
+	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
@@ -16,20 +13,18 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-
-	// Blank import to allow gzip encoding
-	_ "google.golang.org/grpc/encoding/gzip"
+	_ "google.golang.org/grpc/encoding/gzip" // Blank import to allow gzip encoding
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-var userAgent = fmt.Sprintf("telegraf (%s/%s)", runtime.GOOS, runtime.GOARCH)
+var userAgent = internal.ProductToken()
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -47,7 +42,7 @@ type OpenTelemetry struct {
 
 	metricsConverter     *influx2otel.LineProtocolToOtelMetrics
 	grpcClientConn       *grpc.ClientConn
-	metricsServiceClient pmetricotlp.Client
+	metricsServiceClient pmetricotlp.GRPCClient
 	callOptions          []grpc.CallOption
 }
 
@@ -104,7 +99,7 @@ func (o *OpenTelemetry) Connect() error {
 		return err
 	}
 
-	metricsServiceClient := pmetricotlp.NewClient(grpcClientConn)
+	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
 
 	o.metricsConverter = metricsConverter
 	o.grpcClientConn = grpcClientConn
@@ -152,7 +147,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	md := pmetricotlp.NewRequestFromMetrics(batch.GetMetrics())
+	md := pmetricotlp.NewExportRequestFromMetrics(batch.GetMetrics())
 	if md.Metrics().ResourceMetrics().Len() == 0 {
 		return nil
 	}
@@ -160,7 +155,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	if len(o.Attributes) > 0 {
 		for i := 0; i < md.Metrics().ResourceMetrics().Len(); i++ {
 			for k, v := range o.Attributes {
-				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().UpsertString(k, v)
+				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().PutStr(k, v)
 			}
 		}
 	}

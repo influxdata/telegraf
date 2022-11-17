@@ -19,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -111,12 +110,14 @@ func (h *HTTPJSON) Gather(acc telegraf.Accumulator) error {
 
 // Gathers data from a particular server
 // Parameters:
-//     acc      : The telegraf Accumulator to use
-//     serverURL: endpoint to send request to
-//     service  : the service being queried
+//
+//	acc      : The telegraf Accumulator to use
+//	serverURL: endpoint to send request to
+//	service  : the service being queried
 //
 // Returns:
-//     error: Any error that may have occurred
+//
+//	error: Any error that may have occurred
 func (h *HTTPJSON) gatherServer(
 	acc telegraf.Accumulator,
 	serverURL string,
@@ -164,11 +165,13 @@ func (h *HTTPJSON) gatherServer(
 // Sends an HTTP request to the server using the HTTPJSON object's HTTPClient.
 // This request can be either a GET or a POST.
 // Parameters:
-//     serverURL: endpoint to send request to
+//
+//	serverURL: endpoint to send request to
 //
 // Returns:
-//     string: body of the response
-//     error : Any error that may have occurred
+//
+//	string: body of the response
+//	error : Any error that may have occurred
 func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)

@@ -18,16 +18,15 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
 	internalMetric "github.com/influxdata/telegraf/metric"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	internalProxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -49,7 +48,7 @@ type CloudWatch struct {
 
 	Period         config.Duration `toml:"period"`
 	Delay          config.Duration `toml:"delay"`
-	Namespace      string          `toml:"namespace"`
+	Namespace      string          `toml:"namespace" deprecated:"1.25.0;use 'namespaces' instead"`
 	Namespaces     []string        `toml:"namespaces"`
 	Metrics        []*Metric       `toml:"metrics"`
 	CacheTTL       config.Duration `toml:"cache_ttl"`
@@ -259,10 +258,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 					}
 				}
 			} else {
-				allMetrics, err := c.fetchNamespaceMetrics()
-				if err != nil {
-					return nil, err
-				}
+				allMetrics := c.fetchNamespaceMetrics()
 				for _, name := range m.MetricNames {
 					for _, metric := range allMetrics {
 						if isSelected(name, metric, m.Dimensions) {
@@ -295,11 +291,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 			})
 		}
 	} else {
-		metrics, err := c.fetchNamespaceMetrics()
-		if err != nil {
-			return nil, err
-		}
-
+		metrics := c.fetchNamespaceMetrics()
 		fMetrics = []filteredMetric{
 			{
 				metrics:    metrics,
@@ -318,22 +310,18 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 }
 
 // fetchNamespaceMetrics retrieves available metrics for a given CloudWatch namespace.
-func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
+func (c *CloudWatch) fetchNamespaceMetrics() []types.Metric {
 	metrics := []types.Metric{}
 
-	var token *string
-
-	params := &cwClient.ListMetricsInput{
-		Dimensions: []types.DimensionFilter{},
-		NextToken:  token,
-		MetricName: nil,
-	}
-	if c.RecentlyActive == "PT3H" {
-		params.RecentlyActive = types.RecentlyActivePt3h
-	}
-
 	for _, namespace := range c.Namespaces {
-		params.Namespace = aws.String(namespace)
+		params := &cwClient.ListMetricsInput{
+			Dimensions: []types.DimensionFilter{},
+			Namespace:  aws.String(namespace),
+		}
+		if c.RecentlyActive == "PT3H" {
+			params.RecentlyActive = types.RecentlyActivePt3h
+		}
+
 		for {
 			resp, err := c.client.ListMetrics(context.Background(), params)
 			if err != nil {
@@ -341,16 +329,15 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
 				// skip problem namespace on error and continue to next namespace
 				break
 			}
-
 			metrics = append(metrics, resp.Metrics...)
+
 			if resp.NextToken == nil {
 				break
 			}
-
 			params.NextToken = resp.NextToken
 		}
 	}
-	return metrics, nil
+	return metrics
 }
 
 func (c *CloudWatch) updateWindow(relativeTo time.Time) {
@@ -503,9 +490,7 @@ func (c *CloudWatch) aggregateMetrics(
 			tags["region"] = c.Region
 
 			for i := range result.Values {
-				if err := grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i]); err != nil {
-					acc.AddError(err)
-				}
+				grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i])
 			}
 		}
 	}

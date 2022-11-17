@@ -12,7 +12,8 @@ const defaultMedianLimit = 1000
 // RunningStats calculates a running mean, variance, standard deviation,
 // lower bound, upper bound, count, and can calculate estimated percentiles.
 // It is based on the incremental algorithm described here:
-//    https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+//
+//	https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
 type RunningStats struct {
 	k   float64
 	n   int64

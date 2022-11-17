@@ -10,16 +10,16 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-//NativeFinder uses gopsutil to find processes
+// NativeFinder uses gopsutil to find processes
 type NativeFinder struct {
 }
 
-//NewNativeFinder ...
+// NewNativeFinder ...
 func NewNativeFinder() (PIDFinder, error) {
 	return &NativeFinder{}, nil
 }
 
-//Uid will return all pids for the given user
+// Uid will return all pids for the given user
 func (pg *NativeFinder) UID(user string) ([]PID, error) {
 	var dst []PID
 	procs, err := process.Processes()
@@ -40,7 +40,7 @@ func (pg *NativeFinder) UID(user string) ([]PID, error) {
 	return dst, nil
 }
 
-//PidFile returns the pid from the pid file given.
+// PidFile returns the pid from the pid file given.
 func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	var pids []PID
 	pidString, err := os.ReadFile(path)
@@ -56,7 +56,7 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	return pids, nil
 }
 
-//FullPattern matches on the command line when the process was executed
+// FullPattern matches on the command line when the process was executed
 func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	var pids []PID
 	regxPattern, err := regexp.Compile(pattern)

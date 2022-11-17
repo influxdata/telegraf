@@ -1,6 +1,7 @@
-//go:generate ../../../tools/readme_config_includer/generator
 // Package neptune_apex implements an input plugin for the Neptune Apex
 // aquarium controller.
+//
+//go:generate ../../../tools/readme_config_includer/generator
 package neptune_apex
 
 import (
@@ -20,7 +21,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -89,7 +89,7 @@ func (n *NeptuneApex) gatherServer(
 }
 
 // parseXML is strict on the input and does not do best-effort parsing.
-//This is because of the life-support nature of the Neptune Apex.
+// This is because of the life-support nature of the Neptune Apex.
 func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	r := xmlReply{}
 	err := xml.Unmarshal(data, &r)

@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSerialize(t *testing.T) {
@@ -158,15 +159,36 @@ http_request_duration_seconds_count 0
 cpu_time_idle{host="example.org"} 42 1574279268000
 `),
 		},
+		{
+			name: "simple with CompactEncoding",
+			config: FormatConfig{
+				CompactEncoding: true,
+			},
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"host": "example.org",
+				},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(1574279268, 0),
+			),
+			expected: []byte(`
+# TYPE cpu_time_idle untyped
+cpu_time_idle{host="example.org"} 42
+`),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewSerializer(FormatConfig{
+			s := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
 				TimestampExport: tt.config.TimestampExport,
 				StringHandling:  tt.config.StringHandling,
+				CompactEncoding: tt.config.CompactEncoding,
 			})
-			require.NoError(t, err)
+
 			actual, err := s.Serialize(tt.metric)
 			require.NoError(t, err)
 
@@ -676,12 +698,11 @@ rpc_duration_seconds_count 2693
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewSerializer(FormatConfig{
+			s := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
 				TimestampExport: tt.config.TimestampExport,
 				StringHandling:  tt.config.StringHandling,
 			})
-			require.NoError(t, err)
 			actual, err := s.SerializeBatch(tt.metrics)
 			require.NoError(t, err)
 

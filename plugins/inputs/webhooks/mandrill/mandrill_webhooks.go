@@ -2,7 +2,7 @@ package mandrill
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -41,7 +41,7 @@ func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

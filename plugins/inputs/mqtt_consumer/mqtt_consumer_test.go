@@ -156,6 +156,7 @@ func TestPersistentClientIDFail(t *testing.T) {
 
 type Message struct {
 	topic string
+	qos   byte
 }
 
 func (m *Message) Duplicate() bool {
@@ -163,7 +164,7 @@ func (m *Message) Duplicate() bool {
 }
 
 func (m *Message) Qos() byte {
-	panic("not implemented")
+	return m.qos
 }
 
 func (m *Message) Retained() bool {

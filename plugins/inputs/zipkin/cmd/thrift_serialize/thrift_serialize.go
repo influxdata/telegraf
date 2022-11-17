@@ -18,8 +18,6 @@ Usage:
 If `deserialize` is set to true (false by default), the tool will interpret the input file as
 thrift, and write it as json to the output file.
 Otherwise, the input file will be interpreted as json, and the output will be encoded as thrift.
-
-
 */
 package main
 

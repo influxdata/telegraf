@@ -9,10 +9,8 @@ import (
 )
 
 func TestGzipEncodeDecode(t *testing.T) {
-	enc, err := NewGzipEncoder()
-	require.NoError(t, err)
-	dec, err := NewGzipDecoder()
-	require.NoError(t, err)
+	enc := NewGzipEncoder()
+	dec := NewGzipDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -24,10 +22,8 @@ func TestGzipEncodeDecode(t *testing.T) {
 }
 
 func TestGzipReuse(t *testing.T) {
-	enc, err := NewGzipEncoder()
-	require.NoError(t, err)
-	dec, err := NewGzipDecoder()
-	require.NoError(t, err)
+	enc := NewGzipEncoder()
+	dec := NewGzipDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -47,10 +43,8 @@ func TestGzipReuse(t *testing.T) {
 }
 
 func TestZlibEncodeDecode(t *testing.T) {
-	enc, err := NewZlibEncoder()
-	require.NoError(t, err)
-	dec, err := NewZlibDecoder()
-	require.NoError(t, err)
+	enc := NewZlibEncoder()
+	dec := NewZlibDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -90,8 +84,7 @@ func TestStreamIdentityDecode(t *testing.T) {
 }
 
 func TestStreamGzipDecode(t *testing.T) {
-	enc, err := NewGzipEncoder()
-	require.NoError(t, err)
+	enc := NewGzipEncoder()
 	written, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
 

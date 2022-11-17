@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package ping
 
@@ -11,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-ping/ping"
+	ping "github.com/prometheus-community/pro-bing"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs"

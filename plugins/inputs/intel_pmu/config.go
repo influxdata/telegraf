@@ -1,5 +1,4 @@
 //go:build linux && amd64
-// +build linux,amd64
 
 package intel_pmu
 
@@ -158,8 +157,7 @@ func (cp *configParser) parseIntRanges(ranges []string) ([]int, error) {
 }
 
 func parseEventsWithQualifiers(events []string) []*eventWithQuals {
-	var result []*eventWithQuals
-
+	result := make([]*eventWithQuals, 0, len(events))
 	for _, event := range events {
 		newEventWithQualifiers := &eventWithQuals{}
 
@@ -171,6 +169,7 @@ func parseEventsWithQualifiers(events []string) []*eventWithQuals {
 		}
 		result = append(result, newEventWithQualifiers)
 	}
+
 	return result
 }
 

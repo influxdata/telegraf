@@ -45,12 +45,12 @@ MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
-
-LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
+INTERNAL_PKG=github.com/influxdata/telegraf/internal
+LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).Commit=$(commit) -X $(INTERNAL_PKG).Branch=$(branch)
 ifneq ($(tag),)
-	LDFLAGS += -X main.version=$(version)
+	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)
 else
-	LDFLAGS += -X main.version=$(version)-$(commit)
+	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)-$(commit)
 endif
 
 # Go built-in race detector works only for 64 bits architectures.
@@ -107,13 +107,8 @@ deps:
 version:
 	@echo $(version)-$(commit)
 
-.PHONY: versioninfo
-versioninfo:
-	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
-	go run scripts/generate_versioninfo/main.go; \
-	go generate cmd/telegraf/telegraf_windows.go; \
-
 build_tools:
+	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
 
@@ -125,7 +120,7 @@ docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processo
 
 .PHONY: build
 build:
-	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
 telegraf: build
@@ -170,7 +165,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -223,6 +218,10 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf cmd/telegraf/resource.syso
+	rm -rf cmd/telegraf/versioninfo.json
+	rm -rf tools/custom_builder/custom_builder
+	rm -rf tools/custom_builder/custom_builder.exe
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
 	rm -rf tools/package_lxd_test/package_lxd_test
@@ -239,8 +238,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.18.5 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.18.5
+	docker build -t quay.io/influxdb/telegraf-ci:1.19.3 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.19.3
 
 .PHONY: install
 install: $(buildbin)
@@ -313,7 +312,7 @@ i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gz i386.rpm
 .PHONY: i386
 i386:
 	@ echo $(i386)
-windows += windows_i386.zip windows_amd64.zip
+windows += windows_i386.zip windows_amd64.zip windows_arm64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
@@ -334,6 +333,8 @@ package: docs $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
+	if [ "$(suffix $@)" = ".zip" ]; then go generate cmd/telegraf/telegraf_windows.go; fi
+
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
 
@@ -357,6 +358,7 @@ $(include_packages):
 			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
+			--rpm-os ${GOOS} \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
@@ -439,6 +441,9 @@ freebsd_armv7.tar.gz: export GOARM := 7
 windows_amd64.zip: export GOOS := windows
 windows_amd64.zip: export GOARCH := amd64
 
+windows_arm64.zip: export GOOS := windows
+windows_arm64.zip: export GOARCH := arm64
+
 darwin_amd64.tar.gz: export GOOS := darwin
 darwin_amd64.tar.gz: export GOARCH := amd64
 
@@ -448,11 +453,11 @@ darwin_arm64.tar.gz: export GOARCH := arm64
 windows_i386.zip: export GOOS := windows
 windows_i386.zip: export GOARCH := 386
 
-windows_i386.zip windows_amd64.zip: export prefix =
-windows_i386.zip windows_amd64.zip: export bindir = $(prefix)
-windows_i386.zip windows_amd64.zip: export sysconfdir = $(prefix)
-windows_i386.zip windows_amd64.zip: export localstatedir = $(prefix)
-windows_i386.zip windows_amd64.zip: export EXEEXT := .exe
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export prefix =
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export bindir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export sysconfdir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export localstatedir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 
 %.deb: export pkg := deb
 %.deb: export prefix := /usr

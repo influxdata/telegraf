@@ -31,8 +31,8 @@ func TestGosmiTranslator(t *testing.T) {
 	require.NotNil(t, tr)
 }
 
-//gosmi uses the same connection struct as netsnmp but has a few
-//different test cases, so it has its own copy
+// gosmi uses the same connection struct as netsnmp but has a few
+// different test cases, so it has its own copy
 var gosmiTsc = &testSNMPConnection{
 	host: "tsc",
 	values: map[string]interface{}{
@@ -222,11 +222,11 @@ func TestSnmpInit_noTranslateGosmi(t *testing.T) {
 	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 
-//TestTableBuild_walk in snmp_test.go is split into two tests here,
-//noTranslate and Translate.
+// TestTableBuild_walk in snmp_test.go is split into two tests here,
+// noTranslate and Translate.
 //
-//This is only running with gosmi translator but should be valid with
-//netsnmp too.
+// This is only running with gosmi translator but should be valid with
+// netsnmp too.
 func TestTableBuild_walk_noTranslate(t *testing.T) {
 	tbl := Table{
 		Name:       "mytable",

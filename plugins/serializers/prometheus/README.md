@@ -31,6 +31,10 @@ reporting others every bucket/quantile will continue to exist.
   ## discarded.
   prometheus_string_as_label = false
 
+  ## Encode metrics without HELP metadata. This helps reduce the payload
+  ## size.
+  prometheus_compact_encoding = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

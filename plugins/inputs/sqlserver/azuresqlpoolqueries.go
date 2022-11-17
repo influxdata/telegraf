@@ -1,12 +1,13 @@
+//nolint:lll // conditionally long lines allowed
 package sqlserver
 
 import (
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 )
 
-//------------------------------------------------------------------------------------------------
-//------------------ Azure Sql Elastic Pool ------------------------------------------------------
-//------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// ------------------ Azure Sql Elastic Pool ------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 const sqlAzurePoolResourceStats = `
 IF SERVERPROPERTY('EngineEdition') <> 5 
    OR NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN

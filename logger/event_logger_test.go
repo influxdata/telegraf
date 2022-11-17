@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 package logger
 
@@ -11,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
@@ -57,16 +55,18 @@ func TestEventLogIntegration(t *testing.T) {
 		Logfile:   "",
 	}
 
-	SetupLogging(config)
+	err := SetupLogging(config)
+	require.NoError(t, err)
+
 	now := time.Now()
 	log.Println("I! Info message")
 	log.Println("W! Warn message")
 	log.Println("E! Err message")
 	events := getEventLog(t, now)
-	assert.Len(t, events, 3)
-	assert.Contains(t, events, Event{Message: "Info message", Level: Info})
-	assert.Contains(t, events, Event{Message: "Warn message", Level: Warning})
-	assert.Contains(t, events, Event{Message: "Err message", Level: Error})
+	require.Len(t, events, 3)
+	require.Contains(t, events, Event{Message: "Info message", Level: Info})
+	require.Contains(t, events, Event{Message: "Warn message", Level: Warning})
+	require.Contains(t, events, Event{Message: "Err message", Level: Error})
 }
 
 func TestRestrictedEventLogIntegration(t *testing.T) {
@@ -80,7 +80,8 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 		Quiet:     true,
 	}
 
-	SetupLogging(config)
+	err := SetupLogging(config)
+	require.NoError(t, err)
 	//separate previous log messages by small delay
 	time.Sleep(time.Second)
 	now := time.Now()
@@ -88,8 +89,8 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	log.Println("W! Warning message")
 	log.Println("E! Error message")
 	events := getEventLog(t, now)
-	assert.Len(t, events, 1)
-	assert.Contains(t, events, Event{Message: "Error message", Level: Error})
+	require.Len(t, events, 1)
+	require.Contains(t, events, Event{Message: "Error message", Level: Error})
 }
 
 func prepareLogger(t *testing.T) {

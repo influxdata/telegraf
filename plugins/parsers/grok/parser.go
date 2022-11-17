@@ -445,9 +445,10 @@ func (p *Parser) compileCustomPatterns() error {
 
 // parseTypedCaptures parses the capture modifiers, and then deletes the
 // modifier from the line so that it is a valid "grok" pattern again.
-//   ie,
-//     %{NUMBER:bytes:int}      => %{NUMBER:bytes}      (stores %{NUMBER}->bytes->int)
-//     %{IPORHOST:clientip:tag} => %{IPORHOST:clientip} (stores %{IPORHOST}->clientip->tag)
+//
+//	ie,
+//	  %{NUMBER:bytes:int}      => %{NUMBER:bytes}      (stores %{NUMBER}->bytes->int)
+//	  %{IPORHOST:clientip:tag} => %{IPORHOST:clientip} (stores %{IPORHOST}->clientip->tag)
 func (p *Parser) parseTypedCaptures(name, pattern string) (string, error) {
 	matches := modifierRe.FindAllStringSubmatch(pattern, -1)
 
@@ -502,7 +503,8 @@ type tsModder struct {
 // duplicate timestamp.
 // the increment unit is determined as the next smallest time unit below the
 // most significant time unit of ts.
-//   ie, if the input is at ms precision, it will increment it 1µs.
+//
+//	ie, if the input is at ms precision, it will increment it 1µs.
 func (t *tsModder) tsMod(ts time.Time) time.Time {
 	if ts.IsZero() {
 		return ts

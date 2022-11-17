@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package intel_rdt
 
@@ -80,7 +79,6 @@ func (p *Publisher) publishProcess(measurement processMeasurement) {
 }
 
 func parseCoresMeasurement(measurements string) (parsedCoresMeasurement, error) {
-	var values []float64
 	splitCSV, err := splitCSVLineIntoValues(measurements)
 	if err != nil {
 		return parsedCoresMeasurement{}, err
@@ -94,6 +92,7 @@ func parseCoresMeasurement(measurements string) (parsedCoresMeasurement, error) 
 	// trim unwanted quotes
 	coresString = strings.Trim(coresString, "\"")
 
+	values := make([]float64, 0, len(splitCSV.metricsValues))
 	for _, metric := range splitCSV.metricsValues {
 		parsedValue, err := parseFloat(metric)
 		if err != nil {
@@ -144,7 +143,7 @@ func parseProcessesMeasurement(measurement processMeasurement) (parsedProcessMea
 	actualProcess := measurement.name
 	cores := strings.Trim(strings.Join(splitCSV.coreOrPIDsValues[lenOfPIDs:], ","), `"`)
 
-	var values []float64
+	values := make([]float64, 0, len(splitCSV.metricsValues))
 	for _, metric := range splitCSV.metricsValues {
 		parsedValue, err := parseFloat(metric)
 		if err != nil {

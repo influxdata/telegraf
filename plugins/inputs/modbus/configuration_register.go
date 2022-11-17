@@ -5,7 +5,6 @@ import (
 	"fmt"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample_register.conf
 var sampleConfigPartPerRegister string
 
@@ -82,7 +81,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 	if err != nil {
 		return nil, err
 	}
-	return groupFieldsToRequests(fields, nil, maxQuantity), nil
+	return groupFieldsToRequests(fields, nil, maxQuantity, "none"), nil
 }
 
 func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {

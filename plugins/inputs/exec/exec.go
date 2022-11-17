@@ -19,27 +19,33 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
 const MaxStderrBytes int = 512
+
+type exitcodeHandlerFunc func([]telegraf.Metric, error, []byte) []telegraf.Metric
 
 type Exec struct {
 	Commands    []string        `toml:"commands"`
 	Command     string          `toml:"command"`
 	Environment []string        `toml:"environment"`
 	Timeout     config.Duration `toml:"timeout"`
+	Log         telegraf.Logger `toml:"-"`
 
 	parser parsers.Parser
 
 	runner Runner
-	Log    telegraf.Logger `toml:"-"`
+
+	// Allow post processing of command exit codes
+	exitcodeHandler   exitcodeHandlerFunc
+	parseDespiteError bool
 }
 
 func NewExec() *Exec {
@@ -135,10 +141,9 @@ func (*Exec) SampleConfig() string {
 
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
-	_, isNagios := e.parser.(*nagios.Parser)
 
 	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
-	if !isNagios && runErr != nil {
+	if !e.parseDespiteError && runErr != nil {
 		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
@@ -150,8 +155,8 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 		return
 	}
 
-	if isNagios {
-		metrics = nagios.AddState(runErr, errBuf, metrics)
+	if e.exitcodeHandler != nil {
+		metrics = e.exitcodeHandler(metrics, runErr, errBuf)
 	}
 
 	for _, m := range metrics {
@@ -161,6 +166,13 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 
 func (e *Exec) SetParser(parser parsers.Parser) {
 	e.parser = parser
+	unwrapped, ok := parser.(*models.RunningParser)
+	if ok {
+		if _, ok := unwrapped.Parser.(*nagios.Parser); ok {
+			e.exitcodeHandler = nagiosHandler
+			e.parseDespiteError = true
+		}
+	}
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
@@ -212,6 +224,10 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 
 func (e *Exec) Init() error {
 	return nil
+}
+
+func nagiosHandler(metrics []telegraf.Metric, err error, msg []byte) []telegraf.Metric {
+	return nagios.AddState(err, msg, metrics)
 }
 
 func init() {

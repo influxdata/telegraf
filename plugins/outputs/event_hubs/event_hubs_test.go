@@ -49,6 +49,7 @@ func TestInitAndWrite(t *testing.T) {
 		Hub:              mockHub,
 		ConnectionString: "mock",
 		Timeout:          config.Duration(time.Second * 5),
+		MaxMessageSize:   1000000,
 		serializer:       serializer,
 	}
 

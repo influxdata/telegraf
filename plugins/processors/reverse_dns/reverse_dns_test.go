@@ -40,8 +40,7 @@ func TestSimpleReverseLookupIntegration(t *testing.T) {
 	require.NoError(t, err)
 	err = dns.Add(m, acc)
 	require.NoError(t, err)
-	err = dns.Stop()
-	require.NoError(t, err)
+	dns.Stop()
 	// should be processed now.
 
 	require.Len(t, acc.GetTelegrafMetrics(), 1)

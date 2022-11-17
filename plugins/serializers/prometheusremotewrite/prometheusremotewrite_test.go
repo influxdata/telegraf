@@ -10,10 +10,10 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRemoteWriteSerialize(t *testing.T) {
@@ -134,11 +134,10 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewSerializer(FormatConfig{
+			s := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
 				StringHandling:  tt.config.StringHandling,
 			})
-			require.NoError(t, err)
 			data, err := s.Serialize(tt.metric)
 			require.NoError(t, err)
 			actual, err := prompbToText(data)
@@ -582,16 +581,16 @@ cpu_time_idle{host_name="example.org"} 42
 			},
 			expected: []byte(`
 cpu_time_guest{cpu="cpu0"} 8106.04
-cpu_time_system{cpu="cpu0"} 26271.4
-cpu_time_user{cpu="cpu0"} 92904.33
 cpu_time_guest{cpu="cpu1"} 8181.63
-cpu_time_system{cpu="cpu1"} 25351.49
-cpu_time_user{cpu="cpu1"} 96912.57
 cpu_time_guest{cpu="cpu2"} 7470.04
-cpu_time_system{cpu="cpu2"} 24998.43
-cpu_time_user{cpu="cpu2"} 96034.08
 cpu_time_guest{cpu="cpu3"} 7517.95
+cpu_time_system{cpu="cpu0"} 26271.4
+cpu_time_system{cpu="cpu1"} 25351.49
+cpu_time_system{cpu="cpu2"} 24998.43
 cpu_time_system{cpu="cpu3"} 24970.82
+cpu_time_user{cpu="cpu0"} 92904.33
+cpu_time_user{cpu="cpu1"} 96912.57
+cpu_time_user{cpu="cpu2"} 96034.08
 cpu_time_user{cpu="cpu3"} 94148
 `),
 		},
@@ -639,11 +638,10 @@ rpc_duration_seconds_sum 17560473
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewSerializer(FormatConfig{
+			s := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
 				StringHandling:  tt.config.StringHandling,
 			})
-			require.NoError(t, err)
 			data, err := s.SerializeBatch(tt.metrics)
 			require.NoError(t, err)
 			actual, err := prompbToText(data)

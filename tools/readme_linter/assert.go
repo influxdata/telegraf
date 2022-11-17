@@ -9,7 +9,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
-//type for all linter assert methods
+// type for all linter assert methods
 type T struct {
 	filename       string
 	markdown       []byte

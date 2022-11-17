@@ -1,5 +1,4 @@
 //go:build !race && linux
-// +build !race,linux
 
 package sysstat
 

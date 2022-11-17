@@ -12,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -53,7 +52,7 @@ func (s *Self) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields("internal_memstats", fields, map[string]string{})
 	}
 
-	telegrafVersion := inter.Version()
+	telegrafVersion := inter.Version
 	goVersion := strings.TrimPrefix(runtime.Version(), "go")
 
 	for _, m := range selfstat.Metrics() {
