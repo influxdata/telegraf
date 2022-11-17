@@ -224,10 +224,10 @@ func TestDelimiter(t *testing.T) {
 
 func TestNullDelimiter(t *testing.T) {
 	p := &Parser{
-		HeaderRowCount:        0,
-		ForceReplaceDelimiter: "\u0000",
-		ColumnNames:           []string{"first", "second", "third"},
-		TimeFunc:              DefaultTime,
+		HeaderRowCount: 0,
+		Delimiter:      "\u0000",
+		ColumnNames:    []string{"first", "second", "third"},
+		TimeFunc:       DefaultTime,
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -238,18 +238,6 @@ func TestNullDelimiter(t *testing.T) {
 	require.Equal(t, float64(3.4), metrics[0].Fields()["first"])
 	require.Equal(t, int64(70), metrics[0].Fields()["second"])
 	require.Equal(t, "test_name", metrics[0].Fields()["third"])
-}
-
-func TestDelimiterConfiguration(t *testing.T) {
-	p := &Parser{
-		HeaderRowCount:        0,
-		Delimiter:             "%",
-		ForceReplaceDelimiter: "\u0000",
-		ColumnNames:           []string{"first", "second", "third"},
-		TimeFunc:              DefaultTime,
-	}
-	err := p.Init()
-	require.Equal(t, fmt.Errorf("`csv_delimiter` must be empty if `csv_force_replace_delimiter` is used"), err)
 }
 
 func TestValueConversion(t *testing.T) {
