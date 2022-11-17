@@ -39,9 +39,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 By default, this plugin is compatible with PowerDNS Recursor versions older
 than `4.5.0`. If you are using a newer version then you'll need to adjust the
-`control_protocol_version` configuration option based on your version. For 
-versions between `4.5.0` and `4.5.11` set it to `2` and for versions `4.6.0` 
-and newer set it to `3`. If you don't, you will get an `i/o timeout` or a 
+`control_protocol_version` configuration option based on your version. For
+versions between `4.5.0` and `4.5.11` set it to `2` and for versions `4.6.0`
+and newer set it to `3`. If you don't, you will get an `i/o timeout` or a
 `protocol wrong type for socket` error.
 
 ### Permissions
