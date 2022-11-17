@@ -57,18 +57,20 @@ func getEndianness() binary.ByteOrder {
 	return binary.BigEndian
 }
 
-func writeNativeUIntToConn(conn net.Conn, value uint) (int, error) {
+func writeNativeUIntToConn(conn net.Conn, value uint) error {
 	intData := make([]byte, uintSizeInBytes)
 
-	if uintSizeInBytes == 4 {
+	switch uintSizeInBytes { 
+	case 4:
 		getEndianness().PutUint32(intData, uint32(value))
-		return conn.Write(intData)
-	} else if uintSizeInBytes == 8 {
+	case 8:
 		getEndianness().PutUint64(intData, uint64(value))
-		return conn.Write(intData)
+	default:
+		return fmt.Errorf("unsupported system configuration")
 	}
 
-	return 0, fmt.Errorf("unsupported system configuration")
+	_, err := conn.Write(intData)
+	return err
 }
 
 func readNativeUIntFromConn(conn net.Conn) (uint, error) {
