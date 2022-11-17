@@ -1247,7 +1247,7 @@ func (e *Endpoint) collectChunk(
 
 				// Update hiwater marks
 				adjTs := ts.Add(interval).Truncate(interval).Add(-time.Second)
-				e.hwMarks.Put(moid, name, adjTs) // Add a second so avoid seeing same sample again
+				e.hwMarks.Put(moid, name, adjTs)
 			}
 			if nValues == 0 {
 				e.log.Debugf("Missing value for: %s, %s", name, objectRef.name)
