@@ -237,7 +237,7 @@ func TestMysqlIntegration(t *testing.T) {
 
 			fmt.Println(string(bytes))
 			return strings.Contains(string(bytes), string(expected))
-		}, 10*time.Second, 500*time.Millisecond)
+		}, 10*time.Second, 500*time.Millisecond, tc.expectedFile)
 	}
 }
 

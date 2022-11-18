@@ -1,6 +1,6 @@
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `metric three` (
-  `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
+  `timestamp` timestamp NULL DEFAULT NULL,
   `tag four` text DEFAULT NULL,
   `string two` text DEFAULT NULL
 );
