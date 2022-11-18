@@ -77,6 +77,65 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## subject is added as tag subject or the value in subject_tag, if subject_tag is empty string this tag is ignored
+  # subject_tag = ""
+
+  ## Enable extracting tag values from NATS subjects
+  ## _ denotes an ignored entry in the topic path
+  # [[inputs.nats_consumer.subject_parsing]]
+  #   subject = ""
+  #   measurement = ""
+  #   tags = ""
+  #   fields = ""
+  ## Value supported is int, float, unit
+  #   [[inputs.nats_consumer.subject_parsing]]
+  #      key = type
+```
+
+## About Subject Parsing
+
+The NATS subject as a whole is stored as a tag, but this can be far too coarse
+to be easily used when utilizing the data further down the line. This
+change allows tag values to be extracted from the NATS subject letting you
+store the information provided in the subject in a meaningful way.
+An `_` denotes an ignored entry in the subject path.
+Please see the following example.
+
+## Example Configuration for subject parsing
+
+```toml
+[[inputs.nats_consumer]]
+  ## urls of NATS servers
+  servers = ["nats://localhost:4222"]
+
+ ## subject(s) to consume
+  subjects = [
+    "telegraf.*.cpu.23",
+  ]
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "value"
+  data_type = "float"
+
+  subject_tag = "subject"
+
+  [[inputs.nats_consumer.subject_parsing]]
+    subject = "telegraf.one.cpu.23"
+    measurement = "_._.measurement._"
+    tags = "tag._._._"
+    fields = "_._._.test"
+    [inputs.nats_consumer.subject_parsing.types]
+      test = "int"
+```
+
+Result:
+
+```shell
+cpu,host=pop-os,tag=telegraf,subject=telegraf.one.cpu.23 value=45,test=23i 1637014942460689291
 ```
 
 [nats]: https://www.nats.io/about/

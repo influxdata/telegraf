@@ -5,15 +5,15 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/nats-io/nats.go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/nats-io/nats.go"
 )
 
 //go:embed sample.conf
@@ -26,26 +26,42 @@ var (
 type empty struct{}
 type semaphore chan empty
 
-type natsError struct {
-	conn *nats.Conn
-	sub  *nats.Subscription
-	err  error
+type SubjectParsingConfig struct {
+	Subject     string            `toml:"subject"`
+	Measurement string            `toml:"measurement"`
+	Tags        string            `toml:"tags"`
+	Fields      string            `toml:"fields"`
+	FieldTypes  map[string]string `toml:"types"`
+
+	measurementIndex int
+	splitTags        []string
+	splitFields      []string
+	splitSubject     []string
 }
 
-func (e natsError) Error() string {
-	return fmt.Sprintf("%s url:%s id:%s sub:%s queue:%s",
-		e.err.Error(), e.conn.ConnectedUrl(), e.conn.ConnectedServerId(), e.sub.Subject, e.sub.Queue)
+type client interface {
+	QueueSubscribe(subj, group string, callback nats.MsgHandler) (*nats.Subscription, error)
+	JetStream(opts ...nats.JSOpt) (nats.JetStreamContext, error)
+	ConnectedUrl() string
+	IsClosed() bool
+	Close()
 }
+
+// factory methods to make the client testable,
+type clientFactory func(url string, opts ...nats.Option) (client, error)
+type setPendingLimitsFactory func(subscription *nats.Subscription, msgLimit, bytesLimit int) error
 
 type natsConsumer struct {
-	QueueGroup  string   `toml:"queue_group"`
-	Subjects    []string `toml:"subjects"`
-	Servers     []string `toml:"servers"`
-	Secure      bool     `toml:"secure"`
-	Username    string   `toml:"username"`
-	Password    string   `toml:"password"`
-	Credentials string   `toml:"credentials"`
-	JsSubjects  []string `toml:"jetstream_subjects"`
+	QueueGroup     string                 `toml:"queue_group"`
+	Subjects       []string               `toml:"subjects"`
+	SubjectTag     *string                `toml:"subject_tag"`
+	SubjectParsing []SubjectParsingConfig `toml:"subject_parsing"`
+	Servers        []string               `toml:"servers"`
+	Secure         bool                   `toml:"secure"`
+	Username       string                 `toml:"username"`
+	Password       string                 `toml:"password"`
+	Credentials    string                 `toml:"credentials"`
+	JsSubjects     []string               `toml:"jetstream_subjects"`
 
 	tls.ClientConfig
 
@@ -58,19 +74,21 @@ type natsConsumer struct {
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 	MetricBuffer           int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 
-	conn   *nats.Conn
-	jsConn nats.JetStreamContext
-	subs   []*nats.Subscription
-	jsSubs []*nats.Subscription
+	clientFactory           clientFactory
+	setPendingLimitsFactory setPendingLimitsFactory
+	conn                    client
+	jsConn                  nats.JetStreamContext
+	subs                    []*nats.Subscription
+	jsSubs                  []*nats.Subscription
 
 	parser parsers.Parser
-	// channel for all incoming NATS messages
-	in chan *nats.Msg
-	// channel for all NATS read errors
-	errs   chan error
 	acc    telegraf.TrackingAccumulator
-	wg     sync.WaitGroup
-	cancel context.CancelFunc
+
+	ctx           context.Context
+	cancel        context.CancelFunc
+	sem           semaphore
+	messages      map[telegraf.TrackingID]bool
+	messagesMutex sync.Mutex
 }
 
 func (*natsConsumer) SampleConfig() string {
@@ -82,16 +100,48 @@ func (n *natsConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (n *natsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e error) {
-	select {
-	case n.errs <- natsError{conn: c, sub: s, err: e}:
-	default:
-		return
+	n.Log.Errorf("%s url:%s id:%s sub:%s queue:%s", e.Error(), c.ConnectedUrl(), c.ConnectedServerId(), s.Subject, s.Queue)
+}
+
+func (n *natsConsumer) Init() error {
+	n.messages = map[telegraf.TrackingID]bool{}
+
+	for i, p := range n.SubjectParsing {
+		splitMeasurement := strings.Split(p.Measurement, ".")
+		for j := range splitMeasurement {
+			if splitMeasurement[j] != "_" {
+				n.SubjectParsing[i].measurementIndex = j
+				break
+			}
+		}
+		n.SubjectParsing[i].splitTags = strings.Split(p.Tags, ".")
+		n.SubjectParsing[i].splitFields = strings.Split(p.Fields, ".")
+		n.SubjectParsing[i].splitSubject = strings.Split(p.Subject, ".")
+
+		if len(splitMeasurement) != len(n.SubjectParsing[i].splitSubject) && len(splitMeasurement) != 1 {
+			n.Log.Errorf("config error subject parsing: measurement length %d does not equal subject length %d",
+				len(splitMeasurement), len(n.SubjectParsing[i].splitSubject))
+			return fmt.Errorf("config error subject parsing: measurement length does not equal subject length")
+		}
+
+		if len(n.SubjectParsing[i].splitFields) != len(n.SubjectParsing[i].splitSubject) && p.Fields != "" {
+			n.Log.Error("config error subject parsing: fields length does not equal subject length")
+			return fmt.Errorf("config error subject parsing: fields length does not equal subject length")
+		}
+
+		if len(n.SubjectParsing[i].splitTags) != len(n.SubjectParsing[i].splitSubject) && p.Tags != "" {
+			n.Log.Error("config error subject parsing: tags length does not equal subject length")
+			return fmt.Errorf("config error subject parsing: tags length does not equal subject length")
+		}
 	}
+	return nil
 }
 
 // Start the nats consumer. Caller must call *natsConsumer.Stop() to clean up.
 func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 	n.acc = acc.WithTracking(n.MaxUndeliveredMessages)
+	n.ctx, n.cancel = context.WithCancel(context.Background())
+	n.sem = make(semaphore, n.MaxUndeliveredMessages)
 
 	var connectErr error
 
@@ -119,25 +169,19 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 	}
 
 	if n.conn == nil || n.conn.IsClosed() {
-		n.conn, connectErr = nats.Connect(strings.Join(n.Servers, ","), options...)
+		n.conn, connectErr = n.clientFactory(strings.Join(n.Servers, ","), options...)
 		if connectErr != nil {
 			return connectErr
 		}
 
-		// Setup message and error channels
-		n.errs = make(chan error)
-
-		n.in = make(chan *nats.Msg, 1000)
 		for _, subj := range n.Subjects {
-			sub, err := n.conn.QueueSubscribe(subj, n.QueueGroup, func(m *nats.Msg) {
-				n.in <- m
-			})
+			sub, err := n.conn.QueueSubscribe(subj, n.QueueGroup, n.recMessage)
 			if err != nil {
 				return err
 			}
 
 			// set the subscription pending limits
-			err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+			err = n.setPendingLimitsFactory(sub, n.PendingMessageLimit, n.PendingBytesLimit)
 			if err != nil {
 				return err
 			}
@@ -154,15 +198,13 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 
 			if n.jsConn != nil {
 				for _, jsSub := range n.JsSubjects {
-					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
-						n.in <- m
-					})
+					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, n.recMessage)
 					if err != nil {
 						return err
 					}
 
 					// set the subscription pending limits
-					err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+					err = n.setPendingLimitsFactory(sub, n.PendingMessageLimit, n.PendingBytesLimit)
 					if err != nil {
 						return err
 					}
@@ -173,16 +215,6 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	n.cancel = cancel
-
-	// Start the message reader
-	n.wg.Add(1)
-	go func() {
-		defer n.wg.Done()
-		go n.receiver(ctx)
-	}()
-
 	n.Log.Infof("Started the NATS consumer service, nats: %v, subjects: %v, jssubjects: %v, queue: %v",
 		n.conn.ConnectedUrl(), n.Subjects, n.JsSubjects, n.QueueGroup)
 
@@ -191,39 +223,137 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 
 // receiver() reads all incoming messages from NATS, and parses them into
 // telegraf metrics.
-func (n *natsConsumer) receiver(ctx context.Context) {
-	sem := make(semaphore, n.MaxUndeliveredMessages)
-
+func (n *natsConsumer) recMessage(msg *nats.Msg) {
 	for {
+		// Drain anything that's been delivered
 		select {
-		case <-ctx.Done():
-			return
-		case <-n.acc.Delivered():
-			<-sem
-		case err := <-n.errs:
-			n.Log.Error(err)
-		case sem <- empty{}:
-			select {
-			case <-ctx.Done():
-				return
-			case err := <-n.errs:
-				<-sem
-				n.Log.Error(err)
-			case <-n.acc.Delivered():
-				<-sem
-				<-sem
-			case msg := <-n.in:
-				metrics, err := n.parser.Parse(msg.Data)
-				if err != nil {
-					n.Log.Errorf("Subject: %s, error: %s", msg.Subject, err.Error())
-					<-sem
-					continue
-				}
+		case track := <-n.acc.Delivered():
+			n.onDelivered(track)
+			continue
+		default:
+		}
 
-				n.acc.AddTrackingMetricGroup(metrics)
+		// Wait for room to accumulate metric, but make delivery progress if possible
+		// (Note that select will randomly pick a case if both are available)
+		select {
+		case track := <-n.acc.Delivered():
+			n.onDelivered(track)
+		case n.sem <- empty{}:
+			err := n.onMessage(n.acc, msg)
+			if err != nil {
+				n.acc.AddError(err)
+				<-n.sem
+			}
+			return
+		}
+	}
+}
+func (n *natsConsumer) onMessage(acc telegraf.TrackingAccumulator, msg *nats.Msg) error {
+	metrics, err := n.parser.Parse(msg.Data)
+	if err != nil {
+		return err
+	}
+	for _, metric := range metrics {
+		if n.SubjectTag != nil && *n.SubjectTag != "" {
+			metric.AddTag(*n.SubjectTag, msg.Subject)
+		}
+
+		for _, p := range n.SubjectParsing {
+			values := strings.Split(msg.Subject, ".")
+			if !compareSubjects(p.splitSubject, values) {
+				continue
+			}
+
+			if p.Measurement != "" {
+				metric.SetName(values[p.measurementIndex])
+			}
+
+			if p.Tags != "" {
+				err := parseMetric(p.splitTags, values, p.FieldTypes, true, metric)
+				if err != nil {
+					return err
+				}
+			}
+
+			if p.Fields != "" {
+				err := parseMetric(p.splitFields, values, p.FieldTypes, false, metric)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
+
+	id := acc.AddTrackingMetricGroup(metrics)
+	n.messagesMutex.Lock()
+	n.messages[id] = true
+	n.messagesMutex.Unlock()
+	return nil
+}
+
+// compareSubjects is used to support the nats wild card `*` which allows for one subject of any value
+func compareSubjects(expected []string, incoming []string) bool {
+	if len(expected) != len(incoming) {
+		return false
+	}
+
+	for i, expected := range expected {
+		if incoming[i] != expected && expected != "*" {
+			return false
+		}
+	}
+
+	return true
+}
+
+// parseMetric gets multiple fields from the subject based on the user configuration (SubjectParsingConfig.Fields)
+func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
+	for i, k := range keys {
+		if k == "_" {
+			continue
+		}
+		if isTag {
+			metric.AddTag(k, values[i])
+		} else {
+			newType, err := typeConvert(types, values[i], k)
+			if err != nil {
+				return err
+			}
+			metric.AddField(k, newType)
+		}
+	}
+	return nil
+}
+
+func typeConvert(types map[string]string, subjectValue string, key string) (interface{}, error) {
+	var newType interface{}
+	var err error
+	// If the user configured inputs.mqtt_consumer.subject.types, check for the desired type
+	if desiredType, ok := types[key]; ok {
+		switch desiredType {
+		case "uint":
+			newType, err = strconv.ParseUint(subjectValue, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert field '%s' to type uint: %v", subjectValue, err)
+			}
+		case "int":
+			newType, err = strconv.ParseInt(subjectValue, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert field '%s' to type int: %v", subjectValue, err)
+			}
+		case "float":
+			newType, err = strconv.ParseFloat(subjectValue, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert field '%s' to type float: %v", subjectValue, err)
+			}
+		default:
+			return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)
+		}
+	} else {
+		newType = subjectValue
+	}
+
+	return newType, nil
 }
 
 func (n *natsConsumer) clean() {
@@ -248,7 +378,6 @@ func (n *natsConsumer) clean() {
 
 func (n *natsConsumer) Stop() {
 	n.cancel()
-	n.wg.Wait()
 	n.clean()
 }
 
@@ -256,16 +385,36 @@ func (n *natsConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
+func (n *natsConsumer) onDelivered(track telegraf.DeliveryInfo) {
+	<-n.sem
+	n.messagesMutex.Lock()
+	_, ok := n.messages[track.ID()]
+	if ok {
+		delete(n.messages, track.ID())
+	}
+	n.messagesMutex.Unlock()
+}
+
+func New(factory clientFactory, limitsFactory setPendingLimitsFactory) *natsConsumer {
+	return &natsConsumer{
+		Servers:                 []string{"nats://localhost:4222"},
+		Secure:                  false,
+		Subjects:                []string{"telegraf"},
+		QueueGroup:              "telegraf_consumers",
+		PendingBytesLimit:       nats.DefaultSubPendingBytesLimit,
+		PendingMessageLimit:     nats.DefaultSubPendingMsgsLimit,
+		MaxUndeliveredMessages:  defaultMaxUndeliveredMessages,
+		clientFactory:           factory,
+		setPendingLimitsFactory: limitsFactory,
+	}
+}
+
 func init() {
 	inputs.Add("nats_consumer", func() telegraf.Input {
-		return &natsConsumer{
-			Servers:                []string{"nats://localhost:4222"},
-			Secure:                 false,
-			Subjects:               []string{"telegraf"},
-			QueueGroup:             "telegraf_consumers",
-			PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
-			PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
-			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
-		}
+		return New(func(url string, opts ...nats.Option) (client, error) {
+			return nats.Connect(url, opts...)
+		}, func(subscription *nats.Subscription, msgLimit, bytesLimit int) error {
+			return subscription.SetPendingLimits(msgLimit, bytesLimit)
+		})
 	})
 }
