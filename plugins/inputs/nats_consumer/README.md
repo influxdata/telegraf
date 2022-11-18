@@ -103,6 +103,8 @@ change allows tag values to be extracted from the NATS subject letting you
 store the information provided in the subject in a meaningful way.
 An `_` denotes an ignored entry in the subject path.
 Please see the following example.
+store the information provided in the subject in a meaningful way. An `_` denotes an
+ignored entry in the subject path. Please see the following example.
 
 ## Example Configuration for subject parsing
 
@@ -138,6 +140,7 @@ Result:
 
 ```shell
 cpu,host=pop-os,tag=telegraf,subject=telegraf.one.cpu.23 value=45,test=23i 1637014942460689291
+cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
 
 [nats]: https://www.nats.io/about/
