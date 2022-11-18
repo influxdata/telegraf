@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
 	"net/smtp"
@@ -24,7 +25,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
-	_tls "github.com/influxdata/telegraf/plugins/common/tls"
+	commontls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,12 +38,118 @@ type X509Cert struct {
 	Timeout          config.Duration `toml:"timeout"`
 	ServerName       string          `toml:"server_name"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
-	tlsCfg           *tls.Config
-	_tls.ClientConfig
+	Log              telegraf.Logger `toml:"-"`
+	commontls.ClientConfig
 	proxy.TCPProxy
+
+	tlsCfg    *tls.Config
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
-	Log       telegraf.Logger
+}
+
+func (*X509Cert) SampleConfig() string {
+	return sampleConfig
+}
+
+func (c *X509Cert) Init() error {
+	// Check if we do have at least one source
+	if len(c.Sources) == 0 {
+		return errors.New("no source configured")
+	}
+
+	// Check the server name and transfer it if necessary
+	if c.ClientConfig.ServerName != "" && c.ServerName != "" {
+		return fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.ClientConfig.ServerName)
+	} else if c.ServerName != "" {
+		// Store the user-provided server-name in the TLS configuration
+		c.ClientConfig.ServerName = c.ServerName
+	}
+
+	// Normalize the sources, handle files and file-globbing
+	if err := c.sourcesToURLs(); err != nil {
+		return err
+	}
+
+	// Create the TLS configuration
+	tlsCfg, err := c.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+	if tlsCfg == nil {
+		tlsCfg = &tls.Config{}
+	}
+	c.tlsCfg = tlsCfg
+
+	return nil
+}
+
+// Gather adds metrics into the accumulator.
+func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
+	now := time.Now()
+	collectedUrls, err := c.collectCertURLs()
+	if err != nil {
+		acc.AddError(fmt.Errorf("getting some certificates failed: %w", err))
+	}
+
+	for _, location := range append(c.locations, collectedUrls...) {
+		certs, err := c.getCert(location, time.Duration(c.Timeout))
+		if err != nil {
+			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
+		}
+		dnsName, err := c.serverName(location)
+		if err != nil {
+			acc.AddError(fmt.Errorf("resolving name of %q failed: %w", location, err))
+			continue
+		}
+		for i, cert := range certs {
+			fields := getFields(cert, now)
+			tags := getTags(cert, location.String())
+
+			// The first certificate is the leaf/end-entity certificate which
+			// needs DNS name validation against the URL hostname.
+			opts := x509.VerifyOptions{
+				Intermediates: x509.NewCertPool(),
+				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+				Roots:         c.tlsCfg.RootCAs,
+				DNSName:       dnsName,
+			}
+			// Reset DNS name to only use it for the leaf node
+			dnsName = ""
+
+			// Add all returned certs to the pool if intermediates except for
+			// the leaf node and ourself
+			for j, c := range certs[1:] {
+				if i != j {
+					opts.Intermediates.AddCert(c)
+				}
+			}
+
+			if _, err := cert.Verify(opts); err == nil {
+				tags["verification"] = "valid"
+				fields["verification_code"] = 0
+			} else {
+				c.Log.Debugf("Invalid certificate at index %2d!", i)
+				c.Log.Debugf("  cert DNS names:    %v", cert.DNSNames)
+				c.Log.Debugf("  cert IP addresses: %v", cert.IPAddresses)
+				c.Log.Debugf("  opts.DNSName:      %v", opts.DNSName)
+				c.Log.Debugf("  verify options:    %v", opts)
+				c.Log.Debugf("  verify error:      %v", err)
+				c.Log.Debugf("  location:          %v", location)
+				c.Log.Debugf("  tlsCfg.ServerName: %v", c.tlsCfg.ServerName)
+				c.Log.Debugf("  ServerName:        %v", c.ServerName)
+				tags["verification"] = "invalid"
+				fields["verification_code"] = 1
+				fields["verification_error"] = err.Error()
+			}
+
+			acc.AddFields("x509_cert", fields, tags)
+			if c.ExcludeRootCerts {
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 func (c *X509Cert) sourcesToURLs() error {
@@ -72,13 +179,7 @@ func (c *X509Cert) sourcesToURLs() error {
 
 func (c *X509Cert) serverName(u *url.URL) (string, error) {
 	if c.tlsCfg.ServerName != "" {
-		if c.ServerName != "" {
-			return "", fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.tlsCfg.ServerName)
-		}
 		return c.tlsCfg.ServerName, nil
-	}
-	if c.ServerName != "" {
-		return c.ServerName, nil
 	}
 	return u.Hostname(), nil
 }
@@ -126,13 +227,15 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		return certs, nil
 	case "https":
 		protocol = "tcp"
+		if u.Port() == "" {
+			u.Host += ":443"
+		}
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
 		dialer, err := c.Proxy()
 		if err != nil {
 			return nil, err
 		}
-
 		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
@@ -316,110 +419,10 @@ func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 	return urls, nil
 }
 
-func (*X509Cert) SampleConfig() string {
-	return sampleConfig
-}
-
-// Gather adds metrics into the accumulator.
-func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
-	now := time.Now()
-	collectedUrls, err := c.collectCertURLs()
-	if err != nil {
-		acc.AddError(fmt.Errorf("cannot get file: %s", err.Error()))
-	}
-
-	for _, location := range append(c.locations, collectedUrls...) {
-		certs, err := c.getCert(location, time.Duration(c.Timeout))
-		if err != nil {
-			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
-		}
-
-		for i, cert := range certs {
-			fields := getFields(cert, now)
-			tags := getTags(cert, location.String())
-
-			// The first certificate is the leaf/end-entity certificate which needs DNS
-			// name validation against the URL hostname.
-			opts := x509.VerifyOptions{
-				Intermediates: x509.NewCertPool(),
-				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-			}
-			if i == 0 {
-				opts.DNSName, err = c.serverName(location)
-				if err != nil {
-					return err
-				}
-				for j, cert := range certs {
-					if j != 0 {
-						opts.Intermediates.AddCert(cert)
-					}
-				}
-			}
-			if c.tlsCfg.RootCAs != nil {
-				opts.Roots = c.tlsCfg.RootCAs
-			}
-
-			_, err = cert.Verify(opts)
-			if err == nil {
-				tags["verification"] = "valid"
-				fields["verification_code"] = 0
-			} else {
-				c.Log.Debugf("Invalid certificate at index %2d!", i)
-				c.Log.Debugf("  cert DNS names:    %v", cert.DNSNames)
-				c.Log.Debugf("  cert IP addresses: %v", cert.IPAddresses)
-				c.Log.Debugf("  opts.DNSName:      %v", opts.DNSName)
-				c.Log.Debugf("  verify options:    %v", opts)
-				c.Log.Debugf("  verify error:      %v", err)
-				c.Log.Debugf("  location:          %v", location)
-				c.Log.Debugf("  tlsCfg.ServerName: %v", c.tlsCfg.ServerName)
-				c.Log.Debugf("  ServerName:        %v", c.ServerName)
-				tags["verification"] = "invalid"
-				fields["verification_code"] = 1
-				fields["verification_error"] = err.Error()
-			}
-
-			acc.AddFields("x509_cert", fields, tags)
-			if c.ExcludeRootCerts {
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
-func (c *X509Cert) Init() error {
-	err := c.sourcesToURLs()
-	if err != nil {
-		return err
-	}
-
-	tlsCfg, err := c.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-	if tlsCfg == nil {
-		tlsCfg = &tls.Config{}
-	}
-
-	if tlsCfg.ServerName != "" && c.ServerName == "" {
-		// Save SNI from tlsCfg.ServerName to c.ServerName and reset tlsCfg.ServerName.
-		// We need to reset c.tlsCfg.ServerName for each certificate when there's
-		// no explicit SNI (c.tlsCfg.ServerName or c.ServerName) otherwise we'll always (re)use
-		// first uri HostName for all certs (see issue 8914)
-		c.ServerName = tlsCfg.ServerName
-		tlsCfg.ServerName = ""
-	}
-	c.tlsCfg = tlsCfg
-
-	return nil
-}
-
 func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
-			Sources: []string{},
-			Timeout: config.Duration(5 * time.Second), // set default timeout to 5s
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }
