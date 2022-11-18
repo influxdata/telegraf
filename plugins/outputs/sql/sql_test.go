@@ -211,31 +211,35 @@ func TestMysqlIntegration(t *testing.T) {
 		testMetrics,
 	))
 
-	//dump the database
-	var rc int
-	rc, _, err = container.Exec([]string{
-		"bash",
-		"-c",
-		"mariadb-dump --user=" + username +
-			" --password=" + password +
-			" --compact --skip-opt " +
-			dbname +
-			" > /out/dump",
-	})
-	require.NoError(t, err)
-	require.Equal(t, 0, rc)
-	dumpfile := filepath.Join(outDir, "dump")
-	require.Eventually(t, func() bool {
-		_, err := os.Stat(dumpfile)
-		return !os.IsNotExist(err)
-	}, 5*time.Second, 10*time.Millisecond)
+	cases := []struct {
+		expectedFile string
+	}{
+		{"./testdata/mariadb/expected_metric_one.sql"},
+		{"./testdata/mariadb/expected_metric_two.sql"},
+		{"./testdata/mariadb/expected_metric_three.sql"},
+	}
+	for _, tc := range cases {
+		expected, err := os.ReadFile(tc.expectedFile)
+		require.NoError(t, err)
 
-	//compare the dump to what we expected
-	expected, err := os.ReadFile("testdata/mariadb/expected.sql")
-	require.NoError(t, err)
-	actual, err := os.ReadFile(dumpfile)
-	require.NoError(t, err)
-	require.Equal(t, string(expected), string(actual))
+		require.Eventually(t, func() bool {
+			rc, out, err := container.Exec([]string{
+				"bash",
+				"-c",
+				"mariadb-dump --user=" + username +
+					" --password=" + password +
+					" --compact --skip-opt " +
+					dbname,
+			})
+			require.NoError(t, err)
+			require.Equal(t, 0, rc)
+
+			bytes, err := io.ReadAll(out)
+			require.NoError(t, err)
+
+			return strings.Contains(string(bytes), string(expected))
+		}, 5*time.Second, 500*time.Millisecond)
+	}
 }
 
 func TestPostgresIntegration(t *testing.T) {
@@ -295,38 +299,35 @@ func TestPostgresIntegration(t *testing.T) {
 		testMetrics,
 	))
 
-	//dump the database
-	//psql -u postgres
-	var rc int
-	rc, _, err = container.Exec([]string{
-		"bash",
-		"-c",
-		"pg_dump" +
-			" --username=" + username +
-			//" --password=" + password +
-			//			" --compact --skip-opt " +
-			" --no-comments" +
-			//" --data-only" +
-			" " + dbname +
-			// pg_dump's output has comments that include build info
-			// of postgres and pg_dump. The build info changes with
-			// each release. To prevent these changes from causing the
-			// test to fail, we strip out comments. Also strip out
-			// blank lines.
-			"|grep -E -v '(^--|^$)'" +
-			" > /out/dump 2>&1",
-	})
+	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
-	require.Equal(t, 0, rc)
-	dumpfile := filepath.Join(outDir, "dump")
-	require.FileExists(t, dumpfile)
 
-	//compare the dump to what we expected
-	expected, err := os.ReadFile("testdata/postgres/expected.sql")
-	require.NoError(t, err)
-	actual, err := os.ReadFile(dumpfile)
-	require.NoError(t, err)
-	require.Equal(t, string(expected), string(actual))
+	require.Eventually(t, func() bool {
+		rc, out, err := container.Exec([]string{
+			"bash",
+			"-c",
+			"pg_dump" +
+				" --username=" + username +
+				//" --password=" + password +
+				//			" --compact --skip-opt " +
+				" --no-comments" +
+				//" --data-only" +
+				" " + dbname +
+				// pg_dump's output has comments that include build info
+				// of postgres and pg_dump. The build info changes with
+				// each release. To prevent these changes from causing the
+				// test to fail, we strip out comments. Also strip out
+				// blank lines.
+				"|grep -E -v '(^--|^$)'",
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, rc)
+
+		bytes, err := io.ReadAll(out)
+		require.NoError(t, err)
+
+		return strings.Contains(string(bytes), string(expected))
+	}, 5*time.Second, 500*time.Millisecond)
 }
 
 func TestClickHouseIntegration(t *testing.T) {
@@ -412,6 +413,6 @@ func TestClickHouseIntegration(t *testing.T) {
 			bytes, err := io.ReadAll(out)
 			require.NoError(t, err)
 			return strings.Contains(string(bytes), tc.expected)
-		}, 5*time.Second, 10*time.Millisecond)
+		}, 5*time.Second, 500*time.Millisecond)
 	}
 }
