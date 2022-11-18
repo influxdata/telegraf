@@ -2865,3 +2865,99 @@ func TestRequestOptimizationAggressive(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestsWorkaroundsOneRequestPerField(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
+	}
+	plugin.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-3",
+					Address:   uint16(3),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-4",
+					Address:   uint16(4),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-5",
+					Address:   uint16(5),
+					InputType: "INT16",
+				},
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].holding, len(plugin.Requests[0].Fields))
+}
+
+func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "register",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
+	}
+	plugin.SlaveID = 1
+	plugin.HoldingRegisters = []fieldDefinition{
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-1",
+			Address:   []uint16{1},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-2",
+			Address:   []uint16{2},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-3",
+			Address:   []uint16{3},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-4",
+			Address:   []uint16{4},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-5",
+			Address:   []uint16{5},
+			Scale:     1.0,
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
+}

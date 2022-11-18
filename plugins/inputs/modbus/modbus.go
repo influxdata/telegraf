@@ -27,6 +27,7 @@ type ModbusWorkarounds struct {
 	AfterConnectPause config.Duration `toml:"pause_after_connect"`
 	PollPause         config.Duration `toml:"pause_between_requests"`
 	CloseAfterGather  bool            `toml:"close_connection_after_gather"`
+	OnRequestPerField bool            `toml:"one_request_per_field"`
 }
 
 // Modbus holds all data relevant to the plugin
@@ -113,8 +114,10 @@ func (m *Modbus) Init() error {
 	var cfg Configuration
 	switch m.ConfigurationType {
 	case "", "register":
+		m.ConfigurationOriginal.workarounds = m.Workarounds
 		cfg = &m.ConfigurationOriginal
 	case "request":
+		m.ConfigurationPerRequest.workarounds = m.Workarounds
 		cfg = &m.ConfigurationPerRequest
 	default:
 		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
