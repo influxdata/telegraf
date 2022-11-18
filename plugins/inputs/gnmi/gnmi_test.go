@@ -952,6 +952,7 @@ func TestRedial(t *testing.T) {
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
 		Redial:    config.Duration(10 * time.Millisecond),
+		Aliases:   map[string]string{"dummy": "type:/model"},
 	}
 
 	grpcServer := grpc.NewServer()
