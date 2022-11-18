@@ -235,8 +235,9 @@ func TestMysqlIntegration(t *testing.T) {
 			bytes, err := io.ReadAll(out)
 			require.NoError(t, err)
 
+			fmt.Println(string(bytes))
 			return strings.Contains(string(bytes), string(expected))
-		}, 5*time.Second, 500*time.Millisecond)
+		}, 10*time.Second, 500*time.Millisecond, tc.expectedFile)
 	}
 }
 
