@@ -140,7 +140,10 @@ func TestWrite(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
-			serializer, err := telegrafJson.NewSerializer(time.Second, "", "")
+			serializer, err := telegrafJson.NewSerializer(
+				telegrafJson.FormatConfig{
+					TimestampUnits: time.Second,
+				})
 			require.NoError(t, err)
 
 			plugin := AzureDataExplorer{
@@ -264,7 +267,7 @@ func TestWriteWithType(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			serializer, err := telegrafJson.NewSerializer(time.Second, "", "")
+			serializer, err := telegrafJson.NewSerializer(telegrafJson.FormatConfig{TimestampUnits: time.Second})
 			require.NoError(t, err)
 			for tableName, jsonValue := range testCase.tableNameToExpectedResult {
 				ingestionType := "queued"
