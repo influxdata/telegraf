@@ -91,7 +91,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  |---BA, DCBA   - Little Endian
   ##  |---BADC       - Mid-Big Endian
   ##  |---CDAB       - Mid-Little Endian
-  ## data_type   - INT16, UINT16, INT32, UINT32, INT64, UINT64,
+  ## data_type   - INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
+  ##               INT16, UINT16, INT32, UINT32, INT64, UINT64,
   ##               FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
   ##               FLOAT32, FIXED, UFIXED (fixed-point representation on input)
   ## scale       - the final numeric variable representation
@@ -155,7 +156,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## Analog Variables, Input Registers and Holding Registers
     ## address        - address of the register to query. For coil and discrete inputs this is the bit address.
     ## name *1        - field name
-    ## type *1,2      - type of the modbus field, can be INT16, UINT16, INT32, UINT32, INT64, UINT64 and
+    ## type *1,2      - type of the modbus field, can be
+    ##                  INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
+    ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                  FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ## scale *1,2     - (optional) factor to scale the variable with
     ## output *1,2    - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
@@ -279,6 +282,12 @@ plugin. These output types are usually one of string, integer or
 floating-point-number. The size of the output type is assumed to be large enough
 for all supported input types. The mapping from the input type to the output
 type is fixed and cannot be configured.
+
+##### Integers: `INT8L`, `INT8H`, `UINT8L`, `UINT8H`
+
+These types are used for 8-bit integer values. Select the one that matches your
+modbus data source. The `L` and `H` suffix denotes the low- and high byte of
+the register respectively.
 
 ##### Integers: `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64`, `UINT64`
 
@@ -412,15 +421,18 @@ metric identified by `measurement`, `slave_id` and `register`.
 
 ##### register datatype
 
-The `register` setting specifies the datatype of the modbus register and can be
-set to `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64` or `UINT64` for integer
-types or `FLOAT32` and `FLOAT64` for IEEE 754 binary representations of floating
-point values. Usually the datatype of the register is listed in the datasheet of
-your modbus device in relation to the `address` described above.
+The `type` setting specifies the datatype of the modbus register and can be
+set to `INT8L`, `INT8H`, `UINT8L`, `UINT8H` where `L` is the lower byte of the
+register and `H` is the higher byte.
+Furthermore, the types `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64` or `UINT64`
+for integer types or `FLOAT32` and `FLOAT64` for IEEE 754 binary representations
+of floating point values exist. Usually the datatype of the register is listed
+in the datasheet of your modbus device in relation to the `address` described
+above.
 
- This setting is ignored if the field's `omit` is set to `true` or if the
- `register` type is a bit-type (`coil` or `discrete`) and can be omitted in
- these cases.
+This setting is ignored if the field's `omit` is set to `true` or if the
+`register` type is a bit-type (`coil` or `discrete`) and can be omitted in
+these cases.
 
 ##### scaling
 
