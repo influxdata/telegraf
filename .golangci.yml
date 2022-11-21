@@ -2,14 +2,15 @@ linters:
   disable-all: true
   enable:
     # - telegraflinter
-    - asciicheck
     - asasalint
+    - asciicheck
     - bidichk
     - bodyclose
     - depguard
     - dogsled
-    - exportloopref
     - errcheck
+    - errname
+    - exportloopref
     - goprintffuncname
     - gosimple
     - govet
