@@ -12,6 +12,7 @@ import (
 	"math"
 	"net"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,9 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+// Regular expression to see if a path element contains an origin
+var originPattern = regexp.MustCompile(`^([\w-_]+):`)
 
 // gNMI plugin instance
 type GNMI struct {
@@ -187,6 +191,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for alias, encodingPath := range c.Aliases {
 		c.internalAliases[encodingPath] = alias
 	}
+	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
 
 	// Create a goroutine for each device, dial and subscribe
 	c.wg.Add(len(c.Addresses))
@@ -332,6 +337,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 			c.Log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
 		}
 	}
+
 	prefixTags["source"], _, _ = net.SplitHostPort(worker.address)
 	prefixTags["path"] = prefix
 
@@ -384,6 +390,12 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 			}
 		}
 
+		// Check for empty names
+		if name == "" {
+			c.acc.AddError(fmt.Errorf("got empty name for update %+v", update))
+			continue
+		}
+
 		// Group metrics
 		for k, v := range fields {
 			key := k
@@ -434,6 +446,16 @@ func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]stri
 // Parse path to path-buffer and tag-field
 func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[string]string, prefix string) (pathBuffer string, aliasPath string, err error) {
 	builder := bytes.NewBufferString(prefix)
+
+	// Some devices do report the origin in the first path element
+	// so try to find out if this is the case.
+	if gnmiPath.Origin == "" && len(gnmiPath.Elem) > 0 {
+		groups := originPattern.FindStringSubmatch(gnmiPath.Elem[0].Name)
+		if len(groups) == 2 {
+			gnmiPath.Origin = groups[1]
+			gnmiPath.Elem[0].Name = gnmiPath.Elem[0].Name[len(groups[1])+1:]
+		}
+	}
 
 	// Prefix with origin
 	if len(gnmiPath.Origin) > 0 {
