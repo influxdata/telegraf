@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/doclambda/protobufquery"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
@@ -129,6 +131,12 @@ func (p *Parser) Init() error {
 		if config.TimestampFmt == "" {
 			config.TimestampFmt = "unix"
 		}
+		f, err := filter.Compile(config.FieldsHex)
+		if err != nil {
+			return fmt.Errorf("creating hex-fields filter failed: %w", err)
+		}
+		config.FieldsHexFilter = f
+
 		p.Configs[i] = config
 	}
 
@@ -406,6 +414,11 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 					}
 				}
 
+				if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+					if b, ok := v.([]byte); ok {
+						v = hex.EncodeToString(b)
+					}
+				}
 				fields[name] = v
 			}
 		} else {
