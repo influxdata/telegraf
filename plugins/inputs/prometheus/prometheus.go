@@ -58,6 +58,8 @@ type Prometheus struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
+	HTTPHeaders map[string]string `toml:"http_headers"`
+
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	MetricVersion int `toml:"metric_version"`
@@ -296,6 +298,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
 	} else if p.Username != "" || p.Password != "" {
 		req.SetBasicAuth(p.Username, p.Password)
+	}
+
+	if p.HTTPHeaders != nil {
+		for key, value := range p.HTTPHeaders {
+			req.Header.Add(key, value)
+		}
 	}
 
 	var resp *http.Response
