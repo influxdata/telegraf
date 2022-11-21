@@ -357,7 +357,7 @@ func (t *Timestream) createTable(tableName *string) error {
 			MemoryStoreRetentionPeriodInHours:  t.CreateTableMemoryStoreRetentionPeriodInHours,
 		},
 	}
-	var tags []types.Tag
+	tags := make([]types.Tag, 0, len(t.CreateTableTags))
 	for key, val := range t.CreateTableTags {
 		tags = append(tags, types.Tag{
 			Key:   aws.String(key),
@@ -434,7 +434,7 @@ func (t *Timestream) TransformMetrics(metrics []telegraf.Metric) []*timestreamwr
 }
 
 func (t *Timestream) buildDimensions(point telegraf.Metric) []types.Dimension {
-	var dimensions []types.Dimension
+	dimensions := make([]types.Dimension, 0, len(point.Tags()))
 	for tagName, tagValue := range point.Tags() {
 		dimension := types.Dimension{
 			Name:  aws.String(tagName),
@@ -464,10 +464,8 @@ func (t *Timestream) buildWriteRecords(point telegraf.Metric) []types.Record {
 }
 
 func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Record {
-	var records []types.Record
-
 	dimensions := t.buildDimensions(point)
-
+	records := make([]types.Record, 0, len(point.Fields()))
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
@@ -501,8 +499,7 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 		multiMeasureName = point.Name()
 	}
 
-	var multiMeasures []types.MeasureValue
-
+	multiMeasures := make([]types.MeasureValue, 0, len(point.Fields()))
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {

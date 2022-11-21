@@ -161,8 +161,7 @@ func (p *Parser) processMetric(input []byte, data []json_v2.DataSet, tag bool, t
 	}
 
 	p.iterateObjects = false
-	var metrics [][]telegraf.Metric
-
+	metrics := make([][]telegraf.Metric, 0, len(data))
 	for _, c := range data {
 		if c.Path == "" {
 			return nil, fmt.Errorf("GJSON path is required")

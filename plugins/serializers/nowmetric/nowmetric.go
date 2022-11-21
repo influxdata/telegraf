@@ -77,9 +77,8 @@ func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 		 ** ci2metric_id:	List of key-value pairs to identify the CI.
 		 ** source:			Data source monitoring the metric type
 	*/
-	var allmetrics OIMetrics
+	var allmetrics OIMetrics //nolint:prealloc // Pre-allocating may change format of marshaled JSON
 	var oimetric OIMetric
-
 	oimetric.Source = "Telegraf"
 
 	// Process Tags to extract node & resource name info
