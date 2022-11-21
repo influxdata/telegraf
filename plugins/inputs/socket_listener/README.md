@@ -84,10 +84,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Available strategies are:
   ##   newline         -- split at newlines (default)
   ##   null            -- split at null bytes
-  ## Packet splitting strategy and corresponding settings.
-  ## Available strategies are:
-  ##   newline         -- split at newlines (default)
-  ##   null            -- split at null bytes
   ##   delimiter       -- split at delimiter byte-sequence in hex-format
   ##                      given in `splitting_delimiter`
   ##   fixed length    -- split after number of bytes given in `splitting_length`
@@ -103,10 +99,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## or withou.
   ## Note: This setting is only used for splitting_strategy = "delimiter".
   # splitting_delimiter = ""
-  ## The delimiter is a byte-sequence marking the end of a message
-  ## e.g. "0x0D0A" marks a Windows line-break (CR LF).
-  ## Note: This setting is only used for splitting_strategy = "delimiter".
-  # slitting_delimiter = ""
 
   ## Fixed length of a message in bytes.
   ## Note: This setting is only used for splitting_strategy = "fixed length".
@@ -117,17 +109,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  offset        -- start of length field in bytes from begin of data
   ##  bytes         -- length of length field in bytes
   ##  endianness    -- endianness of the value, either "be" for big endian or
-  ## with variable length. The specification containes the following fields:
-  ##  offset        -- start of length field in bytes from beginn of data
-  ##  bytes         -- length of length field in bytes
-  ##  endianness    -- endianness of the value, either "be" for big endian or
   ##                   "le" for little endian
   ##  header_length -- total length of header to be skipped when passing
   ##                   data on to the parser. If zero (default), the header
   ##                   is passed on to the parser together with the message.
   ## Note: This setting is only used for splitting_strategy = "variable length".
   # splitting_length_field = {offset = 0, bytes = 0, endianness = "be", header_length = 0}
-  # splitting_length_field = {offset = 0, bytes = 0, endianess = "be", header_length = 0}
 ```
 
 ## A Note on UDP OS Buffer Sizes
