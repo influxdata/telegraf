@@ -36,8 +36,7 @@ func (sp *streamingProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) e
 	return nil
 }
 
-func (sp *streamingProcessor) Stop() error {
-	return nil
+func (sp *streamingProcessor) Stop() {
 }
 
 // Make the streamingProcessor of type Initializer to be able

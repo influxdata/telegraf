@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const servicePort = "9200"
@@ -44,9 +45,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	urls := []string{
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
@@ -80,9 +79,7 @@ func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	urls := []string{
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
@@ -123,9 +120,7 @@ func TestConnectAndWriteMetricWithNaNValueNoneIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	urls := []string{
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
@@ -167,9 +162,7 @@ func TestConnectAndWriteMetricWithNaNValueDropIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	urls := []string{
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
@@ -233,9 +226,7 @@ func TestConnectAndWriteMetricWithNaNValueReplacementIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	urls := []string{
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
@@ -283,9 +274,7 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	urls := []string{
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
@@ -314,9 +303,7 @@ func TestTemplateManagementIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	urls := []string{
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
@@ -349,9 +336,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	urls := []string{
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),

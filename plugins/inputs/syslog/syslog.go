@@ -209,6 +209,9 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 		if err != nil {
 			acc.AddError(err)
 		}
+		if err == nil && message == nil {
+			acc.AddError(fmt.Errorf("unable to parse message: %s", string(b[:n])))
+		}
 	}
 }
 

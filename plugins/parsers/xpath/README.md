@@ -73,6 +73,23 @@ You should use the following setting
   ...
 ```
 
+#### `xpath_protobuf_skip_bytes` (optional)
+
+This option allows to skip a number of bytes before trying to parse
+the protocol-buffer message. This is useful in cases where the raw data
+has a header e.g. for the message length or in case of GRPC messages.
+
+This is a list of known headers and the corresponding values for
+`xpath_protobuf_skip_bytes`
+
+| name                                    | setting | comment |
+| --------------------------------------- | ------- | ------- |
+| [GRPC protocol][GRPC] | 5 | GRPC adds a 5-byte header for _Length-Prefixed-Messages_ |
+| [PowerDNS logging][PDNS] | 2 | Sent messages contain a 2-byte header containing the message length |
+
+[GRPC]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
+[PDNS]: https://docs.powerdns.com/recursor/lua-config/protobuf.html
+
 ## Configuration
 
 ```toml
@@ -92,6 +109,8 @@ You should use the following setting
   # xpath_protobuf_type = "org.eclipse.tahu.protobuf.Payload"
   ## List of paths to use when looking up imported protocol-buffer definition files.
   # xpath_protobuf_import_paths = ["."]
+  ## Number of (header) bytes to ignore before parsing the message.
+  # xpath_protobuf_skip_bytes = 0
 
   ## Print the internal XML document when in debug logging mode.
   ## This is especially useful when using the parser with non-XML formats like protocol-buffers
@@ -121,6 +140,12 @@ You should use the following setting
     ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
     ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
     # timestamp_format = "2006-01-02T15:04:05Z"
+
+    ## Optional: List of fields to convert to hex-strings if they are
+    ## containing byte-arrays. This might be the case for e.g. protocol-buffer
+    ## messages encoding data as byte-arrays. Wildcard patterns are allowed.
+    ## By default, all byte-array-fields are converted to string.
+    # fields_bytes_as_hex = []
 
     ## Tag definitions using the given XPath queries.
     [inputs.file.xpath.tags]

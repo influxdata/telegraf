@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"log" //nolint:revive // We cannot use the Telegraf's logging here
+	"log"
 	"os"
 	"regexp"
 	"strings"

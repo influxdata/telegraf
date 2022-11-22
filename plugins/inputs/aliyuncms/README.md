@@ -23,6 +23,15 @@ to authenticate.
 
 [1]: https://www.alibabacloud.com/help/doc-detail/53045.htm?spm=a2c63.p38356.b99.127.5cba21fdt5MJKr&parentId=28572
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

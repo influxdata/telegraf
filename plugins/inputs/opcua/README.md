@@ -1,9 +1,18 @@
-# OPC UA Client Input Plugin
+# OPC UA Client Reader Input Plugin
 
-The `opcua` plugin retrieves data from OPC UA client devices.
+The `opcua` plugin retrieves data from OPC UA Server devices.
 
 Telegraf minimum version: Telegraf 1.16
 Plugin minimum tested version: 1.16
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
@@ -19,7 +28,7 @@ Plugin minimum tested version: 1.16
   ## Maximum time allowed to establish a connect to the endpoint.
   # connect_timeout = "10s"
   #
-  ## Maximum time allowed for a request over the estabilished connection.
+  ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
   #
   ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
@@ -58,18 +67,38 @@ Plugin minimum tested version: 1.16
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
   ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
   ## identifier        - OPC UA ID (tag as shown in opcua browser)
-  ## tags              - extra tags to be added to the output metric (optional)
-  ## Example:
-  ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262", tags=[["tag1","value1"],["tag2","value2]]}
+  ## tags              - extra tags to be added to the output metric (optional); deprecated in 1.25.0; use default_tags
+  ## default_tags      - extra tags to be added to the output metric (optional)
+  ##
+  ## Use either the inline notation or the bracketed notation, not both.
+  #
+  ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #  {name="", namespace="", identifier_type="", identifier=""},
-  #  {name="", namespace="", identifier_type="", identifier=""},
-  #]
+  #   {name="", namespace="", identifier_type="", identifier="", tags=[["tag1", "value1"], ["tag2", "value2"]},
+  #   {name="", namespace="", identifier_type="", identifier=""},
+  # ]
+  #
+  ## Bracketed notation
+  # [[inputs.opcua.nodes]]
+  #   name = "node1"
+  #   namespace = ""
+  #   identifier_type = ""
+  #   identifier = ""
+  #   default_tags = { tag1 = "value1", tag2 = "value2" }
+  #
+  # [[inputs.opcua.nodes]]
+  #   name = "node2"
+  #   namespace = ""
+  #   identifier_type = ""
+  #   identifier = ""
   #
   ## Node Group
-  ## Sets defaults for OPC UA namespace and ID type so they aren't required in
-  ## every node.  A group can also have a metric name that overrides the main
-  ## plugin metric name.
+  ## Sets defaults so they aren't required in every node.
+  ## Default values can be set for:
+  ## * Metric name
+  ## * OPC UA namespace
+  ## * Identifier
+  ## * Default tags
   ##
   ## Multiple node groups are allowed
   #[[inputs.opcua.group]]
@@ -85,36 +114,61 @@ Plugin minimum tested version: 1.16
   ## namespace, this is used.
   # identifier_type =
   #
+  ## Default tags that are applied to every node in this group. Can be
+  ## overwritten in a node by setting a different value for the tag name.
+  ##   example: default_tags = { tag1 = "value1" }
+  # default_tags = {}
+  #
   ## Node ID Configuration.  Array of nodes with the same settings as above.
+  ## Use either the inline notation or the bracketed notation, not both.
+  #
+  ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #  {name="", namespace="", identifier_type="", identifier=""},
-  #  {name="", namespace="", identifier_type="", identifier=""},
+  #  {name="node1", namespace="", identifier_type="", identifier=""},
+  #  {name="node2", namespace="", identifier_type="", identifier=""},
   #]
+  #
+  ## Bracketed notation
+  # [[inputs.opcua.group.nodes]]
+  #   name = "node1"
+  #   namespace = ""
+  #   identifier_type = ""
+  #   identifier = ""
+  #   default_tags = { tag1 = "override1", tag2 = "value2" }
+  #
+  # [[inputs.opcua.group.nodes]]
+  #   name = "node2"
+  #   namespace = ""
+  #   identifier_type = ""
+  #   identifier = ""
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
     # additional_valid_status_codes = ["0xC0"]
+
+  # [inputs.opcua.request_workarounds]
+    ## Use unregistered reads instead of registered reads
+    # use_unregistered_reads = false
 ```
 
 ## Node Configuration
 
-An OPC UA node ID may resemble: "n=3;s=Temperature". In this example:
+An OPC UA node ID may resemble: "ns=3;s=Temperature". In this example:
 
-- n=3 is indicating the `namespace` is 3
+- ns=3 is indicating the `namespace` is 3
 - s=Temperature is indicting that the `identifier_type` is a string and `identifier` value is 'Temperature'
 - This example temperature node has a value of 79.0
 To gather data from this node enter the following line into the 'nodes' property above:
 
-```shell
+```text
 {field_name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
 ```
 
 This node configuration produces a metric like this:
 
 ```text
-opcua,id=n\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
-
+opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
 ```
 
 ## Group Configuration
@@ -129,28 +183,59 @@ The output metric will include tags set in the group and the node.  If
 a tag with the same name is set in both places, the tag value from the
 node is used.
 
-This example group configuration has two groups with two nodes each:
+This example group configuration has three groups with two nodes each:
 
 ```toml
+  # Group 1
   [[inputs.opcua.group]]
-  name="group1_metric_name"
-  namespace="3"
-  identifier_type="i"
-  tags=[["group1_tag", "val1"]]
-  nodes = [
-    {name="name", identifier="1001", tags=[["node1_tag", "val2"]]},
-    {name="name", identifier="1002", tags=[["node1_tag", "val3"]]},
-  ]
+    name = "group1_metric_name"
+    namespace = "3"
+    identifier_type = "i"
+    default_tags = { group1_tag = "val1" }
+    [[inputs.opcua.group.nodes]]
+      name = "name"
+      identifier = "1001"
+      default_tags = { node1_tag = "val2" }
+    [[inputs.opcua.group.nodes]]
+      name = "name"
+      identifier = "1002"
+      default_tags = {node1_tag = "val3"}
+  
+  # Group 2
   [[inputs.opcua.group]]
-  name="group2_metric_name"
-  namespace="3"
-  identifier_type="i"
-  tags=[["group2_tag", "val3"]]
-  nodes = [
-    {name="saw", identifier="1003", tags=[["node2_tag", "val4"]]},
-    {name="sin", identifier="1004"},
-  ]
+    name = "group2_metric_name"
+    namespace = "3"
+    identifier_type = "i"
+    default_tags = { group2_tag = "val3" }
+    [[inputs.opcua.group.nodes]]
+      name = "saw"
+      identifier = "1003"
+      default_tags = { node2_tag = "val4" }
+    [[inputs.opcua.group.nodes]]
+      name = "sin"
+      identifier = "1004"
+  
+  # Group 3
+  [[inputs.opcua.group]]
+    name = "group3_metric_name"
+    namespace = "3"
+    identifier_type = "i"
+    default_tags = { group3_tag = "val5" }
+    nodes = [
+      {name="name", identifier="1001"},
+      {name="name", identifier="1002"},
+    ]
 ```
+
+## Connection Service
+
+This plugin actively reads to retrieve data from the OPC server.
+This is done every `interval`.
+
+## Metrics
+
+The metrics collected by this input plugin will depend on the
+configured `nodes` and `group`.
 
 ## Example Output
 

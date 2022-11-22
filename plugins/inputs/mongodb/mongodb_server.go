@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/bsonx"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Server struct {
@@ -269,7 +270,14 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, gatherTopStat bool, colStatsDbs []string) error {
+func (s *Server) gatherData(
+	acc telegraf.Accumulator,
+	gatherClusterStatus bool,
+	gatherDbStats bool,
+	gatherColStats bool,
+	gatherTopStat bool,
+	colStatsDbs []string,
+) error {
 	serverStatus, err := s.gatherServerStatus()
 	if err != nil {
 		return err

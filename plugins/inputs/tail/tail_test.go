@@ -204,7 +204,8 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 		})
 	acc.AssertContainsTaggedFields(t, "tail_grok",
 		map[string]interface{}{
-			"message": "HelloExample: Sorry, something wrong! java.lang.ArithmeticException: / by zero\tat com.foo.HelloExample2.divide(HelloExample2.java:24)\tat com.foo.HelloExample2.main(HelloExample2.java:14)",
+			"message": "HelloExample: Sorry, something wrong! java.lang.ArithmeticException: / by zero\t" +
+				"at com.foo.HelloExample2.divide(HelloExample2.java:24)\tat com.foo.HelloExample2.main(HelloExample2.java:14)",
 		},
 		map[string]string{
 			"path":     expectedPath,

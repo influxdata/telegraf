@@ -13,6 +13,15 @@ The main focus for development of this plugin is Azure IoT hub:
 3. The connection string needed for the plugin is located under *Shared access
    policies*, both the *iothubowner* and *service* policies should work
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

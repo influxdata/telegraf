@@ -1,0 +1,29 @@
+subscription_id = "subscriptionID"
+client_id = "clientID"
+client_secret = "clientSecret"
+tenant_id = "tenantID"
+
+  [[resource_target]]
+    resource_id = "resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1"
+    metrics = ["metric1", "metric2", "metric3"]
+    aggregations = ["Total", "Average"]
+
+  [[resource_target]]
+    resource_id = "resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2"
+    metrics = ["metric1", "metric2"]
+    aggregations = []
+
+  [[resource_target]]
+    resource_id = "resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3"
+    metrics = []
+    aggregations = ["Total"]
+
+  [[resource_target]]
+    resource_id = "resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2"
+    metrics = []
+    aggregations = []
+
+  [[resource_target]]
+    resource_id = "resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1"
+    metrics = []
+    aggregations = []

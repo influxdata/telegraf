@@ -3,6 +3,22 @@
 The `Internet Speed Monitor` collects data about the internet speed on the
 system.
 
+On some systems, the default settings may cause speed tests to fail; if this
+affects you then try enabling `memory_saving_mode`. This reduces the memory
+requirements for the test, and may reduce the runtime of the test. However,
+please be aware that this may also reduce the accuracy of the test for fast
+(>30Mb/s) connections. This setting enables the upstream
+[Memory Saving Mode](https://github.com/showwin/speedtest-go#memory-saving-mode)
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -13,8 +29,8 @@ system.
   ## demand on your internet connection.
   # interval = "60m"
 
-  ## Sets if runs file download test
-  # enable_file_download = false
+  ## Enable to reduce memory usage
+  # memory_saving_mode = false
 
   ## Caches the closest server location
   # cache = false

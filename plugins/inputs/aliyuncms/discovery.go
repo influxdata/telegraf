@@ -16,9 +16,10 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
+	"github.com/pkg/errors"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/limiter"
-	"github.com/pkg/errors"
 )
 
 type discoveryRequest interface {
@@ -86,7 +87,14 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 // Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
 // Discovery can be limited by region if not set, then all regions is queried.
 // Request against API can inquire additional costs, consult with aliyun API documentation.
-func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
+func newDiscoveryTool(
+	regions []string,
+	project string,
+	lg telegraf.Logger,
+	credential auth.Credential,
+	rateLimit int,
+	discoveryInterval time.Duration,
+) (*discoveryTool, error) {
 	var (
 		dscReq                = map[string]discoveryRequest{}
 		cli                   = map[string]aliyunSdkClient{}

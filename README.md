@@ -104,6 +104,7 @@ get in touch with the package author if support is needed:
 - [Chocolatey](https://chocolatey.org/packages/telegraf) by [ripclawffb](https://chocolatey.org/profiles/ripclawffb)
 - [Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/telegraf.json)
 - [Snap](https://snapcraft.io/telegraf) by Laurent Sesquès (sajoupa)
+- [Homebrew](https://formulae.brew.sh/formula/telegraf#default)
 
 ## Getting Started
 

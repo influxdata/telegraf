@@ -1,15 +1,14 @@
 package regex
 
 import (
-	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func newM1() telegraf.Metric {
@@ -274,9 +273,9 @@ func TestMetricNameConversions(t *testing.T) {
 
 	for _, test := range tests {
 		// Copy the inputs as they will be modified by the processor
-		input := make([]telegraf.Metric, len(inputTemplate))
-		for i, m := range inputTemplate {
-			input[i] = m.Copy()
+		input := make([]telegraf.Metric, 0, len(inputTemplate))
+		for _, m := range inputTemplate {
+			input = append(input, m.Copy())
 		}
 
 		t.Run(test.name, func(t *testing.T) {
@@ -484,9 +483,9 @@ func TestFieldRenameConversions(t *testing.T) {
 
 	for _, test := range tests {
 		// Copy the inputs as they will be modified by the processor
-		input := make([]telegraf.Metric, len(inputTemplate))
-		for i, m := range inputTemplate {
-			input[i] = m.Copy()
+		input := make([]telegraf.Metric, 0, len(inputTemplate))
+		for _, m := range inputTemplate {
+			input = append(input, m.Copy())
 		}
 
 		t.Run(test.name, func(t *testing.T) {
@@ -692,9 +691,9 @@ func TestTagRenameConversions(t *testing.T) {
 
 	for _, test := range tests {
 		// Copy the inputs as they will be modified by the processor
-		input := make([]telegraf.Metric, len(inputTemplate))
-		for i, m := range inputTemplate {
-			input[i] = m.Copy()
+		input := make([]telegraf.Metric, 0, len(inputTemplate))
+		for _, m := range inputTemplate {
+			input = append(input, m.Copy())
 		}
 
 		t.Run(test.name, func(t *testing.T) {
@@ -880,8 +879,8 @@ func TestAnyTagConversion(t *testing.T) {
 			"request": "/users/42/",
 		}
 
-		assert.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
-		assert.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
-		assert.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+		require.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
+		require.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
+		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }

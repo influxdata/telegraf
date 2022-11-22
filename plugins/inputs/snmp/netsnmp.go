@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log" //nolint:revive
+	"log" //nolint:depguard // Allow exceptional but valid use of log here.
 	"os/exec"
 	"strings"
 	"sync"

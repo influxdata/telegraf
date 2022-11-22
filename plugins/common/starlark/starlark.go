@@ -1,4 +1,4 @@
-package starlark //nolint - Needed to avoid getting import-shadowing: The name 'starlark' shadows an import name (revive)
+package starlark
 
 import (
 	"errors"
@@ -6,14 +6,14 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"go.starlark.net/lib/json"
 	"go.starlark.net/lib/math"
 	"go.starlark.net/lib/time"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkjson"
 )
 
-type StarlarkCommon struct {
+type Common struct {
 	Source    string                 `toml:"source"`
 	Script    string                 `toml:"script"`
 	Constants map[string]interface{} `toml:"constants"`
@@ -27,7 +27,7 @@ type StarlarkCommon struct {
 	parameters map[string]starlark.Tuple
 }
 
-func (s *StarlarkCommon) Init() error {
+func (s *Common) Init() error {
 	if s.Source == "" && s.Script == "" {
 		return errors.New("one of source or script must be set")
 	}
@@ -51,7 +51,7 @@ func (s *StarlarkCommon) Init() error {
 		return err
 	}
 
-	program, err := s.sourceProgram(builtins, "")
+	program, err := s.sourceProgram(builtins)
 	if err != nil {
 		return err
 	}
@@ -76,12 +76,12 @@ func (s *StarlarkCommon) Init() error {
 	return nil
 }
 
-func (s *StarlarkCommon) GetParameters(name string) (starlark.Tuple, bool) {
+func (s *Common) GetParameters(name string) (starlark.Tuple, bool) {
 	parameters, found := s.parameters[name]
 	return parameters, found
 }
 
-func (s *StarlarkCommon) AddFunction(name string, params ...starlark.Value) error {
+func (s *Common) AddFunction(name string, params ...starlark.Value) error {
 	globalFn, found := s.globals[name]
 	if !found {
 		return fmt.Errorf("%s is not defined", name)
@@ -96,16 +96,15 @@ func (s *StarlarkCommon) AddFunction(name string, params ...starlark.Value) erro
 		return fmt.Errorf("%s function must take %d parameter(s)", name, len(params))
 	}
 	p := make(starlark.Tuple, len(params))
-	for i, param := range params {
-		p[i] = param
-	}
+	copy(p, params)
+
 	s.functions[name] = fn
 	s.parameters[name] = params
 	return nil
 }
 
 // Add all the constants defined in the plugin as constants of the script
-func (s *StarlarkCommon) addConstants(builtins *starlark.StringDict) error {
+func (s *Common) addConstants(builtins *starlark.StringDict) error {
 	for key, val := range s.Constants {
 		sVal, err := asStarlarkValue(val)
 		if err != nil {
@@ -116,7 +115,7 @@ func (s *StarlarkCommon) addConstants(builtins *starlark.StringDict) error {
 	return nil
 }
 
-func (s *StarlarkCommon) sourceProgram(builtins starlark.StringDict, filename string) (*starlark.Program, error) {
+func (s *Common) sourceProgram(builtins starlark.StringDict) (*starlark.Program, error) {
 	var src interface{}
 	if s.Source != "" {
 		src = s.Source
@@ -126,7 +125,7 @@ func (s *StarlarkCommon) sourceProgram(builtins starlark.StringDict, filename st
 }
 
 // Call calls the function corresponding to the given name.
-func (s *StarlarkCommon) Call(name string) (starlark.Value, error) {
+func (s *Common) Call(name string) (starlark.Value, error) {
 	fn, ok := s.functions[name]
 	if !ok {
 		return nil, fmt.Errorf("function %q does not exist", name)
@@ -138,13 +137,13 @@ func (s *StarlarkCommon) Call(name string) (starlark.Value, error) {
 	return starlark.Call(s.thread, fn, args, nil)
 }
 
-func (s *StarlarkCommon) LogError(err error) {
-	if err, ok := err.(*starlark.EvalError); ok {
-		for _, line := range strings.Split(err.Backtrace(), "\n") {
+func (s *Common) LogError(err error) {
+	if evalErr, ok := err.(*starlark.EvalError); ok {
+		for _, line := range strings.Split(evalErr.Backtrace(), "\n") {
 			s.Log.Error(line)
 		}
 	} else {
-		s.Log.Error(err.Msg)
+		s.Log.Error(err)
 	}
 }
 
@@ -152,7 +151,7 @@ func LoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error
 	switch module {
 	case "json.star":
 		return starlark.StringDict{
-			"json": starlarkjson.Module,
+			"json": json.Module,
 		}, nil
 	case "logging.star":
 		return starlark.StringDict{

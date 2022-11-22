@@ -15,6 +15,15 @@ XML format in BIND 9.10+.
 JSON statistics schema version 1 (BIND 9.10+) is supported. As of writing, some
 distros still do not enable support for JSON statistics in their BIND packages.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
