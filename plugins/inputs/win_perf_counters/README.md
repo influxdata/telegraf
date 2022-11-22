@@ -148,7 +148,7 @@ E.g. via Windows sharing `net use \\SQL-SERVER-01`.
 Use either localhost (`"localhost"`) or real local computer name to gather counters
 also from localhost among other computers. Skip, if gather only from localhost.
 
-If a performance object is present only on specific hosts set `Source` param on
+If a performance counter is present only on specific hosts set `Sources` param on
 the object level configuration to override global Sources.
 
 Example:  `Sources = ["localhost", "SQL-SERVER-01", "SQL-SERVER-02", "SQL-SERVER-03"]`
