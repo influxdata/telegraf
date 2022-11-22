@@ -103,20 +103,15 @@ func shouldScrapePod(pod *corev1.Pod, p *Prometheus) bool {
 		podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
 		podHasMatchingFieldSelector(pod, p.podFieldSelector)
 
-	// Annotations always win over configuration. If annotation is not set
-	// scrape only if scrape_config is set
-	shouldScrape := func() bool {
-		switch p.MonitorKubernetesPodsMethod {
-		case MonitorMethodAnnotations: // must have 'true' annotation to be scraped
-			return pod.Annotations != nil && pod.Annotations["prometheus.io/scrape"] == "true"
-		case MonitorMethodSettings: // will be scraped regardless of annotation
-			return true
-		case MonitorMethodSettingsAndAnnotations: // will be scraped unless opts out with 'false' annotation
-			return pod.Annotations == nil || pod.Annotations["prometheus.io/scrape"] != "false"
-		default:
-			return true // should not get here
-		}
-	}()
+	var shouldScrape bool
+	switch p.MonitorKubernetesPodsMethod {
+	case MonitorMethodAnnotations: // must have 'true' annotation to be scraped
+		shouldScrape = pod.Annotations != nil && pod.Annotations["prometheus.io/scrape"] == "true"
+	case MonitorMethodSettings: // will be scraped regardless of annotation
+		shouldScrape = true
+	case MonitorMethodSettingsAndAnnotations: // will be scraped unless opts out with 'false' annotation
+		shouldScrape = pod.Annotations == nil || pod.Annotations["prometheus.io/scrape"] != "false"
+	}
 
 	return isCandidate && shouldScrape
 }
