@@ -127,13 +127,22 @@ func decodeIP(b []byte) interface{} {
 	return ip.String()
 }
 
+func decodeIPFromUint32(a uint32) interface{} {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, a)
+	return decodeIP(b)
+}
+
 func decodeL4Proto(b []byte) interface{} {
-	id := b[0]
+	return mapL4Proto(b[0])
+}
+
+func mapL4Proto(id uint8) string {
 	name, found := l4ProtoMapping[id]
 	if found {
 		return name
 	}
-	return strconv.FormatUint(uint64(b[0]), 10)
+	return strconv.FormatUint(uint64(id), 10)
 }
 
 func decodeIPv4Options(b []byte) interface{} {
@@ -154,6 +163,21 @@ func decodeIPv4Options(b []byte) interface{} {
 }
 
 func decodeTCPFlags(b []byte) interface{} {
+	flags := b[len(b)-1]
+	result := mapTCPFlags(flags)
+
+	// IPFIX has more flags
+	if len(b) == 2 {
+		if b[0]&0x01 != 0 {
+			result = strings.Join([]string{result, "N"}, "") // NS
+		} else {
+			result = strings.Join([]string{result, "."}, "")
+		}
+	}
+	return result
+}
+
+func mapTCPFlags(flags uint8) string {
 	flagMapping := []string{
 		"C", // CWR
 		"E", // ECE
@@ -165,16 +189,8 @@ func decodeTCPFlags(b []byte) interface{} {
 		"F", // FIN
 	}
 
-	flags := b[0] // for netflow v9
 	result := make([]string, 0, 8)
-	if len(b) == 2 {
-		flags = b[1] // for ipfix
-		if b[0]&0x01 != 0 {
-			result = append(result, "N") // NS
-		} else {
-			result = append(result, ".")
-		}
-	}
+
 	for i := 0; i < 8; i++ {
 		if (flags>>i)&0x01 != 0 {
 			result = append(result, flagMapping[i])
@@ -222,7 +238,11 @@ func decodeSampleAlgo(b []byte) interface{} {
 }
 
 func decodeEngineType(b []byte) interface{} {
-	switch b[0] {
+	return mapEngineType(b[0])
+}
+
+func mapEngineType(b uint8) string {
+	switch b {
 	case 0:
 		return "RP"
 	case 1:
@@ -230,7 +250,7 @@ func decodeEngineType(b []byte) interface{} {
 	case 2:
 		return "PFC/DFC"
 	}
-	return strconv.FormatUint(uint64(b[0]), 10)
+	return strconv.FormatUint(uint64(b), 10)
 }
 
 func decodeMPLSType(b []byte) interface{} {

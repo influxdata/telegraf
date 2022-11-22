@@ -27,6 +27,7 @@ type protocolDecoder interface {
 type NetFlow struct {
 	ServiceAddress string          `toml:"service_address"`
 	ReadBufferSize config.Size     `toml:"read_buffer_size"`
+	Protocol       string          `toml:"protocol"`
 	DumpPackets    bool            `toml:"dump_packets"`
 	Log            telegraf.Logger `toml:"-"`
 
@@ -40,7 +41,12 @@ func (*NetFlow) SampleConfig() string {
 }
 
 func (n *NetFlow) Init() error {
-	n.decoder = &netflowDecoder{Log: n.Log}
+	switch strings.ToLower(n.Protocol) {
+	case "", "netflow v9", "ipfix":
+		n.decoder = &netflowDecoder{Log: n.Log}
+	case "netflow v5":
+		n.decoder = &netflowv5Decoder{}
+	}
 	return n.decoder.Init()
 }
 

@@ -538,6 +538,7 @@ type netflowDecoder struct {
 func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric, error) {
 	var metrics []telegraf.Metric
 
+	t := time.Now()
 	src := srcIP.String()
 
 	// Prepare the templates used to decode the messages
@@ -566,11 +567,10 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			case netflow.DataFlowSet:
 				for _, record := range fs.Records {
 					tags := map[string]string{
-						"source":  srcIP.String(),
+						"source":  src,
 						"version": "NetFlowV9",
 					}
 					fields := make(map[string]interface{})
-					t := time.Now()
 					for _, value := range record.Values {
 						for _, field := range d.decodeValueV9(value) {
 							fields[field.Key] = field.Value
