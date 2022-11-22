@@ -6,6 +6,15 @@ between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
 
 [diff-doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

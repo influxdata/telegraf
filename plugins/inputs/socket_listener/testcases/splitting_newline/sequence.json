@@ -1,0 +1,5 @@
+[
+    {
+        "message": "test,foo=bar v=1i 123456789\ntest,foo=baz v=2i 123456790\ntest,foo=zab v=3i 123456791\n"
+    }
+]

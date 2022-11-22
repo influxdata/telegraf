@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
+
+	"github.com/influxdata/telegraf/internal/choice"
 )
 
 //go:embed sample_request.conf
@@ -25,12 +27,14 @@ type requestDefinition struct {
 	ByteOrder    string                   `toml:"byte_order"`
 	RegisterType string                   `toml:"register"`
 	Measurement  string                   `toml:"measurement"`
+	Optimization string                   `toml:"optimization"`
 	Fields       []requestFieldDefinition `toml:"fields"`
 	Tags         map[string]string        `toml:"tags"`
 }
 
 type ConfigurationPerRequest struct {
-	Requests []requestDefinition `toml:"request"`
+	Requests    []requestDefinition `toml:"request"`
+	workarounds ModbusWorkarounds
 }
 
 func (c *ConfigurationPerRequest) SampleConfigPart() string {
@@ -42,6 +46,12 @@ func (c *ConfigurationPerRequest) Check() error {
 	seenFields := make(map[uint64]bool)
 
 	for _, def := range c.Requests {
+		// Check for valid optimization
+		validOptimizations := []string{"", "none", "shrink", "rearrange", "aggressive"}
+		if !choice.Contains(def.Optimization, validOptimizations) {
+			return fmt.Errorf("unknown optimization %q", def.Optimization)
+		}
+
 		// Check byte order of the data
 		switch def.ByteOrder {
 		case "":
@@ -110,7 +120,7 @@ func (c *ConfigurationPerRequest) Check() error {
 			def.Fields[fidx] = f
 
 			// Check for duplicate field definitions
-			id, err := c.fieldID(seed, def.SlaveID, def.RegisterType, def.Measurement, f.Name)
+			id, err := c.fieldID(seed, def, f)
 			if err != nil {
 				return fmt.Errorf("cannot determine field id for %q: %v", f.Name, err)
 			}
@@ -153,16 +163,32 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 
 		switch def.RegisterType {
 		case "coil":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils)
+			maxQuantity := maxQuantityCoils
+			if c.workarounds.OnRequestPerField {
+				maxQuantity = 1
+			}
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput)
+			maxQuantity := maxQuantityDiscreteInput
+			if c.workarounds.OnRequestPerField {
+				maxQuantity = 1
+			}
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters)
+			maxQuantity := maxQuantityHoldingRegisters
+			if c.workarounds.OnRequestPerField {
+				maxQuantity = 1
+			}
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
 			set.holding = append(set.holding, requests...)
 		case "input":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters)
+			maxQuantity := maxQuantityInputRegisters
+			if c.workarounds.OnRequestPerField {
+				maxQuantity = 1
+			}
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
@@ -253,30 +279,49 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 	return f, nil
 }
 
-func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, slave byte, register, measurement, name string) (uint64, error) {
+func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, def requestDefinition, field requestFieldDefinition) (uint64, error) {
 	var mh maphash.Hash
 	mh.SetSeed(seed)
 
-	if err := mh.WriteByte(slave); err != nil {
+	if err := mh.WriteByte(def.SlaveID); err != nil {
 		return 0, err
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
 	}
-	if _, err := mh.WriteString(register); err != nil {
+	if _, err := mh.WriteString(def.RegisterType); err != nil {
 		return 0, err
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
 	}
-	if _, err := mh.WriteString(measurement); err != nil {
+	if _, err := mh.WriteString(field.Measurement); err != nil {
 		return 0, err
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
 	}
-	if _, err := mh.WriteString(name); err != nil {
+	if _, err := mh.WriteString(field.Name); err != nil {
 		return 0, err
+	}
+	if err := mh.WriteByte(0); err != nil {
+		return 0, err
+	}
+
+	// Tags
+	for k, v := range def.Tags {
+		if _, err := mh.WriteString(k); err != nil {
+			return 0, err
+		}
+		if err := mh.WriteByte('='); err != nil {
+			return 0, err
+		}
+		if _, err := mh.WriteString(v); err != nil {
+			return 0, err
+		}
+		if err := mh.WriteByte(':'); err != nil {
+			return 0, err
+		}
 	}
 	if err := mh.WriteByte(0); err != nil {
 		return 0, err
@@ -288,9 +333,9 @@ func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, slave byte, registe
 func (c *ConfigurationPerRequest) determineOutputDatatype(input string) (string, error) {
 	// Handle our special types
 	switch input {
-	case "INT16", "INT32", "INT64":
+	case "INT8L", "INT8H", "INT16", "INT32", "INT64":
 		return "INT64", nil
-	case "UINT16", "UINT32", "UINT64":
+	case "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
 		return "UINT64", nil
 	case "FLOAT32", "FLOAT64":
 		return "FLOAT64", nil
@@ -301,6 +346,8 @@ func (c *ConfigurationPerRequest) determineOutputDatatype(input string) (string,
 func (c *ConfigurationPerRequest) determineFieldLength(input string) (uint16, error) {
 	// Handle our special types
 	switch input {
+	case "INT8L", "INT8H", "UINT8L", "UINT8H":
+		return 1, nil
 	case "INT16", "UINT16":
 		return 1, nil
 	case "INT32", "UINT32", "FLOAT32":

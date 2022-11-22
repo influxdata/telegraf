@@ -3,13 +3,26 @@
 This plugin writes to a [Kafka
 Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
 # Configuration for the Kafka server to send metrics to
 [[outputs.kafka]]
   ## URLs of kafka brokers
+  ## The brokers listed here are used to connect to collect metadata about a
+  ## cluster. However, once the initial metadata collect is completed, telegraf
+  ## will communicate solely with the kafka leader and not all defined brokers.
   brokers = ["localhost:9092"]
+
   ## Kafka topic for producer messages
   topic = "telegraf"
 
@@ -113,7 +126,7 @@ Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
   # max_message_bytes = 1000000
 
   ## Optional TLS Config
-  # enable_tls = true
+  # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"

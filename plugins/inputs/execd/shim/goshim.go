@@ -56,7 +56,7 @@ var (
 
 // New creates a new shim interface
 func New() *Shim {
-	_, _ = fmt.Fprintf(os.Stderr, "%s is deprecated; please change your import to %s\n", oldpkg, newpkg)
+	fmt.Fprintf(os.Stderr, "%s is deprecated; please change your import to %s\n", oldpkg, newpkg)
 	return &Shim{
 		stdin:  os.Stdin,
 		stdout: os.Stdout,

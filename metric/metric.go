@@ -250,13 +250,13 @@ func (m *metric) Copy() telegraf.Metric {
 
 func (m *metric) HashID() uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(m.name))
-	h.Write([]byte("\n"))
+	h.Write([]byte(m.name)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+	h.Write([]byte("\n"))   //nolint:revive // all Write() methods for hash in fnv.go returns nil err
 	for _, tag := range m.tags {
-		h.Write([]byte(tag.Key))
-		h.Write([]byte("\n"))
-		h.Write([]byte(tag.Value))
-		h.Write([]byte("\n"))
+		h.Write([]byte(tag.Key))   //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		h.Write([]byte("\n"))      //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		h.Write([]byte(tag.Value)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		h.Write([]byte("\n"))      //nolint:revive // all Write() methods for hash in fnv.go returns nil err
 	}
 	return h.Sum64()
 }
@@ -270,7 +270,7 @@ func (m *metric) Reject() {
 func (m *metric) Drop() {
 }
 
-// Convert field to a supported type or nil if unconvertible
+// Convert field to a supported type or nil if inconvertible
 func convertField(v interface{}) interface{} {
 	switch v := v.(type) {
 	case float64:

@@ -77,11 +77,13 @@ func (p *Process) Start() error {
 // Stop is called when the process isn't needed anymore
 func (p *Process) Stop() {
 	if p.cancel != nil {
-		// signal our intent to shutdown and not restart the process
+		// signal our intent to shut down and not restart the process
 		p.cancel()
 	}
 	// close stdin so the app can shut down gracefully.
-	p.Stdin.Close()
+	if err := p.Stdin.Close(); err != nil {
+		p.Log.Errorf("Stdin closed with message: %v", err)
+	}
 	p.mainLoopWg.Wait()
 }
 
@@ -176,7 +178,7 @@ func (p *Process) cmdWait(ctx context.Context) error {
 	go func() {
 		select {
 		case <-ctx.Done():
-			gracefulStop(processCtx, p.Cmd, 5*time.Second)
+			p.gracefulStop(processCtx, p.Cmd, 5*time.Second)
 		case <-processCtx.Done():
 		}
 		wg.Done()

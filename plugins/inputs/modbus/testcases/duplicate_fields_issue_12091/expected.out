@@ -1,0 +1,7 @@
+Bitfield,name=EAP,resource=30KTL,slave_id=9,type=holding_register Alarm1=0u,Alarm2=0u,Alarm3=0u,State1=32000u,State2=0u,State3=0u
+Current,name=EAP,resource=30KTL,slave_id=9,type=holding_register PV1=0,PV2=0,PV3=0,PV4=0
+Power,name=EAP,resource=30KTL,slave_id=9,type=holding_register AC=32080,DC=32064,Efficiency=0
+Resistance,name=EAP,resource=30KTL,slave_id=9,type=holding_register Insulation=0
+Status,name=EAP,resource=30KTL,slave_id=9,type=holding_register Device=32086u
+Temp,name=EAP,resource=30KTL,slave_id=9,type=holding_register Internal=0
+Voltage,name=EAP,resource=30KTL,slave_id=9,type=holding_register PV1=0,PV2=0,PV3=0,PV4=0

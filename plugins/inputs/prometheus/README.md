@@ -3,6 +3,15 @@
 The prometheus input plugin gathers metrics from HTTP servers exposing metrics
 in Prometheus format.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -112,6 +121,9 @@ in Prometheus format.
   ## 'bearer_token_string' take priority)
   # username = ""
   # password = ""
+
+  ## Optional custom HTTP headers
+  # headers = {"X-Special-Header" = "Special-Value"}
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"

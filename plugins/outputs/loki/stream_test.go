@@ -3,8 +3,9 @@ package loki
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
 )
 
 type tuple struct {
@@ -13,8 +14,7 @@ type tuple struct {
 
 func generateLabelsAndTag(tt ...tuple) (map[string]string, []*telegraf.Tag) {
 	labels := map[string]string{}
-	var tags []*telegraf.Tag
-
+	tags := make([]*telegraf.Tag, 0, len(tt))
 	for _, t := range tt {
 		labels[t.key] = t.value
 		tags = append(tags, &telegraf.Tag{Key: t.key, Value: t.value})

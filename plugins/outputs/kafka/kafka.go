@@ -80,7 +80,7 @@ func (l *DebugLogger) Printf(format string, v ...interface{}) {
 }
 
 func (l *DebugLogger) Println(v ...interface{}) {
-	l.Print(v)
+	l.Print(v...)
 }
 
 func ValidateTopicSuffixMethod(method string) error {
@@ -145,7 +145,7 @@ func (k *Kafka) Init() error {
 	}
 	config := sarama.NewConfig()
 
-	if err := k.SetConfig(config); err != nil {
+	if err := k.SetConfig(config, k.Log); err != nil {
 		return err
 	}
 
@@ -245,7 +245,10 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					return nil
 				}
 				if prodErr.Err == sarama.ErrInvalidTimestamp {
-					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
+					k.Log.Error(
+						"The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; " +
+							"dropping batch",
+					)
 					return nil
 				}
 				return prodErr //nolint:staticcheck // Return first error encountered

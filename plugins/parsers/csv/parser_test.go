@@ -1139,7 +1139,11 @@ timestamp,type,name,status
 
 	// This should fail when not resetting but reading again due to the header etc
 	_, err = p.Parse([]byte(testCSV))
-	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+	require.Error(
+		t,
+		err,
+		`parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`,
+	)
 }
 
 func TestParseCSVLinewiseResetModeNone(t *testing.T) {
@@ -1243,7 +1247,11 @@ func TestParseCSVLinewiseResetModeNone(t *testing.T) {
 
 	// This should fail when not resetting but reading again due to the header etc
 	_, err = p.ParseLine(testCSV[0])
-	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+	require.Error(
+		t,
+		err,
+		`parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`,
+	)
 }
 
 func TestParseCSVResetModeAlways(t *testing.T) {
@@ -1467,5 +1475,9 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 
 	// This should fail as reset-mode "always" is ignored in line-wise parsing
 	_, err = p.ParseLine(testCSV[0])
-	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+	require.Error(
+		t,
+		err,
+		`parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`,
+	)
 }

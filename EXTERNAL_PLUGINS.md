@@ -33,6 +33,7 @@ Pull requests welcome.
 - [huebridge](https://github.com/hdecarne-github/huebridge-telegraf-plugin) - Gather smart home statistics from [Hue Bridge](https://www.philips-hue.com/) devices
 - [nsdp](https://github.com/hdecarne-github/nsdp-telegraf-plugin) - Gather switch network statistics via [Netgear Switch Discovery Protocol](https://en.wikipedia.org/wiki/Netgear_Switch_Discovery_Protocol)
 - [hwinfo](https://github.com/zachstence/hwinfo-telegraf-plugin) - Gather Windows system hardware information from [HWiNFO](https://www.hwinfo.com/)
+- [libvirt](https://gitlab.com/warrenio/tools/telegraf-input-libvirt) - Gather libvirt domain stats, based on a historical Telegraf implementation (libvirt)[https://libvirt.org/]
 
 ## Outputs
 

@@ -19,13 +19,12 @@ func newColumnList() *columnList {
 	}
 }
 
-func (cl *columnList) Add(column utils.Column) bool {
+func (cl *columnList) Add(column utils.Column) {
 	if _, ok := cl.indices[column.Name]; ok {
-		return false
+		return
 	}
 	cl.columns = append(cl.columns, column)
 	cl.indices[column.Name] = len(cl.columns) - 1
-	return true
 }
 
 func (cl *columnList) Remove(name string) bool {
@@ -82,7 +81,7 @@ func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[string]*Table
 
 func NewTableSource(postgresql *Postgresql, name string) *TableSource {
 	h := fnv.New64a()
-	_, _ = h.Write([]byte(name))
+	h.Write([]byte(name)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
 
 	tsrc := &TableSource{
 		postgresql:  postgresql,
@@ -129,7 +128,7 @@ func (tsrc *TableSource) Name() string {
 	return tsrc.metrics[0].Name()
 }
 
-// Returns the superset of all tags of all metrics.
+// TagColumns returns the superset of all tags of all metrics.
 func (tsrc *TableSource) TagColumns() []utils.Column {
 	var cols []utils.Column
 
@@ -142,12 +141,12 @@ func (tsrc *TableSource) TagColumns() []utils.Column {
 	return cols
 }
 
-// Returns the superset of all fields of all metrics.
+// FieldColumns returns the superset of all fields of all metrics.
 func (tsrc *TableSource) FieldColumns() []utils.Column {
 	return tsrc.fieldColumns.columns
 }
 
-// Returns the full column list, including time, tag id or tags, and fields.
+// MetricTableColumns returns the full column list, including time, tag id or tags, and fields.
 func (tsrc *TableSource) MetricTableColumns() []utils.Column {
 	cols := []utils.Column{
 		timeColumn,
@@ -187,7 +186,7 @@ func (tsrc *TableSource) ColumnNames() []string {
 	return names
 }
 
-// Drops the specified column.
+// DropColumn drops the specified column.
 // If column is a tag column, any metrics containing the tag will be skipped.
 // If column is a field column, any metrics containing the field will have it omitted.
 func (tsrc *TableSource) DropColumn(col utils.Column) error {
@@ -272,7 +271,7 @@ func (tsrc *TableSource) getValues() ([]interface{}, error) {
 			for _, tag := range metric.TagList() {
 				tagPos, ok := tsrc.tagColumns.indices[tag.Key]
 				if !ok {
-					// tag has been dropped, we can't emit or we risk collision with another metric
+					// tag has been dropped, we can't emit, or we risk collision with another metric
 					return nil, nil
 				}
 				tagValues[tagPos] = tag.Value

@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSerialize(t *testing.T) {
@@ -181,13 +182,13 @@ cpu_time_idle{host="example.org"} 42
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewSerializer(FormatConfig{
+			s := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
 				TimestampExport: tt.config.TimestampExport,
 				StringHandling:  tt.config.StringHandling,
 				CompactEncoding: tt.config.CompactEncoding,
 			})
-			require.NoError(t, err)
+
 			actual, err := s.Serialize(tt.metric)
 			require.NoError(t, err)
 
@@ -697,12 +698,11 @@ rpc_duration_seconds_count 2693
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewSerializer(FormatConfig{
+			s := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
 				TimestampExport: tt.config.TimestampExport,
 				StringHandling:  tt.config.StringHandling,
 			})
-			require.NoError(t, err)
 			actual, err := s.SerializeBatch(tt.metrics)
 			require.NoError(t, err)
 

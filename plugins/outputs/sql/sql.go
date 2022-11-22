@@ -141,7 +141,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 }
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
-	var columns []string
+	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+1)
 	//  ##  {KEY_COLUMNS} is a comma-separated list of key columns (timestamp and tags)
 	//var pk []string
 
@@ -171,7 +171,8 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 }
 
 func (p *SQL) generateInsert(tablename string, columns []string) string {
-	var placeholders, quotedColumns []string
+	placeholders := make([]string, 0, len(columns))
+	quotedColumns := make([]string, 0, len(columns))
 	for _, column := range columns {
 		quotedColumns = append(quotedColumns, quoteIdent(column))
 	}

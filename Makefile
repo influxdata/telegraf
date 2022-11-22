@@ -107,12 +107,6 @@ deps:
 version:
 	@echo $(version)-$(commit)
 
-.PHONY: versioninfo
-versioninfo:
-	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
-	go run scripts/generate_versioninfo/main.go; \
-	go generate cmd/telegraf/telegraf_windows.go; \
-
 build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
@@ -171,7 +165,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -224,6 +218,8 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf cmd/telegraf/resource.syso
+	rm -rf cmd/telegraf/versioninfo.json
 	rm -rf tools/custom_builder/custom_builder
 	rm -rf tools/custom_builder/custom_builder.exe
 	rm -rf tools/readme_config_includer/generator
@@ -242,8 +238,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.19.1 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.19.1
+	docker build -t quay.io/influxdb/telegraf-ci:1.19.3 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.19.3
 
 .PHONY: install
 install: $(buildbin)
@@ -316,7 +312,7 @@ i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gz i386.rpm
 .PHONY: i386
 i386:
 	@ echo $(i386)
-windows += windows_i386.zip windows_amd64.zip
+windows += windows_i386.zip windows_amd64.zip windows_arm64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
@@ -337,6 +333,8 @@ package: docs $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
+	if [ "$(suffix $@)" = ".zip" ]; then go generate cmd/telegraf/telegraf_windows.go; fi
+
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
 
@@ -360,6 +358,7 @@ $(include_packages):
 			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
+			--rpm-os ${GOOS} \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
@@ -442,6 +441,9 @@ freebsd_armv7.tar.gz: export GOARM := 7
 windows_amd64.zip: export GOOS := windows
 windows_amd64.zip: export GOARCH := amd64
 
+windows_arm64.zip: export GOOS := windows
+windows_arm64.zip: export GOARCH := arm64
+
 darwin_amd64.tar.gz: export GOOS := darwin
 darwin_amd64.tar.gz: export GOARCH := amd64
 
@@ -451,11 +453,11 @@ darwin_arm64.tar.gz: export GOARCH := arm64
 windows_i386.zip: export GOOS := windows
 windows_i386.zip: export GOARCH := 386
 
-windows_i386.zip windows_amd64.zip: export prefix =
-windows_i386.zip windows_amd64.zip: export bindir = $(prefix)
-windows_i386.zip windows_amd64.zip: export sysconfdir = $(prefix)
-windows_i386.zip windows_amd64.zip: export localstatedir = $(prefix)
-windows_i386.zip windows_amd64.zip: export EXEEXT := .exe
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export prefix =
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export bindir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export sysconfdir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export localstatedir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 
 %.deb: export pkg := deb
 %.deb: export prefix := /usr

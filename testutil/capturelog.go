@@ -2,7 +2,8 @@ package testutil
 
 import (
 	"fmt"
-	"log" //nolint
+	"log"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 )
@@ -11,21 +12,26 @@ var _ telegraf.Logger = &CaptureLogger{}
 
 // CaptureLogger defines a logging structure for plugins.
 type CaptureLogger struct {
-	Name      string // Name is the plugin name, will be printed in the `[]`.
-	LastError string
+	Name   string // Name is the plugin name, will be printed in the `[]`.
+	errors []string
+	sync.Mutex
 }
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l *CaptureLogger) Errorf(format string, args ...interface{}) {
 	s := fmt.Sprintf("E! ["+l.Name+"] "+format, args...)
-	l.LastError = s
+	l.Lock()
+	l.errors = append(l.errors, s)
+	l.Unlock()
 	log.Print(s)
 }
 
 // Error logs an error message, patterned after log.Print.
 func (l *CaptureLogger) Error(args ...interface{}) {
 	s := fmt.Sprint(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
-	l.LastError = s
+	l.Lock()
+	l.errors = append(l.errors, s)
+	l.Unlock()
 	log.Print(s)
 }
 
@@ -57,4 +63,20 @@ func (l *CaptureLogger) Infof(format string, args ...interface{}) {
 // Info logs an information message, patterned after log.Print.
 func (l *CaptureLogger) Info(args ...interface{}) {
 	log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
+}
+
+func (l *CaptureLogger) Errors() []string {
+	l.Lock()
+	defer l.Unlock()
+	e := append([]string{}, l.errors...)
+	return e
+}
+
+func (l *CaptureLogger) LastError() string {
+	l.Lock()
+	defer l.Unlock()
+	if len(l.errors) > 0 {
+		return l.errors[len(l.errors)-1]
+	}
+	return ""
 }

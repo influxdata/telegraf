@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
 //go:embed sample.conf
@@ -64,14 +65,6 @@ var sanitizedRegex = regexp.MustCompile(`[^a-zA-Z\d_.-]`)
 var tagValueReplacer = strings.NewReplacer("*", "-")
 
 var pathReplacer = strings.NewReplacer("_", "_")
-
-type MetricPoint struct {
-	Metric    string
-	Value     float64
-	Timestamp int64
-	Source    string
-	Tags      map[string]string
-}
 
 func (*Wavefront) SampleConfig() string {
 	return sampleConfig
@@ -142,7 +135,14 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 					return fmt.Errorf("wavefront sending error: %v", err)
 				}
 				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
-				w.Log.Debugf("Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ", point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
+				w.Log.Debugf(
+					"Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ",
+					point.Metric,
+					point.Value,
+					point.Timestamp,
+					point.Source,
+					point.Tags,
+				)
 			}
 		}
 	}
@@ -153,8 +153,8 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
-	ret := make([]*MetricPoint, 0)
+func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializer.MetricPoint {
+	ret := make([]*serializer.MetricPoint, 0)
 
 	for fieldName, value := range m.Fields() {
 		var name string
@@ -176,7 +176,7 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
 			name = pathReplacer.Replace(name)
 		}
 
-		metric := &MetricPoint{
+		metric := &serializer.MetricPoint{
 			Metric:    name,
 			Timestamp: m.Time().Unix(),
 		}

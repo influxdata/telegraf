@@ -19,7 +19,9 @@ type Engine struct {
 
 // Apply extracts the template fields from the given line and returns the measurement
 // name, tags and field name
-func (e *Engine) Apply(line string) (string, map[string]string, string, error) {
+//
+//nolint:revive //function-result-limit conditionally 4 return results allowed
+func (e *Engine) Apply(line string) (measurementName string, tags map[string]string, field string, err error) {
 	return e.matcher.match(line).Apply(line, e.joiner)
 }
 

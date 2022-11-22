@@ -4,10 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetTimestreamTime(t *testing.T) {
@@ -55,17 +54,34 @@ func TestPartitionRecords(t *testing.T) {
 func TestConvertValueSupported(t *testing.T) {
 	intInputValues := []interface{}{-1, int8(-2), int16(-3), int32(-4), int64(-5)}
 	intOutputValues := []string{"-1", "-2", "-3", "-4", "-5"}
-	intOutputValueTypes := []types.MeasureValueType{types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint}
+	intOutputValueTypes := []types.MeasureValueType{
+		types.MeasureValueTypeBigint,
+		types.MeasureValueTypeBigint,
+		types.MeasureValueTypeBigint,
+		types.MeasureValueTypeBigint,
+		types.MeasureValueTypeBigint,
+	}
 	testConvertValueSupportedCases(t, intInputValues, intOutputValues, intOutputValueTypes)
 
 	uintInputValues := []interface{}{uint(1), uint8(2), uint16(3), uint32(4), uint64(5)}
 	uintOutputValues := []string{"1", "2", "3", "4", "5"}
-	uintOutputValueTypes := []types.MeasureValueType{types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint}
+	uintOutputValueTypes := []types.MeasureValueType{
+		types.MeasureValueTypeBigint,
+		types.MeasureValueTypeBigint,
+		types.MeasureValueTypeBigint,
+		types.MeasureValueTypeBigint,
+		types.MeasureValueTypeBigint,
+	}
 	testConvertValueSupportedCases(t, uintInputValues, uintOutputValues, uintOutputValueTypes)
 
 	otherInputValues := []interface{}{"foo", float32(22.123), 22.1234, true}
 	otherOutputValues := []string{"foo", "22.123", "22.1234", "true"}
-	otherOutputValueTypes := []types.MeasureValueType{types.MeasureValueTypeVarchar, types.MeasureValueTypeDouble, types.MeasureValueTypeDouble, types.MeasureValueTypeBoolean}
+	otherOutputValueTypes := []types.MeasureValueType{
+		types.MeasureValueTypeVarchar,
+		types.MeasureValueTypeDouble,
+		types.MeasureValueTypeDouble,
+		types.MeasureValueTypeBoolean,
+	}
 	testConvertValueSupportedCases(t, otherInputValues, otherOutputValues, otherOutputValueTypes)
 }
 

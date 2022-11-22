@@ -277,7 +277,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	var body []byte
+	var body []byte //nolint:prealloc // There is no point in guessing the final capacity of this slice
 	for _, m := range azmetrics {
 		// Azure Monitor accepts new batches of points in new-line delimited
 		// JSON, following RFC 4288 (see https://github.com/ndjson/ndjson-spec).
@@ -364,8 +364,8 @@ func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
 }
 
 func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
-	var dimensionNames []string
-	var dimensionValues []string
+	dimensionNames := make([]string, 0, len(m.TagList()))
+	dimensionValues := make([]string, 0, len(m.TagList()))
 	for _, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
 		if len(dimensionNames) >= 10 {

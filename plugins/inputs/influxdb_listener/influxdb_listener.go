@@ -371,7 +371,14 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 	precisionStr := req.URL.Query().Get("precision")
 	if precisionStr != "" {
 		precision := getPrecisionMultiplier(precisionStr)
-		parser.SetTimePrecision(precision)
+		err := parser.SetTimePrecision(precision)
+		if err != nil {
+			h.Log.Debugf("error in upstream parser: %v", err)
+			if err := badRequest(res, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
+			return
+		}
 	}
 
 	if req.ContentLength >= 0 {

@@ -8,11 +8,11 @@ type KNXDummyInterface struct {
 	inbound chan knx.GroupEvent
 }
 
-func NewDummyInterface() (di KNXDummyInterface, err error) {
-	di, err = KNXDummyInterface{}, nil
+func NewDummyInterface() KNXDummyInterface {
+	di := KNXDummyInterface{}
 	di.inbound = make(chan knx.GroupEvent)
 
-	return di, err
+	return di
 }
 
 func (di *KNXDummyInterface) Send(event knx.GroupEvent) {

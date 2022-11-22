@@ -1,0 +1,404 @@
+{
+  "storageTotals": {
+    "ram": {
+      "total": 450972598272,
+      "quotaTotal": 360777252864,
+      "quotaUsed": 360777252864,
+      "used": 446826622976,
+      "usedByData": 255061495696,
+      "quotaUsedPerNode": 51539607552,
+      "quotaTotalPerNode": 51539607552
+    },
+    "hdd": {
+      "total": 1108766539776,
+      "quotaTotal": 1108766539776,
+      "used": 559135126484,
+      "usedByData": 515767865143,
+      "free": 498944942902
+    }
+  },
+  "serverGroupsUri": "/pools/default/serverGroups",
+  "name": "default",
+  "alerts": [
+    "Metadata overhead warning. Over  63% of RAM allocated to bucket  \"blastro-df\" on node \"172.16.8.148\" is taken up by keys and metadata.",
+    "Metadata overhead warning. Over  65% of RAM allocated to bucket  \"blastro-df\" on node \"172.16.10.65\" is taken up by keys and metadata.",
+    "Metadata overhead warning. Over  64% of RAM allocated to bucket  \"blastro-df\" on node \"172.16.13.173\" is taken up by keys and metadata.",
+    "Metadata overhead warning. Over  65% of RAM allocated to bucket  \"blastro-df\" on node \"172.16.15.75\" is taken up by keys and metadata.",
+    "Metadata overhead warning. Over  65% of RAM allocated to bucket  \"blastro-df\" on node \"172.16.13.105\" is taken up by keys and metadata.",
+    "Metadata overhead warning. Over  64% of RAM allocated to bucket  \"blastro-df\" on node \"172.16.8.127\" is taken up by keys and metadata.",
+    "Metadata overhead warning. Over  63% of RAM allocated to bucket  \"blastro-df\" on node \"172.16.15.120\" is taken up by keys and metadata.",
+    "Metadata overhead warning. Over  66% of RAM allocated to bucket  \"blastro-df\" on node \"172.16.10.187\" is taken up by keys and metadata."
+  ],
+  "alertsSilenceURL": "/controller/resetAlerts",
+  "nodes": [
+    {
+      "systemStats": {
+        "cpu_utilization_rate": 35.43307086614173,
+        "swap_total": 0,
+        "swap_used": 0,
+        "mem_total": 64424656896,
+        "mem_free": 23181365248
+      },
+      "interestingStats": {
+        "cmd_get": 17.98201798201798,
+        "couch_docs_actual_disk_size": 68506048063,
+        "couch_docs_data_size": 38718796110,
+        "couch_views_actual_disk_size": 0,
+        "couch_views_data_size": 0,
+        "curr_items": 140158886,
+        "curr_items_tot": 279374646,
+        "ep_bg_fetched": 0.999000999000999,
+        "get_hits": 10.98901098901099,
+        "mem_used": 36497390640,
+        "ops": 829.1708291708292,
+        "vb_replica_curr_items": 139215760
+      },
+      "uptime": "341236",
+      "memoryTotal": 64424656896,
+      "memoryFree": 23181365248,
+      "mcdMemoryReserved": 49152,
+      "mcdMemoryAllocated": 49152,
+      "couchApiBase": "http://172.16.10.187:8092/",
+      "clusterMembership": "active",
+      "recoveryType": "none",
+      "status": "healthy",
+      "otpNode": "ns_1@172.16.10.187",
+      "thisNode": true,
+      "hostname": "172.16.10.187:8091",
+      "clusterCompatibility": 196608,
+      "version": "3.0.1-1444-rel-community",
+      "os": "x86_64-unknown-linux-gnu",
+      "ports": {
+        "proxy": 11211,
+        "direct": 11210
+      }
+    },
+    {
+      "systemStats": {
+        "cpu_utilization_rate": 47.38255033557047,
+        "swap_total": 0,
+        "swap_used": 0,
+        "mem_total": 64424656896,
+        "mem_free": 23665811456
+      },
+      "interestingStats": {
+        "cmd_get": 172.8271728271728,
+        "couch_docs_actual_disk_size": 79360565405,
+        "couch_docs_data_size": 38736382876,
+        "couch_views_actual_disk_size": 0,
+        "couch_views_data_size": 0,
+        "curr_items": 140174377,
+        "curr_items_tot": 279383025,
+        "ep_bg_fetched": 0.999000999000999,
+        "get_hits": 167.8321678321678,
+        "mem_used": 36650059656,
+        "ops": 1685.314685314685,
+        "vb_replica_curr_items": 139208648
+      },
+      "uptime": "341210",
+      "memoryTotal": 64424656896,
+      "memoryFree": 23665811456,
+      "mcdMemoryReserved": 49152,
+      "mcdMemoryAllocated": 49152,
+      "couchApiBase": "http://172.16.10.65:8092/",
+      "clusterMembership": "active",
+      "recoveryType": "none",
+      "status": "healthy",
+      "otpNode": "ns_1@172.16.10.65",
+      "hostname": "172.16.10.65:8091",
+      "clusterCompatibility": 196608,
+      "version": "3.0.1-1444-rel-community",
+      "os": "x86_64-unknown-linux-gnu",
+      "ports": {
+        "proxy": 11211,
+        "direct": 11210
+      }
+    },
+    {
+      "systemStats": {
+        "cpu_utilization_rate": 25.5586592178771,
+        "swap_total": 0,
+        "swap_used": 0,
+        "mem_total": 64424656896,
+        "mem_free": 23726600192
+      },
+      "interestingStats": {
+        "cmd_get": 63.06306306306306,
+        "couch_docs_actual_disk_size": 79345105217,
+        "couch_docs_data_size": 38728086130,
+        "couch_views_actual_disk_size": 0,
+        "couch_views_data_size": 0,
+        "curr_items": 139195268,
+        "curr_items_tot": 279349113,
+        "ep_bg_fetched": 0,
+        "get_hits": 53.05305305305306,
+        "mem_used": 36476665576,
+        "ops": 1878.878878878879,
+        "vb_replica_curr_items": 140153845
+      },
+      "uptime": "341210",
+      "memoryTotal": 64424656896,
+      "memoryFree": 23726600192,
+      "mcdMemoryReserved": 49152,
+      "mcdMemoryAllocated": 49152,
+      "couchApiBase": "http://172.16.13.105:8092/",
+      "clusterMembership": "active",
+      "recoveryType": "none",
+      "status": "healthy",
+      "otpNode": "ns_1@172.16.13.105",
+      "hostname": "172.16.13.105:8091",
+      "clusterCompatibility": 196608,
+      "version": "3.0.1-1444-rel-community",
+      "os": "x86_64-unknown-linux-gnu",
+      "ports": {
+        "proxy": 11211,
+        "direct": 11210
+      }
+    },
+    {
+      "systemStats": {
+        "cpu_utilization_rate": 26.45803698435277,
+        "swap_total": 0,
+        "swap_used": 0,
+        "mem_total": 64424656896,
+        "mem_free": 23854841856
+      },
+      "interestingStats": {
+        "cmd_get": 51.05105105105105,
+        "couch_docs_actual_disk_size": 74465931949,
+        "couch_docs_data_size": 38723830730,
+        "couch_views_actual_disk_size": 0,
+        "couch_views_data_size": 0,
+        "curr_items": 139209869,
+        "curr_items_tot": 279380019,
+        "ep_bg_fetched": 0,
+        "get_hits": 47.04704704704704,
+        "mem_used": 36471784896,
+        "ops": 1831.831831831832,
+        "vb_replica_curr_items": 140170150
+      },
+      "uptime": "340526",
+      "memoryTotal": 64424656896,
+      "memoryFree": 23854841856,
+      "mcdMemoryReserved": 49152,
+      "mcdMemoryAllocated": 49152,
+      "couchApiBase": "http://172.16.13.173:8092/",
+      "clusterMembership": "active",
+      "recoveryType": "none",
+      "status": "healthy",
+      "otpNode": "ns_1@172.16.13.173",
+      "hostname": "172.16.13.173:8091",
+      "clusterCompatibility": 196608,
+      "version": "3.0.1-1444-rel-community",
+      "os": "x86_64-unknown-linux-gnu",
+      "ports": {
+        "proxy": 11211,
+        "direct": 11210
+      }
+    },
+    {
+      "systemStats": {
+        "cpu_utilization_rate": 47.31034482758621,
+        "swap_total": 0,
+        "swap_used": 0,
+        "mem_total": 64424656896,
+        "mem_free": 23773573120
+      },
+      "interestingStats": {
+        "cmd_get": 77.07707707707708,
+        "couch_docs_actual_disk_size": 74743093945,
+        "couch_docs_data_size": 38594660087,
+        "couch_views_actual_disk_size": 0,
+        "couch_views_data_size": 0,
+        "curr_items": 139215932,
+        "curr_items_tot": 278427644,
+        "ep_bg_fetched": 0,
+        "get_hits": 53.05305305305305,
+        "mem_used": 36306500344,
+        "ops": 1981.981981981982,
+        "vb_replica_curr_items": 139211712
+      },
+      "uptime": "340495",
+      "memoryTotal": 64424656896,
+      "memoryFree": 23773573120,
+      "mcdMemoryReserved": 49152,
+      "mcdMemoryAllocated": 49152,
+      "couchApiBase": "http://172.16.15.120:8092/",
+      "clusterMembership": "active",
+      "recoveryType": "none",
+      "status": "healthy",
+      "otpNode": "ns_1@172.16.15.120",
+      "hostname": "172.16.15.120:8091",
+      "clusterCompatibility": 196608,
+      "version": "3.0.1-1444-rel-community",
+      "os": "x86_64-unknown-linux-gnu",
+      "ports": {
+        "proxy": 11211,
+        "direct": 11210
+      }
+    },
+    {
+      "systemStats": {
+        "cpu_utilization_rate": 17.60660247592847,
+        "swap_total": 0,
+        "swap_used": 0,
+        "mem_total": 64424656896,
+        "mem_free": 23662190592
+      },
+      "interestingStats": {
+        "cmd_get": 146.8531468531468,
+        "couch_docs_actual_disk_size": 72932847344,
+        "couch_docs_data_size": 38581771457,
+        "couch_views_actual_disk_size": 0,
+        "couch_views_data_size": 0,
+        "curr_items": 139226879,
+        "curr_items_tot": 278436540,
+        "ep_bg_fetched": 0,
+        "get_hits": 144.8551448551448,
+        "mem_used": 36421860496,
+        "ops": 1495.504495504495,
+        "vb_replica_curr_items": 139209661
+      },
+      "uptime": "337174",
+      "memoryTotal": 64424656896,
+      "memoryFree": 23662190592,
+      "mcdMemoryReserved": 49152,
+      "mcdMemoryAllocated": 49152,
+      "couchApiBase": "http://172.16.8.127:8092/",
+      "clusterMembership": "active",
+      "recoveryType": "none",
+      "status": "healthy",
+      "otpNode": "ns_1@172.16.8.127",
+      "hostname": "172.16.8.127:8091",
+      "clusterCompatibility": 196608,
+      "version": "3.0.1-1444-rel-community",
+      "os": "x86_64-unknown-linux-gnu",
+      "ports": {
+        "proxy": 11211,
+        "direct": 11210
+      }
+    },
+    {
+      "systemStats": {
+        "cpu_utilization_rate": 21.68831168831169,
+        "swap_total": 0,
+        "swap_used": 0,
+        "mem_total": 64424656896,
+        "mem_free": 24049729536
+      },
+      "interestingStats": {
+        "cmd_get": 11.98801198801199,
+        "couch_docs_actual_disk_size": 66414273220,
+        "couch_docs_data_size": 38587642702,
+        "couch_views_actual_disk_size": 0,
+        "couch_views_data_size": 0,
+        "curr_items": 139193759,
+        "curr_items_tot": 278398926,
+        "ep_bg_fetched": 0,
+        "get_hits": 9.990009990009991,
+        "mem_used": 36237234088,
+        "ops": 883.1168831168832,
+        "vb_replica_curr_items": 139205167
+      },
+      "uptime": "341228",
+      "memoryTotal": 64424656896,
+      "memoryFree": 24049729536,
+      "mcdMemoryReserved": 49152,
+      "mcdMemoryAllocated": 49152,
+      "couchApiBase": "http://172.16.8.148:8092/",
+      "clusterMembership": "active",
+      "recoveryType": "none",
+      "status": "healthy",
+      "otpNode": "ns_1@172.16.8.148",
+      "hostname": "172.16.8.148:8091",
+      "clusterCompatibility": 196608,
+      "version": "3.0.1-1444-rel-community",
+      "os": "x86_64-unknown-linux-gnu",
+      "ports": {
+        "proxy": 11211,
+        "direct": 11210
+      }
+    }
+  ],
+  "buckets": {
+    "uri": "/pools/default/buckets",
+    "terseBucketsBase": "/pools/default/b/",
+    "terseStreamingBucketsBase": "/pools/default/bs/"
+  },
+  "remoteClusters": {
+    "uri": "/pools/default/remoteClusters",
+    "validateURI": "/pools/default/remoteClusters?just_validate=1"
+  },
+  "controllers": {
+    "addNode": {
+      "uri": "/controller/addNode"
+    },
+    "rebalance": {
+      "uri": "/controller/rebalance"
+    },
+    "failOver": {
+      "uri": "/controller/failOver"
+    },
+    "startGracefulFailover": {
+      "uri": "/controller/startGracefulFailover"
+    },
+    "reAddNode": {
+      "uri": "/controller/reAddNode"
+    },
+    "reFailOver": {
+      "uri": "/controller/reFailOver"
+    },
+    "ejectNode": {
+      "uri": "/controller/ejectNode"
+    },
+    "setRecoveryType": {
+      "uri": "/controller/setRecoveryType"
+    },
+    "setAutoCompaction": {
+      "uri": "/controller/setAutoCompaction",
+      "validateURI": "/controller/setAutoCompaction?just_validate=1"
+    },
+    "clusterLogsCollection": {
+      "startURI": "/controller/startLogsCollection",
+      "cancelURI": "/controller/cancelLogsCollection"
+    },
+    "replication": {
+      "createURI": "/controller/createReplication",
+      "validateURI": "/controller/createReplication?just_validate=1"
+    },
+    "setFastWarmup": {
+      "uri": "/controller/setFastWarmup",
+      "validateURI": "/controller/setFastWarmup?just_validate=1"
+    }
+  },
+  "rebalanceStatus": "none",
+  "rebalanceProgressUri": "/pools/default/rebalanceProgress",
+  "stopRebalanceUri": "/controller/stopRebalance",
+  "nodeStatusesUri": "/nodeStatuses",
+  "maxBucketCount": 10,
+  "autoCompactionSettings": {
+    "parallelDBAndViewCompaction": false,
+    "databaseFragmentationThreshold": {
+      "percentage": 50,
+      "size": "undefined"
+    },
+    "viewFragmentationThreshold": {
+      "percentage": 50,
+      "size": "undefined"
+    }
+  },
+  "fastWarmupSettings": {
+    "fastWarmupEnabled": true,
+    "minMemoryThreshold": 10,
+    "minItemsThreshold": 10
+  },
+  "tasks": {
+    "uri": "/pools/default/tasks"
+  },
+  "visualSettingsUri": "/internalSettings/visual",
+  "counters": {
+    "rebalance_success": 4,
+    "rebalance_start": 6,
+    "rebalance_stop": 2
+  }
+}

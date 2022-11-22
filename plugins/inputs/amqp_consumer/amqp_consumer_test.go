@@ -3,17 +3,17 @@ package amqp_consumer
 import (
 	"testing"
 
+	"github.com/rabbitmq/amqp091-go"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/rabbitmq/amqp091-go"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAutoEncoding(t *testing.T) {
-	enc, err := internal.NewGzipEncoder()
-	require.NoError(t, err)
+	enc := internal.NewGzipEncoder()
 	payload, err := enc.Encode([]byte(`measurementName fieldKey="gzip" 1556813561098000000`))
 	require.NoError(t, err)
 

@@ -52,7 +52,11 @@ type (
 	WriteClient interface {
 		CreateTable(context.Context, *timestreamwrite.CreateTableInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.CreateTableOutput, error)
 		WriteRecords(context.Context, *timestreamwrite.WriteRecordsInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.WriteRecordsOutput, error)
-		DescribeDatabase(context.Context, *timestreamwrite.DescribeDatabaseInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.DescribeDatabaseOutput, error)
+		DescribeDatabase(
+			context.Context,
+			*timestreamwrite.DescribeDatabaseInput,
+			...func(*timestreamwrite.Options),
+		) (*timestreamwrite.DescribeDatabaseOutput, error)
 	}
 )
 
@@ -325,7 +329,11 @@ func (t *Timestream) logWriteToTimestreamError(err error, tableName *string) {
 
 func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.WriteRecordsInput) error {
 	if t.CreateTableIfNotExists {
-		t.Log.Infof("Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.", *writeRecordsInput.TableName, t.DatabaseName)
+		t.Log.Infof(
+			"Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.",
+			*writeRecordsInput.TableName,
+			t.DatabaseName,
+		)
 		err := t.createTable(writeRecordsInput.TableName)
 		if err == nil {
 			t.Log.Infof("Table '%s' in database '%s' created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
@@ -333,7 +341,8 @@ func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.Writ
 		}
 		t.Log.Errorf("Failed to create table '%s' in database '%s': %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
 	} else {
-		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName)
+		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!",
+			*writeRecordsInput.TableName, t.DatabaseName)
 	}
 	return nil
 }
@@ -348,7 +357,7 @@ func (t *Timestream) createTable(tableName *string) error {
 			MemoryStoreRetentionPeriodInHours:  t.CreateTableMemoryStoreRetentionPeriodInHours,
 		},
 	}
-	var tags []types.Tag
+	tags := make([]types.Tag, 0, len(t.CreateTableTags))
 	for key, val := range t.CreateTableTags {
 		tags = append(tags, types.Tag{
 			Key:   aws.String(key),
@@ -425,7 +434,7 @@ func (t *Timestream) TransformMetrics(metrics []telegraf.Metric) []*timestreamwr
 }
 
 func (t *Timestream) buildDimensions(point telegraf.Metric) []types.Dimension {
-	var dimensions []types.Dimension
+	dimensions := make([]types.Dimension, 0, len(point.Tags()))
 	for tagName, tagValue := range point.Tags() {
 		dimension := types.Dimension{
 			Name:  aws.String(tagName),
@@ -455,10 +464,8 @@ func (t *Timestream) buildWriteRecords(point telegraf.Metric) []types.Record {
 }
 
 func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Record {
-	var records []types.Record
-
 	dimensions := t.buildDimensions(point)
-
+	records := make([]types.Record, 0, len(point.Fields()))
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
@@ -492,8 +499,7 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 		multiMeasureName = point.Name()
 	}
 
-	var multiMeasures []types.MeasureValue
-
+	multiMeasures := make([]types.MeasureValue, 0, len(point.Fields()))
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
@@ -534,8 +540,7 @@ func partitionRecords(size int, records []types.Record) [][]types.Record {
 		numberOfPartitions++
 	}
 
-	partitions := make([][]types.Record, numberOfPartitions)
-
+	partitions := make([][]types.Record, 0, numberOfPartitions)
 	for i := 0; i < numberOfPartitions; i++ {
 		start := size * i
 		end := size * (i + 1)
@@ -543,7 +548,7 @@ func partitionRecords(size int, records []types.Record) [][]types.Record {
 			end = len(records)
 		}
 
-		partitions[i] = records[start:end]
+		partitions = append(partitions, records[start:end])
 	}
 
 	return partitions

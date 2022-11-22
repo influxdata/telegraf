@@ -26,9 +26,7 @@ func TestMemcachedGeneratesMetricsIntegration(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	m := &Memcached{
 		Servers: []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])},

@@ -1,0 +1,13 @@
+{
+  "error": {
+    "code": 404,
+    "message": "No such object: test-iteration-bucket/prefix/offset-key.json",
+    "errors": [
+      {
+        "message": "No such object: test-iteration-bucket/prefix/offset-key.json",
+        "domain": "global",
+        "reason": "notFound"
+      }
+    ]
+  }
+}
