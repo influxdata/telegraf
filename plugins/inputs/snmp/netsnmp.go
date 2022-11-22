@@ -258,6 +258,6 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	return mibName, oidNum, oidText, conversion, nil
 }
 
-func (n *netsnmpTranslator) SnmpFormatEnum(oid string, value interface{}, full bool) (string, error) {
+func (n *netsnmpTranslator) SnmpFormatEnum(_ string, _ interface{}, _ bool) (string, error) {
 	return "", errors.New("not implemented in netsnmp translator")
 }
