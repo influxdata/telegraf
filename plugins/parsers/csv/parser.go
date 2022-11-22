@@ -486,6 +486,7 @@ func (p *Parser) InitFromConfig(config *parsers.Config) error {
 	p.ColumnNames = config.CSVColumnNames
 	p.ColumnTypes = config.CSVColumnTypes
 	p.TagColumns = config.CSVTagColumns
+	p.TagOverwrite = config.CSVTagOverwrite
 	p.MeasurementColumn = config.CSVMeasurementColumn
 	p.TimestampColumn = config.CSVTimestampColumn
 	p.TimestampFormat = config.CSVTimestampFormat
