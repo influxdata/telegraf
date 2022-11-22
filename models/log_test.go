@@ -203,6 +203,11 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 			expected: `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
 		},
 		{
+			name:     "None",
+			level:    telegraf.None,
+			expected: ``,
+		},
+		{
 			name:     "nil value",
 			level:    telegraf.Error,
 			value:    nil,
@@ -220,54 +225,35 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 			value:    123,
 			expected: `Value "123" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
 		},
-		{
-			name:     "None",
-			level:    telegraf.None,
-			expected: ``,
-		},
 	}
 
 	// Switch the logger to log to a buffer
 	var buf bytes.Buffer
-	scanner := bufio.NewScanner(&buf)
-
 	previous := log.Writer()
 	log.SetOutput(&buf)
 	defer log.SetOutput(previous)
 
-	msg := make(chan string, 1)
+	timeout := 1 * time.Second
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf.Reset()
 			PrintOptionValueDeprecationNotice(tt.level, "test", "option", tt.value, info)
-			// Wait for a newline to arrive and timeout for cases where
-			// we don't see a message.
-			go func() {
-				scanner.Scan()
-				msg <- scanner.Text()
-			}()
-
-			// Reduce the timeout if we do not expect a message
-			timeout := 1 * time.Second
-			if tt.expected == "" {
-				timeout = 100 * time.Microsecond
-			}
-
-			var actual string
-			select {
-			case actual = <-msg:
-			case <-time.After(timeout):
-			}
 
 			if tt.expected != "" {
+				require.Eventually(t, func() bool {
+					return strings.HasSuffix(buf.String(), "\n")
+				}, timeout, 100*time.Millisecond)
+
 				// Remove the time for comparison
-				parts := strings.SplitN(actual, " ", 3)
+				parts := strings.SplitN(strings.TrimSpace(buf.String()), " ", 3)
 				require.Len(t, parts, 3)
-				actual = parts[2]
+				actual := parts[2]
 				expected := deprecationPrefix(tt.level) + ": " + tt.expected
 				require.Equal(t, expected, actual)
 			} else {
-				require.Empty(t, actual)
+				time.Sleep(timeout)
+				require.Empty(t, buf.String())
 			}
 		})
 	}
