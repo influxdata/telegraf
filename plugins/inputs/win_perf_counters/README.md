@@ -149,7 +149,7 @@ Use either localhost (`"localhost"`) or real local computer name to gather count
 also from localhost among other computers. Skip, if gather only from localhost.
 
 If a performance counter is present only on specific hosts set `Sources` param on
-the object level configuration to override global Sources.
+the specific counter level configuration to override global (plugin wide) Sources.
 
 Example:  `Sources = ["localhost", "SQL-SERVER-01", "SQL-SERVER-02", "SQL-SERVER-03"]`
 
