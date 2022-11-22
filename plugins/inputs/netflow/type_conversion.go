@@ -84,6 +84,10 @@ func initIPv4OptionMapping() error {
 	return nil
 }
 
+func decodeInt32(b []byte) interface{} {
+	return int64(binary.BigEndian.Uint32(b))
+}
+
 func decodeUint(b []byte) interface{} {
 	buf := append(make([]byte, 8-len(b)), b...)
 	return binary.BigEndian.Uint64(buf)
@@ -111,6 +115,11 @@ func decodeHex(b []byte) interface{} {
 
 func decodeString(b []byte) interface{} {
 	return string(b)
+}
+
+func decodeMAC(b []byte) interface{} {
+	mac := net.HardwareAddr(b)
+	return mac.String()
 }
 
 func decodeIP(b []byte) interface{} {
@@ -526,13 +535,66 @@ func decodeSelectorAlgorithm(b []byte) interface{} {
 	case 4:
 		return "uniform probabilistic sampling"
 	case 5:
-		return "property match giltering"
+		return "property match filtering"
 	case 6:
 		return "hash based filtering using BOB"
 	case 7:
 		return "hash based filtering using IPSX"
 	case 8:
 		return "hash based filtering using CRC"
+	case 9:
+		return "flow-state dependent"
+	}
+	return "unassigned"
+}
+
+// https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-value-distribution-method
+func decodeValueDistMethod(b []byte) interface{} {
+	switch b[0] {
+	case 0:
+		return "unspecified"
+	case 1:
+		return "start interval"
+	case 2:
+		return "end interval"
+	case 3:
+		return "mid interval"
+	case 4:
+		return "simple uniform distribution"
+	case 5:
+		return "proportional uniform distribution"
+	case 6:
+		return "simulated process"
+	case 7:
+		return "direct"
+	}
+	return "unassigned"
+}
+
+// https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-data-link-frame-type
+func decodeDataLinkFrameType(b []byte) interface{} {
+	switch binary.BigEndian.Uint16(b) {
+	case 0x0001:
+		return "IEEE802.3 ethernet"
+	case 0x0002:
+		return "IEEE802.11 MAC"
+	}
+	return "unassigned"
+}
+
+// https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-mib-capture-time-semantics
+func decodeCaptureTimeSemantics(b []byte) interface{} {
+	switch b[0] {
+	case 0:
+		return "undefined"
+	case 1:
+		return "begin"
+	case 2:
+		return "end"
+	case 3:
+		return "export"
+	case 4:
+		return "average"
 	}
 	return "unassigned"
 }
