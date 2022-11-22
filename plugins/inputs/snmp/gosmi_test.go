@@ -581,10 +581,12 @@ func TestFieldConvertGosmi(t *testing.T) {
 		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:LittleEndian:uint64", uint64(6934371307618175232)},
 		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:LittleEndian:uint32", uint32(3812493568)},
 		{[]byte{0x00, 0x09}, "hextoint:LittleEndian:uint16", uint16(2304)},
+		{3, "enum", "testing"},
+		{3, "enum(1)", "testing(3)"},
 	}
 
 	for _, tc := range testTable {
-		act, err := fieldConvert(getGosmiTr(t), tc.conv, gosnmp.SnmpPDU{Value: tc.input})
+		act, err := fieldConvert(getGosmiTr(t), tc.conv, gosnmp.SnmpPDU{Name: "ifOperStatus", Value: tc.input})
 		assert.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 		assert.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 	}
