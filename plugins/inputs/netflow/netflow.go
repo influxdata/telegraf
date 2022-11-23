@@ -125,7 +125,7 @@ func (n *NetFlow) read(acc telegraf.Accumulator) {
 	}
 }
 
-func (n *NetFlow) Gather(acc telegraf.Accumulator) error {
+func (n *NetFlow) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

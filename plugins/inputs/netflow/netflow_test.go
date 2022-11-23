@@ -1,7 +1,6 @@
 package netflow
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net"
 	"os"
@@ -95,7 +94,7 @@ func TestCases(t *testing.T) {
 
 			// Create a client without TLS
 			addr := plugin.conn.LocalAddr()
-			client, err := createClient(plugin.ServiceAddress, addr, nil)
+			client, err := createClient(plugin.ServiceAddress, addr)
 			require.NoError(t, err)
 
 			// Write the given sequence
@@ -135,7 +134,7 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn, error) {
+func createClient(endpoint string, addr net.Addr) (net.Conn, error) {
 	// Determine the protocol in a crude fashion
 	parts := strings.SplitN(endpoint, "://", 2)
 	if len(parts) != 2 {
