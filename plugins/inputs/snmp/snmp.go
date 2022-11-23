@@ -610,12 +610,13 @@ func fieldConvert(tr Translator, conv string, ent gosnmp.SnmpPDU) (v interface{}
 		if bs, ok := ent.Value.([]byte); ok {
 			return string(bs), nil
 		}
-		return v, nil
+		return ent.Value, nil
 	}
 
 	var d int
 	if _, err := fmt.Sscanf(conv, "float(%d)", &d); err == nil || conv == "float" {
-		switch vt := ent.Value.(type) {
+		v = ent.Value
+		switch vt := v.(type) {
 		case float32:
 			v = float64(vt) / math.Pow10(d)
 		case float64:
@@ -651,7 +652,8 @@ func fieldConvert(tr Translator, conv string, ent gosnmp.SnmpPDU) (v interface{}
 	}
 
 	if conv == "int" {
-		switch vt := ent.Value.(type) {
+		v = ent.Value
+		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
 		case float64:
@@ -703,7 +705,7 @@ func fieldConvert(tr Translator, conv string, ent gosnmp.SnmpPDU) (v interface{}
 
 		bv, ok := ent.Value.([]byte)
 		if !ok {
-			return v, nil
+			return ent.Value, nil
 		}
 
 		switch endian {
