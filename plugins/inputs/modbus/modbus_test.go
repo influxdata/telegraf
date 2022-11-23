@@ -4235,7 +4235,6 @@ func TestRequestsWorkaroundsOneRequestPerField(t *testing.T) {
 			},
 		},
 	}
-
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].holding, len(plugin.Requests[0].Fields))
 }
@@ -4289,6 +4288,7 @@ func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
 }
+
 func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 	maxsize := maxQuantityHoldingRegisters
 	maxExtraRegisters := uint16(5)
@@ -4390,7 +4390,6 @@ func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Generate the input structure and the expectation
@@ -4421,5 +4420,4 @@ func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
 		})
 	}
-
 }
