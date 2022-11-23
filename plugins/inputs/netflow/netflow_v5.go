@@ -2,6 +2,7 @@ package netflow
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 	"time"
 
@@ -14,6 +15,9 @@ import (
 type netflowv5Decoder struct{}
 
 func (d *netflowv5Decoder) Init() error {
+	if err := initL4ProtoMapping(); err != nil {
+		return fmt.Errorf("initializing layer 4 protocol mapping failed: %w", err)
+	}
 	return nil
 }
 
@@ -39,12 +43,11 @@ func (d *netflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metr
 				"version": "NetFlowV5",
 			}
 			fields := map[string]interface{}{
-				"version":           msg.Version,
 				"flows":             msg.Count,
 				"sys_uptime":        msg.SysUptime,
 				"seq_number":        msg.FlowSequence,
 				"engine_type":       mapEngineType(msg.EngineType),
-				"engine_id":         msg.EngineId,
+				"engine_id":         decodeHex([]byte{msg.EngineId}),
 				"sampling_interval": msg.SamplingInterval,
 				"src":               decodeIPFromUint32(record.SrcAddr),
 				"dst":               decodeIPFromUint32(record.DstAddr),
@@ -59,7 +62,7 @@ func (d *netflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metr
 				"dst_port":          record.DstPort,
 				"tcp_flags":         mapTCPFlags(record.TCPFlags),
 				"protocol":          mapL4Proto(record.Proto),
-				"src_tos":           record.Tos,
+				"src_tos":           decodeHex([]byte{record.Tos}),
 				"bgp_src_as":        record.SrcAS,
 				"bgp_dst_as":        record.DstAS,
 				"src_mask":          record.SrcMask,
