@@ -3,6 +3,7 @@ package binary
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -1464,4 +1465,36 @@ func TestCases(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual)
 		})
 	}
+}
+
+func TestHexEncoding(t *testing.T) {
+	testdata := []interface{}{
+		uint64(0x01020304050607),
+		uint64(0x08090A0B0C0D0E),
+		uint64(0x0F101213141516),
+		uint64(0x1718191A1B1C1D),
+		uint64(0x1E1F2021222324),
+	}
+
+	parser := &Parser{
+		Endianess:   "be",
+		HexEncoding: true,
+		Configs: []Config{
+			{
+				Entries: []Entry{dummyEntry},
+			},
+		},
+		Log:        testutil.Logger{Name: "parsers.binary"},
+		metricName: "binary",
+	}
+	require.NoError(t, parser.Init())
+
+	// Generate the binary data and encode it to HEX
+	data, err := generateBinary(testdata, binary.BigEndian)
+	require.NoError(t, err)
+	encoded := hex.EncodeToString(data)
+
+	metrics, err := parser.Parse([]byte(encoded))
+	require.NoError(t, err)
+	require.NotEmpty(t, metrics)
 }

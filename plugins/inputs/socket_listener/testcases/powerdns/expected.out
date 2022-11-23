@@ -1,0 +1,1 @@
+powerdns from="7f000001",fromPort=45729u,to="7f000001",toPort=53u,inBytes=48u,serverIdentity="xxxxxxxxxxxxxxxxxxx.com",messageId="943f90bea57a4eecbc5b0bea820a8aae",qName="ilse.nl.",qClass=1u,qType=1u,id=64100u,timeSec=1665050957u,timeUsec=500976u

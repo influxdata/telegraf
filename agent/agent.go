@@ -513,14 +513,13 @@ func (a *Agent) startProcessors(
 	dst chan<- telegraf.Metric,
 	processors models.RunningProcessors,
 ) (chan<- telegraf.Metric, []*processorUnit, error) {
-	var units []*processorUnit
-
 	// Sort from last to first
 	sort.SliceStable(processors, func(i, j int) bool {
 		return processors[i].Config.Order > processors[j].Config.Order
 	})
 
 	var src chan telegraf.Metric
+	units := make([]*processorUnit, 0, len(processors))
 	for _, processor := range processors {
 		src = make(chan telegraf.Metric, 100)
 		acc := NewAccumulator(processor, dst)

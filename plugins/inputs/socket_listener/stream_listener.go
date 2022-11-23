@@ -27,6 +27,7 @@ type streamListener struct {
 	MaxConnections  int
 	ReadTimeout     config.Duration
 	KeepAlivePeriod *config.Duration
+	Splitter        bufio.SplitFunc
 	Parser          telegraf.Parser
 	Log             telegraf.Logger
 
@@ -202,6 +203,7 @@ func (l *streamListener) read(acc telegraf.Accumulator, conn net.Conn) error {
 	timeout := time.Duration(l.ReadTimeout)
 
 	scanner := bufio.NewScanner(decoder)
+	scanner.Split(l.Splitter)
 	for {
 		// Set the read deadline, if any, then start reading. The read
 		// will accept the deadline and return if no or insufficient data

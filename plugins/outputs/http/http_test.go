@@ -661,7 +661,7 @@ func TestBatchedUnbatched(t *testing.T) {
 		Method: defaultMethod,
 	}
 
-	jsonSerializer, err := json.NewSerializer(time.Second, "", "")
+	jsonSerializer, err := json.NewSerializer(json.FormatConfig{TimestampUnits: time.Second})
 	require.NoError(t, err)
 	s := map[string]serializers.Serializer{
 		"influx": influx.NewSerializer(),

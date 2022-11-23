@@ -33,6 +33,13 @@ The `json` output data format converts metrics into JSON documents.
   ## This allows to generate an arbitrary output form based on the metric(s). Please use
   ## multiline strings (starting and ending with three single-quotes) if needed.
   #json_transformation = ""
+
+  ## Filter for fields that contain nested JSON data.
+  ## The serializer will try to decode matching STRING fields containing
+  ## valid JSON. This is done BEFORE any JSON transformation. The filters
+  ## can contain wildcards.
+  #json_nested_fields_include = []
+  #json_nested_fields_exclude = []
 ```
 
 ## Examples

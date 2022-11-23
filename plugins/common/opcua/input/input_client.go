@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
@@ -189,7 +190,7 @@ type metricParts struct {
 }
 
 func newMP(n *NodeMetricMapping) metricParts {
-	var keys []string
+	keys := make([]string, 0, len(n.MetricTags))
 	for key := range n.MetricTags {
 		keys = append(keys, key)
 	}

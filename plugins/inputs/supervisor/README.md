@@ -32,8 +32,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Configuration
 
-```toml
-[inputs.supervisor]
+```toml @sample.conf
+# Gathers information about processes that running under supervisor using XML-RPC API
+[[inputs.supervisor]]
   ## Url of supervisor's XML-RPC endpoint if basic auth enabled in supervisor http server,
   ## than you have to add credentials to url (ex. http://login:pass@localhost:9001/RPC2)
   # url="http://localhost:9001/RPC2"

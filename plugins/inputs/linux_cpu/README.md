@@ -14,7 +14,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Collects CPU metrics exposed on Linux
+# Provides Linux CPU metrics
 [[inputs.linux_cpu]]
   ## Path for sysfs filesystem.
   ## See https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt

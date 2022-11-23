@@ -2,8 +2,10 @@ package binary
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -14,6 +16,7 @@ type Parser struct {
 	AllowNoMatch bool            `toml:"allow_no_match"`
 	Endianess    string          `toml:"endianess"`
 	Configs      []Config        `toml:"binary"`
+	HexEncoding  bool            `toml:"hex_encoding"`
 	Log          telegraf.Logger `toml:"-"`
 
 	metricName  string
@@ -47,8 +50,20 @@ func (p *Parser) Init() error {
 	return nil
 }
 
-func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 	t := time.Now()
+
+	// If the data is encoded in HEX, we need to decode it first
+	buf := data
+	if p.HexEncoding {
+		s := strings.ReplaceAll(string(data), " ", "")
+		s = strings.ReplaceAll(s, "\t", "")
+		var err error
+		buf, err = hex.DecodeString(s)
+		if err != nil {
+			return nil, fmt.Errorf("decoding hex failed: %w", err)
+		}
+	}
 
 	matches := 0
 	metrics := make([]telegraf.Metric, 0)

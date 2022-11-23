@@ -104,6 +104,10 @@ type Config struct {
 	// Transformation as JSONata expression to use for JSON formatted output
 	Transformation string `toml:"transformation"`
 
+	// Field filter for interpreting data as nested JSON for JSON serializer
+	JSONNestedFieldInclude []string `toml:"json_nested_fields_include"`
+	JSONNestedFieldExclude []string `toml:"json_nested_fields_exclude"`
+
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool `toml:"hec_routing"`
 
@@ -157,7 +161,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 			config.Templates,
 		)
 	case "json":
-		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat, config.Transformation)
+		serializer, err = NewJSONSerializer(config)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric, config.SplunkmetricOmitEventTag), nil
 	case "nowmetric":
@@ -232,8 +236,14 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
 }
 
-func NewJSONSerializer(timestampUnits time.Duration, timestampFormat, transform string) (Serializer, error) {
-	return json.NewSerializer(timestampUnits, timestampFormat, transform)
+func NewJSONSerializer(config *Config) (Serializer, error) {
+	return json.NewSerializer(json.FormatConfig{
+		TimestampUnits:      config.TimestampUnits,
+		TimestampFormat:     config.TimestampFormat,
+		Transformation:      config.Transformation,
+		NestedFieldsInclude: config.JSONNestedFieldInclude,
+		NestedFieldsExclude: config.JSONNestedFieldExclude,
+	})
 }
 
 func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {

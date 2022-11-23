@@ -1,14 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package opcua_listener
 
 import (
 	"context"
 	_ "embed"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"time"
 )
 
 type OpcUaListener struct {

@@ -31,6 +31,15 @@ var sampleConfig string
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
 
+type MonitorMethod string
+
+const (
+	MonitorMethodNone                   MonitorMethod = ""
+	MonitorMethodAnnotations            MonitorMethod = "annotations"
+	MonitorMethodSettings               MonitorMethod = "settings"
+	MonitorMethodSettingsAndAnnotations MonitorMethod = "settings+annotations"
+)
+
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
 	URLs []string `toml:"urls"`
@@ -57,6 +66,8 @@ type Prometheus struct {
 	// Basic authentication credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
+
+	HTTPHeaders map[string]string `toml:"http_headers"`
 
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
@@ -89,6 +100,11 @@ type Prometheus struct {
 	podLabelSelector  labels.Selector
 	podFieldSelector  fields.Selector
 	isNodeScrapeScope bool
+
+	MonitorKubernetesPodsMethod MonitorMethod `toml:"monitor_kubernetes_pods_method"`
+	MonitorKubernetesPodsScheme string        `toml:"monitor_kubernetes_pods_scheme"`
+	MonitorKubernetesPodsPath   string        `toml:"monitor_kubernetes_pods_path"`
+	MonitorKubernetesPodsPort   int           `toml:"monitor_kubernetes_pods_port"`
 
 	// Only for monitor_kubernetes_pods=true
 	CacheRefreshInterval int `toml:"cache_refresh_interval"`
@@ -136,6 +152,10 @@ func (p *Prometheus) Init() error {
 
 		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
+	}
+
+	if p.MonitorKubernetesPodsMethod == MonitorMethodNone {
+		p.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
 	}
 
 	ctx := context.Background()
@@ -296,6 +316,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
 	} else if p.Username != "" || p.Password != "" {
 		req.SetBasicAuth(p.Username, p.Password)
+	}
+
+	if p.HTTPHeaders != nil {
+		for key, value := range p.HTTPHeaders {
+			req.Header.Add(key, value)
+		}
 	}
 
 	var resp *http.Response

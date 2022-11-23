@@ -29,6 +29,23 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   - skip: ignore interfaces that are marked down
   # down_interfaces = "expose"
 
+  ## Reading statistics from interfaces in additional namespaces is also
+  ## supported, so long as the namespaces are named (have a symlink in
+  ## /var/run/netns). The telegraf process will also need the CAP_SYS_ADMIN
+  ## permission.
+  ## By default, only the current namespace will be used. For additional
+  ## namespace support, at least one of `namespace_include` and
+  ## `namespace_exclude` must be provided.
+  ## To include all namespaces, set `namespace_include` to `["*"]`.
+  ## The initial namespace (if anonymous) can be specified with the empty
+  ## string ("").
+
+  ## List of namespaces to pull metrics for
+  # namespace_include = []
+
+  ## List of namespace to ignore when pulling metrics.
+  # namespace_exclude = []
+
   ## Some drivers declare statistics with extra whitespace, different spacing,
   ## and mix cases. This list, when enabled, can be used to clean the keys.
   ## Here are the current possible normalizations:
@@ -45,6 +62,36 @@ Interfaces can be included or ignored using:
 - `interface_exclude`
 
 Note that loopback interfaces will be automatically ignored.
+
+## Namespaces
+
+Metrics from interfaces in additional namespaces will be retrieved if either
+`namespace_include` or `namespace_exclude` is configured (to a non-empty list).
+This requires `CAP_SYS_ADMIN` permissions to switch namespaces, which can be
+granted to telegraf in several ways. The two recommended ways are listed below:
+
+### Using systemd capabilities
+
+If you are using systemd to run Telegraf, you may run
+`systemctl edit telegraf.service` and add the following:
+
+```text
+[Service]
+AmbientCapabilities=CAP_SYS_ADMIN
+```
+
+### Configuring executable capabilities
+
+If you are not using systemd to run Telegraf, you can configure the Telegraf
+executable to have `CAP_SYS_ADMIN` when run.
+
+```sh
+sudo setcap CAP_SYS_ADMIN+epi $(which telegraf)
+```
+
+N.B.: This capability is a filesystem attribute on the binary itself. The
+attribute needs to be re-applied if the Telegraf binary is rotated (e.g. on
+installation of new a Telegraf version from the system package manager).
 
 ## Metrics
 

@@ -225,7 +225,7 @@ type AgentConfig struct {
 
 // InputNames returns a list of strings of the configured inputs.
 func (c *Config) InputNames() []string {
-	var name []string
+	name := make([]string, 0, len(c.Inputs))
 	for _, input := range c.Inputs {
 		name = append(name, input.Config.Name)
 	}
@@ -234,7 +234,7 @@ func (c *Config) InputNames() []string {
 
 // AggregatorNames returns a list of strings of the configured aggregators.
 func (c *Config) AggregatorNames() []string {
-	var name []string
+	name := make([]string, 0, len(c.Aggregators))
 	for _, aggregator := range c.Aggregators {
 		name = append(name, aggregator.Config.Name)
 	}
@@ -243,7 +243,7 @@ func (c *Config) AggregatorNames() []string {
 
 // ProcessorNames returns a list of strings of the configured processors.
 func (c *Config) ProcessorNames() []string {
-	var name []string
+	name := make([]string, 0, len(c.Processors))
 	for _, processor := range c.Processors {
 		name = append(name, processor.Config.Name)
 	}
@@ -252,7 +252,7 @@ func (c *Config) ProcessorNames() []string {
 
 // OutputNames returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
-	var name []string
+	name := make([]string, 0, len(c.Outputs))
 	for _, output := range c.Outputs {
 		name = append(name, output.Config.Name)
 	}
@@ -282,8 +282,7 @@ func PluginNameCounts(plugins []string) []string {
 // ListTags returns a string of tags specified in the config,
 // line-protocol style
 func (c *Config) ListTags() string {
-	var tags []string
-
+	tags := make([]string, 0, len(c.Tags))
 	for k, v := range c.Tags {
 		tags = append(tags, fmt.Sprintf("%s=%s", k, v))
 	}
@@ -1197,6 +1196,8 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
 	c.getFieldString(tbl, "json_timestamp_format", &sc.TimestampFormat)
 	c.getFieldString(tbl, "json_transformation", &sc.Transformation)
+	c.getFieldStringSlice(tbl, "json_nested_fields_include", &sc.JSONNestedFieldInclude)
+	c.getFieldStringSlice(tbl, "json_nested_fields_exclude", &sc.JSONNestedFieldExclude)
 
 	c.getFieldBool(tbl, "splunkmetric_hec_routing", &sc.HecRouting)
 	c.getFieldBool(tbl, "splunkmetric_multimetric", &sc.SplunkmetricMultiMetric)
@@ -1277,6 +1278,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
 		"json_timestamp_format", "json_timestamp_units", "json_transformation",
+		"json_nested_fields_include", "json_nested_fields_exclude",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"prometheus_compact_encoding",
 		"splunkmetric_hec_routing", "splunkmetric_multimetric", "splunkmetric_omit_event_tag",

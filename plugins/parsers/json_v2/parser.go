@@ -161,8 +161,7 @@ func (p *Parser) processMetric(input []byte, data []json_v2.DataSet, tag bool, t
 	}
 
 	p.iterateObjects = false
-	var metrics [][]telegraf.Metric
-
+	metrics := make([][]telegraf.Metric, 0, len(data))
 	for _, c := range data {
 		if c.Path == "" {
 			return nil, fmt.Errorf("GJSON path is required")
@@ -230,14 +229,12 @@ func cartesianProduct(a, b []telegraf.Metric) []telegraf.Metric {
 	if len(b) == 0 {
 		return a
 	}
-	p := make([]telegraf.Metric, len(a)*len(b))
-	i := 0
+	p := make([]telegraf.Metric, 0, len(a)*len(b))
 	for _, a := range a {
 		for _, b := range b {
 			m := a.Copy()
 			mergeMetric(b, m)
-			p[i] = m
-			i++
+			p = append(p, m)
 		}
 	}
 

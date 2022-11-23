@@ -1,8 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ethtool
 
 import (
 	_ "embed"
-	"net"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -15,9 +15,9 @@ var downInterfacesBehaviors = []string{"expose", "skip"}
 
 type Command interface {
 	Init() error
-	DriverName(intf string) (string, error)
-	Interfaces() ([]net.Interface, error)
-	Stats(intf string) (map[string]uint64, error)
+	DriverName(intf NamespacedInterface) (string, error)
+	Interfaces(includeNamespaces bool) ([]NamespacedInterface, error)
+	Stats(intf NamespacedInterface) (map[string]uint64, error)
 }
 
 type Ethtool struct {
@@ -30,12 +30,20 @@ type Ethtool struct {
 	// Behavior regarding metrics for downed interfaces
 	DownInterfaces string `toml:" down_interfaces"`
 
+	// This is the list of namespace names to include
+	NamespaceInclude []string `toml:"namespace_include"`
+
+	// This is the list of namespace names to ignore
+	NamespaceExclude []string `toml:"namespace_exclude"`
+
 	// Normalization on the key names
 	NormalizeKeys []string `toml:"normalize_keys"`
 
 	Log telegraf.Logger `toml:"-"`
 
-	interfaceFilter filter.Filter
+	interfaceFilter   filter.Filter
+	namespaceFilter   filter.Filter
+	includeNamespaces bool
 
 	// the ethtool command
 	command Command
@@ -48,6 +56,7 @@ func (*Ethtool) SampleConfig() string {
 const (
 	pluginName       = "ethtool"
 	tagInterface     = "interface"
+	tagNamespace     = "namespace"
 	tagDriverName    = "driver"
 	fieldInterfaceUp = "interface_up"
 )
