@@ -134,7 +134,14 @@ func (p *Prometheus) Init() error {
 
 			p.NodeIP = envVarNodeIP
 		}
+		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
+	}
 
+	if p.MonitorKubernetesPodsMethod == MonitorMethodNone {
+		p.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
+	}
+
+	if p.isNodeScrapeScope || p.MonitorKubernetesPodsMethod != MonitorMethodAnnotations {
 		// Parse label and field selectors - will be used to filter pods after cAdvisor call
 		var err error
 		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
@@ -150,12 +157,7 @@ func (p *Prometheus) Init() error {
 			return fmt.Errorf("the field selector %s is not supported for pods", invalidSelector)
 		}
 
-		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
-	}
-
-	if p.MonitorKubernetesPodsMethod == MonitorMethodNone {
-		p.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
 	}
 
 	ctx := context.Background()
