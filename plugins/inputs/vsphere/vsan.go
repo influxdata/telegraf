@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
@@ -17,6 +15,9 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 	vsanmethods "github.com/vmware/govmomi/vsan/methods"
 	vsantypes "github.com/vmware/govmomi/vsan/types"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
 
 const (
@@ -40,10 +41,10 @@ var (
 func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
 	lower, err := versionLowerThan(e.apiVersion, "5.5")
 	if err != nil {
-		return fmt.Errorf("Failed to get the vCenter version for vSAN: %v", err)
+		return fmt.Errorf("failed to get the vCenter version for vSAN: %v", err)
 	}
 	if lower {
-		return fmt.Errorf("A minimum API version of 5.5 is required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
+		return fmt.Errorf("a minimum API version of 5.5 is required for vSAN. Found: %s. Skipping vCenter: %s", e.apiVersion, e.URL.Host)
 	}
 	vsanPerfMetricsName = strings.Join([]string{"vsphere", "vsan", "performance"}, e.Parent.Separator)
 	vsanSummaryMetricsName = strings.Join([]string{"vsphere", "vsan", "summary"}, e.Parent.Separator)
@@ -111,10 +112,7 @@ func (e *Endpoint) vsanEnabled(ctx context.Context, clusterObj *object.ClusterCo
 		return false
 	}
 	enabled := config.VsanConfigInfo.Enabled
-	if enabled == nil {
-		return false
-	}
-	return *enabled
+	return enabled != nil && *enabled
 }
 
 // getVsanMetadata returns a string list of the entity types that will be queried.

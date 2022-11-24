@@ -12,7 +12,8 @@ vCenter servers.
 
 ## Supported Versions of vSphere
 
-This plugin supports vSphere version 6.5, 6.7 and 7.0. It may work with versions 5.1, 5.5 and 6.0, but neither are officially supported.
+This plugin supports vSphere version 6.5, 6.7 and 7.0.
+It may work with versions 5.1, 5.5 and 6.0, but neither are officially supported.
 
 Compatibility information is available from the govmomi project
 [here](https://github.com/vmware/govmomi/tree/v0.26.0#compatibility)
@@ -689,7 +690,7 @@ vSAN metrics are only collected on the cluster level. Therefore, use the same wa
   * vnic
   * stackName
 
-### Realtime vs. Historical Metrics
+### Realtime vs. Historical Metrics in vSAN
 
 vSAN metrics also keep two different kinds of metrics - realtime and historical metrics.
 
@@ -866,4 +867,3 @@ vsphere_vsan_summary,clustername=Example-VSAN,dcname=Example-DC,host=host.exampl
 vsphere_vsan_summary,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,moid=domain-c7,source=Example-VSAN,vcenter=localhost:8898 overall_health=1i 1578955489000000000
 vsphere_vsan_summary,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,moid=domain-c7,source=Example-VSAN,vcenter=localhost:8898 free_capacity_byte=11022535578757i,total_capacity_byte=14102625779712i 1578955488000000000
 ```
-
