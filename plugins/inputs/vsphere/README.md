@@ -10,12 +10,9 @@ vCenter servers.
 * Datastores
 * vSAN
 
-## Supported versions of vSphere
+## Supported Versions of vSphere
 
-This plugin supports vSphere version 5.5 through 7.0.
-
-This plugin supports vSphere version 6.5, 6.7 and 7.0. It may work with versions
-5.1, 5.5 and 6.0, but neither are officially supported.
+This plugin supports vSphere version 6.5, 6.7 and 7.0. It may work with versions 5.1, 5.5 and 6.0, but neither are officially supported.
 
 Compatibility information is available from the govmomi project
 [here](https://github.com/vmware/govmomi/tree/v0.26.0#compatibility)
@@ -161,12 +158,6 @@ Compatibility information is available from the govmomi project
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default
 
-  ## VSAN
-  vsan_metric_include = [] ## if omitted or empty, all metrics are collected
-  vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
-  ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
-  vsan_metric_skip_verify = false ## false by default.
-
   ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
@@ -186,7 +177,7 @@ Compatibility information is available from the govmomi project
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
 
-  ## timeout applies to any of the api request made to vcenter
+  ## timeout applies to any of the API requests made to vCenter
   # timeout = "60s"
 
   ## When set to true, all samples are sent as integers. This makes the output
@@ -198,7 +189,7 @@ Compatibility information is available from the govmomi project
   # use_int_samples = true
 
   ## Custom attributes from vCenter can be very useful for queries in order to slice the
-  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
+  ## metrics along different dimensions and for forming ad-hoc relationships. They are disabled
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
   ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include.
@@ -238,26 +229,26 @@ NOTE: To disable collection of a specific resource type, simply exclude all
 metrics using the XX_metric_exclude.  For example, to disable collection of VMs,
 add this:
 
-### Objects and Metrics Per Query
+### Objects and Metrics per Query
 
-By default, in vCenter's configuration a limit is set to the number of entities
+By default, in the vCenter configuration a limit is set to the number of entities
 that are included in a performance chart query. Default settings for vCenter 6.5
-and above is 256. Prior versions of vCenter have this set to 64.  A vCenter
-administrator can change this setting, see this [VMware KB
+and later is 256. Earlier versions of vCenter have this set to 64.  A vCenter
+administrator can change this setting. See this [VMware KB
 article](https://kb.vmware.com/s/article/2107096) for more information.
 
 Any modification should be reflected in this plugin by modifying the parameter
 `max_query_objects`
 
 ```toml
-  ## number of objects to retrieve per query for realtime resources (vms and hosts)
+  ## number of objects to retrieve per query for realtime resources (VMs and hosts)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_objects = 256
 ```
 
-### Collection and Discovery concurrency
+### Collection and Discovery Concurrency
 
-On large vCenter setups it may be prudent to have multiple concurrent go
+In large vCenter setups it may be prudent to have multiple concurrent go
 routines collect performance metrics in order to avoid potential errors for time
 elapsed during a collection cycle. This should never be greater than 8, though
 the default of 1 (no concurrency) should be sufficient for most configurations.
@@ -314,7 +305,7 @@ Often, we want to select a group of resource, such as all the VMs in a
 folder. We could use the path `/DC0/vm/Folder1/*` for that.
 
 Another possibility is to select objects using a partial name, such as
-`/DC0/vm/Folder1/hadoop*` yielding all vms in Folder1 with a name starting
+`/DC0/vm/Folder1/hadoop*` yielding all VMs in Folder1 with a name starting
 with "hadoop".
 
 Finally, due to the arbitrary nesting of the folder structure, we need a
@@ -322,7 +313,7 @@ Finally, due to the arbitrary nesting of the folder structure, we need a
 that. If we want to look for a VM with a name starting with "hadoop" in any
 folder, we could use the following path: `/DC0/vm/**/hadoop*`
 
-#### Multiple paths to VMs
+#### Multiple Paths to VMs
 
 As we can see from the example tree above, VMs appear both in its on folder
 under the datacenter, as well as under the hosts. This is useful when you like
@@ -336,7 +327,7 @@ host in Cluster1.
 
 ## Performance Considerations
 
-### Realtime vs. historical metrics
+### Realtime vs. Historical Metrics
 
 vCenter keeps two different kinds of metrics, known as realtime and historical
 metrics.
@@ -409,14 +400,14 @@ instance. For example:
 
 [vsphere-16]: https://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch16_Performance.18.2.html
 
-### Configuring max_query_metrics setting
+### Configuring max_query_metrics Setting
 
 The `max_query_metrics` determines the maximum number of metrics to attempt to
 retrieve in one call to vCenter. Generally speaking, a higher number means
 faster and more efficient queries. However, the number of allowed metrics in a
 query is typically limited in vCenter by the `config.vpxd.stats.maxQueryMetrics`
-setting in vCenter. The value defaults to 64 on vSphere 5.5 and older and 256 on
-newver versions of vCenter. The vSphere plugin always checks this setting and
+setting in vCenter. The value defaults to 64 on vSphere 5.5 and earlier and to 256 on
+more recent versions. The vSphere plugin always checks this setting and
 will automatically reduce the number if the limit configured in vCenter is lower
 than max_query_metrics in the plugin. This will result in a log message similar
 to this:
@@ -428,7 +419,7 @@ to this:
 You may ask a vCenter administrator to increase this limit to help boost
 performance.
 
-### Cluster metrics and the max_query_metrics setting
+### Cluster Metrics and the max_query_metrics Setting
 
 Cluster metrics are handled a bit differently by vCenter. They are aggregated
 from ESXi and virtual machine metrics and may not be available when you query
@@ -447,19 +438,19 @@ There are two ways of addressing this:
 * Ask your vCenter administrator to set `config.vpxd.stats.maxQueryMetrics` to a number that's higher than the total number of virtual machines managed by a vCenter instance.
 * Exclude the cluster metrics and use either the basicstats aggregator to calculate sums and averages per cluster or use queries in the visualization tool to obtain the same result.
 
-### Concurrency settings
+### Concurrency Settings
 
 The vSphere plugin allows you to specify two concurrency settings:
 
 * `collect_concurrency`: The maximum number of simultaneous queries for performance metrics allowed per resource type.
-* `discover_concurrency`: The  maximum number of simultaneous queries for resource discovery allowed.
+* `discover_concurrency`: The maximum number of simultaneous queries for resource discovery allowed.
 
 While a higher level of concurrency typically has a positive impact on
 performance, increasing these numbers too much can cause performance issues at
 the vCenter server. A rule of thumb is to set these parameters to the number of
 virtual machines divided by 1500 and rounded up to the nearest integer.
 
-### Configuring historical_interval setting
+### Configuring historical_interval Setting
 
 When the vSphere plugin queries vCenter for historical statistics it queries for
 statistics that exist at a specific interval.  The default historical interval
@@ -542,18 +533,18 @@ For a detailed list of commonly available metrics, please refer to
 * virtualDisk stats for VM
   * disk (name of virtual disk)
 
-# VMware vSphere Input Plugin - vSAN extension
+## Add a vSAN extension
 
-vSAN resource is a special type of resource that can be collected by the plugin.
-The configuration of vSAN resource is slightly different from hosts, vms and other resources.
+A vSAN resource is a special type of resource that can be collected by the plugin.
+The configuration of a vSAN resource slightly differs from the configuration of hosts, VMs, and other resources.
 
-## Prerequisites
+### Prerequisites for vSAN
 
-* vSphere 5.5 and later environments are needed
+* vSphere 6.5 and later
 * Clusters with vSAN enabled
-* [Turn on vSAN performance service](https://docs.vmware.com/en/VMware-vSphere/6.0/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html): When you create a vSAN cluster, the performance service is disabled. You will need to enable vSAN performance service first to monitor the performance metrics.
+* [Turn on Virtual SAN performance service](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html): When you create a vSAN cluster, the performance service is disabled. To monitor the performance metrics, you must turn on vSAN performance service.
 
-## vSAN Configuration
+### vSAN Configuration
 
 ```toml
 [[inputs.vsphere]]
@@ -617,26 +608,26 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
   # insecure_skip_verify = false
 ```
 
-* Use `vsan_metric_include = [...]` to define the vSAN metrics you want to collect.
-e.g. `vsan_metric_include = ["summary.*", "performance.host-domclient", "performance.cache-disk", "performance.disk-group", "performance.capacity-disk"]`.
+* Use `vsan_metric_include = [...]` to define the vSAN metrics that you want to collect.
+For example, `vsan_metric_include = ["summary.*", "performance.host-domclient", "performance.cache-disk", "performance.disk-group", "performance.capacity-disk"]`.
 To include all supported vSAN metrics, use `vsan_metric_include = [ "*" ]`
 To disable all the vSAN metrics, use `vsan_metric_exclude = [ "*" ]`
 
 * `vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes).
-This option is given because some performance entities are not returned by the API, but we want to offer the flexibility if user really need the stats.
-When set false, anything not in supported entity list will be filtered out.
-When set true, queried metrics will be identical to vsan_metric_include and the exclusive array will not be used in this case. By default the value is false.
+This option is given because some performance entities are not returned by the API, but we want to offer the flexibility if you really need the stats.
+When set to false, anything not in the supported entity list will be filtered out.
+When set to true, queried metrics will be identical to vsan_metric_include and the exclusive array will not be used in this case. By default the value is false.
 
 * `vsan_cluster_include` defines a list of inventory paths that will be used to select a portion of vSAN clusters.
-vSAN metrics are only collected on cluster level. Therefore, use the same way as inventory paths for [vsphere's clusters](README.md#inventory-paths)
+vSAN metrics are only collected on the cluster level. Therefore, use the same way as inventory paths for [vSphere clusters](README.md#inventory-paths).
 
-* Many vCenter environments use self-signed certificates. Be sure to update the bottom portion of the above configuration and provide proper values for all applicable SSL Config settings that apply in your vSphere environment. In some environments, setting insecure_skip_verify = true will be necessary when the SSL certificates are not available.
+* Many vCenter environments use self-signed certificates. Update the bottom portion of the above configuration and provide proper values for all applicable SSL Config settings that apply in your vSphere environment. In some environments, setting insecure_skip_verify = true will be necessary when the SSL certificates are not available.
 
-* To ensure consistent collection in larger vSphere environments you may need to increase concurrency for the plugin. Use the collect_concurrency setting to control concurrency. Set collect_concurrency to the number of virtual machines divided by 1500 and rounded up to the nearest integer. For example, for 1200 VMs use 1 and for 2300 VMs use 2.
+* To ensure consistent collection in larger vSphere environments, you must increase concurrency for the plugin. Use the collect_concurrency setting to control concurrency. Set collect_concurrency to the number of virtual machines divided by 1500 and rounded up to the nearest integer. For example, for 1200 VMs use 1, and for 2300 VMs use 2.
 
-## Measurements & Fields
+### Measurements & Fields
 
-**NOTE**: vSAN performance measurements and fields may vary on the vSAN versions.
+**NOTE**: Depending on the vSAN version, the vSAN performance measurements and fields may vary.
 
 * vSAN Summary
   * overall_health
@@ -677,7 +668,7 @@ vSAN metrics are only collected on cluster level. Therefore, use the same way as
   * vsan-iscsi-lun
     * iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write, bandwidth_total, latency_read, latency_write, latency_total, queue_depth
 
-## Tags
+### vSAN Tags
 
 * all vSAN metrics
   * vcenter
@@ -698,14 +689,14 @@ vSAN metrics are only collected on cluster level. Therefore, use the same way as
   * vnic
   * stackName
 
-## Realtime vs. historical metrics
+### Realtime vs. Historical Metrics
 
 vSAN metrics also keep two different kinds of metrics - realtime and historical metrics.
 
-* Realtime metrics are metrics with prefix 'summary'. These metrics are available at real-time.
-* Historical metrics are metrics with prefix 'performance'. They are metrics queried from vSAN performance API, which is available at a 5-minute rollup level.
+* Realtime metrics are metrics with the prefix 'summary'. These metrics are available in realtime.
+* Historical metrics are metrics with the prefix 'performance'. These are metrics queried from vSAN performance API, which is available at a 5-minute rollup level.
 
-For performance consideration, it is better to specify two instances of the plugin, one for the realtime metrics with a short collection interval and one for the historical metrics with a longer interval. For example:
+For performance consideration, it is better to specify two instances of the plugin, one for the realtime metrics with a short collection interval, and the second one - for the historical metrics with a longer interval. For example:
 
 ```toml
 ## Realtime instance
@@ -865,7 +856,7 @@ vsphere_host_mem,clustername=DC0_C0,esxhostname=DC0_C0_H0,host=host.example.com,
 vsphere_host_net,clustername=DC0_C0,esxhostname=DC0_C0_H0,host=host.example.com,moid=host-30,os=Mac,source=DC0_C0_H0,vcenter=localhost:8989 bytesRx_average=726i,bytesTx_average=643i,usage_average=1504i 1535660339000000000
 ```
 
-## vSAN Sample output
+## vSAN Sample Output
 
 ```shell
 vsphere_vsan_performance_hostdomclient,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,hostname=DC0_C0_H0,moid=domain-c8,source=Example-VSAN,vcenter=localhost:8898 iops_read=7,write_congestion=0,unmap_congestion=0,read_count=2199,iops=8,latency_max_write=8964,latency_avg_unmap=0,latency_avg_write=1883,write_count=364,num_oio=12623,throughput=564127,client_cache_hits=0,latency_max_read=17821,latency_max_unmap=0,read_congestion=0,latency_avg=1154,congestion=0,throughput_read=554721,latency_avg_read=1033,throughput_write=9406,client_cache_hit_rate=0,iops_unmap=0,throughput_unmap=0,latency_stddev=1315,io_count=2563,oio=4,iops_write=1,unmap_count=0 1578955200000000000
@@ -875,3 +866,4 @@ vsphere_vsan_summary,clustername=Example-VSAN,dcname=Example-DC,host=host.exampl
 vsphere_vsan_summary,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,moid=domain-c7,source=Example-VSAN,vcenter=localhost:8898 overall_health=1i 1578955489000000000
 vsphere_vsan_summary,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,moid=domain-c7,source=Example-VSAN,vcenter=localhost:8898 free_capacity_byte=11022535578757i,total_capacity_byte=14102625779712i 1578955488000000000
 ```
+
