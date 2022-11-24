@@ -13,7 +13,7 @@ vCenter servers.
 ## Supported Versions of vSphere
 
 This plugin supports vSphere version 6.5, 6.7 and 7.0.
-It may work with versions 5.1, 5.5 and 6.0, but neither are officially supported.
+It may work with versions 5.1, 5.5 and 6.0, but neither is officially supported.
 
 Compatibility information is available from the govmomi project
 [here](https://github.com/vmware/govmomi/tree/v0.26.0#compatibility)
@@ -232,11 +232,11 @@ add this:
 
 ### Objects and Metrics per Query
 
-By default, in the vCenter configuration a limit is set to the number of entities
-that are included in a performance chart query. Default settings for vCenter 6.5
-and later is 256. Earlier versions of vCenter have this set to 64.  A vCenter
-administrator can change this setting. See this [VMware KB
-article](https://kb.vmware.com/s/article/2107096) for more information.
+By default, in the vCenter configuration a limit is set to the number of
+entities that are included in a performance chart query. Default settings for
+vCenter 6.5 and later is 256. Earlier versions of vCenter have this set to 64.
+A vCenter administrator can change this setting. See this [VMware KB article]
+(https://kb.vmware.com/s/article/2107096) for more information.
 
 Any modification should be reflected in this plugin by modifying the parameter
 `max_query_objects`
@@ -407,8 +407,8 @@ The `max_query_metrics` determines the maximum number of metrics to attempt to
 retrieve in one call to vCenter. Generally speaking, a higher number means
 faster and more efficient queries. However, the number of allowed metrics in a
 query is typically limited in vCenter by the `config.vpxd.stats.maxQueryMetrics`
-setting in vCenter. The value defaults to 64 on vSphere 5.5 and earlier and to 256 on
-more recent versions. The vSphere plugin always checks this setting and
+setting in vCenter. The value defaults to 64 on vSphere 5.5 and earlier and to
+256 on more recent versions. The vSphere plugin always checks this setting and
 will automatically reduce the number if the limit configured in vCenter is lower
 than max_query_metrics in the plugin. This will result in a log message similar
 to this:
@@ -543,7 +543,9 @@ The configuration of a vSAN resource slightly differs from the configuration of 
 
 * vSphere 6.5 and later
 * Clusters with vSAN enabled
-* [Turn on Virtual SAN performance service](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html): When you create a vSAN cluster, the performance service is disabled. To monitor the performance metrics, you must turn on vSAN performance service.
+* [Turn on Virtual SAN performance service](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html): When you create a vSAN cluster,
+the performance service is disabled. To monitor the performance metrics,
+you must turn on vSAN performance service.
 
 ### vSAN Configuration
 
@@ -628,7 +630,8 @@ vSAN metrics are only collected on the cluster level. Therefore, use the same wa
 
 ### Measurements & Fields
 
-**NOTE**: Depending on the vSAN version, the vSAN performance measurements and fields may vary.
+**NOTE**: Depending on the vSAN version, the vSAN performance measurements
+and fields may vary.
 
 * vSAN Summary
   * overall_health
@@ -692,12 +695,16 @@ vSAN metrics are only collected on the cluster level. Therefore, use the same wa
 
 ### Realtime vs. Historical Metrics in vSAN
 
-vSAN metrics also keep two different kinds of metrics - realtime and historical metrics.
+vSAN metrics also keep two different kinds of metrics - realtime and
+historical metrics.
 
 * Realtime metrics are metrics with the prefix 'summary'. These metrics are available in realtime.
 * Historical metrics are metrics with the prefix 'performance'. These are metrics queried from vSAN performance API, which is available at a 5-minute rollup level.
 
-For performance consideration, it is better to specify two instances of the plugin, one for the realtime metrics with a short collection interval, and the second one - for the historical metrics with a longer interval. For example:
+For performance consideration, it is better to specify two instances of the
+plugin, one for the realtime metrics with a short collection interval,
+and the second one - for the historical metrics with a longer interval.
+For example:
 
 ```toml
 ## Realtime instance
