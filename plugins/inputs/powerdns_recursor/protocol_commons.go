@@ -13,6 +13,10 @@ func parseResponse(metrics string) map[string]interface{} {
 	values := make(map[string]interface{})
 
 	s := strings.Split(metrics, "\n")
+	
+	if len(s) < 1 {
+		return values	
+	}
 
 	for _, metric := range s[:len(s)-1] {
 		m := strings.Split(metric, "\t")
