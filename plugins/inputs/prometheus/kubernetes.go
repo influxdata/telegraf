@@ -430,7 +430,7 @@ func getScrapeURL(pod *corev1.Pod, p *Prometheus) (*url.URL, error) {
 		scheme = "http"
 	}
 
-	if port == "" {
+	if port == "" || port == "0" {
 		port = "9102"
 	}
 
