@@ -139,5 +139,5 @@ func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full boo
 		v = node.FormatValue(value, models.FormatEnumName)
 	}
 
-	return v.Formatted, err
+	return v.Formatted, nil
 }
