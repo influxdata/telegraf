@@ -441,6 +441,14 @@ func (c *Config) LoadConfigData(data []byte) error {
 		c.Tags["host"] = c.Agent.Hostname
 	}
 
+	// Warn when explicitly setting the old snmp translator
+	if c.Agent.SnmpTranslator == "netsnmp" {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "agent", "snmp_translator", "netsnmp", telegraf.DeprecationInfo{
+			Since:     "1.25.0",
+			RemovalIn: "2.0.0",
+			Notice:    "Use 'gosmi' instead",
+		})
+	}
 	// Set snmp agent translator default
 	if c.Agent.SnmpTranslator == "" {
 		c.Agent.SnmpTranslator = "netsnmp"

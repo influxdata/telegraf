@@ -263,8 +263,8 @@ The agent table configures Telegraf and the defaults used across all plugins.
   If set to true, do no set the "host" tag in the telegraf agent.
 
 - **snmp_translator**:
-  Method of translating SNMP objects. Can be "netsnmp" which
-  translates by calling external programs snmptranslate and snmptable,
+  Method of translating SNMP objects. Can be "netsnmp" (deprecated) which
+  translates by calling external programs `snmptranslate` and `snmptable`,
   or "gosmi" which translates using the built-in gosmi library.
 
 ## Plugins
