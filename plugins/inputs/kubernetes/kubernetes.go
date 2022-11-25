@@ -42,7 +42,7 @@ type Kubernetes struct {
 }
 
 const (
-	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 func init() {
