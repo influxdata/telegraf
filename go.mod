@@ -72,7 +72,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v0.0.4
-	github.com/google/gnxi v0.0.0-20220411075422-cd6b043b7fd0
+	github.com/google/gnxi v0.0.0-20221016143401-2aeceb5a2901
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/licensecheck v0.3.1
