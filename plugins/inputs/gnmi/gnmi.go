@@ -255,6 +255,12 @@ func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 		return nil, err
 	}
 
+	// Do not provide an empty prefix. Required for Huawei NE40 router v8.21
+	// (and possibly others). See https://github.com/influxdata/telegraf/issues/12273.
+	if gnmiPath.Origin == "" && gnmiPath.Target == "" && len(gnmiPath.Elem) == 0 {
+		gnmiPath = nil
+	}
+
 	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" && c.Encoding != "bytes" {
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
