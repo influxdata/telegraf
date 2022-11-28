@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package riak
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +12,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Type Riak gathers statistics from one or more Riak instances
 type Riak struct {
@@ -77,6 +82,10 @@ type riakStats struct {
 	VnodePutsTotal           int64  `json:"vnode_puts_total"`
 	ReadRepairs              int64  `json:"read_repairs"`
 	ReadRepairsTotal         int64  `json:"read_repairs_total"`
+}
+
+func (*Riak) SampleConfig() string {
+	return sampleConfig
 }
 
 // Reads stats from all configured servers.

@@ -3,9 +3,24 @@
 The zookeeper plugin collects variables outputted from the 'mntr' command
 [Zookeeper Admin](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html).
 
+If in Zookeper, the Prometheus Metric provider is enabled, instead use the
+`prometheus` input plugin. By default, the Prometheus metrics are exposed at
+`http://<ip>:7000/metrics` URL. Using the `prometheus` input plugin provides a
+native solution to read and process Prometheus metrics, while this plugin is
+specific to using `mntr` to collect the Java Properties format.
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Reads 'mntr' stats from one or many zookeeper servers
 [[inputs.zookeeper]]
   ## An array of address to gather stats about. Specify an ip or hostname
@@ -18,8 +33,14 @@ The zookeeper plugin collects variables outputted from the 'mntr' command
   ## Timeout for metric collections from all servers.  Minimum timeout is "1s".
   # timeout = "5s"
 
+  ## Float Parsing - the initial implementation forced any value unable to be
+  ## parsed as an int to be a string. Setting this to "float" will attempt to
+  ## parse float values as floats and not strings. This would break existing
+  ## metrics and may cause issues if a value switches between a float and int.
+  # parse_floats = "string"
+
   ## Optional TLS Config
-  # enable_tls = true
+  # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"

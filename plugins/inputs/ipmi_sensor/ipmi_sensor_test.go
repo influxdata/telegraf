@@ -28,10 +28,8 @@ func TestGather(t *testing.T) {
 	execCommand = fakeExecCommand
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(i.Gather)
-
-	require.NoError(t, err)
-
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
 	require.EqualValues(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
 
 	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
@@ -132,8 +130,8 @@ func TestGather(t *testing.T) {
 		Log:     testutil.Logger{},
 	}
 
-	err = acc.GatherError(i.Gather)
-	require.NoError(t, err)
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}
@@ -378,10 +376,8 @@ OS RealTime Mod  | 0x00              | ok
 
 	// Ignore the returned errors for the mocked interface as tests will fail anyway
 	if cmd == "ipmitool" {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
@@ -404,9 +400,8 @@ func TestGatherV2(t *testing.T) {
 	execCommand = fakeExecCommandV2
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(i.Gather)
-
-	require.NoError(t, err)
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
 
 	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
 	require.EqualValues(t, "USERID", conn.Username)
@@ -443,8 +438,8 @@ func TestGatherV2(t *testing.T) {
 		Log:           testutil.Logger{},
 	}
 
-	err = acc.GatherError(i.Gather)
-	require.NoError(t, err)
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}
@@ -579,10 +574,8 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 
 	// Ignore the returned errors for the mocked interface as tests will fail anyway
 	if cmd == "ipmitool" {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
@@ -822,7 +815,7 @@ func TestSanitizeIPMICmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var sanitizedArgs []string = sanitizeIPMICmd(tt.args)
+			sanitizedArgs := sanitizeIPMICmd(tt.args)
 			require.Equal(t, tt.expected, sanitizedArgs)
 		})
 	}

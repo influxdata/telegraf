@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package elasticsearch_query
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -16,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // ElasticsearchQuery struct
 type ElasticsearchQuery struct {
@@ -49,6 +54,10 @@ type esAggregation struct {
 	MissingTagValue      string          `toml:"missing_tag_value"`
 	mapMetricFields      map[string]string
 	aggregationQueryList []aggregationQueryData
+}
+
+func (*ElasticsearchQuery) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init the plugin.

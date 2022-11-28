@@ -1,20 +1,33 @@
 # Hugepages Input Plugin
 
-Transparent Huge Pages (THP) is a Linux memory management system that reduces the overhead of
-Translation Lookaside Buffer (TLB) lookups on machines with large amounts of memory by using larger
-memory pages.
+Transparent Huge Pages (THP) is a Linux memory management system that reduces
+the overhead of Translation Lookaside Buffer (TLB) lookups on machines with
+large amounts of memory by using larger memory pages.
 
-Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html> for more details.
+Consult [the website][website] for more details.
+
+[website]: https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gathers huge pages measurements.
 [[inputs.hugepages]]
   ## Supported huge page types:
-  ##   - "root" - based on root huge page control directory: /sys/kernel/mm/hugepages
-  ##   - "per_node" - based on per NUMA node directories: /sys/devices/system/node/node[0-9]*/hugepages
-  ##   - "meminfo" - based on /proc/meminfo file
+  ##   - "root"     - based on root huge page control directory:
+  ##                  /sys/kernel/mm/hugepages
+  ##   - "per_node" - based on per NUMA node directories:
+  ##                  /sys/devices/system/node/node[0-9]*/hugepages
+  ##   - "meminfo"  - based on /proc/meminfo file
   # types = ["root", "per_node"]
 ```
 
@@ -22,7 +35,7 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
 
 **The following measurements are supported by Hugepages plugin:**
 
-- hugepages_root (gathered from root huge page control directory: `/sys/kernel/mm/hugepages`)
+- hugepages_root (gathered from `/sys/kernel/mm/hugepages`)
   - tags:
     - size_kb (integer, kB)
   - fields:
@@ -32,7 +45,7 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
     - reserved (integer)
     - surplus (integer)
     - total (integer)
-- hugepages_per_node (gathered from per NUMA node directories: `/sys/devices/system/node/node[0-9]*/hugepages`)
+- hugepages_per_node (gathered from `/sys/devices/system/node/node[0-9]*/hugepages`)
   - tags:
     - size_kb (integer, kB)
     - node (integer)
@@ -41,7 +54,8 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
     - surplus (integer)
     - total (integer)
 - hugepages_meminfo (gathered from `/proc/meminfo` file)
-  - The fields `total`, `free`, `reserved`, and `surplus` are counts of pages of default size. Fields with suffix `_kb` are in kilobytes.
+  - The fields `total`, `free`, `reserved`, and `surplus` are counts of pages
+    of default size. Fields with suffix `_kb` are in kilobytes.
   - fields:
     - anonymous_kb (integer, kB)
     - file_kb (integer, kB)

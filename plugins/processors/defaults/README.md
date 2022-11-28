@@ -1,8 +1,10 @@
-# Defaults Processor
+# Defaults Processor Plugin
 
-The *Defaults* processor allows you to ensure certain fields will always exist with a specified default value on your metric(s).
+The _Defaults_ processor allows you to ensure certain fields will always exist
+with a specified default value on your metric(s).
 
-There are three cases where this processor will insert a configured default field.
+There are three cases where this processor will insert a configured default
+field.
 
 1. The field is nil on the incoming metric
 1. The field is not nil, but its value is an empty string.
@@ -10,9 +12,18 @@ There are three cases where this processor will insert a configured default fiel
 
 Telegraf minimum version: Telegraf 1.15.0
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 ## Set default fields on your metric(s) when they are nil or empty
 [[processors.defaults]]
   ## Ensures a set of fields always exists on your metric(s) with their
@@ -32,7 +43,8 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Example
 
-Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one is not set in the metric by default:
+Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one is
+not set in the metric by default:
 
 ```toml
 [[processors.defaults]]

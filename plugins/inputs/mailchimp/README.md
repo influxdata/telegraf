@@ -1,13 +1,21 @@
 # Mailchimp Input Plugin
 
-Pulls campaign reports from the [Mailchimp API](https://developer.mailchimp.com/).
+Pulls campaign reports from the [Mailchimp API][1].
+
+[1]: https://developer.mailchimp.com/
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage mailchimp`.
-
-```toml
+```toml @sample.conf
 # Gathers metrics from the /3.0/reports MailChimp API
 [[inputs.mailchimp]]
   ## MailChimp API key

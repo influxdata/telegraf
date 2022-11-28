@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tomcat
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -13,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type TomcatStatus struct {
 	TomcatJvm        TomcatJvm         `xml:"jvm"`
@@ -70,6 +75,10 @@ type Tomcat struct {
 	request *http.Request
 }
 
+func (*Tomcat) SampleConfig() string {
+	return sampleConfig
+}
+
 func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
 		client, err := s.createHTTPClient()
@@ -108,19 +117,24 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	tags := map[string]string{
+		"source": s.URL,
+	}
+
 	// add tomcat_jvm_memory measurements
 	tcm := map[string]interface{}{
 		"free":  status.TomcatJvm.JvmMemory.Free,
 		"total": status.TomcatJvm.JvmMemory.Total,
 		"max":   status.TomcatJvm.JvmMemory.Max,
 	}
-	acc.AddFields("tomcat_jvm_memory", tcm, nil)
+	acc.AddFields("tomcat_jvm_memory", tcm, tags)
 
 	// add tomcat_jvm_memorypool measurements
 	for _, mp := range status.TomcatJvm.JvmMemoryPools {
 		tcmpTags := map[string]string{
-			"name": mp.Name,
-			"type": mp.Type,
+			"name":   mp.Name,
+			"type":   mp.Type,
+			"source": s.URL,
 		}
 
 		tcmpFields := map[string]interface{}{
@@ -141,7 +155,8 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		}
 
 		tccTags := map[string]string{
-			"name": name,
+			"name":   name,
+			"source": s.URL,
 		}
 
 		tccFields := map[string]interface{}{

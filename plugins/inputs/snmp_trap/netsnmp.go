@@ -82,8 +82,10 @@ func (s *netsnmpTranslator) snmptranslate(oid string) (e snmp.MibEntry, err erro
 	return e, nil
 }
 
-func newNetsnmpTranslator() *netsnmpTranslator {
+func newNetsnmpTranslator(timeout config.Duration) *netsnmpTranslator {
 	return &netsnmpTranslator{
 		execCmd: realExecCmd,
+		cache:   make(map[string]snmp.MibEntry),
+		Timeout: timeout,
 	}
 }

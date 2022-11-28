@@ -3,9 +3,18 @@
 This plugin writes metrics events to [Sensu Go](https://sensu.io) via its
 HTTP events API.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send aggregate metrics to Sensu Monitor
 [[outputs.sensu]]
   ## BACKEND API URL is the Sensu Backend API root URL to send metrics to

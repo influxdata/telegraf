@@ -1,22 +1,26 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux && (386 || amd64 || arm || arm64)
-// +build linux
-// +build 386 amd64 arm arm64
 
 package ras
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite" //to register SQLite driver
+	// Required for SQL framework driver
+	_ "modernc.org/sqlite"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Ras plugin gathers and counts errors provided by RASDaemon
 type Ras struct {
@@ -67,6 +71,10 @@ const (
 	microcodeROMParity     = "microcode_rom_parity_errors"
 	unclassifiedMCEBase    = "unclassified_mce_errors"
 )
+
+func (*Ras) SampleConfig() string {
+	return sampleConfig
+}
 
 // Start initializes connection to DB, metrics are gathered in Gather
 func (r *Ras) Start(telegraf.Accumulator) error {

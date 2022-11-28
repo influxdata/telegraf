@@ -1,58 +1,12 @@
 package modbus
 
 import (
+	_ "embed"
 	"fmt"
 )
 
-const sampleConfigPartPerRegister = `
-  ## Per register definition
-  ##
-
-  ## Digital Variables, Discrete Inputs and Coils
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## address     - variable address
-
-  discrete_inputs = [
-    { name = "start",          address = [0]},
-    { name = "stop",           address = [1]},
-    { name = "reset",          address = [2]},
-    { name = "emergency_stop", address = [3]},
-  ]
-  coils = [
-    { name = "motor1_run",     address = [0]},
-    { name = "motor1_jog",     address = [1]},
-    { name = "motor1_stop",    address = [2]},
-  ]
-
-  ## Analog Variables, Input Registers and Holding Registers
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## byte_order  - the ordering of bytes
-  ##  |---AB, ABCD   - Big Endian
-  ##  |---BA, DCBA   - Little Endian
-  ##  |---BADC       - Mid-Big Endian
-  ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64,
-  ##              FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
-  ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
-  ## scale      - the final numeric variable representation
-  ## address    - variable address
-
-  holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
-    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
-    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
-    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
-  ]
-  input_registers = [
-    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
-    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
-  ]
-`
+//go:embed sample_register.conf
+var sampleConfigPartPerRegister string
 
 type fieldDefinition struct {
 	Measurement string   `toml:"measurement"`
@@ -69,6 +23,7 @@ type ConfigurationOriginal struct {
 	Coils            []fieldDefinition `toml:"coils"`
 	HoldingRegisters []fieldDefinition `toml:"holding_registers"`
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
+	workarounds      ModbusWorkarounds
 }
 
 func (c *ConfigurationOriginal) SampleConfigPart() string {
@@ -92,22 +47,35 @@ func (c *ConfigurationOriginal) Check() error {
 }
 
 func (c *ConfigurationOriginal) Process() (map[byte]requestSet, error) {
-	coil, err := c.initRequests(c.Coils, maxQuantityCoils)
+	maxQuantity := uint16(1)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityCoils
+	}
+	coil, err := c.initRequests(c.Coils, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantityDiscreteInput)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityDiscreteInput
+	}
+	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	holding, err := c.initRequests(c.HoldingRegisters, maxQuantityHoldingRegisters)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityHoldingRegisters
+	}
+	holding, err := c.initRequests(c.HoldingRegisters, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	input, err := c.initRequests(c.InputRegisters, maxQuantityInputRegisters)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityInputRegisters
+	}
+	input, err := c.initRequests(c.InputRegisters, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +95,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 	if err != nil {
 		return nil, err
 	}
-	return groupFieldsToRequests(fields, nil, maxQuantity), nil
+	return groupFieldsToRequests(fields, nil, maxQuantity, "none"), nil
 }
 
 func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {
@@ -209,7 +177,9 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
+			case "INT8L", "INT8H", "UINT8L", "UINT8H",
+				"UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64",
+				"FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, registerType, item.Name)
 			}

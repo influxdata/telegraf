@@ -16,21 +16,27 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 )
 
 type Parser struct {
-	DefaultTags     map[string]string
-	Header          http.Header
-	IgnoreTimestamp bool
+	DefaultTags     map[string]string `toml:"-"`
+	Header          http.Header       `toml:"-"` // set by the prometheus input
+	IgnoreTimestamp bool              `toml:"prometheus_ignore_timestamp"`
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var parser expfmt.TextParser
 	var metrics []telegraf.Metric
 	var err error
-	// parse even if the buffer begins with a newline
+
+	// Make sure we have a finishing newline but no trailing one
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
+	if !bytes.HasSuffix(buf, []byte("\n")) {
+		buf = append(buf, []byte("\n")...)
+	}
+
 	// Read raw data
 	buffer := bytes.NewBuffer(buf)
 	reader := bufio.NewReader(buffer)
@@ -114,7 +120,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 
 // Get Quantiles for summary metric & Buckets for histogram
 func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, t time.Time) []telegraf.Metric {
-	var metrics []telegraf.Metric
+	metrics := make([]telegraf.Metric, 0, len(m.GetSummary().Quantile)+1)
 	fields := make(map[string]interface{})
 
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
@@ -137,7 +143,7 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 
 // Get Buckets  from histogram metric
 func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, t time.Time) []telegraf.Metric {
-	var metrics []telegraf.Metric
+	metrics := make([]telegraf.Metric, 0, len(m.GetHistogram().Bucket)+2)
 	fields := make(map[string]interface{})
 
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
@@ -146,6 +152,7 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
 	metrics = append(metrics, met)
 
+	infSeen := false
 	for _, b := range m.GetHistogram().Bucket {
 		newTags := tags
 		fields = make(map[string]interface{})
@@ -154,6 +161,20 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 
 		histogramMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
 		metrics = append(metrics, histogramMetric)
+		if math.IsInf(b.GetUpperBound(), +1) {
+			infSeen = true
+		}
+	}
+	// Infinity bucket is required for proper function of histogram in prometheus
+	if !infSeen {
+		newTags := tags
+		newTags["le"] = "+Inf"
+
+		fields = make(map[string]interface{})
+		fields[metricName+"_bucket"] = float64(m.GetHistogram().GetSampleCount())
+
+		histogramInfMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		metrics = append(metrics, histogramInfMetric)
 	}
 	return metrics
 }
@@ -185,4 +206,16 @@ func (p *Parser) GetTimestamp(m *dto.Metric, now time.Time) time.Time {
 		t = now
 	}
 	return t
+}
+
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.IgnoreTimestamp = config.PrometheusIgnoreTimestamp
+	return nil
+}
+
+func init() {
+	parsers.Add("prometheus",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{}
+		})
 }

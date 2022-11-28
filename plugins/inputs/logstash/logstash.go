@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package logstash
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Logstash struct {
 	URL string `toml:"url"`
@@ -86,6 +91,7 @@ type Plugin struct {
 	ID           string                 `json:"id"`
 	Events       interface{}            `json:"events"`
 	Name         string                 `json:"name"`
+	Failures     *int64                 `json:"failures,omitempty"`
 	BulkRequests map[string]interface{} `json:"bulk_requests"`
 	Documents    map[string]interface{} `json:"documents"`
 }
@@ -110,6 +116,10 @@ const jvmStats = "/_node/stats/jvm"
 const processStats = "/_node/stats/process"
 const pipelinesStats = "/_node/stats/pipelines"
 const pipelineStats = "/_node/stats/pipeline"
+
+func (*Logstash) SampleConfig() string {
+	return sampleConfig
+}
 
 func (logstash *Logstash) Init() error {
 	err := choice.CheckSlice(logstash.Collect, []string{"pipelines", "process", "jvm"})
@@ -249,6 +259,10 @@ func (logstash *Logstash) gatherPluginsStats(
 			return err
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+		if plugin.Failures != nil {
+			failuresFields := map[string]interface{}{"failures": *plugin.Failures}
+			accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
+		}
 		/*
 			The elasticsearch output produces additional stats around
 			bulk requests and document writes (that are elasticsearch specific).

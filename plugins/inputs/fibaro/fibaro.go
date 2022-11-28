@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package fibaro
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const defaultTimeout = 5 * time.Second
 
@@ -96,6 +101,10 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	}
 
 	return nil
+}
+
+func (*Fibaro) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather fetches all required information to output metrics

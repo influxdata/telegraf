@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package couchdb
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +12,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type (
 	metaData struct {
@@ -87,6 +92,10 @@ type (
 		client *http.Client
 	}
 )
+
+func (*CouchDB) SampleConfig() string {
+	return sampleConfig
+}
 
 func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
 	var wg sync.WaitGroup

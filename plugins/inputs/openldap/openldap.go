@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package openldap
 
 import (
+	_ "embed"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Openldap struct {
 	Host               string
@@ -55,6 +60,10 @@ func NewOpenldap() *Openldap {
 		BindPassword:       "",
 		ReverseMetricNames: false,
 	}
+}
+
+func (*Openldap) SampleConfig() string {
+	return sampleConfig
 }
 
 // gather metrics
@@ -170,8 +179,8 @@ func dnToMetric(dn string, o *Openldap) string {
 		var metricParts []string
 
 		dn = strings.Trim(dn, " ")
-		dn = strings.Replace(dn, " ", "_", -1)
-		dn = strings.Replace(dn, "cn=", "", -1)
+		dn = strings.ReplaceAll(dn, " ", "_")
+		dn = strings.ReplaceAll(dn, "cn=", "")
 		dn = strings.ToLower(dn)
 		metricParts = strings.Split(dn, ",")
 		for i, j := 0, len(metricParts)-1; i < j; i, j = i+1, j-1 {
@@ -181,12 +190,12 @@ func dnToMetric(dn string, o *Openldap) string {
 	}
 
 	metricName := strings.Trim(dn, " ")
-	metricName = strings.Replace(metricName, " ", "_", -1)
+	metricName = strings.ReplaceAll(metricName, " ", "_")
 	metricName = strings.ToLower(metricName)
 	metricName = strings.TrimPrefix(metricName, "cn=")
-	metricName = strings.Replace(metricName, strings.ToLower("cn=Monitor"), "", -1)
-	metricName = strings.Replace(metricName, "cn=", "_", -1)
-	return strings.Replace(metricName, ",", "", -1)
+	metricName = strings.ReplaceAll(metricName, strings.ToLower("cn=Monitor"), "")
+	metricName = strings.ReplaceAll(metricName, "cn=", "_")
+	return strings.ReplaceAll(metricName, ",", "")
 }
 
 func init() {

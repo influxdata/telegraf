@@ -11,6 +11,19 @@ type Connections struct {
 	Idle     int64 `json:"idle"`
 }
 
+type Slabs map[string]struct {
+	Pages struct {
+		Used int64 `json:"used"`
+		Free int64 `json:"free"`
+	} `json:"pages"`
+	Slots map[string]struct {
+		Used  int64 `json:"used"`
+		Free  int64 `json:"free"`
+		Reqs  int64 `json:"reqs"`
+		Fails int64 `json:"fails"`
+	} `json:"slots"`
+}
+
 type Ssl struct { // added in version 6
 	Handshakes       int64 `json:"handshakes"`
 	HandshakesFailed int64 `json:"handshakes_failed"`
@@ -156,4 +169,12 @@ type HTTPCaches map[string]struct { // added in version 2
 	Miss        ExtendedHitStats `json:"miss"`
 	Expired     ExtendedHitStats `json:"expired"`
 	Bypass      ExtendedHitStats `json:"bypass"`
+}
+
+type HTTPLimitReqs map[string]struct {
+	Passed         int64 `json:"passed"`
+	Delayed        int64 `json:"delayed"`
+	Rejected       int64 `json:"rejected"`
+	DelayedDryRun  int64 `json:"delayed_dry_run"`
+	RejectedDryRun int64 `json:"rejected_dry_run"`
 }

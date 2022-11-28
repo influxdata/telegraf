@@ -2,16 +2,25 @@
 
 The Riak plugin gathers metrics from one or more riak instances.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics one or many Riak servers
 [[inputs.riak]]
   # Specify a list of one or more riak http servers
   servers = ["http://localhost:8098"]
 ```
 
-## Measurements & Fields
+## Metrics
 
 Riak provides one measurement named "riak", with the following fields:
 
@@ -61,9 +70,10 @@ Riak provides one measurement named "riak", with the following fields:
 - read_repairs
 - read_repairs_total
 
-Measurements of time (such as node_get_fsm_time_mean) are measured in nanoseconds.
+Measurements of time (such as node_get_fsm_time_mean) are measured in
+nanoseconds.
 
-## Tags
+### Tags
 
 All measurements have the following tags:
 

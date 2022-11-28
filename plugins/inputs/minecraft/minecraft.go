@@ -1,9 +1,15 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package minecraft
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Client is a client for the Minecraft server.
 type Client interface {
@@ -24,6 +30,10 @@ type Minecraft struct {
 	Password string `toml:"password"`
 
 	client Client
+}
+
+func (*Minecraft) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {

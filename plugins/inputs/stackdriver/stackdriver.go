@@ -1,7 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package stackdriver
 
 import (
 	"context"
+	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -24,6 +27,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs" // Imports the Stackdriver Monitoring client package.
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultRateLimit = 14
@@ -116,10 +122,10 @@ func (g *lockedSeriesGrouper) Add(
 	tm time.Time,
 	field string,
 	fieldValue interface{},
-) error {
+) {
 	g.Lock()
 	defer g.Unlock()
-	return g.SeriesGrouper.Add(measurement, tags, tm, field, fieldValue)
+	g.SeriesGrouper.Add(measurement, tags, tm, field, fieldValue)
 }
 
 // ListMetricDescriptors implements metricClient interface
@@ -183,6 +189,10 @@ func (smc *stackdriverMetricClient) ListTimeSeries(
 // Close implements metricClient interface
 func (smc *stackdriverMetricClient) Close() error {
 	return smc.conn.Close()
+}
+
+func (*Stackdriver) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather implements telegraf.Input interface
@@ -544,14 +554,79 @@ func (s *Stackdriver) gatherTimeSeries(
 					value = p.Value.GetStringValue()
 				}
 
-				if err := grouper.Add(tsConf.measurement, tags, ts, tsConf.fieldKey, value); err != nil {
-					return err
-				}
+				grouper.Add(tsConf.measurement, tags, ts, tsConf.fieldKey, value)
 			}
 		}
 	}
 
 	return nil
+}
+
+type Buckets interface {
+	Amount() int32
+	UpperBound(i int32) float64
+}
+
+type LinearBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Linear
+}
+
+func (l *LinearBuckets) Amount() int32 {
+	return l.NumFiniteBuckets + 2
+}
+
+func (l *LinearBuckets) UpperBound(i int32) float64 {
+	return l.Offset + (l.Width * float64(i))
+}
+
+type ExponentialBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Exponential
+}
+
+func (e *ExponentialBuckets) Amount() int32 {
+	return e.NumFiniteBuckets + 2
+}
+
+func (e *ExponentialBuckets) UpperBound(i int32) float64 {
+	width := math.Pow(e.GrowthFactor, float64(i))
+	return e.Scale * width
+}
+
+type ExplicitBuckets struct {
+	*distributionpb.Distribution_BucketOptions_Explicit
+}
+
+func (e *ExplicitBuckets) Amount() int32 {
+	return int32(len(e.Bounds)) + 1
+}
+
+func (e *ExplicitBuckets) UpperBound(i int32) float64 {
+	return e.Bounds[i]
+}
+
+func NewBucket(dist *distributionpb.Distribution) (Buckets, error) {
+	linearBuckets := dist.BucketOptions.GetLinearBuckets()
+	if linearBuckets != nil {
+		var l LinearBuckets
+		l.Distribution_BucketOptions_Linear = linearBuckets
+		return &l, nil
+	}
+
+	exponentialBuckets := dist.BucketOptions.GetExponentialBuckets()
+	if exponentialBuckets != nil {
+		var e ExponentialBuckets
+		e.Distribution_BucketOptions_Exponential = exponentialBuckets
+		return &e, nil
+	}
+
+	explicitBuckets := dist.BucketOptions.GetExplicitBuckets()
+	if explicitBuckets != nil {
+		var e ExplicitBuckets
+		e.Distribution_BucketOptions_Explicit = explicitBuckets
+		return &e, nil
+	}
+
+	return nil, errors.New("no buckets available")
 }
 
 // AddDistribution adds metrics from a distribution value type.
@@ -561,37 +636,20 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 	field := tsConf.fieldKey
 	name := tsConf.measurement
 
-	if err := grouper.Add(name, tags, ts, field+"_count", dist.Count); err != nil {
-		return err
-	}
-	if err := grouper.Add(name, tags, ts, field+"_mean", dist.Mean); err != nil {
-		return err
-	}
-	if err := grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", dist.SumOfSquaredDeviation); err != nil {
-		return err
-	}
+	grouper.Add(name, tags, ts, field+"_count", dist.Count)
+	grouper.Add(name, tags, ts, field+"_mean", dist.Mean)
+	grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", dist.SumOfSquaredDeviation)
 
 	if dist.Range != nil {
-		if err := grouper.Add(name, tags, ts, field+"_range_min", dist.Range.Min); err != nil {
-			return err
-		}
-		if err := grouper.Add(name, tags, ts, field+"_range_max", dist.Range.Max); err != nil {
-			return err
-		}
+		grouper.Add(name, tags, ts, field+"_range_min", dist.Range.Min)
+		grouper.Add(name, tags, ts, field+"_range_max", dist.Range.Max)
 	}
 
-	linearBuckets := dist.BucketOptions.GetLinearBuckets()
-	exponentialBuckets := dist.BucketOptions.GetExponentialBuckets()
-	explicitBuckets := dist.BucketOptions.GetExplicitBuckets()
-
-	var numBuckets int32
-	if linearBuckets != nil {
-		numBuckets = linearBuckets.NumFiniteBuckets + 2
-	} else if exponentialBuckets != nil {
-		numBuckets = exponentialBuckets.NumFiniteBuckets + 2
-	} else {
-		numBuckets = int32(len(explicitBuckets.Bounds)) + 1
+	bucket, err := NewBucket(dist)
+	if err != nil {
+		return err
 	}
+	numBuckets := bucket.Amount()
 
 	var i int32
 	var count int64
@@ -601,15 +659,7 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 		if i == numBuckets-1 {
 			tags["lt"] = "+Inf"
 		} else {
-			var upperBound float64
-			if linearBuckets != nil {
-				upperBound = linearBuckets.Offset + (linearBuckets.Width * float64(i))
-			} else if exponentialBuckets != nil {
-				width := math.Pow(exponentialBuckets.GrowthFactor, float64(i))
-				upperBound = exponentialBuckets.Scale * width
-			} else if explicitBuckets != nil {
-				upperBound = explicitBuckets.Bounds[i]
-			}
+			upperBound := bucket.UpperBound(i)
 			tags["lt"] = strconv.FormatFloat(upperBound, 'f', -1, 64)
 		}
 
@@ -618,16 +668,14 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 		if i < int32(len(dist.BucketCounts)) {
 			count += dist.BucketCounts[i]
 		}
-		if err := grouper.Add(name, tags, ts, field+"_bucket", count); err != nil {
-			return err
-		}
+		grouper.Add(name, tags, ts, field+"_bucket", count)
 	}
 
 	return nil
 }
 
 func init() {
-	f := func() telegraf.Input {
+	inputs.Add("stackdriver", func() telegraf.Input {
 		return &Stackdriver{
 			CacheTTL:                        defaultCacheTTL,
 			RateLimit:                       defaultRateLimit,
@@ -635,7 +683,5 @@ func init() {
 			GatherRawDistributionBuckets:    true,
 			DistributionAggregationAligners: []string{},
 		}
-	}
-
-	inputs.Add("stackdriver", f)
+	})
 }

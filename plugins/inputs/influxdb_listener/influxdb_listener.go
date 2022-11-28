@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package influxdb_listener
 
 import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -19,6 +21,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// defaultMaxBodySize is the default maximum request body size, in bytes.
@@ -61,6 +66,10 @@ type InfluxDBListener struct {
 	Log telegraf.Logger `toml:"-"`
 
 	mux http.ServeMux
+}
+
+func (*InfluxDBListener) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
@@ -362,7 +371,14 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 	precisionStr := req.URL.Query().Get("precision")
 	if precisionStr != "" {
 		precision := getPrecisionMultiplier(precisionStr)
-		parser.SetTimePrecision(precision)
+		err := parser.SetTimePrecision(precision)
+		if err != nil {
+			h.Log.Debugf("error in upstream parser: %v", err)
+			if err := badRequest(res, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
+			return
+		}
 	}
 
 	if req.ContentLength >= 0 {

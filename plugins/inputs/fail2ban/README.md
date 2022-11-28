@@ -3,15 +3,24 @@
 The fail2ban plugin gathers the count of failed and banned ip addresses using
 [fail2ban](https://www.fail2ban.org).
 
-This plugin runs the `fail2ban-client` command which generally requires root access.
-Acquiring the required permissions can be done using several methods:
+This plugin runs the `fail2ban-client` command which generally requires root
+access.  Acquiring the required permissions can be done using several methods:
 
 - [Use sudo](#using-sudo) run fail2ban-client.
 - Run telegraf as root. (not recommended)
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from fail2ban.
 [[inputs.fail2ban]]
   ## Use sudo to run fail2ban-client
@@ -49,7 +58,7 @@ Defaults!FAIL2BAN !logfile, !syslog, !pam_session
     - failed (integer, count)
     - banned (integer, count)
 
-### Example Output
+## Example Output
 
 ```shell
 # fail2ban-client status sshd

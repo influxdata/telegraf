@@ -1,13 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nstat
 
 import (
 	"bytes"
+	_ "embed"
 	"os"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	zeroByte    = []byte("0")
@@ -36,6 +41,10 @@ type Nstat struct {
 	ProcNetSNMP    string `toml:"proc_net_snmp"`
 	ProcNetSNMP6   string `toml:"proc_net_snmp6"`
 	DumpZeros      bool   `toml:"dump_zeros"`
+}
+
+func (*Nstat) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ns *Nstat) Gather(acc telegraf.Accumulator) error {

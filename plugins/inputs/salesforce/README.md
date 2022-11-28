@@ -1,11 +1,23 @@
 # Salesforce Input Plugin
 
-The Salesforce plugin gathers metrics about the limits in your Salesforce organization and the remaining usage.
-It fetches its data from the [limits endpoint](https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm) of Salesforce's REST API.
+The Salesforce plugin gathers metrics about the limits in your Salesforce
+organization and the remaining usage.  It fetches its data from the [limits
+endpoint][limits] of Salesforce's REST API.
+
+[limits]: https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read API usage and limits for a Salesforce organisation
 [[inputs.salesforce]]
   ## specify your credentials
@@ -26,7 +38,7 @@ It fetches its data from the [limits endpoint](https://developer.salesforce.com/
   # version = "39.0"
 ```
 
-## Measurements & Fields
+## Metrics
 
 Salesforce provide one measurement named "salesforce".
 Each entry is converted to snake\_case and 2 fields are created.
@@ -39,7 +51,7 @@ Each entry is converted to snake\_case and 2 fields are created.
   - \<key\>_remaining (int)
   - (...)
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - host

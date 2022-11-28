@@ -1,11 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !solaris
-// +build !solaris
 
 package tail
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"errors"
 	"io"
 	"strings"
@@ -14,14 +15,17 @@ import (
 
 	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/tail"
+	"github.com/pborman/ansi"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
-	"github.com/pborman/ansi"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultWatchMethod = "inotify"
@@ -78,6 +82,10 @@ func NewTail() *Tail {
 		offsets:             offsetsCopy,
 		PathTag:             "path",
 	}
+}
+
+func (*Tail) SampleConfig() string {
+	return sampleConfig
 }
 
 func (t *Tail) Init() error {
@@ -224,19 +232,14 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 // ParseLine parses a line of text.
 func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
-	switch parser.(type) {
-	case *csv.Parser:
-		m, err := parser.Parse([]byte(line))
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil, nil
-			}
-			return nil, err
+	m, err := parser.Parse([]byte(line))
+	if err != nil {
+		if errors.Is(err, parsers.ErrEOF) {
+			return nil, nil
 		}
-		return m, err
-	default:
-		return parser.Parse([]byte(line))
+		return nil, err
 	}
+	return m, err
 }
 
 // Receiver is launched as a goroutine to continuously watch a tailed logfile

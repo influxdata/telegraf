@@ -3,34 +3,80 @@ package redis_sentinel
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/require"
 )
 
 const masterName = "mymaster"
+const networkName = "telegraf-test-redis-sentinel"
+const sentinelServicePort = "26379"
 
-func TestRedisSentinelConnect(t *testing.T) {
+func TestRedisSentinelConnectIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := fmt.Sprintf("tcp://" + testutil.GetLocalHost() + ":26379")
+	ctx := context.Background()
+	net, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
+		NetworkRequest: testcontainers.NetworkRequest{
+			Name:           networkName,
+			Attachable:     true,
+			CheckDuplicate: true,
+		},
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, net.Remove(ctx), "terminating network failed")
+	}()
+
+	redis := createRedisContainer()
+	err = redis.Start()
+	require.NoError(t, err, "failed to start container")
+	defer redis.Terminate()
+
+	firstSentinel := createSentinelContainer(redis.Name, wait.ForAll(
+		wait.ForLog("+monitor master"),
+		wait.ForListeningPort(nat.Port(sentinelServicePort)),
+	))
+	err = firstSentinel.Start()
+	require.NoError(t, err, "failed to start container")
+	defer firstSentinel.Terminate()
+
+	secondSentinel := createSentinelContainer(redis.Name, wait.ForAll(
+		wait.ForLog("+sentinel sentinel"),
+		wait.ForListeningPort(nat.Port(sentinelServicePort)),
+	))
+	err = secondSentinel.Start()
+	require.NoError(t, err, "failed to start container")
+	defer secondSentinel.Terminate()
+
+	addr := fmt.Sprintf("tcp://%s:%s", secondSentinel.Address, secondSentinel.Ports[sentinelServicePort])
 
 	r := &RedisSentinel{
 		Servers: []string{addr},
 	}
+	err = r.Init()
+	require.NoError(t, err, "failed to run Init function")
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
+
+	require.True(t, acc.HasMeasurement("redis_sentinel_masters"), "redis_sentinel_masters measurement is missing")
+	require.True(t, acc.HasMeasurement("redis_sentinel_sentinels"), "redis_sentinel_sentinels measurement is missing")
+	require.True(t, acc.HasMeasurement("redis_sentinel"), "redis_sentinel measurement is missing")
 }
 
 func TestRedisSentinelMasters(t *testing.T) {
@@ -97,8 +143,8 @@ func TestRedisSentinelMasters(t *testing.T) {
 		"runid":                   "ff3dadd1cfea3043de4d25711d93f01a564562f7",
 	}
 
-	sentinelTags, sentinelFields, sentinalErr := convertSentinelMastersOutput(globalTags, sentinelMastersOutput, nil)
-	require.NoErrorf(t, sentinalErr, "failed converting output: %v", sentinalErr)
+	sentinelTags, sentinelFields, sentinelErr := convertSentinelMastersOutput(globalTags, sentinelMastersOutput, nil)
+	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementMasters, sentinelTags, sentinelFields, now),
@@ -219,8 +265,8 @@ func TestRedisSentinelReplicas(t *testing.T) {
 		"slave_repl_offset":       "1392400",
 	}
 
-	sentinelTags, sentinelFields, sentinalErr := convertSentinelReplicaOutput(globalTags, masterName, replicasOutput)
-	require.NoErrorf(t, sentinalErr, "failed converting output: %v", sentinalErr)
+	sentinelTags, sentinelFields, sentinelErr := convertSentinelReplicaOutput(globalTags, masterName, replicasOutput)
+	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementReplicas, sentinelTags, sentinelFields, now),
@@ -300,12 +346,36 @@ func TestRedisSentinelInfoAll(t *testing.T) {
 
 	rdr := bufio.NewReader(bytes.NewReader(sentinelInfoResponse))
 
-	sentinelTags, sentinelFields, sentinalErr := convertSentinelInfoOutput(globalTags, rdr)
-	require.NoErrorf(t, sentinalErr, "failed converting output: %v", sentinalErr)
+	sentinelTags, sentinelFields, sentinelErr := convertSentinelInfoOutput(globalTags, rdr)
+	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementSentinel, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)
+}
+
+func createRedisContainer() testutil.Container {
+	return testutil.Container{
+		Image:    "redis:7.0-alpine",
+		Name:     "telegraf-test-redis-sentinel-redis",
+		Networks: []string{networkName},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Ready to accept connections"),
+			wait.ForExposedPort(),
+		),
+	}
+}
+
+func createSentinelContainer(redisAddress string, waitingFor wait.Strategy) testutil.Container {
+	return testutil.Container{
+		Image:        "bitnami/redis-sentinel:7.0",
+		ExposedPorts: []string{sentinelServicePort},
+		Networks:     []string{networkName},
+		Env: map[string]string{
+			"REDIS_MASTER_HOST": redisAddress,
+		},
+		WaitingFor: waitingFor,
+	}
 }

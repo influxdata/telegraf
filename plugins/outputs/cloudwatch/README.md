@@ -27,9 +27,18 @@ The IAM user needs only the `cloudwatch:PutMetricData` permission.
 [2]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file
 [3]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for AWS CloudWatch output.
 [[outputs.cloudwatch]]
   ## Amazon REGION
@@ -58,6 +67,10 @@ The IAM user needs only the `cloudwatch:PutMetricData` permission.
   ## default.
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
+
+  ## Set http_proxy
+  # use_system_proxy = false
+  # http_proxy_url = "http://localhost:8888"
 
   ## Namespace for the CloudWatch MetricDatums
   namespace = "InfluxData/Telegraf"

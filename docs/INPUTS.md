@@ -13,12 +13,15 @@ and submit new inputs.
 - A plugin must conform to the [telegraf.Input][] interface.
 - Input Plugins should call `inputs.Add` in their `init` function to register
   themselves.  See below for a quick example.
-- Input Plugins must be added to the
-  `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
-- Each plugin requires a file called `<plugin_name>_sample_config.go`, where `<plugin_name>` is replaced with the actual plugin name.
-  Copy the [example template](#sample-configuration-template) into this file, also updating `<plugin_name>` were appropriate.
-  This file is automatically updated during the build process to include the sample configuration from the `README.md`.
+- To be available within Telegraf itself, plugins must register themselves
+  using a file in `github.com/influxdata/telegraf/plugins/inputs/all` named
+  according to the plugin name. Make sure your also add build-tags to
+  conditionally build the plugin.
+- Each plugin requires a file called `sample.conf` containing the sample
+  configuration  for the plugin in TOML format.
   Please consult the [Sample Config][] page for the latest style guidelines.
+- Each plugin `README.md` file should include the `sample.conf` file in a section
+  describing the configuration by specifying a `toml` section in the form `toml @sample.conf`. The specified file(s) are then injected automatically into the Readme.
 - Follow the recommended [Code Style][].
 
 Let's say you've written a plugin that emits metrics about processes on the
@@ -26,19 +29,29 @@ current host.
 
 ## Input Plugin Example
 
+Content of your plugin file e.g. `simple.go`
+
 ```go
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
+//go:generate ../../../tools/readme_config_includer/generator
 package simple
 
 import (
+    _ "embed"
+
     "github.com/influxdata/telegraf"
     "github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Simple struct {
     Ok  bool            `toml:"ok"`
     Log telegraf.Logger `toml:"-"`
+}
+
+func (*Simple) SampleConfig() string {
+    return sampleConfig
 }
 
 // Init is for setup, and validating config.
@@ -61,22 +74,25 @@ func init() {
 }
 ```
 
-```go
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
-// DON'T EDIT; This file is used as a template by tools/generate_plugindata
-package <plugin_package>
+Registration of the plugin on `plugins/inputs/all/simple.go`:
 
-func (k *<plugin_struct>) SampleConfig() string {
-    return `{{ .SampleConfig }}`
-}
+```go
+//go:build !custom || inputs || inputs.simple
+
+package all
+
+import _ "github.com/influxdata/telegraf/plugins/inputs/simple" // register plugin
+
 ```
+
+The _build-tags_ in the first line allow to selectively include/exclude your
+plugin when customizing Telegraf.
 
 ### Development
 
 - Run `make static` followed by `make plugin-[pluginName]` to spin up a docker
   dev environment using docker-compose.
-- ***[Optional]*** When developing a plugin, add a `dev` directory with a
+- __[Optional]__ When developing a plugin, add a `dev` directory with a
   `docker-compose.yml` and `telegraf.conf` as well as any other supporting
   files, where sensible.
 

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nvidia_smi
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"os"
@@ -15,12 +17,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 const measurement = "nvidia_smi"
 
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
 	BinPath string
 	Timeout config.Duration
+}
+
+func (*NvidiaSMI) SampleConfig() string {
+	return sampleConfig
 }
 
 func (smi *NvidiaSMI) Init() error {

@@ -1,10 +1,20 @@
 # OpenSMTPD Input Plugin
 
-This plugin gathers stats from [OpenSMTPD - a FREE implementation of the server-side SMTP protocol](https://www.opensmtpd.org/)
+This plugin gathers stats from [OpenSMTPD - a FREE implementation of the
+server-side SMTP protocol](https://www.opensmtpd.org/)
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin to collect stats from Opensmtpd - a validating, recursive, and caching DNS resolver
  [[inputs.opensmtpd]]
    ## If running as a restricted user you can prepend sudo for additional access:
@@ -17,10 +27,10 @@ This plugin gathers stats from [OpenSMTPD - a FREE implementation of the server-
    #timeout = "1s"
 ```
 
-## Measurements & Fields
+## Metrics
 
-This is the full list of stats provided by smtpctl and potentially collected by telegram
-depending of your smtpctl configuration.
+This is the full list of stats provided by smtpctl and potentially collected by
+telegram depending of your smtpctl configuration.
 
 - smtpctl
     bounce_envelope
@@ -62,8 +72,10 @@ depending of your smtpctl configuration.
 
 ## Permissions
 
-It's important to note that this plugin references smtpctl, which may require additional permissions to execute successfully.
-Depending on the user/group permissions of the telegraf user executing this plugin, you may need to alter the group membership, set facls, or use sudo.
+It's important to note that this plugin references smtpctl, which may require
+additional permissions to execute successfully.  Depending on the user/group
+permissions of the telegraf user executing this plugin, you may need to alter
+the group membership, set facls, or use sudo.
 
 **Group membership (Recommended)**:
 

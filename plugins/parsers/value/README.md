@@ -1,22 +1,10 @@
-# Value
+# Value Parser Plugin
 
 The "value" data format translates single values into Telegraf metrics. This
 is done by assigning a measurement name and setting a single field ("value")
 as the parsed metric.
 
 ## Configuration
-
-You **must** tell Telegraf what type of metric to collect by using the
-`data_type` configuration option. Available options are:
-
-1. integer
-2. float or long
-3. string
-4. boolean
-
-**Note:** It is also recommended that you set `name_override` to a measurement
-name that makes sense for your metric, otherwise it will just be set to the
-name of the plugin.
 
 ```toml
 [[inputs.exec]]
@@ -36,3 +24,15 @@ name of the plugin.
   data_format = "value"
   data_type = "integer" # required
 ```
+
+You **must** tell Telegraf what type of metric to collect by using the
+`data_type` configuration option. Available options are:
+
+1. integer
+2. float or long
+3. string
+4. boolean
+
+**Note:** It is also recommended that you set `name_override` to a measurement
+name that makes sense for your metric, otherwise it will just be set to the
+name of the plugin.

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sflow
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -13,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	maxPacketSize = 64 * 1024
@@ -30,6 +35,10 @@ type SFlow struct {
 	wg      sync.WaitGroup
 }
 
+func (*SFlow) SampleConfig() string {
+	return sampleConfig
+}
+
 func (s *SFlow) Init() error {
 	s.decoder = NewDecoder()
 	s.decoder.Log = s.Log
@@ -39,11 +48,7 @@ func (s *SFlow) Init() error {
 // Start starts this sFlow listener listening on the configured network for sFlow packets
 func (s *SFlow) Start(acc telegraf.Accumulator) error {
 	s.decoder.OnPacket(func(p *V5Format) {
-		metrics, err := makeMetrics(p)
-		if err != nil {
-			s.Log.Errorf("Failed to make metric from packet: %s", err)
-			return
-		}
+		metrics := makeMetrics(p)
 		for _, m := range metrics {
 			acc.AddMetric(m)
 		}

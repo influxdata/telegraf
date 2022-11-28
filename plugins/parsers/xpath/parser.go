@@ -1,16 +1,24 @@
 package xpath
 
 import (
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
+	"github.com/doclambda/protobufquery"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 )
 
 type dataNode interface{}
@@ -24,60 +32,112 @@ type dataDocument interface {
 }
 
 type Parser struct {
-	Format              string
-	ProtobufMessageDef  string
-	ProtobufMessageType string
-	ProtobufImportPaths []string
-	PrintDocument       bool
-	Configs             []Config
-	DefaultTags         map[string]string
-	Log                 telegraf.Logger
+	Format              string            `toml:"-"`
+	ProtobufMessageDef  string            `toml:"xpath_protobuf_file"`
+	ProtobufMessageType string            `toml:"xpath_protobuf_type"`
+	ProtobufImportPaths []string          `toml:"xpath_protobuf_import_paths"`
+	ProtobufSkipBytes   int64             `toml:"xpath_protobuf_skip_bytes"`
+	PrintDocument       bool              `toml:"xpath_print_document"`
+	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
+	NativeTypes         bool              `toml:"xpath_native_types"`
+	Configs             []xpath.Config    `toml:"xpath"`
+	DefaultMetricName   string            `toml:"-"`
+	DefaultTags         map[string]string `toml:"-"`
+	Log                 telegraf.Logger   `toml:"-"`
+
+	// Required for backward compatibility
+	ConfigsXML     []xpath.Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsJSON    []xpath.Config `toml:"xpath_json" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsMsgPack []xpath.Config `toml:"xpath_msgpack" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsProto   []xpath.Config `toml:"xpath_protobuf" deprecated:"1.23.1;use 'xpath' instead"`
 
 	document dataDocument
-}
-
-type Config struct {
-	MetricDefaultName string            `toml:"-"`
-	MetricQuery       string            `toml:"metric_name"`
-	Selection         string            `toml:"metric_selection"`
-	Timestamp         string            `toml:"timestamp"`
-	TimestampFmt      string            `toml:"timestamp_format"`
-	Tags              map[string]string `toml:"tags"`
-	Fields            map[string]string `toml:"fields"`
-	FieldsInt         map[string]string `toml:"fields_int"`
-
-	FieldSelection  string `toml:"field_selection"`
-	FieldNameQuery  string `toml:"field_name"`
-	FieldValueQuery string `toml:"field_value"`
-	FieldNameExpand bool   `toml:"field_name_expansion"`
-
-	TagSelection  string `toml:"tag_selection"`
-	TagNameQuery  string `toml:"tag_name"`
-	TagValueQuery string `toml:"tag_value"`
-	TagNameExpand bool   `toml:"tag_name_expansion"`
 }
 
 func (p *Parser) Init() error {
 	switch p.Format {
 	case "", "xml":
 		p.document = &xmlDocument{}
+
+		// Required for backward compatibility
+		if len(p.ConfigsXML) > 0 {
+			p.Configs = append(p.Configs, p.ConfigsXML...)
+			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xml", telegraf.DeprecationInfo{
+				Since:     "1.23.1",
+				RemovalIn: "2.0.0",
+				Notice:    "use 'xpath' instead",
+			})
+		}
 	case "xpath_json":
 		p.document = &jsonDocument{}
+
+		// Required for backward compatibility
+		if len(p.ConfigsJSON) > 0 {
+			p.Configs = append(p.Configs, p.ConfigsJSON...)
+			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
+				Since:     "1.23.1",
+				RemovalIn: "2.0.0",
+				Notice:    "use 'xpath' instead",
+			})
+		}
 	case "xpath_msgpack":
 		p.document = &msgpackDocument{}
+
+		// Required for backward compatibility
+		if len(p.ConfigsMsgPack) > 0 {
+			p.Configs = append(p.Configs, p.ConfigsMsgPack...)
+			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
+				Since:     "1.23.1",
+				RemovalIn: "2.0.0",
+				Notice:    "use 'xpath' instead",
+			})
+		}
 	case "xpath_protobuf":
 		pbdoc := protobufDocument{
 			MessageDefinition: p.ProtobufMessageDef,
 			MessageType:       p.ProtobufMessageType,
 			ImportPaths:       p.ProtobufImportPaths,
+			SkipBytes:         p.ProtobufSkipBytes,
 			Log:               p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {
 			return err
 		}
 		p.document = &pbdoc
+
+		// Required for backward compatibility
+		if len(p.ConfigsProto) > 0 {
+			p.Configs = append(p.Configs, p.ConfigsProto...)
+			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
+				Since:     "1.23.1",
+				RemovalIn: "2.0.0",
+				Notice:    "use 'xpath' instead",
+			})
+		}
 	default:
 		return fmt.Errorf("unknown data-format %q for xpath parser", p.Format)
+	}
+
+	// Make sure we do have a metric name
+	if p.DefaultMetricName == "" {
+		return errors.New("missing default metric name")
+	}
+
+	// Update the configs with default values
+	for i, config := range p.Configs {
+		if config.Selection == "" {
+			config.Selection = "/"
+		}
+		if config.TimestampFmt == "" {
+			config.TimestampFmt = "unix"
+		}
+		f, err := filter.Compile(config.FieldsHex)
+		if err != nil {
+			return fmt.Errorf("creating hex-fields filter failed: %w", err)
+		}
+		config.FieldsHexFilter = f
+
+		p.Configs[i] = config
 	}
 
 	return nil
@@ -99,16 +159,13 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 	p.Log.Debugf("Number of configs: %d", len(p.Configs))
 	for _, config := range p.Configs {
-		if len(config.Selection) == 0 {
-			config.Selection = "/"
-		}
 		selectedNodes, err := p.document.QueryAll(doc, config.Selection)
 		if err != nil {
 			return nil, err
 		}
-		if len(selectedNodes) < 1 || selectedNodes[0] == nil {
+		if (len(selectedNodes) < 1 || selectedNodes[0] == nil) && !p.AllowEmptySelection {
 			p.debugEmptyQuery("metric selection", doc, config.Selection)
-			return nil, fmt.Errorf("cannot parse with empty selection node")
+			return metrics, fmt.Errorf("cannot parse with empty selection node")
 		}
 		p.Log.Debugf("Number of selected metric nodes: %d", len(selectedNodes))
 
@@ -126,50 +183,32 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	t := time.Now()
+	metrics, err := p.Parse([]byte(line))
+	if err != nil {
+		return nil, err
+	}
 
-	switch len(p.Configs) {
+	switch len(metrics) {
 	case 0:
 		return nil, nil
 	case 1:
-		config := p.Configs[0]
-
-		doc, err := p.document.Parse([]byte(line))
-		if err != nil {
-			return nil, err
-		}
-
-		selected := doc
-		if len(config.Selection) > 0 {
-			selectedNodes, err := p.document.QueryAll(doc, config.Selection)
-			if err != nil {
-				return nil, err
-			}
-			if len(selectedNodes) < 1 || selectedNodes[0] == nil {
-				p.debugEmptyQuery("metric selection", doc, config.Selection)
-				return nil, fmt.Errorf("cannot parse line with empty selection")
-			} else if len(selectedNodes) != 1 {
-				return nil, fmt.Errorf("cannot parse line with multiple selected nodes (%d)", len(selectedNodes))
-			}
-			selected = selectedNodes[0]
-		}
-
-		return p.parseQuery(t, doc, selected, config)
+		return metrics[0], nil
+	default:
+		return metrics[0], fmt.Errorf("cannot parse line with multiple (%d) metrics", len(metrics))
 	}
-	return nil, fmt.Errorf("cannot parse line with multiple (%d) configurations", len(p.Configs))
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config Config) (telegraf.Metric, error) {
+func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config xpath.Config) (telegraf.Metric, error) {
 	var timestamp time.Time
 	var metricname string
 
 	// Determine the metric name. If a query was specified, use the result of this query and the default metric name
 	// otherwise.
-	metricname = config.MetricDefaultName
+	metricname = p.DefaultMetricName
 	if len(config.MetricQuery) > 0 {
 		v, err := p.executeQuery(doc, selected, config.MetricQuery)
 		if err != nil {
@@ -192,42 +231,11 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		if err != nil {
 			return nil, fmt.Errorf("failed to query timestamp: %v", err)
 		}
-		switch v := v.(type) {
-		case string:
-			// Parse the string with the given format or assume the string to contain
-			// a unix timestamp in seconds if no format is given.
-			if len(config.TimestampFmt) < 1 || strings.HasPrefix(config.TimestampFmt, "unix") {
-				var nanoseconds int64
-
-				t, err := strconv.ParseFloat(v, 64)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse unix timestamp: %v", err)
-				}
-
-				switch config.TimestampFmt {
-				case "unix_ns":
-					nanoseconds = int64(t)
-				case "unix_us":
-					nanoseconds = int64(t * 1e3)
-				case "unix_ms":
-					nanoseconds = int64(t * 1e6)
-				default:
-					nanoseconds = int64(t * 1e9)
-				}
-				timestamp = time.Unix(0, nanoseconds)
-			} else {
-				timestamp, err = time.Parse(config.TimestampFmt, v)
-				if err != nil {
-					return nil, fmt.Errorf("failed to query timestamp format: %v", err)
-				}
+		if v != nil {
+			timestamp, err = internal.ParseTimestamp(config.TimestampFmt, v, "")
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse timestamp: %w", err)
 			}
-		case float64:
-			// Assume the value to contain a timestamp in seconds and fractions thereof.
-			timestamp = time.Unix(0, int64(v*1e9))
-		case nil:
-			// No timestamp found. Just ignore the time and use "starttime"
-		default:
-			return nil, fmt.Errorf("unknown format '%T' for timestamp query '%v'", v, config.Timestamp)
 		}
 	}
 
@@ -406,6 +414,11 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 					}
 				}
 
+				if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+					if b, ok := v.([]byte); ok {
+						v = hex.EncodeToString(b)
+					}
+				}
 				fields[name] = v
 			}
 		} else {
@@ -433,17 +446,29 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 	// separately. Those iterators will be returned for queries directly
 	// referencing a node (value or attribute).
 	n := expr.Evaluate(p.document.CreateXPathNavigator(root))
-	if iter, ok := n.(*path.NodeIterator); ok {
-		// We got an iterator, so take the first match and get the referenced
-		// property. This will always be a string.
-		if iter.MoveNext() {
-			r = iter.Current().Value()
+	iter, ok := n.(*path.NodeIterator)
+	if !ok {
+		return n, nil
+	}
+	// We got an iterator, so take the first match and get the referenced
+	// property. This will always be a string.
+	if iter.MoveNext() {
+		current := iter.Current()
+		// If the dataformat supports native types and if support is
+		// enabled, we should return the native type of the data
+		if p.NativeTypes {
+			switch nn := current.(type) {
+			case *jsonquery.NodeNavigator:
+				return nn.GetValue(), nil
+			case *protobufquery.NodeNavigator:
+				return nn.GetValue(), nil
+			}
 		}
-	} else {
-		r = n
+		// Fallback to get the string value representation
+		return iter.Current().Value(), nil
 	}
 
-	return r, nil
+	return nil, nil
 }
 
 func splitLastPathElement(query string) []string {
@@ -474,8 +499,8 @@ func splitLastPathElement(query string) []string {
 		base = "/"
 	}
 
-	elements := make([]string, 1)
-	elements[0] = base
+	elements := make([]string, 0, 3)
+	elements = append(elements, base)
 
 	offset := seperatorIdx
 	if i := strings.Index(query[offset:], "::"); i >= 0 {
@@ -525,4 +550,60 @@ func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery s
 			query = parts[0]
 		}
 	}
+}
+
+func init() {
+	// Register all variants
+	parsers.Add("xml",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xml",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_json",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_json",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_msgpack",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_msgpack",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_protobuf",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_protobuf",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.Format = config.DataFormat
+	if p.Format == "xpath_protobuf" {
+		p.ProtobufMessageDef = config.XPathProtobufFile
+		p.ProtobufMessageType = config.XPathProtobufType
+	}
+	p.PrintDocument = config.XPathPrintDocument
+	p.DefaultMetricName = config.MetricName
+	p.DefaultTags = config.DefaultTags
+
+	// Convert the config formats which is a one-to-one copy
+	if len(config.XPathConfig) > 0 {
+		p.Configs = make([]xpath.Config, 0, len(config.XPathConfig))
+		p.Configs = append(p.Configs, config.XPathConfig...)
+	}
+
+	return p.Init()
 }

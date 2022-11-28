@@ -1,9 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package datadog
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -16,6 +19,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Datadog struct {
 	Apikey      string          `toml:"apikey"`
@@ -44,6 +50,10 @@ type Metric struct {
 type Point [2]float64
 
 const datadogAPI = "https://app.datadoghq.com/api/v1/series"
+
+func (*Datadog) SampleConfig() string {
+	return sampleConfig
+}
 
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
@@ -148,18 +158,20 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
+		return fmt.Errorf("unable to create http.Request, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
+		return fmt.Errorf("error POSTing metrics, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
-		return fmt.Errorf("received bad status code, %d", resp.StatusCode)
+		// err can be ignored
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("received bad status code, %d: %s", resp.StatusCode, string(body))
 	}
 
 	return nil

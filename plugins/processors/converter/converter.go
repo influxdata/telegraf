@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package converter
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"math"
@@ -12,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Conversion struct {
 	Measurement []string `toml:"measurement"`
@@ -40,6 +45,10 @@ type ConversionFilter struct {
 	Unsigned    filter.Filter
 	Boolean     filter.Filter
 	Float       filter.Filter
+}
+
+func (*Converter) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Converter) Init() error {

@@ -4,11 +4,22 @@ This plugin gather services & hosts status using Icinga2 Remote API.
 
 The icinga2 plugin uses the icinga2 remote API to gather status on running
 services and hosts. You can read Icinga2's documentation for their remote API
-[here](https://docs.icinga.com/icinga2/latest/doc/module/icinga2/chapter/icinga2-api)
+[here][1].
+
+[1]: https://docs.icinga.com/icinga2/latest/doc/module/icinga2/chapter/icinga2-api
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather Icinga2 status
 [[inputs.icinga2]]
   ## Required Icinga2 server address

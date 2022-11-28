@@ -19,10 +19,26 @@ To generate a file with specific inputs and outputs, you can use the
 --input-filter and --output-filter flags:
 
 ```sh
-telegraf --input-filter cpu:mem:net:swap --output-filter influxdb:kafka config
+telegraf config --input-filter cpu:mem:net:swap --output-filter influxdb:kafka
 ```
 
 [View the full list][flags] of Telegraf commands and flags or by running `telegraf --help`.
+
+### Windows PowerShell v5 Encoding
+
+In PowerShell 5, the default encoding is UTF-16LE and not UTF-8. Telegraf
+expects a valid UTF-8 file. This is not an issue with PowerShell 6 or newer,
+as well as the Command Prompt or with using the Git Bash shell.
+
+As such, users will need to specify the output encoding when generating a full
+configuration file:
+
+```sh
+telegraf.exe config | Out-File -Encoding utf8 telegraf.conf
+```
+
+This will generate a UTF-8 encoded file with a BOM. However, Telegraf can
+handle the leading BOM.
 
 ## Configuration Loading
 
@@ -413,8 +429,10 @@ input plugins and before any aggregator plugins.
 Parameters that can be used with any processor plugin:
 
 - **alias**: Name an instance of a plugin.
-- **order**: The order in which the processor(s) are executed. If this is not
-  specified then processor execution order will be random.
+- **order**: The order in which the processor(s) are executed. starting with 1.
+  If this is not specified then processor execution order will be the order in
+  the config. Processors without "order" will take precedence over those
+  with a defined order.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 handled by the processor.  Excluded metrics are passed downstream to the next
@@ -539,7 +557,7 @@ The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
 
 > NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
-defined at the *_end_* of the plugin definition, otherwise subsequent plugin config
+defined at the **end** of the plugin definition, otherwise subsequent plugin config
 options will be interpreted as part of the tagpass/tagdrop tables.
 
 ### Modifiers

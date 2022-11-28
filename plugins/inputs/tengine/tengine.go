@@ -1,8 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tengine
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -11,13 +14,14 @@ import (
 	"sync"
 	"time"
 
-	"io"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Tengine struct {
 	Urls            []string
@@ -25,6 +29,10 @@ type Tengine struct {
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+func (*Tengine) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *Tengine) Gather(acc telegraf.Accumulator) error {

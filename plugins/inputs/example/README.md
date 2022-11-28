@@ -4,33 +4,41 @@ The `example` plugin gathers metrics about example things.  This description
 explains at a high level what the plugin does and provides links to where
 additional information can be found.
 
-Telegraf minimum version: Telegraf x.x
-Plugin minimum tested version: x.x
+Telegraf minimum version: Telegraf x.x Plugin minimum tested version: x.x
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage <plugin-name>`.
-
-```toml
+```toml @sample.conf
 # This is an example plugin
 [[inputs.example]]
   example_option = "example_value"
 ```
 
+Running `telegraf --usage <plugin-name>` also gives the sample TOML
+configuration.
+
 ### example_option
 
-A more in depth description of an option can be provided here, but only do so
-if the option cannot be fully described in the sample config.
+A more in depth description of an option can be provided here, but only do so if
+the option cannot be fully described in the sample config.
 
 ## Metrics
 
-Here you should add an optional description and links to where the user can
-get more information about the measurements.
+Here you should add an optional description and links to where the user can get
+more information about the measurements.
 
-If the output is determined dynamically based on the input source, or there
-are more metrics than can reasonably be listed, describe how the input is
-mapped to the output.
+If the output is determined dynamically based on the input source, or there are
+more metrics than can reasonably be listed, describe how the input is mapped to
+the output.
 
 - measurement1
   - tags:

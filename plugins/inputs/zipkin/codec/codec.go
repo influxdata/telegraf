@@ -7,7 +7,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
 
-//now is a mockable time for now
+// now is a mockable time for now
 var now = time.Now
 
 // DefaultServiceName when the span does not have any serviceName

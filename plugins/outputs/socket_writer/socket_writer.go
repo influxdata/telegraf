@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package socket_writer
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"net"
 	"strings"
@@ -15,6 +17,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type SocketWriter struct {
 	ContentEncoding string `toml:"content_encoding"`
 	Address         string
@@ -27,6 +32,10 @@ type SocketWriter struct {
 	encoder internal.ContentEncoder
 
 	net.Conn
+}
+
+func (*SocketWriter) SampleConfig() string {
+	return sampleConfig
 }
 
 func (sw *SocketWriter) SetSerializer(s serializers.Serializer) {
@@ -110,7 +119,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
-			if err, ok := err.(net.Error); !ok || !err.Temporary() {
+			if err, ok := err.(net.Error); ok {
 				// permanent error. close the connection
 				sw.Close() //nolint:revive // There is another error which will be returned here
 				sw.Conn = nil
@@ -134,7 +143,7 @@ func (sw *SocketWriter) Close() error {
 }
 
 func newSocketWriter() *SocketWriter {
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	return &SocketWriter{
 		Serializer: s,
 	}

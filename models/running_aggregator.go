@@ -163,15 +163,11 @@ func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
 	until := r.periodEnd.Add(r.Config.Period)
 	r.UpdateWindow(since, until)
 
-	r.push(acc)
-	r.Aggregator.Reset()
-}
-
-func (r *RunningAggregator) push(acc telegraf.Accumulator) {
 	start := time.Now()
 	r.Aggregator.Push(acc)
 	elapsed := time.Since(start)
 	r.PushTime.Incr(elapsed.Nanoseconds())
+	r.Aggregator.Reset()
 }
 
 func (r *RunningAggregator) Log() telegraf.Logger {

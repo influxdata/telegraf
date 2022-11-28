@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -31,8 +32,8 @@ func TestGosmiTranslator(t *testing.T) {
 	require.NotNil(t, tr)
 }
 
-//gosmi uses the same connection struct as netsnmp but has a few
-//different test cases, so it has its own copy
+// gosmi uses the same connection struct as netsnmp but has a few
+// different test cases, so it has its own copy
 var gosmiTsc = &testSNMPConnection{
 	host: "tsc",
 	values: map[string]interface{}{
@@ -222,11 +223,11 @@ func TestSnmpInit_noTranslateGosmi(t *testing.T) {
 	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 
-//TestTableBuild_walk in snmp_test.go is split into two tests here,
-//noTranslate and Translate.
+// TestTableBuild_walk in snmp_test.go is split into two tests here,
+// noTranslate and Translate.
 //
-//This is only running with gosmi translator but should be valid with
-//netsnmp too.
+// This is only running with gosmi translator but should be valid with
+// netsnmp too.
 func TestTableBuild_walk_noTranslate(t *testing.T) {
 	tbl := Table{
 		Name:       "mytable",
@@ -580,10 +581,12 @@ func TestFieldConvertGosmi(t *testing.T) {
 		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:LittleEndian:uint64", uint64(6934371307618175232)},
 		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:LittleEndian:uint32", uint32(3812493568)},
 		{[]byte{0x00, 0x09}, "hextoint:LittleEndian:uint16", uint16(2304)},
+		{3, "enum", "testing"},
+		{3, "enum(1)", "testing(3)"},
 	}
 
 	for _, tc := range testTable {
-		act, err := fieldConvert(tc.conv, tc.input)
+		act, err := fieldConvert(getGosmiTr(t), tc.conv, gosnmp.SnmpPDU{Name: ".1.3.6.1.2.1.2.2.1.8", Value: tc.input})
 		assert.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 		assert.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 	}

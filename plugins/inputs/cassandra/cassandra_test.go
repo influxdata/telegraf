@@ -114,11 +114,13 @@ func (c jolokiaClientStub) MakeRequest(_ *http.Request) (*http.Response, error) 
 
 // Generates a pointer to an HttpJson object that uses a mock HTTP client.
 // Parameters:
-//     response  : Body of the response that the mock HTTP client should return
-//     statusCode: HTTP status code the mock HTTP client should return
+//
+//	response  : Body of the response that the mock HTTP client should return
+//	statusCode: HTTP status code the mock HTTP client should return
 //
 // Returns:
-//     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
+//
+//	*HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
 func genJolokiaClientStub(response string, statusCode int, servers []string, metrics []string) *Cassandra {
 	return &Cassandra{
 		jClient: jolokiaClientStub{responseBody: response, statusCode: statusCode},

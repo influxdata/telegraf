@@ -1,8 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package burrow
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -16,6 +19,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultBurrowPrefix          = "/v3/kafka"
@@ -89,6 +95,10 @@ func init() {
 	inputs.Add("burrow", func() telegraf.Input {
 		return &burrow{}
 	})
+}
+
+func (*burrow) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *burrow) Gather(acc telegraf.Accumulator) error {
@@ -168,11 +178,22 @@ func (b *burrow) createClient() (*http.Client, error) {
 		return nil, err
 	}
 
+	timeout := time.Duration(b.ResponseTimeout)
+	dialContext := net.Dialer{Timeout: timeout, DualStack: true}
+	transport := http.Transport{
+		DialContext:     dialContext.DialContext,
+		TLSClientConfig: tlsCfg,
+		// If b.ConcurrentConnections <= 1, then DefaultMaxIdleConnsPerHost is used (=2)
+		MaxIdleConnsPerHost: b.ConcurrentConnections / 2,
+		// If b.ConcurrentConnections == 0, then it is treated as "no limits"
+		MaxConnsPerHost:       b.ConcurrentConnections,
+		ResponseHeaderTimeout: timeout,
+		IdleConnTimeout:       90 * time.Second,
+	}
+
 	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-		},
-		Timeout: time.Duration(b.ResponseTimeout),
+		Transport: &transport,
+		Timeout:   timeout,
 	}
 
 	return client, nil

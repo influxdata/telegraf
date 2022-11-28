@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package prometheus
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -19,12 +21,24 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parserV2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
-const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
+//go:embed sample.conf
+var sampleConfig string
+
+const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
+
+type MonitorMethod string
+
+const (
+	MonitorMethodNone                   MonitorMethod = ""
+	MonitorMethodAnnotations            MonitorMethod = "annotations"
+	MonitorMethodSettings               MonitorMethod = "settings"
+	MonitorMethodSettingsAndAnnotations MonitorMethod = "settings+annotations"
+)
 
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
@@ -53,6 +67,8 @@ type Prometheus struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
+	HTTPHeaders map[string]string `toml:"http_headers"`
+
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	MetricVersion int `toml:"metric_version"`
@@ -61,34 +77,44 @@ type Prometheus struct {
 
 	IgnoreTimestamp bool `toml:"ignore_timestamp"`
 
-	tls.ClientConfig
-
 	Log telegraf.Logger
+
+	httpconfig.HTTPClientConfig
 
 	client  *http.Client
 	headers map[string]string
 
 	// Should we scrape Kubernetes services for prometheus annotations
-	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
-	PodScrapeScope    string `toml:"pod_scrape_scope"`
-	NodeIP            string `toml:"node_ip"`
-	PodScrapeInterval int    `toml:"pod_scrape_interval"`
-	PodNamespace      string `toml:"monitor_kubernetes_pods_namespace"`
-	lock              sync.Mutex
-	kubernetesPods    map[string]URLAndAddress
-	cancel            context.CancelFunc
-	wg                sync.WaitGroup
+	MonitorPods           bool   `toml:"monitor_kubernetes_pods"`
+	PodScrapeScope        string `toml:"pod_scrape_scope"`
+	NodeIP                string `toml:"node_ip"`
+	PodScrapeInterval     int    `toml:"pod_scrape_interval"`
+	PodNamespace          string `toml:"monitor_kubernetes_pods_namespace"`
+	PodNamespaceLabelName string `toml:"pod_namespace_label_name"`
+	lock                  sync.Mutex
+	kubernetesPods        map[string]URLAndAddress
+	cancel                context.CancelFunc
+	wg                    sync.WaitGroup
 
 	// Only for monitor_kubernetes_pods=true and pod_scrape_scope="node"
 	podLabelSelector  labels.Selector
 	podFieldSelector  fields.Selector
 	isNodeScrapeScope bool
 
+	MonitorKubernetesPodsMethod MonitorMethod `toml:"monitor_kubernetes_pods_method"`
+	MonitorKubernetesPodsScheme string        `toml:"monitor_kubernetes_pods_scheme"`
+	MonitorKubernetesPodsPath   string        `toml:"monitor_kubernetes_pods_path"`
+	MonitorKubernetesPodsPort   int           `toml:"monitor_kubernetes_pods_port"`
+
 	// Only for monitor_kubernetes_pods=true
 	CacheRefreshInterval int `toml:"cache_refresh_interval"`
 
 	// List of consul services to scrape
 	consulServices map[string]URLAndAddress
+}
+
+func (*Prometheus) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Prometheus) Init() error {
@@ -108,7 +134,14 @@ func (p *Prometheus) Init() error {
 
 			p.NodeIP = envVarNodeIP
 		}
+		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
+	}
 
+	if p.MonitorKubernetesPodsMethod == MonitorMethodNone {
+		p.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
+	}
+
+	if p.isNodeScrapeScope || p.MonitorKubernetesPodsMethod != MonitorMethodAnnotations {
 		// Parse label and field selectors - will be used to filter pods after cAdvisor call
 		var err error
 		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
@@ -124,8 +157,18 @@ func (p *Prometheus) Init() error {
 			return fmt.Errorf("the field selector %s is not supported for pods", invalidSelector)
 		}
 
-		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
+	}
+
+	ctx := context.Background()
+	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
+	if err != nil {
+		return err
+	}
+	p.client = client
+	p.headers = map[string]string{
+		"User-Agent": internal.ProductToken(),
+		"Accept":     acceptHeader,
 	}
 
 	return nil
@@ -205,18 +248,6 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
-	if p.client == nil {
-		client, err := p.createHTTPClient()
-		if err != nil {
-			return err
-		}
-		p.client = client
-		p.headers = map[string]string{
-			"User-Agent": internal.ProductToken(),
-			"Accept":     acceptHeader,
-		}
-	}
-
 	var wg sync.WaitGroup
 
 	allURLs, err := p.GetAllURLs()
@@ -236,23 +267,6 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Prometheus) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := p.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig:   tlsCfg,
-			DisableKeepAlives: true,
-		},
-		Timeout: time.Duration(p.ResponseTimeout),
-	}
-
-	return client, nil
-}
-
 func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error {
 	var req *http.Request
 	var err error
@@ -270,7 +284,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 
 		// ignore error because it's been handled before getting here
-		tlsCfg, _ := p.ClientConfig.TLSConfig()
+		tlsCfg, _ := p.HTTPClientConfig.TLSConfig()
 		uClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig:   tlsCfg,
@@ -304,6 +318,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
 	} else if p.Username != "" || p.Password != "" {
 		req.SetBasicAuth(p.Username, p.Password)
+	}
+
+	if p.HTTPHeaders != nil {
+		for key, value := range p.HTTPHeaders {
+			req.Header.Add(key, value)
+		}
 	}
 
 	var resp *http.Response

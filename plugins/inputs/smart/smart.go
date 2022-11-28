@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package smart
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +20,9 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const intelVID = "0x8086"
 
@@ -81,6 +86,14 @@ var (
 		"199": "udma_crc_errors",
 	}
 
+	// There are some fields we're interested in which use the vendor specific device ids
+	// so we need to be able to match on name instead
+	deviceFieldNames = map[string]string{
+		"Percent_Lifetime_Remain": "percent_lifetime_remain",
+		"Wear_Leveling_Count":     "wear_leveling_count",
+		"Media_Wearout_Indicator": "media_wearout_indicator",
+	}
+
 	// to obtain metrics from smartctl
 	sasNVMeAttributes = map[string]struct {
 		ID    string
@@ -141,6 +154,10 @@ var (
 			Parse: parsePercentageInt,
 		},
 		"Percentage Used": {
+			Name:  "Percentage_Used",
+			Parse: parsePercentageInt,
+		},
+		"Percentage used endurance indicator": {
 			Name:  "Percentage_Used",
 			Parse: parsePercentageInt,
 		},
@@ -354,6 +371,10 @@ func newSmart() *Smart {
 	}
 }
 
+func (*Smart) SampleConfig() string {
+	return sampleConfig
+}
+
 // Init performs one time setup of the plugin and returns an error if the configuration is invalid.
 func (m *Smart) Init() error {
 	//if deprecated `path` (to smartctl binary) is provided in config and `path_smartctl` override does not exist
@@ -386,7 +407,10 @@ func (m *Smart) Init() error {
 	if err != nil {
 		m.PathNVMe = ""
 		//without nvme, plugin will not be able to gather vendor specific attributes (but it can work without it)
-		m.Log.Warnf("nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s", err.Error())
+		m.Log.Warnf(
+			"nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s",
+			err.Error(),
+		)
 	}
 
 	return nil
@@ -563,8 +587,7 @@ func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 }
 
 func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme string, timeout config.Duration, useSudo bool) []nvmeDevice {
-	var nvmeDevices []nvmeDevice
-
+	nvmeDevices := make([]nvmeDevice, 0, len(devices))
 	for _, device := range devices {
 		newDevice, err := gatherNVMeDeviceInfo(nvme, device, timeout, useSudo)
 		if err != nil {
@@ -730,12 +753,12 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 
 		wwn := wwnInfo.FindStringSubmatch(line)
 		if len(wwn) > 1 {
-			deviceTags["wwn"] = strings.Replace(wwn[1], " ", "", -1)
+			deviceTags["wwn"] = strings.ReplaceAll(wwn[1], " ", "")
 		}
 
 		capacity := userCapacityInfo.FindStringSubmatch(line)
 		if len(capacity) > 1 {
-			deviceTags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
+			deviceTags["capacity"] = strings.ReplaceAll(capacity[1], ",", "")
 		}
 
 		enabled := smartEnabledInfo.FindStringSubmatch(line)
@@ -805,6 +828,16 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			if field, ok := deviceFieldIds[attr[1]]; ok {
 				if val, err := parseRawValue(attr[8]); err == nil {
 					deviceFields[field] = val
+				}
+			}
+
+			if len(attr) > 4 {
+				// If the attribute name matches on in deviceFieldNames
+				// save the value to a field
+				if field, ok := deviceFieldNames[attr[2]]; ok {
+					if val, err := parseRawValue(attr[4]); err == nil {
+						deviceFields[field] = val
+					}
 				}
 			}
 		} else {
@@ -1004,7 +1037,7 @@ func parseDataUnits(fields, deviceFields map[string]interface{}, str string) err
 }
 
 func parseCommaSeparatedIntWithAccumulator(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
-	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
+	i, err := strconv.ParseInt(strings.ReplaceAll(str, ",", ""), 10, 64)
 	if err != nil {
 		return err
 	}

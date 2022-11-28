@@ -154,7 +154,6 @@ func BenchmarkUDP(b *testing.B) {
 func sendRequests(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for i := 0; i < 25000; i++ {
-		//nolint:errcheck,revive
 		fmt.Fprint(conn, testMsg)
 	}
 }
@@ -419,6 +418,7 @@ func TestParse_Timings(t *testing.T) {
 		"count":         int64(5),
 		"lower":         float64(1),
 		"mean":          float64(3),
+		"median":        float64(1),
 		"stddev":        float64(4),
 		"sum":           float64(15),
 		"upper":         float64(11),
@@ -913,6 +913,7 @@ func TestParse_DataDogTags(t *testing.T) {
 						"count":  10,
 						"lower":  float64(3),
 						"mean":   float64(3),
+						"median": float64(3),
 						"stddev": float64(0),
 						"sum":    float64(30),
 						"upper":  float64(3),
@@ -1211,6 +1212,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 		"success_count":         int64(5),
 		"success_lower":         float64(1),
 		"success_mean":          float64(3),
+		"success_median":        float64(1),
 		"success_stddev":        float64(4),
 		"success_sum":           float64(15),
 		"success_upper":         float64(11),
@@ -1219,6 +1221,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 		"error_count":         int64(5),
 		"error_lower":         float64(2),
 		"error_mean":          float64(6),
+		"error_median":        float64(2),
 		"error_stddev":        float64(8),
 		"error_sum":           float64(30),
 		"error_upper":         float64(22),
@@ -1259,6 +1262,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 		"count":         int64(5),
 		"lower":         float64(1),
 		"mean":          float64(3),
+		"median":        float64(1),
 		"stddev":        float64(4),
 		"sum":           float64(15),
 		"upper":         float64(11),
@@ -1268,6 +1272,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 		"count":         int64(5),
 		"lower":         float64(2),
 		"mean":          float64(6),
+		"median":        float64(2),
 		"stddev":        float64(8),
 		"sum":           float64(30),
 		"upper":         float64(22),
@@ -1764,4 +1769,56 @@ func TestParseNoSanitize(t *testing.T) {
 		name, _, _ := s.parseName(test.inName)
 		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
 	}
+}
+
+func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "tcp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      250,
+		TCPKeepAlive:           true,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, statsd.Start(acc))
+	defer statsd.Stop()
+
+	addr := statsd.TCPlistener.Addr().String()
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+
+	// first write an invalid line
+	_, err = conn.Write([]byte("test.service.stat.missing_value:|h\n"))
+	require.NoError(t, err)
+
+	// pause to let statsd to parse the metric and force a collection interval
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, statsd.Gather(acc))
+
+	// then verify we can write a valid line, service recovered
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, statsd.Gather(acc))
+	acc.Wait(1)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu_time_idle",
+			map[string]string{
+				"metric_type": "counter",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+	require.NoError(t, conn.Close())
 }

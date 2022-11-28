@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ping
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"math"
@@ -12,12 +14,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-ping/ping"
+	ping "github.com/prometheus-community/pro-bing"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultPingDataBytesSize = 56
@@ -97,6 +102,10 @@ type stats struct {
 	roundTripTimeStats
 }
 
+func (*Ping) SampleConfig() string {
+	return sampleConfig
+}
+
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	for _, host := range p.Urls {
 		p.wg.Add(1)
@@ -156,7 +165,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	once := &sync.Once{}
 	pinger.OnRecv = func(pkt *ping.Packet) {
 		once.Do(func() {
-			ps.ttl = pkt.Ttl
+			ps.ttl = pkt.TTL
 		})
 	}
 
@@ -170,7 +179,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 			return nil, fmt.Errorf("permission changes required, refer to the ping plugin's README.md for more info")
 		}
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	ps.Statistics = *pinger.Statistics()

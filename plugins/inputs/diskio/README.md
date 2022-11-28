@@ -2,15 +2,26 @@
 
 The diskio input plugin gathers metrics about disk traffic and timing.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about disk IO by device
 [[inputs.diskio]]
   ## By default, telegraf will gather stats for all devices including
   ## disk partitions.
   ## Setting devices will restrict the stats to the specified devices.
-  # devices = ["sda", "sdb", "vd*"]
+  ## NOTE: Globbing expressions (e.g. asterix) are not supported for
+  ##       disk synonyms like '/dev/disk/by-id'.
+  # devices = ["sda", "sdb", "vd*", "/dev/disk/by-id/nvme-eui.00123deadc0de123"]
   ## Uncomment the following line if you need disk serial numbers.
   # skip_serial_number = false
   #
@@ -67,10 +78,12 @@ docker run --privileged -v /:/hostfs:ro -v /run/udev:/run/udev:ro -e HOST_PROC=/
     - merged_reads (integer, counter)
     - merged_writes (integer, counter)
 
-On linux these values correspond to the values in
-[`/proc/diskstats`](https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats)
-and
-[`/sys/block/<dev>/stat`](https://www.kernel.org/doc/Documentation/block/stat.txt).
+On linux these values correspond to the values in [`/proc/diskstats`][1] and
+[`/sys/block/<dev>/stat`][2].
+
+[1]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
+
+[2]: https://www.kernel.org/doc/Documentation/block/stat.txt
 
 ### `reads` & `writes`
 
@@ -124,13 +137,14 @@ SELECT non_negative_derivative(last("io_time"),1ms) FROM "diskio" WHERE time > n
 
 ### Calculate average queue depth
 
-`iops_in_progress` will give you an instantaneous value. This will give you the average between polling intervals.
+`iops_in_progress` will give you an instantaneous value. This will give you the
+average between polling intervals.
 
 ```sql
 SELECT non_negative_derivative(last("weighted_io_time"),1ms) from "diskio" WHERE time > now() - 30m GROUP BY "host","name",time(60s)
 ```
 
-## Example
+## Example Output
 
 ```shell
 diskio,name=sda1 merged_reads=0i,reads=2353i,writes=10i,write_bytes=2117632i,write_time=49i,io_time=1271i,weighted_io_time=1350i,read_bytes=31350272i,read_time=1303i,iops_in_progress=0i,merged_writes=0i 1578326400000000000

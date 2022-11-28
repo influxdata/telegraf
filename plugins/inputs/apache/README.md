@@ -1,12 +1,28 @@
 # Apache Input Plugin
 
-The Apache plugin collects server performance information using the [`mod_status`](https://httpd.apache.org/docs/2.4/mod/mod_status.html) module of the [Apache HTTP Server](https://httpd.apache.org/).
+The Apache plugin collects server performance information using the
+[`mod_status`](https://httpd.apache.org/docs/2.4/mod/mod_status.html) module of
+the [Apache HTTP Server](https://httpd.apache.org/).
 
-Typically, the `mod_status` module is configured to expose a page at the `/server-status?auto` location of the Apache server.  The [ExtendedStatus](https://httpd.apache.org/docs/2.4/mod/core.html#extendedstatus) option must be enabled in order to collect all available fields.  For information about how to configure your server reference the [module documentation](https://httpd.apache.org/docs/2.4/mod/mod_status.html#enable).
+Typically, the `mod_status` module is configured to expose a page at the
+`/server-status?auto` location of the Apache server.  The
+[ExtendedStatus](https://httpd.apache.org/docs/2.4/mod/core.html#extendedstatus)
+option must be enabled in order to collect all available fields.  For
+information about how to configure your server reference the [module
+documentation](https://httpd.apache.org/docs/2.4/mod/mod_status.html#enable).
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Apache status information (mod_status)
 [[inputs.apache]]
   ## An array of URLs to gather from, must be directed at the machine
@@ -29,7 +45,7 @@ Typically, the `mod_status` module is configured to expose a page at the `/serve
   # insecure_skip_verify = false
 ```
 
-## Measurements & Fields
+## Metrics
 
 - apache
   - BusyWorkers (float)
@@ -56,7 +72,8 @@ Typically, the `mod_status` module is configured to expose a page at the `/serve
   - TotalkBytes (float)
   - Uptime (float)
 
-The following fields are collected from the `Scoreboard`, and represent the number of requests in the given state:
+The following fields are collected from the `Scoreboard`, and represent the
+number of requests in the given state:
 
 - apache
   - scboard_closing (float)

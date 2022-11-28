@@ -24,14 +24,14 @@ import (
 var now = time.Date(2020, 6, 30, 16, 16, 0, 0, time.UTC)
 
 func TestExternalOutputWorks(t *testing.T) {
-	influxSerializer, err := serializers.NewInfluxSerializer()
-	require.NoError(t, err)
+	influxSerializer := serializers.NewInfluxSerializer()
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
 
 	e := &Execd{
 		Command:      []string{exe, "-testoutput"},
+		Environment:  []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
 		RestartDelay: config.Duration(5 * time.Second),
 		serializer:   influxSerializer,
 		Log:          testutil.Logger{},
@@ -69,12 +69,85 @@ func TestExternalOutputWorks(t *testing.T) {
 	wg.Wait()
 }
 
+func TestPartiallyUnserializableThrowError(t *testing.T) {
+	influxSerializer := serializers.NewInfluxSerializer()
+
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	e := &Execd{
+		Command:                  []string{exe, "-testoutput"},
+		Environment:              []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
+		RestartDelay:             config.Duration(5 * time.Second),
+		IgnoreSerializationError: false,
+		serializer:               influxSerializer,
+		Log:                      testutil.Logger{},
+	}
+
+	require.NoError(t, e.Init())
+
+	m1 := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu1"},
+		map[string]interface{}{"idle": 50, "sys": 30},
+		now,
+	)
+
+	m2 := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu2"},
+		map[string]interface{}{},
+		now,
+	)
+
+	require.NoError(t, e.Connect())
+	require.Error(t, e.Write([]telegraf.Metric{m1, m2}))
+	require.NoError(t, e.Close())
+}
+
+func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
+	influxSerializer := serializers.NewInfluxSerializer()
+
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	e := &Execd{
+		Command:                  []string{exe, "-testoutput"},
+		Environment:              []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
+		RestartDelay:             config.Duration(5 * time.Second),
+		IgnoreSerializationError: true,
+		serializer:               influxSerializer,
+		Log:                      testutil.Logger{},
+	}
+
+	require.NoError(t, e.Init())
+
+	m1 := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu1"},
+		map[string]interface{}{"idle": 50, "sys": 30},
+		now,
+	)
+
+	m2 := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu2"},
+		map[string]interface{}{},
+		now,
+	)
+
+	require.NoError(t, e.Connect())
+	require.NoError(t, e.Write([]telegraf.Metric{m1, m2}))
+	require.NoError(t, e.Close())
+}
+
 var testoutput = flag.Bool("testoutput", false,
 	"if true, act like line input program instead of test")
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if *testoutput {
+	runMode := os.Getenv("PLUGINS_OUTPUTS_EXECD_MODE")
+	if *testoutput && runMode == "application" {
 		runOutputConsumerProgram()
 		os.Exit(0)
 	}
@@ -83,6 +156,7 @@ func TestMain(m *testing.M) {
 }
 
 func runOutputConsumerProgram() {
+	metricName := os.Getenv("METRIC_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
 
 	for {
@@ -92,25 +166,22 @@ func runOutputConsumerProgram() {
 				return // stream ended
 			}
 			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
-				//nolint:errcheck,revive // Test will fail anyway
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				//nolint:revive // error code is important for this "test"
 				os.Exit(1)
 			}
-			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
 			//nolint:revive // error code is important for this "test"
 			os.Exit(1)
 		}
 
-		expected := testutil.MustMetric("cpu",
+		expected := testutil.MustMetric(metricName,
 			map[string]string{"name": "cpu1"},
 			map[string]interface{}{"idle": 50, "sys": 30},
 			now,
 		)
 
 		if !testutil.MetricEqual(expected, m) {
-			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "metric doesn't match expected\n")
 			//nolint:revive // error code is important for this "test"
 			os.Exit(1)

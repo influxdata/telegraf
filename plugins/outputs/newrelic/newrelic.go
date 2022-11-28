@@ -1,8 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package newrelic
 
-// newrelic.go
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -15,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // NewRelic nr structure
 type NewRelic struct {
@@ -29,6 +33,10 @@ type NewRelic struct {
 	savedErrors map[int]interface{}
 	errorCount  int
 	client      http.Client
+}
+
+func (*NewRelic) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect to the Output

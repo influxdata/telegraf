@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package snmp_legacy
 
 import (
-	"log"
+	_ "embed"
+	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -14,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 // Snmp is a snmp plugin
 type Snmp struct {
 	Host              []Host
@@ -23,7 +28,7 @@ type Snmp struct {
 	Subtable          []Subtable
 	SnmptranslateFile string
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	nameToOid   map[string]string
 	initNode    Node
@@ -162,6 +167,10 @@ func findNodeName(node Node, ids []string) (oidName string, instance string) {
 	}
 	// return an empty node name
 	return node.name, ""
+}
+
+func (*Snmp) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Snmp) Gather(acc telegraf.Accumulator) error {
@@ -516,10 +525,7 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
 			return err3
 		}
 		// Handle response
-		_, err = h.HandleResponse(oidsList, result, acc, initNode)
-		if err != nil {
-			return err
-		}
+		h.HandleResponse(oidsList, result, acc, initNode)
 	}
 	return nil
 }
@@ -559,10 +565,7 @@ func (h *Host) SNMPBulk(acc telegraf.Accumulator, initNode Node) error {
 				return err3
 			}
 			// Handle response
-			lastOid, err := h.HandleResponse(oidsList, result, acc, initNode)
-			if err != nil {
-				return err
-			}
+			lastOid := h.HandleResponse(oidsList, result, acc, initNode)
 			// Determine if we need more requests
 			if strings.HasPrefix(lastOid, oidAsked) {
 				needMoreRequests = true
@@ -619,7 +622,7 @@ func (h *Host) HandleResponse(
 	result *gosnmp.SnmpPacket,
 	acc telegraf.Accumulator,
 	initNode Node,
-) (string, error) {
+) string {
 	var lastOid string
 	for _, variable := range result.Variables {
 		lastOid = variable.Name
@@ -691,7 +694,7 @@ func (h *Host) HandleResponse(
 					acc.AddFields(fieldName, fields, tags)
 				case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
 					// Oid not found
-					log.Printf("E! [inputs.snmp_legacy] oid %q not found", oidKey)
+					acc.AddError(fmt.Errorf("oid %q not found", oidKey))
 				default:
 					// delete other data
 				}
@@ -699,7 +702,7 @@ func (h *Host) HandleResponse(
 			}
 		}
 	}
-	return lastOid, nil
+	return lastOid
 }
 
 func init() {

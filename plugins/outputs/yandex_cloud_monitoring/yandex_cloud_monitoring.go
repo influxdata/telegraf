@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package yandex_cloud_monitoring
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,9 +12,13 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // YandexCloudMonitoring allows publishing of metrics to the Yandex Cloud Monitoring custom metrics
 // service
@@ -62,6 +68,10 @@ const (
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
+
+func (*YandexCloudMonitoring) SampleConfig() string {
+	return sampleConfig
+}
 
 // Connect initializes the plugin and validates connectivity
 func (a *YandexCloudMonitoring) Connect() error {
@@ -113,13 +123,19 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	var yandexCloudMonitoringMetrics []yandexCloudMonitoringMetric
 	for _, m := range metrics {
 		for _, field := range m.FieldList() {
+			value, err := internal.ToFloat64(field.Value)
+			if err != nil {
+				a.Log.Errorf("skipping value: %w", err.Error())
+				continue
+			}
+
 			yandexCloudMonitoringMetrics = append(
 				yandexCloudMonitoringMetrics,
 				yandexCloudMonitoringMetric{
 					Name:   field.Key,
 					Labels: m.Tags(),
 					TS:     fmt.Sprint(m.Time().Format(time.RFC3339)),
-					Value:  field.Value.(float64),
+					Value:  value,
 				},
 			)
 		}

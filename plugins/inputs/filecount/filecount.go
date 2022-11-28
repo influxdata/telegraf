@@ -1,17 +1,23 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package filecount
 
 import (
+	_ "embed"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/karrick/godirwalk"
+	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/karrick/godirwalk"
-	"github.com/pkg/errors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type FileCount struct {
 	Directory      string `toml:"directory" deprecated:"1.9.0;use 'directories' instead"`
@@ -201,6 +207,10 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 	return true, nil
 }
 
+func (*FileCount) SampleConfig() string {
+	return sampleConfig
+}
+
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	if fc.globPaths == nil {
 		fc.initGlobPaths(acc)
@@ -227,9 +237,9 @@ func (fc *FileCount) onlyDirectories(directories []string) []string {
 }
 
 func (fc *FileCount) getDirs() []string {
-	dirs := make([]string, len(fc.Directories))
-	for i, dir := range fc.Directories {
-		dirs[i] = filepath.Clean(dir)
+	dirs := make([]string, 0, len(fc.Directories)+1)
+	for _, dir := range fc.Directories {
+		dirs = append(dirs, filepath.Clean(dir))
 	}
 
 	if fc.Directory != "" {

@@ -1,13 +1,23 @@
 # Lustre Input Plugin
 
-The [Lustre][]® file system is an open-source, parallel file system that supports
-many requirements of leadership class HPC simulation environments.
+The [Lustre][]® file system is an open-source, parallel file system that
+supports many requirements of leadership class HPC simulation environments.
 
-This plugin monitors the Lustre file system using its entries in the proc filesystem.
+This plugin monitors the Lustre file system using its entries in the proc
+filesystem.
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from local Lustre service on OST, MDS
 [[inputs.lustre2]]
   ## An array of /proc globs to search for Lustre stats
@@ -28,7 +38,8 @@ This plugin monitors the Lustre file system using its entries in the proc filesy
 
 ## Metrics
 
-From `/proc/fs/lustre/obdfilter/*/stats` and `/proc/fs/lustre/osd-ldiskfs/*/stats`:
+From `/proc/fs/lustre/obdfilter/*/stats` and
+`/proc/fs/lustre/osd-ldiskfs/*/stats`:
 
 - lustre2
   - tags:

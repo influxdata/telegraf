@@ -3,17 +3,26 @@
 The Logical Volume Management (LVM) input plugin collects information about
 physical volumes, volume groups, and logical volumes.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-The `lvm` command requires elevated permissions. If the user has configured
-sudo with the ability to run these commands, then set the `use_sudo` to true.
-
-```toml
+```toml @sample.conf
 # Read metrics about LVM physical volumes, volume groups, logical volumes.
 [[inputs.lvm]]
   ## Use sudo to run LVM commands
   use_sudo = false
 ```
+
+The `lvm` command requires elevated permissions. If the user has configured sudo
+with the ability to run these commands, then set the `use_sudo` to true.
 
 ### Using sudo
 

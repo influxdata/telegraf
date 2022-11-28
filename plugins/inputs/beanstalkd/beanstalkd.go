@@ -1,19 +1,29 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package beanstalkd
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"net/textproto"
 	"sync"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"gopkg.in/yaml.v2"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Beanstalkd struct {
 	Server string   `toml:"server"`
 	Tubes  []string `toml:"tubes"`
+}
+
+func (*Beanstalkd) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {

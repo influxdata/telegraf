@@ -8,9 +8,18 @@ Google Cloud using either a service account or user credentials.
 Be aware that this plugin accesses APIs that are
 [chargeable](https://cloud.google.com/bigquery/pricing) and might incur costs.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Google Cloud BigQuery to send entries
 [[outputs.bigquery]]
   ## Credentials File

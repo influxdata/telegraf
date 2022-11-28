@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 package win_services
 
@@ -17,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-//testData is DD wrapper for unit testing of WinServices
+// testData is DD wrapper for unit testing of WinServices
 type testData struct {
 	//collection that will be returned in ListServices if service array passed into WinServices constructor is empty
 	queryServiceList     []string

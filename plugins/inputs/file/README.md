@@ -1,14 +1,23 @@
 # File Input Plugin
 
-The file plugin parses the **complete** contents of a file **every interval** using
-the selected [input data format][].
+The file plugin parses the **complete** contents of a file **every interval**
+using the selected [input data format][].
 
 **Note:** If you wish to parse only newly appended lines use the [tail][] input
 plugin instead.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Parse a complete file each interval
 [[inputs.file]]
   ## Files to parse each interval.  Accept standard unix glob matching rules,
@@ -37,6 +46,11 @@ plugin instead.
   ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
   # file_tag = ""
 ```
+
+## Metrics
+
+The format of metrics produced by this plugin depends on the content and data
+format of the file.
 
 [input data format]: /docs/DATA_FORMATS_INPUT.md
 [tail]: /plugins/inputs/tail

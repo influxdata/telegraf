@@ -1,11 +1,34 @@
 # Nstat Input Plugin
 
-Plugin collects network metrics from `/proc/net/netstat`, `/proc/net/snmp` and `/proc/net/snmp6` files
+Plugin collects network metrics from `/proc/net/netstat`, `/proc/net/snmp` and
+`/proc/net/snmp6` files
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-The plugin firstly tries to read file paths from config values
-if it is empty, then it reads from env variables.
+```toml @sample.conf
+# Collect kernel snmp counters and network interface statistics
+[[inputs.nstat]]
+  ## file paths for proc files. If empty default paths will be used:
+  ##    /proc/net/netstat, /proc/net/snmp, /proc/net/snmp6
+  ## These can also be overridden with env variables, see README.
+  proc_net_netstat = "/proc/net/netstat"
+  proc_net_snmp = "/proc/net/snmp"
+  proc_net_snmp6 = "/proc/net/snmp6"
+  ## dump metrics with 0 values too
+  dump_zeros       = true
+```
+
+The plugin firstly tries to read file paths from config values if it is empty,
+then it reads from env variables.
 
 * `PROC_NET_NETSTAT`
 * `PROC_NET_SNMP`
@@ -21,30 +44,17 @@ Then appends default file paths:
 * `/net/snmp`
 * `/net/snmp6`
 
-So if nothing is given, no paths in config and in env vars, the plugin takes the default paths.
+So if nothing is given, no paths in config and in env vars, the plugin takes the
+default paths.
 
 * `/proc/net/netstat`
 * `/proc/net/snmp`
 * `/proc/net/snmp6`
 
-The sample config file
+In case that `proc_net_snmp6` path doesn't exist (e.g. IPv6 is not enabled) no
+error would be raised.
 
-```toml
-# Collect kernel snmp counters and network interface statistics
-[[inputs.nstat]]
-  ## file paths for proc files. If empty default paths will be used:
-  ##    /proc/net/netstat, /proc/net/snmp, /proc/net/snmp6
-  ## These can also be overridden with env variables, see README.
-  proc_net_netstat = "/proc/net/netstat"
-  proc_net_snmp = "/proc/net/snmp"
-  proc_net_snmp6 = "/proc/net/snmp6"
-  ## dump metrics with 0 values too
-  dump_zeros       = true
-```
-
-In case that `proc_net_snmp6` path doesn't exist (e.g. IPv6 is not enabled) no error would be raised.
-
-## Measurements & Fields
+## Metrics
 
 * nstat
   * Icmp6InCsumErrors
@@ -345,7 +355,7 @@ In case that `proc_net_snmp6` path doesn't exist (e.g. IPv6 is not enabled) no e
   * UdpRcvbufErrors
   * UdpSndbufErrors
 
-## Tags
+### Tags
 
 * All measurements have the following tags
   * host (host of the system)

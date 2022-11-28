@@ -9,7 +9,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
-//type for all linter assert methods
+// type for all linter assert methods
 type T struct {
 	filename       string
 	markdown       []byte
@@ -139,4 +139,8 @@ func (t *T) assertHeadingLevel(expected int, n ast.Node) {
 	}
 
 	t.printFailedAssertf(n, "expected header level %d, have %d", expected, h.Level)
+}
+
+func (t *T) pass() bool {
+	return t.fails == 0
 }

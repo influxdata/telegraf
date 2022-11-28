@@ -17,6 +17,9 @@ func TestRunningStats_Single(t *testing.T) {
 	if rs.Mean() != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Mean())
 	}
+	if rs.Median() != 10.1 {
+		t.Errorf("Expected %v, got %v", 10.1, rs.Median())
+	}
 	if rs.Upper() != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Upper())
 	}
@@ -61,6 +64,9 @@ func TestRunningStats_Duplicate(t *testing.T) {
 	if rs.Mean() != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Mean())
 	}
+	if rs.Median() != 10.1 {
+		t.Errorf("Expected %v, got %v", 10.1, rs.Median())
+	}
 	if rs.Upper() != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Upper())
 	}
@@ -104,6 +110,9 @@ func TestRunningStats(t *testing.T) {
 
 	if rs.Mean() != 15.9375 {
 		t.Errorf("Expected %v, got %v", 15.9375, rs.Mean())
+	}
+	if rs.Median() != 10.5 {
+		t.Errorf("Expected %v, got %v", 10.5, rs.Median())
 	}
 	if rs.Upper() != 45 {
 		t.Errorf("Expected %v, got %v", 45, rs.Upper())
@@ -163,4 +172,25 @@ func TestRunningStats_PercentileLimit(t *testing.T) {
 
 func fuzzyEqual(a, b, epsilon float64) bool {
 	return math.Abs(a-b) <= epsilon
+}
+
+// Test that the median limit is respected and MedInsertIndex is properly incrementing index.
+func TestRunningStats_MedianLimitIndex(t *testing.T) {
+	rs := RunningStats{}
+	rs.MedLimit = 10
+	values := []float64{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+
+	for _, v := range values {
+		rs.AddValue(v)
+	}
+
+	if rs.Count() != 11 {
+		t.Errorf("Expected %v, got %v", 11, rs.Count())
+	}
+	if len(rs.med) != 10 {
+		t.Errorf("Expected %v, got %v", 10, len(rs.med))
+	}
+	if rs.MedInsertIndex != 1 {
+		t.Errorf("Expected %v, got %v", 0, rs.MedInsertIndex)
+	}
 }

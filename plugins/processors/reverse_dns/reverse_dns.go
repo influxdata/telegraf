@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package reverse_dns
 
 import (
+	_ "embed"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -8,6 +10,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type lookupEntry struct {
 	Tag   string `toml:"tag"`
@@ -28,6 +33,10 @@ type ReverseDNS struct {
 	Log                telegraf.Logger `toml:"-"`
 }
 
+func (*ReverseDNS) SampleConfig() string {
+	return sampleConfig
+}
+
 func (r *ReverseDNS) Start(acc telegraf.Accumulator) error {
 	r.acc = acc
 	r.reverseDNSCache = NewReverseDNSCache(
@@ -43,10 +52,9 @@ func (r *ReverseDNS) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *ReverseDNS) Stop() error {
+func (r *ReverseDNS) Stop() {
 	r.parallel.Stop()
 	r.reverseDNSCache.Stop()
-	return nil
 }
 
 func (r *ReverseDNS) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {

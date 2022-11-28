@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package lvm
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -13,12 +15,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 var (
 	execCommand = exec.Command
 )
 
 type LVM struct {
 	UseSudo bool `toml:"use_sudo"`
+}
+
+func (*LVM) SampleConfig() string {
+	return sampleConfig
 }
 
 func (lvm *LVM) Init() error {

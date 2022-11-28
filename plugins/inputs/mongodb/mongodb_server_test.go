@@ -1,17 +1,56 @@
-//go:build integration
-// +build integration
-
 package mongodb
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestGetDefaultTags(t *testing.T) {
+var ServicePort = "27017"
+var unreachableMongoEndpoint = "mongodb://user:pass@127.0.0.1:27017/nop"
+
+func createTestServer(t *testing.T) *testutil.Container {
+	container := testutil.Container{
+		Image:        "mongo",
+		ExposedPorts: []string{ServicePort},
+		WaitingFor: wait.ForAll(
+			wait.NewHTTPStrategy("/").WithPort(nat.Port(ServicePort)),
+			wait.ForLog("Waiting for connections"),
+		),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+
+	return &container
+}
+
+func TestGetDefaultTagsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := createTestServer(t)
+	defer container.Terminate()
+
+	m := &MongoDB{
+		Log: testutil.Logger{},
+		Servers: []string{
+			fmt.Sprintf("mongodb://%s:%s", container.Address, container.Ports[ServicePort]),
+		},
+	}
+	err := m.Init()
+	require.NoError(t, err)
+	var acc testutil.Accumulator
+	err = m.Start(&acc)
+	require.NoError(t, err)
+
+	server := m.clients[0]
+
 	var tagTests = []struct {
 		in  string
 		out string
@@ -26,10 +65,29 @@ func TestGetDefaultTags(t *testing.T) {
 	}
 }
 
-func TestAddDefaultStats(t *testing.T) {
-	var acc testutil.Accumulator
+func TestAddDefaultStatsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
-	err := server.gatherData(&acc, false, true, true, true, []string{"local"})
+	container := createTestServer(t)
+	defer container.Terminate()
+
+	m := &MongoDB{
+		Log: testutil.Logger{},
+		Servers: []string{
+			fmt.Sprintf("mongodb://%s:%s", container.Address, container.Ports[ServicePort]),
+		},
+	}
+	err := m.Init()
+	require.NoError(t, err)
+	var acc testutil.Accumulator
+	err = m.Start(&acc)
+	require.NoError(t, err)
+
+	server := m.clients[0]
+
+	err = server.gatherData(&acc, false, true, true, true, []string{"local"})
 	require.NoError(t, err)
 
 	// need to call this twice so it can perform the diff
@@ -39,6 +97,48 @@ func TestAddDefaultStats(t *testing.T) {
 	for key := range defaultStats {
 		require.True(t, acc.HasInt64Field("mongodb", key))
 	}
+}
+
+// Verify that when set to skip, telegraf will init, start, and collect while
+// ignoring connection errors.
+func TestSkipBehaviorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &MongoDB{
+		Log:     &testutil.CaptureLogger{},
+		Servers: []string{unreachableMongoEndpoint},
+	}
+
+	m.DisconnectedServersBehavior = "skip"
+	err := m.Init()
+	require.NoError(t, err)
+	var acc testutil.Accumulator
+	err = m.Start(&acc)
+	require.NoError(t, err)
+
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+}
+
+// Verify that when set to error, telegraf will error out on start as expected
+func TestErrorBehaviorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &MongoDB{
+		Log:                         &testutil.CaptureLogger{},
+		Servers:                     []string{unreachableMongoEndpoint},
+		DisconnectedServersBehavior: "error",
+	}
+
+	err := m.Init()
+	require.NoError(t, err)
+	var acc testutil.Accumulator
+	err = m.Start(&acc)
+	require.Error(t, err)
 }
 
 func TestPoolStatsVersionCompatibility(t *testing.T) {
@@ -61,6 +161,11 @@ func TestPoolStatsVersionCompatibility(t *testing.T) {
 		{
 			name:            "mongodb v5",
 			version:         "5.0.0",
+			expectedCommand: "connPoolStats",
+		},
+		{
+			name:            "mongodb v6",
+			version:         "6.0.0",
 			expectedCommand: "connPoolStats",
 		},
 		{

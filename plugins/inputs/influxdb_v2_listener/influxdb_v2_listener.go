@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package influxdb_v2_listener
 
 import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,6 +23,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// defaultMaxBodySize is the default maximum request body size, in bytes.
@@ -69,6 +74,10 @@ type InfluxDBV2Listener struct {
 	Log telegraf.Logger `toml:"-"`
 
 	mux http.ServeMux
+}
+
+func (*InfluxDBV2Listener) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
@@ -239,7 +248,12 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		var metrics []telegraf.Metric
 		var err error
 		if h.ParserType == "upstream" {
-			parser := influx_upstream.NewParser()
+			parser := influx_upstream.Parser{}
+			err = parser.Init()
+			if err != ErrEOF && err != nil {
+				h.Log.Debugf("Error initializing parser: %v", err.Error())
+				return
+			}
 			parser.SetTimeFunc(influx_upstream.TimeFunc(h.timeFunc))
 
 			if precisionStr != "" {
@@ -249,13 +263,17 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 			metrics, err = parser.Parse(bytes)
 		} else {
-			metricHandler := influx.NewMetricHandler()
-			parser := influx.NewParser(metricHandler)
+			parser := influx.Parser{}
+			err = parser.Init()
+			if err != ErrEOF && err != nil {
+				h.Log.Debugf("Error initializing parser: %v", err.Error())
+				return
+			}
 			parser.SetTimeFunc(h.timeFunc)
 
 			if precisionStr != "" {
 				precision := getPrecisionMultiplier(precisionStr)
-				metricHandler.SetTimePrecision(precision)
+				parser.SetTimePrecision(precision)
 			}
 
 			metrics, err = parser.Parse(bytes)

@@ -14,11 +14,14 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func getTestCasesForNonTransparent() []testCaseStream {
+func getTestCasesForNonTransparent(hasRemoteAddr bool) []testCaseStream {
 	testCases := []testCaseStream{
 		{
 			name: "1st/avg/ok",
-			data: []byte(`<29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
+			data: []byte(
+				`<29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] ` +
+					`"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
+			),
 			wantStrict: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
@@ -130,11 +133,23 @@ func getTestCasesForNonTransparent() []testCaseStream {
 			},
 		},
 	}
+
+	if hasRemoteAddr {
+		for _, tc := range testCases {
+			for _, m := range tc.wantStrict {
+				m.AddTag("source", "127.0.0.1")
+			}
+			for _, m := range tc.wantBestEffort {
+				m.AddTag("source", "127.0.0.1")
+			}
+		}
+	}
+
 	return testCases
 }
 
 func testStrictNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
-	for _, tc := range getTestCasesForNonTransparent() {
+	for _, tc := range getTestCasesForNonTransparent(protocol != "unix") {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, false, framing.NonTransparent)
@@ -193,7 +208,7 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 
 func testBestEffortNonTransparent(t *testing.T, protocol string, address string, wantTLS bool) {
 	keepAlive := (*config.Duration)(nil)
-	for _, tc := range getTestCasesForNonTransparent() {
+	for _, tc := range getTestCasesForNonTransparent(protocol != "unix") {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, true, framing.NonTransparent)

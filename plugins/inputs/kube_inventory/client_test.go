@@ -25,6 +25,9 @@ func toBoolPtr(b bool) *bool {
 }
 
 func TestNewClient(t *testing.T) {
-	_, err := newClient("https://127.0.0.1:443/", "default", "abc123", time.Second, tls.ClientConfig{})
+	_, err := newClient("https://127.0.0.1:443/", "default", "", "abc123", time.Second, tls.ClientConfig{})
 	require.NoErrorf(t, err, "Failed to create new client - %v", err)
+
+	_, err = newClient("https://127.0.0.1:443/", "default", "nonexistantFile", "", time.Second, tls.ClientConfig{})
+	require.Errorf(t, err, "failed to read token file \"file\": open file: no such file or directory", err)
 }

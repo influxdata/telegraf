@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
 // AddOutput adds the input to the shim. Later calls to Run() will run this.
@@ -23,9 +23,10 @@ func (s *Shim) AddOutput(output telegraf.Output) error {
 }
 
 func (s *Shim) RunOutput() error {
-	parser, err := parsers.NewInfluxParser()
+	parser := influx.Parser{}
+	err := parser.Init()
 	if err != nil {
-		return fmt.Errorf("Failed to create new parser: %w", err)
+		return fmt.Errorf("failed to create new parser: %w", err)
 	}
 
 	err = s.Output.Connect()

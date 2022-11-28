@@ -1,12 +1,11 @@
 //go:build !windows
-// +build !windows
 
 package varnish
 
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -508,13 +507,17 @@ func TestV2ParseVarnishNames(t *testing.T) {
 			activeVcl: "1111",
 		},
 		{
-			vName:     "VBE.VCL_1023_DIS_VOD_SHIELD_V1629295401194_1629295437531.goto.00000000.(111.112.113.114).(http://abc-ede.xyz.yyy.com:80).(ttl:3600.000000).is_healthy",
-			tags:      map[string]string{"section": "VBE", "serial_1": "0", "backend_1": "111.112.113.114", "server_1": "http://abc-ede.xyz.yyy.com:80", "ttl": "3600.000000"},
+			vName: "VBE.VCL_1023_DIS_VOD_SHIELD_V1629295401194_1629295437531.goto.00000000.(111.112.113.114)." +
+				"(http://abc-ede.xyz.yyy.com:80).(ttl:3600.000000).is_healthy",
+			tags: map[string]string{"section": "VBE", "serial_1": "0", "backend_1": "111.112.113.114",
+				"server_1": "http://abc-ede.xyz.yyy.com:80", "ttl": "3600.000000"},
 			field:     "is_healthy",
 			activeVcl: "VCL_1023_DIS_VOD_SHIELD_V1629295401194_1629295437531",
 			customRegexps: []string{
-				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_1>[[:alnum:]])+\.\((?P<backend_1>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_1>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
-				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_2>[[:alnum:]])+\.\((?P<backend_2>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_2>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
+				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_1>[[:alnum:]])+\.` +
+					`\((?P<backend_1>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_1>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
+				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_2>[[:alnum:]])+\.` +
+					`\((?P<backend_2>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_2>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
 			},
 		},
 	} {
@@ -548,8 +551,9 @@ func TestVersions(t *testing.T) {
 		{jsonFile: "varnish6.6.json", activeReloadPrefix: "boot", size: 358},
 		{jsonFile: "varnish4_4.json", activeReloadPrefix: "boot", size: 295},
 	} {
-		output, _ := ioutil.ReadFile("test_data/" + c.jsonFile)
-		err := server.processMetricsV2(c.activeReloadPrefix, acc, bytes.NewBuffer(output))
+		output, err := os.ReadFile("test_data/" + c.jsonFile)
+		require.NoError(t, err)
+		err = server.processMetricsV2(c.activeReloadPrefix, acc, bytes.NewBuffer(output))
 		require.NoError(t, err)
 		require.Equal(t, c.size, len(acc.Metrics))
 		for _, m := range acc.Metrics {
@@ -619,12 +623,14 @@ func TestJsonTypes(t *testing.T) {
 }
 
 func TestVarnishAdmJson(t *testing.T) {
-	admJSON, _ := ioutil.ReadFile("test_data/" + "varnishadm-200.json")
+	admJSON, err := os.ReadFile("test_data/" + "varnishadm-200.json")
+	require.NoError(t, err)
 	activeVcl, err := getActiveVCLJson(bytes.NewBuffer(admJSON))
 	require.NoError(t, err)
 	require.Equal(t, activeVcl, "boot-123")
 
-	admJSON, _ = ioutil.ReadFile("test_data/" + "varnishadm-reload.json")
+	admJSON, err = os.ReadFile("test_data/" + "varnishadm-reload.json")
+	require.NoError(t, err)
 	activeVcl, err = getActiveVCLJson(bytes.NewBuffer(admJSON))
 	require.NoError(t, err)
 	require.Equal(t, activeVcl, "reload_20210723_091821_2056185")

@@ -1,8 +1,9 @@
-//nolint
+//go:generate ../../../tools/readme_config_includer/generator
 package influxdb
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -15,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultURL = "http://localhost:8086"
@@ -61,6 +65,10 @@ type InfluxDB struct {
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
 
 	Log telegraf.Logger
+}
+
+func (*InfluxDB) SampleConfig() string {
+	return sampleConfig
 }
 
 func (i *InfluxDB) Connect() error {
@@ -144,13 +152,11 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			}
 			// retry control
 			// error so the write is retried
-			err := client.CreateDatabase(ctx, apiError.Database)
-			if err != nil {
-				i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
-					client.URL(), apiError.Database)
-			} else {
+			if err := client.CreateDatabase(ctx, apiError.Database); err == nil {
 				return errors.New("database created; retry write")
 			}
+			i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
+				client.URL(), apiError.Database)
 		default:
 			allErrorsAreDatabaseNotFoundErrors = false
 		}
@@ -163,30 +169,30 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	return errors.New("could not write any address")
 }
 
-func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
-	config := &UDPConfig{
-		URL:            url,
+func (i *InfluxDB) udpClient(address *url.URL) (Client, error) {
+	udpConfig := &UDPConfig{
+		URL:            address,
 		MaxPayloadSize: int(i.UDPPayload),
 		Serializer:     i.newSerializer(),
 		Log:            i.Log,
 	}
 
-	c, err := i.CreateUDPClientF(config)
+	c, err := i.CreateUDPClientF(udpConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error creating UDP client [%s]: %v", url, err)
+		return nil, fmt.Errorf("error creating UDP client [%s]: %v", address, err)
 	}
 
 	return c, nil
 }
 
-func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL) (Client, error) {
+func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	config := &HTTPConfig{
-		URL:                       url,
+	httpConfig := &HTTPConfig{
+		URL:                       address,
 		Timeout:                   time.Duration(i.Timeout),
 		TLSConfig:                 tlsConfig,
 		UserAgent:                 i.UserAgent,
@@ -207,9 +213,9 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		Log:                       i.Log,
 	}
 
-	c, err := i.CreateHTTPClientF(config)
+	c, err := i.CreateHTTPClientF(httpConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", url, err)
+		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", address, err)
 	}
 
 	if !i.SkipDatabaseCreation {

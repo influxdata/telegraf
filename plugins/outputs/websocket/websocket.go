@@ -1,11 +1,15 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package websocket
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
+
+	ws "github.com/gorilla/websocket"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -13,9 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
-	ws "github.com/gorilla/websocket"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultConnectTimeout = 30 * time.Second
@@ -38,6 +43,10 @@ type WebSocket struct {
 
 	conn       *ws.Conn
 	serializer serializers.Serializer
+}
+
+func (*WebSocket) SampleConfig() string {
+	return sampleConfig
 }
 
 // SetSerializer implements serializers.SerializerOutput.

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cloudwatch
 
 import (
 	"context"
+	_ "embed"
 	"math"
 	"sort"
 	"strings"
@@ -12,20 +14,22 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/config/aws"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type CloudWatch struct {
 	Namespace             string `toml:"namespace"` // CloudWatch Metrics Namespace
 	HighResolutionMetrics bool   `toml:"high_resolution_metrics"`
 	svc                   *cloudwatch.Client
-
-	WriteStatistics bool `toml:"write_statistics"`
-
-	Log telegraf.Logger `toml:"-"`
-
+	WriteStatistics       bool            `toml:"write_statistics"`
+	Log                   telegraf.Logger `toml:"-"`
 	internalaws.CredentialConfig
+	httpconfig.HTTPClientConfig
 }
 
 type statisticType int
@@ -148,13 +152,28 @@ func (f *valueField) buildDatum() []types.MetricDatum {
 	}
 }
 
+func (*CloudWatch) SampleConfig() string {
+	return sampleConfig
+}
+
 func (c *CloudWatch) Connect() error {
 	cfg, err := c.CredentialConfig.Credentials()
+
 	if err != nil {
 		return err
 	}
 
-	c.svc = cloudwatch.NewFromConfig(cfg)
+	ctx := context.Background()
+	client, err := c.HTTPClientConfig.CreateClient(ctx, c.Log)
+
+	if err != nil {
+		return err
+	}
+
+	c.svc = cloudwatch.NewFromConfig(cfg, func(options *cloudwatch.Options) {
+		options.HTTPClient = client
+	})
+
 	return nil
 }
 

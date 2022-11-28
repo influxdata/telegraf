@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package riemann_legacy
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"sort"
@@ -12,7 +14,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const deprecationMsg = "Error: this Riemann output plugin will be deprecated in a future release, see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
+//go:embed sample.conf
+var sampleConfig string
+
+const deprecationMsg = "Error: this Riemann output plugin will be deprecated in a future release, " +
+	"see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
 
 type Riemann struct {
 	URL       string          `toml:"url"`
@@ -21,6 +27,10 @@ type Riemann struct {
 	Log       telegraf.Logger `toml:"-"`
 
 	client *raidman.Client
+}
+
+func (*Riemann) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *Riemann) Connect() error {

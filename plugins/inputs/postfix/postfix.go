@@ -1,11 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
-// +build !windows
 
 // postfix doesn't aim for Windows
 
 package postfix
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +17,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 func getQueueDirectory() (string, error) {
 	qd, err := exec.Command("postconf", "-h", "queue_directory").Output()
@@ -73,6 +77,10 @@ func qScan(path string, acc telegraf.Accumulator) (map[string]interface{}, error
 
 type Postfix struct {
 	QueueDirectory string
+}
+
+func (*Postfix) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Postfix) Gather(acc telegraf.Accumulator) error {

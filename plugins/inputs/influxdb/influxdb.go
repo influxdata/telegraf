@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package influxdb
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -15,6 +17,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	maxErrorResponseBodyLength = 1024
@@ -41,6 +46,10 @@ type InfluxDB struct {
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+func (*InfluxDB) SampleConfig() string {
+	return sampleConfig
 }
 
 func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
@@ -116,11 +125,13 @@ type memstats struct {
 
 // Gathers data from a particular URL
 // Parameters:
-//     acc    : The telegraf Accumulator to use
-//     url    : endpoint to send request to
+//
+//	acc    : The telegraf Accumulator to use
+//	url    : endpoint to send request to
 //
 // Returns:
-//     error: Any error that may have occurred
+//
+//	error: Any error that may have occurred
 func (i *InfluxDB) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
@@ -137,7 +148,7 @@ func (i *InfluxDB) gatherURL(
 		req.SetBasicAuth(i.Username, i.Password)
 	}
 
-	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+	req.Header.Set("User-Agent", "Telegraf/"+internal.Version)
 
 	resp, err := i.client.Do(req)
 	if err != nil {

@@ -6,9 +6,18 @@ Note that `used_percent` is calculated by doing `used / (used + free)`, _not_
 `used / total`, which is how the unix `df` command does it. See
 [wikipedia - df](https://en.wikipedia.org/wiki/Df_(Unix)) for more details.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about disk usage by mount point
 [[inputs.disk]]
   ## By default stats will be gathered for all mount points.
@@ -17,16 +26,21 @@ Note that `used_percent` is calculated by doing `used / (used + free)`, _not_
 
   ## Ignore mount points by filesystem type.
   ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
+
+  ## Ignore mount points by mount options.
+  ## The 'mount' command reports options of all mounts in parathesis.
+  ## Bind mounts can be ignored with the special 'bind' option.
+  # ignore_mount_opts = []
 ```
 
 ### Docker container
 
-To monitor the Docker engine host from within a container you will need to
-mount the host's filesystem into the container and set the `HOST_PROC`
-environment variable to the location of the `/proc` filesystem.  If desired, you can
-also set the `HOST_MOUNT_PREFIX` environment variable to the prefix containing
-the `/proc` directory, when present this variable is stripped from the
-reported `path` tag.
+To monitor the Docker engine host from within a container you will need to mount
+the host's filesystem into the container and set the `HOST_PROC` environment
+variable to the location of the `/proc` filesystem.  If desired, you can also
+set the `HOST_MOUNT_PREFIX` environment variable to the prefix containing the
+`/proc` directory, when present this variable is stripped from the reported
+`path` tag.
 
 ```shell
 docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_PROC=/hostfs/proc telegraf
@@ -67,7 +81,7 @@ It may be desired to use POSIX ACLs to provide additional access:
 sudo setfacl -R -m u:telegraf:X /var/lib/docker/volumes/
 ```
 
-## Example
+## Example Output
 
 ```shell
 disk,fstype=hfs,mode=ro,path=/ free=398407520256i,inodes_free=97267461i,inodes_total=121847806i,inodes_used=24580345i,total=499088621568i,used=100418957312i,used_percent=20.131039916242397 1453832006274071563

@@ -3,13 +3,20 @@
 The Riemann Listener is a simple input plugin that listens for messages from
 client that use riemann clients using riemann-protobuff format.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-This is a sample configuration for the plugin.
-
-```toml
+```toml @sample.conf
 # Riemann protobuff listener
-[[inputs.rimann_listener]]
+[[inputs.riemann_listener]]
   ## URL to listen on
   ## Default is "tcp://:5555"
   #  service_address = "tcp://:8094"
@@ -37,7 +44,9 @@ This is a sample configuration for the plugin.
   #  keep_alive_period = "5m"
 ```
 
-Just like Riemann the default port is 5555. This can be configured, refer configuration above.
+Just like Riemann the default port is 5555. This can be configured, refer
+configuration above.
 
-Riemann `Service` is mapped as `measurement`. `metric` and `TTL` are converted into field values.
-As Riemann tags as simply an array, they are converted into the `influx_line` format key-value, where both key and value are the tags.
+Riemann `Service` is mapped as `measurement`. `metric` and `TTL` are converted
+into field values.  As Riemann tags as simply an array, they are converted into
+the `influx_line` format key-value, where both key and value are the tags.

@@ -1,4 +1,4 @@
-# Influx Line Protocol
+# Influx Line Protocol Parser Plugin
 
 Parses metrics using the [Influx Line Protocol][].
 

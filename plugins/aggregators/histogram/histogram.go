@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package histogram
 
 import (
+	_ "embed"
 	"sort"
 	"strconv"
 	"time"
@@ -9,6 +11,9 @@ import (
 	telegrafConfig "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // bucketRightTag is the tag, which contains right bucket border
 const bucketRightTag = "le"
@@ -80,6 +85,10 @@ func NewHistogramAggregator() *HistogramAggregator {
 	h.resetCache()
 
 	return h
+}
+
+func (*HistogramAggregator) SampleConfig() string {
+	return sampleConfig
 }
 
 // Add adds new hit to the buckets

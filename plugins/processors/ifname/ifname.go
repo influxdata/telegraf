@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ifname
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"strconv"
@@ -14,6 +16,9 @@ import (
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type nameMap map[uint64]string
 type keyType = string
@@ -53,6 +58,10 @@ type IfName struct {
 }
 
 const minRetry = 5 * time.Minute
+
+func (*IfName) SampleConfig() string {
+	return sampleConfig
+}
 
 func (d *IfName) Init() error {
 	d.getMapRemote = d.getMapRemoteNoMock
@@ -163,9 +172,8 @@ func (d *IfName) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *IfName) Stop() error {
+func (d *IfName) Stop() {
 	d.parallel.Stop()
-	return nil
 }
 
 // getMap gets the interface names map either from cache or from the SNMP

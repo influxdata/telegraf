@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package example
 
 import (
+	_ "embed"
 	"fmt"
 	"math/rand"
 	"time"
@@ -9,6 +11,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // Example struct should be named the same as the Plugin
 type Example struct {
@@ -30,6 +35,10 @@ type Example struct {
 
 	// This is a non-exported internal state.
 	count int64
+}
+
+func (*Example) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init can be implemented to do one-time processing stuff like initializing variables

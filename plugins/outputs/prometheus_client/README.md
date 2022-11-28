@@ -3,20 +3,26 @@
 This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
 metrics on `/metrics` (default) to be polled by a Prometheus server.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the Prometheus client to spawn
 [[outputs.prometheus_client]]
   ## Address to listen on.
   listen = ":9273"
 
-  ## Metric version controls the mapping from Telegraf metrics into
-  ## Prometheus format.  When using the prometheus input, use the same value in
-  ## both plugins to ensure metrics are round-tripped without modification.
-  ##
-  ##   example: metric_version = 1;
-  ##            metric_version = 2; recommended version
+  ## Metric version controls the mapping from Prometheus metrics into Telegraf metrics.
+  ## See "Metric Format Configuration" in plugins/inputs/prometheus/README.md for details.
+  ## Valid options: 1, 2
   # metric_version = 1
 
   ## Use HTTP Basic Authentication.

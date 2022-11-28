@@ -3,9 +3,18 @@
 This plugin gathers stats from [Unbound](https://www.unbound.net/) -
 a validating, recursive, and caching DNS resolver.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin to collect stats from the Unbound DNS resolver
 [[inputs.unbound]]
   ## Address of server to connect to, read from unbound conf default, optionally ':port'
@@ -34,8 +43,10 @@ a validating, recursive, and caching DNS resolver.
 
 ### Permissions
 
-It's important to note that this plugin references unbound-control, which may require additional permissions to execute successfully.
-Depending on the user/group permissions of the telegraf user executing this plugin, you may need to alter the group membership, set facls, or use sudo.
+It's important to note that this plugin references unbound-control, which may
+require additional permissions to execute successfully.  Depending on the
+user/group permissions of the telegraf user executing this plugin, you may need
+to alter the group membership, set facls, or use sudo.
 
 **Group membership (Recommended)**:
 
@@ -71,10 +82,11 @@ Please use the solution you see as most appropriate.
 
 ## Metrics
 
-This is the full list of stats provided by unbound-control and potentially collected
-depending of your unbound configuration.  Histogram related statistics will never be collected,
-extended statistics can also be imported ("extended-statistics: yes" in unbound configuration).
-In the output, the dots in the unbound-control stat name are replaced by underscores(see
+This is the full list of stats provided by unbound-control and potentially
+collected depending of your unbound configuration.  Histogram related statistics
+will never be collected, extended statistics can also be imported
+("extended-statistics: yes" in unbound configuration).  In the output, the dots
+in the unbound-control stat name are replaced by underscores(see
 <https://www.unbound.net/documentation/unbound-control.html> for details).
 
 Shown metrics are with `thread_as_tag` enabled.

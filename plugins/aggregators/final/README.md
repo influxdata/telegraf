@@ -11,9 +11,18 @@ discrete time series such as procstat, cgroup, kubernetes etc.
 When a series has not been updated within the time defined in
 `series_timeout`, the last metric is emitted with the `_final` appended.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Report the final metric of a series
 [[aggregators.final]]
   ## The period on which to flush & clear the aggregator.

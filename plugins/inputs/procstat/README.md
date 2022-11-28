@@ -1,7 +1,7 @@
 # Procstat Input Plugin
 
-The procstat plugin can be used to monitor the system resource usage of one or more processes.
-The procstat_lookup metric displays the query information,
+The procstat plugin can be used to monitor the system resource usage of one or
+more processes.  The procstat_lookup metric displays the query information,
 specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
@@ -14,9 +14,18 @@ Processes can be selected for monitoring using one of several methods:
 - cgroup
 - win_service
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Monitor process cpu and memory usage
 [[inputs.procstat]]
   ## PID file to monitor process

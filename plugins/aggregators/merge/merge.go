@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package merge
 
 import (
+	_ "embed"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -8,8 +10,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Merge struct {
 	grouper *metric.SeriesGrouper
+}
+
+func (*Merge) SampleConfig() string {
+	return sampleConfig
 }
 
 func (a *Merge) Init() error {

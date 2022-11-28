@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package powerdns
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -13,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Powerdns struct {
 	UnixSockets []string
 
@@ -20,6 +25,10 @@ type Powerdns struct {
 }
 
 var defaultTimeout = 5 * time.Second
+
+func (*Powerdns) SampleConfig() string {
+	return sampleConfig
+}
 
 func (p *Powerdns) Gather(acc telegraf.Accumulator) error {
 	if len(p.UnixSockets) == 0 {

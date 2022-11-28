@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tcp_listener
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"net"
 	"sync"
@@ -12,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type TCPListener struct {
 	ServiceAddress         string
@@ -57,6 +62,10 @@ var dropwarn = "tcp_listener message queue full. " +
 
 var malformedwarn = "tcp_listener has received %d malformed packets" +
 	" thus far."
+
+func (*TCPListener) SampleConfig() string {
+	return sampleConfig
+}
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.
@@ -124,10 +133,10 @@ func (t *TCPListener) Stop() {
 
 	// Close all open TCP connections
 	//  - get all conns from the t.conns map and put into slice
-	//  - this is so the forget() function doesnt conflict with looping
+	//  - this is so the forget() function doesn't conflict with looping
 	//    over the t.conns map
-	var conns []*net.TCPConn
 	t.cleanup.Lock()
+	conns := make([]*net.TCPConn, 0, len(t.conns))
 	for _, conn := range t.conns {
 		conns = append(conns, conn)
 	}
@@ -178,7 +187,6 @@ func (t *TCPListener) tcpListen() {
 // refuser refuses a TCP connection
 func (t *TCPListener) refuser(conn *net.TCPConn) {
 	// Tell the connection why we are closing.
-	//nolint:errcheck,revive
 	fmt.Fprintf(conn, "Telegraf maximum concurrent TCP connections (%d)"+
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)

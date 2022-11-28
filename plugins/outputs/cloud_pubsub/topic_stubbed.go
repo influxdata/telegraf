@@ -2,6 +2,7 @@ package cloud_pubsub
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"runtime"
@@ -9,14 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"encoding/base64"
-
 	"cloud.google.com/go/pubsub"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/api/support/bundler"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"google.golang.org/api/support/bundler"
 )
 
 const (
@@ -60,7 +62,7 @@ type (
 )
 
 func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []testMetric) (*PubSub, *stubTopic, []telegraf.Metric) {
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 
 	metrics := make([]telegraf.Metric, len(testM))
 	t := &stubTopic{
@@ -178,7 +180,9 @@ func (t *stubTopic) sendBundle() func(items interface{}) {
 }
 
 func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
-	p, _ := parsers.NewInfluxParser()
+	p := influx.Parser{}
+	err := p.Init()
+	require.NoError(t, err)
 	metrics, err := p.Parse(msg.Data)
 	if err != nil {
 		// Just attempt to base64-decode first before returning error.

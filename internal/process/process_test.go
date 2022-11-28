@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package process
 
@@ -27,7 +26,7 @@ func TestRestartingRebindsPipes(t *testing.T) {
 	exe, err := os.Executable()
 	require.NoError(t, err)
 
-	p, err := New([]string{exe, "-external"})
+	p, err := New([]string{exe, "-external"}, []string{"INTERNAL_PROCESS_MODE=application"})
 	p.RestartDelay = 100 * time.Nanosecond
 	p.Log = testutil.Logger{}
 	require.NoError(t, err)
@@ -47,7 +46,7 @@ func TestRestartingRebindsPipes(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 	}
 
-	syscall.Kill(p.Pid(), syscall.SIGKILL)
+	require.NoError(t, syscall.Kill(p.Pid(), syscall.SIGKILL))
 
 	for atomic.LoadInt64(&linesRead) < 2 {
 		time.Sleep(1 * time.Millisecond)
@@ -62,7 +61,8 @@ var external = flag.Bool("external", false,
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if *external {
+	runMode := os.Getenv("INTERNAL_PROCESS_MODE")
+	if *external && runMode == "application" {
 		externalProcess()
 		os.Exit(0)
 	}
@@ -76,5 +76,5 @@ func externalProcess() {
 	wait := make(chan int)
 	fmt.Fprintln(os.Stdout, "started")
 	<-wait
-	os.Exit(2)
+	os.Exit(2) //nolint:revive // os.Exit called intentionally
 }

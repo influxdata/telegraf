@@ -2,12 +2,18 @@
 
 Collect metrics from [RethinkDB](https://www.rethinkdb.com/).
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage rethinkdb`.
-
-```toml
+```toml @sample.conf
 # Read metrics from one or many RethinkDB servers
 [[inputs.rethinkdb]]
   ## An array of URI to gather stats about. Specify an ip or hostname

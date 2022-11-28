@@ -1,10 +1,20 @@
 # DNS Query Input Plugin
 
-The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wikipedia.org/wiki/Dig_\(command\))
+The DNS plugin gathers dns query times in miliseconds - like
+[Dig](https://en.wikipedia.org/wiki/Dig_\(command\))
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Query given DNS server and gives statistics
 [[inputs.dns_query]]
   ## servers to query
@@ -66,7 +76,7 @@ The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wi
 |22 | BADTRUNC  | Bad Truncation                    |
 |23 | BADCOOKIE | Bad/missing Server Cookie         |
 
-### Example
+## Example Output
 
 ```shell
 dns_query,domain=google.com,rcode=NOERROR,record_type=A,result=success,server=127.0.0.1 rcode_value=0i,result_code=0i,query_time_ms=0.13746 1550020750001000000

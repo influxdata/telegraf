@@ -8,16 +8,26 @@ it requires access to execute `ps`.
 
 **Supported Platforms**: Linux, FreeBSD, Darwin
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get the number of processes and group them by status
 [[inputs.processes]]
   # no configuration
 ```
 
-Another possible configuration is to define an alternative path for resolving the /proc location.
-Using the environment variable `HOST_PROC` the plugin will retrieve process information from the specified location.
+Another possible configuration is to define an alternative path for resolving
+the /proc location.  Using the environment variable `HOST_PROC` the plugin will
+retrieve process information from the specified location.
 
 `docker run -v /proc:/rootfs/proc:ro -e HOST_PROC=/rootfs/proc`
 

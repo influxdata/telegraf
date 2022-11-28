@@ -1,17 +1,26 @@
 # Kafka Consumer Legacy Input Plugin
 
-## Deprecated in version 1.4. Please use [Kafka Consumer input plugin][]
+**Deprecated in version 1.4. Please use [Kafka Consumer input plugin][]**
 
 The [Kafka](http://kafka.apache.org/) consumer plugin polls a specified Kafka
-topic and adds messages to InfluxDB. The plugin assumes messages follow the
-line protocol. [Consumer Group](http://godoc.org/github.com/wvanbergen/kafka/consumergroup)
-is used to talk to the Kafka cluster so multiple instances of telegraf can read
-from the same topic in parallel.
+topic and adds messages to InfluxDB. The plugin assumes messages follow the line
+protocol. [Consumer Group][1] is used to talk to the Kafka cluster so multiple
+instances of telegraf can read from the same topic in parallel.
+
+[1]: http://godoc.org/github.com/wvanbergen/kafka/consumergroup
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
-## DEPRECATED: The 'kafka_consumer_legacy' plugin is deprecated in version 1.4.0, use 'inputs.kafka_consumer' instead, NOTE: 'kafka_consumer' only supports Kafka v0.8+.
+```toml @sample.conf
 # Read metrics from Kafka topic(s)
 [[inputs.kafka_consumer_legacy]]
   ## topic(s) to consume
@@ -45,4 +54,4 @@ from the same topic in parallel.
 Running integration tests requires running Zookeeper & Kafka. See Makefile
 for kafka container command.
 
-[Kafka Consumer input plugin]: /plugins/inputs/kafka_consumer
+[Kafka Consumer input plugin]: ../kafka_consumer/README.md

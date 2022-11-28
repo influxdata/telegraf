@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestSimpleReverseLookup(t *testing.T) {
+func TestSimpleReverseLookupIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -40,8 +40,7 @@ func TestSimpleReverseLookup(t *testing.T) {
 	require.NoError(t, err)
 	err = dns.Add(m, acc)
 	require.NoError(t, err)
-	err = dns.Stop()
-	require.NoError(t, err)
+	dns.Stop()
 	// should be processed now.
 
 	require.Len(t, acc.GetTelegrafMetrics(), 1)

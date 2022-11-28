@@ -3,8 +3,9 @@
 This plugin is only available on Linux.
 
 The kernel plugin gathers info about the kernel that doesn't fit into other
-plugins. In general, it is the statistics available in `/proc/stat` that are
-not covered by other plugins as well as the value of `/proc/sys/kernel/random/entropy_avail`
+plugins. In general, it is the statistics available in `/proc/stat` that are not
+covered by other plugins as well as the value of
+`/proc/sys/kernel/random/entropy_avail`
 
 The metrics are documented in `man proc` under the `/proc/stat` section.
 The metrics are documented in `man 4 random` under the `/proc/stat` section.
@@ -39,9 +40,18 @@ processes 86031
 Number of forks since boot.
 ```
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get kernel statistics from /proc/stat
 [[inputs.kernel]]
   # no configuration

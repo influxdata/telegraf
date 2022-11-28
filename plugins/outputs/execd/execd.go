@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package execd
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"strings"
@@ -14,13 +16,22 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Execd struct {
-	Command      []string        `toml:"command"`
-	RestartDelay config.Duration `toml:"restart_delay"`
-	Log          telegraf.Logger
+	Command                  []string        `toml:"command"`
+	Environment              []string        `toml:"environment"`
+	RestartDelay             config.Duration `toml:"restart_delay"`
+	IgnoreSerializationError bool            `toml:"ignore_serialization_error"`
+	Log                      telegraf.Logger
 
 	process    *process.Process
 	serializer serializers.Serializer
+}
+
+func (*Execd) SampleConfig() string {
+	return sampleConfig
 }
 
 func (e *Execd) SetSerializer(s serializers.Serializer) {
@@ -34,7 +45,7 @@ func (e *Execd) Init() error {
 
 	var err error
 
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating process %s: %w", e.Command, err)
 	}
@@ -70,7 +81,11 @@ func (e *Execd) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		b, err := e.serializer.Serialize(m)
 		if err != nil {
-			return fmt.Errorf("error serializing metrics: %s", err)
+			if !e.IgnoreSerializationError {
+				return fmt.Errorf("error serializing metrics: %w", err)
+			}
+			e.Log.Error("Skipping metric due to a serialization error: %w", err)
+			continue
 		}
 
 		if _, err = e.process.Stdin.Write(b); err != nil {

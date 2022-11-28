@@ -84,7 +84,7 @@
       "q4": 0,
       "target_ram_count": 0
     },
-    "head_message_timestamp": null,
+    "head_message_timestamp": 1446362534,
     "message_bytes_persistent": 7,
     "message_bytes_ram": 6,
     "message_bytes_unacknowledged": 5,

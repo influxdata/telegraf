@@ -4,9 +4,18 @@ The Bond input plugin collects network bond interface status for both the
 network bond interface as well as slave interfaces.
 The plugin collects these metrics from `/proc/net/bonding/*` files.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collect bond interface status, slaves statuses and failures count
 [[inputs.bond]]
   ## Sets 'proc' directory path
@@ -27,7 +36,7 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
   # collect_sys_details = false
 ```
 
-## Measurements & Fields
+## Metrics
 
 - bond
   - active_slave (for active-backup mode)
@@ -75,7 +84,7 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
   - bond
   - mode
 
-## Example output
+## Example Output
 
 Configuration:
 

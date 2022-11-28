@@ -1,11 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
-// +build !windows
 
 package intel_rdt
 
 import (
 	"bufio"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -23,6 +24,9 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	timestampFormat           = "2006-01-02 15:04:05"
@@ -70,6 +74,10 @@ type splitCSVLine struct {
 	timeValue        string
 	metricsValues    []string
 	coreOrPIDsValues []string
+}
+
+func (*IntelRDT) SampleConfig() string {
+	return sampleConfig
 }
 
 // All gathering is done in the Start function
@@ -233,7 +241,7 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 
 	if r.UseSudo {
 		// run pqos with `/bin/sh -c "sudo /path/to/pqos ..."`
-		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.Replace(strings.Join(args, " "), ";", "\\;", -1))}
+		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.ReplaceAll(strings.Join(args, " "), ";", "\\;"))}
 		cmd = exec.Command("/bin/sh", args...)
 	}
 
@@ -392,10 +400,10 @@ func validatePqosPath(pqosPath string) error {
 }
 
 func parseCoresConfig(cores []string) ([]string, error) {
-	var parsedCores []string
 	var allCores []int
 	configError := fmt.Errorf("wrong cores input config data format")
 
+	parsedCores := make([]string, 0, len(cores))
 	for _, singleCoreGroup := range cores {
 		var actualGroupOfCores []int
 		separatedCores := strings.Split(singleCoreGroup, ",")
@@ -413,6 +421,7 @@ func parseCoresConfig(cores []string) ([]string, error) {
 		}
 		parsedCores = append(parsedCores, arrayToString(actualGroupOfCores))
 	}
+
 	return parsedCores, nil
 }
 

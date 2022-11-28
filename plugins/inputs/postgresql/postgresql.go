@@ -1,17 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package postgresql
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 
-	// register in driver.
+	// Blank import required to register driver
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Postgresql struct {
 	Service
@@ -21,6 +26,10 @@ type Postgresql struct {
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
+
+func (*Postgresql) SampleConfig() string {
+	return sampleConfig
+}
 
 func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
@@ -96,7 +105,6 @@ type scanner interface {
 }
 
 func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []string) error {
-	var columnVars []interface{}
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
@@ -106,6 +114,7 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []str
 		columnMap[column] = new(interface{})
 	}
 
+	columnVars := make([]interface{}, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])

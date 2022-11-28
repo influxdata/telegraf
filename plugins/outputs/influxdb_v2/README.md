@@ -2,9 +2,18 @@
 
 The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for sending metrics to InfluxDB 2.0
 [[outputs.influxdb_v2]]
   ## The URLs of the InfluxDB cluster nodes.

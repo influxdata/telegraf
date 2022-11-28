@@ -1,11 +1,22 @@
 # Mesos Input Plugin
 
-This input plugin gathers metrics from Mesos.
-For more information, please check the [Mesos Observability Metrics](http://mesos.apache.org/documentation/latest/monitoring/) page.
+This input plugin gathers metrics from Mesos.  For more information, please
+check the [Mesos Observability Metrics][1] page.
+
+[1]: http://mesos.apache.org/documentation/latest/monitoring/
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Telegraf plugin for gathering metrics from N Mesos masters
 [[inputs.mesos]]
   ## Timeout, in ms.
@@ -50,10 +61,12 @@ For more information, please check the [Mesos Observability Metrics](http://meso
   # insecure_skip_verify = false
 ```
 
-By default this plugin is not configured to gather metrics from mesos. Since a mesos cluster can be deployed in numerous ways it does not provide any default
-values. User needs to specify master/slave nodes this plugin will gather metrics from.
+By default this plugin is not configured to gather metrics from mesos. Since a
+mesos cluster can be deployed in numerous ways it does not provide any default
+values. User needs to specify master/slave nodes this plugin will gather metrics
+from.
 
-## Measurements & Fields
+## Metrics
 
 Mesos master metric groups
 

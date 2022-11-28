@@ -1,5 +1,5 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
-// +build linux
 
 // Copyright 2018 The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@
 package mdstat
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"regexp"
@@ -29,6 +30,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultHostProc = "/proc"
@@ -171,6 +175,10 @@ func evalComponentDevices(deviceFields []string) string {
 	// Ensure no churn on tag ordering change
 	sort.Strings(mdComponentDevices)
 	return strings.Join(mdComponentDevices, ",")
+}
+
+func (*MdstatConf) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {

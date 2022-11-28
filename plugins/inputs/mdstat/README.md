@@ -1,16 +1,30 @@
 # mdstat Input Plugin
 
-The mdstat plugin gathers statistics about any Linux MD RAID arrays configured on the host
-by reading /proc/mdstat. For a full list of available fields see the
-/proc/mdstat section of the [proc man page](http://man7.org/linux/man-pages/man5/proc.5.html).
-For a better idea of what each field represents, see the
-[mdstat man page](https://raid.wiki.kernel.org/index.php/Mdstat).
+The mdstat plugin gathers statistics about any Linux MD RAID arrays configured
+on the host by reading /proc/mdstat. For a full list of available fields see
+the /proc/mdstat section of the [proc man page][man-proc].  For a better idea
+of what each field represents, see the [mdstat man page][man-mdstat].
 
-Stat collection based on Prometheus' mdstat collection library at <https://github.com/prometheus/procfs/blob/master/mdstat.go>
+Stat collection based on Prometheus' [mdstat collection library][prom-lib].
+
+[man-proc]: http://man7.org/linux/man-pages/man5/proc.5.html
+
+[man-mdstat]: https://raid.wiki.kernel.org/index.php/Mdstat
+
+[prom-lib]: https://github.com/prometheus/procfs/blob/master/mdstat.go
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get kernel statistics from /proc/mdstat
 [[inputs.mdstat]]
   ## Sets file path
@@ -18,15 +32,19 @@ Stat collection based on Prometheus' mdstat collection library at <https://githu
   # file_name = "/proc/mdstat"
 ```
 
-## Measurements & Fields
+## Metrics
 
 - mdstat
-  - BlocksSynced (if the array is rebuilding/checking, this is the count of blocks that have been scanned)
-  - BlocksSyncedFinishTime (the expected finish time of the rebuild scan, listed in minutes remaining)
+  - BlocksSynced (if the array is rebuilding/checking, this is the count of
+    blocks that have been scanned)
+  - BlocksSyncedFinishTime (the expected finish time of the rebuild scan,
+    listed in minutes remaining)
   - BlocksSyncedPct (the percentage of the rebuild scan left)
-  - BlocksSyncedSpeed (the current speed the rebuild is running at, listed in K/sec)
+  - BlocksSyncedSpeed (the current speed the rebuild is running at, listed
+    in K/sec)
   - BlocksTotal (the total count of blocks in the array)
-  - DisksActive (the number of disks that are currently considered healthy in the array)
+  - DisksActive (the number of disks that are currently considered healthy
+    in the array)
   - DisksFailed (the current count of failed disks in the array)
   - DisksSpare (the current count of "spare" disks in the array)
   - DisksTotal (total count of disks in the array)

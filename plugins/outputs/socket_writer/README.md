@@ -6,9 +6,18 @@ It can output data in any of the [supported output formats][formats].
 
 [formats]: ../../../docs/DATA_FORMATS_OUTPUT.md
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Generic socket writer capable of handling multiple socket types.
 [[outputs.socket_writer]]
   ## URL to connect to
@@ -44,6 +53,6 @@ It can output data in any of the [supported output formats][formats].
   ## Data format to generate.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 ```

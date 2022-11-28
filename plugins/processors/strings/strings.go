@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package strings
 
 import (
+	_ "embed"
 	"encoding/base64"
 	"strings"
 	"unicode"
@@ -8,7 +10,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Strings struct {
 	Lowercase    []converter `toml:"lowercase"`
@@ -181,7 +188,9 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Titlecase {
-		c.fn = strings.Title
+		c.fn = func(s string) string {
+			return cases.Title(language.Und, cases.NoLower).String(s)
+		}
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Trim {
@@ -224,7 +233,7 @@ func (s *Strings) initOnce() {
 	for _, c := range s.Replace {
 		c := c
 		c.fn = func(s string) string {
-			newString := strings.Replace(s, c.Old, c.New, -1)
+			newString := strings.ReplaceAll(s, c.Old, c.New)
 			if newString == "" {
 				return s
 			}
@@ -265,6 +274,10 @@ func (s *Strings) initOnce() {
 	}
 
 	s.init = true
+}
+
+func (*Strings) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Strings) Apply(in ...telegraf.Metric) []telegraf.Metric {

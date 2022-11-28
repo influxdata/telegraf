@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nsq
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/nsqio/go-nsq"
@@ -10,6 +12,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type NSQ struct {
 	Server string
 	Topic  string
@@ -17,6 +22,10 @@ type NSQ struct {
 
 	producer   *nsq.Producer
 	serializer serializers.Serializer
+}
+
+func (*NSQ) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NSQ) SetSerializer(serializer serializers.Serializer) {

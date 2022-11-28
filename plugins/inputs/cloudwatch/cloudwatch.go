@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cloudwatch
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -16,14 +18,17 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
 	internalMetric "github.com/influxdata/telegraf/metric"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	internalProxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	StatisticAverage     = "Average"
@@ -43,12 +48,13 @@ type CloudWatch struct {
 
 	Period         config.Duration `toml:"period"`
 	Delay          config.Duration `toml:"delay"`
-	Namespace      string          `toml:"namespace"`
+	Namespace      string          `toml:"namespace" deprecated:"1.25.0;use 'namespaces' instead"`
 	Namespaces     []string        `toml:"namespaces"`
 	Metrics        []*Metric       `toml:"metrics"`
 	CacheTTL       config.Duration `toml:"cache_ttl"`
 	RateLimit      int             `toml:"ratelimit"`
 	RecentlyActive string          `toml:"recently_active"`
+	BatchSize      int             `toml:"batch_size"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -88,6 +94,10 @@ type metricCache struct {
 type cloudwatchClient interface {
 	ListMetrics(context.Context, *cwClient.ListMetricsInput, ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error)
 	GetMetricData(context.Context, *cwClient.GetMetricDataInput, ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error)
+}
+
+func (*CloudWatch) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *CloudWatch) Init() error {
@@ -136,12 +146,10 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	results := map[string][]types.MetricDataResult{}
 
 	for namespace, namespacedQueries := range queries {
-		// 500 is the maximum number of metric data queries a `GetMetricData` request can contain.
-		batchSize := 500
 		var batches [][]types.MetricDataQuery
 
-		for batchSize < len(namespacedQueries) {
-			namespacedQueries, batches = namespacedQueries[batchSize:], append(batches, namespacedQueries[0:batchSize:batchSize])
+		for c.BatchSize < len(namespacedQueries) {
+			namespacedQueries, batches = namespacedQueries[c.BatchSize:], append(batches, namespacedQueries[0:c.BatchSize:c.BatchSize])
 		}
 		batches = append(batches, namespacedQueries)
 
@@ -250,10 +258,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 					}
 				}
 			} else {
-				allMetrics, err := c.fetchNamespaceMetrics()
-				if err != nil {
-					return nil, err
-				}
+				allMetrics := c.fetchNamespaceMetrics()
 				for _, name := range m.MetricNames {
 					for _, metric := range allMetrics {
 						if isSelected(name, metric, m.Dimensions) {
@@ -286,11 +291,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 			})
 		}
 	} else {
-		metrics, err := c.fetchNamespaceMetrics()
-		if err != nil {
-			return nil, err
-		}
-
+		metrics := c.fetchNamespaceMetrics()
 		fMetrics = []filteredMetric{
 			{
 				metrics:    metrics,
@@ -309,37 +310,34 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 }
 
 // fetchNamespaceMetrics retrieves available metrics for a given CloudWatch namespace.
-func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
+func (c *CloudWatch) fetchNamespaceMetrics() []types.Metric {
 	metrics := []types.Metric{}
 
-	var token *string
-
-	params := &cwClient.ListMetricsInput{
-		Dimensions: []types.DimensionFilter{},
-		NextToken:  token,
-		MetricName: nil,
-	}
-	if c.RecentlyActive == "PT3H" {
-		params.RecentlyActive = types.RecentlyActivePt3h
-	}
-
 	for _, namespace := range c.Namespaces {
-		params.Namespace = aws.String(namespace)
+		params := &cwClient.ListMetricsInput{
+			Dimensions: []types.DimensionFilter{},
+			Namespace:  aws.String(namespace),
+		}
+		if c.RecentlyActive == "PT3H" {
+			params.RecentlyActive = types.RecentlyActivePt3h
+		}
+
 		for {
 			resp, err := c.client.ListMetrics(context.Background(), params)
 			if err != nil {
-				return nil, fmt.Errorf("failed to list metrics with params per namespace: %v", err)
+				c.Log.Errorf("failed to list metrics with namespace %s: %v", namespace, err)
+				// skip problem namespace on error and continue to next namespace
+				break
 			}
-
 			metrics = append(metrics, resp.Metrics...)
+
 			if resp.NextToken == nil {
 				break
 			}
-
 			params.NextToken = resp.NextToken
 		}
 	}
-	return metrics, nil
+	return metrics
 }
 
 func (c *CloudWatch) updateWindow(relativeTo time.Time) {
@@ -492,9 +490,7 @@ func (c *CloudWatch) aggregateMetrics(
 			tags["region"] = c.Region
 
 			for i := range result.Values {
-				if err := grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i]); err != nil {
-					acc.AddError(err)
-				}
+				grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i])
 			}
 		}
 	}
@@ -518,19 +514,20 @@ func New() *CloudWatch {
 		CacheTTL:  config.Duration(time.Hour),
 		RateLimit: 25,
 		Timeout:   config.Duration(time.Second * 5),
+		BatchSize: 500,
 	}
 }
 
 func sanitizeMeasurement(namespace string) string {
-	namespace = strings.Replace(namespace, "/", "_", -1)
+	namespace = strings.ReplaceAll(namespace, "/", "_")
 	namespace = snakeCase(namespace)
 	return "cloudwatch_" + namespace
 }
 
 func snakeCase(s string) string {
 	s = internal.SnakeCase(s)
-	s = strings.Replace(s, " ", "_", -1)
-	s = strings.Replace(s, "__", "_", -1)
+	s = strings.ReplaceAll(s, " ", "_")
+	s = strings.ReplaceAll(s, "__", "_")
 	return s
 }
 

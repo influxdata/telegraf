@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package warp10
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"math"
@@ -17,6 +19,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultClientTimeout = 15 * time.Second
@@ -62,6 +67,10 @@ func (w *Warp10) createClient() (*http.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (*Warp10) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect to warp10
@@ -142,16 +151,13 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 }
 
 func buildTags(tags []*telegraf.Tag) []string {
-	tagsString := make([]string, len(tags)+1)
-	indexSource := 0
-	for index, tag := range tags {
+	tagsString := make([]string, 0, len(tags)+1)
+	for _, tag := range tags {
 		key := url.QueryEscape(tag.Key)
 		value := url.QueryEscape(tag.Value)
-		tagsString[index] = fmt.Sprintf("%s=%s", key, value)
-		indexSource = index
+		tagsString = append(tagsString, fmt.Sprintf("%s=%s", key, value))
 	}
-	indexSource++
-	tagsString[indexSource] = "source=telegraf"
+	tagsString = append(tagsString, "source=telegraf")
 	sort.Strings(tagsString)
 	return tagsString
 }
@@ -162,7 +168,7 @@ func buildValue(v interface{}) (string, error) {
 	case int64:
 		retv = intToString(p)
 	case string:
-		retv = fmt.Sprintf("'%s'", strings.Replace(p, "'", "\\'", -1))
+		retv = fmt.Sprintf("'%s'", strings.ReplaceAll(p, "'", "\\'"))
 	case bool:
 		retv = boolToString(p)
 	case uint64:

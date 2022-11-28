@@ -1,11 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tag_limit
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type TagLimit struct {
 	Limit    int             `toml:"limit"`
@@ -31,6 +36,10 @@ func (d *TagLimit) initOnce() error {
 	return nil
 }
 
+func (*TagLimit) SampleConfig() string {
+	return sampleConfig
+}
+
 func (d *TagLimit) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	err := d.initOnce()
 	if err != nil {
@@ -43,13 +52,11 @@ func (d *TagLimit) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		if lenPointTags <= d.Limit {
 			continue
 		}
-		tagsToRemove := make([]string, lenPointTags-d.Limit)
-		removeIdx := 0
+		tagsToRemove := make([]string, 0, lenPointTags-d.Limit)
 		// remove extraneous tags, stop once we're at the limit
 		for _, t := range pointOriginalTags {
 			if _, ok := d.keepTags[t.Key]; !ok {
-				tagsToRemove[removeIdx] = t.Key
-				removeIdx++
+				tagsToRemove = append(tagsToRemove, t.Key)
 				lenPointTags--
 			}
 			if lenPointTags <= d.Limit {

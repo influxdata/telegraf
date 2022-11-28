@@ -1,7 +1,7 @@
 # Azure Monitor Output Plugin
 
-__The Azure Monitor custom metrics service is currently in preview and not
-available in a subset of Azure regions.__
+**The Azure Monitor custom metrics service is currently in preview and not
+available in a subset of Azure regions.**
 
 This plugin will send custom metrics to Azure Monitor. Azure Monitor has a
 metric resolution of one minute. To handle this in Telegraf, the Azure Monitor
@@ -14,9 +14,18 @@ is written as the Azure Monitor metric name. All field values are written as a
 summarized set that includes: min, max, sum, count. Tags are written as a
 dimension on each Azure Monitor metric.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send aggregate metrics to Azure Monitor
 [[outputs.azure_monitor]]
   ## Timeout for HTTP writes.

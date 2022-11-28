@@ -1,6 +1,7 @@
 # Passenger Input Plugin
 
-Gather [Phusion Passenger](https://www.phusionpassenger.com/) metrics using the `passenger-status` command line utility.
+Gather [Phusion Passenger](https://www.phusionpassenger.com/) metrics using the
+`passenger-status` command line utility.
 
 ## Series Cardinality Warning
 
@@ -20,9 +21,18 @@ manage your series cardinality:
 - Monitor your databases
   [series cardinality](https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality).
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics of passenger using passenger-status
 [[inputs.passenger]]
   ## Path of passenger-status.
@@ -38,7 +48,8 @@ manage your series cardinality:
 
 ### Permissions
 
-Telegraf must have permission to execute the `passenger-status` command.  On most systems, Telegraf runs as the `telegraf` user.
+Telegraf must have permission to execute the `passenger-status` command.  On
+most systems, Telegraf runs as the `telegraf` user.
 
 ## Metrics
 

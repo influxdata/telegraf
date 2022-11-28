@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package modbus
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"net/url"
@@ -15,9 +17,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample_general_begin.conf
+var sampleConfigStart string
+
+//go:embed sample_general_end.conf
+var sampleConfigEnd string
+
 type ModbusWorkarounds struct {
-	PollPause        config.Duration `toml:"pause_between_requests"`
-	CloseAfterGather bool            `toml:"close_connection_after_gather"`
+	AfterConnectPause config.Duration `toml:"pause_after_connect"`
+	PollPause         config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather  bool            `toml:"close_connection_after_gather"`
+	OnRequestPerField bool            `toml:"one_request_per_field"`
 }
 
 // Modbus holds all data relevant to the plugin
@@ -74,6 +84,22 @@ const (
 	cInputRegisters   = "input_register"
 )
 
+// SampleConfig returns a basic configuration for the plugin
+func (m *Modbus) SampleConfig() string {
+	configs := []Configuration{}
+	cfgOriginal := m.ConfigurationOriginal
+	cfgPerRequest := m.ConfigurationPerRequest
+	configs = append(configs, &cfgOriginal, &cfgPerRequest)
+
+	totalConfig := sampleConfigStart
+	for _, c := range configs {
+		totalConfig += c.SampleConfigPart() + "\n"
+	}
+	totalConfig += "\n"
+	totalConfig += sampleConfigEnd
+	return totalConfig
+}
+
 func (m *Modbus) Init() error {
 	//check device name
 	if m.Name == "" {
@@ -88,8 +114,10 @@ func (m *Modbus) Init() error {
 	var cfg Configuration
 	switch m.ConfigurationType {
 	case "", "register":
+		m.ConfigurationOriginal.workarounds = m.Workarounds
 		cfg = &m.ConfigurationOriginal
 	case "request":
+		m.ConfigurationPerRequest.workarounds = m.Workarounds
 		cfg = &m.ConfigurationPerRequest
 	default:
 		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
@@ -97,12 +125,12 @@ func (m *Modbus) Init() error {
 
 	// Check and process the configuration
 	if err := cfg.Check(); err != nil {
-		return fmt.Errorf("configuraton invalid: %v", err)
+		return fmt.Errorf("configuration invalid: %v", err)
 	}
 
 	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process configuraton: %v", err)
+		return fmt.Errorf("cannot process configuration: %v", err)
 	}
 	m.requests = r
 
@@ -122,26 +150,24 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	timestamp := time.Now()
-	for retry := 0; retry <= m.Retries; retry++ {
-		timestamp = time.Now()
-		if err := m.gatherFields(); err != nil {
-			if mberr, ok := err.(*mb.Error); ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
-				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
-				time.Sleep(time.Duration(m.RetriesWaitTime))
-				continue
-			}
-			// Show the disconnect error this way to not shadow the initial error
-			if discerr := m.disconnect(); discerr != nil {
-				m.Log.Errorf("Disconnecting failed: %v", discerr)
-			}
-			return err
-		}
-		// Reading was successful, leave the retry loop
-		break
-	}
-
 	for slaveID, requests := range m.requests {
+		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
+		if err := m.readSlaveData(slaveID, requests); err != nil {
+			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
+			mberr, ok := err.(*mb.Error)
+			if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+				m.Log.Debugf("Reconnecting to %s...", m.Controller)
+				if err := m.disconnect(); err != nil {
+					return fmt.Errorf("disconnecting failed: %w", err)
+				}
+				if err := m.connect(); err != nil {
+					return fmt.Errorf("slave %d: connecting failed: %w", slaveID, err)
+				}
+			}
+			continue
+		}
+		timestamp := time.Now()
+
 		tags := map[string]string{
 			"name":     m.Name,
 			"type":     cCoils,
@@ -243,6 +269,10 @@ func (m *Modbus) initClient() error {
 func (m *Modbus) connect() error {
 	err := m.handler.Connect()
 	m.isConnected = err == nil
+	if m.isConnected && m.Workarounds.AfterConnectPause != 0 {
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.AfterConnectPause))
+		time.Sleep(time.Until(nextRequest))
+	}
 	return err
 }
 
@@ -252,24 +282,40 @@ func (m *Modbus) disconnect() error {
 	return err
 }
 
-func (m *Modbus) gatherFields() error {
-	for slaveID, requests := range m.requests {
-		m.handler.SetSlave(slaveID)
-		if err := m.gatherRequestsCoil(requests.coil); err != nil {
-			return err
-		}
-		if err := m.gatherRequestsDiscrete(requests.discrete); err != nil {
-			return err
-		}
-		if err := m.gatherRequestsHolding(requests.holding); err != nil {
-			return err
-		}
-		if err := m.gatherRequestsInput(requests.input); err != nil {
-			return err
-		}
-	}
+func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
+	m.handler.SetSlave(slaveID)
 
-	return nil
+	for retry := 0; retry < m.Retries; retry++ {
+		err := m.gatherFields(requests)
+		if err == nil {
+			// Reading was successful
+			return nil
+		}
+
+		// Exit in case a non-recoverable error occurred
+		mberr, ok := err.(*mb.Error)
+		if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+			return err
+		}
+
+		// Wait some time and try again reading the slave.
+		m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
+		time.Sleep(time.Duration(m.RetriesWaitTime))
+	}
+	return m.gatherFields(requests)
+}
+
+func (m *Modbus) gatherFields(requests requestSet) error {
+	if err := m.gatherRequestsCoil(requests.coil); err != nil {
+		return err
+	}
+	if err := m.gatherRequestsDiscrete(requests.discrete); err != nil {
+		return err
+	}
+	if err := m.gatherRequestsHolding(requests.holding); err != nil {
+		return err
+	}
+	return m.gatherRequestsInput(requests.input)
 }
 
 func (m *Modbus) gatherRequestsCoil(requests []request) error {
@@ -398,10 +444,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			if err := grouper.Add(measurement, rtags, timestamp, field.name, field.value); err != nil {
-				acc.AddError(fmt.Errorf("cannot add field %q for measurement %q: %v", field.name, measurement, err))
-				continue
-			}
+			grouper.Add(measurement, rtags, timestamp, field.name, field.value)
 		}
 	}
 

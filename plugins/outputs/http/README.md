@@ -4,9 +4,18 @@ This plugin sends metrics in a HTTP message encoded using one of the output data
 formats. For data_formats that support batching, metrics are sent in batch
 format by default.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can transmit metrics over HTTP
 [[outputs.http]]
   ## URL is the address to send metrics to
@@ -27,6 +36,9 @@ format by default.
   # client_secret = "secret"
   # token_url = "https://indentityprovider/oauth2/v1/token"
   # scopes = ["urn:opc:idm:__myscopes__"]
+
+  ## Goole API Auth
+  # google_application_credentials = "/etc/telegraf/example_secret.json"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -103,6 +115,14 @@ format by default.
   ## Optional list of statuscodes (<200 or >300) upon which requests should not be retried
   # non_retryable_statuscodes = [409, 413]
 ```
+
+### Google API Auth
+
+The `google_application_credentials` setting is used with Google Cloud APIs. It specifies the json key file. To learn about creating Google service accounts, consult Google's
+[oauth2 service account documentation][create_service_account]. An example use case is a metrics proxy deployed to
+Cloud Run. In this example, the service account must have the "run.routes.invoke" permission.
+
+[create_service_account]: https://cloud.google.com/docs/authentication/production#create_service_account
 
 ### Optional Cookie Authentication Settings
 

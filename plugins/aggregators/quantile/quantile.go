@@ -1,11 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package quantile
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Quantile struct {
 	Quantiles     []float64 `toml:"quantiles"`
@@ -16,6 +21,8 @@ type Quantile struct {
 
 	cache    map[uint64]aggregate
 	suffixes []string
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 type aggregate struct {
@@ -26,6 +33,10 @@ type aggregate struct {
 
 type newAlgorithmFunc func(compression float64) (algorithm, error)
 
+func (*Quantile) SampleConfig() string {
+	return sampleConfig
+}
+
 func (q *Quantile) Add(in telegraf.Metric) {
 	id := in.HashID()
 	if cached, ok := q.cache[id]; ok {
@@ -33,7 +44,10 @@ func (q *Quantile) Add(in telegraf.Metric) {
 		for k, algo := range cached.fields {
 			if field, ok := fields[k]; ok {
 				if v, isconvertible := convert(field); isconvertible {
-					algo.Add(v)
+					err := algo.Add(v)
+					if err != nil {
+						q.Log.Errorf("adding cached field %s: %v", k, err)
+					}
 				}
 			}
 		}
@@ -50,7 +64,10 @@ func (q *Quantile) Add(in telegraf.Metric) {
 		if v, isconvertible := convert(field); isconvertible {
 			// This should never error out as we tested it in Init()
 			algo, _ := q.newAlgorithm(q.Compression)
-			algo.Add(v)
+			err := algo.Add(v)
+			if err != nil {
+				q.Log.Errorf("adding field %s: %v", k, err)
+			}
 			a.fields[k] = algo
 		}
 	}

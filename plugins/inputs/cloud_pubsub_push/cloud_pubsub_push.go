@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cloud_pubsub_push
 
 import (
 	"context"
 	"crypto/subtle"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -16,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
 // if the request body is over this size, we will return an HTTP 413 error.
@@ -59,6 +64,10 @@ type Message struct {
 type Payload struct {
 	Msg          Message `json:"message"`
 	Subscription string  `json:"subscription"`
+}
+
+func (*PubSubPush) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *PubSubPush) Gather(_ telegraf.Accumulator) error {

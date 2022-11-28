@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -168,8 +168,11 @@ func verifyRawMetricPublished(t *testing.T, m telegraf.Metric, published map[str
 }
 
 func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message, base64Encoded bool) *pubsub.Message {
-	p, _ := parsers.NewInfluxParser()
-
+	p := influx.Parser{}
+	err := p.Init()
+	if err != nil {
+		t.Fatalf("unexpected parsing error: %v", err)
+	}
 	v, _ := m.GetField("value")
 	psMsg, ok := published[v.(string)]
 	if !ok {

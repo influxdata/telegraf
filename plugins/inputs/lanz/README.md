@@ -1,9 +1,11 @@
 # Arista LANZ Consumer Input Plugin
 
-This plugin provides a consumer for use with Arista Networks’ Latency Analyzer (LANZ)
+This plugin provides a consumer for use with Arista Networks’ Latency Analyzer
+(LANZ)
 
 Metrics are read from a stream of data via TCP through port 50001 on the
-switches management IP. The data is in Protobuffers format. For more information on Arista LANZ
+switches management IP. The data is in Protobuffers format. For more information
+on Arista LANZ
 
 - <https://www.arista.com/en/um-eos/eos-latency-analyzer-lanz>
 
@@ -11,14 +13,18 @@ This plugin uses Arista's sdk.
 
 - <https://github.com/aristanetworks/goarista>
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-You will need to configure LANZ and enable streaming LANZ data.
-
-- <https://www.arista.com/en/um-eos/eos-section-44-3-configuring-lanz>
-- <https://www.arista.com/en/um-eos/eos-section-44-3-configuring-lanz#ww1149292>
-
-```toml
+```toml @sample.conf
 # Read metrics off Arista LANZ, via socket
 [[inputs.lanz]]
   ## URL to Arista LANZ endpoint
@@ -28,9 +34,15 @@ You will need to configure LANZ and enable streaming LANZ data.
   ]
 ```
 
+You will need to configure LANZ and enable streaming LANZ data.
+
+- <https://www.arista.com/en/um-eos/eos-section-44-3-configuring-lanz>
+- <https://www.arista.com/en/um-eos/eos-section-44-3-configuring-lanz#ww1149292>
+
 ## Metrics
 
-For more details on the metrics see <https://github.com/aristanetworks/goarista/blob/master/lanz/proto/lanz.proto>
+For more details on the metrics see
+<https://github.com/aristanetworks/goarista/blob/master/lanz/proto/lanz.proto>
 
 - lanz_congestion_record:
   - tags:

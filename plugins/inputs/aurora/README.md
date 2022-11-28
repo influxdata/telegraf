@@ -1,12 +1,23 @@
 # Aurora Input Plugin
 
-The Aurora Input Plugin gathers metrics from [Apache Aurora](https://aurora.apache.org/) schedulers.
+The Aurora Input Plugin gathers metrics from [Apache
+Aurora](https://aurora.apache.org/) schedulers.
 
-For monitoring recommendations reference [Monitoring your Aurora cluster](https://aurora.apache.org/documentation/latest/operations/monitoring/)
+For monitoring recommendations reference [Monitoring your Aurora
+cluster](https://aurora.apache.org/documentation/latest/operations/monitoring/)
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather metrics from Apache Aurora schedulers
 [[inputs.aurora]]
   ## Schedulers are the base addresses of your Aurora Schedulers

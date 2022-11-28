@@ -1,14 +1,17 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package postgresql_extensible
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
 
-	_ "github.com/jackc/pgx/v4/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
+	// Required for SQL framework driver
+	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -16,9 +19,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Postgresql struct {
 	postgresql.Service
-	Databases          []string
+	Databases          []string `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	AdditionalTags     []string
 	Timestamp          string
 	Query              query
@@ -32,13 +38,17 @@ type query []struct {
 	Sqlquery    string
 	Script      string
 	Version     int
-	Withdbname  bool
+	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Tagvalue    string
 	Measurement string
 	Timestamp   string
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
+
+func (*Postgresql) SampleConfig() string {
+	return sampleConfig
+}
 
 func (p *Postgresql) Init() error {
 	var err error
@@ -160,7 +170,6 @@ type scanner interface {
 func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulator, columns []string) error {
 	var (
 		err        error
-		columnVars []interface{}
 		dbname     bytes.Buffer
 		tagAddress string
 		timestamp  time.Time
@@ -173,6 +182,7 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 		columnMap[column] = new(interface{})
 	}
 
+	columnVars := make([]interface{}, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])

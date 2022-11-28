@@ -1,22 +1,30 @@
 # Amazon ECS Input Plugin
 
-Amazon ECS, Fargate compatible, input plugin which uses the Amazon ECS metadata and
-stats [v2][task-metadata-endpoint-v2] or [v3][task-metadata-endpoint-v3] API endpoints
-to gather stats on running containers in a Task.
+Amazon ECS, Fargate compatible, input plugin which uses the Amazon ECS metadata
+and stats [v2][task-metadata-endpoint-v2] or [v3][task-metadata-endpoint-v3] API
+endpoints to gather stats on running containers in a Task.
 
 The telegraf container must be run in the same Task as the workload it is
 inspecting.
 
-This is similar to (and reuses a few pieces of) the [Docker][docker-input]
-input plugin, with some ECS specific modifications for AWS metadata and stats
-formats.
+This is similar to (and reuses a few pieces of) the [Docker][docker-input] input
+plugin, with some ECS specific modifications for AWS metadata and stats formats.
 
 The amazon-ecs-agent (though it _is_ a container running on the host) is not
 present in the metadata/stats endpoints.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about ECS containers
 [[inputs.ecs]]
   ## ECS metadata url.

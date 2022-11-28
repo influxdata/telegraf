@@ -1,21 +1,27 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cloud_pubsub
 
 import (
 	"context"
+	_ "embed"
 	"encoding/base64"
 	"fmt"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/pubsub"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/option"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/option"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type PubSub struct {
 	CredentialsFile string            `toml:"credentials_file"`
@@ -39,6 +45,10 @@ type PubSub struct {
 
 	serializer     serializers.Serializer
 	publishResults []publishResult
+}
+
+func (*PubSub) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ps *PubSub) SetSerializer(serializer serializers.Serializer) {

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kapacitor
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	defaultURL = "http://localhost:9092/kapacitor/v1/debug/vars"
 )
@@ -23,6 +28,10 @@ type Kapacitor struct {
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+func (*Kapacitor) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
@@ -116,11 +125,13 @@ type stats struct {
 
 // Gathers data from a particular URL
 // Parameters:
-//     acc    : The telegraf Accumulator to use
-//     url    : endpoint to send request to
+//
+//	acc    : The telegraf Accumulator to use
+//	url    : endpoint to send request to
 //
 // Returns:
-//     error: Any error that may have occurred
+//
+//	error: Any error that may have occurred
 func (k *Kapacitor) gatherURL(
 	acc telegraf.Accumulator,
 	url string,

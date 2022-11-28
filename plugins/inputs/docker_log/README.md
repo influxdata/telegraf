@@ -12,9 +12,18 @@ The docker plugin uses the [Official Docker Client][] to gather logs from the
 [Official Docker Client]: https://github.com/moby/moby/tree/master/client
 [Engine API]: https://docs.docker.com/engine/api/v1.24/
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read logging output from the Docker engine
 [[inputs.docker_log]]
   ## Docker Endpoint
@@ -64,14 +73,16 @@ When using the `"ENV"` endpoint, the connection is configured using the
 
 ## source tag
 
-Selecting the containers can be tricky if you have many containers with the same name.
-To alleviate this issue you can set the below value to `true`
+Selecting the containers can be tricky if you have many containers with the same
+name.  To alleviate this issue you can set the below value to `true`
 
 ```toml
 source_tag = true
 ```
 
-This will cause all data points to have the `source` tag be set to the first 12 characters of the container id. The first 12 characters is the common hostname for containers that have no explicit hostname set, as defined by docker.
+This will cause all data points to have the `source` tag be set to the first 12
+characters of the container id. The first 12 characters is the common hostname
+for containers that have no explicit hostname set, as defined by docker.
 
 ## Metrics
 

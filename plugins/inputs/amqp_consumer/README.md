@@ -1,21 +1,31 @@
 # AMQP Consumer Input Plugin
 
-This plugin provides a consumer for use with AMQP 0-9-1, a prominent implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
+This plugin provides a consumer for use with AMQP 0-9-1, a prominent
+implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
 
-Metrics are read from a topic exchange using the configured queue and binding_key.
+Metrics are read from a topic exchange using the configured queue and
+binding_key.
 
-Message payload should be formatted in one of the [Telegraf Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+Message payload should be formatted in one of the [Telegraf Data
+Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
 For an introduction to AMQP see:
 
 - [amqp - concepts](https://www.rabbitmq.com/tutorials/amqp-concepts.html)
 - [rabbitmq: getting started](https://www.rabbitmq.com/getstarted.html)
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-The following defaults are known to work with RabbitMQ:
-
-```toml
+```toml @sample.conf
 # AMQP consumer plugin
 [[inputs.amqp_consumer]]
   ## Brokers to consume from.  If multiple brokers are specified a random broker
@@ -81,8 +91,11 @@ The following defaults are known to work with RabbitMQ:
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Content encoding for message payloads, can be set to "gzip" to or
-  ## "identity" to apply no encoding.
+  ## Content encoding for message payloads, can be set to
+  ## "gzip", "identity" or "auto"
+  ## - Use "gzip" to decode gzip
+  ## - Use "identity" to apply no encoding
+  ## - Use "auto" determine the encoding using the ContentEncoding header
   # content_encoding = "identity"
 
   ## Data format to consume.
@@ -91,3 +104,11 @@ The following defaults are known to work with RabbitMQ:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
+
+## Metrics
+
+TODO
+
+## Example Output
+
+TODO

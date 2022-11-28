@@ -4,22 +4,8 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers/collectd"
-	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
-	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
-	"github.com/influxdata/telegraf/plugins/parsers/graphite"
-	"github.com/influxdata/telegraf/plugins/parsers/grok"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
-	"github.com/influxdata/telegraf/plugins/parsers/json"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
-	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
-	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
-	"github.com/influxdata/telegraf/plugins/parsers/value"
-	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
-	"github.com/influxdata/telegraf/plugins/parsers/xpath"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
+	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 )
 
 // Creator is the function to create a new parser
@@ -184,271 +170,38 @@ type Config struct {
 	ValueFieldName string `toml:"value_field_name"`
 
 	// XPath configuration
-	XPathPrintDocument       bool     `toml:"xpath_print_document"`
-	XPathProtobufFile        string   `toml:"xpath_protobuf_file"`
-	XPathProtobufType        string   `toml:"xpath_protobuf_type"`
-	XPathProtobufImportPaths []string `toml:"xpath_protobuf_import_paths"`
-	XPathConfig              []XPathConfig
+	XPathPrintDocument       bool           `toml:"xpath_print_document"`
+	XPathProtobufFile        string         `toml:"xpath_protobuf_file"`
+	XPathProtobufType        string         `toml:"xpath_protobuf_type"`
+	XPathProtobufImportPaths []string       `toml:"xpath_protobuf_import_paths"`
+	XPathAllowEmptySelection bool           `toml:"xpath_allow_empty_selection"`
+	XPathConfig              []xpath.Config `toml:"xpath"`
 
 	// JSONPath configuration
-	JSONV2Config []JSONV2Config `toml:"json_v2"`
+	JSONV2Config []json_v2.Config `toml:"json_v2"`
 
 	// Influx configuration
 	InfluxParserType string `toml:"influx_parser_type"`
-}
 
-type XPathConfig xpath.Config
-
-type JSONV2Config struct {
-	json_v2.Config
+	// LogFmt configuration
+	LogFmtTagKeys []string `toml:"logfmt_tag_keys"`
 }
 
 // NewParser returns a Parser interface based on the given config.
+// DEPRECATED: Please instantiate the parser directly instead of using this function.
 func NewParser(config *Config) (Parser, error) {
-	var err error
-	var parser Parser
-	switch config.DataFormat {
-	case "json":
-		parser, err = json.New(
-			&json.Config{
-				MetricName:   config.MetricName,
-				TagKeys:      config.TagKeys,
-				NameKey:      config.JSONNameKey,
-				StringFields: config.JSONStringFields,
-				Query:        config.JSONQuery,
-				TimeKey:      config.JSONTimeKey,
-				TimeFormat:   config.JSONTimeFormat,
-				Timezone:     config.JSONTimezone,
-				DefaultTags:  config.DefaultTags,
-				Strict:       config.JSONStrict,
-			},
-		)
-	case "value":
-		parser, err = NewValueParser(config.MetricName,
-			config.DataType, config.ValueFieldName, config.DefaultTags)
-	case "influx":
-		if config.InfluxParserType == "upstream" {
-			parser, err = NewInfluxUpstreamParser()
-		} else {
-			parser, err = NewInfluxParser()
-		}
-	case "nagios":
-		parser, err = NewNagiosParser()
-	case "graphite":
-		parser, err = NewGraphiteParser(config.Separator,
-			config.Templates, config.DefaultTags)
-	case "collectd":
-		parser, err = NewCollectdParser(config.CollectdAuthFile,
-			config.CollectdSecurityLevel, config.CollectdTypesDB, config.CollectdSplit)
-	case "dropwizard":
-		parser, err = NewDropwizardParser(
-			config.DropwizardMetricRegistryPath,
-			config.DropwizardTimePath,
-			config.DropwizardTimeFormat,
-			config.DropwizardTagsPath,
-			config.DropwizardTagPathsMap,
-			config.DefaultTags,
-			config.Separator,
-			config.Templates)
-	case "wavefront":
-		parser, err = NewWavefrontParser(config.DefaultTags)
-	case "grok":
-		parser, err = newGrokParser(
-			config.MetricName,
-			config.GrokPatterns,
-			config.GrokNamedPatterns,
-			config.GrokCustomPatterns,
-			config.GrokCustomPatternFiles,
-			config.GrokTimezone,
-			config.GrokUniqueTimestamp)
-	case "logfmt":
-		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
-	case "form_urlencoded":
-		parser, err = NewFormUrlencodedParser(
-			config.MetricName,
-			config.DefaultTags,
-			config.FormUrlencodedTagKeys,
-		)
-	case "prometheus":
-		parser, err = NewPrometheusParser(
-			config.DefaultTags,
-			config.PrometheusIgnoreTimestamp,
-		)
-	case "prometheusremotewrite":
-		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
-		parser = &xpath.Parser{
-			Format:              config.DataFormat,
-			ProtobufMessageDef:  config.XPathProtobufFile,
-			ProtobufMessageType: config.XPathProtobufType,
-			ProtobufImportPaths: config.XPathProtobufImportPaths,
-			PrintDocument:       config.XPathPrintDocument,
-			DefaultTags:         config.DefaultTags,
-			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
-		}
-	case "json_v2":
-		parser, err = NewJSONPathParser(config.JSONV2Config)
-	default:
-		creator, found := Parsers[config.DataFormat]
-		if !found {
-			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
-		}
-
-		// Try to create new-style parsers the old way...
-		// DEPRECATED: Please instantiate the parser directly instead of using this function.
-		parser = creator(config.MetricName)
-		p, ok := parser.(ParserCompatibility)
-		if !ok {
-			return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
-		}
-		err = p.InitFromConfig(config)
+	creator, found := Parsers[config.DataFormat]
+	if !found {
+		return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
+
+	// Try to create new-style parsers the old way...
+	parser := creator(config.MetricName)
+	p, ok := parser.(ParserCompatibility)
+	if !ok {
+		return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
+	}
+	err := p.InitFromConfig(config)
+
 	return parser, err
-}
-
-func newGrokParser(metricName string,
-	patterns []string, nPatterns []string,
-	cPatterns string, cPatternFiles []string,
-	tZone string, uniqueTimestamp string) (Parser, error) {
-	parser := grok.Parser{
-		Measurement:        metricName,
-		Patterns:           patterns,
-		NamedPatterns:      nPatterns,
-		CustomPatterns:     cPatterns,
-		CustomPatternFiles: cPatternFiles,
-		Timezone:           tZone,
-		UniqueTimestamp:    uniqueTimestamp,
-	}
-
-	err := parser.Compile()
-	return &parser, err
-}
-
-func NewNagiosParser() (Parser, error) {
-	return &nagios.NagiosParser{}, nil
-}
-
-func NewInfluxParser() (Parser, error) {
-	handler := influx.NewMetricHandler()
-	return influx.NewParser(handler), nil
-}
-
-func NewInfluxUpstreamParser() (Parser, error) {
-	return influx_upstream.NewParser(), nil
-}
-
-func NewGraphiteParser(
-	separator string,
-	templates []string,
-	defaultTags map[string]string,
-) (Parser, error) {
-	return graphite.NewGraphiteParser(separator, templates, defaultTags)
-}
-
-func NewValueParser(
-	metricName string,
-	dataType string,
-	fieldName string,
-	defaultTags map[string]string,
-) (Parser, error) {
-	return value.NewValueParser(metricName, dataType, fieldName, defaultTags), nil
-}
-
-func NewCollectdParser(
-	authFile string,
-	securityLevel string,
-	typesDB []string,
-	split string,
-) (Parser, error) {
-	return collectd.NewCollectdParser(authFile, securityLevel, typesDB, split)
-}
-
-func NewDropwizardParser(
-	metricRegistryPath string,
-	timePath string,
-	timeFormat string,
-	tagsPath string,
-	tagPathsMap map[string]string,
-	defaultTags map[string]string,
-	separator string,
-	templates []string,
-
-) (Parser, error) {
-	parser := dropwizard.NewParser()
-	parser.MetricRegistryPath = metricRegistryPath
-	parser.TimePath = timePath
-	parser.TimeFormat = timeFormat
-	parser.TagsPath = tagsPath
-	parser.TagPathsMap = tagPathsMap
-	parser.DefaultTags = defaultTags
-	err := parser.SetTemplates(separator, templates)
-	if err != nil {
-		return nil, err
-	}
-	return parser, err
-}
-
-// NewLogFmtParser returns a logfmt parser with the default options.
-func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, error) {
-	return logfmt.NewParser(metricName, defaultTags), nil
-}
-
-func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
-	return wavefront.NewWavefrontParser(defaultTags), nil
-}
-
-func NewFormUrlencodedParser(
-	metricName string,
-	defaultTags map[string]string,
-	tagKeys []string,
-) (Parser, error) {
-	return &form_urlencoded.Parser{
-		MetricName:  metricName,
-		DefaultTags: defaultTags,
-		TagKeys:     tagKeys,
-	}, nil
-}
-
-func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (Parser, error) {
-	return &prometheus.Parser{
-		DefaultTags:     defaultTags,
-		IgnoreTimestamp: ignoreTimestamp,
-	}, nil
-}
-
-func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
-	return &prometheusremotewrite.Parser{
-		DefaultTags: defaultTags,
-	}, nil
-}
-
-func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config {
-	// Convert the config formats which is a one-to-one copy
-	configs := make([]xpath.Config, 0, len(cfgs))
-	for _, cfg := range cfgs {
-		config := xpath.Config(cfg)
-		config.MetricDefaultName = metricName
-		configs = append(configs, config)
-	}
-	return configs
-}
-
-func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
-	configs := make([]json_v2.Config, len(jsonv2config))
-	for i, cfg := range jsonv2config {
-		configs[i].MeasurementName = cfg.MeasurementName
-		configs[i].MeasurementNamePath = cfg.MeasurementNamePath
-
-		configs[i].TimestampPath = cfg.TimestampPath
-		configs[i].TimestampFormat = cfg.TimestampFormat
-		configs[i].TimestampTimezone = cfg.TimestampTimezone
-
-		configs[i].Fields = cfg.Fields
-		configs[i].Tags = cfg.Tags
-
-		configs[i].JSONObjects = cfg.JSONObjects
-	}
-	return &json_v2.Parser{
-		Configs: configs,
-	}, nil
 }

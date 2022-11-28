@@ -1,11 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package logzio
 
 import (
 	"bytes"
 	"compress/gzip"
+	_ "embed"
 	"encoding/json"
 	"fmt"
-
 	"net/http"
 	"time"
 
@@ -15,11 +16,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	defaultLogzioURL = "https://listener.logz.io:8071"
-
-	logzioDescription = "Send aggregate metrics to Logz.io"
-	logzioType        = "telegraf"
+	logzioType       = "telegraf"
 )
 
 type Logzio struct {
@@ -41,6 +43,10 @@ type Metric struct {
 	Dimensions map[string]string      `json:"dimensions"`
 	Time       time.Time              `json:"@timestamp"`
 	Type       string                 `json:"type"`
+}
+
+func (*Logzio) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect to the Output

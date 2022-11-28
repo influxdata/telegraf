@@ -1,19 +1,26 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package snmp_trap
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/gosnmp/gosnmp"
 )
+
+var defaultTimeout = config.Duration(time.Second * 5)
+
+//go:embed sample.conf
+var sampleConfig string
 
 type translator interface {
 	lookup(oid string) (snmp.MibEntry, error)
@@ -49,6 +56,10 @@ type SnmpTrap struct {
 	translator translator //nolint:revive
 }
 
+func (*SnmpTrap) SampleConfig() string {
+	return sampleConfig
+}
+
 func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
@@ -58,6 +69,7 @@ func init() {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
 			ServiceAddress: "udp://:162",
+			Timeout:        defaultTimeout,
 			Path:           []string{"/usr/share/snmp/mibs"},
 			Version:        "2c",
 		}
@@ -77,7 +89,7 @@ func (s *SnmpTrap) Init() error {
 			return err
 		}
 	case "netsnmp":
-		s.translator = newNetsnmpTranslator()
+		s.translator = newNetsnmpTranslator(s.Timeout)
 	default:
 		return fmt.Errorf("invalid translator value")
 	}

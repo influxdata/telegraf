@@ -3,67 +3,99 @@
 The prometheus input plugin gathers metrics from HTTP servers exposing metrics
 in Prometheus format.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many prometheus clients
 [[inputs.prometheus]]
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
-  
-  ## Metric version controls the mapping from Prometheus metrics into
-  ## Telegraf metrics.  When using the prometheus_client output, use the same
-  ## value in both plugins to ensure metrics are round-tripped without
-  ## modification.
-  ##
-  ##   example: metric_version = 1; 
-  ##            metric_version = 2; recommended version
+
+  ## Metric version controls the mapping from Prometheus metrics into Telegraf metrics.
+  ## See "Metric Format Configuration" in plugins/inputs/prometheus/README.md for details.
+  ## Valid options: 1, 2
   # metric_version = 1
-  
+
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "url"
-  
+
   ## Whether the timestamp of the scraped metrics will be ignored.
   ## If set to true, the gather time will be used.
   # ignore_timestamp = false
-  
+
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
-  
+
   ## Kubernetes config file to create client from.
   # kube_config = "/path/to/kubernetes.config"
-  
-  ## Scrape Kubernetes pods for the following prometheus annotations:
-  ## - prometheus.io/scrape: Enable scraping for this pod
-  ## - prometheus.io/scheme: If the metrics endpoint is secured then you will need to
-  ##     set this to 'https' & most likely set the tls config.
-  ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
+
+  ## Scrape Pods
+  ## Enable scraping of k8s pods. Further settings as to which pods to scape
+  ## are determiend by the 'method' option below. When enabled, the default is
+  ## to use annotations to determine whether to scrape or not.
+  # monitor_kubernetes_pods = false
+
+  ## Scrape Pods Method
+  ## annotations: default, looks for specific pod annotations documented below
+  ## settings: only look for pods matching the settings provided, not
+  ##   annotations
+  ## settings+annotations: looks at pods that match annotations using the user
+  ##   defined settings
+  # monitor_kubernetes_pods_method = "annotations"
+
+  ## Scrape Pods 'annotations' method options
+  ## If set method is set to 'annotations' or 'settings+annotations', these
+  ## annotation flags are looked for:
+  ## - prometheus.io/scrape: Required to enable scraping for this pod. Can also
+  ##     use 'prometheus.io/scrape=false' annotation to opt-out entirely.
+  ## - prometheus.io/scheme: If the metrics endpoint is secured then you will
+  ##     need to set this to 'https' & most likely set the tls config
+  ## - prometheus.io/path: If the metrics path is not /metrics, define it with
+  ##     this annotation
   ## - prometheus.io/port: If port is not 9102 use this annotation
-  # monitor_kubernetes_pods = true
-  
+
+  ## Scrape Pods 'settings' method options
+  ## When using 'settings' or 'settings+annotations', the default values for
+  ## annotations can be modified using with the following options:
+  # monitor_kubernetes_pods_scheme = "http"
+  # monitor_kubernetes_pods_port = "9102"
+  # monitor_kubernetes_pods_path = "/metrics"
+
   ## Get the list of pods to scrape with either the scope of
   ## - cluster: the kubernetes watch api (default, no need to specify)
   ## - node: the local cadvisor api; for scalability. Note that the config node_ip or the environment variable NODE_IP must be set to the host IP.
   # pod_scrape_scope = "cluster"
-  
+
   ## Only for node scrape scope: node IP of the node that telegraf is running on.
   ## Either this config or the environment variable NODE_IP must be set.
   # node_ip = "10.180.1.1"
- 
+
   ## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping.
   ## Default is 60 seconds.
   # pod_scrape_interval = 60
-  
+
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
+  ## The name of the label for the pod that is being scraped.
+  ## Default is 'namespace' but this can conflict with metrics that have the label 'namespace'
+  # pod_namespace_label_name = "namespace"
   # label selector to target pods which have the label
   # kubernetes_label_selector = "env=dev,app=nginx"
   # field selector to target pods
   # eg. To scrape pods on a specific node
   # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
 
-  # cache refresh interval to set the interval for re-sync of pods list. 
+  # cache refresh interval to set the interval for re-sync of pods list.
   # Default is 60 minutes.
   # cache_refresh_interval = 60
 
@@ -79,55 +111,107 @@ in Prometheus format.
   #     url = 'http://{{if ne .ServiceAddress ""}}{{.ServiceAddress}}{{else}}{{.Address}}{{end}}:{{.ServicePort}}/{{with .ServiceMeta.metrics_path}}{{.}}{{else}}metrics{{end}}'
   #     [inputs.prometheus.consul.query.tags]
   #       host = "{{.Node}}"
-  
+
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
   ## OR
   # bearer_token_string = "abc_123"
-  
+
   ## HTTP Basic Authentication username and password. ('bearer_token' and
   ## 'bearer_token_string' take priority)
   # username = ""
   # password = ""
-  
+
+  ## Optional custom HTTP headers
+  # headers = {"X-Special-Header" = "Special-Value"}
+
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
-  
+
+  ## HTTP Proxy support
+  # use_system_proxy = false
+  # http_proxy_url = ""
+
   ## Optional TLS Config
   # tls_ca = /path/to/cafile
   # tls_cert = /path/to/certfile
   # tls_key = /path/to/keyfile
-  
+
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
 
-`urls` can contain a unix socket as well. If a different path is required (default is `/metrics` for both http[s] and unix) for a unix socket, add `path` as a query parameter as follows: `unix:///var/run/prometheus.sock?path=/custom/metrics`
+`urls` can contain a unix socket as well. If a different path is required
+(default is `/metrics` for both http[s] and unix) for a unix socket, add `path`
+as a query parameter as follows:
+`unix:///var/run/prometheus.sock?path=/custom/metrics`
+
+### Metric Format Configuration
+
+The `metric_version` setting controls how telegraf translates prometheus format
+metrics to telegraf metrics. There are two options.
+
+With `metric_version = 1`, the prometheus metric name becomes the telegraf
+metric name. Prometheus labels become telegraf tags. Prometheus values become
+telegraf field values. The fields have generic keys based on the type of the
+prometheus metric. This option produces metrics that are dense (not
+sparse). Denseness is a useful property for some outputs, including those that
+are more efficient with row-oriented data.
+
+`metric_version = 2` differs in a few ways. The prometheus metric name becomes a
+telegraf field key. Metrics hold more than one value and the field keys aren't
+generic. The resulting metrics are sparse, but for some outputs they may be
+easier to process or query, including those that are more efficient with
+column-oriented data. The telegraf metric name is the same for all metrics in
+the input instance. It can be set with the `name_override` setting and defaults
+to "prometheus". To have multiple metric names, you can use multiple instances
+of the plugin, each with its own `name_override`.
+
+`metric_version = 2` uses the same histogram format as the [histogram
+aggregator](../../aggregators/histogram/README.md)
+
+The Example Outputs sections shows examples for both options.
+
+When using this plugin along with the prometheus_client output, use the same
+option in both to ensure metrics are round-tripped without modification.
 
 ### Kubernetes Service Discovery
 
-URLs listed in the `kubernetes_services` parameter will be expanded
-by looking up all A records assigned to the hostname as described in
-[Kubernetes DNS service discovery](https://kubernetes.io/docs/concepts/services-networking/service/#dns).
+URLs listed in the `kubernetes_services` parameter will be expanded by looking
+up all A records assigned to the hostname as described in [Kubernetes DNS
+service discovery][serv-disc].
 
-This method can be used to locate all
-[Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services).
+This method can be used to locate all [Kubernetes headless services][headless].
+
+[serv-disc]: https://kubernetes.io/docs/concepts/services-networking/service/#dns
+
+[headless]: https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
 
 ### Kubernetes scraping
 
-Enabling this option will allow the plugin to scrape for prometheus annotation on Kubernetes
-pods. Currently, you can run this plugin in your kubernetes cluster, or we use the kubeconfig
-file to determine where to monitor.
-Currently the following annotation are supported:
+Enabling this option will allow the plugin to scrape for prometheus annotation
+on Kubernetes pods. Currently, you can run this plugin in your kubernetes
+cluster, or we use the kubeconfig file to determine where to monitor.  Currently
+the following annotation are supported:
 
 * `prometheus.io/scrape` Enable scraping for this pod.
 * `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
 * `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
 * `prometheus.io/port` Used to override the port. (default 9102)
 
-Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
+Using the `monitor_kubernetes_pods_namespace` option allows you to limit which
+pods you are scraping.
 
-Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that either `node_ip` must be specified in the config or the environment variable `NODE_IP` must be set to the host IP. ThisThe latter can be done in the yaml of the pod running telegraf:
+The setting `pod_namespace_label_name` allows you to change the label name for
+the namespace of the pod you are scraping. The default is `namespace`, but this
+will overwrite a label with the name `namespace` from a metric scraped.
+
+Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which
+will scrape pods only in the node that telegraf is running. It will fetch the
+pod list locally from the node's kubelet. This will require running Telegraf in
+every node of the cluster. Note that either `node_ip` must be specified in the
+config or the environment variable `NODE_IP` must be set to the host IP. ThisThe
+latter can be done in the yaml of the pod running telegraf:
 
 ```sh
 env:
@@ -137,11 +221,15 @@ env:
         fieldPath: status.hostIP
  ```
 
-If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated. If not specified, the default is 60 seconds.
+If using node level scrape scope, `pod_scrape_interval` specifies how often (in
+seconds) the pod list for scraping should updated. If not specified, the default
+is 60 seconds.
 
-The pod running telegraf will need to have the proper rbac configuration in order to be allowed to call the k8s api to discover and watch pods in the cluster.
-A typical configuration will create a service account, a cluster role with the appropriate rules and a cluster role binding to tie the cluster role to the service account.
-Example of configuration for cluster level discovery:
+The pod running telegraf will need to have the proper rbac configuration in
+order to be allowed to call the k8s api to discover and watch pods in the
+cluster.  A typical configuration will create a service account, a cluster role
+with the appropriate rules and a cluster role binding to tie the cluster role to
+the service account.  Example of configuration for cluster level discovery:
 
 ```yaml
 ---
@@ -181,10 +269,11 @@ metadata:
 
 ### Consul Service Discovery
 
-Enabling this option and configuring consul `agent` url will allow the plugin to query
-consul catalog for available services. Using `query_interval` the plugin will periodically
-query the consul catalog for services with `name` and `tag` and refresh the list of scraped urls.
-It can use the information from the catalog to build the scraped url and additional tags from a template.
+Enabling this option and configuring consul `agent` url will allow the plugin to
+query consul catalog for available services. Using `query_interval` the plugin
+will periodically query the consul catalog for services with `name` and `tag`
+and refresh the list of scraped urls.  It can use the information from the
+catalog to build the scraped url and additional tags from a template.
 
 Multiple consul queries can be configured, each for different service.
 The following example fields can be used in url or tag templates:

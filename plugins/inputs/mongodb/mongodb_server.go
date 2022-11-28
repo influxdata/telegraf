@@ -3,16 +3,17 @@ package mongodb
 import (
 	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/bsonx"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Server struct {
@@ -35,6 +36,13 @@ type oplogEntry struct {
 
 func IsAuthorization(err error) bool {
 	return strings.Contains(err.Error(), "not authorized")
+}
+
+func (s *Server) ping() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	return s.client.Ping(ctx, nil)
 }
 
 func (s *Server) authLog(err error) {
@@ -134,7 +142,7 @@ func poolStatsCommand(version string) (string, error) {
 		return "", err
 	}
 
-	if major == 5 {
+	if major >= 5 {
 		return "connPoolStats", nil
 	}
 	return "shardConnPoolStats", nil
@@ -229,8 +237,11 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	results := &ColStats{}
 	for _, dbName := range names {
 		if stringInSlice(dbName, colStatsDbs) || len(colStatsDbs) == 0 {
+			// skip views as they fail on collStats below
+			filter := bson.M{"type": bson.M{"$in": bson.A{"collection", "timeseries"}}}
+
 			var colls []string
-			colls, err = s.client.Database(dbName).ListCollectionNames(context.Background(), bson.D{})
+			colls, err = s.client.Database(dbName).ListCollectionNames(context.Background(), filter)
 			if err != nil {
 				s.Log.Errorf("Error getting collection names: %s", err.Error())
 				continue
@@ -259,7 +270,14 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, gatherTopStat bool, colStatsDbs []string) error {
+func (s *Server) gatherData(
+	acc telegraf.Accumulator,
+	gatherClusterStatus bool,
+	gatherDbStats bool,
+	gatherColStats bool,
+	gatherTopStat bool,
+	colStatsDbs []string,
+) error {
 	serverStatus, err := s.gatherServerStatus()
 	if err != nil {
 		return err

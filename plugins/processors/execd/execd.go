@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package execd
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -11,19 +13,21 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/process"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Execd struct {
 	Command      []string        `toml:"command"`
+	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger
 
-	parserConfig     *parsers.Config
-	parser           parsers.Parser
+	parser           telegraf.Parser
 	serializerConfig *serializers.Config
 	serializer       serializers.Serializer
 	acc              telegraf.Accumulator
@@ -33,28 +37,29 @@ type Execd struct {
 func New() *Execd {
 	return &Execd{
 		RestartDelay: config.Duration(10 * time.Second),
-		parserConfig: &parsers.Config{
-			DataFormat: "influx",
-		},
 		serializerConfig: &serializers.Config{
 			DataFormat: "influx",
 		},
 	}
 }
 
+func (e *Execd) SetParser(p telegraf.Parser) {
+	e.parser = p
+}
+
+func (*Execd) SampleConfig() string {
+	return sampleConfig
+}
+
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	var err error
-	e.parser, err = parsers.NewParser(e.parserConfig)
-	if err != nil {
-		return fmt.Errorf("error creating parser: %w", err)
-	}
 	e.serializer, err = serializers.NewSerializer(e.serializerConfig)
 	if err != nil {
 		return fmt.Errorf("error creating serializer: %w", err)
 	}
 	e.acc = acc
 
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}
@@ -95,9 +100,8 @@ func (e *Execd) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Execd) Stop() error {
+func (e *Execd) Stop() {
 	e.process.Stop()
-	return nil
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {

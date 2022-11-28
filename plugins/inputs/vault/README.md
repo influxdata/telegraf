@@ -1,12 +1,23 @@
 # Hashicorp Vault Input Plugin
 
-The Vault plugin could grab metrics from every Vault agent of the cluster. Telegraf may be present in every node and connect to the agent locally. In this case should be something like `http://127.0.0.1:8200`.
+The Vault plugin could grab metrics from every Vault agent of the
+cluster. Telegraf may be present in every node and connect to the agent
+locally. In this case should be something like `http://127.0.0.1:8200`.
 
 > Tested on vault 1.8.5
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from the Vault API
 [[inputs.vault]]
   ## URL for the Vault agent
@@ -30,7 +41,8 @@ The Vault plugin could grab metrics from every Vault agent of the cluster. Teleg
 
 ## Metrics
 
-For a more deep understanding of Vault monitoring, please have a look at the following Vault documentation:
+For a more deep understanding of Vault monitoring, please have a look at the
+following Vault documentation:
 
 - [https://www.vaultproject.io/docs/internals/telemetry](https://www.vaultproject.io/docs/internals/telemetry)
 - [https://learn.hashicorp.com/tutorials/vault/monitor-telemetry-audit-splunk?in=vault/monitoring](https://learn.hashicorp.com/tutorials/vault/monitor-telemetry-audit-splunk?in=vault/monitoring)

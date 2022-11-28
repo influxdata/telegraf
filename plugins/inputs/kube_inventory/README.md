@@ -1,6 +1,7 @@
 # Kubernetes Inventory Input Plugin
 
-This plugin generates metrics derived from the state of the following Kubernetes resources:
+This plugin generates metrics derived from the state of the following
+Kubernetes resources:
 
 - daemonsets
 - deployments
@@ -13,9 +14,9 @@ This plugin generates metrics derived from the state of the following Kubernetes
 - services
 - statefulsets
 
-Kubernetes is a fast moving project, with a new minor release every 3 months. As
-such, we will aim to maintain support only for versions that are supported by
-the major cloud providers; this is roughly 4 release / 2 years.
+Kubernetes is a fast moving project, with a new minor release every 3 months.
+As such, we will aim to maintain support only for versions that are supported
+by the major cloud providers; this is roughly 4 release / 2 years.
 
 **This plugin supports Kubernetes 1.11 and later.**
 
@@ -29,11 +30,21 @@ avoid cardinality issues:
 - Write to a database with an appropriate [retention policy][].
 - Consider using the [Time Series Index][tsi].
 - Monitor your databases [series cardinality][].
-- Consult the [InfluxDB documentation][influx-docs] for the most up-to-date techniques.
+- Consult the [InfluxDB documentation][influx-docs] for the most up-to-date
+  techniques.
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from the Kubernetes api
 [[inputs.kube_inventory]]
   ## URL for the Kubernetes API
@@ -43,10 +54,15 @@ avoid cardinality issues:
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ##
   ## If both of these are empty, we'll use the default serviceaccount:
   ## at: /run/secrets/kubernetes.io/serviceaccount/token
-  # bearer_token = "/path/to/bearer/token"
+  ##
+  ## To auto-refresh the token, please use a file with the bearer_token option.
+  ## If given a string, Telegraf cannot refresh the token periodically.
+  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
+  ## deprecated in 1.24.0; use bearer_token with a file
   # bearer_token_string = "abc_123"
 
   ## Set response_timeout (default 5 seconds)
@@ -54,8 +70,9 @@ avoid cardinality issues:
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
-  ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress",
+  ## "nodes", "persistentvolumes", "persistentvolumeclaims", "pods", "services",
+  ## "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -86,7 +103,13 @@ avoid cardinality issues:
 
 ## Kubernetes Permissions
 
-If using [RBAC authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), you will need to create a cluster role to list "persistentvolumes" and "nodes". You will then need to make an [aggregated ClusterRole](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles) that will eventually be bound to a user or group.
+If using [RBAC authorization][rbac], you will need to create a cluster role to
+list "persistentvolumes" and "nodes". You will then need to make an [aggregated
+ClusterRole][agg] that will eventually be bound to a user or group.
+
+[rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+
+[agg]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
 
 ```yaml
 ---
@@ -115,7 +138,8 @@ aggregationRule:
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
 
-Bind the newly created aggregated ClusterRole with the following config file, updating the subjects as needed.
+Bind the newly created aggregated ClusterRole with the following config file,
+updating the subjects as needed.
 
 ```yaml
 ---
@@ -135,13 +159,13 @@ subjects:
 
 ## Quickstart in k3s
 
-When monitoring [k3s](https://k3s.io) server instances one can re-use already generated administration token.
-This is less secure than using the more restrictive dedicated telegraf user but more convienient to set up.
+When monitoring [k3s](https://k3s.io) server instances one can re-use already
+generated administration token. This is less secure than using the more
+restrictive dedicated telegraf user but more convienient to set up.
 
 ```console
-# an empty token will make telegraf use the client cert/key files instead
-$ touch /run/telegraf-kubernetes-token
 # replace `telegraf` with the user the telegraf process is running as
+$ install -o telegraf -m400 /var/lib/rancher/k3s/server/token /run/telegraf-kubernetes-token
 $ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.crt /run/telegraf-kubernetes-cert
 $ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.key /run/telegraf-kubernetes-key
 ```
@@ -294,7 +318,8 @@ tls_key = "/run/telegraf-kubernetes-key"
 
 ### pv `phase_type`
 
-The persistentvolume "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
+The persistentvolume "phase" is saved in the `phase` tag with a correlated
+numeric field called `phase_type` corresponding with that tag value.
 
 | Tag value | Corresponding field value |
 | --------- | ------------------------- |
@@ -307,7 +332,8 @@ The persistentvolume "phase" is saved in the `phase` tag with a correlated numer
 
 ### pvc `phase_type`
 
-The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
+The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated
+numeric field called `phase_type` corresponding with that tag value.
 
 | Tag value | Corresponding field value |
 | --------- | ------------------------- |
@@ -336,4 +362,3 @@ kubernetes_statefulset,namespace=default,selector_select1=s1,statefulset_name=et
 [tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/
-[k8s-telegraf]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/

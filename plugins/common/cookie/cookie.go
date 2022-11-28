@@ -54,11 +54,6 @@ func (c *CookieAuthConfig) initializeClient(client *http.Client) (err error) {
 		c.Method = http.MethodPost
 	}
 
-	// add cookie jar to HTTP client
-	if c.client.Jar, err = cookiejar.New(nil); err != nil {
-		return err
-	}
-
 	return c.auth()
 }
 
@@ -77,10 +72,19 @@ func (c *CookieAuthConfig) authRenewal(ctx context.Context, ticker *clockutil.Ti
 }
 
 func (c *CookieAuthConfig) auth() error {
-	var body io.ReadCloser
+	var err error
+
+	// everytime we auth we clear out the cookie jar to ensure that the cookie
+	// is not used as a part of re-authing. The only way to empty or reset is
+	// to create a new cookie jar.
+	c.client.Jar, err = cookiejar.New(nil)
+	if err != nil {
+		return err
+	}
+
+	var body io.Reader
 	if c.Body != "" {
-		body = io.NopCloser(strings.NewReader(c.Body))
-		defer body.Close()
+		body = strings.NewReader(c.Body)
 	}
 
 	req, err := http.NewRequest(c.Method, c.URL, body)
@@ -106,14 +110,17 @@ func (c *CookieAuthConfig) auth() error {
 	}
 	defer resp.Body.Close()
 
-	if _, err = io.Copy(io.Discard, resp.Body); err != nil {
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("cookie auth renewal received status code: %v (%v)",
+	// check either 200 or 201 as some devices may return either
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("cookie auth renewal received status code: %v (%v) [%v]",
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
+			string(respBody),
 		)
 	}
 

@@ -3,6 +3,7 @@ package cloudwatch
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -12,15 +13,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
-	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
+	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 type mockGatherCloudWatchClient struct{}
 
-func (m *mockGatherCloudWatchClient) ListMetrics(_ context.Context, params *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
+func (m *mockGatherCloudWatchClient) ListMetrics(
+	_ context.Context,
+	params *cwClient.ListMetricsInput,
+	_ ...func(*cwClient.Options),
+) (*cwClient.ListMetricsOutput, error) {
 	return &cwClient.ListMetricsOutput{
 		Metrics: []types.Metric{
 			{
@@ -37,7 +42,11 @@ func (m *mockGatherCloudWatchClient) ListMetrics(_ context.Context, params *cwCl
 	}, nil
 }
 
-func (m *mockGatherCloudWatchClient) GetMetricData(_ context.Context, params *cwClient.GetMetricDataInput, _ ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
+func (m *mockGatherCloudWatchClient) GetMetricData(
+	_ context.Context,
+	params *cwClient.GetMetricDataInput,
+	_ ...func(*cwClient.Options),
+) (*cwClient.GetMetricDataOutput, error) {
 	return &cwClient.GetMetricDataOutput{
 		MetricDataResults: []types.MetricDataResult{
 			{
@@ -105,6 +114,8 @@ func TestGather(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
+		BatchSize: 500,
+		Log:       testutil.Logger{},
 	}
 
 	var acc testutil.Accumulator
@@ -136,6 +147,8 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 		Delay:      internalDuration,
 		Period:     internalDuration,
 		RateLimit:  200,
+		BatchSize:  500,
+		Log:        testutil.Logger{},
 	}
 
 	var acc testutil.Accumulator
@@ -150,7 +163,11 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ context.Context, params *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) ListMetrics(
+	_ context.Context,
+	_ *cwClient.ListMetricsInput,
+	_ ...func(*cwClient.Options),
+) (*cwClient.ListMetricsOutput, error) {
 	metrics := []types.Metric{}
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
@@ -197,7 +214,11 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ context.Context, param
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ context.Context, params *cwClient.GetMetricDataInput, _ ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) GetMetricData(
+	_ context.Context,
+	_ *cwClient.GetMetricDataInput,
+	_ ...func(*cwClient.Options),
+) (*cwClient.GetMetricDataOutput, error) {
 	return nil, nil
 }
 
@@ -212,6 +233,7 @@ func TestSelectMetrics(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
+		BatchSize: 500,
 		Metrics: []*Metric{
 			{
 				MetricNames: []string{"Latency", "RequestCount"},
@@ -227,6 +249,7 @@ func TestSelectMetrics(t *testing.T) {
 				},
 			},
 		},
+		Log: testutil.Logger{},
 	}
 	require.NoError(t, c.Init())
 	c.client = &mockSelectMetricsCloudWatchClient{}
@@ -257,6 +280,8 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Namespaces: []string{namespace},
 		Delay:      internalDuration,
 		Period:     internalDuration,
+		BatchSize:  500,
+		Log:        testutil.Logger{},
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -296,6 +321,8 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Namespaces: []string{namespace},
 		Delay:      internalDuration,
 		Period:     internalDuration,
+		BatchSize:  500,
+		Log:        testutil.Logger{},
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -335,6 +362,8 @@ func TestUpdateWindow(t *testing.T) {
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
+		BatchSize: 500,
+		Log:       testutil.Logger{},
 	}
 
 	now := time.Now()
@@ -360,19 +389,31 @@ func TestUpdateWindow(t *testing.T) {
 
 func TestProxyFunction(t *testing.T) {
 	c := &CloudWatch{
-		HTTPProxy: proxy.HTTPProxy{HTTPProxyURL: "http://www.penguins.com"},
+		HTTPProxy: proxy.HTTPProxy{
+			HTTPProxyURL: "http://www.penguins.com",
+		},
+		BatchSize: 500,
+		Log:       testutil.Logger{},
 	}
 
 	proxyFunction, err := c.HTTPProxy.Proxy()
 	require.NoError(t, err)
 
-	proxyResult, err := proxyFunction(&http.Request{})
+	u, err := url.Parse("https://monitoring.us-west-1.amazonaws.com/")
+	require.NoError(t, err)
+
+	proxyResult, err := proxyFunction(&http.Request{URL: u})
 	require.NoError(t, err)
 	require.Equal(t, "www.penguins.com", proxyResult.Host)
 }
 
 func TestCombineNamespaces(t *testing.T) {
-	c := &CloudWatch{Namespace: "AWS/ELB", Namespaces: []string{"AWS/EC2", "AWS/Billing"}}
+	c := &CloudWatch{
+		Namespace:  "AWS/ELB",
+		Namespaces: []string{"AWS/EC2", "AWS/Billing"},
+		BatchSize:  500,
+		Log:        testutil.Logger{},
+	}
 
 	require.NoError(t, c.Init())
 	require.Equal(t, []string{"AWS/EC2", "AWS/Billing", "AWS/ELB"}, c.Namespaces)

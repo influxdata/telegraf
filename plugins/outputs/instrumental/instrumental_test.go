@@ -79,7 +79,9 @@ func TestWrite(t *testing.T) {
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:8000")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:8000")
+	require.NoError(t, err)
+
 	go func() {
 		defer wg.Done()
 		conn, _ := tcpServer.Accept()

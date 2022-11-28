@@ -465,7 +465,7 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 			totalCount:          0,
 			pageSize:            0,
 			pageNumber:          0,
-			expectedErrorString: `Didn't find root key "LoadBalancers" in discovery response`,
+			expectedErrorString: `didn't find root key "LoadBalancers" in discovery response`,
 		},
 		{
 			name:    "1 object discovered",

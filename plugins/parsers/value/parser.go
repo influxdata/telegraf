@@ -9,16 +9,17 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-type ValueParser struct {
-	MetricName  string
-	DataType    string
-	DefaultTags map[string]string
-	FieldName   string
+type Parser struct {
+	DataType    string            `toml:"data_type"`
+	FieldName   string            `toml:"value_field_name"`
+	MetricName  string            `toml:"-"`
+	DefaultTags map[string]string `toml:"-"`
 }
 
-func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	vStr := string(bytes.TrimSpace(bytes.Trim(buf, "\x00")))
 
 	// unless it's a string, separate out any fields in the buffer,
@@ -54,7 +55,7 @@ func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return []telegraf.Metric{m}, nil
 }
 
-func (v *ValueParser) ParseLine(line string) (telegraf.Metric, error) {
+func (v *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := v.Parse([]byte(line))
 
 	if err != nil {
@@ -68,19 +69,32 @@ func (v *ValueParser) ParseLine(line string) (telegraf.Metric, error) {
 	return metrics[0], nil
 }
 
-func (v *ValueParser) SetDefaultTags(tags map[string]string) {
+func (v *Parser) SetDefaultTags(tags map[string]string) {
 	v.DefaultTags = tags
 }
 
-func NewValueParser(metricName, dataType, fieldName string, defaultTags map[string]string) *ValueParser {
-	if fieldName == "" {
-		fieldName = "value"
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (v *Parser) InitFromConfig(config *parsers.Config) error {
+	v.MetricName = config.MetricName
+	v.DefaultTags = config.DefaultTags
+	return v.Init()
+}
+
+func (v *Parser) Init() error {
+	if v.FieldName == "" {
+		v.FieldName = "value"
 	}
 
-	return &ValueParser{
-		MetricName:  metricName,
-		DataType:    dataType,
-		DefaultTags: defaultTags,
-		FieldName:   fieldName,
-	}
+	return nil
+}
+
+func init() {
+	parsers.Add("value",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				FieldName:  "value",
+				MetricName: defaultMetricName,
+			}
+		},
+	)
 }

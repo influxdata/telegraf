@@ -1,6 +1,8 @@
 # TopK Processor Plugin
 
-The TopK processor plugin is a filter designed to get the top series over a period of time. It can be tweaked to calculate the top metrics via different aggregation functions.
+The TopK processor plugin is a filter designed to get the top series over a
+period of time. It can be tweaked to calculate the top metrics via different
+aggregation functions.
 
 This processor goes through these steps when processing a batch of metrics:
 
@@ -15,9 +17,18 @@ Notes:
 * Depending on the amount of metrics on each  bucket, more than `K` series may be returned
 * If a measurement does not have one of the selected fields, it is dropped from the aggregation
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Print all metrics that pass through this filter.
 [[processors.topk]]
   ## How many seconds between aggregations
@@ -77,11 +88,14 @@ Notes:
 
 ### Tags
 
-This processor does not add tags by default. But the setting `add_groupby_tag` will add a tag if set to anything other than ""
+This processor does not add tags by default. But the setting `add_groupby_tag`
+will add a tag if set to anything other than ""
 
 ### Fields
 
-This processor does not add fields by default. But the settings `add_rank_fields` and `add_aggregation_fields` will add one or several fields if set to anything other than ""
+This processor does not add fields by default. But the settings
+`add_rank_fields` and `add_aggregation_fields` will add one or several fields if
+set to anything other than ""
 
 ### Example
 

@@ -1,0 +1,243 @@
+[
+  {
+    "namespace": "Microsoft.Test/type1",
+    "resourceregion": "eastus",
+    "value": [
+      {
+        "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1/providers/Microsoft.Insights/metrics/metric1",
+        "name": {
+          "localizedValue": "metric1"
+        },
+        "unit": "Count",
+        "timeseries": [
+          {
+            "data": [
+              {
+                "timeStamp": "2022-02-22T22:00:00Z",
+                "total": 1.0,
+                "maximum": 1.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:01:00Z",
+                "total": 2.0,
+                "maximum": 2.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:02:00Z",
+                "total": 2.5,
+                "maximum": 2.5
+              },
+              {
+                "timeStamp": "2022-02-22T22:58:00Z",
+                "total": 2.0,
+                "maximum": 2.5
+              },
+              {
+                "timeStamp": "2022-02-22T22:59:00Z",
+                "total": 5.0,
+                "maximum": 5.0
+              }
+            ]
+          }
+        ],
+        "errorCode": "Success"
+      },
+      {
+        "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1/providers/Microsoft.Insights/metrics/metric2",
+        "name": {
+          "localizedValue": "metric2"
+        },
+        "unit": "Count",
+        "timeseries": [
+          {
+            "data": [
+              {
+                "timeStamp": "2022-02-22T22:00:00Z",
+                "total": 2.0,
+                "maximum": 2.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:01:00Z",
+                "total": 1.0,
+                "maximum": 2.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:02:00Z",
+                "total": 1.0,
+                "maximum": 2.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:58:00Z",
+                "total": 2.5,
+                "maximum": 2.5
+              },
+              {
+                "timeStamp": "2022-02-22T22:59:00Z",
+                "total": 2.5,
+                "maximum": 2.5
+              }
+            ]
+          }
+        ],
+        "errorCode": "Success"
+      }
+    ]
+  },
+  {
+    "namespace": "Microsoft.Test/type2",
+    "resourceregion": "eastus",
+    "value": [
+      {
+        "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2/providers/Microsoft.Insights/metrics/metric1",
+        "name": {
+          "localizedValue": "metric1"
+        },
+        "unit": "Count",
+        "timeseries": [
+          {
+            "data": [
+              {
+                "timeStamp": "2022-02-22T22:00:00Z",
+                "total": 5.0,
+                "minimum": 5.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:01:00Z",
+                "total": 3.0,
+                "minimum": 3.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:02:00Z",
+                "total": 5.0,
+                "minimum": 3.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:58:00Z",
+                "total": 2.5,
+                "minimum": 2.5
+              },
+              {
+                "timeStamp": "2022-02-22T22:59:00Z",
+                "total": 5.0,
+                "minimum": 2.5
+              }
+            ]
+          }
+        ],
+        "errorCode": "Success"
+      }
+    ]
+  },
+  {
+    "namespace": "Microsoft.Test/type1",
+    "resourceregion": "eastus",
+    "value": [
+      {
+        "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3/providers/Microsoft.Insights/metrics/metric1",
+        "name": {
+          "localizedValue": "metric1"
+        },
+        "unit": "Bytes",
+        "timeseries": [
+          {
+            "data": [
+              {
+                "timeStamp": "2022-02-22T22:00:00Z",
+                "total": 5.0,
+                "minimum": 5.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:01:00Z",
+                "total": 3.0,
+                "minimum": 3.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:02:00Z",
+                "total": 5.0,
+                "minimum": 3.0
+              },
+              {
+                "timeStamp": "2022-02-22T22:58:00Z",
+                "total": 2.5,
+                "minimum": 2.5
+              },
+              {
+                "timeStamp": "2022-02-22T22:59:00Z"
+              }
+            ]
+          }
+        ],
+        "errorCode": "Success"
+      }
+    ]
+  },
+  {
+    "namespace": "Microsoft.Test/type2",
+    "resourceregion": "eastus",
+    "value": [
+      {
+        "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource4/providers/Microsoft.Insights/metrics/metric1",
+        "name": {
+          "localizedValue": "metric1"
+        },
+        "unit": "Bytes",
+        "timeseries": [
+          {
+            "data": [
+              {
+                "timeStamp": "2022-02-22T22:00:00Z"
+              },
+              {
+                "timeStamp": "2022-02-22T22:01:00Z"
+              },
+              {
+                "timeStamp": "2022-02-22T22:02:00Z"
+              },
+              {
+                "timeStamp": "2022-02-22T22:58:00Z"
+              },
+              {
+                "timeStamp": "2022-02-22T22:59:00Z"
+              }
+            ]
+          }
+        ],
+        "errorCode": "Success"
+      }
+    ]
+  },
+  {
+    "namespace": "Microsoft.Test/type2",
+    "resourceregion": "eastus",
+    "value": [
+      {
+        "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource5/providers/Microsoft.Insights/metrics/metric2",
+        "name": {
+          "localizedValue": "metric2"
+        },
+        "unit": "Bytes",
+        "timeseries": [
+          {
+            "data": []
+          }
+        ],
+        "errorCode": "Success"
+      }
+    ]
+  },
+  {
+    "namespace": "Microsoft.Test/type2",
+    "resourceregion": "eastus",
+    "value": [
+      {
+        "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource6/providers/Microsoft.Insights/metrics/metric2",
+        "name": {
+          "localizedValue": "metric2"
+        },
+        "unit": "Bytes",
+        "timeseries": [],
+        "errorCode": "Success"
+      }
+    ]
+  }
+]

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package icinga2
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Icinga2 struct {
 	Server          string
@@ -49,6 +54,10 @@ type Attribute struct {
 var levels = []string{"ok", "warning", "critical", "unknown"}
 
 type ObjectType string
+
+func (*Icinga2) SampleConfig() string {
+	return sampleConfig
+}
 
 func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 	for _, check := range checks {

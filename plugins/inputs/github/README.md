@@ -5,9 +5,18 @@ Gather repository information from [GitHub][] hosted repositories.
 **Note:** Telegraf also contains the [webhook][] input which can be used as an
 alternative method for collecting repository information.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather repository information from GitHub hosted repositories.
 [[inputs.github]]
   ## List of repositories to monitor
@@ -34,7 +43,7 @@ alternative method for collecting repository information.
   # additional_fields = []
 ```
 
-### Metrics
+## Metrics
 
 - github_repository
   - tags:
@@ -61,17 +70,18 @@ When the [internal][] input is enabled:
     - remaining - How many requests you have remaining (per hour)
     - blocks - How many requests have been blocked due to rate limit
 
-When specifying `additional_fields` the plugin will collect the specified properties.
-**NOTE:** Querying this additional fields might require to perform additional API-calls.
-Please make sure you don't exceed the query rate-limit by specifying too many additional fields.
-In the following we list the available options with the required API-calls and the resulting fields
+When specifying `additional_fields` the plugin will collect the specified
+properties.  **NOTE:** Querying this additional fields might require to perform
+additional API-calls.  Please make sure you don't exceed the query rate-limit by
+specifying too many additional fields.  In the following we list the available
+options with the required API-calls and the resulting fields
 
 - "pull-requests" (2 API-calls per repository)
   - fields:
     - open_pull_requests (int)
     - closed_pull_requests (int)
 
-### Example Output
+## Example Output
 
 ```shell
 github_repository,language=Go,license=MIT\ License,name=telegraf,owner=influxdata forks=2679i,networks=2679i,open_issues=794i,size=23263i,stars=7091i,subscribers=316i,watchers=7091i 1563901372000000000

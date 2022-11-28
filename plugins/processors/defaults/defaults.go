@@ -1,16 +1,25 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package defaults
 
 import (
+	_ "embed"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 // Defaults is a processor for ensuring certain fields always exist
 // on your Metrics with at least a default value.
 type Defaults struct {
 	DefaultFieldsSets map[string]interface{} `toml:"fields"`
+}
+
+func (*Defaults) SampleConfig() string {
+	return sampleConfig
 }
 
 // Apply contains the main implementation of this processor.

@@ -1,16 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package azure_storage_queue
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/Azure/azure-storage-queue-go/azqueue"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type AzureStorageQueue struct {
 	StorageAccountName   string `toml:"account_name"`
@@ -19,6 +25,10 @@ type AzureStorageQueue struct {
 	Log                  telegraf.Logger
 
 	serviceURL *azqueue.ServiceURL
+}
+
+func (*AzureStorageQueue) SampleConfig() string {
+	return sampleConfig
 }
 
 func (a *AzureStorageQueue) Init() error {
@@ -52,7 +62,12 @@ func (a *AzureStorageQueue) GetServiceURL() (azqueue.ServiceURL, error) {
 	return *a.serviceURL, nil
 }
 
-func (a *AzureStorageQueue) GatherQueueMetrics(acc telegraf.Accumulator, queueItem azqueue.QueueItem, properties *azqueue.QueueGetPropertiesResponse, peekedMessage *azqueue.PeekedMessage) {
+func (a *AzureStorageQueue) GatherQueueMetrics(
+	acc telegraf.Accumulator,
+	queueItem azqueue.QueueItem,
+	properties *azqueue.QueueGetPropertiesResponse,
+	peekedMessage *azqueue.PeekedMessage,
+) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	tags["queue"] = strings.TrimSpace(queueItem.Name)

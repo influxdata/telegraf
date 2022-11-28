@@ -1,5 +1,5 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
-// +build !windows
 
 // iproute2 doesn't exist on Windows
 
@@ -8,6 +8,7 @@ package socketstat
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -20,6 +21,9 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const measurement = "socketstat"
 
@@ -36,6 +40,10 @@ type Socketstat struct {
 }
 
 type socketLister func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
+
+func (*Socketstat) SampleConfig() string {
+	return sampleConfig
+}
 
 // Gather gathers indicators from established connections
 func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {

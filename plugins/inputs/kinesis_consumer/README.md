@@ -3,9 +3,18 @@
 The [Kinesis][kinesis] consumer plugin reads from a Kinesis data stream
 and creates metrics using one of the supported [input data formats][].
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the AWS Kinesis input.
 [[inputs.kinesis_consumer]]
   ## Amazon REGION of kinesis endpoint.
@@ -89,8 +98,8 @@ DynamoDB:
 
 ### DynamoDB Checkpoint
 
-The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
-this functionality, create a table with the following string type keys:
+The DynamoDB checkpoint stores the last processed record in a DynamoDB. To
+leverage this functionality, create a table with the following string type keys:
 
 ```shell
 Partition key: namespace

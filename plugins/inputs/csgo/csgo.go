@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package csgo
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -13,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type statsData struct {
 	CPU           float64 `json:"cpu"`
@@ -29,6 +34,10 @@ type statsData struct {
 
 type CSGO struct {
 	Servers [][]string `toml:"servers"`
+}
+
+func (*CSGO) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *CSGO) Gather(acc telegraf.Accumulator) error {

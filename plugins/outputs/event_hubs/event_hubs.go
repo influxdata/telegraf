@@ -1,15 +1,21 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package event_hubs
 
 import (
 	"context"
+	_ "embed"
 	"time"
 
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 /*
 ** Wrapper interface for eventhub.Hub
@@ -50,21 +56,32 @@ func (eh *eventHub) SendBatch(ctx context.Context, iterator eventhub.BatchIterat
 type EventHubs struct {
 	Log              telegraf.Logger `toml:"-"`
 	ConnectionString string          `toml:"connection_string"`
-	Timeout          config.Duration
+	Timeout          config.Duration `toml:"timeout"`
+	PartitionKey     string          `toml:"partition_key"`
+	MaxMessageSize   int             `toml:"max_message_size"`
 
-	Hub        EventHubInterface
-	serializer serializers.Serializer
+	Hub          EventHubInterface
+	batchOptions []eventhub.BatchOption
+	serializer   serializers.Serializer
 }
 
 const (
 	defaultRequestTimeout = time.Second * 30
 )
 
+func (*EventHubs) SampleConfig() string {
+	return sampleConfig
+}
+
 func (e *EventHubs) Init() error {
 	err := e.Hub.GetHub(e.ConnectionString)
 
 	if err != nil {
 		return err
+	}
+
+	if e.MaxMessageSize > 0 {
+		e.batchOptions = append(e.batchOptions, eventhub.BatchWithMaxSizeInBytes(e.MaxMessageSize))
 	}
 
 	return nil
@@ -92,8 +109,7 @@ func (e *EventHubs) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (e *EventHubs) Write(metrics []telegraf.Metric) error {
-	var events []*eventhub.Event
-
+	events := make([]*eventhub.Event, 0, len(metrics))
 	for _, metric := range metrics {
 		payload, err := e.serializer.Serialize(metric)
 
@@ -102,13 +118,24 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 			continue
 		}
 
-		events = append(events, eventhub.NewEvent(payload))
+		event := eventhub.NewEvent(payload)
+		if e.PartitionKey != "" {
+			if key, ok := metric.GetTag(e.PartitionKey); ok {
+				event.PartitionKey = &key
+			} else if key, ok := metric.GetField(e.PartitionKey); ok {
+				if strKey, ok := key.(string); ok {
+					event.PartitionKey = &strKey
+				}
+			}
+		}
+
+		events = append(events, event)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
-	err := e.Hub.SendBatch(ctx, eventhub.NewEventBatchIterator(events...))
+	err := e.Hub.SendBatch(ctx, eventhub.NewEventBatchIterator(events...), e.batchOptions...)
 
 	if err != nil {
 		return err

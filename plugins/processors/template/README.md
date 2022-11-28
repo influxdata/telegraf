@@ -1,4 +1,4 @@
-# Template Processor
+# Template Processor Plugin
 
 The `template` processor applies a Go template to metrics to generate a new
 tag.  The primary use case of this plugin is to create a tag that can be used
@@ -10,9 +10,18 @@ timestamp using the [interface in `/template_metric.go`](template_metric.go).
 
 Read the full [Go Template Documentation][].
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Uses a Go template to create a new tag
 [[processors.template]]
   ## Tag to set with the output of the template.
@@ -62,7 +71,9 @@ Read the full [Go Template Documentation][].
 
 ### Add all fields as a tag
 
-Sometimes it is usefull to pass all fields with their values into a single message for sending it to a monitoring system (e.g. Syslog, GroundWork), then you can use `.FieldList` or `.TagList`:
+Sometimes it is usefull to pass all fields with their values into a single
+message for sending it to a monitoring system (e.g. Syslog, GroundWork), then
+you can use `.FieldList` or `.TagList`:
 
 ```toml
 [[processors.template]]

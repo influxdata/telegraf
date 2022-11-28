@@ -1,10 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package xtremio
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,6 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type XtremIO struct {
 	Username   string          `toml:"username"`
@@ -25,6 +30,10 @@ type XtremIO struct {
 
 	cookie *http.Cookie
 	client *http.Client
+}
+
+func (*XtremIO) SampleConfig() string {
+	return sampleConfig
 }
 
 func (xio *XtremIO) Init() error {
@@ -339,7 +348,7 @@ func (xio *XtremIO) call(endpoint string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

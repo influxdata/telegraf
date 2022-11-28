@@ -58,9 +58,18 @@ DEFAULT CURRENT\_TIMESTAMP, {COLUMNS})".
 The mapping of metric types to sql column types can be customized through the
 convert settings.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Save metrics to an SQL Database
 [[outputs.sql]]
   ## Database driver
@@ -114,6 +123,20 @@ convert settings.
   ## the unsigned option. This is useful for a database like ClickHouse where
   ## the unsigned value should use a value like "uint64".
   # conversion_style = "unsigned_suffix"
+
+  ## Maximum amount of time a connection may be idle. "0s" means connections are
+  ## never closed due to idle time.
+  # connection_max_idle_time = "0s"
+
+  ## Maximum amount of time a connection may be reused. "0s" means connections
+  ## are never closed due to age.
+  # connection_max_lifetime = "0s"
+
+  ## Maximum number of connections in the idle connection pool. 0 means unlimited.
+  # connection_max_idle = 2
+
+  ## Maximum number of open connections to the database. 0 means unlimited.
+  # connection_max_open = 0
 ```
 
 ## Driver-specific information

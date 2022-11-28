@@ -3,9 +3,18 @@
 A plugin for Redis Sentinel to monitor multiple Sentinel instances that are
 monitoring multiple Redis servers and replicas.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many redis-sentinel servers
 [[inputs.redis_sentinel]]
   ## specify servers via a url matching:
@@ -36,7 +45,8 @@ The plugin gathers the results of these commands and measurements:
 * `sentinel replicas` - `redis_replicas`
 * `info all` - `redis_sentinel`
 
-The `has_quorum` field in `redis_sentinel_masters` is from calling the command `sentinels ckquorum`.
+The `has_quorum` field in `redis_sentinel_masters` is from calling the command
+`sentinels ckquorum`.
 
 There are 5 remote network requests made for each server listed in the config.
 
@@ -172,7 +182,8 @@ There are 5 remote network requests made for each server listed in the config.
 
 ## Example Output
 
-An example of 2 Redis Sentinel instances monitoring a single master and replica. It produces:
+An example of 2 Redis Sentinel instances monitoring a single master and
+replica. It produces:
 
 ### redis_sentinel_masters
 

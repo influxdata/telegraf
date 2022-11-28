@@ -2,9 +2,18 @@
 
 The CouchDB plugin gathers metrics of CouchDB using [_stats] endpoint.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read CouchDB Stats from one or more servers
 [[inputs.couchdb]]
   ## Works with CouchDB stats endpoints out of the box
@@ -16,7 +25,7 @@ The CouchDB plugin gathers metrics of CouchDB using [_stats] endpoint.
   # basic_password = "p@ssw0rd"
 ```
 
-## Measurements & Fields
+## Metrics
 
 Statistics specific to the internals of CouchDB:
 
@@ -65,7 +74,7 @@ httpd statistics:
 
 - server (url of the couchdb _stats endpoint)
 
-## Example
+## Example Output
 
 ### Post Couchdb 2.0
 

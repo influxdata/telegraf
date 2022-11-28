@@ -1,0 +1,51 @@
+{
+  "status":"completed",
+  "message":"Done",
+  "data":{
+    "thumb":"https://cdn.filestackcontent.com/f1e8V88QDuxzOvtOAq1W",
+    "thumb100x100":"https://process.filestackapi.com/AhTgLagciQByzXpFGRI0Az/resize=w:100,h:100,f:crop/output=f:jpg,q:66/https://cdn.filestackcontent.com/f1e8V88QDuxzOvtOAq1W",
+    "thumb200x200":"https://process.filestackapi.com/AhTgLagciQByzXpFGRI0Az/resize=w:200,h:200,f:crop/output=f:jpg,q:66/https://cdn.filestackcontent.com/f1e8V88QDuxzOvtOAq1W",
+    "thumb300x300":"https://process.filestackapi.com/AhTgLagciQByzXpFGRI0Az/resize=w:300,h:300,f:crop/output=f:jpg,q:66/https://cdn.filestackcontent.com/f1e8V88QDuxzOvtOAq1W",
+    "url":"https://cdn.filestackcontent.com/VgvFVdvvTkml0WXPIoGn"
+  },
+  "metadata":{
+    "result":{
+      "audio_channels":2,
+      "audio_codec":"vorbis",
+      "audio_sample_rate":44100,
+      "created_at":"2015/12/21 20:45:19 +0000",
+      "duration":10587,
+      "encoding_progress":100,
+      "encoding_time":8,
+      "extname":".webm",
+      "file_size":293459,
+      "fps":24,
+      "height":260,
+      "mime_type":"video/webm",
+      "started_encoding_at":"2015/12/21 20:45:22 +0000",
+      "updated_at":"2015/12/21 20:45:32 +0000",
+      "video_bitrate":221,
+      "video_codec":"vp8",
+      "width":300
+    },
+    "source":{
+      "audio_bitrate":125,
+      "audio_channels":2,
+      "audio_codec":"aac",
+      "audio_sample_rate":44100,
+      "created_at":"2015/12/21 20:45:19 +0000",
+      "duration":10564,
+      "extname":".mp4",
+      "file_size":875797,
+      "fps":24,
+      "height":360,
+      "mime_type":"video/mp4",
+      "updated_at":"2015/12/21 20:45:32 +0000",
+      "video_bitrate":196,
+      "video_codec":"h264",
+      "width":480
+    }
+  },
+  "timestamp":"1453850583",
+  "uuid":"638311d89d2bc849563a674a45809b7c"
+}

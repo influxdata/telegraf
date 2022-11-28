@@ -7,10 +7,9 @@ This plugin will send logs to Amazon CloudWatch.
 This plugin uses a credential chain for Authentication with the CloudWatch Logs
 API endpoint. In the following order the plugin will attempt to authenticate.
 
-1. Web identity provider credentials via STS if `role_arn` and
-   `web_identity_token_file` are specified
-1. Assumed credentials via STS if `role_arn` attribute is specified (source
-   credentials are evaluated from subsequent rules)
+1. Web identity provider credentials via STS if `role_arn` and `web_identity_token_file` are specified
+1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules).
+The `endpoint_url` attribute is used only for Cloudwatch Logs service. When fetching credentials, STS global endpoint will be used.
 1. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
 1. Shared profile from `profile` attribute
 1. [Environment Variables][1]
@@ -31,9 +30,18 @@ The IAM user needs the following permissions (see this [reference][4] for more):
 [3]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 [4]: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/permissions-reference-cwl.html
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for AWS CloudWatchLogs output.
 [[outputs.cloudwatch_logs]]
   ## The region is the Amazon region that you wish to connect to.

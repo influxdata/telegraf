@@ -1,9 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build windows
-// +build windows
 
 package win_perf_counters
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Win_PerfCounters struct {
 	PrintValid                 bool `toml:"PrintValid"`
@@ -116,7 +120,16 @@ func extractCounterInfoFromCounterPath(counterPath string) (object string, insta
 	return
 }
 
-func newCounter(counterHandle PDH_HCOUNTER, counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) *counter {
+func newCounter(
+	counterHandle PDH_HCOUNTER,
+	counterPath string,
+	objectName string,
+	instance string,
+	counterName string,
+	measurement string,
+	includeTotal bool,
+	useRawValue bool,
+) *counter {
 	measurementName := sanitizedChars.Replace(measurement)
 	if measurementName == "" {
 		measurementName = "win_perf_counters"
@@ -129,7 +142,19 @@ func newCounter(counterHandle PDH_HCOUNTER, counterPath string, objectName strin
 		includeTotal, useRawValue, counterHandle}
 }
 
-func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) error {
+func (*Win_PerfCounters) SampleConfig() string {
+	return sampleConfig
+}
+
+func (m *Win_PerfCounters) AddItem(
+	counterPath string,
+	objectName string,
+	instance string,
+	counterName string,
+	measurement string,
+	includeTotal bool,
+	useRawValue bool,
+) error {
 	origCounterPath := counterPath
 	var err error
 	var counterHandle PDH_HCOUNTER
@@ -351,7 +376,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
-				m.Log.Warnf("error while getting value for counter %q, will skip metric: %v", metric.counterPath, err)
+				m.Log.Warnf("error while getting value for counter %q, instance: %s, will skip metric: %v", metric.counterPath, metric.instance, err)
 				continue
 			}
 			addCounterMeasurement(metric, metric.instance, value, collectFields)
@@ -367,7 +392,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
-				m.Log.Warnf("error while getting value for counter %q, will skip metric: %v", metric.counterPath, err)
+				m.Log.Warnf("error while getting value for counter %q, instance: %s, will skip metric: %v", metric.counterPath, metric.instance, err)
 				continue
 			}
 			for _, cValue := range counterValues {

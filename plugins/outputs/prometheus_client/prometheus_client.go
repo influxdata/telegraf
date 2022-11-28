@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package prometheus_client
 
 import (
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -22,6 +24,9 @@ import (
 	v1 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
 	v2 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultListen             = ":9273"
@@ -54,6 +59,10 @@ type PrometheusClient struct {
 	url       *url.URL
 	collector Collector
 	wg        sync.WaitGroup
+}
+
+func (*PrometheusClient) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *PrometheusClient) Init() error {

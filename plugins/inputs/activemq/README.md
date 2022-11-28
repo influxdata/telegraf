@@ -1,10 +1,20 @@
 # ActiveMQ Input Plugin
 
-This plugin gather queues, topics & subscribers metrics using ActiveMQ Console API.
+This plugin gather queues, topics & subscribers metrics using ActiveMQ Console
+API.
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather ActiveMQ metrics
 [[inputs.activemq]]
   ## ActiveMQ WebConsole URL
@@ -35,7 +45,8 @@ This plugin gather queues, topics & subscribers metrics using ActiveMQ Console A
 
 ## Metrics
 
-Every effort was made to preserve the names based on the XML response from the ActiveMQ Console API.
+Every effort was made to preserve the names based on the XML response from the
+ActiveMQ Console API.
 
 - activemq_queues
   - tags:
@@ -74,7 +85,7 @@ Every effort was made to preserve the names based on the XML response from the A
     - enqueue_counter
     - dequeue_counter
 
-### Example Output
+## Example Output
 
 ```shell
 activemq_queues,name=sandra,host=88284b2fe51b,source=localhost,port=8161 consumer_count=0i,enqueue_count=0i,dequeue_count=0i,size=0i 1492610703000000000

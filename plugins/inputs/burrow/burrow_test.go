@@ -16,7 +16,7 @@ import (
 // remap uri to json file, eg: /v3/kafka -> ./testdata/v3_kafka.json
 func getResponseJSON(requestURI string) ([]byte, int) {
 	uri := strings.TrimLeft(requestURI, "/")
-	mappedFile := strings.Replace(uri, "/", "_", -1)
+	mappedFile := strings.ReplaceAll(uri, "/", "_")
 	jsonFile := fmt.Sprintf("./testdata/%s.json", mappedFile)
 
 	code := 200

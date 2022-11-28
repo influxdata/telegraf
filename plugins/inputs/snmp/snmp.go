@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package snmp
 
 import (
+	_ "embed"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -19,6 +21,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Translator interface {
 	SnmpTranslate(oid string) (
 		mibName string, oidNum string, oidText string,
@@ -29,6 +34,11 @@ type Translator interface {
 	SnmpTable(oid string) (
 		mibName string, oidNum string, oidText string,
 		fields []Field,
+		err error,
+	)
+
+	SnmpFormatEnum(oid string, value interface{}, full bool) (
+		formatted string,
 		err error,
 	)
 }
@@ -61,6 +71,10 @@ type Snmp struct {
 
 func (s *Snmp) SetTranslator(name string) {
 	s.Translator = name
+}
+
+func (*Snmp) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Snmp) Init() error {
@@ -205,6 +219,7 @@ type Field struct {
 	//  "int" will conver the value into an integer.
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
+	//  "enum"/"enum(1)" will convert the value according to its syntax. (Only supported with gosmi translator)
 	Conversion string
 	// Translate tells if the value of the field should be snmptranslated
 	Translate bool
@@ -289,22 +304,6 @@ func (e *walkError) Error() string {
 
 func (e *walkError) Unwrap() error {
 	return e.err
-}
-
-func init() {
-	inputs.Add("snmp", func() telegraf.Input {
-		return &Snmp{
-			Name: "snmp",
-			ClientConfig: snmp.ClientConfig{
-				Retries:        3,
-				MaxRepetitions: 10,
-				Timeout:        config.Duration(5 * time.Second),
-				Version:        2,
-				Path:           []string{"/usr/share/snmp/mibs"},
-				Community:      "public",
-			},
-		}
-	})
 }
 
 // Gather retrieves all the configured fields and tables.
@@ -431,7 +430,7 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 				}
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
-				fv, err := fieldConvert(f.Conversion, ent.Value)
+				fv, err := fieldConvert(tr, f.Conversion, ent)
 				if err != nil {
 					return nil, fmt.Errorf("converting %q (OID %s) for field %s: %w", ent.Value, ent.Name, f.Name, err)
 				}
@@ -475,7 +474,7 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 					}
 				}
 
-				fv, err := fieldConvert(f.Conversion, ent.Value)
+				fv, err := fieldConvert(tr, f.Conversion, ent)
 				if err != nil {
 					return &walkError{
 						msg: fmt.Sprintf("converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name),
@@ -566,6 +565,7 @@ type snmpConnection interface {
 	//BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
 	Walk(string, gosnmp.WalkFunc) error
 	Get(oids []string) (*gosnmp.SnmpPacket, error)
+	Reconnect() error
 }
 
 // getConnection creates a snmpConnection (*gosnmp.GoSNMP) object and caches the
@@ -574,6 +574,10 @@ type snmpConnection interface {
 // more than one goroutine.
 func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	if gs := s.connectionCache[idx]; gs != nil {
+		if err := gs.Reconnect(); err != nil {
+			return gs, fmt.Errorf("reconnecting: %w", err)
+		}
+
 		return gs, nil
 	}
 
@@ -601,16 +605,17 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 }
 
 // fieldConvert converts from any type according to the conv specification
-func fieldConvert(conv string, v interface{}) (interface{}, error) {
+func fieldConvert(tr Translator, conv string, ent gosnmp.SnmpPDU) (v interface{}, err error) {
 	if conv == "" {
-		if bs, ok := v.([]byte); ok {
+		if bs, ok := ent.Value.([]byte); ok {
 			return string(bs), nil
 		}
-		return v, nil
+		return ent.Value, nil
 	}
 
 	var d int
 	if _, err := fmt.Sscanf(conv, "float(%d)", &d); err == nil || conv == "float" {
+		v = ent.Value
 		switch vt := v.(type) {
 		case float32:
 			v = float64(vt) / math.Pow10(d)
@@ -647,6 +652,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	}
 
 	if conv == "int" {
+		v = ent.Value
 		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
@@ -681,7 +687,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	}
 
 	if conv == "hwaddr" {
-		switch vt := v.(type) {
+		switch vt := ent.Value.(type) {
 		case string:
 			v = net.HardwareAddr(vt).String()
 		case []byte:
@@ -697,9 +703,9 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		endian := split[1]
 		bit := split[2]
 
-		bv, ok := v.([]byte)
+		bv, ok := ent.Value.([]byte)
 		if !ok {
-			return v, nil
+			return ent.Value, nil
 		}
 
 		switch endian {
@@ -735,7 +741,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "ipaddr" {
 		var ipbs []byte
 
-		switch vt := v.(type) {
+		switch vt := ent.Value.(type) {
 		case string:
 			ipbs = []byte(vt)
 		case []byte:
@@ -754,5 +760,29 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		return v, nil
 	}
 
+	if conv == "enum" {
+		return tr.SnmpFormatEnum(ent.Name, ent.Value, false)
+	}
+
+	if conv == "enum(1)" {
+		return tr.SnmpFormatEnum(ent.Name, ent.Value, true)
+	}
+
 	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
+}
+
+func init() {
+	inputs.Add("snmp", func() telegraf.Input {
+		return &Snmp{
+			Name: "snmp",
+			ClientConfig: snmp.ClientConfig{
+				Retries:        3,
+				MaxRepetitions: 10,
+				Timeout:        config.Duration(5 * time.Second),
+				Version:        2,
+				Path:           []string{"/usr/share/snmp/mibs"},
+				Community:      "public",
+			},
+		}
+	})
 }

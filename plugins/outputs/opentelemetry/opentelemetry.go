@@ -1,24 +1,32 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package opentelemetry
 
 import (
 	"context"
-	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
-	"google.golang.org/grpc/credentials/insecure"
+	ntls "crypto/tls"
+	_ "embed"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
-	// This causes the gRPC library to register gzip compression.
-	_ "google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/credentials/insecure"
+	_ "google.golang.org/grpc/encoding/gzip" // Blank import to allow gzip encoding
 	"google.golang.org/grpc/metadata"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+var userAgent = internal.ProductToken()
+
+//go:embed sample.conf
+var sampleConfig string
 
 type OpenTelemetry struct {
 	ServiceAddress string `toml:"service_address"`
@@ -28,13 +36,24 @@ type OpenTelemetry struct {
 	Compression string            `toml:"compression"`
 	Headers     map[string]string `toml:"headers"`
 	Attributes  map[string]string `toml:"attributes"`
+	Coralogix   *CoralogixConfig  `toml:"coralogix"`
 
 	Log telegraf.Logger `toml:"-"`
 
 	metricsConverter     *influx2otel.LineProtocolToOtelMetrics
 	grpcClientConn       *grpc.ClientConn
-	metricsServiceClient pmetricotlp.Client
+	metricsServiceClient pmetricotlp.GRPCClient
 	callOptions          []grpc.CallOption
+}
+
+type CoralogixConfig struct {
+	AppName    string `toml:"application"`
+	SubSystem  string `toml:"subsystem"`
+	PrivateKey string `toml:"private_key"`
+}
+
+func (*OpenTelemetry) SampleConfig() string {
+	return sampleConfig
 }
 
 func (o *OpenTelemetry) Connect() error {
@@ -49,6 +68,14 @@ func (o *OpenTelemetry) Connect() error {
 	if o.Compression == "" {
 		o.Compression = defaultCompression
 	}
+	if o.Coralogix != nil {
+		if o.Headers == nil {
+			o.Headers = make(map[string]string)
+		}
+		o.Headers["ApplicationName"] = o.Coralogix.AppName
+		o.Headers["ApiName"] = o.Coralogix.SubSystem
+		o.Headers["Authorization"] = "Bearer " + o.Coralogix.PrivateKey
+	}
 
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(logger)
 	if err != nil {
@@ -60,16 +87,19 @@ func (o *OpenTelemetry) Connect() error {
 		return err
 	} else if tlsConfig != nil {
 		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
+	} else if o.Coralogix != nil {
+		// For coralogix, we enforce GRPC connection with TLS
+		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
 	} else {
 		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption)
+	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
 	if err != nil {
 		return err
 	}
 
-	metricsServiceClient := pmetricotlp.NewClient(grpcClientConn)
+	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
 
 	o.metricsConverter = metricsConverter
 	o.grpcClientConn = grpcClientConn
@@ -117,8 +147,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	md := pmetricotlp.NewRequest()
-	md.SetMetrics(batch.GetMetrics())
+	md := pmetricotlp.NewExportRequestFromMetrics(batch.GetMetrics())
 	if md.Metrics().ResourceMetrics().Len() == 0 {
 		return nil
 	}
@@ -126,7 +155,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	if len(o.Attributes) > 0 {
 		for i := 0; i < md.Metrics().ResourceMetrics().Len(); i++ {
 			for k, v := range o.Attributes {
-				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().UpsertString(k, v)
+				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().PutStr(k, v)
 			}
 		}
 	}

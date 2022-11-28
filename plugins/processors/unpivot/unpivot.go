@@ -1,9 +1,15 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package unpivot
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type Unpivot struct {
 	TagKey   string `toml:"tag_key"`
@@ -23,6 +29,10 @@ func copyWithoutFields(metric telegraf.Metric) telegraf.Metric {
 	}
 
 	return m
+}
+
+func (*Unpivot) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Unpivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {

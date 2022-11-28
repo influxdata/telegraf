@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sumologic
 
 import (
 	"bytes"
 	"compress/gzip"
+	_ "embed"
 	"net/http"
 	"time"
 
@@ -17,6 +19,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultClientTimeout      = 5 * time.Second
@@ -55,6 +60,10 @@ type SumoLogic struct {
 
 	err     error
 	headers map[string]string
+}
+
+func (*SumoLogic) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *SumoLogic) SetSerializer(serializer serializers.Serializer) {

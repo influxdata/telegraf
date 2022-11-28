@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package github
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"strings"
@@ -16,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // GitHub - plugin main structure
 type GitHub struct {
@@ -64,6 +69,10 @@ func (g *GitHub) newGithubClient(httpClient *http.Client) (*githubLib.Client, er
 		return githubLib.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
 	}
 	return githubLib.NewClient(httpClient), nil
+}
+
+func (*GitHub) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather GitHub Metrics

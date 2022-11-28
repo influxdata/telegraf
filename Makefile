@@ -1,10 +1,9 @@
-ifeq ($(OS),Windows_NT)
-	next_version := $(shell type build_version.txt)
-	tag := $(shell git describe --exact-match --tags 2> nul)
-else
-	next_version := $(shell cat build_version.txt)
-	tag := $(shell git describe --exact-match --tags 2>/dev/null)
+ifneq (,$(filter $(OS),Windows_NT Windows))
+	EXEEXT=.exe
 endif
+
+next_version := $(shell cat build_version.txt)
+tag := $(shell git describe --exact-match --tags 2>/dev/null)
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
@@ -46,12 +45,12 @@ MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
-
-LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
+INTERNAL_PKG=github.com/influxdata/telegraf/internal
+LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).Commit=$(commit) -X $(INTERNAL_PKG).Branch=$(branch)
 ifneq ($(tag),)
-	LDFLAGS += -X main.version=$(version)
+	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)
 else
-	LDFLAGS += -X main.version=$(version)-$(commit)
+	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)-$(commit)
 endif
 
 # Go built-in race detector works only for 64 bits architectures.
@@ -70,15 +69,14 @@ localstatedir ?= $(prefix)/var
 pkgdir ?= build/dist
 
 .PHONY: all
-all:
-	@$(MAKE) deps
-	@$(MAKE) telegraf
+all: deps docs telegraf
 
 .PHONY: help
 help:
 	@echo 'Targets:'
 	@echo '  all          - download dependencies and compile telegraf binary'
 	@echo '  deps         - download dependencies'
+	@echo '  docs         - embed sample-configurations into READMEs'
 	@echo '  telegraf     - compile telegraf binary'
 	@echo '  test         - run short unit tests'
 	@echo '  fmt          - format source files'
@@ -109,26 +107,23 @@ deps:
 version:
 	@echo $(version)-$(commit)
 
-.PHONY: versioninfo
-versioninfo:
-	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
-	go run scripts/generate_versioninfo/main.go; \
-	go generate cmd/telegraf/telegraf_windows.go; \
+build_tools:
+	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
+	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
+	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
 
-.PHONY: generate
-generate:
-	go generate -run="plugindata/main.go$$" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+embed_readme_%:
+	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 
-.PHONY: generate-clean
-generate-clean:
-	go generate -run="plugindata/main.go --clean" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+.PHONY: docs
+docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators
 
 .PHONY: build
 build:
-	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
-telegraf: generate build generate-clean
+telegraf: build
 
 # Used by dockerfile builds
 .PHONY: go-install
@@ -170,7 +165,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -223,6 +218,16 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf cmd/telegraf/resource.syso
+	rm -rf cmd/telegraf/versioninfo.json
+	rm -rf tools/custom_builder/custom_builder
+	rm -rf tools/custom_builder/custom_builder.exe
+	rm -rf tools/readme_config_includer/generator
+	rm -rf tools/readme_config_includer/generator.exe
+	rm -rf tools/package_lxd_test/package_lxd_test
+	rm -rf tools/package_lxd_test/package_lxd_test.exe
+	rm -rf tools/license_checker/license_checker
+	rm -rf tools/license_checker/license_checker.exe
 
 .PHONY: docker-image
 docker-image:
@@ -231,15 +236,10 @@ docker-image:
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
-.PHONY: plugin-%
-plugin-%:
-	@echo "Starting dev environment for $${$(@)} input plugin..."
-	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
-
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.18.1 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.18.1
+	docker build -t quay.io/influxdb/telegraf-ci:1.19.3 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.19.3
 
 .PHONY: install
 install: $(buildbin)
@@ -312,7 +312,7 @@ i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gz i386.rpm
 .PHONY: i386
 i386:
 	@ echo $(i386)
-windows += windows_i386.zip windows_amd64.zip
+windows += windows_i386.zip windows_amd64.zip windows_arm64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
@@ -329,10 +329,12 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: generate $(include_packages) generate-clean
+package: docs $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
+	if [ "$(suffix $@)" = ".zip" ]; then go generate cmd/telegraf/telegraf_windows.go; fi
+
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
 
@@ -356,6 +358,7 @@ $(include_packages):
 			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
+			--rpm-os ${GOOS} \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
@@ -438,6 +441,9 @@ freebsd_armv7.tar.gz: export GOARM := 7
 windows_amd64.zip: export GOOS := windows
 windows_amd64.zip: export GOARCH := amd64
 
+windows_arm64.zip: export GOOS := windows
+windows_arm64.zip: export GOARCH := arm64
+
 darwin_amd64.tar.gz: export GOOS := darwin
 darwin_amd64.tar.gz: export GOARCH := amd64
 
@@ -447,11 +453,11 @@ darwin_arm64.tar.gz: export GOARCH := arm64
 windows_i386.zip: export GOOS := windows
 windows_i386.zip: export GOARCH := 386
 
-windows_i386.zip windows_amd64.zip: export prefix =
-windows_i386.zip windows_amd64.zip: export bindir = $(prefix)
-windows_i386.zip windows_amd64.zip: export sysconfdir = $(prefix)
-windows_i386.zip windows_amd64.zip: export localstatedir = $(prefix)
-windows_i386.zip windows_amd64.zip: export EXEEXT := .exe
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export prefix =
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export bindir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export sysconfdir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export localstatedir = $(prefix)
+windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 
 %.deb: export pkg := deb
 %.deb: export prefix := /usr

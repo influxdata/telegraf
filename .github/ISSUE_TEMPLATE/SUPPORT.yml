@@ -1,0 +1,22 @@
+name: Support request
+description: Open a support request
+labels: ["support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        WOAHH, hold up. This isn't the best place for support questions. 
+        You can get a faster response on slack or forums:
+
+        Please redirect any QUESTIONS about Telegraf usage to 
+        - InfluxData Slack Channel: https://www.influxdata.com/slack 
+        - InfluxData Community Site: https://community.influxdata.com
+
+        Check the documentation for the related plugin including the troubleshooting
+        section if available.
+
+        https://docs.influxdata.com/telegraf
+        https://github.com/influxdata/telegraf/tree/master/docs
+  - type: textarea
+    attributes:
+      label: "Please direct all support questsions to slack or the forums. Thank you."

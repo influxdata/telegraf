@@ -34,13 +34,22 @@ KEY0 ... VAL0\n
 KEY1 ... VAL1\n
 ```
 
-## Tags
+## Metrics
 
 All measurements have the `path` tag.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read specific statistics per cgroup
 [[inputs.cgroup]]
   ## Directories in which to look for files, globs are supported.
@@ -57,7 +66,7 @@ All measurements have the `path` tag.
   # files = ["memory.*usage*", "memory.limit_in_bytes"]
 ```
 
-## Example
+## Example Configurations
 
 ```toml
 # [[inputs.cgroup]]

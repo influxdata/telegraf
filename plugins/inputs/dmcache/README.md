@@ -1,21 +1,33 @@
 # DMCache Input Plugin
 
-This plugin provide a native collection for dmsetup based statistics for dm-cache.
+This plugin provide a native collection for dmsetup based statistics for
+dm-cache.
 
-This plugin requires sudo, that is why you should setup and be sure that the telegraf is able to execute sudo without a password.
+This plugin requires sudo, that is why you should setup and be sure that the
+telegraf is able to execute sudo without a password.
 
-`sudo /sbin/dmsetup status --target cache` is the full command that telegraf will run for debugging purposes.
+`sudo /sbin/dmsetup status --target cache` is the full command that telegraf
+will run for debugging purposes.
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Provide a native collection for dmsetup based statistics for dm-cache
 [[inputs.dmcache]]
   ## Whether to report per-device stats or not
   per_device = true
 ```
 
-## Measurements & Fields
+## Metrics
 
 - dmcache
   - length

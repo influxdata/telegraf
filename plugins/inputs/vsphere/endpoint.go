@@ -14,12 +14,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 )
 
@@ -100,6 +100,7 @@ type objectRef struct {
 	parentRef    *types.ManagedObjectReference //Pointer because it must be nillable
 	guest        string
 	dcname       string
+	rpname       string
 	customValues map[string]string
 	lookup       map[string]string
 }
@@ -164,6 +165,24 @@ func NewEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
+		},
+		"resourcepool": {
+			name:             "resourcepool",
+			vcName:           "ResourcePool",
+			pKey:             "rpname",
+			parentTag:        "clustername",
+			enabled:          anythingEnabled(parent.ResourcePoolMetricExclude),
+			realTime:         false,
+			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
+			objects:          make(objectMap),
+			filters:          newFilterOrPanic(parent.ResourcePoolMetricInclude, parent.ResourcePoolMetricExclude),
+			paths:            parent.ResourcePoolInclude,
+			excludePaths:     parent.ResourcePoolExclude,
+			simple:           isSimple(parent.ResourcePoolMetricInclude, parent.ResourcePoolMetricExclude),
+			include:          parent.ResourcePoolMetricInclude,
+			collectInstances: parent.ResourcePoolInstances,
+			getObjects:       getResourcePools,
+			parent:           "cluster",
 		},
 		"host": {
 			name:             "host",
@@ -350,7 +369,13 @@ func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache 
 	return e.getAncestorName(ctx, client, "Datacenter", cache, r)
 }
 
-func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resourceType string, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
+func (e *Endpoint) getAncestorName(
+	ctx context.Context,
+	client *Client,
+	resourceType string,
+	cache map[string]string,
+	r types.ManagedObjectReference,
+) (string, bool) {
 	path := make([]string, 0)
 	returnVal := ""
 	here := r
@@ -653,7 +678,36 @@ func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilte
 	return m, nil
 }
 
-//noinspection GoUnusedParameter
+// noinspection GoUnusedParameter
+func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
+	var resources []mo.ResourcePool
+	err := resourceFilter.FindAll(ctx, &resources)
+	if err != nil {
+		return nil, err
+	}
+	m := make(objectMap)
+	for _, r := range resources {
+		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+			name:         r.Name,
+			ref:          r.ExtensibleManagedObject.Reference(),
+			parentRef:    r.Parent,
+			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+		}
+	}
+	return m, nil
+}
+
+func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string {
+	//Loop through the Resource Pools objectmap to find the corresponding one
+	for _, r := range rps {
+		if r.ref == rp {
+			return r.name
+		}
+	}
+	return "Resources" //Default value
+}
+
+// noinspection GoUnusedParameter
 func getHosts(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
 	var resources []mo.HostSystem
 	err := resourceFilter.FindAll(ctx, &resources)
@@ -681,6 +735,20 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		return nil, err
 	}
 	m := make(objectMap)
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	//Create a ResourcePool Filter and get the list of Resource Pools
+	rprf := ResourceFilter{
+		finder:       &Finder{client},
+		resType:      "ResourcePool",
+		paths:        []string{"/*/host/**"},
+		excludePaths: nil}
+	resourcePools, err := getResourcePools(ctx, e, &rprf)
+	if err != nil {
+		return nil, err
+	}
 	for _, r := range resources {
 		if r.Runtime.PowerState != "poweredOn" {
 			continue
@@ -688,6 +756,8 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		guest := "unknown"
 		uuid := ""
 		lookup := make(map[string]string)
+		// Get the name of the VM resource pool
+		rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
 
 		// Extract host name
 		if r.Guest != nil && r.Guest.HostName != "" {
@@ -755,6 +825,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			parentRef:    r.Runtime.Host,
 			guest:        guest,
 			altID:        uuid,
+			rpname:       rpname,
 			customValues: e.loadCustomAttributes(&r.ManagedEntity),
 			lookup:       lookup,
 		}
@@ -1074,7 +1145,13 @@ func (e *Endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, int
 	return rInfo, rValues
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resourceKind, acc telegraf.Accumulator, interval time.Duration) (int, time.Time, error) {
+func (e *Endpoint) collectChunk(
+	ctx context.Context,
+	pqs queryChunk,
+	res *resourceKind,
+	acc telegraf.Accumulator,
+	interval time.Duration,
+) (int, time.Time, error) {
 	e.log.Debugf("Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0
@@ -1190,6 +1267,9 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 
 	if resourceType == "vm" && objectRef.altID != "" {
 		t["uuid"] = objectRef.altID
+	}
+	if resourceType == "vm" && objectRef.rpname != "" {
+		t["rpname"] = objectRef.rpname
 	}
 
 	// Map parent reference
