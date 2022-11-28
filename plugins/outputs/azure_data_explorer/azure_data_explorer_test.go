@@ -159,7 +159,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TestCreateAzureDataExplorerTable(t *testing.T) {
-	serializer, _ := telegrafJson.NewSerializer(time.Second, "", "")
+	serializer, _ := telegrafJson.NewSerializer(telegrafJson.FormatConfig{TimestampUnits: time.Second})
 	plugin := AzureDataExplorer{
 		Endpoint:        "someendpoint",
 		Database:        "databasename",
