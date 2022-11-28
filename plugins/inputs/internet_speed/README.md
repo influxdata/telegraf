@@ -49,6 +49,6 @@ It collects latency, download speed and upload speed
 
 ## Example Output
 
-```sh
-internet_speed,host=Sanyam-Ubuntu download=41.791,latency=28.518,upload=59.798 1631031183000000000,provider=CenturyLink
+```
+internet_speed,host=its.nunya.biz download=513.9051616345864,latency=7.491828,provider="Hiawatha Broadband Communications",upload=511.563304774099844 1669653345000000000
 ```
