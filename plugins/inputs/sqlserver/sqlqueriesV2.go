@@ -322,6 +322,7 @@ BEGIN
 			DB_NAME() as [database_name],
 		        [cpu_count]
         	        ,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
+			,(SELECT [available_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [available_server_memory]
 	                ,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR) AS [sku]
         	        ,@EngineEdition AS [engine_edition]
                 	,DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) AS [uptime]
