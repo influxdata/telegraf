@@ -412,7 +412,8 @@ func getScrapeURL(pod *corev1.Pod) (*url.URL, error) {
 	if scheme == "" {
 		scheme = "http"
 	}
-	if port == "" {
+
+	if port == "" || port == "0" {
 		port = "9102"
 	}
 	if pathAndQuery == "" {
