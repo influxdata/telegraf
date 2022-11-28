@@ -50,6 +50,5 @@ It collects latency, download speed and upload speed
 ## Example Output
 
 ```shell
-```
 internet_speed,host=its.nunya.biz download=513.9051616345864,latency=7.491828,provider="Hiawatha Broadband Communications",upload=511.563304774099844 1669653345000000000
 ```
