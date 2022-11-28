@@ -326,3 +326,22 @@ func TestInitConfigErrors(t *testing.T) {
 	expectedMessage = "the field selector spec.containerNames is not supported for pods"
 	require.Error(t, err, expectedMessage)
 }
+
+func TestInitConfigSelectors(t *testing.T) {
+	p := &Prometheus{
+		MetricVersion:               2,
+		Log:                         testutil.Logger{},
+		URLs:                        nil,
+		URLTag:                      "url",
+		MonitorPods:                 true,
+		MonitorKubernetesPodsMethod: MonitorMethodSettings,
+		PodScrapeInterval:           60,
+		KubernetesLabelSelector:     "app=test",
+		KubernetesFieldSelector:     "spec.nodeName=node-0",
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
+	require.NotNil(t, p.podLabelSelector)
+	require.NotNil(t, p.podFieldSelector)
+}
