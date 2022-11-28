@@ -24,7 +24,7 @@ require (
 	github.com/Shopify/sarama v1.37.2
 	github.com/aerospike/aerospike-client-go/v5 v5.10.0
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
-	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1836
+	github.com/aliyun/alibaba-cloud-sdk-go v1.62.42
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.0
 	github.com/antchfx/xmlquery v1.3.12
@@ -125,7 +125,7 @@ require (
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/openconfig/gnmi v0.0.0-20220920173703-480bf53a74d2
-	github.com/opentracing/opentracing-go v1.2.0
+	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/pborman/ansi v1.0.0
