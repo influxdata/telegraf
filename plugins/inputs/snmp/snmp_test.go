@@ -901,7 +901,7 @@ func TestFieldConvert(t *testing.T) {
 	}
 
 	for _, tc := range testTable {
-		act, err := fieldConvert(tc.conv, tc.input)
+		act, err := fieldConvert(NewNetsnmpTranslator(), tc.conv, gosnmp.SnmpPDU{Value: tc.input})
 		if !assert.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected) {
 			continue
 		}
