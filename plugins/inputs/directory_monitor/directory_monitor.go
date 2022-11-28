@@ -335,7 +335,6 @@ func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
 	if err != nil {
 		monitor.Log.Errorf("Could not open input file: %s", err)
 	}
-	defer inputFile.Close()
 
 	outputFile, err := os.Create(dstPath)
 	if err != nil {
@@ -348,8 +347,14 @@ func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
 		monitor.Log.Errorf("Writing to output file failed: %s", err)
 	}
 
-	err = os.Remove(srcPath)
-	if err != nil {
+	// We need to close the file for remove on Windows as we otherwise
+	// will run into a "being used by another process" error
+	// (see https://github.com/influxdata/telegraf/issues/12287)
+	if err := inputFile.Close(); err != nil {
+		monitor.Log.Errorf("Could not close input file: %s", err)
+	}
+
+	if err := os.Remove(srcPath); err != nil {
 		monitor.Log.Errorf("Failed removing original file: %s", err)
 	}
 }
