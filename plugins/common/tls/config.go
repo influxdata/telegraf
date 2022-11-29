@@ -68,21 +68,21 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		return nil, nil
 	}
 
-	var renegotationMethod tls.RenegotiationSupport
+	var renegotiationMethod tls.RenegotiationSupport
 	switch c.RenegotiationMethod {
 	case "", "never":
-		renegotationMethod = tls.RenegotiateNever
+		renegotiationMethod = tls.RenegotiateNever
 	case "once":
-		renegotationMethod = tls.RenegotiateOnceAsClient
+		renegotiationMethod = tls.RenegotiateOnceAsClient
 	case "freely":
-		renegotationMethod = tls.RenegotiateFreelyAsClient
+		renegotiationMethod = tls.RenegotiateFreelyAsClient
 	default:
 		return nil, fmt.Errorf("unrecognized renegotation method '%s', choose from: 'never', 'once', 'freely'", c.RenegotiationMethod)
 	}
 
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.InsecureSkipVerify,
-		Renegotiation:      renegotationMethod,
+		Renegotiation:      renegotiationMethod,
 	}
 
 	if c.TLSCA != "" {
