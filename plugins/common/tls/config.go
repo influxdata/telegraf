@@ -21,7 +21,7 @@ type ClientConfig struct {
 	TLSMinVersion       string `toml:"tls_min_version"`
 	InsecureSkipVerify  bool   `toml:"insecure_skip_verify"`
 	ServerName          string `toml:"tls_server_name"`
-	RenegotiationMethod string `toml:"renegotiation_method"`
+	RenegotiationMethod string `toml:"tls_renegotiation_method"`
 
 	SSLCA   string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	SSLCert string `toml:"ssl_cert" deprecated:"1.7.0;use 'tls_cert' instead"`

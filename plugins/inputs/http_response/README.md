@@ -77,7 +77,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Use the given name as the SNI server name on each URL
   # tls_server_name = ""
   ## TLS renegotiation method, choose from "never", "once", "freely"
-  # renegotiation_method = "never"
+  # tls_renegotiation_method = "never"
 
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
