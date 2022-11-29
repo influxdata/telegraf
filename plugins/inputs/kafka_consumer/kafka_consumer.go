@@ -70,6 +70,25 @@ type ConsumerGroupCreator interface {
 
 type SaramaCreator struct{}
 
+// DebugLogger logs messages from sarama at the debug level.
+type DebugLogger struct {
+	Log telegraf.Logger
+}
+
+func (l *DebugLogger) Print(v ...interface{}) {
+	args := make([]interface{}, 0, len(v)+1)
+	args = append(append(args, "[sarama] "), v...)
+	l.Log.Debug(args...)
+}
+
+func (l *DebugLogger) Printf(format string, v ...interface{}) {
+	l.Log.Debugf("[sarama] "+format, v...)
+}
+
+func (l *DebugLogger) Println(v ...interface{}) {
+	l.Print(v...)
+}
+
 func (*SaramaCreator) Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error) {
 	return sarama.NewConsumerGroup(brokers, group, cfg)
 }
@@ -83,6 +102,8 @@ func (k *KafkaConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KafkaConsumer) Init() error {
+	sarama.Logger = &DebugLogger{Log: k.Log}
+
 	if k.MaxUndeliveredMessages == 0 {
 		k.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
 	}
