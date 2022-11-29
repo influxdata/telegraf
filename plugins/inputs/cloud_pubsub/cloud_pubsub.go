@@ -92,6 +92,7 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 
 	ps.sem = make(semaphore, ps.MaxUndeliveredMessages)
 	ps.acc = ac.WithTracking(ps.MaxUndeliveredMessages)
+	ps.undelivered = make(map[telegraf.TrackingID]message, ps.MaxUndeliveredMessages)
 
 	// Create top-level context with cancel that will be called on Stop().
 	ctx, cancel := context.WithCancel(context.Background())
@@ -189,11 +190,13 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 
 	metrics, err := ps.parser.Parse(data)
 	if err != nil {
+		ps.Log.Debugf("failed parsing data: %s\n", string(data))
 		msg.Ack()
 		return err
 	}
 
 	if len(metrics) == 0 {
+		ps.Log.Debug("no metrics parsed from message")
 		msg.Ack()
 		return nil
 	}
@@ -209,11 +212,8 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	defer ps.Unlock()
 
 	id := ps.acc.AddTrackingMetricGroup(metrics)
-	if ps.undelivered == nil {
-		ps.undelivered = make(map[telegraf.TrackingID]message)
-	}
 	ps.undelivered[id] = msg
-
+	ps.Log.Debugf("%d: %s (%d undelivered msgs)\n", id, metrics[0], len(ps.undelivered))
 	return nil
 }
 
@@ -224,10 +224,11 @@ func (ps *PubSub) waitForDelivery(parentCtx context.Context) {
 			return
 		case info := <-ps.acc.Delivered():
 			<-ps.sem
-			msg := ps.removeDelivered(info.ID())
-
+			id := info.ID()
+			msg := ps.removeDelivered(id)
 			if msg != nil {
 				msg.Ack()
+				ps.Log.Debugf("%d: ack'ed\n", id)
 			}
 		}
 	}
@@ -239,6 +240,7 @@ func (ps *PubSub) removeDelivered(id telegraf.TrackingID) message {
 
 	msg, ok := ps.undelivered[id]
 	if !ok {
+		ps.Log.Debugf("%d: not found in undelivered, unable to ack\n", id)
 		return nil
 	}
 	delete(ps.undelivered, id)
