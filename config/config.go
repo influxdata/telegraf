@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/google/uuid"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
@@ -69,14 +68,28 @@ type Config struct {
 	Outputs     []*models.RunningOutput
 	Aggregators []*models.RunningAggregator
 	// Processors have a slice wrapper type because they need to be sorted
-	Processors    models.RunningProcessors
-	AggProcessors models.RunningProcessors
+	Processors        models.RunningProcessors
+	AggProcessors     models.RunningProcessors
+	fileProcessors    OrderedPlugins
+	fileAggProcessors OrderedPlugins
+
 	// Parsers are created by their inputs during gather. Config doesn't keep track of them
 	// like the other plugins because they need to be garbage collected (See issue #11809)
 
 	Deprecations map[string][]int64
 	version      *semver.Version
 }
+
+// Ordered plugins used to keep the order in which they appear in a file
+type OrderedPlugin struct {
+	Line   int
+	plugin any
+}
+type OrderedPlugins []*OrderedPlugin
+
+func (op OrderedPlugins) Len() int           { return len(op) }
+func (op OrderedPlugins) Swap(i, j int)      { op[i], op[j] = op[j], op[i] }
+func (op OrderedPlugins) Less(i, j int) bool { return op[i].Line < op[j].Line }
 
 // NewConfig creates a new struct to hold the Telegraf config.
 // For historical reasons, It holds the actual instances of the running plugins
@@ -95,14 +108,16 @@ func NewConfig() *Config {
 			LogfileRotationMaxArchives: 5,
 		},
 
-		Tags:          make(map[string]string),
-		Inputs:        make([]*models.RunningInput, 0),
-		Outputs:       make([]*models.RunningOutput, 0),
-		Processors:    make([]*models.RunningProcessor, 0),
-		AggProcessors: make([]*models.RunningProcessor, 0),
-		InputFilters:  make([]string, 0),
-		OutputFilters: make([]string, 0),
-		Deprecations:  make(map[string][]int64),
+		Tags:              make(map[string]string),
+		Inputs:            make([]*models.RunningInput, 0),
+		Outputs:           make([]*models.RunningOutput, 0),
+		Processors:        make([]*models.RunningProcessor, 0),
+		AggProcessors:     make([]*models.RunningProcessor, 0),
+		fileProcessors:    make([]*OrderedPlugin, 0),
+		fileAggProcessors: make([]*OrderedPlugin, 0),
+		InputFilters:      make([]string, 0),
+		OutputFilters:     make([]string, 0),
+		Deprecations:      make(map[string][]int64),
 	}
 
 	// Handle unknown version
@@ -391,14 +406,16 @@ func (c *Config) LoadAll(configFiles ...string) error {
 		}
 	}
 
+	// Sort the processors according to their `order` setting while
+	// using a stable sort to keep the file loading / file position order.
+	sort.Stable(c.Processors)
+	sort.Stable(c.AggProcessors)
+
 	return nil
 }
 
 // LoadConfigData loads TOML-formatted config data
 func (c *Config) LoadConfigData(data []byte) error {
-	// Create unique identifier for plugins to identify when using multiple configurations
-	id := uuid.New()
-
 	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("error parsing data: %s", err)
@@ -449,6 +466,10 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if len(c.UnusedFields) > 0 {
 		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
 	}
+
+	// Initialize the file-sorting slices
+	c.fileProcessors = make(OrderedPlugins, 0)
+	c.fileAggProcessors = make(OrderedPlugins, 0)
 
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
@@ -510,7 +531,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addProcessor(id.String(), pluginName, t); err != nil {
+						if err = c.addProcessor(pluginName, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -555,8 +576,19 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 	}
 
-	if len(c.Processors) > 1 {
-		sort.Sort(c.Processors)
+	// Sort the processor according to the order they appeared in this file
+	// In a later stage, we sort them using the `order` option.
+	if len(c.fileProcessors) > 1 {
+		sort.Sort(c.fileProcessors)
+		for _, op := range c.fileProcessors {
+			c.Processors = append(c.Processors, op.plugin.(*models.RunningProcessor))
+		}
+	}
+	if len(c.fileAggProcessors) > 1 {
+		sort.Sort(c.fileAggProcessors)
+		for _, op := range c.fileAggProcessors {
+			c.AggProcessors = append(c.AggProcessors, op.plugin.(*models.RunningProcessor))
+		}
 	}
 
 	return nil
@@ -758,7 +790,7 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 	return running, err
 }
 
-func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
+func (c *Config) addProcessor(name string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -780,7 +812,7 @@ func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
-	processorConfig, err := c.buildProcessor(id, name, table)
+	processorConfig, err := c.buildProcessor(name, table)
 	if err != nil {
 		return err
 	}
@@ -791,7 +823,7 @@ func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
 		return err
 	}
 	rf := models.NewRunningProcessor(processorBefore, processorConfig)
-	c.Processors = append(c.Processors, rf)
+	c.fileProcessors = append(c.fileProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Setup another (new) processor instance running after the aggregator
 	processorAfter, _, err := c.setupProcessor(processorConfig.Name, creator, table)
@@ -799,7 +831,7 @@ func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
 		return err
 	}
 	rf = models.NewRunningProcessor(processorAfter, processorConfig)
-	c.AggProcessors = append(c.AggProcessors, rf)
+	c.fileAggProcessors = append(c.fileAggProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Check the number of misses against the threshold
 	if hasParser {
@@ -1074,12 +1106,8 @@ func (c *Config) buildParser(name string, tbl *ast.Table) *models.ParserConfig {
 // buildProcessor parses Processor specific items from the ast.Table,
 // builds the filter and returns a
 // models.ProcessorConfig to be inserted into models.RunningProcessor
-func (c *Config) buildProcessor(id string, name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
-	conf := &models.ProcessorConfig{
-		ID:   id,
-		Name: name,
-		Line: tbl.Line,
-	}
+func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+	conf := &models.ProcessorConfig{Name: name}
 
 	c.getFieldInt64(tbl, "order", &conf.Order)
 	c.getFieldString(tbl, "alias", &conf.Alias)
