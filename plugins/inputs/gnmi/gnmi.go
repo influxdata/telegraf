@@ -38,6 +38,14 @@ var sampleConfig string
 // Regular expression to see if a path element contains an origin
 var originPattern = regexp.MustCompile(`^([\w-_]+):`)
 
+// Define the warning to show if we cannot get a metric name.
+const emptyNameWarning = `Got empty metric-name for response, usually indicating
+configuration issues as the response cannot be related to any subscription.
+Please open an issue on https://github.com/influxdata/telegraf including your
+device model and the following response data:
+%+v
+This message is only printed once.`
+
 // gNMI plugin instance
 type GNMI struct {
 	Addresses        []string          `toml:"addresses"`
@@ -64,11 +72,12 @@ type GNMI struct {
 	internaltls.ClientConfig
 
 	// Internal state
-	internalAliases map[string]string
-	acc             telegraf.Accumulator
-	cancel          context.CancelFunc
-	wg              sync.WaitGroup
-	legacyTags      bool
+	internalAliases    map[string]string
+	acc                telegraf.Accumulator
+	cancel             context.CancelFunc
+	wg                 sync.WaitGroup
+	legacyTags         bool
+	emptyNameWarnShown bool
 
 	Log telegraf.Logger
 }
@@ -396,9 +405,9 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 		}
 
 		// Check for empty names
-		if name == "" {
-			c.acc.AddError(fmt.Errorf("got empty name for update %+v", update))
-			continue
+		if name == "" && !c.emptyNameWarnShown {
+			c.Log.Warnf(emptyNameWarning, response.Update)
+			c.emptyNameWarnShown = true
 		}
 
 		// Group metrics
