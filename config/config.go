@@ -578,17 +578,14 @@ func (c *Config) LoadConfigData(data []byte) error {
 
 	// Sort the processor according to the order they appeared in this file
 	// In a later stage, we sort them using the `order` option.
-	if len(c.fileProcessors) > 1 {
-		sort.Sort(c.fileProcessors)
-		for _, op := range c.fileProcessors {
-			c.Processors = append(c.Processors, op.plugin.(*models.RunningProcessor))
-		}
+	sort.Sort(c.fileProcessors)
+	for _, op := range c.fileProcessors {
+		c.Processors = append(c.Processors, op.plugin.(*models.RunningProcessor))
 	}
-	if len(c.fileAggProcessors) > 1 {
-		sort.Sort(c.fileAggProcessors)
-		for _, op := range c.fileAggProcessors {
-			c.AggProcessors = append(c.AggProcessors, op.plugin.(*models.RunningProcessor))
-		}
+
+	sort.Sort(c.fileAggProcessors)
+	for _, op := range c.fileAggProcessors {
+		c.AggProcessors = append(c.AggProcessors, op.plugin.(*models.RunningProcessor))
 	}
 
 	return nil
