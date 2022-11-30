@@ -1219,7 +1219,7 @@ Thank you to @zak-pawel for lots of linter fixes!
 - [ldap_org and ds389](https://github.com/falon/CSI-telegraf-plugins) - contributed by @falon
 - [x509_crl](https://github.com/jcgonnard/telegraf-input-x590crl) - contributed by @jcgonnard
 - [dnsmasq](https://github.com/machinly/dnsmasq-telegraf-plugin) - contributed by @machinly
-- [Big Blue Button](https://github.com/SLedunois/bigbluebutton-telegraf-plugin) - contributed by @SLedunois
+- [Big Blue Button](https://github.com/bigblueswarm/bigbluebutton-telegraf-plugin) - contributed by @SLedunois
 
 ## v1.18.3 [2021-05-20]
 
