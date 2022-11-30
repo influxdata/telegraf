@@ -227,16 +227,16 @@ vm_metric_exclude = [ "*" ]
 ```
 
 NOTE: To disable collection of a specific resource type, simply exclude all
-metrics using the XX_metric_exclude.  For example, to disable collection of VMs,
-add this:
+metrics using the XX_metric_exclude.
+For example, to disable collection of VMs, add this:
 
 ### Objects and Metrics per Query
 
 By default, in the vCenter configuration a limit is set to the number of
 entities that are included in a performance chart query. Default settings for
 vCenter 6.5 and later is 256. Earlier versions of vCenter have this set to 64.
-A vCenter administrator can change this setting. See this [VMware KB article](https://kb.vmware.com/s/article/2107096)
-for more information.
+A vCenter administrator can change this setting.
+See this [VMware KB article](https://kb.vmware.com/s/article/2107096) for more information.
 
 Any modification should be reflected in this plugin by modifying the parameter
 `max_query_objects`
@@ -250,9 +250,10 @@ Any modification should be reflected in this plugin by modifying the parameter
 ### Collection and Discovery Concurrency
 
 In large vCenter setups it may be prudent to have multiple concurrent go
-routines collect performance metrics in order to avoid potential errors for time
-elapsed during a collection cycle. This should never be greater than 8, though
-the default of 1 (no concurrency) should be sufficient for most configurations.
+routines collect performance metrics in order to avoid potential errors for
+time elapsed during a collection cycle. This should never be greater than 8,
+though the default of 1 (no concurrency) should be sufficient for most
+configurations.
 
 For setting up concurrency, modify `collect_concurrency` and
 `discover_concurrency` parameters.
@@ -265,8 +266,8 @@ For setting up concurrency, modify `collect_concurrency` and
 
 ### Inventory Paths
 
-Resources to be monitored can be selected using Inventory Paths. This treats the
-vSphere inventory as a tree structure similar to a file system. A vSphere
+Resources to be monitored can be selected using Inventory Paths. This treats
+the vSphere inventory as a tree structure similar to a file system. A vSphere
 inventory has a structure similar to this:
 
 ```bash
@@ -310,9 +311,9 @@ Another possibility is to select objects using a partial name, such as
 with "hadoop".
 
 Finally, due to the arbitrary nesting of the folder structure, we need a
-"recursive wildcard" for traversing multiple folders. We use the "**" symbol for
-that. If we want to look for a VM with a name starting with "hadoop" in any
-folder, we could use the following path: `/DC0/vm/**/hadoop*`
+"recursive wildcard" for traversing multiple folders. We use the "**" symbol
+for that. If we want to look for a VM with a name starting with "hadoop" in
+any folder, we could use the following path: `/DC0/vm/**/hadoop*`
 
 #### Multiple Paths to VMs
 
@@ -339,15 +340,15 @@ metrics.
 For more information, refer to the vSphere [documentation][vsphere-16].
 
 This distinction has an impact on how Telegraf collects metrics. A single
-instance of an input plugin can have one and only one collection interval, which
-means that you typically set the collection interval based on the most
+instance of an input plugin can have one and only one collection interval,
+which means that you typically set the collection interval based on the most
 frequently collected metric. Let's assume you set the collection interval to 1
 minute. All realtime metrics will be collected every minute. Since the
 historical metrics are only available on a 5 minute interval, the vSphere
-Telegraf plugin automatically skips four out of five collection cycles for these
-metrics. This works fine in many cases. Problems arise when the collection of
-historical metrics takes longer than the collection interval. This will cause
-error messages similar to this to appear in the Telegraf logs:
+Telegraf plugin automatically skips four out of five collection cycles for
+these metrics. This works fine in many cases. Problems arise when the
+collection of historical metrics takes longer than the collection interval.
+This will cause error messages similar to this to appear in the Telegraf logs:
 
 ```text
 2019-01-16T13:41:10Z W! [agent] input "inputs.vsphere" did not complete within its interval
@@ -356,8 +357,8 @@ error messages similar to this to appear in the Telegraf logs:
 This will disrupt the metric collection and can result in missed samples. The
 best practice workaround is to specify two instances of the vSphere plugin, one
 for the realtime metrics with a short collection interval and one for the
-historical metrics with a longer interval. You can use the `*_metric_exclude` to
-turn off the resources you don't want to collect metrics for in each
+historical metrics with a longer interval. You can use the `*_metric_exclude`
+to turn off the resources you don't want to collect metrics for in each
 instance. For example:
 
 ```toml
@@ -425,10 +426,10 @@ performance.
 Cluster metrics are handled a bit differently by vCenter. They are aggregated
 from ESXi and virtual machine metrics and may not be available when you query
 their most recent values. When this happens, vCenter will attempt to perform
-that aggregation on the fly. Unfortunately, all the subqueries needed internally
-in vCenter to perform this aggregation will count towards
-`config.vpxd.stats.maxQueryMetrics`. This means that even a very small query may
-result in an error message similar to this:
+that aggregation on the fly. Unfortunately, all the subqueries needed
+internally in vCenter to perform this aggregation will count towards
+`config.vpxd.stats.maxQueryMetrics`. This means that even a very small query
+may result in an error message similar to this:
 
 ```text
 2018-11-02T13:37:11Z E! Error in plugin [inputs.vsphere]: ServerFaultCode: This operation is restricted by the administrator - 'vpxd.stats.maxQueryMetrics'. Contact your system administrator
@@ -454,7 +455,7 @@ virtual machines divided by 1500 and rounded up to the nearest integer.
 ### Configuring historical_interval Setting
 
 When the vSphere plugin queries vCenter for historical statistics it queries for
-statistics that exist at a specific interval.  The default historical interval
+statistics that exist at a specific interval. The default historical interval
 duration is 5 minutes but if this interval has been changed then you must
 override the default query interval in the vSphere plugin.
 
@@ -536,8 +537,9 @@ For a detailed list of commonly available metrics, please refer to
 
 ## Add a vSAN extension
 
-A vSAN resource is a special type of resource that can be collected by the plugin.
-The configuration of a vSAN resource slightly differs from the configuration of hosts, VMs, and other resources.
+A vSAN resource is a special type of resource that can be collected by the
+plugin. The configuration of a vSAN resource slightly differs from the
+configuration of hosts, VMs, and other resources.
 
 ### Prerequisites for vSAN
 
@@ -594,7 +596,7 @@ you must turn on vSAN performance service.
     "performance.host-memory-slab",
     "performance.host-memory-heap",
     "performance.system-mem",
-  ]  
+  ]
   # by default vsan_metric_skip_verify = false
   vsan_metric_skip_verify = true
   # vsan_metric_exclude = ["*"]
