@@ -235,8 +235,8 @@ add this:
 By default, in the vCenter configuration a limit is set to the number of
 entities that are included in a performance chart query. Default settings for
 vCenter 6.5 and later is 256. Earlier versions of vCenter have this set to 64.
-A vCenter administrator can change this setting. See this [VMware KB article]
-(https://kb.vmware.com/s/article/2107096) for more information.
+A vCenter administrator can change this setting. See this [VMware KB article](https://kb.vmware.com/s/article/2107096)
+for more information.
 
 Any modification should be reflected in this plugin by modifying the parameter
 `max_query_objects`
