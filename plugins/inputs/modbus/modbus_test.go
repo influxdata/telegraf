@@ -3130,6 +3130,70 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 	}
 }
 
+func TestConfigurationMaxExtraRegisterFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		requests []requestDefinition
+		errormsg string
+	}{{
+		name: "MaxExtraRegister too large",
+		requests: []requestDefinition{
+			{
+				SlaveID:           1,
+				ByteOrder:         "ABCD",
+				RegisterType:      "input",
+				Optimization:      "max_insert",
+				MaxExtraRegisters: 5000,
+				Fields: []requestFieldDefinition{
+					{
+						Name:        "input-0",
+						Address:     uint16(0),
+						Measurement: "foo",
+					},
+				},
+			},
+		},
+		errormsg: "configuration invalid: optimization_max_register_fill has to be between 1 and 125",
+	},
+		{
+			name: "MaxExtraRegister too small",
+			requests: []requestDefinition{
+				{
+					SlaveID:           1,
+					ByteOrder:         "ABCD",
+					RegisterType:      "input",
+					Optimization:      "max_insert",
+					MaxExtraRegisters: 0,
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "input-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+			},
+			errormsg: "configuration invalid: optimization_max_register_fill has to be between 1 and 125",
+		}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = tt.requests
+
+			err := plugin.Init()
+			require.Error(t, err)
+			require.Equal(t, tt.errormsg, err.Error())
+			require.Empty(t, plugin.requests)
+		})
+	}
+}
+
 func TestRequestsStartingWithOmits(t *testing.T) {
 	modbus := Modbus{
 		Name:              "Test",
@@ -4223,4 +4287,137 @@ func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
 	}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
+}
+
+func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
+	maxsize := maxQuantityHoldingRegisters
+	maxExtraRegisters := uint16(5)
+	tests := []struct {
+		name     string
+		inputs   []rangeDefinition
+		expected []requestExpectation
+	}{
+		{
+			name: "large gaps",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 5},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+		{
+			name: "large gaps filled",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, 17, 1, 1, "INT16", true},
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+					},
+					req: request{address: 0, length: 1},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: 18, count: 3, length: 1},
+					},
+					req: request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 5},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+		{
+			name: "large gaps filled with offset",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 5},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Generate the input structure and the expectation
+			requestFields := generateRequestDefinitions(tt.inputs)
+			expected := generateExpectation(tt.expected)
+
+			// Setup the plugin
+			slaveID := byte(1)
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = []requestDefinition{
+				{
+					SlaveID:           slaveID,
+					ByteOrder:         "ABCD",
+					RegisterType:      "holding",
+					Optimization:      "max_insert",
+					MaxExtraRegisters: maxExtraRegisters,
+					Fields:            requestFields,
+				},
+			}
+			require.NoError(t, plugin.Init())
+			require.NotEmpty(t, plugin.requests)
+			require.Contains(t, plugin.requests, slaveID)
+			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
+		})
+	}
 }

@@ -138,7 +138,35 @@ func (m *Modbus) Init() error {
 	if err := m.initClient(); err != nil {
 		return fmt.Errorf("initializing client failed: %v", err)
 	}
+	for slaveID, rqs := range m.requests {
+		var nHoldingRegs, nInputsRegs, nDiscreteRegs, nCoilRegs uint16
+		var nHoldingFields, nInputsFields, nDiscreteFields, nCoilFields int
 
+		for _, r := range rqs.holding {
+			nHoldingRegs += r.length
+			nHoldingFields += len(r.fields)
+		}
+		for _, r := range rqs.input {
+			nInputsRegs += r.length
+			nInputsFields += len(r.fields)
+		}
+		for _, r := range rqs.discrete {
+			nDiscreteRegs += r.length
+			nDiscreteFields += len(r.fields)
+		}
+		for _, r := range rqs.coil {
+			nCoilRegs += r.length
+			nCoilFields += len(r.fields)
+		}
+		m.Log.Infof("Got %d request(s) touching %d holding registers for %d fields (slave %d)",
+			len(rqs.holding), nHoldingRegs, nHoldingFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d inputs registers for %d fields (slave %d)",
+			len(rqs.input), nInputsRegs, nInputsFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d discrete registers for %d fields (slave %d)",
+			len(rqs.discrete), nDiscreteRegs, nDiscreteFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d coil registers for %d fields (slave %d)",
+			len(rqs.coil), nCoilRegs, nCoilFields, slaveID)
+	}
 	return nil
 }
 

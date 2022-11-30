@@ -123,7 +123,41 @@ func optimizeGroup(g request, maxBatchSize uint16) []request {
 	return requests
 }
 
-func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16, optimization string) []request {
+func optimitzeGroupWithinLimits(g request, maxBatchSize uint16, maxExtraRegisters uint16) []request {
+	if len(g.fields) == 0 {
+		return nil
+	}
+
+	var requests []request
+	currentRequest := request{
+		fields:  []field{g.fields[0]},
+		address: g.fields[0].address,
+		length:  g.fields[0].length,
+	}
+	for i := 1; i <= len(g.fields)-1; i++ {
+		// Check if we need to interrupt the current chunk and require a new one
+		holeSize := g.fields[i].address - (g.fields[i-1].address + g.fields[i-1].length)
+		needInterrupt := holeSize > maxExtraRegisters                                                     // too far apart
+		needInterrupt = needInterrupt || currentRequest.length+holeSize+g.fields[i].length > maxBatchSize // too large
+		if !needInterrupt {
+			// Still safe to add the field to the current request
+			currentRequest.length = g.fields[i].address + g.fields[i].length - currentRequest.address
+			currentRequest.fields = append(currentRequest.fields, g.fields[i])
+			continue
+		}
+		// Finish the current request, add it to the list and construct a new one
+		requests = append(requests, currentRequest)
+		currentRequest = request{
+			fields:  []field{g.fields[i]},
+			address: g.fields[i].address,
+			length:  g.fields[i].length,
+		}
+	}
+	requests = append(requests, currentRequest)
+	return requests
+}
+
+func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16, optimization string, maxExtraRegisters uint16) []request {
 	if len(fields) == 0 {
 		return nil
 	}
@@ -196,6 +230,15 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 			}
 		}
 		requests = optimizeGroup(total, maxBatchSize)
+	case "max_insert":
+		// Similar to aggressive but keeps the number of touched registers bellow a threshold
+		var total request
+		for _, g := range groups {
+			if len(g.fields) > 0 {
+				total.fields = append(total.fields, g.fields...)
+			}
+		}
+		requests = optimitzeGroupWithinLimits(total, maxBatchSize, maxExtraRegisters)
 	default:
 		// no optimization
 		for _, g := range groups {
