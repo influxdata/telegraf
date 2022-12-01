@@ -150,6 +150,7 @@ type Config struct {
 	CSVSkipColumns        int      `toml:"csv_skip_columns"`
 	CSVSkipRows           int      `toml:"csv_skip_rows"`
 	CSVTagColumns         []string `toml:"csv_tag_columns"`
+	CSVTagOverwrite       bool     `toml:"csv_tag_overwrite"`
 	CSVTimestampColumn    string   `toml:"csv_timestamp_column"`
 	CSVTimestampFormat    string   `toml:"csv_timestamp_format"`
 	CSVTimezone           string   `toml:"csv_timezone"`

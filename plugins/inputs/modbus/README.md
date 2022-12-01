@@ -147,10 +147,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##  |                 to reduce the number of requested registers by keeping
     ##  |                 the number of requests.
     ##  |---aggressive -- Rearrange request boundaries similar to "rearrange" but
-    ##                    allow to request registers not specified by the user to
-    ##                    fill gaps. This usually reduces the number of requests at the
-    ##                    cost of more requested registers.
+    ##  |                 allow to request registers not specified by the user to
+    ##  |                 fill gaps. This usually reduces the number of requests at the
+    ##  |                 cost of more requested registers.
+    ##  |---max_insert -- Rearrange request keeping the number of extra fields below the value
+    ##                    provided in "optimization_max_register_fill". It is not necessary to define 'omitted'
+    ##                    fields as the optimisation will add such field only where needed.
     # optimization = "none"
+
+    ## Maximum number register the optimizer is allowed to insert between two fields to 
+    ## save requests.
+    ## This option is only used for the 'max_insert' optimization strategy.
+    ## NOTE: All omitted fields are ignored, so this option denotes the effective hole 
+    ## size to fill.
+    # optimization_max_register_fill = 50
 
     ## Field definitions
     ## Analog Variables, Input Registers and Holding Registers
@@ -396,6 +406,23 @@ interested in but want to minimize the number of requests sent to the device.
 
 __Please note:__ This optimization might take long in case of many
 non-consecutive, non-omitted fields!
+
+##### `max_insert`
+
+Fields are assigned to the same request as long as the hole between the fields
+do not exceed the maximum fill size given in `optimization_max_register_fill`.
+User-defined omitted fields are ignored and interpreted as holes, so the best
+practice is to not manually insert omitted fields for this optimizer. This
+allows to specify only actually used fields and let the optimizer figure out
+the request organization which can dramatically improve query time. The
+trade-off here is between the cost of reading additional registers trashed
+later and the cost of many requests.
+
+__Please note:__ The optimal value for `optimization_max_register_fill` depends
+on the network and the queried device. It is hence recommended to test several
+values and assess performance in order to find the best value. Use the
+`--test --debug` flags to monitor how may requests are sent and the number of
+touched registers.
 
 #### Field definitions
 

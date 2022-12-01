@@ -1,7 +1,7 @@
 
 # Nightly Builds
 
-These builds are generated from the master branch each night:
+These builds are generated from the master branch at midnight UTC:
 
 | DEB             | RPM             | TAR GZ                        | ZIP |
 | --------------- | --------------- | ------------------------------| --- |
