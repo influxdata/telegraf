@@ -75,6 +75,7 @@ type Parser struct {
 	NamedPatterns      []string          `toml:"grok_named_patterns"`
 	CustomPatterns     string            `toml:"grok_custom_patterns"`
 	CustomPatternFiles []string          `toml:"grok_custom_pattern_files"`
+	Multiline          bool              `toml:"grok_multiline"`
 	Measurement        string            `toml:"-"`
 	DefaultTags        map[string]string `toml:"-"`
 	Log                telegraf.Logger   `toml:"-"`
@@ -381,6 +382,15 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 
+	if p.Multiline {
+		m, err := p.ParseLine(string(buf))
+		if err != nil {
+			return nil, err
+		}
+		metrics = append(metrics, m)
+		return metrics, nil
+	}
+
 	scanner := bufio.NewScanner(bytes.NewReader(buf))
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -572,6 +582,7 @@ func (p *Parser) InitFromConfig(config *parsers.Config) error {
 	p.Patterns = config.GrokPatterns
 	p.Timezone = config.GrokTimezone
 	p.UniqueTimestamp = config.GrokUniqueTimestamp
+	p.Multiline = config.GrokMultiline
 
 	return p.Init()
 }

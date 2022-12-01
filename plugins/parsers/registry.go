@@ -139,6 +139,7 @@ type Config struct {
 	GrokCustomPatternFiles []string `toml:"grok_custom_pattern_files"`
 	GrokTimezone           string   `toml:"grok_timezone"`
 	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
+	GrokMultiline          bool     `toml:"grok_multiline"`
 
 	//csv configuration
 	CSVColumnNames        []string `toml:"csv_column_names"`
