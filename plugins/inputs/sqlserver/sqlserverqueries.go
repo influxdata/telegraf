@@ -216,6 +216,7 @@ SELECT
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 	,si.[cpu_count]
 	,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
+	,(SELECT [available_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [available_server_memory]
 	,SERVERPROPERTY(''Edition'') AS [sku]
 	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
