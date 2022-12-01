@@ -162,6 +162,7 @@ type Statsd struct {
 	UDPPacketsDrop     selfstat.Stat
 	UDPBytesRecv       selfstat.Stat
 	ParseTimeNS        selfstat.Stat
+	PendingMessages    selfstat.Stat
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -330,6 +331,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.UDPPacketsDrop = selfstat.Register("statsd", "udp_packets_dropped", tags)
 	s.UDPBytesRecv = selfstat.Register("statsd", "udp_bytes_received", tags)
 	s.ParseTimeNS = selfstat.Register("statsd", "parse_time_ns", tags)
+	s.PendingMessages = selfstat.Register("statsd", "pending_messages", tags)
 
 	s.in = make(chan input, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
@@ -487,6 +489,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 				Buffer: b,
 				Time:   time.Now(),
 				Addr:   addr.IP.String()}:
+				s.PendingMessages.Set(int64(len(s.in)))
 			default:
 				s.UDPPacketsDrop.Incr(1)
 				s.drops++
@@ -509,6 +512,7 @@ func (s *Statsd) parser() error {
 		case <-s.done:
 			return nil
 		case in := <-s.in:
+			s.PendingMessages.Set(int64(len(s.in)))
 			start := time.Now()
 			lines := strings.Split(in.Buffer.String(), "\n")
 			s.bufPool.Put(in.Buffer)
@@ -913,6 +917,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 			select {
 			case s.in <- input{Buffer: b, Time: time.Now(), Addr: remoteIP}:
+				s.PendingMessages.Set(int64(len(s.in)))
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
