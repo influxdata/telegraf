@@ -85,7 +85,7 @@ func (k *KafkaConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KafkaConsumer) Init() error {
-	k.SetLogger(k.Log)
+	k.SetLogger()
 
 	if k.MaxUndeliveredMessages == 0 {
 		k.MaxUndeliveredMessages = defaultMaxUndeliveredMessages

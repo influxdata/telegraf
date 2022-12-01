@@ -120,7 +120,7 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (k *Kafka) Init() error {
-	k.SetLogger(k.Log)
+	k.SetLogger()
 
 	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
 	if err != nil {

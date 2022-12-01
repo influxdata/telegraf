@@ -4,6 +4,7 @@ import (
 	"github.com/Shopify/sarama"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 )
 
 type Logger struct {
@@ -15,13 +16,11 @@ type DebugLogger struct {
 }
 
 func (l *DebugLogger) Print(v ...interface{}) {
-	args := make([]interface{}, 0, len(v)+1)
-	args = append(append(args, "[sarama] "), v...)
-	l.Log.Debug(args...)
+	l.Log.Debug(v...)
 }
 
 func (l *DebugLogger) Printf(format string, v ...interface{}) {
-	l.Log.Debugf("[sarama] "+format, v...)
+	l.Log.Debugf(format, v...)
 }
 
 func (l *DebugLogger) Println(v ...interface{}) {
@@ -29,6 +28,7 @@ func (l *DebugLogger) Println(v ...interface{}) {
 }
 
 // SetLogger configures a debug logger for kafka (sarama)
-func (k *Logger) SetLogger(log telegraf.Logger) {
+func (k *Logger) SetLogger() {
+	log := &models.Logger{Name: "sarama"}
 	sarama.Logger = &DebugLogger{Log: log}
 }
