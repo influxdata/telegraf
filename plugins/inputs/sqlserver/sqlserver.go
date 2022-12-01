@@ -2,6 +2,7 @@
 package sqlserver
 
 import (
+	"context"
 	"database/sql"
 	_ "embed"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	mssql "github.com/denisenkom/go-mssqldb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -24,6 +26,7 @@ var sampleConfig string
 // SQLServer struct
 type SQLServer struct {
 	Servers      []string        `toml:"servers"`
+	Timeout      config.Duration `toml:"timeout"`
 	AuthMethod   string          `toml:"auth_method"`
 	QueryVersion int             `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
 	AzureDB      bool            `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
@@ -294,7 +297,9 @@ func (s *SQLServer) Stop() {
 
 func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
 	// execute query
-	rows, err := pool.Query(query.Script)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
+	defer cancel()
+	rows, err := pool.QueryContext(ctx, query.Script)
 	if err != nil {
 		serverName, databaseName := getConnectionIdentifiers(connectionString)
 
@@ -423,6 +428,10 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
 		s.Log.Warn("Warning: Server list is empty.")
+	}
+
+	if s.Timeout <= 0 {
+		s.Timeout = config.Duration(5 * time.Second)
 	}
 
 	return nil
