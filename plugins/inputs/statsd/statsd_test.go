@@ -118,6 +118,26 @@ func TestCloseConcurrentConns(t *testing.T) {
 	listener.Stop()
 }
 
+// benchmark how long it takes to parse metrics:
+func BenchmarkParser(b *testing.B) {
+	plugin := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "udp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 250000,
+	}
+	acc := &testutil.Accumulator{Discard: true}
+
+	require.NoError(b, plugin.Start(acc))
+
+	// send multiple messages to socket
+	for n := 0; n < b.N; n++ {
+		require.NoError(b, plugin.parseStatsdLine(testMsg))
+	}
+
+	plugin.Stop()
+}
+
 // benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkUDP(b *testing.B) {
 	listener := Statsd{
