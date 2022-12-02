@@ -41,15 +41,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## MQTT outputs send metrics to this topic format:
   ## {{ .TopicPrefix }}/{{ .Hostname }}/{{ .PluginName }}/{{ .Tag "tag_key" }}
   ## (e.g. prefix/web01.example.com/mem/some_tag_value)
-  ## When a tag is not found within the metric, the segment is ignored and is not considered in the final topic name.
-  ## Where each segment accept either a placeholder, an environment variable, or a key.
-  ## An empty string is illegal as a topic name, in which case, we use by default the input plugin name
-  ## The characters `#` and `+` are reserved in MQTT, therefore, are invalid to use as part of the topic name.
-  ## The following is the default topic format:
-   topic = "{{ .TopicPrefix }}/{{ .Hostname }}/{{ .PluginName }}"
+  ## Each path segment accepts either a template placeholder, an environment variable, or a tag key
+  ## of the form `{{.Tag "tag_key_name"]]`. Empty path elements as well as special MQTT characters
+  ## (such as `+` or `#`) are invalid to form the topic name and will lead to an error.
+  ## In case a tag is missing in the metric, that path segment omitted for the final topic.
+  topic = "{{ .TopicPrefix }}/{{ .Hostname }}/{{ .PluginName }}"
 
-  ## The topic_prefix has been made redundant with the added support to a topic based on patterns, however,
-  ## the variable is left in place for backward compatibility.
+  ## DEPRECATED: Use the topic template instead.
   topic_prefix = "telegraf"
 
   ## QoS policy for messages

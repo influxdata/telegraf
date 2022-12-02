@@ -49,16 +49,13 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err := m.Init()
-	require.NoError(t, err)
+	require.NoError(t, m.Init())
 
 	// Verify that we can connect to the MQTT broker
-	err = m.Connect()
-	require.NoError(t, err)
+	require.NoError(t, m.Connect())
 
 	// Verify that we can successfully write data to the mqtt broker
-	err = m.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, m.Write(testutil.MockMetrics()))
 }
 
 func TestConnectAndWriteIntegrationMQTTv3(t *testing.T) {
@@ -80,16 +77,13 @@ func TestConnectAndWriteIntegrationMQTTv3(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err := m.Init()
-	require.NoError(t, err)
+	require.NoError(t, m.Init())
 
 	// Verify that we can connect to the MQTT broker
-	err = m.Connect()
-	require.NoError(t, err)
+	require.NoError(t, m.Connect())
 
 	// Verify that we can successfully write data to the mqtt broker
-	err = m.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, m.Write(testutil.MockMetrics()))
 }
 
 func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
@@ -111,36 +105,33 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err := m.Init()
-	require.NoError(t, err)
-	err = m.Connect()
-	require.NoError(t, err)
+	require.NoError(t, m.Init())
+	require.NoError(t, m.Connect())
 
 	// Verify that we can successfully write data to the mqtt broker
-	err = m.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, m.Write(testutil.MockMetrics()))
 }
 
-func TestMQTT_Init(t *testing.T) {
+func TestMQTTTopicGenerationTemplateIsValid(t *testing.T) {
 	tests := []struct {
-		name    string
-		topic   string
-		wantErr bool
+		name          string
+		topic         string
+		expectedError string
 	}{
 		{
-			name:    "a valid pattern is accepted",
-			topic:   "this/is/valid",
-			wantErr: false,
+			name:          "a valid pattern is accepted",
+			topic:         "this/is/valid",
+			expectedError: "",
 		},
 		{
-			name:    "an invalid pattern is rejected",
-			topic:   "this/is/#/invalid",
-			wantErr: true,
+			name:          "an invalid pattern is rejected",
+			topic:         "this/is/#/invalid",
+			expectedError: "found forbidden character # in the topic name this/is/#/invalid",
 		},
 		{
-			name:    "an invalid pattern is rejected",
-			topic:   "this/is/+/invalid",
-			wantErr: true,
+			name:          "an invalid pattern is rejected",
+			topic:         "this/is/+/invalid",
+			expectedError: "found forbidden character + in the topic name this/is/+/invalid",
 		},
 	}
 	for _, tt := range tests {
@@ -148,8 +139,11 @@ func TestMQTT_Init(t *testing.T) {
 			m := &MQTT{
 				Topic: tt.topic,
 			}
-			if err := m.Init(); (err != nil) != tt.wantErr {
-				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
+			err := m.Init()
+			if tt.expectedError != "" {
+				require.ErrorContains(t, err, tt.expectedError)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
