@@ -83,7 +83,11 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.MeasurementColumn != "" && name == q.MeasurementColumn {
 				var ok bool
 				if measurement, ok = columnData[i].(string); !ok {
-					return 0, fmt.Errorf("measurement column type \"%T\" unsupported", columnData[i])
+					var fieldValue []uint8
+					if fieldValue, ok = columnData[i].([]uint8); !ok {
+						return 0, fmt.Errorf("measurement column type \"%T\" unsupported", columnData[i])
+					}
+					measurement = string(fieldValue)
 				}
 			}
 
