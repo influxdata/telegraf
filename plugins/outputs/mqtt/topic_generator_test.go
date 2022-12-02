@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func Test_parse(t *testing.T) {
+func Test_generateTopicName(t *testing.T) {
 	s := serializers.NewInfluxSerializer()
 	m := &MQTT{
 		Servers:    []string{"tcp://localhost:502"},

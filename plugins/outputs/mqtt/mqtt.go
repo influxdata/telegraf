@@ -62,7 +62,11 @@ func (*MQTT) SampleConfig() string {
 }
 
 func (m *MQTT) Init() error {
-	m.template = template.Must(template.New("topic_name").Parse(m.Topic))
+	var err error
+	m.template, err = template.New("topic_name").Parse(m.Topic)
+	if err != nil {
+		return err
+	}
 	for _, p := range strings.Split(m.Topic, "/") {
 		if strings.ContainsAny(p, "#+") {
 			return fmt.Errorf("found forbidden character %s in the topic name %s", p, m.Topic)
