@@ -68,7 +68,7 @@ func Test_generateTopicName(t *testing.T) {
 			err := m.Init()
 			require.NoError(t, err)
 			topic := NewTopicNameGenerator("hostname", tp, m.template)
-			if got := topic.Generate(met); got != tt.want {
+			if got, _ := topic.Generate(met); got != tt.want {
 				t.Errorf("parse() = %v, want %v", got, tt.want)
 			}
 		})

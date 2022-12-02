@@ -27,12 +27,12 @@ func (t *TopicNameGenerator) PluginName() string {
 	return t.metric.Name()
 }
 
-func (t *TopicNameGenerator) Generate(m telegraf.Metric) string {
+func (t *TopicNameGenerator) Generate(m telegraf.Metric) (string, error) {
 	t.metric = m
 	var b strings.Builder
 	err := t.template.Execute(&b, t)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	var ts []string
 	for _, p := range strings.Split(b.String(), "/") {
@@ -43,7 +43,7 @@ func (t *TopicNameGenerator) Generate(m telegraf.Metric) string {
 	topic := strings.Join(ts, "/")
 	// This is to keep backward compatibility with previous behaviour where the plugin name was always present
 	if topic == "" {
-		return t.PluginName()
+		return t.PluginName(), nil
 	}
-	return topic
+	return topic, nil
 }

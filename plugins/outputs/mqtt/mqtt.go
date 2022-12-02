@@ -116,7 +116,10 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	}
 	tt := NewTopicNameGenerator(hostname, m.TopicPrefix, m.template)
 	for _, metric := range metrics {
-		topic := tt.Generate(metric)
+		topic, err := tt.Generate(metric)
+		if err != nil {
+			return fmt.Errorf("topic name couldn't be generated due to error: %w", err)
+		}
 
 		if m.BatchMessage {
 			metricsmap[topic] = append(metricsmap[topic], metric)
