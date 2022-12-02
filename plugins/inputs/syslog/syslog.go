@@ -305,6 +305,9 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 
 	p.Parse(conn)
 
+	if conn == nil {
+		fmt.Println("connection is nil")
+	}
 	if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
 		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
 			acc.AddError(fmt.Errorf("resetting read deadline failed: %v", err))
