@@ -114,9 +114,9 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	if !ok {
 		hostname = ""
 	}
+	tt := NewTopicNameGenerator(hostname, m.TopicPrefix, m.template)
 	for _, metric := range metrics {
-		tt := &TopicGenerator{Hostname: hostname, metric: metric}
-		topic := tt.Generate(m)
+		topic := tt.Generate(metric)
 
 		if m.BatchMessage {
 			metricsmap[topic] = append(metricsmap[topic], metric)

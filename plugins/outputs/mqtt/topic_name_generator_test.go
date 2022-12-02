@@ -59,7 +59,6 @@ func Test_generateTopicName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m.Topic = tt.pattern
 			tp := "prefix"
-			m.TopicPrefix = tp
 			met := metric.New(
 				"metric-name",
 				map[string]string{"tag1": "value1"},
@@ -68,8 +67,8 @@ func Test_generateTopicName(t *testing.T) {
 			)
 			err := m.Init()
 			require.NoError(t, err)
-			topic := &TopicGenerator{Hostname: "hostname", metric: met}
-			if got := topic.Generate(m); got != tt.want {
+			topic := NewTopicNameGenerator("hostname", tp, m.template)
+			if got := topic.Generate(met); got != tt.want {
 				t.Errorf("parse() = %v, want %v", got, tt.want)
 			}
 		})
