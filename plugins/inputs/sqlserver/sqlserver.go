@@ -297,9 +297,16 @@ func (s *SQLServer) Stop() {
 
 func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
 	// execute query
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
-	defer cancel()
-	rows, err := pool.QueryContext(ctx, query.Script)
+	var err error
+	var rows *sql.Rows
+	// If Timeout is 0 , execute query without any timeout else query will be execued with a timeout with s.Timeout
+	if s.Timeout == 0 {
+		rows, err = pool.Query(query.Script)
+	} else {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
+		defer cancel()
+		rows, err = pool.QueryContext(ctx, query.Script)
+	}
 	if err != nil {
 		serverName, databaseName := getConnectionIdentifiers(connectionString)
 
@@ -429,9 +436,9 @@ func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
 		s.Log.Warn("Warning: Server list is empty.")
 	}
-
+	s.Log.Infof("Tmeout = %v", s.Timeout)
 	if s.Timeout <= 0 {
-		s.Timeout = config.Duration(5 * time.Second)
+		s.Timeout = config.Duration(0 * time.Second)
 	}
 
 	return nil

@@ -136,6 +136,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Timeout for query execution operation
   ## Note that the timeout for queries is per query not per gather.
+  ## 0 value means no timeout
   # timeout = "5s"
 
   ## Authentication method
