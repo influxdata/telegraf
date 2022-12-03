@@ -436,7 +436,6 @@ func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
 		s.Log.Warn("Warning: Server list is empty.")
 	}
-	s.Log.Infof("Tmeout = %v", s.Timeout)
 	if s.Timeout <= 0 {
 		s.Timeout = config.Duration(0 * time.Second)
 	}
