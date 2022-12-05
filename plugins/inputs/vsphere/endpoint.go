@@ -971,7 +971,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			}
 
 			if !start.Truncate(time.Second).Before(now.Truncate(time.Second)) {
-				e.log.Warnf("Start >= end (rounded to seconds): %s > %s", start, now)
+				e.log.Debugf("Start >= end (rounded to seconds): %s > %s", start, now)
 			}
 
 			// Create bucket if we don't already have it
