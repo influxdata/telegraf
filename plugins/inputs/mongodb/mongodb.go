@@ -144,7 +144,16 @@ func (m *MongoDB) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *MongoDB) Stop() {}
+// Stop disconnect mongo connections when stop or reload
+func (m *MongoDB) Stop() {
+	for _, server := range m.clients {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := server.client.Disconnect(ctx); err != nil {
+			m.Log.Errorf("disconnecting from %q failed: %w", server, err)
+		}
+		cancel()
+	}
+}
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
