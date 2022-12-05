@@ -11,7 +11,7 @@ vCenter servers.
 
 ## Supported versions of vSphere
 
-This plugin supports vSphere version 6.5, 6.7, 7.0 and 8.0. 
+This plugin supports vSphere version 6.5, 6.7, 7.0 and 8.0.
 It may work with versions 5.1, 5.5 and 6.0, but neither are
 officially supported.
 
