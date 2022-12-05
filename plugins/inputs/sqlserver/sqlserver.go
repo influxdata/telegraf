@@ -26,7 +26,7 @@ var sampleConfig string
 // SQLServer struct
 type SQLServer struct {
 	Servers      []string        `toml:"servers"`
-	Timeout      config.Duration `toml:"timeout"`
+	QueryTimeout      config.Duration `toml:"query_timeout"`
 	AuthMethod   string          `toml:"auth_method"`
 	QueryVersion int             `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
 	AzureDB      bool            `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
