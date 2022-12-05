@@ -299,8 +299,8 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 	// execute query
 	ctx := context.Background()
 	// Use the query timeout if any
-	if s.Timeout > 0 {
-		ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
+	if s.QueryTimeout > 0 {
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(s.QueryTimeout))
 		defer cancel()
 	}
 	rows, err := pool.QueryContext(ctx, query.Script)
@@ -433,8 +433,8 @@ func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
 		s.Log.Warn("Warning: Server list is empty.")
 	}
-	if s.Timeout <= 0 {
-		s.Timeout = config.Duration(0 * time.Second)
+	if s.QueryTimeout <= 0 {
+		s.QueryTimeout = config.Duration(0 * time.Second)
 	}
 
 	return nil
