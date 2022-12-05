@@ -10,7 +10,6 @@ vCenter servers.
 * Datastores
 
 ## Supported versions of vSphere
-This plugin supports vSphere version 5.5 through 7.0.
 
 This plugin supports vSphere version 6.5, 6.7, 7.0 and 8.0. 
 It may work with versions 5.1, 5.5 and 6.0, but neither are
@@ -18,7 +17,6 @@ officially supported.
 
 Compatibility information is available from the govmomi project
 [here](https://github.com/vmware/govmomi/tree/v0.26.0#compatibility)
-Compatibility information was found [here](https://github.com/vmware/govmomi/tree/v0.26.0#compatibility)
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
