@@ -297,16 +297,13 @@ func (s *SQLServer) Stop() {
 
 func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
 	// execute query
-	var err error
-	var rows *sql.Rows
-	// If Timeout is 0 , execute query without any timeout else query will be execued with a timeout with s.Timeout
-	if s.Timeout == 0 {
-		rows, err = pool.Query(query.Script)
-	} else {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
+	ctx := context.Background()
+	// Use the query timeout if any
+	if s.Timeout > 0 {
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 		defer cancel()
-		rows, err = pool.QueryContext(ctx, query.Script)
 	}
+	rows, err := pool.QueryContext(ctx, query.Script)
 	if err != nil {
 		serverName, databaseName := getConnectionIdentifiers(connectionString)
 
