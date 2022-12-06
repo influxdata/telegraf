@@ -1691,6 +1691,35 @@ func TestUdp(t *testing.T) {
 	)
 }
 
+func TestUdpFillQueue(t *testing.T) {
+	logger := testutil.CaptureLogger{}
+	plugin := &Statsd{
+		Log:                    &logger,
+		Protocol:               "udp",
+		ServiceAddress:         "localhost:0",
+		AllowedPendingMessages: 10,
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	conn, err := net.Dial("udp", plugin.UDPlistener.LocalAddr().String())
+	require.NoError(t, err)
+	numberToSend := plugin.AllowedPendingMessages
+	for i := 0; i < numberToSend; i++ {
+		_, _ = fmt.Fprintf(conn, "cpu.time_idle:%d|c\n", i)
+	}
+	require.NoError(t, conn.Close())
+
+	require.Eventually(t, func() bool {
+		return plugin.UDPPacketsRecv.Get() >= int64(numberToSend)
+	}, 1*time.Second, 100*time.Millisecond)
+	defer plugin.Stop()
+
+	errs := logger.Errors()
+	require.Lenf(t, errs, 0, "got errors: %v", errs)
+}
+
 func TestParse_Ints(t *testing.T) {
 	s := NewTestStatsd()
 	s.Percentiles = []Number{90}
