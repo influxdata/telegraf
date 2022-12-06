@@ -142,12 +142,12 @@ type Statsd struct {
 	TCPlistener *net.TCPListener
 
 	// track current connections so we can close them in Stop()
-	conns map[string]*net.TCPConn
-
+	conns          map[string]*net.TCPConn
 	graphiteParser *graphite.Parser
+	acc            telegraf.Accumulator
+	bufPool        sync.Pool // pool of byte slices to handle parsing
 
-	acc telegraf.Accumulator
-
+	// Internal statistics counters
 	MaxConnections     selfstat.Stat
 	CurrentConnections selfstat.Stat
 	TotalConnections   selfstat.Stat
@@ -158,9 +158,6 @@ type Statsd struct {
 	UDPBytesRecv       selfstat.Stat
 	ParseTimeNS        selfstat.Stat
 	PendingMessages    selfstat.Stat
-
-	// A pool of byte slices to handle parsing
-	bufPool sync.Pool
 }
 
 type input struct {
