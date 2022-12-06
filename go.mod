@@ -160,6 +160,7 @@ require (
 	github.com/vmware/govmomi v0.28.1-0.20220921224932-b4b508abf208
 	github.com/wavefronthq/wavefront-sdk-go v0.10.4
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
+	github.com/x448/float16 v0.8.4
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.5.3
 	go.mongodb.org/mongo-driver v1.11.0
@@ -194,7 +195,6 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.0 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
-	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/otel/metric v0.32.1 // indirect
 	go.uber.org/zap v1.22.0 // indirect
 )
