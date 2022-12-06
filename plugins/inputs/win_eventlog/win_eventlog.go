@@ -347,6 +347,11 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	}
 	defer _EvtClose(publisherHandle)
 
+	fmt.Println("----")
+	fmt.Println(event)
+	fmt.Println(EvtFormatMessageKeyword)
+	fmt.Println(eventHandle)
+	fmt.Println(publisherHandle)
 	// Populating text values
 	keywords, err := formatEventString(EvtFormatMessageKeyword, eventHandle, publisherHandle)
 	if err == nil {
