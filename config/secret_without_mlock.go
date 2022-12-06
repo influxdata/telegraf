@@ -10,7 +10,6 @@ func protect(secret []byte) error {
 	return nil
 }
 
-func ReleaseSecret(secret []byte) error {
+func ReleaseSecret(secret []byte) {
 	memguard.WipeBytes(secret)
-	return nil
 }

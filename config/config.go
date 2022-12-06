@@ -282,7 +282,7 @@ func (c *Config) OutputNames() []string {
 
 // SecretstoreNames returns a list of strings of the configured secret-stores.
 func (c *Config) SecretstoreNames() []string {
-	var names []string
+	names := make([]string, 0, len(c.SecretStores))
 	for name := range c.SecretStores {
 		names = append(names, name)
 	}
@@ -596,7 +596,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 					return fmt.Errorf("unsupported config format: %s", pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+					msg := "plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used"
+					return fmt.Errorf(msg, name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
 

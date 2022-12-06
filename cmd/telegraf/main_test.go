@@ -58,7 +58,7 @@ func (m *MockTelegraf) Run() error {
 }
 
 func (m *MockTelegraf) ListSecretStores() ([]string, error) {
-	var ids []string
+	ids := make([]string, 0, len(secrets))
 	for k := range secrets {
 		ids = append(ids, k)
 	}
@@ -102,7 +102,7 @@ func (s *MockSecretStore) Set(key, value string) error {
 	return nil
 }
 func (s *MockSecretStore) List() ([]string, error) {
-	var keys []string
+	keys := make([]string, 0, len(s.Secrets))
 	for k := range s.Secrets {
 		keys = append(keys, k)
 	}

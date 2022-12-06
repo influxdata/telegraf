@@ -12,7 +12,9 @@ func protect(secret []byte) error {
 	return syscall.Mlock(secret)
 }
 
-func ReleaseSecret(secret []byte) error {
+func ReleaseSecret(secret []byte) {
 	memguard.WipeBytes(secret)
-	return syscall.Munlock(secret)
+	if err := syscall.Munlock(secret); err != nil {
+		panic(err)
+	}
 }

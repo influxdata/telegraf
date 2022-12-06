@@ -89,7 +89,7 @@ func (t *Telegraf) ListSecretStores() ([]string, error) {
 		return nil, err
 	}
 
-	var ids []string
+	ids := make([]string, 0, len(c.SecretStores))
 	for k := range c.SecretStores {
 		ids = append(ids, k)
 	}

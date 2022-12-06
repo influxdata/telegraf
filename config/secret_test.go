@@ -352,7 +352,7 @@ func TestSecretStoreStatic(t *testing.T) {
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
 		require.EqualValues(t, expected[i], secret)
-		require.NoError(t, ReleaseSecret(secret))
+		ReleaseSecret(secret)
 	}
 }
 
@@ -398,7 +398,7 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
 		require.EqualValues(t, expected[i], secret)
-		require.NoError(t, ReleaseSecret(secret))
+		ReleaseSecret(secret)
 	}
 }
 
@@ -469,7 +469,7 @@ func TestSecretStoreStaticChanging(t *testing.T) {
 
 		// The secret should not change as the store is marked non-dyamic!
 		require.EqualValues(t, "Ood Bnar", secret)
-		require.NoError(t, ReleaseSecret(secret))
+		ReleaseSecret(secret)
 	}
 }
 
@@ -503,7 +503,7 @@ func TestSecretStoreDynamic(t *testing.T) {
 
 		// The secret should not change as the store is marked non-dynamic!
 		require.EqualValues(t, v, secret)
-		require.NoError(t, ReleaseSecret(secret))
+		ReleaseSecret(secret)
 	}
 }
 
@@ -512,8 +512,8 @@ type MockupSecretPlugin struct {
 	Secret Secret `toml:"secret"`
 }
 
-func (*MockupSecretPlugin) SampleConfig() string                  { return "Mockup test secret plugin" }
-func (*MockupSecretPlugin) Gather(acc telegraf.Accumulator) error { return nil }
+func (*MockupSecretPlugin) SampleConfig() string                { return "Mockup test secret plugin" }
+func (*MockupSecretPlugin) Gather(_ telegraf.Accumulator) error { return nil }
 
 type MockupSecretStore struct {
 	Secrets map[string][]byte
@@ -541,7 +541,7 @@ func (s *MockupSecretStore) Set(key, value string) error {
 }
 
 func (s *MockupSecretStore) List() ([]string, error) {
-	keys := []string{}
+	keys := make([]string, 0, len(s.Secrets))
 	for k := range s.Secrets {
 		keys = append(keys, k)
 	}
