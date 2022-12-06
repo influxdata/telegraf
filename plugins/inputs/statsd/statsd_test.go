@@ -20,7 +20,10 @@ const (
 )
 
 func NewTestStatsd() *Statsd {
-	s := Statsd{Log: testutil.Logger{}}
+	s := Statsd{
+		Log:                 testutil.Logger{},
+		NumberWorkerThreads: 5,
+	}
 
 	// Make data structures
 	s.done = make(chan struct{})
@@ -44,6 +47,7 @@ func TestConcurrentConns(t *testing.T) {
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
+		NumberWorkerThreads:    5,
 	}
 
 	acc := &testutil.Accumulator{}
@@ -75,6 +79,7 @@ func TestConcurrentConns1(t *testing.T) {
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      1,
+		NumberWorkerThreads:    5,
 	}
 
 	acc := &testutil.Accumulator{}
@@ -104,6 +109,7 @@ func TestCloseConcurrentConns(t *testing.T) {
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
+		NumberWorkerThreads:    5,
 	}
 
 	acc := &testutil.Accumulator{}
@@ -125,6 +131,7 @@ func BenchmarkParser(b *testing.B) {
 		Protocol:               "udp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
+		NumberWorkerThreads:    5,
 	}
 	acc := &testutil.Accumulator{Discard: true}
 
@@ -145,6 +152,7 @@ func BenchmarkUDP(b *testing.B) {
 		Protocol:               "udp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
+		NumberWorkerThreads:    5,
 	}
 	acc := &testutil.Accumulator{Discard: true}
 
@@ -171,6 +179,114 @@ func BenchmarkUDP(b *testing.B) {
 	}
 }
 
+func BenchmarkUDPThreads4(b *testing.B) {
+	listener := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "udp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 250000,
+		NumberWorkerThreads:    4,
+	}
+
+	acc := &testutil.Accumulator{Discard: true}
+	require.NoError(b, listener.Start(acc))
+
+	time.Sleep(time.Millisecond * 250)
+	conn, err := net.Dial("udp", "127.0.0.1:8125")
+	require.NoError(b, err)
+	defer conn.Close()
+
+	var wg sync.WaitGroup
+	for i := 0; i < b.N; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 1000; i++ {
+				conn.Write([]byte(testMsg))
+			}
+		}()
+	}
+	wg.Wait()
+
+	// wait for 250,000 metrics to get added to accumulator
+	for len(listener.in) > 0 {
+		time.Sleep(time.Millisecond)
+	}
+	listener.Stop()
+}
+
+func BenchmarkUDPThreads8(b *testing.B) {
+	listener := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "udp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 250000,
+		NumberWorkerThreads:    8,
+	}
+
+	acc := &testutil.Accumulator{Discard: true}
+	require.NoError(b, listener.Start(acc))
+
+	time.Sleep(time.Millisecond * 250)
+	conn, err := net.Dial("udp", "127.0.0.1:8125")
+	require.NoError(b, err)
+	defer conn.Close()
+
+	var wg sync.WaitGroup
+	for i := 0; i < b.N; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 1000; i++ {
+				conn.Write([]byte(testMsg))
+			}
+		}()
+	}
+	wg.Wait()
+
+	// wait for 250,000 metrics to get added to accumulator
+	for len(listener.in) > 0 {
+		time.Sleep(time.Millisecond)
+	}
+	listener.Stop()
+}
+
+func BenchmarkUDPThreads16(b *testing.B) {
+	listener := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "udp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 250000,
+		NumberWorkerThreads:    16,
+	}
+
+	acc := &testutil.Accumulator{Discard: true}
+	require.NoError(b, listener.Start(acc))
+
+	time.Sleep(time.Millisecond * 250)
+	conn, err := net.Dial("udp", "127.0.0.1:8125")
+	require.NoError(b, err)
+	defer conn.Close()
+
+	var wg sync.WaitGroup
+	for i := 0; i < b.N; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 1000; i++ {
+				conn.Write([]byte(testMsg))
+			}
+		}()
+	}
+	wg.Wait()
+
+	// wait for 250,000 metrics to get added to accumulator
+	for len(listener.in) > 0 {
+		time.Sleep(time.Millisecond)
+	}
+	listener.Stop()
+}
+
 func sendRequests(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for i := 0; i < 25000; i++ {
@@ -186,6 +302,7 @@ func BenchmarkTCP(b *testing.B) {
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
 		MaxTCPConnections:      250,
+		NumberWorkerThreads:    5,
 	}
 	acc := &testutil.Accumulator{Discard: true}
 
@@ -1606,6 +1723,7 @@ func TestTCP(t *testing.T) {
 		ServiceAddress:         "localhost:0",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
+		NumberWorkerThreads:    5,
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, statsd.Start(&acc))
@@ -1653,6 +1771,7 @@ func TestUdp(t *testing.T) {
 		Protocol:               "udp",
 		ServiceAddress:         "localhost:14223",
 		AllowedPendingMessages: 250000,
+		NumberWorkerThreads:    5,
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, statsd.Start(&acc))
@@ -1698,6 +1817,7 @@ func TestUdpFillQueue(t *testing.T) {
 		Protocol:               "udp",
 		ServiceAddress:         "localhost:0",
 		AllowedPendingMessages: 10,
+		NumberWorkerThreads:    5,
 	}
 
 	var acc testutil.Accumulator
@@ -1828,6 +1948,7 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
 		TCPKeepAlive:           true,
+		NumberWorkerThreads:    5,
 	}
 
 	acc := &testutil.Accumulator{}

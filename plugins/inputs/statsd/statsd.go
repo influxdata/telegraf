@@ -38,8 +38,6 @@ const (
 
 	defaultSeparator           = "_"
 	defaultAllowPendingMessage = 10000
-
-	parserGoRoutines = 5
 )
 
 var errParsing = errors.New("error parsing statsd line")
@@ -68,6 +66,7 @@ type Statsd struct {
 	// Number of messages allowed to queue up in between calls to Gather. If this
 	// fills up, packets will get dropped until the next Gather interval is ran.
 	AllowedPendingMessages int `toml:"allowed_pending_messages"`
+	NumberWorkerThreads    int `toml:"number_workers_threads"`
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
@@ -383,7 +382,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		}()
 	}
 
-	for i := 1; i <= parserGoRoutines; i++ {
+	for i := 1; i <= s.NumberWorkerThreads; i++ {
 		// Start the line parser
 		s.wg.Add(1)
 		go func() {
@@ -1017,14 +1016,13 @@ func init() {
 			Protocol:               defaultProtocol,
 			ServiceAddress:         ":8125",
 			MaxTCPConnections:      250,
-			TCPKeepAlive:           false,
 			MetricSeparator:        "_",
 			AllowedPendingMessages: defaultAllowPendingMessage,
 			DeleteCounters:         true,
 			DeleteGauges:           true,
 			DeleteSets:             true,
 			DeleteTimings:          true,
-			SanitizeNamesMethod:    "",
+			NumberWorkerThreads:    5,
 		}
 	})
 }
