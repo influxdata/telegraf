@@ -41,13 +41,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   controller = "tcp://localhost:502"
 
   ## Serial (RS485; RS232)
+  ## For unix-like operating systems use:
   # controller = "file:///dev/ttyUSB0"
-  # baud_rate = 9600
-  # data_bits = 8
-  # parity = "N"
-  # stop_bits = 1
-
-  ## Serial (RS485; RS232) [Windows]
+  ## For Windows operating systems use:
   # controller = "COM1"
   # baud_rate = 9600
   # data_bits = 8
