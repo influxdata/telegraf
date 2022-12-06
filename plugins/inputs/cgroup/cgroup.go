@@ -14,6 +14,8 @@ var sampleConfig string
 type CGroup struct {
 	Paths []string `toml:"paths"`
 	Files []string `toml:"files"`
+
+	logged map[string]bool
 }
 
 func (*CGroup) SampleConfig() string {
@@ -21,5 +23,5 @@ func (*CGroup) SampleConfig() string {
 }
 
 func init() {
-	inputs.Add("cgroup", func() telegraf.Input { return &CGroup{} })
+	inputs.Add("cgroup", func() telegraf.Input { return &CGroup{logged: make(map[string]bool)} })
 }

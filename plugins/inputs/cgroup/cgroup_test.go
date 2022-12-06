@@ -332,3 +332,32 @@ func TestCgroupStatistics_7(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "cgroup", fields, tags)
 }
+
+var cg8 = &CGroup{
+	Paths:  []string{"testdata/broken"},
+	Files:  []string{"malformed.file", "memory.limit_in_bytes"},
+	logged: make(map[string]bool),
+}
+
+func TestCgroupStatistics_8(t *testing.T) {
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(cg8.Gather)
+	require.Error(t, err)
+	require.Len(t, cg8.logged, 1)
+
+	tags := map[string]string{
+		"path": "testdata/broken",
+	}
+	fields := map[string]interface{}{
+		"memory.limit_in_bytes": int64(1),
+	}
+	acc.AssertContainsTaggedFields(t, "cgroup", fields, tags)
+
+	// clear errors so we can check for new errors in next round
+	acc.Errors = nil
+
+	err = acc.GatherError(cg8.Gather)
+	require.NoError(t, err)
+	require.Len(t, cg8.logged, 1)
+}
