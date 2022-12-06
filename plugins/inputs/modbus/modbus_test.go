@@ -21,6 +21,16 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestControllers(t *testing.T) {
+	plugin := Modbus{
+		Name:             "dummy",
+		Controller:       "COM2",
+		TransmissionMode: "RTU",
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+}
+
 func TestCoils(t *testing.T) {
 	var coilTests = []struct {
 		name     string

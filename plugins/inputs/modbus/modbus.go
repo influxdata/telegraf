@@ -256,7 +256,7 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		}
-	case "file":
+	case "", "file":
 		switch m.TransmissionMode {
 		case "RTU":
 			handler := mb.NewRTUClientHandler(u.Path)

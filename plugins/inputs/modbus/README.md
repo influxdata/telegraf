@@ -47,9 +47,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # parity = "N"
   # stop_bits = 1
 
-  ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"
-  ## default behaviour is "TCP" if the controller is TCP
-  ## For Serial you can choose between "RTU" and "ASCII"
+  ## Serial (RS485; RS232) [Windows]
+  # controller = "COM1"
+  # baud_rate = 9600
+  # data_bits = 8
+  # parity = "N"
+  # stop_bits = 1
+
+  ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and
+  ## "ASCIIoverTCP". The default behaviour is "TCP" for ModbusTCP controllers.
+  ## For Serial controllers you can choose between "RTU" and "ASCII".
   # transmission_mode = "RTU"
 
   ## Trace the connection to the modbus device as debug messages
