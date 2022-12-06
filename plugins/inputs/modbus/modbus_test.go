@@ -749,6 +749,26 @@ func TestHoldingRegisters(t *testing.T) {
 			write:     []byte{0x8F, 0x55, 0xC3, 0x47, 0x6A, 0x40, 0xBF, 0x9C},
 			read:      float64(-0.02774907295123737),
 		},
+		{
+			name:      "register240_abcd_float16",
+			address:   []uint16{240},
+			quantity:  1,
+			byteOrder: "AB",
+			dataType:  "FLOAT16-IEEE",
+			scale:     1,
+			write:     []byte{0xb8, 0x14},
+			read:      float64(-0.509765625),
+		},
+		{
+			name:      "register240_dcba_float16",
+			address:   []uint16{240},
+			quantity:  1,
+			byteOrder: "BA",
+			dataType:  "FLOAT16-IEEE",
+			scale:     1,
+			write:     []byte{0x14, 0xb8},
+			read:      float64(-0.509765625),
+		},
 	}
 
 	serv := mbserver.NewServer()
@@ -1310,6 +1330,37 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 			scale:      1.0,
 			write:      []byte{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea},
 			read:       float64(3.14159265359000006156975359772),
+		},
+		{
+			name:       "register100_float16",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.509765625),
+		},
+		{
+			name:       "register100_float16-scale_.1",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      .1,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.0509765625),
+		},
+		{
+			name:       "register100_float16_scale_10",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      10,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-5.09765625),
+		},
+		{
+			name:       "register100_float16_float64_scale",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      1.0,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.509765625),
 		},
 	}
 
@@ -1881,6 +1932,37 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 			write:      []byte{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea},
 			read:       float64(3.14159265359000006156975359772),
 		},
+		{
+			name:       "register100_float16",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.509765625),
+		},
+		{
+			name:       "register100_float16-scale_.1",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      .1,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.0509765625),
+		},
+		{
+			name:       "register100_float16_scale_10",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      10,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-5.09765625),
+		},
+		{
+			name:       "register100_float16_float64_scale",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      1.0,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.509765625),
+		},
 	}
 
 	serv := mbserver.NewServer()
@@ -1903,7 +1985,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 			require.NoError(t, err)
 
 			modbus := Modbus{
-				Name:              "TestRequestTypesHoldingABCD",
+				Name:              "TestRequestTypesHoldingDCBA",
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
