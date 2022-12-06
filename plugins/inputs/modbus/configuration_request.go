@@ -354,7 +354,7 @@ func (c *ConfigurationPerRequest) determineOutputDatatype(input string) (string,
 		return "INT64", nil
 	case "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
 		return "UINT64", nil
-	case "FLOAT32", "FLOAT64":
+	case "FLOAT16", "FLOAT32", "FLOAT64":
 		return "FLOAT64", nil
 	}
 	return "unknown", fmt.Errorf("invalid input datatype %q for determining output", input)
@@ -365,7 +365,7 @@ func (c *ConfigurationPerRequest) determineFieldLength(input string) (uint16, er
 	switch input {
 	case "INT8L", "INT8H", "UINT8L", "UINT8H":
 		return 1, nil
-	case "INT16", "UINT16":
+	case "INT16", "UINT16", "FLOAT16":
 		return 1, nil
 	case "INT32", "UINT32", "FLOAT32":
 		return 2, nil
