@@ -434,9 +434,6 @@ func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
 		s.Log.Warn("Warning: Server list is empty.")
 	}
-	if s.QueryTimeout <= 0 {
-		s.QueryTimeout = config.Duration(0 * time.Second)
-	}
 
 	return nil
 }
