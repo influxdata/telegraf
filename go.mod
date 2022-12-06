@@ -194,6 +194,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.0 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/otel/metric v0.32.1 // indirect
 	go.uber.org/zap v1.22.0 // indirect
 )
