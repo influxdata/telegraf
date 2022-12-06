@@ -63,25 +63,24 @@ type Statsd struct {
 	Protocol string `toml:"protocol"`
 
 	// Address & Port to serve from
-	ServiceAddress string
+	ServiceAddress string `toml:"service_address"`
 
 	// Number of messages allowed to queue up in between calls to Gather. If this
 	// fills up, packets will get dropped until the next Gather interval is ran.
-	AllowedPendingMessages int
+	AllowedPendingMessages int `toml:"allowed_pending_messages"`
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []Number
-	PercentileLimit int
-
-	DeleteGauges   bool
-	DeleteCounters bool
-	DeleteSets     bool
-	DeleteTimings  bool
-	ConvertNames   bool `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
+	Percentiles     []Number `toml:"percentiles"`
+	PercentileLimit int      `toml:"percentile_limit"`
+	DeleteGauges    bool     `toml:"delete_gauges"`
+	DeleteCounters  bool     `toml:"delete_counters"`
+	DeleteSets      bool     `toml:"delete_sets"`
+	DeleteTimings   bool     `toml:"delete_timings"`
+	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
 
 	// MetricSeparator is the separator between parts of the metric name.
-	MetricSeparator string
+	MetricSeparator string `toml:"metric_separator"`
 	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;use 'datadog_extensions' instead"`
@@ -102,9 +101,16 @@ type Statsd struct {
 	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;2.0.0;option is ignored"`
 
-	ReadBufferSize int `toml:"read_buffer_size"`
+	ReadBufferSize      int              `toml:"read_buffer_size"`
+	SanitizeNamesMethod string           `toml:"sanitize_name_method"`
+	Templates           []string         `toml:"templates"` // bucket -> influx templates
+	MaxTCPConnections   int              `toml:"max_tcp_connections"`
+	TCPKeepAlive        bool             `toml:"tcp_keep_alive"`
+	TCPKeepAlivePeriod  *config.Duration `toml:"tcp_keep_alive_period"`
 
-	SanitizeNamesMethod string `toml:"sanitize_name_method"`
+	// Max duration for each metric to stay cached without being updated.
+	MaxTTL config.Duration `toml:"max_ttl"`
+	Log    telegraf.Logger `toml:"-"`
 
 	sync.Mutex
 	// Lock for preventing a data race during resource cleanup
@@ -131,23 +137,12 @@ type Statsd struct {
 	timings       map[string]cachedtimings
 	distributions []cacheddistributions
 
-	// bucket -> influx templates
-	Templates []string
-
 	// Protocol listeners
 	UDPlistener *net.UDPConn
 	TCPlistener *net.TCPListener
 
 	// track current connections so we can close them in Stop()
 	conns map[string]*net.TCPConn
-
-	MaxTCPConnections int `toml:"max_tcp_connections"`
-
-	TCPKeepAlive       bool             `toml:"tcp_keep_alive"`
-	TCPKeepAlivePeriod *config.Duration `toml:"tcp_keep_alive_period"`
-
-	// Max duration for each metric to stay cached without being updated.
-	MaxTTL config.Duration `toml:"max_ttl"`
 
 	graphiteParser *graphite.Parser
 
@@ -163,8 +158,6 @@ type Statsd struct {
 	UDPBytesRecv       selfstat.Stat
 	ParseTimeNS        selfstat.Stat
 	PendingMessages    selfstat.Stat
-
-	Log telegraf.Logger `toml:"-"`
 
 	// A pool of byte slices to handle parsing
 	bufPool sync.Pool
