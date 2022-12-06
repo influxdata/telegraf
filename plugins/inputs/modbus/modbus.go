@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -256,10 +257,14 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		}
-	case "file":
+	case "", "file":
+		path := filepath.Join(u.Host, u.Path)
+		if path == "" {
+			return fmt.Errorf("invalid path for controller %q", m.Controller)
+		}
 		switch m.TransmissionMode {
 		case "RTU":
-			handler := mb.NewRTUClientHandler(u.Path)
+			handler := mb.NewRTUClientHandler(path)
 			handler.Timeout = time.Duration(m.Timeout)
 			handler.BaudRate = m.BaudRate
 			handler.DataBits = m.DataBits
@@ -270,7 +275,7 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		case "ASCII":
-			handler := mb.NewASCIIClientHandler(u.Path)
+			handler := mb.NewASCIIClientHandler(path)
 			handler.Timeout = time.Duration(m.Timeout)
 			handler.BaudRate = m.BaudRate
 			handler.DataBits = m.DataBits

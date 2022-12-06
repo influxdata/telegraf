@@ -21,6 +21,76 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestControllers(t *testing.T) {
+	var tests = []struct {
+		name       string
+		controller string
+		errmsg     string
+	}{
+		{
+			name:       "TCP host",
+			controller: "tcp://localhost:502",
+		},
+		{
+			name:       "invalid TCP host",
+			controller: "tcp://localhost",
+			errmsg:     "initializing client failed: address localhost: missing port in address",
+		},
+		{
+			name:       "absolute file path",
+			controller: "file:///dev/ttyUSB0",
+		},
+		{
+			name:       "relative file path",
+			controller: "file://dev/ttyUSB0",
+		},
+		{
+			name:       "relative file path with dot",
+			controller: "file://./dev/ttyUSB0",
+		},
+		{
+			name:       "Windows COM-port",
+			controller: "COM2",
+		},
+		{
+			name:       "Windows COM-port file path",
+			controller: "file://com2",
+		},
+		{
+			name:       "empty file path",
+			controller: "file://",
+			errmsg:     "initializing client failed: invalid path for controller",
+		},
+		{
+			name:       "empty controller",
+			controller: "",
+			errmsg:     "initializing client failed: invalid path for controller",
+		},
+		{
+			name:       "invalid scheme",
+			controller: "foo://bar",
+			errmsg:     "initializing client failed: invalid controller",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Modbus{
+				Name:             "dummy",
+				Controller:       tt.controller,
+				TransmissionMode: "RTU",
+				Log:              testutil.Logger{},
+			}
+			err := plugin.Init()
+			if tt.errmsg != "" {
+				require.ErrorContains(t, err, tt.errmsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestCoils(t *testing.T) {
 	var coilTests = []struct {
 		name     string
