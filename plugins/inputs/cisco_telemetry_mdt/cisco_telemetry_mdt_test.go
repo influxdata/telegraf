@@ -104,7 +104,10 @@ func TestIncludeDeleteField(t *testing.T) {
 		uint64Value uint64
 		stringValue string
 	}
-	encodingPath := TelemetryEntry{name: "path", stringValue: "openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv6/addresses/address"}
+	encodingPath := TelemetryEntry{
+		name:        "path",
+		stringValue: "openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv6/addresses/address",
+	}
 	name := TelemetryEntry{name: "name", stringValue: "Loopback10"}
 	index := TelemetryEntry{name: "index", stringValue: "0"}
 	ip := TelemetryEntry{name: "ip", fieldName: "state/ip", stringValue: "10::10"}
@@ -113,8 +116,8 @@ func TestIncludeDeleteField(t *testing.T) {
 	status := TelemetryEntry{name: "status", fieldName: "state/status", stringValue: "PREFERRED"}
 	source := TelemetryEntry{name: "source", stringValue: "hostname"}
 	subscription := TelemetryEntry{name: "subscription", stringValue: "subscription"}
-	delete := "delete"
-	state := "state"
+	deleteKey := "delete"
+	stateKey := "state"
 
 	testCases := []struct {
 		telemetry *telemetryBis.Telemetry
@@ -150,7 +153,7 @@ func TestIncludeDeleteField(t *testing.T) {
 							Name: "content",
 							Fields: []*telemetryBis.TelemetryField{
 								{
-									Name: state,
+									Name: stateKey,
 									Fields: []*telemetryBis.TelemetryField{
 										{
 											Name:        ip.name,
@@ -176,8 +179,21 @@ func TestIncludeDeleteField(t *testing.T) {
 				},
 			},
 		},
-		tags:   map[string]string{encodingPath.name: encodingPath.stringValue, name.name: name.stringValue, index.name: index.stringValue, ip.name: ip.stringValue, source.name: source.stringValue, subscription.name: subscription.stringValue},
-		fields: map[string]interface{}{delete: false, ip.fieldName: ip.stringValue, prefixLength.fieldName: prefixLength.uint64Value, origin.fieldName: origin.stringValue, status.fieldName: status.stringValue},
+		tags: map[string]string{
+			encodingPath.name: encodingPath.stringValue,
+			name.name:         name.stringValue,
+			index.name:        index.stringValue,
+			ip.name:           ip.stringValue,
+			source.name:       source.stringValue,
+			subscription.name: subscription.stringValue,
+		},
+		fields: map[string]interface{}{
+			deleteKey:              false,
+			ip.fieldName:           ip.stringValue,
+			prefixLength.fieldName: prefixLength.uint64Value,
+			origin.fieldName:       origin.stringValue,
+			status.fieldName:       status.stringValue,
+		},
 	},
 		{
 			telemetry: &telemetryBis.Telemetry{
@@ -210,12 +226,23 @@ func TestIncludeDeleteField(t *testing.T) {
 					},
 				},
 			},
-			tags:   map[string]string{encodingPath.name: encodingPath.stringValue, name.name: name.stringValue, index.name: index.stringValue, ip.name: ip.stringValue, source.name: source.stringValue, subscription.name: subscription.stringValue},
-			fields: map[string]interface{}{delete: true},
+			tags: map[string]string{
+				encodingPath.name: encodingPath.stringValue,
+				name.name:         name.stringValue,
+				index.name:        index.stringValue,
+				ip.name:           ip.stringValue,
+				source.name:       source.stringValue,
+				subscription.name: subscription.stringValue,
+			},
+			fields: map[string]interface{}{deleteKey: true},
 		},
 	}
 	for _, test := range testCases {
-		c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"deleted": encodingPath.stringValue}, IncludeDeleteField: true}
+		c := &CiscoTelemetryMDT{
+			Log:                testutil.Logger{},
+			Transport:          "dummy",
+			Aliases:            map[string]string{"deleted": encodingPath.stringValue},
+			IncludeDeleteField: true}
 		acc := &testutil.Accumulator{}
 		err := c.Start(acc)
 		// error is expected since we are passing in dummy transport
