@@ -40,7 +40,7 @@ func initL4ProtoMapping() error {
 
 	l4ProtoMapping = make(map[uint8]string)
 	for _, r := range records[1:] {
-		if len(r) != 5 {
+		if len(r) != 2 {
 			return fmt.Errorf("invalid record: %v", r)
 		}
 		name := strings.ToLower(r[1])
