@@ -15,9 +15,9 @@ telegraf --config config.toml
 ## Help
 
 |command|description|
-|--------|-----------------------------------------------|
+|---------|-----------------------------------------------|
 |`config` |print out full sample configuration to stdout|
-|`secret` |manage secret-store secrets|
+|`secrets`|manage secret-store secrets|
 |`version`|print the version to stdout|
 
 To get the full list of subcommands and flags run:
@@ -66,45 +66,39 @@ telegraf config --input-filter cpu --output-filter influxdb
 
 `telegraf --config telegraf.conf --pprof-addr localhost:6060`
 
-## Secret-store management
+## Secrets management
 
 You can use telegraf to manage the secrets in the configured secret-stores.
-Please make sure you specify a config containing the secret store
-configuration!
+Please make sure you specify a config containing the secret store configuration!
 
-To list all available secret-stores run
+To list all available secret-stores with all known secret *keys* run
 
-`telegraf list-secretstores`
+`telegraf secrets list`
 
-which will print a list of all known secret-store IDs that can be used for
-accessing the secrets in that store
+You can also specify a secret-store ID and only get the keys for that store
 
-`telegraf list-secrets someid`
+`telegraf secrets list someid`
 
 The above command will now list the *keys* of all secrets in the
 secret-store with ID `someid`. To also reveal the *values* of all
 the secrets use
 
-`telegraf list-secrets --reveal-secret someid`
+`telegraf secrets list --reveal-secret someid`
 
 You can also pass a list of secret-stores and the command will
-print all secrets in those stores. If no secret-store ID is provided, i.e.
+print all secrets in those stores.
 
-`telegraf list-secrets`
+To access the *value* of a specific secret you can use
 
-the command will list the *keys* of all secrets in all known secret-stores.
-
-To access the *value* of a secret you can use the `get-secret` command
-
-`telegraf get-secret someid a_secret_key`
+`telegraf secrets get someid a_secret_key`
 
 to output the *value* of the secret `a_secret_key` in the secret-store
 with ID `someid`.
 
 All commands above will *read* secrets stored in the given store(s). To add
-or modify keys use the `set-secret` command
+or modify keys use the `set` command
 
-`telegraf set-secret someid a_secret_key the_new_value`
+`telegraf secrets set someid a_secret_key the_new_value`
 
 to add or overwrite a secret named `a_secret_key` with the value
 `the_new_value` in the secret-store with ID `someid`. If the secret with
