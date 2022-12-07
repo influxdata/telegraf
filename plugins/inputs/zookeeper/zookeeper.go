@@ -26,8 +26,9 @@ var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
 
 // Zookeeper is a zookeeper plugin
 type Zookeeper struct {
-	Servers []string
-	Timeout config.Duration
+	Servers     []string        `toml:"servers"`
+	Timeout     config.Duration `toml:"timeout"`
+	ParseFloats string          `toml:"parse_floats"`
 
 	EnableTLS bool `toml:"enable_tls"`
 	EnableSSL bool `toml:"enable_ssl" deprecated:"1.7.0;use 'enable_tls' instead"`
@@ -129,16 +130,29 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 		measurement := strings.TrimPrefix(parts[1], "zk_")
 		if measurement == "server_state" {
 			zookeeperState = parts[2]
-		} else {
-			sValue := parts[2]
+			continue
+		}
 
-			iVal, err := strconv.ParseInt(sValue, 10, 64)
+		sValue := parts[2]
+
+		// First attempt to parse as an int
+		iVal, err := strconv.ParseInt(sValue, 10, 64)
+		if err == nil {
+			fields[measurement] = iVal
+			continue
+		}
+
+		// If set, attempt to parse as a float
+		if z.ParseFloats == "float" {
+			fVal, err := strconv.ParseFloat(sValue, 64)
 			if err == nil {
-				fields[measurement] = iVal
-			} else {
-				fields[measurement] = sValue
+				fields[measurement] = fVal
+				continue
 			}
 		}
+
+		// Finally, save as a string
+		fields[measurement] = sValue
 	}
 
 	srv := "localhost"

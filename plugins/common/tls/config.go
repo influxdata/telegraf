@@ -14,13 +14,14 @@ const TLSMinVersionDefault = tls.VersionTLS12
 
 // ClientConfig represents the standard client TLS config.
 type ClientConfig struct {
-	TLSCA              string `toml:"tls_ca"`
-	TLSCert            string `toml:"tls_cert"`
-	TLSKey             string `toml:"tls_key"`
-	TLSKeyPwd          string `toml:"tls_key_pwd"`
-	TLSMinVersion      string `toml:"tls_min_version"`
-	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
-	ServerName         string `toml:"tls_server_name"`
+	TLSCA               string `toml:"tls_ca"`
+	TLSCert             string `toml:"tls_cert"`
+	TLSKey              string `toml:"tls_key"`
+	TLSKeyPwd           string `toml:"tls_key_pwd"`
+	TLSMinVersion       string `toml:"tls_min_version"`
+	InsecureSkipVerify  bool   `toml:"insecure_skip_verify"`
+	ServerName          string `toml:"tls_server_name"`
+	RenegotiationMethod string `toml:"tls_renegotiation_method"`
 
 	SSLCA   string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	SSLCert string `toml:"ssl_cert" deprecated:"1.7.0;use 'tls_cert' instead"`
@@ -58,15 +59,30 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	// a TLS connection. That is, any of:
 	//     * client certificate settings,
 	//     * peer certificate authorities,
-	//     * disabled security, or
-	//     * an SNI server name.
-	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" && !c.InsecureSkipVerify && c.ServerName == "" {
+	//     * disabled security,
+	//     * an SNI server name, or
+	//     * empty/never renegotiation method
+	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" &&
+		!c.InsecureSkipVerify && c.ServerName == "" &&
+		(c.RenegotiationMethod == "" || c.RenegotiationMethod == "never") {
 		return nil, nil
+	}
+
+	var renegotiationMethod tls.RenegotiationSupport
+	switch c.RenegotiationMethod {
+	case "", "never":
+		renegotiationMethod = tls.RenegotiateNever
+	case "once":
+		renegotiationMethod = tls.RenegotiateOnceAsClient
+	case "freely":
+		renegotiationMethod = tls.RenegotiateFreelyAsClient
+	default:
+		return nil, fmt.Errorf("unrecognized renegotation method '%s', choose from: 'never', 'once', 'freely'", c.RenegotiationMethod)
 	}
 
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.InsecureSkipVerify,
-		Renegotiation:      tls.RenegotiateNever,
+		Renegotiation:      renegotiationMethod,
 	}
 
 	if c.TLSCA != "" {
@@ -199,11 +215,10 @@ func loadCertificate(config *tls.Config, certFile, keyFile string) error {
 	}
 
 	config.Certificates = []tls.Certificate{cert}
-	config.BuildNameToCertificate()
 	return nil
 }
 
-func (c *ServerConfig) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+func (c *ServerConfig) verifyPeerCertificate(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 	// The certificate chain is client + intermediate + root.
 	// Let's review the client certificate.
 	cert, err := x509.ParseCertificate(rawCerts[0])

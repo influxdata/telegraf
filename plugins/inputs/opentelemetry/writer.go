@@ -14,7 +14,14 @@ type writeToAccumulator struct {
 	accumulator telegraf.Accumulator
 }
 
-func (w *writeToAccumulator) WritePoint(_ context.Context, measurement string, tags map[string]string, fields map[string]interface{}, ts time.Time, vType common.InfluxMetricValueType) error {
+func (w *writeToAccumulator) WritePoint(
+	_ context.Context,
+	measurement string,
+	tags map[string]string,
+	fields map[string]interface{},
+	ts time.Time,
+	vType common.InfluxMetricValueType,
+) error {
 	switch vType {
 	case common.InfluxMetricValueTypeUntyped:
 		w.accumulator.AddFields(measurement, fields, tags, ts)

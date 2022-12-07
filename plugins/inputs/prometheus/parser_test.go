@@ -9,9 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const validUniqueGauge = `# HELP cadvisor_version_info A metric with a constant '1' value labeled by kernel version, OS version, docker version, cadvisor version & cadvisor revision.
+const validUniqueGauge = `
+# HELP cadvisor_version_info A metric with a constant '1' value labeled by kernel version, OS version, docker version, cadvisor version & cadvisor revision.
 # TYPE cadvisor_version_info gauge
-cadvisor_version_info{cadvisorRevision="",cadvisorVersion="",dockerVersion="1.8.2",kernelVersion="3.10.0-229.20.1.el7.x86_64",osVersion="CentOS Linux 7 (Core)"} 1
+cadvisor_version_info{cadvisorRevision="",cadvisorVersion="",dockerVersion="1.8.2",` +
+	`kernelVersion="3.10.0-229.20.1.el7.x86_64",osVersion="CentOS Linux 7 (Core)"} 1
 `
 
 const validUniqueCounter = `# HELP get_token_fail_count Counter of failed Token() requests to the alternate token source

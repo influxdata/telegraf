@@ -1,12 +1,16 @@
 package mandrill
 
 import (
-	"github.com/influxdata/telegraf/testutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func postWebhooks(md *MandrillWebhook, eventBody string) *httptest.ResponseRecorder {
@@ -40,7 +44,7 @@ func TestHead(t *testing.T) {
 func TestSendEvent(t *testing.T) {
 	var acc testutil.Accumulator
 	md := &MandrillWebhook{Path: "/mandrill", acc: &acc}
-	resp := postWebhooks(md, "["+SendEventJSON()+"]")
+	resp := postWebhooks(md, "["+readFile(t, "testdata/send_event.json")+"]")
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST send returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -59,7 +63,7 @@ func TestSendEvent(t *testing.T) {
 func TestMultipleEvents(t *testing.T) {
 	var acc testutil.Accumulator
 	md := &MandrillWebhook{Path: "/mandrill", acc: &acc}
-	resp := postWebhooks(md, "["+SendEventJSON()+","+HardBounceEventJSON()+"]")
+	resp := postWebhooks(md, "["+readFile(t, "testdata/send_event.json")+","+readFile(t, "testdata/hard_bounce_event.json")+"]")
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST send returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -82,4 +86,11 @@ func TestMultipleEvents(t *testing.T) {
 		"event": "hard_bounce",
 	}
 	acc.AssertContainsTaggedFields(t, "mandrill_webhooks", fields, tags)
+}
+
+func readFile(t *testing.T, filePath string) string {
+	data, err := os.ReadFile(filePath)
+	require.NoErrorf(t, err, "could not read from file %s", filePath)
+
+	return string(data)
 }

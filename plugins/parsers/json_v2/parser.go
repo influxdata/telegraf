@@ -2,16 +2,19 @@ package json_v2
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dimchansky/utfbom"
+	"github.com/tidwall/gjson"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
-	"github.com/tidwall/gjson"
 )
 
 // Parser adheres to the parser interface, contains the parser configuration, and data required to parse JSON
@@ -68,6 +71,13 @@ func (p *Parser) Init() error {
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
+	reader := strings.NewReader(string(input))
+	body, _ := utfbom.Skip(reader)
+	input, err := io.ReadAll(body)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read body after BOM removal: %v", err)
+	}
+
 	// Only valid JSON is supported
 	if !gjson.Valid(string(input)) {
 		return nil, fmt.Errorf("invalid JSON provided, unable to parse")
@@ -151,8 +161,7 @@ func (p *Parser) processMetric(input []byte, data []json_v2.DataSet, tag bool, t
 	}
 
 	p.iterateObjects = false
-	var metrics [][]telegraf.Metric
-
+	metrics := make([][]telegraf.Metric, 0, len(data))
 	for _, c := range data {
 		if c.Path == "" {
 			return nil, fmt.Errorf("GJSON path is required")
@@ -220,14 +229,12 @@ func cartesianProduct(a, b []telegraf.Metric) []telegraf.Metric {
 	if len(b) == 0 {
 		return a
 	}
-	p := make([]telegraf.Metric, len(a)*len(b))
-	i := 0
+	p := make([]telegraf.Metric, 0, len(a)*len(b))
 	for _, a := range a {
 		for _, b := range b {
 			m := a.Copy()
 			mergeMetric(b, m)
-			p[i] = m
-			i++
+			p = append(p, m)
 		}
 	}
 
@@ -563,7 +570,7 @@ func (p *Parser) isExcluded(key string) bool {
 	return false
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(_ string) (telegraf.Metric, error) {
 	return nil, fmt.Errorf("ParseLine is designed for parsing influx line protocol, therefore not implemented for parsing JSON")
 }
 

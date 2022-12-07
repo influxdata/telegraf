@@ -15,6 +15,15 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 5. [Shared Credentials][credentials]
 6. [EC2 Instance Profile][iam-roles]
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -87,8 +96,6 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
   ## Metric Statistic Namespaces (required)
   namespaces = ["AWS/ELB"]
-  ## Single metric statistic namespace appended to namespaces on startup
-  # namespace = "AWS/ELB"
 
   ## Maximum requests per second. Note that the global default AWS rate limit
   ## is 50 reqs/sec, so if you define multiple namespaces, these should add up
@@ -130,14 +137,17 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   #    value = "p-example"
 ```
 
+Please note, the `namespace` option is deprecated in favor of the `namespaces`
+list option.
+
 ## Requirements and Terminology
 
-Plugin Configuration utilizes [CloudWatch concepts][concept] and access pattern to
-allow monitoring of any CloudWatch Metric.
+Plugin Configuration utilizes [CloudWatch concepts][concept] and access
+pattern to allow monitoring of any CloudWatch Metric.
 
 - `region` must be a valid AWS [region][] value
 - `period` must be a valid CloudWatch [period][] value
-- `namespace` must be a valid CloudWatch [namespace][] value
+- `namespaces` must be a list of valid CloudWatch [namespace][] value(s)
 - `names` must be valid CloudWatch [metric][] names
 - `dimensions` must be valid CloudWatch [dimension][] name/value pairs
 

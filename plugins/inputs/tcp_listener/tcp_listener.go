@@ -133,10 +133,10 @@ func (t *TCPListener) Stop() {
 
 	// Close all open TCP connections
 	//  - get all conns from the t.conns map and put into slice
-	//  - this is so the forget() function doesnt conflict with looping
+	//  - this is so the forget() function doesn't conflict with looping
 	//    over the t.conns map
-	var conns []*net.TCPConn
 	t.cleanup.Lock()
+	conns := make([]*net.TCPConn, 0, len(t.conns))
 	for _, conn := range t.conns {
 		conns = append(conns, conn)
 	}
@@ -187,7 +187,6 @@ func (t *TCPListener) tcpListen() {
 // refuser refuses a TCP connection
 func (t *TCPListener) refuser(conn *net.TCPConn) {
 	// Tell the connection why we are closing.
-	//nolint:errcheck,revive
 	fmt.Fprintf(conn, "Telegraf maximum concurrent TCP connections (%d)"+
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)

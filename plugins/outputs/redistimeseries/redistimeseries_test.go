@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestConnectAndWrite(t *testing.T) {
@@ -40,9 +41,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 	redis := &RedisTimeSeries{
 		Address: fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 	}

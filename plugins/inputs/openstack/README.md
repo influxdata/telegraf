@@ -17,9 +17,7 @@ At present this plugin requires the following APIs:
 * networking  v2
 * orchestration  v1
 
-## Configuration and Recommendations
-
-### Recommendations
+## Recommendations
 
 Due to the large number of unique tags that this plugin generates, in order to
 keep the cardinality down it is **highly recommended** to use
@@ -55,7 +53,16 @@ your requirements. This will help with load and cardinality as well.
   ....
 ```
 
-### Configuration
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
+## Configuration
 
 ```toml @sample.conf
 # Collects performance metrics from OpenStack services

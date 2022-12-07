@@ -103,6 +103,7 @@ make test-all
 - [Profiling][profiling]
 - [Reviews][reviews]
 - [Sample Config][sample config]
+- [Code of Conduct][code of conduct]
 
 [cla]: https://www.influxdata.com/legal/cla/
 [new issue]: https://github.com/influxdata/telegraf/issues/new/choose
@@ -119,3 +120,4 @@ make test-all
 [profiling]: /docs/developers/PROFILING.md
 [reviews]: /docs/developers/REVIEWS.md
 [sample config]: /docs/developers/SAMPLE_CONFIG.md
+[code of conduct]: /CODE_OF_CONDUCT.md

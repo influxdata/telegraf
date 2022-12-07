@@ -49,7 +49,13 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						}
 
 						for _, m := range fromFieldMetric {
-							if m.Name() == "" {
+							// The parser get the parent plugin's name as
+							// default measurement name. Thus, in case the
+							// parsed metric does not provide a name itself,
+							// the parser  will return 'parser' as we are in
+							// processors.parser. In those cases we want to
+							// keep the original metric name.
+							if m.Name() == "" || m.Name() == "parser" {
 								m.SetName(metric.Name())
 							}
 						}

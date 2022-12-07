@@ -1,0 +1,241 @@
+[
+  {
+    "request": {
+      "mbean": "object_without_attribute",
+      "type": "read"
+    },
+    "value": {
+      "biz": 123,
+      "baz": 456
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "mbean": "object_with_attribute",
+      "attribute": "biz",
+      "type": "read"
+    },
+    "value": {
+      "fiz": 123,
+      "faz": 456
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "mbean": "object_with_branching_paths",
+      "attribute": "foo",
+      "path": "fiz",
+      "type": "read"
+    },
+    "value": {
+      "bing": 123
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "mbean": "object_with_branching_paths",
+      "attribute": "foo",
+      "path": "faz",
+      "type": "read"
+    },
+    "value": {
+      "bang": 456
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "mbean": "object_with_attribute_and_path",
+      "attribute": "biz",
+      "path": "baz",
+      "type": "read"
+    },
+    "value": {
+      "bing": 123,
+      "bang": 456
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "mbean": "object_with_key_pattern:test=*",
+      "type": "read"
+    },
+    "value": {
+      "object_with_key_pattern:test=foo": {
+        "fiz": 123
+      },
+      "object_with_key_pattern:test=bar": {
+        "biz": 456
+      }
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "mbean": "org.apache.cassandra.metrics:keyspace=*,name=EstimatedRowSizeHistogram,scope=schema_columns,type=ColumnFamily",
+      "type": "read"
+    },
+    "value": {
+      "org.apache.cassandra.metrics:keyspace=system,name=EstimatedRowSizeHistogram,scope=schema_columns,type=ColumnFamily": {
+        "Value": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "status": 200
+  }
+]

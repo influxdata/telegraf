@@ -377,7 +377,8 @@ func TestSqlServerIntegration_AGQueriesApplicableForDatabaseTypeSQLServer(t *tes
 }
 
 func TestSqlServerIntegration_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
-	// This test case checks where Availability Group (AG / HADR) queries return specific fields supported by corresponding SQL Server version database being connected to.
+	// This test case checks where Availability Group (AG / HADR) queries return specific fields
+	// supported by corresponding SQL Server version database being connected to.
 
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -434,7 +435,10 @@ func TestSqlServerIntegration_AGQueryFieldsOutputBasedOnSQLServerVersion(t *test
 	s2012.Stop()
 }
 
-const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio
+const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;` +
+	`Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;` +
+	`Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);` +
+	`Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio
 Performance metrics;WIN8-DEV;Performance metrics;0;6353158144;0;0;7;2773;415061;0;25;229371;130;10;18;188;52;14`
 
 const mockWaitStatsCategorized = `measurement;servername;type;I/O;Latch;Lock;Network;Service broker;Memory;Buffer;CLR;XEvent;Other;Total

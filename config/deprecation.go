@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log" //nolint:revive // log is ok here as the logging facility is not set-up yet
+	"log"
 	"reflect"
 	"sort"
 	"strings"
@@ -258,7 +258,7 @@ func (c *Config) PrintDeprecationList(plugins []PluginDeprecationInfo) {
 	for _, plugin := range plugins {
 		switch plugin.LogLevel {
 		case telegraf.Warn, telegraf.Error:
-			_, _ = fmt.Printf(
+			fmt.Printf(
 				"  %-40s %-5s since %-5s removal in %-5s %s\n",
 				plugin.Name, plugin.LogLevel, plugin.info.Since, plugin.info.RemovalIn, plugin.info.Notice,
 			)
@@ -269,7 +269,7 @@ func (c *Config) PrintDeprecationList(plugins []PluginDeprecationInfo) {
 		}
 		sort.Slice(plugin.Options, func(i, j int) bool { return plugin.Options[i].Name < plugin.Options[j].Name })
 		for _, option := range plugin.Options {
-			_, _ = fmt.Printf(
+			fmt.Printf(
 				"  %-40s %-5s since %-5s removal in %-5s %s\n",
 				plugin.Name+"/"+option.Name, option.LogLevel, option.info.Since, option.info.RemovalIn, option.info.Notice,
 			)

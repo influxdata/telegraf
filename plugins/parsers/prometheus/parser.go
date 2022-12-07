@@ -120,7 +120,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 
 // Get Quantiles for summary metric & Buckets for histogram
 func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, t time.Time) []telegraf.Metric {
-	var metrics []telegraf.Metric
+	metrics := make([]telegraf.Metric, 0, len(m.GetSummary().Quantile)+1)
 	fields := make(map[string]interface{})
 
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
@@ -143,7 +143,7 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 
 // Get Buckets  from histogram metric
 func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, t time.Time) []telegraf.Metric {
-	var metrics []telegraf.Metric
+	metrics := make([]telegraf.Metric, 0, len(m.GetHistogram().Bucket)+2)
 	fields := make(map[string]interface{})
 
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())

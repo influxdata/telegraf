@@ -1,4 +1,3 @@
-// nolint
 package postgresql
 
 // Copied from https://github.com/jackc/pgtype/blob/master/int8.go and tweaked for uint64
@@ -34,11 +33,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	. "github.com/jackc/pgtype"
 	"math"
 	"strconv"
 
 	"github.com/jackc/pgio"
+	"github.com/jackc/pgtype"
 )
 
 var errUndefined = errors.New("cannot encode status undefined")
@@ -46,143 +45,130 @@ var errBadStatus = errors.New("invalid status")
 
 type Uint8 struct {
 	Int    uint64
-	Status Status
+	Status pgtype.Status
 }
 
-func (dst *Uint8) Set(src interface{}) error {
+func (u *Uint8) Set(src interface{}) error {
 	if src == nil {
-		*dst = Uint8{Status: Null}
+		*u = Uint8{Status: pgtype.Null}
 		return nil
 	}
 
 	if value, ok := src.(interface{ Get() interface{} }); ok {
 		value2 := value.Get()
 		if value2 != value {
-			return dst.Set(value2)
+			return u.Set(value2)
 		}
 	}
 
 	switch value := src.(type) {
 	case int8:
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case uint8:
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case int16:
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case uint16:
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case int32:
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case uint32:
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case int64:
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case uint64:
-		*dst = Uint8{Int: value, Status: Present}
+		*u = Uint8{Int: value, Status: pgtype.Present}
 	case int:
 		if value < 0 {
 			return fmt.Errorf("%d is less than maximum value for Uint8", value)
 		}
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case uint:
 		if uint64(value) > math.MaxInt64 {
 			return fmt.Errorf("%d is greater than maximum value for Uint8", value)
 		}
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case string:
 		num, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			return err
 		}
-		*dst = Uint8{Int: num, Status: Present}
+		*u = Uint8{Int: num, Status: pgtype.Present}
 	case float32:
 		if value > math.MaxInt64 {
 			return fmt.Errorf("%f is greater than maximum value for Uint8", value)
 		}
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case float64:
 		if value > math.MaxInt64 {
 			return fmt.Errorf("%f is greater than maximum value for Uint8", value)
 		}
-		*dst = Uint8{Int: uint64(value), Status: Present}
+		*u = Uint8{Int: uint64(value), Status: pgtype.Present}
 	case *int8:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *uint8:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *int16:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *uint16:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *int32:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *uint32:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *int64:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *uint64:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *int:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *uint:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *string:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *float32:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	case *float64:
-		if value == nil {
-			*dst = Uint8{Status: Null}
-		} else {
-			return dst.Set(*value)
+		if value != nil {
+			return u.Set(*value)
 		}
+		*u = Uint8{Status: pgtype.Null}
 	default:
 		return fmt.Errorf("cannot convert %v to Uint8", value)
 	}
@@ -190,58 +176,58 @@ func (dst *Uint8) Set(src interface{}) error {
 	return nil
 }
 
-func (dst Uint8) Get() interface{} {
-	switch dst.Status {
-	case Present:
-		return dst.Int
-	case Null:
+func (u *Uint8) Get() interface{} {
+	switch u.Status {
+	case pgtype.Present:
+		return u.Int
+	case pgtype.Null:
 		return nil
 	default:
-		return dst.Status
+		return u.Status
 	}
 }
 
-func (src *Uint8) AssignTo(dst interface{}) error {
+func (u *Uint8) AssignTo(dst interface{}) error {
 	switch v := dst.(type) {
 	case *int:
-		*v = int(src.Int)
+		*v = int(u.Int)
 	case *int8:
-		*v = int8(src.Int)
+		*v = int8(u.Int)
 	case *int16:
-		*v = int16(src.Int)
+		*v = int16(u.Int)
 	case *int32:
-		*v = int32(src.Int)
+		*v = int32(u.Int)
 	case *int64:
-		*v = int64(src.Int)
+		*v = int64(u.Int)
 	case *uint:
-		*v = uint(src.Int)
+		*v = uint(u.Int)
 	case *uint8:
-		*v = uint8(src.Int)
+		*v = uint8(u.Int)
 	case *uint16:
-		*v = uint16(src.Int)
+		*v = uint16(u.Int)
 	case *uint32:
-		*v = uint32(src.Int)
+		*v = uint32(u.Int)
 	case *uint64:
-		*v = src.Int
+		*v = u.Int
 	case *float32:
-		*v = float32(src.Int)
+		*v = float32(u.Int)
 	case *float64:
-		*v = float64(src.Int)
+		*v = float64(u.Int)
 	case *string:
-		*v = strconv.FormatUint(src.Int, 10)
+		*v = strconv.FormatUint(u.Int, 10)
 	case sql.Scanner:
-		return v.Scan(src.Int)
+		return v.Scan(u.Int)
 	case interface{ Set(interface{}) error }:
-		return v.Set(src.Int)
+		return v.Set(u.Int)
 	default:
-		return fmt.Errorf("cannot assign %v into %T", src.Int, dst)
+		return fmt.Errorf("cannot assign %v into %T", u.Int, dst)
 	}
 	return nil
 }
 
-func (dst *Uint8) DecodeText(ci *ConnInfo, src []byte) error {
+func (u *Uint8) DecodeText(_, src []byte) error {
 	if src == nil {
-		*dst = Uint8{Status: Null}
+		*u = Uint8{Status: pgtype.Null}
 		return nil
 	}
 
@@ -250,13 +236,13 @@ func (dst *Uint8) DecodeText(ci *ConnInfo, src []byte) error {
 		return err
 	}
 
-	*dst = Uint8{Int: n, Status: Present}
+	*u = Uint8{Int: n, Status: pgtype.Present}
 	return nil
 }
 
-func (dst *Uint8) DecodeBinary(ci *ConnInfo, src []byte) error {
+func (u *Uint8) DecodeBinary(_, src []byte) error {
 	if src == nil {
-		*dst = Uint8{Status: Null}
+		*u = Uint8{Status: pgtype.Null}
 		return nil
 	}
 
@@ -266,80 +252,80 @@ func (dst *Uint8) DecodeBinary(ci *ConnInfo, src []byte) error {
 
 	n := binary.BigEndian.Uint64(src)
 
-	*dst = Uint8{Int: n, Status: Present}
+	*u = Uint8{Int: n, Status: pgtype.Present}
 	return nil
 }
 
-func (src Uint8) EncodeText(ci *ConnInfo, buf []byte) ([]byte, error) {
-	switch src.Status {
-	case Null:
+func (u *Uint8) EncodeText(_, buf []byte) ([]byte, error) {
+	switch u.Status {
+	case pgtype.Null:
 		return nil, nil
-	case Undefined:
+	case pgtype.Undefined:
 		return nil, errUndefined
 	}
 
-	return append(buf, strconv.FormatUint(src.Int, 10)...), nil
+	return append(buf, strconv.FormatUint(u.Int, 10)...), nil
 }
 
-func (src Uint8) EncodeBinary(ci *ConnInfo, buf []byte) ([]byte, error) {
-	switch src.Status {
-	case Null:
+func (u *Uint8) EncodeBinary(_, buf []byte) ([]byte, error) {
+	switch u.Status {
+	case pgtype.Null:
 		return nil, nil
-	case Undefined:
+	case pgtype.Undefined:
 		return nil, errUndefined
 	}
 
-	return pgio.AppendUint64(buf, src.Int), nil
+	return pgio.AppendUint64(buf, u.Int), nil
 }
 
 // Scan implements the database/sql Scanner interface.
-func (dst *Uint8) Scan(src interface{}) error {
+func (u *Uint8) Scan(src interface{}) error {
 	if src == nil {
-		*dst = Uint8{Status: Null}
+		*u = Uint8{Status: pgtype.Null}
 		return nil
 	}
 
 	switch src := src.(type) {
 	case uint64:
-		*dst = Uint8{Int: src, Status: Present}
+		*u = Uint8{Int: src, Status: pgtype.Present}
 		return nil
 	case string:
-		return dst.DecodeText(nil, []byte(src))
+		return u.DecodeText(nil, []byte(src))
 	case []byte:
 		srcCopy := make([]byte, len(src))
 		copy(srcCopy, src)
-		return dst.DecodeText(nil, srcCopy)
+		return u.DecodeText(nil, srcCopy)
 	}
 
 	return fmt.Errorf("cannot scan %T", src)
 }
 
 // Value implements the database/sql/driver Valuer interface.
-func (src Uint8) Value() (driver.Value, error) {
-	switch src.Status {
-	case Present:
-		return int64(src.Int), nil
-	case Null:
+func (u *Uint8) Value() (driver.Value, error) {
+	switch u.Status {
+	case pgtype.Present:
+		return int64(u.Int), nil
+	case pgtype.Null:
 		return nil, nil
 	default:
 		return nil, errUndefined
 	}
 }
 
-func (src Uint8) MarshalJSON() ([]byte, error) {
-	switch src.Status {
-	case Present:
-		return []byte(strconv.FormatUint(src.Int, 10)), nil
-	case Null:
+func (u *Uint8) MarshalJSON() ([]byte, error) {
+	switch u.Status {
+	case pgtype.Present:
+		return []byte(strconv.FormatUint(u.Int, 10)), nil
+	case pgtype.Null:
 		return []byte("null"), nil
-	case Undefined:
+	case pgtype.Undefined:
 		return nil, errUndefined
 	}
 
 	return nil, errBadStatus
 }
 
-func (dst *Uint8) UnmarshalJSON(b []byte) error {
+func (u *Uint8) UnmarshalJSON(b []byte) error {
 	var n *uint64
 	err := json.Unmarshal(b, &n)
 	if err != nil {
@@ -347,9 +333,9 @@ func (dst *Uint8) UnmarshalJSON(b []byte) error {
 	}
 
 	if n == nil {
-		*dst = Uint8{Status: Null}
+		*u = Uint8{Status: pgtype.Null}
 	} else {
-		*dst = Uint8{Int: *n, Status: Present}
+		*u = Uint8{Int: *n, Status: pgtype.Present}
 	}
 
 	return nil

@@ -11,6 +11,15 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
 
 [1]: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf

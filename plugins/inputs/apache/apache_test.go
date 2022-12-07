@@ -6,11 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
+//nolint:lll // conditionally long lines allowed
 var apacheStatus = `
 Total Accesses: 129811861
 Total kBytes: 5213701865

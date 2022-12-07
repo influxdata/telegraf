@@ -21,7 +21,13 @@ func NewTestHistogram(cfg []config, reset bool, cumulative bool, pushOnlyOnUpdat
 	return NewTestHistogramWithExpirationInterval(cfg, reset, cumulative, pushOnlyOnUpdate, 0)
 }
 
-func NewTestHistogramWithExpirationInterval(cfg []config, reset bool, cumulative bool, pushOnlyOnUpdate bool, expirationInterval telegrafConfig.Duration) telegraf.Aggregator {
+func NewTestHistogramWithExpirationInterval(
+	cfg []config,
+	reset bool,
+	cumulative bool,
+	pushOnlyOnUpdate bool,
+	expirationInterval telegrafConfig.Duration,
+) telegraf.Aggregator {
 	htm := NewHistogramAggregator()
 	htm.Configs = cfg
 	htm.ResetBuckets = reset
@@ -195,18 +201,66 @@ func TestHistogramWithAllFields(t *testing.T) {
 
 	require.Len(t, acc.Metrics, 12, "Incorrect number of metrics")
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "0"})
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "15.5"})
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)},
+		tags{bucketRightTag: "15.5"},
+	)
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "20"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "30"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(1), "c_bucket": int64(1)}, tags{bucketRightTag: "40"})
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(1), "c_bucket": int64(1)}, tags{bucketRightTag: bucketPosInf})
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(2), "b_bucket": int64(1), "c_bucket": int64(1)},
+		tags{bucketRightTag: bucketPosInf},
+	)
 
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "0"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "4"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "10"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "23"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "30"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(1), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: bucketPosInf})
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "0"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "4"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "10"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "23"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "30"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(1), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: bucketPosInf},
+	)
 }
 
 // TestHistogramWithAllFieldsNonCumulative tests two metrics for one period and for all fields
@@ -224,19 +278,91 @@ func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
 	histogram.Push(acc)
 
 	require.Len(t, acc.Metrics, 12, "Incorrect number of metrics")
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: bucketNegInf, bucketRightTag: "0"})
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: "0", bucketRightTag: "15.5"})
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: "15.5", bucketRightTag: "20"})
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: "20", bucketRightTag: "30"})
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(1), "c_bucket": int64(1)}, tags{bucketLeftTag: "30", bucketRightTag: "40"})
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: "40", bucketRightTag: bucketPosInf})
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)},
+		tags{bucketLeftTag: bucketNegInf, bucketRightTag: "0"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)},
+		tags{bucketLeftTag: "0", bucketRightTag: "15.5"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)},
+		tags{bucketLeftTag: "15.5", bucketRightTag: "20"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)},
+		tags{bucketLeftTag: "20", bucketRightTag: "30"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(0), "b_bucket": int64(1), "c_bucket": int64(1)},
+		tags{bucketLeftTag: "30", bucketRightTag: "40"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)},
+		tags{bucketLeftTag: "40", bucketRightTag: bucketPosInf},
+	)
 
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketLeftTag: bucketNegInf, bucketRightTag: "0"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketLeftTag: "0", bucketRightTag: "4"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketLeftTag: "4", bucketRightTag: "10"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketLeftTag: "10", bucketRightTag: "23"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketLeftTag: "23", bucketRightTag: "30"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(1), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketLeftTag: "30", bucketRightTag: bucketPosInf})
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketLeftTag: bucketNegInf, bucketRightTag: "0"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketLeftTag: "0", bucketRightTag: "4"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketLeftTag: "4", bucketRightTag: "10"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketLeftTag: "10", bucketRightTag: "23"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketLeftTag: "23", bucketRightTag: "30"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(1), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketLeftTag: "30", bucketRightTag: bucketPosInf},
+	)
 }
 
 // TestHistogramWithTwoPeriodsAndAllFields tests two metrics getting added with a push/reset in between (simulates
@@ -266,7 +392,13 @@ func TestHistogramWithTwoPeriodsAndAllFields(t *testing.T) {
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "20"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "30"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(1), "c_bucket": int64(1)}, tags{bucketRightTag: "40"})
-	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(1), "c_bucket": int64(1)}, tags{bucketRightTag: bucketPosInf})
+	assertContainsTaggedField(
+		t,
+		acc,
+		"first_metric_name",
+		fields{"a_bucket": int64(2), "b_bucket": int64(1), "c_bucket": int64(1)},
+		tags{bucketRightTag: bucketPosInf},
+	)
 }
 
 // TestWrongBucketsOrder tests the calling panic with incorrect order of buckets
@@ -310,12 +442,48 @@ func TestHistogramMetricExpiration(t *testing.T) {
 	histogram.Push(acc)
 
 	require.Len(t, acc.Metrics, 6, "Incorrect number of metrics")
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "0"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "4"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "10"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "23"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "30"})
-	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(1), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: bucketPosInf})
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "0"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "4"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "10"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "23"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: "30"},
+	)
+	assertContainsTaggedField(
+		t,
+		acc,
+		"second_metric_name",
+		fields{"a_bucket": int64(1), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)},
+		tags{bucketRightTag: bucketPosInf},
+	)
 }
 
 // assertContainsTaggedField is help functions to test histogram data

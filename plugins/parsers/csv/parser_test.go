@@ -1015,32 +1015,47 @@ timestamp,type,name,status
 }
 
 func TestOverwriteDefaultTagsAndMetaDataTags(t *testing.T) {
-	// This tests makes sure that the default tags and metadata tags don't overwrite record data
-	// This test also covers the scenario where the metadata overwrites the default tag
-	p := &Parser{
-		ColumnNames:        []string{"first", "second", "third"},
-		TagColumns:         []string{"second", "third"},
-		TimeFunc:           DefaultTime,
-		MetadataRows:       2,
-		MetadataSeparators: []string{"="},
+	csv := []byte(`second=orange
+fourth=plain
+1.4,apple,hi
+`)
+	defaultTags := map[string]string{"third": "bye", "fourth": "car"}
+
+	tests := []struct {
+		name         string
+		tagOverwrite bool
+		expectedTags map[string]string
+	}{
+		{
+			name:         "Don't overwrite tags",
+			tagOverwrite: false,
+			expectedTags: map[string]string{"second": "orange", "third": "bye", "fourth": "car"},
+		},
+		{
+			name:         "Overwrite tags",
+			tagOverwrite: true,
+			expectedTags: map[string]string{"second": "apple", "third": "hi", "fourth": "plain"},
+		},
 	}
-	err := p.Init()
-	require.NoError(t, err)
-	p.SetDefaultTags(map[string]string{"third": "bye", "fourth": "car"})
-	m, err := p.ParseLine("second=orange")
-	require.ErrorIs(t, err, parsers.ErrEOF)
-	require.Nil(t, m)
-	m, err = p.ParseLine("fourth=plain")
-	require.NoError(t, err)
-	require.Nil(t, m)
-	expectedFields := []map[string]interface{}{{"first": 1.4}}
-	expectedTags := []map[string]string{{"second": "orange", "third": "bye", "fourth": "car"}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Parser{
+				ColumnNames:        []string{"first", "second", "third"},
+				TagColumns:         []string{"second", "third"},
+				TagOverwrite:       tt.tagOverwrite,
+				MetadataRows:       2,
+				MetadataSeparators: []string{"="},
+			}
 
-	m, err = p.ParseLine("1.4,apple,hi")
-	require.NoError(t, err)
+			require.NoError(t, p.Init())
+			p.SetDefaultTags(defaultTags)
 
-	require.Equal(t, expectedFields[0], m.Fields())
-	require.Equal(t, expectedTags[0], m.Tags())
+			metrics, err := p.Parse(csv)
+			require.NoError(t, err)
+			require.Len(t, metrics, 1)
+			require.EqualValues(t, tt.expectedTags, metrics[0].Tags())
+		})
+	}
 }
 
 func TestParseCSVResetModeInvalid(t *testing.T) {
@@ -1139,7 +1154,11 @@ timestamp,type,name,status
 
 	// This should fail when not resetting but reading again due to the header etc
 	_, err = p.Parse([]byte(testCSV))
-	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+	require.Error(
+		t,
+		err,
+		`parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`,
+	)
 }
 
 func TestParseCSVLinewiseResetModeNone(t *testing.T) {
@@ -1243,7 +1262,11 @@ func TestParseCSVLinewiseResetModeNone(t *testing.T) {
 
 	// This should fail when not resetting but reading again due to the header etc
 	_, err = p.ParseLine(testCSV[0])
-	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+	require.Error(
+		t,
+		err,
+		`parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`,
+	)
 }
 
 func TestParseCSVResetModeAlways(t *testing.T) {
@@ -1467,5 +1490,9 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 
 	// This should fail as reset-mode "always" is ignored in line-wise parsing
 	_, err = p.ParseLine(testCSV[0])
-	require.Error(t, err, `parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`)
+	require.Error(
+		t,
+		err,
+		`parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`,
+	)
 }

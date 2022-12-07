@@ -19,6 +19,15 @@ see <http://man7.org/linux/man-pages/man1/tail.1.html> for more details.
 The plugin expects messages in one of the [Telegraf Input Data
 Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -86,6 +95,20 @@ Formats](../../../docs/DATA_FORMATS_INPUT.md).
     ## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
     #invert_match = false
 
+    ## The handling method for quoted text (defaults to 'ignore').
+    ## The following methods are available:
+    ##   ignore  -- do not consider quotation (default)
+    ##   single-quotes -- consider text quoted by single quotes (')
+    ##   double-quotes -- consider text quoted by double quotes (")
+    ##   backticks     -- consider text quoted by backticks (`)
+    ## When handling quotes, escaped quotes (e.g. \") are handled correctly.
+    #quotation = "ignore"
+
+    ## The preserve_newline option can be true or false (defaults to false).
+    ## If true, the newline character is preserved for multiline elements,
+    ## this is useful to preserve message-structure e.g. for logging outputs.
+    #preserver_newline = false
+
     #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
     #timeout = 5s
 ```
@@ -94,3 +117,7 @@ Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
 Metrics are produced according to the `data_format` option.  Additionally a
 tag labeled `path` is added to the metric containing the filename being tailed.
+
+## Example Output
+
+There is no predefined metric format, so output depends on plugin input.

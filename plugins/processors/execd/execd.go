@@ -100,9 +100,8 @@ func (e *Execd) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Execd) Stop() error {
+func (e *Execd) Stop() {
 	e.process.Stop()
-	return nil
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
