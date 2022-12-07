@@ -214,6 +214,7 @@ SET @SqlStatement = '
 SELECT
 	 ''sqlserver_server_properties'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+	,@@SERVICENAME AS [service_name]
 	,si.[cpu_count]
 	,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
 	,(SELECT [available_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [available_server_memory]
@@ -221,6 +222,7 @@ SELECT
 	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
+	,SERVERPROPERTY(''IsClustered'') AS [instance_type]
 	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
 	,dbs.[db_online]
 	,dbs.[db_restoring]
