@@ -339,7 +339,7 @@ func (a *Agent) runInputs(
 func (a *Agent) testStartInputs(
 	dst chan<- telegraf.Metric,
 	inputs []*models.RunningInput,
-) *inputUnit {
+) (*inputUnit, error) {
 	log.Printf("D! [agent] Starting service inputs")
 
 	unit := &inputUnit{
@@ -357,14 +357,14 @@ func (a *Agent) testStartInputs(
 
 			err := si.Start(acc)
 			if err != nil {
-				log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
+				return unit, fmt.Errorf("starting input %s: %v", input.LogName(), err)
 			}
 		}
 
 		unit.inputs = append(unit.inputs, input)
 	}
 
-	return unit
+	return unit, nil
 }
 
 // testRunInputs is a variation of runInputs for use in --test and --once mode.
@@ -934,7 +934,10 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 		}
 	}
 
-	iu := a.testStartInputs(next, a.Config.Inputs)
+	iu, err := a.testStartInputs(next, a.Config.Inputs)
+	if err != nil {
+		return err
+	}
 
 	var wg sync.WaitGroup
 	if au != nil {
@@ -1033,7 +1036,10 @@ func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 		}
 	}
 
-	iu := a.testStartInputs(next, a.Config.Inputs)
+	iu, err := a.testStartInputs(next, a.Config.Inputs)
+	if err != nil {
+		return err
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
