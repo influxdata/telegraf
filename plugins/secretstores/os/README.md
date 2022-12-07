@@ -4,9 +4,9 @@ The `os` plugin allows to manage and store secrets using the native Operating
 System keyring. For Windows this plugin uses the credential manager, on Linux
 the kernel keyring is used and on MacOS we use the Keychain implementation.
 
-To manage your secrets you can either
-[use Telegraf](/docs/COMMANDS_AND_FLAGS.md#secret-store-management) or the
-tools that natively comes with the secret-store.
+To manage your secrets you can either use the
+[secrets command of Telegraf](/docs/COMMANDS_AND_FLAGS.md#secrets-management)
+or the tools that natively comes with your operating system.
 
 ## Configuration
 
