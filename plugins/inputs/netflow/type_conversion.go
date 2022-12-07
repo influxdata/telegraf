@@ -70,15 +70,14 @@ func initIPv4OptionMapping() error {
 
 	ipv4OptionMapping = make([]string, 32)
 	for _, r := range records[1:] {
-		if len(r) != 6 {
+		if len(r) != 2 {
 			return fmt.Errorf("invalid record: %v", r)
 		}
-		idx, err := strconv.ParseUint(r[2], 10, 8)
+		idx, err := strconv.ParseUint(r[0], 10, 8)
 		if err != nil {
 			return fmt.Errorf("%w: %v", err, r)
 		}
-		parts := strings.SplitN(r[4], "-", 2)
-		ipv4OptionMapping[31-idx] = parts[0]
+		ipv4OptionMapping[31-idx] = r[1]
 	}
 
 	return nil

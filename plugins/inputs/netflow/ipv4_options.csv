@@ -1,31 +1,27 @@
-Copy,Class,Number,Value,Name,Reference
-0,0,0,0,EOOL   - End of Options List,[RFC791][Jon_Postel]
-0,0,1,1,NOP    - No Operation,[RFC791][Jon_Postel]
-1,0,2,130,SEC    - Security,[RFC1108]
-1,0,3,131,LSR    - Loose Source Route,[RFC791][Jon_Postel]
-0,2,4,68,TS     - Time Stamp,[RFC791][Jon_Postel]
-1,0,5,133,E-SEC  - Extended Security,[RFC1108]
-1,0,6,134,CIPSO  - Commercial Security,[draft-ietf-cipso-ipsecurity-01]
-0,0,7,7,RR     - Record Route,[RFC791][Jon_Postel]
-1,0,8,136,SID    - Stream ID,[RFC791][Jon_Postel][RFC6814][1]
-1,0,9,137,SSR    - Strict Source Route,[RFC791][Jon_Postel]
-0,0,10,10,ZSU    - Experimental Measurement,[ZSu]
-0,0,11,11,MTUP   - MTU Probe,[RFC1063][RFC1191][1]
-0,0,12,12,MTUR   - MTU Reply,[RFC1063][RFC1191][1]
-1,2,13,205,FINN   - Experimental Flow Control,[Greg_Finn]
-1,0,14,142,VISA   - Experimental Access Control,[Deborah_Estrin][RFC6814][1]
-0,0,15,15,ENCODE - ???,[VerSteeg][RFC6814][1]
-1,0,16,144,IMITD  - IMI Traffic Descriptor,[Lee]
-1,0,17,145,EIP    - Extended Internet Protocol,[RFC1385][RFC6814][1]
-0,2,18,82,TR     - Traceroute,[RFC1393][RFC6814][1]
-1,0,19,147,ADDEXT - Address Extension,[Ullmann IPv7][RFC6814][1]
-1,0,20,148,RTRALT - Router Alert,[RFC2113]
-1,0,21,149,SDB    - Selective Directed Broadcast,[Charles_Bud_Graff][RFC6814][1]
-1,0,22,150,- Unassigned (Released 18 October 2005),
-1,0,23,151,DPS    - Dynamic Packet State,[Andy_Malis][RFC6814][1]
-1,0,24,152,UMP    - Upstream Multicast Pkt.,[Dino_Farinacci][RFC6814][1]
-0,0,25,25,QS     - Quick-Start,[RFC4782]
-0,0,30,30,EXP    - RFC3692-style Experiment [2],[RFC4727]
-0,2,30,94,EXP    - RFC3692-style Experiment [2],[RFC4727]
-1,0,30,158,EXP    - RFC3692-style Experiment [2],[RFC4727]
-1,2,30,222,EXP    - RFC3692-style Experiment [2],[RFC4727]
+Number,Name
+0,EOOL
+1,NOP
+2,SEC
+3,LSR
+4,TS
+5,E-SEC
+6,CIPSO
+7,RR
+8,SID
+9,SSR
+10,ZSU
+11,MTUP
+12,MTUR
+13,FINN
+14,VISA
+15,ENCODE
+16,IMITD
+17,EIP
+18,TR
+19,ADDEXT
+20,RTRALT
+21,SDB
+23,DPS
+24,UMP
+25,QS
+30,EXP
