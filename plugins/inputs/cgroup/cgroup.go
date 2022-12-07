@@ -22,6 +22,12 @@ func (*CGroup) SampleConfig() string {
 	return sampleConfig
 }
 
+func (cg *CGroup) Init() error {
+	cg.logged = make(map[string]bool)
+
+	return nil
+}
+
 func init() {
-	inputs.Add("cgroup", func() telegraf.Input { return &CGroup{logged: make(map[string]bool)} })
+	inputs.Add("cgroup", func() telegraf.Input { return &CGroup{} })
 }
