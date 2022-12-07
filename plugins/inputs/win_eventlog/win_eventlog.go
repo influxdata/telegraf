@@ -349,10 +349,13 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 
 	fmt.Println("----")
 	fmt.Printf("channel: '%s', process name: '%s', source: '%s'\n", event.Channel, event.Execution.ProcessName, event.Source.Name)
-	fmt.Printf("eventid: %d, opcode: %d'\n", event.EventID, event.Opcode)
+	fmt.Printf("eventid: %d, eventRecordid: %d, opcode: %d'\n", event.EventID, event.EventRecordID, event.Opcode)
 	fmt.Printf("userData XML: %s\n", string(event.UserData.InnerXML))
+	fmt.Printf("eventData XML: %s\n", string(event.EventData.InnerXML))
 	fmt.Printf("message: %s\n", event.Message)
+	fmt.Printf("sourceName: %s\n", event.Source.Name)
 	fmt.Printf("keyword: %d, eventHandle: %d, publisherHandle: %d\n", EvtFormatMessageKeyword, eventHandle, publisherHandle)
+	fmt.Printf("task: %d, text: %s\n", event.Task, event.TaskText)
 
 	// Populating text values
 	keywords, err := formatEventString(EvtFormatMessageKeyword, eventHandle, publisherHandle)
