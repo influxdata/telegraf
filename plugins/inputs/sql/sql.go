@@ -81,8 +81,12 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 
 		for i, name := range columnNames {
 			if q.MeasurementColumn != "" && name == q.MeasurementColumn {
-				var ok bool
-				if measurement, ok = columnData[i].(string); !ok {
+				switch raw := columnData[i].(type) {
+				case string:
+					measurement = raw
+				case []byte:
+					measurement = string(raw)
+				default:
 					return 0, fmt.Errorf("measurement column type \"%T\" unsupported", columnData[i])
 				}
 			}
