@@ -88,8 +88,17 @@ func decodeInt32(b []byte) interface{} {
 }
 
 func decodeUint(b []byte) interface{} {
-	buf := append(make([]byte, 8-len(b)), b...)
-	return binary.BigEndian.Uint64(buf)
+	switch len(b) {
+	case 1:
+		return uint64(b[0])
+	case 2:
+		return uint64(binary.BigEndian.Uint16(b))
+	case 4:
+		return uint64(binary.BigEndian.Uint32(b))
+	case 8:
+		return uint64(binary.BigEndian.Uint64(b))
+	}
+	panic(fmt.Errorf("invalid length for uint buffer %v", b))
 }
 
 func decodeFloat64(b []byte) interface{} {
