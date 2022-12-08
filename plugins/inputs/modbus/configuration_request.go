@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
-
-	"github.com/influxdata/telegraf/internal/choice"
 )
 
 //go:embed sample_request.conf
@@ -23,13 +21,14 @@ type requestFieldDefinition struct {
 }
 
 type requestDefinition struct {
-	SlaveID      byte                     `toml:"slave_id"`
-	ByteOrder    string                   `toml:"byte_order"`
-	RegisterType string                   `toml:"register"`
-	Measurement  string                   `toml:"measurement"`
-	Optimization string                   `toml:"optimization"`
-	Fields       []requestFieldDefinition `toml:"fields"`
-	Tags         map[string]string        `toml:"tags"`
+	SlaveID           byte                     `toml:"slave_id"`
+	ByteOrder         string                   `toml:"byte_order"`
+	RegisterType      string                   `toml:"register"`
+	Measurement       string                   `toml:"measurement"`
+	Optimization      string                   `toml:"optimization"`
+	MaxExtraRegisters uint16                   `toml:"optimization_max_register_fill"`
+	Fields            []requestFieldDefinition `toml:"fields"`
+	Tags              map[string]string        `toml:"tags"`
 }
 
 type ConfigurationPerRequest struct {
@@ -46,12 +45,6 @@ func (c *ConfigurationPerRequest) Check() error {
 	seenFields := make(map[uint64]bool)
 
 	for _, def := range c.Requests {
-		// Check for valid optimization
-		validOptimizations := []string{"", "none", "shrink", "rearrange", "aggressive"}
-		if !choice.Contains(def.Optimization, validOptimizations) {
-			return fmt.Errorf("unknown optimization %q", def.Optimization)
-		}
-
 		// Check byte order of the data
 		switch def.ByteOrder {
 		case "":
@@ -69,7 +62,31 @@ func (c *ConfigurationPerRequest) Check() error {
 		default:
 			return fmt.Errorf("unknown register-type %q", def.RegisterType)
 		}
-
+		// Check for valid optimization
+		switch def.Optimization {
+		case "", "none", "shrink", "rearrange", "aggressive":
+		case "max_insert":
+			switch def.RegisterType {
+			case "coil":
+				if def.MaxExtraRegisters <= 0 || def.MaxExtraRegisters > maxQuantityCoils {
+					return fmt.Errorf("optimization_max_register_fill has to be between 1 and %d", maxQuantityCoils)
+				}
+			case "discrete":
+				if def.MaxExtraRegisters <= 0 || def.MaxExtraRegisters > maxQuantityDiscreteInput {
+					return fmt.Errorf("optimization_max_register_fill has to be between 1 and %d", maxQuantityDiscreteInput)
+				}
+			case "holding":
+				if def.MaxExtraRegisters <= 0 || def.MaxExtraRegisters > maxQuantityHoldingRegisters {
+					return fmt.Errorf("optimization_max_register_fill has to be between 1 and %d", maxQuantityHoldingRegisters)
+				}
+			case "input":
+				if def.MaxExtraRegisters <= 0 || def.MaxExtraRegisters > maxQuantityInputRegisters {
+					return fmt.Errorf("optimization_max_register_fill has to be between 1 and %d", maxQuantityInputRegisters)
+				}
+			}
+		default:
+			return fmt.Errorf("unknown optimization %q", def.Optimization)
+		}
 		// Set the default for measurement if required
 		if def.Measurement == "" {
 			def.Measurement = "modbus"
@@ -167,28 +184,28 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 			if c.workarounds.OnRequestPerField {
 				maxQuantity = 1
 			}
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization, def.MaxExtraRegisters)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
 			maxQuantity := maxQuantityDiscreteInput
 			if c.workarounds.OnRequestPerField {
 				maxQuantity = 1
 			}
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization, def.MaxExtraRegisters)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
 			maxQuantity := maxQuantityHoldingRegisters
 			if c.workarounds.OnRequestPerField {
 				maxQuantity = 1
 			}
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization, def.MaxExtraRegisters)
 			set.holding = append(set.holding, requests...)
 		case "input":
 			maxQuantity := maxQuantityInputRegisters
 			if c.workarounds.OnRequestPerField {
 				maxQuantity = 1
 			}
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization, def.MaxExtraRegisters)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
@@ -337,7 +354,7 @@ func (c *ConfigurationPerRequest) determineOutputDatatype(input string) (string,
 		return "INT64", nil
 	case "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
 		return "UINT64", nil
-	case "FLOAT32", "FLOAT64":
+	case "FLOAT16", "FLOAT32", "FLOAT64":
 		return "FLOAT64", nil
 	}
 	return "unknown", fmt.Errorf("invalid input datatype %q for determining output", input)
@@ -348,7 +365,7 @@ func (c *ConfigurationPerRequest) determineFieldLength(input string) (uint16, er
 	switch input {
 	case "INT8L", "INT8H", "UINT8L", "UINT8H":
 		return 1, nil
-	case "INT16", "UINT16":
+	case "INT16", "UINT16", "FLOAT16":
 		return 1, nil
 	case "INT32", "UINT32", "FLOAT32":
 		return 2, nil

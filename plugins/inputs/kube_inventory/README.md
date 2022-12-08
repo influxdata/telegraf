@@ -160,13 +160,12 @@ subjects:
 ## Quickstart in k3s
 
 When monitoring [k3s](https://k3s.io) server instances one can re-use already
-generated administration token.  This is less secure than using the more
+generated administration token. This is less secure than using the more
 restrictive dedicated telegraf user but more convienient to set up.
 
 ```console
-# an empty token will make telegraf use the client cert/key files instead
-$ touch /run/telegraf-kubernetes-token
 # replace `telegraf` with the user the telegraf process is running as
+$ install -o telegraf -m400 /var/lib/rancher/k3s/server/token /run/telegraf-kubernetes-token
 $ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.crt /run/telegraf-kubernetes-cert
 $ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.key /run/telegraf-kubernetes-key
 ```

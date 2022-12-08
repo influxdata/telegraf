@@ -38,6 +38,14 @@ var sampleConfig string
 // Regular expression to see if a path element contains an origin
 var originPattern = regexp.MustCompile(`^([\w-_]+):`)
 
+// Define the warning to show if we cannot get a metric name.
+const emptyNameWarning = `Got empty metric-name for response, usually indicating
+configuration issues as the response cannot be related to any subscription.
+Please open an issue on https://github.com/influxdata/telegraf including your
+device model and the following response data:
+%+v
+This message is only printed once.`
+
 // gNMI plugin instance
 type GNMI struct {
 	Addresses        []string          `toml:"addresses"`
@@ -64,11 +72,12 @@ type GNMI struct {
 	internaltls.ClientConfig
 
 	// Internal state
-	internalAliases map[string]string
-	acc             telegraf.Accumulator
-	cancel          context.CancelFunc
-	wg              sync.WaitGroup
-	legacyTags      bool
+	internalAliases    map[string]string
+	acc                telegraf.Accumulator
+	cancel             context.CancelFunc
+	wg                 sync.WaitGroup
+	legacyTags         bool
+	emptyNameWarnShown bool
 
 	Log telegraf.Logger
 }
@@ -255,6 +264,12 @@ func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 		return nil, err
 	}
 
+	// Do not provide an empty prefix. Required for Huawei NE40 router v8.21
+	// (and possibly others). See https://github.com/influxdata/telegraf/issues/12273.
+	if gnmiPath.Origin == "" && gnmiPath.Target == "" && len(gnmiPath.Elem) == 0 {
+		gnmiPath = nil
+	}
+
 	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" && c.Encoding != "bytes" {
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
@@ -390,9 +405,9 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 		}
 
 		// Check for empty names
-		if name == "" {
-			c.acc.AddError(fmt.Errorf("got empty name for update %+v", update))
-			continue
+		if name == "" && !c.emptyNameWarnShown {
+			c.Log.Warnf(emptyNameWarning, response.Update)
+			c.emptyNameWarnShown = true
 		}
 
 		// Group metrics

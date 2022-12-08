@@ -23,11 +23,12 @@ type Multiline struct {
 }
 
 type MultilineConfig struct {
-	Pattern        string                  `toml:"pattern"`
-	MatchWhichLine MultilineMatchWhichLine `toml:"match_which_line"`
-	InvertMatch    bool                    `toml:"invert_match"`
-	Quotation      string                  `toml:"quotation"`
-	Timeout        *config.Duration        `toml:"timeout"`
+	Pattern         string                  `toml:"pattern"`
+	MatchWhichLine  MultilineMatchWhichLine `toml:"match_which_line"`
+	InvertMatch     bool                    `toml:"invert_match"`
+	PreserveNewline bool                    `toml:"preserve_newline"`
+	Quotation       string                  `toml:"quotation"`
+	Timeout         *config.Duration        `toml:"timeout"`
 }
 
 const (
@@ -80,12 +81,11 @@ func (m *Multiline) IsEnabled() bool {
 }
 
 func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
-	if m.matchQuotation(text) {
-		// Ignore the returned error as we cannot do anything about it anyway
-		_, _ = buffer.WriteString(text + "\n")
-		return ""
-	}
-	if m.matchString(text) {
+	if m.matchQuotation(text) || m.matchString(text) {
+		// Restore the newline removed by tail's scanner
+		if buffer.Len() > 0 && m.config.PreserveNewline {
+			_, _ = buffer.WriteString("\n")
+		}
 		// Ignore the returned error as we cannot do anything about it anyway
 		_, _ = buffer.WriteString(text)
 		return ""
@@ -101,6 +101,9 @@ func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
 	} else {
 		// Next
 		if buffer.Len() > 0 {
+			if m.config.PreserveNewline {
+				_, _ = buffer.WriteString("\n")
+			}
 			if _, err := buffer.WriteString(text); err != nil {
 				return ""
 			}

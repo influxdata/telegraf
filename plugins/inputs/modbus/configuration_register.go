@@ -95,7 +95,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 	if err != nil {
 		return nil, err
 	}
-	return groupFieldsToRequests(fields, nil, maxQuantity, "none"), nil
+	return groupFieldsToRequests(fields, nil, maxQuantity, "none", 0), nil
 }
 
 func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {
@@ -179,7 +179,7 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 			switch item.DataType {
 			case "INT8L", "INT8H", "UINT8L", "UINT8H",
 				"UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64",
-				"FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
+				"FLOAT16-IEEE", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, registerType, item.Name)
 			}
@@ -236,6 +236,8 @@ func (c *ConfigurationOriginal) normalizeInputDatatype(dataType string, words in
 		default:
 			return "unknown", fmt.Errorf("invalid length %d for type %q", words, dataType)
 		}
+	case "FLOAT16-IEEE":
+		return "FLOAT16", nil
 	case "FLOAT32-IEEE":
 		return "FLOAT32", nil
 	case "FLOAT64-IEEE":

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -138,7 +139,35 @@ func (m *Modbus) Init() error {
 	if err := m.initClient(); err != nil {
 		return fmt.Errorf("initializing client failed: %v", err)
 	}
+	for slaveID, rqs := range m.requests {
+		var nHoldingRegs, nInputsRegs, nDiscreteRegs, nCoilRegs uint16
+		var nHoldingFields, nInputsFields, nDiscreteFields, nCoilFields int
 
+		for _, r := range rqs.holding {
+			nHoldingRegs += r.length
+			nHoldingFields += len(r.fields)
+		}
+		for _, r := range rqs.input {
+			nInputsRegs += r.length
+			nInputsFields += len(r.fields)
+		}
+		for _, r := range rqs.discrete {
+			nDiscreteRegs += r.length
+			nDiscreteFields += len(r.fields)
+		}
+		for _, r := range rqs.coil {
+			nCoilRegs += r.length
+			nCoilFields += len(r.fields)
+		}
+		m.Log.Infof("Got %d request(s) touching %d holding registers for %d fields (slave %d)",
+			len(rqs.holding), nHoldingRegs, nHoldingFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d inputs registers for %d fields (slave %d)",
+			len(rqs.input), nInputsRegs, nInputsFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d discrete registers for %d fields (slave %d)",
+			len(rqs.discrete), nDiscreteRegs, nDiscreteFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d coil registers for %d fields (slave %d)",
+			len(rqs.coil), nCoilRegs, nCoilFields, slaveID)
+	}
 	return nil
 }
 
@@ -228,10 +257,14 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		}
-	case "file":
+	case "", "file":
+		path := filepath.Join(u.Host, u.Path)
+		if path == "" {
+			return fmt.Errorf("invalid path for controller %q", m.Controller)
+		}
 		switch m.TransmissionMode {
 		case "RTU":
-			handler := mb.NewRTUClientHandler(u.Path)
+			handler := mb.NewRTUClientHandler(path)
 			handler.Timeout = time.Duration(m.Timeout)
 			handler.BaudRate = m.BaudRate
 			handler.DataBits = m.DataBits
@@ -242,7 +275,7 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		case "ASCII":
-			handler := mb.NewASCIIClientHandler(u.Path)
+			handler := mb.NewASCIIClientHandler(path)
 			handler.Timeout = time.Duration(m.Timeout)
 			handler.BaudRate = m.BaudRate
 			handler.DataBits = m.DataBits

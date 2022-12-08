@@ -147,6 +147,10 @@ option operate similar to the `snmpget` utility.
     ##                or hextoint:BigEndian:uint32. Valid options for the Endian are:
     ##                BigEndian and LittleEndian. For the bit size: uint16, uint32
     ##                and uint64.
+    ##   enum(1):     Convert the value according to its syntax in the MIB (full).
+    ##                (Only supported with gosmi translator)
+    ##   enum:        Convert the value according to its syntax in the MIB.
+    ##                (Only supported with gosmi translator)
     ##
     # conversion = ""
 ```

@@ -21,6 +21,76 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestControllers(t *testing.T) {
+	var tests = []struct {
+		name       string
+		controller string
+		errmsg     string
+	}{
+		{
+			name:       "TCP host",
+			controller: "tcp://localhost:502",
+		},
+		{
+			name:       "invalid TCP host",
+			controller: "tcp://localhost",
+			errmsg:     "initializing client failed: address localhost: missing port in address",
+		},
+		{
+			name:       "absolute file path",
+			controller: "file:///dev/ttyUSB0",
+		},
+		{
+			name:       "relative file path",
+			controller: "file://dev/ttyUSB0",
+		},
+		{
+			name:       "relative file path with dot",
+			controller: "file://./dev/ttyUSB0",
+		},
+		{
+			name:       "Windows COM-port",
+			controller: "COM2",
+		},
+		{
+			name:       "Windows COM-port file path",
+			controller: "file://com2",
+		},
+		{
+			name:       "empty file path",
+			controller: "file://",
+			errmsg:     "initializing client failed: invalid path for controller",
+		},
+		{
+			name:       "empty controller",
+			controller: "",
+			errmsg:     "initializing client failed: invalid path for controller",
+		},
+		{
+			name:       "invalid scheme",
+			controller: "foo://bar",
+			errmsg:     "initializing client failed: invalid controller",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Modbus{
+				Name:             "dummy",
+				Controller:       tt.controller,
+				TransmissionMode: "RTU",
+				Log:              testutil.Logger{},
+			}
+			err := plugin.Init()
+			if tt.errmsg != "" {
+				require.ErrorContains(t, err, tt.errmsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestCoils(t *testing.T) {
 	var coilTests = []struct {
 		name     string
@@ -749,6 +819,26 @@ func TestHoldingRegisters(t *testing.T) {
 			write:     []byte{0x8F, 0x55, 0xC3, 0x47, 0x6A, 0x40, 0xBF, 0x9C},
 			read:      float64(-0.02774907295123737),
 		},
+		{
+			name:      "register240_abcd_float16",
+			address:   []uint16{240},
+			quantity:  1,
+			byteOrder: "AB",
+			dataType:  "FLOAT16-IEEE",
+			scale:     1,
+			write:     []byte{0xb8, 0x14},
+			read:      float64(-0.509765625),
+		},
+		{
+			name:      "register240_dcba_float16",
+			address:   []uint16{240},
+			quantity:  1,
+			byteOrder: "BA",
+			dataType:  "FLOAT16-IEEE",
+			scale:     1,
+			write:     []byte{0x14, 0xb8},
+			read:      float64(-0.509765625),
+		},
 	}
 
 	serv := mbserver.NewServer()
@@ -1310,6 +1400,37 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 			scale:      1.0,
 			write:      []byte{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea},
 			read:       float64(3.14159265359000006156975359772),
+		},
+		{
+			name:       "register100_float16",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.509765625),
+		},
+		{
+			name:       "register100_float16-scale_.1",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      .1,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.0509765625),
+		},
+		{
+			name:       "register100_float16_scale_10",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      10,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-5.09765625),
+		},
+		{
+			name:       "register100_float16_float64_scale",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      1.0,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.509765625),
 		},
 	}
 
@@ -1881,6 +2002,37 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 			write:      []byte{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea},
 			read:       float64(3.14159265359000006156975359772),
 		},
+		{
+			name:       "register100_float16",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.509765625),
+		},
+		{
+			name:       "register100_float16-scale_.1",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      .1,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.0509765625),
+		},
+		{
+			name:       "register100_float16_scale_10",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      10,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-5.09765625),
+		},
+		{
+			name:       "register100_float16_float64_scale",
+			address:    100,
+			dataTypeIn: "FLOAT16",
+			scale:      1.0,
+			write:      []byte{0xb8, 0x14},
+			read:       float64(-0.509765625),
+		},
 	}
 
 	serv := mbserver.NewServer()
@@ -1903,7 +2055,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 			require.NoError(t, err)
 
 			modbus := Modbus{
-				Name:              "TestRequestTypesHoldingABCD",
+				Name:              "TestRequestTypesHoldingDCBA",
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
@@ -3130,6 +3282,70 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 	}
 }
 
+func TestConfigurationMaxExtraRegisterFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		requests []requestDefinition
+		errormsg string
+	}{{
+		name: "MaxExtraRegister too large",
+		requests: []requestDefinition{
+			{
+				SlaveID:           1,
+				ByteOrder:         "ABCD",
+				RegisterType:      "input",
+				Optimization:      "max_insert",
+				MaxExtraRegisters: 5000,
+				Fields: []requestFieldDefinition{
+					{
+						Name:        "input-0",
+						Address:     uint16(0),
+						Measurement: "foo",
+					},
+				},
+			},
+		},
+		errormsg: "configuration invalid: optimization_max_register_fill has to be between 1 and 125",
+	},
+		{
+			name: "MaxExtraRegister too small",
+			requests: []requestDefinition{
+				{
+					SlaveID:           1,
+					ByteOrder:         "ABCD",
+					RegisterType:      "input",
+					Optimization:      "max_insert",
+					MaxExtraRegisters: 0,
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "input-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+			},
+			errormsg: "configuration invalid: optimization_max_register_fill has to be between 1 and 125",
+		}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = tt.requests
+
+			err := plugin.Init()
+			require.Error(t, err)
+			require.Equal(t, tt.errormsg, err.Error())
+			require.Empty(t, plugin.requests)
+		})
+	}
+}
+
 func TestRequestsStartingWithOmits(t *testing.T) {
 	modbus := Modbus{
 		Name:              "Test",
@@ -4223,4 +4439,137 @@ func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
 	}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
+}
+
+func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
+	maxsize := maxQuantityHoldingRegisters
+	maxExtraRegisters := uint16(5)
+	tests := []struct {
+		name     string
+		inputs   []rangeDefinition
+		expected []requestExpectation
+	}{
+		{
+			name: "large gaps",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 5},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+		{
+			name: "large gaps filled",
+			inputs: []rangeDefinition{
+				{0, 1, 1, 1, "INT16", false},
+				{1, 17, 1, 1, "INT16", true},
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{
+						{start: 0, count: 1, length: 1},
+					},
+					req: request{address: 0, length: 1},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: 18, count: 3, length: 1},
+					},
+					req: request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 5},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+		{
+			name: "large gaps filled with offset",
+			inputs: []rangeDefinition{
+				{18, 3, 1, 1, "INT16", false},
+				{21, maxsize - 23, 1, 1, "INT16", true},
+				{maxsize - 2, 5, 1, 1, "INT16", false},
+				{maxsize + 3, 39, 1, 1, "INT16", true},
+				{maxsize + 42, 2, 1, 1, "INT16", false},
+			},
+			expected: []requestExpectation{
+				{
+					fields: []rangeDefinition{{start: 18, count: 3, length: 1}},
+					req:    request{address: 18, length: 3},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize - 2, count: 5, length: 1},
+					},
+					req: request{address: maxsize - 2, length: 5},
+				},
+				{
+					fields: []rangeDefinition{
+						{start: maxsize + 42, count: 2, length: 1},
+					},
+					req: request{address: maxsize + 42, length: 2},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Generate the input structure and the expectation
+			requestFields := generateRequestDefinitions(tt.inputs)
+			expected := generateExpectation(tt.expected)
+
+			// Setup the plugin
+			slaveID := byte(1)
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = []requestDefinition{
+				{
+					SlaveID:           slaveID,
+					ByteOrder:         "ABCD",
+					RegisterType:      "holding",
+					Optimization:      "max_insert",
+					MaxExtraRegisters: maxExtraRegisters,
+					Fields:            requestFields,
+				},
+			}
+			require.NoError(t, plugin.Init())
+			require.NotEmpty(t, plugin.requests)
+			require.Contains(t, plugin.requests, slaveID)
+			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
+		})
+	}
 }
