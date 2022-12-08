@@ -356,8 +356,8 @@ func (g *Graylog) Connect() error {
 		servers := strings.Join(unconnected, ",")
 		return fmt.Errorf("connect: connection failed for %s", servers)
 	}
-	var writers []io.Writer
-	var closers []io.WriteCloser
+	writers := make([]io.Writer, 0, len(gelfs))
+	closers := make([]io.WriteCloser, 0, len(gelfs))
 	for _, w := range gelfs {
 		writers = append(writers, w)
 		closers = append(closers, w)

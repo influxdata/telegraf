@@ -216,21 +216,20 @@ func (client *RedisSentinelClient) gatherInfoStats(acc telegraf.Accumulator) err
 }
 
 func (client *RedisSentinelClient) gatherMasterStats(acc telegraf.Accumulator) ([]string, error) {
-	var masterNames []string
-
 	mastersCmd := redis.NewSliceCmd("sentinel", "masters")
 	if err := client.sentinel.Process(mastersCmd); err != nil {
-		return masterNames, err
+		return nil, err
 	}
 
 	masters, err := mastersCmd.Result()
 	if err != nil {
-		return masterNames, err
+		return nil, err
 	}
 
 	// Break out of the loop if one of the items comes out malformed
 	// It's safe to assume that if we fail parsing one item that the rest will fail too
 	// This is because we are iterating over a single server response
+	masterNames := make([]string, 0, len(masters))
 	for _, master := range masters {
 		master, ok := master.([]interface{})
 		if !ok {

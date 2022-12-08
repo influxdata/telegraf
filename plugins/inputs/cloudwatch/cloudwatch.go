@@ -241,12 +241,12 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 		for _, m := range c.Metrics {
 			metrics := []types.Metric{}
 			if !hasWildcard(m.Dimensions) {
-				dimensions := make([]types.Dimension, len(m.Dimensions))
-				for k, d := range m.Dimensions {
-					dimensions[k] = types.Dimension{
+				dimensions := make([]types.Dimension, 0, len(m.Dimensions))
+				for _, d := range m.Dimensions {
+					dimensions = append(dimensions, types.Dimension{
 						Name:  aws.String(d.Name),
 						Value: aws.String(d.Value),
-					}
+					})
 				}
 				for _, name := range m.MetricNames {
 					for _, namespace := range c.Namespaces {
