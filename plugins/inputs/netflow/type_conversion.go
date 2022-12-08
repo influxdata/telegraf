@@ -84,7 +84,7 @@ func initIPv4OptionMapping() error {
 }
 
 func decodeInt32(b []byte) interface{} {
-	return int64(binary.BigEndian.Uint32(b))
+	return int64(int32(binary.BigEndian.Uint32(b)))
 }
 
 func decodeUint(b []byte) interface{} {
