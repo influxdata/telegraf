@@ -44,6 +44,7 @@ type MQTT struct {
 	client     Client
 	serializer serializers.Serializer
 	template   *template.Template
+	generator  *TopicNameGenerator
 
 	sync.Mutex
 }
@@ -64,6 +65,7 @@ func (*MQTT) SampleConfig() string {
 func (m *MQTT) Init() error {
 	var err error
 	m.template, err = template.New("topic_name").Parse(m.Topic)
+	m.generator = NewTopicNameGenerator(m.TopicPrefix, m.template)
 	if err != nil {
 		return err
 	}
@@ -114,9 +116,8 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	if !ok {
 		hostname = ""
 	}
-	tt := NewTopicNameGenerator(hostname, m.TopicPrefix, m.template)
 	for _, metric := range metrics {
-		topic, err := tt.Generate(metric)
+		topic, err := m.generator.Generate(hostname, metric)
 		if err != nil {
 			return fmt.Errorf("topic name couldn't be generated due to error: %w", err)
 		}

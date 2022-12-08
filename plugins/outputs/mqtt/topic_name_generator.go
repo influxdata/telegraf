@@ -14,8 +14,8 @@ type TopicNameGenerator struct {
 	template    *template.Template
 }
 
-func NewTopicNameGenerator(hostname string, topicPrefix string, temp *template.Template) *TopicNameGenerator {
-	return &TopicNameGenerator{Hostname: hostname, TopicPrefix: topicPrefix, template: temp}
+func NewTopicNameGenerator(topicPrefix string, temp *template.Template) *TopicNameGenerator {
+	return &TopicNameGenerator{TopicPrefix: topicPrefix, template: temp}
 }
 
 func (t *TopicNameGenerator) Tag(key string) string {
@@ -27,7 +27,8 @@ func (t *TopicNameGenerator) PluginName() string {
 	return t.metric.Name()
 }
 
-func (t *TopicNameGenerator) Generate(m telegraf.Metric) (string, error) {
+func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (string, error) {
+	t.Hostname = hostname
 	t.metric = m
 	var b strings.Builder
 	err := t.template.Execute(&b, t)
