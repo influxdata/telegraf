@@ -1,8 +1,8 @@
 //go:build !arm64be
 // +build !arm64be
 
-package binary
+package internal
 
 import "encoding/binary"
 
-var hostEndianess = binary.LittleEndian
+var HostEndianess = binary.LittleEndian
