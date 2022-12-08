@@ -61,3 +61,40 @@ func TestDecodeFloat64(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, float64(3.14159265359), out)
 }
+
+func TestDecodeBool(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       []byte
+		expected interface{}
+	}{
+		{
+			name:     "zero",
+			in:       []byte{0x00},
+			expected: uint8(0),
+		},
+		{
+			name:     "true",
+			in:       []byte{0x01},
+			expected: true,
+		},
+		{
+			name:     "false",
+			in:       []byte{0x02},
+			expected: false,
+		},
+		{
+			name:     "other",
+			in:       []byte{0x23},
+			expected: uint8(35),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := decodeBool(tt.in)
+			require.Equal(t, tt.expected, out)
+
+		})
+	}
+}
