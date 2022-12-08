@@ -116,7 +116,7 @@ embed_readme_%:
 	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 
 .PHONY: docs
-docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators
+docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
 
 .PHONY: build
 build:
