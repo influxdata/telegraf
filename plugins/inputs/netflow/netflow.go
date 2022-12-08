@@ -4,6 +4,7 @@ package netflow
 import (
 	_ "embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -40,11 +41,26 @@ func (*NetFlow) SampleConfig() string {
 }
 
 func (n *NetFlow) Init() error {
+	if n.ServiceAddress == "" {
+		return errors.New("service_address required")
+	}
+	u, err := url.Parse(n.ServiceAddress)
+	if err != nil {
+		return fmt.Errorf("invalid service address %q: %w", n.ServiceAddress, err)
+	}
+	switch u.Scheme {
+	case "udp", "udp4", "udp6":
+	default:
+		return fmt.Errorf("invalid scheme %q, should be 'udp', 'udp4' or 'udp6'", u.Scheme)
+	}
+
 	switch strings.ToLower(n.Protocol) {
 	case "", "netflow v9", "ipfix":
 		n.decoder = &netflowDecoder{Log: n.Log}
 	case "netflow v5":
 		n.decoder = &netflowv5Decoder{}
+	default:
+		return fmt.Errorf("invalid protocol %q, only supports 'netflow v5', 'netflow v9' and 'ipfix'", n.Protocol)
 	}
 	return n.decoder.Init()
 }
@@ -53,11 +69,6 @@ func (n *NetFlow) Start(acc telegraf.Accumulator) error {
 	u, err := url.Parse(n.ServiceAddress)
 	if err != nil {
 		return err
-	}
-	switch u.Scheme {
-	case "udp", "udp4", "udp6":
-	default:
-		return fmt.Errorf("invalid scheme %q, should be 'udp', 'udp4' or 'udp6'", u.Scheme)
 	}
 	addr, err := net.ResolveUDPAddr(u.Scheme, u.Host)
 	if err != nil {
@@ -97,9 +108,6 @@ func (n *NetFlow) read(acc telegraf.Accumulator) {
 	buf := make([]byte, 64*1024) // 64kB
 	for {
 		count, src, err := n.conn.ReadFromUDP(buf)
-		if count < 1 {
-			continue
-		}
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 				acc.AddError(err)
@@ -107,6 +115,9 @@ func (n *NetFlow) read(acc telegraf.Accumulator) {
 			break
 		}
 		n.Log.Debugf("received %d bytes\n", count)
+		if count < 1 {
+			continue
+		}
 		if n.DumpPackets {
 			n.Log.Debugf("raw data: %s", hex.EncodeToString(buf[:count]))
 		}

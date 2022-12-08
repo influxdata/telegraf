@@ -19,6 +19,102 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestInit(t *testing.T) {
+	tests := []struct {
+		name     string
+		address  string
+		protocol string
+		errmsg   string
+	}{
+		{
+			name:     "Netflow v5",
+			address:  "udp://:2055",
+			protocol: "netflow v5",
+		},
+		{
+			name:     "Netflow v5 (uppercase)",
+			address:  "udp://:2055",
+			protocol: "Netflow v5",
+		},
+		{
+			name:     "Netflow v9",
+			address:  "udp://:2055",
+			protocol: "netflow v9",
+		},
+		{
+			name:     "Netflow v9 (uppercase)",
+			address:  "udp://:2055",
+			protocol: "Netflow v9",
+		},
+		{
+			name:     "IPFIX",
+			address:  "udp://:2055",
+			protocol: "ipfix",
+		},
+		{
+			name:     "IPFIX (uppercase)",
+			address:  "udp://:2055",
+			protocol: "IPFIX",
+		},
+		{
+			name:     "invalid protocol",
+			address:  "udp://:2055",
+			protocol: "foo",
+			errmsg:   "invalid protocol",
+		},
+		{
+			name:     "UDP",
+			address:  "udp://:2055",
+			protocol: "netflow v5",
+		},
+		{
+			name:     "UDP4",
+			address:  "udp4://:2055",
+			protocol: "netflow v5",
+		},
+		{
+			name:     "UDP6",
+			address:  "udp6://:2055",
+			protocol: "netflow v5",
+		},
+		{
+			name:     "empty service address",
+			address:  "",
+			protocol: "netflow v5",
+			errmsg:   "service_address required",
+		},
+		{
+			name:     "invalid address scheme",
+			address:  "tcp://:2055",
+			protocol: "netflow v5",
+			errmsg:   "invalid scheme",
+		},
+		{
+			name:     "invalid service address",
+			address:  "udp://198.168.1.290:la",
+			protocol: "netflow v5",
+			errmsg:   "invalid service address",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &NetFlow{
+				ServiceAddress: tt.address,
+				Protocol:       tt.protocol,
+				Log:            testutil.Logger{},
+			}
+			err := plugin.Init()
+			if tt.errmsg != "" {
+				require.ErrorContains(t, err, tt.errmsg)
+			} else {
+				require.NoError(t, err)
+			}
+
+		})
+	}
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")
