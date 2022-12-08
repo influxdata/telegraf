@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/netsampler/goflow2/decoders/netflow"
 )
 
 //go:embed sample.conf
@@ -98,6 +97,9 @@ func (n *NetFlow) read(acc telegraf.Accumulator) {
 	buf := make([]byte, 64*1024) // 64kB
 	for {
 		count, src, err := n.conn.ReadFromUDP(buf)
+		if count < 1 {
+			continue
+		}
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 				acc.AddError(err)
@@ -110,12 +112,6 @@ func (n *NetFlow) read(acc telegraf.Accumulator) {
 		}
 		metrics, err := n.decoder.Decode(src.IP, buf[:count])
 		if err != nil {
-			switch err.(type) {
-			case *netflow.ErrorTemplateNotFound:
-				fmt.Printf("template error: %v\n", err)
-			default:
-				fmt.Printf("decoding error: %v\n", err)
-			}
 			acc.AddError(err)
 			continue
 		}

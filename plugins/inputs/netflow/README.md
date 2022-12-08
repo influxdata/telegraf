@@ -6,7 +6,7 @@ flow information. The Layer 4 protocol numbers are gathered from the
 The internal field mappings for Netflow v5 fields are defined according to
 [Cisco's Netflow v5 documentation][CISCO NF5], Netflow v9 fields are defined
 according to [Cisco's Netflow v9 documentation][CISCO NF9] and the
-[ASA extensions][].
+[ASA extensions][ASA extensions].
 Definitions for IPFIX are according to [IANA assignement document][IPFIX doc].
 
 [IANA assignments]: https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
@@ -28,6 +28,7 @@ Definitions for IPFIX are according to [IANA assignement document][IPFIX doc].
 
   ## Set the size of the operating system's receive buffer.
   ##   example: read_buffer_size = "64KiB"
+  ## Uses the system's default if not set.
   # read_buffer_size = ""
 
   ## Protocol version to use for decoding.
@@ -74,7 +75,14 @@ examples
 ### Netflow v5
 
 ```shell
-TODO
+netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="140.82.121.3",src_port=443u,dst="192.168.119.100",dst_port=55516u,flows=8u,in_bytes=87477u,in_packets=78u,first_switched=86400660u,last_switched=86403316u,tcp_flags="...AP...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
+netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="140.82.121.6",src_port=443u,dst="192.168.119.100",dst_port=36408u,flows=8u,in_bytes=5009u,in_packets=21u,first_switched=86400447u,last_switched=86403267u,tcp_flags="...AP...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
+netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="140.82.112.22",src_port=443u,dst="192.168.119.100",dst_port=39638u,flows=8u,in_bytes=925u,in_packets=6u,first_switched=86400324u,last_switched=86403214u,tcp_flags="...AP...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
+netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="140.82.114.26",src_port=443u,dst="192.168.119.100",dst_port=49398u,flows=8u,in_bytes=250u,in_packets=2u,first_switched=86403131u,last_switched=86403362u,tcp_flags="...AP...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
+netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="192.168.119.100",src_port=55516u,dst="140.82.121.3",dst_port=443u,flows=8u,in_bytes=4969u,in_packets=37u,first_switched=86400652u,last_switched=86403269u,tcp_flags="...AP...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
+netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="192.168.119.100",src_port=36408u,dst="140.82.121.6",dst_port=443u,flows=8u,in_bytes=2736u,in_packets=21u,first_switched=86400438u,last_switched=86403258u,tcp_flags="...AP...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
+netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="192.168.119.100",src_port=39638u,dst="140.82.112.22",dst_port=443u,flows=8u,in_bytes=1560u,in_packets=6u,first_switched=86400225u,last_switched=86403255u,tcp_flags="...AP...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
+netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="192.168.119.100",src_port=49398u,dst="140.82.114.26",dst_port=443u,flows=8u,in_bytes=697u,in_packets=4u,first_switched=86403030u,last_switched=86403362u,tcp_flags="...AP...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
 ```
 
 ### Netflow v9

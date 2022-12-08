@@ -525,7 +525,6 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 
 // Decoder structure
 type netflowDecoder struct {
-	//FieldMappings map[string]TODO
 	Log telegraf.Logger
 
 	templates     map[string]*netflow.BasicTemplateSystem
