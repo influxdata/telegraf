@@ -54,3 +54,10 @@ func TestDecodeUint(t *testing.T) {
 func TestDecodeUintInvalid(t *testing.T) {
 	require.Panics(t, func() { decodeUint([]byte{0x00, 0x00, 0x00}) })
 }
+
+func TestDecodeFloat64(t *testing.T) {
+	buf := []byte{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea}
+	out, ok := decodeFloat64(buf).(float64)
+	require.True(t, ok)
+	require.Equal(t, float64(3.14159265359), out)
+}
