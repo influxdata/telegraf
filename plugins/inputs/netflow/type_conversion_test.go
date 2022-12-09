@@ -106,9 +106,68 @@ func TestDecodeHex(t *testing.T) {
 	require.Equal(t, "0x400921fb54442eea", out)
 }
 
-func TestString(t *testing.T) {
+func TestDecodeString(t *testing.T) {
 	buf := []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x74, 0x65, 0x6c, 0x65, 0x67, 0x72, 0x61, 0x66}
 	out, ok := decodeString(buf).(string)
 	require.True(t, ok)
 	require.Equal(t, "hello telegraf", out)
+}
+
+func TestDecodeMAC(t *testing.T) {
+	buf := []byte{0x2c, 0xf0, 0x5d, 0xe9, 0x04, 0x42}
+	out, ok := decodeMAC(buf).(string)
+	require.True(t, ok)
+	require.Equal(t, "2c:f0:5d:e9:04:42", out)
+}
+
+func TestDecodeIP(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       []byte
+		expected string
+	}{
+		{
+			name:     "localhost IPv4",
+			in:       []byte{0x7f, 0x00, 0x00, 0x01},
+			expected: "127.0.0.1",
+		},
+		{
+			name:     "unrouted IPv4",
+			in:       []byte{0xc0, 0xa8, 0x04, 0x42},
+			expected: "192.168.4.66",
+		},
+		{
+			name:     "localhost IPv6",
+			in:       []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+			expected: "::1",
+		},
+		{
+			name:     "local network IPv6",
+			in:       []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe, 0x80, 0xd6, 0x8e, 0x07, 0x7f, 0x59, 0x5a, 0x23, 0xf1},
+			expected: "::fe80:d68e:77f:595a:23f1",
+		},
+		{
+			name:     "google.com IPv6",
+			in:       []byte{0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x14, 0x50, 0x40, 0x01, 0x08, 0x11, 0x00, 0x00, 0x20, 0x0e},
+			expected: "::2a00:1450:4001:811:0:200e",
+		},
+		{
+			name:     "stripped in between IPv6",
+			in:       []byte{0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x50, 0x40, 0x01, 0x08, 0x11, 0x00, 0x01, 0x20, 0x0e},
+			expected: "2a00::1450:4001:811:1:200e",
+		},
+		{
+			name:     "IPv6 not enough bytes",
+			in:       []byte{0x00, 0x00, 0x00, 0xff, 0x00, 0x01},
+			expected: "?000000ff0001",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, ok := decodeIP(tt.in).(string)
+			require.True(t, ok)
+			require.Equal(t, tt.expected, out)
+		})
+	}
 }
