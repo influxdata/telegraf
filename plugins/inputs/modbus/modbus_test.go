@@ -25,6 +25,7 @@ func TestControllers(t *testing.T) {
 	var tests = []struct {
 		name       string
 		controller string
+		mode       string
 		errmsg     string
 	}{
 		{
@@ -32,9 +33,41 @@ func TestControllers(t *testing.T) {
 			controller: "tcp://localhost:502",
 		},
 		{
-			name:       "invalid TCP host",
+			name:       "TCP mode auto",
+			controller: "tcp://localhost:502",
+			mode:       "auto",
+		},
+		{
+			name:       "TCP mode TCP",
+			controller: "tcp://localhost:502",
+			mode:       "TCP",
+		},
+		{
+			name:       "TCP mode RTUoverTCP",
+			controller: "tcp://localhost:502",
+			mode:       "RTUoverTCP",
+		},
+		{
+			name:       "TCP mode ASCIIoverTCP",
+			controller: "tcp://localhost:502",
+			mode:       "ASCIIoverTCP",
+		},
+		{
+			name:       "TCP invalid host",
 			controller: "tcp://localhost",
-			errmsg:     "initializing client failed: address localhost: missing port in address",
+			errmsg:     "address localhost: missing port in address",
+		},
+		{
+			name:       "TCP invalid mode RTU",
+			controller: "tcp://localhost:502",
+			mode:       "RTU",
+			errmsg:     "invalid transmission mode",
+		},
+		{
+			name:       "TCP invalid mode ASCII",
+			controller: "tcp://localhost:502",
+			mode:       "ASCII",
+			errmsg:     "invalid transmission mode",
 		},
 		{
 			name:       "absolute file path",
@@ -57,19 +90,40 @@ func TestControllers(t *testing.T) {
 			controller: "file://com2",
 		},
 		{
+			name:       "serial mode auto",
+			controller: "file:///dev/ttyUSB0",
+			mode:       "auto",
+		},
+		{
+			name:       "serial mode RTU",
+			controller: "file:///dev/ttyUSB0",
+			mode:       "RTU",
+		},
+		{
+			name:       "serial mode ASCII",
+			controller: "file:///dev/ttyUSB0",
+			mode:       "ASCII",
+		},
+		{
 			name:       "empty file path",
 			controller: "file://",
-			errmsg:     "initializing client failed: invalid path for controller",
+			errmsg:     "invalid path for controller",
 		},
 		{
 			name:       "empty controller",
 			controller: "",
-			errmsg:     "initializing client failed: invalid path for controller",
+			errmsg:     "invalid path for controller",
 		},
 		{
 			name:       "invalid scheme",
 			controller: "foo://bar",
-			errmsg:     "initializing client failed: invalid controller",
+			errmsg:     "invalid controller",
+		},
+		{
+			name:       "serial invalid mode TCP",
+			controller: "file:///dev/ttyUSB0",
+			mode:       "TCP",
+			errmsg:     "invalid transmission mode",
 		},
 	}
 
@@ -78,7 +132,7 @@ func TestControllers(t *testing.T) {
 			plugin := Modbus{
 				Name:             "dummy",
 				Controller:       tt.controller,
-				TransmissionMode: "RTU",
+				TransmissionMode: tt.mode,
 				Log:              testutil.Logger{},
 			}
 			err := plugin.Init()

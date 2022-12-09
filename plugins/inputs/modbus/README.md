@@ -50,10 +50,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # parity = "N"
   # stop_bits = 1
 
-  ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and
-  ## "ASCIIoverTCP". The default behaviour is "TCP" for ModbusTCP controllers.
+  ## Transmission mode for Modbus packets depending on the controller type.
+  ## For Modbus over TCP you can choose between "TCP" , "RTUoverTCP" and
+  ## "ASCIIoverTCP".
   ## For Serial controllers you can choose between "RTU" and "ASCII".
-  # transmission_mode = "RTU"
+  ## By default this is set to "auto" selecting "TCP" for ModbusTCP connections
+  ## and "RTU" for serial connections.
+  # transmission_mode = "auto"
 
   ## Trace the connection to the modbus device as debug messages
   ## Note: You have to enable telegraf's debug mode to see those messages!
