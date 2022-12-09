@@ -98,3 +98,10 @@ func TestDecodeBool(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeHex(t *testing.T) {
+	buf := []byte{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea}
+	out, ok := decodeHex(buf).(string)
+	require.True(t, ok)
+	require.Equal(t, "0x400921fb54442eea", out)
+}
