@@ -191,7 +191,7 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 	if !p.delimiterReplaced && p.Delimiter != "" {
 		csvReader.Comma = []rune(p.Delimiter)[0]
 	}
-	// if the delimiter is balckited by the go reader
+	// Check if delimiter is invalid
 	if p.invalidDelimiter && p.Delimiter != "" {
 		csvReader.Comma = []rune(commaByte)[0]
 	}
