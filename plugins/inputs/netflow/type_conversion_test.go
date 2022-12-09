@@ -171,3 +171,10 @@ func TestDecodeIP(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeIPFromUint32(t *testing.T) {
+	in := uint32(0x7f000001)
+	out, ok := decodeIPFromUint32(in).(string)
+	require.True(t, ok)
+	require.Equal(t, "127.0.0.1", out)
+}
