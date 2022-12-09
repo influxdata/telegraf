@@ -181,6 +181,8 @@ func TestDecodeIPFromUint32(t *testing.T) {
 }
 
 func TestDecodeLayer4ProtocolNumber(t *testing.T) {
+	require.NoError(t, initL4ProtoMapping())
+
 	tests := []struct {
 		name     string
 		in       []byte
@@ -238,6 +240,8 @@ func TestDecodeLayer4ProtocolNumber(t *testing.T) {
 }
 
 func TestDecodeIPv4Options(t *testing.T) {
+	require.NoError(t, initIPv4OptionMapping())
+
 	tests := []struct {
 		name     string
 		bits     []int
