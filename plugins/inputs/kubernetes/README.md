@@ -48,7 +48,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics from the kubernetes kubelet api
 [[inputs.kubernetes]]
-  ## URL for the kubelet
+  ## URL for the kubelet, if empty read metrics from all nodes in the cluster
   url = "http://127.0.0.1:10255"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
