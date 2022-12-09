@@ -211,11 +211,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if p.ResetMode == "always" {
 		p.Reset()
 	}
-	// Replace blacklisted delimiter bytes
-	if p.delimiterReplaced {
-		// replace value commes to replacement bytes
+	// If using an invalid delimiter, replace commas with replacement and
+	// invalid delimiter with commas
+	if p.invalidDelimiter {
 		buf = bytes.Replace(buf, []byte(commaByte), []byte(replacementByte), -1)
-		// replace delimiters to comma
 		buf = bytes.Replace(buf, []byte(p.Delimiter), []byte(commaByte), -1)
 	}
 	r := bytes.NewReader(buf)
