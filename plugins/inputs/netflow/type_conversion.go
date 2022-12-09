@@ -77,7 +77,7 @@ func initIPv4OptionMapping() error {
 		if err != nil {
 			return fmt.Errorf("%w: %v", err, r)
 		}
-		ipv4OptionMapping[31-idx] = r[1]
+		ipv4OptionMapping[idx] = r[1]
 	}
 
 	return nil
@@ -160,7 +160,7 @@ func decodeIPv4Options(b []byte) interface{} {
 	for i := 0; i < 32; i++ {
 		name := ipv4OptionMapping[i]
 		if name == "" {
-			name = "UA"
+			name = fmt.Sprintf("UA%d", i)
 		}
 		if (flags>>i)&0x01 != 0 {
 			result = append(result, name)

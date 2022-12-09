@@ -1,6 +1,7 @@
 package netflow
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -230,6 +231,55 @@ func TestDecodeLayer4ProtocolNumber(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out, ok := decodeL4Proto(tt.in).(string)
+			require.True(t, ok)
+			require.Equal(t, tt.expected, out)
+		})
+	}
+}
+
+func TestDecodeIPv4Options(t *testing.T) {
+	tests := []struct {
+		name     string
+		bits     []int
+		expected string
+	}{
+		{
+			name:     "none",
+			bits:     []int{},
+			expected: "",
+		},
+		{
+			name: "all",
+			bits: []int{
+				0, 1, 2, 3, 4, 5, 6, 7,
+				8, 9, 10, 11, 12, 13, 14, 15,
+				16, 17, 18, 19, 20, 21, 22, 23,
+				24, 25, 26, 27, 28, 29, 30, 31,
+			},
+			expected: "EOOL,NOP,SEC,LSR,TS,E-SEC,CIPSO,RR,SID,SSR,ZSU,MTUP,MTUR,FINN,VISA,ENCODE,IMITD,EIP,TR,ADDEXT,RTRALT,SDB,UA22,DPS,UMP,QS,UA26,UA27,UA28,UA29,EXP,UA31",
+		},
+		{
+			name:     "EOOL",
+			bits:     []int{0},
+			expected: "EOOL",
+		},
+		{
+			name:     "SSR",
+			bits:     []int{9},
+			expected: "SSR",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var options uint32
+			for _, bit := range tt.bits {
+				options |= 1 << bit
+			}
+			in := make([]byte, 4)
+			binary.BigEndian.PutUint32(in, options)
+
+			out, ok := decodeIPv4Options(in).(string)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
 		})
