@@ -178,3 +178,60 @@ func TestDecodeIPFromUint32(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, "127.0.0.1", out)
 }
+
+func TestDecodeLayer4ProtocolNumber(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       []byte
+		expected string
+	}{
+		{
+			name:     "ICMP 1",
+			in:       []byte{0x01},
+			expected: "icmp",
+		},
+		{
+			name:     "IPv4 4",
+			in:       []byte{0x04},
+			expected: "ipv4",
+		},
+		{
+			name:     "IPv6 41",
+			in:       []byte{0x29},
+			expected: "ipv6",
+		},
+		{
+			name:     "L2TP 115",
+			in:       []byte{0x73},
+			expected: "l2tp",
+		},
+		{
+			name:     "PTP 123",
+			in:       []byte{0x7b},
+			expected: "ptp",
+		},
+		{
+			name:     "unassigned 201",
+			in:       []byte{0xc9},
+			expected: "201",
+		},
+		{
+			name:     "experimental 254",
+			in:       []byte{0xfe},
+			expected: "experimental",
+		},
+		{
+			name:     "Reserved 255",
+			in:       []byte{0xff},
+			expected: "reserved",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, ok := decodeL4Proto(tt.in).(string)
+			require.True(t, ok)
+			require.Equal(t, tt.expected, out)
+		})
+	}
+}
