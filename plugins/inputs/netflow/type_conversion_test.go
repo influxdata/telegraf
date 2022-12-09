@@ -289,3 +289,104 @@ func TestDecodeIPv4Options(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeTCPFlags(t *testing.T) {
+	require.NoError(t, initIPv4OptionMapping())
+
+	tests := []struct {
+		name     string
+		bits     []int
+		expected string
+		ipfix    bool
+	}{
+		{
+			name:     "none",
+			bits:     []int{},
+			expected: "........",
+		},
+		{
+			name:     "none IPFIX",
+			bits:     []int{},
+			expected: "................",
+			ipfix:    true,
+		},
+		{
+			name:     "all",
+			bits:     []int{0, 1, 2, 3, 4, 5, 6, 7},
+			expected: "CEUAPRSF",
+		},
+		{
+			name:     "all IPFIX",
+			bits:     []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+			expected: "********CEUAPRSF",
+			ipfix:    true,
+		},
+		{
+			name:     "SYN",
+			bits:     []int{1},
+			expected: "......S.",
+		},
+		{
+			name:     "SYN/ACK",
+			bits:     []int{1, 4},
+			expected: "...A..S.",
+		},
+		{
+			name:     "ACK",
+			bits:     []int{4},
+			expected: "...A....",
+		},
+		{
+			name:     "FIN",
+			bits:     []int{0},
+			expected: ".......F",
+		},
+		{
+			name:     "FIN/ACK",
+			bits:     []int{0, 4},
+			expected: "...A...F",
+		},
+		{
+			name:     "ACK IPFIX",
+			bits:     []int{4},
+			expected: "...........A....",
+			ipfix:    true,
+		},
+		{
+			name:     "FIN IPFIX",
+			bits:     []int{0},
+			expected: "...............F",
+			ipfix:    true,
+		},
+		{
+			name:     "ECN Nounce Sum IPFIX",
+			bits:     []int{8},
+			expected: ".......*........",
+			ipfix:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var in []byte
+
+			if tt.ipfix {
+				var options uint16
+				for _, bit := range tt.bits {
+					options |= 1 << bit
+				}
+				in = make([]byte, 2)
+				binary.BigEndian.PutUint16(in, options)
+			} else {
+				var options uint8
+				for _, bit := range tt.bits {
+					options |= 1 << bit
+				}
+				in = []byte{options}
+			}
+			out, ok := decodeTCPFlags(in).(string)
+			require.True(t, ok)
+			require.Equal(t, tt.expected, out)
+		})
+	}
+}

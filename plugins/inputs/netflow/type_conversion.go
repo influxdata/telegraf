@@ -171,35 +171,42 @@ func decodeIPv4Options(b []byte) interface{} {
 }
 
 func decodeTCPFlags(b []byte) interface{} {
-	flags := b[len(b)-1]
-	result := mapTCPFlags(flags)
+	if len(b) < 1 {
+		return ""
+	}
+
+	if len(b) == 1 {
+		return mapTCPFlags(b[0])
+	}
 
 	// IPFIX has more flags
-	if len(b) == 2 {
-		if b[0]&0x01 != 0 {
-			result = strings.Join([]string{result, "N"}, "") // NS
+	results := make([]string, 0, 8)
+	for i := 7; i >= 0; i-- {
+		if (b[0]>>i)&0x01 != 0 {
+			// Currently all flags are reserved so denote the bit set
+			results = append(results, "*")
 		} else {
-			result = strings.Join([]string{result, "."}, "")
+			results = append(results, ".")
 		}
 	}
-	return result
+	return strings.Join(results, "") + mapTCPFlags(b[1])
 }
 
 func mapTCPFlags(flags uint8) string {
 	flagMapping := []string{
-		"C", // CWR
-		"E", // ECE
-		"U", // URG
-		"A", // ACK
-		"P", // PSH
-		"R", // RST
-		"S", // SYN
 		"F", // FIN
+		"S", // SYN
+		"R", // RST
+		"P", // PSH
+		"A", // ACK
+		"U", // URG
+		"E", // ECE
+		"C", // CWR
 	}
 
 	result := make([]string, 0, 8)
 
-	for i := 0; i < 8; i++ {
+	for i := 7; i >= 0; i-- {
 		if (flags>>i)&0x01 != 0 {
 			result = append(result, flagMapping[i])
 		} else {
