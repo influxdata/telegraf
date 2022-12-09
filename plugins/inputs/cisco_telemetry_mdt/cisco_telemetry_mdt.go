@@ -51,7 +51,7 @@ type GRPCEnforcementPolicy struct {
 // CiscoTelemetryMDT plugin for IOS XR, IOS XE and NXOS platforms
 type CiscoTelemetryMDT struct {
 	// Common configuration
-	Transport          string
+	Transport          string                `toml:"transport"`
 	ServiceAddress     string                `toml:"service_address"`
 	MaxMsgSize         int                   `toml:"max_msg_size"`
 	Aliases            map[string]string     `toml:"aliases"`
