@@ -244,9 +244,8 @@ func TestIncludeDeleteField(t *testing.T) {
 			Aliases:            map[string]string{"deleted": encodingPath.stringValue},
 			IncludeDeleteField: true}
 		acc := &testutil.Accumulator{}
-		err := c.Start(acc)
 		// error is expected since we are passing in dummy transport
-		require.Error(t, err)
+		require.ErrorContains(t, c.Start(acc), "a message part you expect")
 		data, err := proto.Marshal(test.telemetry)
 		require.NoError(t, err)
 
