@@ -96,7 +96,7 @@ func decodeUint(b []byte) interface{} {
 	case 4:
 		return uint64(binary.BigEndian.Uint32(b))
 	case 8:
-		return uint64(binary.BigEndian.Uint64(b))
+		return binary.BigEndian.Uint64(b)
 	}
 	panic(fmt.Errorf("invalid length for uint buffer %v", b))
 }

@@ -47,7 +47,6 @@ func TestDecodeUint(t *testing.T) {
 			out, ok := decodeUint(tt.in).(uint64)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
-
 		})
 	}
 }
@@ -95,7 +94,6 @@ func TestDecodeBool(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			out := decodeBool(tt.in)
 			require.Equal(t, tt.expected, out)
-
 		})
 	}
 }
@@ -260,7 +258,9 @@ func TestDecodeIPv4Options(t *testing.T) {
 				16, 17, 18, 19, 20, 21, 22, 23,
 				24, 25, 26, 27, 28, 29, 30, 31,
 			},
-			expected: "EOOL,NOP,SEC,LSR,TS,E-SEC,CIPSO,RR,SID,SSR,ZSU,MTUP,MTUR,FINN,VISA,ENCODE,IMITD,EIP,TR,ADDEXT,RTRALT,SDB,UA22,DPS,UMP,QS,UA26,UA27,UA28,UA29,EXP,UA31",
+			expected: "EOOL,NOP,SEC,LSR,TS,E-SEC,CIPSO,RR,SID,SSR,ZSU,MTUP," +
+				"MTUR,FINN,VISA,ENCODE,IMITD,EIP,TR,ADDEXT,RTRALT,SDB," +
+				"UA22,DPS,UMP,QS,UA26,UA27,UA28,UA29,EXP,UA31",
 		},
 		{
 			name:     "EOOL",
@@ -390,7 +390,6 @@ func TestDecodeTCPFlags(t *testing.T) {
 }
 
 func TestDecodeFragmentFlags(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		bits     []int
