@@ -59,8 +59,10 @@ values.
 
   ## The separator between csv fields
   ## By default, the parser assumes a comma (",")
-  ## Please note that if you use blacklisted delimiters (e.g. "\u0000"), this will be changed to comma.
-  ## in the data the blacklisted delimiters will be changed to comma, and original commas will be changed to "\ufffd"
+  ## Please note that if you use invalid delimiters (e.g. "\u0000"), commas
+  ## will be changed to "\ufffd", the invalid delimiters changed to a comma
+  ## during parsing, and afterwards the invalid characters and commas are
+  ## returned to their original values.
   csv_delimiter = ","
 
   ## The character reserved for marking a row as a comment row
