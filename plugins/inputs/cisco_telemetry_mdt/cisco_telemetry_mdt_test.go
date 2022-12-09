@@ -8,8 +8,8 @@ import (
 	"net"
 	"testing"
 
-	telemetryBis "github.com/INSRapperswil/cisco-xr-telemetry-proto"
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	telemetryBis "github.com/INSRapperswil/cisco-xr-telemetry-proto"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

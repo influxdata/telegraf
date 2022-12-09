@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	telemetry "github.com/INSRapperswil/cisco-xr-telemetry-proto"
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	telemetry "github.com/INSRapperswil/cisco-xr-telemetry-proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
@@ -408,6 +408,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		encodingPath := msg.GetEncodingPath()
 		tags["path"] = encodingPath
 
+<<<<<<< HEAD
 		// if keys != nil {
 		// }
 
@@ -424,8 +425,19 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 				c.parseContentField(grouper, subfield, prefix, encodingPath, tags, timestamp)
 			}
 		}
+=======
+>>>>>>> faac53a91 (change import order + optimize telemetry message handling)
 		if c.IncludeDeleteField {
 			grouper.Add(c.getMeasurementName(encodingPath), tags, timestamp, "delete", gpbkv.GetDelete())
+		}
+
+		if content == nil {
+			continue
+		}
+
+		// Parse values
+		for _, subfield := range content.Fields {
+			c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
 		}
 	}
 
