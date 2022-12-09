@@ -392,8 +392,15 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 			continue
 		}
 
+		if keys != nil {
+			tags = make(map[string]string, len(keys.Fields)+3)
+			for _, subfield := range keys.Fields {
+				c.parseKeyField(tags, subfield, "")
+			}
+		} else {
+			tags = make(map[string]string, 3)
+		}
 		// Parse keys
-		tags = make(map[string]string, len(keys.Fields)+3)
 		tags["source"] = msg.GetNodeIdStr()
 		if msgID := msg.GetSubscriptionIdStr(); msgID != "" {
 			tags["subscription"] = msgID
@@ -401,9 +408,8 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		encodingPath := msg.GetEncodingPath()
 		tags["path"] = encodingPath
 
-		for _, subfield := range keys.Fields {
-			c.parseKeyField(tags, subfield, "")
-		}
+		// if keys != nil {
+		// }
 
 		if content != nil {
 			// Parse values
