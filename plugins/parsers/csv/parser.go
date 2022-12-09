@@ -146,7 +146,7 @@ func (p *Parser) Init() error {
 		if len(runeStr) > 1 {
 			return fmt.Errorf("csv_delimiter must be a single character, got: %s", p.Delimiter)
 		}
-		p.delimiterReplaced = !validDelim(runeStr[0])
+		p.invalidDelimiter = !validDelim(runeStr[0])
 	}
 
 	if p.Comment != "" {
