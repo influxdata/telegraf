@@ -235,6 +235,13 @@ func (m *Modbus) initClient() error {
 			return err
 		}
 		switch m.TransmissionMode {
+		case "", "auto", "TCP":
+			handler := mb.NewTCPClientHandler(host + ":" + port)
+			handler.Timeout = time.Duration(m.Timeout)
+			if m.DebugConnection {
+				handler.Logger = m
+			}
+			m.handler = handler
 		case "RTUoverTCP":
 			handler := mb.NewRTUOverTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
@@ -250,12 +257,7 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		default:
-			handler := mb.NewTCPClientHandler(host + ":" + port)
-			handler.Timeout = time.Duration(m.Timeout)
-			if m.DebugConnection {
-				handler.Logger = m
-			}
-			m.handler = handler
+			return fmt.Errorf("invalid transmission mode %q for %q", m.TransmissionMode, u.Scheme)
 		}
 	case "", "file":
 		path := filepath.Join(u.Host, u.Path)
@@ -263,7 +265,7 @@ func (m *Modbus) initClient() error {
 			return fmt.Errorf("invalid path for controller %q", m.Controller)
 		}
 		switch m.TransmissionMode {
-		case "RTU":
+		case "", "auto", "RTU":
 			handler := mb.NewRTUClientHandler(path)
 			handler.Timeout = time.Duration(m.Timeout)
 			handler.BaudRate = m.BaudRate
@@ -286,7 +288,7 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		default:
-			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
+			return fmt.Errorf("invalid transmission mode %q for %q", m.TransmissionMode, u.Scheme)
 		}
 	default:
 		return fmt.Errorf("invalid controller %q", m.Controller)
