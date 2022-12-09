@@ -105,3 +105,10 @@ func TestDecodeHex(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, "0x400921fb54442eea", out)
 }
+
+func TestString(t *testing.T) {
+	buf := []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x74, 0x65, 0x6c, 0x65, 0x67, 0x72, 0x61, 0x66}
+	out, ok := decodeString(buf).(string)
+	require.True(t, ok)
+	require.Equal(t, "hello telegraf", out)
+}
