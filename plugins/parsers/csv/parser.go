@@ -54,7 +54,7 @@ type Parser struct {
 
 	gotColumnNames bool
 
-	delimiterReplaced bool
+	invalidDelimiter bool
 
 	TimeFunc     func() time.Time
 	DefaultTags  map[string]string
