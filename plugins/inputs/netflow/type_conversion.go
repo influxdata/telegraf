@@ -231,7 +231,7 @@ func decodeFragmentFlags(b []byte) interface{} {
 
 	flags := b[0]
 	result := make([]string, 0, 8)
-	for i := 0; i < 8; i++ {
+	for i := 7; i >= 0; i-- {
 		if (flags>>i)&0x01 != 0 {
 			result = append(result, flagMapping[i])
 		} else {

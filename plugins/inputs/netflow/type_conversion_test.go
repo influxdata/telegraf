@@ -291,8 +291,6 @@ func TestDecodeIPv4Options(t *testing.T) {
 }
 
 func TestDecodeTCPFlags(t *testing.T) {
-	require.NoError(t, initIPv4OptionMapping())
-
 	tests := []struct {
 		name     string
 		bits     []int
@@ -385,6 +383,59 @@ func TestDecodeTCPFlags(t *testing.T) {
 				in = []byte{options}
 			}
 			out, ok := decodeTCPFlags(in).(string)
+			require.True(t, ok)
+			require.Equal(t, tt.expected, out)
+		})
+	}
+}
+
+func TestDecodeFragmentFlags(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		bits     []int
+		expected string
+	}{
+		{
+			name:     "none",
+			bits:     []int{},
+			expected: "........",
+		},
+		{
+			name:     "all",
+			bits:     []int{0, 1, 2, 3, 4, 5, 6, 7},
+			expected: "RDM*****",
+		},
+		{
+			name:     "RS",
+			bits:     []int{7},
+			expected: "R.......",
+		},
+		{
+			name:     "DF",
+			bits:     []int{6},
+			expected: ".D......",
+		},
+		{
+			name:     "MF",
+			bits:     []int{5},
+			expected: "..M.....",
+		},
+		{
+			name:     "Bit 7 (LSB)",
+			bits:     []int{0},
+			expected: ".......*",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var flags uint8
+			for _, bit := range tt.bits {
+				flags |= 1 << bit
+			}
+			in := []byte{flags}
+			out, ok := decodeFragmentFlags(in).(string)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
 		})
