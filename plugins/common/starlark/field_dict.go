@@ -218,13 +218,13 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 	switch v.Kind() {
 	case reflect.Slice:
 		length := v.Len()
-		array := make([]starlark.Value, length)
+		array := make([]starlark.Value, 0, length)
 		for i := 0; i < length; i++ {
 			sVal, err := asStarlarkValue(v.Index(i).Interface())
 			if err != nil {
 				return starlark.None, err
 			}
-			array[i] = sVal
+			array = append(array, sVal)
 		}
 		return starlark.NewList(array), nil
 	case reflect.Map:
