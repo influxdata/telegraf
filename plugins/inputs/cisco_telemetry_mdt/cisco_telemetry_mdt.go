@@ -488,13 +488,6 @@ func decodeTag(field *telemetry.TelemetryField) string {
 	}
 }
 
-func (c *CiscoTelemetryMDT) addDeleteField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, encodingPath string,
-	tags map[string]string, timestamp time.Time) {
-	if c.IncludeDeleteField {
-		grouper.Add(c.getMeasurementName(encodingPath), tags, timestamp, "delete", field.GetDelete())
-	}
-}
-
 // Recursively parse tag fields
 func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemetry.TelemetryField, prefix string) {
 	localname := strings.ReplaceAll(field.Name, "-", "_")
