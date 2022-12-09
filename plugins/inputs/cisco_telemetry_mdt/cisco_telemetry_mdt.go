@@ -424,7 +424,9 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 				c.parseContentField(grouper, subfield, prefix, encodingPath, tags, timestamp)
 			}
 		}
-		c.addDeleteField(grouper, gpbkv, encodingPath, tags, timestamp)
+		if c.IncludeDeleteField {
+			grouper.Add(c.getMeasurementName(encodingPath), tags, timestamp, "delete", gpbkv.GetDelete())
+		}
 	}
 
 	for _, groupedMetric := range grouper.Metrics() {
