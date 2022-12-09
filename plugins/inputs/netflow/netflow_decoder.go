@@ -602,6 +602,8 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 				}
 			}
 		}
+	default:
+		return nil, fmt.Errorf("invalid message of type %T", packet)
 	}
 
 	return metrics, nil
