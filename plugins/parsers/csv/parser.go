@@ -188,7 +188,7 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 	csvReader := csv.NewReader(r)
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
-	if !p.delimiterReplaced && p.Delimiter != "" {
+	if !p.invalidDelimiter && p.Delimiter != "" {
 		csvReader.Comma = []rune(p.Delimiter)[0]
 	}
 	// Check if delimiter is invalid
