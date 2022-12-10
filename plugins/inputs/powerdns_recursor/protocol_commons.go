@@ -1,12 +1,12 @@
 package powerdns_recursor
 
 import (
-	"encoding/binary"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
-	"unsafe"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
 func parseResponse(metrics string) map[string]interface{} {
@@ -40,9 +40,7 @@ func parseResponse(metrics string) map[string]interface{} {
 // The C implementation uses size_t as the size type for the
 // command length. The size and endianness of size_t change
 // depending on the platform the program is being run on.
-// At the time of writing, the Go type `uint` has the same
-// behavior, where its size and endianness are platform
-// dependent. Using the unsafe method below, and the known
+// Using the target architecture endianness and the known
 // integer size, we can "recreate" the corresponding C
 // behavior in an effort to maintain compatibility. Of course
 // in cases where one program is compiled for i386 and the
@@ -50,25 +48,14 @@ func parseResponse(metrics string) map[string]interface{} {
 
 const uintSizeInBytes = strconv.IntSize / 8
 
-func getEndianness() binary.ByteOrder {
-	buf := make([]byte, 2)
-	*(*uint16)(unsafe.Pointer(&buf[0])) = uint16(0x0001)
-
-	if buf[0] == 1 {
-		return binary.LittleEndian
-	}
-
-	return binary.BigEndian
-}
-
 func writeNativeUIntToConn(conn net.Conn, value uint) error {
 	intData := make([]byte, uintSizeInBytes)
 
 	switch uintSizeInBytes {
 	case 4:
-		getEndianness().PutUint32(intData, uint32(value))
+		internal.HostEndianess.PutUint32(intData, uint32(value))
 	case 8:
-		getEndianness().PutUint64(intData, uint64(value))
+		internal.HostEndianess.PutUint64(intData, uint64(value))
 	default:
 		return fmt.Errorf("unsupported system configuration")
 	}
@@ -91,9 +78,9 @@ func readNativeUIntFromConn(conn net.Conn) (uint, error) {
 	}
 
 	if uintSizeInBytes == 4 {
-		return uint(getEndianness().Uint32(intData)), nil
+		return uint(internal.HostEndianess.Uint32(intData)), nil
 	} else if uintSizeInBytes == 8 {
-		return uint(getEndianness().Uint64(intData)), nil
+		return uint(internal.HostEndianess.Uint64(intData)), nil
 	} else {
 		return 0, fmt.Errorf("unsupported system configuration")
 	}
