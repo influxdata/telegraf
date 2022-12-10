@@ -825,9 +825,11 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			c := NewConfig()
-			for _, f := range test.filename {
-				require.NoError(t, c.LoadConfig(filepath.Join("./testdata/processor_order", f)))
+			filenames := make([]string, 0, len(test.filename))
+			for _, fn := range test.filename {
+				filenames = append(filenames, filepath.Join("./testdata/processor_order", fn))
 			}
+			require.NoError(t, c.LoadAll(filenames...))
 
 			require.Equal(t, len(test.expectedOrder), len(c.Processors))
 
@@ -862,7 +864,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 	}
 
 	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/processors_with_parsers.toml"))
+	require.NoError(t, c.LoadAll("./testdata/processors_with_parsers.toml"))
 	require.Len(t, c.Processors, len(formats))
 
 	override := map[string]struct {

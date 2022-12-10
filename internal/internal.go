@@ -24,8 +24,8 @@ import (
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 var (
-	ErrTimeout          = errors.New("command timed out")
-	ErrorNotImplemented = errors.New("not implemented yet")
+	ErrTimeout        = errors.New("command timed out")
+	ErrNotImplemented = errors.New("not implemented yet")
 )
 
 // Set via LDFLAGS -X

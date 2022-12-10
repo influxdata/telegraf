@@ -29,7 +29,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, err := NewSerializer(0, "", "")
+	s, err := NewSerializer(FormatConfig{})
 	require.NoError(t, err)
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -90,7 +90,10 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 				},
 				time.Unix(1525478795, 123456789),
 			)
-			s, err := NewSerializer(tt.timestampUnits, tt.timestampFormat, "")
+			s, err := NewSerializer(FormatConfig{
+				TimestampUnits:  tt.timestampUnits,
+				TimestampFormat: tt.timestampFormat,
+			})
 			require.NoError(t, err)
 			actual, err := s.Serialize(m)
 			require.NoError(t, err)
@@ -109,7 +112,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, err := NewSerializer(0, "", "")
+	s, err := NewSerializer(FormatConfig{})
 	require.NoError(t, err)
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -128,7 +131,7 @@ func TestSerializeMetricString(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, err := NewSerializer(0, "", "")
+	s, err := NewSerializer(FormatConfig{})
 	require.NoError(t, err)
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -148,7 +151,7 @@ func TestSerializeMultiFields(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, err := NewSerializer(0, "", "")
+	s, err := NewSerializer(FormatConfig{})
 	require.NoError(t, err)
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -167,7 +170,7 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	}
 	m := metric.New("My CPU", tags, fields, now)
 
-	s, err := NewSerializer(0, "", "")
+	s, err := NewSerializer(FormatConfig{})
 	require.NoError(t, err)
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -187,7 +190,7 @@ func TestSerializeBatch(t *testing.T) {
 	)
 
 	metrics := []telegraf.Metric{m, m}
-	s, err := NewSerializer(0, "", "")
+	s, err := NewSerializer(FormatConfig{})
 	require.NoError(t, err)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
@@ -211,7 +214,7 @@ func TestSerializeBatchSkipInf(t *testing.T) {
 		),
 	}
 
-	s, err := NewSerializer(0, "", "")
+	s, err := NewSerializer(FormatConfig{})
 	require.NoError(t, err)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
@@ -230,7 +233,7 @@ func TestSerializeBatchSkipInfAllFields(t *testing.T) {
 		),
 	}
 
-	s, err := NewSerializer(0, "", "")
+	s, err := NewSerializer(FormatConfig{})
 	require.NoError(t, err)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
@@ -266,7 +269,12 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 			expected := expectedArray.([]interface{})
 
 			// Serialize
-			serializer, err := NewSerializer(cfg.TimestampUnits, cfg.TimestampFormat, cfg.Transformation)
+			serializer, err := NewSerializer(
+				FormatConfig{
+					TimestampUnits:  cfg.TimestampUnits,
+					TimestampFormat: cfg.TimestampFormat,
+					Transformation:  cfg.Transformation,
+				})
 			require.NoError(t, err)
 			for i, m := range metrics {
 				buf, err := serializer.Serialize(m)
@@ -275,8 +283,6 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 				// Compare
 				var actual interface{}
 				require.NoError(t, json.Unmarshal(buf, &actual))
-				fmt.Printf("actual: %v\n", actual)
-				fmt.Printf("expected: %v\n", expected[i])
 				require.EqualValuesf(t, expected[i], actual, "mismatch in %d", i)
 			}
 		})
@@ -311,7 +317,12 @@ func TestSerializeTransformationBatch(t *testing.T) {
 			require.NoError(t, err)
 
 			// Serialize
-			serializer, err := NewSerializer(cfg.TimestampUnits, cfg.TimestampFormat, cfg.Transformation)
+			serializer, err := NewSerializer(
+				FormatConfig{
+					TimestampUnits:  cfg.TimestampUnits,
+					TimestampFormat: cfg.TimestampFormat,
+					Transformation:  cfg.Transformation,
+				})
 			require.NoError(t, err)
 			buf, err := serializer.SerializeBatch(metrics)
 			require.NoError(t, err)
@@ -324,10 +335,70 @@ func TestSerializeTransformationBatch(t *testing.T) {
 	}
 }
 
+func TestSerializeNesting(t *testing.T) {
+	var tests = []struct {
+		name     string
+		filename string
+		out      string
+	}{
+		{
+			name:     "nested fields include",
+			filename: "testcases/nested_fields_include.conf",
+			out:      "testcases/nested_fields_out.json",
+		},
+		{
+			name:     "nested fields exclude",
+			filename: "testcases/nested_fields_exclude.conf",
+			out:      "testcases/nested_fields_out.json",
+		},
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filename := filepath.FromSlash(tt.filename)
+			cfg, header, err := loadTestConfiguration(filename)
+			require.NoError(t, err)
+
+			// Get the input metrics
+			metrics, err := testutil.ParseMetricsFrom(header, "Input:", parser)
+			require.NoError(t, err)
+			require.Len(t, metrics, 1)
+
+			// Get the expectations
+			expectedArray, err := loadJSON(tt.out)
+			require.NoError(t, err)
+			expected := expectedArray.(map[string]interface{})
+
+			// Serialize
+			serializer, err := NewSerializer(
+				FormatConfig{
+					TimestampUnits:      cfg.TimestampUnits,
+					TimestampFormat:     cfg.TimestampFormat,
+					Transformation:      cfg.Transformation,
+					NestedFieldsInclude: cfg.JSONNestedFieldsInclude,
+					NestedFieldsExclude: cfg.JSONNestedFieldsExclude,
+				})
+			require.NoError(t, err)
+
+			buf, err := serializer.Serialize(metrics[0])
+			require.NoError(t, err)
+
+			// Compare
+			var actual interface{}
+			require.NoError(t, json.Unmarshal(buf, &actual))
+			require.EqualValues(t, expected, actual)
+		})
+	}
+}
+
 type Config struct {
-	TimestampUnits  time.Duration `toml:"json_timestamp_units"`
-	TimestampFormat string        `toml:"json_timestamp_format"`
-	Transformation  string        `toml:"json_transformation"`
+	TimestampUnits          time.Duration `toml:"json_timestamp_units"`
+	TimestampFormat         string        `toml:"json_timestamp_format"`
+	Transformation          string        `toml:"json_transformation"`
+	JSONNestedFieldsInclude []string      `toml:"json_nested_fields_include"`
+	JSONNestedFieldsExclude []string      `toml:"json_nested_fields_exclude"`
 }
 
 func loadTestConfiguration(filename string) (*Config, []string, error) {

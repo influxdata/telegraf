@@ -380,7 +380,7 @@ func TestDefaults(t *testing.T) {
 	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
 }
 
-// Benchmarks to test performance of string replacement via Regex and Replacer
+// Benchmarks to test performance of string replacement via Regex and Sanitize
 var testString = "this_is*my!test/string\\for=replacement"
 
 func BenchmarkReplaceAllString(b *testing.B) {
@@ -397,6 +397,6 @@ func BenchmarkReplaceAllLiteralString(b *testing.B) {
 
 func BenchmarkReplacer(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		sanitizedChars.Replace(testString)
+		serializer.Sanitize(false, testString)
 	}
 }

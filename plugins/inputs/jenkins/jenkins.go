@@ -384,8 +384,8 @@ type jobRequest struct {
 }
 
 func (jr jobRequest) combined() []string {
-	path := make([]string, len(jr.parents))
-	copy(path, jr.parents)
+	path := make([]string, 0, len(jr.parents)+1)
+	path = append(path, jr.parents...)
 	return append(path, jr.name)
 }
 

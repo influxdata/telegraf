@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
@@ -31,7 +32,7 @@ func (p *Parser) Init() error {
 	case "be":
 		p.converter = binary.BigEndian
 	case "", "host":
-		p.converter = hostEndianess
+		p.converter = internal.HostEndianess
 	default:
 		return fmt.Errorf("unknown endianess %q", p.Endianess)
 	}

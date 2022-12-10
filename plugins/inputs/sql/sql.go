@@ -81,8 +81,12 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 
 		for i, name := range columnNames {
 			if q.MeasurementColumn != "" && name == q.MeasurementColumn {
-				var ok bool
-				if measurement, ok = columnData[i].(string); !ok {
+				switch raw := columnData[i].(type) {
+				case string:
+					measurement = raw
+				case []byte:
+					measurement = string(raw)
+				default:
 					return 0, fmt.Errorf("measurement column type \"%T\" unsupported", columnData[i])
 				}
 			}
@@ -202,7 +206,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 
 type SQL struct {
 	Driver             string          `toml:"driver"`
-	Dsn                string          `toml:"dsn"`
+	Dsn                config.Secret   `toml:"dsn"`
 	Timeout            config.Duration `toml:"timeout"`
 	MaxIdleTime        config.Duration `toml:"connection_max_idle_time"`
 	MaxLifetime        config.Duration `toml:"connection_max_life_time"`
@@ -225,8 +229,8 @@ func (s *SQL) Init() error {
 		return errors.New("missing SQL driver option")
 	}
 
-	if s.Dsn == "" {
-		return errors.New("missing data source name (DSN) option")
+	if err := s.checkDSN(); err != nil {
+		return err
 	}
 
 	if s.Timeout <= 0 {
@@ -354,8 +358,13 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	var err error
 
 	// Connect to the database server
-	s.Log.Debugf("Connecting to %q...", s.Dsn)
-	s.db, err = dbsql.Open(s.driverName, s.Dsn)
+	dsn, err := s.Dsn.Get()
+	if err != nil {
+		return fmt.Errorf("getting DSN failed: %v", err)
+	}
+	defer config.ReleaseSecret(dsn)
+	s.Log.Debug("Connecting...")
+	s.db, err = dbsql.Open(s.driverName, string(dsn))
 	if err != nil {
 		return err
 	}
@@ -367,7 +376,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	s.db.SetMaxIdleConns(s.MaxIdleConnections)
 
 	// Test if the connection can be established
-	s.Log.Debugf("Testing connectivity...")
+	s.Log.Debug("Testing connectivity...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
 	err = s.db.PingContext(ctx)
 	cancel()
@@ -460,4 +469,16 @@ func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Quer
 	s.Log.Debugf("Received %d rows and %d columns for query %q", rowCount, len(columnNames), q.Query)
 
 	return err
+}
+
+func (s *SQL) checkDSN() error {
+	dsn, err := s.Dsn.Get()
+	if err != nil {
+		return fmt.Errorf("getting DSN failed: %w", err)
+	}
+	defer config.ReleaseSecret(dsn)
+	if len(dsn) == 0 {
+		return errors.New("missing data source name (DSN) option")
+	}
+	return nil
 }

@@ -18,6 +18,7 @@ var categories = []string{
 	"outputs",
 	"parsers",
 	"processors",
+	"secretstores",
 }
 
 const description = `

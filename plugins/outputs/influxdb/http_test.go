@@ -1215,10 +1215,10 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 	err = output.Connect()
 	require.NoError(t, err)
 	err = output.Write(metrics)
-	require.Contains(t, logger.LastError, "database not found")
+	require.Contains(t, logger.LastError(), "database not found")
 	require.NoError(t, err)
 
 	err = output.Write(metrics)
-	require.Contains(t, logger.LastError, "database not found")
+	require.Contains(t, logger.LastError(), "database not found")
 	require.NoError(t, err)
 }

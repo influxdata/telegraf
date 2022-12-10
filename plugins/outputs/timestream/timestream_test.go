@@ -231,8 +231,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 
 	localTime, _ := strconv.Atoi(time1Epoch)
 
-	var inputs []telegraf.Metric
-
+	inputs := make([]telegraf.Metric, 0, recordCount+1)
 	for i := 1; i <= recordCount+1; i++ {
 		localTime++
 
@@ -289,8 +288,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 
 	localTime, _ := strconv.Atoi(time1Epoch)
 
-	var inputs []telegraf.Metric
-
+	inputs := make([]telegraf.Metric, 0, recordCount)
 	for i := 1; i <= recordCount; i++ {
 		localTime++
 
@@ -584,8 +582,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 
 	require.NoError(t, plugin.Connect())
 
-	var inputs []telegraf.Metric
-
+	inputs := make([]telegraf.Metric, 0, totalRecords)
 	for i := 1; i <= totalRecords; i++ {
 		fieldName := "value_supported" + strconv.Itoa(i)
 		inputs = append(inputs, testutil.MustMetric(
@@ -624,8 +621,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 	}
 	require.NoError(t, plugin.Connect())
 
-	var inputs []telegraf.Metric
-
+	inputs := make([]telegraf.Metric, 0, totalRecords)
 	for i := 1; i <= totalRecords; i++ {
 		fieldName := "value_supported" + strconv.Itoa(i)
 		inputs = append(inputs, testutil.MustMetric(
@@ -724,7 +720,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 func TestTransformMetricsRequestsAboveLimitAreSplit(t *testing.T) {
 	const maxRecordsInWriteRecordsCall = 100
 
-	var inputs []telegraf.Metric
+	inputs := make([]telegraf.Metric, 0, maxRecordsInWriteRecordsCall+1)
 	for i := 1; i <= maxRecordsInWriteRecordsCall+1; i++ {
 		fieldName := "value_supported" + strconv.Itoa(i)
 		inputs = append(inputs, testutil.MustMetric(
@@ -781,8 +777,7 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 
 	localTime, _ := strconv.Atoi(time1Epoch)
 
-	var inputs []telegraf.Metric
-
+	inputs := make([]telegraf.Metric, 0, maxRecordsInWriteRecordsCall+1)
 	for i := 1; i <= maxRecordsInWriteRecordsCall+1; i++ {
 		localTime++
 
@@ -1275,7 +1270,7 @@ type SimpleInput struct {
 }
 
 func buildExpectedInput(i SimpleInput) *timestreamwrite.WriteRecordsInput {
-	var tsDimensions []types.Dimension
+	tsDimensions := make([]types.Dimension, 0, len(i.dimensions))
 	for k, v := range i.dimensions {
 		tsDimensions = append(tsDimensions, types.Dimension{
 			Name:  aws.String(k),
@@ -1283,7 +1278,7 @@ func buildExpectedInput(i SimpleInput) *timestreamwrite.WriteRecordsInput {
 		})
 	}
 
-	var tsRecords []types.Record
+	tsRecords := make([]types.Record, 0, len(i.measureValues))
 	for k, v := range i.measureValues {
 		tsRecords = append(tsRecords, types.Record{
 			MeasureName:      aws.String(k),
@@ -1316,10 +1311,7 @@ func buildRecords(inputs []SimpleInput) []types.Record {
 }
 
 func buildRecord(input SimpleInput) []types.Record {
-	var tsRecords []types.Record
-
-	var tsDimensions []types.Dimension
-
+	tsDimensions := make([]types.Dimension, 0, len(input.dimensions))
 	for k, v := range input.dimensions {
 		tsDimensions = append(tsDimensions, types.Dimension{
 			Name:  aws.String(k),
@@ -1327,6 +1319,7 @@ func buildRecord(input SimpleInput) []types.Record {
 		})
 	}
 
+	tsRecords := make([]types.Record, 0, len(input.measureValues))
 	for k, v := range input.measureValues {
 		tsRecords = append(tsRecords, types.Record{
 			MeasureName:      aws.String(k),
@@ -1342,11 +1335,9 @@ func buildRecord(input SimpleInput) []types.Record {
 }
 
 func buildMultiRecords(inputs []SimpleInput, multiMeasureName string, measureType types.MeasureValueType) []types.Record {
-	var tsRecords []types.Record
+	tsRecords := make([]types.Record, 0, len(inputs))
 	for _, input := range inputs {
-		var multiMeasures []types.MeasureValue
-		var tsDimensions []types.Dimension
-
+		tsDimensions := make([]types.Dimension, 0, len(input.dimensions))
 		for k, v := range input.dimensions {
 			tsDimensions = append(tsDimensions, types.Dimension{
 				Name:  aws.String(k),
@@ -1354,6 +1345,7 @@ func buildMultiRecords(inputs []SimpleInput, multiMeasureName string, measureTyp
 			})
 		}
 
+		multiMeasures := make([]types.MeasureValue, 0, len(input.measureValues))
 		for k, v := range input.measureValues {
 			multiMeasures = append(multiMeasures, types.MeasureValue{
 				Name:  aws.String(k),

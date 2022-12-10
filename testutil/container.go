@@ -42,8 +42,7 @@ type Container struct {
 func (c *Container) Start() error {
 	c.ctx = context.Background()
 
-	var containerMounts []testcontainers.ContainerMount
-
+	containerMounts := make([]testcontainers.ContainerMount, 0, len(c.BindMounts))
 	for k, v := range c.BindMounts {
 		containerMounts = append(containerMounts, testcontainers.BindMount(v, testcontainers.ContainerMountTarget(k)))
 	}

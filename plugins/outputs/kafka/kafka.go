@@ -49,6 +49,8 @@ type Kafka struct {
 
 	kafka.WriteConfig
 
+	kafka.Logger
+
 	Log telegraf.Logger `toml:"-"`
 
 	saramaConfig *sarama.Config
@@ -62,25 +64,6 @@ type TopicSuffix struct {
 	Method    string   `toml:"method"`
 	Keys      []string `toml:"keys"`
 	Separator string   `toml:"separator"`
-}
-
-// DebugLogger logs messages from sarama at the debug level.
-type DebugLogger struct {
-	Log telegraf.Logger
-}
-
-func (l *DebugLogger) Print(v ...interface{}) {
-	args := make([]interface{}, 0, len(v)+1)
-	args = append(append(args, "[sarama] "), v...)
-	l.Log.Debug(args...)
-}
-
-func (l *DebugLogger) Printf(format string, v ...interface{}) {
-	l.Log.Debugf("[sarama] "+format, v...)
-}
-
-func (l *DebugLogger) Println(v ...interface{}) {
-	l.Print(v...)
 }
 
 func ValidateTopicSuffixMethod(method string) error {
@@ -137,7 +120,7 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (k *Kafka) Init() error {
-	sarama.Logger = &DebugLogger{Log: k.Log}
+	k.SetLogger()
 
 	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
 	if err != nil {
