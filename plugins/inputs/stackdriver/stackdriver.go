@@ -270,15 +270,15 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 
 	var valueFmt string
 	if len(s.Filter.ResourceLabels) > 0 {
-		resourceLabelsFilter := make([]string, len(s.Filter.ResourceLabels))
-		for i, resourceLabel := range s.Filter.ResourceLabels {
+		resourceLabelsFilter := make([]string, 0, len(s.Filter.ResourceLabels))
+		for _, resourceLabel := range s.Filter.ResourceLabels {
 			// check if resource label value contains function
 			if includeExcludeHelper(resourceLabel.Value, functions, nil) {
 				valueFmt = `resource.labels.%s = %s`
 			} else {
 				valueFmt = `resource.labels.%s = "%s"`
 			}
-			resourceLabelsFilter[i] = fmt.Sprintf(valueFmt, resourceLabel.Key, resourceLabel.Value)
+			resourceLabelsFilter = append(resourceLabelsFilter, fmt.Sprintf(valueFmt, resourceLabel.Key, resourceLabel.Value))
 		}
 		if len(resourceLabelsFilter) == 1 {
 			filterString += fmt.Sprintf(" AND %s", resourceLabelsFilter[0])
@@ -288,15 +288,15 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 	}
 
 	if len(s.Filter.MetricLabels) > 0 {
-		metricLabelsFilter := make([]string, len(s.Filter.MetricLabels))
-		for i, metricLabel := range s.Filter.MetricLabels {
+		metricLabelsFilter := make([]string, 0, len(s.Filter.MetricLabels))
+		for _, metricLabel := range s.Filter.MetricLabels {
 			// check if metric label value contains function
 			if includeExcludeHelper(metricLabel.Value, functions, nil) {
 				valueFmt = `metric.labels.%s = %s`
 			} else {
 				valueFmt = `metric.labels.%s = "%s"`
 			}
-			metricLabelsFilter[i] = fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value)
+			metricLabelsFilter = append(metricLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
 		}
 		if len(metricLabelsFilter) == 1 {
 			filterString += fmt.Sprintf(" AND %s", metricLabelsFilter[0])
@@ -429,9 +429,9 @@ func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 		return nil
 	}
 
-	metricTypeFilters := make([]string, len(s.MetricTypePrefixInclude))
-	for i, metricTypePrefix := range s.MetricTypePrefixInclude {
-		metricTypeFilters[i] = fmt.Sprintf(`metric.type = starts_with(%q)`, metricTypePrefix)
+	metricTypeFilters := make([]string, 0, len(s.MetricTypePrefixInclude))
+	for _, metricTypePrefix := range s.MetricTypePrefixInclude {
+		metricTypeFilters = append(metricTypeFilters, fmt.Sprintf(`metric.type = starts_with(%q)`, metricTypePrefix))
 	}
 	return metricTypeFilters
 }

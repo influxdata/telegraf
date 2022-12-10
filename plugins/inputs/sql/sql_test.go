@@ -18,12 +18,11 @@ import (
 
 func pwgen(n int) string {
 	charset := []byte("abcdedfghijklmnopqrstABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-
 	nchars := len(charset)
-	buffer := make([]byte, n)
 
-	for i := range buffer {
-		buffer[i] = charset[rand.Intn(nchars)]
+	buffer := make([]byte, 0, n)
+	for i := 0; i < n; i++ {
+		buffer = append(buffer, charset[rand.Intn(nchars)])
 	}
 
 	return string(buffer)

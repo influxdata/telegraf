@@ -245,17 +245,20 @@ func (s *Subscription) buildSubscription() (*gnmiLib.Subscription, error) {
 // Create a new gNMI SubscribeRequest
 func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 	// Create subscription objects
-	var err error
-	subscriptions := make([]*gnmiLib.Subscription, len(c.Subscriptions)+len(c.TagSubscriptions))
-	for i, subscription := range c.TagSubscriptions {
-		if subscriptions[i], err = subscription.buildSubscription(); err != nil {
+	subscriptions := make([]*gnmiLib.Subscription, 0, len(c.Subscriptions)+len(c.TagSubscriptions))
+	for _, subscription := range c.TagSubscriptions {
+		sub, err := subscription.buildSubscription()
+		if err != nil {
 			return nil, err
 		}
+		subscriptions = append(subscriptions, sub)
 	}
-	for i, subscription := range c.Subscriptions {
-		if subscriptions[i+len(c.TagSubscriptions)], err = subscription.buildSubscription(); err != nil {
+	for _, subscription := range c.Subscriptions {
+		sub, err := subscription.buildSubscription()
+		if err != nil {
 			return nil, err
 		}
+		subscriptions = append(subscriptions, sub)
 	}
 
 	// Construct subscribe request
