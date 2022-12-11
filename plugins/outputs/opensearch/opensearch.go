@@ -113,7 +113,7 @@ func (a *Opensearch) Connect() error {
 		clientOptions = append(clientOptions,
 			elastic.SetHealthcheck(false),
 		)
-		a.Log.Debugf("Disabling health check")
+		a.Log.Debug("Disabling health check")
 	}
 
 	a.client, err = elastic.NewClient(clientOptions...)
