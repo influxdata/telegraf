@@ -344,9 +344,9 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	}
 	w.Log.Debugf("event: %+v", event)
 
-	var publisherHandle uintptr
 	// We leave the publisher handle NIL for event forwarded by WEC, see
 	// https://learn.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtformatmessage#parameters
+	var publisherHandle EvtHandle
 	if event.RenderingInfo == nil {
 		ph, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
 		if err != nil {
