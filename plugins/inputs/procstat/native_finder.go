@@ -87,9 +87,9 @@ func (pg *NativeFinder) FastProcessList() ([]*process.Process, error) {
 		return nil, err
 	}
 
-	result := make([]*process.Process, len(pids))
-	for i, pid := range pids {
-		result[i] = &process.Process{Pid: pid}
+	result := make([]*process.Process, 0, len(pids))
+	for _, pid := range pids {
+		result = append(result, &process.Process{Pid: pid})
 	}
 	return result, nil
 }

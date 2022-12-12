@@ -53,14 +53,13 @@ func (r *RedisSentinel) Init() error {
 		r.Servers = []string{"tcp://localhost:26379"}
 	}
 
-	r.clients = make([]*RedisSentinelClient, len(r.Servers))
-
 	tlsConfig, err := r.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
 
-	for i, serv := range r.Servers {
+	r.clients = make([]*RedisSentinelClient, 0, len(r.Servers))
+	for _, serv := range r.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
 			return fmt.Errorf("unable to parse to address %q: %v", serv, err)
@@ -96,10 +95,10 @@ func (r *RedisSentinel) Init() error {
 			},
 		)
 
-		r.clients[i] = &RedisSentinelClient{
+		r.clients = append(r.clients, &RedisSentinelClient{
 			sentinel: sentinel,
 			tags:     tags,
-		}
+		})
 	}
 
 	return nil

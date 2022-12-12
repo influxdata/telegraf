@@ -91,8 +91,8 @@ func (v *VSphere) Start(_ telegraf.Accumulator) error {
 	v.cancel = cancel
 
 	// Create endpoints, one for each vCenter we're monitoring
-	v.endpoints = make([]*Endpoint, len(v.Vcenters))
-	for i, rawURL := range v.Vcenters {
+	v.endpoints = make([]*Endpoint, 0, len(v.Vcenters))
+	for _, rawURL := range v.Vcenters {
 		u, err := soap.ParseURL(rawURL)
 		if err != nil {
 			return err
@@ -101,7 +101,7 @@ func (v *VSphere) Start(_ telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		v.endpoints[i] = ep
+		v.endpoints = append(v.endpoints, ep)
 	}
 	return nil
 }

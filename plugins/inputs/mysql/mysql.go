@@ -606,12 +606,14 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		if err != nil {
 			return err
 		}
-		vals := make([]sql.RawBytes, len(cols))
-		valPtrs := make([]interface{}, len(cols))
+
+		vals := make([]sql.RawBytes, 0, len(cols))
+		valPtrs := make([]interface{}, 0, len(cols))
 		// fill the array with sql.Rawbytes
-		for i := range vals {
-			vals[i] = sql.RawBytes{}
-			valPtrs[i] = &vals[i]
+		for range cols {
+			rawBytes := sql.RawBytes{}
+			vals = append(vals, rawBytes)
+			valPtrs = append(valPtrs, &rawBytes)
 		}
 		if err = rows.Scan(valPtrs...); err != nil {
 			return err
