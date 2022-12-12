@@ -344,11 +344,17 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	}
 	w.Log.Debugf("event: %+v", event)
 
-	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
-	if err != nil {
-		return event, nil
+	var publisherHandle uintptr
+	// We leave the publisher handle NIL for event forwarded by WEC, see
+	// https://learn.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtformatmessage#parameters
+	if event.RenderingInfo == nil {
+		ph, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
+		if err != nil {
+			return event, nil
+		}
+		publisherHandle = ph
+		defer _EvtClose(publisherHandle)
 	}
-	defer _EvtClose(publisherHandle)
 	w.Log.Debugf("publisher handle: %v", publisherHandle)
 
 	// Populating text values
