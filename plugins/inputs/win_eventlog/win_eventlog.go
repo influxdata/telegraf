@@ -388,6 +388,11 @@ func formatEventString(
 		return "", err
 	}
 
+	// Handle empty elements
+	if bufferUsed < 1 {
+		return "", nil
+	}
+
 	bufferUsed *= 2
 	buffer := make([]byte, bufferUsed)
 	bufferUsed = 0
