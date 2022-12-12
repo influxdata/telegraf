@@ -333,6 +333,8 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	if err != nil {
 		return event, err
 	}
+	w.Log.Debugf("event XML: %s", string(eventXML))
+
 	err = xml.Unmarshal([]byte(eventXML), &event)
 	if err != nil {
 		// We can return event without most text values,
@@ -340,7 +342,7 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 		// This can happen when processing Forwarded Events
 		return event, nil
 	}
-	w.Log.Debugf("event XML: %v", eventXML)
+	w.Log.Debugf("event: %+v", event)
 
 	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
 	if err != nil {
