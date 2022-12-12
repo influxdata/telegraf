@@ -340,12 +340,14 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 		// This can happen when processing Forwarded Events
 		return event, nil
 	}
+	w.Log.Debugf("event XML: %v", eventXML)
 
 	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
 	if err != nil {
 		return event, nil
 	}
 	defer _EvtClose(publisherHandle)
+	w.Log.Debugf("publisher handle: %v", publisherHandle)
 
 	// Populating text values
 	keywords, err := formatEventString(EvtFormatMessageKeyword, eventHandle, publisherHandle)
