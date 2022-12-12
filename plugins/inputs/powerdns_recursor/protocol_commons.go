@@ -77,11 +77,12 @@ func readNativeUIntFromConn(conn net.Conn) (uint, error) {
 		return 0, fmt.Errorf("did not read enough data for native uint: read '%v' bytes, expected '%v'", n, uintSizeInBytes)
 	}
 
-	if uintSizeInBytes == 4 {
+	switch uintSizeInBytes {
+	case 4:
 		return uint(internal.HostEndianess.Uint32(intData)), nil
-	} else if uintSizeInBytes == 8 {
+	case 8:
 		return uint(internal.HostEndianess.Uint64(intData)), nil
-	} else {
+	default:
 		return 0, fmt.Errorf("unsupported system configuration")
 	}
 }
