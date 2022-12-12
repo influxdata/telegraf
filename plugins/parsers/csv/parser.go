@@ -202,6 +202,8 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 	return csvReader
 }
 
+// Taken from upstream Golang code see
+// https://github.com/golang/go/blob/release-branch.go1.19/src/encoding/csv/reader.go#L95
 func validDelim(r rune) bool {
 	return r != 0 && r != '"' && r != '\r' && r != '\n' && utf8.ValidRune(r) && r != utf8.RuneError
 }
