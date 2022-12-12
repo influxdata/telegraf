@@ -138,11 +138,11 @@ func (o *OpcUAClient) setupOptions() error {
 func (o *OpcUAClient) setupWorkarounds() error {
 	o.codes = []ua.StatusCode{ua.StatusOK}
 	for _, c := range o.Config.Workarounds.AdditionalValidStatusCodes {
-		val, err := strconv.ParseInt(c, 0, 32) // setting 32 bits to allow for safe conversion
+		val, err := strconv.ParseUint(c, 0, 32) // setting 32 bits to allow for safe conversion
 		if err != nil {
 			return err
 		}
-		o.codes = append(o.codes, ua.StatusCode(uint32(val)))
+		o.codes = append(o.codes, ua.StatusCode(val))
 	}
 
 	return nil
