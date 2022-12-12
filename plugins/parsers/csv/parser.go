@@ -24,8 +24,8 @@ import (
 
 type TimeFunc func() time.Time
 
-var replacementByte = "\ufffd"
-var commaByte = "\u002C"
+const replacementByte = "\ufffd"
+const commaByte = "\u002C"
 
 type Parser struct {
 	ColumnNames        []string        `toml:"csv_column_names"`
