@@ -1126,6 +1126,26 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 							Value: `starts_with("abc-")`,
 						},
 					},
+					UserLabels: []*Label{
+						{
+							Key:   "team",
+							Value: "badgers",
+						},
+						{
+							Key:   "environment",
+							Value: `starts_with("prod-")`,
+						},
+					},
+					SystemLabels: []*Label{
+						{
+							Key:   "machine_type",
+							Value: "e2",
+						},
+						{
+							Key:   "machine_type",
+							Value: `starts_with("n2")`,
+						},
+					},
 				},
 				RateLimit: 1,
 			},
@@ -1141,7 +1161,9 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 					name: "ListTimeSeries",
 					filter: `metric.type = "telegraf/cpu/usage" AND ` +
 						`(resource.labels.instance_name = "localhost" OR resource.labels.zone = starts_with("us-")) AND ` +
-						`(metric.labels.resource_type = "instance" OR metric.labels.resource_id = starts_with("abc-"))`,
+						`(metric.labels.resource_type = "instance" OR metric.labels.resource_id = starts_with("abc-")) AND ` +
+						`(metadata.user_labels."team" = "badgers" OR metadata.user_labels."environment" = starts_with("prod-")) AND ` +
+						`(metadata.system_labels."machine_type" = "e2" OR metadata.system_labels."machine_type" = starts_with("n2"))`,
 				},
 			},
 		},
