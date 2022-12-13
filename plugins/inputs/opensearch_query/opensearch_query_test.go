@@ -24,7 +24,7 @@ import (
 
 const (
 	servicePort = "9200"
-	testindex   = "test-elasticsearch"
+	testindex   = "test-opensearch"
 )
 
 type osAggregationQueryTest struct {
@@ -672,7 +672,7 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 	}
 }
 
-func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
+func TestOpensearchQueryIntegration_getMetricFields(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -731,7 +731,7 @@ func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
 	}
 }
 
-func TestElasticsearchQuery_buildAggregationQuery(t *testing.T) {
+func TestOpensearchQuery_buildAggregationQuery(t *testing.T) {
 	type test struct {
 		name        string
 		aggregation osAggregation
