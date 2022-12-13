@@ -146,7 +146,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
   ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
   ## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
-
   database_type = "SQLServer"
 
   ## A list of queries to include. If not specified, all the below listed queries are used.
