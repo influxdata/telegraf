@@ -135,9 +135,11 @@ func (o *OpensearchQuery) getMetricFields(ctx context.Context, aggregation osAgg
 		return nil, err
 	}
 
-	for _, f := range aggregation.MetricFields {
-		if _, ok := m[aggregation.Index].Mappings[f]; ok {
-			mapMetricFields[f] = m[aggregation.Index].Mappings[f].Mapping[f].Type
+	for _, mm := range m {
+		for _, f := range aggregation.MetricFields {
+			if _, ok := mm.Mappings[f]; ok {
+				mapMetricFields[f] = mm.Mappings[f].Mapping[f].Type
+			}
 		}
 	}
 
