@@ -1,7 +1,7 @@
-# Elasticsearch Query Input Plugin
+# OpenSearch Query Input Plugin
 
-This [elasticsearch](https://www.elastic.co/) query plugin queries endpoints
-to obtain metrics from data stored in an Elasticsearch cluster.
+This [opensearch_query](https://opensearch.org/) plugin queries endpoints
+to obtain metrics from data stored in an OpenSearch cluster.
 
 The following is supported:
 
@@ -10,10 +10,9 @@ The following is supported:
   aggregated per tag
 - count number of terms for a particular field
 
-## Elasticsearch Support
+## OpenSearch Support
 
-This plugins is tested against Elasticsearch 5.x and 6.x releases.
-Currently it is known to break on 7.x or greater versions.
+This plugins is tested against OpenSearch 2.4.0.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -27,27 +26,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Derive metrics from aggregating Elasticsearch query results
-[[inputs.elasticsearch_query]]
-  ## The full HTTP endpoint URL for your Elasticsearch instance
+# Derive metrics from aggregating OpenSearch query results
+[[inputs.opensearch_query]]
+  ## The full HTTP endpoint URL for your OpenSearch instance
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
-  urls = [ "http://node1.es.example.com:9200" ] # required.
+  urls = [ "http://node1.os.example.com:9200" ] # required.
 
-  ## Elasticsearch client timeout, defaults to "5s".
+  ## OpenSearch client timeout, defaults to "5s".
   # timeout = "5s"
 
-  ## Set to true to ask Elasticsearch a list of all cluster nodes,
-  ## thus it is not necessary to list all nodes in the urls config option
-  # enable_sniffer = false
-
-  ## Set the interval to check if the Elasticsearch nodes are available
-  ## This option is only used if enable_sniffer is also set (0s to disable it)
-  # health_check_interval = "10s"
-
-  ## HTTP basic authentication details (eg. when using x-pack)
-  # username = "telegraf"
-  # password = "mypassword"
+  ## HTTP basic authentication details
+  # username = "admin"
+  # password = "admin"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -56,21 +47,22 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  [[inputs.elasticsearch_query.aggregation]]
+  [[inputs.opensearch_query.aggregation]]
     ## measurement name for the results of the aggregation query
     measurement_name = "measurement"
 
-    ## Elasticsearch indexes to query (accept wildcards).
+    ## OpenSearch indexes to query (accept wildcards).
     index = "index-*"
 
-    ## The date/time field in the Elasticsearch index (mandatory).
+    ## The date/time field in the OpenSearch index (mandatory).
     date_field = "@timestamp"
 
-    ## If the field used for the date/time field in Elasticsearch is also using
+    ## If the field used for the date/time field in OpenSearch is also using
     ## a custom date/time format it may be required to provide the format to
     ## correctly parse the field.
     ##
-    ## If using one of the built in elasticsearch formats this is not required.
+    ## If using one of the built in OpenSearch formats this is not required.
+    ## https://opensearch.org/docs/2.4/opensearch/supported-field-types/date/#built-in-formats
     # date_field_custom_format = ""
 
     ## Time window to query (eg. "1m" to query documents from last minute).
@@ -103,13 +95,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Examples
 
-Please note that the `[[inputs.elasticsearch_query]]` is still required for all
+Please note that the `[[inputs.opensearch_query]]` is still required for all
 of the examples below.
 
 ### Search the average response time, per URI and per response status code
 
 ```toml
-[[inputs.elasticsearch_query.aggregation]]
+[[inputs.opensearch_query.aggregation]]
   measurement_name = "http_logs"
   index = "my-index-*"
   filter_query = "*"
@@ -125,7 +117,7 @@ of the examples below.
 ### Search the maximum response time per method and per URI
 
 ```toml
-[[inputs.elasticsearch_query.aggregation]]
+[[inputs.opensearch_query.aggregation]]
   measurement_name = "http_logs"
   index = "my-index-*"
   filter_query = "*"
@@ -141,7 +133,7 @@ of the examples below.
 ### Search number of documents matching a filter query in all indices
 
 ```toml
-[[inputs.elasticsearch_query.aggregation]]
+[[inputs.opensearch_query.aggregation]]
   measurement_name = "http_logs"
   index = "*"
   filter_query = "product_1 AND HEAD"
@@ -152,7 +144,7 @@ of the examples below.
 ### Search number of documents matching a filter query, returning per response status code
 
 ```toml
-[[inputs.elasticsearch_query.aggregation]]
+[[inputs.opensearch_query.aggregation]]
   measurement_name = "http_logs"
   index = "*"
   filter_query = "downloads"
@@ -166,15 +158,15 @@ of the examples below.
 
 - `measurement_name`: The target measurement to be stored the results of the
   aggregation query.
-- `index`: The index name to query on Elasticsearch
+- `index`: The index name to query on OpenSearch
 - `query_period`: The time window to query (eg. "1m" to query documents from
   last minute). Normally should be set to same as collection
-- `date_field`: The date/time field in the Elasticsearch index
+- `date_field`: The date/time field in the OpenSearch index
 
 ### Optional parameters
 
 - `date_field_custom_format`: Not needed if using one of the built in date/time
-  formats of Elasticsearch, but may be required if using a custom date/time
+  formats of OpenSearch, but may be required if using a custom date/time
   format. The format syntax uses the [Joda date format][joda].
 - `filter_query`: Lucene query to filter the results (default: "\*")
 - `metric_fields`: The list of fields to perform metric aggregation (these must
@@ -191,5 +183,5 @@ of the examples below.
   which the tag field does not exist. Only used when `include_missing_tag` is
   set to `true`.
 
-[joda]: https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-aggregations-bucket-daterange-aggregation.html#date-format-pattern
-[agg]: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html
+[joda]: https://opensearch.org/docs/2.4/opensearch/supported-field-types/date/#custom-formats
+[agg]: https://opensearch.org/docs/2.4/opensearch/aggregations/
