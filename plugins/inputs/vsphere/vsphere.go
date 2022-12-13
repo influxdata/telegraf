@@ -22,8 +22,8 @@ var sampleConfig string
 // and a list of connected vSphere endpoints
 type VSphere struct {
 	Vcenters                  []string
-	Username                  string
-	Password                  string
+	Username                  config.Secret `toml:"username"`
+	Password                  config.Secret `toml:"password"`
 	DatacenterInstances       bool
 	DatacenterMetricInclude   []string
 	DatacenterMetricExclude   []string
