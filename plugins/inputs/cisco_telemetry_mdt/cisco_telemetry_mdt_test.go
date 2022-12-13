@@ -4,17 +4,21 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"testing"
+	"time"
 
-	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetryBis "github.com/INSRapperswil/cisco-xr-telemetry-proto"
+	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -121,8 +125,7 @@ func TestIncludeDeleteField(t *testing.T) {
 
 	testCases := []struct {
 		telemetry *telemetryBis.Telemetry
-		tags      map[string]string
-		fields    map[string]interface{}
+		expected  []telegraf.Metric
 	}{{
 		telemetry: &telemetryBis.Telemetry{
 			MsgTimestamp: 1543236572000,
@@ -179,21 +182,26 @@ func TestIncludeDeleteField(t *testing.T) {
 				},
 			},
 		},
-		tags: map[string]string{
-			encodingPath.name: encodingPath.stringValue,
-			name.name:         name.stringValue,
-			index.name:        index.stringValue,
-			ip.name:           ip.stringValue,
-			source.name:       source.stringValue,
-			subscription.name: subscription.stringValue,
-		},
-		fields: map[string]interface{}{
-			deleteKey:              false,
-			ip.fieldName:           ip.stringValue,
-			prefixLength.fieldName: prefixLength.uint64Value,
-			origin.fieldName:       origin.stringValue,
-			status.fieldName:       status.stringValue,
-		},
+		expected: []telegraf.Metric{
+			metric.New(
+				"deleted",
+				map[string]string{
+					encodingPath.name: encodingPath.stringValue,
+					name.name:         name.stringValue,
+					index.name:        index.stringValue,
+					ip.name:           ip.stringValue,
+					source.name:       source.stringValue,
+					subscription.name: subscription.stringValue,
+				},
+				map[string]interface{}{
+					deleteKey:              false,
+					ip.fieldName:           ip.stringValue,
+					prefixLength.fieldName: prefixLength.uint64Value,
+					origin.fieldName:       origin.stringValue,
+					status.fieldName:       status.stringValue,
+				},
+				time.Now(),
+			)},
 	},
 		{
 			telemetry: &telemetryBis.Telemetry{
@@ -226,15 +234,20 @@ func TestIncludeDeleteField(t *testing.T) {
 					},
 				},
 			},
-			tags: map[string]string{
-				encodingPath.name: encodingPath.stringValue,
-				name.name:         name.stringValue,
-				index.name:        index.stringValue,
-				ip.name:           ip.stringValue,
-				source.name:       source.stringValue,
-				subscription.name: subscription.stringValue,
-			},
-			fields: map[string]interface{}{deleteKey: true},
+			expected: []telegraf.Metric{
+				metric.New(
+					"deleted",
+					map[string]string{
+						encodingPath.name: encodingPath.stringValue,
+						name.name:         name.stringValue,
+						index.name:        index.stringValue,
+						ip.name:           ip.stringValue,
+						source.name:       source.stringValue,
+						subscription.name: subscription.stringValue,
+					},
+					map[string]interface{}{deleteKey: true},
+					time.Now(),
+				)},
 		},
 	}
 	for _, test := range testCases {
@@ -245,13 +258,15 @@ func TestIncludeDeleteField(t *testing.T) {
 			IncludeDeleteField: true}
 		acc := &testutil.Accumulator{}
 		// error is expected since we are passing in dummy transport
-		require.ErrorContains(t, c.Start(acc), "a message part you expect")
+		require.ErrorContains(t, c.Start(acc), "dummy")
 		data, err := proto.Marshal(test.telemetry)
 		require.NoError(t, err)
 
 		c.handleTelemetry(data)
-		require.Empty(t, acc.Errors)
-		acc.AssertContainsTaggedFields(t, "deleted", test.fields, test.tags)
+		actual := acc.GetTelegrafMetrics()
+		fmt.Println(test.expected)
+		fmt.Println(actual)
+		testutil.RequireMetricsEqual(t, test.expected, actual, testutil.IgnoreTime())
 	}
 }
 
