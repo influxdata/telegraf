@@ -189,9 +189,9 @@ of the examples below.
 ## Metrics
 
 All metrics derive from aggregating OpenSearch query results.  Queries must
-conform to appropriate [OpenSearch Aggregations]
-(https://opensearch.org/docs/latest/opensearch/aggregations/) for more 
-information.
+conform to appropriate OpenSearch
+[Aggregations](https://opensearch.org/docs/latest/opensearch/aggregations/)
+for more information.
 
 ## Example Output
 
