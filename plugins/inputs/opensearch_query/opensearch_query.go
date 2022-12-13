@@ -3,6 +3,7 @@ package opensearch_query
 
 import (
 	"context"
+	"crypto/tls"
 	_ "embed"
 	"fmt"
 	"github.com/opensearch-project/opensearch-go/v2"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	influxtls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,9 +32,7 @@ type OpensearchQuery struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	tls.ClientConfig
-	//httpclient *http.Client
-	//esClient   *elastic.Client
+	influxtls.ClientConfig
 	osClient *opensearch.Client
 }
 
@@ -61,12 +60,12 @@ func (*OpensearchQuery) SampleConfig() string {
 // Init the plugin.
 func (o *OpensearchQuery) Init() error {
 	if o.URLs == nil {
-		return fmt.Errorf("elasticsearch urls is not defined")
+		return fmt.Errorf("opensearch urls is not defined")
 	}
 
 	err := o.connectToOpensearch()
 	if err != nil {
-		o.Log.Errorf("E! error connecting to elasticsearch: %s", err)
+		o.Log.Errorf("E! error connecting to opensearch: %s", err)
 		return nil
 	}
 
@@ -112,12 +111,25 @@ func (o *OpensearchQuery) initAggregation(ctx context.Context, agg osAggregation
 }
 
 func (o *OpensearchQuery) connectToOpensearch() error {
+	var client *opensearch.Client
+	var transport *http.Transport
+
+	if o.InsecureSkipVerify {
+		transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
+
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
 		Username:  o.Username,
 		Password:  o.Password,
 		//Signer:                nil,
 		//CACert:                nil,
+	}
+
+	if transport != nil {
+		clientConfig.Transport = transport
 	}
 
 	client, err := opensearch.NewClient(clientConfig)
@@ -129,7 +141,7 @@ func (o *OpensearchQuery) connectToOpensearch() error {
 	return nil
 }
 
-// Gather writes the results of the queries from Elasticsearch to the Accumulator.
+// Gather writes the results of the queries from OpenSearch to the Accumulator.
 func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
@@ -144,7 +156,7 @@ func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := o.osAggregationQuery(acc, agg, i)
 			if err != nil {
-				acc.AddError(fmt.Errorf("elasticsearch query aggregation %s: %s ", agg.MeasurementName, err.Error()))
+				acc.AddError(fmt.Errorf("opensearch query aggregation %s: %s ", agg.MeasurementName, err.Error()))
 			}
 		}(agg, i)
 	}
