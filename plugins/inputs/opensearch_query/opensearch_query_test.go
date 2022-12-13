@@ -600,8 +600,8 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		if e != nil {
 			return &container, e
 		}
-
 	}
+
 	if scanner.Err() != nil {
 		return &container, err
 	}

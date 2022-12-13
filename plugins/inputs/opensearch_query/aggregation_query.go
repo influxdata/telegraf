@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 	"github.com/pkg/errors"
-	"io"
 	"strings"
 	"time"
 
@@ -95,9 +94,7 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 	if resp.IsError() {
 		return nil, errors.Errorf("Opensearch SearchRequest failure: [%d] %s", resp.StatusCode, resp.Status())
 	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	var searchResult elastic.SearchResult
 

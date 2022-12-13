@@ -165,23 +165,6 @@ func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (o *OpensearchQuery) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := o.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-	tr := &http.Transport{
-		ResponseHeaderTimeout: time.Duration(o.Timeout),
-		TLSClientConfig:       tlsCfg,
-	}
-	httpclient := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(o.Timeout),
-	}
-
-	return httpclient, nil
-}
-
 func (o *OpensearchQuery) osAggregationQuery(acc telegraf.Accumulator, aggregation osAggregation, i int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 	defer cancel()
