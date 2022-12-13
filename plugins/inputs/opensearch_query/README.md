@@ -185,3 +185,24 @@ of the examples below.
 
 [joda]: https://opensearch.org/docs/2.4/opensearch/supported-field-types/date/#custom-formats
 [agg]: https://opensearch.org/docs/2.4/opensearch/aggregations/
+
+## Metrics
+
+All metrics derive from aggregating OpenSearch query results.  Queries must
+conform to appropriate [OpenSearch Aggregations]
+(https://opensearch.org/docs/latest/opensearch/aggregations/) for more 
+information.
+
+## Example Output
+
+```shell
+./telegraf --config plugins/inputs/opensearch_query/dev/telegraf.conf --input-filter opensearch_query --test
+2022-12-13T21:09:41Z I! Starting Telegraf 1.26.0-a96e9d38
+2022-12-13T21:09:41Z I! Available plugins: 214 inputs, 9 aggregators, 26 processors, 21 parsers, 57 outputs, 2 secret-stores
+2022-12-13T21:09:41Z I! Loaded inputs: opensearch_query
+2022-12-13T21:09:41Z I! Loaded aggregators:
+2022-12-13T21:09:41Z I! Loaded processors:
+2022-12-13T21:09:41Z I! Loaded secretstores:
+2022-12-13T21:09:41Z W! Outputs are not used in testing mode!
+2022-12-13T21:09:41Z I! Tags enabled: host=localhost
+```
