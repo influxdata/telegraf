@@ -29,22 +29,21 @@ type store struct {
 }
 
 type HTTP struct {
-	URL                string                  `toml:"url"`
-	Headers            map[string]string       `toml:"headers"`
-	Username           config.Secret           `toml:"username"`
-	Password           config.Secret           `toml:"password"`
-	BearerToken        string                  `toml:"bearer_token"`
-	SuccessStatusCodes []int                   `toml:"success_status_codes"`
-	Transformation     string                  `toml:"transformation"`
-	Cipher             string                  `toml:"cipher"`
-	CipherAes          encryption.AesEncryptor `toml:"aes"`
-	Log                telegraf.Logger         `toml:"-"`
+	URL                string            `toml:"url"`
+	Headers            map[string]string `toml:"headers"`
+	Username           config.Secret     `toml:"username"`
+	Password           config.Secret     `toml:"password"`
+	BearerToken        string            `toml:"bearer_token"`
+	SuccessStatusCodes []int             `toml:"success_status_codes"`
+	Transformation     string            `toml:"transformation"`
+	Log                telegraf.Logger   `toml:"-"`
 	chttp.HTTPClientConfig
+	encryption.EncryptionConfig
 
 	client      *http.Client
 	transformer *jsonata.Expr
 	cache       store
-	decryptor   encryption.Decryptor
+	decrypter   encryption.Decrypter
 }
 
 func (*HTTP) SampleConfig() string {
@@ -74,17 +73,9 @@ func (h *HTTP) Init() error {
 	}
 
 	// Setup the decryption infrastructure
-	parts := strings.Split(h.Cipher, "/")
-	switch strings.ToLower(parts[0]) {
-	case "":
-	case "aes":
-		h.CipherAes.Variant = parts
-		if err := h.CipherAes.Init(); err != nil {
-			return fmt.Errorf("AES init failed: %w", err)
-		}
-		h.decryptor = &h.CipherAes
-	default:
-		return fmt.Errorf("unknown cipher %q", h.Cipher)
+	h.decrypter, err = h.EncryptionConfig.CreateDecrypter()
+	if err != nil {
+		return err
 	}
 
 	// Download and parse the credentials
@@ -92,8 +83,8 @@ func (h *HTTP) Init() error {
 		return err
 	}
 
-	// Check if we do have a decryptor for encrypted data
-	if len(h.cache.Encrypted) > 0 && h.decryptor == nil {
+	// Check if we do have a decrypter for encrypted data
+	if len(h.cache.Encrypted) > 0 && h.decrypter == nil {
 		return errors.New("got encrypted secrets but no cipher specified")
 	}
 
@@ -110,7 +101,7 @@ func (h *HTTP) Get(key string) ([]byte, error) {
 	if !found {
 		return nil, errors.New("not found")
 	}
-	return h.decryptor.Decrypt(v)
+	return h.decrypter.Decrypt(v)
 }
 
 // Set sets the given secret for the given key
