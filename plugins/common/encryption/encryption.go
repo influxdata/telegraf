@@ -6,7 +6,6 @@ import (
 )
 
 type Decrypter interface {
-	Init() error
 	Decrypt(data []byte) ([]byte, error)
 }
 
@@ -18,9 +17,11 @@ type EncryptionConfig struct {
 func (c *EncryptionConfig) CreateDecrypter() (Decrypter, error) {
 	// For ciphers that allowing variants (e.g. AES256/CBC/PKCS#5Padding)
 	// can specify the variant using <algorithm>[/param 1>[/<param 2>]...]
-	// where all parameters will be passed on to the decryptor.
+	// where all parameters will be passed on to the decrypter.
 	parts := strings.Split(c.Cipher, "/")
 	switch strings.ToLower(parts[0]) {
+	case "", "none":
+		return nil, nil
 	case "aes", "aes128", "aes192", "aes256":
 		c.Aes.Variant = parts
 		if err := c.Aes.Init(); err != nil {
