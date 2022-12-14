@@ -15,7 +15,8 @@ import (
 	"github.com/blues/jsonata-go"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	"github.com/influxdata/telegraf/plugins/common/encryption"
+	chttp "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
 
@@ -27,28 +28,23 @@ type store struct {
 	Encrypted map[string][]byte `json:"encrypted"`
 }
 
-type decryptor interface {
-	Init() error
-	Decrypt(data []byte) ([]byte, error)
-}
-
 type HTTP struct {
-	URL                string            `toml:"url"`
-	Headers            map[string]string `toml:"headers"`
-	Username           config.Secret     `toml:"username"`
-	Password           config.Secret     `toml:"password"`
-	BearerToken        string            `toml:"bearer_token"`
-	SuccessStatusCodes []int             `toml:"success_status_codes"`
-	Transformation     string            `toml:"transformation"`
-	Cipher             string            `toml:"cipher"`
-	CipherAes          AesEncryptor      `toml:"aes"`
-	Log                telegraf.Logger   `toml:"-"`
-	httpconfig.HTTPClientConfig
+	URL                string                  `toml:"url"`
+	Headers            map[string]string       `toml:"headers"`
+	Username           config.Secret           `toml:"username"`
+	Password           config.Secret           `toml:"password"`
+	BearerToken        string                  `toml:"bearer_token"`
+	SuccessStatusCodes []int                   `toml:"success_status_codes"`
+	Transformation     string                  `toml:"transformation"`
+	Cipher             string                  `toml:"cipher"`
+	CipherAes          encryption.AesEncryptor `toml:"aes"`
+	Log                telegraf.Logger         `toml:"-"`
+	chttp.HTTPClientConfig
 
 	client      *http.Client
 	transformer *jsonata.Expr
 	cache       store
-	decryptor   decryptor
+	decryptor   encryption.Decryptor
 }
 
 func (*HTTP) SampleConfig() string {
