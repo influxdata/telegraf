@@ -42,24 +42,7 @@ type Wavefront struct {
 	Log    telegraf.Logger `toml:"-"`
 }
 
-// catch many of the invalid chars that could appear in a metric or tag name
-var sanitizedChars = strings.NewReplacer(
-	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
-	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
-	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
-	">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
-	"=", "-",
-)
-
-// catch many of the invalid chars that could appear in a metric or tag name
-var strictSanitizedChars = strings.NewReplacer(
-	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
-	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
-	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
-	">", "-", "?", "-", "\\", "-", "|", "-", " ", "-", "=", "-",
-)
-
-// instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
+// instead of Sanitize which may miss some special characters we can use a regex pattern, but this is significantly slower than Sanitize
 var sanitizedRegex = regexp.MustCompile(`[^a-zA-Z\d_.-]`)
 
 var tagValueReplacer = strings.NewReplacer("*", "-")
@@ -166,10 +149,8 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializer.MetricPoint {
 
 		if w.UseRegex {
 			name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
-		} else if w.UseStrict {
-			name = strictSanitizedChars.Replace(name)
 		} else {
-			name = sanitizedChars.Replace(name)
+			name = serializer.Sanitize(w.UseStrict, name)
 		}
 
 		if w.ConvertPaths {
@@ -245,10 +226,8 @@ func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]strin
 		var key string
 		if w.UseRegex {
 			key = sanitizedRegex.ReplaceAllLiteralString(k, "-")
-		} else if w.UseStrict {
-			key = strictSanitizedChars.Replace(k)
 		} else {
-			key = sanitizedChars.Replace(k)
+			key = serializer.Sanitize(w.UseStrict, k)
 		}
 		val := tagValueReplacer.Replace(v)
 		if w.TruncateTags {

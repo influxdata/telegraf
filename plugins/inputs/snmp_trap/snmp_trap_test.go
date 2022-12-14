@@ -50,7 +50,6 @@ func newMsgFlagsV3(secLevel string) gosnmp.SnmpV3MsgFlags {
 	default:
 		msgFlags = gosnmp.NoAuthNoPriv
 	}
-
 	return msgFlags
 }
 
@@ -96,7 +95,7 @@ func newUsmSecurityParametersForV3(authProto string, privProto string, username 
 	}
 
 	return &gosnmp.UsmSecurityParameters{
-		AuthoritativeEngineID:    "1",
+		AuthoritativeEngineID:    "deadbeef", // has to be between 5 & 32 chars
 		AuthoritativeEngineBoots: 1,
 		AuthoritativeEngineTime:  1,
 		UserName:                 username,
@@ -136,16 +135,11 @@ func newGoSNMP(version gosnmp.SnmpVersion, port uint16) gosnmp.GoSNMP {
 }
 
 func sendTrap(t *testing.T, goSNMP gosnmp.GoSNMP, trap gosnmp.SnmpTrap) {
-	err := goSNMP.Connect()
-	if err != nil {
-		t.Errorf("Connect() err: %v", err)
-	}
+	require.NoError(t, goSNMP.Connect())
 	defer goSNMP.Conn.Close()
 
-	_, err = goSNMP.SendTrap(trap)
-	if err != nil {
-		t.Errorf("SendTrap() err: %v", err)
-	}
+	_, err := goSNMP.SendTrap(trap)
+	require.NoError(t, err)
 }
 
 func TestReceiveTrap(t *testing.T) {
@@ -1295,7 +1289,7 @@ func TestReceiveTrap(t *testing.T) {
 			s.translator = newTestTranslator(tt.entries)
 
 			var acc testutil.Accumulator
-			require.Nil(t, s.Start(&acc))
+			require.NoError(t, s.Start(&acc))
 			defer s.Stop()
 
 			var goSNMP gosnmp.GoSNMP

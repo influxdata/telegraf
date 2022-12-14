@@ -2,11 +2,14 @@ package grok
 
 import (
 	"log"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -994,6 +997,31 @@ func TestNewlineInPatterns(t *testing.T) {
 	m, err := p.ParseLine("Apr 10 05:11:57")
 	require.NoError(t, err)
 	require.NotNil(t, m)
+}
+
+func TestMultilinePatterns(t *testing.T) {
+	buf, err := os.ReadFile("./testdata/test_multiline.log")
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"multiline",
+			map[string]string{},
+			map[string]interface{}{"text": "Error A long and\n    multiline\n    message"},
+			time.Date(2022, time.December, 1, 12, 41, 45, 0, time.UTC),
+		),
+	}
+
+	p := &Parser{
+		Measurement: "multiline",
+		Patterns:    []string{`%{TIMESTAMP_ISO8601:timestamp:ts-rfc3339}\s%{MULTILINEDATA:text}`},
+		Multiline:   true,
+		Log:         testutil.Logger{},
+	}
+	require.NoError(t, p.Compile())
+	actual, err := p.Parse(buf)
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
 func TestSyslogTimestamp(t *testing.T) {

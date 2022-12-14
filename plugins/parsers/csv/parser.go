@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	_ "time/tzdata" // needed to bundle timezone info into the binary for Windows
 
@@ -22,6 +23,9 @@ import (
 )
 
 type TimeFunc func() time.Time
+
+const replacementByte = "\ufffd"
+const commaByte = "\u002C"
 
 type Parser struct {
 	ColumnNames        []string        `toml:"csv_column_names"`
@@ -50,6 +54,8 @@ type Parser struct {
 	metadataSeparatorList metadataPattern
 
 	gotColumnNames bool
+
+	invalidDelimiter bool
 
 	TimeFunc     func() time.Time
 	DefaultTags  map[string]string
@@ -141,6 +147,7 @@ func (p *Parser) Init() error {
 		if len(runeStr) > 1 {
 			return fmt.Errorf("csv_delimiter must be a single character, got: %s", p.Delimiter)
 		}
+		p.invalidDelimiter = !validDelim(runeStr[0])
 	}
 
 	if p.Comment != "" {
@@ -182,8 +189,12 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 	csvReader := csv.NewReader(r)
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
-	if p.Delimiter != "" {
+	if !p.invalidDelimiter && p.Delimiter != "" {
 		csvReader.Comma = []rune(p.Delimiter)[0]
+	}
+	// Check if delimiter is invalid
+	if p.invalidDelimiter && p.Delimiter != "" {
+		csvReader.Comma = []rune(commaByte)[0]
 	}
 	if p.Comment != "" {
 		csvReader.Comment = []rune(p.Comment)[0]
@@ -192,12 +203,23 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 	return csvReader
 }
 
+// Taken from upstream Golang code see
+// https://github.com/golang/go/blob/release-branch.go1.19/src/encoding/csv/reader.go#L95
+func validDelim(r rune) bool {
+	return r != 0 && r != '"' && r != '\r' && r != '\n' && utf8.ValidRune(r) && r != utf8.RuneError
+}
+
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// Reset the parser according to the specified mode
 	if p.ResetMode == "always" {
 		p.Reset()
 	}
-
+	// If using an invalid delimiter, replace commas with replacement and
+	// invalid delimiter with commas
+	if p.invalidDelimiter {
+		buf = bytes.Replace(buf, []byte(commaByte), []byte(replacementByte), -1)
+		buf = bytes.Replace(buf, []byte(p.Delimiter), []byte(commaByte), -1)
+	}
 	r := bytes.NewReader(buf)
 	metrics, err := parseCSV(p, r)
 	if err != nil && errors.Is(err, io.EOF) {
