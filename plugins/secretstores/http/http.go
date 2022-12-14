@@ -34,7 +34,7 @@ type HTTP struct {
 	Transformation     string            `toml:"transformation"`
 	Log                telegraf.Logger   `toml:"-"`
 	chttp.HTTPClientConfig
-	encryption.EncryptionConfig
+	encryption.DecryptionConfig
 
 	client      *http.Client
 	transformer *jsonata.Expr
@@ -42,8 +42,8 @@ type HTTP struct {
 	decrypter   encryption.Decrypter
 }
 
-func (*HTTP) SampleConfig() string {
-	return sampleConfig
+func (h *HTTP) SampleConfig() string {
+	return sampleConfig + h.DecryptionConfig.SampleConfig("secretstores.http")
 }
 
 func (h *HTTP) Init() error {
@@ -69,7 +69,7 @@ func (h *HTTP) Init() error {
 	}
 
 	// Setup the decryption infrastructure
-	h.decrypter, err = h.EncryptionConfig.CreateDecrypter()
+	h.decrypter, err = h.DecryptionConfig.CreateDecrypter()
 	if err != nil {
 		return err
 	}
