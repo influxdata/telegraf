@@ -34,6 +34,7 @@ Pull requests welcome.
 - [nsdp](https://github.com/hdecarne-github/nsdp-telegraf-plugin) - Gather switch network statistics via [Netgear Switch Discovery Protocol](https://en.wikipedia.org/wiki/Netgear_Switch_Discovery_Protocol)
 - [hwinfo](https://github.com/zachstence/hwinfo-telegraf-plugin) - Gather Windows system hardware information from [HWiNFO](https://www.hwinfo.com/)
 - [libvirt](https://gitlab.com/warrenio/tools/telegraf-input-libvirt) - Gather libvirt domain stats, based on a historical Telegraf implementation (libvirt)[https://libvirt.org/]
+- [bacnet](https://github.com/JurajMarcin/telegraf-bacnet) - Gather statistics from BACnet devices, with support for device discovery and Change of Value subscriptions
 
 ## Outputs
 
