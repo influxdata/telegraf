@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/crypto/pbkdf2"
+
 	"github.com/influxdata/telegraf/config"
-	"github.com/xdg-go/pbkdf2"
 )
 
 type AesEncryptor struct {
@@ -20,17 +21,33 @@ type AesEncryptor struct {
 	Iterations int           `toml:"iterations"`
 	Variant    []string      `toml:"-"`
 
-	mode    string
-	padding func([]byte) []byte
+	mode string
+	trim func([]byte) []byte
 }
 
 func (a *AesEncryptor) Init() error {
-	if len(a.Variant) < 2 {
-		return errors.New("please specify AES mode")
+	var cipher, mode, padding string
+
+	switch len(a.Variant) {
+	case 3:
+		padding = strings.ToLower(a.Variant[2])
+		fallthrough
+	case 2:
+		mode = strings.ToLower(a.Variant[1])
+		fallthrough
+	case 1:
+		cipher = strings.ToLower(a.Variant[0])
+		if !strings.HasPrefix(cipher, "aes") {
+			return fmt.Errorf("requested AES but specified %q", cipher)
+		}
+	case 0:
+		return errors.New("please specify cipher")
+	default:
+		return errors.New("too many variant elements")
 	}
 
 	var keylen int
-	switch strings.ToLower(a.Variant[0]) {
+	switch cipher {
 	case "aes", "aes128":
 		keylen = 16
 	case "aes192":
@@ -38,30 +55,30 @@ func (a *AesEncryptor) Init() error {
 	case "aes256":
 		keylen = 32
 	default:
-		return fmt.Errorf("unsupported AES variant %q", a.Variant[0])
+		return fmt.Errorf("unsupported AES cipher %q", cipher)
 	}
 
-	a.mode = strings.ToLower(a.Variant[1])
-	switch a.mode {
-	case "cbc", "cfb", "ctr", "ofb":
+	switch mode {
+	case "", "none": // pure AES
+		mode = "none"
+	case "cbc": // AES block mode
+	case "cfb", "ctr", "ofb": // AES stream mode
 	default:
 		return fmt.Errorf("unsupported block mode %q", a.Variant[1])
 	}
+	a.mode = mode
 
-	var padding string
-	if len(a.Variant) > 2 {
-		padding = strings.ToLower(a.Variant[2])
-	}
+	// Setup the trimming function to revert padding
 	switch padding {
 	case "", "none":
 		// identity, no padding
-		a.padding = func(in []byte) []byte { return in }
+		a.trim = func(in []byte) []byte { return in }
 	case "pkcs5", "pkcs#5", "pkcs5padding", "pkcs#5padding":
 		// The implementation can handle both variants, so fallthrough to
 		// the PKCS#7 case
 		fallthrough
 	case "pkcs7", "pkcs#7", "pkcs7padding", "pkcs#7padding":
-		a.padding = PKCS7Trimming
+		a.trim = PKCS7Trimming
 	default:
 		return fmt.Errorf("unsupported padding %q", padding)
 	}
@@ -111,6 +128,8 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 	defer config.ReleaseSecret(iv)
 
 	switch a.mode {
+	case "none":
+		block.Decrypt(data, data)
 	case "cbc":
 		cipher.NewCBCDecrypter(block, iv).CryptBlocks(data, data)
 	case "cfb":
@@ -123,7 +142,7 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("unsupported block mode %q", a.mode)
 	}
 
-	return a.padding(data), nil
+	return a.trim(data), nil
 }
 
 func (a *AesEncryptor) generateKey(keylen int) ([]byte, error) {
