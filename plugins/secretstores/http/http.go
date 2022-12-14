@@ -4,6 +4,7 @@ package http
 import (
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,11 +24,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type store struct {
-	PlainText map[string]string `json:"plain"`
-	Encrypted map[string][]byte `json:"encrypted"`
-}
-
 type HTTP struct {
 	URL                string            `toml:"url"`
 	Headers            map[string]string `toml:"headers"`
@@ -42,7 +38,7 @@ type HTTP struct {
 
 	client      *http.Client
 	transformer *jsonata.Expr
-	cache       store
+	cache       map[string]string
 	decrypter   encryption.Decrypter
 }
 
@@ -83,25 +79,27 @@ func (h *HTTP) Init() error {
 		return err
 	}
 
-	// Check if we do have a decrypter for encrypted data
-	if len(h.cache.Encrypted) > 0 && h.decrypter == nil {
-		return errors.New("got encrypted secrets but no cipher specified")
-	}
-
 	return nil
 }
 
 // Get searches for the given key and return the secret
 func (h *HTTP) Get(key string) ([]byte, error) {
-	if v, found := h.cache.PlainText[key]; found {
-		return []byte(v), nil
-	}
-
-	v, found := h.cache.Encrypted[key]
+	v, found := h.cache[key]
 	if !found {
 		return nil, errors.New("not found")
 	}
-	return h.decrypter.Decrypt(v)
+
+	if h.decrypter != nil {
+		// We got binary data delivered in a string, so try to
+		// decode it assuming base64-encoding.
+		buf, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, fmt.Errorf("base64 decoding failed: %w", err)
+		}
+		return h.decrypter.Decrypt(buf)
+	}
+
+	return []byte(v), nil
 }
 
 // Set sets the given secret for the given key
@@ -111,11 +109,8 @@ func (h *HTTP) Set(key, value string) error {
 
 // List lists all known secret keys
 func (h *HTTP) List() ([]string, error) {
-	keys := make([]string, 0, len(h.cache.PlainText)+len(h.cache.Encrypted))
-	for k := range h.cache.PlainText {
-		keys = append(keys, k)
-	}
-	for k := range h.cache.Encrypted {
+	keys := make([]string, 0, len(h.cache))
+	for k := range h.cache {
 		keys = append(keys, k)
 	}
 	return keys, nil

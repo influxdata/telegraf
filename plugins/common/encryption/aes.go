@@ -104,7 +104,7 @@ func (a *AesEncryptor) Init() error {
 
 func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 	if len(data)%aes.BlockSize != 0 {
-		return nil, fmt.Errorf("invalid data size %d", aes.BlockSize)
+		return nil, fmt.Errorf("invalid data size %d", len(data))
 	}
 
 	// Setup the cipher and return the decoded data
