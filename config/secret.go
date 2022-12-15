@@ -29,6 +29,9 @@ type Secret struct {
 	// unlinked contains all references in the secret that are not yet
 	// linked to the corresponding secret store.
 	unlinked []string
+
+	// Denotes if the secret is completely empty
+	notempty bool
 }
 
 // NewSecret creates a new secret from the given bytes
@@ -45,7 +48,7 @@ func (s *Secret) UnmarshalTOML(b []byte) error {
 
 	// Keep track of secrets that contain references to secret-stores
 	// for later resolving by the config.
-	if len(s.unlinked) > 0 {
+	if len(s.unlinked) > 0 && s.notempty {
 		unlinkedSecrets = append(unlinkedSecrets, s)
 	}
 
@@ -55,6 +58,9 @@ func (s *Secret) UnmarshalTOML(b []byte) error {
 // Initialize the secret content
 func (s *Secret) init(b []byte) {
 	secret := unquoteTomlString(b)
+
+	// Remember if the secret is completely empty
+	s.notempty = len(secret) != 0
 
 	// Find all parts that need to be resolved and return them
 	s.unlinked = secretPattern.FindAllString(string(secret), -1)
@@ -68,6 +74,7 @@ func (s *Secret) init(b []byte) {
 func (s *Secret) Destroy() {
 	s.resolvers = nil
 	s.unlinked = nil
+	s.notempty = false
 
 	if s.enclave == nil {
 		return
@@ -79,6 +86,11 @@ func (s *Secret) Destroy() {
 		lockbuf.Destroy()
 	}
 	s.enclave = nil
+}
+
+// Empty return if the secret is completely empty
+func (s *Secret) Empty() bool {
+	return !s.notempty
 }
 
 // Get return the string representation of the secret

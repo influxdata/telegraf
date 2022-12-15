@@ -1,5 +1,4 @@
 //go:build darwin || linux || windows
-// +build darwin linux windows
 
 //go:generate ../../../tools/readme_config_includer/generator
 package os

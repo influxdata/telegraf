@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 package os
 
@@ -9,8 +8,6 @@ import (
 	"github.com/99designs/keyring"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample_windows.conf
 var sampleConfig string
 

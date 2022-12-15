@@ -25,9 +25,17 @@ func TestInitFail(t *testing.T) {
 			expected: "id missing",
 		},
 		{
+			name: "missing path",
+			plugin: &Jose{
+				ID: "test",
+			},
+			expected: "path missing",
+		},
+		{
 			name: "invalid password",
 			plugin: &Jose{
 				ID:       "test",
+				Path:     os.TempDir(),
 				Password: config.NewSecret([]byte("@{unresolvable:secret}")),
 			},
 			expected: "getting password failed",
