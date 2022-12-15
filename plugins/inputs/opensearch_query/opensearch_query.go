@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"fmt"
-	"github.com/opensearch-project/opensearch-go/v2"
 	"net/http"
 	"sync"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	influxtls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/opensearch-project/opensearch-go/v2"
 )
 
 //go:embed sample.conf
@@ -65,8 +65,7 @@ func (o *OpensearchQuery) Init() error {
 
 	err := o.connectToOpensearch()
 	if err != nil {
-		o.Log.Errorf("E! error connecting to opensearch: %s", err)
-		return nil
+		return fmt.Errorf("error connecting to opensearch: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
@@ -81,8 +80,7 @@ func (o *OpensearchQuery) Init() error {
 		}
 		err = o.initAggregation(ctx, agg, i)
 		if err != nil {
-			o.Log.Errorf("%s", err)
-			return nil
+			return err
 		}
 	}
 	return nil
@@ -103,7 +101,7 @@ func (o *OpensearchQuery) initAggregation(ctx context.Context, agg osAggregation
 
 	err = agg.buildAggregationQuery()
 	if err != nil {
-		return err
+		return fmt.Errorf("error building aggregation: %s", err)
 	}
 
 	o.Aggregations[i] = agg
@@ -124,8 +122,6 @@ func (o *OpensearchQuery) connectToOpensearch() error {
 		Addresses: o.URLs,
 		Username:  o.Username,
 		Password:  o.Password,
-		//Signer:                nil,
-		//CACert:                nil,
 	}
 
 	if transport != nil {

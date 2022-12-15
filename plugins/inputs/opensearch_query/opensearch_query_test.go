@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -35,14 +35,15 @@ type osAggregationQueryTest struct {
 	wantBuildQueryErr         bool
 	wantGetMetricFieldsErr    bool
 	wantQueryResErr           bool
+	wantInitErr               bool
 }
 
 var queryPeriod = config.Duration(time.Second * 600)
 
 var testOpensearchAggregationData = []osAggregationQueryTest{
 	{
-		"query 1",
-		osAggregation{
+		queryName: "query 1",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement1",
 			MetricFields:    []string{"size"},
@@ -53,7 +54,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{"URI.keyword"},
 			mapMetricFields: map[string]string{"size": "long"},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement1", name: "size_avg", function: "avg", field: "size"},
 				isParent: false,
@@ -63,7 +64,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement1",
 				map[string]string{"URI_keyword": "/downloads/product_1"},
@@ -71,13 +72,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 2",
-		osAggregation{
+		queryName: "query 2",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement2",
 			MetricFields:    []string{"size"},
@@ -88,7 +86,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{"URI.keyword"},
 			mapMetricFields: map[string]string{"size": "long"},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement2", name: "size_max", function: "max", field: "size"},
 				isParent: false,
@@ -98,7 +96,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement2",
 				map[string]string{"URI_keyword": "/downloads/product_1"},
@@ -112,13 +110,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 3",
-		osAggregation{
+		queryName: "query 3",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement3",
 			MetricFields:    []string{"size"},
@@ -129,7 +124,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{"response.keyword"},
 			mapMetricFields: map[string]string{"size": "long"},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement3", name: "size_sum", function: "sum", field: "size"},
 				isParent: false,
@@ -139,7 +134,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement3",
 				map[string]string{"response_keyword": "200"},
@@ -159,13 +154,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 4",
-		osAggregation{
+		queryName: "query 4",
+		testAggregationQueryInput: osAggregation{
 			Index:             testindex,
 			MeasurementName:   "measurement4",
 			MetricFields:      []string{"size", "response_time"},
@@ -178,7 +170,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
 			mapMetricFields:   map[string]string{"size": "long", "response_time": "long"},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement4", name: "size_min", function: "min", field: "size"},
 				isParent: false,
@@ -200,7 +192,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement4",
 				map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
@@ -250,13 +242,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 5",
-		osAggregation{
+		queryName: "query 5",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement5",
 			FilterQuery:     "product_2",
@@ -265,13 +254,13 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{"URI.keyword"},
 			mapMetricFields: map[string]string{},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement5", name: "URI_keyword", function: "terms", field: "URI.keyword"},
 				isParent: true,
 			},
 		},
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement5",
 				map[string]string{"URI_keyword": "/downloads/product_2"},
@@ -279,13 +268,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 6",
-		osAggregation{
+		queryName: "query 6",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement6",
 			FilterQuery:     "response: 200",
@@ -294,7 +280,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{"URI.keyword", "response.keyword"},
 			mapMetricFields: map[string]string{},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement6", name: "URI_keyword", function: "terms", field: "URI.keyword"},
 				isParent: false,
@@ -304,7 +290,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement6",
 				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
@@ -318,13 +304,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 7 - simple query",
-		osAggregation{
+		queryName: "query 7 - simple query",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement7",
 			FilterQuery:     "response: 200",
@@ -333,8 +316,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{},
 			mapMetricFields: map[string]string{},
 		},
-		nil,
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement7",
 				map[string]string{},
@@ -342,13 +324,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 8",
-		osAggregation{
+		queryName: "query 8",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement8",
 			MetricFields:    []string{"size"},
@@ -359,13 +338,13 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{},
 			mapMetricFields: map[string]string{"size": "long"},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement8", name: "size_max", function: "max", field: "size"},
 				isParent: true,
 			},
 		},
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement8",
 				map[string]string{},
@@ -373,13 +352,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 9 - invalid function",
-		osAggregation{
+		queryName: "query 9 - invalid function",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement9",
 			MetricFields:    []string{"size"},
@@ -390,15 +366,12 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{},
 			mapMetricFields: map[string]string{"size": "long"},
 		},
-		nil,
-		nil,
-		true,
-		false,
-		true,
+		wantBuildQueryErr: true,
+		wantInitErr:       true,
 	},
 	{
-		"query 10 - non-existing metric field",
-		osAggregation{
+		queryName: "query 10 - non-existing metric field",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement10",
 			MetricFields:    []string{"none"},
@@ -407,15 +380,12 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{},
 			mapMetricFields: map[string]string{},
 		},
-		nil,
-		nil,
-		false,
-		false,
-		true,
+		wantQueryResErr: true,
+		wantInitErr:     true,
 	},
 	{
-		"query 11 - non-existing index field",
-		osAggregation{
+		queryName: "query 11 - non-existing index field",
+		testAggregationQueryInput: osAggregation{
 			Index:           "notanindex",
 			MeasurementName: "measurement11",
 			DateField:       "@timestamp",
@@ -423,15 +393,11 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{},
 			mapMetricFields: map[string]string{},
 		},
-		nil,
-		nil,
-		false,
-		false,
-		true,
+		wantQueryResErr: true,
 	},
 	{
-		"query 12 - non-existing timestamp field",
-		osAggregation{
+		queryName: "query 12 - non-existing timestamp field",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement12",
 			MetricFields:    []string{"size"},
@@ -441,13 +407,13 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{},
 			mapMetricFields: map[string]string{"size": "long"},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement12", name: "size_avg", function: "avg", field: "size"},
 				isParent: true,
 			},
 		},
-		[]telegraf.Metric{
+		expectedMetrics: []telegraf.Metric{
 			testutil.MustMetric(
 				"measurement12",
 				map[string]string{},
@@ -455,13 +421,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
-		false,
-		false,
-		false,
 	},
 	{
-		"query 13 - non-existing tag field",
-		osAggregation{
+		queryName: "query 13 - non-existing tag field",
+		testAggregationQueryInput: osAggregation{
 			Index:             testindex,
 			MeasurementName:   "measurement13",
 			MetricFields:      []string{"size"},
@@ -472,7 +435,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:              []string{"nothere"},
 			mapMetricFields:   map[string]string{"size": "long"},
 		},
-		[]aggregationQueryData{
+		testAggregationQueryData: []aggregationQueryData{
 			{
 				aggKey:   aggKey{measurement: "measurement13", name: "size_avg", function: "avg", field: "size"},
 				isParent: false,
@@ -482,14 +445,10 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		nil,
-		false,
-		false,
-		false,
 	},
 	{
-		"query 14 - non-existing custom date/time format",
-		osAggregation{
+		queryName: "query 14 - non-existing custom date/time format",
+		testAggregationQueryInput: osAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement14",
 			DateField:       "@timestamp",
@@ -498,11 +457,7 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			Tags:            []string{},
 			mapMetricFields: map[string]string{},
 		},
-		nil,
-		nil,
-		false,
-		false,
-		true,
+		wantQueryResErr: true,
 	},
 }
 
@@ -527,7 +482,6 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 			"discovery.type":            "single-node",
 			"plugins.security.disabled": "true",
 		},
-		Networks: []string{"promnet"},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("initialized"),
 			wait.ForListeningPort(nat.Port(servicePort)),
@@ -622,7 +576,6 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 	require.NoError(t, err)
 	defer container.Terminate()
 
-	var acc testutil.Accumulator
 	o := &OpensearchQuery{
 		URLs: []string{
 			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
@@ -634,41 +587,36 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 	err = o.connectToOpensearch()
 	require.NoError(t, err)
 
-	var aggs []osAggregation
-	var aggsErr []osAggregation
+	for _, tt := range testOpensearchAggregationData {
+		t.Run(tt.queryName, func(t *testing.T) {
+			var err error
+			var acc testutil.Accumulator
 
-	for _, agg := range testOpensearchAggregationData {
-		if !agg.wantQueryResErr {
-			aggs = append(aggs, agg.testAggregationQueryInput)
-		}
-	}
-	o.Aggregations = aggs
+			o.Aggregations = []osAggregation{tt.testAggregationQueryInput}
+			err = o.Init()
+			if (err != nil) != tt.wantInitErr {
+				t.Errorf("OpensearchQuery.Init() error = %v, wantInitErr %v", err, tt.wantInitErr)
+				return
+			} else if err != nil {
+				// Init() failures mean we're done
+				return
+			}
 
-	require.NoError(t, o.Init())
-	require.NoError(t, o.Gather(&acc))
+			err = o.Gather(&acc)
+			if (len(acc.Errors) > 0) && !tt.wantQueryResErr {
+				for _, err = range acc.Errors {
+					t.Errorf("OpensearchQuery.Gather() error: %v, wantQueryResErr %v", err, tt.wantQueryResErr)
+				}
+				return
+			}
 
-	if len(acc.Errors) > 0 {
-		t.Errorf("%s", acc.Errors)
-	}
+			if err != nil {
+				t.Errorf("Unexpected error %v", err)
+				return
+			}
 
-	var expectedMetrics []telegraf.Metric
-	for _, result := range testOpensearchAggregationData {
-		expectedMetrics = append(expectedMetrics, result.expectedMetrics...)
-	}
-	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
-
-	// aggregations that should return an error
-	for _, agg := range testOpensearchAggregationData {
-		if agg.wantQueryResErr {
-			aggsErr = append(aggsErr, agg.testAggregationQueryInput)
-		}
-	}
-	o.Aggregations = aggsErr
-	require.NoError(t, o.Init())
-	require.NoError(t, o.Gather(&acc))
-
-	if len(acc.Errors) != len(aggsErr) {
-		t.Errorf("expecting %v query result errors, got %v: %s", len(aggsErr), len(acc.Errors), acc.Errors)
+			testutil.RequireMetricsEqual(t, tt.expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+		})
 	}
 }
 
@@ -708,11 +656,11 @@ func TestOpensearchQueryIntegration_getMetricFields(t *testing.T) {
 	tests := make([]test, 0, len(testOpensearchAggregationData))
 	for _, d := range testOpensearchAggregationData {
 		tests = append(tests, test{
-			"getMetricFields " + d.queryName,
-			e,
-			args{context.Background(), d.testAggregationQueryInput},
-			d.testAggregationQueryInput.mapMetricFields,
-			d.wantGetMetricFieldsErr,
+			name:    "getMetricFields " + d.queryName,
+			e:       e,
+			args:    args{context.Background(), d.testAggregationQueryInput},
+			want:    d.testAggregationQueryInput.mapMetricFields,
+			wantErr: d.wantGetMetricFieldsErr,
 		})
 	}
 
@@ -742,10 +690,10 @@ func TestOpensearchQuery_buildAggregationQuery(t *testing.T) {
 	tests := make([]test, 0, len(testOpensearchAggregationData))
 	for _, d := range testOpensearchAggregationData {
 		tests = append(tests, test{
-			"build " + d.queryName,
-			d.testAggregationQueryInput,
-			d.testAggregationQueryData,
-			d.wantBuildQueryErr,
+			name:        "build " + d.queryName,
+			aggregation: d.testAggregationQueryInput,
+			want:        d.testAggregationQueryData,
+			wantErr:     d.wantBuildQueryErr,
 		})
 	}
 

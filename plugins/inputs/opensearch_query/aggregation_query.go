@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
-	"github.com/pkg/errors"
 	"strings"
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
+	"github.com/pkg/errors"
 )
 
 type aggKey struct {
