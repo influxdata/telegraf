@@ -1,21 +1,27 @@
 # EXTR
 
 The `extr` output data format converts metrics into JSON documents, performing the following operatins on batched metrics:
-   - Combines sequential metrics matching name, tags, and timestamps into a single JSON metric, combining the fields of each metric into an array of fields.
-   - Groups metric fields appended with _min, _max, _avg or _old, _new
+
+- Combines sequential metrics matching name, tags, and timestamps into a single JSON metric, combining the fields of each metric into an array of fields.
+
+- Groups metric fields appended with min, max, avg or old, new
         usage_min=1,usage_max=100,usage_avg=50
         --> "usage":{"avg":50,"max":100,"min":1}
         ifAdminStatus_old="Up",ifAdminStatus_new="Down"
         --> "ifAdminStatus":{"old":"Up","new":"Down"}
-   - Groups metric fields appended with _key.
+
+- Groups metric fields appended with _key.
         ifIndex_key=1, name_key="1:2"
         --> "key":{ifIndex:1, name:"1:2"}
-   - Groups metric fields appended with _tag.
+
+- Groups metric fields appended with _tag.
         partNumber_tag="1647G-00129 800751-00-01", revision_tag="01"
         --> "tags":{partNumber:"1647G-00129 800751-00-01", revision:"01"}
-   - Groups like metric names into a toplevel map. Name of group is same as name, but with first char lowercase
+
+- Groups like metric names into a toplevel map. Name of group is same as name, but with first char lowercase
         "fanStats" :[{grouped_FanStats_Metric1}, {grouped_FanStats_Metric2} ]
-   - Creates nested JSON schema by parsing underscore "_" seperated field keys
+
+- Creates nested JSON schema by parsing underscore "_" seperated field keys
         cpu1_subcore_core_keys=2
         cpu2_subcore_core_keys=5
         --> {"keys":{"core":{"subcore":{"cpu1":2, "cpu2":5}}}}
@@ -28,8 +34,8 @@ The `extr` output data format converts metrics into JSON documents, performing t
         --> "bar":{"foo":{"x"=21,"y"=21}}
 
 *extr serializer batches metrics by default.
-   
-### Configuration
+
+## Configuration
 
 ```toml
 [[outputs.file]]
@@ -61,10 +67,10 @@ The `extr` output data format converts metrics into JSON documents, performing t
 
 ```
 
-### Examples:
+## Examples
 
 The following Telegraf batched metrics
-   
+
 ```text
 CpuStats,serialnumber=XYZ-1234 core_key=0i,usage_min=35.1,usage_max=99.1,usage_avg=35.1
 CpuStats,serialnumber=XYZ-1234 core_key=1i,usage_min=50.1,usage_max=88.1,usage_avg=51.1
@@ -85,7 +91,7 @@ OspfNeighborStateChange,serialnum="ABCD-1234",reporterSerialnum="XYZ-5678" route
 ```
 
 will serialize into the following extr JSON ouput
-   
+
 ```json
 {
   "cpuStats": [
