@@ -119,7 +119,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			// Add all returned certs to the pool if intermediates except for
 			// the leaf node and ourself
 			for j, c := range certs[1:] {
-				if i != j {
+				if i+1 != j {
 					opts.Intermediates.AddCert(c)
 				}
 			}
@@ -131,6 +131,8 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				c.Log.Debugf("Invalid certificate at index %2d!", i)
 				c.Log.Debugf("  cert DNS names:    %v", cert.DNSNames)
 				c.Log.Debugf("  cert IP addresses: %v", cert.IPAddresses)
+				c.Log.Debugf("  cert subject:      %v", cert.Subject)
+				c.Log.Debugf("  cert issuer:       %v", cert.Issuer)
 				c.Log.Debugf("  opts.DNSName:      %v", opts.DNSName)
 				c.Log.Debugf("  verify options:    %v", opts)
 				c.Log.Debugf("  verify error:      %v", err)
