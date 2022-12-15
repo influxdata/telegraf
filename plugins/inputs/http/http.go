@@ -186,19 +186,24 @@ func (h *HTTP) gatherURL(
 }
 
 func (h *HTTP) setRequestAuth(request *http.Request) error {
+	if h.Username.Empty() && h.Password.Empty() {
+		return nil
+	}
+
 	username, err := h.Username.Get()
 	if err != nil {
 		return fmt.Errorf("getting username failed: %v", err)
 	}
 	defer config.ReleaseSecret(username)
+
 	password, err := h.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %v", err)
 	}
 	defer config.ReleaseSecret(password)
-	if len(username) != 0 || len(password) != 0 {
-		request.SetBasicAuth(string(username), string(password))
-	}
+
+	request.SetBasicAuth(string(username), string(password))
+
 	return nil
 }
 

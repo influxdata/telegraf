@@ -1,5 +1,4 @@
 //go:build darwin
-// +build darwin
 
 package os
 
@@ -12,8 +11,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample_darwin.conf
 var sampleConfig string
 

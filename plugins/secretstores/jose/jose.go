@@ -12,8 +12,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -37,10 +35,15 @@ func (j *Jose) Init() error {
 		return errors.New("id missing")
 	}
 
+	if j.Path == "" {
+		return errors.New("path missing")
+	}
+
 	passwd, err := j.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %v", err)
 	}
+	defer config.ReleaseSecret(passwd)
 
 	// Create the prompt-function in case we need it
 	promptFunc := keyring.TerminalPrompt
@@ -100,9 +103,6 @@ func (j *Jose) GetResolver(key string) (telegraf.ResolveFunc, error) {
 // Register the secret-store on load.
 func init() {
 	secretstores.Add("jose", func(id string) telegraf.SecretStore {
-		return &Jose{
-			ID:   id,
-			Path: "secrets",
-		}
+		return &Jose{ID: id}
 	})
 }
