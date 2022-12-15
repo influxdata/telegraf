@@ -22,7 +22,7 @@ to get more information on how to do this.
   id = "secretstore"
 
   ## Directory for storing the secrets
-  # path = "secrets"
+  path = "/etc/telegraf/secrets"
 
   ## Password to access the secrets.
   ## If no password is specified here, Telegraf will prompt for it at startup time.
