@@ -15,6 +15,17 @@ The `extr` output data format converts metrics into JSON documents, performing t
         --> "tags":{partNumber:"1647G-00129 800751-00-01", revision:"01"}
    - Groups like metric names into a toplevel map. Name of group is same as name, but with first char lowercase
         "fanStats" :[{grouped_FanStats_Metric1}, {grouped_FanStats_Metric2} ]
+   - Creates nested JSON schema by parsing underscore "_" seperated field keys
+        cpu1_subcore_core_keys=2
+        cpu2_subcore_core_keys=5
+        --> {"keys":{"core":{"subcore":{"cpu1":2, "cpu2":5}}}}
+        usage_subcore_cpu1_min=21
+        usage_subcore_cpu1_max=100
+        usage_subcore_cpu1_avg=54
+        --> "usage":{"subcore":{"cpu1":{"avg":54,"max":100,"min":21}}}
+        x_foo_bar=21
+        y_foo_bar=37
+        --> "bar":{"foo":{"x"=21,"y"=21}}
 
 *extr serializer batches metrics by default.
    
@@ -69,6 +80,8 @@ CpuStats,serialnumber=XYZ-1234 core_key=1i,usage_min=22.2,usage_max=89.2,usage_a
 CpuStats,serialnumber=XYZ-1234 core_key=2i,usage_min=33.2,usage_max=79.2,usage_avg=47.2
 FanStats,serialnumber=XYZ-1234 tray_key=2i,fan_key=10i,rpm_min=4112,rpm_max=5012,rpm_avg=4212,pwm_min=32,pwm_max=52,pwm_avg=32
 FanStats,serialnumber=XYZ-1234 tray_key=2i,fan_key=11i,rpm_min=5002,rpm_max=5092,rpm_avg=4102,pwm_min=52,pwm_max=62,pwm_avg=52
+OspfNeighborStateChange,serialnum="ABCD-1234",reporterSerialnum="XYZ-5678" routerId_key=10,neighborAddress_key="10.20.4.1",neighborAdressLessInterface_key=0,neighborRouterId=10,name_vrf_key="vrf-1",id_vrf_key=99,state_old="Init",state_new="2Way"
+OspfNeighborStateChange,serialnum="ABCD-1234",reporterSerialnum="XYZ-5678" routerId_key=10,neighborAddress_key="10.20.66.1",neighborAdressLessInterface_key=0,neighborRouterId=20,name_vrf_key="vrf-4",id_vrf_key=33,state_old="Exchange",state_new="Full"
 ```
 
 will serialize into the following extr JSON ouput
@@ -323,6 +336,50 @@ will serialize into the following extr JSON ouput
       ],
       "name": "InterfaceStateChanged",
       "ts": 1654791970
+    }
+  ],
+  "ospfNeighborStateChange": [
+    {
+      "device": {
+        "reporterSerialnum": "\"XYZ-5678\"",
+        "serialnum": "\"ABCD-1234\""
+      },
+      "items": [
+        {
+          "keys": {
+            "neighborAddress": "10.20.4.1",
+            "neighborAdressLessInterface": 0,
+            "routerId": 10,
+            "vrf": {
+              "id": 99,
+              "name": "vrf-1"
+            }
+          },
+          "neighborRouterId": 10,
+          "state": {
+            "new": "2Way",
+            "old": "Init"
+          }
+        },
+        {
+          "keys": {
+            "neighborAddress": "10.20.66.1",
+            "neighborAdressLessInterface": 0,
+            "routerId": 10,
+            "vrf": {
+              "id": 33,
+              "name": "vrf-4"
+            }
+          },
+          "neighborRouterId": 20,
+          "state": {
+            "new": "Full",
+            "old": "Exchange"
+          }
+        }
+      ],
+      "name": "OspfNeighborStateChange",
+      "ts": 1671059160
     }
   ]
 }
