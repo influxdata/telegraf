@@ -438,6 +438,9 @@ func TestSerializeBatchMultiGroupsMultiLevel(t *testing.T) {
 		"usage_min":              22,
 		"usage_max":              99,
 		"usage_avg":              44,
+		"xyz/_temp_min":          1,
+		"xyz/_temp_avg":          22,
+		"xyz/_temp_max":          100,
 		"cpu1_subcore_usage_min": 1,
 		"cpu1_subcore_usage_max": 100,
 		"cpu1_subcore_usage_avg": 50,
@@ -456,7 +459,7 @@ func TestSerializeBatchMultiGroupsMultiLevel(t *testing.T) {
 	buf, err := s.SerializeBatch(metrics)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`{"testMultiLevelStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":1,"subcore":{"cpu1":2,"cpu2":3}},"subcore":{"name":{"abc":"foo","xyz":"bar"}},"usage":{"avg":44,"max":99,"min":22,"subcore":{"cpu1":{"avg":50,"max":100,"min":1,"old":"up"},"cpu2":{"avg":50,"max":100,"min":1,"new":"down"}}}}],"name":"TestMultiLevelStats","ts":%d}]}`, now.Unix()))
+	expS := []byte(fmt.Sprintf(`{"testMultiLevelStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":1,"subcore":{"cpu1":2,"cpu2":3}},"subcore":{"name":{"abc":"foo","xyz":"bar"}},"usage":{"avg":44,"max":99,"min":22,"subcore":{"cpu1":{"avg":50,"max":100,"min":1,"old":"up"},"cpu2":{"avg":50,"max":100,"min":1,"new":"down"}}},"xyz_temp":{"avg":22,"max":100,"min":1}}],"name":"TestMultiLevelStats","ts":%d}]}`, now.Unix()))
 
 	assert.Equal(t, string(expS), string(buf))
 }

@@ -307,8 +307,6 @@ func firstCharToLower(str string) string {
 func buildMap(startMap map[string]interface{}, startKey string, s []string, numKeys int) (
 	map[string]interface{}, string, error) {
 
-	sIndex := numKeys - 1
-
 	if numKeys == 0 {
 		return startMap, startKey, errors.New("numKeys 0.")
 
@@ -317,6 +315,8 @@ func buildMap(startMap map[string]interface{}, startKey string, s []string, numK
 		if len(startKey) == 0 {
 			return nil, "", errors.New("No start key string provided")
 		}
+
+		sIndex := numKeys - 1
 
 		_, ok := startMap[startKey].(map[string]interface{})
 		if !ok {
@@ -352,8 +352,18 @@ func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (
 	//             name_vrd   // 2-level
 	//      value1_opt1_vrf   // 3-level
 
+	// Accounts for keeping _ in name vs nesting.
+	// i.e. foo/_bar:100 --> foo_bar:100
+	//      foo_bar:100 --> {foo:{bar:100}}
+	fKey = strings.ReplaceAll(fKey, "/_", "/")
+
 	// Returns an array of strings
 	s := strings.Split(fKey, "_")
+
+	// Convert / to _
+	for i, _ := range s {
+		s[i] = strings.ReplaceAll(s[i], "/", "_")
+	}
 
 	// If no top level map name is passed, use the first element of array.
 	// This is the case for _min,_max,_avg and _old,_new fields.
