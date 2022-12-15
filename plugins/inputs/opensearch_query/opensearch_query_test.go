@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
 	"github.com/stretchr/testify/require"
@@ -479,23 +480,25 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		Image:        "opensearchproject/opensearch:2.4.0",
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
-			"discovery.type":            "single-node",
-			"plugins.security.disabled": "true",
+			"discovery.type": "single-node",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("initialized"),
+			wait.ForLog(".opendistro_security is used as internal security index."),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
 
-	url := fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort])
+	url := fmt.Sprintf("https://%s:%s", container.Address, container.Ports[servicePort])
 
 	o := &OpensearchQuery{
-		URLs:    []string{url},
-		Timeout: config.Duration(time.Second * 30),
-		Log:     testutil.Logger{},
+		URLs:         []string{url},
+		Timeout:      config.Duration(time.Second * 30),
+		Log:          testutil.Logger{},
+		Username:     "admin",
+		Password:     "admin",
+		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
 	err = o.connectToOpensearch()
@@ -578,10 +581,13 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 
 	o := &OpensearchQuery{
 		URLs: []string{
-			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+			fmt.Sprintf("https://%s:%s", container.Address, container.Ports[servicePort]),
 		},
-		Timeout: config.Duration(time.Second * 30),
-		Log:     testutil.Logger{},
+		Timeout:      config.Duration(time.Second * 30),
+		Log:          testutil.Logger{},
+		Username:     "admin",
+		Password:     "admin",
+		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
 	err = o.connectToOpensearch()
@@ -636,10 +642,13 @@ func TestOpensearchQueryIntegration_getMetricFields(t *testing.T) {
 
 	e := &OpensearchQuery{
 		URLs: []string{
-			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+			fmt.Sprintf("https://%s:%s", container.Address, container.Ports[servicePort]),
 		},
-		Timeout: config.Duration(time.Second * 30),
-		Log:     testutil.Logger{},
+		Timeout:      config.Duration(time.Second * 30),
+		Log:          testutil.Logger{},
+		Username:     "admin",
+		Password:     "admin",
+		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
 	err = e.connectToOpensearch()
