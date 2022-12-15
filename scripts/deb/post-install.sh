@@ -1,9 +1,7 @@
 #!/bin/bash
 
-BIN_DIR=/usr/bin
 LOG_DIR=/var/log/telegraf
 SCRIPT_DIR=/usr/lib/telegraf/scripts
-LOGROTATE_DIR=/etc/logrotate.d
 
 function install_init {
     cp -f $SCRIPT_DIR/init.sh /etc/init.d/telegraf
@@ -11,6 +9,7 @@ function install_init {
 }
 
 function install_systemd {
+    #shellcheck disable=SC2086
     cp -f $SCRIPT_DIR/telegraf.service $1
     systemctl enable telegraf || true
     systemctl daemon-reload || true
