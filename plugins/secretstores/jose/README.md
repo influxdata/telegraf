@@ -3,8 +3,13 @@
 The `jose` plugin allows to manage and store secrets locally
 protected by the [Javascript Object Signing and Encryption][jose] algorithm.
 
-To manage your secrets of this secret-store, you should use the
-[secrets command of Telegraf](/docs/COMMANDS_AND_FLAGS.md#secrets-management).
+To manage your secrets of this secret-store, you should use Telegraf. Run
+
+```shell
+telegraf secrets help
+```
+
+to get more information on how to do this.
 
 ## Configuration
 
