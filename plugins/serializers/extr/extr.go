@@ -2,6 +2,7 @@ package extr
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/influxdata/telegraf"
 	"math"
 	"strings"
@@ -204,54 +205,39 @@ func createItem(metric telegraf.Metric) map[string]interface{} {
 
 		id, fKey, fValue := splitMetricFieldId(field.Key, field.Value)
 
-		if id == keyStr {
+		if id == keyStr || id == tagStr || id == "" {
 
-			// Found a "_key" field.  Group this metric field under "keys" map.
+			var itemKey string
 
-			var mType map[string]interface{}
-
-			// Check if keys[key] exists
-			if _, found := item[keysStr]; !found {
-				item[keysStr] = make(map[string]interface{})
+			if id == keyStr {
+				// Found a "_key" field. Group this metric field under "keys" map.
+				itemKey = keysStr
+			} else if id == tagStr {
+				// Found a "_tag" field. Group this metric field under "tags" map.
+				itemKey = tagsStr
+			} else {
+				// No id field. Make this a top level item
+				itemKey = ""
 			}
 
-			mType = item[keysStr].(map[string]interface{})
-
-			mType[fKey] = fValue
-
-		} else if id == tagStr {
-
-			// Found a "_tag" field.  Group this metric field under "tags" map.
-
-			var mType map[string]interface{}
-
-			// Check if tags[tag] exists
-			if _, found := item[tagsStr]; !found {
-				item[tagsStr] = make(map[string]interface{})
+			myMap, myIndex, err := splitKey(item, itemKey, fKey)
+			if err != nil {
+				continue
 			}
-
-			mType = item[tagsStr].(map[string]interface{})
-
-			mType[fKey] = fValue
+			myMap[myIndex] = fValue
 
 		} else if id == minStr || id == maxStr || id == avgStr || id == oldStr || id == newStr {
 
-			// Found _min,_max,_avg or _old,_newfield. Do grouping.
+			// Found _min,_max,_avg or _old,_new field.
+			itemKey := ""
 
-			var mType map[string]interface{}
-
-			// Check if name[key] exists
-			if _, found := item[fKey]; !found {
-				item[fKey] = make(map[string]interface{})
+			myMap, myIndex, err := splitKey(item, itemKey, fKey)
+			if err != nil {
+				continue
 			}
 
-			mType = item[fKey].(map[string]interface{})
-			mType[id] = fValue
-
-		} else {
-
-			// Not a key or min/max/avg old/new field.
-			item[fKey] = fValue
+			mMap := myMap[myIndex].(map[string]interface{})
+			mMap[id] = fValue
 		}
 	}
 
@@ -294,7 +280,9 @@ func splitMetricFieldId(fKey string, fValue interface{}) (id string, key string,
 	// If last element matches "min","max","avg" or "key" or "old","new" string
 	lastElem := s[len(s)-1]
 
-	if lastElem == minStr || lastElem == maxStr || lastElem == avgStr || lastElem == keyStr || lastElem == oldStr || lastElem == newStr || lastElem == tagStr {
+	if lastElem == minStr || lastElem == maxStr || lastElem == avgStr ||
+		lastElem == keyStr || lastElem == oldStr || lastElem == newStr || lastElem == tagStr {
+
 		id = lastElem
 		mcut = "_" + lastElem
 		key = strings.Replace(fKey, mcut, "", -1)
@@ -314,4 +302,82 @@ func firstCharToLower(str string) string {
 	}
 
 	return ""
+}
+
+func buildMap(startMap map[string]interface{}, startKey string, s []string, numKeys int) (
+	map[string]interface{}, string, error) {
+
+	sIndex := numKeys - 1
+
+	if numKeys == 0 {
+		return startMap, startKey, errors.New("numKeys 0.")
+
+	} else {
+
+		if len(startKey) == 0 {
+			return nil, "", errors.New("No start key string provided")
+		}
+
+		_, ok := startMap[startKey].(map[string]interface{})
+		if !ok {
+			// This occurs if bad syntax is used for influx field
+			// i.e. car_tag=Ford and engine_car_tag=F150.
+			// Once we create..
+			//    {tags:{car: Ford}}
+			// We cannot create a
+			//    {tags:{car:{engine:F150}}}
+			// because the top level "car" element is already assigned the value "Ford" and thus
+			// cannot contain any subvalues.
+			// Expecting and map value for startMap[startKey]
+			return nil, "", errors.New("Expecting map value. Invalid metric name syntax.")
+		}
+
+		myMap := startMap[startKey].(map[string]interface{})
+		if _, found := myMap[s[sIndex]]; !found {
+			myMap[s[sIndex]] = make(map[string]interface{})
+		}
+
+		myMap, myKey, _ := buildMap(myMap, s[sIndex], s, sIndex)
+		return myMap, myKey, nil
+	}
+}
+
+// Split key into tokens and build nested map based on elements of fKey
+// Top level map is passed along with that maps name. i.e. input["keys"] or input["tags"]
+func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (
+	map[string]interface{}, string, error) {
+
+	// Split fInput into tokens.  Already removed type, _key, _min, _max, etc.
+	// i.e.           rtrId   // 1 level
+	//             name_vrd   // 2-level
+	//      value1_opt1_vrf   // 3-level
+
+	// Returns an array of strings
+	s := strings.Split(fKey, "_")
+
+	// If no top level map name is passed, use the first element of array.
+	// This is the case for _min,_max,_avg and _old,_new fields.
+	if len(topMapName) == 0 {
+		// use last element
+		topMapName = s[len(s)-1]
+		// Remove last element from array
+		s = s[:len(s)-1]
+	}
+
+	// Allocate map if not there.
+	// i.e. topMap["keys"]
+	if _, found := topMap[topMapName]; !found {
+		topMap[topMapName] = make(map[string]interface{})
+	}
+
+	numKeys := len(s)
+
+	if len(s) <= 0 {
+		// This is okay for a top level data element.. i.e.psuTemp_min=100
+		return topMap, topMapName, nil
+	}
+
+	myMap, myIndex, err := buildMap(topMap, topMapName, s, numKeys)
+
+	return myMap, myIndex, err
 }

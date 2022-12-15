@@ -24,12 +24,12 @@ func TestSerializeBatchMetricFloat(t *testing.T) {
 		"serialnumber": "ABC-123",
 	}
 	field1 := map[string]interface{}{
-		"core_key":   0,
-		"usage_idle": float64(91.5),
+		"core_key":  0,
+		"usageIdle": float64(91.5),
 	}
 	field2 := map[string]interface{}{
-		"core_key":   1,
-		"usage_idle": float64(0.9999),
+		"core_key":  1,
+		"usageIdle": float64(0.9999),
 	}
 	m1 := metric.New("CpuStats", tags, field1, now)
 	m2 := metric.New("CpuStats", tags, field2, now)
@@ -40,7 +40,7 @@ func TestSerializeBatchMetricFloat(t *testing.T) {
 	var buf []byte
 	buf, err := s.SerializeBatch(metrics)
 	assert.NoError(t, err)
-	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usage_idle":91.5},{"keys":{"core":1},"usage_idle":0.9999}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usageIdle":91.5},{"keys":{"core":1},"usageIdle":0.9999}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -79,12 +79,12 @@ func TestSerializeBatchMetricInt(t *testing.T) {
 		"serialnumber": "ABC-123",
 	}
 	field1 := map[string]interface{}{
-		"core_key":   0,
-		"usage_idle": int64(91),
+		"core_key":  0,
+		"usageIdle": int64(91),
 	}
 	field2 := map[string]interface{}{
-		"core_key":   1,
-		"usage_idle": int64(90),
+		"core_key":  1,
+		"usageIdle": int64(90),
 	}
 	m1 := metric.New("CpuStats", tags, field1, now)
 	m2 := metric.New("CpuStats", tags, field2, now)
@@ -96,7 +96,7 @@ func TestSerializeBatchMetricInt(t *testing.T) {
 	buf, err := s.SerializeBatch(metrics)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usage_idle":91},{"keys":{"core":1},"usage_idle":90}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usageIdle":91},{"keys":{"core":1},"usageIdle":90}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -107,12 +107,12 @@ func TestSerializeBatchMetricString(t *testing.T) {
 		"serialnumber": "ABC-123",
 	}
 	field1 := map[string]interface{}{
-		"core_key":   0,
-		"usage_idle": "foobar1",
+		"core_key":  0,
+		"usageIdle": "foobar1",
 	}
 	field2 := map[string]interface{}{
-		"core_key":   1,
-		"usage_idle": "barfoo1",
+		"core_key":  1,
+		"usageIdle": "barfoo1",
 	}
 	m1 := metric.New("CpuStats", tags, field1, now)
 	m2 := metric.New("CpuStats", tags, field2, now)
@@ -124,7 +124,7 @@ func TestSerializeBatchMetricString(t *testing.T) {
 	buf, err := s.SerializeBatch(metrics)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usage_idle":"foobar1"},{"keys":{"core":1},"usage_idle":"barfoo1"}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usageIdle":"foobar1"},{"keys":{"core":1},"usageIdle":"barfoo1"}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -291,19 +291,54 @@ func TestSerializeBatchMultiFields(t *testing.T) {
 		"ifOperStatus_old":  1,
 		"ifOperStatus_new":  0,
 	}
+	field5 := map[string]interface{}{
+		"routerId_key":                     10,
+		"neighborAddress_key":              "10.100.2.1",
+		"neighborAddressLessInterface_key": 0,
+		"neighborRouterId_key":             10,
+		"name_vrf_key":                     "vrf-1",
+		"id_vrf_key":                       100,
+		"state_old":                        "2Way",
+		"state_new":                        "Full",
+		"reason":                           "ExchangeComplete",
+	}
+	field6 := map[string]interface{}{
+		"slot_key":     1,
+		"fan_key":      1,
+		"tray_key":     2,
+		"rpm_min":      10,
+		"rpm_max":      99,
+		"rpm_avg":      75,
+		"cpu1_pwm_min": 10,
+		"cpu2_pwm_max": 99,
+		"cpu3_pwm_avg": 75,
+	}
+	field7 := map[string]interface{}{
+		"ifIndex_key":           4022,
+		"name_key":              "4:22",
+		"if1_ifAdminStatus_old": 1,
+		"if1_ifAdminStatus_new": 0,
+		"ifOperStatus_old":      1,
+		"ifOperStatus_new":      0,
+		"if2_ifAdminStatus_old": 1,
+		"if2_ifAdminStatus_new": 0,
+	}
 	m1 := metric.New("CpuStats", tags, field1, now)
 	m2 := metric.New("CpuStats", tags, field2, now)
 	m3 := metric.New("InterfaceStateChanged", tags, field3, now)
 	m4 := metric.New("InterfaceStateChanged", tags, field4, now)
+	m5 := metric.New("OspfNeighborStateChanged", tags, field5, now)
+	m6 := metric.New("FanTestTwoLayerStats", tags, field6, now)
+	m7 := metric.New("FanTestTwoLayerStats", tags, field7, now)
 
-	metrics := []telegraf.Metric{m1, m2, m3, m4}
+	metrics := []telegraf.Metric{m1, m2, m3, m4, m5, m6, m7}
 
 	s, _ := NewSerializer(0)
 	var buf []byte
 	buf, err := s.SerializeBatch(metrics)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"reporterSerialnumber":"XYZ-456","serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"mystring":"Elon Musk was here","usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"mystring":"Jeff Bezos was here","usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":%d}],"interfaceStateChanged":[{"device":{"reporterSerialnumber":"XYZ-456","serialnumber":"ABC-123"},"items":[{"ifAdminStatus":{"new":1,"old":0},"ifOperStatus":{"new":1,"old":0},"keys":{"ifIndex":1001,"name":"1:1"}},{"ifAdminStatus":{"new":0,"old":1},"ifOperStatus":{"new":0,"old":1},"keys":{"ifIndex":1002,"name":"1:2"}}],"name":"InterfaceStateChanged","ts":%d}]}`, now.Unix(), now.Unix()))
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"reporterSerialnumber":"XYZ-456","serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"mystring":"Elon Musk was here","usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"mystring":"Jeff Bezos was here","usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":%d}],"fanTestTwoLayerStats":[{"device":{"reporterSerialnumber":"XYZ-456","serialnumber":"ABC-123"},"items":[{"keys":{"fan":1,"slot":1,"tray":2},"pwm":{"cpu1":{"min":10},"cpu2":{"max":99},"cpu3":{"avg":75}},"rpm":{"avg":75,"max":99,"min":10}},{"ifAdminStatus":{"if1":{"new":0,"old":1},"if2":{"new":0,"old":1}},"ifOperStatus":{"new":0,"old":1},"keys":{"ifIndex":4022,"name":"4:22"}}],"name":"FanTestTwoLayerStats","ts":%d}],"interfaceStateChanged":[{"device":{"reporterSerialnumber":"XYZ-456","serialnumber":"ABC-123"},"items":[{"ifAdminStatus":{"new":1,"old":0},"ifOperStatus":{"new":1,"old":0},"keys":{"ifIndex":1001,"name":"1:1"}},{"ifAdminStatus":{"new":0,"old":1},"ifOperStatus":{"new":0,"old":1},"keys":{"ifIndex":1002,"name":"1:2"}}],"name":"InterfaceStateChanged","ts":%d}],"ospfNeighborStateChanged":[{"device":{"reporterSerialnumber":"XYZ-456","serialnumber":"ABC-123"},"items":[{"keys":{"neighborAddress":"10.100.2.1","neighborAddressLessInterface":0,"neighborRouterId":10,"routerId":10,"vrf":{"id":100,"name":"vrf-1"}},"reason":"ExchangeComplete","state":{"new":"Full","old":"2Way"}}],"name":"OspfNeighborStateChanged","ts":%d}]}`, now.Unix(), now.Unix(), now.Unix(), now.Unix()))
 
 	assert.Equal(t, string(expS), string(buf))
 }
@@ -384,6 +419,44 @@ func TestSerializeBatchMultiMetricTypesMultiGroups(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"tags":{"partNumber":"1647G-00129 800751-00-01","revision":"01"},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":0},{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"tags":{"partNumber":"1647G-00129 800751-00-01","revision":"01"},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":100000000},{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"tags":{"partNumber":"1647G-00129 800751-00-01","revision":"01"},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":550000000},{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":1},"tags":{"partNumber":"1647G-00129 800751-00-01","revision":"01"},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":%d}],"memoryStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"tags":{"partNumber":"1647G-00129 800751-00-01","revision":"01"},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"MemoryStats","ts":20000000},{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}}],"name":"MemoryStats","ts":%d}]}`, now.Unix(), now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
+}
+
+func TestSerializeBatchMultiGroupsMultiLevel(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnumber": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"core_key":               1,
+		"cpu1_subcore_key":       2,
+		"cpu2_subcore_key":       3,
+		"cpu1_subcore_usage_old": "up",
+		"cpu2_subcore_usage_new": "down",
+		"usage_min":              22,
+		"usage_max":              99,
+		"usage_avg":              44,
+		"cpu1_subcore_usage_min": 1,
+		"cpu1_subcore_usage_max": 100,
+		"cpu1_subcore_usage_avg": 50,
+		"cpu2_subcore_usage_min": 1,
+		"cpu2_subcore_usage_max": 100,
+		"cpu2_subcore_usage_avg": 50,
+		"abc_name_subcore":       "foo",
+		"xyz_name_subcore":       "bar",
+	}
+	m1 := metric.New("TestMultiLevelStats", tags, field1, now)
+
+	metrics := []telegraf.Metric{m1}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"testMultiLevelStats":[{"device":{"serialnumber":"ABC-123"},"items":[{"keys":{"core":1,"subcore":{"cpu1":2,"cpu2":3}},"subcore":{"name":{"abc":"foo","xyz":"bar"}},"usage":{"avg":44,"max":99,"min":22,"subcore":{"cpu1":{"avg":50,"max":100,"min":1,"old":"up"},"cpu2":{"avg":50,"max":100,"min":1,"new":"down"}}}}],"name":"TestMultiLevelStats","ts":%d}]}`, now.Unix()))
 
 	assert.Equal(t, string(expS), string(buf))
 }
