@@ -52,9 +52,10 @@ test -d $LOG_DIR || mkdir -p $LOG_DIR
 chown -R -L telegraf:telegraf $LOG_DIR
 chmod 755 $LOG_DIR
 
-if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
-	install_systemd /lib/systemd/system/telegraf.service
-	deb-systemd-invoke restart telegraf.service || echo "WARNING: systemd not running."
+if [ -d /run/systemd/system ]; then
+    install_systemd /lib/systemd/system/telegraf.service
+    # if and only if the service was already running then restart
+    deb-systemd-invoke try-restart telegraf.service >/dev/null || true
 else
 	# Assuming SysVinit
 	install_init
