@@ -47,66 +47,6 @@ integer is used as a metric field.
 If telegraf is configured with a logfile and the plugin's configuration
 contains an invalid namespace, class, or property, an error is logged.
 
-## Basics
-
-The examples contained in this file have been utilized and exercised in Windows
-environments. There are many other useful classes to monitor if you know what
-to look for.
-
-### Namespace
-
-A string representing the WMI namespace to be queried. For example,
-`root\\cimv2`.
-
-### ClassName
-
-A string representing the WMI class to be queried. For example,
-`Win32_Processor`.
-
-### Properties
-
-An array of strings representing the properties of the WMI class to be queried.
-By default, the `Name` property is included in the query. However, some classes
-do not contain a `Name` property, in which cases the `ExcludeNameKey`
-configuration should be utilized.
-
-### TagPropertiesInclude
-
-Properties which should be considered tags instead of fields.
-If a WMI class property's value is a string, then the string is included with
-the metric as a tag. If a WMI class property's value is an integer, then the
-integer is used as a metric field.
-
-If telegraf is configured with a logfile and the plugin's configuration
-contains an invalid namespace, class, or property, an error is logged.
-
-## Basics
-
-The examples contained in this file have been utilized and exercised in Windows
-environments. There are many other useful classes to monitor if you know what
-to look for.
-
-### Namespace
-
-A string representing the WMI namespace to be queried. For example,
-`root\\cimv2`.
-
-### ClassName
-
-A string representing the WMI class to be queried. For example,
-`Win32_Processor`.
-
-### Properties
-
-An array of strings representing the properties of the WMI class to be queried.
-By default, the `Name` property is included in the query. However, some classes
-do not contain a `Name` property, in which cases the `ExcludeNameKey`
-configuration should be utilized.
-
-### TagPropertiesInclude
-
-Properties which should be considered tags instead of fields.
-
 ## Configuration
 
 ```toml @sample.conf
