@@ -467,34 +467,6 @@ is installed.
     ]
     Filter = "ServiceName LIKE 'MSSQLSERVER' AND SqlServiceType = 1 AND (PropertyName LIKE 'FILEVERSION' OR PropertyName LIKE 'SKUNAME')"
     TagPropertiesInclude = ["PropertyName","ServiceName","PropertyStrValue"]
-This query provides metrics which contain tags describing the version and SKU of SQL Server. These properties are useful
-for creating a dashboard of your SQL Server inventory, which includes the patch level and edition of SQL Server that is
-installed.
-
-```toml
-[[inputs.win_wmi]]
-  namespace = "Root\\microsoft\\sqlserver\\ComputerManagement15"
-  classname = "SqlServiceAdvancedProperty"
-  properties = [
-    "PropertyName",
-    "ServiceName",
-    "PropertyStrValue",
-    "SqlServiceType"
-  ]
-  filter = "ServiceName LIKE 'MSSQLSERVER' AND SqlServiceType = 1 AND (PropertyName LIKE 'FILEVERSION' OR PropertyName LIKE 'SKUNAME')"
-  excludenamekey = true
-  name_prefix = "win_wmi_"
-  [[inputs.win_wmi.query]]
-    Namespace = "Root\\Microsoft\\SqlServer\\ComputerManagement15"
-    ClassName = "SqlServiceAdvancedProperty"
-    Properties = [
-      "PropertyName",
-      "ServiceName",
-      "PropertyStrValue",
-      "SqlServiceType"
-    ]
-    Filter = "ServiceName LIKE 'MSSQLSERVER' AND SqlServiceType = 1 AND (PropertyName LIKE 'FILEVERSION' OR PropertyName LIKE 'SKUNAME')"
-    TagPropertiesInclude = ["PropertyName","ServiceName","PropertyStrValue"]
 ```
 
 ## Troubleshooting
