@@ -157,7 +157,14 @@ func optimitzeGroupWithinLimits(g request, maxBatchSize uint16, maxExtraRegister
 	return requests
 }
 
-func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16, optimization string, maxExtraRegisters uint16) []request {
+type groupingParams struct {
+	Tags              map[string]string
+	MaxBatchSize      uint16
+	Optimization      string
+	MaxExtraRegisters uint16
+}
+
+func groupFieldsToRequests(fields []field, params groupingParams) []request {
 	if len(fields) == 0 {
 		return nil
 	}
@@ -204,12 +211,12 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 	}
 
 	var requests []request
-	switch optimization {
+	switch params.Optimization {
 	case "shrink":
 		// Shrink request by striping leading and trailing fields with an omit flag set
 		for _, g := range groups {
 			if len(g.fields) > 0 {
-				requests = append(requests, shrinkGroup(g, maxBatchSize)...)
+				requests = append(requests, shrinkGroup(g, params.MaxBatchSize)...)
 			}
 		}
 	case "rearrange":
@@ -217,7 +224,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 		// registers while keeping the number of requests
 		for _, g := range groups {
 			if len(g.fields) > 0 {
-				requests = append(requests, optimizeGroup(g, maxBatchSize)...)
+				requests = append(requests, optimizeGroup(g, params.MaxBatchSize)...)
 			}
 		}
 	case "aggressive":
@@ -229,7 +236,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 				total.fields = append(total.fields, g.fields...)
 			}
 		}
-		requests = optimizeGroup(total, maxBatchSize)
+		requests = optimizeGroup(total, params.MaxBatchSize)
 	case "max_insert":
 		// Similar to aggressive but keeps the number of touched registers bellow a threshold
 		var total request
@@ -238,12 +245,12 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 				total.fields = append(total.fields, g.fields...)
 			}
 		}
-		requests = optimitzeGroupWithinLimits(total, maxBatchSize, maxExtraRegisters)
+		requests = optimitzeGroupWithinLimits(total, params.MaxBatchSize, params.MaxExtraRegisters)
 	default:
 		// no optimization
 		for _, g := range groups {
 			if len(g.fields) > 0 {
-				requests = append(requests, splitMaxBatchSize(g, maxBatchSize)...)
+				requests = append(requests, splitMaxBatchSize(g, params.MaxBatchSize)...)
 			}
 		}
 	}
@@ -251,7 +258,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 	// Copy the tags
 	for i := range requests {
 		requests[i].tags = make(map[string]string)
-		for k, v := range tags {
+		for k, v := range params.Tags {
 			requests[i].tags[k] = v
 		}
 	}
