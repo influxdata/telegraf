@@ -37,6 +37,10 @@ func (d TagDict) Type() string {
 }
 
 func (d TagDict) Freeze() {
+	// Disable linter check as the frozen variable is modified despite
+	// passing a value instead of a pointer, because `FieldDict` holds
+	// a pointer to the underlying metric containing the `frozen` field.
+	//revive:disable:modifies-value-receiver
 	d.frozen = true
 }
 
