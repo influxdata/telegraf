@@ -355,7 +355,7 @@ The new (version 2) metrics provide:
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
 - *Schedulers* - This captures `sys.dm_os_schedulers`.
 - *SqlRequests* - This captures a snapshot of `sys.dm_exec_requests` and `sys.dm_exec_sessions` that gives you running requests as well as wait types and
-  blocking sessions. Telegraf's monitoring request is omitted unless it is a heading blocker.
+  blocking sessions. Telegraf's monitoring request is omitted unless it is a heading blocker. Also includes sleeping sessions with open transactions.
 - *VolumeSpace* - uses `sys.dm_os_volume_stats` to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
 - *Cpu* - uses the buffer ring (`sys.dm_os_ring_buffers`) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
 
