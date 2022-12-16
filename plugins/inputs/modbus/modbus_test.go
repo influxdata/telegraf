@@ -4732,7 +4732,7 @@ func TestRequestsWorkaroundsReadCoilsStartingAtZeroRequest(t *testing.T) {
 				},
 				{
 					Name:    "coil-new-group",
-					Address: uint16(maxQuantityCoils),
+					Address: maxQuantityCoils,
 				},
 			},
 		},
@@ -4746,7 +4746,7 @@ func TestRequestsWorkaroundsReadCoilsStartingAtZeroRequest(t *testing.T) {
 
 	// The second field should form a new group as the previous request
 	// is now too large (beyond max-coils-per-read) after zero enforcement.
-	require.Equal(t, uint16(maxQuantityCoils), plugin.requests[1].coil[1].address)
+	require.Equal(t, maxQuantityCoils, plugin.requests[1].coil[1].address)
 	require.Equal(t, uint16(1), plugin.requests[1].coil[1].length)
 }
 
@@ -4778,6 +4778,6 @@ func TestRequestsWorkaroundsReadCoilsStartingAtZeroRegister(t *testing.T) {
 
 	// The second field should form a new group as the previous request
 	// is now too large (beyond max-coils-per-read) after zero enforcement.
-	require.Equal(t, uint16(maxQuantityCoils), plugin.requests[1].coil[1].address)
+	require.Equal(t, maxQuantityCoils, plugin.requests[1].coil[1].address)
 	require.Equal(t, uint16(1), plugin.requests[1].coil[1].length)
 }
