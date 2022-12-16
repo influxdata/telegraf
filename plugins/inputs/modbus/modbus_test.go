@@ -3468,6 +3468,91 @@ func TestRequestsStartingWithOmits(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
+func TestRequestsWithOmittedFieldsOnly(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT16",
+					Omit:      true,
+				},
+			},
+		},
+	}
+	require.NoError(t, modbus.Init())
+	require.Empty(t, modbus.requests)
+}
+
+func TestRequestsGroupWithOmittedFieldsOnly(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-8",
+					Address:   uint16(8),
+					InputType: "INT16",
+				},
+			},
+		},
+	}
+	require.NoError(t, modbus.Init())
+	require.Len(t, modbus.requests, 1)
+	require.NotNil(t, modbus.requests[1])
+	require.Len(t, modbus.requests[1].holding, 1)
+	require.Equal(t, uint16(8), modbus.requests[1].holding[0].address)
+	require.Equal(t, uint16(1), modbus.requests[1].holding[0].length)
+}
+
 func TestRequestsEmptyFields(t *testing.T) {
 	modbus := Modbus{
 		Name:              "Test",
@@ -4399,102 +4484,6 @@ func TestRequestOptimizationAggressive(t *testing.T) {
 	}
 }
 
-func TestRequestsWorkaroundsOneRequestPerField(t *testing.T) {
-	plugin := Modbus{
-		Name:              "Test",
-		Controller:        "tcp://localhost:1502",
-		ConfigurationType: "request",
-		Log:               testutil.Logger{},
-		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
-	}
-	plugin.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-1",
-					Address:   uint16(1),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-2",
-					Address:   uint16(2),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-3",
-					Address:   uint16(3),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-4",
-					Address:   uint16(4),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-5",
-					Address:   uint16(5),
-					InputType: "INT16",
-				},
-			},
-		},
-	}
-	require.NoError(t, plugin.Init())
-	require.Len(t, plugin.requests[1].holding, len(plugin.Requests[0].Fields))
-}
-
-func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
-	plugin := Modbus{
-		Name:              "Test",
-		Controller:        "tcp://localhost:1502",
-		ConfigurationType: "register",
-		Log:               testutil.Logger{},
-		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
-	}
-	plugin.SlaveID = 1
-	plugin.HoldingRegisters = []fieldDefinition{
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-1",
-			Address:   []uint16{1},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-2",
-			Address:   []uint16{2},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-3",
-			Address:   []uint16{3},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-4",
-			Address:   []uint16{4},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-5",
-			Address:   []uint16{5},
-			Scale:     1.0,
-		},
-	}
-	require.NoError(t, plugin.Init())
-	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
-}
-
 func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 	maxsize := maxQuantityHoldingRegisters
 	maxExtraRegisters := uint16(5)
@@ -4626,4 +4615,169 @@ func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
 		})
 	}
+}
+func TestRequestsWorkaroundsOneRequestPerField(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
+	}
+	plugin.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-3",
+					Address:   uint16(3),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-4",
+					Address:   uint16(4),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-5",
+					Address:   uint16(5),
+					InputType: "INT16",
+				},
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].holding, len(plugin.Requests[0].Fields))
+}
+
+func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "register",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
+	}
+	plugin.SlaveID = 1
+	plugin.HoldingRegisters = []fieldDefinition{
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-1",
+			Address:   []uint16{1},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-2",
+			Address:   []uint16{2},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-3",
+			Address:   []uint16{3},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-4",
+			Address:   []uint16{4},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-5",
+			Address:   []uint16{5},
+			Scale:     1.0,
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
+}
+
+func TestRequestsWorkaroundsReadCoilsStartingAtZeroRequest(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{ReadCoilsStartingAtZero: true},
+	}
+	plugin.SlaveID = 1
+	plugin.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			RegisterType: "coil",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "coil-8",
+					Address: uint16(8),
+				},
+				{
+					Name:    "coil-new-group",
+					Address: uint16(maxQuantityCoils),
+				},
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].coil, 2)
+
+	// First group should now start at zero and have the cumulated length
+	require.Equal(t, uint16(0), plugin.requests[1].coil[0].address)
+	require.Equal(t, uint16(9), plugin.requests[1].coil[0].length)
+
+	// The second field should form a new group as the previous request
+	// is now too large (beyond max-coils-per-read) after zero enforcement.
+	require.Equal(t, uint16(maxQuantityCoils), plugin.requests[1].coil[1].address)
+	require.Equal(t, uint16(1), plugin.requests[1].coil[1].length)
+}
+
+func TestRequestsWorkaroundsReadCoilsStartingAtZeroRegister(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "register",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{ReadCoilsStartingAtZero: true},
+	}
+	plugin.SlaveID = 1
+	plugin.Coils = []fieldDefinition{
+		{
+			Name:    "coil-8",
+			Address: []uint16{8},
+		},
+		{
+			Name:    "coil-new-group",
+			Address: []uint16{maxQuantityCoils},
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].coil, 2)
+
+	// First group should now start at zero and have the cumulated length
+	require.Equal(t, uint16(0), plugin.requests[1].coil[0].address)
+	require.Equal(t, uint16(9), plugin.requests[1].coil[0].length)
+
+	// The second field should form a new group as the previous request
+	// is now too large (beyond max-coils-per-read) after zero enforcement.
+	require.Equal(t, uint16(maxQuantityCoils), plugin.requests[1].coil[1].address)
+	require.Equal(t, uint16(1), plugin.requests[1].coil[1].length)
 }
