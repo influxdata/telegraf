@@ -4,12 +4,12 @@
 package win_wmi
 
 import (
-	"bytes"
 	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	ole "github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
@@ -34,7 +34,7 @@ const sampleConfig = `
 
 // Query struct
 type Query struct {
-	Query                string   `toml:"query"`
+	Query                string
 	Namespace            string   `toml:"Namespace"`
 	ClassName            string   `toml:"ClassName"`
 	Properties           []string `toml:"Properties"`
@@ -43,11 +43,10 @@ type Query struct {
 	tagFilter            filter.Filter
 }
 
-var lock sync.Mutex
-
 // Wmi struct
 type Wmi struct {
 	Queries []Query `toml:"query"`
+	Log     telegraf.Logger
 }
 
 // S_FALSE is returned by CoInitializeEx if it was already called on this thread.
@@ -64,6 +63,14 @@ func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
 	return i, nil
 }
 
+// Init function
+func (s *Wmi) Init() error {
+	if err := CompileInputs(s); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Description function
 func (s *Wmi) Description() string {
 	return "returns WMI query results as metrics"
@@ -74,49 +81,53 @@ func (s *Wmi) SampleConfig() string {
 	return sampleConfig
 }
 
-// build a WMI query
-func BuildWmiQuery(q Query) (string, error) {
-	var wql string
-	var b bytes.Buffer
-	_, err := b.WriteString("SELECT ")
-	if err != nil {
-		return wql, err
+func CompileInputs(s *Wmi) error {
+	BuildWqlStatements(s)
+	if err := CompileTagFilters(s); err != nil {
+		return err
 	}
+	return nil
+}
 
-	_, err = b.WriteString(strings.Join(q.Properties, ", "))
-	if err != nil {
-		return wql, err
+func CompileTagFilters(s *Wmi) error {
+	var err error
+	for i, q := range s.Queries {
+		s.Queries[i].tagFilter, err = CompileTagFilter(q)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
+}
 
-	_, err = b.WriteString(" FROM ")
+func CompileTagFilter(q Query) (filter.Filter, error) {
+	tagFilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagPropertiesInclude, nil, false, false)
 	if err != nil {
-		return wql, err
+		return nil, fmt.Errorf("creating tag filter failed: %v", err)
 	}
+	return tagFilter, nil
+}
 
-	_, err = b.WriteString(q.ClassName)
-	if err != nil {
-		return wql, err
+func BuildWqlStatements(s *Wmi) {
+	for i, q := range s.Queries {
+		s.Queries[i].Query = BuildWqlStatement(q)
 	}
+}
 
+// build a WMI query from input configuration
+func BuildWqlStatement(q Query) string {
+	wql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(q.Properties, ", "), q.ClassName)
 	if len(q.Filter) > 0 {
-		_, err = b.WriteString(" WHERE ")
-		if err != nil {
-			return wql, err
-		}
-
-		_, err = b.WriteString(q.Filter)
-		if err != nil {
-			return wql, err
-		}
+		wql = fmt.Sprintf("%s WHERE %s", wql, q.Filter)
 	}
-	wql = b.String()
-
-	return wql, nil
+	return wql
 }
 
 func DoQuery(q Query, acc telegraf.Accumulator) error {
-	lock.Lock()
-	defer lock.Unlock()
+	// The only way to run WMI queries in parallel while being thread-safe is to
+	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
+	// Otherwise, attempting to initialize and run parallel queries across
+	// goroutines will result in protected memory errors.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -124,8 +135,7 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 
 	// init COM
-	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
-	if err != nil {
+	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
 		oleCode := err.(*ole.OleError).Code()
 		if oleCode != ole.S_OK && oleCode != sFalse {
 			return err
@@ -137,54 +147,42 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	} else if unknown == nil {
-		panic("CreateObject returned nil")
+		return fmt.Errorf("failed to create WbemScripting.SWbemLocator, is WMI broken?")
 	}
 	defer unknown.Release()
 
 	wmi, err := unknown.QueryInterface(ole.IID_IDispatch)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to QueryInterface: %v", err)
 	}
 	defer wmi.Release()
 
 	// service is a SWbemServices
 	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", nil, q.Namespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed calling method ConnectServer: %v", err)
 	}
 	service := serviceRaw.ToIDispatch()
 	defer func() { _ = serviceRaw.Clear() }()
 
-	query, err := BuildWmiQuery(q)
-	if err != nil {
-		return err
-	}
-
 	// result is a SWBemObjectSet
-	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", query)
+	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", q.Query)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed calling method ExecQuery for query %s: %v", q.Query, err)
 	}
 	result := resultRaw.ToIDispatch()
 	defer func() { _ = resultRaw.Clear() }()
 
 	count, err := oleInt64(result, "Count")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed getting Count: %v", err)
 	}
-
-	// Compile the tag filter
-	tagfilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagPropertiesInclude, nil, false, false)
-	if err != nil {
-		return fmt.Errorf("creating tag filter failed: %v", err)
-	}
-	q.tagFilter = tagfilter
 
 	for i := int64(0); i < count; i++ {
 		// item is a SWbemObject
 		itemRaw, err := oleutil.CallMethod(result, "ItemIndex", i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed calling method ItemIndex: %v", err)
 		}
 
 		outerErr := func() error {
@@ -195,7 +193,7 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 				innerErr := func() error {
 					prop, err := oleutil.GetProperty(item, wmiProperty)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed GetProperty: %v", err)
 					}
 					defer func() { _ = prop.Clear() }()
 
@@ -233,7 +231,6 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 							return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
 						}
 						fields[wmiProperty] = fieldValue
-
 					}
 
 					return nil
@@ -261,10 +258,13 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(q Query) {
 			defer wg.Done()
+			start := time.Now()
 			err := DoQuery(q, acc)
 			if err != nil {
 				acc.AddError(err)
 			}
+			elapsed := time.Since(start)
+			s.Log.Debugf("Query \"%s\" took %s", q.Query, elapsed)
 		}(query)
 	}
 	wg.Wait()
