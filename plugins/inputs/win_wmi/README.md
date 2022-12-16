@@ -35,49 +35,10 @@ An array of strings representing the properties of the WMI class to be queried.
 ### TagPropertiesInclude
 
 Properties which should be considered tags instead of fields.
-This document presents the input plugin to read WMI classes on Windows
-operating systems. With the win_wmi plugin, an administrator is enabled to
-capture and filter virtually any configuration or metric value exposed through
-the Windows Management Instrumentation service.
-
-If a WMI class property's value is a string, then the string is included with
-the metric as a tag. If a WMI class property's value is an integer, then the
-integer is used as a metric field.
-
-If telegraf is configured with a logfile and the plugin's configuration
-contains an invalid namespace, class, or property, an error is logged.
 
 ## Configuration
 
 ```toml @sample.conf
-  ## [[inputs.win_wmi]]
-  ##   name_prefix = "win_wmi_"
-  ##   [[inputs.win_wmi.query]]
-  ##     Namespace = "root\\cimv2"
-  ##     ClassName = "Win32_Volume"
-  ##     Properties = ["Name","Capacity","FreeSpace"]
-  ##     Filter = 'NOT Name LIKE "\\\\?\\%"'
-  ##     TagPropertiesInclude = ["Name"]
-  ## By default, this plugin returns no results.
-  ## Uncomment the example below or write your own as you see fit.
-  ## The "Name" property of a WMI class is automatically included unless
-  ## excludenamekey is true.
-  ## If the WMI property's value is a string, then it is used as a tag.
-  ## If the WMI property's value is a type of int, then it is used as a field.
-  ## [[inputs.win_wmi]]
-  ##   name_prefix = "win_wmi_"
-  ##   [[inputs.win_wmi.query]]
-  ##     Namespace = "root\\cimv2"
-  ##     ClassName = "Win32_Volume"
-  ##     Properties = ["Name","Capacity","FreeSpace"]
-  ##     Filter = 'NOT Name LIKE "\\\\?\\%"'
-  ##     TagPropertiesInclude = ["Name"]
-  ## By default, this plugin returns no results.
-  ## Uncomment the example below or write your own as you see fit.
-  ## The "Name" property of a WMI class is automatically included unless
-  ## excludenamekey is true.
-  ## If the WMI property's value is a string, then it is used as a tag.
-  ## If the WMI property's value is a type of int, then it is used as a field.
   ## [[inputs.win_wmi]]
   ##   name_prefix = "win_wmi_"
   ##   [[inputs.win_wmi.query]]
@@ -109,73 +70,6 @@ locator of each device.
       "Speed",
     ]
     TagPropertiesInclude = ["Name","DeviceLocator","Manufacturer","PartNumber"]
-```
-
-This query provides metrics for the number of cores in each physical processor.
-Since the Name property of the WMI class is included by default, the metrics
-will also contain a tag value describing the model of each CPU.
-
-```toml
-[[inputs.win_wmi]]
-  name_prefix = "win_wmi_"
-  [[inputs.win_wmi.query]]
-    Namespace = "root\\cimv2"
-    ClassName = "Win32_Processor"
-    Properties = ["Name","NumberOfCores"]
-    TagPropertiesInclude = ["Name"]
-```
-
-This query provides metrics for the number of socketted processors, number of
-logical cores on each processor, and the total physical memory in the computer.
-The metrics include tag values for the domain, manufacturer, and model of the
-This query provides metrics for the speed and capacity of each physical memory
-device, along with tags describing the manufacturer, part number, and device
-locator of each device.
-
-```toml
-[[inputs.win_wmi]]
-  namespace = "root\\cimv2"
-  classname = "Win32_PhysicalMemory"
-  properties = [
-    "Capacity",
-    "DeviceLocator",
-    "Manufacturer",
-    "PartNumber",
-    "Speed",
-  ]
-  name_prefix = "win_wmi_"
-  [[inputs.win_wmi.query]]
-    Namespace = "root\\cimv2"
-    ClassName = "Win32_PhysicalMemory"
-    Properties = [
-      "Name",
-      "Capacity",
-      "DeviceLocator",
-      "Manufacturer",
-      "PartNumber",
-      "Speed",
-    ]
-    TagPropertiesInclude = ["Name","DeviceLocator","Manufacturer","PartNumber"]
-```
-
-This query provides metrics for the number of cores in each physical processor.
-Since the Name property of the WMI class is included by default, the metrics
-will also contain a tag value describing the model of each CPU.
-
-```toml
-[[inputs.win_wmi]]
-  name_prefix = "win_wmi_"
-  [[inputs.win_wmi.query]]
-    Namespace = "root\\cimv2"
-    ClassName = "Win32_Processor"
-    Properties = ["Name","NumberOfCores"]
-    TagPropertiesInclude = ["Name"]
-```
-
-This query provides metrics for the number of socketted processors, number of
-logical cores on each processor, and the total physical memory in the computer.
-The metrics include tag values for the domain, manufacturer, and model of the
-
 ```
 
 This query provides metrics for the number of cores in each physical processor.
@@ -236,79 +130,6 @@ tagged value to describe whether the installation is 32-bit or 64-bit.
       "ProductType"
     ]
     TagPropertiesInclude = ["Name","Caption","OSArchitecture"]
-
-  namespace = "root\\cimv2"
-  classname = "Win32_ComputerSystem"
-  properties = [
-    "Domain",
-    "Manufacturer",
-    "Model",
-    "NumberOfLogicalProcessors",
-    "NumberOfProcessors",
-    "TotalPhysicalMemory"
-  ]
-  name_prefix = "win_wmi_"
-  [[inputs.win_wmi.query]]
-    Namespace = "root\\cimv2"
-    ClassName = "Win32_ComputerSystem"
-    Properties = [
-      "Name",
-      "Domain",
-      "Manufacturer",
-      "Model",
-      "NumberOfLogicalProcessors",
-      "NumberOfProcessors",
-      "TotalPhysicalMemory"
-    ]
-    TagPropertiesInclude = ["Name","Domain","Manufacturer","Model"]
-```
-
-This query provides metrics for the paging file's free space, the operating
-system's free virtual memory, the operating system SKU installed on the
-computer, and the Windows product type. The OS architecture is included as a
-tagged value to describe whether the installation is 32-bit or 64-bit.
-
-```toml
-[[inputs.win_wmi]]
-  name_prefix = "win_wmi_"
-  [[inputs.win_wmi.query]]
-    ClassName = "Win32_OperatingSystem"
-    Namespace = "root\\cimv2"
-    Properties = [
-      "Name",
-      "Caption",
-      "FreeSpaceInPagingFiles",
-      "FreeVirtualMemory",
-      "OperatingSystemSKU",
-      "OSArchitecture",
-      "ProductType"
-    ]
-    TagPropertiesInclude = ["Name","Caption","OSArchitecture"]
-
-```
-
-This query provides metrics for the paging file's free space, the operating
-system's free virtual memory, the operating system SKU installed on the
-computer, and the Windows product type. The OS architecture is included as a
-tagged value to describe whether the installation is 32-bit or 64-bit.
-
-```toml
-[[inputs.win_wmi]]
-  name_prefix = "win_wmi_"
-  [[inputs.win_wmi.query]]
-    ClassName = "Win32_OperatingSystem"
-    Namespace = "root\\cimv2"
-    Properties = [
-      "Name",
-      "Caption",
-      "FreeSpaceInPagingFiles",
-      "FreeVirtualMemory",
-      "OperatingSystemSKU",
-      "OSArchitecture",
-      "ProductType"
-    ]
-    TagPropertiesInclude = ["Name","Caption","OSArchitecture"]
-
 ]
 ```
 
@@ -380,9 +201,6 @@ is installed.
 If you are getting an error about an invalid WMI namespace, class, or property,
 use the `Get-WmiObject` or `Get-CimInstance` PowerShell commands in order to
 verify their validity. For example:
-If you are getting an error about an invalid WMI namespace, class, or property,
-use the `Get-WmiObject` or `Get-CimInstance` PowerShell commands in order to
-verify their validity. For example:
 
 ```powershell
 Get-WmiObject -Namespace root\cimv2 -Class Win32_Volume -Property Capacity, FreeSpace, Name -Filter 'NOT Name LIKE "\\\\?\\%"'
@@ -395,10 +213,6 @@ Get-CimInstance -Namespace root\cimv2 -ClassName Win32_Volume -Property Capacity
 ## Metrics
 
 All WMI class properties are fields unless specified in `TagPropertiesInclude`.
-Fields and tags are dynamically generated based on the structure of the queried
-WMI class. If the WMI class property's value is a string, then the name and
-value will be used as a metric tag. If the WMI class property's value is an
-integer, then the name and value will be used as a metric field.
 
 ## Example Output
 
