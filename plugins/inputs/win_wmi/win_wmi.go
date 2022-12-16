@@ -4,6 +4,7 @@
 package win_wmi
 
 import (
+	_ "embed"
 	"fmt"
 	"runtime"
 	"strconv"
@@ -19,18 +20,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## By default, this plugin returns no results.
-  ## Uncomment the example below or write your own as you see fit.
-  ## [[inputs.win_wmi]]
-  ##   name_prefix = "win_wmi_"
-  ##   [[inputs.win_wmi.query]]
-  ##     Namespace = "root\\cimv2"
-  ##     ClassName = "Win32_Volume"
-  ##     Properties = ["Name", "Capacity", "FreeSpace"]
-  ##     Filter = 'NOT Name LIKE "\\\\?\\%"'
-  ##     TagPropertiesInclude = ["Name"]
-`
+//go:embed sample.conf
+var sampleConfig string
 
 // Query struct
 type Query struct {
