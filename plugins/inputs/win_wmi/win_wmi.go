@@ -178,13 +178,6 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed getting Count: %v", err)
 	}
 
-	// Compile the tag filter
-	tagfilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagPropertiesInclude, nil, false, false)
-	if err != nil {
-		return fmt.Errorf("creating tag filter failed: %v", err)
-	}
-	q.tagFilter = tagfilter
-
 	for i := int64(0); i < count; i++ {
 		// item is a SWbemObject
 		itemRaw, err := oleutil.CallMethod(result, "ItemIndex", i)
@@ -238,10 +231,6 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 							return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
 						}
 						fields[wmiProperty] = fieldValue
-<<<<<<< HEAD
-=======
-
->>>>>>> 7592cf338 (implement suggestions from code review, et al)
 					}
 
 					return nil
