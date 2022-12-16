@@ -35,9 +35,10 @@ An array of strings representing the properties of the WMI class to be queried.
 ### TagPropertiesInclude
 
 Properties which should be considered tags instead of fields.
-This document presents the input plugin to read WMI classes on Windows operating systems. With the win_wmi plugin,
-an administrator is enabled to capture and filter virtually any configuration or metric value exposed through the
-Windows Management Instrumentation service.
+This document presents the input plugin to read WMI classes on Windows
+operating systems. With the win_wmi plugin, an administrator is enabled to
+capture and filter virtually any configuration or metric value exposed through
+the Windows Management Instrumentation service.
 
 If a WMI class property's value is a string, then the string is included with
 the metric as a tag. If a WMI class property's value is an integer, then the
@@ -72,8 +73,9 @@ configuration should be utilized.
 ### TagPropertiesInclude
 
 Properties which should be considered tags instead of fields.
-If a WMI class property's value is a string, then the string is included with the metric as a tag. If a WMI class
-property's value is an integer, then the integer is used as a metric field.
+If a WMI class property's value is a string, then the string is included with
+the metric as a tag. If a WMI class property's value is an integer, then the
+integer is used as a metric field.
 
 If telegraf is configured with a logfile and the plugin's configuration
 contains an invalid namespace, class, or property, an error is logged.
@@ -186,8 +188,9 @@ will also contain a tag value describing the model of each CPU.
 This query provides metrics for the number of socketted processors, number of
 logical cores on each processor, and the total physical memory in the computer.
 The metrics include tag values for the domain, manufacturer, and model of the
-This query provides metrics for the speed and capacity of each physical memory device, along with tags describing
-the manufacturer, part number, and device locator of each device.
+This query provides metrics for the speed and capacity of each physical memory
+device, along with tags describing the manufacturer, part number, and device
+locator of each device.
 
 ```toml
 [[inputs.win_wmi]]
@@ -232,6 +235,7 @@ will also contain a tag value describing the model of each CPU.
 This query provides metrics for the number of socketted processors, number of
 logical cores on each processor, and the total physical memory in the computer.
 The metrics include tag values for the domain, manufacturer, and model of the
+
 ```
 
 This query provides metrics for the number of cores in each physical processor.
@@ -498,8 +502,9 @@ installed.
 If you are getting an error about an invalid WMI namespace, class, or property,
 use the `Get-WmiObject` or `Get-CimInstance` PowerShell commands in order to
 verify their validity. For example:
-If you are getting an error about an invalid WMI namespace, class, or property, use the `Get-WmiObject` or
-`Get-CimInstance` PowerShell commands in order to verify their validity. For example:
+If you are getting an error about an invalid WMI namespace, class, or property,
+use the `Get-WmiObject` or `Get-CimInstance` PowerShell commands in order to
+verify their validity. For example:
 
 ```powershell
 Get-WmiObject -Namespace root\cimv2 -Class Win32_Volume -Property Capacity, FreeSpace, Name -Filter 'NOT Name LIKE "\\\\?\\%"'
