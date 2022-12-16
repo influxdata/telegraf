@@ -189,6 +189,7 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 			if c.workarounds.OnRequestPerField {
 				params.MaxBatchSize = 1
 			}
+			params.EnforceFromZero = c.workarounds.ReadCoilsStartingAtZero
 			requests := groupFieldsToRequests(fields, params)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
@@ -215,7 +216,9 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
 		}
-		result[def.SlaveID] = set
+		if !set.Empty() {
+			result[def.SlaveID] = set
+		}
 	}
 
 	return result, nil
