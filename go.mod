@@ -110,8 +110,20 @@ require (
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
 	github.com/jmespath/go-jmespath v0.4.0
+	github.com/kardianos/service v1.2.1
+	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kolo/xmlrpc v0.0.0-20201022064351-38db28db192b
+	github.com/logzio/azure-monitor-metrics-receiver v1.0.0
+	github.com/lxc/lxd v0.0.0-20220920163450-e9b4b514106a
+	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
+	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
+	github.com/microsoft/ApplicationInsights-Go v0.4.4
+	github.com/miekg/dns v1.1.50
+	github.com/moby/ipvs v1.0.2
+	github.com/multiplay/go-ts3 v1.0.1
+	github.com/nats-io/nats-server/v2 v2.9.9
+	github.com/nats-io/nats.go v1.19.0
 	github.com/netsampler/goflow2 v1.1.1
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
