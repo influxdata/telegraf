@@ -130,7 +130,6 @@ tagged value to describe whether the installation is 32-bit or 64-bit.
       "ProductType"
     ]
     TagPropertiesInclude = ["Name","Caption","OSArchitecture"]
-]
 ```
 
 ### Failover Clusters
