@@ -390,18 +390,6 @@ the Windows Server Failover Cluster and the type of Quorum in use.
       "DynamicQuorumEnabled"
     ]
     TagPropertiesInclude = ["Name","QuorumType"]
-This query provides a boolean metric describing whether Dynamic Quorum is enabled for the cluster. The tag values for
-the metric also include the name of the Windows Server Failover Cluster and the type of Quorum in use.
-
-```toml
-[[inputs.win_wmi]]
-  namespace = "root\\mscluster"
-  classname = "MSCluster_Cluster"
-  properties = [
-    "QuorumType",
-    "DynamicQuorumEnabled"
-  ]
-  name_prefix = "win_wmi_MSCluster"
 ```
 
 ### Bitlocker
@@ -413,28 +401,6 @@ VolumeName property is included in the metric as a tagged value.
 
 ```toml
 [[inputs.win_wmi]]
-  name_prefix = "win_wmi_"
-  [[inputs.win_wmi.query]]
-    Namespace = "root\\Microsoft\\MBAM"
-    ClassName = "MBAM_Volume"
-    Properties = [
-      "Compliant",
-      "VolumeName"
-    ]
-    TagPropertiesInclude = ["VolumeName"]
-This query provides a list of volumes which are eligible for bitlocker encryption and their compliance status. Because
-the MBAM_Volume class does not include a Name property, the ExcludeNameKey configuration is included. The VolumeName
-property is included in the metric as a tagged value.
-
-```toml
-[[inputs.win_wmi]]
-  namespace = "root\\Microsoft\\MBAM"
-  classname = "MBAM_Volume"
-  properties = [
-    "Compliant",
-    "VolumeName"
-  ]
-  excludenamekey = true
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
     Namespace = "root\\Microsoft\\MBAM"
