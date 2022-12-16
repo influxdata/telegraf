@@ -1134,6 +1134,7 @@ WHERE
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')
 		)
+		AND [session_id] <> @@SPID  --Exclude current SPID
 	)
 OPTION(MAXDOP 1)'
 
