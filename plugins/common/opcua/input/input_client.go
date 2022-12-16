@@ -336,13 +336,13 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 }
 
 func (o *OpcUAInputClient) initNodeIDs() error {
-	o.NodeIDs = make([]*ua.NodeID, len(o.NodeMetricMapping))
-	for i, node := range o.NodeMetricMapping {
+	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
+	for _, node := range o.NodeMetricMapping {
 		nid, err := ua.ParseNodeID(node.Tag.NodeID())
 		if err != nil {
 			return err
 		}
-		o.NodeIDs[i] = nid
+		o.NodeIDs = append(o.NodeIDs, nid)
 	}
 
 	return nil
