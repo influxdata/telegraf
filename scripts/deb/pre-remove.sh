@@ -1,9 +1,9 @@
 #!/bin/bash
 
-BIN_DIR=/usr/bin
-
-if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
-	deb-systemd-invoke stop telegraf.service
+if [ -d /run/systemd/system ]; then
+	if [ "$1" = remove ]; then
+		deb-systemd-invoke stop telegraf.service
+	fi
 else
 	# Assuming sysv
 	invoke-rc.d telegraf stop
