@@ -236,7 +236,7 @@ func BenchmarkReader(b *testing.B) {
 		time.Unix(0, 1517620624000000000),
 	)
 	metrics := make([]telegraf.Metric, 0, 1000)
-	for range metrics {
+	for i := 0; i < 1000; i++ {
 		metrics = append(metrics, m)
 	}
 
