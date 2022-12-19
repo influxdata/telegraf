@@ -364,6 +364,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
 		for _, tagSub := range c.TagSubscriptions {
 			if equalPathNoKeys(fullPath, tagSub.fullPath) {
+				c.Log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
 				worker.storeTags(update, tagSub)
 				response.Update.Update = append(response.Update.Update[:i], response.Update.Update[i+1:]...)
 			}
