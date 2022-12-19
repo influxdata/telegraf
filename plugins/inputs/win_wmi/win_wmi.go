@@ -25,12 +25,12 @@ var sampleConfig string
 
 // Query struct
 type Query struct {
-	Query                string
-	Namespace            string   `toml:"Namespace"`
-	ClassName            string   `toml:"ClassName"`
-	Properties           []string `toml:"Properties"`
-	Filter               string   `toml:"Filter"`
-	TagPropertiesInclude []string `toml:"TagPropertiesInclude"`
+	query                string
+	Namespace            string   `toml:"namespace"`
+	ClassName            string   `toml:"class_name"`
+	Properties           []string `toml:"properties"`
+	Filter               string   `toml:"filter"`
+	TagPropertiesInclude []string `toml:"tag_properties"`
 	tagFilter            filter.Filter
 }
 
@@ -101,7 +101,7 @@ func CompileTagFilter(q Query) (filter.Filter, error) {
 
 func BuildWqlStatements(s *Wmi) {
 	for i, q := range s.Queries {
-		s.Queries[i].Query = BuildWqlStatement(q)
+		s.Queries[i].query = BuildWqlStatement(q)
 	}
 }
 
@@ -114,7 +114,7 @@ func BuildWqlStatement(q Query) string {
 	return wql
 }
 
-func DoQuery(q Query, acc telegraf.Accumulator) error {
+func (q *Query) DoQuery(acc telegraf.Accumulator) error {
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across
@@ -157,9 +157,9 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 	defer func() { _ = serviceRaw.Clear() }()
 
 	// result is a SWBemObjectSet
-	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", q.Query)
+	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", q.query)
 	if err != nil {
-		return fmt.Errorf("failed calling method ExecQuery for query %s: %v", q.Query, err)
+		return fmt.Errorf("failed calling method ExecQuery for query %s: %v", q.query, err)
 	}
 	result := resultRaw.ToIDispatch()
 	defer func() { _ = resultRaw.Clear() }()
@@ -188,11 +188,6 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 					}
 					defer func() { _ = prop.Clear() }()
 
-					// if an empty property is returned from WMI, then move on
-					if prop.Value() == nil {
-						return nil
-					}
-
 					if q.tagFilter.Match(wmiProperty) {
 						valStr, err := internal.ToString(prop.Value())
 						if err != nil {
@@ -218,6 +213,8 @@ func DoQuery(q Query, acc telegraf.Accumulator) error {
 							fieldValue = string(v)
 						case fmt.Stringer:
 							fieldValue = v.String()
+						case nil:
+							fieldValue = nil
 						default:
 							return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
 						}
@@ -250,12 +247,12 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 		go func(q Query) {
 			defer wg.Done()
 			start := time.Now()
-			err := DoQuery(q, acc)
+			err := q.DoQuery(acc)
 			if err != nil {
 				acc.AddError(err)
 			}
 			elapsed := time.Since(start)
-			s.Log.Debugf("Query \"%s\" took %s", q.Query, elapsed)
+			s.Log.Debugf("Query \"%s\" took %s", q.query, elapsed)
 		}(query)
 	}
 	wg.Wait()

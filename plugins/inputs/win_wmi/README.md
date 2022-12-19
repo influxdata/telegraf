@@ -5,9 +5,9 @@ operating systems. With the win_wmi plugin, an administrator is enabled to
 capture and filter virtually any configuration or metric value exposed through
 the Windows Management Instrumentation service.
 
-If a WMI class property's value is a string, then the string is included with
-the metric as a tag. If a WMI class property's value is an integer, then the
-integer is used as a metric field.
+By default, a WMI class property's value is used as a metric field. If a class
+property's value is specified in TagPropertiesInclude, then the value is
+instead included with the metric as a tag.
 
 If telegraf is configured with a logfile and the plugin's configuration
 contains an invalid namespace, class, or property, an error is logged.
@@ -39,14 +39,15 @@ Properties which should be considered tags instead of fields.
 ## Configuration
 
 ```toml @sample.conf
-  ## [[inputs.win_wmi]]
-  ##   name_prefix = "win_wmi_"
-  ##   [[inputs.win_wmi.query]]
-  ##     Namespace = "root\\cimv2"
-  ##     ClassName = "Win32_Volume"
-  ##     Properties = ["Name","Capacity","FreeSpace"]
-  ##     Filter = 'NOT Name LIKE "\\\\?\\%"'
-  ##     TagPropertiesInclude = ["Name"]
+# Input plugin to query Windows Management Instrumentation
+[[inputs.win_wmi]]
+  name_prefix = "win_wmi_"
+  [[inputs.win_wmi.query]]
+    Namespace = "root\\cimv2"
+    ClassName = "Win32_Volume"
+    Properties = ["Name", "Capacity", "FreeSpace"]
+    Filter = 'NOT Name LIKE "\\\\?\\%"'
+    TagPropertiesInclude = ["Name"]
 ```
 
 ### Generic Queries
