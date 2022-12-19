@@ -726,3 +726,17 @@ func TestOpensearchQuery_buildAggregationQuery(t *testing.T) {
 		})
 	}
 }
+
+func TestAggregationSearchBody(t *testing.T) {
+	aa := aggregationSearchBody{
+		Size:         0,
+		Aggregations: make(map[name]aggType),
+	}
+
+	ss, err := json.Marshal(aa)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(string(ss))
+}

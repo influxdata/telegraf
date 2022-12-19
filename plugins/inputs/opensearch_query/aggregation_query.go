@@ -11,6 +11,24 @@ import (
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 )
 
+type name string
+
+type function string
+
+type aggType map[function]aggField
+
+type aggField struct {
+	Field string `json:"field"`
+}
+
+type aggregationSearchBody struct {
+	Size         int                    `json:"size"`
+	Aggregations map[name]aggType       `json:"aggregations"`
+	Query        map[string]interface{} `json:"query,omitempty"`
+
+	nestedAggregations map[name]aggType
+}
+
 type aggKey struct {
 	measurement string
 	name        string
@@ -78,6 +96,7 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 		return nil, err
 	}
 
+	o.Log.Debugf("{\"body\": %s}", string(s))
 	req := strings.NewReader(string(s))
 
 	searchRequest := &opensearchapi.SearchRequest{
