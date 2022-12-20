@@ -17,6 +17,8 @@ import (
 var sysDrive = fmt.Sprintf(`%s\`, os.Getenv("SystemDrive")) // C:\
 var logger = new(testutil.Logger)
 var acc = new(testutil.Accumulator)
+
+// include Name as a tag, FreeSpace as a field, and Purpose as a known-null class property
 var testQuery Query = Query{
 	Namespace:            "ROOT\\cimv2",
 	ClassName:            "Win32_Volume",
@@ -28,8 +30,7 @@ var testQuery Query = Query{
 var expectedWql = fmt.Sprintf(
 	`SELECT Name, FreeSpace, Purpose FROM Win32_Volume WHERE NOT Name LIKE "\\\\?\\%%" AND Name LIKE "%s"`,
 	regexp.QuoteMeta(sysDrive))
-var testQueries []Query = []Query{testQuery}
-var testWmi Wmi = Wmi{Queries: []Query{testQuery}}
+var testWmi Wmi = Wmi{Queries: []Query{testQuery}, Log: logger}
 
 // test DoQuery
 func TestWmi_DoQuery(t *testing.T) {
@@ -51,22 +52,10 @@ func TestWmi_DoQuery(t *testing.T) {
 
 // test Init function
 func TestWmi_Init(t *testing.T) {
-	t.Run("NoError", func(t *testing.T) {
-		s := &Wmi{
-			Queries: testQueries,
-			Log:     logger,
-		}
-		require.NoError(t, s.Init())
-	})
+	t.Run("NoError", func(t *testing.T) { require.NoError(t, testWmi.Init()) })
 }
 
 // test Gather function
 func TestWmi_Gather(t *testing.T) {
-	t.Run("NoError", func(t *testing.T) {
-		s := &Wmi{
-			Queries: testQueries,
-			Log:     logger,
-		}
-		require.NoError(t, s.Gather(acc))
-	})
+	t.Run("NoError", func(t *testing.T) { require.NoError(t, testWmi.Gather(acc)) })
 }
