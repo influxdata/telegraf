@@ -3,7 +3,9 @@
 This document presents the input plugin to read WMI classes on Windows
 operating systems. With the win_wmi plugin, an administrator is enabled to
 capture and filter virtually any configuration or metric value exposed through
-the [Windows Management Instrumentation](https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page) service.
+the Windows Management Instrumentation
+([WMI](https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page))
+service.
 
 If telegraf is configured with a logfile and the plugin's configuration
 contains an invalid namespace, class, or property, an error is logged.
@@ -44,7 +46,8 @@ An array of strings representing the properties of the WMI class to be queried.
 
 ### filter
 
-A string specifying a WHERE clause to use as a filter for the WMI Query Language (WQL).
+A string specifying a WHERE clause to use as a filter for the WMI Query
+Language (WQL).
 
 ### tag_properties
 
@@ -70,7 +73,7 @@ Get-WmiObject -Namespace root\cimv2 -Class Win32_Volume -Property Capacity, Free
 Get-CimInstance -Namespace root\cimv2 -ClassName Win32_Volume -Property Capacity, FreeSpace, Name -Filter 'NOT Name LIKE "\\\\?\\%"'
 ```
 
-## Example
+## Example Output
 
 ### Physical Memory
 
