@@ -136,8 +136,7 @@ func (h *HTTPListenerV2) createHTTPServer() *http.Server {
 // Stop cleans up all resources
 func (h *HTTPListenerV2) Stop() {
 	if h.listener != nil {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
+		//nolint:revive // ignore the returned error as we cannot do anything about it anyway
 		h.listener.Close()
 	}
 	h.wg.Wait()

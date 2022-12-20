@@ -97,8 +97,8 @@ func (h mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	// Ignore the returned error as the tests will fail anyway
-	//nolint:errcheck,revive
+
+	//nolint:errcheck,revive // ignore the returned error as the tests will fail anyway
 	w.Write(b)
 }
 
