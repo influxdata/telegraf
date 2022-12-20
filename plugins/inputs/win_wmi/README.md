@@ -13,12 +13,18 @@ contains an invalid namespace, class, or property, an error is logged.
 ```toml @sample.conf
 # Input plugin to query Windows Management Instrumentation
 [[inputs.win_wmi]]
+  # specifies a prefix to attach to the measurement name
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
+    # a string representing the WMI namespace to be queried
     namespace = "root\\cimv2"
+    # a string representing the WMI class to be queried
     class_name = "Win32_Volume"
+    # an array of strings representing the properties of the WMI class to be queried
     properties = ["Name", "Capacity", "FreeSpace"]
+    # a string specifying a WHERE clause to use as a filter for the WQL
     filter = 'NOT Name LIKE "\\\\?\\%"'
+    # WMI class properties which should be considered tags instead of fields
     tag_properties = ["Name"]
 ```
 
