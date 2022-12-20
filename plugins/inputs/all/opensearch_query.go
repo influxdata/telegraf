@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.openntpd
+//go:build !custom || inputs || inputs.opensearch_query
 
 package all
 

@@ -9,7 +9,6 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
-	"github.com/pkg/errors"
 )
 
 type aggKey struct {
@@ -92,7 +91,7 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 		return nil, err
 	}
 	if resp.IsError() {
-		return nil, errors.Errorf("Opensearch SearchRequest failure: [%d] %s", resp.StatusCode, resp.Status())
+		return nil, fmt.Errorf("Opensearch SearchRequest failure: [%d] %s", resp.StatusCode, resp.Status())
 	}
 	defer resp.Body.Close()
 

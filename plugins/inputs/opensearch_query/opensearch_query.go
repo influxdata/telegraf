@@ -129,22 +129,14 @@ func (o *OpensearchQuery) connectToOpensearch() error {
 	}
 
 	client, err := opensearch.NewClient(clientConfig)
-	if err != nil {
-		return err
-	}
-
 	o.osClient = client
-	return nil
+
+	return err
 }
 
 // Gather writes the results of the queries from OpenSearch to the Accumulator.
 func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-
-	err := o.connectToOpensearch()
-	if err != nil {
-		return err
-	}
 
 	for i, agg := range o.Aggregations {
 		wg.Add(1)
