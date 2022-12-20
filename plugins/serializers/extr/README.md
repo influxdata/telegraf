@@ -33,6 +33,12 @@ The `extr` output data format converts metrics into JSON documents, performing t
         y_foo_bar=37
         --> "bar":{"foo":{"x"=21,"y"=21}}
 
+- To keep "_" in a field name add /_
+        x/_foo/_bar=21
+        y/_foo/_bar=33
+        --> "x_foo_bar"=21
+        --> "y_foo_bar"=33
+
 *extr serializer batches metrics by default.
 
 ## Configuration
