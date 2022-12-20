@@ -201,11 +201,9 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 }
 
 func buildTags(tagList []*telegraf.Tag) []string {
-	tags := make([]string, len(tagList))
-	index := 0
+	tags := make([]string, 0, len(tagList))
 	for _, tag := range tagList {
-		tags[index] = fmt.Sprintf("%s:%s", tag.Key, tag.Value)
-		index++
+		tags = append(tags, fmt.Sprintf("%s:%s", tag.Key, tag.Value))
 	}
 	return tags
 }

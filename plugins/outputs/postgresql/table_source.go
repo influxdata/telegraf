@@ -179,9 +179,9 @@ func (tsrc *TableSource) TagTableColumns() []utils.Column {
 
 func (tsrc *TableSource) ColumnNames() []string {
 	cols := tsrc.MetricTableColumns()
-	names := make([]string, len(cols))
-	for i, col := range cols {
-		names[i] = col.Name
+	names := make([]string, 0, len(cols))
+	for _, col := range cols {
+		names = append(names, col.Name)
 	}
 	return names
 }
@@ -370,9 +370,9 @@ func (ttsrc *TagTableSource) cacheTouch(tagID int64) {
 
 func (ttsrc *TagTableSource) ColumnNames() []string {
 	cols := ttsrc.TagTableColumns()
-	names := make([]string, len(cols))
-	for i, col := range cols {
-		names[i] = col.Name
+	names := make([]string, 0, len(cols))
+	for _, col := range cols {
+		names = append(names, col.Name)
 	}
 	return names
 }

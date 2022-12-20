@@ -48,11 +48,9 @@ type OpenTSDB struct {
 }
 
 func ToLineFormat(tags map[string]string) string {
-	tagsArray := make([]string, len(tags))
-	index := 0
+	tagsArray := make([]string, 0, len(tags))
 	for k, v := range tags {
-		tagsArray[index] = fmt.Sprintf("%s=%s", k, v)
-		index++
+		tagsArray = append(tagsArray, fmt.Sprintf("%s=%s", k, v))
 	}
 	sort.Strings(tagsArray)
 	return strings.Join(tagsArray, " ")
