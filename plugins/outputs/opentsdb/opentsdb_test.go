@@ -128,9 +128,9 @@ func TestSanitize(t *testing.T) {
 func BenchmarkHttpSend(b *testing.B) {
 	const batchSize = 50
 	const metricsCount = 4 * batchSize
-	metrics := make([]telegraf.Metric, metricsCount)
+	metrics := make([]telegraf.Metric, 0, metricsCount)
 	for i := 0; i < metricsCount; i++ {
-		metrics[i] = testutil.TestMetric(1.0)
+		metrics = append(metrics, testutil.TestMetric(1.0))
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
