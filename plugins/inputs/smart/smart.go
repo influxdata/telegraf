@@ -567,7 +567,7 @@ func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 
 	for _, device := range nvmeDevices {
 		if contains(m.EnableExtensions, "auto-on") {
-			// nolint:revive // one case switch on purpose to demonstrate potential extensions
+			//nolint:revive // one case switch on purpose to demonstrate potential extensions
 			switch device.vendorID {
 			case intelVID:
 				wg.Add(1)

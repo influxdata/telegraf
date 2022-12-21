@@ -96,51 +96,58 @@ func (m *MongoDB) Init() error {
 // Start runs after init and setup mongodb connections
 func (m *MongoDB) Start(telegraf.Accumulator) error {
 	for _, connURL := range m.Servers {
-		if !strings.HasPrefix(connURL, "mongodb://") && !strings.HasPrefix(connURL, "mongodb+srv://") {
-			// Preserve backwards compatibility for hostnames without a
-			// scheme, broken in go 1.8. Remove in Telegraf 2.0
-			connURL = "mongodb://" + connURL
-			m.Log.Warnf("Using %q as connection URL; please update your configuration to use an URL", connURL)
+		if err := m.setupConnection(connURL); err != nil {
+			return err
 		}
-
-		u, err := url.Parse(connURL)
-		if err != nil {
-			return fmt.Errorf("unable to parse connection URL: %w", err)
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel() //nolint:revive
-
-		opts := options.Client().ApplyURI(connURL)
-		if m.tlsConfig != nil {
-			opts.TLSConfig = m.tlsConfig
-		}
-		if opts.ReadPreference == nil {
-			opts.ReadPreference = readpref.Nearest()
-		}
-
-		client, err := mongo.Connect(ctx, opts)
-		if err != nil {
-			return fmt.Errorf("unable to connect to MongoDB: %w", err)
-		}
-
-		err = client.Ping(ctx, opts.ReadPreference)
-		if err != nil {
-			if m.DisconnectedServersBehavior == "error" {
-				return fmt.Errorf("unable to ping MongoDB: %w", err)
-			}
-
-			m.Log.Errorf("unable to ping MongoDB: %w", err)
-		}
-
-		server := &Server{
-			client:   client,
-			hostname: u.Host,
-			Log:      m.Log,
-		}
-		m.clients = append(m.clients, server)
 	}
 
+	return nil
+}
+
+func (m *MongoDB) setupConnection(connURL string) error {
+	if !strings.HasPrefix(connURL, "mongodb://") && !strings.HasPrefix(connURL, "mongodb+srv://") {
+		// Preserve backwards compatibility for hostnames without a
+		// scheme, broken in go 1.8. Remove in Telegraf 2.0
+		connURL = "mongodb://" + connURL
+		m.Log.Warnf("Using %q as connection URL; please update your configuration to use an URL", connURL)
+	}
+
+	u, err := url.Parse(connURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse connection URL: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	opts := options.Client().ApplyURI(connURL)
+	if m.tlsConfig != nil {
+		opts.TLSConfig = m.tlsConfig
+	}
+	if opts.ReadPreference == nil {
+		opts.ReadPreference = readpref.Nearest()
+	}
+
+	client, err := mongo.Connect(ctx, opts)
+	if err != nil {
+		return fmt.Errorf("unable to connect to MongoDB: %w", err)
+	}
+
+	err = client.Ping(ctx, opts.ReadPreference)
+	if err != nil {
+		if m.DisconnectedServersBehavior == "error" {
+			return fmt.Errorf("unable to ping MongoDB: %w", err)
+		}
+
+		m.Log.Errorf("unable to ping MongoDB: %w", err)
+	}
+
+	server := &Server{
+		client:   client,
+		hostname: u.Host,
+		Log:      m.Log,
+	}
+	m.clients = append(m.clients, server)
 	return nil
 }
 

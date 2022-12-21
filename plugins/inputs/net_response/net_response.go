@@ -119,18 +119,14 @@ func (n *NetResponse) UDPGather() (map[string]string, map[string]interface{}, er
 	// Handle error
 	if err != nil {
 		setResult(ConnectionFailed, fields, tags, n.Expect)
-		// Error encoded in result
-		//nolint:nilerr
-		return tags, fields, nil
+		return tags, fields, nil //nolint:nilerr // error encoded in result
 	}
 	// Connecting
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	// Handle error
 	if err != nil {
 		setResult(ConnectionFailed, fields, tags, n.Expect)
-		// Error encoded in result
-		//nolint:nilerr
-		return tags, fields, nil
+		return tags, fields, nil //nolint:nilerr // error encoded in result
 	}
 	defer conn.Close()
 	// Send string
@@ -151,9 +147,7 @@ func (n *NetResponse) UDPGather() (map[string]string, map[string]interface{}, er
 	// Handle error
 	if err != nil {
 		setResult(ReadFailed, fields, tags, n.Expect)
-		// Error encoded in result
-		//nolint:nilerr
-		return tags, fields, nil
+		return tags, fields, nil //nolint:nilerr // error encoded in result
 	}
 
 	// Looking for string in answer
