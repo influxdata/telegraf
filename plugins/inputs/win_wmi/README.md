@@ -1,4 +1,4 @@
-# Windows Management Interface Input Plugin
+# Windows Management Instrumentation Input Plugin
 
 This document presents the input plugin to read WMI classes on Windows
 operating systems. With the win_wmi plugin, an administrator is enabled to
