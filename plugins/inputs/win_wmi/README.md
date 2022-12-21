@@ -85,9 +85,9 @@ locator of each device.
 [[inputs.win_wmi]]
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
-    Namespace = "root\\cimv2"
-    ClassName = "Win32_PhysicalMemory"
-    Properties = [
+    namespace = "root\\cimv2"
+    class_name = "Win32_PhysicalMemory"
+    properties = [
       "Name",
       "Capacity",
       "DeviceLocator",
@@ -95,7 +95,7 @@ locator of each device.
       "PartNumber",
       "Speed",
     ]
-    TagPropertiesInclude = ["Name","DeviceLocator","Manufacturer","PartNumber"]
+    tag_properties = ["Name","DeviceLocator","Manufacturer","PartNumber"]
 ```
 
 Example Output:
@@ -114,10 +114,10 @@ will also contain a tag value describing the model of each CPU.
 [[inputs.win_wmi]]
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
-    Namespace = "root\\cimv2"
-    ClassName = "Win32_Processor"
-    Properties = ["Name","NumberOfCores"]
-    TagPropertiesInclude = ["Name"]
+    namespace = "root\\cimv2"
+    class_name = "Win32_Processor"
+    properties = ["Name","NumberOfCores"]
+    tag_properties = ["Name"]
 ```
 
 Example Output:
@@ -137,9 +137,9 @@ computer.
 [[inputs.win_wmi]]
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
-    Namespace = "root\\cimv2"
-    ClassName = "Win32_ComputerSystem"
-    Properties = [
+    namespace = "root\\cimv2"
+    class_name = "Win32_ComputerSystem"
+    properties = [
       "Name",
       "Domain",
       "Manufacturer",
@@ -148,7 +148,7 @@ computer.
       "NumberOfProcessors",
       "TotalPhysicalMemory"
     ]
-    TagPropertiesInclude = ["Name","Domain","Manufacturer","Model"]
+    tag_properties = ["Name","Domain","Manufacturer","Model"]
 ```
 
 Example Output:
@@ -168,9 +168,9 @@ tagged value to describe whether the installation is 32-bit or 64-bit.
 [[inputs.win_wmi]]
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
-    ClassName = "Win32_OperatingSystem"
-    Namespace = "root\\cimv2"
-    Properties = [
+    class_name = "Win32_OperatingSystem"
+    namespace = "root\\cimv2"
+    properties = [
       "Name",
       "Caption",
       "FreeSpaceInPagingFiles",
@@ -179,7 +179,7 @@ tagged value to describe whether the installation is 32-bit or 64-bit.
       "OSArchitecture",
       "ProductType"
     ]
-    TagPropertiesInclude = ["Name","Caption","OSArchitecture"]
+    tag_properties = ["Name","Caption","OSArchitecture"]
 ```
 
 Example Output:
@@ -198,14 +198,14 @@ the Windows Server Failover Cluster and the type of Quorum in use.
 [[inputs.win_wmi]]
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
-    Namespace = "root\\mscluster"
-    ClassName = "MSCluster_Cluster"
-    Properties = [
+    namespace = "root\\mscluster"
+    class_name = "MSCluster_Cluster"
+    properties = [
       "Name",
       "QuorumType",
       "DynamicQuorumEnabled"
     ]
-    TagPropertiesInclude = ["Name","QuorumType"]
+    tag_properties = ["Name","QuorumType"]
 ```
 
 Example Output:
@@ -225,13 +225,13 @@ VolumeName property is included in the metric as a tagged value.
 [[inputs.win_wmi]]
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
-    Namespace = "root\\Microsoft\\MBAM"
-    ClassName = "MBAM_Volume"
-    Properties = [
+    namespace = "root\\Microsoft\\MBAM"
+    class_name = "MBAM_Volume"
+    properties = [
       "Compliant",
       "VolumeName"
     ]
-    TagPropertiesInclude = ["VolumeName"]
+    tag_properties = ["VolumeName"]
 ```
 
 Example Output:
@@ -251,16 +251,16 @@ is installed.
 [[inputs.win_wmi]]
   name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
-    Namespace = "Root\\Microsoft\\SqlServer\\ComputerManagement15"
-    ClassName = "SqlServiceAdvancedProperty"
-    Properties = [
+    namespace = "Root\\Microsoft\\SqlServer\\ComputerManagement15"
+    class_name = "SqlServiceAdvancedProperty"
+    properties = [
       "PropertyName",
       "ServiceName",
       "PropertyStrValue",
       "SqlServiceType"
     ]
-    Filter = "ServiceName LIKE 'MSSQLSERVER' AND SqlServiceType = 1 AND (PropertyName LIKE 'FILEVERSION' OR PropertyName LIKE 'SKUNAME')"
-    TagPropertiesInclude = ["PropertyName","ServiceName","PropertyStrValue"]
+    filter = "ServiceName LIKE 'MSSQLSERVER' AND SqlServiceType = 1 AND (PropertyName LIKE 'FILEVERSION' OR PropertyName LIKE 'SKUNAME')"
+    tag_properties = ["PropertyName","ServiceName","PropertyStrValue"]
 ```
 
 Example Output:
