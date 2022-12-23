@@ -727,16 +727,29 @@ func TestOpensearchQuery_buildAggregationQuery(t *testing.T) {
 	}
 }
 
-func TestAggregationSearchBody(t *testing.T) {
-	aa := aggregationSearchBody{
-		Size:         0,
-		Aggregations: make(map[name]aggType),
-	}
-
-	ss, err := json.Marshal(aa)
+func TestOpensearchQuery_metricAggregationMarshal(t *testing.T) {
+	agg := &MetricAggregation{}
+	err := agg.AddAggregation("sum_taxful_total_price", "sum", "taxful_total_price")
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("metricAggregation error: %v", err)
 	}
 
-	t.Log(string(ss))
+	body, err := json.Marshal(agg)
+	if err != nil {
+		t.Errorf("metricAggregationMarshal error %v, want %v", err, nil)
+	}
+	t.Log(string(body))
+
+	bucket := &BucketAggregation{}
+	err = bucket.AddAggregation("terms_by_currency", "terms", "currency")
+	if err != nil {
+		t.Errorf("bucket aggregation error: %v", err)
+	}
+
+	bucket.AddNestedAggregation("terms_by_currency", agg)
+	body, err = json.Marshal(bucket)
+	if err != nil {
+		t.Errorf("BucketAggregation marshal error: %v", err)
+	}
+	t.Log(string(body))
 }

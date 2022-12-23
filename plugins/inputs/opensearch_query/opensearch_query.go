@@ -51,6 +51,8 @@ type osAggregation struct {
 	MissingTagValue      string          `toml:"missing_tag_value"`
 	mapMetricFields      map[string]string
 	aggregationQueryList []aggregationQueryData
+
+	aggregation Aggregation
 }
 
 func (*OpensearchQuery) SampleConfig() string {

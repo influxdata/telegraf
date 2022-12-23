@@ -11,24 +11,6 @@ import (
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 )
 
-type name string
-
-type function string
-
-type aggType map[function]aggField
-
-type aggField struct {
-	Field string `json:"field"`
-}
-
-type aggregationSearchBody struct {
-	Size         int                    `json:"size"`
-	Aggregations map[name]aggType       `json:"aggregations"`
-	Query        map[string]interface{} `json:"query,omitempty"`
-
-	nestedAggregations map[name]aggType
-}
-
 type aggKey struct {
 	measurement string
 	name        string
@@ -65,6 +47,12 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 		filterQuery = "*"
 	}
 
+	aq := &AggregationQuery{
+		Size:         0,
+		Aggregations: aggregation.aggregation,
+		Query:        nil,
+	}
+
 	query := elastic.NewBoolQuery()
 	query = query.Filter(elastic.NewQueryStringQuery(filterQuery))
 	query = query.Filter(elastic.NewRangeQuery(aggregation.DateField).From(from).To(now).Format(aggregation.DateFieldFormat))
@@ -79,30 +67,18 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 	}
 	o.Log.Debugf("{\"query\": %s}", string(data))
 
-	searchSource := elastic.NewSearchSource().Query(query).Size(0)
-	// add only parent elastic.Aggregations to the resp request, all the rest are subaggregations of these
-	for _, v := range aggregation.aggregationQueryList {
-		if v.isParent && v.aggregation != nil {
-			searchSource.Aggregation(v.aggKey.name, v.aggregation)
-		}
-	}
+	aq.Query = src
+	req, err := json.Marshal(aq)
 
-	ss, err := searchSource.Source()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get query source - %v", err)
+		return nil, fmt.Errorf("failed to marshal request: %s", err)
 	}
-	s, err := json.Marshal(ss)
-	if err != nil {
-		return nil, err
-	}
-
-	o.Log.Debugf("{\"body\": %s}", string(s))
-	req := strings.NewReader(string(s))
+	o.Log.Debugf("{\"body\": %s}", string(req))
 
 	searchRequest := &opensearchapi.SearchRequest{
-		Body:  req,
-		Index: []string{aggregation.Index},
-		//Timeout: time.Duration(o.Timeout),
+		Body:    strings.NewReader(string(req)),
+		Index:   []string{aggregation.Index},
+		Timeout: time.Duration(o.Timeout),
 	}
 
 	resp, err := searchRequest.Do(ctx, o.osClient)
@@ -162,88 +138,44 @@ func (o *OpensearchQuery) getMetricFields(ctx context.Context, aggregation osAgg
 }
 
 func (aggregation *osAggregation) buildAggregationQuery() error {
+	var agg Aggregation
+	agg = &MetricAggregation{}
+
 	// create one aggregation per metric field found & function defined for numeric fields
 	for k, v := range aggregation.mapMetricFields {
 		switch v {
-		case "long":
-		case "float":
-		case "integer":
-		case "short":
-		case "double":
-		case "scaled_float":
+		case "long", "float", "integer", "short", "double", "scaled_float":
 		default:
 			continue
 		}
 
-		agg, err := getFunctionAggregation(aggregation.MetricFunction, k)
+		err := agg.AddAggregation(strings.ReplaceAll(k, ".", "_")+"_"+aggregation.MetricFunction, aggregation.MetricFunction, k)
 		if err != nil {
 			return err
 		}
-
-		aggregationQuery := aggregationQueryData{
-			aggKey: aggKey{
-				measurement: aggregation.MeasurementName,
-				function:    aggregation.MetricFunction,
-				field:       k,
-				name:        strings.ReplaceAll(k, ".", "_") + "_" + aggregation.MetricFunction,
-			},
-			isParent:    true,
-			aggregation: agg,
-		}
-
-		aggregation.aggregationQueryList = append(aggregation.aggregationQueryList, aggregationQuery)
 	}
 
 	// create a terms aggregation per tag
 	for _, term := range aggregation.Tags {
-		agg := elastic.NewTermsAggregation()
-		if aggregation.IncludeMissingTag && aggregation.MissingTagValue != "" {
-			agg.Missing(aggregation.MissingTagValue)
+		//agg := elastic.NewTermsAggregation()
+		//if aggregation.IncludeMissingTag && aggregation.MissingTagValue != "" {
+		//	agg.Missing(aggregation.MissingTagValue)
+		//}
+
+		bucket := &BucketAggregation{}
+		name := strings.ReplaceAll(term, ".", "_")
+		err := bucket.AddAggregation(name, "terms", term)
+		if err != nil {
+			return err
 		}
+		_ = bucket.BucketSize(name, 1000)
 
-		agg.Field(term).Size(1000)
+		bucket.AddNestedAggregation(name, agg)
 
-		// add each previous parent aggregations as subaggregations of this terms aggregation
-		for key, aggMap := range aggregation.aggregationQueryList {
-			if aggMap.isParent {
-				agg.Field(term).SubAggregation(aggMap.name, aggMap.aggregation).Size(1000)
-				// update subaggregation map with parent information
-				aggregation.aggregationQueryList[key].isParent = false
-			}
-		}
-
-		aggregationQuery := aggregationQueryData{
-			aggKey: aggKey{
-				measurement: aggregation.MeasurementName,
-				function:    "terms",
-				field:       term,
-				name:        strings.ReplaceAll(term, ".", "_"),
-			},
-			isParent:    true,
-			aggregation: agg,
-		}
-
-		aggregation.aggregationQueryList = append(aggregation.aggregationQueryList, aggregationQuery)
+		agg = bucket
 	}
+
+	aggregation.aggregation = agg
 
 	return nil
-}
-
-func getFunctionAggregation(function string, aggfield string) (elastic.Aggregation, error) {
-	var agg elastic.Aggregation
-
-	switch function {
-	case "avg":
-		agg = elastic.NewAvgAggregation().Field(aggfield)
-	case "sum":
-		agg = elastic.NewSumAggregation().Field(aggfield)
-	case "min":
-		agg = elastic.NewMinAggregation().Field(aggfield)
-	case "max":
-		agg = elastic.NewMaxAggregation().Field(aggfield)
-	default:
-		return nil, fmt.Errorf("aggregation function '%s' not supported", function)
-	}
-
-	return agg, nil
 }
