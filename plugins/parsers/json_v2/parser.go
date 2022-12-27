@@ -80,6 +80,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 	// Only valid JSON is supported
 	if !gjson.Valid(string(input)) {
+		p.Log.Debugf("Message: %s", input)
 		return nil, fmt.Errorf("invalid JSON provided, unable to parse")
 	}
 
