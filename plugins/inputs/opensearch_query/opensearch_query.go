@@ -66,7 +66,7 @@ func (o *OpensearchQuery) Init() error {
 
 	err := o.connectToOpensearch()
 	if err != nil {
-		return fmt.Errorf("error connecting to opensearch: %w", err)
+		o.Log.Warnf("error connecting to opensearch: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
