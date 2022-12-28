@@ -158,15 +158,6 @@ func (o *OpensearchQuery) osAggregationQuery(acc telegraf.Accumulator, aggregati
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 	defer cancel()
 
-	//// try to init the aggregation query if it is not done already
-	//if aggregation.aggregationQueryList == nil {
-	//	err := o.initAggregation(ctx, aggregation, i)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	aggregation = o.Aggregations[i]
-	//}
-
 	searchResult, err := o.runAggregationQuery(ctx, aggregation)
 	if err != nil {
 		return err
