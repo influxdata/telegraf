@@ -10,18 +10,6 @@ import (
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 )
 
-type aggKey struct {
-	measurement string
-	name        string
-	function    string
-	field       string
-}
-
-type aggregationQueryData struct {
-	aggKey
-	isParent bool
-}
-
 type mapping map[string]fieldIndex
 
 type fieldIndex struct {

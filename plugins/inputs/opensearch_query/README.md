@@ -226,6 +226,8 @@ Nested results will build on their parent field names, for example, results for 
 Thus, our results would take the form `size_percentiles_values_1.0`.  This structure applies to `percentiles` and 
 `extended_stats` functions.
 
+Note: `extended_stats` is currently limited to 2 s.d. only.
+
 ## Example Output
 
 ```shell
