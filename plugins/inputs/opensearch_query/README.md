@@ -9,6 +9,8 @@ The following is supported:
 - calculate the avg/max/min/sum for a numeric field, filtered by a query,
   aggregated per tag
 - count number of terms for a particular field
+- stats (returns sum, min, max, avg, and count in one query)
+- percentile
 
 ## OpenSearch Support
 
@@ -193,16 +195,39 @@ conform to appropriate OpenSearch
 [Aggregations](https://opensearch.org/docs/latest/opensearch/aggregations/)
 for more information.
 
+Metric names are composed of a combination of the field name, metric aggregation
+function, and the result field name.
+
+For simple metrics, the result field name is `valid`, and so getting the `avg` on a
+field named `size` would produce the result
+
+For functions with multiple metrics, we use the resulting field.  For example, the `stats`
+function returns five different results, so for a field `size`, we would see five metric fields, named `size_stats_min`,
+`size_stats_max`, `size_stats_sum`, `size_stats_avg`, and `size_stats_count`.
+
+Nested results will build on their parent field names, for example, results for percentile take the form:
+```json
+{
+  "aggregations" : {
+  "size_percentiles" : {
+    "values" : {
+      "1.0" : 21.984375,
+      "5.0" : 27.984375,
+      "25.0" : 44.96875,
+      "50.0" : 64.22061688311689,
+      "75.0" : 93.0,
+      "95.0" : 156.0,
+      "99.0" : 222.0
+    }
+  }
+ }
+}
+```
+Thus, our results would take the form `size_percentiles_values_1.0`.  This structure applies to `percentiles` and 
+`extended_stats` functions.
+
 ## Example Output
 
 ```shell
-./telegraf --config plugins/inputs/opensearch_query/dev/telegraf.conf --input-filter opensearch_query --test
-2022-12-13T21:09:41Z I! Starting Telegraf 1.26.0-a96e9d38
-2022-12-13T21:09:41Z I! Available plugins: 214 inputs, 9 aggregators, 26 processors, 21 parsers, 57 outputs, 2 secret-stores
-2022-12-13T21:09:41Z I! Loaded inputs: opensearch_query
-2022-12-13T21:09:41Z I! Loaded aggregators:
-2022-12-13T21:09:41Z I! Loaded processors:
-2022-12-13T21:09:41Z I! Loaded secretstores:
-2022-12-13T21:09:41Z W! Outputs are not used in testing mode!
-2022-12-13T21:09:41Z I! Tags enabled: host=localhost
+
 ```

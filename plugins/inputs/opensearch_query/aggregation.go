@@ -56,7 +56,7 @@ func (a *aggregationFunction) Missing(missing string) {
 
 func getAggregationFunctionType(field string) (string, error) {
 	switch field {
-	case "avg", "sum", "min", "max", "cardinality", "value_count":
+	case "avg", "sum", "min", "max", "value_count", "stats", "percentiles":
 		return "metric", nil
 	case "terms":
 		return "bucket", nil

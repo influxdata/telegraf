@@ -54,9 +54,15 @@ func (a *Aggregation) GetMetrics(acc telegraf.Accumulator, measurement string, d
 			return nil
 		} else {
 			for metric, value := range agg.metrics {
-				fields[name+"_"+metric] = value
+				switch value.(type) {
+				case map[string]interface{}:
+					for k, v := range value.(map[string]interface{}) {
+						fields[name+"_"+metric+"_"+k] = v
+					}
+				default:
+					fields[name+"_"+metric] = value
+				}
 			}
-
 		}
 	}
 
