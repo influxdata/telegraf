@@ -11,6 +11,31 @@ type AggregationResponse struct {
 	Aggregations *Aggregation `json:"aggregations"`
 }
 
+type SearchHits struct {
+	TotalHits *TotalHits `json:"total,omitempty"`
+}
+
+type TotalHits struct {
+	Relation string `json:"relation"`
+	Value    int64  `json:"value"`
+}
+
+type MetricAggregation map[string]interface{}
+
+type AggregateValue struct {
+	metrics MetricAggregation
+	buckets []BucketData
+}
+
+type Aggregation map[string]AggregateValue
+
+type BucketData struct {
+	DocumentCount int64  `json:"doc_count"`
+	Key           string `json:"key"`
+
+	subaggregation Aggregation
+}
+
 func (a *AggregationResponse) GetMetrics(acc telegraf.Accumulator, measurement string) error {
 	// Simple case (no aggregations)
 	if a.Aggregations == nil {
@@ -24,17 +49,6 @@ func (a *AggregationResponse) GetMetrics(acc telegraf.Accumulator, measurement s
 
 	return a.Aggregations.GetMetrics(acc, measurement, a.Hits.TotalHits.Value, map[string]string{})
 }
-
-type SearchHits struct {
-	TotalHits *TotalHits `json:"total,omitempty"`
-}
-
-type TotalHits struct {
-	Relation string `json:"relation"`
-	Value    int64  `json:"value"`
-}
-
-type Aggregation map[string]AggregateValue
 
 func (a *Aggregation) GetMetrics(acc telegraf.Accumulator, measurement string, docCount int64, tags map[string]string) error {
 	var err error
@@ -52,16 +66,15 @@ func (a *Aggregation) GetMetrics(acc telegraf.Accumulator, measurement string, d
 				}
 			}
 			return nil
-		} else {
-			for metric, value := range agg.metrics {
-				switch value.(type) {
-				case map[string]interface{}:
-					for k, v := range value.(map[string]interface{}) {
-						fields[name+"_"+metric+"_"+k] = v
-					}
-				default:
-					fields[name+"_"+metric] = value
+		}
+		for metric, value := range agg.metrics {
+			switch value := value.(type) {
+			case map[string]interface{}:
+				for k, v := range value {
+					fields[name+"_"+metric+"_"+k] = v
 				}
+			default:
+				fields[name+"_"+metric] = value
 			}
 		}
 	}
@@ -70,11 +83,6 @@ func (a *Aggregation) GetMetrics(acc telegraf.Accumulator, measurement string, d
 	acc.AddFields(measurement, fields, tags)
 
 	return nil
-}
-
-type AggregateValue struct {
-	metrics MetricAggregation
-	buckets []BucketData
 }
 
 func (a *AggregateValue) UnmarshalJSON(bytes []byte) error {
@@ -95,15 +103,6 @@ func (a *AggregateValue) UnmarshalJSON(bytes []byte) error {
 
 func (a *AggregateValue) IsAggregation() bool {
 	return !(a.buckets == nil)
-}
-
-type MetricAggregation map[string]interface{}
-
-type BucketData struct {
-	DocumentCount int64  `json:"doc_count"`
-	Key           string `json:"key"`
-
-	subaggregation Aggregation
 }
 
 func (b *BucketData) UnmarshalJSON(bytes []byte) error {

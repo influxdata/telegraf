@@ -385,13 +385,25 @@ var testOpensearchAggregationData = []osAggregationQueryTest{
 			testutil.MustMetric(
 				"measurement15",
 				map[string]string{"URI_keyword": "/downloads/product_1"},
-				map[string]interface{}{"size_stats_sum": float64(53205), "size_stats_min": float64(0), "size_stats_max": float64(3301), "size_stats_avg": float64(202.30038022813687), "size_stats_count": float64(263), "doc_count": int64(263)},
+				map[string]interface{}{
+					"size_stats_sum":   float64(53205),
+					"size_stats_min":   float64(0),
+					"size_stats_max":   float64(3301),
+					"size_stats_avg":   float64(202.30038022813687),
+					"size_stats_count": float64(263),
+					"doc_count":        int64(263)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 			testutil.MustMetric(
 				"measurement15",
 				map[string]string{"URI_keyword": "/downloads/product_2"},
-				map[string]interface{}{"size_stats_sum": float64(56517), "size_stats_min": float64(0), "size_stats_max": float64(3318), "size_stats_avg": float64(238.46835443037975), "size_stats_count": float64(237), "doc_count": int64(237)},
+				map[string]interface{}{
+					"size_stats_sum":   float64(56517),
+					"size_stats_min":   float64(0),
+					"size_stats_max":   float64(3318),
+					"size_stats_avg":   float64(238.46835443037975),
+					"size_stats_count": float64(237),
+					"doc_count":        int64(237)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
 		},
