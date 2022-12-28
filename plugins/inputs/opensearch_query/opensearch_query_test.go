@@ -712,16 +712,6 @@ func TestOpensearchQuery_buildAggregationQuery(t *testing.T) {
 				t.Errorf("OpensearchQuery.buildAggregationQuery() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-
-			//opts := []cmp.Option{
-			//	cmp.AllowUnexported(aggKey{}, aggregationQueryData{}),
-			//	cmpopts.IgnoreFields(aggregationQueryData{}, "aggregation"),
-			//	cmpopts.SortSlices(func(x, y aggregationQueryData) bool { return x.aggKey.name > y.aggKey.name }),
-			//}
-
-			//if !cmp.Equal(tt.aggregation.aggregationQueryList, tt.want, opts...) {
-			//	t.Errorf("OpensearchQuery.buildAggregationQuery(): %s error = %s ", tt.name, cmp.Diff(tt.aggregation.aggregationQueryList, tt.want, opts...))
-			//}
 		})
 	}
 }
