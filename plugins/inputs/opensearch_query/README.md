@@ -198,14 +198,17 @@ for more information.
 Metric names are composed of a combination of the field name, metric aggregation
 function, and the result field name.
 
-For simple metrics, the result field name is `valid`, and so getting the `avg` on a
-field named `size` would produce the result
+For simple metrics, the result field name is `value`, and so getting the `avg`
+on a field named `size` would produce the result `size_value_avg`.
 
-For functions with multiple metrics, we use the resulting field.  For example, the `stats`
-function returns five different results, so for a field `size`, we would see five metric fields, named `size_stats_min`,
+For functions with multiple metrics, we use the resulting field.  For example,
+the `stats` function returns five different results, so for a field `size`, 
+we would see five metric fields, named `size_stats_min`,
 `size_stats_max`, `size_stats_sum`, `size_stats_avg`, and `size_stats_count`.
 
-Nested results will build on their parent field names, for example, results for percentile take the form:
+Nested results will build on their parent field names, for example, results for
+percentile take the form:
+
 ```json
 {
   "aggregations" : {
@@ -223,8 +226,8 @@ Nested results will build on their parent field names, for example, results for 
  }
 }
 ```
-Thus, our results would take the form `size_percentiles_values_1.0`.  This structure applies to `percentiles` and 
-`extended_stats` functions.
+Thus, our results would take the form `size_percentiles_values_1.0`.  This 
+structure applies to `percentiles` and `extended_stats` functions.
 
 Note: `extended_stats` is currently limited to 2 s.d. only.
 
