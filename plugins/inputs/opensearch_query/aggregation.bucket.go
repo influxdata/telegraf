@@ -2,9 +2,9 @@ package opensearch_query
 
 import "fmt"
 
-type BucketAggregation map[string]*aggregationFunction
+type BucketAggregationRequest map[string]*aggregationFunction
 
-func (b BucketAggregation) AddAggregation(name, aggType, field string) error {
+func (b BucketAggregationRequest) AddAggregation(name, aggType, field string) error {
 	switch aggType { // TODO: Use categorization function
 	case "terms":
 	default:
@@ -19,11 +19,11 @@ func (b BucketAggregation) AddAggregation(name, aggType, field string) error {
 	return nil
 }
 
-func (b BucketAggregation) AddNestedAggregation(name string, a Aggregation) {
+func (b BucketAggregationRequest) AddNestedAggregation(name string, a AggregationRequest) {
 	b[name].nested = a
 }
 
-func (b BucketAggregation) BucketSize(name string, size int) error {
+func (b BucketAggregationRequest) BucketSize(name string, size int) error {
 	if size <= 0 {
 		return fmt.Errorf("invalid size; must be integer value > 0")
 	}
@@ -35,4 +35,8 @@ func (b BucketAggregation) BucketSize(name string, size int) error {
 	b[name].Size(size)
 
 	return nil
+}
+
+func (b BucketAggregationRequest) Missing(name, missing string) {
+	b[name].Missing(missing)
 }

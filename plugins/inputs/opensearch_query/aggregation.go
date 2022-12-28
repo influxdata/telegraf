@@ -5,12 +5,12 @@ import (
 	"fmt"
 )
 
-type Aggregation interface {
+type AggregationRequest interface {
 	AddAggregation(string, string, string) error
 }
 
 type NestedAggregation interface {
-	Nested(string, Aggregation)
+	Nested(string, AggregationRequest)
 	Missing(string)
 	Size(int)
 }
@@ -19,8 +19,9 @@ type aggregationFunction struct {
 	aggType string
 	field   string
 	size    int
+	missing string
 
-	nested Aggregation
+	nested AggregationRequest
 }
 
 func (a *aggregationFunction) MarshalJSON() ([]byte, error) {
@@ -33,6 +34,10 @@ func (a *aggregationFunction) MarshalJSON() ([]byte, error) {
 		}
 		field["size"] = a.size
 	}
+	if a.missing != "" {
+		field["missing"] = a.missing
+	}
+
 	agg[a.aggType] = field
 
 	if a.nested != nil {
@@ -43,6 +48,10 @@ func (a *aggregationFunction) MarshalJSON() ([]byte, error) {
 
 func (a *aggregationFunction) Size(size int) {
 	a.size = size
+}
+
+func (a *aggregationFunction) Missing(missing string) {
+	a.missing = missing
 }
 
 func getAggregationFunctionType(field string) (string, error) {

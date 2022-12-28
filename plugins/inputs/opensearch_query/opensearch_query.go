@@ -38,21 +38,20 @@ type OpensearchQuery struct {
 
 // osAggregation struct
 type osAggregation struct {
-	Index                string          `toml:"index"`
-	MeasurementName      string          `toml:"measurement_name"`
-	DateField            string          `toml:"date_field"`
-	DateFieldFormat      string          `toml:"date_field_custom_format"`
-	QueryPeriod          config.Duration `toml:"query_period"`
-	FilterQuery          string          `toml:"filter_query"`
-	MetricFields         []string        `toml:"metric_fields"`
-	MetricFunction       string          `toml:"metric_function"`
-	Tags                 []string        `toml:"tags"`
-	IncludeMissingTag    bool            `toml:"include_missing_tag"`
-	MissingTagValue      string          `toml:"missing_tag_value"`
-	mapMetricFields      map[string]string
-	aggregationQueryList []aggregationQueryData
+	Index             string          `toml:"index"`
+	MeasurementName   string          `toml:"measurement_name"`
+	DateField         string          `toml:"date_field"`
+	DateFieldFormat   string          `toml:"date_field_custom_format"`
+	QueryPeriod       config.Duration `toml:"query_period"`
+	FilterQuery       string          `toml:"filter_query"`
+	MetricFields      []string        `toml:"metric_fields"`
+	MetricFunction    string          `toml:"metric_function"`
+	Tags              []string        `toml:"tags"`
+	IncludeMissingTag bool            `toml:"include_missing_tag"`
+	MissingTagValue   string          `toml:"missing_tag_value"`
+	mapMetricFields   map[string]string
 
-	aggregation Aggregation
+	aggregation AggregationRequest
 }
 
 func (*OpensearchQuery) SampleConfig() string {
@@ -144,7 +143,7 @@ func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(agg osAggregation, i int) {
 			defer wg.Done()
-			err := o.osAggregationQuery(acc, agg, i)
+			err := o.osAggregationQuery(acc, agg)
 			if err != nil {
 				acc.AddError(fmt.Errorf("opensearch query aggregation %s: %s ", agg.MeasurementName, err.Error()))
 			}
@@ -155,30 +154,25 @@ func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (o *OpensearchQuery) osAggregationQuery(acc telegraf.Accumulator, aggregation osAggregation, i int) error {
+func (o *OpensearchQuery) osAggregationQuery(acc telegraf.Accumulator, aggregation osAggregation) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 	defer cancel()
 
-	// try to init the aggregation query if it is not done already
-	if aggregation.aggregationQueryList == nil {
-		err := o.initAggregation(ctx, aggregation, i)
-		if err != nil {
-			return err
-		}
-		aggregation = o.Aggregations[i]
-	}
+	//// try to init the aggregation query if it is not done already
+	//if aggregation.aggregationQueryList == nil {
+	//	err := o.initAggregation(ctx, aggregation, i)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	aggregation = o.Aggregations[i]
+	//}
 
 	searchResult, err := o.runAggregationQuery(ctx, aggregation)
 	if err != nil {
 		return err
 	}
 
-	if searchResult.Aggregations == nil {
-		parseSimpleResult(acc, aggregation.MeasurementName, searchResult)
-		return nil
-	}
-
-	return parseAggregationResult(acc, aggregation.aggregationQueryList, searchResult)
+	return searchResult.GetMetrics(acc, aggregation.MeasurementName)
 }
 
 func init() {

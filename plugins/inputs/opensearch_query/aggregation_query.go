@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 )
 
@@ -20,8 +19,7 @@ type aggKey struct {
 
 type aggregationQueryData struct {
 	aggKey
-	isParent    bool
-	aggregation elastic.Aggregation
+	isParent bool
 }
 
 type mapping map[string]fieldIndex
@@ -39,7 +37,7 @@ type fieldType struct {
 	Type string `json:"type"`
 }
 
-func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation osAggregation) (*elastic.SearchResult, error) {
+func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation osAggregation) (*AggregationResponse, error) {
 	now := time.Now().UTC()
 	from := now.Add(time.Duration(-aggregation.QueryPeriod))
 	filterQuery := aggregation.FilterQuery
@@ -47,27 +45,21 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 		filterQuery = "*"
 	}
 
-	aq := &AggregationQuery{
+	aq := &Query{
 		Size:         0,
 		Aggregations: aggregation.aggregation,
 		Query:        nil,
 	}
 
-	query := elastic.NewBoolQuery()
-	query = query.Filter(elastic.NewQueryStringQuery(filterQuery))
-	query = query.Filter(elastic.NewRangeQuery(aggregation.DateField).From(from).To(now).Format(aggregation.DateFieldFormat))
-
-	src, err := query.Source()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get query source - %v", err)
+	boolQuery := &BoolQuery{
+		FilterQueryString: filterQuery,
+		TimestampField:    aggregation.DateField,
+		TimeRangeFrom:     from,
+		TimeRangeTo:       now,
+		DateFieldFormat:   aggregation.DateFieldFormat,
 	}
-	data, err := json.Marshal(src)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response - %v", err)
-	}
-	o.Log.Debugf("{\"query\": %s}", string(data))
 
-	aq.Query = src
+	aq.Query = boolQuery
 	req, err := json.Marshal(aq)
 
 	if err != nil {
@@ -90,7 +82,7 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 	}
 	defer resp.Body.Close()
 
-	var searchResult elastic.SearchResult
+	var searchResult AggregationResponse
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&searchResult)
@@ -138,8 +130,8 @@ func (o *OpensearchQuery) getMetricFields(ctx context.Context, aggregation osAgg
 }
 
 func (aggregation *osAggregation) buildAggregationQuery() error {
-	var agg Aggregation
-	agg = &MetricAggregation{}
+	var agg AggregationRequest
+	agg = &MetricAggregationRequest{}
 
 	// create one aggregation per metric field found & function defined for numeric fields
 	for k, v := range aggregation.mapMetricFields {
@@ -157,18 +149,16 @@ func (aggregation *osAggregation) buildAggregationQuery() error {
 
 	// create a terms aggregation per tag
 	for _, term := range aggregation.Tags {
-		//agg := elastic.NewTermsAggregation()
-		//if aggregation.IncludeMissingTag && aggregation.MissingTagValue != "" {
-		//	agg.Missing(aggregation.MissingTagValue)
-		//}
-
-		bucket := &BucketAggregation{}
+		bucket := &BucketAggregationRequest{}
 		name := strings.ReplaceAll(term, ".", "_")
 		err := bucket.AddAggregation(name, "terms", term)
 		if err != nil {
 			return err
 		}
 		_ = bucket.BucketSize(name, 1000)
+		if aggregation.IncludeMissingTag && aggregation.MissingTagValue != "" {
+			bucket.Missing(name, aggregation.MissingTagValue)
+		}
 
 		bucket.AddNestedAggregation(name, agg)
 
