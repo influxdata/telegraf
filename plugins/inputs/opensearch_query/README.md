@@ -10,7 +10,7 @@ The following is supported:
   aggregated per tag
 - `value_count` returns the number of documents for a particular field
 - `stats` (returns `sum`, `min`, `max`, `avg`, and `value_count` in one query)
-- extended_stats (`stats` plus stats such as sum of squares, variance, and standard 
+- extended_stats (`stats` plus stats such as sum of squares, variance, and standard
   deviation)
 - `percentiles` returns the 1st, 5th, 25th, 50th, 75th, 95th, and 99th percentiles
 
@@ -79,16 +79,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## Valid values are: avg, sum, min, max, sum
     # metric_function = "avg"
 
-    ## Fields to be used as tags
-    ## Must be text, non-analyzed fields. Metric aggregations are performed
-    ## per tag
+    ## Fields to be used as tags.  Must be text, non-analyzed fields. Metric
+    ## aggregations are performed per tag
     # tags = ["field.keyword", "field2.keyword"]
 
     ## Set to true to not ignore documents when the tag(s) above are missing
     # include_missing_tag = false
 
     ## String value of the tag when the tag does not exist
-    ## Used when include_missing_tag is true
+    ## Required when include_missing_tag is true
     # missing_tag_value = "null"
 ```
 
@@ -126,6 +125,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [agg]: https://opensearch.org/docs/2.4/opensearch/aggregations/
 
 ### Example configurations
+
 #### Search the average response time, per URI and per response status code
 
 ```toml
@@ -208,7 +208,7 @@ For simple metrics, the result field name is `value`, and so getting the `avg`
 on a field named `size` would produce the result `size_value_avg`.
 
 For functions with multiple metrics, we use the resulting field.  For example,
-the `stats` function returns five different results, so for a field `size`, 
+the `stats` function returns five different results, so for a field `size`,
 we would see five metric fields, named `size_stats_min`,
 `size_stats_max`, `size_stats_sum`, `size_stats_avg`, and `size_stats_count`.
 
@@ -231,9 +231,9 @@ percentile take the form:
   }
  }
 }
-
 ```
-Thus, our results would take the form `size_percentiles_values_1.0`.  This 
+
+Thus, our results would take the form `size_percentiles_values_1.0`.  This
 structure applies to `percentiles` and `extended_stats` functions.
 
 Note: `extended_stats` is currently limited to 2 standard deviations only.
