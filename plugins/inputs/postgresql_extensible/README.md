@@ -26,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics from one or many postgresql servers
 [[inputs.postgresql_extensible]]
   # specify address via a url matching:
-  # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
+  # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...&statement_timeout=...
   # or a simple string:
   #   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
   #
