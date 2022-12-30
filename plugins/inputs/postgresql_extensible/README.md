@@ -272,7 +272,7 @@ CREATE OR REPLACE VIEW public.sessions AS
 ```
 
 
-### Example Output
+## Example Output
 
 The example out below was taken by running the query
 
@@ -286,7 +286,7 @@ Which generates the following
 postgresql,db=postgres,server=dbname\=postgres\ host\=localhost\ port\=5432\ statement_timeout\=10000\ user\=postgres percentage_of_used_cons=6i 1672400531000000000
 ```
 
-### Metrics
+## Metrics
 
 The metrics collected by this input plugin will depend on the configured query.
 

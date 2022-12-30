@@ -103,7 +103,7 @@ host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/te
 ```
 
 
-### Metrics
+## Metrics
 
 This postgresql plugin provides metrics for your postgres database. It currently
 works with postgres versions 8.1+. It uses data from the built in
@@ -143,7 +143,7 @@ More information about the meaning of these metrics can be found in the
 
 
 
-### Example Output
+## Example Output
 
 ```text
 postgresql,db=postgres_global,server=dbname\=postgres\ host\=localhost\ port\=5432\ statement_timeout\=10000\ user\=postgres tup_fetched=1271i,tup_updated=5i,session_time=1451414320768.855,xact_rollback=2i,conflicts=0i,blk_write_time=0,temp_bytes=0i,datid=0i,sessions_fatal=0i,tup_returned=1339i,sessions_abandoned=0i,blk_read_time=0,blks_read=88i,idle_in_transaction_time=0,sessions=0i,active_time=0,tup_inserted=24i,tup_deleted=0i,temp_files=0i,numbackends=0i,xact_commit=4i,sessions_killed=0i,blks_hit=5616i,deadlocks=0i 1672399790000000000
