@@ -1,6 +1,8 @@
 # PostgreSQL Input Plugin
 
-The `postgresql` plugin provides metrics for your PostgreSQL Server instance. Recorded metrics are lightweight and use Dynamic Management Views supplied by PostgreSQL.
+The `postgresql` plugin provides metrics for your PostgreSQL Server instance.
+Recorded metrics are lightweight and use Dynamic Management Views supplied
+by PostgreSQL.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
