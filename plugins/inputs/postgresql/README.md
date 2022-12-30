@@ -102,7 +102,9 @@ Or via an url matching:
 postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]
 ```
 
-It is also possible to specify a query timeout maximum execution time (in milliseconds) for any individual statement passed over the connection
+It is also possible to specify a query timeout maximum execution time (in ms)
+for any individual statement passed over the connection
+
 ```text
 postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]&statement_timeout=10000
 ```
