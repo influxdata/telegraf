@@ -271,7 +271,6 @@ CREATE OR REPLACE VIEW public.sessions AS
   WHERE proc.pid = stat.pid;
 ```
 
-
 ## Example Output
 
 The example out below was taken by running the query
@@ -293,6 +292,6 @@ The metrics collected by this input plugin will depend on the configured query.
 By default, the following format will be used
 
 * postgresql
-    * tags:
-        * db
-        * server
+  * tags:
+    * db
+    * server

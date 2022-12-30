@@ -104,7 +104,6 @@ Add the `sslkey`, `sslcert` and `sslrootcert` options to your DSN:
 host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/telegraf/key.pem sslcert=/etc/telegraf/cert.pem sslrootcert=/etc/telegraf/ca.pem
 ```
 
-
 ## Metrics
 
 This postgresql plugin provides metrics for your postgres database. It currently
@@ -142,8 +141,6 @@ More information about the meaning of these metrics can be found in the
 [PostgreSQL Documentation][1].
 
 [1]: http://www.postgresql.org/docs/9.2/static/monitoring-stats.html#PG-STAT-DATABASE-VIEW
-
-
 
 ## Example Output
 
