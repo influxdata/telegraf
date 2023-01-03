@@ -3,30 +3,25 @@ package encryption
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/sha1"
 	"errors"
 	"fmt"
 	"strings"
-
-	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/influxdata/telegraf/config"
 )
 
 type AesEncryptor struct {
-	Key        config.Secret `toml:"key"`
-	Vec        config.Secret `toml:"init_vector"`
-	Passwd     config.Secret `toml:"password"`
-	Salt       config.Secret `toml:"salt"`
-	Iterations int           `toml:"iterations"`
-	Variant    []string      `toml:"-"`
+	Variant []string      `toml:"-"`
+	Key     config.Secret `toml:"key"`
+	Vec     config.Secret `toml:"init_vector"`
+	KDFConfig
 
 	mode string
 	trim func([]byte) []byte
 }
 
 func (a *AesEncryptor) Init() error {
-	var cipher, mode, padding string
+	var cipherName, mode, padding string
 
 	switch len(a.Variant) {
 	case 3:
@@ -36,9 +31,9 @@ func (a *AesEncryptor) Init() error {
 		mode = strings.ToLower(a.Variant[1])
 		fallthrough
 	case 1:
-		cipher = strings.ToLower(a.Variant[0])
-		if !strings.HasPrefix(cipher, "aes") {
-			return fmt.Errorf("requested AES but specified %q", cipher)
+		cipherName = strings.ToLower(a.Variant[0])
+		if !strings.HasPrefix(cipherName, "aes") {
+			return fmt.Errorf("requested AES but specified %q", cipherName)
 		}
 	case 0:
 		return errors.New("please specify cipher")
@@ -47,7 +42,7 @@ func (a *AesEncryptor) Init() error {
 	}
 
 	var keylen int
-	switch cipher {
+	switch cipherName {
 	case "aes", "aes128":
 		keylen = 16
 	case "aes192":
@@ -55,7 +50,7 @@ func (a *AesEncryptor) Init() error {
 	case "aes256":
 		keylen = 32
 	default:
-		return fmt.Errorf("unsupported AES cipher %q", cipher)
+		return fmt.Errorf("unsupported AES cipher %q", cipherName)
 	}
 
 	switch mode {
@@ -85,18 +80,25 @@ func (a *AesEncryptor) Init() error {
 
 	// Generate the key using password-based-keys
 	if a.Key.Empty() {
-		a.Key.Destroy()
 		if a.Passwd.Empty() {
 			return errors.New("either key or password has to be specified")
 		}
 		if a.Salt.Empty() || a.Iterations == 0 {
 			return errors.New("salt and iterations required for password-based-keys")
 		}
-		key, err := a.generateKey(keylen)
+		key, iv, err := a.KDFConfig.NewKey(keylen)
 		if err != nil {
 			return fmt.Errorf("generating key failed: %w", err)
 		}
+		a.Key.Destroy()
 		a.Key = config.NewSecret(key)
+		if a.Vec.Empty() && len(iv) > 0 {
+			a.Vec.Destroy()
+			a.Vec = config.NewSecret(iv)
+		}
+	}
+	if a.Vec.Empty() {
+		return errors.New("'init_vector' has to be specified or derived from password")
 	}
 
 	return nil
@@ -143,20 +145,4 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 	}
 
 	return a.trim(data), nil
-}
-
-func (a *AesEncryptor) generateKey(keylen int) ([]byte, error) {
-	passwd, err := a.Passwd.Get()
-	if err != nil {
-		return nil, fmt.Errorf("getting password failed: %w", err)
-	}
-	defer config.ReleaseSecret(passwd)
-
-	salt, err := a.Salt.Get()
-	if err != nil {
-		return nil, fmt.Errorf("getting salt failed: %w", err)
-	}
-	defer config.ReleaseSecret(salt)
-
-	return pbkdf2.Key(passwd, salt, a.Iterations, keylen, sha1.New), nil
 }
