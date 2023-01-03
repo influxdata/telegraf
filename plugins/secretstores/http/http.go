@@ -75,11 +75,7 @@ func (h *HTTP) Init() error {
 	}
 
 	// Download and parse the credentials
-	if err := h.download(); err != nil {
-		return err
-	}
-
-	return nil
+	return h.download()
 }
 
 // Get searches for the given key and return the secret
@@ -103,7 +99,7 @@ func (h *HTTP) Get(key string) ([]byte, error) {
 }
 
 // Set sets the given secret for the given key
-func (h *HTTP) Set(key, value string) error {
+func (h *HTTP) Set(_, _ string) error {
 	return errors.New("setting secrets not supported")
 }
 
