@@ -7,10 +7,12 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -241,7 +243,7 @@ func TestReadUncoreFreq(t *testing.T) {
 
 	mockServices.msr.On("isMsrLoaded").Return(true)
 
-	mockServices.msr.On("readSingleMsr", "0", "MSR_UNCORE_PERF_STATUS").Return(uint64(10), nil)
+	mockServices.msr.On("readSingleMsr", "0", msrUncorePerfStatusString).Return(uint64(10), nil)
 
 	mockServices.msr.On("retrieveUncoreFrequency", "0", "initial", "min", "0").
 		Return(float64(500), nil)
@@ -640,4 +642,210 @@ func getPowerWithMockedServices() (*PowerStat, *MockServices) {
 	p.packageThermalDesignPower = true
 
 	return p, &mockServices
+}
+
+func TestGetBusClock(t *testing.T) {
+	tests := []struct {
+		name                string
+		modelCPU            uint64
+		socketID            string
+		msrFSBFreqValue     uint64
+		readSingleMsrErrFSB error
+		cpuBusClockValue    float64
+	}{
+		{
+			name:             "Error_withUnknownCPUmodel",
+			socketID:         "0",
+			modelCPU:         0xFF,
+			cpuBusClockValue: 0,
+		},
+		{
+			name:             "OK_withFBS100",
+			socketID:         "0",
+			modelCPU:         106,
+			msrFSBFreqValue:  1,
+			cpuBusClockValue: 100.0,
+		},
+		{
+			name:             "OK_withFBS133",
+			socketID:         "0",
+			modelCPU:         0x1F,
+			cpuBusClockValue: 133,
+		},
+		{
+			name:                "Error_withFBSCalculated",
+			socketID:            "0",
+			modelCPU:            0x37,
+			msrFSBFreqValue:     0,
+			readSingleMsrErrFSB: errors.New("something is wrong"),
+		},
+		{
+			name:             "OK_withFBSCalculated83.3",
+			socketID:         "0",
+			modelCPU:         0x37,
+			msrFSBFreqValue:  0,
+			cpuBusClockValue: 83.3,
+		},
+		{
+			name:             "OK_withFBSCalculated100",
+			socketID:         "0",
+			modelCPU:         0x37,
+			msrFSBFreqValue:  1,
+			cpuBusClockValue: 100,
+		},
+		{
+			name:             "OK_withFBSCalculated133.3",
+			socketID:         "0",
+			modelCPU:         0x37,
+			msrFSBFreqValue:  2,
+			cpuBusClockValue: 133.3,
+		},
+		{
+			name:             "OK_withFBSCalculated116.7",
+			socketID:         "0",
+			modelCPU:         0x37,
+			msrFSBFreqValue:  3,
+			cpuBusClockValue: 116.7,
+		},
+		{
+			name:             "OK_withFBSCalculated80",
+			socketID:         "0",
+			modelCPU:         0x37,
+			msrFSBFreqValue:  4,
+			cpuBusClockValue: 80,
+		},
+		{
+			name:             "OK_withFBSCalculatedUnknownFSBFreq",
+			socketID:         "0",
+			modelCPU:         0x37,
+			msrFSBFreqValue:  5,
+			cpuBusClockValue: 116.7,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, mockServices := getPowerWithMockedServices()
+			busClockCalculate := []uint64{0x37, 0x4D}
+			p.cpuInfo = map[string]*cpuInfo{
+				tt.socketID: {cpuID: tt.socketID, physicalID: tt.socketID, model: strconv.FormatUint(tt.modelCPU, 10)},
+			}
+			if contains(busClockCalculate, tt.modelCPU) {
+				mockServices.msr.On("readSingleMsr", mock.Anything, msrFSBFreqString).Return(tt.msrFSBFreqValue, tt.readSingleMsrErrFSB)
+			}
+			defer mockServices.msr.AssertExpectations(t)
+
+			value := p.getBusClock(tt.socketID)
+			require.Equal(t, tt.cpuBusClockValue, value)
+		})
+	}
+}
+
+func TestFillCPUBusClock(t *testing.T) {
+	tests := []struct {
+		name                       string
+		modelCPU                   uint64
+		busClockValue              float64
+		packageCPUBaseFrequencySet bool
+	}{
+		{
+			name:          "NotSet_0",
+			modelCPU:      0xFF,
+			busClockValue: 0,
+		},
+		{
+			name:                       "Set_100",
+			modelCPU:                   0x2A,
+			busClockValue:              100,
+			packageCPUBaseFrequencySet: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, _ := getPowerWithMockedServices()
+			p.packageCPUBaseFrequency = true
+			p.cpuInfo = map[string]*cpuInfo{
+				"0": {cpuID: "0", physicalID: "0", model: strconv.FormatUint(tt.modelCPU, 10)},
+			}
+
+			p.fillCPUBusClock()
+			require.Equal(t, tt.busClockValue, p.cpuBusClockValue)
+			require.Equal(t, tt.packageCPUBaseFrequencySet, p.packageCPUBaseFrequency)
+		})
+	}
+}
+
+func TestAddCPUBaseFreq(t *testing.T) {
+	tests := []struct {
+		name                  string
+		socketID              string
+		readSingleMsrErrRatio error
+		msrPlatformInfoValue  uint64
+		setupPowerstat        func(t *testing.T)
+		clockBusValue         float64
+		nonTurboRatio         float64
+		metricExpected        bool
+	}{
+		{
+			name:                  "Error_reading_msr",
+			socketID:              "0",
+			clockBusValue:         100,
+			readSingleMsrErrRatio: errors.New("can't read msr"),
+			metricExpected:        false,
+		},
+		{
+			name:                 "NoMetric_Ratio_is_0",
+			socketID:             "0",
+			msrPlatformInfoValue: 0x8008082FF2810000,
+			clockBusValue:        100,
+			nonTurboRatio:        0,
+			metricExpected:       false,
+		},
+		{
+			name:                 "OK_Ratio_is_24",
+			socketID:             "0",
+			msrPlatformInfoValue: 0x8008082FF2811800,
+			clockBusValue:        100,
+			nonTurboRatio:        24,
+			metricExpected:       true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+			p, mockServices := getPowerWithMockedServices()
+
+			p.cpuInfo = map[string]*cpuInfo{
+				tt.socketID: {cpuID: tt.socketID, physicalID: tt.socketID},
+			}
+			p.cpuBusClockValue = tt.clockBusValue
+
+			mockServices.msr.On("readSingleMsr", mock.Anything, msrPlatformInfoString).Return(tt.msrPlatformInfoValue, tt.readSingleMsrErrRatio)
+			defer mockServices.msr.AssertExpectations(t)
+
+			p.addCPUBaseFreq(tt.socketID, &acc)
+			actual := acc.GetTelegrafMetrics()
+			if !tt.metricExpected {
+				require.Len(t, actual, 0)
+				return
+			}
+
+			require.Len(t, actual, 1)
+			expected := []telegraf.Metric{
+				testutil.MustMetric(
+					"powerstat_package",
+					map[string]string{
+						"package_id": tt.socketID,
+					},
+					map[string]interface{}{
+						"cpu_base_frequency_mhz": uint64(tt.nonTurboRatio * tt.clockBusValue),
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
+			}
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+		})
+	}
 }
