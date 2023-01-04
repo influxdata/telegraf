@@ -105,14 +105,7 @@ func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 		}
 	}
 	// Make sure we add a trailing newline
-	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) {
-		if _, err := buf.Write([]byte("\n")); err != nil {
-			return errors.New("adding newline failed")
-		}
-	}
-
-	// Insert newlines before and after
-	if b.Newlines {
+	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) || b.Newlines {
 		if _, err := buf.Write([]byte("\n")); err != nil {
 			return errors.New("adding newline failed")
 		}
