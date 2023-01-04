@@ -42,7 +42,7 @@ func (eh *mockEventHub) SendBatch(ctx context.Context, iterator eventhub.BatchIt
 /* End wrapper interface */
 
 func TestInitAndWrite(t *testing.T) {
-	serializer, err := json.NewSerializer(time.Second, "", "")
+	serializer, err := json.NewSerializer(json.FormatConfig{TimestampUnits: time.Second})
 	require.NoError(t, err)
 	mockHub := &mockEventHub{}
 	e := &EventHubs{
@@ -101,7 +101,7 @@ func TestInitAndWriteIntegration(t *testing.T) {
 	testHubCS := os.Getenv("EVENTHUB_CONNECTION_STRING") + ";EntityPath=" + entity.Name
 
 	// Configure the plugin to target the newly created hub
-	serializer, err := json.NewSerializer(time.Second, "", "")
+	serializer, err := json.NewSerializer(json.FormatConfig{TimestampUnits: time.Second})
 	require.NoError(t, err)
 	e := &EventHubs{
 		Hub:              &eventHub{},

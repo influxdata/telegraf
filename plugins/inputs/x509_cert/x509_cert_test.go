@@ -417,19 +417,22 @@ func TestServerName(t *testing.T) {
 		test := elt
 		t.Run(test.name, func(t *testing.T) {
 			sc := &X509Cert{
+				Sources:      []string{test.url},
 				ServerName:   test.fromCfg,
 				ClientConfig: _tls.ClientConfig{ServerName: test.fromTLS},
 				Log:          testutil.Logger{},
 			}
-			require.NoError(t, sc.Init())
-			u, err := url.Parse(test.url)
-			require.NoError(t, err)
-			actual, err := sc.serverName(u)
+			err := sc.Init()
 			if test.err {
 				require.Error(t, err)
+				return
 			} else {
 				require.NoError(t, err)
 			}
+			u, err := url.Parse(test.url)
+			require.NoError(t, err)
+			actual, err := sc.serverName(u)
+			require.NoError(t, err)
 			require.Equal(t, test.expected, actual)
 		})
 	}

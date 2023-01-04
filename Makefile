@@ -116,7 +116,7 @@ embed_readme_%:
 	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 
 .PHONY: docs
-docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators
+docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
 
 .PHONY: build
 build:
@@ -238,8 +238,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.19.3 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.19.3
+	docker build -t quay.io/influxdb/telegraf-ci:1.19.4 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.19.4
 
 .PHONY: install
 install: $(buildbin)

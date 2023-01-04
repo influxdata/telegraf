@@ -231,9 +231,9 @@ func makeReadResponses(jresponses []jolokiaResponse) []ReadResponse {
 				rrequest.Attributes = []string{attribute}
 			} else {
 				attributes, _ := attrValue.([]interface{})
-				rrequest.Attributes = make([]string, len(attributes))
-				for i, attr := range attributes {
-					rrequest.Attributes[i] = attr.(string)
+				rrequest.Attributes = make([]string, 0, len(attributes))
+				for _, attr := range attributes {
+					rrequest.Attributes = append(rrequest.Attributes, attr.(string))
 				}
 			}
 		}

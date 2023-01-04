@@ -27,6 +27,7 @@ type streamListener struct {
 	MaxConnections  int
 	ReadTimeout     config.Duration
 	KeepAlivePeriod *config.Duration
+	Splitter        bufio.SplitFunc
 	Parser          telegraf.Parser
 	Log             telegraf.Logger
 
@@ -122,15 +123,13 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 
 	// Store the connection mapped to its address
 	l.Lock()
-	defer l.Unlock()
 	l.connections[addr] = conn
+	l.Unlock()
 
 	return nil
 }
 
 func (l *streamListener) closeConnection(conn net.Conn) {
-	l.Lock()
-	defer l.Unlock()
 	addr := conn.RemoteAddr().String()
 	if err := conn.Close(); err != nil {
 		l.Log.Errorf("Cannot close connection to %q: %v", addr, err)
@@ -147,9 +146,11 @@ func (l *streamListener) close() error {
 		return err
 	}
 
+	l.Lock()
 	for _, conn := range l.connections {
 		l.closeConnection(conn)
 	}
+	l.Unlock()
 	l.wg.Wait()
 
 	if l.path != "" {
@@ -183,12 +184,15 @@ func (l *streamListener) listen(acc telegraf.Accumulator) {
 		}
 
 		wg.Add(1)
-		go func() {
+		go func(c net.Conn) {
 			defer wg.Done()
-			if err := l.read(acc, conn); err != nil {
+			if err := l.read(acc, c); err != nil {
 				acc.AddError(err)
 			}
-		}()
+			l.Lock()
+			l.closeConnection(conn)
+			l.Unlock()
+		}(conn)
 	}
 	wg.Wait()
 }
@@ -202,6 +206,7 @@ func (l *streamListener) read(acc telegraf.Accumulator, conn net.Conn) error {
 	timeout := time.Duration(l.ReadTimeout)
 
 	scanner := bufio.NewScanner(decoder)
+	scanner.Split(l.Splitter)
 	for {
 		// Set the read deadline, if any, then start reading. The read
 		// will accept the deadline and return if no or insufficient data

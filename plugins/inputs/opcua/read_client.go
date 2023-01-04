@@ -57,10 +57,10 @@ func (o *ReadClient) Connect() error {
 		return err
 	}
 
-	readValueIds := make([]*ua.ReadValueID, len(o.NodeIDs))
+	readValueIds := make([]*ua.ReadValueID, 0, len(o.NodeIDs))
 	if o.Workarounds.UseUnregisteredReads {
-		for i, nid := range o.NodeIDs {
-			readValueIds[i] = &ua.ReadValueID{NodeID: nid}
+		for _, nid := range o.NodeIDs {
+			readValueIds = append(readValueIds, &ua.ReadValueID{NodeID: nid})
 		}
 	} else {
 		regResp, err := o.Client.RegisterNodes(&ua.RegisterNodesRequest{
@@ -70,8 +70,8 @@ func (o *ReadClient) Connect() error {
 			return fmt.Errorf("registerNodes failed: %v", err)
 		}
 
-		for i, v := range regResp.RegisteredNodeIDs {
-			readValueIds[i] = &ua.ReadValueID{NodeID: v}
+		for _, v := range regResp.RegisteredNodeIDs {
+			readValueIds = append(readValueIds, &ua.ReadValueID{NodeID: v})
 		}
 	}
 

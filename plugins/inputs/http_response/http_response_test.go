@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -169,8 +170,10 @@ func checkOutput(
 func TestHeaders(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cHeader := r.Header.Get("Content-Type")
+		uaHeader := r.Header.Get("User-Agent")
 		require.Equal(t, "Hello", r.Host)
 		require.Equal(t, "application/json", cHeader)
+		require.Equal(t, internal.ProductToken(), uaHeader)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()

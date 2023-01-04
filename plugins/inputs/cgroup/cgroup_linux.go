@@ -54,7 +54,11 @@ func (g *CGroup) gatherDir(acc telegraf.Accumulator, dir string) error {
 
 		fd := fileData{data: raw, path: file.path}
 		if err := fd.parse(fields); err != nil {
-			return err
+			if !g.logged[file.path] {
+				acc.AddError(err)
+			}
+			g.logged[file.path] = true
+			continue
 		}
 	}
 

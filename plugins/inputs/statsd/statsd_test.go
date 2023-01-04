@@ -1032,7 +1032,7 @@ func TestParse_MeasurementsWithSameName(t *testing.T) {
 // Test that the metric caches expire (clear) an entry after the entry hasn't been updated for the configurable MaxTTL duration.
 func TestCachesExpireAfterMaxTTL(t *testing.T) {
 	s := NewTestStatsd()
-	s.MaxTTL = config.Duration(100 * time.Microsecond)
+	s.MaxTTL = config.Duration(10 * time.Millisecond)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, s.parseStatsdLine("valid:45|c"))
@@ -1040,7 +1040,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 	require.NoError(t, s.Gather(acc))
 
 	// Max TTL goes by, our 'valid' entry is cleared.
-	time.Sleep(100 * time.Microsecond)
+	time.Sleep(100 * time.Millisecond)
 	require.NoError(t, s.Gather(acc))
 
 	// Now when we gather, we should have a counter that is reset to zero.

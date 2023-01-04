@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/google/uuid"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/plugins/secretstores"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
@@ -60,23 +60,40 @@ type Config struct {
 	UnusedFields      map[string]bool
 	unusedFieldsMutex *sync.Mutex
 
-	Tags          map[string]string
-	InputFilters  []string
-	OutputFilters []string
+	Tags               map[string]string
+	InputFilters       []string
+	OutputFilters      []string
+	SecretStoreFilters []string
+
+	SecretStores map[string]telegraf.SecretStore
 
 	Agent       *AgentConfig
 	Inputs      []*models.RunningInput
 	Outputs     []*models.RunningOutput
 	Aggregators []*models.RunningAggregator
 	// Processors have a slice wrapper type because they need to be sorted
-	Processors    models.RunningProcessors
-	AggProcessors models.RunningProcessors
+	Processors        models.RunningProcessors
+	AggProcessors     models.RunningProcessors
+	fileProcessors    OrderedPlugins
+	fileAggProcessors OrderedPlugins
+
 	// Parsers are created by their inputs during gather. Config doesn't keep track of them
 	// like the other plugins because they need to be garbage collected (See issue #11809)
 
 	Deprecations map[string][]int64
 	version      *semver.Version
 }
+
+// Ordered plugins used to keep the order in which they appear in a file
+type OrderedPlugin struct {
+	Line   int
+	plugin any
+}
+type OrderedPlugins []*OrderedPlugin
+
+func (op OrderedPlugins) Len() int           { return len(op) }
+func (op OrderedPlugins) Swap(i, j int)      { op[i], op[j] = op[j], op[i] }
+func (op OrderedPlugins) Less(i, j int) bool { return op[i].Line < op[j].Line }
 
 // NewConfig creates a new struct to hold the Telegraf config.
 // For historical reasons, It holds the actual instances of the running plugins
@@ -95,14 +112,18 @@ func NewConfig() *Config {
 			LogfileRotationMaxArchives: 5,
 		},
 
-		Tags:          make(map[string]string),
-		Inputs:        make([]*models.RunningInput, 0),
-		Outputs:       make([]*models.RunningOutput, 0),
-		Processors:    make([]*models.RunningProcessor, 0),
-		AggProcessors: make([]*models.RunningProcessor, 0),
-		InputFilters:  make([]string, 0),
-		OutputFilters: make([]string, 0),
-		Deprecations:  make(map[string][]int64),
+		Tags:               make(map[string]string),
+		Inputs:             make([]*models.RunningInput, 0),
+		Outputs:            make([]*models.RunningOutput, 0),
+		Processors:         make([]*models.RunningProcessor, 0),
+		AggProcessors:      make([]*models.RunningProcessor, 0),
+		SecretStores:       make(map[string]telegraf.SecretStore),
+		fileProcessors:     make([]*OrderedPlugin, 0),
+		fileAggProcessors:  make([]*OrderedPlugin, 0),
+		InputFilters:       make([]string, 0),
+		OutputFilters:      make([]string, 0),
+		SecretStoreFilters: make([]string, 0),
+		Deprecations:       make(map[string][]int64),
 	}
 
 	// Handle unknown version
@@ -259,6 +280,15 @@ func (c *Config) OutputNames() []string {
 	return PluginNameCounts(name)
 }
 
+// SecretstoreNames returns a list of strings of the configured secret-stores.
+func (c *Config) SecretstoreNames() []string {
+	names := make([]string, 0, len(c.SecretStores))
+	for name := range c.SecretStores {
+		names = append(names, name)
+	}
+	return PluginNameCounts(names)
+}
+
 // PluginNameCounts returns a list of sorted plugin names and their count
 func PluginNameCounts(plugins []string) []string {
 	names := make(map[string]int)
@@ -391,14 +421,17 @@ func (c *Config) LoadAll(configFiles ...string) error {
 		}
 	}
 
-	return nil
+	// Sort the processors according to their `order` setting while
+	// using a stable sort to keep the file loading / file position order.
+	sort.Stable(c.Processors)
+	sort.Stable(c.AggProcessors)
+
+	// Let's link all secrets to their secret-stores
+	return c.LinkSecrets()
 }
 
 // LoadConfigData loads TOML-formatted config data
 func (c *Config) LoadConfigData(data []byte) error {
-	// Create unique identifier for plugins to identify when using multiple configurations
-	id := uuid.New()
-
 	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("error parsing data: %s", err)
@@ -441,6 +474,14 @@ func (c *Config) LoadConfigData(data []byte) error {
 		c.Tags["host"] = c.Agent.Hostname
 	}
 
+	// Warn when explicitly setting the old snmp translator
+	if c.Agent.SnmpTranslator == "netsnmp" {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "agent", "snmp_translator", "netsnmp", telegraf.DeprecationInfo{
+			Since:     "1.25.0",
+			RemovalIn: "2.0.0",
+			Notice:    "Use 'gosmi' instead",
+		})
+	}
 	// Set snmp agent translator default
 	if c.Agent.SnmpTranslator == "" {
 		c.Agent.SnmpTranslator = "netsnmp"
@@ -449,6 +490,10 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if len(c.UnusedFields) > 0 {
 		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
 	}
+
+	// Initialize the file-sorting slices
+	c.fileProcessors = make(OrderedPlugins, 0)
+	c.fileAggProcessors = make(OrderedPlugins, 0)
 
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
@@ -510,7 +555,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addProcessor(id.String(), pluginName, t); err != nil {
+						if err = c.addProcessor(pluginName, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -546,6 +591,24 @@ func (c *Config) LoadConfigData(data []byte) error {
 						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
+		case "secretstores":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addSecretStore(pluginName, t); err != nil {
+							return fmt.Errorf("error parsing %s, %s", pluginName, err)
+						}
+					}
+				default:
+					return fmt.Errorf("unsupported config format: %s", pluginName)
+				}
+				if len(c.UnusedFields) > 0 {
+					msg := "plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used"
+					return fmt.Errorf(msg, name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
+			}
+
 		// Assume it's an input for legacy config file support if no other
 		// identifiers are present
 		default:
@@ -555,8 +618,16 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 	}
 
-	if len(c.Processors) > 1 {
-		sort.Sort(c.Processors)
+	// Sort the processor according to the order they appeared in this file
+	// In a later stage, we sort them using the `order` option.
+	sort.Sort(c.fileProcessors)
+	for _, op := range c.fileProcessors {
+		c.Processors = append(c.Processors, op.plugin.(*models.RunningProcessor))
+	}
+
+	sort.Sort(c.fileAggProcessors)
+	for _, op := range c.fileAggProcessors {
+		c.AggProcessors = append(c.AggProcessors, op.plugin.(*models.RunningProcessor))
 	}
 
 	return nil
@@ -709,6 +780,68 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	return nil
 }
 
+func (c *Config) addSecretStore(name string, table *ast.Table) error {
+	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
+		return nil
+	}
+
+	var storeid string
+	c.getFieldString(table, "id", &storeid)
+
+	creator, ok := secretstores.SecretStores[name]
+	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := secretstores.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("secretstores", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
+		return fmt.Errorf("undefined but requested secretstores: %s", name)
+	}
+	store := creator(storeid)
+
+	if err := c.toml.UnmarshalTable(table, store); err != nil {
+		return err
+	}
+
+	if err := c.printUserDeprecation("secretstores", name, store); err != nil {
+		return err
+	}
+
+	if err := store.Init(); err != nil {
+		return fmt.Errorf("error initializing secretstore: %w", err)
+	}
+
+	if _, found := c.SecretStores[storeid]; found {
+		return fmt.Errorf("duplicate ID %q for secretstore %q", storeid, name)
+	}
+	c.SecretStores[storeid] = store
+	return nil
+}
+
+func (c *Config) LinkSecrets() error {
+	for _, s := range unlinkedSecrets {
+		resolvers := make(map[string]telegraf.ResolveFunc)
+		for _, ref := range s.GetUnlinked() {
+			// Split the reference and lookup the resolver
+			storeid, key := splitLink(ref)
+			store, found := c.SecretStores[storeid]
+			if !found {
+				return fmt.Errorf("unknown secret-store for %q", ref)
+			}
+			resolver, err := store.GetResolver(key)
+			if err != nil {
+				return fmt.Errorf("retrieving resolver for %q failed: %v", ref, err)
+			}
+			resolvers[ref] = resolver
+		}
+		// Inject the resolver list into the secret
+		if err := s.Link(resolvers); err != nil {
+			return fmt.Errorf("retrieving resolver failed: %v", err)
+		}
+	}
+	return nil
+}
+
 func (c *Config) probeParser(parentcategory string, parentname string, table *ast.Table) bool {
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
@@ -758,7 +891,7 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 	return running, err
 }
 
-func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
+func (c *Config) addProcessor(name string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -780,7 +913,7 @@ func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
-	processorConfig, err := c.buildProcessor(id, name, table)
+	processorConfig, err := c.buildProcessor(name, table)
 	if err != nil {
 		return err
 	}
@@ -791,7 +924,7 @@ func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
 		return err
 	}
 	rf := models.NewRunningProcessor(processorBefore, processorConfig)
-	c.Processors = append(c.Processors, rf)
+	c.fileProcessors = append(c.fileProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Setup another (new) processor instance running after the aggregator
 	processorAfter, _, err := c.setupProcessor(processorConfig.Name, creator, table)
@@ -799,7 +932,7 @@ func (c *Config) addProcessor(id string, name string, table *ast.Table) error {
 		return err
 	}
 	rf = models.NewRunningProcessor(processorAfter, processorConfig)
-	c.AggProcessors = append(c.AggProcessors, rf)
+	c.fileAggProcessors = append(c.fileAggProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Check the number of misses against the threshold
 	if hasParser {
@@ -1074,12 +1207,8 @@ func (c *Config) buildParser(name string, tbl *ast.Table) *models.ParserConfig {
 // buildProcessor parses Processor specific items from the ast.Table,
 // builds the filter and returns a
 // models.ProcessorConfig to be inserted into models.RunningProcessor
-func (c *Config) buildProcessor(id string, name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
-	conf := &models.ProcessorConfig{
-		ID:   id,
-		Name: name,
-		Line: tbl.Line,
-	}
+func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+	conf := &models.ProcessorConfig{Name: name}
 
 	c.getFieldInt64(tbl, "order", &conf.Order)
 	c.getFieldString(tbl, "alias", &conf.Alias)
@@ -1196,6 +1325,8 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
 	c.getFieldString(tbl, "json_timestamp_format", &sc.TimestampFormat)
 	c.getFieldString(tbl, "json_transformation", &sc.Transformation)
+	c.getFieldStringSlice(tbl, "json_nested_fields_include", &sc.JSONNestedFieldInclude)
+	c.getFieldStringSlice(tbl, "json_nested_fields_exclude", &sc.JSONNestedFieldExclude)
 
 	c.getFieldBool(tbl, "splunkmetric_hec_routing", &sc.HecRouting)
 	c.getFieldBool(tbl, "splunkmetric_multimetric", &sc.SplunkmetricMultiMetric)
@@ -1276,6 +1407,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
 		"json_timestamp_format", "json_timestamp_units", "json_transformation",
+		"json_nested_fields_include", "json_nested_fields_exclude",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"prometheus_compact_encoding",
 		"splunkmetric_hec_routing", "splunkmetric_multimetric", "splunkmetric_omit_event_tag",

@@ -270,8 +270,10 @@ func TestRunParser(t *testing.T) {
 func TestRunParserInvalidMsg(t *testing.T) {
 	var testmsg = []byte("cpu_load_short")
 
+	logger := &testutil.CaptureLogger{}
+
 	listener, in := newTestTCPListener()
-	listener.Log = &testutil.CaptureLogger{}
+	listener.Log = logger
 	listener.acc = &testutil.Accumulator{}
 
 	parser := &influx.Parser{}
@@ -283,8 +285,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	in <- testmsg
 
 	listener.Stop()
-	errmsg := listener.Log.(*testutil.CaptureLogger).LastError
-	require.Contains(t, errmsg, "tcp_listener has received 1 malformed packets thus far.")
+	require.Contains(t, logger.LastError(), "tcp_listener has received 1 malformed packets thus far.")
 }
 
 func TestRunParserGraphiteMsg(t *testing.T) {

@@ -141,6 +141,12 @@ This is a list of known headers and the corresponding values for
     ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
     # timestamp_format = "2006-01-02T15:04:05Z"
 
+    ## Optional: List of fields to convert to hex-strings if they are
+    ## containing byte-arrays. This might be the case for e.g. protocol-buffer
+    ## messages encoding data as byte-arrays. Wildcard patterns are allowed.
+    ## By default, all byte-array-fields are converted to string.
+    # fields_bytes_as_hex = []
+
     ## Tag definitions using the given XPath queries.
     [inputs.file.xpath.tags]
       name   = "substring-after(Sensor/@name, ' ')"

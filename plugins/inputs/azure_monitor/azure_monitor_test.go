@@ -975,7 +975,7 @@ func TestGather_Success(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.azureManager = &mockAzureClientsManager{}
 
-	var resourceTargets []*receiver.ResourceTarget
+	resourceTargets := make([]*receiver.ResourceTarget, 0, len(am.ResourceTargets))
 	for _, target := range am.ResourceTargets {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}

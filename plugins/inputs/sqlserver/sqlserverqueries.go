@@ -214,12 +214,15 @@ SET @SqlStatement = '
 SELECT
 	 ''sqlserver_server_properties'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+	,@@SERVICENAME AS [service_name]
 	,si.[cpu_count]
 	,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
+	,(SELECT [available_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [available_server_memory]
 	,SERVERPROPERTY(''Edition'') AS [sku]
 	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
+	,SERVERPROPERTY(''IsClustered'') AS [instance_type]
 	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
 	,dbs.[db_online]
 	,dbs.[db_restoring]
@@ -1123,13 +1126,15 @@ FROM (
 	OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
 ) AS data
 WHERE
-	[blocking_or_blocked] > 1	--Always include blocking or blocked sessions/requests
+	   [blocking_or_blocked] > 1 --Always include blocking or blocked sessions/requests
+	OR [open_transaction] >= 1   --Always include sessions with open transactions
 	OR (
 		[request_id] IS NOT NULL	--A request must exists
 		AND (	--Always fetch user process (in any state), fetch system process only if active
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')
 		)
+		AND [session_id] <> @@SPID  --Exclude current SPID
 	)
 OPTION(MAXDOP 1)'
 

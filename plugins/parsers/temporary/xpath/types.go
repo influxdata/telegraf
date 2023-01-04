@@ -1,5 +1,7 @@
 package xpath
 
+import "github.com/influxdata/telegraf/filter"
+
 // Config definition for backward compatibility ONLY.
 // We need this here to avoid cyclic dependencies. However, we need
 // to move this to plugins/parsers/xpath once we deprecate parser
@@ -12,6 +14,7 @@ type Config struct {
 	Tags         map[string]string `toml:"tags"`
 	Fields       map[string]string `toml:"fields"`
 	FieldsInt    map[string]string `toml:"fields_int"`
+	FieldsHex    []string          `toml:"fields_bytes_as_hex"`
 
 	FieldSelection  string `toml:"field_selection"`
 	FieldNameQuery  string `toml:"field_name"`
@@ -22,4 +25,6 @@ type Config struct {
 	TagNameQuery  string `toml:"tag_name"`
 	TagValueQuery string `toml:"tag_value"`
 	TagNameExpand bool   `toml:"tag_name_expansion"`
+
+	FieldsHexFilter filter.Filter
 }

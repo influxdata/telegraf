@@ -164,14 +164,14 @@ func createSim(folders int) (*simulator.Model, *simulator.Server, error) {
 
 func testAlignUniform(t *testing.T, n int) {
 	now := time.Now().Truncate(60 * time.Second)
-	info := make([]types.PerfSampleInfo, n)
-	values := make([]int64, n)
+	info := make([]types.PerfSampleInfo, 0, n)
+	values := make([]int64, 0, n)
 	for i := 0; i < n; i++ {
-		info[i] = types.PerfSampleInfo{
+		info = append(info, types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
 			Interval:  20,
-		}
-		values[i] = 1
+		})
+		values = append(values, 1)
 	}
 	e := Endpoint{log: testutil.Logger{}}
 	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
@@ -190,14 +190,14 @@ func TestAlignMetrics(t *testing.T) {
 	// 20s to 60s of 1,2,3,1,2,3... (should average to 2)
 	n := 30
 	now := time.Now().Truncate(60 * time.Second)
-	info := make([]types.PerfSampleInfo, n)
-	values := make([]int64, n)
+	info := make([]types.PerfSampleInfo, 0, n)
+	values := make([]int64, 0, n)
 	for i := 0; i < n; i++ {
-		info[i] = types.PerfSampleInfo{
+		info = append(info, types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
 			Interval:  20,
-		}
-		values[i] = int64(i%3 + 1)
+		})
+		values = append(values, int64(i%3+1))
 	}
 	e := Endpoint{log: testutil.Logger{}}
 	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)

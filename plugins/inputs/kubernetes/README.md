@@ -48,17 +48,17 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics from the kubernetes kubelet api
 [[inputs.kubernetes]]
-  ## URL for the kubelet
+  ## URL for the kubelet, if empty read metrics from all nodes in the cluster
   url = "http://127.0.0.1:10255"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ## If both of these are empty, we'll use the default serviceaccount:
-  ## at: /run/secrets/kubernetes.io/serviceaccount/token
+  ## at: /var/run/secrets/kubernetes.io/serviceaccount/token
   ##
   ## To re-read the token at each interval, please use a file with the
   ## bearer_token option. If given a string, Telegraf will always use that
   ## token.
-  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
+  # bearer_token = "/var/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
   # bearer_token_string = "abc_123"
 

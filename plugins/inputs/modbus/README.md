@@ -41,16 +41,22 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   controller = "tcp://localhost:502"
 
   ## Serial (RS485; RS232)
+  ## For unix-like operating systems use:
   # controller = "file:///dev/ttyUSB0"
+  ## For Windows operating systems use:
+  # controller = "COM1"
   # baud_rate = 9600
   # data_bits = 8
   # parity = "N"
   # stop_bits = 1
 
-  ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"
-  ## default behaviour is "TCP" if the controller is TCP
-  ## For Serial you can choose between "RTU" and "ASCII"
-  # transmission_mode = "RTU"
+  ## Transmission mode for Modbus packets depending on the controller type.
+  ## For Modbus over TCP you can choose between "TCP" , "RTUoverTCP" and
+  ## "ASCIIoverTCP".
+  ## For Serial controllers you can choose between "RTU" and "ASCII".
+  ## By default this is set to "auto" selecting "TCP" for ModbusTCP connections
+  ## and "RTU" for serial connections.
+  # transmission_mode = "auto"
 
   ## Trace the connection to the modbus device as debug messages
   ## Note: You have to enable telegraf's debug mode to see those messages!
@@ -91,8 +97,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  |---BA, DCBA   - Little Endian
   ##  |---BADC       - Mid-Big Endian
   ##  |---CDAB       - Mid-Little Endian
-  ## data_type   - INT16, UINT16, INT32, UINT32, INT64, UINT64,
-  ##               FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
+  ## data_type   - INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
+  ##               INT16, UINT16, INT32, UINT32, INT64, UINT64,
+  ##               FLOAT16-IEEE, FLOAT32-IEEE, FLOAT64-IEEE (IEEE 754 binary representation)
   ##               FLOAT32, FIXED, UFIXED (fixed-point representation on input)
   ## scale       - the final numeric variable representation
   ## address     - variable address
@@ -146,17 +153,29 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##  |                 to reduce the number of requested registers by keeping
     ##  |                 the number of requests.
     ##  |---aggressive -- Rearrange request boundaries similar to "rearrange" but
-    ##                    allow to request registers not specified by the user to
-    ##                    fill gaps. This usually reduces the number of requests at the
-    ##                    cost of more requested registers.
+    ##  |                 allow to request registers not specified by the user to
+    ##  |                 fill gaps. This usually reduces the number of requests at the
+    ##  |                 cost of more requested registers.
+    ##  |---max_insert -- Rearrange request keeping the number of extra fields below the value
+    ##                    provided in "optimization_max_register_fill". It is not necessary to define 'omitted'
+    ##                    fields as the optimisation will add such field only where needed.
     # optimization = "none"
+
+    ## Maximum number register the optimizer is allowed to insert between two fields to
+    ## save requests.
+    ## This option is only used for the 'max_insert' optimization strategy.
+    ## NOTE: All omitted fields are ignored, so this option denotes the effective hole
+    ## size to fill.
+    # optimization_max_register_fill = 50
 
     ## Field definitions
     ## Analog Variables, Input Registers and Holding Registers
     ## address        - address of the register to query. For coil and discrete inputs this is the bit address.
     ## name *1        - field name
-    ## type *1,2      - type of the modbus field, can be INT16, UINT16, INT32, UINT32, INT64, UINT64 and
-    ##                  FLOAT32, FLOAT64 (IEEE 754 binary representation)
+    ## type *1,2      - type of the modbus field, can be
+    ##                  INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
+    ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
+    ##                  FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ## scale *1,2     - (optional) factor to scale the variable with
     ## output *1,2    - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
     ##                  "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
@@ -218,14 +237,25 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.modbus.workarounds]
-    ## Pause after connect delays the first request by the specified time. This might be necessary for (slow) devices.
+    ## Pause after connect delays the first request by the specified time.
+    ## This might be necessary for (slow) devices.
     # pause_after_connect = "0ms"
-    ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
+
+    ## Pause between read requests sent to the device.
+    ## This might be necessary for (slow) serial devices.
     # pause_between_requests = "0ms"
-    ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
-    ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
-    ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
+
+    ## Close the connection after every gather cycle.
+    ## Usually the plugin closes the connection after a certain idle-timeout,
+    ## however, if you query a device with limited simultaneous connectivity
+    ## (e.g. serial devices) from multiple instances you might want to only
+    ## stay connected during gather and disconnect afterwards.
     # close_connection_after_gather = false
+
+    ## Force the plugin to read each field in a separate request.
+    ## This might be necessary for devices not conforming to the spec,
+    ## see https://github.com/influxdata/telegraf/issues/12071.
+    # one_request_per_field = false
 ```
 
 ## Notes
@@ -269,12 +299,18 @@ floating-point-number. The size of the output type is assumed to be large enough
 for all supported input types. The mapping from the input type to the output
 type is fixed and cannot be configured.
 
+##### Integers: `INT8L`, `INT8H`, `UINT8L`, `UINT8H`
+
+These types are used for 8-bit integer values. Select the one that matches your
+modbus data source. The `L` and `H` suffix denotes the low- and high byte of
+the register respectively.
+
 ##### Integers: `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64`, `UINT64`
 
 These types are used for integer input values. Select the one that matches your
 modbus data source.
 
-##### Floating Point: `FLOAT32-IEEE`, `FLOAT64-IEEE`
+##### Floating Point: `FLOAT16-IEEE`, `FLOAT32-IEEE`, `FLOAT64-IEEE`
 
 Use these types if your modbus registers contain a value that is encoded in this
 format. These types always include the sign, therefore no variant exists.
@@ -377,6 +413,23 @@ interested in but want to minimize the number of requests sent to the device.
 __Please note:__ This optimization might take long in case of many
 non-consecutive, non-omitted fields!
 
+##### `max_insert`
+
+Fields are assigned to the same request as long as the hole between the fields
+do not exceed the maximum fill size given in `optimization_max_register_fill`.
+User-defined omitted fields are ignored and interpreted as holes, so the best
+practice is to not manually insert omitted fields for this optimizer. This
+allows to specify only actually used fields and let the optimizer figure out
+the request organization which can dramatically improve query time. The
+trade-off here is between the cost of reading additional registers trashed
+later and the cost of many requests.
+
+__Please note:__ The optimal value for `optimization_max_register_fill` depends
+on the network and the queried device. It is hence recommended to test several
+values and assess performance in order to find the best value. Use the
+`--test --debug` flags to monitor how may requests are sent and the number of
+touched registers.
+
 #### Field definitions
 
 Each `request` can contain a list of fields to collect from the modbus device.
@@ -401,15 +454,19 @@ metric identified by `measurement`, `slave_id` and `register`.
 
 ##### register datatype
 
-The `register` setting specifies the datatype of the modbus register and can be
-set to `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64` or `UINT64` for integer
-types or `FLOAT32` and `FLOAT64` for IEEE 754 binary representations of floating
-point values. Usually the datatype of the register is listed in the datasheet of
-your modbus device in relation to the `address` described above.
+The `type` setting specifies the datatype of the modbus register and can be
+set to `INT8L`, `INT8H`, `UINT8L`, `UINT8H` where `L` is the lower byte of the
+register and `H` is the higher byte.
+Furthermore, the types `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64` or `UINT64`
+for integer types or `FLOAT16`, `FLOAT32` and `FLOAT64` for IEEE 754 binary
+representations of floating point values exist. `FLOAT16` denotes a
+half-precision float with a 16-bit representation.
+Usually the datatype of the register is listed in the datasheet of your modbus
+device in relation to the `address` described above.
 
- This setting is ignored if the field's `omit` is set to `true` or if the
- `register` type is a bit-type (`coil` or `discrete`) and can be omitted in
- these cases.
+This setting is ignored if the field's `omit` is set to `true` or if the
+`register` type is a bit-type (`coil` or `discrete`) and can be omitted in
+these cases.
 
 ##### scaling
 

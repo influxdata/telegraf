@@ -47,6 +47,8 @@ type KafkaConsumer struct {
 
 	kafka.ReadConfig
 
+	kafka.Logger
+
 	Log telegraf.Logger `toml:"-"`
 
 	ConsumerCreator ConsumerGroupCreator `toml:"-"`
@@ -83,6 +85,8 @@ func (k *KafkaConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KafkaConsumer) Init() error {
+	k.SetLogger()
+
 	if k.MaxUndeliveredMessages == 0 {
 		k.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
 	}
