@@ -1,21 +1,67 @@
-## Decryption
+### Plain text
 
-### AES
+Set `cipher` to `none` if the secrets are transmitted as plain-text. No further
+options are required.
 
-Currently, `AES128`, `AES192` and `AES256` are supported. You can (optionally)
-specify a _mode_ and _padding_ algorithm in the form`AES256[/mode[/<padding>]]`.
+### Advanced Encryption Standard (AES)
 
-Besides the plain AES (no mode), the following _modes_ are supported:
+Currently the following AES ciphers are supported
 
-- CBC block cipher
-- CFB stream cipher
-- CTR stream cipher
-- OFB stream cipher
+- `AES128`: plain AES with 128-bit key length
+- `AES128/CBC`: 128-bit key in _CBC_ block mode without padding
+- `AES128/CBC/PKCS#5`: 128-bit key in _CBC_ block mode with _PKCS#5_ padding
+- `AES128/CBC/PKCS#7`: 128-bit key in _CBC_ block mode with _PKCS#7_ padding
+- `AES128/CFB`: 128-bit key in _CFB_ streaming mode without padding
+- `AES128/CFB/PKCS#5`: 128-bit key in _CFB_ streaming mode with _PKCS#5_ padding
+- `AES128/CFB/PKCS#7`: 128-bit key in _CFB_ streaming mode with _PKCS#7_ padding
+- `AES128/CTR`: 128-bit key in _CTR_ streaming mode without padding
+- `AES128/CTR/PKCS#5`: 128-bit key in _CTR_ streaming mode with _PKCS#5_ padding
+- `AES128/CTR/PKCS#7`: 128-bit key in _CTR_ streaming mode with _PKCS#7_ padding
+- `AES128/OFB`: 128-bit key in _OFB_ streaming mode without padding
+- `AES128/OFB/PKCS#5`: 128-bit key in _OFB_ streaming mode with _PKCS#5_ padding
+- `AES128/OFB/PKCS#7`: 128-bit key in _OFB_ streaming mode with _PKCS#7_ padding
+- `AES192`: plain AES with 192-bit key length
+- `AES192/CBC`: 192-bit key in _CBC_ block mode without padding
+- `AES192/CBC/PKCS#5`: 192-bit key in _CBC_ block mode with _PKCS#5_ padding
+- `AES192/CBC/PKCS#7`: 192-bit key in _CBC_ block mode with _PKCS#7_ padding
+- `AES192/CFB`: 192-bit key in _CFB_ streaming mode without padding
+- `AES192/CFB/PKCS#5`: 192-bit key in _CFB_ streaming mode with _PKCS#5_ padding
+- `AES192/CFB/PKCS#7`: 192-bit key in _CFB_ streaming mode with _PKCS#7_ padding
+- `AES192/CTR`: 192-bit key in _CTR_ streaming mode without padding
+- `AES192/CTR/PKCS#5`: 192-bit key in _CTR_ streaming mode with _PKCS#5_ padding
+- `AES192/CTR/PKCS#7`: 192-bit key in _CTR_ streaming mode with _PKCS#7_ padding
+- `AES192/OFB`: 192-bit key in _OFB_ streaming mode without padding
+- `AES192/OFB/PKCS#5`: 192-bit key in _OFB_ streaming mode with _PKCS#5_ padding
+- `AES192/OFB/PKCS#7`: 192-bit key in _OFB_ streaming mode with _PKCS#7_ padding
+- `AES256`: plain AES with 256-bit key length
+- `AES256/CBC`: 256-bit key in _CBC_ block mode without padding
+- `AES256/CBC/PKCS#5`: 256-bit key in _CBC_ block mode with _PKCS#5_ padding
+- `AES256/CBC/PKCS#7`: 256-bit key in _CBC_ block mode with _PKCS#7_ padding
+- `AES256/CFB`: 256-bit key in _CFB_ streaming mode without padding
+- `AES256/CFB/PKCS#5`: 256-bit key in _CFB_ streaming mode with _PKCS#5_ padding
+- `AES256/CFB/PKCS#7`: 256-bit key in _CFB_ streaming mode with _PKCS#7_ padding
+- `AES256/CTR`: 256-bit key in _CTR_ streaming mode without padding
+- `AES256/CTR/PKCS#5`: 256-bit key in _CTR_ streaming mode with _PKCS#5_ padding
+- `AES256/CTR/PKCS#7`: 256-bit key in _CTR_ streaming mode with _PKCS#7_ padding
+- `AES256/OFB`: 256-bit key in _OFB_ streaming mode without padding
+- `AES256/OFB/PKCS#5`: 256-bit key in _OFB_ streaming mode with _PKCS#5_ padding
+- `AES256/OFB/PKCS#7`: 256-bit key in _OFB_ streaming mode with _PKCS#7_ padding
 
-You can also specify one of the following paddings:
+Additional to the cipher, you need to provide the encryption `key` and
+initialization vector `init_vector` to be able to decrypt the data.
+In case you are using password-based key derivation, `key`
+(and possibly `init_vector`) can be omitted. Take a look at the
+[password-based key derivation section](#password-based-key-derivation).
 
-- PKCS#5
-- PKCS#7
+### Password-based key derivation
 
-So for plain AES256 specify `AES256` while for AES128 with CBC and PKCS#5
-padding you should use `AES128/CBC/PKCS#5`.
+Alternatively to providing a `key` (and `init_vector`) the key (and vector)
+can be derived from a given password. Currently the following algorithms are
+supported for `kdf_algorithm`:
+
+ - `PBKDF2-HMAC-SHA256` for `key` only, no `init_vector` created
+
+You also need to provide the `password` to derive the key from as well as the
+`salt` and `iterations` used.
+__Please note:__ All parameters must match the encryption side to derive the
+same key in Telegraf!
