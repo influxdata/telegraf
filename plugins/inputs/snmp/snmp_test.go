@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -287,6 +288,10 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 }
 
 func TestGetSNMPConnectionTCP(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows")
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go stubTCPServer(&wg)
