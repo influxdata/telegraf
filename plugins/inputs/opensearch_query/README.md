@@ -34,7 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.opensearch_query]]
   ## OpenSearch cluster endpoint(s). Multiple urls can be specified as part
   ## of the same cluster.  Only one succesful call will be made per interval.
-  urls = [ "http://node1.os.example.com:9200" ] # required.
+  urls = [ "https://node1.os.example.com:9200" ] # required.
 
   ## OpenSearch client timeout, defaults to "5s".
   # timeout = "5s"

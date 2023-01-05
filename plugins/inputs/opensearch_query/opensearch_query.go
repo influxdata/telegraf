@@ -217,7 +217,6 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 
 	aq.Query = boolQuery
 	req, err := json.Marshal(aq)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %s", err)
 	}
@@ -263,7 +262,7 @@ func (o *OpensearchQuery) getMetricFields(ctx context.Context, aggregation osAgg
 	}
 
 	// Bad request; move on
-	if response.StatusCode == 400 {
+	if response.StatusCode != 200 {
 		return mapMetricFields, nil
 	}
 

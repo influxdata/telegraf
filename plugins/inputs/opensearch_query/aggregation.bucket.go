@@ -5,7 +5,7 @@ import "fmt"
 type BucketAggregationRequest map[string]*aggregationFunction
 
 func (b BucketAggregationRequest) AddAggregation(name, aggType, field string) error {
-	switch aggType { // TODO: Use categorization function
+	switch aggType {
 	case "terms":
 	default:
 		return fmt.Errorf("aggregation function '%s' not supported", aggType)
