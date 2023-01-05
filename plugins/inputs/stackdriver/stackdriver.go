@@ -308,15 +308,15 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 	}
 
 	if len(s.Filter.UserLabels) > 0 {
-		userLabelsFilter := make([]string, len(s.Filter.UserLabels))
-		for i, metricLabel := range s.Filter.UserLabels {
+		userLabelsFilter := make([]string, 0, len(s.Filter.UserLabels))
+		for _, metricLabel := range s.Filter.UserLabels {
 			// check if metric label value contains function
 			if includeExcludeHelper(metricLabel.Value, functions, nil) {
 				valueFmt = `metadata.user_labels."%s" = %s`
 			} else {
 				valueFmt = `metadata.user_labels."%s" = "%s"`
 			}
-			userLabelsFilter[i] = fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value)
+			userLabelsFilter = append(userLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
 		}
 		if len(userLabelsFilter) == 1 {
 			filterString += fmt.Sprintf(" AND %s", userLabelsFilter[0])
@@ -326,15 +326,15 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 	}
 
 	if len(s.Filter.SystemLabels) > 0 {
-		systemLabelsFilter := make([]string, len(s.Filter.SystemLabels))
-		for i, metricLabel := range s.Filter.SystemLabels {
+		systemLabelsFilter := make([]string, 0, len(s.Filter.SystemLabels))
+		for _, metricLabel := range s.Filter.SystemLabels {
 			// check if metric label value contains function
 			if includeExcludeHelper(metricLabel.Value, functions, nil) {
 				valueFmt = `metadata.system_labels."%s" = %s`
 			} else {
 				valueFmt = `metadata.system_labels."%s" = "%s"`
 			}
-			systemLabelsFilter[i] = fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value)
+			systemLabelsFilter = append(systemLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
 		}
 		if len(systemLabelsFilter) == 1 {
 			filterString += fmt.Sprintf(" AND %s", systemLabelsFilter[0])

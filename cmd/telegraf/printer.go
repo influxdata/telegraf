@@ -146,24 +146,6 @@ func printSampleConfig(
 		}
 	}
 
-	// print secretstore plugins
-	if sliceContains("secretstores", sectionFilters) {
-		if len(secretstoreFilters) != 0 {
-			if len(secretstoreFilters) >= 3 && secretstoreFilters[1] != "none" {
-				fmt.Print(secretstoreHeader)
-			}
-			printFilteredSecretstores(secretstoreFilters, false, outputBuffer)
-		} else {
-			fmt.Print(secretstoreHeader)
-			snames := []string{}
-			for sname := range secretstores.SecretStores {
-				snames = append(snames, sname)
-			}
-			sort.Strings(snames)
-			printFilteredSecretstores(snames, true, outputBuffer)
-		}
-	}
-
 	// print output plugins
 	if sliceContains("outputs", sectionFilters) {
 		if len(outputFilters) != 0 {

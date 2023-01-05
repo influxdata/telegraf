@@ -1126,13 +1126,15 @@ FROM (
 	OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
 ) AS data
 WHERE
-	[blocking_or_blocked] > 1	--Always include blocking or blocked sessions/requests
+	   [blocking_or_blocked] > 1 --Always include blocking or blocked sessions/requests
+	OR [open_transaction] >= 1   --Always include sessions with open transactions
 	OR (
 		[request_id] IS NOT NULL	--A request must exists
 		AND (	--Always fetch user process (in any state), fetch system process only if active
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')
 		)
+		AND [session_id] <> @@SPID  --Exclude current SPID
 	)
 OPTION(MAXDOP 1)'
 
