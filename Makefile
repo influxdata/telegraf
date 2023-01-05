@@ -2,7 +2,7 @@ ifneq (,$(filter $(OS),Windows_NT Windows))
 	EXEEXT=.exe
 endif
 
-next_version := $(shell cat build_version.txt)
+next_version := $(file < build_version.txt)
 tag := $(shell git describe --exact-match --tags 2>/dev/null)
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
