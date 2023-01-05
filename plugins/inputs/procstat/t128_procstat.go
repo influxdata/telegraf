@@ -13,17 +13,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/shirou/gopsutil/v3/process"
 )
 
-var (
-	defaultPIDFinder = NewPgrep
-	defaultProcess   = NewProc
-)
-
-type PID int32
-
-type Procstat struct {
+type T128Procstat struct {
 	PidFinder              string `toml:"pid_finder"`
 	PidFile                string `toml:"pid_file"`
 	Exe                    string
@@ -48,7 +40,7 @@ type Procstat struct {
 	createProcess   func(PID) (Process, error)
 }
 
-var sampleConfig = `
+var t128sampleConfig = `
   ## PID file to monitor process
   pid_file = "/var/run/nginx.pid"
   ## executable name (ie, pgrep <exe>)
@@ -94,21 +86,15 @@ var sampleConfig = `
   # pid_finder = "pgrep"
 `
 
-func (p *Procstat) SampleConfig() string {
-	return sampleConfig
+func (p *T128Procstat) SampleConfig() string {
+	return t128sampleConfig
 }
 
-func (p *Procstat) Description() string {
+func (p *T128Procstat) Description() string {
 	return "Monitor process cpu and memory usage"
 }
 
-type PidsTags struct {
-	PIDS []PID
-	Tags map[string]string
-	Err  error
-}
-
-func (p *Procstat) Gather(acc telegraf.Accumulator) error {
+func (p *T128Procstat) Gather(acc telegraf.Accumulator) error {
 	if p.createPIDFinder == nil {
 		switch p.PidFinder {
 		case "native":
@@ -180,7 +166,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 }
 
 // Add metrics a single Process
-func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time) {
+func (p *T128Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time) {
 	var prefix string
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
@@ -217,38 +203,6 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 				proc.Tags()["cmdline"] = cmdline
 			}
 		}
-	}
-
-	numThreads, err := proc.NumThreads()
-	if err == nil {
-		fields[prefix+"num_threads"] = numThreads
-	}
-
-	fds, err := proc.NumFDs()
-	if err == nil {
-		fields[prefix+"num_fds"] = fds
-	}
-
-	ctx, err := proc.NumCtxSwitches()
-	if err == nil {
-		fields[prefix+"voluntary_context_switches"] = ctx.Voluntary
-		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
-	}
-
-	faults, err := proc.PageFaults()
-	if err == nil {
-		fields[prefix+"minor_faults"] = faults.MinorFaults
-		fields[prefix+"major_faults"] = faults.MajorFaults
-		fields[prefix+"child_minor_faults"] = faults.ChildMinorFaults
-		fields[prefix+"child_major_faults"] = faults.ChildMajorFaults
-	}
-
-	io, err := proc.IOCounters()
-	if err == nil {
-		fields[prefix+"read_count"] = io.ReadCount
-		fields[prefix+"write_count"] = io.WriteCount
-		fields[prefix+"read_bytes"] = io.ReadBytes
-		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
 	createdAt, err := proc.CreateTime() //Returns epoch in ms
@@ -289,50 +243,6 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		fields[prefix+"memory_locked"] = mem.Locked
 	}
 
-	memPerc, err := proc.MemoryPercent()
-	if err == nil {
-		fields[prefix+"memory_usage"] = memPerc
-	}
-
-	rlims, err := proc.RlimitUsage(true)
-	if err == nil {
-		for _, rlim := range rlims {
-			var name string
-			switch rlim.Resource {
-			case process.RLIMIT_CPU:
-				name = "cpu_time"
-			case process.RLIMIT_DATA:
-				name = "memory_data"
-			case process.RLIMIT_STACK:
-				name = "memory_stack"
-			case process.RLIMIT_RSS:
-				name = "memory_rss"
-			case process.RLIMIT_NOFILE:
-				name = "num_fds"
-			case process.RLIMIT_MEMLOCK:
-				name = "memory_locked"
-			case process.RLIMIT_AS:
-				name = "memory_vms"
-			case process.RLIMIT_LOCKS:
-				name = "file_locks"
-			case process.RLIMIT_SIGPENDING:
-				name = "signals_pending"
-			case process.RLIMIT_NICE:
-				name = "nice_priority"
-			case process.RLIMIT_RTPRIO:
-				name = "realtime_priority"
-			default:
-				continue
-			}
-
-			fields[prefix+"rlimit_"+name+"_soft"] = rlim.Soft
-			fields[prefix+"rlimit_"+name+"_hard"] = rlim.Hard
-			if name != "file_locks" { // gopsutil doesn't currently track the used file locks count
-				fields[prefix+name] = rlim.Used
-			}
-		}
-	}
-
 	ppid, err := proc.Ppid()
 	if err == nil {
 		fields[prefix+"ppid"] = ppid
@@ -342,7 +252,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process, procs map[PID]Process) error {
+func (p *T128Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process, procs map[PID]Process) error {
 	for _, pid := range pids {
 		info, ok := prevInfo[pid]
 		if ok {
@@ -381,7 +291,7 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 }
 
 // Create and return PIDGatherer lazily
-func (p *Procstat) getPIDFinder() (PIDFinder, error) {
+func (p *T128Procstat) getPIDFinder() (PIDFinder, error) {
 	if p.finder == nil {
 		f, err := p.createPIDFinder()
 		if err != nil {
@@ -393,7 +303,7 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 }
 
 // Get matching PIDs and their initial tags
-func (p *Procstat) findPids() []PidsTags {
+func (p *T128Procstat) findPids() []PidsTags {
 	var pidTags []PidsTags
 
 	if p.SystemdUnit != "" {
@@ -416,7 +326,7 @@ func (p *Procstat) findPids() []PidsTags {
 }
 
 // Get matching PIDs and their initial tags
-func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error) {
+func (p *T128Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error) {
 	var pids []PID
 	tags := make(map[string]string)
 	var err error
@@ -444,9 +354,9 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 }
 
 // execCommand is so tests can mock out exec.Command usage.
-var execCommand = exec.Command
+var t128execCommand = exec.Command
 
-func (p *Procstat) systemdUnitPIDs() []PidsTags {
+func (p *T128Procstat) systemdUnitPIDs() []PidsTags {
 	if p.IncludeSystemdChildren {
 		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnit)
 		return p.cgroupPIDs()
@@ -460,10 +370,10 @@ func (p *Procstat) systemdUnitPIDs() []PidsTags {
 	return pidTags
 }
 
-func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
+func (p *T128Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 	var pids []PID
 
-	cmd := execCommand("systemctl", "show", p.SystemdUnit)
+	cmd := t128execCommand("systemctl", "show", p.SystemdUnit)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -489,7 +399,7 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 	return pids, nil
 }
 
-func (p *Procstat) cgroupPIDs() []PidsTags {
+func (p *T128Procstat) cgroupPIDs() []PidsTags {
 	var pidTags []PidsTags
 
 	procsPath := p.CGroup
@@ -510,7 +420,7 @@ func (p *Procstat) cgroupPIDs() []PidsTags {
 	return pidTags
 }
 
-func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
+func (p *T128Procstat) singleCgroupPIDs(path string) ([]PID, error) {
 	var pids []PID
 
 	ok, err := isDir(path)
@@ -539,15 +449,7 @@ func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
 	return pids, nil
 }
 
-func isDir(path string) (bool, error) {
-	result, err := os.Stat(path)
-	if err != nil {
-		return false, err
-	}
-	return result.IsDir(), nil
-}
-
-func (p *Procstat) winServicePIDs() ([]PID, error) {
+func (p *T128Procstat) winServicePIDs() ([]PID, error) {
 	var pids []PID
 
 	pid, err := queryPidWithWinServiceName(p.WinService)
@@ -560,7 +462,7 @@ func (p *Procstat) winServicePIDs() ([]PID, error) {
 	return pids, nil
 }
 
-func (p *Procstat) Init() error {
+func (p *T128Procstat) Init() error {
 	if strings.ToLower(p.Mode) == "solaris" {
 		p.solarisMode = true
 	}
@@ -571,8 +473,5 @@ func (p *Procstat) Init() error {
 func init() {
 	inputs.Add("procstat", func() telegraf.Input {
 		return &Procstat{}
-	})
-	inputs.Add("t128-procstat", func() telegraf.Input {
-		return &T128Procstat{}
 	})
 }
