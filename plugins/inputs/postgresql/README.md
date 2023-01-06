@@ -31,6 +31,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## to grab metrics for.
   ##
   address = "host=localhost user=postgres sslmode=disable"
+
   ## A custom name for the database that will be used as the "server" tag in the
   ## measurement output. If not specified, a default one generated from
   ## the connection address is used.
@@ -158,7 +159,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics from one or many postgresql servers
 [[inputs.postgresql]]
   ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
+  ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]&statement_timeout=...
   ## or a simple string:
   ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   ##
@@ -179,6 +180,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## connection configuration.
   ## maxlifetime - specify the maximum lifetime of a connection.
   ## default is forever (0s)
+  ##
+  ## Note that this does not interrupt queries, the lifetime will not be enforced
+  ## whilst a query is running
   # max_lifetime = "0s"
 
   ## A  list of databases to explicitly ignore.  If not specified, metrics for all
