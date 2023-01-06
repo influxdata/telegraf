@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"testing"
 	"time"
-	// "fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	cwClient "github.com/aws/aws-sdk-go-v2/service/cloudwatch"
