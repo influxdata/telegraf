@@ -75,5 +75,11 @@ type TimeCreated struct {
 // RenderingInfo is provided for events forwarded by Windows Event Collector
 // see https://learn.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtformatmessage#parameters
 type RenderingInfo struct {
-	InnerXML []byte `xml:",innerxml"`
+	Message  string   `xml:"Message"`
+	Level    string   `xml:"Level"`
+	Task     string   `xml:"Task"`
+	Opcode   string   `xml:"Opcode"`
+	Channel  string   `xml:"Channel"`
+	Provider string   `xml:"Provider"`
+	Keywords []string `xml:"Keywords>Keyword"`
 }

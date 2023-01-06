@@ -48,8 +48,6 @@ type WinEventLog struct {
 
 var bufferSize = 1 << 14
 
-var description = "Input plugin to collect Windows Event Log messages"
-
 func (*WinEventLog) SampleConfig() string {
 	return sampleConfig
 }
@@ -61,7 +59,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 	if w.subscription == 0 {
 		w.subscription, err = w.evtSubscribe(w.EventlogName, w.Query)
 		if err != nil {
-			return fmt.Errorf("Windows Event Log subscription error: %v", err.Error())
+			return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
 		}
 	}
 	w.Log.Debug("Subscription handle id:", w.subscription)
@@ -74,7 +72,7 @@ loop:
 			case err == ERROR_NO_MORE_ITEMS:
 				break loop
 			case err != nil:
-				w.Log.Error("Error getting events:", err.Error())
+				w.Log.Errorf("Error getting events: %v", err)
 				return err
 			}
 		}
@@ -344,18 +342,24 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	}
 	w.Log.Debugf("event: %+v", event)
 
-	// We leave the publisher handle NIL for event forwarded by WEC, see
-	// https://learn.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtformatmessage#parameters
-	var publisherHandle EvtHandle
+	// Do resolve local messages the usual way, while using built-in information for events forwarded by WEC.
+	// This is a safety measure as the underlying Windows-internal EvtFormatMessage might segfault in cases
+	// where the publisher (i.e. the remote machine which forwared the event) is unavailable e.g. due to
+	// a reboot. See https://github.com/influxdata/telegraf/issues/12328 for the full story.
 	if event.RenderingInfo == nil {
-		ph, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
-		if err != nil {
-			return event, nil
-		}
-		publisherHandle = ph
-		defer _EvtClose(publisherHandle)
+		return w.renderLocalMessage(event, eventHandle)
 	}
-	w.Log.Debugf("publisher handle: %v", publisherHandle)
+
+	// We got 'RenderInfo' elements, so try to apply them in the following function
+	return w.renderRemoteMessage(event)
+}
+
+func (w *WinEventLog) renderLocalMessage(event Event, eventHandle EvtHandle) (Event, error) {
+	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
+	if err != nil {
+		return event, nil
+	}
+	defer _EvtClose(publisherHandle)
 
 	// Populating text values
 	keywords, err := formatEventString(EvtFormatMessageKeyword, eventHandle, publisherHandle)
@@ -382,6 +386,32 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	opcode, err := formatEventString(EvtFormatMessageOpcode, eventHandle, publisherHandle)
 	if err == nil {
 		event.OpcodeText = opcode
+	}
+	return event, nil
+}
+
+func (w *WinEventLog) renderRemoteMessage(event Event) (Event, error) {
+	// Populating text values from RenderingInfo part of the XML
+	if len(event.RenderingInfo.Keywords) > 0 {
+		event.Keywords = strings.Join(event.RenderingInfo.Keywords, ",")
+	}
+	if event.RenderingInfo.Message != "" {
+		message := event.RenderingInfo.Message
+		if w.OnlyFirstLineOfMessage {
+			scanner := bufio.NewScanner(strings.NewReader(message))
+			scanner.Scan()
+			message = scanner.Text()
+		}
+		event.Message = message
+	}
+	if event.RenderingInfo.Level != "" {
+		event.LevelText = event.RenderingInfo.Level
+	}
+	if event.RenderingInfo.Task != "" {
+		event.TaskText = event.RenderingInfo.Task
+	}
+	if event.RenderingInfo.Opcode != "" {
+		event.OpcodeText = event.RenderingInfo.Opcode
 	}
 	return event, nil
 }
