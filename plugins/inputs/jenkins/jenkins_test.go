@@ -98,8 +98,7 @@ func (h mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//nolint:errcheck,revive // ignore the returned error as the tests will fail anyway
-	w.Write(b)
+	w.Write(b) //nolint:errcheck,revive // ignore the returned error as the tests will fail anyway
 }
 
 func TestGatherNodeData(t *testing.T) {
