@@ -81,7 +81,7 @@ This section shows example output in Line Protocol format.  You can often use
 `telegraf --input-filter <plugin-name> --test` or use the `file` output to get
 this information.
 
-```shell
+```text
 measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
 measurement2,tag1=foo,tag2=bar,tag3=baz field3=1i 1453831884664956455
 ```
