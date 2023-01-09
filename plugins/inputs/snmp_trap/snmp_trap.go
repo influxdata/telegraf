@@ -35,14 +35,14 @@ type SnmpTrap struct {
 
 	// Settings for version 3
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
-	SecLevel string `toml:"sec_level"`
-	SecName  string `toml:"sec_name"`
+	SecLevel string        `toml:"sec_level"`
+	SecName  config.Secret `toml:"sec_name"`
 	// Values: "MD5", "SHA", "". Default: ""
-	AuthProtocol string `toml:"auth_protocol"`
-	AuthPassword string `toml:"auth_password"`
+	AuthProtocol string        `toml:"auth_protocol"`
+	AuthPassword config.Secret `toml:"auth_password"`
 	// Values: "DES", "AES", "". Default: ""
-	PrivProtocol string `toml:"priv_protocol"`
-	PrivPassword string `toml:"priv_password"`
+	PrivProtocol string        `toml:"priv_protocol"`
+	PrivPassword config.Secret `toml:"priv_password"`
 
 	acc      telegraf.Accumulator
 	listener *gosnmp.TrapListener
@@ -171,13 +171,28 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			return fmt.Errorf("unknown privacy protocol '%s'", s.PrivProtocol)
 		}
 
+		secname, err := s.SecName.Get()
+		if err != nil {
+			return fmt.Errorf("getting secname failed: %v", err)
+		}
+		privPasswd, err := s.PrivPassword.Get()
+		if err != nil {
+			return fmt.Errorf("getting secname failed: %v", err)
+		}
+		authPasswd, err := s.AuthPassword.Get()
+		if err != nil {
+			return fmt.Errorf("getting secname failed: %v", err)
+		}
 		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
-			UserName:                 s.SecName,
+			UserName:                 string(secname),
 			PrivacyProtocol:          privacyProtocol,
-			PrivacyPassphrase:        s.PrivPassword,
-			AuthenticationPassphrase: s.AuthPassword,
+			PrivacyPassphrase:        string(privPasswd),
+			AuthenticationPassphrase: string(authPasswd),
 			AuthenticationProtocol:   authenticationProtocol,
 		}
+		config.ReleaseSecret(secname)
+		config.ReleaseSecret(privPasswd)
+		config.ReleaseSecret(authPasswd)
 	}
 
 	// wrap the handler, used in unit tests

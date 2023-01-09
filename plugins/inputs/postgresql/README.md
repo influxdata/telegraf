@@ -31,6 +31,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## to grab metrics for.
   ##
   address = "host=localhost user=postgres sslmode=disable"
+
   ## A custom name for the database that will be used as the "server" tag in the
   ## measurement output. If not specified, a default one generated from
   ## the connection address is used.
