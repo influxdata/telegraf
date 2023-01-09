@@ -111,6 +111,11 @@ func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 }
 
 func (t *Telegraf) reloadLoop() error {
+	_, err := t.loadConfiguration()
+	if err != nil {
+		return err
+	}
+
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {

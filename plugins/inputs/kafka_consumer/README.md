@@ -45,6 +45,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Period between keep alive probes.
+  ## Defaults to the OS configuration if not specified or zero.
+  # keep_alive_period = "15s"
+
   ## SASL authentication credentials.  These settings should typically be used
   ## with TLS encryption enabled
   # sasl_username = "kafka"
