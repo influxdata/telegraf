@@ -172,8 +172,9 @@ type buffer []byte
 func (b *buffer) Reset() { *b = (*b)[:0] }
 
 func (b *buffer) Copy() []byte {
-	p := make([]byte, 0, len(*b))
-	return append(p, *b...)
+	p := make([]byte, len(*b))
+	copy(p, *b)
+	return p
 }
 
 func (b *buffer) WriteString(s string) {

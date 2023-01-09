@@ -20,9 +20,9 @@ func (d *xmlDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 		return nil, err
 	}
 
-	nodes := make([]dataNode, 0, len(native))
-	for _, n := range native {
-		nodes = append(nodes, n)
+	nodes := make([]dataNode, len(native))
+	for i, n := range native {
+		nodes[i] = n
 	}
 	return nodes, nil
 }

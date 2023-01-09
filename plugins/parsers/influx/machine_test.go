@@ -17,118 +17,132 @@ type TestingHandler struct {
 }
 
 func (h *TestingHandler) SetMeasurement(name []byte) error {
-	n := make([]byte, 0, len(name))
+	n := make([]byte, len(name))
+	copy(n, name)
 
-	mName := Result{
+	mname := Result{
 		Name:  Measurement,
-		Value: append(n, name...),
+		Value: n,
 	}
-	h.results = append(h.results, mName)
+	h.results = append(h.results, mname)
 	return nil
 }
 
 func (h *TestingHandler) AddTag(key []byte, value []byte) error {
-	k := make([]byte, 0, len(key))
-	v := make([]byte, 0, len(value))
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
 
-	tagKey := Result{
+	tagkey := Result{
 		Name:  TagKey,
-		Value: append(k, key...),
+		Value: k,
 	}
-	tagValue := Result{
+	tagvalue := Result{
 		Name:  TagValue,
-		Value: append(v, value...),
+		Value: v,
 	}
-	h.results = append(h.results, tagKey, tagValue)
+	h.results = append(h.results, tagkey, tagvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddInt(key []byte, value []byte) error {
-	k := make([]byte, 0, len(key))
-	v := make([]byte, 0, len(value))
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
 
-	fieldKey := Result{
+	fieldkey := Result{
 		Name:  FieldKey,
-		Value: append(k, key...),
+		Value: k,
 	}
-	fieldValue := Result{
+	fieldvalue := Result{
 		Name:  FieldInt,
-		Value: append(v, value...),
+		Value: v,
 	}
-	h.results = append(h.results, fieldKey, fieldValue)
+	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddUint(key []byte, value []byte) error {
-	k := make([]byte, 0, len(key))
-	v := make([]byte, 0, len(value))
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
 
-	fieldKey := Result{
+	fieldkey := Result{
 		Name:  FieldKey,
-		Value: append(k, key...),
+		Value: key,
 	}
-	fieldValue := Result{
+	fieldvalue := Result{
 		Name:  FieldUint,
-		Value: append(v, value...),
+		Value: value,
 	}
-	h.results = append(h.results, fieldKey, fieldValue)
+	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddFloat(key []byte, value []byte) error {
-	k := make([]byte, 0, len(key))
-	v := make([]byte, 0, len(value))
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
 
-	fieldKey := Result{
+	fieldkey := Result{
 		Name:  FieldKey,
-		Value: append(k, key...),
+		Value: k,
 	}
-	fieldValue := Result{
+	fieldvalue := Result{
 		Name:  FieldFloat,
-		Value: append(v, value...),
+		Value: v,
 	}
-	h.results = append(h.results, fieldKey, fieldValue)
+	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddString(key []byte, value []byte) error {
-	k := make([]byte, 0, len(key))
-	v := make([]byte, 0, len(value))
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
 
-	fieldKey := Result{
+	fieldkey := Result{
 		Name:  FieldKey,
-		Value: append(k, key...),
+		Value: k,
 	}
-	fieldValue := Result{
+	fieldvalue := Result{
 		Name:  FieldString,
-		Value: append(v, value...),
+		Value: v,
 	}
-	h.results = append(h.results, fieldKey, fieldValue)
+	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddBool(key []byte, value []byte) error {
-	k := make([]byte, 0, len(key))
-	v := make([]byte, 0, len(value))
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
 
-	fieldKey := Result{
+	fieldkey := Result{
 		Name:  FieldKey,
-		Value: append(k, key...),
+		Value: k,
 	}
-	fieldValue := Result{
+	fieldvalue := Result{
 		Name:  FieldBool,
-		Value: append(v, value...),
+		Value: v,
 	}
-	h.results = append(h.results, fieldKey, fieldValue)
+	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) SetTimestamp(tm []byte) error {
-	t := make([]byte, 0, len(tm))
+	t := make([]byte, len(tm))
+	copy(t, tm)
 
 	timestamp := Result{
 		Name:  Timestamp,
-		Value: append(t, tm...),
+		Value: t,
 	}
 	h.results = append(h.results, timestamp)
 	return nil

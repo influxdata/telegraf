@@ -6,16 +6,18 @@ import (
 	"sort"
 	"strings"
 
-	path "github.com/antchfx/xpath"
-	"github.com/doclambda/protobufquery"
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/protoparse"
+	"github.com/influxdata/telegraf"
+
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 
-	"github.com/influxdata/telegraf"
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoparse"
+
+	path "github.com/antchfx/xpath"
+	"github.com/doclambda/protobufquery"
 )
 
 type protobufDocument struct {
@@ -110,9 +112,9 @@ func (d *protobufDocument) QueryAll(node dataNode, expr string) ([]dataNode, err
 		return nil, err
 	}
 
-	nodes := make([]dataNode, 0, len(native))
-	for _, n := range native {
-		nodes = append(nodes, n)
+	nodes := make([]dataNode, len(native))
+	for i, n := range native {
+		nodes[i] = n
 	}
 	return nodes, nil
 }

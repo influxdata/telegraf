@@ -52,11 +52,13 @@ func (d *TagLimit) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		if lenPointTags <= d.Limit {
 			continue
 		}
-		tagsToRemove := make([]string, 0, lenPointTags-d.Limit)
+		tagsToRemove := make([]string, lenPointTags-d.Limit)
+		removeIdx := 0
 		// remove extraneous tags, stop once we're at the limit
 		for _, t := range pointOriginalTags {
 			if _, ok := d.keepTags[t.Key]; !ok {
-				tagsToRemove = append(tagsToRemove, t.Key)
+				tagsToRemove[removeIdx] = t.Key
+				removeIdx++
 				lenPointTags--
 			}
 			if lenPointTags <= d.Limit {

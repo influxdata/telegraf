@@ -229,12 +229,14 @@ func cartesianProduct(a, b []telegraf.Metric) []telegraf.Metric {
 	if len(b) == 0 {
 		return a
 	}
-	p := make([]telegraf.Metric, 0, len(a)*len(b))
+	p := make([]telegraf.Metric, len(a)*len(b))
+	i := 0
 	for _, a := range a {
 		for _, b := range b {
 			m := a.Copy()
 			mergeMetric(b, m)
-			p = append(p, m)
+			p[i] = m
+			i++
 		}
 	}
 
