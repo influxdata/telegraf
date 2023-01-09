@@ -180,7 +180,7 @@ Alternatively to providing a `key` (and `init_vector`) the key (and vector)
 can be derived from a given password. Currently the following algorithms are
 supported for `kdf_algorithm`:
 
- - `PBKDF2-HMAC-SHA256` for `key` only, no `init_vector` created
+- `PBKDF2-HMAC-SHA256` for `key` only, no `init_vector` created
 
 You also need to provide the `password` to derive the key from as well as the
 `salt` and `iterations` used.
