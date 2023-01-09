@@ -303,7 +303,6 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 		if eventHandle != 0 {
 			event, err := w.renderEvent(eventHandle)
 			if err == nil {
-				// w.Log.Debugf("Got event: %v", event)
 				events = append(events, event)
 			}
 		}
@@ -331,7 +330,7 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	if err != nil {
 		return event, err
 	}
-	w.Log.Debugf("event XML: %s", string(eventXML))
+	w.Log.Debugf("Event: %s", string(eventXML))
 
 	err = xml.Unmarshal([]byte(eventXML), &event)
 	if err != nil {
@@ -340,7 +339,6 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 		// This can happen when processing Forwarded Events
 		return event, nil
 	}
-	w.Log.Debugf("event: %+v", event)
 
 	// Do resolve local messages the usual way, while using built-in information for events forwarded by WEC.
 	// This is a safety measure as the underlying Windows-internal EvtFormatMessage might segfault in cases
