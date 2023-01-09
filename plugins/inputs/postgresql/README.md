@@ -144,62 +144,6 @@ More information about the meaning of these metrics can be found in the
 [1]: http://www.postgresql.org/docs/9.2/static/monitoring-stats.html#PG-STAT-DATABASE-VIEW
 
 ## Example Output
-## Global configuration options <!-- @/docs/includes/plugin_config.md -->
-
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
-
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
-
-## Configuration
-
-```toml @sample.conf
-# Read metrics from one or many postgresql servers
-[[inputs.postgresql]]
-  ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]&statement_timeout=...
-  ## or a simple string:
-  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
-  ##
-  ## All connection parameters are optional.
-  ##
-  ## Without the dbname parameter, the driver will default to a database
-  ## with the same name as the user. This dbname is just for instantiating a
-  ## connection with the server and doesn't restrict the databases we are trying
-  ## to grab metrics for.
-  ##
-  address = "host=localhost user=postgres sslmode=disable"
-
-  ## A custom name for the database that will be used as the "server" tag in the
-  ## measurement output. If not specified, a default one generated from
-  ## the connection address is used.
-  # outputaddress = "db01"
-
-  ## connection configuration.
-  ## maxlifetime - specify the maximum lifetime of a connection.
-  ## default is forever (0s)
-  ##
-  ## Note that this does not interrupt queries, the lifetime will not be enforced
-  ## whilst a query is running
-  # max_lifetime = "0s"
-
-  ## A  list of databases to explicitly ignore.  If not specified, metrics for all
-  ## databases are gathered.  Do NOT use with the 'databases' option.
-  # ignored_databases = ["postgres", "template0", "template1"]
-
-  ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.  Do NOT use with the 'ignored_databases' option.
-  # databases = ["app_production", "testing"]
-
-  ## Whether to use prepared statements when connecting to the database.
-  ## This should be set to false when connecting through a PgBouncer instance
-  ## with pool_mode set to transaction.
-  prepared_statements = true
-```
-
-Specify address via a postgresql connection string:
 
 ```text
 postgresql,db=postgres_global,server=dbname\=postgres\ host\=localhost\ port\=5432\ statement_timeout\=10000\ user\=postgres tup_fetched=1271i,tup_updated=5i,session_time=1451414320768.855,xact_rollback=2i,conflicts=0i,blk_write_time=0,temp_bytes=0i,datid=0i,sessions_fatal=0i,tup_returned=1339i,sessions_abandoned=0i,blk_read_time=0,blks_read=88i,idle_in_transaction_time=0,sessions=0i,active_time=0,tup_inserted=24i,tup_deleted=0i,temp_files=0i,numbackends=0i,xact_commit=4i,sessions_killed=0i,blks_hit=5616i,deadlocks=0i 1672399790000000000
