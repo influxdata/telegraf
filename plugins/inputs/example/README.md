@@ -75,7 +75,7 @@ SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar A
 This optional section can provide basic troubleshooting steps that a user can
 perform.
 
-## Example
+## Example Output
 
 This section shows example output in Line Protocol format.  You can often use
 `telegraf --input-filter <plugin-name> --test` or use the `file` output to get
