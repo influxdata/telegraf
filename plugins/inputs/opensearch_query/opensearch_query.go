@@ -79,7 +79,7 @@ func (*OpensearchQuery) SampleConfig() string {
 // Init the plugin.
 func (o *OpensearchQuery) Init() error {
 	if o.URLs == nil {
-		return fmt.Errorf("opensearch urls is not defined")
+		return fmt.Errorf("no urls defined")
 	}
 
 	err := o.connectToOpensearch()

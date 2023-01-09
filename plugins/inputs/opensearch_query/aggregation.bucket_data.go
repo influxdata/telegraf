@@ -1,1 +1,0 @@
-package opensearch_query

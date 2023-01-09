@@ -8,7 +8,7 @@ func (b BucketAggregationRequest) AddAggregation(name, aggType, field string) er
 	switch aggType {
 	case "terms":
 	default:
-		return fmt.Errorf("aggregation function '%s' not supported", aggType)
+		return fmt.Errorf("aggregation function %q not supported", aggType)
 	}
 
 	b[name] = &aggregationFunction{
@@ -29,7 +29,7 @@ func (b BucketAggregationRequest) BucketSize(name string, size int) error {
 	}
 
 	if _, ok := b[name]; !ok {
-		return fmt.Errorf("aggregation %s not found", name)
+		return fmt.Errorf("aggregation %q not found", name)
 	}
 
 	b[name].Size(size)

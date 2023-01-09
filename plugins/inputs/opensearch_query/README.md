@@ -1,6 +1,6 @@
 # OpenSearch Query Input Plugin
 
-This [opensearch_query](https://opensearch.org/) plugin queries endpoints
+This [OpenSearch](https://opensearch.org/) plugin queries endpoints
 to derive metrics from data stored in an OpenSearch cluster.
 
 The following is supported:
@@ -252,7 +252,7 @@ Note: `extended_stats` is currently limited to 2 standard deviations only.
     tags = ["response.keyword"]
 ```
 
-```shell
+```text
 bytes_stats,host=localhost,response_keyword=200 bytes_stats_sum=22231,doc_count=4i,bytes_stats_count=4,bytes_stats_min=941,bytes_stats_max=9544,bytes_stats_avg=5557.75 1672327840000000000
 bytes_stats,host=localhost,response_keyword=404 bytes_stats_min=5330,bytes_stats_max=5330,bytes_stats_avg=5330,doc_count=1i,bytes_stats_sum=5330,bytes_stats_count=1 1672327840000000000
 ```

@@ -6,7 +6,7 @@ type MetricAggregationRequest map[string]*aggregationFunction
 
 func (m MetricAggregationRequest) AddAggregation(name, aggType, field string) error {
 	if t, _ := getAggregationFunctionType(aggType); t != "metric" {
-		return fmt.Errorf("aggregation function '%s' not supported", aggType)
+		return fmt.Errorf("aggregation function %q not supported", aggType)
 	}
 
 	m[name] = &aggregationFunction{
