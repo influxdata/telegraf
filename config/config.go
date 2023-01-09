@@ -808,7 +808,7 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 	}
 
 	if err := store.Init(); err != nil {
-		return fmt.Errorf("error initializing secretstore: %w", err)
+		return fmt.Errorf("error initializing secret-store %q: %w", storeid, err)
 	}
 
 	if _, found := c.SecretStores[storeid]; found {
