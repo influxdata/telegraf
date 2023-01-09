@@ -13,7 +13,7 @@ to get more information on how to do this.
 
 ## Configuration
 
-```toml @sample.conf @/plugins/common/encryption/sample_decryption.conf
+```toml @sample.conf
 # Read secrets from a HTTP endpoint
 [[secretstores.http]]
   ## URLs from which to read the secrets
@@ -76,14 +76,9 @@ to get more information on how to do this.
   ## Please refer to https://github.com/influxdata/telegraf/blob/master/plugins/secretstores/http/README.md
   ## for supported values.
   # cipher = "none"
-  ## Cipher to use for decryption.
-  ## You can specify variants of the algorithm e.g. AES128/CBC/PKCS#5Padding
-  ## using a slash ('/') separator. A list of available ciphers can be found at
-  ## https://github.com/influxdata/telegraf/tree/master/plugins/common/encryption/README.md
-  # cipher = "none"
 
   ## AES cipher parameters
-  # [{{.Prefix}}.aes]
+  # [secretstores.http.aes]
   #   ## Key and initialization-vector (IV) for the decryption.
   #   ## In case the key (and IV) is derived from a password, the values can
   #   ## be omitted.
@@ -94,15 +89,16 @@ to get more information on how to do this.
   #   ## These parameters must match the encryption side to derive the same
   #   ## key on both sides!
   #   # kdf_algorithm = "PBKDF2-HMAC-SHA256"
-  #   password = ""
-  #   salt = ""
-  #   iterations = 0
+  #   # password = ""
+  #   # salt = ""
+  #   # iterations = 0
 ```
 
 A collection of secrets is queried from the `url` endpoint. The plugin currently
 expects JSON data in a flat key-value form and means to convert arbitrary JSON
-to that form. Furthermore, the secret data can be transmitted in an encrypted
-format, see encryption section for details.
+to that form (see [transformation section](#transformation)).
+Furthermore, the secret data can be transmitted in an encrypted
+format, see [encryption section](#encryption) for details.
 
 ## Transformation
 
@@ -121,7 +117,7 @@ If your HTTP endpoint provides JSON data in a different format, you can use
 the `transformation` option to apply a [JSONata expression](https://jsonata.org)
 (version v1.5.4) to transform the server answer to the above format.
 
-## Encryption <!-- @/plugins/common/encryption/README.md -->
+## Encryption
 
 ### Plain text
 
