@@ -256,6 +256,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## This might be necessary for devices not conforming to the spec,
     ## see https://github.com/influxdata/telegraf/issues/12071.
     # one_request_per_field = false
+
+    ## Enforce the starting address to be zero for the first request on
+    ## coil registers. This is necessary for some devices see
+    ## https://github.com/influxdata/telegraf/issues/8905
+    # read_coils_starting_at_zero = false
 ```
 
 ## Notes
