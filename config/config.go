@@ -1397,6 +1397,9 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"pass", "period", "precision",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
 
+	// Secret-store options to ignore
+	case "id":
+
 	// Parser options to ignore
 	case "data_type", "influx_parser_type":
 
