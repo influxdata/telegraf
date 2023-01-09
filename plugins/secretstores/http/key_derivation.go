@@ -1,4 +1,4 @@
-package encryption
+package http
 
 import (
 	"crypto/sha256"

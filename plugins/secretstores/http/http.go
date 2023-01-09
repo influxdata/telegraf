@@ -16,7 +16,6 @@ import (
 	"github.com/blues/jsonata-go"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/encryption"
 	chttp "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
@@ -34,16 +33,16 @@ type HTTP struct {
 	Transformation     string            `toml:"transformation"`
 	Log                telegraf.Logger   `toml:"-"`
 	chttp.HTTPClientConfig
-	encryption.DecryptionConfig
+	DecryptionConfig
 
 	client      *http.Client
 	transformer *jsonata.Expr
 	cache       map[string]string
-	decrypter   encryption.Decrypter
+	decrypter   Decrypter
 }
 
 func (h *HTTP) SampleConfig() string {
-	return sampleConfig + h.DecryptionConfig.SampleConfig("secretstores.http")
+	return sampleConfig
 }
 
 func (h *HTTP) Init() error {

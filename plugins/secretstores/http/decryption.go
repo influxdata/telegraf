@@ -1,15 +1,10 @@
-package encryption
+package http
 
 import (
-	"bytes"
 	_ "embed"
 	"fmt"
 	"strings"
-	"text/template"
 )
-
-//go:embed sample_decryption.conf
-var sampleConfigDecryption string
 
 type Decrypter interface {
 	Decrypt(data []byte) ([]byte, error)
@@ -18,20 +13,6 @@ type Decrypter interface {
 type DecryptionConfig struct {
 	Cipher string       `toml:"cipher"`
 	Aes    AesEncryptor `toml:"aes"`
-}
-
-func (*DecryptionConfig) SampleConfig(prefix string) string {
-	tmpl := template.Must(template.New("cfg").Parse(sampleConfigDecryption))
-	params := struct {
-		Prefix string
-	}{
-		Prefix: prefix,
-	}
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, params); err != nil {
-		panic(fmt.Errorf("creating sample config for prefix %q failed: %w", prefix, err))
-	}
-	return buf.String()
 }
 
 func (c *DecryptionConfig) CreateDecrypter() (Decrypter, error) {
