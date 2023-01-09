@@ -374,6 +374,7 @@ SELECT DISTINCT
 			,'Free list stalls/sec'
 			,'Buffer cache hit ratio'
 			,'Buffer cache hit ratio base'
+			,'Database Pages'
 			,'Backup/Restore Throughput/sec'
 			,'Total Server Memory (KB)'
 			,'Target Server Memory (KB)'
