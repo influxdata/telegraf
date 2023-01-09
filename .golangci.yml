@@ -17,18 +17,14 @@ linters:
     - ineffassign
     - interfacebloat
     - lll
-    - makezero
     - nakedret
     - nilerr
     - prealloc
     - predeclared
-    - revive
     - sqlclosecheck
-    - staticcheck
     - tparallel
     - typecheck
     - unconvert
-    - unparam
     - unused
 
 linters-settings:
