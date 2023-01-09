@@ -808,7 +808,7 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 	}
 
 	if err := store.Init(); err != nil {
-		return fmt.Errorf("error initializing secretstore: %w", err)
+		return fmt.Errorf("error initializing secret-store %q: %w", storeid, err)
 	}
 
 	if _, found := c.SecretStores[storeid]; found {
@@ -1396,6 +1396,9 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"order",
 		"pass", "period", "precision",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
+
+	// Secret-store options to ignore
+	case "id":
 
 	// Parser options to ignore
 	case "data_type", "influx_parser_type":
