@@ -1,7 +1,6 @@
 package http
 
 import (
-	_ "embed"
 	"fmt"
 	"strings"
 )
