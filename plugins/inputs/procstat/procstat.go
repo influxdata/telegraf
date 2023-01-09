@@ -572,7 +572,7 @@ func init() {
 	inputs.Add("procstat", func() telegraf.Input {
 		return &Procstat{}
 	})
-	inputs.Add("t128-procstat", func() telegraf.Input {
+	inputs.Add("t128_procstat", func() telegraf.Input {
 		return &T128Procstat{}
 	})
 }
