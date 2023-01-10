@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -288,37 +287,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 }
 
 func TestGetSNMPConnectionTCP(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping test on Windows")
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go stubTCPServer(&wg)
-	wg.Wait()
-
-	s := &Snmp{
-		Agents: []string{"tcp://127.0.0.1:56789"},
-		ClientConfig: snmp.ClientConfig{
-			Translator: "netsnmp",
-		},
-	}
-	err := s.Init()
-	require.NoError(t, err)
-
-	wg.Add(1)
-	gsc, err := s.getConnection(0)
-	require.NoError(t, err)
-	gs := gsc.(snmp.GosnmpWrapper)
-	assert.Equal(t, "127.0.0.1", gs.Target)
-	assert.EqualValues(t, 56789, gs.Port)
-	assert.Equal(t, "tcp", gs.Transport)
-	wg.Wait()
-}
-
-func stubTCPServer(wg *sync.WaitGroup) {
-	defer wg.Done()
-	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:56789")
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -327,9 +296,21 @@ func stubTCPServer(wg *sync.WaitGroup) {
 		fmt.Print(err)
 	}
 	defer tcpServer.Close()
-	wg.Done()
-	conn, _ := tcpServer.AcceptTCP()
-	defer conn.Close()
+
+	s := &Snmp{
+		Agents: []string{fmt.Sprintf("tcp://%s", tcpServer.Addr())},
+		ClientConfig: snmp.ClientConfig{
+			Translator: "netsnmp",
+		},
+	}
+	err = s.Init()
+	require.NoError(t, err)
+
+	gsc, err := s.getConnection(0)
+	require.NoError(t, err)
+	gs := gsc.(snmp.GosnmpWrapper)
+	assert.Equal(t, "127.0.0.1", gs.Target)
+	assert.Equal(t, "tcp", gs.Transport)
 }
 
 func TestGetSNMPConnection_v3(t *testing.T) {
