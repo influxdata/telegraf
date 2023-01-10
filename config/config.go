@@ -426,6 +426,11 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	sort.Stable(c.Processors)
 	sort.Stable(c.AggProcessors)
 
+	// Set snmp agent translator default
+	if c.Agent.SnmpTranslator == "" {
+		c.Agent.SnmpTranslator = "netsnmp"
+	}
+
 	// Let's link all secrets to their secret-stores
 	return c.LinkSecrets()
 }
@@ -481,10 +486,6 @@ func (c *Config) LoadConfigData(data []byte) error {
 			RemovalIn: "2.0.0",
 			Notice:    "Use 'gosmi' instead",
 		})
-	}
-	// Set snmp agent translator default
-	if c.Agent.SnmpTranslator == "" {
-		c.Agent.SnmpTranslator = "netsnmp"
 	}
 
 	if len(c.UnusedFields) > 0 {
