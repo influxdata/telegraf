@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	nut "github.com/robbiet480/go.nut"
@@ -83,9 +84,14 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"nominal_input_voltage":   metrics["input.voltage.nominal"],
 		"nominal_battery_voltage": metrics["battery.voltage.nominal"],
 		"nominal_power":           metrics["ups.realpower.nominal"],
-		"firmware":                metrics["ups.firmware"],
 		"battery_date":            metrics["battery.mfr.date"],
 	}
+
+	val, err := internal.ToString(metrics["ups.firmware"])
+	if err != nil {
+		acc.AddError(fmt.Errorf("converting ups.firmware=%v failed: %v", metrics["ups.firmware"], err))
+	}
+	fields["firmware"] = val
 
 	acc.AddFields("upsd", fields, tags)
 }
