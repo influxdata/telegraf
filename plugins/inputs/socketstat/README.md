@@ -25,31 +25,35 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.socketstat]]
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
   ## Specify here the types you want to gather
-  socket_types = [ "tcp", "udp" ]
+  protocols = [ "tcp", "udp" ]
+
   ## The default timeout of 1s for ss execution can be overridden here:
   # timeout = "1s"
 ```
 
-## Measurements & Fields
+## Metrics
 
-- socketstat
-  - state (string) (for tcp, dccp and sctp protocols)
-  - If ss provides it (it depends on the protocol and ss version):
-    - bytes_acked (integer, bytes)
-    - bytes_received (integer, bytes)
-    - segs_out (integer, count)
-    - segs_in (integer, count)
-    - data_segs_out (integer, count)
-    - data_segs_in (integer, count)
+The measurements `socketstat` contains the following fields
 
-## Tags
+- state (string) (for tcp, dccp and sctp protocols)
 
-- All measurements have the following tags:
-  - proto
-  - local_addr
-  - local_port
-  - remote_addr
-  - remote_port
+If ss provides it (it depends on the protocol and ss version) it has the
+following additional fields
+
+- bytes_acked (integer, bytes)
+- bytes_received (integer, bytes)
+- segs_out (integer, count)
+- segs_in (integer, count)
+- data_segs_out (integer, count)
+- data_segs_in (integer, count)
+
+All measurements have the following tags:
+
+- proto
+- local_addr
+- local_port
+- remote_addr
+- remote_port
 
 ## Example Output
 
