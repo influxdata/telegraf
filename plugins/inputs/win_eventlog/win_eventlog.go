@@ -330,7 +330,6 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	if err != nil {
 		return event, err
 	}
-	w.Log.Debugf("Event: %s", string(eventXML))
 
 	err = xml.Unmarshal([]byte(eventXML), &event)
 	if err != nil {
