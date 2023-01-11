@@ -63,7 +63,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   timeout = "5s"
 ```
 
-## Measurements & Fields
+## Metrics
 
 **Note:** The measurements and fields included in this plugin are dynamically
 built from the InfluxDB source, and may vary between versions:
