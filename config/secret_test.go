@@ -260,6 +260,38 @@ func TestSecretUnquote(t *testing.T) {
 					expected = '''"""a secret"""'''
 			`),
 		},
+		{
+			name: "single quotes with backslashes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = 'Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;'
+					expected = 'Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;'
+			`),
+		},
+		{
+			name: "double quotes with backslashes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = "Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;"
+					expected = "Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;"
+			`),
+		},
+		{
+			name: "triple single quotes with backslashes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = '''Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;'''
+					expected = '''Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;'''
+			`),
+		},
+		{
+			name: "triple double quotes with backslashes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = """Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;"""
+					expected = """Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;"""
+			`),
+		},
 	}
 
 	for _, tt := range tests {
