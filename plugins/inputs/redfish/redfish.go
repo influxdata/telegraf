@@ -53,6 +53,21 @@ type Chassis struct {
 }
 
 type Power struct {
+	PowerControl []struct {
+		Name                string
+		MemberID            string
+		PowerAllocatedWatts *float64
+		PowerAvailableWatts *float64
+		PowerCapacityWatts  *float64
+		PowerConsumedWatts  *float64
+		PowerRequestedWatts *float64
+		PowerMetrics        struct {
+			AverageConsumedWatts *float64
+			IntervalInMin        int
+			MaxConsumedWatts     *float64
+			MinConsumedWatts     *float64
+		}
+	}
 	PowerSupplies []struct {
 		Name                 string
 		MemberID             string
@@ -307,6 +322,33 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		power, err := r.getPower(chassis.Power.Ref)
 		if err != nil {
 			return err
+		}
+
+		for _, j := range power.PowerControl {
+			tags := map[string]string{}
+			tags["member_id"] = j.MemberID
+			tags["address"] = address
+			tags["name"] = j.Name
+			tags["source"] = system.Hostname
+			if chassis.Location != nil {
+				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+				tags["room"] = chassis.Location.PostalAddress.Room
+				tags["rack"] = chassis.Location.Placement.Rack
+				tags["row"] = chassis.Location.Placement.Row
+			}
+
+			fields := make(map[string]interface{})
+			fields["power_allocated_watts"] = j.PowerAllocatedWatts
+			fields["power_available_watts"] = j.PowerAvailableWatts
+			fields["power_capacity_watts"] = j.PowerCapacityWatts
+			fields["power_consumed_watts"] = j.PowerConsumedWatts
+			fields["power_requested_watts"] = j.PowerRequestedWatts
+			fields["average_consumed_watts"] = j.PowerMetrics.AverageConsumedWatts
+			fields["interval_in_min"] = j.PowerMetrics.IntervalInMin
+			fields["max_consumed_watts"] = j.PowerMetrics.MaxConsumedWatts
+			fields["min_consumed_watts"] = j.PowerMetrics.MinConsumedWatts
+
+			acc.AddFields("redfish_power_powercontrol", fields, tags)
 		}
 
 		for _, j := range power.PowerSupplies {
