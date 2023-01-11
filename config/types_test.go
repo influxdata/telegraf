@@ -4,11 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/processors/reverse_dns"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConfigDuration(t *testing.T) {
@@ -35,43 +36,32 @@ func TestConfigDuration(t *testing.T) {
 func TestDuration(t *testing.T) {
 	var d config.Duration
 
-	require.NoError(t, d.UnmarshalTOML([]byte(`"1s"`)))
+	d = config.Duration(0)
+	require.NoError(t, d.UnmarshalText([]byte(`1s`)))
 	require.Equal(t, time.Second, time.Duration(d))
 
 	d = config.Duration(0)
-	require.NoError(t, d.UnmarshalTOML([]byte(`1s`)))
-	require.Equal(t, time.Second, time.Duration(d))
-
-	d = config.Duration(0)
-	require.NoError(t, d.UnmarshalTOML([]byte(`'1s'`)))
-	require.Equal(t, time.Second, time.Duration(d))
-
-	d = config.Duration(0)
-	require.NoError(t, d.UnmarshalTOML([]byte(`10`)))
+	require.NoError(t, d.UnmarshalText([]byte(`10`)))
 	require.Equal(t, 10*time.Second, time.Duration(d))
 
 	d = config.Duration(0)
-	require.NoError(t, d.UnmarshalTOML([]byte(`1.5`)))
+	require.NoError(t, d.UnmarshalText([]byte(`1.5`)))
 	require.Equal(t, 1500*time.Millisecond, time.Duration(d))
 
 	d = config.Duration(0)
-	require.NoError(t, d.UnmarshalTOML([]byte(``)))
+	require.NoError(t, d.UnmarshalText([]byte(``)))
 	require.Equal(t, 0*time.Second, time.Duration(d))
 
-	d = config.Duration(0)
-	require.NoError(t, d.UnmarshalTOML([]byte(`""`)))
-	require.Equal(t, 0*time.Second, time.Duration(d))
-
-	require.Error(t, d.UnmarshalTOML([]byte(`"1"`)))  // string missing unit
-	require.Error(t, d.UnmarshalTOML([]byte(`'2'`)))  // string missing unit
-	require.Error(t, d.UnmarshalTOML([]byte(`'ns'`))) // string missing time
-	require.Error(t, d.UnmarshalTOML([]byte(`'us'`))) // string missing time
+	require.Error(t, d.UnmarshalText([]byte(`"1"`)))  // string missing unit
+	require.Error(t, d.UnmarshalText([]byte(`'2'`)))  // string missing unit
+	require.Error(t, d.UnmarshalText([]byte(`'ns'`))) // string missing time
+	require.Error(t, d.UnmarshalText([]byte(`'us'`))) // string missing time
 }
 
 func TestSize(t *testing.T) {
 	var s config.Size
 
-	require.NoError(t, s.UnmarshalText([]byte(`"1B"`)))
+	require.NoError(t, s.UnmarshalText([]byte(`1B`)))
 	require.Equal(t, int64(1), int64(s))
 
 	s = config.Size(0)
@@ -79,15 +69,11 @@ func TestSize(t *testing.T) {
 	require.Equal(t, int64(1), int64(s))
 
 	s = config.Size(0)
-	require.NoError(t, s.UnmarshalText([]byte(`'1'`)))
-	require.Equal(t, int64(1), int64(s))
-
-	s = config.Size(0)
-	require.NoError(t, s.UnmarshalText([]byte(`"1GB"`)))
+	require.NoError(t, s.UnmarshalText([]byte(`1GB`)))
 	require.Equal(t, int64(1000*1000*1000), int64(s))
 
 	s = config.Size(0)
-	require.NoError(t, s.UnmarshalText([]byte(`"12GiB"`)))
+	require.NoError(t, s.UnmarshalText([]byte(`12GiB`)))
 	require.Equal(t, int64(12*1024*1024*1024), int64(s))
 }
 
@@ -100,6 +86,7 @@ func TestTOMLParsingStringDurations(t *testing.T) {
 		'1s',
 		"1.5s",
 		"",
+		'',
 		"2h",
 		"42m",
 		"100ms",
@@ -113,6 +100,7 @@ func TestTOMLParsingStringDurations(t *testing.T) {
 		1 * time.Second,
 		1 * time.Second,
 		1500 * time.Millisecond,
+		0,
 		0,
 		2 * time.Hour,
 		42 * time.Minute,
@@ -200,6 +188,8 @@ func TestTOMLParsingStringSizes(t *testing.T) {
 		"1B",
 		"1",
 		'1',
+		'''15kB''',
+		"""15KiB""",
 		"1GB",
 		"12GiB"
 	]
@@ -209,6 +199,8 @@ func TestTOMLParsingStringSizes(t *testing.T) {
 		1,
 		1,
 		1,
+		15 * 1000,
+		15 * 1024,
 		1000 * 1000 * 1000,
 		12 * 1024 * 1024 * 1024,
 	}
