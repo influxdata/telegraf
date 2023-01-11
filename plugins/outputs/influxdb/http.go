@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -88,8 +89,8 @@ type HTTPConfig struct {
 	URL                       *url.URL
 	UserAgent                 string
 	Timeout                   time.Duration
-	Username                  string
-	Password                  string
+	Username                  config.Secret
+	Password                  config.Secret
 	TLSConfig                 *tls.Config
 	Proxy                     *url.URL
 	Headers                   map[string]string
@@ -451,9 +452,11 @@ func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	c.addHeaders(req)
+	if err := c.addHeaders(req); err != nil {
+		return nil, err
+	}
 
-	return req, nil
+	return req, err
 }
 
 func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
@@ -465,7 +468,9 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 	}
 
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
-	c.addHeaders(req)
+	if err := c.addHeaders(req); err != nil {
+		return nil, err
+	}
 
 	if c.config.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
@@ -491,14 +496,27 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser
 	return io.NopCloser(reader), nil
 }
 
-func (c *httpClient) addHeaders(req *http.Request) {
-	if c.config.Username != "" || c.config.Password != "" {
-		req.SetBasicAuth(c.config.Username, c.config.Password)
+func (c *httpClient) addHeaders(req *http.Request) error {
+	if !c.config.Username.Empty() || !c.config.Password.Empty() {
+		username, err := c.config.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		defer config.ReleaseSecret(username)
+		password, err := c.config.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(password)
+
+		req.SetBasicAuth(string(username), string(password))
 	}
 
 	for header, value := range c.config.Headers {
 		req.Header.Set(header, value)
 	}
+
+	return nil
 }
 
 func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
