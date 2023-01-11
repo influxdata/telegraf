@@ -27,7 +27,7 @@ import (
 var sampleConfig string
 
 type Elasticsearch struct {
-	AuthBearerToken     string          `toml:"auth_bearer_token"`
+	AuthBearerToken     config.Secret   `toml:"auth_bearer_token"`
 	DefaultPipeline     string          `toml:"default_pipeline"`
 	DefaultTagValue     string          `toml:"default_tag_value"`
 	EnableGzip          bool            `toml:"enable_gzip"`
@@ -182,21 +182,11 @@ func (a *Elasticsearch) Connect() error {
 		elastic.SetGzip(a.EnableGzip),
 	)
 
-	if !a.Username.Empty() && !a.Password.Empty() {
-		authFunc, err := a.getAuthFunc()
-		if err != nil {
-			return err
-		}
-		clientOptions = append(clientOptions, authFunc)
+	authOptions, err := a.getAuthOptions()
+	if err != nil {
+		return err
 	}
-
-	if a.AuthBearerToken != "" {
-		clientOptions = append(clientOptions,
-			elastic.SetHeaders(http.Header{
-				"Authorization": []string{fmt.Sprintf("Bearer %s", a.AuthBearerToken)},
-			}),
-		)
-	}
+	clientOptions = append(clientOptions, authOptions...)
 
 	if time.Duration(a.HealthCheckInterval) == 0 {
 		clientOptions = append(clientOptions,
@@ -472,19 +462,35 @@ func (a *Elasticsearch) Close() error {
 	return nil
 }
 
-func (a *Elasticsearch) getAuthFunc() (elastic.ClientOptionFunc, error) {
-	username, err := a.Username.Get()
-	if err != nil {
-		return nil, fmt.Errorf("getting username failed: %w", err)
-	}
-	defer config.ReleaseSecret(username)
-	password, err := a.Password.Get()
-	if err != nil {
-		return nil, fmt.Errorf("getting password failed: %w", err)
-	}
-	defer config.ReleaseSecret(password)
+func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
+	var fns []elastic.ClientOptionFunc
 
-	return elastic.SetBasicAuth(string(username), string(password)), nil
+	if !a.Username.Empty() && !a.Password.Empty() {
+		username, err := a.Username.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting username failed: %w", err)
+		}
+		defer config.ReleaseSecret(username)
+		password, err := a.Password.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(password)
+
+		fns = append(fns, elastic.SetBasicAuth(string(username), string(password)))
+	}
+
+	if !a.AuthBearerToken.Empty() {
+		token, err := a.AuthBearerToken.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting token failed: %w", err)
+		}
+		defer config.ReleaseSecret(token)
+
+		auth := []string{"Bearer " + string(token)}
+		fns = append(fns, elastic.SetHeaders(http.Header{"Authorization": auth}))
+	}
+	return fns, nil
 }
 
 func init() {
