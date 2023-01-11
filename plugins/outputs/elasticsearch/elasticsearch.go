@@ -40,12 +40,12 @@ type Elasticsearch struct {
 	IndexName           string          `toml:"index_name"`
 	ManageTemplate      bool            `toml:"manage_template"`
 	OverwriteTemplate   bool            `toml:"overwrite_template"`
-	Password            string          `toml:"password"`
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
 	TemplateName        string          `toml:"template_name"`
 	Timeout             config.Duration `toml:"timeout"`
 	URLs                []string        `toml:"urls"`
 	UsePipeline         string          `toml:"use_pipeline"`
-	Username            string          `toml:"username"`
 	Log                 telegraf.Logger `toml:"-"`
 	majorReleaseNumber  int
 	pipelineName        string
@@ -182,10 +182,12 @@ func (a *Elasticsearch) Connect() error {
 		elastic.SetGzip(a.EnableGzip),
 	)
 
-	if a.Username != "" && a.Password != "" {
-		clientOptions = append(clientOptions,
-			elastic.SetBasicAuth(a.Username, a.Password),
-		)
+	if !a.Username.Empty() && !a.Password.Empty() {
+		authFunc, err := a.getAuthFunc()
+		if err != nil {
+			return err
+		}
+		clientOptions = append(clientOptions, authFunc)
 	}
 
 	if a.AuthBearerToken != "" {
@@ -468,6 +470,21 @@ func getISOWeek(eventTime time.Time) string {
 func (a *Elasticsearch) Close() error {
 	a.Client = nil
 	return nil
+}
+
+func (a *Elasticsearch) getAuthFunc() (elastic.ClientOptionFunc, error) {
+	username, err := a.Username.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting username failed: %w", err)
+	}
+	defer config.ReleaseSecret(username)
+	password, err := a.Password.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting password failed: %w", err)
+	}
+	defer config.ReleaseSecret(password)
+
+	return elastic.SetBasicAuth(string(username), string(password)), nil
 }
 
 func init() {
