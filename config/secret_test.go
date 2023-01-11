@@ -169,97 +169,128 @@ func TestSecretConstant(t *testing.T) {
 
 func TestSecretUnquote(t *testing.T) {
 	tests := []struct {
-		name     string
-		cfg      []byte
-		expected string
+		name string
+		cfg  []byte
 	}{
 		{
 			name: "single quotes",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = 'a secret'
+					expected = 'a secret'
 			`),
-			expected: "a secret",
 		},
 		{
 			name: "double quotes",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = "a secret"
+					expected = "a secret"
 			`),
-			expected: "a secret",
 		},
 		{
 			name: "triple single quotes",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = '''a secret'''
+					expected = '''a secret'''
 			`),
-			expected: "a secret",
 		},
 		{
 			name: "triple double quotes",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = """a secret"""
+					expected = """a secret"""
 			`),
-			expected: "a secret",
 		},
 		{
 			name: "escaped double quotes",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = "\"a secret\""
+					expected = "\"a secret\""
 			`),
-			expected: `\"a secret\"`,
 		},
 		{
 			name: "mix double-single quotes (single)",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = "'a secret'"
+					expected = "'a secret'"
 			`),
-			expected: `'a secret'`,
 		},
 		{
 			name: "mix single-double quotes (single)",
 			cfg: []byte(`
 				[[inputs.mockup]]
-					secret = '"a secret"'
+				secret = '"a secret"'
+				expected = '"a secret"'
 			`),
-			expected: `"a secret"`,
 		},
 		{
 			name: "mix double-single quotes (triple-single)",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = """'a secret'"""
+					expected = """'a secret'"""
 			`),
-			expected: `'a secret'`,
 		},
 		{
 			name: "mix single-double quotes (triple-single)",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = '''"a secret"'''
+					expected = '''"a secret"'''
 			`),
-			expected: `"a secret"`,
 		},
 		{
 			name: "mix double-single quotes (triple)",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = """'''a secret'''"""
+					expected = """'''a secret'''"""
 			`),
-			expected: `'''a secret'''`,
 		},
 		{
 			name: "mix single-double quotes (triple)",
 			cfg: []byte(`
 				[[inputs.mockup]]
 					secret = '''"""a secret"""'''
+					expected = '''"""a secret"""'''
 			`),
-			expected: `"""a secret"""`,
+		},
+		{
+			name: "single quotes with backslashes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = 'Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;'
+					expected = 'Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;'
+			`),
+		},
+		{
+			name: "double quotes with backslashes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = "Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;"
+					expected = "Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;"
+			`),
+		},
+		{
+			name: "triple single quotes with backslashes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = '''Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;'''
+					expected = '''Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;'''
+			`),
+		},
+		{
+			name: "triple double quotes with backslashes",
+			cfg: []byte(`
+				[[inputs.mockup]]
+					secret = """Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;"""
+					expected = """Server=SQLTELEGRAF\\SQL2022;app name=telegraf;log=1;"""
+			`),
 		},
 	}
 
@@ -282,7 +313,7 @@ func TestSecretUnquote(t *testing.T) {
 			require.NoError(t, err)
 			defer ReleaseSecret(secret)
 
-			require.EqualValues(t, tt.expected, string(secret))
+			require.EqualValues(t, plugin.Expected, string(secret))
 		})
 	}
 }
@@ -325,7 +356,7 @@ func TestSecretStoreStatic(t *testing.T) {
 [[inputs.mockup]]
 	secret = "@{mock:a_strange_secret}"
 [[inputs.mockup]]
-	secret = "@{mock:a_wierd_secret}"
+	secret = "@{mock:a_weird_secret}"
 `)
 
 	c := NewConfig()
@@ -339,7 +370,7 @@ func TestSecretStoreStatic(t *testing.T) {
 			"secret1":          []byte("Ood Bnar"),
 			"secret2":          []byte("Thon"),
 			"a_strange_secret": []byte("Obi-Wan Kenobi"),
-			"a_wierd_secret":   []byte("Arca Jeth"),
+			"a_weird_secret":   []byte("Arca Jeth"),
 		},
 	}
 	require.NoError(t, store.Init())
@@ -366,7 +397,7 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 [[inputs.mockup]]
 	secret = "@{mock:a-strange-secret}"
 [[inputs.mockup]]
-	secret = "@{mock:a wierd secret}"
+	secret = "@{mock:a weird secret}"
 `)
 
 	c := NewConfig()
@@ -380,7 +411,7 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 			"":                 []byte("Ood Bnar"),
 			"wild?%go":         []byte("Thon"),
 			"a-strange-secret": []byte("Obi-Wan Kenobi"),
-			"a wierd secret":   []byte("Arca Jeth"),
+			"a weird secret":   []byte("Arca Jeth"),
 		},
 	}
 	require.NoError(t, store.Init())
@@ -391,7 +422,7 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 		"@{mock:}",
 		"@{mock:wild?%go}",
 		"@{mock:a-strange-secret}",
-		"@{mock:a wierd secret}",
+		"@{mock:a weird secret}",
 	}
 	for i, input := range c.Inputs {
 		plugin := input.Input.(*MockupSecretPlugin)
@@ -509,7 +540,8 @@ func TestSecretStoreDynamic(t *testing.T) {
 
 /*** Mockup (input) plugin for testing to avoid cyclic dependencies ***/
 type MockupSecretPlugin struct {
-	Secret Secret `toml:"secret"`
+	Secret   Secret `toml:"secret"`
+	Expected string `toml:"expected"`
 }
 
 func (*MockupSecretPlugin) SampleConfig() string                { return "Mockup test secret plugin" }
