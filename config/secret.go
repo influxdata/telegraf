@@ -41,9 +41,9 @@ func NewSecret(b []byte) Secret {
 	return s
 }
 
-// UnmarshalTOML creates a secret from a toml value.
-func (s *Secret) UnmarshalTOML(b []byte) error {
-	// Unmarshal raw secret from TOML and put it into protected memory
+// UnmarshalText creates a secret from a toml value following the "string" rule.
+func (s *Secret) UnmarshalText(b []byte) error {
+	// Unmarshal secret from TOML and put it into protected memory
 	s.init(b)
 
 	// Keep track of secrets that contain references to secret-stores
@@ -56,9 +56,7 @@ func (s *Secret) UnmarshalTOML(b []byte) error {
 }
 
 // Initialize the secret content
-func (s *Secret) init(b []byte) {
-	secret := unquoteTomlString(b)
-
+func (s *Secret) init(secret []byte) {
 	// Remember if the secret is completely empty
 	s.notempty = len(secret) != 0
 
