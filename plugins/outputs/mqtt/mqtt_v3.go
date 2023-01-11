@@ -40,13 +40,21 @@ func (m *mqttv311Client) Connect() error {
 	}
 	opts.SetTLSConfig(tlsCfg)
 
-	user := m.Username
-	if user != "" {
-		opts.SetUsername(user)
+	if !m.Username.Empty() {
+		user, err := m.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		opts.SetUsername(string(user))
+		config.ReleaseSecret(user)
 	}
-	password := m.Password
-	if password != "" {
-		opts.SetPassword(password)
+	if !m.Password.Empty() {
+		password, err := m.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		opts.SetPassword(string(password))
+		config.ReleaseSecret(password)
 	}
 
 	if len(m.Servers) == 0 {
