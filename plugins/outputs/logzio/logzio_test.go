@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -18,13 +20,23 @@ const (
 	testURL   = "https://logzio.com"
 )
 
-func TestConnetWithoutToken(t *testing.T) {
+func TestConnectWithoutToken(t *testing.T) {
 	l := &Logzio{
 		URL: testURL,
 		Log: testutil.Logger{},
 	}
 	err := l.Connect()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "token is required")
+}
+
+func TestConnectWithDefaultToken(t *testing.T) {
+	l := &Logzio{
+		URL:   testURL,
+		Token: config.NewSecret([]byte("your logz.io token")),
+		Log:   testutil.Logger{},
+	}
+	err := l.Connect()
+	require.ErrorContains(t, err, "please replace 'token'")
 }
 
 func TestParseMetric(t *testing.T) {
@@ -45,16 +57,12 @@ func TestBadStatusCode(t *testing.T) {
 	defer ts.Close()
 
 	l := &Logzio{
-		Token: testToken,
+		Token: config.NewSecret([]byte(testToken)),
 		URL:   ts.URL,
 		Log:   testutil.Logger{},
 	}
-
-	err := l.Connect()
-	require.NoError(t, err)
-
-	err = l.Write(testutil.MockMetrics())
-	require.Error(t, err)
+	require.NoError(t, l.Connect())
+	require.Error(t, l.Write(testutil.MockMetrics()))
 }
 
 func TestWrite(t *testing.T) {
@@ -81,14 +89,10 @@ func TestWrite(t *testing.T) {
 	defer ts.Close()
 
 	l := &Logzio{
-		Token: testToken,
+		Token: config.NewSecret([]byte(testToken)),
 		URL:   ts.URL,
 		Log:   testutil.Logger{},
 	}
-
-	err := l.Connect()
-	require.NoError(t, err)
-
-	err = l.Write([]telegraf.Metric{tm})
-	require.NoError(t, err)
+	require.NoError(t, l.Connect())
+	require.NoError(t, l.Write([]telegraf.Metric{tm}))
 }
