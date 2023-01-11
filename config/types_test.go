@@ -4,7 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/processors/reverse_dns"
 	"github.com/stretchr/testify/require"
 )
@@ -69,22 +71,205 @@ func TestDuration(t *testing.T) {
 func TestSize(t *testing.T) {
 	var s config.Size
 
-	require.NoError(t, s.UnmarshalTOML([]byte(`"1B"`)))
+	require.NoError(t, s.UnmarshalText([]byte(`"1B"`)))
 	require.Equal(t, int64(1), int64(s))
 
 	s = config.Size(0)
-	require.NoError(t, s.UnmarshalTOML([]byte(`1`)))
+	require.NoError(t, s.UnmarshalText([]byte(`1`)))
 	require.Equal(t, int64(1), int64(s))
 
 	s = config.Size(0)
-	require.NoError(t, s.UnmarshalTOML([]byte(`'1'`)))
+	require.NoError(t, s.UnmarshalText([]byte(`'1'`)))
 	require.Equal(t, int64(1), int64(s))
 
 	s = config.Size(0)
-	require.NoError(t, s.UnmarshalTOML([]byte(`"1GB"`)))
+	require.NoError(t, s.UnmarshalText([]byte(`"1GB"`)))
 	require.Equal(t, int64(1000*1000*1000), int64(s))
 
 	s = config.Size(0)
-	require.NoError(t, s.UnmarshalTOML([]byte(`"12GiB"`)))
+	require.NoError(t, s.UnmarshalText([]byte(`"12GiB"`)))
 	require.Equal(t, int64(12*1024*1024*1024), int64(s))
+}
+
+func TestTOMLParsingStringDurations(t *testing.T) {
+	cfg := []byte(`
+[[inputs.typesmockup]]
+	durations = [
+		"1s",
+		'''1s''',
+		'1s',
+		"1.5s",
+		"",
+		"2h",
+		"42m",
+		"100ms",
+		"100us",
+		"100ns"
+	]
+`)
+
+	expected := []time.Duration{
+		1 * time.Second,
+		1 * time.Second,
+		1 * time.Second,
+		1500 * time.Millisecond,
+		0,
+		2 * time.Hour,
+		42 * time.Minute,
+		100 * time.Millisecond,
+		100 * time.Microsecond,
+		100 * time.Nanosecond,
+	}
+
+	// Load the data
+	c := config.NewConfig()
+	err := c.LoadConfigData(cfg)
+	require.NoError(t, err)
+	require.Len(t, c.Inputs, 1)
+	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
+
+	require.Empty(t, plugin.Sizes)
+	require.Len(t, plugin.Durations, len(expected))
+	for i, actual := range plugin.Durations {
+		require.EqualValuesf(t, expected[i], actual, "case %d failed", i)
+	}
+}
+
+func TestTOMLParsingIntegerDurations(t *testing.T) {
+	cfg := []byte(`
+[[inputs.typesmockup]]
+	durations = [
+		1,
+		10,
+		3601
+	]
+`)
+
+	expected := []time.Duration{
+		1 * time.Second,
+		10 * time.Second,
+		3601 * time.Second,
+	}
+
+	// Load the data
+	c := config.NewConfig()
+	err := c.LoadConfigData(cfg)
+	require.NoError(t, err)
+	require.Len(t, c.Inputs, 1)
+	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
+
+	require.Empty(t, plugin.Sizes)
+	require.Len(t, plugin.Durations, len(expected))
+	for i, actual := range plugin.Durations {
+		require.EqualValuesf(t, expected[i], actual, "case %d failed", i)
+	}
+}
+
+func TestTOMLParsingFloatDurations(t *testing.T) {
+	cfg := []byte(`
+[[inputs.typesmockup]]
+	durations = [
+		42.0,
+		1.5
+	]
+`)
+
+	expected := []time.Duration{
+		42 * time.Second,
+		1500 * time.Millisecond,
+	}
+
+	// Load the data
+	c := config.NewConfig()
+	err := c.LoadConfigData(cfg)
+	require.NoError(t, err)
+	require.Len(t, c.Inputs, 1)
+	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
+
+	require.Empty(t, plugin.Sizes)
+	require.Len(t, plugin.Durations, len(expected))
+	for i, actual := range plugin.Durations {
+		require.EqualValuesf(t, expected[i], actual, "case %d failed", i)
+	}
+}
+
+func TestTOMLParsingStringSizes(t *testing.T) {
+	cfg := []byte(`
+[[inputs.typesmockup]]
+	sizes = [
+		"1B",
+		"1",
+		'1',
+		"1GB",
+		"12GiB"
+	]
+`)
+
+	expected := []int64{
+		1,
+		1,
+		1,
+		1000 * 1000 * 1000,
+		12 * 1024 * 1024 * 1024,
+	}
+
+	// Load the data
+	c := config.NewConfig()
+	err := c.LoadConfigData(cfg)
+	require.NoError(t, err)
+	require.Len(t, c.Inputs, 1)
+	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
+
+	require.Empty(t, plugin.Durations)
+	require.Len(t, plugin.Sizes, len(expected))
+	for i, actual := range plugin.Sizes {
+		require.EqualValuesf(t, expected[i], actual, "case %d failed", i)
+	}
+}
+
+func TestTOMLParsingIntegerSizes(t *testing.T) {
+	cfg := []byte(`
+[[inputs.typesmockup]]
+	sizes = [
+		0,
+		1,
+		1000,
+		1024
+	]
+`)
+
+	expected := []int64{
+		0,
+		1,
+		1000,
+		1024,
+	}
+
+	// Load the data
+	c := config.NewConfig()
+	err := c.LoadConfigData(cfg)
+	require.NoError(t, err)
+	require.Len(t, c.Inputs, 1)
+	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
+
+	require.Empty(t, plugin.Durations)
+	require.Len(t, plugin.Sizes, len(expected))
+	for i, actual := range plugin.Sizes {
+		require.EqualValuesf(t, expected[i], actual, "case %d failed", i)
+	}
+}
+
+/*** Mockup (input) plugin for testing to avoid cyclic dependencies ***/
+type MockupTypesPlugin struct {
+	Durations []config.Duration `toml:"durations"`
+	Sizes     []config.Size     `toml:"sizes"`
+}
+
+func (*MockupTypesPlugin) SampleConfig() string                { return "Mockup test types plugin" }
+func (*MockupTypesPlugin) Gather(_ telegraf.Accumulator) error { return nil }
+
+// Register the mockup plugin on loading
+func init() {
+	// Register the mockup input plugin for the required names
+	inputs.Add("typesmockup", func() telegraf.Input { return &MockupTypesPlugin{} })
 }
