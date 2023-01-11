@@ -52,7 +52,7 @@ func TestDuration(t *testing.T) {
 
 	d = config.Duration(0)
 	require.NoError(t, d.UnmarshalTOML([]byte(`1.5`)))
-	require.Equal(t, time.Second, time.Duration(d))
+	require.Equal(t, 1500*time.Millisecond, time.Duration(d))
 
 	d = config.Duration(0)
 	require.NoError(t, d.UnmarshalTOML([]byte(``)))

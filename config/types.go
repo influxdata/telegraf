@@ -30,7 +30,7 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	// Second try parsing as float seconds
 	sF, err := strconv.ParseFloat(durStr, 64)
 	if err == nil {
-		dur := time.Second * time.Duration(sF)
+		dur := float64(time.Second) * sF
 		*d = Duration(dur)
 		return nil
 	}
