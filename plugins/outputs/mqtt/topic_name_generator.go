@@ -23,6 +23,7 @@ func (t *TopicNameGenerator) Tag(key string) string {
 	return tagString
 }
 
+// PluginName returns the name of the plugin and is used by the template parser when the topic uses {{ .PluginName }}
 func (t *TopicNameGenerator) PluginName() string {
 	return t.metric.Name()
 }
@@ -44,7 +45,7 @@ func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (strin
 	topic := strings.Join(ts, "/")
 	// This is to keep backward compatibility with previous behaviour where the plugin name was always present
 	if topic == "" {
-		return t.PluginName(), nil
+		return m.Name(), nil
 	}
 	return topic, nil
 }

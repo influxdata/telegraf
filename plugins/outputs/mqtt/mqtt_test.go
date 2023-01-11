@@ -166,8 +166,8 @@ func TestGenerateTopicName(t *testing.T) {
 	}{
 		{
 			name:    "matches default legacy format",
-			pattern: "{{ .TopicPrefix }}/{{ .Hostname }}/{{ .PluginName }}",
-			want:    "prefix/hostname/metric-name",
+			pattern: "telegraf/{{ .Hostname }}/{{ .PluginName }}",
+			want:    "telegraf/hostname/metric-name",
 		},
 		{
 			name:    "respect hardcoded strings",

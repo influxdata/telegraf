@@ -111,11 +111,11 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	metricsmap := make(map[string][]telegraf.Metric)
 	hostname, ok := metrics[0].Tags()["host"]
 	if !ok {
 		hostname = ""
 	}
+	metricsmap := make(map[string][]telegraf.Metric)
 	for _, metric := range metrics {
 		topic, err := m.generator.Generate(hostname, metric)
 		if err != nil {
