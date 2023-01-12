@@ -1,6 +1,7 @@
 package mqtt
 
 import (
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -19,6 +20,11 @@ func NewTopicNameGenerator(topicPrefix string, topic string) (*TopicNameGenerato
 	tt, err := template.New("topic_name").Parse(topic)
 	if err != nil {
 		return nil, err
+	}
+	for _, p := range strings.Split(topic, "/") {
+		if strings.ContainsAny(p, "#+") {
+			return nil, fmt.Errorf("found forbidden character %s in the topic name %s", p, topic)
+		}
 	}
 	return &TopicNameGenerator{TopicPrefix: topicPrefix, template: tt}, nil
 }

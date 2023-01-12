@@ -5,14 +5,15 @@ import (
 	// Blank import to support go:embed compile directive
 	_ "embed"
 	"fmt"
+	"net/url"
+	"strings"
+	"sync"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"net/url"
-	"strings"
-	"sync"
 )
 
 //go:embed sample.conf
@@ -64,11 +65,6 @@ func (m *MQTT) Init() error {
 	m.generator, err = NewTopicNameGenerator(m.TopicPrefix, m.Topic)
 	if err != nil {
 		return err
-	}
-	for _, p := range strings.Split(m.Topic, "/") {
-		if strings.ContainsAny(p, "#+") {
-			return fmt.Errorf("found forbidden character %s in the topic name %s", p, m.Topic)
-		}
 	}
 	return nil
 }
