@@ -288,13 +288,10 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 func TestGetSNMPConnectionTCP(t *testing.T) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
-	if err != nil {
-		fmt.Print(err)
-	}
+	require.NoError(t, err)
+	
 	tcpServer, err := net.ListenTCP("tcp", tcpAddr)
-	if err != nil {
-		fmt.Print(err)
-	}
+	require.NoError(t, err)
 	defer tcpServer.Close()
 
 	s := &Snmp{
