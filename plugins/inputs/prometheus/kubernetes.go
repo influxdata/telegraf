@@ -14,7 +14,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -134,76 +133,43 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 	podinformer := informerfactory.Core().V1().Pods()
 	podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(newObj)
-			if err != nil {
-				p.Log.Errorf("getting key from cache %s\n", err.Error())
+			newPod, ok := newObj.(*corev1.Pod)
+			if !ok {
+				p.Log.Error("[BUG] Not a Pod, report it to the Github issues, please")
+				return
 			}
-
-			namespace, name, err := cache.SplitMetaNamespaceKey(key)
-			if err != nil {
-				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
-			}
-
-			pod, _ := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
-
-			if shouldScrapePod(pod, p) {
-				registerPod(pod, p)
-			}
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			newKey, err := cache.MetaNamespaceKeyFunc(newObj)
-			if err != nil {
-				p.Log.Errorf("getting key from cache %s\n", err.Error())
-			}
-
-			newNamespace, newName, err := cache.SplitMetaNamespaceKey(newKey)
-			if err != nil {
-				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
-			}
-
-			newPod, _ := clientset.CoreV1().Pods(newNamespace).Get(ctx, newName, metav1.GetOptions{})
-
 			if shouldScrapePod(newPod, p) {
-				if newPod.GetDeletionTimestamp() == nil {
-					registerPod(newPod, p)
-				}
-			}
-
-			oldKey, err := cache.MetaNamespaceKeyFunc(oldObj)
-			if err != nil {
-				p.Log.Errorf("getting key from cache %s\n", err.Error())
-			}
-
-			oldNamespace, oldName, err := cache.SplitMetaNamespaceKey(oldKey)
-			if err != nil {
-				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
-			}
-
-			oldPod, _ := clientset.CoreV1().Pods(oldNamespace).Get(ctx, oldName, metav1.GetOptions{})
-
-			if shouldScrapePod(oldPod, p) {
-				if oldPod.GetDeletionTimestamp() != nil {
-					unregisterPod(oldPod, p)
-				}
+				registerPod(newPod, p)
 			}
 		},
-		DeleteFunc: func(oldObj interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(oldObj)
+		// On Pod status updates and regular reList by Informer
+		UpdateFunc: func(_, newObj interface{}) {
+			newPod, ok := newObj.(*corev1.Pod)
+			if !ok {
+				p.Log.Error("[BUG] Not a Pod, report it to the Github issues, please")
+				return
+			}
+
+			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(newObj)
 			if err != nil {
 				p.Log.Errorf("getting key from cache %s", err.Error())
 			}
-
-			namespace, name, err := cache.SplitMetaNamespaceKey(key)
-			if err != nil {
-				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
-			}
-
-			pod, _ := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
-
-			if shouldScrapePod(pod, p) {
-				if pod.GetDeletionTimestamp() != nil {
-					unregisterPod(pod, p)
+			podID := PodID(key)
+			if shouldScrapePod(newPod, p) {
+				// When Informers re-Lists, pod might already be registered,
+				// do nothing if it is, register otherwise
+				if _, ok = p.kubernetesPods[podID]; !ok {
+					registerPod(newPod, p)
 				}
+			} else {
+				// Pods are largely immutable, but it's readiness status can change, unregister then
+				unregisterPod(podID, p)
+			}
+		},
+		DeleteFunc: func(oldObj interface{}) {
+			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(oldObj)
+			if err == nil {
+				unregisterPod(PodID(key), p)
 			}
 		},
 	})
@@ -449,17 +415,12 @@ func getScrapeURL(pod *corev1.Pod, p *Prometheus) (*url.URL, error) {
 	return base, nil
 }
 
-func unregisterPod(pod *corev1.Pod, p *Prometheus) {
-	podId := getPodID(pod)
+func unregisterPod(podID PodID, p *Prometheus) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if v, ok := p.kubernetesPods[podId]; ok {
-		p.Log.Debugf("registered a delete request for %q in namespace %q", pod.Name, pod.Namespace)
-		delete(p.kubernetesPods, podId)
+	if v, ok := p.kubernetesPods[podID]; ok {
+		p.Log.Debugf("registered a delete request for %s", podID)
+		delete(p.kubernetesPods, podID)
 		p.Log.Debugf("will stop scraping for %q", v.URL.String())
 	}
-}
-
-func getPodID(pod *corev1.Pod) PodID {
-	return PodID(pod.GetNamespace() + "/" + pod.GetName())
 }

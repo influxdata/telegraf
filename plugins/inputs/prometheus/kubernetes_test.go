@@ -178,8 +178,8 @@ func TestDeletePods(t *testing.T) {
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 
-	podId, _ := cache.MetaNamespaceKeyFunc(p)
-	unregisterPod(PodID(podId), prom)
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	unregisterPod(PodID(podID), prom)
 	require.Equal(t, 0, len(prom.kubernetesPods))
 }
 
@@ -190,8 +190,8 @@ func TestKeepDefaultNamespaceLabelName(t *testing.T) {
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 
-	podId, _ := cache.MetaNamespaceKeyFunc(p)
-	tags := prom.kubernetesPods[PodID(podId)].Tags
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	tags := prom.kubernetesPods[PodID(podID)].Tags
 	require.Equal(t, "default", tags["namespace"])
 }
 
@@ -202,8 +202,8 @@ func TestChangeNamespaceLabelName(t *testing.T) {
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 
-	podId, _ := cache.MetaNamespaceKeyFunc(p)
-	tags := prom.kubernetesPods[PodID(podId)].Tags
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	tags := prom.kubernetesPods[PodID(podID)].Tags
 	require.Equal(t, "default", tags["pod_namespace"])
 	require.Equal(t, "", tags["namespace"])
 }
