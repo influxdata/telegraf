@@ -300,8 +300,7 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 			Translator: "netsnmp",
 		},
 	}
-	err = s.Init()
-	require.NoError(t, err)
+	require.NoError(t, s.Init())
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
