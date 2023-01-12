@@ -231,7 +231,7 @@ case](https://en.wikipedia.org/wiki/Snake_case)
 - All measurements have the following tags:
   - region           (CloudWatch Region)
   - {dimension-name} (Cloudwatch Dimension value - one per metric dimension)
-- If IncludeLinkedAccounts is set to true then below tag is also provided:
+- If `include_linked_accounts` is set to true then below tag is also provided:
   - account           (The ID of the account where the metrics are located.)
 
 ## Troubleshooting
