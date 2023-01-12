@@ -111,6 +111,7 @@ build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
 	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
@@ -224,6 +225,8 @@ clean:
 	rm -rf tools/custom_builder/custom_builder.exe
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
+	rm -rf tools/readme_linter/readme_linter
+	rm -rf tools/readme_linter/readme_linter.exe
 	rm -rf tools/package_lxd_test/package_lxd_test
 	rm -rf tools/package_lxd_test/package_lxd_test.exe
 	rm -rf tools/license_checker/license_checker
