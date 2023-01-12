@@ -381,20 +381,21 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 			}
 
 			for statisticType, statistic := range statisticTypes {
-				if filtered.statFilter.Match(statisticType) {
-					queryID := statisticType + "_" + id
-					c.queryDimensions[queryID] = dimension
-					dataQueries[*metric.Namespace] = append(dataQueries[*metric.Namespace], types.MetricDataQuery{
-						Id:        aws.String(queryID),
-						AccountId: accountID,
-						Label:     aws.String(snakeCase(*metric.MetricName + "_" + statisticType)),
-						MetricStat: &types.MetricStat{
-							Metric: &filtered.metrics[j],
-							Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
-							Stat:   aws.String(statistic),
-						},
-					})
+				if !filtered.statFilter.Match(statisticType) {
+					continue
 				}
+				queryID := statisticType + "_" + id
+				c.queryDimensions[queryID] = dimension
+				dataQueries[*metric.Namespace] = append(dataQueries[*metric.Namespace], types.MetricDataQuery{
+					Id:        aws.String(queryID),
+					AccountId: accountID,
+					Label:     aws.String(snakeCase(*metric.MetricName + "_" + statisticType)),
+					MetricStat: &types.MetricStat{
+						Metric: &filtered.metrics[j],
+						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
+						Stat:   aws.String(statistic),
+					},
+				})
 			}
 
 		}
