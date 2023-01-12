@@ -44,6 +44,17 @@ namespaced, you should be aware of the security implication! One implication
 is for example that keys added in one container are accessible by __all__
 other containers running on the same host, not only within the same container.
 
+### systemd-nspawn
+
+The memguard dependency that Telegraf uses to secure memory for secret storage
+requires the `CAP_IPC_LOCK` capability to correctly lock memory. Without this
+capability Telegraf will panic. Users will need to start a container with the
+`--capability=CAP_IPC_LOCK` flag for telegraf to correctly work.
+
+See [github.com/awnumar/memguard#144][memguard-issue] for more information.
+
+[memguard-issue]: https://github.com/awnumar/memguard/issues/144
+
 ### Windows
 
 ```toml @sample_windows.conf
