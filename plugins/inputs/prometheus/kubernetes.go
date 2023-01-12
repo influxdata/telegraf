@@ -275,7 +275,7 @@ func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 
 	// Updating pod list to be latest cadvisor response
 	p.lock.Lock()
-	p.kubernetesPods = make(map[string]URLAndAddress)
+	p.kubernetesPods = make(map[PodID]URLAndAddress)
 
 	// Register pod only if it has an annotation to scrape, if it is ready,
 	// and if namespace and selectors are specified and match
@@ -352,7 +352,7 @@ func podReady(statuss []corev1.ContainerStatus) bool {
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
 	if p.kubernetesPods == nil {
-		p.kubernetesPods = map[string]URLAndAddress{}
+		p.kubernetesPods = map[PodID]URLAndAddress{}
 	}
 	targetURL, err := getScrapeURL(pod, p)
 	if err != nil {
@@ -388,7 +388,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 		p.lock.Lock()
 		defer p.lock.Unlock()
 	}
-	p.kubernetesPods[podURL.String()] = URLAndAddress{
+	p.kubernetesPods[PodID(pod.GetNamespace()+"/"+pod.GetName())] = URLAndAddress{
 		URL:         podURL,
 		Address:     targetURL.Hostname(),
 		OriginalURL: targetURL,
@@ -450,19 +450,16 @@ func getScrapeURL(pod *corev1.Pod, p *Prometheus) (*url.URL, error) {
 }
 
 func unregisterPod(pod *corev1.Pod, p *Prometheus) {
-	targetURL, err := getScrapeURL(pod, p)
-	if err != nil {
-		p.Log.Errorf("failed to parse url: %s", err)
-		return
-	} else if targetURL == nil {
-		return
-	}
-
+	podId := getPodID(pod)
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if _, ok := p.kubernetesPods[targetURL.String()]; ok {
+	if v, ok := p.kubernetesPods[podId]; ok {
 		p.Log.Debugf("registered a delete request for %q in namespace %q", pod.Name, pod.Namespace)
-		delete(p.kubernetesPods, targetURL.String())
-		p.Log.Debugf("will stop scraping for %q", targetURL.String())
+		delete(p.kubernetesPods, podId)
+		p.Log.Debugf("will stop scraping for %q", v.URL.String())
 	}
+}
+
+func getPodID(pod *corev1.Pod) PodID {
+	return PodID(pod.GetNamespace() + "/" + pod.GetName())
 }
