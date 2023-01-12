@@ -10,12 +10,17 @@ import (
 type TopicNameGenerator struct {
 	Hostname    string
 	TopicPrefix string
+	PluginName  string
 	metric      telegraf.Metric
 	template    *template.Template
 }
 
-func NewTopicNameGenerator(topicPrefix string, temp *template.Template) *TopicNameGenerator {
-	return &TopicNameGenerator{TopicPrefix: topicPrefix, template: temp}
+func NewTopicNameGenerator(topicPrefix string, topic string) (*TopicNameGenerator, error) {
+	tt, err := template.New("topic_name").Parse(topic)
+	if err != nil {
+		return nil, err
+	}
+	return &TopicNameGenerator{TopicPrefix: topicPrefix, template: tt}, nil
 }
 
 func (t *TopicNameGenerator) Tag(key string) string {
@@ -23,14 +28,10 @@ func (t *TopicNameGenerator) Tag(key string) string {
 	return tagString
 }
 
-// PluginName returns the name of the plugin and is used by the template parser when the topic uses {{ .PluginName }}
-func (t *TopicNameGenerator) PluginName() string {
-	return t.metric.Name()
-}
-
 func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (string, error) {
 	t.Hostname = hostname
 	t.metric = m
+	t.PluginName = m.Name()
 	var b strings.Builder
 	err := t.template.Execute(&b, t)
 	if err != nil {

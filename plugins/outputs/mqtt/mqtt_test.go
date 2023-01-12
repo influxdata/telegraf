@@ -198,19 +198,17 @@ func TestGenerateTopicName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m.Topic = tt.pattern
-			tp := "prefix"
+			m.TopicPrefix = "prefix"
 			met := metric.New(
 				"metric-name",
 				map[string]string{"tag1": "value1"},
 				map[string]interface{}{"value": 123},
 				time.Date(2022, time.November, 10, 23, 0, 0, 0, time.UTC),
 			)
-			err := m.Init()
+			require.NoError(t, m.Init())
+			actual, err := m.generator.Generate("hostname", met)
 			require.NoError(t, err)
-			topic := NewTopicNameGenerator(tp, m.template)
-			if got, _ := topic.Generate("hostname", met); got != tt.want {
-				t.Errorf("parse() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, actual)
 		})
 	}
 }

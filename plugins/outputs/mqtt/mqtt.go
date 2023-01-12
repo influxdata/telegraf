@@ -5,16 +5,14 @@ import (
 	// Blank import to support go:embed compile directive
 	_ "embed"
 	"fmt"
-	"net/url"
-	"strings"
-	"sync"
-	"text/template"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"net/url"
+	"strings"
+	"sync"
 )
 
 //go:embed sample.conf
@@ -43,7 +41,6 @@ type MQTT struct {
 
 	client     Client
 	serializer serializers.Serializer
-	template   *template.Template
 	generator  *TopicNameGenerator
 
 	sync.Mutex
@@ -64,8 +61,7 @@ func (*MQTT) SampleConfig() string {
 
 func (m *MQTT) Init() error {
 	var err error
-	m.template, err = template.New("topic_name").Parse(m.Topic)
-	m.generator = NewTopicNameGenerator(m.TopicPrefix, m.template)
+	m.generator, err = NewTopicNameGenerator(m.TopicPrefix, m.Topic)
 	if err != nil {
 		return err
 	}

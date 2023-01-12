@@ -47,9 +47,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## In case a tag is missing in the metric, that path segment omitted for the final topic.
   topic = "telegraf/{{ .Hostname }}/{{ .PluginName }}"
 
-  ## DEPRECATED: Use the topic template instead.
-  ## topic_prefix = "telegraf"
-
   ## QoS policy for messages
   ## The mqtt QoS policy for sending messages.
   ## See https://www.ibm.com/support/knowledgecenter/en/SSFKSJ_9.0.0/com.ibm.mq.dev.doc/q029090_.htm
