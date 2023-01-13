@@ -325,11 +325,12 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		}
 
 		for _, j := range power.PowerControl {
-			tags := map[string]string{}
-			tags["member_id"] = j.MemberID
-			tags["address"] = address
-			tags["name"] = j.Name
-			tags["source"] = system.Hostname
+			tags := map[string]string{
+				"member_id": j.MemberID,
+				"address":   address,
+				"name":      j.Name,
+				"source":    system.Hostname,
+			}
 			if chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
