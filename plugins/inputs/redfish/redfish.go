@@ -338,16 +338,17 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 				tags["row"] = chassis.Location.Placement.Row
 			}
 
-			fields := make(map[string]interface{})
-			fields["power_allocated_watts"] = j.PowerAllocatedWatts
-			fields["power_available_watts"] = j.PowerAvailableWatts
-			fields["power_capacity_watts"] = j.PowerCapacityWatts
-			fields["power_consumed_watts"] = j.PowerConsumedWatts
-			fields["power_requested_watts"] = j.PowerRequestedWatts
-			fields["average_consumed_watts"] = j.PowerMetrics.AverageConsumedWatts
-			fields["interval_in_min"] = j.PowerMetrics.IntervalInMin
-			fields["max_consumed_watts"] = j.PowerMetrics.MaxConsumedWatts
-			fields["min_consumed_watts"] = j.PowerMetrics.MinConsumedWatts
+			fields := map[string]interface{}{
+				"power_allocated_watts":  j.PowerAllocatedWatts,
+				"power_available_watts":  j.PowerAvailableWatts,
+				"power_capacity_watts":   j.PowerCapacityWatts,
+				"power_consumed_watts":   j.PowerConsumedWatts,
+				"power_requested_watts":  j.PowerRequestedWatts,
+				"average_consumed_watts": j.PowerMetrics.AverageConsumedWatts,
+				"interval_in_min":        j.PowerMetrics.IntervalInMin,
+				"max_consumed_watts":     j.PowerMetrics.MaxConsumedWatts,
+				"min_consumed_watts":     j.PowerMetrics.MinConsumedWatts,
+			}
 
 			acc.AddFields("redfish_power_powercontrol", fields, tags)
 		}
