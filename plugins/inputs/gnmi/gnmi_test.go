@@ -5,17 +5,23 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -1198,6 +1204,122 @@ func TestTagNode(t *testing.T) {
 				rootNode.insert(s.keys, s.name, s.value)
 			}
 			require.Equal(t, rootNode, tt.expected)
+		})
+	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all testcase directories
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("gnmi", New)
+
+	// Compare options
+	options := []cmp.Option{
+		testutil.SortMetrics(),
+	}
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			inputFilename := filepath.Join(testcasePath, "notification.json")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+			// Load the input data
+			buf, err := os.ReadFile(inputFilename)
+			require.NoError(t, err)
+			var notification gnmiLib.Notification
+			require.NoError(t, protojson.Unmarshal(buf, &notification))
+
+			// Prepare the influx parser for expectations
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Prepare the server response
+			responseFunction := func(server gnmiLib.GNMI_SubscribeServer) error {
+				return server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_Update{Update: &notification}})
+			}
+
+			// Setup a mock server
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			require.NoError(t, err)
+			grpcServer := grpc.NewServer()
+			gnmiServer := &MockServer{
+				SubscribeF: responseFunction,
+				GRPCServer: grpcServer,
+			}
+			gnmiLib.RegisterGNMIServer(grpcServer, gnmiServer)
+
+			// Setup the plugin
+			plugin := cfg.Inputs[0].Input.(*GNMI)
+			plugin.Addresses = []string{listener.Addr().String()}
+			plugin.Log = testutil.Logger{}
+
+			// Start the server
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err := grpcServer.Serve(listener)
+				require.NoError(t, err)
+			}()
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+
+			require.Eventually(t,
+				func() bool {
+					return acc.NMetrics() >= uint64(len(expected))
+				}, 1*time.Second, 100*time.Millisecond)
+			plugin.Stop()
+			grpcServer.Stop()
+			wg.Wait()
+
+			// Check for errors
+			require.Len(t, acc.Errors, len(expectedErrors))
+			if len(acc.Errors) > 0 {
+				var actualErrorMsgs []string
+				for _, err := range acc.Errors {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+			}
+
+			// Check the metric nevertheless as we might get some metrics despite errors.
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+
 		})
 	}
 }
