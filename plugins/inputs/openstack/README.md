@@ -78,6 +78,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The project to authenticate as.
   # project = "admin"
 
+  ## The endpoint region option.
+  # region = ""
+
   ## User authentication credentials. Must have admin rights.
   username = "admin"
   password = "password"

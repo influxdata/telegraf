@@ -66,6 +66,7 @@ type OpenStack struct {
 	IdentityEndpoint string          `toml:"authentication_endpoint"`
 	Domain           string          `toml:"domain"`
 	Project          string          `toml:"project"`
+	Region           string          `toml:"region"`
 	Username         string          `toml:"username"`
 	Password         string          `toml:"password"`
 	EnabledServices  []string        `toml:"enabled_services"`
@@ -143,6 +144,10 @@ func (o *OpenStack) Init() error {
 		Password:         o.Password,
 		AllowReauth:      true,
 	}
+	// Set endpoint region option
+	endpointOpts := gophercloud.EndpointOpts{
+		Region: o.Region,
+	}
 	provider, err := openstack.NewClient(authOption.IdentityEndpoint)
 	if err != nil {
 		return fmt.Errorf("unable to create client for OpenStack endpoint %v", err)
@@ -161,7 +166,7 @@ func (o *OpenStack) Init() error {
 	}
 
 	// Create required clients and attach to the OpenStack struct
-	if o.identity, err = openstack.NewIdentityV3(provider, gophercloud.EndpointOpts{}); err != nil {
+	if o.identity, err = openstack.NewIdentityV3(provider, endpointOpts); err != nil {
 		return fmt.Errorf("unable to create V3 identity client %v", err)
 	}
 
@@ -169,25 +174,25 @@ func (o *OpenStack) Init() error {
 		return fmt.Errorf("failed to get resource openstack services %v", err)
 	}
 
-	if o.compute, err = openstack.NewComputeV2(provider, gophercloud.EndpointOpts{}); err != nil {
+	if o.compute, err = openstack.NewComputeV2(provider, endpointOpts); err != nil {
 		return fmt.Errorf("unable to create V2 compute client %v", err)
 	}
 
 	// Create required clients and attach to the OpenStack struct
-	if o.network, err = openstack.NewNetworkV2(provider, gophercloud.EndpointOpts{}); err != nil {
+	if o.network, err = openstack.NewNetworkV2(provider, endpointOpts); err != nil {
 		return fmt.Errorf("unable to create V2 network client %v", err)
 	}
 
 	// The Orchestration service is optional
 	if o.containsService("orchestration") {
-		if o.stack, err = openstack.NewOrchestrationV1(provider, gophercloud.EndpointOpts{}); err != nil {
+		if o.stack, err = openstack.NewOrchestrationV1(provider, endpointOpts); err != nil {
 			return fmt.Errorf("unable to create V1 stack client %v", err)
 		}
 	}
 
 	// The Cinder volume storage service is optional
 	if o.containsService("volumev3") {
-		if o.volume, err = openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{}); err != nil {
+		if o.volume, err = openstack.NewBlockStorageV3(provider, endpointOpts); err != nil {
 			return fmt.Errorf("unable to create V3 volume client %v", err)
 		}
 	}
