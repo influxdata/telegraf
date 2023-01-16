@@ -91,14 +91,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # [[inputs.gnmi.tag_subscription]]
   #  ## When applying this value as a tag to other metrics, use this tag name
   #  name = "descr"
+  #
   #  ## All other subscription fields are as normal
   #  origin = "openconfig-interfaces"
   #  path = "/interfaces/interface/state"
   #  subscription_mode = "on_change"
-  #  ## At least one path element name must be supplied that contains at least
-  #  ## one key to match on. Multiple element names can be specified in any
-  #  ## order. In this case all element names must be present.
-  #  elements = ["description", "interface"]
+  #
+  #  ## Match strategy to use for the tag.
+  #  ## Tags are only applied for metrics of the same address. The following
+  #  ## settings are valid:
+  #  ##   unconditional -- always match
+  #  ##   elements      -- match by the key elements given in `elements`
+  #  ## By default, 'unconditional' is used if no elements are given and
+  #  ## 'elements' otherwise.
+  #  # match = ""
+  #
+  #  ## For the 'elements' match strategy, at least one path-element name must
+  #  ## be supplied containing at least one key to match on. Multiple element
+  #  ## names can be specified in any order. All elements must be present for
+  #  ## a match.
+  #  # elements = ["description", "interface"]
 ```
 
 ## Metrics
