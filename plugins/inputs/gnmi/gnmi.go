@@ -8,9 +8,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
-	"net"
 	"path"
 	"regexp"
 	"strings"
@@ -19,14 +17,10 @@ import (
 
 	"github.com/google/gnxi/utils/xpath"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
@@ -73,12 +67,11 @@ type GNMI struct {
 	internaltls.ClientConfig
 
 	// Internal state
-	internalAliases    map[string]string
-	acc                telegraf.Accumulator
-	cancel             context.CancelFunc
-	wg                 sync.WaitGroup
-	legacyTags         bool
-	emptyNameWarnShown bool
+	internalAliases map[string]string
+	acc             telegraf.Accumulator
+	cancel          context.CancelFunc
+	wg              sync.WaitGroup
+	legacyTags      bool
 
 	Log telegraf.Logger
 }
@@ -189,12 +182,18 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	// Create a goroutine for each device, dial and subscribe
 	c.wg.Add(len(c.Addresses))
 	for _, addr := range c.Addresses {
-		worker := Worker{address: addr}
-		worker.tagStore = &tagNode{}
-		go func(worker Worker) {
+		go func(addr string) {
 			defer c.wg.Done()
+			h := Worker{
+				address:    addr,
+				aliases:    c.internalAliases,
+				tagsubs:    c.TagSubscriptions,
+				maxMsgSize: int(c.MaxMsgSize),
+				log:        c.Log,
+				tagStore:   &tagNode{},
+			}
 			for ctx.Err() == nil {
-				if err := c.subscribeGNMI(ctx, &worker, tlscfg, request); err != nil && ctx.Err() == nil {
+				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
 				}
 
@@ -203,7 +202,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 				case <-time.After(time.Duration(c.Redial)):
 				}
 			}
-		}(worker)
+		}(addr)
 	}
 	return nil
 }
@@ -272,182 +271,6 @@ func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 			},
 		},
 	}, nil
-}
-
-// SubscribeGNMI and extract telemetry data
-func (c *GNMI) subscribeGNMI(ctx context.Context, worker *Worker, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
-	var creds credentials.TransportCredentials
-	if tlscfg != nil {
-		creds = credentials.NewTLS(tlscfg)
-	} else {
-		creds = insecure.NewCredentials()
-	}
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
-	}
-
-	if c.MaxMsgSize > 0 {
-		opts = append(opts, grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(int(c.MaxMsgSize)),
-		))
-	}
-
-	client, err := grpc.DialContext(ctx, worker.address, opts...)
-	if err != nil {
-		return fmt.Errorf("failed to dial: %v", err)
-	}
-	defer client.Close()
-
-	subscribeClient, err := gnmiLib.NewGNMIClient(client).Subscribe(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to setup subscription: %v", err)
-	}
-
-	if err = subscribeClient.Send(request); err != nil {
-		// If io.EOF is returned, the stream may have ended and stream status
-		// can be determined by calling Recv.
-		if err != io.EOF {
-			return fmt.Errorf("failed to send subscription request: %v", err)
-		}
-	}
-
-	c.Log.Debugf("Connection to gNMI device %s established", worker.address)
-	defer c.Log.Debugf("Connection to gNMI device %s closed", worker.address)
-	for ctx.Err() == nil {
-		var reply *gnmiLib.SubscribeResponse
-		if reply, err = subscribeClient.Recv(); err != nil {
-			if err != io.EOF && ctx.Err() == nil {
-				return fmt.Errorf("aborted gNMI subscription: %v", err)
-			}
-			break
-		}
-
-		c.handleSubscribeResponse(worker, reply)
-	}
-	return nil
-}
-
-func (c *GNMI) handleSubscribeResponse(worker *Worker, reply *gnmiLib.SubscribeResponse) {
-	if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
-		c.handleSubscribeResponseUpdate(worker, response)
-	}
-}
-
-// Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
-func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.SubscribeResponse_Update) {
-	var prefix, prefixAliasPath string
-	grouper := metric.NewSeriesGrouper()
-	timestamp := time.Unix(0, response.Update.Timestamp)
-	prefixTags := make(map[string]string)
-
-	if response.Update.Prefix != nil {
-		var err error
-		if prefix, prefixAliasPath, err = handlePath(response.Update.Prefix, prefixTags, c.internalAliases, ""); err != nil {
-			c.Log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
-		}
-	}
-
-	prefixTags["source"], _, _ = net.SplitHostPort(worker.address)
-	prefixTags["path"] = prefix
-
-	// Process and remove tag-only updates from the response
-	for i := len(response.Update.Update) - 1; i >= 0; i-- {
-		update := response.Update.Update[i]
-		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
-		for _, tagSub := range c.TagSubscriptions {
-			if equalPathNoKeys(fullPath, tagSub.fullPath) {
-				c.Log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
-				worker.storeTags(update, tagSub)
-				response.Update.Update = append(response.Update.Update[:i], response.Update.Update[i+1:]...)
-			}
-		}
-	}
-
-	// Parse individual Update message and create measurements
-	var name, lastAliasPath string
-	for _, update := range response.Update.Update {
-		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
-
-		// Prepare tags from prefix
-		tags := make(map[string]string, len(prefixTags))
-		for key, val := range prefixTags {
-			tags[key] = val
-		}
-		aliasPath, fields := c.handleTelemetryField(update, tags, prefix)
-
-		if tagOnlyTags := worker.checkTags(fullPath); tagOnlyTags != nil {
-			for k, v := range tagOnlyTags {
-				if alias, ok := c.internalAliases[k]; ok {
-					tags[alias] = fmt.Sprint(v)
-				} else {
-					tags[k] = fmt.Sprint(v)
-				}
-			}
-		}
-
-		// Inherent valid alias from prefix parsing
-		if len(prefixAliasPath) > 0 && len(aliasPath) == 0 {
-			aliasPath = prefixAliasPath
-		}
-
-		// Lookup alias if alias-path has changed
-		if aliasPath != lastAliasPath {
-			name = prefix
-			if alias, ok := c.internalAliases[aliasPath]; ok {
-				name = alias
-			} else {
-				c.Log.Debugf("No measurement alias for gNMI path: %s", name)
-			}
-		}
-
-		// Check for empty names
-		if name == "" && !c.emptyNameWarnShown {
-			c.Log.Warnf(emptyNameWarning, response.Update)
-			c.emptyNameWarnShown = true
-		}
-
-		// Group metrics
-		for k, v := range fields {
-			key := k
-			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
-				// This may not be an exact prefix, due to naming style
-				// conversion on the key.
-				key = key[len(aliasPath)+1:]
-			} else if len(aliasPath) >= len(key) {
-				// Otherwise use the last path element as the field key.
-				key = path.Base(key)
-
-				// If there are no elements skip the item; this would be an
-				// invalid message.
-				key = strings.TrimLeft(key, "/.")
-				if key == "" {
-					c.Log.Errorf("invalid empty path: %q", k)
-					continue
-				}
-			}
-			grouper.Add(name, tags, timestamp, key, v)
-		}
-
-		lastAliasPath = aliasPath
-	}
-
-	// Add grouped measurements
-	for _, metricToAdd := range grouper.Metrics() {
-		c.acc.AddMetric(metricToAdd)
-	}
-}
-
-// HandleTelemetryField and add it to a measurement
-func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
-	gpath, aliasPath, err := handlePath(update.Path, tags, c.internalAliases, prefix)
-	if err != nil {
-		c.Log.Errorf("handling path %q failed: %v", update.Path, err)
-	}
-	fields, err := gnmiToFields(strings.Replace(gpath, "-", "_", -1), update.Val)
-	if err != nil {
-		c.Log.Errorf("error parsing update value %q: %v", update.Val, err)
-	}
-	return aliasPath, fields
 }
 
 // Parse path to path-buffer and tag-field
