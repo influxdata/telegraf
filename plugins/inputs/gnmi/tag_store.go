@@ -40,6 +40,18 @@ func newTagStore(subs []TagSubscription) *tagStore {
 func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, values map[string]interface{}) error {
 	switch subscription.Match {
 	case "unconditional":
+		// Add the values
+		for k, v := range values {
+			tagName := subscription.Name
+			if len(values) > 1 {
+				tagName += "_" + k
+			}
+			sv, err := internal.ToString(v)
+			if err != nil {
+				return fmt.Errorf("conversion error for %v: %w", v, err)
+			}
+			s.unconditional[tagName] = sv
+		}
 	case "elements":
 		key, match := s.getElementsKeys(path, subscription.Elements)
 		if !match || len(values) == 0 {
@@ -62,7 +74,6 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 				return fmt.Errorf("conversion error for %v: %w", v, err)
 			}
 			s.elements.tags[key][tagName] = sv
-
 		}
 	default:
 		return fmt.Errorf("unknown match strategy %q", subscription.Match)
@@ -72,6 +83,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 }
 
 func (s *tagStore) lookup(path *gnmiLib.Path) map[string]string {
+	fmt.Println(s.unconditional)
 	// Add all unconditional tags
 	tags := make(map[string]string, len(s.unconditional))
 	for k, v := range s.unconditional {

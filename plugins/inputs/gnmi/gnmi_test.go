@@ -103,8 +103,9 @@ func TestWaitError(t *testing.T) {
 	grpcServer.Stop()
 	wg.Wait()
 
-	require.Contains(t, acc.Errors,
-		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = testerror"))
+	// Check if the expected error text is among the errors
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "aborted gNMI subscription: rpc error: code = Unknown desc = testerror")
 }
 
 func TestUsernamePassword(t *testing.T) {
@@ -161,8 +162,9 @@ func TestUsernamePassword(t *testing.T) {
 	grpcServer.Stop()
 	wg.Wait()
 
-	require.Contains(t, acc.Errors,
-		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = success"))
+	// Check if the expected error text is among the errors
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "aborted gNMI subscription: rpc error: code = Unknown desc = success")
 }
 
 func mockGNMINotification() *gnmiLib.Notification {
@@ -485,7 +487,6 @@ func TestNotification(t *testing.T) {
 				testutil.MustMetric(
 					"oc-intf-counters",
 					map[string]string{
-						"path":         "",
 						"source":       "127.0.0.1",
 						"name":         "Ethernet1",
 						"oc-intf-desc": "foo",
@@ -634,15 +635,6 @@ func TestNotification(t *testing.T) {
 						},
 					}
 
-					fmt.Println("************** tagResponse response ************ ")
-					buf, err := protojson.Marshal(tagResponse.GetUpdate())
-					fmt.Println(string(buf))
-					fmt.Println(err)
-					fmt.Println("************** tagged response ************ ")
-					buf, err = protojson.Marshal(taggedResponse.GetUpdate())
-					fmt.Println(string(buf))
-					fmt.Println(err)
-
 					return server.Send(taggedResponse)
 				},
 			},
@@ -650,7 +642,6 @@ func TestNotification(t *testing.T) {
 				testutil.MustMetric(
 					"oc-neigh-state",
 					map[string]string{
-						"path":             "",
 						"source":           "127.0.0.1",
 						"neighbor_address": "192.0.2.1",
 						"name":             "default",

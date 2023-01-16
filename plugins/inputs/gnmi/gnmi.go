@@ -114,9 +114,12 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 
 	for i := len(c.Subscriptions) - 1; i >= 0; i-- {
 		subscription := c.Subscriptions[i]
-		// Support legacy TagOnly subscriptions
+		// Support and convert legacy TagOnly subscriptions
 		if subscription.TagOnly {
-			tagSub := convertTagOnlySubscription(subscription)
+			tagSub := TagSubscription{
+				Subscription: subscription,
+				Match:        "unconditional",
+			}
 			c.TagSubscriptions = append(c.TagSubscriptions, tagSub)
 			// Remove from the original subscriptions list
 			c.Subscriptions = append(c.Subscriptions[:i], c.Subscriptions[i+1:]...)
@@ -194,7 +197,6 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 		go func(addr string) {
 			defer c.wg.Done()
 			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log)
-			fmt.Printf("tag-store: %+v\n", h.tagStore)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
@@ -309,11 +311,6 @@ func init() {
 	inputs.Add("gnmi", New)
 	// Backwards compatible alias:
 	inputs.Add("cisco_telemetry_gnmi", New)
-}
-
-func convertTagOnlySubscription(s Subscription) TagSubscription {
-	t := TagSubscription{Subscription: s, Elements: []string{"interface"}}
-	return t
 }
 
 func (s *Subscription) buildFullPath(c *GNMI) error {
