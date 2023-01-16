@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type Worker struct {
+type handler struct {
 	address            string
 	aliases            map[string]string
 	tagsubs            []TagSubscription
@@ -29,7 +29,7 @@ type Worker struct {
 }
 
 // SubscribeGNMI and extract telemetry data
-func (h *Worker) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
+func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
 	var creds credentials.TransportCredentials
 	if tlscfg != nil {
 		creds = credentials.NewTLS(tlscfg)
@@ -82,7 +82,7 @@ func (h *Worker) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, tl
 }
 
 // Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
-func (h *Worker) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update) {
+func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
@@ -186,7 +186,7 @@ func (h *Worker) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respons
 }
 
 // HandleTelemetryField and add it to a measurement
-func (h *Worker) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
+func (h *handler) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
 	gpath, aliasPath, err := handlePath(update.Path, tags, h.aliases, prefix)
 	if err != nil {
 		h.log.Errorf("handling path %q failed: %v", update.Path, err)
@@ -210,7 +210,7 @@ type tagResults struct {
 	values []*gnmiLib.TypedValue
 }
 
-func (w *Worker) storeTags(update *gnmiLib.Update, sub TagSubscription) {
+func (w *handler) storeTags(update *gnmiLib.Update, sub TagSubscription) {
 	updateKeys := pathKeys(update.Path)
 	var foundKey bool
 	for _, requiredKey := range sub.Elements {
@@ -272,7 +272,7 @@ func (node *tagNode) retrieve(keys []*gnmiLib.PathElem, tagResults *tagResults) 
 	}
 }
 
-func (w *Worker) checkTags(fullPath *gnmiLib.Path) map[string]interface{} {
+func (w *handler) checkTags(fullPath *gnmiLib.Path) map[string]interface{} {
 	results := &tagResults{}
 	w.tagStore.retrieve(pathKeys(fullPath), results)
 	tags := make(map[string]interface{})
