@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -632,6 +633,16 @@ func TestNotification(t *testing.T) {
 							},
 						},
 					}
+
+					fmt.Println("************** tagResponse response ************ ")
+					buf, err := protojson.Marshal(tagResponse.GetUpdate())
+					fmt.Println(string(buf))
+					fmt.Println(err)
+					fmt.Println("************** tagged response ************ ")
+					buf, err = protojson.Marshal(taggedResponse.GetUpdate())
+					fmt.Println(string(buf))
+					fmt.Println(err)
+
 					return server.Send(taggedResponse)
 				},
 			},
@@ -1017,196 +1028,196 @@ func TestRedial(t *testing.T) {
 	wg.Wait()
 }
 
-func TestTagNode(t *testing.T) {
-	type insertOp struct {
-		keys  []*gnmiLib.PathElem
-		name  string
-		value *gnmiLib.TypedValue
-	}
-	interfaceElemSingleKey := &gnmiLib.PathElem{
-		Name: "interface",
-		Key:  map[string]string{"name": "Management0"},
-	}
-	networkInstanceSingleKey := &gnmiLib.PathElem{
-		Name: "network-instance",
-		Key:  map[string]string{"name": "default"},
-	}
-	protocolDoubleKey := &gnmiLib.PathElem{
-		Name: "protocol",
-		Key:  map[string]string{"name": "BGP", "protocol": "BGP"},
-	}
-	neighborSingleKey := &gnmiLib.PathElem{
-		Name: "neighbor",
-		Key:  map[string]string{"neighbor_address": "192.0.2.1"},
-	}
-	tests := []struct {
-		name      string
-		insertOps []insertOp
-		expected  *tagNode
-	}{
-		{
-			name: "single elem single key insert",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey},
-					name:  "tagFoo",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 1}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"interface": {
-						{
-							elem:    interfaceElemSingleKey,
-							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 1}},
-							tagName: "tagFoo",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "double elem single key insert",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey, networkInstanceSingleKey},
-					name:  "tagBar",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "rocks"}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"interface": {
-						{
-							elem: interfaceElemSingleKey,
-							tagStore: map[string][]*tagNode{
-								"network-instance": {
-									{
-										elem:    networkInstanceSingleKey,
-										value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "rocks"}},
-										tagName: "tagBar",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "single elem double key insert",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{protocolDoubleKey},
-					name:  "doubleKey",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte("{}")}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"protocol": {
-						{
-							elem:    protocolDoubleKey,
-							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte("{}")}},
-							tagName: "doubleKey",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "multi elem unrelated insert",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey},
-					name:  "intf_desc",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "mgmt"}},
-				},
-				{
-					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey, protocolDoubleKey, neighborSingleKey},
-					name:  "bgp_neigh_desc",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "example-neighbor"}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"interface": {
-						{
-							elem:    interfaceElemSingleKey,
-							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "mgmt"}},
-							tagName: "intf_desc",
-						},
-					},
-					"network-instance": {
-						{
-							elem: networkInstanceSingleKey,
-							tagStore: map[string][]*tagNode{
-								"protocol": {
-									{
-										elem: protocolDoubleKey,
-										tagStore: map[string][]*tagNode{
-											"neighbor": {
-												{
-													elem:    neighborSingleKey,
-													value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "example-neighbor"}},
-													tagName: "bgp_neigh_desc",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "values at multiple levels",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey},
-					name:  "vrf_stuff",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"}},
-				},
-				{
-					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey, protocolDoubleKey},
-					name:  "protocol_stuff",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "bar"}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"network-instance": {
-						{
-							elem:    networkInstanceSingleKey,
-							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"}},
-							tagName: "vrf_stuff",
-							tagStore: map[string][]*tagNode{
-								"protocol": {
-									{
-										elem:    protocolDoubleKey,
-										value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "bar"}},
-										tagName: "protocol_stuff",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rootNode := new(tagNode)
-			for _, s := range tt.insertOps {
-				rootNode.insert(s.keys, s.name, s.value)
-			}
-			require.Equal(t, rootNode, tt.expected)
-		})
-	}
-}
+// func TestTagNode(t *testing.T) {
+// 	type insertOp struct {
+// 		keys  []*gnmiLib.PathElem
+// 		name  string
+// 		value *gnmiLib.TypedValue
+// 	}
+// 	interfaceElemSingleKey := &gnmiLib.PathElem{
+// 		Name: "interface",
+// 		Key:  map[string]string{"name": "Management0"},
+// 	}
+// 	networkInstanceSingleKey := &gnmiLib.PathElem{
+// 		Name: "network-instance",
+// 		Key:  map[string]string{"name": "default"},
+// 	}
+// 	protocolDoubleKey := &gnmiLib.PathElem{
+// 		Name: "protocol",
+// 		Key:  map[string]string{"name": "BGP", "protocol": "BGP"},
+// 	}
+// 	neighborSingleKey := &gnmiLib.PathElem{
+// 		Name: "neighbor",
+// 		Key:  map[string]string{"neighbor_address": "192.0.2.1"},
+// 	}
+// 	tests := []struct {
+// 		name      string
+// 		insertOps []insertOp
+// 		expected  *tagNode
+// 	}{
+// 		{
+// 			name: "single elem single key insert",
+// 			insertOps: []insertOp{
+// 				{
+// 					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey},
+// 					name:  "tagFoo",
+// 					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 1}},
+// 				},
+// 			},
+// 			expected: &tagNode{
+// 				tagStore: map[string][]*tagNode{
+// 					"interface": {
+// 						{
+// 							elem:    interfaceElemSingleKey,
+// 							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 1}},
+// 							tagName: "tagFoo",
+// 						},
+// 					},
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "double elem single key insert",
+// 			insertOps: []insertOp{
+// 				{
+// 					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey, networkInstanceSingleKey},
+// 					name:  "tagBar",
+// 					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "rocks"}},
+// 				},
+// 			},
+// 			expected: &tagNode{
+// 				tagStore: map[string][]*tagNode{
+// 					"interface": {
+// 						{
+// 							elem: interfaceElemSingleKey,
+// 							tagStore: map[string][]*tagNode{
+// 								"network-instance": {
+// 									{
+// 										elem:    networkInstanceSingleKey,
+// 										value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "rocks"}},
+// 										tagName: "tagBar",
+// 									},
+// 								},
+// 							},
+// 						},
+// 					},
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "single elem double key insert",
+// 			insertOps: []insertOp{
+// 				{
+// 					keys:  []*gnmiLib.PathElem{protocolDoubleKey},
+// 					name:  "doubleKey",
+// 					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte("{}")}},
+// 				},
+// 			},
+// 			expected: &tagNode{
+// 				tagStore: map[string][]*tagNode{
+// 					"protocol": {
+// 						{
+// 							elem:    protocolDoubleKey,
+// 							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte("{}")}},
+// 							tagName: "doubleKey",
+// 						},
+// 					},
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "multi elem unrelated insert",
+// 			insertOps: []insertOp{
+// 				{
+// 					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey},
+// 					name:  "intf_desc",
+// 					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "mgmt"}},
+// 				},
+// 				{
+// 					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey, protocolDoubleKey, neighborSingleKey},
+// 					name:  "bgp_neigh_desc",
+// 					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "example-neighbor"}},
+// 				},
+// 			},
+// 			expected: &tagNode{
+// 				tagStore: map[string][]*tagNode{
+// 					"interface": {
+// 						{
+// 							elem:    interfaceElemSingleKey,
+// 							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "mgmt"}},
+// 							tagName: "intf_desc",
+// 						},
+// 					},
+// 					"network-instance": {
+// 						{
+// 							elem: networkInstanceSingleKey,
+// 							tagStore: map[string][]*tagNode{
+// 								"protocol": {
+// 									{
+// 										elem: protocolDoubleKey,
+// 										tagStore: map[string][]*tagNode{
+// 											"neighbor": {
+// 												{
+// 													elem:    neighborSingleKey,
+// 													value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "example-neighbor"}},
+// 													tagName: "bgp_neigh_desc",
+// 												},
+// 											},
+// 										},
+// 									},
+// 								},
+// 							},
+// 						},
+// 					},
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "values at multiple levels",
+// 			insertOps: []insertOp{
+// 				{
+// 					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey},
+// 					name:  "vrf_stuff",
+// 					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"}},
+// 				},
+// 				{
+// 					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey, protocolDoubleKey},
+// 					name:  "protocol_stuff",
+// 					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "bar"}},
+// 				},
+// 			},
+// 			expected: &tagNode{
+// 				tagStore: map[string][]*tagNode{
+// 					"network-instance": {
+// 						{
+// 							elem:    networkInstanceSingleKey,
+// 							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"}},
+// 							tagName: "vrf_stuff",
+// 							tagStore: map[string][]*tagNode{
+// 								"protocol": {
+// 									{
+// 										elem:    protocolDoubleKey,
+// 										value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "bar"}},
+// 										tagName: "protocol_stuff",
+// 									},
+// 								},
+// 							},
+// 						},
+// 					},
+// 				},
+// 			},
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			rootNode := new(tagNode)
+// 			for _, s := range tt.insertOps {
+// 				rootNode.insert(s.keys, s.name, s.value)
+// 			}
+// 			require.Equal(t, rootNode, tt.expected)
+// 		})
+// 	}
+// }
 
 func TestCases(t *testing.T) {
 	// Get all testcase directories
@@ -1221,6 +1232,11 @@ func TestCases(t *testing.T) {
 		testutil.SortMetrics(),
 	}
 
+	// TEST-GENERATION: Serialize test.message
+	// buf, err := protojson.Marshal(taggedResponse.GetUpdate())
+	// fmt.Println(string(buf))
+	// fmt.Println(err)
+
 	for _, f := range folders {
 		// Only handle folders
 		if !f.IsDir() {
@@ -1230,15 +1246,24 @@ func TestCases(t *testing.T) {
 		t.Run(f.Name(), func(t *testing.T) {
 			testcasePath := filepath.Join("testcases", f.Name())
 			configFilename := filepath.Join(testcasePath, "telegraf.conf")
-			inputFilename := filepath.Join(testcasePath, "notification.json")
+			inputFilenames := filepath.Join(testcasePath, "notification*.json")
 			expectedFilename := filepath.Join(testcasePath, "expected.out")
 			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
 			// Load the input data
-			buf, err := os.ReadFile(inputFilename)
+			matches, err := filepath.Glob(inputFilenames)
 			require.NoError(t, err)
-			var notification gnmiLib.Notification
-			require.NoError(t, protojson.Unmarshal(buf, &notification))
+			require.NotEmpty(t, matches)
+			sort.Strings(matches)
+			notifications := make([]gnmiLib.Notification, 0, len(matches))
+			for _, fn := range matches {
+				buf, err := os.ReadFile(fn)
+				require.NoError(t, err)
+
+				var notification gnmiLib.Notification
+				require.NoError(t, protojson.Unmarshal(buf, &notification))
+				notifications = append(notifications, notification)
+			}
 
 			// Prepare the influx parser for expectations
 			parser := &influx.Parser{}
@@ -1268,7 +1293,29 @@ func TestCases(t *testing.T) {
 
 			// Prepare the server response
 			responseFunction := func(server gnmiLib.GNMI_SubscribeServer) error {
-				return server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_Update{Update: &notification}})
+				for i, notification := range notifications {
+					if i > 0 {
+						sync := &gnmiLib.SubscribeResponse{
+							Response: &gnmiLib.SubscribeResponse_SyncResponse{
+								SyncResponse: true,
+							},
+						}
+						if err := server.Send(sync); err != nil {
+							return err
+						}
+					}
+
+					response := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &notification,
+						},
+					}
+					if err := server.Send(response); err != nil {
+						return err
+					}
+				}
+
+				return nil
 			}
 
 			// Setup a mock server

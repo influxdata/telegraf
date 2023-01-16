@@ -24,8 +24,19 @@ type handler struct {
 	tagsubs            []TagSubscription
 	maxMsgSize         int
 	emptyNameWarnShown bool
-	tagStore           *tagNode
+	tagStore           *tagStore
 	log                telegraf.Logger
+}
+
+func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger) *handler {
+	return &handler{
+		address:    addr,
+		aliases:    aliases,
+		tagsubs:    subs,
+		maxMsgSize: maxsize,
+		tagStore:   newTagStore(subs),
+		log:        l,
+	}
 }
 
 // SubscribeGNMI and extract telemetry data
@@ -96,16 +107,26 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	}
 
 	prefixTags["source"], _, _ = net.SplitHostPort(h.address)
-	prefixTags["path"] = prefix
+	if prefix != "" {
+		prefixTags["path"] = prefix
+	}
 
 	// Process and remove tag-only updates from the response
 	for i := len(response.Update.Update) - 1; i >= 0; i-- {
 		update := response.Update.Update[i]
 		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
+
+		// Prepare tags from prefix
+		tags := make(map[string]string, len(prefixTags))
+		for key, val := range prefixTags {
+			tags[key] = val
+		}
+		aliasPath, fields := h.handleTelemetryField(update, tags, prefix)
+		_ = aliasPath
 		for _, tagSub := range h.tagsubs {
 			if equalPathNoKeys(fullPath, tagSub.fullPath) {
 				h.log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
-				h.storeTags(update, tagSub)
+				h.tagStore.insert(tagSub, fullPath, fields)
 				response.Update.Update = append(response.Update.Update[:i], response.Update.Update[i+1:]...)
 			}
 		}
@@ -121,17 +142,13 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		for key, val := range prefixTags {
 			tags[key] = val
 		}
-		aliasPath, fields := h.handleTelemetryField(update, tags, prefix)
 
-		if tagOnlyTags := h.checkTags(fullPath); tagOnlyTags != nil {
-			for k, v := range tagOnlyTags {
-				if alias, ok := h.aliases[k]; ok {
-					tags[alias] = fmt.Sprint(v)
-				} else {
-					tags[k] = fmt.Sprint(v)
-				}
-			}
+		// Add the tags derived via tag-subscriptions
+		for k, v := range h.tagStore.lookup(fullPath) {
+			tags[k] = v
 		}
+
+		aliasPath, fields := h.handleTelemetryField(update, tags, prefix)
 
 		// Inherent valid alias from prefix parsing
 		if len(prefixAliasPath) > 0 && len(aliasPath) == 0 {
@@ -196,91 +213,4 @@ func (h *handler) handleTelemetryField(update *gnmiLib.Update, tags map[string]s
 		h.log.Errorf("error parsing update value %q: %v", update.Val, err)
 	}
 	return aliasPath, fields
-}
-
-type tagNode struct {
-	elem     *gnmiLib.PathElem
-	tagName  string
-	value    *gnmiLib.TypedValue
-	tagStore map[string][]*tagNode
-}
-
-type tagResults struct {
-	names  []string
-	values []*gnmiLib.TypedValue
-}
-
-func (w *handler) storeTags(update *gnmiLib.Update, sub TagSubscription) {
-	updateKeys := pathKeys(update.Path)
-	var foundKey bool
-	for _, requiredKey := range sub.Elements {
-		foundKey = false
-		for _, elem := range updateKeys {
-			if elem.Name == requiredKey {
-				foundKey = true
-			}
-		}
-		if !foundKey {
-			return
-		}
-	}
-	// All required keys present for this TagSubscription
-	w.tagStore.insert(updateKeys, sub.Name, update.Val)
-}
-
-func (node *tagNode) insert(keys []*gnmiLib.PathElem, name string, value *gnmiLib.TypedValue) {
-	if len(keys) == 0 {
-		node.value = value
-		node.tagName = name
-		return
-	}
-	var found *tagNode
-	key := keys[0]
-	keyName := key.Name
-	if node.tagStore == nil {
-		node.tagStore = make(map[string][]*tagNode)
-	}
-	if _, ok := node.tagStore[keyName]; !ok {
-		node.tagStore[keyName] = make([]*tagNode, 0)
-	}
-	for _, node := range node.tagStore[keyName] {
-		if compareKeys(node.elem.Key, key.Key) {
-			found = node
-			break
-		}
-	}
-	if found == nil {
-		found = &tagNode{elem: keys[0]}
-		node.tagStore[keyName] = append(node.tagStore[keyName], found)
-	}
-	found.insert(keys[1:], name, value)
-}
-
-func (node *tagNode) retrieve(keys []*gnmiLib.PathElem, tagResults *tagResults) {
-	if node.value != nil {
-		tagResults.names = append(tagResults.names, node.tagName)
-		tagResults.values = append(tagResults.values, node.value)
-	}
-	for _, key := range keys {
-		if elems, ok := node.tagStore[key.Name]; ok {
-			for _, node := range elems {
-				if compareKeys(node.elem.Key, key.Key) {
-					node.retrieve(keys, tagResults)
-				}
-			}
-		}
-	}
-}
-
-func (w *handler) checkTags(fullPath *gnmiLib.Path) map[string]interface{} {
-	results := &tagResults{}
-	w.tagStore.retrieve(pathKeys(fullPath), results)
-	tags := make(map[string]interface{})
-	for idx := range results.names {
-		vals, _ := gnmiToFields(results.names[idx], results.values[idx])
-		for k, v := range vals {
-			tags[k] = v
-		}
-	}
-	return tags
 }

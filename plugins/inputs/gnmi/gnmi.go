@@ -95,6 +95,7 @@ type Subscription struct {
 // Tag Subscription for a gNMI client
 type TagSubscription struct {
 	Subscription
+	Match    string `toml:"match"`
 	Elements []string
 }
 
@@ -133,8 +134,20 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 		if c.TagSubscriptions[idx].TagOnly != c.TagSubscriptions[0].TagOnly {
 			return fmt.Errorf("do not mix legacy tag_only subscriptions and tag subscriptions")
 		}
-		if len(c.TagSubscriptions[idx].Elements) == 0 {
-			return fmt.Errorf("tag_subscription must have at least one element")
+		switch c.TagSubscriptions[idx].Match {
+		case "":
+			if len(c.TagSubscriptions[idx].Elements) > 0 {
+				c.TagSubscriptions[idx].Match = "elements"
+			} else {
+				c.TagSubscriptions[idx].Match = "unconditional"
+			}
+		case "unconditional":
+		case "elements":
+			if len(c.TagSubscriptions[idx].Elements) == 0 {
+				return fmt.Errorf("tag_subscription must have at least one element")
+			}
+		default:
+			return fmt.Errorf("unknown match type %q for tag-subscription %q", c.TagSubscriptions[idx].Match, c.TagSubscriptions[idx].Name)
 		}
 	}
 
@@ -180,14 +193,8 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			h := handler{
-				address:    addr,
-				aliases:    c.internalAliases,
-				tagsubs:    c.TagSubscriptions,
-				maxMsgSize: int(c.MaxMsgSize),
-				log:        c.Log,
-				tagStore:   &tagNode{},
-			}
+			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log)
+			fmt.Printf("tag-store: %+v\n", h.tagStore)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
