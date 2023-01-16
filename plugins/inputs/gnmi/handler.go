@@ -111,9 +111,10 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		prefixTags["path"] = prefix
 	}
 
-	// Process and remove tag-only updates from the response
-	for i := len(response.Update.Update) - 1; i >= 0; i-- {
-		update := response.Update.Update[i]
+	// Process and remove tag-updates from the response first so we will
+	// add all available tags to the metrics later.
+	var valueUpdates []*gnmiLib.Update
+	for _, update := range response.Update.Update {
 		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
 
 		// Prepare tags from prefix
@@ -121,20 +122,28 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		for key, val := range prefixTags {
 			tags[key] = val
 		}
-		aliasPath, fields := h.handleTelemetryField(update, tags, prefix)
-		_ = aliasPath
+
+		_, fields := h.handleTelemetryField(update, tags, prefix)
+		var tagUpdate bool
 		for _, tagSub := range h.tagsubs {
-			if equalPathNoKeys(fullPath, tagSub.fullPath) {
-				h.log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
-				h.tagStore.insert(tagSub, fullPath, fields)
-				response.Update.Update = append(response.Update.Update[:i], response.Update.Update[i+1:]...)
+			if !equalPathNoKeys(fullPath, tagSub.fullPath) {
+				continue
 			}
+			h.log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
+			if err := h.tagStore.insert(tagSub, fullPath, fields); err != nil {
+				h.log.Errorf("inserting tag failed: %w", err)
+			}
+			tagUpdate = true
+			break
+		}
+		if !tagUpdate {
+			valueUpdates = append(valueUpdates, update)
 		}
 	}
 
 	// Parse individual Update message and create measurements
 	var name, lastAliasPath string
-	for _, update := range response.Update.Update {
+	for _, update := range valueUpdates {
 		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
 
 		// Prepare tags from prefix

@@ -83,7 +83,6 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 }
 
 func (s *tagStore) lookup(path *gnmiLib.Path) map[string]string {
-	fmt.Println(s.unconditional)
 	// Add all unconditional tags
 	tags := make(map[string]string, len(s.unconditional))
 	for k, v := range s.unconditional {

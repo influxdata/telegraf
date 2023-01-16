@@ -1246,14 +1246,11 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, matches)
 			sort.Strings(matches)
-			notifications := make([]gnmiLib.Notification, 0, len(matches))
-			for _, fn := range matches {
+			notifications := make([]gnmiLib.Notification, len(matches))
+			for i, fn := range matches {
 				buf, err := os.ReadFile(fn)
 				require.NoError(t, err)
-
-				var notification gnmiLib.Notification
-				require.NoError(t, protojson.Unmarshal(buf, &notification))
-				notifications = append(notifications, notification)
+				require.NoError(t, protojson.Unmarshal(buf, &notifications[i]))
 			}
 
 			// Prepare the influx parser for expectations
@@ -1284,7 +1281,7 @@ func TestCases(t *testing.T) {
 
 			// Prepare the server response
 			responseFunction := func(server gnmiLib.GNMI_SubscribeServer) error {
-				for i, notification := range notifications {
+				for i := range notifications {
 					if i > 0 {
 						sync := &gnmiLib.SubscribeResponse{
 							Response: &gnmiLib.SubscribeResponse_SyncResponse{
@@ -1298,7 +1295,7 @@ func TestCases(t *testing.T) {
 
 					response := &gnmiLib.SubscribeResponse{
 						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &notification,
+							Update: &notifications[i],
 						},
 					}
 					if err := server.Send(response); err != nil {
@@ -1357,7 +1354,6 @@ func TestCases(t *testing.T) {
 			// Check the metric nevertheless as we might get some metrics despite errors.
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, options...)
-
 		})
 	}
 }
