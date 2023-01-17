@@ -71,11 +71,8 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	}
 
 	fields := map[string]interface{}{
-		"battery_date":    metrics["battery.mfr.date"],
-		"input_frequency": metrics["input.frequency"],
-		"internal_temp":   metrics["ups.temperature"],
-		"nominal_power":   metrics["ups.realpower.nominal"],
-		"status_flags":    status,
+		"battery_date": metrics["battery.mfr.date"],
+		"status_flags": status,
 		//Compatibility with apcupsd metrics format
 		"time_left_ns": timeLeftS * 1_000_000_000,
 		"ups_status":   metrics["ups.status"],
@@ -84,10 +81,13 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	floatValues := map[string]string{
 		"battery_charge_percent":  "battery.charge",
 		"battery_voltage":         "battery.voltage",
+		"input_frequency":         "input.frequency",
 		"input_voltage":           "input.voltage",
+		"internal_temp":           "ups.temperature",
 		"load_percent":            "ups.load",
 		"nominal_battery_voltage": "battery.voltage.nominal",
 		"nominal_input_voltage":   "input.voltage.nominal",
+		"nominal_power":           "ups.realpower.nominal",
 		"output_voltage":          "output.voltage",
 	}
 
