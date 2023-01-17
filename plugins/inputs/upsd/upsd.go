@@ -71,27 +71,41 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	}
 
 	fields := map[string]interface{}{
-		"status_flags":            status,
-		"ups_status":              metrics["ups.status"],
-		"input_voltage":           metrics["input.voltage"],
-		"load_percent":            metrics["ups.load"],
-		"battery_charge_percent":  metrics["battery.charge"],
-		"time_left_ns":            timeLeftS * 1_000_000_000, //Compatibility with apcupsd metrics format
-		"output_voltage":          metrics["output.voltage"],
-		"internal_temp":           metrics["ups.temperature"],
-		"battery_voltage":         metrics["battery.voltage"],
-		"input_frequency":         metrics["input.frequency"],
-		"nominal_input_voltage":   metrics["input.voltage.nominal"],
-		"nominal_battery_voltage": metrics["battery.voltage.nominal"],
-		"nominal_power":           metrics["ups.realpower.nominal"],
-		"battery_date":            metrics["battery.mfr.date"],
+		"battery_date":    metrics["battery.mfr.date"],
+		"input_frequency": metrics["input.frequency"],
+		"internal_temp":   metrics["ups.temperature"],
+		"nominal_power":   metrics["ups.realpower.nominal"],
+		"status_flags":    status,
+		//Compatibility with apcupsd metrics format
+		"time_left_ns": timeLeftS * 1_000_000_000,
+		"ups_status":   metrics["ups.status"],
+	}
+
+	floatValues := map[string]string{
+		"battery_charge_percent":  "battery.charge",
+		"battery_voltage":         "battery.voltage",
+		"input_voltage":           "input.voltage",
+		"load_percent":            "ups.load",
+		"nominal_battery_voltage": "battery.voltage.nominal",
+		"nominal_input_voltage":   "input.voltage.nominal",
+		"output_voltage":          "output.voltage",
+	}
+
+	for key, value := range floatValues {
+		val, err := internal.ToFloat64(metrics[value])
+		if err != nil {
+			acc.AddError(fmt.Errorf("converting %s=%v failed: %v", value, metrics[value], err))
+		} else {
+			fields[key] = val
+		}
 	}
 
 	val, err := internal.ToString(metrics["ups.firmware"])
 	if err != nil {
 		acc.AddError(fmt.Errorf("converting ups.firmware=%v failed: %v", metrics["ups.firmware"], err))
+	} else {
+		fields["firmware"] = val
 	}
-	fields["firmware"] = val
 
 	acc.AddFields("upsd", fields, tags)
 }
