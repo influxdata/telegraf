@@ -28,12 +28,15 @@ const (
 )
 
 type DNSQuery struct {
-	Domains    []string        `toml:"domains"`
-	Network    string          `toml:"network"`
-	Servers    []string        `toml:"servers"`
-	RecordType string          `toml:"record_type"`
-	Port       int             `toml:"port"`
-	Timeout    config.Duration `toml:"timeout"`
+	Domains       []string        `toml:"domains"`
+	Network       string          `toml:"network"`
+	Servers       []string        `toml:"servers"`
+	RecordType    string          `toml:"record_type"`
+	Port          int             `toml:"port"`
+	Timeout       config.Duration `toml:"timeout"`
+	IncludeFields []string        `toml:"include_fields"`
+
+	fieldEnabled map[string]bool
 }
 
 func (*DNSQuery) SampleConfig() string {
@@ -41,6 +44,17 @@ func (*DNSQuery) SampleConfig() string {
 }
 
 func (d *DNSQuery) Init() error {
+	// Convert the included fields into a lookup-table
+	d.fieldEnabled = make(map[string]bool, len(d.IncludeFields))
+	for _, f := range d.IncludeFields {
+		switch f {
+		case "IP", "all IPs":
+		default:
+			return fmt.Errorf("invalid field %q included", f)
+		}
+		d.fieldEnabled[f] = true
+	}
+
 	// Set defaults
 	if d.Network == "" {
 		d.Network = "udp"
@@ -108,13 +122,13 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 	if err != nil {
 		return fields, tags, err
 	}
-	msg := new(dns.Msg)
-	//	var msg dns.Msg
+
+	var msg dns.Msg
 	msg.SetQuestion(dns.Fqdn(domain), recordType)
 	msg.RecursionDesired = true
 
 	addr := net.JoinHostPort(server, strconv.Itoa(d.Port))
-	r, rtt, err := c.Exchange(msg, addr)
+	r, rtt, err := c.Exchange(&msg, addr)
 	if err != nil {
 		if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
 			tags["result"] = "timeout"
@@ -137,6 +151,22 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 	// Success
 	tags["result"] = "success"
 	fields["result_code"] = uint64(Success)
+
+	if d.fieldEnabled["IP"] {
+		for _, record := range r.Answer {
+			if ip, found := extractIP(record); found {
+				fields["ip"] = ip
+				break
+			}
+		}
+	}
+	if d.fieldEnabled["all IPs"] {
+		for i, record := range r.Answer {
+			if ip, found := extractIP(record); found {
+				fields["ip_"+strconv.Itoa(i)] = ip
+			}
+		}
+	}
 
 	return fields, tags, nil
 }
@@ -173,6 +203,16 @@ func (d *DNSQuery) parseRecordType() (uint16, error) {
 	}
 
 	return recordType, err
+}
+
+func extractIP(record dns.RR) (string, bool) {
+	if r, ok := record.(*dns.A); ok {
+		return r.A.String(), true
+	}
+	if r, ok := record.(*dns.AAAA); ok {
+		return r.AAAA.String(), true
+	}
+	return "", false
 }
 
 func init() {
