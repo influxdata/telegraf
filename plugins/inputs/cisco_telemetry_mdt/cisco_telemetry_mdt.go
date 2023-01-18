@@ -388,7 +388,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		}
 
 		if content == nil && !c.IncludeDeleteField {
-			c.Log.Debugf("Message skipped because no content found and include of delete field not enabled")
+			c.Log.Debug("Message skipped because no content found and include of delete field not enabled")
 			continue
 		}
 
