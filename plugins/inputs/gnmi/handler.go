@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type handler struct {
@@ -111,10 +112,20 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		prefixTags["path"] = prefix
 	}
 
+	for i, u := range response.Update.GetUpdate() {
+		buf, err := protojson.Marshal(u)
+		if err != nil {
+			h.log.Debugf("marshal %v_%d failed: %v", timestamp.UnixNano(), i, err)
+		} else {
+			h.log.Debugf("update_%v_%d: %s", timestamp.UnixNano(), i, string(buf))
+		}
+	}
+
 	// Process and remove tag-updates from the response first so we will
 	// add all available tags to the metrics later.
 	var valueUpdates []*gnmiLib.Update
 	for _, update := range response.Update.Update {
+
 		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
 
 		// Prepare tags from prefix
