@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	telemetry "github.com/INSRapperswil/cisco-xr-telemetry-proto"
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding

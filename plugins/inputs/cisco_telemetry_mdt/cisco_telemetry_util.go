@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	telemetry "github.com/INSRapperswil/cisco-xr-telemetry-proto"
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 )
 
 // xform Field to string

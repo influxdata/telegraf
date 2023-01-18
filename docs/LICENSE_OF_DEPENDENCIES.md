@@ -26,7 +26,6 @@ following works:
 - github.com/Azure/go-ntlmssp [MIT License](https://github.com/Azure/go-ntlmssp/blob/master/LICENSE)
 - github.com/AzureAD/microsoft-authentication-library-for-go [MIT License](https://github.com/AzureAD/microsoft-authentication-library-for-go/blob/main/LICENSE)
 - github.com/ClickHouse/clickhouse-go [MIT License](https://github.com/ClickHouse/clickhouse-go/blob/master/LICENSE)
-- github.com/INSRapperswil/cisco-xr-telemetry-proto [Apache License 2.0](https://github.com/INSRapperswil/cisco-xr-telemetry-proto/blob/main/LICENCE)
 - github.com/Masterminds/goutils [Apache License 2.0](https://github.com/Masterminds/goutils/blob/master/LICENSE.txt)
 - github.com/Masterminds/semver [MIT License](https://github.com/Masterminds/semver/blob/master/LICENSE.txt)
 - github.com/Masterminds/sprig [MIT License](https://github.com/Masterminds/sprig/blob/master/LICENSE.txt)
