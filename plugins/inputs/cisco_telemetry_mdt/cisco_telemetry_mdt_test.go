@@ -264,8 +264,6 @@ func TestIncludeDeleteField(t *testing.T) {
 
 		c.handleTelemetry(data)
 		actual := acc.GetTelegrafMetrics()
-		fmt.Println(test.expected)
-		fmt.Println(actual)
 		testutil.RequireMetricsEqual(t, test.expected, actual, testutil.IgnoreTime())
 	}
 }
