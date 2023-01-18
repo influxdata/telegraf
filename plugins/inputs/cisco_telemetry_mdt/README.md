@@ -49,6 +49,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Include the delete field in every telemetry message.
   # include_delete_field = false
+  
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
