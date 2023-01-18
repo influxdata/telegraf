@@ -125,7 +125,6 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	// add all available tags to the metrics later.
 	var valueUpdates []*gnmiLib.Update
 	for _, update := range response.Update.Update {
-
 		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
 
 		// Prepare tags from prefix
