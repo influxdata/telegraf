@@ -86,6 +86,14 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 			break
 		}
 
+		buf, err := protojson.Marshal(reply)
+		if err != nil {
+			h.log.Debugf("marshal failed: %v", err)
+		} else {
+			t := reply.GetUpdate().GetTimestamp()
+			h.log.Debugf("update_%v: %s", t, string(buf))
+		}
+
 		if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
 			h.handleSubscribeResponseUpdate(acc, response)
 		}
@@ -110,15 +118,6 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	prefixTags["source"], _, _ = net.SplitHostPort(h.address)
 	if prefix != "" {
 		prefixTags["path"] = prefix
-	}
-
-	for i, u := range response.Update.GetUpdate() {
-		buf, err := protojson.Marshal(u)
-		if err != nil {
-			h.log.Debugf("marshal %v_%d failed: %v", timestamp.UnixNano(), i, err)
-		} else {
-			h.log.Debugf("update_%v_%d: %s", timestamp.UnixNano(), i, string(buf))
-		}
 	}
 
 	// Process and remove tag-updates from the response first so we will
