@@ -113,7 +113,7 @@ func (p *PowerStat) fillCPUBusClock() {
 		// cpuBusClock is the same for every core/socket.
 		busClockInfo := p.getBusClock("0")
 		if busClockInfo == 0 {
-			p.Log.Debug("Disabling package metric: cpu_base_frequency_mhz. Can't detect bus clock value")
+			p.Log.Warn("Disabling package metric: cpu_base_frequency_mhz. Can't detect bus clock value")
 			p.packageCPUBaseFrequency = false
 			return
 		}
