@@ -74,9 +74,6 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 			if err != nil {
 				return fmt.Errorf("conversion error for %v: %w", v, err)
 			}
-			if tags["name"] == "xe-0/1/1" {
-				fmt.Printf("==>> entry [%s][%s] = %v\n", key, tagName, sv)
-			}
 			if sv == "" {
 				delete(s.names[key], tagName)
 			} else {
