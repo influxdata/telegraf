@@ -1246,7 +1246,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, matches)
 			sort.Strings(matches)
-			notifications := make([]gnmiLib.Notification, len(matches))
+			notifications := make([]gnmiLib.SubscribeResponse, len(matches))
 			for i, fn := range matches {
 				buf, err := os.ReadFile(fn)
 				require.NoError(t, err)
@@ -1293,12 +1293,7 @@ func TestCases(t *testing.T) {
 						}
 					}
 
-					response := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &notifications[i],
-						},
-					}
-					if err := server.Send(response); err != nil {
+					if err := server.Send(&notifications[i]); err != nil {
 						return err
 					}
 				}

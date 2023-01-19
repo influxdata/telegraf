@@ -1,4 +1,4 @@
-{
+{"update":{
     "timestamp": "1673608605875353770",
     "prefix": {
         "origin": "openconfig-interfaces",
@@ -19,4 +19,5 @@
             "val":  {"stringVal": "eth42"}
         }
     ]
+}
 }
