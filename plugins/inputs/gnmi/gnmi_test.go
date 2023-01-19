@@ -1235,9 +1235,9 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 			var entries []json.RawMessage
 			require.NoError(t, json.Unmarshal(buf, &entries))
-			respones := make([]gnmiLib.SubscribeResponse, len(entries))
+			responses := make([]gnmiLib.SubscribeResponse, len(entries))
 			for i, entry := range entries {
-				require.NoError(t, protojson.Unmarshal(entry, &respones[i]))
+				require.NoError(t, protojson.Unmarshal(entry, &responses[i]))
 			}
 
 			// Prepare the influx parser for expectations
@@ -1274,8 +1274,8 @@ func TestCases(t *testing.T) {
 					},
 				}
 				_ = sync
-				for _, response := range respones {
-					if err := server.Send(&response); err != nil {
+				for i := range responses {
+					if err := server.Send(&responses[i]); err != nil {
 						return err
 					}
 				}
