@@ -26,16 +26,18 @@ type handler struct {
 	maxMsgSize         int
 	emptyNameWarnShown bool
 	tagStore           *tagStore
+	trace              bool
 	log                telegraf.Logger
 }
 
-func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger) *handler {
+func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger, trace bool) *handler {
 	return &handler{
 		address:    addr,
 		aliases:    aliases,
 		tagsubs:    subs,
 		maxMsgSize: maxsize,
 		tagStore:   newTagStore(subs),
+		trace:      trace,
 		log:        l,
 	}
 }
@@ -86,12 +88,14 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 			break
 		}
 
-		buf, err := protojson.Marshal(reply)
-		if err != nil {
-			h.log.Debugf("marshal failed: %v", err)
-		} else {
-			t := reply.GetUpdate().GetTimestamp()
-			h.log.Debugf("update_%v: %s", t, string(buf))
+		if h.trace {
+			buf, err := protojson.Marshal(reply)
+			if err != nil {
+				h.log.Debugf("marshal failed: %v", err)
+			} else {
+				t := reply.GetUpdate().GetTimestamp()
+				h.log.Debugf("update_%v: %s", t, string(buf))
+			}
 		}
 
 		if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
@@ -133,6 +137,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		}
 
 		_, fields := h.handleTelemetryField(update, tags, prefix)
+
 		var tagUpdate bool
 		for _, tagSub := range h.tagsubs {
 			if !equalPathNoKeys(fullPath, tagSub.fullPath) {

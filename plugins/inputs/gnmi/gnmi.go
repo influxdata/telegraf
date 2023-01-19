@@ -42,24 +42,18 @@ type GNMI struct {
 	Subscriptions    []Subscription    `toml:"subscription"`
 	TagSubscriptions []TagSubscription `toml:"tag_subscription"`
 	Aliases          map[string]string `toml:"aliases"`
+	Encoding         string            `toml:"encoding"`
+	Origin           string            `toml:"origin"`
+	Prefix           string            `toml:"prefix"`
+	Target           string            `toml:"target"`
+	UpdatesOnly      bool              `toml:"updates_only"`
+	Username         string            `toml:"username"`
+	Password         string            `toml:"password"`
+	Redial           config.Duration   `toml:"redial"`
 	MaxMsgSize       config.Size       `toml:"max_msg_size"`
-
-	// Optional subscription configuration
-	Encoding    string
-	Origin      string
-	Prefix      string
-	Target      string
-	UpdatesOnly bool `toml:"updates_only"`
-
-	// gNMI target credentials
-	Username string
-	Password string
-
-	// Redial
-	Redial config.Duration
-
-	// GRPC TLS settings
-	EnableTLS bool `toml:"enable_tls"`
+	Trace            bool              `toml:"dump_responses"`
+	EnableTLS        bool              `toml:"enable_tls"`
+	Log              telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
 	// Internal state
@@ -67,9 +61,6 @@ type GNMI struct {
 	acc             telegraf.Accumulator
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
-	legacyTags      bool
-
-	Log telegraf.Logger
 }
 
 // Subscription for a gNMI client
@@ -123,7 +114,6 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			c.TagSubscriptions = append(c.TagSubscriptions, tagSub)
 			// Remove from the original subscriptions list
 			c.Subscriptions = append(c.Subscriptions[:i], c.Subscriptions[i+1:]...)
-			c.legacyTags = true
 			continue
 		}
 		if err = subscription.buildFullPath(c); err != nil {
@@ -196,7 +186,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log)
+			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log, c.Trace)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
