@@ -9,7 +9,8 @@
                         "name": "interfaces"
                     },
                     {
-                        "name": "interface"
+                        "name": "interface",
+                        "key":{"name":"eth42"}
                     },
                     {
                         "name": "state"

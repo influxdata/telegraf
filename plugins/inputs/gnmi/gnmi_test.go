@@ -486,9 +486,9 @@ func TestNotification(t *testing.T) {
 				testutil.MustMetric(
 					"oc-intf-counters",
 					map[string]string{
-						"source":       "127.0.0.1",
-						"name":         "Ethernet1",
-						"oc-intf-desc": "foo",
+						"source":                   "127.0.0.1",
+						"name":                     "Ethernet1",
+						"oc-intf-desc/description": "foo",
 					},
 					map[string]interface{}{
 						"in_broadcast_pkts": 42,
@@ -641,10 +641,10 @@ func TestNotification(t *testing.T) {
 				testutil.MustMetric(
 					"oc-neigh-state",
 					map[string]string{
-						"source":           "127.0.0.1",
-						"neighbor_address": "192.0.2.1",
-						"name":             "default",
-						"oc-neigh-desc":    "EXAMPLE-PEER",
+						"source":                    "127.0.0.1",
+						"neighbor_address":          "192.0.2.1",
+						"name":                      "default",
+						"oc-neigh-desc/description": "EXAMPLE-PEER",
 						"/network-instances/network-instance/protocols/protocol/name": "BGP",
 						"identifier": "BGP",
 					},
