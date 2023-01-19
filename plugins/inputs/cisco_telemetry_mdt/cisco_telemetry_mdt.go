@@ -408,10 +408,6 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		encodingPath := msg.GetEncodingPath()
 		tags["path"] = encodingPath
 
-<<<<<<< HEAD
-		// if keys != nil {
-		// }
-
 		if content != nil {
 			// Parse values
 			for _, subfield := range content.Fields {
@@ -425,8 +421,6 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 				c.parseContentField(grouper, subfield, prefix, encodingPath, tags, timestamp)
 			}
 		}
-=======
->>>>>>> faac53a91 (change import order + optimize telemetry message handling)
 		if c.IncludeDeleteField {
 			grouper.Add(c.getMeasurementName(encodingPath), tags, timestamp, "delete", gpbkv.GetDelete())
 		}
