@@ -166,12 +166,12 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			tags[key] = val
 		}
 
+		aliasPath, fields := h.handleTelemetryField(update, tags, prefix)
+
 		// Add the tags derived via tag-subscriptions
 		for k, v := range h.tagStore.lookup(fullPath, tags) {
 			tags[k] = v
 		}
-
-		aliasPath, fields := h.handleTelemetryField(update, tags, prefix)
 
 		// Inherent valid alias from prefix parsing
 		if len(prefixAliasPath) > 0 && len(aliasPath) == 0 {
