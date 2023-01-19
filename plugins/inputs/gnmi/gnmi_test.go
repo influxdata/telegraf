@@ -1281,13 +1281,13 @@ func TestCases(t *testing.T) {
 
 			// Prepare the server response
 			responseFunction := func(server gnmiLib.GNMI_SubscribeServer) error {
+				sync := &gnmiLib.SubscribeResponse{
+					Response: &gnmiLib.SubscribeResponse_SyncResponse{
+						SyncResponse: true,
+					},
+				}
 				for i := range notifications {
 					if i > 0 {
-						sync := &gnmiLib.SubscribeResponse{
-							Response: &gnmiLib.SubscribeResponse_SyncResponse{
-								SyncResponse: true,
-							},
-						}
 						if err := server.Send(sync); err != nil {
 							return err
 						}
