@@ -144,7 +144,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				continue
 			}
 			h.log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
-			if err := h.tagStore.insert(tagSub, fullPath, fields); err != nil {
+			if err := h.tagStore.insert(tagSub, fullPath, fields, tags); err != nil {
 				h.log.Errorf("inserting tag failed: %w", err)
 			}
 			tagUpdate = true
@@ -167,7 +167,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		}
 
 		// Add the tags derived via tag-subscriptions
-		for k, v := range h.tagStore.lookup(fullPath) {
+		for k, v := range h.tagStore.lookup(fullPath, tags) {
 			tags[k] = v
 		}
 
@@ -186,6 +186,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			} else {
 				h.log.Debugf("No measurement alias for gNMI path: %s", name)
 			}
+			lastAliasPath = aliasPath
 		}
 
 		// Check for empty names
@@ -215,8 +216,6 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			}
 			grouper.Add(name, tags, timestamp, key, v)
 		}
-
-		lastAliasPath = aliasPath
 	}
 
 	// Add grouped measurements

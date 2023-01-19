@@ -109,7 +109,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 		if subscription.TagOnly {
 			tagSub := TagSubscription{
 				Subscription: subscription,
-				Match:        "unconditional",
+				Match:        "name",
 			}
 			c.TagSubscriptions = append(c.TagSubscriptions, tagSub)
 			// Remove from the original subscriptions list
@@ -132,9 +132,10 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			if len(c.TagSubscriptions[idx].Elements) > 0 {
 				c.TagSubscriptions[idx].Match = "elements"
 			} else {
-				c.TagSubscriptions[idx].Match = "unconditional"
+				c.TagSubscriptions[idx].Match = "name"
 			}
 		case "unconditional":
+		case "name":
 		case "elements":
 			if len(c.TagSubscriptions[idx].Elements) == 0 {
 				return fmt.Errorf("tag_subscription must have at least one element")

@@ -2,6 +2,7 @@ package gnmi
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 
 type tagStore struct {
 	unconditional map[string]string
+	names         map[string]map[string]string
 	elements      elementsStore
 }
 
@@ -22,6 +24,7 @@ type elementsStore struct {
 func newTagStore(subs []TagSubscription) *tagStore {
 	store := tagStore{
 		unconditional: make(map[string]string),
+		names:         make(map[string]map[string]string),
 		elements: elementsStore{
 			required: make([][]string, 0, len(subs)),
 			tags:     make(map[string]map[string]string),
@@ -37,20 +40,48 @@ func newTagStore(subs []TagSubscription) *tagStore {
 }
 
 // Store tags extracted from TagSubscriptions
-func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, values map[string]interface{}) error {
+func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, values map[string]interface{}, tags map[string]string) error {
 	switch subscription.Match {
 	case "unconditional":
-		// Add the values
 		for k, v := range values {
-			tagName := subscription.Name
-			if len(values) > 1 {
-				tagName += "_" + k
-			}
+			tagName := subscription.Name + "/" + filepath.Base(k)
 			sv, err := internal.ToString(v)
 			if err != nil {
 				return fmt.Errorf("conversion error for %v: %w", v, err)
 			}
-			s.unconditional[tagName] = sv
+			if sv == "" {
+				delete(s.unconditional, tagName)
+			} else {
+				s.unconditional[tagName] = sv
+			}
+		}
+	case "name":
+		// Get the lookup key
+		key, found := tags["name"]
+		if !found {
+			return nil
+		}
+
+		// Make sure we have a valid map for the key
+		if _, exists := s.names[key]; !exists {
+			s.names[key] = make(map[string]string)
+		}
+
+		// Add the values
+		for k, v := range values {
+			tagName := subscription.Name + "/" + filepath.Base(k)
+			sv, err := internal.ToString(v)
+			if err != nil {
+				return fmt.Errorf("conversion error for %v: %w", v, err)
+			}
+			if tags["name"] == "xe-0/1/1" {
+				fmt.Printf("==>> entry [%s][%s] = %v\n", key, tagName, sv)
+			}
+			if sv == "" {
+				delete(s.names[key], tagName)
+			} else {
+				s.names[key][tagName] = sv
+			}
 		}
 	case "elements":
 		key, match := s.getElementsKeys(path, subscription.Elements)
@@ -65,15 +96,16 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 
 		// Add the values
 		for k, v := range values {
-			tagName := subscription.Name
-			if len(values) > 1 {
-				tagName += "_" + k
-			}
+			tagName := subscription.Name + "/" + filepath.Base(k)
 			sv, err := internal.ToString(v)
 			if err != nil {
 				return fmt.Errorf("conversion error for %v: %w", v, err)
 			}
-			s.elements.tags[key][tagName] = sv
+			if sv == "" {
+				delete(s.elements.tags[key], tagName)
+			} else {
+				s.elements.tags[key][tagName] = sv
+			}
 		}
 	default:
 		return fmt.Errorf("unknown match strategy %q", subscription.Match)
@@ -82,11 +114,19 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 	return nil
 }
 
-func (s *tagStore) lookup(path *gnmiLib.Path) map[string]string {
+func (s *tagStore) lookup(path *gnmiLib.Path, metricTags map[string]string) map[string]string {
 	// Add all unconditional tags
 	tags := make(map[string]string, len(s.unconditional))
 	for k, v := range s.unconditional {
 		tags[k] = v
+	}
+
+	// Match names
+	key, found := metricTags["name"]
+	if found {
+		for k, v := range s.names[key] {
+			tags[k] = v
+		}
 	}
 
 	// Match elements

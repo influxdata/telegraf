@@ -101,15 +101,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #  ## Tags are only applied for metrics of the same address. The following
   #  ## settings are valid:
   #  ##   unconditional -- always match
-  #  ##   elements      -- match by the key elements given in `elements`
-  #  ## By default, 'unconditional' is used if no elements are given and
-  #  ## 'elements' otherwise.
+  #  ##   name          -- match by the "name" key
+  #  ##                    This resembles the previsou 'tag-only' behavior.
+  #  ##   elements      -- match by the keys in the path filtered by the path
+  #  ##                    parts specified `elements` below
+  #  ## By default, 'elements' is used if the 'elements' option is provided,
+  #  ## otherwise match by 'name'.
   #  # match = ""
   #
   #  ## For the 'elements' match strategy, at least one path-element name must
-  #  ## be supplied containing at least one key to match on. Multiple element
-  #  ## names can be specified in any order. All elements must be present for
-  #  ## a match.
+  #  ## be supplied containing at least one key to match on. Multiple path
+  #  ## elements can be specified in any order. All given keys must be equal
+  #  ## for a match.
   #  # elements = ["description", "interface"]
 ```
 
