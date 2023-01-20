@@ -72,6 +72,7 @@ func (o *OpcUAClientConfig) CreateClient(log telegraf.Logger) (*OpcUAClient, err
 		Log:    log,
 	}
 	c.Log.Debug("Initialising OpcUAClient")
+	c.Init()
 	c.State = Disconnected
 
 	err = c.setupWorkarounds()
