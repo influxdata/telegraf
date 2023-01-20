@@ -73,11 +73,6 @@ func (o *OpcUAClientConfig) CreateClient(log telegraf.Logger) (*OpcUAClient, err
 	}
 	c.Log.Debug("Initialising OpcUAClient")
 
-	err = c.Init()
-	if err != nil {
-		return nil, err
-	}
-
 	c.State = Disconnected
 
 	err = c.setupWorkarounds()
@@ -174,6 +169,11 @@ func (o *OpcUAClient) Connect() error {
 	switch u.Scheme {
 	case "opc.tcp":
 		o.State = Connecting
+
+		err = o.Init()
+		if err != nil {
+			return err
+		}
 
 		if o.Client != nil {
 			o.Log.Warnf("Closing connection due to Connect called while already instantiated", u)
