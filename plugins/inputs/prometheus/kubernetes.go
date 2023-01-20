@@ -97,7 +97,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 }
 
 func shouldScrapePod(pod *corev1.Pod, p *Prometheus) bool {
-	isCandidate := podReady(pod.Status.ContainerStatuses) &&
+	isCandidate := podReady(pod) &&
 		podHasMatchingNamespace(pod, p) &&
 		podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
 		podHasMatchingFieldSelector(pod, p.podFieldSelector)
@@ -135,7 +135,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		AddFunc: func(newObj interface{}) {
 			newPod, ok := newObj.(*corev1.Pod)
 			if !ok {
-				p.Log.Error("[BUG] Not a Pod, report it to the Github issues, please")
+				p.Log.Errorf("[BUG] received unexpected object: %v", newObj)
 				return
 			}
 			if shouldScrapePod(newPod, p) {
@@ -146,7 +146,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		UpdateFunc: func(_, newObj interface{}) {
 			newPod, ok := newObj.(*corev1.Pod)
 			if !ok {
-				p.Log.Error("[BUG] Not a Pod, report it to the Github issues, please")
+				p.Log.Errorf("[BUG] received unexpected object: %v", newObj)
 				return
 			}
 
@@ -174,7 +174,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		},
 	})
 
-	informerfactory.Start(wait.NeverStop)
+	informerfactory.Start(ctx.Done())
 	informerfactory.WaitForCacheSync(wait.NeverStop)
 
 	<-ctx.Done()
@@ -304,16 +304,13 @@ func podHasMatchingNamespace(pod *corev1.Pod, p *Prometheus) bool {
 	return !(p.PodNamespace != "" && pod.Namespace != p.PodNamespace)
 }
 
-func podReady(statuss []corev1.ContainerStatus) bool {
-	if len(statuss) == 0 {
-		return false
-	}
-	for _, cs := range statuss {
-		if !cs.Ready {
-			return false
+func podReady(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
