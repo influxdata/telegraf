@@ -669,11 +669,6 @@ WHERE
 		AND [session_id] <> @@SPID
 	)
 OPTION(MAXDOP 1);
-END TRY
-BEGIN CATCH
-   IF (ERROR_NUMBER() <> 976) --Avoid possible errors from secondary replica
-        THROW; 
-END CATCH
 `
 
 const sqlAzureDBSchedulers string = `
