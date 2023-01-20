@@ -38,8 +38,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Include the specified additional properties in the resulting metric.
   ## The following values are supported:
-  ##    IP        -- return IP of the first A and AAAA answer
-  ##    "all IPs" -- return IP of the all A and AAAA answers with index
+  ##    "first_ip" -- return IP of the first A and AAAA answer
+  ##    "all_ips"  -- return IPs of all A and AAAA answers
   # include_fields = []
 ```
 

@@ -48,7 +48,7 @@ func (d *DNSQuery) Init() error {
 	d.fieldEnabled = make(map[string]bool, len(d.IncludeFields))
 	for _, f := range d.IncludeFields {
 		switch f {
-		case "IP", "all IPs":
+		case "first_ip", "all_ips":
 		default:
 			return fmt.Errorf("invalid field %q included", f)
 		}
@@ -152,7 +152,7 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 	tags["result"] = "success"
 	fields["result_code"] = uint64(Success)
 
-	if d.fieldEnabled["IP"] {
+	if d.fieldEnabled["first_ip"] {
 		for _, record := range r.Answer {
 			if ip, found := extractIP(record); found {
 				fields["ip"] = ip
@@ -160,7 +160,7 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 			}
 		}
 	}
-	if d.fieldEnabled["all IPs"] {
+	if d.fieldEnabled["all_ips"] {
 		for i, record := range r.Answer {
 			if ip, found := extractIP(record); found {
 				fields["ip_"+strconv.Itoa(i)] = ip
