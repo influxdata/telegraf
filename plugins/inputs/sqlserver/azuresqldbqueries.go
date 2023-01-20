@@ -659,7 +659,7 @@ FROM (
 ) AS data
 WHERE
 	   [blocking_or_blocked] > 1 --Always include blocking or blocked sessions/requests
-	OR [open_transaction] >= 1 --Always include sessions with open transactions
+	OR [open_transaction] >= 1   --Always include sessions with open transactions
 	OR (
 		[request_id] IS NOT NULL	--A request must exists
 		AND (	--Always fetch user process (in any state), fetch system process only if active
