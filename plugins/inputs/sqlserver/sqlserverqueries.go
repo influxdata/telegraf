@@ -203,7 +203,7 @@ DECLARE
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 
-	IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0' 
+IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0' 
 	SET @Columns = N'
 	,CASE [virtual_machine_type_desc]
 		WHEN ''NONE'' THEN ''PHYSICAL Machine''
@@ -1127,8 +1127,8 @@ FROM (
 	OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
 ) AS data
 WHERE
-[blocking_or_blocked] > 1 --Always include blocking or blocked sessions/requests
-OR [open_transaction] >= 1   --Always include sessions with open transactions
+	   [blocking_or_blocked] > 1 --Always include blocking or blocked sessions/requests
+	OR [open_transaction] >= 1   --Always include sessions with open transactions
 	OR (
 		[request_id] IS NOT NULL	--A request must exists
 		AND (	--Always fetch user process (in any state), fetch system process only if active
@@ -1159,7 +1159,7 @@ END
 DECLARE
 	@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 
-	IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0' BEGIN
+IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0' BEGIN
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('MachineName') AS [server_name]

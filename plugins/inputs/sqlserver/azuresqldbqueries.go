@@ -588,10 +588,9 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 END
 
 
-	BEGIN TRY
-		
-		SELECT
-		[measurement],[sql_instance],[database_name],[session_id]
+
+SELECT
+	 [measurement],[sql_instance],[database_name],[session_id]
 	,ISNULL([request_id],0) AS [request_id]
 	,[blocking_session_id],[status],[cpu_time_ms]
 	,[total_elapsed_time_ms],[logical_reads],[writes]
@@ -603,7 +602,7 @@ END
 	,[stmt_db_name],[query_hash],[query_plan_hash]
 	,replica_updateability
 	,[session_db_name],[open_transaction]
-	FROM (
+FROM (
 	SELECT
 		'sqlserver_requests' AS [measurement]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -657,10 +656,10 @@ END
 	LEFT OUTER JOIN sys.dm_exec_requests AS r
 		ON s.[session_id] = r.[session_id]
 	OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
-	) AS data
-	WHERE
-	[blocking_or_blocked] > 1 --Always include blocking or blocked sessions/requests
- OR [open_transaction] >= 1   --Always include sessions with open transactions
+) AS data
+WHERE
+	   [blocking_or_blocked] > 1 --Always include blocking or blocked sessions/requests
+	OR [open_transaction] >= 1 --Always include sessions with open transactions
 	OR (
 		[request_id] IS NOT NULL	--A request must exists
 		AND (	--Always fetch user process (in any state), fetch system process only if active
@@ -669,7 +668,7 @@ END
 		)
 		AND [session_id] <> @@SPID
 	)
-	OPTION(MAXDOP 1);
+OPTION(MAXDOP 1);
 END TRY
 BEGIN CATCH
    IF (ERROR_NUMBER() <> 976) --Avoid possible errors from secondary replica
