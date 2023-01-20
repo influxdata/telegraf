@@ -1436,6 +1436,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	c.getFieldString(tbl, "name_prefix", &cp.MeasurementPrefix)
 	c.getFieldString(tbl, "name_suffix", &cp.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &cp.NameOverride)
+	c.getFieldBool(tbl, "always_include_local_tags", &cp.AlwaysIncludeLocalTags)
 	c.getFieldString(tbl, "alias", &cp.Alias)
 
 	cp.Tags = make(map[string]string)
@@ -1528,7 +1529,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
 	// General options to ignore
-	case "alias",
+	case "alias", "always_include_local_tags",
 		"collection_jitter", "collection_offset",
 		"data_format", "delay", "drop", "drop_original",
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter",
