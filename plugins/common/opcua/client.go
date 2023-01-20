@@ -72,7 +72,12 @@ func (o *OpcUAClientConfig) CreateClient(log telegraf.Logger) (*OpcUAClient, err
 		Log:    log,
 	}
 	c.Log.Debug("Initialising OpcUAClient")
-	c.Init()
+
+	err = c.Init()
+	if err != nil {
+		return nil, err
+	}
+
 	c.State = Disconnected
 
 	err = c.setupWorkarounds()
@@ -180,7 +185,10 @@ func (o *OpcUAClient) Connect() error {
 		}
 
 		o.Client = opcua.NewClient(o.Config.Endpoint, o.opts...)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Config.ConnectTimeout))
+		ctx, cancel := context.WithTimeout(
+			context.Background(),
+			time.Duration(o.Config.ConnectTimeout),
+		)
 		defer cancel()
 		if err := o.Client.Connect(ctx); err != nil {
 			o.State = Disconnected
