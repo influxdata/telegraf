@@ -9,10 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
@@ -686,6 +688,95 @@ func TestTailEOF(t *testing.T) {
 
 	err = tmpfile.Close()
 	require.NoError(t, err)
+}
+
+func TestCSVBehavior(t *testing.T) {
+	// Prepare the input file
+	input, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer os.Remove(input.Name())
+	// Write header
+	_, err = input.WriteString("a,b\n")
+	require.NoError(t, err)
+	require.NoError(t, input.Sync())
+
+	// Setup the CSV parser creator function
+	parserFunc := func() (parsers.Parser, error) {
+		parser := &csv.Parser{
+			MetricName:     "tail",
+			HeaderRowCount: 1,
+		}
+		err := parser.Init()
+		return parser, err
+	}
+
+	// Setup the plugin
+	plugin := &Tail{
+		Files:               []string{input.Name()},
+		FromBeginning:       true,
+		MaxUndeliveredLines: 1000,
+		offsets:             make(map[string]int64, 0),
+		PathTag:             "path",
+		Log:                 testutil.Logger{},
+	}
+	plugin.SetParserFunc(parserFunc)
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Write the first line of data
+	_, err = input.WriteString("1,2\n")
+	require.NoError(t, err)
+	require.NoError(t, input.Sync())
+	require.NoError(t, plugin.Gather(&acc))
+
+	// Write another line of data
+	_, err = input.WriteString("3,4\n")
+	require.NoError(t, err)
+	require.NoError(t, input.Sync())
+	require.NoError(t, plugin.Gather(&acc))
+	require.Eventuallyf(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return acc.NMetrics() >= 2
+	}, time.Second, 100*time.Millisecond, "Expected 2 metrics found %d", acc.NMetrics())
+
+	// Check the result
+	options := []cmp.Option{
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
+	}
+	expected := []telegraf.Metric{
+		metric.New(
+			"tail",
+			map[string]string{
+				"path": input.Name(),
+			},
+			map[string]interface{}{
+				"a": int64(1),
+				"b": int64(2),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"tail",
+			map[string]string{
+				"path": input.Name(),
+			},
+			map[string]interface{}{
+				"a": int64(3),
+				"b": int64(4),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
+
+	// Close the input file
+	require.NoError(t, input.Close())
 }
 
 func getTestdataDir() string {
