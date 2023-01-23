@@ -31,6 +31,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -881,6 +882,14 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 		return nil, fmt.Errorf("undefined but requested parser: %s", dataformat)
 	}
 	parser := creator(parentname)
+
+	// Handle reset-mode of CSV parsers to stay backward compatible (see issue #12022)
+	if dataformat == "csv" && parentcategory == "inputs" {
+		if parentname == "exec" {
+			csv := parser.(*csv.Parser)
+			csv.ResetMode = "always"
+		}
+	}
 
 	conf := c.buildParser(parentname, table)
 	if err := c.toml.UnmarshalTable(table, parser); err != nil {
