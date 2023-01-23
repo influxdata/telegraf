@@ -426,6 +426,11 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	sort.Stable(c.Processors)
 	sort.Stable(c.AggProcessors)
 
+	// Set snmp agent translator default
+	if c.Agent.SnmpTranslator == "" {
+		c.Agent.SnmpTranslator = "netsnmp"
+	}
+
 	// Let's link all secrets to their secret-stores
 	return c.LinkSecrets()
 }
@@ -481,10 +486,6 @@ func (c *Config) LoadConfigData(data []byte) error {
 			RemovalIn: "2.0.0",
 			Notice:    "Use 'gosmi' instead",
 		})
-	}
-	// Set snmp agent translator default
-	if c.Agent.SnmpTranslator == "" {
-		c.Agent.SnmpTranslator = "netsnmp"
 	}
 
 	if len(c.UnusedFields) > 0 {
@@ -808,7 +809,7 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 	}
 
 	if err := store.Init(); err != nil {
-		return fmt.Errorf("error initializing secretstore: %w", err)
+		return fmt.Errorf("error initializing secret-store %q: %w", storeid, err)
 	}
 
 	if _, found := c.SecretStores[storeid]; found {
@@ -1396,6 +1397,9 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"order",
 		"pass", "period", "precision",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
+
+	// Secret-store options to ignore
+	case "id":
 
 	// Parser options to ignore
 	case "data_type", "influx_parser_type":

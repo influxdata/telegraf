@@ -116,7 +116,7 @@ type Subscription struct {
 	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
 
 	// Mark this subscription as a tag-only lookup source, not emitting any metric
-	TagOnly bool `toml:"tag_only"`
+	TagOnly bool `toml:"tag_only" deprecated:"1.25.0;2.0.0;please use 'tag_subscription's instead"`
 }
 
 // Tag Subscription for a gNMI client
@@ -364,6 +364,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
 		for _, tagSub := range c.TagSubscriptions {
 			if equalPathNoKeys(fullPath, tagSub.fullPath) {
+				c.Log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
 				worker.storeTags(update, tagSub)
 				response.Update.Update = append(response.Update.Update[:i], response.Update.Update[i+1:]...)
 			}

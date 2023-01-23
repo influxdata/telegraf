@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/models"
-
-	monpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	monpb "cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	tspb "google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/influxdata/telegraf/models"
 )
 
 func TestCreateCounterCacheEntry(t *testing.T) {

@@ -203,7 +203,7 @@ DECLARE
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 
-IF @MajorMinorVersion >= 1050
+IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0' 
 	SET @Columns = N'
 	,CASE [virtual_machine_type_desc]
 		WHEN ''NONE'' THEN ''PHYSICAL Machine''
@@ -374,6 +374,7 @@ SELECT DISTINCT
 			,'Free list stalls/sec'
 			,'Buffer cache hit ratio'
 			,'Buffer cache hit ratio base'
+			,'Database Pages'
 			,'Backup/Restore Throughput/sec'
 			,'Total Server Memory (KB)'
 			,'Target Server Memory (KB)'
@@ -1152,7 +1153,7 @@ END
 DECLARE
 	@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 
-IF @MajorMinorVersion >= 1050 BEGIN
+IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0' BEGIN
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('MachineName') AS [server_name]

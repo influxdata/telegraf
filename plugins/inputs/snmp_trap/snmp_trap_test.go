@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -1274,12 +1275,12 @@ func TestReceiveTrap(t *testing.T) {
 				//if cold start be answer otherwise err
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
-				SecName:      tt.secName,
+				SecName:      config.NewSecret([]byte(tt.secName)),
 				SecLevel:     tt.secLevel,
 				AuthProtocol: tt.authProto,
-				AuthPassword: tt.authPass,
+				AuthPassword: config.NewSecret([]byte(tt.authPass)),
 				PrivProtocol: tt.privProto,
-				PrivPassword: tt.privPass,
+				PrivPassword: config.NewSecret([]byte(tt.privPass)),
 				Translator:   "netsnmp",
 			}
 

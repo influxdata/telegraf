@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -33,8 +33,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Dns server port.
   # port = 53
 
-  ## Query timeout in seconds.
-  # timeout = 2
+  ## Query timeout
+  # timeout = "2s"
+
+  ## Include the specified additional properties in the resulting metric.
+  ## The following values are supported:
+  ##    "first_ip" -- return IP of the first A and AAAA answer
+  ##    "all_ips"  -- return IPs of all A and AAAA answers
+  # include_fields = []
 ```
 
 ## Metrics

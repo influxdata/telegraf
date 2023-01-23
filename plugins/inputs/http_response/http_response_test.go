@@ -1115,8 +1115,8 @@ func TestBasicAuth(t *testing.T) {
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: config.Duration(time.Second * 20),
-		Username:        "me",
-		Password:        "mypassword",
+		Username:        config.NewSecret([]byte("me")),
+		Password:        config.NewSecret([]byte("mypassword")),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
