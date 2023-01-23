@@ -115,6 +115,9 @@ func shouldScrapePod(pod *corev1.Pod, p *Prometheus) bool {
 	return isCandidate && shouldScrape
 }
 
+// Share informer across all instances of this plugin
+var informerfactory informers.SharedInformerFactory
+
 // An edge case exists if a pod goes offline at the same time a new pod is created
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
 // pod, causing errors in the logs. This is only true if the pod going offline is not
@@ -128,7 +131,9 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		resyncinterval = 60 * time.Minute
 	}
 
-	informerfactory := informers.NewSharedInformerFactory(clientset, resyncinterval)
+	if informerfactory == nil {
+		informerfactory = informers.NewSharedInformerFactory(clientset, resyncinterval)
+	}
 
 	podinformer := informerfactory.Core().V1().Pods()
 	podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
