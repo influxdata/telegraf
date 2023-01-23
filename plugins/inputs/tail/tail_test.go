@@ -722,32 +722,6 @@ func TestCSVBehavior(t *testing.T) {
 	plugin.SetParserFunc(parserFunc)
 	require.NoError(t, plugin.Init())
 
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	// Write the first line of data
-	_, err = input.WriteString("1,2\n")
-	require.NoError(t, err)
-	require.NoError(t, input.Sync())
-	require.NoError(t, plugin.Gather(&acc))
-
-	// Write another line of data
-	_, err = input.WriteString("3,4\n")
-	require.NoError(t, err)
-	require.NoError(t, input.Sync())
-	require.NoError(t, plugin.Gather(&acc))
-	require.Eventuallyf(t, func() bool {
-		acc.Lock()
-		defer acc.Unlock()
-		return acc.NMetrics() >= 2
-	}, time.Second, 100*time.Millisecond, "Expected 2 metrics found %d", acc.NMetrics())
-
-	// Check the result
-	options := []cmp.Option{
-		testutil.SortMetrics(),
-		testutil.IgnoreTime(),
-	}
 	expected := []telegraf.Metric{
 		metric.New(
 			"tail",
@@ -771,6 +745,33 @@ func TestCSVBehavior(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Write the first line of data
+	_, err = input.WriteString("1,2\n")
+	require.NoError(t, err)
+	require.NoError(t, input.Sync())
+	require.NoError(t, plugin.Gather(&acc))
+
+	// Write another line of data
+	_, err = input.WriteString("3,4\n")
+	require.NoError(t, err)
+	require.NoError(t, input.Sync())
+	require.NoError(t, plugin.Gather(&acc))
+	require.Eventuallyf(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return acc.NMetrics() >= uint64(len(expected))
+	}, time.Second, 100*time.Millisecond, "Expected %d metrics found %d", len(expected), acc.NMetrics())
+
+	// Check the result
+	options := []cmp.Option{
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
 	}
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
