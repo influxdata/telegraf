@@ -559,7 +559,7 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
-	err = o.connectToOpensearch()
+	err = o.newClient()
 	if err != nil {
 		return &container, err
 	}
@@ -648,7 +648,7 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
-	err = o.connectToOpensearch()
+	err = o.newClient()
 	require.NoError(t, err)
 
 	for _, tt := range testOpensearchAggregationData {
@@ -674,17 +674,14 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 				return
 			}
 
-			if err != nil {
-				t.Errorf("Unexpected error %v", err)
-				return
-			}
+			require.NoError(t, err)
 
 			testutil.RequireMetricsEqual(t, tt.expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
 
-func TestOpensearchQueryIntegration_getMetricFields(t *testing.T) {
+func TestIntegrationGetMetricFields(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -709,7 +706,7 @@ func TestOpensearchQueryIntegration_getMetricFields(t *testing.T) {
 		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
-	err = e.connectToOpensearch()
+	err = e.newClient()
 	require.NoError(t, err)
 
 	type test struct {
@@ -746,29 +743,19 @@ func TestOpensearchQueryIntegration_getMetricFields(t *testing.T) {
 	}
 }
 
-func TestOpensearchQuery_metricAggregationMarshal(t *testing.T) {
+func TestMetricAggregationMarshal(t *testing.T) {
 	agg := &MetricAggregationRequest{}
 	err := agg.AddAggregation("sum_taxful_total_price", "sum", "taxful_total_price")
-	if err != nil {
-		t.Errorf("metricAggregation error: %v", err)
-	}
+	require.NoError(t, err)
 
-	body, err := json.Marshal(agg)
-	if err != nil {
-		t.Errorf("metricAggregationMarshal error %v, want %v", err, nil)
-	}
-	t.Log(string(body))
+	_, err = json.Marshal(agg)
+	require.NoError(t, err)
 
 	bucket := &BucketAggregationRequest{}
 	err = bucket.AddAggregation("terms_by_currency", "terms", "currency")
-	if err != nil {
-		t.Errorf("bucket aggregation error: %v", err)
-	}
+	require.NoError(t, err)
 
 	bucket.AddNestedAggregation("terms_by_currency", agg)
-	body, err = json.Marshal(bucket)
-	if err != nil {
-		t.Errorf("BucketAggregationRequest marshal error: %v", err)
-	}
-	t.Log(string(body))
+	_, err = json.Marshal(bucket)
+	require.NoError(t, err)
 }

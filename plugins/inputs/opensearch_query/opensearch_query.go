@@ -82,13 +82,10 @@ func (o *OpensearchQuery) Init() error {
 		return fmt.Errorf("no urls defined")
 	}
 
-	err := o.connectToOpensearch()
+	err := o.newClient()
 	if err != nil {
-		o.Log.Warnf("error connecting to opensearch: %w", err)
+		o.Log.Errorf("error creating OpenSearch client: %w", err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
-	defer cancel()
 
 	for i, agg := range o.Aggregations {
 		if agg.MeasurementName == "" {
@@ -97,7 +94,7 @@ func (o *OpensearchQuery) Init() error {
 		if agg.DateField == "" {
 			return fmt.Errorf("field 'date_field' is not set")
 		}
-		err = o.initAggregation(ctx, agg, i)
+		err = o.initAggregation(agg, i)
 		if err != nil {
 			return err
 		}
@@ -105,13 +102,7 @@ func (o *OpensearchQuery) Init() error {
 	return nil
 }
 
-func (o *OpensearchQuery) initAggregation(ctx context.Context, agg osAggregation, i int) (err error) {
-	// retrieve field mapping and build queries only once
-	agg.mapMetricFields, err = o.getMetricFields(ctx, agg)
-	if err != nil {
-		return fmt.Errorf("not possible to retrieve fields: %v", err.Error())
-	}
-
+func (o *OpensearchQuery) initAggregation(agg osAggregation, i int) (err error) {
 	for _, metricField := range agg.MetricFields {
 		if _, ok := agg.mapMetricFields[metricField]; !ok {
 			return fmt.Errorf("metric field '%s' not found on index '%s'", metricField, agg.Index)
@@ -120,31 +111,24 @@ func (o *OpensearchQuery) initAggregation(ctx context.Context, agg osAggregation
 
 	err = agg.buildAggregationQuery()
 	if err != nil {
-		return fmt.Errorf("error building aggregation: %s", err)
+		return fmt.Errorf("error building aggregation: %w", err)
 	}
 
 	o.Aggregations[i] = agg
 	return nil
 }
 
-func (o *OpensearchQuery) connectToOpensearch() error {
-	var client *opensearch.Client
-	var transport *http.Transport
-
-	if o.InsecureSkipVerify {
-		transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-	}
-
+func (o *OpensearchQuery) newClient() error {
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
 		Username:  o.Username,
 		Password:  o.Password,
 	}
 
-	if transport != nil {
-		clientConfig.Transport = transport
+	if o.InsecureSkipVerify {
+		clientConfig.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 	}
 
 	client, err := opensearch.NewClient(clientConfig)
@@ -163,7 +147,7 @@ func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := o.osAggregationQuery(acc, agg)
 			if err != nil {
-				acc.AddError(fmt.Errorf("opensearch query aggregation %s: %s ", agg.MeasurementName, err.Error()))
+				acc.AddError(fmt.Errorf("opensearch query aggregation %s: %s ", agg.MeasurementName, err))
 			}
 		}(agg)
 	}
@@ -220,7 +204,6 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %s", err)
 	}
-	o.Log.Debugf("{\"body\": %s}", string(req))
 
 	searchRequest := &opensearchapi.SearchRequest{
 		Body:    strings.NewReader(string(req)),
