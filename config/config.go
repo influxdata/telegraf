@@ -886,8 +886,8 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 	// Handle reset-mode of CSV parsers to stay backward compatible (see issue #12022)
 	if dataformat == "csv" && parentcategory == "inputs" {
 		if parentname == "exec" {
-			csv := parser.(*csv.Parser)
-			csv.ResetMode = "always"
+			csvParser := parser.(*csv.Parser)
+			csvParser.ResetMode = "always"
 		}
 	}
 
