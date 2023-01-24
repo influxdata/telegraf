@@ -185,10 +185,7 @@ func (o *OpcUAClient) Connect() error {
 		}
 
 		o.Client = opcua.NewClient(o.Config.Endpoint, o.opts...)
-		ctx, cancel := context.WithTimeout(
-			context.Background(),
-			time.Duration(o.Config.ConnectTimeout),
-		)
+		ctx, cancel := context.WithTimeout( context.Background(), time.Duration(o.Config.ConnectTimeout))
 		defer cancel()
 		if err := o.Client.Connect(ctx); err != nil {
 			o.State = Disconnected

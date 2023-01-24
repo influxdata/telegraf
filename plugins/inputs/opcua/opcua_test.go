@@ -315,42 +315,14 @@ use_unregistered_reads = true
 			}},
 		},
 	}, o.ReadClientConfig.Groups)
-	require.Equal(
-		t,
-		opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}},
-		o.ReadClientConfig.Workarounds,
-	)
-	require.Equal(
-		t,
-		ReadClientWorkarounds{UseUnregisteredReads: true},
-		o.ReadClientConfig.ReadClientWorkarounds,
-	)
+	require.Equal( t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.ReadClientConfig.Workarounds)
+	require.Equal( t, ReadClientWorkarounds{UseUnregisteredReads: true}, o.ReadClientConfig.ReadClientWorkarounds)
 	err = o.Init()
 	require.NoError(t, err)
 	require.Len(t, o.client.NodeMetricMapping, 5, "incorrect number of nodes")
-	require.EqualValues(
-		t,
-		o.client.NodeMetricMapping[0].MetricTags,
-		map[string]string{"tag0": "val0"},
-	)
-	require.EqualValues(
-		t,
-		o.client.NodeMetricMapping[1].MetricTags,
-		map[string]string{"tag6": "val6"},
-	)
-	require.EqualValues(
-		t,
-		o.client.NodeMetricMapping[2].MetricTags,
-		map[string]string{"tag1": "val1", "tag2": "val2", "tag3": "val3"},
-	)
-	require.EqualValues(
-		t,
-		o.client.NodeMetricMapping[3].MetricTags,
-		map[string]string{"tag1": "override", "tag2": "val2"},
-	)
-	require.EqualValues(
-		t,
-		o.client.NodeMetricMapping[4].MetricTags,
-		map[string]string{"tag1": "val1", "tag2": "val2"},
-	)
+	require.EqualValues( t, o.client.NodeMetricMapping[0].MetricTags, map[string]string{"tag0": "val0"})
+	require.EqualValues( t, o.client.NodeMetricMapping[1].MetricTags, map[string]string{"tag6": "val6"})
+	require.EqualValues( t, o.client.NodeMetricMapping[2].MetricTags, map[string]string{"tag1": "val1", "tag2": "val2", "tag3": "val3"})
+	require.EqualValues( t, o.client.NodeMetricMapping[3].MetricTags, map[string]string{"tag1": "override", "tag2": "val2"})
+	require.EqualValues( t, o.client.NodeMetricMapping[4].MetricTags, map[string]string{"tag1": "val1", "tag2": "val2"})
 }
