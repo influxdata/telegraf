@@ -35,7 +35,7 @@ func MapOPCTag(tags OPCTags) (out input.NodeSettings) {
 
 type TestReadClientArgs struct {
 	t                        *testing.T
-	container_entrypoint     []string
+	containerEntrypoint      []string
 	testOPCTags              []OPCTags
 	testGroups               []input.NodeGroupSettings
 	readConfig               ReadClientConfig
@@ -50,7 +50,7 @@ func testReadClient(args TestReadClientArgs) {
 	container := testutil.Container{
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
-		Entrypoint:   args.container_entrypoint,
+		Entrypoint:   args.containerEntrypoint,
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
@@ -71,16 +71,16 @@ func testReadClient(args TestReadClientArgs) {
 
 	args.readConfig.Groups = append(args.readConfig.Groups, args.testGroups...)
 
-	opcua := OpcUA{
+	opcua_input := OpcUA{
 		ReadClientConfig: args.readConfig,
 		Log:              &testutil.CaptureLogger{},
 	}
 
-	require.NoError(args.t, opcua.Init(), "Initialization")
-	require.NoError(args.t, opcua.Gather(&testutil.Accumulator{}), "Gather")
+	require.NoError(args.t, opcua_input.Init(), "Initialization")
+	require.NoError(args.t, opcua_input.Gather(&testutil.Accumulator{}), "Gather")
 
 	if args.validateLastReceivedData {
-		for i, v := range opcua.client.LastReceivedData {
+		for i, v := range opcua_input.client.LastReceivedData {
 			require.Equal(args.t, args.testOPCTags[i].Want, v.Value)
 		}
 	}
@@ -105,10 +105,10 @@ func TestGetDataBadNodeContainerIntegration2(t *testing.T) {
 	}
 
 	testReadClient(TestReadClientArgs{
-		t:                    t,
-		container_entrypoint: nil,
-		testOPCTags:          testopctags,
-		testGroups:           []input.NodeGroupSettings{g},
+		t:                   t,
+		containerEntrypoint: nil,
+		testOPCTags:         testopctags,
+		testGroups:          []input.NodeGroupSettings{g},
 		readConfig: ReadClientConfig{
 			InputClientConfig: input.InputClientConfig{
 				OpcUAClientConfig: opcua.OpcUAClientConfig{
@@ -163,8 +163,8 @@ func TestReadClientIntegration(t *testing.T) {
 
 func TestReadClientIntegrationWithAuth(t *testing.T) {
 	testReadClient(TestReadClientArgs{
-		t:                    t,
-		container_entrypoint: []string{"/opt/open62541/build/bin/examples/access_control_server"},
+		t:                   t,
+		containerEntrypoint: []string{"/opt/open62541/build/bin/examples/access_control_server"},
 		testOPCTags: []OPCTags{
 			{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
 			{"ProductUri", "0", "i", "2262", "http://open62541.org"},
