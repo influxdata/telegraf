@@ -26,8 +26,8 @@ var sampleConfig string
 // OpensearchQuery struct
 type OpensearchQuery struct {
 	URLs                []string        `toml:"urls"`
-	Username            string          `toml:"username"`
-	Password            string          `toml:"password"`
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
 	EnableSniffer       bool            `toml:"enable_sniffer"`
 	Timeout             config.Duration `toml:"timeout"`
 	HealthCheckInterval config.Duration `toml:"health_check_interval"`
@@ -119,10 +119,21 @@ func (o *OpensearchQuery) initAggregation(agg osAggregation, i int) (err error) 
 }
 
 func (o *OpensearchQuery) newClient() error {
+	username, err := o.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %v", err)
+	}
+	defer config.ReleaseSecret(username)
+	password, err := o.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %v", err)
+	}
+	defer config.ReleaseSecret(password)
+
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
-		Username:  o.Username,
-		Password:  o.Password,
+		Username:  string(username),
+		Password:  string(password),
 	}
 
 	if o.InsecureSkipVerify {

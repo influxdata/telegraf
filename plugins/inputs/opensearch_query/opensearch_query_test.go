@@ -554,8 +554,8 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		URLs:         []string{url},
 		Timeout:      config.Duration(time.Second * 30),
 		Log:          testutil.Logger{},
-		Username:     "admin",
-		Password:     "admin",
+		Username:     config.NewSecret([]byte("admin")),
+		Password:     config.NewSecret([]byte("admin")),
 		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
@@ -643,8 +643,8 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 		},
 		Timeout:      config.Duration(time.Second * 30),
 		Log:          testutil.Logger{},
-		Username:     "admin",
-		Password:     "admin",
+		Username:     config.NewSecret([]byte("admin")),
+		Password:     config.NewSecret([]byte("admin")),
 		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
@@ -701,8 +701,8 @@ func TestIntegrationGetMetricFields(t *testing.T) {
 		},
 		Timeout:      config.Duration(time.Second * 30),
 		Log:          testutil.Logger{},
-		Username:     "admin",
-		Password:     "admin",
+		Username:     config.NewSecret([]byte("admin")),
+		Password:     config.NewSecret([]byte("admin")),
 		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
 	}
 
