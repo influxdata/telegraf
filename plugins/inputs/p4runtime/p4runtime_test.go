@@ -62,30 +62,21 @@ func NewTestP4RuntimeClient(
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	return &P4runtime{
-		Address:        addr,
-		DeviceID:       "1",
-		Log:            testutil.Logger{},
-		conn:           conn,
-		client:         p4RuntimeClient,
-		deviceIDParsed: uint64(1),
+		Endpoint: addr,
+		DeviceID: uint64(1),
+		Log:      testutil.Logger{},
+		conn:     conn,
+		client:   p4RuntimeClient,
 	}
 }
 
 func TestInitDefault(t *testing.T) {
 	plugin := &P4runtime{Log: testutil.Logger{}}
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	require.Equal(t, "127.0.0.1:9559", plugin.Address)
-	require.Equal(t, uint64(1), plugin.deviceIDParsed)
-	require.Equal(t, 0, len(plugin.CounterNames))
+	require.NoError(t, plugin.Init())
+	require.Equal(t, "127.0.0.1:9559", plugin.Endpoint)
+	require.Equal(t, uint64(0), plugin.DeviceID)
+	require.Equal(t, 0, len(plugin.CounterNamesInclude))
 	require.Equal(t, false, plugin.EnableTLS)
-}
-
-func TestInitWrongDeviceId(t *testing.T) {
-	plugin := &P4runtime{Log: testutil.Logger{}}
-	plugin.DeviceID = "invalid int value"
-	var acc testutil.Accumulator
-	require.Error(t, plugin.Start(&acc))
 }
 
 func TestErrorGetP4Info(t *testing.T) {
@@ -517,7 +508,7 @@ func TestFilterCounters(t *testing.T) {
 
 	plugin := NewTestP4RuntimeClient(p4RtClient, listener.Addr().String())
 
-	plugin.CounterNames = []string{"oof"}
+	plugin.CounterNamesInclude = []string{"oof"}
 
 	var acc testutil.Accumulator
 	errGather := plugin.Gather(&acc)
@@ -638,7 +629,7 @@ func TestFailReadAllEntries(t *testing.T) {
 	)
 }
 
-func TestFilterCounterNames(t *testing.T) {
+func TestFilterCounterNamesInclude(t *testing.T) {
 	counters := []*p4ConfigV1.Counter{
 		createCounter("foo", 1, p4ConfigV1.CounterSpec_BOTH),
 		createCounter("bar", 2, p4ConfigV1.CounterSpec_BOTH),
@@ -646,9 +637,9 @@ func TestFilterCounterNames(t *testing.T) {
 		createCounter("", 3, p4ConfigV1.CounterSpec_BOTH),
 	}
 
-	counterNames := []string{"bar"}
+	counterNamesInclude := []string{"bar"}
 
-	filteredCounters := filterCounters(counters, counterNames)
+	filteredCounters := filterCounters(counters, counterNamesInclude)
 	assert.Equal(
 		t,
 		filteredCounters,

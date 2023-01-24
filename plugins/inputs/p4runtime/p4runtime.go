@@ -25,42 +25,31 @@ import (
 var sampleConfig string
 
 const (
-	defaultDeviceID = "1"
-	defaultAddress  = "127.0.0.1:9559"
+	defaultDeviceID = 1
+	defaultEndpoint = "127.0.0.1:9559"
 )
 
 type P4runtime struct {
-	Address      string          `toml:"endpoint"`
-	DeviceID     string          `toml:"device_id"`
-	CounterNames []string        `toml:"counter_names"`
-	Log          telegraf.Logger `toml:"-"`
-	EnableTLS    bool            `toml:"enable_tls"`
+	Endpoint            string          `toml:"endpoint"`
+	DeviceID            uint64          `toml:"device_id"`
+	CounterNamesInclude []string        `toml:"counter_names_include"`
+	Log                 telegraf.Logger `toml:"-"`
+	EnableTLS           bool            `toml:"enable_tls"`
 	internaltls.ClientConfig
 
-	conn           *grpc.ClientConn
-	client         p4v1.P4RuntimeClient
-	deviceIDParsed uint64
-	wg             sync.WaitGroup
+	conn   *grpc.ClientConn
+	client p4v1.P4RuntimeClient
+	wg     sync.WaitGroup
 }
 
 func (*P4runtime) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *P4runtime) Start(telegraf.Accumulator) error {
-	if p.DeviceID == "" {
-		p.Log.Debugf("Using default deviceID: %v", defaultDeviceID)
-		p.DeviceID = defaultDeviceID
-	}
-	deviceID, err := strconv.ParseUint(p.DeviceID, 10, 64)
-	if err != nil {
-		return err
-	}
-	p.deviceIDParsed = deviceID
-
-	if p.Address == "" {
-		p.Log.Debugf("Using default Address: %v", defaultAddress)
-		p.Address = defaultAddress
+func (p *P4runtime) Init() error {
+	if p.Endpoint == "" {
+		p.Log.Debugf("Using default Endpoint: %v", defaultEndpoint)
+		p.Endpoint = defaultEndpoint
 	}
 
 	return p.newP4RuntimeClient()
@@ -77,7 +66,7 @@ func (p *P4runtime) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	filteredCounters := filterCounters(p4Info.Counters, p.CounterNames)
+	filteredCounters := filterCounters(p4Info.Counters, p.CounterNamesInclude)
 	if len(filteredCounters) == 0 {
 		p.Log.Warn("No filtered counters available in P4 Program!")
 		return nil
@@ -137,19 +126,19 @@ func (p *P4runtime) Stop() {
 	p.wg.Wait()
 }
 
-func initConnection(addr string, tlscfg *tls.Config) (*grpc.ClientConn, error) {
+func initConnection(endpoint string, tlscfg *tls.Config) (*grpc.ClientConn, error) {
 	var creds credentials.TransportCredentials
 	if tlscfg != nil {
 		creds = credentials.NewTLS(tlscfg)
 	} else {
 		creds = insecure.NewCredentials()
 	}
-	return grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	return grpc.Dial(endpoint, grpc.WithTransportCredentials(creds))
 }
 
 func (p *P4runtime) getP4Info() (*p4ConfigV1.P4Info, error) {
 	req := &p4v1.GetForwardingPipelineConfigRequest{
-		DeviceId:     p.deviceIDParsed,
+		DeviceId:     p.DeviceID,
 		ResponseType: p4v1.GetForwardingPipelineConfigRequest_ALL,
 	}
 	resp, err := p.client.GetForwardingPipelineConfig(context.Background(), req)
@@ -176,8 +165,8 @@ func (p *P4runtime) getP4Info() (*p4ConfigV1.P4Info, error) {
 	return p4info, nil
 }
 
-func filterCounters(counters []*p4ConfigV1.Counter, counterNames []string) []*p4ConfigV1.Counter {
-	if len(counterNames) == 0 {
+func filterCounters(counters []*p4ConfigV1.Counter, counterNamesInclude []string) []*p4ConfigV1.Counter {
+	if len(counterNamesInclude) == 0 {
 		return counters
 	}
 
@@ -186,7 +175,7 @@ func filterCounters(counters []*p4ConfigV1.Counter, counterNames []string) []*p4
 		if counter == nil {
 			continue
 		}
-		if slices.Contains(counterNames, counter.Preamble.Name) {
+		if slices.Contains(counterNamesInclude, counter.Preamble.Name) {
 			filteredCounters = append(filteredCounters, counter)
 		}
 	}
@@ -203,7 +192,7 @@ func (p *P4runtime) newP4RuntimeClient() error {
 		}
 	}
 
-	conn, err := initConnection(p.Address, tlscfg)
+	conn, err := initConnection(p.Endpoint, tlscfg)
 	if err != nil {
 		return fmt.Errorf("cannot connect to the server: %v", err)
 	}
@@ -214,7 +203,7 @@ func (p *P4runtime) newP4RuntimeClient() error {
 
 func (p *P4runtime) readAllEntries(counterID uint32) ([]*p4v1.Entity, error) {
 	readRequest := &p4v1.ReadRequest{
-		DeviceId: p.deviceIDParsed,
+		DeviceId: p.DeviceID,
 		Entities: []*p4v1.Entity{{
 			Entity: &p4v1.Entity_CounterEntry{
 				CounterEntry: &p4v1.CounterEntry{
@@ -235,6 +224,10 @@ func (p *P4runtime) readAllEntries(counterID uint32) ([]*p4v1.Entity, error) {
 
 func init() {
 	inputs.Add("p4runtime", func() telegraf.Input {
-		return &P4runtime{CounterNames: []string{}}
+		p4runtime := &P4runtime{
+			CounterNamesInclude: []string{},
+			DeviceID:            defaultDeviceID,
+		}
+		return p4runtime
 	})
 }
