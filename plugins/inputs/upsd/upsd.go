@@ -99,7 +99,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 			if err != nil {
 				acc.AddError(fmt.Errorf("converting %s=%v failed: %v", rawValue, metrics[rawValue], err))
 			} else {
-				fields[key] = float64(float)
+				fields[key] = float
 			}
 		} else {
 			fields[key] = metrics[rawValue]
