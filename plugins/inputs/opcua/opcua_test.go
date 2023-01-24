@@ -71,16 +71,16 @@ func testReadClient(args TestReadClientArgs) {
 
 	args.readConfig.Groups = append(args.readConfig.Groups, args.testGroups...)
 
-	opcua_input := OpcUA{
+	opcuaInput := OpcUA{
 		ReadClientConfig: args.readConfig,
 		Log:              &testutil.CaptureLogger{},
 	}
 
-	require.NoError(args.t, opcua_input.Init(), "Initialization")
-	require.NoError(args.t, opcua_input.Gather(&testutil.Accumulator{}), "Gather")
+	require.NoError(args.t, opcuaInput.Init(), "Initialization")
+	require.NoError(args.t, opcuaInput.Gather(&testutil.Accumulator{}), "Gather")
 
 	if args.validateLastReceivedData {
-		for i, v := range opcua_input.client.LastReceivedData {
+		for i, v := range opcuaInput.client.LastReceivedData {
 			require.Equal(args.t, args.testOPCTags[i].Want, v.Value)
 		}
 	}
