@@ -13,7 +13,7 @@ name = InfluxData Repository - Stable
 baseurl = https://repos.influxdata.com/stable/\$basearch/main
 enabled = 1
 gpgcheck = 1
-gpgkey = https://repos.influxdata.com/influxdb.key
+gpgkey = https://repos.influxdata.com/influxdata-oss-archive_compat.key
 `
 
 type Container struct {
