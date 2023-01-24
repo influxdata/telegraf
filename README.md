@@ -49,8 +49,8 @@ repo key and setup a new sources.list entry:
 # influxdata-oss-archive_compat.key GPG fingerprint:
 #     9D53 9D90 D332 8DC7 D6C8 D3B9 D8FF 8E1F 7DF8 B07E
 wget -q https://repos.influxdata.com/influxdata-oss-archive_compat.key
-echo '393e8779c89ac8d958f81f942f9ad7fb82a25e133faddaf92e15b16e6ac9ce4c influxdata-oss-archive_compat.key' | sha256sum -c && cat influxdb.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdata-oss-archive_compat.key > /dev/null
-echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-oss-archive_compat.key] https://repos.influxdata.com/debian stable main' | sudo tee /etc/apt/sources.list.d/influxdata.list
+echo '393e8779c89ac8d958f81f942f9ad7fb82a25e133faddaf92e15b16e6ac9ce4c influxdata-oss-archive_compat.key' | sha256sum -c && cat influxdata-oss-archive_compat.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdata-oss-archive_compat.gpg > /dev/null
+echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-oss-archive_compat.gpg] https://repos.influxdata.com/debian stable main' | sudo tee /etc/apt/sources.list.d/influxdata.list
 sudo apt-get update && sudo apt-get install telegraf
 ```
 
