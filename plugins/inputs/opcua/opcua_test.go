@@ -33,48 +33,64 @@ func MapOPCTag(tags OPCTags) (out input.NodeSettings) {
 	return out
 }
 
-func TestGetDataBadNodeContainerIntegration(t *testing.T) {
+type TestReadClientArgs struct {
+	t                        *testing.T
+	container_entrypoint     []string
+	testOPCTags              []OPCTags
+	testGroups               []input.NodeGroupSettings
+	readConfig               ReadClientConfig
+	validateLastReceivedData bool
+}
+
+func testReadClient(args TestReadClientArgs) {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		args.t.Skip("Skipping integration test in short mode")
 	}
 
 	container := testutil.Container{
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
+		Entrypoint:   args.container_entrypoint,
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(args.t, container.Start(), "Failed to start container")
 	defer container.Terminate()
 
+	args.readConfig.InputClientConfig.OpcUAClientConfig.Endpoint = fmt.Sprintf(
+		"opc.tcp://%s:%s",
+		container.Address,
+		container.Ports[servicePort],
+	)
+
+	for _, tags := range args.testOPCTags {
+		args.readConfig.RootNodes = append(args.readConfig.RootNodes, MapOPCTag(tags))
+	}
+
+	args.readConfig.Groups = append(args.readConfig.Groups, args.testGroups...)
+
+	opcua := OpcUA{
+		ReadClientConfig: args.readConfig,
+		Log:              &testutil.CaptureLogger{},
+	}
+
+	require.NoError(args.t, opcua.Init(), "Initialization")
+	require.NoError(args.t, opcua.Gather(&testutil.Accumulator{}), "Gather")
+
+	if args.validateLastReceivedData {
+		for i, v := range opcua.client.LastReceivedData {
+			require.Equal(args.t, args.testOPCTags[i].Want, v.Value)
+		}
+	}
+}
+
+func TestGetDataBadNodeContainerIntegration2(t *testing.T) {
 	var testopctags = []OPCTags{
 		{"ProductName", "1", "i", "2261", "open62541 OPC UA Server"},
 		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
 		{"ManufacturerName", "0", "i", "2263", "open62541"},
-	}
-
-	readConfig := ReadClientConfig{
-		InputClientConfig: input.InputClientConfig{
-			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-				Certificate:    "",
-				PrivateKey:     "",
-				Username:       "",
-				Password:       "",
-				AuthMethod:     "Anonymous",
-				ConnectTimeout: config.Duration(10 * time.Second),
-				RequestTimeout: config.Duration(1 * time.Second),
-				Workarounds:    opcua.OpcUAWorkarounds{},
-			},
-			MetricName: "testing",
-			RootNodes:  make([]input.NodeSettings, 0),
-			Groups:     make([]input.NodeGroupSettings, 0),
-		},
 	}
 
 	g := input.NodeGroupSettings{
@@ -87,80 +103,92 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	for _, tags := range testopctags {
 		g.Nodes = append(g.Nodes, MapOPCTag(tags))
 	}
-	readConfig.Groups = append(readConfig.Groups, g)
 
-	logger := &testutil.CaptureLogger{}
-	readClient, err := readConfig.CreateReadClient(logger)
-	require.NoError(t, err)
-	err = readClient.Init()
-	require.NoError(t, err)
-
-	err = readClient.Connect()
-	require.NoError(t, err)
+	testReadClient(TestReadClientArgs{
+		t:                    t,
+		container_entrypoint: nil,
+		testOPCTags:          testopctags,
+		testGroups:           []input.NodeGroupSettings{g},
+		readConfig: ReadClientConfig{
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					Certificate:    "",
+					PrivateKey:     "",
+					Username:       "",
+					Password:       "",
+					AuthMethod:     "Anonymous",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+					Workarounds:    opcua.OpcUAWorkarounds{},
+				},
+				MetricName: "testing",
+				RootNodes:  make([]input.NodeSettings, 0),
+				Groups:     make([]input.NodeGroupSettings, 0),
+			},
+		},
+	})
 }
 
 func TestReadClientIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	container := testutil.Container{
-		Image:        "open62541/open62541",
-		ExposedPorts: []string{servicePort},
-		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("TCP network layer listening on opc.tcp://"),
-		),
-	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
-	defer container.Terminate()
-
-	var testopctags = []OPCTags{
-		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
-		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
-		{"ManufacturerName", "0", "i", "2263", "open62541"},
-		{"badnode", "1", "i", "1337", nil},
-		{"goodnode", "1", "s", "the.answer", int32(42)},
-		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
-	}
-
-	readConfig := ReadClientConfig{
-		InputClientConfig: input.InputClientConfig{
-			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-				Certificate:    "",
-				PrivateKey:     "",
-				Username:       "",
-				Password:       "",
-				AuthMethod:     "Anonymous",
-				ConnectTimeout: config.Duration(10 * time.Second),
-				RequestTimeout: config.Duration(1 * time.Second),
-				Workarounds:    opcua.OpcUAWorkarounds{},
-			},
-			MetricName: "testing",
-			RootNodes:  make([]input.NodeSettings, 0),
-			Groups:     make([]input.NodeGroupSettings, 0),
+	testReadClient(TestReadClientArgs{
+		t: t,
+		testOPCTags: []OPCTags{
+			{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+			{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+			{"ManufacturerName", "0", "i", "2263", "open62541"},
+			{"badnode", "1", "i", "1337", nil},
+			{"goodnode", "1", "s", "the.answer", int32(42)},
+			{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
 		},
-	}
+		readConfig: ReadClientConfig{
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					AuthMethod:     "Anonymous",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+					Workarounds:    opcua.OpcUAWorkarounds{},
+				},
+				MetricName: "testing",
+				RootNodes:  make([]input.NodeSettings, 0),
+				Groups:     make([]input.NodeGroupSettings, 0),
+			},
+		},
+		validateLastReceivedData: true,
+	})
+}
 
-	for _, tags := range testopctags {
-		readConfig.RootNodes = append(readConfig.RootNodes, MapOPCTag(tags))
-	}
-
-	client, err := readConfig.CreateReadClient(testutil.Logger{})
-	require.NoError(t, err)
-
-	err = client.Init()
-	require.NoError(t, err, "Initialization")
-	err = client.Connect()
-	require.NoError(t, err, "Connect")
-
-	for i, v := range client.LastReceivedData {
-		require.Equal(t, testopctags[i].Want, v.Value)
-	}
+func TestReadClientIntegrationWithAuth(t *testing.T) {
+	testReadClient(TestReadClientArgs{
+		t:                    t,
+		container_entrypoint: []string{"/opt/open62541/build/bin/examples/access_control_server"},
+		testOPCTags: []OPCTags{
+			{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+			{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+			{"ManufacturerName", "0", "i", "2263", "open62541"},
+		},
+		readConfig: ReadClientConfig{
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					Username:       "peter",
+					Password:       "peter123",
+					AuthMethod:     "UserName",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+					Workarounds:    opcua.OpcUAWorkarounds{},
+				},
+				MetricName: "testing",
+				RootNodes:  make([]input.NodeSettings, 0),
+				Groups:     make([]input.NodeGroupSettings, 0),
+			},
+		},
+		validateLastReceivedData: true,
+	})
 }
 
 func TestReadClientConfig(t *testing.T) {
@@ -287,14 +315,42 @@ use_unregistered_reads = true
 			}},
 		},
 	}, o.ReadClientConfig.Groups)
-	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.ReadClientConfig.Workarounds)
-	require.Equal(t, ReadClientWorkarounds{UseUnregisteredReads: true}, o.ReadClientConfig.ReadClientWorkarounds)
+	require.Equal(
+		t,
+		opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}},
+		o.ReadClientConfig.Workarounds,
+	)
+	require.Equal(
+		t,
+		ReadClientWorkarounds{UseUnregisteredReads: true},
+		o.ReadClientConfig.ReadClientWorkarounds,
+	)
 	err = o.Init()
 	require.NoError(t, err)
 	require.Len(t, o.client.NodeMetricMapping, 5, "incorrect number of nodes")
-	require.EqualValues(t, o.client.NodeMetricMapping[0].MetricTags, map[string]string{"tag0": "val0"})
-	require.EqualValues(t, o.client.NodeMetricMapping[1].MetricTags, map[string]string{"tag6": "val6"})
-	require.EqualValues(t, o.client.NodeMetricMapping[2].MetricTags, map[string]string{"tag1": "val1", "tag2": "val2", "tag3": "val3"})
-	require.EqualValues(t, o.client.NodeMetricMapping[3].MetricTags, map[string]string{"tag1": "override", "tag2": "val2"})
-	require.EqualValues(t, o.client.NodeMetricMapping[4].MetricTags, map[string]string{"tag1": "val1", "tag2": "val2"})
+	require.EqualValues(
+		t,
+		o.client.NodeMetricMapping[0].MetricTags,
+		map[string]string{"tag0": "val0"},
+	)
+	require.EqualValues(
+		t,
+		o.client.NodeMetricMapping[1].MetricTags,
+		map[string]string{"tag6": "val6"},
+	)
+	require.EqualValues(
+		t,
+		o.client.NodeMetricMapping[2].MetricTags,
+		map[string]string{"tag1": "val1", "tag2": "val2", "tag3": "val3"},
+	)
+	require.EqualValues(
+		t,
+		o.client.NodeMetricMapping[3].MetricTags,
+		map[string]string{"tag1": "override", "tag2": "val2"},
+	)
+	require.EqualValues(
+		t,
+		o.client.NodeMetricMapping[4].MetricTags,
+		map[string]string{"tag1": "val1", "tag2": "val2"},
+	)
 }
