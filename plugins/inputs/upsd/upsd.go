@@ -22,11 +22,13 @@ const defaultAddress = "127.0.0.1"
 const defaultPort = 3493
 
 type Upsd struct {
-	Server   string
-	Port     int
-	Username string
-	Password string
-	Log      telegraf.Logger `toml:"-"`
+	Server     string `toml:"server"`
+	Port       int    `toml:"port"`
+	Username   string `toml:"username"`
+	Password   string `toml:"password"`
+	ForceFloat bool   `toml:"force_float"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	batteryRuntimeTypeWarningIssued bool
 }
@@ -91,12 +93,16 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"output_voltage":          "output.voltage",
 	}
 
-	for key, value := range floatValues {
-		val, err := internal.ToFloat64(metrics[value])
-		if err != nil {
-			acc.AddError(fmt.Errorf("converting %s=%v failed: %v", value, metrics[value], err))
+	for key, rawValue := range floatValues {
+		if u.ForceFloat {
+			float, err := internal.ToFloat64(metrics[rawValue])
+			if err != nil {
+				acc.AddError(fmt.Errorf("converting %s=%v failed: %v", rawValue, metrics[rawValue], err))
+			} else {
+				fields[key] = float
+			}
 		} else {
-			fields[key] = val
+			fields[key] = rawValue
 		}
 	}
 
