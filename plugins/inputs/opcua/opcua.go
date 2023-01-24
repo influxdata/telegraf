@@ -34,7 +34,7 @@ func (o *OpcUA) Init() (err error) {
 
 // Gather defines what data the plugin will gather.
 func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
-	metrics, err := o.client.CurrentValues()
+	metrics, err := o.client.CurrentValues() // Will (re)connect if the client is disconnected
 	if err != nil {
 		return err
 	}
