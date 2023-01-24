@@ -101,7 +101,6 @@ func TestUpsdGather(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				acc.AssertContainsFields(t, "upsd", tt.fields)
 				acc.AssertContainsTaggedFields(t, "upsd", tt.fields, tt.tags)
 			}
 			cancel()
