@@ -222,11 +222,9 @@ func (m *metric) name() string {
 	buf := bytes.Buffer{}
 	for i := len(m.pathStack) - 1; i >= 0; i-- {
 		if buf.Len() > 0 {
-			//nolint:errcheck,revive // should never return an error
-			buf.WriteString(".")
+			buf.WriteString(".") //nolint:revive // should never return an error
 		}
-		//nolint:errcheck,revive // should never return an error
-		buf.WriteString(m.pathStack[i])
+		buf.WriteString(m.pathStack[i]) //nolint:revive // should never return an error
 	}
 	return buf.String()
 }
