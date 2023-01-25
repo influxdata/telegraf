@@ -129,8 +129,13 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	extraFlags := append(pluginFilterFlags, cliFlags()...)
 
 	// This function is used when Telegraf is run with only flags
-
 	action := func(cCtx *cli.Context) error {
+		// We do not expect any arguments this is likely a misspelling of
+		// a command...
+		if cCtx.NArg() > 0 {
+			return fmt.Errorf("unknown command %q", cCtx.Args().First())
+		}
+
 		err := logger.SetupLogging(logger.LogConfig{})
 		if err != nil {
 			return err
