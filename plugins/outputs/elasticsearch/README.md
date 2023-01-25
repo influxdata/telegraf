@@ -196,7 +196,7 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
 [3]: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade
 
 
-### Timestamp Timezone
+## Timestamp Timezone
 
 Elasticsearch documents use RFC3339 timestamps, which denote timezone information
 (for example `2017-01-01T00:00:00-08:00`) and by default, Telegraf will use the
