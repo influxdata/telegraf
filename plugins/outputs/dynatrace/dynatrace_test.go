@@ -35,7 +35,7 @@ func TestNilMetrics(t *testing.T) {
 	}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 	err := d.Init()
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestEmptyMetricsSlice(t *testing.T) {
 	d := &Dynatrace{}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 
 	err := d.Init()
@@ -82,7 +82,7 @@ func TestMockURL(t *testing.T) {
 	d := &Dynatrace{}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 
 	err := d.Init()
@@ -153,7 +153,7 @@ func TestSendMetrics(t *testing.T) {
 
 	d := &Dynatrace{
 		URL:               ts.URL,
-		APIToken:          "123",
+		APIToken:          config.NewSecret([]byte("123")),
 		Log:               testutil.Logger{},
 		AddCounterMetrics: []string{},
 	}
@@ -230,7 +230,7 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 	d := &Dynatrace{}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 	err := d.Init()
 	require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestSendMetricWithoutTags(t *testing.T) {
 	d := &Dynatrace{}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 	err := d.Init()
 	require.NoError(t, err)
@@ -318,7 +318,7 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 	d := &Dynatrace{}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 	err := d.Init()
 	require.NoError(t, err)
@@ -359,7 +359,7 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 	d := &Dynatrace{}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 	err := d.Init()
 	require.NoError(t, err)
@@ -402,7 +402,7 @@ func TestSendMetricWithDefaultDimensions(t *testing.T) {
 	d := &Dynatrace{DefaultDimensions: map[string]string{"dim": "value"}}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 	err := d.Init()
 	require.NoError(t, err)
@@ -445,7 +445,7 @@ func TestMetricDimensionsOverrideDefault(t *testing.T) {
 	d := &Dynatrace{DefaultDimensions: map[string]string{"dim": "default"}}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 	err := d.Init()
 	require.NoError(t, err)
@@ -487,7 +487,7 @@ func TestStaticDimensionsOverrideMetric(t *testing.T) {
 	d := &Dynatrace{DefaultDimensions: map[string]string{"dim": "default"}}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = testutil.Logger{}
 	err := d.Init()
 	require.NoError(t, err)
@@ -533,7 +533,7 @@ func TestSendUnsupportedMetric(t *testing.T) {
 	logStub := loggerStub{}
 
 	d.URL = ts.URL
-	d.APIToken = "123"
+	d.APIToken = config.NewSecret([]byte("123"))
 	d.Log = logStub
 	err := d.Init()
 	require.NoError(t, err)

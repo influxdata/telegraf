@@ -9,6 +9,7 @@ import (
 	"github.com/nats-io/nats.go"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -18,13 +19,13 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers     []string `toml:"servers"`
-	Secure      bool     `toml:"secure"`
-	Name        string   `toml:"name"`
-	Username    string   `toml:"username"`
-	Password    string   `toml:"password"`
-	Credentials string   `toml:"credentials"`
-	Subject     string   `toml:"subject"`
+	Servers     []string      `toml:"servers"`
+	Secure      bool          `toml:"secure"`
+	Name        string        `toml:"name"`
+	Username    config.Secret `toml:"username"`
+	Password    config.Secret `toml:"password"`
+	Credentials config.Secret `toml:"credentials"`
+	Subject     string        `toml:"subject"`
 
 	tls.ClientConfig
 
@@ -50,12 +51,28 @@ func (n *NATS) Connect() error {
 	}
 
 	// override authentication, if any was specified
-	if n.Username != "" && n.Password != "" {
-		opts = append(opts, nats.UserInfo(n.Username, n.Password))
+	if !n.Username.Empty() && !n.Password.Empty() {
+		username, err := n.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		password, err := n.Password.Get()
+		if err != nil {
+			config.ReleaseSecret(username)
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		opts = append(opts, nats.UserInfo(string(username), string(password)))
+		config.ReleaseSecret(username)
+		config.ReleaseSecret(password)
 	}
 
-	if n.Credentials != "" {
-		opts = append(opts, nats.UserCredentials(n.Credentials))
+	if !n.Credentials.Empty() {
+		credentials, err := n.Credentials.Get()
+		if err != nil {
+			return fmt.Errorf("getting credentials failed: %w", err)
+		}
+		opts = append(opts, nats.UserCredentials(string(credentials)))
+		config.ReleaseSecret(credentials)
 	}
 
 	if n.Name != "" {

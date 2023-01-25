@@ -24,10 +24,10 @@ const (
 )
 
 type MQTT struct {
-	Servers     []string `toml:"servers"`
-	Protocol    string   `toml:"protocol"`
-	Username    string   `toml:"username"`
-	Password    string   `toml:"password"`
+	Servers     []string      `toml:"servers"`
+	Protocol    string        `toml:"protocol"`
+	Username    config.Secret `toml:"username"`
+	Password    config.Secret `toml:"password"`
 	Database    string
 	Timeout     config.Duration `toml:"timeout"`
 	TopicPrefix string          `toml:"topic_prefix" deprecated:"1.25.0;use 'topic' instead"`

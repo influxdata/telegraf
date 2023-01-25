@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
@@ -91,8 +92,8 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 			name: "send basic auth",
 			config: influxdb.HTTPConfig{
 				URL:      u,
-				Username: "guy",
-				Password: "smiley",
+				Username: config.NewSecret([]byte("guy")),
+				Password: config.NewSecret([]byte("smiley")),
 				Database: "telegraf",
 			},
 			database: "telegraf",
@@ -302,8 +303,8 @@ func TestHTTP_Write(t *testing.T) {
 			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
-				Username: "guy",
-				Password: "smiley",
+				Username: config.NewSecret([]byte("guy")),
+				Password: config.NewSecret([]byte("smiley")),
 				Log:      testutil.Logger{},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {

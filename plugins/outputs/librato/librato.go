@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,8 +23,8 @@ var sampleConfig string
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser   string          `toml:"api_user"`
-	APIToken  string          `toml:"api_token"`
+	APIUser   config.Secret   `toml:"api_user"`
+	APIToken  config.Secret   `toml:"api_token"`
 	Debug     bool            `toml:"debug"`
 	SourceTag string          `toml:"source_tag" deprecated:"1.0.0;use 'template' instead"`
 	Timeout   config.Duration `toml:"timeout"`
@@ -67,9 +68,8 @@ func (*Librato) SampleConfig() string {
 // Connect is the default output plugin connection function who make sure it
 // can connect to the endpoint
 func (l *Librato) Connect() error {
-	if l.APIUser == "" || l.APIToken == "" {
-		return fmt.Errorf(
-			"api_user and api_token are required fields for librato output")
+	if l.APIUser.Empty() || l.APIToken.Empty() {
+		return errors.New("api_user and api_token required")
 	}
 	l.client = &http.Client{
 		Transport: &http.Transport{
@@ -142,7 +142,19 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 		return fmt.Errorf("unable to create http.Request, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(l.APIUser, l.APIToken)
+
+	user, err := l.APIUser.Get()
+	if err != nil {
+		return fmt.Errorf("getting user failed: %w", err)
+	}
+	token, err := l.APIToken.Get()
+	if err != nil {
+		config.ReleaseSecret(user)
+		return fmt.Errorf("getting token failed: %w", err)
+	}
+	req.SetBasicAuth(string(user), string(token))
+	config.ReleaseSecret(user)
+	config.ReleaseSecret(token)
 
 	resp, err := l.client.Do(req)
 	if err != nil {

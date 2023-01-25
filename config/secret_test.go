@@ -433,6 +433,20 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 	}
 }
 
+func TestSecretEqualTo(t *testing.T) {
+	mysecret := "a wonderful test"
+	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
+
+	equal, err := s.EqualTo([]byte(mysecret))
+	require.NoError(t, err)
+	require.True(t, equal)
+
+	equal, err = s.EqualTo([]byte("some random text"))
+	require.NoError(t, err)
+	require.False(t, equal)
+}
+
 func TestSecretStoreInvalidReference(t *testing.T) {
 	// Make sure we clean-up our mess
 	defer func() { unlinkedSecrets = make([]*Secret, 0) }()

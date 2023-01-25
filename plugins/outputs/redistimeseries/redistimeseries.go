@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-redis/redis/v7"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -17,8 +18,8 @@ var sampleConfig string
 
 type RedisTimeSeries struct {
 	Address  string          `toml:"address"`
-	Username string          `toml:"username"`
-	Password string          `toml:"password"`
+	Username config.Secret   `toml:"username"`
+	Password config.Secret   `toml:"password"`
 	Database int             `toml:"database"`
 	Log      telegraf.Logger `toml:"-"`
 	tls.ClientConfig
@@ -29,10 +30,23 @@ func (r *RedisTimeSeries) Connect() error {
 	if r.Address == "" {
 		return errors.New("redis address must be specified")
 	}
+
+	username, err := r.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	defer config.ReleaseSecret(username)
+
+	password, err := r.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+	defer config.ReleaseSecret(password)
+
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.Address,
-		Password: r.Password,
-		Username: r.Username,
+		Username: string(username),
+		Password: string(password),
 		DB:       r.Database,
 	})
 	return r.client.Ping().Err()

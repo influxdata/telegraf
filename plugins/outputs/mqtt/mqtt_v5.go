@@ -29,9 +29,18 @@ func (m *mqttv5Client) Connect() error {
 		opts.ClientID = "Telegraf-Output-" + internal.RandomString(5)
 	}
 
-	user := m.Username
-	pass := m.Password
-	opts.SetUsernamePassword(user, []byte(pass))
+	user, err := m.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	pass, err := m.Password.Get()
+	if err != nil {
+		config.ReleaseSecret(user)
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+	opts.SetUsernamePassword(string(user), pass)
+	config.ReleaseSecret(user)
+	config.ReleaseSecret(pass)
 
 	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {

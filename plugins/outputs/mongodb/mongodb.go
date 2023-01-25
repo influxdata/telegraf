@@ -55,8 +55,8 @@ type MongoDB struct {
 	AuthenticationType  string          `toml:"authentication"`
 	MetricDatabase      string          `toml:"database"`
 	MetricGranularity   string          `toml:"granularity"`
-	Username            string          `toml:"username"`
-	Password            string          `toml:"password"`
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
 	ServerSelectTimeout config.Duration `toml:"timeout"`
 	TTL                 config.Duration `toml:"ttl"`
 	Log                 telegraf.Logger `toml:"-"`
@@ -95,17 +95,28 @@ func (s *MongoDB) Init() error {
 
 	switch s.AuthenticationType {
 	case "SCRAM":
-		if s.Username == "" {
+		if s.Username.Empty() {
 			return fmt.Errorf("SCRAM authentication must specify a username")
 		}
-		if s.Password == "" {
+		if s.Password.Empty() {
 			return fmt.Errorf("SCRAM authentication must specify a password")
+		}
+		username, err := s.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		password, err := s.Password.Get()
+		if err != nil {
+			config.ReleaseSecret(username)
+			return fmt.Errorf("getting password failed: %w", err)
 		}
 		credential := options.Credential{
 			AuthMechanism: "SCRAM-SHA-256",
-			Username:      s.Username,
-			Password:      s.Password,
+			Username:      string(username),
+			Password:      string(password),
 		}
+		config.ReleaseSecret(username)
+		config.ReleaseSecret(password)
 		s.clientOptions.SetAuth(credential)
 	case "X509":
 		//format connection string to include tls/x509 options

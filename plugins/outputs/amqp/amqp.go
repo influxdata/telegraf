@@ -4,6 +4,7 @@ package amqp
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"strings"
 	"time"
 
@@ -47,8 +48,8 @@ type AMQP struct {
 	ExchangePassive    bool              `toml:"exchange_passive"`
 	ExchangeDurability string            `toml:"exchange_durability"`
 	ExchangeArguments  map[string]string `toml:"exchange_arguments"`
-	Username           string            `toml:"username"`
-	Password           string            `toml:"password"`
+	Username           config.Secret     `toml:"username"`
+	Password           config.Secret     `toml:"password"`
 	MaxMessages        int               `toml:"max_messages"`
 	AuthMethod         string            `toml:"auth_method"`
 	RoutingTag         string            `toml:"routing_tag"`
@@ -293,11 +294,21 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 	var auth []amqp.Authentication
 	if strings.ToUpper(q.AuthMethod) == "EXTERNAL" {
 		auth = []amqp.Authentication{&externalAuth{}}
-	} else if q.Username != "" || q.Password != "" {
+	} else if !q.Username.Empty() || !q.Password.Empty() {
+		username, err := q.Username.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting username failed: %w", err)
+		}
+		defer config.ReleaseSecret(username)
+		password, err := q.Password.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(password)
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
-				Username: q.Username,
-				Password: q.Password,
+				Username: string(username),
+				Password: string(password),
 			},
 		}
 	}

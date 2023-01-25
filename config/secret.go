@@ -91,6 +91,26 @@ func (s *Secret) Empty() bool {
 	return !s.notempty
 }
 
+// EqualTo performs a constant-time comparison of the secret to the given reference
+func (s *Secret) EqualTo(ref []byte) (bool, error) {
+	if s.enclave == nil {
+		return false, nil
+	}
+
+	if len(s.unlinked) > 0 {
+		return false, fmt.Errorf("unlinked parts in secret: %v", strings.Join(s.unlinked, ";"))
+	}
+
+	// Get a locked-buffer of the secret to perform the comparison
+	lockbuf, err := s.enclave.Open()
+	if err != nil {
+		return false, fmt.Errorf("opening enclave failed: %v", err)
+	}
+	defer lockbuf.Destroy()
+
+	return lockbuf.EqualTo(ref), nil
+}
+
 // Get return the string representation of the secret
 func (s *Secret) Get() ([]byte, error) {
 	if s.enclave == nil {
