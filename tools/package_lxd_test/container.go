@@ -13,7 +13,7 @@ name = InfluxData Repository - Stable
 baseurl = https://repos.influxdata.com/stable/\$basearch/main
 enabled = 1
 gpgcheck = 1
-gpgkey = https://repos.influxdata.com/influxdata-oss-archive_compat.key
+gpgkey = https://repos.influxdata.com/influxdata-archive_compat.key
 `
 
 type Container struct {
@@ -147,7 +147,7 @@ func (c *Container) configureApt() error {
 		return err
 	}
 
-	err = c.client.Exec(c.Name, "wget", "https://repos.influxdata.com/influxdata-oss-archive_compat.key")
+	err = c.client.Exec(c.Name, "wget", "https://repos.influxdata.com/influxdata-archive_compat.key")
 	if err != nil {
 		return err
 	}
@@ -157,9 +157,9 @@ func (c *Container) configureApt() error {
 		"bash",
 		"-c",
 		"--",
-		"echo '393e8779c89ac8d958f81f942f9ad7fb82a25e133faddaf92e15b16e6ac9ce4c influxdata-oss-archive_compat.key' | "+
-			"sha256sum -c && cat influxdata-oss-archive_compat.key | gpg --dearmor | "+
-			"sudo tee /etc/apt/trusted.gpg.d/influxdata-oss-archive_compat.gpg > /dev/null",
+		"echo '393e8779c89ac8d958f81f942f9ad7fb82a25e133faddaf92e15b16e6ac9ce4c influxdata-archive_compat.key' | "+
+			"sha256sum -c && cat influxdata-archive_compat.key | gpg --dearmor | "+
+			"sudo tee /etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg > /dev/null",
 	)
 	if err != nil {
 		return err
@@ -170,7 +170,7 @@ func (c *Container) configureApt() error {
 		"bash",
 		"-c",
 		"--",
-		"echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-oss-archive_compat.gpg] https://repos.influxdata.com/debian stable main' | "+
+		"echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main' | "+
 			"tee /etc/apt/sources.list.d/influxdata.list",
 	)
 	if err != nil {
