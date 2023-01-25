@@ -94,16 +94,18 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	}
 
 	for key, rawValue := range floatValues {
-		if u.ForceFloat {
-			float, err := internal.ToFloat64(metrics[rawValue])
-			if err != nil {
-				acc.AddError(fmt.Errorf("converting %s=%v failed: %v", rawValue, metrics[rawValue], err))
-			} else {
-				fields[key] = float
-			}
-		} else {
+		if !u.ForceFloat {
 			fields[key] = metrics[rawValue]
+			continue
 		}
+
+		// Force expected float values to actually being float (e.g. if delivered as int)
+		float, err := internal.ToFloat64(metrics[rawValue])
+		if err != nil {
+			acc.AddError(fmt.Errorf("converting %s=%v failed: %v", rawValue, metrics[rawValue], err))
+			continue
+		}
+		fields[key] = float
 	}
 
 	val, err := internal.ToString(metrics["ups.firmware"])
