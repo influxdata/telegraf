@@ -94,6 +94,10 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	}
 
 	for key, rawValue := range floatValues {
+		if metrics[rawValue] == nil {
+			continue
+		}
+
 		if !u.ForceFloat {
 			fields[key] = metrics[rawValue]
 			continue
