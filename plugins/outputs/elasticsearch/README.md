@@ -156,6 +156,33 @@ This plugin will format the events in the following way:
 }
 ```
 
+### Timestamp Timezone
+
+Elasticsearch documents use RFC3339 timestamps, which denote timezone information
+(for example `2017-01-01T00:00:00-08:00`) and by default, Telegraf will use the
+host system's configured timezone.
+
+However, this may not always be desirable. Elasticsearch preserves the timezone
+information and uses it when returning associated documents. This can cause issues
+for some pipelines (those that don't parse the timestamp and instead assume
+that the timezone returned will always be consistent).
+
+Telegraf honours the timezone configured in the environment variable `TZ`, so it
+is possible to influence the timezone used in timestamps sent to Elasticsearch
+without needing to change the timezone configured in the host system:
+
+```sh
+export TZ="America/Los_Angeles"
+export TZ="UTC"
+```
+
+If Telegraf is being run using SystemD, this can be achieved with
+
+```sh
+echo TZ="UTC" | sudo tee -a /etc/default/telegraf
+```
+
+
 ## OpenSearch Support
 
 OpenSearch is a fork of Elasticsearch hosted by AWS. The OpenSearch server will
@@ -194,33 +221,6 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
 ```
 
 [3]: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade
-
-
-## Timestamp Timezone
-
-Elasticsearch documents use RFC3339 timestamps, which denote timezone information
-(for example `2017-01-01T00:00:00-08:00`) and by default, Telegraf will use the
-host system's configured timezone.
-
-However, this may not always be desirable. Elasticsearch preserves the timezone
-information and uses it when returning associated documents. This can cause issues
-for some pipelines (those that don't parse the timestamp and instead assume
-that the timezone returned will always be consistent).
-
-Telegraf honours the timezone configured in the environment variable `TZ`, so it
-is possible to influence the timezone used in timestamps sent to Elasticsearch
-without needing to change the timezone configured in the host system:
-
-```sh
-export TZ="America/Los_Angeles"
-export TZ="UTC"
-```
-
-If Telegraf is being run using SystemD, this can be achieved with
-
-```sh
-echo TZ="UTC" | sudo tee -a /etc/default/telegraf
-```
 
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
