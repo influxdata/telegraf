@@ -182,7 +182,6 @@ func GetIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[s
 
 	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
 	for _, index := range node.GetIndex() {
-		//nolint:staticcheck //assaignment to nil map to keep backwards compatibilty
 		tagOids[mibPrefix+index.Name] = struct{}{}
 	}
 
@@ -247,8 +246,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
 		oidNum = oid
 		// ensure modules are loaded or node will be empty (might not error)
-		// do not return the err as the oid is numeric and telegraf can continue
-		//nolint:nilerr
+		//nolint:nilerr // do not return the err as the oid is numeric and telegraf can continue
 		if err != nil || out.Name == "iso" {
 			return oid, oid, oid, oid, out, nil
 		}
