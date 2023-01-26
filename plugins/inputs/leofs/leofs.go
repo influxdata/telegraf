@@ -203,12 +203,10 @@ func (l *LeoFS) gatherServer(
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	defer internal.WaitTimeout(cmd, time.Second*5)
+	defer internal.WaitTimeout(cmd, time.Second*5) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 	scanner := bufio.NewScanner(stdout)
 	if !scanner.Scan() {
-		return fmt.Errorf("Unable to retrieve the node name")
+		return fmt.Errorf("unable to retrieve the node name")
 	}
 	nodeName, err := retrieveTokenAfterColon(scanner.Text())
 	if err != nil {

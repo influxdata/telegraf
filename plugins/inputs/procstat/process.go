@@ -8,7 +8,7 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-// nolint:interfacebloat // conditionally allow to contain more methods
+//nolint:interfacebloat // conditionally allow to contain more methods
 type Process interface {
 	PID() PID
 	Tags() map[string]string

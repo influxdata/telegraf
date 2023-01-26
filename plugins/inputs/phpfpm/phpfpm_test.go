@@ -79,8 +79,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	defer tcp.Close()
 
 	s := statServer{}
-	//nolint:errcheck,revive
-	go fcgi.Serve(tcp, s)
+	go fcgi.Serve(tcp, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 
 	//Now we tested again above server
 	r := &phpfpm{
@@ -125,8 +124,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 
 	defer tcp.Close()
 	s := statServer{}
-	//nolint:errcheck,revive
-	go fcgi.Serve(tcp, s)
+	go fcgi.Serve(tcp, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 
 	r := &phpfpm{
 		Urls: []string{tcp.Addr().String()},
@@ -178,10 +176,8 @@ func TestPhpFpmGeneratesMetrics_From_Multiple_Sockets_With_Glob(t *testing.T) {
 	defer tcp2.Close()
 
 	s := statServer{}
-	//nolint:errcheck,revive
-	go fcgi.Serve(tcp1, s)
-	//nolint:errcheck,revive
-	go fcgi.Serve(tcp2, s)
+	go fcgi.Serve(tcp1, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
+	go fcgi.Serve(tcp2, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 
 	r := &phpfpm{
 		Urls: []string{"/tmp/test-fpm[\\-0-9]*.sock"},
@@ -234,8 +230,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 
 	defer tcp.Close()
 	s := statServer{}
-	//nolint:errcheck,revive
-	go fcgi.Serve(tcp, s)
+	go fcgi.Serve(tcp, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 
 	r := &phpfpm{
 		Urls: []string{tcp.Addr().String() + ":custom-status-path"},
