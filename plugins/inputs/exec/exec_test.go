@@ -317,7 +317,7 @@ func TestCSVBehavior(t *testing.T) {
 
 	// Setup the plugin
 	plugin := NewExec()
-	plugin.Commands = []string{`echo -e "a,b\n1,2\n3,4"`}
+	plugin.Commands = []string{"echo -e \"a,b\n1,2\n3,4\""}
 	plugin.Log = testutil.Logger{}
 	plugin.SetParser(parser)
 	require.NoError(t, plugin.Init())
@@ -391,7 +391,7 @@ func TestCases(t *testing.T) {
 	cfg := config.NewConfig()
 	require.NoError(t, cfg.LoadConfigData([]byte(`
 	[[inputs.exec]]
-	commands = [ 'echo -e "a,b\n1,2\n3,4"' ]
+	commands = [ "echo \"a,b\n1,2\n3,4\"" ]
 	data_format = "csv"
 	csv_header_row_count = 1
 `)))
