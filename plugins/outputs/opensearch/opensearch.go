@@ -68,7 +68,6 @@ func (*Opensearch) SampleConfig() string {
 }
 
 func (a *Opensearch) Connect() error {
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
@@ -206,7 +205,10 @@ func (a *Opensearch) Write(metrics []telegraf.Metric) error {
 
 	if res.Errors {
 		for id, err := range res.Failed() {
-			a.Log.Errorf("Opensearch indexing failure, id: %d, error: %s, caused by: %s, %s", id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"])
+			a.Log.Errorf(
+				"Opensearch indexing failure, id: %d, error: %s, caused by: %s, %s",
+				id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"],
+			)
 			break
 		}
 		return fmt.Errorf("opensearch failed to index %d metrics", len(res.Failed()))
