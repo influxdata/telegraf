@@ -31,6 +31,7 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("Init AD version hash ring successfully"),
 		),
 	}
 	err := container.Start()
