@@ -317,7 +317,7 @@ func TestCSVBehavior(t *testing.T) {
 
 	// Setup the plugin
 	plugin := NewExec()
-	plugin.Commands = []string{"echo -e \"a,b\n1,2\n3,4\""}
+	plugin.Commands = []string{"echo \"a,b\n1,2\n3,4\""}
 	plugin.Log = testutil.Logger{}
 	plugin.SetParser(parser)
 	require.NoError(t, plugin.Init())
