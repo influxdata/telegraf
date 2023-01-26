@@ -145,15 +145,19 @@ Example:
 Host names or ip addresses of computers to gather all performance counters from.
 The user running Telegraf must be authenticated to the remote computer(s).
 E.g. via Windows sharing `net use \\SQL-SERVER-01`.
-Use either localhost (`"localhost"`) or real local computer name to gather counters
-also from localhost among other computers. Skip, if gather only from localhost.
+Use either localhost (`"localhost"`) or real local computer name to gather
+counters also from localhost among other computers. Skip, if gather only from
+localhost.
 
-If a performance counter is present only on specific hosts set `Sources` param on
-the specific counter level configuration to override global (plugin wide) Sources.
+If a performance counter is present only on specific hosts set `Sources` param
+on the specific counter level configuration to override global (plugin wide)
+sources.
 
-Example:  `Sources = ["localhost", "SQL-SERVER-01", "SQL-SERVER-02", "SQL-SERVER-03"]`
+Example:
+`Sources = ["localhost", "SQL-SERVER-01", "SQL-SERVER-02", "SQL-SERVER-03"]`
 
-Default: `Sources = ["localhost"]`
+Default:
+`Sources = ["localhost"]`
 
 ### Object
 
@@ -216,8 +220,8 @@ is set to `true`.
 
 (Optional)
 
-Overrides the [Sources](#sources) global parameter for current performance object.
-See [Sources](#sources) description for more details.
+Overrides the [Sources](#sources) global parameter for current performance
+object. See [Sources](#sources) description for more details.
 
 #### Measurement
 
@@ -247,7 +251,7 @@ of nanoseconds.
 This key is optional. It is a simple bool.
 If set to `true`, counter values will be provided in the raw, integer, form.
 This is in contrast with the default behavior, where values are returned in a
-formatted, displayable, form as seen in the Windows Performance Monitor.  
+formatted, displayable, form as seen in the Windows Performance Monitor.
 A field representing raw counter value has the `_Raw` suffix.
 Raw values should be further used in a calculation,
 e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
@@ -670,8 +674,10 @@ to check the counter path on the command line.  E.g. `typeperf
 If no metrics are emitted even with the default config, you may need to repair
 your performance counters.
 
-1. Launch the Command Prompt as Administrator (right click Runs As Administrator).
-1. Drop into the C:\WINDOWS\System32 directory by typing `C:` then `cd \Windows\System32`
+1. Launch the Command Prompt as Administrator
+   (right click "Runs As Administrator").
+1. Drop into the C:\WINDOWS\System32 directory by typing `C:` then
+   `cd \Windows\System32`
 1. Rebuild your counter values, which may take a few moments so please be
    patient, by running:
 
@@ -679,10 +685,6 @@ your performance counters.
 lodctr /r
 ```
 
-## Example output
-
-TODO
-
 ## Metrics
 
-TODO
+## Example Output
