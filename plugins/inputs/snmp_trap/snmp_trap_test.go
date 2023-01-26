@@ -1287,7 +1287,7 @@ func TestReceiveTrap(t *testing.T) {
 			require.NoError(t, s.Init())
 
 			//inject test translator
-			s.translator = newTestTranslator(tt.entries)
+			s.transl = newTestTranslator(tt.entries)
 
 			var acc testutil.Accumulator
 			require.NoError(t, s.Start(&acc))
