@@ -15,15 +15,17 @@ func TestUpsdGather(t *testing.T) {
 
 	var (
 		tests = []struct {
-			name   string
-			err    bool
-			tags   map[string]string
-			fields map[string]interface{}
-			out    func() []interaction
+			name       string
+			forceFloat bool
+			err        bool
+			tags       map[string]string
+			fields     map[string]interface{}
+			out        func() []interaction
 		}{
 			{
-				name: "test listening server with output",
-				err:  false,
+				name:       "test listening server with output",
+				forceFloat: false,
+				err:        false,
 				tags: map[string]string{
 					"serial":    "ABC123",
 					"ups_name":  "fake",
@@ -35,9 +37,34 @@ func TestUpsdGather(t *testing.T) {
 					"ups_status":              "OL",
 					"battery_charge_percent":  float64(100),
 					"battery_voltage":         float64(13.4),
-					"input_frequency":         nil,
 					"input_voltage":           float64(242),
-					"internal_temp":           nil,
+					"load_percent":            float64(23),
+					"output_voltage":          float64(230),
+					"time_left_ns":            int64(600000000000),
+					"nominal_input_voltage":   float64(230),
+					"nominal_battery_voltage": float64(24),
+					"nominal_power":           int64(700),
+					"firmware":                "CUSTOM_FIRMWARE",
+					"battery_date":            "2016-07-26",
+				},
+				out: genOutput,
+			},
+			{
+				name:       "test listening server with output & force floats",
+				forceFloat: true,
+				err:        false,
+				tags: map[string]string{
+					"serial":    "ABC123",
+					"ups_name":  "fake",
+					"model":     "Model 12345",
+					"status_OL": "true",
+				},
+				fields: map[string]interface{}{
+					"status_flags":            uint64(8),
+					"ups_status":              "OL",
+					"battery_charge_percent":  float64(100),
+					"battery_voltage":         float64(13.4),
+					"input_voltage":           float64(242),
 					"load_percent":            float64(23),
 					"output_voltage":          float64(230),
 					"time_left_ns":            int64(600000000000),
@@ -63,6 +90,7 @@ func TestUpsdGather(t *testing.T) {
 
 			nut.Server = (lAddr.(*net.TCPAddr)).IP.String()
 			nut.Port = (lAddr.(*net.TCPAddr)).Port
+			nut.ForceFloat = tt.forceFloat
 
 			err = nut.Gather(&acc)
 			if tt.err {
