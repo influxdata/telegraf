@@ -522,7 +522,18 @@ func testData() []osAggregationQueryTest {
 	}
 }
 
-func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
+func newOpensearchQuery(url string) *OpensearchQuery {
+	return &OpensearchQuery{
+		URLs:         []string{url},
+		Timeout:      config.Duration(time.Second * 30),
+		Log:          testutil.Logger{},
+		Username:     config.NewSecret([]byte("admin")),
+		Password:     config.NewSecret([]byte("admin")),
+		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
+	}
+}
+
+func setupIntegrationTest(t *testing.T) (*testutil.Container, *OpensearchQuery, error) {
 	var err error
 
 	type nginxlog struct {
@@ -552,24 +563,17 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 
 	url := fmt.Sprintf("https://%s:%s", container.Address, container.Ports[servicePort])
 
-	o := &OpensearchQuery{
-		URLs:         []string{url},
-		Timeout:      config.Duration(time.Second * 30),
-		Log:          testutil.Logger{},
-		Username:     config.NewSecret([]byte("admin")),
-		Password:     config.NewSecret([]byte("admin")),
-		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
-	}
+	o := newOpensearchQuery(url)
 
 	err = o.newClient()
 	if err != nil {
-		return &container, err
+		return &container, o, err
 	}
 
 	// parse and build query
 	file, err := os.Open("testdata/nginx_logs")
 	if err != nil {
-		return &container, err
+		return &container, o, err
 	}
 	defer func(file *os.File) {
 		_ = file.Close()
@@ -581,7 +585,7 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		Refresh: "true",
 	})
 	if err != nil {
-		return &container, err
+		return &container, o, err
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -604,7 +608,7 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 
 		body, e := json.Marshal(logline)
 		if e != nil {
-			return &container, e
+			return &container, o, e
 		}
 
 		e = indexer.Add(
@@ -615,19 +619,19 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 				Body:   strings.NewReader(string(body)),
 			})
 		if e != nil {
-			return &container, e
+			return &container, o, e
 		}
 	}
 
 	if scanner.Err() != nil {
-		return &container, err
+		return &container, o, err
 	}
 
 	if err = indexer.Close(context.Background()); err != nil {
-		return &container, err
+		return &container, o, err
 	}
 
-	return &container, nil
+	return &container, o, nil
 }
 
 func TestOpensearchQueryIntegration(t *testing.T) {
@@ -635,23 +639,9 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container, err := setupIntegrationTest(t)
+	container, o, err := setupIntegrationTest(t)
 	require.NoError(t, err)
 	defer container.Terminate()
-
-	o := &OpensearchQuery{
-		URLs: []string{
-			fmt.Sprintf("https://%s:%s", container.Address, container.Ports[servicePort]),
-		},
-		Timeout:      config.Duration(time.Second * 30),
-		Log:          testutil.Logger{},
-		Username:     config.NewSecret([]byte("admin")),
-		Password:     config.NewSecret([]byte("admin")),
-		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
-	}
-
-	err = o.newClient()
-	require.NoError(t, err)
 
 	for _, tt := range testData() {
 		t.Run(tt.queryName, func(t *testing.T) {
@@ -688,7 +678,7 @@ func TestIntegrationGetMetricFields(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container, err := setupIntegrationTest(t)
+	container, o, err := setupIntegrationTest(t)
 	require.NoError(t, err)
 	defer container.Terminate()
 
@@ -697,23 +687,9 @@ func TestIntegrationGetMetricFields(t *testing.T) {
 		aggregation osAggregation
 	}
 
-	e := &OpensearchQuery{
-		URLs: []string{
-			fmt.Sprintf("https://%s:%s", container.Address, container.Ports[servicePort]),
-		},
-		Timeout:      config.Duration(time.Second * 30),
-		Log:          testutil.Logger{},
-		Username:     config.NewSecret([]byte("admin")),
-		Password:     config.NewSecret([]byte("admin")),
-		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
-	}
-
-	err = e.newClient()
-	require.NoError(t, err)
-
 	type test struct {
 		name    string
-		e       *OpensearchQuery
+		o       *OpensearchQuery
 		args    args
 		want    map[string]string
 		wantErr bool
@@ -724,7 +700,7 @@ func TestIntegrationGetMetricFields(t *testing.T) {
 	for _, d := range testOpensearchAggregationData {
 		tests = append(tests, test{
 			name:    "getMetricFields " + d.queryName,
-			e:       e,
+			o:       o,
 			args:    args{context.Background(), d.testAggregationQueryInput},
 			want:    d.testAggregationQueryInput.mapMetricFields,
 			wantErr: d.wantGetMetricFieldsErr,
@@ -733,7 +709,7 @@ func TestIntegrationGetMetricFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.e.getMetricFields(tt.args.ctx, tt.args.aggregation)
+			got, err := tt.o.getMetricFields(tt.args.ctx, tt.args.aggregation)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("OpensearchQuery.buildAggregationQuery() error = %v, wantErr %v", err, tt.wantErr)
 				return
