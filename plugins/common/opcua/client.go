@@ -206,7 +206,6 @@ func (o *OpcUAClient) Disconnect(ctx context.Context) error {
 	case "opc.tcp":
 		o.State = Disconnected
 		// We can't do anything about failing to close a connection
-		//nolint:errcheck,revive
 		err := o.Client.CloseWithContext(ctx)
 		o.Client = nil
 		return err

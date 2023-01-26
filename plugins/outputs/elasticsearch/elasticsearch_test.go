@@ -746,7 +746,7 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 		EnableGzip:      false,
 		ManageTemplate:  false,
 		Log:             testutil.Logger{},
-		AuthBearerToken: "0123456789abcdef",
+		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
 	}
 
 	err := e.Connect()

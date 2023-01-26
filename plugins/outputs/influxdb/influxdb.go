@@ -38,8 +38,8 @@ type Client interface {
 type InfluxDB struct {
 	URL                       string            `toml:"url" deprecated:"0.1.9;2.0.0;use 'urls' instead"`
 	URLs                      []string          `toml:"urls"`
-	Username                  string            `toml:"username"`
-	Password                  string            `toml:"password"`
+	Username                  config.Secret     `toml:"username"`
+	Password                  config.Secret     `toml:"password"`
 	Database                  string            `toml:"database"`
 	DatabaseTag               string            `toml:"database_tag"`
 	ExcludeDatabaseTag        bool              `toml:"exclude_database_tag"`

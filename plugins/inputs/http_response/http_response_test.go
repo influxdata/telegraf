@@ -99,8 +99,7 @@ func setUpTestMux() http.Handler {
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/invalidUTF8", func(w http.ResponseWriter, req *http.Request) {
-		//nolint:errcheck,revive
-		w.Write([]byte{0xff, 0xfe, 0xfd})
+		w.Write([]byte{0xff, 0xfe, 0xfd}) //nolint:errcheck,revive // ignore the returned error as the test will fail anyway
 	})
 	mux.HandleFunc("/noheader", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "hit the good page!")
@@ -120,8 +119,7 @@ func setUpTestMux() http.Handler {
 	})
 	mux.HandleFunc("/musthaveabody", func(w http.ResponseWriter, req *http.Request) {
 		body, err := io.ReadAll(req.Body)
-		//nolint:errcheck,revive
-		req.Body.Close()
+		defer req.Body.Close()
 		if err != nil {
 			http.Error(w, "couldn't read request body", http.StatusBadRequest)
 			return

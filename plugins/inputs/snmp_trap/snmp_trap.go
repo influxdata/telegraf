@@ -53,7 +53,7 @@ type SnmpTrap struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	translator translator //nolint:revive
+	transl translator
 }
 
 func (*SnmpTrap) SampleConfig() string {
@@ -84,12 +84,12 @@ func (s *SnmpTrap) Init() error {
 	var err error
 	switch s.Translator {
 	case "gosmi":
-		s.translator, err = newGosmiTranslator(s.Path, s.Log)
+		s.transl, err = newGosmiTranslator(s.Path, s.Log)
 		if err != nil {
 			return err
 		}
 	case "netsnmp":
-		s.translator = newNetsnmpTranslator(s.Timeout)
+		s.transl = newNetsnmpTranslator(s.Timeout)
 	default:
 		return fmt.Errorf("invalid translator value")
 	}
@@ -268,7 +268,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 			}
 
 			if trapOid != "" {
-				e, err := s.translator.lookup(trapOid)
+				e, err := s.transl.lookup(trapOid)
 				if err != nil {
 					s.Log.Errorf("Error resolving V1 OID, oid=%s, source=%s: %v", trapOid, tags["source"], err)
 					return
@@ -306,7 +306,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 
 				var e snmp.MibEntry
 				var err error
-				e, err = s.translator.lookup(val)
+				e, err = s.transl.lookup(val)
 				if nil != err {
 					s.Log.Errorf("Error resolving value OID, oid=%s, source=%s: %v", val, tags["source"], err)
 					return
@@ -324,7 +324,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 				value = v.Value
 			}
 
-			e, err := s.translator.lookup(v.Name)
+			e, err := s.transl.lookup(v.Name)
 			if nil != err {
 				s.Log.Errorf("Error resolving OID oid=%s, source=%s: %v", v.Name, tags["source"], err)
 				return

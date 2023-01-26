@@ -17,6 +17,7 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
@@ -43,8 +44,8 @@ const (
 type HTTP struct {
 	URL                     string            `toml:"url"`
 	Method                  string            `toml:"method"`
-	Username                string            `toml:"username"`
-	Password                string            `toml:"password"`
+	Username                config.Secret     `toml:"username"`
+	Password                config.Secret     `toml:"password"`
 	Headers                 map[string]string `toml:"headers"`
 	ContentEncoding         string            `toml:"content_encoding"`
 	UseBatchFormat          bool              `toml:"use_batch_format"`
@@ -180,8 +181,19 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		}
 	}
 
-	if h.Username != "" || h.Password != "" {
-		req.SetBasicAuth(h.Username, h.Password)
+	if !h.Username.Empty() || !h.Password.Empty() {
+		username, err := h.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		defer config.ReleaseSecret(username)
+		password, err := h.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(password)
+
+		req.SetBasicAuth(string(username), string(password))
 	}
 
 	// google api auth

@@ -229,9 +229,7 @@ type bufWriter struct {
 
 func (w *bufWriter) Close() error {
 	if err := w.Writer.Flush(); err != nil {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		w.closer.Close()
+		w.closer.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
 		return err
 	}
 	return w.closer.Close()

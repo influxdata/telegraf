@@ -225,9 +225,7 @@ func TestMain(m *testing.M) {
 	grpcServer := grpc.NewServer(opts...)
 	telemetry.RegisterOpenConfigTelemetryServer(grpcServer, newServer())
 	go func() {
-		// Ignore the returned error as the tests will fail anyway
-		//nolint:errcheck,revive
-		grpcServer.Serve(lis)
+		grpcServer.Serve(lis) //nolint:errcheck // ignore the returned error as the tests will fail anyway
 	}()
 	defer grpcServer.Stop()
 	os.Exit(m.Run())

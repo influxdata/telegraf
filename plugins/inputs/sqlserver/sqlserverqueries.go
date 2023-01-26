@@ -1139,7 +1139,13 @@ WHERE
 	)
 OPTION(MAXDOP 1)'
 
-EXEC sp_executesql @SqlStatement
+BEGIN TRY
+	EXEC sp_executesql @SqlStatement
+END TRY
+BEGIN CATCH
+   IF (ERROR_NUMBER() <> 976) --Avoid possible errors from secondary replica
+        THROW; 
+END CATCH
 `
 
 const sqlServerVolumeSpace string = `

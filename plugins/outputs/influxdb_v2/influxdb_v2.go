@@ -35,7 +35,7 @@ type Client interface {
 
 type InfluxDB struct {
 	URLs             []string          `toml:"urls"`
-	Token            string            `toml:"token"`
+	Token            config.Secret     `toml:"token"`
 	Organization     string            `toml:"organization"`
 	Bucket           string            `toml:"bucket"`
 	BucketTag        string            `toml:"bucket_tag"`

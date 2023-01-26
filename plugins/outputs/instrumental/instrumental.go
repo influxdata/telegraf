@@ -28,7 +28,7 @@ var (
 
 type Instrumental struct {
 	Host       string          `toml:"host"`
-	APIToken   string          `toml:"api_token"`
+	APIToken   config.Secret   `toml:"api_token"`
 	Prefix     string          `toml:"prefix"`
 	DataFormat string          `toml:"data_format"`
 	Template   string          `toml:"template"`
@@ -164,8 +164,13 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {
-	_, err := fmt.Fprintf(conn, HandshakeFormat, i.APIToken)
+	token, err := i.APIToken.Get()
 	if err != nil {
+		return fmt.Errorf("getting token failed: %w", err)
+	}
+	defer config.ReleaseSecret(token)
+
+	if _, err := fmt.Fprintf(conn, HandshakeFormat, string(token)); err != nil {
 		return err
 	}
 
