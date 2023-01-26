@@ -52,7 +52,7 @@ type GNMI struct {
 	Subscriptions    []Subscription    `toml:"subscription"`
 	TagSubscriptions []TagSubscription `toml:"tag_subscription"`
 	Aliases          map[string]string `toml:"aliases"`
-	MaxMsgSize       int               `toml:"max_msg_size"`
+	MaxMsgSize       config.Size       `toml:"max_msg_size"`
 
 	// Optional subscription configuration
 	Encoding    string
@@ -305,7 +305,7 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, worker *Worker, tlscfg *tls.Co
 
 	if c.MaxMsgSize > 0 {
 		opts = append(opts, grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(c.MaxMsgSize),
+			grpc.MaxCallRecvMsgSize(int(c.MaxMsgSize)),
 		))
 	}
 
