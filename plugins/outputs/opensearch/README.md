@@ -223,14 +223,20 @@ This plugin will format the events in the following way:
 
   ## Index Config
   ## The target index for metrics (Opensearch will create if it not exists).
-  ## You can use the date specifiers to create indexes per time frame using the notation {{.Time.Format "2006-01-02"}}.
+  ## You can use the date specifiers below to create indexes per time frame.
   ## The metric timestamp will be used to decide the destination index name
-  ## You can also specify a tag name using the notation {{.Tag tag_name}}
+  # %Y - year (2016)
+  # %y - last two digits of year (00..99)
+  # %m - month (01..12)
+  # %d - day of month (e.g., 01)
+  # %H - hour (00..23)
+  # %V - week of the year (ISO week) (01..53)
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
   ## which will be used as part of the index name. If the tag does not exist,
   ## the default tag value will be used.
-  # index_name = 'telegraf-{{.Tag "tag1"}}-{{.Tag "tag2"}}-{{.Time.Format "2006-01-02"}}'
+  # index_name = "telegraf-{{host}}-%Y.%m.%d"
   # default_tag_value = "none"
-  index_name = "telegraf-{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}" # required.
+  index_name = "telegraf-%Y.%m.%d" # required.
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
