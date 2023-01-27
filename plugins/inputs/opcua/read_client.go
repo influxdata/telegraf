@@ -51,7 +51,7 @@ func (rc *ReadClientConfig) CreateReadClient(log telegraf.Logger) (*ReadClient, 
 	}, nil
 }
 
-func (o *ReadClient) connect() error {
+func (o *ReadClient) Connect() error {
 	err := o.OpcUAClient.Connect()
 	if err != nil {
 		return err
@@ -89,16 +89,24 @@ func (o *ReadClient) connect() error {
 	return nil
 }
 
-func (o *ReadClient) CurrentValues() ([]telegraf.Metric, error) {
+func (o *ReadClient) ensureConnected() error {
 	if o.State == opcua.Disconnected {
-		// Connecting here includes the intial connection attempt at telegraf startup
-		err := o.connect()
+		err := o.Connect()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	err := o.read()
+	return nil
+}
+
+func (o *ReadClient) CurrentValues() ([]telegraf.Metric, error) {
+	err := o.ensureConnected()
+	if err != nil {
+		return nil, err
+	}
+
+	err = o.read()
 	if err != nil && o.State == opcua.Connected {
 		// We do not return the disconnect error, as this would mask the
 		// original problem, but we do log it
