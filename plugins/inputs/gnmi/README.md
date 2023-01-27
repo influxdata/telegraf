@@ -36,7 +36,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # encoding = "proto"
 
   ## redial in case of failures after
-  redial = "10s"
+  # redial = "10s"
+
+  ## gRPC Maximum Message Size
+  # max_msg_size = "4MB"
 
   ## enable client-side TLS and define CA to authenticate the device
   # enable_tls = false

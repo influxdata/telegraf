@@ -52,6 +52,7 @@ type GNMI struct {
 	Subscriptions    []Subscription    `toml:"subscription"`
 	TagSubscriptions []TagSubscription `toml:"tag_subscription"`
 	Aliases          map[string]string `toml:"aliases"`
+	MaxMsgSize       config.Size       `toml:"max_msg_size"`
 
 	// Optional subscription configuration
 	Encoding    string
@@ -298,9 +299,17 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, worker *Worker, tlscfg *tls.Co
 	} else {
 		creds = insecure.NewCredentials()
 	}
-	opt := grpc.WithTransportCredentials(creds)
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+	}
 
-	client, err := grpc.DialContext(ctx, worker.address, opt)
+	if c.MaxMsgSize > 0 {
+		opts = append(opts, grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(int(c.MaxMsgSize)),
+		))
+	}
+
+	client, err := grpc.DialContext(ctx, worker.address, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %v", err)
 	}
