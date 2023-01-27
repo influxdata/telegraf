@@ -163,6 +163,7 @@ func (p *Prometheus) Init() error {
 	}
 
 	ctx := context.Background()
+	p.HTTPClientConfig.Timeout = p.ResponseTimeout
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
 	if err != nil {
 		return err
