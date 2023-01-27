@@ -84,7 +84,6 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 
 	floatValues := map[string]string{
 		"battery_charge_percent":  "battery.charge",
-		"battery_runtime":         "battery.runtime",
 		"battery_runtime_low":     "battery.runtime.low",
 		"battery_voltage":         "battery.voltage",
 		"input_frequency":         "input.frequency",
