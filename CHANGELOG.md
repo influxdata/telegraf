@@ -1,6 +1,51 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.25.1 [2023-01-30]
+
+### Bugfixes
+
+- [#12549](https://github.com/influxdata/telegraf/pull/12549) `agent` Catch non-existing commands and error out
+- [#12453](https://github.com/influxdata/telegraf/pull/12453) `agent` Correctly reload configuration files
+- [#12491](https://github.com/influxdata/telegraf/pull/12491) `agent` Handle float time with fractions of seconds correctly
+- [#12457](https://github.com/influxdata/telegraf/pull/12457) `agent` Only set default snmp after reading all configs
+- [#12515](https://github.com/influxdata/telegraf/pull/12515) `common.cookie` Allow any 2xx status code
+- [#12459](https://github.com/influxdata/telegraf/pull/12459) `common.kafka` Add keep-alive period setting for input and output
+- [#12240](https://github.com/influxdata/telegraf/pull/12240) `inputs.cisco_telemetry_mdt` Add operation-metric and class-policy prefix
+- [#12533](https://github.com/influxdata/telegraf/pull/12533) `inputs.exec` Restore pre-v1.21 behavior for CSV data_format
+- [#12415](https://github.com/influxdata/telegraf/pull/12415) `inputs.gnmi` Update configuration documentation
+- [#12536](https://github.com/influxdata/telegraf/pull/12536) `inputs.logstash` Collect opensearch specific stats
+- [#12409](https://github.com/influxdata/telegraf/pull/12409) `inputs.mysql` Revert slice declarations with non-zero initial length
+- [#12529](https://github.com/influxdata/telegraf/pull/12529) `inputs.opcua` Fix opcua and opcua-listener for servers using password-based auth
+- [#12522](https://github.com/influxdata/telegraf/pull/12522) `inputs.prometheus` Correctly track deleted pods
+- [#12559](https://github.com/influxdata/telegraf/pull/12559) `inputs.prometheus` Set the timeout for slow running API endpoints correctly
+- [#12384](https://github.com/influxdata/telegraf/pull/12384) `inputs.sqlserver` Add more precise version check
+- [#12387](https://github.com/influxdata/telegraf/pull/12387) `inputs.sqlserver` Added own SPID filter
+- [#12386](https://github.com/influxdata/telegraf/pull/12386) `inputs.sqlserver` SqlRequests include sleeping sessions with open transactions
+- [#12528](https://github.com/influxdata/telegraf/pull/12528) `inputs.sqlserver` Suppress error on secondary replicas
+- [#12516](https://github.com/influxdata/telegraf/pull/12516) `inputs.upsd` Always convert to float
+- [#12486](https://github.com/influxdata/telegraf/pull/12486) `inputs.upsd` Ensure firmware is always a string
+- [#12375](https://github.com/influxdata/telegraf/pull/12375) `inputs.win_eventlog` Handle remote events more robustly
+- [#12404](https://github.com/influxdata/telegraf/pull/12404) `inputs.x509_cert` Fix off-by-one when adding intermediate certificates
+- [#12399](https://github.com/influxdata/telegraf/pull/12399) `outputs.loki` Return response body on error
+- [#12440](https://github.com/influxdata/telegraf/pull/12440) `parsers.json_v2` In case of invalid json, log message to debug log
+- [#12401](https://github.com/influxdata/telegraf/pull/12401) `secretstores` Cleanup duplicate printing
+- [#12468](https://github.com/influxdata/telegraf/pull/12468) `secretstores` Fix handling of "id" and print failing secret-store
+- [#12490](https://github.com/influxdata/telegraf/pull/12490) `secretstores` Fix handling of TOML strings
+
+### Dependency Updates
+
+- [#12385](https://github.com/influxdata/telegraf/pull/12385) `deps` Bump cloud.google.com/go/storage from 1.23.0 to 1.28.1
+- [#12511](https://github.com/influxdata/telegraf/pull/12511) `deps` Bump github.com/antchfx/jsonquery from 1.3.0 to 1.3.1
+- [#12420](https://github.com/influxdata/telegraf/pull/12420) `deps` Bump github.com/aws/aws-sdk-go-v2 from 1.17.1 to 1.17.3
+- [#12538](https://github.com/influxdata/telegraf/pull/12538) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2 from 1.54.4 to 1.80.1
+- [#12476](https://github.com/influxdata/telegraf/pull/12476) `deps` Bump github.com/denisenkom/go-mssqldb from 0.12.0 to 0.12.3
+- [#12378](https://github.com/influxdata/telegraf/pull/12378) `deps` Bump github.com/eclipse/paho.mqtt.golang from 1.4.1 to 1.4.2
+- [#12381](https://github.com/influxdata/telegraf/pull/12381) `deps` Bump github.com/hashicorp/consul/api from 1.15.2 to 1.18.0
+- [#12417](https://github.com/influxdata/telegraf/pull/12417) `deps` Bump github.com/karrick/godirwalk from 1.16.1 to 1.17.0
+- [#12418](https://github.com/influxdata/telegraf/pull/12418) `deps` Bump github.com/kardianos/service from 1.2.1 to 1.2.2
+- [#12379](https://github.com/influxdata/telegraf/pull/12379) `deps` Bump github.com/nats-io/nats-server/v2 from 2.9.4 to 2.9.9
+
 ## v1.25.0 [2022-12-12]
 
 ### New Plugins
