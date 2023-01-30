@@ -101,12 +101,8 @@ type OpcUAClient struct {
 	codes []ua.StatusCode
 }
 
-func (o *OpcUAClient) Init() error {
-	return o.setupOptions()
-}
-
 // / setupOptions read the endpoints from the specified server and setup all authentication
-func (o *OpcUAClient) setupOptions() error {
+func (o *OpcUAClient) SetupOptions() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Config.ConnectTimeout))
 	defer cancel()
 	// Get a list of the endpoints for our target server
@@ -168,6 +164,11 @@ func (o *OpcUAClient) Connect() error {
 	switch u.Scheme {
 	case "opc.tcp":
 		o.State = Connecting
+
+		err = o.SetupOptions()
+		if err != nil {
+			return err
+		}
 
 		if o.Client != nil {
 			o.Log.Warnf("Closing connection due to Connect called while already instantiated", u)
