@@ -21,17 +21,18 @@ import (
 var sampleConfig string
 
 type WinPerfCounters struct {
-	PrintValid                 bool `toml:"PrintValid"`
-	PreVistaSupport            bool `toml:"PreVistaSupport" deprecated:"1.7.0;determined dynamically"`
-	UsePerfCounterTime         bool
-	Object                     []perfobject
-	CountersRefreshInterval    config.Duration
-	UseWildcardsExpansion      bool
-	LocalizeWildcardsExpansion bool
-	IgnoredErrors              []string `toml:"IgnoredErrors"`
-	Sources                    []string
+	PrintValid                 bool            `toml:"PrintValid"`
+	PreVistaSupport            bool            `toml:"PreVistaSupport" deprecated:"1.7.0;determined dynamically"`
+	UsePerfCounterTime         bool            `toml:"UsePerfCounterTime"`
+	UseWildcardsExpansion      bool            `toml:"UseWildcardsExpansion"`
+	LocalizeWildcardsExpansion bool            `toml:"LocalizeWildcardsExpansion"`
+	TimestampTimezone          string          `toml:"TimestampTimezone"`
+	IgnoredErrors              []string        `toml:"IgnoredErrors"`
+	Sources                    []string        `toml:"Sources"`
+	CountersRefreshInterval    config.Duration `toml:"CountersRefreshInterval"`
 
-	Log telegraf.Logger
+	Object []perfobject
+	Log    telegraf.Logger
 
 	lastRefreshed time.Time
 	queryCreator  PerformanceQueryCreator
@@ -429,6 +430,10 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 				return err
 			}
 		}
+		// by default timestamps are in local time
+		if m.TimestampTimezone == "utc" {
+			hostCounterSet.timestamp = hostCounterSet.timestamp.UTC()
+		}
 	}
 	var wg sync.WaitGroup
 	//iterate over computers
@@ -593,6 +598,13 @@ func (m *WinPerfCounters) Init() error {
 			return fmt.Errorf("wildcards can't be used with LocalizeWildcardsExpansion=false")
 		}
 	}
+
+	switch m.TimestampTimezone {
+	case "local", "utc":
+	default:
+		return fmt.Errorf("invlaid timestamp timezone, choose from: 'local' or 'utc")
+	}
+
 	return nil
 }
 
@@ -601,6 +613,7 @@ func init() {
 		return &WinPerfCounters{
 			CountersRefreshInterval:    config.Duration(time.Second * 60),
 			LocalizeWildcardsExpansion: true,
+			TimestampTimezone:          "local",
 			queryCreator:               &PerformanceQueryCreatorImpl{},
 		}
 	})
