@@ -16,8 +16,6 @@ import (
 // To do so, please write one 'TestXYZ' function per 'case' e.g. default init,
 // things that should fail or expected values from a mockup.
 
-var defaultUserName = config.NewSecret([]byte("test"))
-
 func TestInitDefault(t *testing.T) {
 	// This test should succeed with the default initialization.
 
@@ -25,7 +23,6 @@ func TestInitDefault(t *testing.T) {
 	// ATTENTION: Always initialze the "Log" as you will get SIGSEGV otherwise.
 	plugin := &Example{
 		DeviceName: "test",
-		UserName:   defaultUserName,
 		Timeout:    config.Duration(100 * time.Millisecond),
 		Log:        testutil.Logger{},
 	}
@@ -85,7 +82,6 @@ func TestFixedValue(t *testing.T) {
 			name: "count only",
 			plugin: &Example{
 				DeviceName:   "test",
-				UserName:     defaultUserName,
 				NumberFields: 1,
 			},
 			expected: []telegraf.Metric{
@@ -125,7 +121,6 @@ func TestFixedValue(t *testing.T) {
 			name: "default settings",
 			plugin: &Example{
 				DeviceName: "test",
-				UserName:   defaultUserName,
 			},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
@@ -167,7 +162,6 @@ func TestFixedValue(t *testing.T) {
 			name: "more fields",
 			plugin: &Example{
 				DeviceName:   "test",
-				UserName:     defaultUserName,
 				NumberFields: 4,
 			},
 			expected: []telegraf.Metric{
@@ -252,7 +246,6 @@ func TestRandomValue(t *testing.T) {
 			name: "count only",
 			plugin: &Example{
 				DeviceName:           "test",
-				UserName:             defaultUserName,
 				NumberFields:         1,
 				EnableRandomVariable: true,
 			},
@@ -271,7 +264,6 @@ func TestRandomValue(t *testing.T) {
 			name: "default settings",
 			plugin: &Example{
 				DeviceName:           "test",
-				UserName:             defaultUserName,
 				EnableRandomVariable: true,
 			},
 			template: testutil.MustMetric(
@@ -290,7 +282,6 @@ func TestRandomValue(t *testing.T) {
 			name: "more fields",
 			plugin: &Example{
 				DeviceName:           "test",
-				UserName:             defaultUserName,
 				NumberFields:         4,
 				EnableRandomVariable: true,
 			},
@@ -359,7 +350,6 @@ func TestGatherFail(t *testing.T) {
 			name: "too many fields",
 			plugin: &Example{
 				DeviceName:   "test",
-				UserName:     defaultUserName,
 				NumberFields: 11,
 			},
 			expected: "too many fields",
@@ -395,7 +385,6 @@ func TestRandomValueFailPartial(t *testing.T) {
 			name: "flappy gather",
 			plugin: &Example{
 				DeviceName:           "flappy",
-				UserName:             defaultUserName,
 				NumberFields:         1,
 				EnableRandomVariable: true,
 			},

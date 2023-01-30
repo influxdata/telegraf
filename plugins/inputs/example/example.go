@@ -62,7 +62,7 @@ func (m *Example) Init() error {
 
 	// Check using the secret-store
 	if m.UserName.Empty() {
-		return fmt.Errorf("username cannot be empty")
+		// For example, use a default value
 	}
 
 	// Retrieve credentials using the secret-store
