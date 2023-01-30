@@ -63,6 +63,7 @@ func (m *Example) Init() error {
 	// Check using the secret-store
 	if m.UserName.Empty() {
 		// For example, use a default value
+		m.Log.Debug("using default username")
 	}
 
 	// Retrieve credentials using the secret-store
