@@ -169,6 +169,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default
 
+  ## VSAN
+  vsan_metric_include = [] ## if omitted or empty, all metrics are collected
+  vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
+  ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
+  vsan_metric_skip_verify = false ## false by default.
+
   ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
@@ -188,7 +194,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
 
-  ## timeout applies to any of the API requests made to vCenter
+  ## timeout applies to any of the api request made to vcenter
   # timeout = "60s"
 
   ## When set to true, all samples are sent as integers. This makes the output
@@ -200,7 +206,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # use_int_samples = true
 
   ## Custom attributes from vCenter can be very useful for queries in order to slice the
-  ## metrics along different dimensions and for forming ad-hoc relationships. They are disabled
+  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
   ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include.
