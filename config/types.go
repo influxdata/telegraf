@@ -1,11 +1,17 @@
 package config
 
 import (
+	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/units"
 )
+
+// Regexp for day specifications in durations
+var durationDayRe = regexp.MustCompile(`(\d+(?:\.\d+)?)d`)
 
 // Duration is a time.Duration
 type Duration time.Duration
@@ -36,13 +42,18 @@ func (d *Duration) UnmarshalText(b []byte) error {
 
 	// Finally, try value is a TOML string (e.g. "3s", 3s) or literal (e.g. '3s')
 	if durStr == "" {
-		durStr = "0s"
+		*d = Duration(0)
+		return nil
 	}
-	// special case: logging interval had a default of 0d, which silently
-	// failed, but in order to prevent issues with default configs that had
-	// uncommented the option, change it from zero days to zero hours.
-	if durStr == "0d" {
-		durStr = "0h"
+
+	// Handle "day" intervals and replace them with the "hours" equivalent
+	for _, m := range durationDayRe.FindAllStringSubmatch(durStr, -1) {
+		days, err := strconv.ParseFloat(m[1], 64)
+		if err != nil {
+			return fmt.Errorf("converting %q to hours failed: %w", durStr, err)
+		}
+		hours := strconv.FormatFloat(days*24, 'f', -1, 64) + "h"
+		durStr = strings.Replace(durStr, m[0], hours, 1)
 	}
 
 	dur, err := time.ParseDuration(durStr)
