@@ -451,7 +451,7 @@ func TestVsanCmmds(t *testing.T) {
 	require.NoError(t, err)
 
 	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
-	cmds, err := getCmmdsMap(ctx, c.Client.Client, clusterObj)
+	_, err = getCmmdsMap(ctx, c.Client.Client, clusterObj)
 	require.NoError(t, err)
 }
 
