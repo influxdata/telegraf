@@ -145,7 +145,7 @@ require (
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 	github.com/sensu/sensu-go/api/core/v2 v2.15.0
-	github.com/shirou/gopsutil/v3 v3.22.9
+	github.com/shirou/gopsutil/v3 v3.22.12
 	github.com/showwin/speedtest-go v1.2.1
 	github.com/signalfx/golib/v3 v3.3.46
 	github.com/sirupsen/logrus v1.9.0
@@ -385,8 +385,8 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/tklauser/go-sysconf v0.3.10 // indirect
-	github.com/tklauser/numcpus v0.5.0 // indirect
+	github.com/tklauser/go-sysconf v0.3.11 // indirect
+	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	github.com/vishvananda/netlink v1.2.1-beta.2 // indirect
