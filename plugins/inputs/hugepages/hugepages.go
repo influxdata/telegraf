@@ -151,7 +151,12 @@ func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, fileFilter map[string]string, defaultTags map[string]string) error {
+func (h *Hugepages) gatherFromHugepagePath(
+	acc telegraf.Accumulator,
+	measurement, path string,
+	fileFilter map[string]string,
+	defaultTags map[string]string,
+) error {
 	// read metrics from: hugepages/hugepages-*/*
 	hugepagesDirs, err := os.ReadDir(path)
 	if err != nil {

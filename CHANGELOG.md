@@ -1,6 +1,94 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.24.4 [2022-11-29]
+
+### Bugfixes
+
+- [#12177](https://github.com/influxdata/telegraf/pull/12177) `inputs.cloudwatch` Correctly handle multiple namespaces
+- [#12294](https://github.com/influxdata/telegraf/pull/12294) `inputs.directory_monitor` Close input file before removal
+- [#12140](https://github.com/influxdata/telegraf/pull/12140) `inputs.gnmi` Handle decimal_val as per gnmi v0.8.0
+- [#12275](https://github.com/influxdata/telegraf/pull/12275) `inputs.gnmi` Do not provide empty prefix for subscription request
+- [#12258](https://github.com/influxdata/telegraf/pull/12258) `inputs.gnmi` Fix empty name for Sonic devices
+- [#12171](https://github.com/influxdata/telegraf/pull/12171) `inputs.ping` Avoid -x/-X on FreeBSD 13 and newer with ping6
+- [#12282](https://github.com/influxdata/telegraf/pull/12282) `inputs.prometheus` Correctly default to port 9102
+- [#12229](https://github.com/influxdata/telegraf/pull/12229) `input.redis_sentinel` Fix sentinel and replica stats gathering
+- [#12280](https://github.com/influxdata/telegraf/pull/12280) `inputs.socket_listener` Ensure closed connection
+- [#12201](https://github.com/influxdata/telegraf/pull/12201) `output.datadog` Log response in case of non 2XX response from API
+- [#12160](https://github.com/influxdata/telegraf/pull/12160) `outputs.prometheus` Expire metrics correctly during adds
+- [#12156](https://github.com/influxdata/telegraf/pull/12156) `outputs.yandex_cloud_monitoring` Catch int64 values
+
+### Dependency Updates
+
+- [#12132](https://github.com/influxdata/telegraf/pull/12132) `deps` Bump github.com/aliyun/alibaba-cloud-sdk-go from 1.61.1818 to 1.61.1836
+- [#12197](https://github.com/influxdata/telegraf/pull/12197) `deps` Bump github.com/prometheus/client_golang from 1.13.0 to 1.13.1
+- [#12196](https://github.com/influxdata/telegraf/pull/12196) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.13.12 to 1.14.5
+- [#12198](https://github.com/influxdata/telegraf/pull/12198) `deps` Bump github.com/aws/aws-sdk-go-v2/feature/ec2/imds from 1.12.17 to 1.12.19
+- [#12236](https://github.com/influxdata/telegraf/pull/12236) `deps` Bump github.com/gofrs/uuid from v4.3.0 to v4.3.1
+- [#12237](https://github.com/influxdata/telegraf/pull/12237) `deps` Bump github.com/aws/aws-sdk-go-v2/service/sts from 1.16.19 to 1.17.2
+- [#12238](https://github.com/influxdata/telegraf/pull/12238) `deps` Bump github.com/urfave/cli/v2 from 2.16.3 to 2.23.5
+- [#12239](https://github.com/influxdata/telegraf/pull/12239) `deps` Bump github.com/Azure/azure-event-hubs-go/v3 from 3.3.18 to 3.3.20
+- [#12248](https://github.com/influxdata/telegraf/pull/12248) `deps` Bump github.com/showwin/speedtest-go from 1.1.5 to 1.2.1
+- [#12269](https://github.com/influxdata/telegraf/pull/12269) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.12.21 to 1.13.2
+- [#12268](https://github.com/influxdata/telegraf/pull/12268) `deps` Bump github.com/yuin/goldmark from 1.5.2 to 1.5.3
+- [#12267](https://github.com/influxdata/telegraf/pull/12267) `deps` Bump cloud.google.com/go/pubsub from 1.25.1 to 1.26.0
+- [#12266](https://github.com/influxdata/telegraf/pull/12266) `deps` Bump go.mongodb.org/mongo-driver from 1.10.2 to 1.11.0
+
+## v1.24.3 [2022-11-02]
+
+### Bugfixes
+
+- [#12063](https://github.com/influxdata/telegraf/pull/12063) Restore warning on unused config option(s)
+- [#11941](https://github.com/influxdata/telegraf/pull/11941) Setting `enable_tls` has incorrect default value
+- [#12093](https://github.com/influxdata/telegraf/pull/12093) Update systemd unit description
+- [#12077](https://github.com/influxdata/telegraf/pull/12077) `agent` Fix panic due to tickers slice was off-by-one in size
+- [#12076](https://github.com/influxdata/telegraf/pull/12076) `config` Set default parser
+- [#12124](https://github.com/influxdata/telegraf/pull/12124) `inputs.directory_monitor` Allow cross filesystem directories
+- [#12064](https://github.com/influxdata/telegraf/pull/12064) `inputs.kafka` Switch to sarama's new consumer group rebalance strategy setting
+- [#12038](https://github.com/influxdata/telegraf/pull/12038) `inputs.modbus` Add slave id to failing connection
+- [#12109](https://github.com/influxdata/telegraf/pull/12109) `inputs.modbus` Handle field-measurement definitions correctly on duplicate field check
+- [#11912](https://github.com/influxdata/telegraf/pull/11912) `inputs.modbus` Improve duplicate field checks
+- [#11993](https://github.com/influxdata/telegraf/pull/11993) `inputs.opcua` Add metric tags to node
+- [#11997](https://github.com/influxdata/telegraf/pull/11997) `inputs.syslog` Print error when no error or message given
+- [#12023](https://github.com/influxdata/telegraf/pull/12023) `inputs.zookeeper` Add the ability to parse floats as floats
+- [#11926](https://github.com/influxdata/telegraf/pull/11926) `parsers.json_v2` Remove BOM before parsing
+- [#12116](https://github.com/influxdata/telegraf/pull/12116) `processors.parser` Keep name of original metric if parser doesn't return one
+- [#12081](https://github.com/influxdata/telegraf/pull/12081) `processors` Correctly setup processors
+- [#12016](https://github.com/influxdata/telegraf/pull/12016) `regression` Fixes problem with metrics not exposed by plugins.
+- [#12024](https://github.com/influxdata/telegraf/pull/12024) `serializers.splunkmetric` Provide option to remove event metric tag
+
+### Features
+
+- [#12075](https://github.com/influxdata/telegraf/pull/12075) `tools` Allow to markdown includes for sections
+
+### Dependency Updates
+
+- [#11886](https://github.com/influxdata/telegraf/pull/11886) `deps` Bump github.com/snowflakedb/gosnowflake from 1.6.2 to 1.6.13
+- [#11928](https://github.com/influxdata/telegraf/pull/11928) `deps` Bump github.com/sensu/sensu-go/api/core/v2 from 2.14.0 to 2.15.0
+- [#11935](https://github.com/influxdata/telegraf/pull/11935) `deps` Bump github.com/gofrs/uuid from 4.2.0& to 4.3.0
+- [#11894](https://github.com/influxdata/telegraf/pull/11894) `deps` Bump github.com/hashicorp/consul/api from 1.14.0 to 1.15.2
+- [#11936](https://github.com/influxdata/telegraf/pull/11936) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.12.5 to 1.12.21
+- [#11972](https://github.com/influxdata/telegraf/pull/11972) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch
+- [#11979](https://github.com/influxdata/telegraf/pull/11979) `deps` Bump github.com/aws/aws-sdk-go-v2/config
+- [#11938](https://github.com/influxdata/telegraf/pull/11938) `deps` Bump k8s.io/apimachinery from 0.25.1 to 0.25.2
+- [#12001](https://github.com/influxdata/telegraf/pull/12001) `deps` Bump k8s.io/api from 0.25.0 to 0.25.2
+- [#12029](https://github.com/influxdata/telegraf/pull/12029) `deps` Bump k8s.io/api from 0.25.2 to 0.25.3
+- [#12030](https://github.com/influxdata/telegraf/pull/12030) `deps` Bump modernc.org/sqlite from 1.17.3 to 1.19.2
+- [#12034](https://github.com/influxdata/telegraf/pull/12034) `deps` Bump github.com/signalfx/golib/v3 from 3.3.45 to 3.3.46
+- [#12035](https://github.com/influxdata/telegraf/pull/12035) `deps` Bump github.com/yuin/goldmark from 1.4.13 to 1.5.2
+- [#11937](https://github.com/influxdata/telegraf/pull/11937) `deps` Bump cloud.google.com/go/bigquery from 1.40.0 to 1.42.0
+- [#12037](https://github.com/influxdata/telegraf/pull/12037) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis
+- [#12036](https://github.com/influxdata/telegraf/pull/12036) `deps` Bump github.com/aliyun/alibaba-cloud-sdk-go
+- [#11980](https://github.com/influxdata/telegraf/pull/11980) `deps` Bump github.com/Shopify/sarama from 1.36.0 to 1.37.2
+- [#12039](https://github.com/influxdata/telegraf/pull/12039) `deps` Bump testcontainers-go from 0.13.0 to 0.14.0 and address breaking change
+- [#12090](https://github.com/influxdata/telegraf/pull/12090) `deps` Bump modernc.org/libc from v1.20.3 to v1.21.2
+- [#12098](https://github.com/influxdata/telegraf/pull/12098) `deps` Bump github.com/aws/aws-sdk-go-v2/service/dynamodb
+- [#12096](https://github.com/influxdata/telegraf/pull/12096) `deps` Bump google.golang.org/api from 0.95.0 to 0.100.0
+- [#12095](https://github.com/influxdata/telegraf/pull/12095) `deps` Bump github.com/gopcua/opcua from 0.3.3 to 0.3.7
+- [#12097](https://github.com/influxdata/telegraf/pull/12097) `deps` Bump github.com/prometheus/client_model from 0.2.0 to 0.3.0
+- [#12135](https://github.com/influxdata/telegraf/pull/12135) `deps` Bump cloud.google.com/go/monitoring from 1.5.0 to 1.7.0
+- [#12134](https://github.com/influxdata/telegraf/pull/12134) `deps` Bump github.com/nats-io/nats-server/v2 from 2.8.4 to 2.9.4
+
 ## v1.24.2 [2022-10-03]
 
 ### Bugfixes
@@ -88,7 +176,7 @@
 - [#11300](https://github.com/influxdata/telegraf/pull/11300) Add default appType as config option to groundwork output
 - [#11398](https://github.com/influxdata/telegraf/pull/11398) Add license checking tool
 - [#11399](https://github.com/influxdata/telegraf/pull/11399) Add proxy support for outputs/cloudwatch
-- [#11516](https://github.com/influxdata/telegraf/pull/11516) Added metrics for member and replica-set avg health of MongoDB 
+- [#11516](https://github.com/influxdata/telegraf/pull/11516) Added metrics for member and replica-set avg health of MongoDB
 - [#11233](https://github.com/influxdata/telegraf/pull/11233) Adding aws metric streams input plugin
 - [#9717](https://github.com/influxdata/telegraf/pull/9717) Allow collecting node-level metrics for Couchbase buckets
 - [#11282](https://github.com/influxdata/telegraf/pull/11282) Make the command config a subcommand
@@ -1131,7 +1219,7 @@ Thank you to @zak-pawel for lots of linter fixes!
 - [ldap_org and ds389](https://github.com/falon/CSI-telegraf-plugins) - contributed by @falon
 - [x509_crl](https://github.com/jcgonnard/telegraf-input-x590crl) - contributed by @jcgonnard
 - [dnsmasq](https://github.com/machinly/dnsmasq-telegraf-plugin) - contributed by @machinly
-- [Big Blue Button](https://github.com/SLedunois/bigbluebutton-telegraf-plugin) - contributed by @SLedunois
+- [Big Blue Button](https://github.com/bigblueswarm/bigbluebutton-telegraf-plugin) - contributed by @SLedunois
 
 ## v1.18.3 [2021-05-20]
 

@@ -12,6 +12,7 @@ import (
 	"math"
 	"net"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,17 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+// Regular expression to see if a path element contains an origin
+var originPattern = regexp.MustCompile(`^([\w-_]+):`)
+
+// Define the warning to show if we cannot get a metric name.
+const emptyNameWarning = `Got empty metric-name for response, usually indicating
+configuration issues as the response cannot be related to any subscription.
+Please open an issue on https://github.com/influxdata/telegraf including your
+device model and the following response data:
+%+v
+This message is only printed once.`
 
 // gNMI plugin instance
 type GNMI struct {
@@ -60,11 +72,12 @@ type GNMI struct {
 	internaltls.ClientConfig
 
 	// Internal state
-	internalAliases map[string]string
-	acc             telegraf.Accumulator
-	cancel          context.CancelFunc
-	wg              sync.WaitGroup
-	legacyTags      bool
+	internalAliases    map[string]string
+	acc                telegraf.Accumulator
+	cancel             context.CancelFunc
+	wg                 sync.WaitGroup
+	legacyTags         bool
+	emptyNameWarnShown bool
 
 	Log telegraf.Logger
 }
@@ -187,6 +200,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for alias, encodingPath := range c.Aliases {
 		c.internalAliases[encodingPath] = alias
 	}
+	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
 
 	// Create a goroutine for each device, dial and subscribe
 	c.wg.Add(len(c.Addresses))
@@ -248,6 +262,12 @@ func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 	gnmiPath, err := parsePath(c.Origin, c.Prefix, c.Target)
 	if err != nil {
 		return nil, err
+	}
+
+	// Do not provide an empty prefix. Required for Huawei NE40 router v8.21
+	// (and possibly others). See https://github.com/influxdata/telegraf/issues/12273.
+	if gnmiPath.Origin == "" && gnmiPath.Target == "" && len(gnmiPath.Elem) == 0 {
+		gnmiPath = nil
 	}
 
 	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" && c.Encoding != "bytes" {
@@ -313,11 +333,8 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, worker *Worker, tlscfg *tls.Co
 }
 
 func (c *GNMI) handleSubscribeResponse(worker *Worker, reply *gnmiLib.SubscribeResponse) {
-	switch response := reply.Response.(type) {
-	case *gnmiLib.SubscribeResponse_Update:
+	if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
 		c.handleSubscribeResponseUpdate(worker, response)
-	case *gnmiLib.SubscribeResponse_Error:
-		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
 	}
 }
 
@@ -334,6 +351,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 			c.Log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
 		}
 	}
+
 	prefixTags["source"], _, _ = net.SplitHostPort(worker.address)
 	prefixTags["path"] = prefix
 
@@ -361,7 +379,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 		}
 		aliasPath, fields := c.handleTelemetryField(update, tags, prefix)
 
-		if tagOnlyTags := worker.checkTags(fullPath, c.TagSubscriptions); tagOnlyTags != nil {
+		if tagOnlyTags := worker.checkTags(fullPath); tagOnlyTags != nil {
 			for k, v := range tagOnlyTags {
 				if alias, ok := c.internalAliases[k]; ok {
 					tags[alias] = fmt.Sprint(v)
@@ -386,6 +404,12 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 			}
 		}
 
+		// Check for empty names
+		if name == "" && !c.emptyNameWarnShown {
+			c.Log.Warnf(emptyNameWarning, response.Update)
+			c.emptyNameWarnShown = true
+		}
+
 		// Group metrics
 		for k, v := range fields {
 			key := k
@@ -405,10 +429,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 					continue
 				}
 			}
-
-			if err := grouper.Add(name, tags, timestamp, key, v); err != nil {
-				c.Log.Errorf("cannot add to grouper: %v", err)
-			}
+			grouper.Add(name, tags, timestamp, key, v)
 		}
 
 		lastAliasPath = aliasPath
@@ -436,6 +457,16 @@ func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]stri
 // Parse path to path-buffer and tag-field
 func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[string]string, prefix string) (pathBuffer string, aliasPath string, err error) {
 	builder := bytes.NewBufferString(prefix)
+
+	// Some devices do report the origin in the first path element
+	// so try to find out if this is the case.
+	if gnmiPath.Origin == "" && len(gnmiPath.Elem) > 0 {
+		groups := originPattern.FindStringSubmatch(gnmiPath.Elem[0].Name)
+		if len(groups) == 2 {
+			gnmiPath.Origin = groups[1]
+			gnmiPath.Elem[0].Name = gnmiPath.Elem[0].Name[len(groups[1])+1:]
+		}
+	}
 
 	// Prefix with origin
 	if len(gnmiPath.Origin) > 0 {
@@ -636,7 +667,7 @@ func (node *tagNode) retrieve(keys []*gnmiLib.PathElem, tagResults *tagResults) 
 	}
 }
 
-func (w *Worker) checkTags(fullPath *gnmiLib.Path, subscriptions []TagSubscription) map[string]interface{} {
+func (w *Worker) checkTags(fullPath *gnmiLib.Path) map[string]interface{} {
 	results := &tagResults{}
 	w.tagStore.retrieve(pathKeys(fullPath), results)
 	tags := make(map[string]interface{})
@@ -698,9 +729,13 @@ func gnmiToFields(name string, updateVal *gnmiLib.TypedValue) (map[string]interf
 		value = val.BoolVal
 	case *gnmiLib.TypedValue_BytesVal:
 		value = val.BytesVal
+	case *gnmiLib.TypedValue_DoubleVal:
+		value = val.DoubleVal
 	case *gnmiLib.TypedValue_DecimalVal:
+		//nolint:staticcheck // to maintain backward compatibility with older gnmi specs
 		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
 	case *gnmiLib.TypedValue_FloatVal:
+		//nolint:staticcheck // to maintain backward compatibility with older gnmi specs
 		value = val.FloatVal
 	case *gnmiLib.TypedValue_IntVal:
 		value = val.IntVal

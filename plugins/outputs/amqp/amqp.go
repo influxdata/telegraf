@@ -159,7 +159,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			// If this is the first attempt to publish and the connection is
 			// closed, try to reconnect and retry once.
-			//nolint: revive // Simplifying if-else with early return will reduce clarity
+
 			if aerr, ok := err.(*amqp.Error); first && ok && aerr == amqp.ErrClosed {
 				q.client = nil
 				err := q.publish(key, body)

@@ -318,7 +318,7 @@ func TestAddShardHostStats(t *testing.T) {
 	d.AddShardHostStats()
 	d.flush(&acc)
 
-	var hostsFound []string
+	hostsFound := make([]string, 0, len(hostStatLines))
 	for host := range hostStatLines {
 		for key := range shardHostStats {
 			require.True(t, acc.HasInt64Field("mongodb_shard_stats", key))
@@ -498,7 +498,7 @@ func TestStateTag(t *testing.T) {
 
 func TestAddTopStats(t *testing.T) {
 	collections := []string{"collectionOne", "collectionTwo"}
-	var topStatLines []TopStatLine
+	topStatLines := make([]TopStatLine, 0, len(collections))
 	for _, collection := range collections {
 		topStatLine := TopStatLine{
 			CollectionName: collection,

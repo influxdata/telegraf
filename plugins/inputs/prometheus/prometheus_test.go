@@ -305,7 +305,8 @@ func TestInitConfigErrors(t *testing.T) {
 	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0.0"))
 	err := p.Init()
 	require.Error(t, err)
-	expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid; cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+	expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid; " +
+		"cannot get pod list for monitor_kubernetes_pods using node scrape scope"
 	require.Equal(t, expectedMessage, err.Error())
 	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0"))
 
@@ -324,4 +325,23 @@ func TestInitConfigErrors(t *testing.T) {
 	err = p.Init()
 	expectedMessage = "the field selector spec.containerNames is not supported for pods"
 	require.Error(t, err, expectedMessage)
+}
+
+func TestInitConfigSelectors(t *testing.T) {
+	p := &Prometheus{
+		MetricVersion:               2,
+		Log:                         testutil.Logger{},
+		URLs:                        nil,
+		URLTag:                      "url",
+		MonitorPods:                 true,
+		MonitorKubernetesPodsMethod: MonitorMethodSettings,
+		PodScrapeInterval:           60,
+		KubernetesLabelSelector:     "app=test",
+		KubernetesFieldSelector:     "spec.nodeName=node-0",
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
+	require.NotNil(t, p.podLabelSelector)
+	require.NotNil(t, p.podFieldSelector)
 }

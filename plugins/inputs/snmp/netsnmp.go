@@ -3,8 +3,9 @@ package snmp
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
-	"log" //nolint:revive
+	"log" //nolint:depguard // Allow exceptional but valid use of log here.
 	"os/exec"
 	"strings"
 	"sync"
@@ -255,4 +256,8 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	}
 
 	return mibName, oidNum, oidText, conversion, nil
+}
+
+func (n *netsnmpTranslator) SnmpFormatEnum(_ string, _ interface{}, _ bool) (string, error) {
+	return "", errors.New("not implemented in netsnmp translator")
 }

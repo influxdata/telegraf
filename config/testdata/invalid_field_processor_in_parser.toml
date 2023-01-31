@@ -1,0 +1,3 @@
+[[processors.processor_parser]]
+  not_a_field = true
+  data_format = "influx"

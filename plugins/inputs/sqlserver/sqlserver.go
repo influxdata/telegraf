@@ -2,6 +2,7 @@
 package sqlserver
 
 import (
+	"context"
 	"database/sql"
 	_ "embed"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	mssql "github.com/denisenkom/go-mssqldb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -24,6 +26,7 @@ var sampleConfig string
 // SQLServer struct
 type SQLServer struct {
 	Servers      []string        `toml:"servers"`
+	QueryTimeout config.Duration `toml:"query_timeout"`
 	AuthMethod   string          `toml:"auth_method"`
 	QueryVersion int             `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
 	AzureDB      bool            `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
@@ -114,11 +117,13 @@ func (s *SQLServer) initQueries() error {
 		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
 	} else if s.DatabaseType == typeAzureSQLPool {
 		queries["AzureSQLPoolResourceStats"] = Query{ScriptName: "AzureSQLPoolResourceStats", Script: sqlAzurePoolResourceStats, ResultByRow: false}
-		queries["AzureSQLPoolResourceGovernance"] = Query{ScriptName: "AzureSQLPoolResourceGovernance", Script: sqlAzurePoolResourceGovernance, ResultByRow: false}
+		queries["AzureSQLPoolResourceGovernance"] =
+			Query{ScriptName: "AzureSQLPoolResourceGovernance", Script: sqlAzurePoolResourceGovernance, ResultByRow: false}
 		queries["AzureSQLPoolDatabaseIO"] = Query{ScriptName: "AzureSQLPoolDatabaseIO", Script: sqlAzurePoolDatabaseIO, ResultByRow: false}
 		queries["AzureSQLPoolOsWaitStats"] = Query{ScriptName: "AzureSQLPoolOsWaitStats", Script: sqlAzurePoolOsWaitStats, ResultByRow: false}
 		queries["AzureSQLPoolMemoryClerks"] = Query{ScriptName: "AzureSQLPoolMemoryClerks", Script: sqlAzurePoolMemoryClerks, ResultByRow: false}
-		queries["AzureSQLPoolPerformanceCounters"] = Query{ScriptName: "AzureSQLPoolPerformanceCounters", Script: sqlAzurePoolPerformanceCounters, ResultByRow: false}
+		queries["AzureSQLPoolPerformanceCounters"] =
+			Query{ScriptName: "AzureSQLPoolPerformanceCounters", Script: sqlAzurePoolPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLPoolSchedulers"] = Query{ScriptName: "AzureSQLPoolSchedulers", Script: sqlAzurePoolSchedulers, ResultByRow: false}
 	} else if s.DatabaseType == typeSQLServer { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
@@ -130,8 +135,10 @@ func (s *SQLServer) initQueries() error {
 		queries["SQLServerRequests"] = Query{ScriptName: "SQLServerRequests", Script: sqlServerRequests, ResultByRow: false}
 		queries["SQLServerVolumeSpace"] = Query{ScriptName: "SQLServerVolumeSpace", Script: sqlServerVolumeSpace, ResultByRow: false}
 		queries["SQLServerCpu"] = Query{ScriptName: "SQLServerCpu", Script: sqlServerRingBufferCPU, ResultByRow: false}
-		queries["SQLServerAvailabilityReplicaStates"] = Query{ScriptName: "SQLServerAvailabilityReplicaStates", Script: sqlServerAvailabilityReplicaStates, ResultByRow: false}
-		queries["SQLServerDatabaseReplicaStates"] = Query{ScriptName: "SQLServerDatabaseReplicaStates", Script: sqlServerDatabaseReplicaStates, ResultByRow: false}
+		queries["SQLServerAvailabilityReplicaStates"] =
+			Query{ScriptName: "SQLServerAvailabilityReplicaStates", Script: sqlServerAvailabilityReplicaStates, ResultByRow: false}
+		queries["SQLServerDatabaseReplicaStates"] =
+			Query{ScriptName: "SQLServerDatabaseReplicaStates", Script: sqlServerDatabaseReplicaStates, ResultByRow: false}
 		queries["SQLServerRecentBackups"] = Query{ScriptName: "SQLServerRecentBackups", Script: sqlServerRecentBackups, ResultByRow: false}
 	} else {
 		// If this is an AzureDB instance, grab some extra metrics
@@ -175,11 +182,11 @@ func (s *SQLServer) initQueries() error {
 		}
 	}
 
-	var querylist []string
+	queryList := make([]string, 0, len(queries))
 	for query := range queries {
-		querylist = append(querylist, query)
+		queryList = append(queryList, query)
 	}
-	s.Log.Infof("Config: Effective Queries: %#v\n", querylist)
+	s.Log.Infof("Config: Effective Queries: %#v\n", queryList)
 
 	return nil
 }
@@ -290,7 +297,14 @@ func (s *SQLServer) Stop() {
 
 func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
 	// execute query
-	rows, err := pool.Query(query.Script)
+	ctx := context.Background()
+	// Use the query timeout if any
+	if s.QueryTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(s.QueryTimeout))
+		defer cancel()
+	}
+	rows, err := pool.QueryContext(ctx, query.Script)
 	if err != nil {
 		serverName, databaseName := getConnectionIdentifiers(connectionString)
 
@@ -321,7 +335,6 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 }
 
 func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) error {
-	var columnVars []interface{}
 	var fields = make(map[string]interface{})
 
 	// store the column name with its *interface{}
@@ -329,6 +342,8 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 	for _, column := range query.OrderedColumns {
 		columnMap[column] = new(interface{})
 	}
+
+	columnVars := make([]interface{}, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[query.OrderedColumns[i]])

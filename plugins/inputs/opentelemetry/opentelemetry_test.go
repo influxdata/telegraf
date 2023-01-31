@@ -50,6 +50,7 @@ func TestOpenTelemetry(t *testing.T) {
 
 	meter := mp.Meter("library-name")
 	counter, err := meter.SyncInt64().Counter("measurement-counter")
+	require.NoError(t, err)
 	counter.Add(ctx, 7)
 
 	// write metrics through the telegraf OpenTelemetry input plugin

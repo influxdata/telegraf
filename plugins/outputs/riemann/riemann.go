@@ -169,7 +169,7 @@ func (r *Riemann) tags(tags map[string]string) []string {
 	}
 
 	// otherwise add all values from telegraf tag key/value pairs
-	var keys []string
+	keys := make([]string, 0, len(tags))
 	for key := range tags {
 		keys = append(keys, key)
 	}

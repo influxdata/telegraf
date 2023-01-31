@@ -5,11 +5,13 @@ parameters which dictate batch size and flush timeout.
 
 Usage as follows:
 
-`./stress_test_write -batch_size=<batch_size> -max_backlog=<max_span_buffer_backlog> -batch_interval=<batch_interval_in_seconds> -span_count<number_of_spans_to_write> -zipkin_host=<zipkin_service_hostname>`
+`./stress_test_write -batch_size=<batch_size> -max_backlog=<max_span_buffer_backlog> -batch_interval=<batch_interval_in_seconds> \
+-span_count<number_of_spans_to_write> -zipkin_host=<zipkin_service_hostname>`
 
 Or with a timer:
 
-`time ./stress_test_write -batch_size=<batch_size> -max_backlog=<max_span_buffer_backlog> -batch_interval=<batch_interval_in_seconds> -span_count<number_of_spans_to_write> -zipkin_host=<zipkin_service_hostname>`
+`time ./stress_test_write -batch_size=<batch_size> -max_backlog=<max_span_buffer_backlog> -batch_interval=<batch_interval_in_seconds> \
+-span_count<number_of_spans_to_write> -zipkin_host=<zipkin_service_hostname>`
 
 However, the flag defaults work just fine for a good write stress test (and are what
 this tool has mainly been tested with), so there shouldn't be much need to

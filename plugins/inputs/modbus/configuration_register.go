@@ -23,6 +23,7 @@ type ConfigurationOriginal struct {
 	Coils            []fieldDefinition `toml:"coils"`
 	HoldingRegisters []fieldDefinition `toml:"holding_registers"`
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
+	workarounds      ModbusWorkarounds
 }
 
 func (c *ConfigurationOriginal) SampleConfigPart() string {
@@ -46,22 +47,35 @@ func (c *ConfigurationOriginal) Check() error {
 }
 
 func (c *ConfigurationOriginal) Process() (map[byte]requestSet, error) {
-	coil, err := c.initRequests(c.Coils, maxQuantityCoils)
+	maxQuantity := uint16(1)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityCoils
+	}
+	coil, err := c.initRequests(c.Coils, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantityDiscreteInput)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityDiscreteInput
+	}
+	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	holding, err := c.initRequests(c.HoldingRegisters, maxQuantityHoldingRegisters)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityHoldingRegisters
+	}
+	holding, err := c.initRequests(c.HoldingRegisters, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
 
-	input, err := c.initRequests(c.InputRegisters, maxQuantityInputRegisters)
+	if !c.workarounds.OnRequestPerField {
+		maxQuantity = maxQuantityInputRegisters
+	}
+	input, err := c.initRequests(c.InputRegisters, maxQuantity)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +95,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 	if err != nil {
 		return nil, err
 	}
-	return groupFieldsToRequests(fields, nil, maxQuantity), nil
+	return groupFieldsToRequests(fields, nil, maxQuantity, "none", 0), nil
 }
 
 func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {
@@ -163,7 +177,9 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
+			case "INT8L", "INT8H", "UINT8L", "UINT8H",
+				"UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64",
+				"FLOAT16-IEEE", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, registerType, item.Name)
 			}
@@ -220,6 +236,8 @@ func (c *ConfigurationOriginal) normalizeInputDatatype(dataType string, words in
 		default:
 			return "unknown", fmt.Errorf("invalid length %d for type %q", words, dataType)
 		}
+	case "FLOAT16-IEEE":
+		return "FLOAT16", nil
 	case "FLOAT32-IEEE":
 		return "FLOAT32", nil
 	case "FLOAT64-IEEE":

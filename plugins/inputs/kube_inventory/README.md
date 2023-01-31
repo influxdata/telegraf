@@ -33,6 +33,15 @@ avoid cardinality issues:
 - Consult the [InfluxDB documentation][influx-docs] for the most up-to-date
   techniques.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+
 ## Configuration
 
 ```toml @sample.conf
@@ -151,13 +160,12 @@ subjects:
 ## Quickstart in k3s
 
 When monitoring [k3s](https://k3s.io) server instances one can re-use already
-generated administration token.  This is less secure than using the more
+generated administration token. This is less secure than using the more
 restrictive dedicated telegraf user but more convienient to set up.
 
 ```console
-# an empty token will make telegraf use the client cert/key files instead
-$ touch /run/telegraf-kubernetes-token
 # replace `telegraf` with the user the telegraf process is running as
+$ install -o telegraf -m400 /var/lib/rancher/k3s/server/token /run/telegraf-kubernetes-token
 $ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.crt /run/telegraf-kubernetes-cert
 $ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.key /run/telegraf-kubernetes-key
 ```

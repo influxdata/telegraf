@@ -143,6 +143,8 @@ func (c *LXDClient) Exec(name string, command ...string) error {
 		return fmt.Errorf(output.String())
 	}
 
+	fmt.Println(output.String())
+
 	return nil
 }
 

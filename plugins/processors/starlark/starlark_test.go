@@ -232,9 +232,7 @@ def apply(metric):
 				}
 			}
 
-			err = plugin.Stop()
-			require.NoError(t, err)
-
+			plugin.Stop()
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
@@ -2576,9 +2574,7 @@ def apply(metric):
 				}
 			}
 
-			err = plugin.Stop()
-			require.NoError(t, err)
-
+			plugin.Stop()
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
@@ -2659,9 +2655,7 @@ def apply(metric):
 				require.NoError(t, err)
 			}
 
-			err = plugin.Stop()
-			require.NoError(t, err)
-
+			plugin.Stop()
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
@@ -2935,9 +2929,7 @@ func TestScript(t *testing.T) {
 				}
 			}
 
-			err = tt.plugin.Stop()
-			require.NoError(t, err)
-
+			tt.plugin.Stop()
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
@@ -3267,8 +3259,7 @@ def apply(metric):
 				}
 			}
 
-			err = plugin.Stop()
-			require.NoError(b, err)
+			plugin.Stop()
 		})
 	}
 }
@@ -3309,9 +3300,7 @@ func TestAllScriptTestData(t *testing.T) {
 					}
 				}
 
-				err = plugin.Stop()
-				require.NoError(t, err)
-
+				plugin.Stop()
 				testutil.RequireMetricsEqual(t, outputMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics())
 			})
 			return nil
@@ -3388,7 +3377,7 @@ func testNow(_ *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []star
 
 func newStarlarkFromSource(source string) *Starlark {
 	return &Starlark{
-		StarlarkCommon: common.StarlarkCommon{
+		Common: common.Common{
 			StarlarkLoadFunc: testLoadFunc,
 			Log:              testutil.Logger{},
 			Source:           source,
@@ -3398,7 +3387,7 @@ func newStarlarkFromSource(source string) *Starlark {
 
 func newStarlarkFromScript(script string) *Starlark {
 	return &Starlark{
-		StarlarkCommon: common.StarlarkCommon{
+		Common: common.Common{
 			StarlarkLoadFunc: testLoadFunc,
 			Log:              testutil.Logger{},
 			Script:           script,
@@ -3408,7 +3397,7 @@ func newStarlarkFromScript(script string) *Starlark {
 
 func newStarlarkNoScript() *Starlark {
 	return &Starlark{
-		StarlarkCommon: common.StarlarkCommon{
+		Common: common.Common{
 			StarlarkLoadFunc: testLoadFunc,
 			Log:              testutil.Logger{},
 		},

@@ -49,6 +49,8 @@ type Kafka struct {
 
 	kafka.WriteConfig
 
+	kafka.Logger
+
 	Log telegraf.Logger `toml:"-"`
 
 	saramaConfig *sarama.Config
@@ -62,25 +64,6 @@ type TopicSuffix struct {
 	Method    string   `toml:"method"`
 	Keys      []string `toml:"keys"`
 	Separator string   `toml:"separator"`
-}
-
-// DebugLogger logs messages from sarama at the debug level.
-type DebugLogger struct {
-	Log telegraf.Logger
-}
-
-func (l *DebugLogger) Print(v ...interface{}) {
-	args := make([]interface{}, 0, len(v)+1)
-	args = append(append(args, "[sarama] "), v...)
-	l.Log.Debug(args...)
-}
-
-func (l *DebugLogger) Printf(format string, v ...interface{}) {
-	l.Log.Debugf("[sarama] "+format, v...)
-}
-
-func (l *DebugLogger) Println(v ...interface{}) {
-	l.Print(v)
 }
 
 func ValidateTopicSuffixMethod(method string) error {
@@ -137,7 +120,7 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (k *Kafka) Init() error {
-	sarama.Logger = &DebugLogger{Log: k.Log}
+	k.SetLogger()
 
 	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
 	if err != nil {
@@ -145,7 +128,7 @@ func (k *Kafka) Init() error {
 	}
 	config := sarama.NewConfig()
 
-	if err := k.SetConfig(config); err != nil {
+	if err := k.SetConfig(config, k.Log); err != nil {
 		return err
 	}
 
@@ -245,7 +228,10 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					return nil
 				}
 				if prodErr.Err == sarama.ErrInvalidTimestamp {
-					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
+					k.Log.Error(
+						"The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; " +
+							"dropping batch",
+					)
 					return nil
 				}
 				return prodErr //nolint:staticcheck // Return first error encountered

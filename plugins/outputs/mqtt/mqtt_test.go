@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/stretchr/testify/require"
+	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const servicePort = "1883"
@@ -38,12 +38,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
-	s, err := serializers.NewInfluxSerializer()
-	require.NoError(t, err)
+	s := serializers.NewInfluxSerializer()
 	m := &MQTT{
 		Servers:    []string{url},
 		serializer: s,
@@ -52,7 +49,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err = m.Connect()
+	err := m.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the mqtt broker
@@ -66,13 +63,10 @@ func TestConnectAndWriteIntegrationMQTTv3(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
-	s, err := serializers.NewInfluxSerializer()
-	require.NoError(t, err)
+	s := serializers.NewInfluxSerializer()
 	m := &MQTT{
 		Servers:    []string{url},
 		Protocol:   "3.1.1",
@@ -82,7 +76,7 @@ func TestConnectAndWriteIntegrationMQTTv3(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err = m.Connect()
+	err := m.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the mqtt broker
@@ -96,13 +90,10 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
-	s, err := serializers.NewInfluxSerializer()
-	require.NoError(t, err)
+	s := serializers.NewInfluxSerializer()
 	m := &MQTT{
 		Servers:    []string{url},
 		Protocol:   "5",
@@ -112,7 +103,7 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 	}
 
 	// Verify that we can connect to the MQTT broker
-	err = m.Connect()
+	err := m.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the mqtt broker

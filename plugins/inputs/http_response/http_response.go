@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -196,6 +197,10 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	request, err := http.NewRequest(h.Method, u, body)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if _, uaPresent := h.Headers["User-Agent"]; !uaPresent {
+		request.Header.Set("User-Agent", internal.ProductToken())
 	}
 
 	if h.BearerToken != "" {

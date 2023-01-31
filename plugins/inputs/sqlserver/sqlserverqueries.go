@@ -1,3 +1,4 @@
+//nolint:lll // conditionally long lines allowed
 package sqlserver
 
 import (
@@ -16,7 +17,8 @@ import (
 //   - 1500 --> SQL Server 2019
 
 // Thanks Bob Ward (http://aka.ms/bobwardms)
-// and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
+// and the folks at Stack Overflow
+// (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
 const sqlServerMemoryClerks = `
 SET DEADLOCK_PRIORITY -10;
@@ -214,6 +216,7 @@ SELECT
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 	,si.[cpu_count]
 	,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
+	,(SELECT [available_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [available_server_memory]
 	,SERVERPROPERTY(''Edition'') AS [sku]
 	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]

@@ -13,9 +13,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-
-	// Blank import to allow gzip encoding
-	_ "google.golang.org/grpc/encoding/gzip"
+	_ "google.golang.org/grpc/encoding/gzip" // Blank import to allow gzip encoding
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
@@ -101,7 +99,7 @@ func (o *OpenTelemetry) Connect() error {
 		return err
 	}
 
-	metricsServiceClient := pmetricotlp.NewClient(grpcClientConn)
+	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
 
 	o.metricsConverter = metricsConverter
 	o.grpcClientConn = grpcClientConn
@@ -149,7 +147,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	md := pmetricotlp.NewRequestFromMetrics(batch.GetMetrics())
+	md := pmetricotlp.NewExportRequestFromMetrics(batch.GetMetrics())
 	if md.Metrics().ResourceMetrics().Len() == 0 {
 		return nil
 	}
@@ -157,7 +155,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	if len(o.Attributes) > 0 {
 		for i := 0; i < md.Metrics().ResourceMetrics().Len(); i++ {
 			for k, v := range o.Attributes {
-				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().PutString(k, v)
+				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().PutStr(k, v)
 			}
 		}
 	}

@@ -66,6 +66,7 @@ func catch(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kw
 		return nil, err
 	}
 	if _, err := starlark.Call(thread, fn, nil, nil); err != nil {
+		//nolint:nilerr // nil returned on purpose, error put inside starlark.Value
 		return starlark.String(err.Error()), nil
 	}
 	return starlark.None, nil
@@ -206,22 +207,27 @@ func dictUpdate(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tupl
 			defer iter.Done()
 			var pair starlark.Value
 			for i := 0; iter.Next(&pair); i++ {
-				iter2 := starlark.Iterate(pair)
-				if iter2 == nil {
-					return nil, fmt.Errorf("dictionary update sequence element #%d is not iterable (%s)", i, pair.Type())
-				}
-				defer iter2.Done()
-				length := starlark.Len(pair)
-				if length < 0 {
-					return nil, fmt.Errorf("dictionary update sequence element #%d has unknown length (%s)", i, pair.Type())
-				} else if length != 2 {
-					return nil, fmt.Errorf("dictionary update sequence element #%d has length %d, want 2", i, length)
-				}
-				var k, v starlark.Value
-				iter2.Next(&k)
-				iter2.Next(&v)
-				if err := dict.SetKey(k, v); err != nil {
-					return nil, err
+				iterErr := func() error {
+					iter2 := starlark.Iterate(pair)
+					if iter2 == nil {
+						return fmt.Errorf("dictionary update sequence element #%d is not iterable (%s)", i, pair.Type())
+					}
+					defer iter2.Done()
+					length := starlark.Len(pair)
+					if length < 0 {
+						return fmt.Errorf("dictionary update sequence element #%d has unknown length (%s)", i, pair.Type())
+					} else if length != 2 {
+						return fmt.Errorf("dictionary update sequence element #%d has length %d, want 2", i, length)
+					}
+					var k, v starlark.Value
+					iter2.Next(&k)
+					iter2.Next(&v)
+
+					return dict.SetKey(k, v)
+				}()
+
+				if iterErr != nil {
+					return nil, iterErr
 				}
 			}
 		}

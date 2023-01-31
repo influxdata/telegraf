@@ -21,7 +21,7 @@ const (
 
 func TestFileExistingFile(t *testing.T) {
 	fh := createFile(t)
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	f := File{
 		Files:      []string{fh.Name()},
 		serializer: s,
@@ -40,7 +40,7 @@ func TestFileExistingFile(t *testing.T) {
 }
 
 func TestFileNewFile(t *testing.T) {
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	fh := tmpFile(t)
 	f := File{
 		Files:      []string{fh},
@@ -64,7 +64,7 @@ func TestFileExistingFiles(t *testing.T) {
 	fh2 := createFile(t)
 	fh3 := createFile(t)
 
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	f := File{
 		Files:      []string{fh1.Name(), fh2.Name(), fh3.Name()},
 		serializer: s,
@@ -85,7 +85,7 @@ func TestFileExistingFiles(t *testing.T) {
 }
 
 func TestFileNewFiles(t *testing.T) {
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	fh1 := tmpFile(t)
 	fh2 := tmpFile(t)
 	fh3 := tmpFile(t)
@@ -112,7 +112,7 @@ func TestFileBoth(t *testing.T) {
 	fh1 := createFile(t)
 	fh2 := tmpFile(t)
 
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	f := File{
 		Files:      []string{fh1.Name(), fh2},
 		serializer: s,
@@ -137,7 +137,7 @@ func TestFileStdout(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	s, _ := serializers.NewInfluxSerializer()
+	s := serializers.NewInfluxSerializer()
 	f := File{
 		Files:      []string{"stdout"},
 		serializer: s,

@@ -26,13 +26,11 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 		Env: map[string]string{
 			"POSTGRES_HOST_AUTH_METHOD": "trust",
 		},
-		WaitingFor: wait.ForLog("database system is ready to accept connections"),
+		WaitingFor: wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 	}
 	err := backend.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, backend.Terminate(), "terminating container failed")
-	}()
+	defer backend.Terminate()
 
 	container := testutil.Container{
 		Image:        "z9pascal/pgbouncer-container:1.17.0-latest",
@@ -48,9 +46,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	p := &PgBouncer{
 		Service: postgresql.Service{
@@ -68,7 +64,11 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	require.NoError(t, p.Gather(&acc))
 
 	// Return value of pgBouncer
-	// [pgbouncer map[db:pgbouncer server:host=localhost user=pgbouncer dbname=pgbouncer port=6432 ] map[avg_query_count:0 avg_query_time:0 avg_wait_time:0 avg_xact_count:0 avg_xact_time:0 total_query_count:3 total_query_time:0 total_received:0 total_sent:0 total_wait_time:0 total_xact_count:3 total_xact_time:0] 1620163750039747891 pgbouncer_pools map[db:pgbouncer pool_mode:statement server:host=localhost user=pgbouncer dbname=pgbouncer port=6432  user:pgbouncer] map[cl_active:1 cl_waiting:0 maxwait:0 maxwait_us:0 sv_active:0 sv_idle:0 sv_login:0 sv_tested:0 sv_used:0] 1620163750041444466]
+	// [pgbouncer map[db:pgbouncer server:host=localhost user=pgbouncer dbname=pgbouncer port=6432 ]
+	// map[avg_query_count:0 avg_query_time:0 avg_wait_time:0 avg_xact_count:0 avg_xact_time:0 total_query_count:3 total_query_time:0 total_received:0
+	// total_sent:0 total_wait_time:0 total_xact_count:3 total_xact_time:0] 1620163750039747891 pgbouncer_pools map[db:pgbouncer pool_mode:statement
+	// server:host=localhost user=pgbouncer dbname=pgbouncer port=6432  user:pgbouncer] map[cl_active:1 cl_waiting:0 maxwait:0 maxwait_us:0
+	// sv_active:0 sv_idle:0 sv_login:0 sv_tested:0 sv_used:0] 1620163750041444466]
 
 	intMetricsPgBouncer := []string{
 		"total_received",

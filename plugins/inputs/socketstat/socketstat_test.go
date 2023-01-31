@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSocketstat_Gather(t *testing.T) {
@@ -43,9 +44,45 @@ func TestSocketstat_Gather(t *testing.T) {
 				{"proto": "tcp", "local_addr": "127.0.0.1", "local_port": "7778", "remote_addr": "127.0.0.1", "remote_port": "50378"},
 			},
 			fields: [][]map[string]interface{}{
-				{map[string]interface{}{"state": "ESTAB", "bytes_acked": uint64(1126), "bytes_received": uint64(532644751), "segs_out": uint64(211249), "segs_in": uint64(211254), "data_segs_out": uint64(2), "data_segs_in": uint64(211251), "recv_q": uint64(0), "send_q": uint64(0)}},
-				{map[string]interface{}{"state": "ESTAB", "bytes_acked": uint64(790782896), "bytes_received": uint64(1126), "segs_out": uint64(333361), "segs_in": uint64(333361), "data_segs_out": uint64(333358), "data_segs_in": uint64(2), "recv_q": uint64(0), "send_q": uint64(0)}},
-				{map[string]interface{}{"state": "ESTAB", "bytes_acked": uint64(19983121), "bytes_received": uint64(266383), "segs_out": uint64(15431), "segs_in": uint64(17633), "data_segs_out": uint64(15119), "data_segs_in": uint64(5098), "recv_q": uint64(0), "send_q": uint64(0)}},
+				{
+					map[string]interface{}{
+						"state":          "ESTAB",
+						"bytes_acked":    uint64(1126),
+						"bytes_received": uint64(532644751),
+						"segs_out":       uint64(211249),
+						"segs_in":        uint64(211254),
+						"data_segs_out":  uint64(2),
+						"data_segs_in":   uint64(211251),
+						"recv_q":         uint64(0),
+						"send_q":         uint64(0),
+					},
+				},
+				{
+					map[string]interface{}{
+						"state":          "ESTAB",
+						"bytes_acked":    uint64(790782896),
+						"bytes_received": uint64(1126),
+						"segs_out":       uint64(333361),
+						"segs_in":        uint64(333361),
+						"data_segs_out":  uint64(333358),
+						"data_segs_in":   uint64(2),
+						"recv_q":         uint64(0),
+						"send_q":         uint64(0),
+					},
+				},
+				{
+					map[string]interface{}{
+						"state":          "ESTAB",
+						"bytes_acked":    uint64(19983121),
+						"bytes_received": uint64(266383),
+						"segs_out":       uint64(15431),
+						"segs_in":        uint64(17633),
+						"data_segs_out":  uint64(15119),
+						"data_segs_in":   uint64(5098),
+						"recv_q":         uint64(0),
+						"send_q":         uint64(0),
+					},
+				},
 			},
 		},
 		{

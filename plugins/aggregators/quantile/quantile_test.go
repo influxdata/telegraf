@@ -46,7 +46,10 @@ func TestConfigInvalidQuantiles(t *testing.T) {
 func TestSingleMetricTDigest(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{Compression: 100}
+	q := Quantile{
+		Compression: 100,
+		Log:         testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -113,7 +116,10 @@ func TestSingleMetricTDigest(t *testing.T) {
 func TestMultipleMetricsTDigest(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{Compression: 100}
+	q := Quantile{
+		Compression: 100,
+		Log:         testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -173,7 +179,10 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 func TestSingleMetricExactR7(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{AlgorithmType: "exact R7"}
+	q := Quantile{
+		AlgorithmType: "exact R7",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -240,7 +249,10 @@ func TestSingleMetricExactR7(t *testing.T) {
 func TestMultipleMetricsExactR7(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{AlgorithmType: "exact R7"}
+	q := Quantile{
+		AlgorithmType: "exact R7",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -300,7 +312,10 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 func TestSingleMetricExactR8(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{AlgorithmType: "exact R8"}
+	q := Quantile{
+		AlgorithmType: "exact R8",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -367,7 +382,10 @@ func TestSingleMetricExactR8(t *testing.T) {
 func TestMultipleMetricsExactR8(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{AlgorithmType: "exact R8"}
+	q := Quantile{
+		AlgorithmType: "exact R8",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -444,7 +462,10 @@ func BenchmarkDefaultTDigest(b *testing.B) {
 		)
 	}
 
-	q := Quantile{Compression: 100}
+	q := Quantile{
+		Compression: 100,
+		Log:         testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -481,7 +502,11 @@ func BenchmarkDefaultTDigest100Q(b *testing.B) {
 		quantiles[i] = 0.01 * float64(i)
 	}
 
-	q := Quantile{Compression: 100, Quantiles: quantiles}
+	q := Quantile{
+		Compression: 100,
+		Quantiles:   quantiles,
+		Log:         testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -514,7 +539,10 @@ func BenchmarkDefaultExactR7(b *testing.B) {
 		)
 	}
 
-	q := Quantile{AlgorithmType: "exact R7"}
+	q := Quantile{
+		AlgorithmType: "exact R7",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -551,7 +579,11 @@ func BenchmarkDefaultExactR7100Q(b *testing.B) {
 		quantiles[i] = 0.01 * float64(i)
 	}
 
-	q := Quantile{AlgorithmType: "exact R7", Quantiles: quantiles}
+	q := Quantile{
+		AlgorithmType: "exact R7",
+		Quantiles:     quantiles,
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -584,7 +616,10 @@ func BenchmarkDefaultExactR8(b *testing.B) {
 		)
 	}
 
-	q := Quantile{AlgorithmType: "exact R8"}
+	q := Quantile{
+		AlgorithmType: "exact R8",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -621,7 +656,11 @@ func BenchmarkDefaultExactR8100Q(b *testing.B) {
 		quantiles[i] = 0.01 * float64(i)
 	}
 
-	q := Quantile{AlgorithmType: "exact R8", Quantiles: quantiles}
+	q := Quantile{
+		AlgorithmType: "exact R8",
+		Quantiles:     quantiles,
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
