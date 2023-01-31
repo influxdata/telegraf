@@ -96,11 +96,8 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
-		dnsName, err := c.serverName(location)
-		if err != nil {
-			acc.AddError(fmt.Errorf("resolving name of %q failed: %w", location, err))
-			continue
-		}
+
+		dnsName := c.serverName(location)
 		for i, cert := range certs {
 			fields := getFields(cert, now)
 			tags := getTags(cert, location.String())
@@ -179,11 +176,11 @@ func (c *X509Cert) sourcesToURLs() error {
 	return nil
 }
 
-func (c *X509Cert) serverName(u *url.URL) (string, error) {
+func (c *X509Cert) serverName(u *url.URL) string {
 	if c.tlsCfg.ServerName != "" {
-		return c.tlsCfg.ServerName, nil
+		return c.tlsCfg.ServerName
 	}
-	return u.Hostname(), nil
+	return u.Hostname()
 }
 
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
@@ -196,16 +193,11 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		defer ipConn.Close()
 
-		serverName, err := c.serverName(u)
-		if err != nil {
-			return nil, err
-		}
-
 		dtlsCfg := &dtls.Config{
 			InsecureSkipVerify: true,
 			Certificates:       c.tlsCfg.Certificates,
 			RootCAs:            c.tlsCfg.RootCAs,
-			ServerName:         serverName,
+			ServerName:         c.serverName(u),
 		}
 		conn, err := dtls.Client(ipConn, dtlsCfg)
 		if err != nil {
@@ -244,13 +236,8 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		defer ipConn.Close()
 
-		serverName, err := c.serverName(u)
-		if err != nil {
-			return nil, err
-		}
-
 		downloadTLSCfg := c.tlsCfg.Clone()
-		downloadTLSCfg.ServerName = serverName
+		downloadTLSCfg.ServerName = c.serverName(u)
 		downloadTLSCfg.InsecureSkipVerify = true
 
 		conn := tls.Client(ipConn, downloadTLSCfg)
@@ -296,13 +283,8 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		defer ipConn.Close()
 
-		serverName, err := c.serverName(u)
-		if err != nil {
-			return nil, err
-		}
-
 		downloadTLSCfg := c.tlsCfg.Clone()
-		downloadTLSCfg.ServerName = serverName
+		downloadTLSCfg.ServerName = c.serverName(u)
 		downloadTLSCfg.InsecureSkipVerify = true
 
 		smtpConn, err := smtp.NewClient(ipConn, u.Host)
