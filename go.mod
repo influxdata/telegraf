@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/pubsub v1.27.1
 	cloud.google.com/go/storage v1.28.1
 	collectd.org v0.5.0
-	github.com/99designs/keyring v1.2.1
+	github.com/99designs/keyring v1.2.2
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.20
 	github.com/Azure/azure-kusto-go v0.8.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor v0.4.1
