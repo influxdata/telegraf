@@ -492,7 +492,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 }
 
 // versionLowerThan returns true is the current version < a base version
-func versionLowerThan(current string, base string) (bool) {
+func versionLowerThan(current string, base string) bool {
 	v1, _ := semver.New(current)
 	v2, _ := semver.New(base)
 	return v1.LT(*v2)
