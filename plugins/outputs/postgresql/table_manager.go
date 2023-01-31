@@ -93,12 +93,12 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 		}
 
 		if len(missingCols) > 0 {
-			colDefs := make([]string, len(missingCols))
-			for i, col := range missingCols {
+			colDefs := make([]string, 0, len(missingCols))
+			for _, col := range missingCols {
 				if err := rowSource.DropColumn(col); err != nil {
 					return fmt.Errorf("metric/table mismatch: Unable to omit field/column from \"%s\": %w", tagTable.name, err)
 				}
-				colDefs[i] = col.Name + " " + col.Type
+				colDefs = append(colDefs, col.Name+" "+col.Type)
 			}
 			tm.Logger.Errorf("table '%s' is missing tag columns (dropping metrics): %s",
 				tagTable.name,
@@ -124,12 +124,12 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 	}
 
 	if len(missingCols) > 0 {
-		colDefs := make([]string, len(missingCols))
-		for i, col := range missingCols {
+		colDefs := make([]string, 0, len(missingCols))
+		for _, col := range missingCols {
 			if err := rowSource.DropColumn(col); err != nil {
 				return fmt.Errorf("metric/table mismatch: Unable to omit field/column from \"%s\": %w", metricTable.name, err)
 			}
-			colDefs[i] = col.Name + " " + col.Type
+			colDefs = append(colDefs, col.Name+" "+col.Type)
 		}
 		tm.Logger.Errorf("table '%s' is missing columns (omitting fields): %s",
 			metricTable.name,

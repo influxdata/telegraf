@@ -52,6 +52,7 @@ type GNMI struct {
 	Subscriptions    []Subscription    `toml:"subscription"`
 	TagSubscriptions []TagSubscription `toml:"tag_subscription"`
 	Aliases          map[string]string `toml:"aliases"`
+	MaxMsgSize       config.Size       `toml:"max_msg_size"`
 
 	// Optional subscription configuration
 	Encoding    string
@@ -116,7 +117,7 @@ type Subscription struct {
 	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
 
 	// Mark this subscription as a tag-only lookup source, not emitting any metric
-	TagOnly bool `toml:"tag_only"`
+	TagOnly bool `toml:"tag_only" deprecated:"1.25.0;2.0.0;please use 'tag_subscription's instead"`
 }
 
 // Tag Subscription for a gNMI client
@@ -245,17 +246,20 @@ func (s *Subscription) buildSubscription() (*gnmiLib.Subscription, error) {
 // Create a new gNMI SubscribeRequest
 func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 	// Create subscription objects
-	var err error
-	subscriptions := make([]*gnmiLib.Subscription, len(c.Subscriptions)+len(c.TagSubscriptions))
-	for i, subscription := range c.TagSubscriptions {
-		if subscriptions[i], err = subscription.buildSubscription(); err != nil {
+	subscriptions := make([]*gnmiLib.Subscription, 0, len(c.Subscriptions)+len(c.TagSubscriptions))
+	for _, subscription := range c.TagSubscriptions {
+		sub, err := subscription.buildSubscription()
+		if err != nil {
 			return nil, err
 		}
+		subscriptions = append(subscriptions, sub)
 	}
-	for i, subscription := range c.Subscriptions {
-		if subscriptions[i+len(c.TagSubscriptions)], err = subscription.buildSubscription(); err != nil {
+	for _, subscription := range c.Subscriptions {
+		sub, err := subscription.buildSubscription()
+		if err != nil {
 			return nil, err
 		}
+		subscriptions = append(subscriptions, sub)
 	}
 
 	// Construct subscribe request
@@ -295,9 +299,17 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, worker *Worker, tlscfg *tls.Co
 	} else {
 		creds = insecure.NewCredentials()
 	}
-	opt := grpc.WithTransportCredentials(creds)
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+	}
 
-	client, err := grpc.DialContext(ctx, worker.address, opt)
+	if c.MaxMsgSize > 0 {
+		opts = append(opts, grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(int(c.MaxMsgSize)),
+		))
+	}
+
+	client, err := grpc.DialContext(ctx, worker.address, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %v", err)
 	}
@@ -361,6 +373,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(worker *Worker, response *gnmiLib.S
 		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
 		for _, tagSub := range c.TagSubscriptions {
 			if equalPathNoKeys(fullPath, tagSub.fullPath) {
+				c.Log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
 				worker.storeTags(update, tagSub)
 				response.Update.Update = append(response.Update.Update[:i], response.Update.Update[i+1:]...)
 			}

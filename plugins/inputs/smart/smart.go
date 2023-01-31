@@ -80,10 +80,19 @@ var (
 
 	deviceFieldIds = map[string]string{
 		"1":   "read_error_rate",
+		"5":   "reallocated_sectors_count",
 		"7":   "seek_error_rate",
+		"10":  "spin_retry_count",
+		"184": "end_to_end_error",
+		"187": "uncorrectable_errors",
+		"188": "command_timeout",
 		"190": "temp_c",
 		"194": "temp_c",
+		"196": "realloc_event_count",
+		"197": "pending_sector_count",
+		"198": "uncorrectable_sector_count",
 		"199": "udma_crc_errors",
+		"201": "soft_read_error_rate",
 	}
 
 	// There are some fields we're interested in which use the vendor specific device ids
@@ -558,7 +567,7 @@ func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 
 	for _, device := range nvmeDevices {
 		if contains(m.EnableExtensions, "auto-on") {
-			// nolint:revive // one case switch on purpose to demonstrate potential extensions
+			//nolint:revive // one case switch on purpose to demonstrate potential extensions
 			switch device.vendorID {
 			case intelVID:
 				wg.Add(1)

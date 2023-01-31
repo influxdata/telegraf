@@ -114,8 +114,8 @@ func TestConnect(t *testing.T) {
 			name: "username password",
 			output: &AMQP{
 				URL:      "amqp://foo:bar@localhost",
-				Username: "telegraf",
-				Password: "pa$$word",
+				Username: config.NewSecret([]byte("telegraf")),
+				Password: config.NewSecret([]byte("pa$$word")),
 				connect: func(_ *ClientConfig) (Client, error) {
 					return NewMockClient(), nil
 				},

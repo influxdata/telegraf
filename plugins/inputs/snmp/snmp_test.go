@@ -287,44 +287,26 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 }
 
 func TestGetSNMPConnectionTCP(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go stubTCPServer(&wg)
-	wg.Wait()
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	tcpServer, err := net.ListenTCP("tcp", tcpAddr)
+	require.NoError(t, err)
+	defer tcpServer.Close()
 
 	s := &Snmp{
-		Agents: []string{"tcp://127.0.0.1:56789"},
+		Agents: []string{fmt.Sprintf("tcp://%s", tcpServer.Addr())},
 		ClientConfig: snmp.ClientConfig{
 			Translator: "netsnmp",
 		},
 	}
-	err := s.Init()
-	require.NoError(t, err)
+	require.NoError(t, s.Init())
 
-	wg.Add(1)
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
-	assert.EqualValues(t, 56789, gs.Port)
 	assert.Equal(t, "tcp", gs.Transport)
-	wg.Wait()
-}
-
-func stubTCPServer(wg *sync.WaitGroup) {
-	defer wg.Done()
-	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:56789")
-	if err != nil {
-		fmt.Print(err)
-	}
-	tcpServer, err := net.ListenTCP("tcp", tcpAddr)
-	if err != nil {
-		fmt.Print(err)
-	}
-	defer tcpServer.Close()
-	wg.Done()
-	conn, _ := tcpServer.AcceptTCP()
-	defer conn.Close()
 }
 
 func TestGetSNMPConnection_v3(t *testing.T) {

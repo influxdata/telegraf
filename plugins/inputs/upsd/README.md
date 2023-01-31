@@ -14,7 +14,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -26,6 +26,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # port = 3493
   # username = "user"
   # password = "password"
+
+  ## Force parsing numbers as floats
+  ## It is highly recommended to enable this setting to parse numbers
+  ## consistently as floats to avoid database conflicts where some numbers are
+  ## parsed as integers and others as floats.
+  # force_float = false
 ```
 
 ## Metrics

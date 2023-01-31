@@ -65,8 +65,8 @@ type MQTTConsumer struct {
 	Topics                 []string             `toml:"topics"`
 	TopicTag               *string              `toml:"topic_tag"`
 	TopicParsing           []TopicParsingConfig `toml:"topic_parsing"`
-	Username               string               `toml:"username"`
-	Password               string               `toml:"password"`
+	Username               config.Secret        `toml:"username"`
+	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
@@ -331,16 +331,25 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	if tlsCfg != nil {
 		opts.SetTLSConfig(tlsCfg)
 	}
-	user := m.Username
-	if user != "" {
-		opts.SetUsername(user)
+	if !m.Username.Empty() {
+		user, err := m.Username.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting username failed: %w", err)
+		}
+		opts.SetUsername(string(user))
+		config.ReleaseSecret(user)
 	}
-	password := m.Password
-	if password != "" {
-		opts.SetPassword(password)
+
+	if !m.Password.Empty() {
+		password, err := m.Password.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting password failed: %w", err)
+		}
+		opts.SetPassword(string(password))
+		config.ReleaseSecret(password)
 	}
 	if len(m.Servers) == 0 {
-		return opts, fmt.Errorf("could not get host informations")
+		return opts, fmt.Errorf("could not get host information")
 	}
 	for _, server := range m.Servers {
 		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4

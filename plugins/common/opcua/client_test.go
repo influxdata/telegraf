@@ -10,7 +10,7 @@ func TestSetupWorkarounds(t *testing.T) {
 	o := OpcUAClient{
 		Config: &OpcUAClientConfig{
 			Workarounds: OpcUAWorkarounds{
-				AdditionalValidStatusCodes: []string{"0xC0", "0x00AA0000"},
+				AdditionalValidStatusCodes: []string{"0xC0", "0x00AA0000", "0x80000000"},
 			},
 		},
 	}
@@ -18,10 +18,11 @@ func TestSetupWorkarounds(t *testing.T) {
 	err := o.setupWorkarounds()
 	require.NoError(t, err)
 
-	require.Len(t, o.codes, 3)
+	require.Len(t, o.codes, 4)
 	require.Equal(t, o.codes[0], ua.StatusCode(0))
 	require.Equal(t, o.codes[1], ua.StatusCode(192))
 	require.Equal(t, o.codes[2], ua.StatusCode(11141120))
+	require.Equal(t, o.codes[3], ua.StatusCode(2147483648))
 }
 
 func TestCheckStatusCode(t *testing.T) {

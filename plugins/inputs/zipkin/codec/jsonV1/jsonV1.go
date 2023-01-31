@@ -21,12 +21,12 @@ func (j *JSON) Decode(octets []byte) ([]codec.Span, error) {
 		return nil, err
 	}
 
-	res := make([]codec.Span, len(spans))
+	res := make([]codec.Span, 0, len(spans))
 	for i := range spans {
 		if err := spans[i].Validate(); err != nil {
 			return nil, err
 		}
-		res[i] = &spans[i]
+		res = append(res, &spans[i])
 	}
 	return res, nil
 }
@@ -89,23 +89,23 @@ func (s *span) Name() string {
 }
 
 func (s *span) Annotations() []codec.Annotation {
-	res := make([]codec.Annotation, len(s.Anno))
+	res := make([]codec.Annotation, 0, len(s.Anno))
 	for i := range s.Anno {
-		res[i] = &s.Anno[i]
+		res = append(res, &s.Anno[i])
 	}
 	return res
 }
 
 func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
-	res := make([]codec.BinaryAnnotation, len(s.BAnno))
+	res := make([]codec.BinaryAnnotation, 0, len(s.BAnno))
 	for i, a := range s.BAnno {
 		if a.Key() != "" && a.Value() == "" {
-			return nil, fmt.Errorf("No value for key %s at binaryAnnotations[%d]", a.K, i)
+			return nil, fmt.Errorf("no value for key %s at binaryAnnotations[%d]", a.K, i)
 		}
 		if a.Value() != "" && a.Key() == "" {
-			return nil, fmt.Errorf("No key at binaryAnnotations[%d]", i)
+			return nil, fmt.Errorf("no key at binaryAnnotations[%d]", i)
 		}
-		res[i] = &s.BAnno[i]
+		res = append(res, &s.BAnno[i])
 	}
 	return res, nil
 }

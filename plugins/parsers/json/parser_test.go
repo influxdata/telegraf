@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/fuzz"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -1355,4 +1356,24 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
 		})
 	}
+}
+
+func FuzzParserJSON(f *testing.F) {
+	for _, value := range fuzz.JSONDictionary {
+		f.Add([]byte(value))
+	}
+
+	f.Add([]byte(validJSON))
+	f.Add([]byte(validJSONArray))
+	f.Add([]byte(validJSONArrayMultiple))
+	f.Add([]byte(validJSONArrayTags))
+	f.Add([]byte(validJSONNewline))
+	f.Add([]byte(validJSONTags))
+
+	parser := &Parser{MetricName: "testing"}
+	require.NoError(f, parser.Init())
+
+	f.Fuzz(func(t *testing.T, input []byte) {
+		_, _ = parser.Parse(input)
+	})
 }

@@ -33,6 +33,18 @@ const (
 	turboRatioLimit2Location           = 0x1AF
 	atomCoreTurboRatiosLocation        = 0x66C
 	uncorePerfStatusLocation           = 0x621
+	platformInfo                       = 0xCE
+	fsbFreq                            = 0xCD
+)
+
+const (
+	msrTurboRatioLimitString     = "MSR_TURBO_RATIO_LIMIT"
+	msrTurboRatioLimit1String    = "MSR_TURBO_RATIO_LIMIT1"
+	msrTurboRatioLimit2String    = "MSR_TURBO_RATIO_LIMIT2"
+	msrAtomCoreTurboRatiosString = "MSR_ATOM_CORE_TURBO_RATIOS"
+	msrUncorePerfStatusString    = "MSR_UNCORE_PERF_STATUS"
+	msrPlatformInfoString        = "MSR_PLATFORM_INFO"
+	msrFSBFreqString             = "MSR_FSB_FREQ"
 )
 
 // msrService is responsible for interactions with MSR.
@@ -157,16 +169,20 @@ func (m *msrServiceImpl) readSingleMsr(core string, msr string) (uint64, error) 
 
 	var msrAddress int64
 	switch msr {
-	case "MSR_TURBO_RATIO_LIMIT":
+	case msrTurboRatioLimitString:
 		msrAddress = turboRatioLimitLocation
-	case "MSR_TURBO_RATIO_LIMIT1":
+	case msrTurboRatioLimit1String:
 		msrAddress = turboRatioLimit1Location
-	case "MSR_TURBO_RATIO_LIMIT2":
+	case msrTurboRatioLimit2String:
 		msrAddress = turboRatioLimit2Location
-	case "MSR_ATOM_CORE_TURBO_RATIOS":
+	case msrAtomCoreTurboRatiosString:
 		msrAddress = atomCoreTurboRatiosLocation
-	case "MSR_UNCORE_PERF_STATUS":
+	case msrUncorePerfStatusString:
 		msrAddress = uncorePerfStatusLocation
+	case msrPlatformInfoString:
+		msrAddress = platformInfo
+	case msrFSBFreqString:
+		msrAddress = fsbFreq
 	default:
 		return 0, fmt.Errorf("incorect name of MSR %s", msr)
 	}

@@ -22,8 +22,8 @@ var sampleConfig string
 
 type STOMP struct {
 	Host      string          `toml:"host"`
-	Username  string          `toml:"username"`
-	Password  string          `toml:"password"`
+	Username  config.Secret   `toml:"username"`
+	Password  config.Secret   `toml:"password"`
 	QueueName string          `toml:"queueName"`
 	Log       telegraf.Logger `toml:"-"`
 
@@ -55,11 +55,15 @@ func (q *STOMP) Connect() error {
 		}
 	}
 
-	q.stomp, err = stomp.Connect(
-		q.conn,
-		stomp.ConnOpt.HeartBeat(time.Duration(q.HeartBeatSend), time.Duration(q.HeartBeatRec)),
-		stomp.ConnOpt.Login(q.Username, q.Password),
+	authOption, err := q.getAuthOption()
+	if err != nil {
+		return err
+	}
+	heartbeatOption := stomp.ConnOpt.HeartBeat(
+		time.Duration(q.HeartBeatSend),
+		time.Duration(q.HeartBeatRec),
 	)
+	q.stomp, err = stomp.Connect(q.conn, heartbeatOption, authOption)
 	if err != nil {
 		return err
 	}
@@ -90,6 +94,20 @@ func (q *STOMP) SampleConfig() string {
 }
 func (q *STOMP) Close() error {
 	return q.stomp.Disconnect()
+}
+
+func (q *STOMP) getAuthOption() (func(*stomp.Conn) error, error) {
+	username, err := q.Username.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting username failed: %w", err)
+	}
+	defer config.ReleaseSecret(username)
+	password, err := q.Password.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting password failed: %w", err)
+	}
+	defer config.ReleaseSecret(password)
+	return stomp.ConnOpt.Login(string(username), string(password)), nil
 }
 
 func init() {

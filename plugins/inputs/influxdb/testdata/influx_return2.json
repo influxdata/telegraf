@@ -270,6 +270,11 @@
       "numSeries": 1
     }
   },
+  "system": {
+    "currentTime": "2023-01-11T17:04:59.928454705Z",
+    "started": "2023-01-11T16:51:23.355766023Z",
+    "uptime": 816
+  },
   "memstats": {
     "Alloc": 17034016,
     "TotalAlloc": 201739016,

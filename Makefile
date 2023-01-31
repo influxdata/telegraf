@@ -2,7 +2,7 @@ ifneq (,$(filter $(OS),Windows_NT Windows))
 	EXEEXT=.exe
 endif
 
-next_version := $(shell cat build_version.txt)
+next_version := $(file < build_version.txt)
 tag := $(shell git describe --exact-match --tags 2>/dev/null)
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
@@ -111,12 +111,15 @@ build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
-	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+	GOOS=linux go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+	GOOS=windows go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+	GOOS=darwin go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 
 .PHONY: docs
-docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators
+docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
 
 .PHONY: build
 build:
@@ -224,6 +227,8 @@ clean:
 	rm -rf tools/custom_builder/custom_builder.exe
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
+	rm -rf tools/readme_linter/readme_linter
+	rm -rf tools/readme_linter/readme_linter.exe
 	rm -rf tools/package_lxd_test/package_lxd_test
 	rm -rf tools/package_lxd_test/package_lxd_test.exe
 	rm -rf tools/license_checker/license_checker
@@ -238,8 +243,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.19.4 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.19.4
+	docker build -t quay.io/influxdb/telegraf-ci:1.19.5 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.19.5
 
 .PHONY: install
 install: $(buildbin)

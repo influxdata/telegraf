@@ -262,9 +262,9 @@ func dictItems(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 	}
 	items := b.Receiver().(starlark.IterableMapping).Items()
-	res := make([]starlark.Value, len(items))
-	for i, item := range items {
-		res[i] = item // convert [2]starlark.Value to starlark.Value
+	res := make([]starlark.Value, 0, len(items))
+	for _, item := range items {
+		res = append(res, item) // convert [2]starlark.Value to starlark.Value
 	}
 	return starlark.NewList(res), nil
 }
@@ -276,9 +276,9 @@ func dictKeys(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple)
 	}
 
 	items := b.Receiver().(starlark.IterableMapping).Items()
-	res := make([]starlark.Value, len(items))
-	for i, item := range items {
-		res[i] = item[0]
+	res := make([]starlark.Value, 0, len(items))
+	for _, item := range items {
+		res = append(res, item[0])
 	}
 	return starlark.NewList(res), nil
 }
@@ -289,9 +289,9 @@ func dictValues(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tupl
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 	}
 	items := b.Receiver().(starlark.IterableMapping).Items()
-	res := make([]starlark.Value, len(items))
-	for i, item := range items {
-		res[i] = item[1]
+	res := make([]starlark.Value, 0, len(items))
+	for _, item := range items {
+		res = append(res, item[1])
 	}
 	return starlark.NewList(res), nil
 }

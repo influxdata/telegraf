@@ -573,11 +573,9 @@ func (e *Endpoint) simpleMetadataSelect(ctx context.Context, client *Client, res
 func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind, objects objectMap) {
 	// We're only going to get metadata from maxMetadataSamples resources. If we have
 	// more resources than that, we pick maxMetadataSamples samples at random.
-	sampledObjects := make([]*objectRef, len(objects))
-	i := 0
+	sampledObjects := make([]*objectRef, 0, len(objects))
 	for _, obj := range objects {
-		sampledObjects[i] = obj
-		i++
+		sampledObjects = append(sampledObjects, obj)
 	}
 	n := len(sampledObjects)
 	if n > maxMetadataSamples {

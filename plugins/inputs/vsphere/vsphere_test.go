@@ -164,14 +164,14 @@ func createSim(folders int) (*simulator.Model, *simulator.Server, error) {
 
 func testAlignUniform(t *testing.T, n int) {
 	now := time.Now().Truncate(60 * time.Second)
-	info := make([]types.PerfSampleInfo, n)
-	values := make([]int64, n)
+	info := make([]types.PerfSampleInfo, 0, n)
+	values := make([]int64, 0, n)
 	for i := 0; i < n; i++ {
-		info[i] = types.PerfSampleInfo{
+		info = append(info, types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
 			Interval:  20,
-		}
-		values[i] = 1
+		})
+		values = append(values, 1)
 	}
 	e := Endpoint{log: testutil.Logger{}}
 	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
@@ -190,14 +190,14 @@ func TestAlignMetrics(t *testing.T) {
 	// 20s to 60s of 1,2,3,1,2,3... (should average to 2)
 	n := 30
 	now := time.Now().Truncate(60 * time.Second)
-	info := make([]types.PerfSampleInfo, n)
-	values := make([]int64, n)
+	info := make([]types.PerfSampleInfo, 0, n)
+	values := make([]int64, 0, n)
 	for i := 0; i < n; i++ {
-		info[i] = types.PerfSampleInfo{
+		info = append(info, types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
 			Interval:  20,
-		}
-		values[i] = int64(i%3 + 1)
+		})
+		values = append(values, int64(i%3+1))
 	}
 	e := Endpoint{log: testutil.Logger{}}
 	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
@@ -225,9 +225,7 @@ func TestMaxQuery(t *testing.T) {
 		return
 	}
 	m, s, err := createSim(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer m.Remove()
 	defer s.Close()
 
@@ -235,9 +233,7 @@ func TestMaxQuery(t *testing.T) {
 	v.MaxQueryMetrics = 256
 	ctx := context.Background()
 	c, err := NewClient(ctx, s.URL, v)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.Equal(t, 256, v.MaxQueryMetrics)
 
 	om := object.NewOptionManager(c.Client.Client, *c.Client.Client.ServiceContent.Setting)
@@ -245,16 +241,12 @@ func TestMaxQuery(t *testing.T) {
 		Key:   "config.vpxd.stats.maxQueryMetrics",
 		Value: "42",
 	}})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	v.MaxQueryMetrics = 256
 	ctx = context.Background()
 	c2, err := NewClient(ctx, s.URL, v)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.Equal(t, 42, v.MaxQueryMetrics)
 	c.close()
 	c2.close()
@@ -287,9 +279,7 @@ func TestFinder(t *testing.T) {
 	}
 
 	m, s, err := createSim(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer m.Remove()
 	defer s.Close()
 
@@ -413,9 +403,7 @@ func TestFolders(t *testing.T) {
 	}
 
 	m, s, err := createSim(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer m.Remove()
 	defer s.Close()
 
@@ -511,8 +499,8 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	v := defaultVSphere()
 	if vCenter != "" {
 		v.Vcenters = []string{vCenter}
-		v.Username = username
-		v.Password = password
+		v.Username = config.NewSecret([]byte(username))
+		v.Password = config.NewSecret([]byte(password))
 	} else {
 		// Don't run test on 32-bit machines due to bug in simulator.
 		// https://github.com/vmware/govmomi/issues/1330
@@ -522,9 +510,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 		}
 
 		m, s, err := createSim(0)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		defer m.Remove()
 		defer s.Close()
 		v.Vcenters = []string{s.URL.String()}

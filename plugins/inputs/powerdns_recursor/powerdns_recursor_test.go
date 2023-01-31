@@ -96,12 +96,13 @@ var intOverflowMetrics = "all-outqueries\t18446744073709550195\nanswers-slow\t36
 	"x-our-latency\t19\nx-ourtime-slow\t632\nx-ourtime0-1\t3060079\nx-ourtime1-2\t3351\nx-ourtime16-32\t197\n" +
 	"x-ourtime2-4\t302\nx-ourtime4-8\t194\nx-ourtime8-16\t24\n"
 
-func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
+func TestV1PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
 		t.Skip("Skipping on windows and darwin, as unixgram sockets are not supported")
 	}
 	// We create a fake server to return test data
 	controlSocket := "/tmp/pdns5724354148158589552.controlsocket"
+	defer os.Remove(controlSocket)
 	addr, err := net.ResolveUnixAddr("unixgram", controlSocket)
 	require.NoError(t, err, "Cannot parse unix socket")
 	socket, err := net.ListenUnixgram("unixgram", addr)
@@ -111,13 +112,8 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			// Ignore the returned error as we need to remove the socket file anyway
-			//nolint:errcheck,revive
-			socket.Close()
-			// Ignore the returned error as we want to remove the file and ignore
-			// no-such-file errors
-			//nolint:errcheck,revive
-			os.Remove(controlSocket)
+			socket.Close()           //nolint:revive // ignore the returned error as we need to remove the socket file anyway
+			os.Remove(controlSocket) //nolint:revive // ignore the returned error as we want to remove the file and ignore no-such-file errors
 			wg.Done()
 		}()
 
@@ -125,20 +121,14 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			buf := make([]byte, 1024)
 			n, remote, err := socket.ReadFromUnix(buf)
 			if err != nil {
-				// Ignore the returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
-				socket.Close()
+				socket.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
 				return
 			}
 
 			data := buf[:n]
 			if string(data) == "get-all\n" {
-				// Ignore the returned error as we need to close the socket anyway
-				//nolint:errcheck,revive
-				socket.WriteToUnix([]byte(metrics), remote)
-				// Ignore the returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
-				socket.Close()
+				socket.WriteToUnix([]byte(metrics), remote) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
+				socket.Close()                              //nolint:revive // ignore the returned error as we cannot do anything about it anyway
 			}
 
 			time.Sleep(100 * time.Millisecond)
@@ -158,6 +148,145 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 
 	wg.Wait()
 
+	testReturnedMetrics(t, &acc)
+}
+
+func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+		t.Skip("Skipping on windows and darwin, as unixgram sockets are not supported")
+	}
+	// We create a fake server to return test data
+	controlSocket := "/tmp/pdns-v2-5724354148158589552.controlsocket"
+	defer os.Remove(controlSocket)
+	addr, err := net.ResolveUnixAddr("unixgram", controlSocket)
+	require.NoError(t, err, "Cannot parse unix socket")
+	socket, err := net.ListenUnixgram("unixgram", addr)
+	require.NoError(t, err, "Cannot initialize server on port")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer func() {
+			socket.Close()           //nolint:revive // ignore the returned error as we need to remove the socket file anyway
+			os.Remove(controlSocket) //nolint:revive // ignore the returned error as we want to remove the file and ignore no-such-file errors
+			wg.Done()
+		}()
+
+		for {
+			status := make([]byte, 4)
+			n, _, err := socket.ReadFromUnix(status)
+			if err != nil || n != 4 {
+				socket.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				return
+			}
+
+			buf := make([]byte, 1024)
+			n, remote, err := socket.ReadFromUnix(buf)
+			if err != nil {
+				socket.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				return
+			}
+
+			data := buf[:n]
+			if string(data) == "get-all" {
+				socket.WriteToUnix([]byte{0, 0, 0, 0}, remote) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
+				socket.WriteToUnix([]byte(metrics), remote)    //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
+				socket.Close()                                 //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	p := &PowerdnsRecursor{
+		UnixSockets:            []string{controlSocket},
+		SocketDir:              "/tmp",
+		SocketMode:             "0666",
+		ControlProtocolVersion: 2,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+
+	require.NoError(t, acc.GatherError(p.Gather))
+
+	wg.Wait()
+
+	testReturnedMetrics(t, &acc)
+}
+
+func TestV3PowerdnsRecursorGeneratesMetrics(t *testing.T) {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+		t.Skip("Skipping on windows and darwin, as unixgram sockets are not supported")
+	}
+	// We create a fake server to return test data
+	controlSocket := "/tmp/pdns-v3-5724354148158589552.controlsocket"
+	defer os.Remove(controlSocket)
+	socket, err := net.Listen("unix", controlSocket)
+	require.NoError(t, err, "Cannot initialize server on port")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer func() {
+			socket.Close()           //nolint:revive // ignore the returned error as we need to remove the socket file anyway
+			os.Remove(controlSocket) //nolint:revive // ignore the returned error as we want to remove the file and ignore no-such-file errors
+			wg.Done()
+		}()
+
+		for {
+			conn, err := socket.Accept()
+			if err != nil {
+				return
+			}
+
+			status := make([]byte, 4)
+			n, err := conn.Read(status)
+			if err != nil || n != 4 {
+				return
+			}
+
+			dataLen, err := readNativeUIntFromConn(conn)
+			if err != nil || dataLen == 0 || dataLen >= 16384 {
+				return
+			}
+
+			buf := make([]byte, dataLen)
+			n, err = conn.Read(buf)
+			if err != nil || uint(n) != dataLen {
+				return
+			}
+
+			if string(buf) == "get-all" {
+				conn.Write([]byte{0, 0, 0, 0}) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
+				metrics := []byte(metrics)
+				writeNativeUIntToConn(conn, uint(len(metrics))) //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
+				conn.Write(metrics)                             //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
+				socket.Close()                                  //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	p := &PowerdnsRecursor{
+		UnixSockets:            []string{controlSocket},
+		SocketDir:              "/tmp",
+		SocketMode:             "0666",
+		ControlProtocolVersion: 3,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+
+	require.NoError(t, acc.GatherError(p.Gather))
+
+	wg.Wait()
+
+	testReturnedMetrics(t, &acc)
+}
+
+func testReturnedMetrics(t *testing.T, acc *testutil.Accumulator) {
 	intMetrics := []string{"all-outqueries", "answers-slow", "answers0-1", "answers1-10",
 		"answers10-100", "answers100-1000", "auth-zone-queries", "auth4-answers-slow",
 		"auth4-answers0-1", "auth4-answers1-10", "auth4-answers10-100", "auth4-answers100-1000",
@@ -188,11 +317,7 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 }
 
 func TestPowerdnsRecursorParseMetrics(t *testing.T) {
-	p := &PowerdnsRecursor{
-		Log: testutil.Logger{},
-	}
-
-	values := p.parseResponse(metrics)
+	values := parseResponse(metrics)
 
 	tests := []struct {
 		key   string
@@ -312,11 +437,7 @@ func TestPowerdnsRecursorParseMetrics(t *testing.T) {
 }
 
 func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
-	p := &PowerdnsRecursor{
-		Log: testutil.Logger{},
-	}
-
-	values := p.parseResponse(corruptMetrics)
+	values := parseResponse(corruptMetrics)
 
 	tests := []struct {
 		key   string
@@ -435,11 +556,7 @@ func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
 }
 
 func TestPowerdnsRecursorParseIntOverflowMetrics(t *testing.T) {
-	p := &PowerdnsRecursor{
-		Log: testutil.Logger{},
-	}
-
-	values := p.parseResponse(intOverflowMetrics)
+	values := parseResponse(intOverflowMetrics)
 
 	tests := []struct {
 		key   string

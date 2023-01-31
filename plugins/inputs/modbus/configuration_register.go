@@ -95,7 +95,13 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 	if err != nil {
 		return nil, err
 	}
-	return groupFieldsToRequests(fields, nil, maxQuantity, "none", 0), nil
+	params := groupingParams{
+		MaxBatchSize:    maxQuantity,
+		Optimization:    "none",
+		EnforceFromZero: c.workarounds.ReadCoilsStartingAtZero,
+	}
+
+	return groupFieldsToRequests(fields, params), nil
 }
 
 func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {

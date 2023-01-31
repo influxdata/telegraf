@@ -403,6 +403,31 @@ func TestDellApis(t *testing.T) {
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
+			"redfish_power_powercontrol",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Power Control",
+				"member_id":  "PowerControl",
+				"address":    address,
+				"datacenter": "",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+			},
+			map[string]interface{}{
+				"average_consumed_watts": 426.0,
+				"interval_in_min":        int64(1),
+				"max_consumed_watts":     436.0,
+				"min_consumed_watts":     425.0,
+				"power_allocated_watts":  1628.0,
+				"power_available_watts":  0.0,
+				"power_capacity_watts":   1628.0,
+				"power_consumed_watts":   429.0,
+				"power_requested_watts":  704.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
 			"redfish_power_powersupplies",
 			map[string]string{
 				"source":     "tpa-hostname",
@@ -604,6 +629,24 @@ func TestHPApis(t *testing.T) {
 			},
 			map[string]interface{}{
 				"reading_percent": 23,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_powercontrol",
+			map[string]string{
+				"source":    "tpa-hostname",
+				"name":      "",
+				"member_id": "0",
+				"address":   address,
+			},
+			map[string]interface{}{
+				"average_consumed_watts": 221.0,
+				"interval_in_min":        int64(20),
+				"max_consumed_watts":     252.0,
+				"min_consumed_watts":     220.0,
+				"power_capacity_watts":   1600.0,
+				"power_consumed_watts":   221.0,
 			},
 			time.Unix(0, 0),
 		),

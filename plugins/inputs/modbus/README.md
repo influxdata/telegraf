@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -50,10 +50,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # parity = "N"
   # stop_bits = 1
 
-  ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and
-  ## "ASCIIoverTCP". The default behaviour is "TCP" for ModbusTCP controllers.
+  ## Transmission mode for Modbus packets depending on the controller type.
+  ## For Modbus over TCP you can choose between "TCP" , "RTUoverTCP" and
+  ## "ASCIIoverTCP".
   ## For Serial controllers you can choose between "RTU" and "ASCII".
-  # transmission_mode = "RTU"
+  ## By default this is set to "auto" selecting "TCP" for ModbusTCP connections
+  ## and "RTU" for serial connections.
+  # transmission_mode = "auto"
 
   ## Trace the connection to the modbus device as debug messages
   ## Note: You have to enable telegraf's debug mode to see those messages!
@@ -253,6 +256,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## This might be necessary for devices not conforming to the spec,
     ## see https://github.com/influxdata/telegraf/issues/12071.
     # one_request_per_field = false
+
+    ## Enforce the starting address to be zero for the first request on
+    ## coil registers. This is necessary for some devices see
+    ## https://github.com/influxdata/telegraf/issues/8905
+    # read_coils_starting_at_zero = false
 ```
 
 ## Notes

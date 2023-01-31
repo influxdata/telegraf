@@ -24,13 +24,14 @@ const (
 )
 
 type MQTT struct {
-	Servers     []string `toml:"servers"`
-	Protocol    string   `toml:"protocol"`
-	Username    string   `toml:"username"`
-	Password    string   `toml:"password"`
+	Servers     []string      `toml:"servers"`
+	Protocol    string        `toml:"protocol"`
+	Username    config.Secret `toml:"username"`
+	Password    config.Secret `toml:"password"`
 	Database    string
 	Timeout     config.Duration `toml:"timeout"`
-	TopicPrefix string          `toml:"topic_prefix"`
+	TopicPrefix string          `toml:"topic_prefix" deprecated:"1.25.0;use 'topic' instead"`
+	Topic       string          `toml:"topic"`
 	QoS         int             `toml:"qos"`
 	ClientID    string          `toml:"client_id"`
 	tls.ClientConfig
@@ -41,6 +42,7 @@ type MQTT struct {
 
 	client     Client
 	serializer serializers.Serializer
+	generator  *TopicNameGenerator
 
 	sync.Mutex
 }
@@ -56,6 +58,15 @@ type Client interface {
 
 func (*MQTT) SampleConfig() string {
 	return sampleConfig
+}
+
+func (m *MQTT) Init() error {
+	var err error
+	m.generator, err = NewTopicNameGenerator(m.TopicPrefix, m.Topic)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *MQTT) Connect() error {
@@ -91,24 +102,17 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
+
 	hostname, ok := metrics[0].Tags()["host"]
 	if !ok {
 		hostname = ""
 	}
-
 	metricsmap := make(map[string][]telegraf.Metric)
-
 	for _, metric := range metrics {
-		var t []string
-		if m.TopicPrefix != "" {
-			t = append(t, m.TopicPrefix)
+		topic, err := m.generator.Generate(hostname, metric)
+		if err != nil {
+			return fmt.Errorf("topic name couldn't be generated due to error: %w", err)
 		}
-		if hostname != "" {
-			t = append(t, hostname)
-		}
-
-		t = append(t, metric.Name())
-		topic := strings.Join(t, "/")
 
 		if m.BatchMessage {
 			metricsmap[topic] = append(metricsmap[topic], metric)

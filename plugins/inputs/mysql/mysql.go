@@ -606,6 +606,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		if err != nil {
 			return err
 		}
+
 		vals := make([]sql.RawBytes, len(cols))
 		valPtrs := make([]interface{}, len(cols))
 		// fill the array with sql.Rawbytes

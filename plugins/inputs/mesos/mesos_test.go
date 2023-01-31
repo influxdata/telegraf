@@ -288,9 +288,7 @@ func TestMain(m *testing.M) {
 	masterRouter.HandleFunc("/metrics/snapshot", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		json.NewEncoder(w).Encode(masterMetrics)
+		json.NewEncoder(w).Encode(masterMetrics) //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
 	})
 	masterTestServer = httptest.NewServer(masterRouter)
 
@@ -298,9 +296,7 @@ func TestMain(m *testing.M) {
 	slaveRouter.HandleFunc("/metrics/snapshot", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		json.NewEncoder(w).Encode(slaveMetrics)
+		json.NewEncoder(w).Encode(slaveMetrics) //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
 	})
 	slaveTestServer = httptest.NewServer(slaveRouter)
 

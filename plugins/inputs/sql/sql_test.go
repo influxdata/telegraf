@@ -12,17 +12,17 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func pwgen(n int) string {
 	charset := []byte("abcdedfghijklmnopqrstABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-
 	nchars := len(charset)
-	buffer := make([]byte, n)
 
-	for i := range buffer {
-		buffer[i] = charset[rand.Intn(nchars)]
+	buffer := make([]byte, 0, n)
+	for i := 0; i < n; i++ {
+		buffer = append(buffer, charset[rand.Intn(nchars)])
 	}
 
 	return string(buffer)
@@ -99,14 +99,11 @@ func TestMariaDBIntegration(t *testing.T) {
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
+			dsn := fmt.Sprintf("root:%s@tcp(%s:%s)/%s", passwd, container.Address, container.Ports[port], database)
+			secret := config.NewSecret([]byte(dsn))
 			plugin := &SQL{
-				Driver: "maria",
-				Dsn: fmt.Sprintf("root:%s@tcp(%s:%s)/%s",
-					passwd,
-					container.Address,
-					container.Ports[port],
-					database,
-				),
+				Driver:  "maria",
+				Dsn:     secret,
 				Queries: tt.queries,
 				Log:     logger,
 			}
@@ -114,14 +111,11 @@ func TestMariaDBIntegration(t *testing.T) {
 			var acc testutil.Accumulator
 
 			// Startup the plugin
-			err := plugin.Init()
-			require.NoError(t, err)
-			err = plugin.Start(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Start(&acc))
 
 			// Gather
-			err = plugin.Gather(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Gather(&acc))
 			require.Len(t, acc.Errors, 0)
 
 			// Stopping the plugin
@@ -204,14 +198,11 @@ func TestPostgreSQLIntegration(t *testing.T) {
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
+			dsn := fmt.Sprintf("postgres://postgres:%v@%v:%v/%v", passwd, container.Address, container.Ports[port], database)
+			secret := config.NewSecret([]byte(dsn))
 			plugin := &SQL{
-				Driver: "pgx",
-				Dsn: fmt.Sprintf("postgres://postgres:%v@%v:%v/%v",
-					passwd,
-					container.Address,
-					container.Ports[port],
-					database,
-				),
+				Driver:  "pgx",
+				Dsn:     secret,
 				Queries: tt.queries,
 				Log:     logger,
 			}
@@ -219,14 +210,11 @@ func TestPostgreSQLIntegration(t *testing.T) {
 			var acc testutil.Accumulator
 
 			// Startup the plugin
-			err := plugin.Init()
-			require.NoError(t, err)
-			err = plugin.Start(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Start(&acc))
 
 			// Gather
-			err = plugin.Gather(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Gather(&acc))
 			require.Len(t, acc.Errors, 0)
 
 			// Stopping the plugin
@@ -305,13 +293,11 @@ func TestClickHouseIntegration(t *testing.T) {
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
+			dsn := fmt.Sprintf("tcp://%v:%v?username=%v", container.Address, container.Ports[port], user)
+			secret := config.NewSecret([]byte(dsn))
 			plugin := &SQL{
-				Driver: "clickhouse",
-				Dsn: fmt.Sprintf("tcp://%v:%v?username=%v",
-					container.Address,
-					container.Ports[port],
-					user,
-				),
+				Driver:  "clickhouse",
+				Dsn:     secret,
 				Queries: tt.queries,
 				Log:     logger,
 			}
@@ -319,14 +305,11 @@ func TestClickHouseIntegration(t *testing.T) {
 			var acc testutil.Accumulator
 
 			// Startup the plugin
-			err := plugin.Init()
-			require.NoError(t, err)
-			err = plugin.Start(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Start(&acc))
 
 			// Gather
-			err = plugin.Gather(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Gather(&acc))
 			require.Len(t, acc.Errors, 0)
 
 			// Stopping the plugin

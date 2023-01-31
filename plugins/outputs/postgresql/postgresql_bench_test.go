@@ -61,19 +61,19 @@ type batchGeneratorArgs struct {
 
 // tagCardinality counts all the tag keys & values as one element. fieldCardinality counts all the field keys (not values) as one element.
 func batchGenerator(args batchGeneratorArgs) <-chan []telegraf.Metric {
-	tagSets := make([]MSS, args.tagCardinality)
+	tagSets := make([]MSS, 0, args.tagCardinality)
 	for i := 0; i < args.tagCardinality; i++ {
 		tags := MSS{}
 		for j := 0; j < args.numTags; j++ {
 			tags[fmt.Sprintf("tag_%d", j)] = fmt.Sprintf("%d", rand.Int())
 		}
-		tagSets[i] = tags
+		tagSets = append(tagSets, tags)
 	}
 
 	metricChan := make(chan []telegraf.Metric, 32)
 	go func() {
 		for {
-			batch := make([]telegraf.Metric, args.batchSize)
+			batch := make([]telegraf.Metric, 0, args.batchSize)
 			for i := 0; i < args.batchSize; i++ {
 				tableName := args.b.Name() + "_" + strconv.Itoa(rand.Intn(args.numTables))
 
@@ -88,7 +88,7 @@ func batchGenerator(args batchGeneratorArgs) <-chan []telegraf.Metric {
 				}
 				m.AddField("f"+strconv.Itoa(rand.Intn(args.fieldCardinality)), rand.Int())
 
-				batch[i] = m
+				batch = append(batch, m)
 			}
 
 			select {

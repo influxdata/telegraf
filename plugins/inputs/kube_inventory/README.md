@@ -40,27 +40,30 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Read metrics from the Kubernetes api
 [[inputs.kube_inventory]]
-  ## URL for the Kubernetes API
-  url = "https://127.0.0.1"
+  ## URL for the Kubernetes API.
+  ## If empty in-cluster config with POD's service account token will be used.
+  # url = ""
 
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ##
+  ## Ignored if url is empty and in-cluster config is used.
+  ##
   ## If both of these are empty, we'll use the default serviceaccount:
-  ## at: /run/secrets/kubernetes.io/serviceaccount/token
+  ## at: /var/run/secrets/kubernetes.io/serviceaccount/token
   ##
   ## To auto-refresh the token, please use a file with the bearer_token option.
   ## If given a string, Telegraf cannot refresh the token periodically.
-  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
+  # bearer_token = "/var/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
   ## deprecated in 1.24.0; use bearer_token with a file
   # bearer_token_string = "abc_123"
