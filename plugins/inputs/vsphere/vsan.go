@@ -367,7 +367,7 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	clusterRef *objectRef, acc telegraf.Accumulator) error {
 	if lower := versionLowerThan(e.apiVersion, "6.7"); lower {
 		e.Parent.Log.Infof("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s",
-		e.apiVersion, e.URL.Host)
+			e.apiVersion, e.URL.Host)
 		return nil
 	}
 	hosts, err := clusterObj.Hosts(ctx)
