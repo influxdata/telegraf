@@ -70,7 +70,8 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 }
 
 // collectVsanPerCluster is called by goroutines in collectVsan function.
-func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *objectRef, vimClient *vim25.Client, vsanClient *soap.Client, metrics map[string]string, acc telegraf.Accumulator) {
+func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *objectRef, vimClient *vim25.Client, vsanClient *soap.Client,
+	metrics map[string]string, acc telegraf.Accumulator) {
 	// Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(vimClient, clusterRef.ref)
 	if !e.vsanEnabled(ctx, cluster) {
@@ -199,7 +200,8 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 }
 
 // queryPerformance adds performance metrics to telegraf accumulator
-func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client, clusterRef *objectRef, metrics map[string]string, cmmds map[string]CmmdsEntity, acc telegraf.Accumulator) error {
+func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client, clusterRef *objectRef, metrics map[string]string,
+	cmmds map[string]CmmdsEntity, acc telegraf.Accumulator) error {
 	end := time.Now().UTC()
 
 	// We're using a fake metric key, since we only store one highwater mark per resource
@@ -361,9 +363,11 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 }
 
 // queryResyncSummary adds resync information to accumulator
-func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource, clusterRef *objectRef, acc telegraf.Accumulator) error {
+func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource,
+	clusterRef *objectRef, acc telegraf.Accumulator) error {
 	if lower := versionLowerThan(e.apiVersion, "6.7"); lower {
-		e.Parent.Log.Infof("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
+		e.Parent.Log.Infof("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s",
+		e.apiVersion, e.URL.Host)
 		return nil
 	}
 	hosts, err := clusterObj.Hosts(ctx)
