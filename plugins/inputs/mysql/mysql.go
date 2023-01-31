@@ -86,11 +86,11 @@ func (m *Mysql) Init() error {
 	// one for the mysql package, we need to define unique IDs to avoid
 	// side effects and races between different plugin instances. Therefore,
 	// we decorate the "custom" naming of the "tls" parameter with an UUID.
-	uuid, err := uuid.NewV7()
+	tlsuuid, err := uuid.NewV7()
 	if err != nil {
 		return fmt.Errorf("cannot create UUID: %w", err)
 	}
-	tlsid := "custom-" + uuid.String()
+	tlsid := "custom-" + tlsuuid.String()
 	tlsConfig, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return fmt.Errorf("registering TLS config: %s", err)
