@@ -10,7 +10,7 @@ vCenter servers.
 * Datastores
 * vSAN
 
-## Supported Versions of vSphere
+## Supported versions of vSphere
 
 This plugin supports vSphere version 6.5, 6.7 and 7.0.
 It may work with versions 5.1, 5.5 and 6.0, but neither is officially supported.
@@ -219,7 +219,7 @@ Compatibility information is available from the govmomi project
 ```
 
 NOTE: To disable collection of a specific resource type, simply exclude all
-metrics using the XX_metric_exclude.  For example, to disable collection of VMs,
+metrics using the XX_metric_exclude. For example, to disable collection of VMs,
 add this:
 
 ```toml

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
@@ -39,10 +40,7 @@ var (
 
 // collectVsan is the entry point for vsan metrics collection
 func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
-	lower, err := versionLowerThan(e.apiVersion, "5.5")
-	if err != nil {
-		return fmt.Errorf("failed to get the vCenter version for vSAN: %v", err)
-	}
+	lower := versionLowerThan(e.apiVersion, "5.5")
 	if lower {
 		return fmt.Errorf("a minimum API version of 5.5 is required for vSAN. Found: %s. Skipping vCenter: %s", e.apiVersion, e.URL.Host)
 	}
@@ -364,7 +362,7 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 
 // queryResyncSummary adds resync information to accumulator
 func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource, clusterRef *objectRef, acc telegraf.Accumulator) error {
-	if lower, _ := versionLowerThan(e.apiVersion, "6.7"); lower {
+	if lower := versionLowerThan(e.apiVersion, "6.7"); lower {
 		e.Parent.Log.Infof("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
 		return nil
 	}
@@ -494,23 +492,10 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 }
 
 // versionLowerThan returns true is the current version < a base version
-func versionLowerThan(current string, base string) (bool, error) {
-	v1 := strings.Split(current, ".")
-	v2 := strings.Split(base, ".")
-	major1, err := strconv.Atoi(v1[0])
-	major2, _ := strconv.Atoi(v2[0])
-	if err != nil {
-		return false, fmt.Errorf("fail to parse version %s: %v", current, err)
-	}
-	if len(v1) < 2 {
-		return major1 < major2, nil
-	}
-	minor1, err := strconv.Atoi(v1[1])
-	minor2, _ := strconv.Atoi(v2[1])
-	if err != nil {
-		return false, fmt.Errorf("fail to parse version %s: %v", current, err)
-	}
-	return major1 < major2 || major1 == major2 && minor1 < minor2, nil
+func versionLowerThan(current string, base string) (bool) {
+	v1, _ := semver.New(current)
+	v2, _ := semver.New(base)
+	return v1.LT(*v2)
 }
 
 type CmmdsEntity struct {
