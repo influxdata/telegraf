@@ -98,6 +98,20 @@ func (m *Mysql) Init() error {
 		}
 	}
 
+	// Adapt the DSN string with default timeout
+	for i, dsn := range m.Servers {
+		conf, err := mysql.ParseDSN(dsn)
+		if err != nil {
+			return fmt.Errorf("parsing %q failed: %w", dsn, err)
+		}
+
+		if conf.Timeout == 0 {
+			conf.Timeout = time.Second * 5
+		}
+
+		m.Servers[i] = conf.FormatDSN()
+	}
+
 	return nil
 }
 
@@ -381,16 +395,10 @@ const (
 )
 
 func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
-	serv, err := dsnAddTimeout(serv)
-	if err != nil {
-		return err
-	}
-
 	db, err := sql.Open("mysql", serv)
 	if err != nil {
 		return err
 	}
-
 	defer db.Close()
 
 	err = m.gatherGlobalStatuses(db, serv, acc)
@@ -1924,19 +1932,6 @@ func copyTags(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
-}
-
-func dsnAddTimeout(dsn string) (string, error) {
-	conf, err := mysql.ParseDSN(dsn)
-	if err != nil {
-		return "", err
-	}
-
-	if conf.Timeout == 0 {
-		conf.Timeout = time.Second * 5
-	}
-
-	return conf.FormatDSN(), nil
 }
 
 func getDSNTag(dsn string) string {

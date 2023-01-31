@@ -167,44 +167,53 @@ func TestMysqlGetDSNTag(t *testing.T) {
 
 func TestMysqlDNSAddTimeout(t *testing.T) {
 	tests := []struct {
+		name   string
 		input  string
 		output string
 	}{
 		{
+			"empty",
 			"",
 			"tcp(127.0.0.1:3306)/?timeout=5s",
 		},
 		{
+			"no timeout",
 			"tcp(192.168.1.1:3306)/",
 			"tcp(192.168.1.1:3306)/?timeout=5s",
 		},
 		{
+			"no timeout with credentials",
 			"root:passwd@tcp(192.168.1.1:3306)/?tls=false",
 			"root:passwd@tcp(192.168.1.1:3306)/?timeout=5s&tls=false",
 		},
 		{
+			"with timeout and credentials",
 			"root:passwd@tcp(192.168.1.1:3306)/?tls=false&timeout=10s",
 			"root:passwd@tcp(192.168.1.1:3306)/?timeout=10s&tls=false",
 		},
 		{
+			"no timeout different IP",
 			"tcp(10.150.1.123:3306)/",
 			"tcp(10.150.1.123:3306)/?timeout=5s",
 		},
 		{
+			"no timeout with bracket credentials",
 			"root:@!~(*&$#%(&@#(@&#Password@tcp(10.150.1.123:3306)/",
 			"root:@!~(*&$#%(&@#(@&#Password@tcp(10.150.1.123:3306)/?timeout=5s",
 		},
 		{
+			"no timeout with strange credentials",
 			"root:Test3a#@!@tcp(10.150.1.123:3306)/",
 			"root:Test3a#@!@tcp(10.150.1.123:3306)/?timeout=5s",
 		},
 	}
 
-	for _, test := range tests {
-		output, _ := dsnAddTimeout(test.input)
-		if output != test.output {
-			t.Errorf("Expected %s, got %s\n", test.output, output)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Mysql{Servers: []string{tt.input}}
+			require.NoError(t, m.Init())
+			require.Equal(t, tt.output, m.Servers[0])
+		})
 	}
 }
 
