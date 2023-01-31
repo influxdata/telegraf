@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/gofrs/uuid"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -87,26 +88,40 @@ func (m *Mysql) Init() error {
 		m.Servers = append(m.Servers, localhost)
 	}
 
+	// Register the TLS configuration. Due to the registry being a global
+	// one for the mysql package, we need to define unique IDs to avoid
+	// side effects and races between different plugin instances. Therefore,
+	// we decorate the "custom" naming of the "tls" parameter with an UUID.
+	uuid, err := uuid.NewV7()
+	if err != nil {
+		return fmt.Errorf("cannot create UUID: %w", err)
+	}
+	tlsid := "custom-" + uuid.String()
 	tlsConfig, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return fmt.Errorf("registering TLS config: %s", err)
 	}
-
 	if tlsConfig != nil {
-		if err := mysql.RegisterTLSConfig("custom", tlsConfig); err != nil {
+		if err := mysql.RegisterTLSConfig(tlsid, tlsConfig); err != nil {
 			return err
 		}
 	}
 
-	// Adapt the DSN string with default timeout
+	// Adapt the DSN string
 	for i, dsn := range m.Servers {
 		conf, err := mysql.ParseDSN(dsn)
 		if err != nil {
 			return fmt.Errorf("parsing %q failed: %w", dsn, err)
 		}
 
+		// Set the default timeout if none specified
 		if conf.Timeout == 0 {
 			conf.Timeout = time.Second * 5
+		}
+
+		// Reference the custom TLS config of _THIS_ plugin instance
+		if conf.TLSConfig == "custom" {
+			conf.TLSConfig = tlsid
 		}
 
 		m.Servers[i] = conf.FormatDSN()
