@@ -522,6 +522,10 @@ func testData() []osAggregationQueryTest {
 	}
 }
 
+func opensearchTestImages() []string {
+	return []string{"opensearchproject/opensearch:2.5.0", "opensearchproject/opensearch:1.3.7"}
+}
+
 func newOpensearchQuery(url string) *OpensearchQuery {
 	return &OpensearchQuery{
 		URLs:         []string{url},
@@ -533,7 +537,7 @@ func newOpensearchQuery(url string) *OpensearchQuery {
 	}
 }
 
-func setupIntegrationTest(t *testing.T) (*testutil.Container, *OpensearchQuery, error) {
+func setupIntegrationTest(t *testing.T, image string) (*testutil.Container, *OpensearchQuery, error) {
 	var err error
 
 	type nginxlog struct {
@@ -548,7 +552,7 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, *OpensearchQuery, 
 	}
 
 	container := testutil.Container{
-		Image:        "opensearchproject/opensearch:2.4.1",
+		Image:        image,
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"discovery.type": "single-node",
@@ -639,37 +643,41 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container, o, err := setupIntegrationTest(t)
-	require.NoError(t, err)
-	defer container.Terminate()
-
-	for _, tt := range testData() {
-		t.Run(tt.queryName, func(t *testing.T) {
-			var err error
-			var acc testutil.Accumulator
-
-			o.Aggregations = []osAggregation{tt.testAggregationQueryInput}
-			err = o.Init()
-			if (err != nil) != tt.wantInitErr {
-				t.Errorf("OpensearchQuery.Init() error = %v, wantInitErr %v", err, tt.wantInitErr)
-				return
-			} else if err != nil {
-				// Init() failures mean we're done
-				return
-			}
-
-			err = o.Gather(&acc)
-			if (len(acc.Errors) > 0) != tt.wantQueryResErr {
-				for _, err = range acc.Errors {
-					t.Errorf("OpensearchQuery.Gather() error: %v, wantQueryResErr %v", err, tt.wantQueryResErr)
-				}
-				return
-			}
-
+	for _, image := range opensearchTestImages() {
+		func() {
+			container, o, err := setupIntegrationTest(t, image)
 			require.NoError(t, err)
+			defer container.Terminate()
 
-			testutil.RequireMetricsEqual(t, tt.expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
-		})
+			for _, tt := range testData() {
+				t.Run(tt.queryName, func(t *testing.T) {
+					var err error
+					var acc testutil.Accumulator
+
+					o.Aggregations = []osAggregation{tt.testAggregationQueryInput}
+					err = o.Init()
+					if (err != nil) != tt.wantInitErr {
+						t.Errorf("OpensearchQuery.Init() error = %v, wantInitErr %v", err, tt.wantInitErr)
+						return
+					} else if err != nil {
+						// Init() failures mean we're done
+						return
+					}
+
+					err = o.Gather(&acc)
+					if (len(acc.Errors) > 0) != tt.wantQueryResErr {
+						for _, err = range acc.Errors {
+							t.Errorf("OpensearchQuery.Gather() error: %v, wantQueryResErr %v", err, tt.wantQueryResErr)
+						}
+						return
+					}
+
+					require.NoError(t, err)
+
+					testutil.RequireMetricsEqual(t, tt.expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+				})
+			}
+		}()
 	}
 }
 
@@ -678,47 +686,51 @@ func TestIntegrationGetMetricFields(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container, o, err := setupIntegrationTest(t)
-	require.NoError(t, err)
-	defer container.Terminate()
+	for _, image := range opensearchTestImages() {
+		func() {
+			container, o, err := setupIntegrationTest(t, image)
+			require.NoError(t, err)
+			defer container.Terminate()
 
-	type args struct {
-		ctx         context.Context
-		aggregation osAggregation
-	}
-
-	type test struct {
-		name    string
-		o       *OpensearchQuery
-		args    args
-		want    map[string]string
-		wantErr bool
-	}
-
-	testOpensearchAggregationData := testData()
-	tests := make([]test, 0, len(testOpensearchAggregationData))
-	for _, d := range testOpensearchAggregationData {
-		tests = append(tests, test{
-			name:    "getMetricFields " + d.queryName,
-			o:       o,
-			args:    args{context.Background(), d.testAggregationQueryInput},
-			want:    d.testAggregationQueryInput.mapMetricFields,
-			wantErr: d.wantGetMetricFieldsErr,
-		})
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.o.getMetricFields(tt.args.ctx, tt.args.aggregation)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("OpensearchQuery.buildAggregationQuery() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			type args struct {
+				ctx         context.Context
+				aggregation osAggregation
 			}
 
-			if !cmp.Equal(got, tt.want) {
-				t.Errorf("OpensearchQuery.getMetricFields() = error = %s", cmp.Diff(got, tt.want))
+			type test struct {
+				name    string
+				o       *OpensearchQuery
+				args    args
+				want    map[string]string
+				wantErr bool
 			}
-		})
+
+			testOpensearchAggregationData := testData()
+			tests := make([]test, 0, len(testOpensearchAggregationData))
+			for _, d := range testOpensearchAggregationData {
+				tests = append(tests, test{
+					name:    "getMetricFields " + d.queryName,
+					o:       o,
+					args:    args{context.Background(), d.testAggregationQueryInput},
+					want:    d.testAggregationQueryInput.mapMetricFields,
+					wantErr: d.wantGetMetricFieldsErr,
+				})
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					got, err := tt.o.getMetricFields(tt.args.ctx, tt.args.aggregation)
+					if (err != nil) != tt.wantErr {
+						t.Errorf("OpensearchQuery.buildAggregationQuery() error = %v, wantErr %v", err, tt.wantErr)
+						return
+					}
+
+					if !cmp.Equal(got, tt.want) {
+						t.Errorf("OpensearchQuery.getMetricFields() = error = %s", cmp.Diff(got, tt.want))
+					}
+				})
+			}
+		}()
 	}
 }
 
