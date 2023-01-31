@@ -52,7 +52,6 @@ type Mysql struct {
 	Log telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 	lastT            time.Time
-	initDone         bool
 	scanIntervalSlow uint32
 	getStatusQuery   string
 }
@@ -70,7 +69,7 @@ func (*Mysql) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Mysql) InitMysql() {
+func (m *Mysql) Init() error {
 	if len(m.IntervalSlow) > 0 {
 		interval, err := time.ParseDuration(m.IntervalSlow)
 		if err == nil && interval.Seconds() >= 1.0 {
@@ -82,17 +81,10 @@ func (m *Mysql) InitMysql() {
 	} else {
 		m.getStatusQuery = slaveStatusQuery
 	}
-	m.initDone = true
-}
 
-func (m *Mysql) Gather(acc telegraf.Accumulator) error {
+	// Default to localhost if nothing specified.
 	if len(m.Servers) == 0 {
-		// default to localhost if nothing specified.
-		return m.gatherServer(localhost, acc)
-	}
-	// Initialise additional query intervals
-	if !m.initDone {
-		m.InitMysql()
+		m.Servers = append(m.Servers, localhost)
 	}
 
 	tlsConfig, err := m.ClientConfig.TLSConfig()
@@ -106,6 +98,10 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	return nil
+}
+
+func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	// Loop through each server and collect metrics

@@ -31,17 +31,16 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 		),
 	}
 
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	m := &Mysql{
 		Servers: []string{fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])},
 	}
+	require.NoError(t, m.Init())
 
 	var acc testutil.Accumulator
-	err = m.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
 
 	require.True(t, acc.HasMeasurement("mysql"))
@@ -66,8 +65,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 		),
 	}
 
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
@@ -77,10 +75,10 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 		GatherGlobalVars: true,
 		MetricVersion:    2,
 	}
+	require.NoError(t, m.Init())
 
-	var acc, acc2 testutil.Accumulator
-	err = m.Gather(&acc)
-	require.NoError(t, err)
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("mysql"))
 	// acc should have global variables
@@ -90,8 +88,10 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 		Servers:       []string{testServer},
 		MetricVersion: 2,
 	}
-	err = m2.Gather(&acc2)
-	require.NoError(t, err)
+	require.NoError(t, m2.Init())
+
+	var acc2 testutil.Accumulator
+	require.NoError(t, m2.Gather(&acc2))
 	require.Empty(t, acc.Errors)
 	require.True(t, acc2.HasMeasurement("mysql"))
 	// acc2 should not have global variables
@@ -102,19 +102,8 @@ func TestMysqlMultipleInits(t *testing.T) {
 	m := &Mysql{
 		IntervalSlow: "30s",
 	}
-	m2 := &Mysql{}
-
-	m.InitMysql()
-	require.True(t, m.initDone)
-	require.False(t, m2.initDone)
+	require.NoError(t, m.Init())
 	require.Equal(t, m.scanIntervalSlow, uint32(30))
-	require.Equal(t, m2.scanIntervalSlow, uint32(0))
-
-	m2.InitMysql()
-	require.True(t, m.initDone)
-	require.True(t, m2.initDone)
-	require.Equal(t, m.scanIntervalSlow, uint32(30))
-	require.Equal(t, m2.scanIntervalSlow, uint32(0))
 }
 
 func TestMysqlGetDSNTag(t *testing.T) {
@@ -228,7 +217,7 @@ func TestGatherGlobalVariables(t *testing.T) {
 		Log:           testutil.Logger{},
 		MetricVersion: 2,
 	}
-	m.InitMysql()
+	require.NoError(t, m.Init())
 
 	columns := []string{"Variable_name", "Value"}
 	measurement := "mysql_variables"
