@@ -659,7 +659,7 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 			}
 
 			err = o.Gather(&acc)
-			if (len(acc.Errors) > 0) && !tt.wantQueryResErr {
+			if (len(acc.Errors) > 0) != tt.wantQueryResErr {
 				for _, err = range acc.Errors {
 					t.Errorf("OpensearchQuery.Gather() error: %v, wantQueryResErr %v", err, tt.wantQueryResErr)
 				}
