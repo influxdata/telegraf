@@ -3,12 +3,14 @@ package mysql
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -71,7 +73,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
 	m := &Mysql{
 		Servers:          []string{testServer},
-		IntervalSlow:     "30s",
+		IntervalSlow:     config.Duration(30 * time.Second),
 		GatherGlobalVars: true,
 		MetricVersion:    2,
 	}
@@ -96,14 +98,6 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	require.True(t, acc2.HasMeasurement("mysql"))
 	// acc2 should not have global variables
 	require.False(t, acc2.HasMeasurement("mysql_variables"))
-}
-
-func TestMysqlMultipleInits(t *testing.T) {
-	m := &Mysql{
-		IntervalSlow: "30s",
-	}
-	require.NoError(t, m.Init())
-	require.Equal(t, m.scanIntervalSlow, uint32(30))
 }
 
 func TestMysqlGetDSNTag(t *testing.T) {
