@@ -12,6 +12,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `usernane` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -206,7 +215,7 @@ sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 - when [[inputs.internal]] is set:
   - payload_size (int): get the cumulative size in bytes that have been received from incoming messages
   - messages_received (int): count of the number of messages that have been received from mqtt
-  
+
 This will result in the following metric:
 
 ```text
