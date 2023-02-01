@@ -193,8 +193,7 @@ lint-branch:
 		echo "golangci-lint not found, please run: make lint-install"; \
 		exit 1; \
 	}
-
-	golangci-lint run --new-from-rev master
+	golangci-lint run
 
 .PHONY: tidy
 tidy:
