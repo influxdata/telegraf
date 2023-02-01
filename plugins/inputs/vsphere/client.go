@@ -117,7 +117,6 @@ func (cf *ClientFactory) testClient(ctx context.Context) error {
 		if err := cf.client.Client.SessionManager.Login(ctx2, auth); err != nil {
 			return fmt.Errorf("renewing authentication failed: %w", err)
 		}
-
 	}
 
 	return nil

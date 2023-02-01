@@ -30,9 +30,9 @@ func TestGathering(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, dnsConfig.Init())
 	require.NoError(t, acc.GatherError(dnsConfig.Gather))
-	metric, ok := acc.Get("dns_query")
+	m, ok := acc.Get("dns_query")
 	require.True(t, ok)
-	queryTime, ok := metric.Fields["query_time_ms"].(float64)
+	queryTime, ok := m.Fields["query_time_ms"].(float64)
 	require.True(t, ok)
 	require.NotEqual(t, float64(0), queryTime)
 }
@@ -52,9 +52,9 @@ func TestGatheringMxRecord(t *testing.T) {
 
 	require.NoError(t, dnsConfig.Init())
 	require.NoError(t, acc.GatherError(dnsConfig.Gather))
-	metric, ok := acc.Get("dns_query")
+	m, ok := acc.Get("dns_query")
 	require.True(t, ok)
-	queryTime, ok := metric.Fields["query_time_ms"].(float64)
+	queryTime, ok := m.Fields["query_time_ms"].(float64)
 	require.True(t, ok)
 	require.NotEqual(t, float64(0), queryTime)
 }
