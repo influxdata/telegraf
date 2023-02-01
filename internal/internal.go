@@ -194,30 +194,39 @@ func (r *ReadWaitCloser) Close() error {
 	return err
 }
 
-// CompressWithGzip takes an io.Reader as input and pipes
-// it through a gzip.Writer returning an io.Reader containing
-// the gzipped data.
-// An error is returned if passing data to the gzip.Writer fails
+// CompressWithGzip takes an io.Reader as input and pipes it through a
+// gzip.Writer returning an io.Reader containing the gzipped data.
+// Errors occurring during compression are returned to the instance reading
+// from the returned reader via through the corresponding read call
+// (e.g. io.Copy or io.ReadAll).
 func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
 	pipeReader, pipeWriter := io.Pipe()
 	gzipWriter := gzip.NewWriter(pipeWriter)
 
-	rc := &ReadWaitCloser{
-		pipeReader: pipeReader,
-	}
-
-	rc.wg.Add(1)
-	var err error
+	// Start copying from the uncompressed reader to the output reader
+	// in the background until the input reader is closed (or errors out).
 	go func() {
-		_, err = io.Copy(gzipWriter, data)
-		gzipWriter.Close()
-		// subsequent reads from the read half of the pipe will
-		// return no bytes and the error err, or EOF if err is nil.
-		pipeWriter.CloseWithError(err)
-		rc.wg.Done()
+		// This copy will block until "data" reached EOF or an error occurs
+		_, err := io.Copy(gzipWriter, data)
+
+		// Close the compression writer and make sure we do not overwrite
+		// the copy error if any.
+		gzipErr := gzipWriter.Close()
+		if err == nil {
+			err = gzipErr
+		}
+
+		// Subsequent reads from the output reader (connected to "pipeWriter"
+		// via pipe) will return the copy (or closing) error if any to the
+		// instance reading from the reader returned by the CompressWithGzip
+		// function. If "err" is nil, the below function will correctly report
+		// io.EOF.
+		_ = pipeWriter.CloseWithError(err)
 	}()
 
-	return pipeReader, err
+	// Return a reader which then can be read by the caller to collect the
+	// compressed stream.
+	return pipeReader, nil
 }
 
 // ParseTimestamp parses a Time according to the standard Telegraf options.
