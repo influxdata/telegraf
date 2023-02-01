@@ -207,11 +207,10 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 	require.Equal(t, int64(10000), n)
 
 	r1 := mr.readN
-	err = rc.Close()
-	require.NoError(t, err)
+	require.NoError(t, rc.Close())
 
 	n, err = io.CopyN(io.Discard, rc, 10000)
-	require.Error(t, io.EOF, err)
+	require.ErrorIs(t, err, io.ErrClosedPipe)
 	require.Equal(t, int64(0), n)
 
 	r2 := mr.readN
