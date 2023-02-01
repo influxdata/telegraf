@@ -480,12 +480,7 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser
 	reader := influx.NewReader(metrics, c.config.Serializer)
 
 	if c.config.ContentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reader)
-		if err != nil {
-			return nil, err
-		}
-
-		return rc, nil
+		return internal.CompressWithGzip(reader), nil
 	}
 
 	return io.NopCloser(reader), nil
