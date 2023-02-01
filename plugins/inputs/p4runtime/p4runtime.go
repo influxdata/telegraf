@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
-	"strconv"
 	"sync"
 
 	p4ConfigV1 "github.com/p4lang/p4runtime/go/p4/config/v1"
@@ -102,14 +101,14 @@ func (p *P4runtime) Gather(acc telegraf.Accumulator) error {
 				}
 
 				fields := map[string]interface{}{
-					"bytes":   ce.Data.ByteCount,
-					"packets": ce.Data.PacketCount,
+					"bytes":         ce.Data.ByteCount,
+					"packets":       ce.Data.PacketCount,
+					"counter_index": ce.Index.Index,
 				}
 
 				tags := map[string]string{
 					"p4program_name": p4Info.PkgInfo.Name,
 					"counter_name":   counter.Preamble.Name,
-					"counter_index":  strconv.FormatInt(ce.Index.Index, 10),
 					"counter_type":   counter.Spec.Unit.String(),
 				}
 

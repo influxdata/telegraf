@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"testing"
 	"time"
 
@@ -148,10 +147,12 @@ func TestOneCounterRead(t *testing.T) {
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   "foo",
-					"counter_index":  "5",
 					"counter_type":   "BOTH",
 				},
-				map[string]interface{}{"bytes": int64(5), "packets": int64(1)}),
+				map[string]interface{}{
+					"bytes":         int64(5),
+					"packets":       int64(1),
+					"counter_index": 5}),
 			},
 		}, {
 			forwardingPipelineConfig: &p4v1.ForwardingPipelineConfig{
@@ -175,10 +176,12 @@ func TestOneCounterRead(t *testing.T) {
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   "foo",
-					"counter_index":  "5",
 					"counter_type":   "BYTES",
 				},
-				map[string]interface{}{"bytes": int64(5), "packets": int64(0)}),
+				map[string]interface{}{
+					"bytes":         int64(5),
+					"packets":       int64(0),
+					"counter_index": 5}),
 			},
 		}, {
 			forwardingPipelineConfig: &p4v1.ForwardingPipelineConfig{
@@ -202,10 +205,12 @@ func TestOneCounterRead(t *testing.T) {
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   "foo",
-					"counter_index":  "5",
 					"counter_type":   "PACKETS",
 				},
-				map[string]interface{}{"bytes": int64(0), "packets": int64(1)}),
+				map[string]interface{}{
+					"bytes":         int64(0),
+					"packets":       int64(1),
+					"counter_index": 5}),
 			},
 		}, {
 			forwardingPipelineConfig: &p4v1.ForwardingPipelineConfig{
@@ -302,12 +307,12 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   "foo",
-					"counter_index":  strconv.FormatInt(int64(i), 10),
 					"counter_type":   "BOTH",
 				},
 				map[string]interface{}{
-					"bytes":   int64(10),
-					"packets": int64(10),
+					"bytes":         int64(10),
+					"packets":       int64(10),
+					"counter_index": i,
 				},
 			))
 		}
@@ -387,12 +392,12 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   counterName,
-					"counter_index":  "1",
 					"counter_type":   "BOTH",
 				},
 				map[string]interface{}{
-					"bytes":   int64(10),
-					"packets": int64(10),
+					"bytes":         int64(10),
+					"packets":       int64(10),
+					"counter_index": 1,
 				}))
 		}
 

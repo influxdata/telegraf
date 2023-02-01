@@ -73,13 +73,13 @@ If user wants to gather information about program name, please follow
 [6.2.1. Annotating P4 code with PkgInfo] instruction and apply changes
 to your P4 program.
 - `counter_name`: Name of given counter in P4 program.
-- `counter_index`: Index at which metrics are collected in P4 counter.
 - `counter_type`: Type of counter (BYTES, PACKETS, BOTH).
 
 Fields are constructed in given manner:
 
 - `bytes`: Number of bytes gathered in counter.
 - `packets` Number of packets gathered in counter.
+- `counter_index`: Index at which metrics are collected in P4 counter.
 
 ## Example Output
 
@@ -87,7 +87,7 @@ Expected output for p4runtime plugin instance
 running on host named `p4runtime-host`:
 
 ```shell
-p4_runtime,counter_index=10,counter_name=MyIngress.egressTunnelCounter,counter_type=BOTH,host=p4runtime-host bytes=20i,packets=0i 1664973560000000000
+p4_runtime,counter_name=MyIngress.egressTunnelCounter,counter_type=BOTH,host=p4 bytes=408i,packets=4i,counter_index=200i 1675175030000000000
 ```
 
 [6.2.1. Annotating P4 code with PkgInfo]: https://p4.org/p4-spec/p4runtime/main/P4Runtime-Spec.html#sec-annotating-p4-code-with-pkginfo
