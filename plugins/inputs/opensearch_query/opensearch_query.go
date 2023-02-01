@@ -213,7 +213,7 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 	aq.Query = boolQuery
 	req, err := json.Marshal(aq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %s", err)
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	searchRequest := &opensearchapi.SearchRequest{
