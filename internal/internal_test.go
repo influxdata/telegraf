@@ -188,12 +188,23 @@ func TestCompressWithGzip(t *testing.T) {
 }
 
 type mockReader struct {
-	readN uint64 // record the number of calls to Read
+	err    error
+	ncalls uint64 // record the number of calls to Read
+	msg    []byte
 }
 
 func (r *mockReader) Read(p []byte) (n int, err error) {
-	r.readN++
-	return rand.Read(p)
+	r.ncalls++
+
+	if len(r.msg) > 0 {
+		n, err = copy(p, r.msg), io.EOF
+	} else {
+		n, err = rand.Read(p)
+	}
+	if r.err == nil {
+		return n, err
+	}
+	return n, r.err
 }
 
 func TestCompressWithGzipEarlyClose(t *testing.T) {
@@ -206,16 +217,30 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(10000), n)
 
-	r1 := mr.readN
+	r1 := mr.ncalls
 	require.NoError(t, rc.Close())
 
 	n, err = io.CopyN(io.Discard, rc, 10000)
 	require.ErrorIs(t, err, io.ErrClosedPipe)
 	require.Equal(t, int64(0), n)
 
-	r2 := mr.readN
+	r2 := mr.ncalls
 	// no more read to the source after closing
 	require.Equal(t, r1, r2)
+}
+
+func TestCompressWithGzipErrorPropagationCopy(t *testing.T) {
+	errs := []error{io.ErrClosedPipe, io.ErrNoProgress, io.ErrUnexpectedEOF}
+	for _, expected := range errs {
+		r := &mockReader{msg: []byte("this is a test"), err: expected}
+		rc, err := CompressWithGzip(r)
+		require.NoError(t, err)
+
+		n, err := io.Copy(io.Discard, rc)
+		require.Greater(t, n, int64(0))
+		require.ErrorIs(t, err, expected)
+		require.NoError(t, rc.Close())
+	}
 }
 
 func TestAlignDuration(t *testing.T) {
