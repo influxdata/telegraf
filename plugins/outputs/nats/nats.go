@@ -24,7 +24,7 @@ type NATS struct {
 	Name        string        `toml:"name"`
 	Username    config.Secret `toml:"username"`
 	Password    config.Secret `toml:"password"`
-	Credentials config.Secret `toml:"credentials"`
+	Credentials string        `toml:"credentials"`
 	Subject     string        `toml:"subject"`
 
 	tls.ClientConfig
@@ -66,13 +66,8 @@ func (n *NATS) Connect() error {
 		config.ReleaseSecret(password)
 	}
 
-	if !n.Credentials.Empty() {
-		credentials, err := n.Credentials.Get()
-		if err != nil {
-			return fmt.Errorf("getting credentials failed: %w", err)
-		}
-		opts = append(opts, nats.UserCredentials(string(credentials)))
-		config.ReleaseSecret(credentials)
+	if n.Credentials != "" {
+		opts = append(opts, nats.UserCredentials(n.Credentials))
 	}
 
 	if n.Name != "" {
