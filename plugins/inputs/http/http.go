@@ -2,7 +2,6 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
@@ -214,15 +213,7 @@ func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
 
 	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reader)
-		if err != nil {
-			return nil, err
-		}
-		data, err := io.ReadAll(rc)
-		if err != nil {
-			return nil, err
-		}
-		return bytes.NewReader(data), nil
+		return internal.CompressWithGzip(reader), nil
 	}
 
 	return reader, nil
