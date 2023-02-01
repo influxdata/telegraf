@@ -243,6 +243,20 @@ func TestCompressWithGzipErrorPropagationCopy(t *testing.T) {
 	}
 }
 
+func TestCompressWithGzipErrorPropagationReadAll(t *testing.T) {
+	errs := []error{io.ErrClosedPipe, io.ErrNoProgress, io.ErrUnexpectedEOF}
+	for _, expected := range errs {
+		r := &mockReader{msg: []byte("this is a test"), err: expected}
+		rc, err := CompressWithGzip(r)
+		require.NoError(t, err)
+
+		buf, err := io.ReadAll(rc)
+		require.NotEmpty(t, buf)
+		require.ErrorIs(t, err, expected)
+		require.NoError(t, rc.Close())
+	}
+}
+
 func TestAlignDuration(t *testing.T) {
 	tests := []struct {
 		name     string
