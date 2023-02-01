@@ -136,10 +136,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	var err error
 	if h.ContentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reqBodyBuffer)
-		if err != nil {
-			return err
-		}
+		rc := internal.CompressWithGzip(reqBodyBuffer)
 		defer rc.Close()
 		reqBodyBuffer = rc
 	}

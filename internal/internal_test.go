@@ -174,9 +174,7 @@ func TestCompressWithGzip(t *testing.T) {
 	testData := "the quick brown fox jumps over the lazy dog"
 	inputBuffer := bytes.NewBuffer([]byte(testData))
 
-	outputBuffer, err := CompressWithGzip(inputBuffer)
-	require.NoError(t, err)
-
+	outputBuffer := CompressWithGzip(inputBuffer)
 	gzipReader, err := gzip.NewReader(outputBuffer)
 	require.NoError(t, err)
 	defer gzipReader.Close()
@@ -210,9 +208,7 @@ func (r *mockReader) Read(p []byte) (n int, err error) {
 func TestCompressWithGzipEarlyClose(t *testing.T) {
 	mr := &mockReader{}
 
-	rc, err := CompressWithGzip(mr)
-	require.NoError(t, err)
-
+	rc := CompressWithGzip(mr)
 	n, err := io.CopyN(io.Discard, rc, 10000)
 	require.NoError(t, err)
 	require.Equal(t, int64(10000), n)
@@ -233,9 +229,8 @@ func TestCompressWithGzipErrorPropagationCopy(t *testing.T) {
 	errs := []error{io.ErrClosedPipe, io.ErrNoProgress, io.ErrUnexpectedEOF}
 	for _, expected := range errs {
 		r := &mockReader{msg: []byte("this is a test"), err: expected}
-		rc, err := CompressWithGzip(r)
-		require.NoError(t, err)
 
+		rc := CompressWithGzip(r)
 		n, err := io.Copy(io.Discard, rc)
 		require.Greater(t, n, int64(0))
 		require.ErrorIs(t, err, expected)
@@ -247,9 +242,8 @@ func TestCompressWithGzipErrorPropagationReadAll(t *testing.T) {
 	errs := []error{io.ErrClosedPipe, io.ErrNoProgress, io.ErrUnexpectedEOF}
 	for _, expected := range errs {
 		r := &mockReader{msg: []byte("this is a test"), err: expected}
-		rc, err := CompressWithGzip(r)
-		require.NoError(t, err)
 
+		rc := CompressWithGzip(r)
 		buf, err := io.ReadAll(rc)
 		require.NotEmpty(t, buf)
 		require.ErrorIs(t, err, expected)

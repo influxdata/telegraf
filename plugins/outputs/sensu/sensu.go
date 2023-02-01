@@ -213,10 +213,7 @@ func (s *Sensu) writeMetrics(reqBody []byte) error {
 	method := http.MethodPost
 
 	if s.ContentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reqBodyBuffer)
-		if err != nil {
-			return err
-		}
+		rc := internal.CompressWithGzip(reqBodyBuffer)
 		defer rc.Close()
 		reqBodyBuffer = rc
 	}

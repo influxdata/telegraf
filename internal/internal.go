@@ -199,7 +199,7 @@ func (r *ReadWaitCloser) Close() error {
 // Errors occurring during compression are returned to the instance reading
 // from the returned reader via through the corresponding read call
 // (e.g. io.Copy or io.ReadAll).
-func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
+func CompressWithGzip(data io.Reader) io.ReadCloser {
 	pipeReader, pipeWriter := io.Pipe()
 	gzipWriter := gzip.NewWriter(pipeWriter)
 
@@ -226,7 +226,7 @@ func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
 
 	// Return a reader which then can be read by the caller to collect the
 	// compressed stream.
-	return pipeReader, nil
+	return pipeReader
 }
 
 // ParseTimestamp parses a Time according to the standard Telegraf options.
