@@ -83,6 +83,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -101,7 +110,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # timeout = "5s"
 
   ## Configuration of type conversion for 64-bit unsigned int
-  ## IoTDB currently DOES NOT support unsigned integers (version 13.x). 
+  ## IoTDB currently DOES NOT support unsigned integers (version 13.x).
   ## 32-bit unsigned integers are safely converted into 64-bit signed integers by the plugin,
   ## however, this is not true for 64-bit values in general as overflows may occur.
   ## The following setting allows to specify the handling of 64-bit unsigned integers.
@@ -112,16 +121,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # uint64_conversion = "int64_clip"
 
   ## Configuration of TimeStamp
-  ## TimeStamp is always saved in 64bits int. timestamp_precision specifies the unit of timestamp. 
+  ## TimeStamp is always saved in 64bits int. timestamp_precision specifies the unit of timestamp.
   ## Available value:
   ## "second", "millisecond", "microsecond", "nanosecond"(default)
   # timestamp_precision = "nanosecond"
 
   ## Handling of tags
-  ## Tags are not fully supported by IoTDB. 
+  ## Tags are not fully supported by IoTDB.
   ## A guide with suggestions on how to handle tags can be found here:
   ##     https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html
-  ## 
+  ##
   ## Available values are:
   ##   - "fields"     --  convert tags to fields in the measurement
   ##   - "device_id"  --  attach tags to the device ID
