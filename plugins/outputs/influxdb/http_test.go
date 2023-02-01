@@ -33,28 +33,28 @@ func getHTTPURL() *url.URL {
 }
 
 func TestHTTP_EmptyConfig(t *testing.T) {
-	config := influxdb.HTTPConfig{}
-	_, err := influxdb.NewHTTPClient(config)
+	cfg := influxdb.HTTPConfig{}
+	_, err := influxdb.NewHTTPClient(cfg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), influxdb.ErrMissingURL.Error())
 }
 
 func TestHTTP_MinimalConfig(t *testing.T) {
-	config := influxdb.HTTPConfig{
+	cfg := influxdb.HTTPConfig{
 		URL: getHTTPURL(),
 	}
-	_, err := influxdb.NewHTTPClient(config)
+	_, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
 }
 
 func TestHTTP_UnsupportedScheme(t *testing.T) {
-	config := influxdb.HTTPConfig{
+	cfg := influxdb.HTTPConfig{
 		URL: &url.URL{
 			Scheme: "foo",
 			Host:   "localhost",
 		},
 	}
-	_, err := influxdb.NewHTTPClient(config)
+	_, err := influxdb.NewHTTPClient(cfg)
 	require.Error(t, err)
 }
 
@@ -561,15 +561,15 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 	)
 	metrics := []telegraf.Metric{m}
 
-	config := influxdb.HTTPConfig{
+	cfg := influxdb.HTTPConfig{
 		URL:      u,
 		Database: "telegraf",
 		Log:      testutil.Logger{},
 	}
 
-	client, err := influxdb.NewHTTPClient(config)
+	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
-	err = client.CreateDatabase(ctx, config.Database)
+	err = client.CreateDatabase(ctx, cfg.Database)
 	require.NoError(t, err)
 	err = client.Write(ctx, metrics)
 	require.NoError(t, err)
@@ -615,14 +615,14 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 	require.NoError(t, err)
 	metrics := []telegraf.Metric{m}
 
-	config := influxdb.HTTPConfig{
+	cfg := influxdb.HTTPConfig{
 		URL:             u,
 		Database:        "telegraf",
 		ContentEncoding: "gzip",
 		Log:             testutil.Logger{},
 	}
 
-	client, err := influxdb.NewHTTPClient(config)
+	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
 	err = client.Write(ctx, metrics)
 	require.NoError(t, err)
@@ -729,7 +729,7 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 		Host:   ts.Listener.Addr().String(),
 	}
 
-	config := influxdb.HTTPConfig{
+	cfg := influxdb.HTTPConfig{
 		URL:                addr,
 		Database:           "telegraf",
 		DatabaseTag:        "database",
@@ -737,7 +737,7 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 		Log:                testutil.Logger{},
 	}
 
-	client, err := influxdb.NewHTTPClient(config)
+	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{
