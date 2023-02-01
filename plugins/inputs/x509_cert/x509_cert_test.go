@@ -431,9 +431,7 @@ func TestServerName(t *testing.T) {
 			}
 			u, err := url.Parse(test.url)
 			require.NoError(t, err)
-			actual, err := sc.serverName(u)
-			require.NoError(t, err)
-			require.Equal(t, test.expected, actual)
+			require.Equal(t, test.expected, sc.serverName(u))
 		})
 	}
 }

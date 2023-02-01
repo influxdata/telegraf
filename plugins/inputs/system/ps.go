@@ -214,14 +214,7 @@ func (s *SystemPS) SwapStat() (*mem.SwapMemoryStat, error) {
 }
 
 func (s *SystemPS) Temperature() ([]host.TemperatureStat, error) {
-	temp, err := host.SensorsTemperatures()
-	if err != nil {
-		_, ok := err.(*host.Warnings)
-		if !ok {
-			return temp, err
-		}
-	}
-	return temp, nil
+	return host.SensorsTemperatures()
 }
 
 func (s *SystemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
