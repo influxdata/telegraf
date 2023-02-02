@@ -61,7 +61,11 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 	influxWriter := &writeToAccumulator{accumulator}
 	o.grpcServer = grpc.NewServer(grpcOptions...)
 
-	ptraceotlp.RegisterGRPCServer(o.grpcServer, newTraceService(logger, influxWriter))
+	traceService, err := newTraceService(logger, influxWriter)
+	if err != nil {
+		return err
+	}
+	ptraceotlp.RegisterGRPCServer(o.grpcServer, traceService)
 	ms, err := newMetricsService(logger, influxWriter, o.MetricsSchema)
 	if err != nil {
 		return err

@@ -2,7 +2,6 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
@@ -104,11 +103,7 @@ func (h *HTTP) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
 ) error {
-	body, err := makeRequestBodyReader(h.ContentEncoding, h.Body)
-	if err != nil {
-		return err
-	}
-
+	body := makeRequestBodyReader(h.ContentEncoding, h.Body)
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
 		return err
@@ -207,25 +202,17 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 	return nil
 }
 
-func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
+func makeRequestBodyReader(contentEncoding, body string) io.Reader {
 	if body == "" {
-		return nil, nil
+		return nil
 	}
 
 	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reader)
-		if err != nil {
-			return nil, err
-		}
-		data, err := io.ReadAll(rc)
-		if err != nil {
-			return nil, err
-		}
-		return bytes.NewReader(data), nil
+		return internal.CompressWithGzip(reader)
 	}
 
-	return reader, nil
+	return reader
 }
 
 func init() {

@@ -8,9 +8,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/urfave/cli/v2"
 
-	"github.com/awnumar/memguard"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
@@ -207,15 +207,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		case cCtx.Bool("sample-config"):
 			filters := processFilterFlags(cCtx)
 
-			printSampleConfig(
-				outputBuffer,
-				filters.section,
-				filters.input,
-				filters.output,
-				filters.aggregator,
-				filters.processor,
-				filters.secretstore,
-			)
+			printSampleConfig(outputBuffer, filters)
 			return nil
 		}
 
@@ -352,15 +344,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					// e.g. telegraf config --section-filter inputs
 					filters := processFilterFlags(cCtx)
 
-					printSampleConfig(
-						outputBuffer,
-						filters.section,
-						filters.input,
-						filters.output,
-						filters.aggregator,
-						filters.processor,
-						filters.secretstore,
-					)
+					printSampleConfig(outputBuffer, filters)
 					return nil
 				},
 			},

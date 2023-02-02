@@ -121,72 +121,72 @@ type httpClient struct {
 	log telegraf.Logger
 }
 
-func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
-	if config.URL == nil {
+func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
+	if cfg.URL == nil {
 		return nil, ErrMissingURL
 	}
 
-	if config.Database == "" {
-		config.Database = defaultDatabase
+	if cfg.Database == "" {
+		cfg.Database = defaultDatabase
 	}
 
-	if config.Timeout == 0 {
-		config.Timeout = defaultRequestTimeout
+	if cfg.Timeout == 0 {
+		cfg.Timeout = defaultRequestTimeout
 	}
 
-	userAgent := config.UserAgent
+	userAgent := cfg.UserAgent
 	if userAgent == "" {
 		userAgent = internal.ProductToken()
 	}
 
-	if config.Headers == nil {
-		config.Headers = make(map[string]string)
+	if cfg.Headers == nil {
+		cfg.Headers = make(map[string]string)
 	}
-	config.Headers["User-Agent"] = userAgent
-	for k, v := range config.Headers {
-		config.Headers[k] = v
+	cfg.Headers["User-Agent"] = userAgent
+	for k, v := range cfg.Headers {
+		cfg.Headers[k] = v
 	}
 
 	var proxy func(*http.Request) (*url.URL, error)
-	if config.Proxy != nil {
-		proxy = http.ProxyURL(config.Proxy)
+	if cfg.Proxy != nil {
+		proxy = http.ProxyURL(cfg.Proxy)
 	} else {
 		proxy = http.ProxyFromEnvironment
 	}
 
-	if config.Serializer == nil {
-		config.Serializer = influx.NewSerializer()
+	if cfg.Serializer == nil {
+		cfg.Serializer = influx.NewSerializer()
 	}
 
 	var transport *http.Transport
-	switch config.URL.Scheme {
+	switch cfg.URL.Scheme {
 	case "http", "https":
 		transport = &http.Transport{
 			Proxy:           proxy,
-			TLSClientConfig: config.TLSConfig,
+			TLSClientConfig: cfg.TLSConfig,
 		}
 	case "unix":
 		transport = &http.Transport{
 			Dial: func(_, _ string) (net.Conn, error) {
 				return net.DialTimeout(
-					config.URL.Scheme,
-					config.URL.Path,
+					cfg.URL.Scheme,
+					cfg.URL.Path,
 					defaultRequestTimeout,
 				)
 			},
 		}
 	default:
-		return nil, fmt.Errorf("unsupported scheme %q", config.URL.Scheme)
+		return nil, fmt.Errorf("unsupported scheme %q", cfg.URL.Scheme)
 	}
 
 	client := &httpClient{
 		client: &http.Client{
-			Timeout:   config.Timeout,
+			Timeout:   cfg.Timeout,
 			Transport: transport,
 		},
 		createDatabaseExecuted: make(map[string]bool),
-		config:                 config,
-		log:                    config.Log,
+		config:                 cfg,
+		log:                    cfg.Log,
 	}
 	return client, nil
 }
@@ -333,10 +333,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 		return fmt.Errorf("failed making write url: %s", err.Error())
 	}
 
-	reader, err := c.requestBodyReader(metrics)
-	if err != nil {
-		return err
-	}
+	reader := c.requestBodyReader(metrics)
 	defer reader.Close()
 
 	req, err := c.makeWriteRequest(loc, reader)
@@ -481,19 +478,14 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 
 // requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
 // side of the connection in case of error
-func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser, error) {
+func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
 	reader := influx.NewReader(metrics, c.config.Serializer)
 
 	if c.config.ContentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reader)
-		if err != nil {
-			return nil, err
-		}
-
-		return rc, nil
+		return internal.CompressWithGzip(reader)
 	}
 
-	return io.NopCloser(reader), nil
+	return io.NopCloser(reader)
 }
 
 func (c *httpClient) addHeaders(req *http.Request) error {

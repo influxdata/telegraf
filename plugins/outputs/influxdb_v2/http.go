@@ -249,10 +249,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		return err
 	}
 
-	reader, err := c.requestBodyReader(metrics)
-	if err != nil {
-		return err
-	}
+	reader := c.requestBodyReader(metrics)
 	defer reader.Close()
 
 	req, err := c.makeWriteRequest(loc, reader)
@@ -387,19 +384,14 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 
 // requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
 // side of the connection in case of error
-func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser, error) {
+func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
 	reader := influx.NewReader(metrics, c.serializer)
 
 	if c.ContentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reader)
-		if err != nil {
-			return nil, err
-		}
-
-		return rc, nil
+		return internal.CompressWithGzip(reader)
 	}
 
-	return io.NopCloser(reader), nil
+	return io.NopCloser(reader)
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {

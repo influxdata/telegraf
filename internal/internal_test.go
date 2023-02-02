@@ -174,9 +174,7 @@ func TestCompressWithGzip(t *testing.T) {
 	testData := "the quick brown fox jumps over the lazy dog"
 	inputBuffer := bytes.NewBuffer([]byte(testData))
 
-	outputBuffer, err := CompressWithGzip(inputBuffer)
-	require.NoError(t, err)
-
+	outputBuffer := CompressWithGzip(inputBuffer)
 	gzipReader, err := gzip.NewReader(outputBuffer)
 	require.NoError(t, err)
 	defer gzipReader.Close()
@@ -188,35 +186,69 @@ func TestCompressWithGzip(t *testing.T) {
 }
 
 type mockReader struct {
-	readN uint64 // record the number of calls to Read
+	err    error
+	ncalls uint64 // record the number of calls to Read
+	msg    []byte
 }
 
 func (r *mockReader) Read(p []byte) (n int, err error) {
-	r.readN++
-	return rand.Read(p)
+	r.ncalls++
+
+	if len(r.msg) > 0 {
+		n, err = copy(p, r.msg), io.EOF
+	} else {
+		n, err = rand.Read(p)
+	}
+	if r.err == nil {
+		return n, err
+	}
+	return n, r.err
 }
 
 func TestCompressWithGzipEarlyClose(t *testing.T) {
 	mr := &mockReader{}
 
-	rc, err := CompressWithGzip(mr)
-	require.NoError(t, err)
-
+	rc := CompressWithGzip(mr)
 	n, err := io.CopyN(io.Discard, rc, 10000)
 	require.NoError(t, err)
 	require.Equal(t, int64(10000), n)
 
-	r1 := mr.readN
-	err = rc.Close()
-	require.NoError(t, err)
+	r1 := mr.ncalls
+	require.NoError(t, rc.Close())
 
 	n, err = io.CopyN(io.Discard, rc, 10000)
-	require.Error(t, io.EOF, err)
+	require.ErrorIs(t, err, io.ErrClosedPipe)
 	require.Equal(t, int64(0), n)
 
-	r2 := mr.readN
+	r2 := mr.ncalls
 	// no more read to the source after closing
 	require.Equal(t, r1, r2)
+}
+
+func TestCompressWithGzipErrorPropagationCopy(t *testing.T) {
+	errs := []error{io.ErrClosedPipe, io.ErrNoProgress, io.ErrUnexpectedEOF}
+	for _, expected := range errs {
+		r := &mockReader{msg: []byte("this is a test"), err: expected}
+
+		rc := CompressWithGzip(r)
+		n, err := io.Copy(io.Discard, rc)
+		require.Greater(t, n, int64(0))
+		require.ErrorIs(t, err, expected)
+		require.NoError(t, rc.Close())
+	}
+}
+
+func TestCompressWithGzipErrorPropagationReadAll(t *testing.T) {
+	errs := []error{io.ErrClosedPipe, io.ErrNoProgress, io.ErrUnexpectedEOF}
+	for _, expected := range errs {
+		r := &mockReader{msg: []byte("this is a test"), err: expected}
+
+		rc := CompressWithGzip(r)
+		buf, err := io.ReadAll(rc)
+		require.NotEmpty(t, buf)
+		require.ErrorIs(t, err, expected)
+		require.NoError(t, rc.Close())
+	}
 }
 
 func TestAlignDuration(t *testing.T) {

@@ -143,10 +143,7 @@ func (l *Loki) writeMetrics(s Streams) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(bs)
 
 	if l.GZipRequest {
-		rc, err := internal.CompressWithGzip(reqBodyBuffer)
-		if err != nil {
-			return err
-		}
+		rc := internal.CompressWithGzip(reqBodyBuffer)
 		defer rc.Close()
 		reqBodyBuffer = rc
 	}
