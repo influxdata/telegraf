@@ -484,7 +484,7 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	require.NoError(t, err)
 	configPath, err := getDefaultConfigPath()
 	require.NoError(t, err)
-	require.Equal(t, ts.URL, configPath)
+	require.Equal(t, []string{ts.URL}, configPath)
 	err = c.LoadConfig("")
 	require.NoError(t, err)
 }

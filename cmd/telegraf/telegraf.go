@@ -208,19 +208,20 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	c.SecretStoreFilters = t.secretstoreFilters
 
 	var configFiles []string
-	// providing no "config" flag should load default config
-	if len(t.config) == 0 {
-		configFiles = append(configFiles, "")
-	} else {
-		configFiles = append(configFiles, t.config...)
-	}
 
+	configFiles = append(configFiles, t.config...)
 	for _, fConfigDirectory := range t.configDir {
 		files, err := config.WalkDirectory(fConfigDirectory)
 		if err != nil {
 			return c, err
 		}
 		configFiles = append(configFiles, files...)
+	}
+
+	// providing no "config" or "config-directory" flag(s) should load default
+	// configuration files
+	if len(configFiles) == 0 {
+		configFiles = append(configFiles, "")
 	}
 
 	t.configFiles = configFiles
