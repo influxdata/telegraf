@@ -168,7 +168,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -193,8 +193,7 @@ lint-branch:
 		echo "golangci-lint not found, please run: make lint-install"; \
 		exit 1; \
 	}
-
-	golangci-lint run --new-from-rev master
+	golangci-lint run
 
 .PHONY: tidy
 tidy:
