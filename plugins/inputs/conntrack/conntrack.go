@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
@@ -57,9 +58,17 @@ func (*Conntrack) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
+func (c *Conntrack) Init() error {
 	c.setDefaults()
 
+	if err := choice.CheckSlice(c.Collect, []string{"all", "percpu"}); err != nil {
+		return fmt.Errorf("config option 'collect': %w", err)
+	}
+
+	return nil
+}
+
+func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	var metricKey string
 	fields := make(map[string]interface{})
 
@@ -93,19 +102,8 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	var all bool
-	var perCPU bool
-
-	for _, collect := range c.Collect {
-		if collect == "all" {
-			all = true
-		}
-		if collect == "percpu" {
-			perCPU = true
-		}
-	}
-
-	if all || perCPU {
+	for _, metric := range c.Collect {
+		perCPU := metric == "percpu"
 		stats, err := c.ps.NetConntrack(perCPU)
 		if err != nil {
 			acc.AddError(fmt.Errorf("failed to retrieve conntrack statistics: %v", err))
@@ -115,8 +113,8 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("conntrack input failed to collect stats"))
 		}
 
+		cpuTag := "all"
 		for i, sts := range stats {
-			cpuTag := "all"
 			if perCPU {
 				cpuTag = fmt.Sprintf("cpu%d", i)
 			}
@@ -157,5 +155,9 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add(inputName, func() telegraf.Input { return &Conntrack{} })
+	inputs.Add(inputName, func() telegraf.Input {
+		return &Conntrack{
+			ps: system.NewSystemPS(),
+		}
+	})
 }
