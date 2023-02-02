@@ -16,7 +16,7 @@ The following is supported:
 
 ## OpenSearch Support
 
-This plugins is tested against OpenSearch 2.4.x.
+This plugins is tested against OpenSearch 2.5.0 and 1.3.7.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

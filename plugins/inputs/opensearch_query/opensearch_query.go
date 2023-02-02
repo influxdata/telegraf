@@ -57,21 +57,6 @@ type osAggregation struct {
 	aggregation AggregationRequest
 }
 
-type mapping map[string]fieldIndex
-
-type fieldIndex struct {
-	Mappings map[string]fieldMapping `json:"mappings"`
-}
-
-type fieldMapping struct {
-	FullName string               `json:"full_name"`
-	Mapping  map[string]fieldType `json:"mapping"`
-}
-
-type fieldType struct {
-	Type string `json:"type"`
-}
-
 func (*OpensearchQuery) SampleConfig() string {
 	return sampleConfig
 }
@@ -121,12 +106,12 @@ func (o *OpensearchQuery) initAggregation(agg osAggregation, i int) (err error) 
 func (o *OpensearchQuery) newClient() error {
 	username, err := o.Username.Get()
 	if err != nil {
-		return fmt.Errorf("getting username failed: %v", err)
+		return fmt.Errorf("getting username failed: %w", err)
 	}
 	defer config.ReleaseSecret(username)
 	password, err := o.Password.Get()
 	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
+		return fmt.Errorf("getting password failed: %w", err)
 	}
 	defer config.ReleaseSecret(password)
 
@@ -240,42 +225,6 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 	}
 
 	return &searchResult, nil
-}
-
-// getMetricFields function returns a map of fields and field types on Elasticsearch that matches field.MetricFields
-func (o *OpensearchQuery) getMetricFields(ctx context.Context, aggregation osAggregation) (map[string]string, error) {
-	mapMetricFields := make(map[string]string)
-	fieldMappingRequest := opensearchapi.IndicesGetFieldMappingRequest{
-		Index:  []string{aggregation.Index},
-		Fields: aggregation.MetricFields,
-	}
-
-	response, err := fieldMappingRequest.Do(ctx, o.osClient)
-	if err != nil {
-		return nil, err
-	}
-
-	// Bad request; move on
-	if response.StatusCode != 200 {
-		return mapMetricFields, nil
-	}
-
-	var m mapping
-	decoder := json.NewDecoder(response.Body)
-	err = decoder.Decode(&m)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, mm := range m {
-		for _, f := range aggregation.MetricFields {
-			if _, ok := mm.Mappings[f]; ok {
-				mapMetricFields[f] = mm.Mappings[f].Mapping[f].Type
-			}
-		}
-	}
-
-	return mapMetricFields, nil
 }
 
 func (aggregation *osAggregation) buildAggregationQuery() error {

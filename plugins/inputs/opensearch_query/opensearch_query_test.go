@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -31,7 +30,6 @@ type osAggregationQueryTest struct {
 	queryName                 string
 	testAggregationQueryInput osAggregation
 	expectedMetrics           []telegraf.Metric
-	wantBuildQueryErr         bool
 	wantGetMetricFieldsErr    bool
 	wantQueryResErr           bool
 	wantInitErr               bool
@@ -292,8 +290,7 @@ func testData() []osAggregationQueryTest {
 				Tags:            []string{},
 				mapMetricFields: map[string]string{"size": "long"},
 			},
-			wantBuildQueryErr: true,
-			wantInitErr:       true,
+			wantInitErr: true,
 		},
 		{
 			queryName: "query 10 (non-existing metric field)",
@@ -675,59 +672,6 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 					require.NoError(t, err)
 
 					testutil.RequireMetricsEqual(t, tt.expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
-				})
-			}
-		}()
-	}
-}
-
-func TestIntegrationGetMetricFields(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	for _, image := range opensearchTestImages() {
-		func() {
-			container, o, err := setupIntegrationTest(t, image)
-			require.NoError(t, err)
-			defer container.Terminate()
-
-			type args struct {
-				ctx         context.Context
-				aggregation osAggregation
-			}
-
-			type test struct {
-				name    string
-				o       *OpensearchQuery
-				args    args
-				want    map[string]string
-				wantErr bool
-			}
-
-			testOpensearchAggregationData := testData()
-			tests := make([]test, 0, len(testOpensearchAggregationData))
-			for _, d := range testOpensearchAggregationData {
-				tests = append(tests, test{
-					name:    "getMetricFields " + d.queryName,
-					o:       o,
-					args:    args{context.Background(), d.testAggregationQueryInput},
-					want:    d.testAggregationQueryInput.mapMetricFields,
-					wantErr: d.wantGetMetricFieldsErr,
-				})
-			}
-
-			for _, tt := range tests {
-				t.Run(tt.name, func(t *testing.T) {
-					got, err := tt.o.getMetricFields(tt.args.ctx, tt.args.aggregation)
-					if (err != nil) != tt.wantErr {
-						t.Errorf("OpensearchQuery.buildAggregationQuery() error = %v, wantErr %v", err, tt.wantErr)
-						return
-					}
-
-					if !cmp.Equal(got, tt.want) {
-						t.Errorf("OpensearchQuery.getMetricFields() = error = %s", cmp.Diff(got, tt.want))
-					}
 				})
 			}
 		}()
