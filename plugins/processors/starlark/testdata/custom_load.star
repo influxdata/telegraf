@@ -10,7 +10,7 @@
 # custom message="invalid" 1515581000000000000
 #
 # Example Output:
-# custom message="Hallo from custom plugin" 1515581000000000000
+# custom message="Hallo from custom module" 1515581000000000000
 # 
 
 load("example_custom_load/custom.star", "custom")
