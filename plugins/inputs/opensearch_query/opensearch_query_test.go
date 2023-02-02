@@ -30,7 +30,6 @@ type osAggregationQueryTest struct {
 	queryName                 string
 	testAggregationQueryInput osAggregation
 	expectedMetrics           []telegraf.Metric
-	wantGetMetricFieldsErr    bool
 	wantQueryResErr           bool
 	wantInitErr               bool
 }
