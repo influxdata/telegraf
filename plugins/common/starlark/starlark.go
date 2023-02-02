@@ -3,6 +3,10 @@ package starlark
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"plugin"
+	"runtime"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -11,6 +15,7 @@ import (
 	"go.starlark.net/lib/time"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkstruct"
 )
 
 type Common struct {
@@ -166,7 +171,36 @@ func LoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error
 			"time": time.Module,
 		}, nil
 	default:
-		return nil, errors.New("module " + module + " is not available")
+		if runtime.GOOS == "Windows" {
+			return nil, errors.New("loading of custom modules is not supported under windows")
+		}
+
+		file, err := os.Stat(module)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, errors.New("module " + module + " is not available")
+		}
+
+		newPlugin, err := plugin.Open(module)
+
+		if err != nil {
+			return nil, fmt.Errorf("module %s could not be loaded with %s", module, err)
+		}
+
+		init, err := newPlugin.Lookup("InitModule")
+		if err != nil {
+			return nil, fmt.Errorf("module %s could not be loaded with %s", module, err)
+		}
+
+		initModule, ok := init.(func(telegraf.Logger) *starlarkstruct.Module)
+
+		if !ok {
+			return nil, errors.New(`"InitModule() does not follow the type "func(telegraf.Logger) *starlarkstruct.Module""`)
+		}
+
+		moduleName := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
+		return starlark.StringDict{
+			moduleName: initModule(logger),
+		}, nil
 	}
 }
 
