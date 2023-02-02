@@ -426,9 +426,9 @@ func TestServerName(t *testing.T) {
 			if test.err {
 				require.Error(t, err)
 				return
-			} else {
-				require.NoError(t, err)
 			}
+			require.NoError(t, err)
+
 			u, err := url.Parse(test.url)
 			require.NoError(t, err)
 			require.Equal(t, test.expected, sc.serverName(u))

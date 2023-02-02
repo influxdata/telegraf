@@ -36,8 +36,9 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
+	dsn := fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])
 	m := &Mysql{
-		Servers: []string{fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])},
+		Servers: []config.Secret{config.NewSecret([]byte(dsn))},
 	}
 	require.NoError(t, m.Init())
 
@@ -70,9 +71,9 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
+	dsn := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
 	m := &Mysql{
-		Servers:          []string{testServer},
+		Servers:          []config.Secret{config.NewSecret([]byte(dsn))},
 		IntervalSlow:     config.Duration(30 * time.Second),
 		GatherGlobalVars: true,
 		MetricVersion:    2,
@@ -87,7 +88,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	require.True(t, acc.HasMeasurement("mysql_variables"))
 
 	m2 := &Mysql{
-		Servers:       []string{testServer},
+		Servers:       []config.Secret{config.NewSecret([]byte(dsn))},
 		MetricVersion: 2,
 	}
 	require.NoError(t, m2.Init())
@@ -204,9 +205,13 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &Mysql{Servers: []string{tt.input}}
+			m := &Mysql{
+				Servers: []config.Secret{config.NewSecret([]byte(tt.input))},
+			}
 			require.NoError(t, m.Init())
-			require.Equal(t, tt.output, m.Servers[0])
+			equal, err := m.Servers[0].EqualTo([]byte(tt.output))
+			require.NoError(t, err)
+			require.True(t, equal)
 		})
 	}
 }
@@ -314,7 +319,7 @@ func TestGatherGlobalVariables(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 
-			err = m.gatherGlobalVariables(db, "test", acc)
+			err := m.gatherGlobalVariables(db, getDSNTag("test"), acc)
 			require.NoErrorf(t, err, "err on gatherGlobalVariables (test case %q)", testCase.name)
 
 			foundFields := map[string]bool{}
