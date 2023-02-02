@@ -165,15 +165,15 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 
 		port := "4020"
 		if len(results) > 2 {
-			acc.AddError(fmt.Errorf("Unable to parse address %q", endpoint))
+			acc.AddError(fmt.Errorf("unable to parse address %q", endpoint))
 			continue
 		} else if len(results) == 2 {
-			if _, err := strconv.Atoi(results[1]); err == nil {
-				port = results[1]
-			} else {
-				acc.AddError(fmt.Errorf("Unable to parse port from %q", endpoint))
+			_, err := strconv.Atoi(results[1])
+			if err != nil {
+				acc.AddError(fmt.Errorf("unable to parse port from %q", endpoint))
 				continue
 			}
+			port = results[1]
 		}
 
 		st, ok := serverTypeMapping[port]

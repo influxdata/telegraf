@@ -11,6 +11,7 @@ linters:
     - errcheck
     - errname
     - exportloopref
+    - gocheckcompilerdirectives
     - goprintffuncname
     - gosimple
     - govet
@@ -130,7 +131,7 @@ linters-settings:
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unhandled-error
-        arguments: [ "outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
+        arguments: [ "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
       - name: unnecessary-stmt
       - name: unreachable-code
       - name: unused-parameter
@@ -182,6 +183,9 @@ issues:
 
     - path: cmd/telegraf/(main|printer).go
       text: "Error return value of `outputBuffer.Write` is not checked"
+
+    - path: cmd/telegraf/(main|printer).go
+      text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
 
 # output configuration options
 output:
