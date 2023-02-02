@@ -16,3 +16,4 @@ process.yml
 /*.conf
 resource.syso
 versioninfo.json
+plugins/processors/starlark/example_custom_module/*.star

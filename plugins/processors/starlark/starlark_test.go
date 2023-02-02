@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -3265,8 +3266,45 @@ def apply(metric):
 }
 
 func TestAllScriptTestData(t *testing.T) {
+	// build custom modules before
+	paths := []string{"example_custom_module", "plugins/processors/starlark/example_custom_module"}
+
+	for _, modulePath := range paths {
+		err := filepath.Walk(modulePath, func(path string, info os.FileInfo, err error) error {
+			if info == nil || info.IsDir() {
+				return nil
+			}
+
+			if filepath.Ext(info.Name()) == ".go" {
+				// get `go` executable path
+				goExecutable, _ := exec.LookPath("go")
+				outArg := fmt.Sprintf("-o=%s/%s.star", modulePath, strings.TrimSuffix(info.Name(), filepath.Ext(info.Name())))
+				filePath := fmt.Sprintf("%s/%s", modulePath, info.Name())
+
+				// `go build -buildmode=plugin -o=<modulePath>/<filename>.star <modulePath>/<filename>` command
+				cmdGoPlugin := &exec.Cmd{
+					Path:   goExecutable,
+					Args:   []string{goExecutable, "build", "-buildmode=plugin", outArg, filePath},
+					Stdout: os.Stdout,
+					Stderr: os.Stdout,
+				}
+
+				// run command
+				err := cmdGoPlugin.Run()
+				require.NoError(t, err)
+
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+		require.NoError(t, err)
+	}
+
 	// can be run from multiple folders
-	paths := []string{"testdata", "plugins/processors/starlark/testdata"}
+	paths = []string{"testdata", "plugins/processors/starlark/testdata"}
 	for _, testdataPath := range paths {
 		err := filepath.Walk(testdataPath, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
