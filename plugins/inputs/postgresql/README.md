@@ -18,10 +18,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics from one or many postgresql servers
 [[inputs.postgresql]]
-  ## specify address via a url matching:
+  ## Specify address via a url matching:
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]&statement_timeout=...
   ## or a simple string:
   ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
+  ## Users can pass the path to the socket as the host value to use a socket
+  ## connection (e.g. `/var/run/postgresql`).
   ##
   ## All connection parameters are optional.
   ##
@@ -69,6 +71,9 @@ Or via an url matching:
 ```text
 postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]
 ```
+
+Users can pass the path to the socket as the host value to use a socket
+connection (e.g. `/var/run/postgresql`).
 
 It is also possible to specify a query timeout maximum execution time (in ms)
 for any individual statement passed over the connection
