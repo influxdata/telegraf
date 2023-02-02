@@ -111,7 +111,7 @@ func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 }
 
 func (t *Telegraf) reloadLoop() error {
-	config, err := t.loadConfiguration()
+	cfg, err := t.loadConfiguration()
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (t *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := t.runAgent(ctx, config)
+		err := t.runAgent(ctx, cfg)
 		if err != nil && err != context.Canceled {
 			return fmt.Errorf("[telegraf] Error running agent: %v", err)
 		}
