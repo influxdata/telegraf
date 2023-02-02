@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blang/semver/v4"
+	"github.com/coreos/go-semver/semver"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
@@ -497,9 +497,9 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 
 // versionLowerThan returns true is the current version < a base version
 func versionLowerThan(current string, base string) bool {
-	v1, _ := semver.New(current)
-	v2, _ := semver.New(base)
-	return v1.LT(*v2)
+	v1 := semver.New(current)
+	v2 := semver.New(base)
+	return v1.LessThan(*v2)
 }
 
 type CmmdsEntity struct {

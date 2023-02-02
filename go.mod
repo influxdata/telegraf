@@ -48,7 +48,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.14.5
 	github.com/aws/smithy-go v1.13.5
 	github.com/benbjohnson/clock v1.3.0
-	github.com/blang/semver/v4 v4.0.0
 	github.com/blues/jsonata-go v1.5.4
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/caio/go-tdigest v3.1.0+incompatible
