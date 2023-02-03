@@ -67,3 +67,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Please refer to GrayLog metrics api browser for full metric end points:
 `http://host:9000/api/api-browser`
+
+## Metrics
+
+## Example Output

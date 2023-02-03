@@ -54,3 +54,5 @@ format of the file.
 
 [input data format]: /docs/DATA_FORMATS_INPUT.md
 [tail]: /plugins/inputs/tail
+
+## Example Output

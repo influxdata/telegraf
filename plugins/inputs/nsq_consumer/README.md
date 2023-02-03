@@ -48,3 +48,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [nsq]: https://nsq.io
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
+
+## Metrics
+
+## Example Output

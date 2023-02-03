@@ -26,3 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.linux_sysctl_fs]]
   # no configuration
 ```
+
+## Metrics
+
+## Example Output

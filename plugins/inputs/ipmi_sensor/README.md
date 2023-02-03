@@ -87,7 +87,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # cache_path = ""
 ```
 
-## Measurements
+## Metrics
 
 Version 1 schema:
 

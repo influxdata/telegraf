@@ -46,3 +46,5 @@ following Vault documentation:
 
 - [https://www.vaultproject.io/docs/internals/telemetry](https://www.vaultproject.io/docs/internals/telemetry)
 - [https://learn.hashicorp.com/tutorials/vault/monitor-telemetry-audit-splunk?in=vault/monitoring](https://learn.hashicorp.com/tutorials/vault/monitor-telemetry-audit-splunk?in=vault/monitoring)
+
+## Example Output

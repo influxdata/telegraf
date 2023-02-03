@@ -31,7 +31,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # types = ["root", "per_node"]
 ```
 
-## Measurements
+## Metrics
+
+### Measurements
 
 **The following measurements are supported by Hugepages plugin:**
 

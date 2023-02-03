@@ -86,3 +86,8 @@ available for output:
 ```shell
 $host.UI.RawUI.BufferSize = new-object System.Management.Automation.Host.Size(1024,50)
 ```
+
+## Metrics
+
+## Example Output
+

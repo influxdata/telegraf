@@ -41,7 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - fields:
     - temperature
 
-## Example output
+## Example Output
 
 ```shell
 hddtemp,source=server1,unit=C,status=,device=sdb,model=WDC\ WD740GD-00FLA1 temperature=43i 1481655647000000000

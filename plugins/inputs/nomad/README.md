@@ -39,3 +39,5 @@ have a look at Nomad following documentation:
 
 - [https://www.nomadproject.io/docs/operations/metrics](https://www.nomadproject.io/docs/operations/metrics)
 - [https://www.nomadproject.io/docs/operations/telemetry](https://www.nomadproject.io/docs/operations/telemetry)
+
+## Example Output

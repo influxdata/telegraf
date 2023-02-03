@@ -879,3 +879,5 @@ Emitted when the appropriate `shards_stats` options are set.
     - warmer_current (float)
     - warmer_total (float)
     - warmer_total_time_in_millis (float)
+
+## Example Output

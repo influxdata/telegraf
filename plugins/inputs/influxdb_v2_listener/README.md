@@ -70,3 +70,5 @@ curl -i -XPOST 'http://localhost:8186/api/v2/write' --data-binary 'cpu_load_shor
 ```
 
 [influxdb_http_api]: https://docs.influxdata.com/influxdb/latest/api/
+
+## Example Output

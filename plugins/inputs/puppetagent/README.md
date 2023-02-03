@@ -95,7 +95,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   location = "/var/lib/puppet/state/last_run_summary.yaml"
 ```
 
-## Measurements
+## Metrics
 
 ### PuppetAgent int64 measurements
 
@@ -164,3 +164,5 @@ Meta:
 Measurement names:
 
 - puppetagent_version_puppet
+
+## Example Output
