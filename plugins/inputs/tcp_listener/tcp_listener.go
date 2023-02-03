@@ -170,10 +170,16 @@ func (t *TCPListener) tcpListen() {
 
 			select {
 			case <-t.accept:
+				// generate a random id for this TCPConn
+				id, err := internal.RandomString(6)
+				if err != nil {
+					t.Log.Errorf("generating a random id for TCP connection failed: %v", err)
+					return
+				}
+
 				// not over connection limit, handle the connection properly.
 				t.wg.Add(1)
-				// generate a random id for this TCPConn
-				id := internal.RandomString(6)
+
 				t.remember(id, conn)
 				go t.handler(conn, id)
 			default:

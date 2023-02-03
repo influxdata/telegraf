@@ -435,7 +435,11 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 				// not over connection limit, handle the connection properly.
 				s.wg.Add(1)
 				// generate a random id for this TCPConn
-				id := internal.RandomString(6)
+				id, err := internal.RandomString(6)
+				if err != nil {
+					return err
+				}
+
 				s.remember(id, conn)
 				go s.handler(conn, id)
 			default:
