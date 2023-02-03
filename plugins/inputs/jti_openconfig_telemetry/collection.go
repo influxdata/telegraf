@@ -30,12 +30,8 @@ func (a CollectionByKeys) IsAvailable(tags map[string]string) *DataGroup {
 
 		matchFound := true
 		for k, v := range tags {
-			if val, ok := group.tags[k]; ok {
-				if val != v {
-					matchFound = false
-					break
-				}
-			} else {
+			val, ok := group.tags[k]
+			if !ok || val != v {
 				matchFound = false
 				break
 			}
