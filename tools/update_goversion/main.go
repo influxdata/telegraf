@@ -144,6 +144,11 @@ func main() {
 			Replace:  fmt.Sprintf("$1:%s", version),
 		},
 		{
+			FileName: ".github/workflows/golangci-lint.yml",
+			Regex:    `(go-version).*`,
+			Replace:  fmt.Sprintf("$1: '%s'", zeroPatchVersion),
+		},
+		{
 			FileName: "Makefile",
 			Regex:    `(quay\.io\/influxdb\/telegraf-ci):(\d.\d*.\d)`,
 			Replace:  fmt.Sprintf("$1:%s", version),

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	// Library that supports v3.1.1
-	mqttv3 "github.com/eclipse/paho.mqtt.golang"
+	mqttv3 "github.com/eclipse/paho.mqtt.golang" // Library that supports v3.1.1
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 )
@@ -31,7 +31,11 @@ func (m *mqttv311Client) Connect() error {
 	if m.ClientID != "" {
 		opts.SetClientID(m.ClientID)
 	} else {
-		opts.SetClientID("Telegraf-Output-" + internal.RandomString(5))
+		randomString, err := internal.RandomString(5)
+		if err != nil {
+			return fmt.Errorf("generating random string for client ID failed: %w", err)
+		}
+		opts.SetClientID("Telegraf-Output-" + randomString)
 	}
 
 	tlsCfg, err := m.ClientConfig.TLSConfig()

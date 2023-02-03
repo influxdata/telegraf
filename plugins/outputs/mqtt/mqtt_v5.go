@@ -8,6 +8,7 @@ import (
 
 	mqttv5auto "github.com/eclipse/paho.golang/autopaho"
 	mqttv5 "github.com/eclipse/paho.golang/paho"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 )
@@ -26,7 +27,11 @@ func (m *mqttv5Client) Connect() error {
 	if m.ClientID != "" {
 		opts.ClientID = m.ClientID
 	} else {
-		opts.ClientID = "Telegraf-Output-" + internal.RandomString(5)
+		randomString, err := internal.RandomString(5)
+		if err != nil {
+			return fmt.Errorf("generating random string for client ID failed: %w", err)
+		}
+		opts.ClientID = "Telegraf-Output-" + randomString
 	}
 
 	user, err := m.Username.Get()

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
+	cryptoRand "crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -87,13 +88,16 @@ func ReadLines(filename string) ([]string, error) {
 }
 
 // RandomString returns a random string of alphanumeric characters
-func RandomString(n int) string {
+func RandomString(n int) (string, error) {
 	var bytes = make([]byte, n)
-	rand.Read(bytes) //nolint:revive // from math/rand/rand.go: "It always returns len(p) and a nil error."
+	_, err := cryptoRand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
 	for i, b := range bytes {
 		bytes[i] = alphanum[b%byte(len(alphanum))]
 	}
-	return string(bytes)
+	return string(bytes), nil
 }
 
 // SnakeCase converts the given string to snake case following the Golang format:
