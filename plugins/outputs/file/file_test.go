@@ -185,7 +185,9 @@ func createFile(t *testing.T) *os.File {
 }
 
 func tmpFile(t *testing.T) string {
-	return t.TempDir() + internal.RandomString(10)
+	randomString, err := internal.RandomString(10)
+	require.NoError(t, err)
+	return t.TempDir() + randomString
 }
 
 func validateFile(t *testing.T, fileName, expS string) {

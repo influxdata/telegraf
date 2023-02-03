@@ -320,7 +320,11 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 	opts.ConnectTimeout = time.Duration(m.ConnectionTimeout)
 	if m.ClientID == "" {
-		opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))
+		randomString, err := internal.RandomString(5)
+		if err != nil {
+			return nil, fmt.Errorf("generating random string for client ID failed: %w", err)
+		}
+		opts.SetClientID("Telegraf-Consumer-" + randomString)
 	} else {
 		opts.SetClientID(m.ClientID)
 	}
