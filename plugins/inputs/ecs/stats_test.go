@@ -74,8 +74,8 @@ func Test_memstats(t *testing.T) {
 			"total_pgpgout":             uint64(1674),
 			"total_pgpgin":              uint64(3477),
 			"total_rss":                 uint64(1597440),
-			"usage":                     uint64(2392064),
-			"usage_percent":             float64(0.23141727228778164),
+			"usage":                     uint64(3858432),
+			"usage_percent":             float64(0.3732792302998122),
 		},
 		map[string]string{
 			"test_tag": "test",

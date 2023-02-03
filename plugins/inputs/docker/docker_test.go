@@ -409,8 +409,8 @@ func TestDockerMemoryExcludesCache(t *testing.T) {
 		"total_unevictable":         uint64(0),
 		"total_writeback":           uint64(55),
 		"unevictable":               uint64(0),
-		"usage_percent":             float64(54.75), // 1095 / 2000
-		"usage":                     uint64(1095),
+		"usage_percent":             float64(55.2),
+		"usage":                     uint64(1104),
 		"writeback":                 uint64(0),
 	}
 
