@@ -71,16 +71,15 @@ func (p *P4runtime) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	p.wg.Add(len(filteredCounters))
-
 	for _, counter := range filteredCounters {
+		p.wg.Add(1)
 		go func(counter *p4ConfigV1.Counter) {
 			defer p.wg.Done()
 			entries, err := p.readAllEntries(counter.Preamble.Id)
 			if err != nil {
 				acc.AddError(
 					fmt.Errorf(
-						"Reading counter entries with ID=%v failed with error: %v",
+						"reading counter entries with ID=%v failed with error: %w",
 						counter.Preamble.Id,
 						err,
 					),
@@ -92,7 +91,7 @@ func (p *P4runtime) Gather(acc telegraf.Accumulator) error {
 				ce := entry.GetCounterEntry()
 
 				if ce == nil {
-					acc.AddError(fmt.Errorf("Reading counter entry from entry %v failed", entry))
+					acc.AddError(fmt.Errorf("reading counter entry from entry %v failed", entry))
 					continue
 				}
 
@@ -142,13 +141,13 @@ func (p *P4runtime) getP4Info() (*p4ConfigV1.P4Info, error) {
 	}
 	resp, err := p.client.GetForwardingPipelineConfig(context.Background(), req)
 	if err != nil {
-		return nil, fmt.Errorf("error when retrieving forwarding pipeline config: %v", err)
+		return nil, fmt.Errorf("error when retrieving forwarding pipeline config: %w", err)
 	}
 
 	config := resp.GetConfig()
 	if config == nil {
 		return nil, fmt.Errorf(
-			"error when retrieving config from forwarding pipeline - pipeline doesn't have a config yet: %v",
+			"error when retrieving config from forwarding pipeline - pipeline doesn't have a config yet: %w",
 			err,
 		)
 	}
@@ -156,7 +155,7 @@ func (p *P4runtime) getP4Info() (*p4ConfigV1.P4Info, error) {
 	p4info := config.GetP4Info()
 	if p4info == nil {
 		return nil, fmt.Errorf(
-			"error when retrieving P4Info from config - config doesn't have a P4Info: %v",
+			"error when retrieving P4Info from config - config doesn't have a P4Info: %w",
 			err,
 		)
 	}
@@ -193,7 +192,7 @@ func (p *P4runtime) newP4RuntimeClient() error {
 
 	conn, err := initConnection(p.Endpoint, tlscfg)
 	if err != nil {
-		return fmt.Errorf("cannot connect to the server: %v", err)
+		return fmt.Errorf("cannot connect to the server: %w", err)
 	}
 	p.conn = conn
 	p.client = p4v1.NewP4RuntimeClient(conn)
@@ -224,8 +223,7 @@ func (p *P4runtime) readAllEntries(counterID uint32) ([]*p4v1.Entity, error) {
 func init() {
 	inputs.Add("p4runtime", func() telegraf.Input {
 		p4runtime := &P4runtime{
-			CounterNamesInclude: []string{},
-			DeviceID:            defaultDeviceID,
+			DeviceID: defaultDeviceID,
 		}
 		return p4runtime
 	})

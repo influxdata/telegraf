@@ -31,13 +31,6 @@ func createCounter(
 	}
 }
 
-func createTelegrafMetric(
-	tags map[string]string,
-	fields map[string]interface{},
-) telegraf.Metric {
-	return testutil.MustMetric("p4_runtime", tags, fields, time.Unix(0, 0))
-}
-
 func createEntityCounterEntry(
 	counterID uint32,
 	index int64,
@@ -74,8 +67,8 @@ func TestInitDefault(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	require.Equal(t, "127.0.0.1:9559", plugin.Endpoint)
 	require.Equal(t, uint64(0), plugin.DeviceID)
-	require.Equal(t, 0, len(plugin.CounterNamesInclude))
-	require.Equal(t, false, plugin.EnableTLS)
+	require.Empty(t, plugin.CounterNamesInclude)
+	require.False(t, plugin.EnableTLS)
 }
 
 func TestErrorGetP4Info(t *testing.T) {
@@ -118,8 +111,7 @@ func TestErrorGetP4Info(t *testing.T) {
 		plugin := NewTestP4RuntimeClient(p4RtClient, listener.Addr().String())
 
 		var acc testutil.Accumulator
-		errGather := plugin.Gather(&acc)
-		require.Error(t, errGather)
+		require.Error(t, plugin.Gather(&acc))
 	}
 }
 
@@ -143,7 +135,8 @@ func TestOneCounterRead(t *testing.T) {
 				5,
 				&p4v1.CounterData{ByteCount: 5, PacketCount: 1},
 			),
-			expected: []telegraf.Metric{createTelegrafMetric(
+			expected: []telegraf.Metric{testutil.MustMetric(
+				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   "foo",
@@ -152,7 +145,8 @@ func TestOneCounterRead(t *testing.T) {
 				map[string]interface{}{
 					"bytes":         int64(5),
 					"packets":       int64(1),
-					"counter_index": 5}),
+					"counter_index": 5},
+				time.Unix(0, 0)),
 			},
 		}, {
 			forwardingPipelineConfig: &p4v1.ForwardingPipelineConfig{
@@ -172,7 +166,8 @@ func TestOneCounterRead(t *testing.T) {
 				5,
 				&p4v1.CounterData{ByteCount: 5},
 			),
-			expected: []telegraf.Metric{createTelegrafMetric(
+			expected: []telegraf.Metric{testutil.MustMetric(
+				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   "foo",
@@ -181,7 +176,8 @@ func TestOneCounterRead(t *testing.T) {
 				map[string]interface{}{
 					"bytes":         int64(5),
 					"packets":       int64(0),
-					"counter_index": 5}),
+					"counter_index": 5},
+				time.Unix(0, 0)),
 			},
 		}, {
 			forwardingPipelineConfig: &p4v1.ForwardingPipelineConfig{
@@ -201,7 +197,8 @@ func TestOneCounterRead(t *testing.T) {
 				5,
 				&p4v1.CounterData{PacketCount: 1},
 			),
-			expected: []telegraf.Metric{createTelegrafMetric(
+			expected: []telegraf.Metric{testutil.MustMetric(
+				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   "foo",
@@ -210,7 +207,8 @@ func TestOneCounterRead(t *testing.T) {
 				map[string]interface{}{
 					"bytes":         int64(0),
 					"packets":       int64(1),
-					"counter_index": 5}),
+					"counter_index": 5},
+				time.Unix(0, 0)),
 			},
 		}, {
 			forwardingPipelineConfig: &p4v1.ForwardingPipelineConfig{
@@ -260,8 +258,7 @@ func TestOneCounterRead(t *testing.T) {
 		plugin := NewTestP4RuntimeClient(p4RtClient, listener.Addr().String())
 
 		var acc testutil.Accumulator
-		errGather := plugin.Gather(&acc)
-		require.NoError(t, errGather)
+		require.NoError(t, plugin.Gather(&acc))
 
 		testutil.RequireMetricsEqual(
 			t,
@@ -303,7 +300,8 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 			}
 
 			entities = append(entities, counterEntry)
-			expected = append(expected, createTelegrafMetric(
+			expected = append(expected, testutil.MustMetric(
+				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   "foo",
@@ -314,6 +312,7 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 					"packets":       int64(10),
 					"counter_index": i,
 				},
+				time.Unix(0, 0),
 			))
 		}
 
@@ -351,8 +350,7 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 		plugin := NewTestP4RuntimeClient(p4RtClient, listener.Addr().String())
 
 		var acc testutil.Accumulator
-		errGather := plugin.Gather(&acc)
-		require.NoError(t, errGather)
+		require.NoError(t, plugin.Gather(&acc))
 		acc.Wait(totalNumOfEntries)
 
 		testutil.RequireMetricsEqual(
@@ -388,7 +386,8 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 				),
 			)
 
-			expected = append(expected, createTelegrafMetric(
+			expected = append(expected, testutil.MustMetric(
+				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
 					"counter_name":   counterName,
@@ -398,7 +397,9 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 					"bytes":         int64(10),
 					"packets":       int64(10),
 					"counter_index": 1,
-				}))
+				},
+				time.Unix(0, 0),
+			))
 		}
 
 		forwardingPipelineConfig := &p4v1.ForwardingPipelineConfig{
@@ -445,8 +446,7 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 		plugin := NewTestP4RuntimeClient(p4RtClient, listener.Addr().String())
 
 		var acc testutil.Accumulator
-		errGather := plugin.Gather(&acc)
-		require.NoError(t, errGather)
+		require.NoError(t, plugin.Gather(&acc))
 		acc.Wait(totalNumOfCounters)
 
 		testutil.RequireMetricsEqual(
@@ -482,8 +482,7 @@ func TestNoCountersAvailable(t *testing.T) {
 	plugin := NewTestP4RuntimeClient(p4RtClient, listener.Addr().String())
 
 	var acc testutil.Accumulator
-	errGather := plugin.Gather(&acc)
-	require.NoError(t, errGather)
+	require.NoError(t, plugin.Gather(&acc))
 }
 
 func TestFilterCounters(t *testing.T) {
@@ -516,8 +515,7 @@ func TestFilterCounters(t *testing.T) {
 	plugin.CounterNamesInclude = []string{"oof"}
 
 	var acc testutil.Accumulator
-	errGather := plugin.Gather(&acc)
-	require.NoError(t, errGather)
+	require.NoError(t, plugin.Gather(&acc))
 	testutil.RequireMetricsEqual(
 		t,
 		nil,
@@ -569,12 +567,11 @@ func TestFailReadCounterEntryFromEntry(t *testing.T) {
 	plugin := NewTestP4RuntimeClient(p4RtClient, listener.Addr().String())
 
 	var acc testutil.Accumulator
-	errGather := plugin.Gather(&acc)
-	require.NoError(t, errGather)
+	require.NoError(t, plugin.Gather(&acc))
 	assert.Equal(
 		t,
 		acc.Errors[0],
-		errors.New("Reading counter entry from entry table_entry:<>  failed"),
+		errors.New("reading counter entry from entry table_entry:<>  failed"),
 	)
 	testutil.RequireMetricsEqual(
 		t,
@@ -617,14 +614,12 @@ func TestFailReadAllEntries(t *testing.T) {
 	plugin := NewTestP4RuntimeClient(p4RtClient, listener.Addr().String())
 
 	var acc testutil.Accumulator
-	errGather := plugin.Gather(&acc)
-	require.NoError(t, errGather)
+	require.NoError(t, plugin.Gather(&acc))
 	assert.Equal(
 		t,
 		acc.Errors[0],
-		errors.New(
-			"Reading counter entries with ID=1111 failed with error: Connection error",
-		),
+		fmt.Errorf("reading counter entries with ID=1111 failed with error: %w",
+			errors.New("Connection error")),
 	)
 	testutil.RequireMetricsEqual(
 		t,
