@@ -49,16 +49,16 @@ func calculateCPUPercentWindows(v *types.StatsJSON) float64 {
 // This definition is designed to be consistent with past values and the latest docker CLI
 // * https://github.com/docker/cli/blob/6e2838e18645e06f3e4b6c5143898ccc44063e3b/cli/command/container/stats_helpers.go#L239
 func CalculateMemUsageUnixNoCache(mem types.MemoryStats) float64 {
-	// Docker 19.03 and older
-	if v, isOldDocker := mem.Stats["cache"]; isOldDocker && v < mem.Usage {
-		return float64(mem.Usage - v)
-	}
 	// cgroup v1
 	if v, isCgroup1 := mem.Stats["total_inactive_file"]; isCgroup1 && v < mem.Usage {
 		return float64(mem.Usage - v)
 	}
 	// cgroup v2
 	if v := mem.Stats["inactive_file"]; v < mem.Usage {
+		return float64(mem.Usage - v)
+	}
+	// Docker 19.03 and older
+	if v, isOldDocker := mem.Stats["cache"]; isOldDocker && v < mem.Usage {
 		return float64(mem.Usage - v)
 	}
 	return float64(mem.Usage)
