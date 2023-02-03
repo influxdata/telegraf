@@ -17,7 +17,7 @@ import (
 
 type PS interface {
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error)
-	DiskUsage(mountPointFilter []string, mountOptsExclude []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error)
+	DiskUsage(mountPointFilter []string, mountOptsExclude []string, fstypeExclude []string) ([]*disk.UsageStat, []*PartitionStatExtended, error)
 	NetIO() ([]net.IOCountersStat, error)
 	NetProto() ([]net.ProtoCountersStat, error)
 	DiskIO(names []string) (map[string]disk.IOCountersStat, error)
@@ -45,6 +45,14 @@ type SystemPS struct {
 }
 
 type SystemPSDisk struct{}
+
+type PartitionStatExtended struct {
+	Device     string   `json:"device"`
+	Mountpoint string   `json:"mountpoint"`
+	Fstype     string   `json:"fstype"`
+	Opts       []string `json:"opts"`
+	Label      string   `json:"label"`
+}
 
 func (s *SystemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	var cpuTimes []cpu.TimesStat
@@ -94,7 +102,7 @@ func (s *SystemPS) DiskUsage(
 	mountPointFilter []string,
 	mountOptsExclude []string,
 	fstypeExclude []string,
-) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
+) ([]*disk.UsageStat, []*PartitionStatExtended, error) {
 	parts, err := s.Partitions(true)
 	if err != nil {
 		return nil, nil, err
@@ -123,7 +131,7 @@ func (s *SystemPS) DiskUsage(
 	fstypeExcludeSet.add("autofs")
 
 	var usage []*disk.UsageStat
-	var partitions []*disk.PartitionStat
+	var partitions []*PartitionStatExtended
 	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
 partitionRange:
@@ -174,7 +182,13 @@ partitionRange:
 		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))
 		du.Fstype = p.Fstype
 		usage = append(usage, du)
-		partitions = append(partitions, &p)
+		e := PartitionStatExtended{Device: p.Device, Mountpoint: p.Mountpoint, Fstype: p.Fstype, Opts: p.Opts}
+		m := strings.Count(p.Device, "/dev/")
+		if (m > 0) {
+			label, _ := disk.Label(strings.Replace(p.Device, "/dev/", "", 1))
+			e.Label = label
+		}
+		partitions = append(partitions, &e)
 	}
 
 	return usage, partitions, nil
