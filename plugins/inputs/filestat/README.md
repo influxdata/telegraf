@@ -40,7 +40,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - All measurements have the following tags:
   - file (the path the to file, as specified in the config)
 
-
 ## Example Output
 
 ```shell
