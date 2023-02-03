@@ -148,7 +148,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 // If the table cannot be modified, the returned column list is the columns which are missing from the table. This
 // includes when an error is returned.
 //
-//nolint:revive
+//nolint:revive //argument-limit conditionally more arguments allowed
 func (tm *TableManager) EnsureStructure(
 	ctx context.Context,
 	db dbh,
@@ -248,7 +248,7 @@ func (tm *TableManager) EnsureStructure(
 	if err != nil {
 		return append(addColumns, invalidColumns...), err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
+	defer tx.Rollback(ctx) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
 	// It's possible to have multiple telegraf processes, in which we can't ensure they all lock tables in the same
 	// order. So to prevent possible deadlocks, we have to have a single lock for all schema modifications.
 	if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", schemaAdvisoryLockID); err != nil {
@@ -346,7 +346,7 @@ func (tm *TableManager) getColumns(ctx context.Context, db dbh, name string) (ma
 	return cols, rows.Err()
 }
 
-//nolint:revive
+//nolint:revive //argument-limit conditionally more arguments allowed
 func (tm *TableManager) update(ctx context.Context,
 	tx pgx.Tx,
 	state *tableState,

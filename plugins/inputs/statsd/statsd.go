@@ -872,10 +872,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 	// connection cleanup function
 	defer func() {
 		s.wg.Done()
-
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		conn.Close()
+		conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 
 		// Add one connection potential back to channel when this one closes
 		s.accept <- true
@@ -907,11 +904,8 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
-			// Writes to a bytes buffer always succeed, so do not check the errors here
-			//nolint:errcheck,revive
-			b.Write(scanner.Bytes())
-			//nolint:errcheck,revive
-			b.WriteByte('\n')
+			b.Write(scanner.Bytes()) //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
+			b.WriteByte('\n')        //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
 
 			select {
 			case s.in <- input{Buffer: b, Time: time.Now(), Addr: remoteIP}:
@@ -929,9 +923,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	conn.Close()
+	conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 	s.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	s.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
@@ -955,13 +947,9 @@ func (s *Statsd) Stop() {
 	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
 	if s.isUDP() {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		s.UDPlistener.Close()
+		s.UDPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 	} else {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		s.TCPlistener.Close()
+		s.TCPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 		// Close all open TCP connections
 		//  - get all conns from the s.conns map and put into slice
 		//  - this is so the forget() function doesnt conflict with looping
@@ -973,9 +961,7 @@ func (s *Statsd) Stop() {
 		}
 		s.cleanup.Unlock()
 		for _, conn := range conns {
-			// Ignore the returned error as we cannot do anything about it anyway
-			//nolint:errcheck,revive
-			conn.Close()
+			conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 		}
 	}
 	s.Unlock()
