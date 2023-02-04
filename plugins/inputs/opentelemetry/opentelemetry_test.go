@@ -49,7 +49,7 @@ func TestOpenTelemetry(t *testing.T) {
 	// set a metric value
 
 	meter := mp.Meter("library-name")
-	counter, err := meter.SyncInt64().Counter("measurement-counter")
+	counter, err := meter.Int64Counter("measurement-counter")
 	require.NoError(t, err)
 	counter.Add(ctx, 7)
 

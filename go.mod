@@ -94,9 +94,9 @@ require (
 	github.com/hashicorp/consul/api v1.18.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.3.0
-	github.com/influxdata/influxdb-observability/influx2otel v0.3.0
-	github.com/influxdata/influxdb-observability/otel2influx v0.3.0
+	github.com/influxdata/influxdb-observability/common v0.3.1
+	github.com/influxdata/influxdb-observability/influx2otel v0.3.1
+	github.com/influxdata/influxdb-observability/otel2influx v0.3.1
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
@@ -169,8 +169,8 @@ require (
 	github.com/yuin/goldmark v1.5.3
 	go.mongodb.org/mongo-driver v1.11.1
 	go.opentelemetry.io/collector/pdata v1.0.0-rc4
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.34.0
-	go.opentelemetry.io/otel/sdk/metric v0.34.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.35.0
+	go.opentelemetry.io/otel/sdk/metric v0.35.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 	golang.org/x/net v0.5.0
@@ -412,12 +412,12 @@ require (
 	go.opentelemetry.io/collector/consumer v0.70.0 // indirect
 	go.opentelemetry.io/collector/featuregate v0.70.0 // indirect
 	go.opentelemetry.io/collector/semconv v0.70.0 // indirect
-	go.opentelemetry.io/otel v1.11.2 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.11.2 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.34.0 // indirect
-	go.opentelemetry.io/otel/metric v0.34.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.11.2 // indirect
-	go.opentelemetry.io/otel/trace v1.11.2 // indirect
+	go.opentelemetry.io/otel v1.12.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.12.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.35.0 // indirect
+	go.opentelemetry.io/otel/metric v0.35.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.12.0 // indirect
+	go.opentelemetry.io/otel/trace v1.12.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
