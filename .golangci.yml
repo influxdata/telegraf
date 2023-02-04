@@ -26,6 +26,7 @@ linters:
     - revive
     - sqlclosecheck
     - staticcheck
+    - tenv
     - tparallel
     - typecheck
     - unconvert
@@ -141,6 +142,11 @@ linters-settings:
   nakedret:
     # make an issue if func has more lines of code than this setting and it has naked returns; default is 30
     max-func-lines: 1
+  tenv:
+    # The option `all` will run against whole test files (`_test.go`) regardless of method/function signatures.
+    # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
+    # Default: false
+    all: true
 
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m

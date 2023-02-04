@@ -416,7 +416,5 @@ func readJSON(t *testing.T, jsonFilePath string) []byte {
 }
 
 func emulatorSetEnv(t *testing.T, srv *httptest.Server) {
-	if err := os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", "")); err != nil {
-		t.Error(err)
-	}
+	t.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
 }
