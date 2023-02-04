@@ -3,14 +3,14 @@ package prometheus
 import (
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf/config"
 	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/config"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/fields"
@@ -360,30 +360,35 @@ func TestInitConfigErrors(t *testing.T) {
 	}
 
 	// Both invalid IP addresses
-	p.NodeIP = "10.240.0.0.0"
-	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0.0"))
-	err := p.Init()
-	require.Error(t, err)
-	expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid; " +
-		"cannot get pod list for monitor_kubernetes_pods using node scrape scope"
-	require.Equal(t, expectedMessage, err.Error())
-	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0"))
+	t.Run("Both invalid IP addresses", func(t *testing.T) {
+		p.NodeIP = "10.240.0.0.0"
+		t.Setenv("NODE_IP", "10.000.0.0.0")
+		err := p.Init()
+		require.Error(t, err)
+		expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid; " +
+			"cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+		require.Equal(t, expectedMessage, err.Error())
+	})
 
-	p.KubernetesLabelSelector = "label0==label0, label0 in (=)"
-	err = p.Init()
-	expectedMessage = "error parsing the specified label selector(s): unable to parse requirement: found '=', expected: ',', ')' or identifier"
-	require.Error(t, err, expectedMessage)
-	p.KubernetesLabelSelector = "label0==label"
+	t.Run("Valid IP address", func(t *testing.T) {
+		t.Setenv("NODE_IP", "10.000.0.0")
 
-	p.KubernetesFieldSelector = "field,"
-	err = p.Init()
-	expectedMessage = "error parsing the specified field selector(s): invalid selector: 'field,'; can't understand 'field'"
-	require.Error(t, err, expectedMessage)
+		p.KubernetesLabelSelector = "label0==label0, label0 in (=)"
+		err := p.Init()
+		expectedMessage := "error parsing the specified label selector(s): unable to parse requirement: found '=', expected: ',', ')' or identifier"
+		require.Error(t, err, expectedMessage)
+		p.KubernetesLabelSelector = "label0==label"
 
-	p.KubernetesFieldSelector = "spec.containerNames=containerNames"
-	err = p.Init()
-	expectedMessage = "the field selector spec.containerNames is not supported for pods"
-	require.Error(t, err, expectedMessage)
+		p.KubernetesFieldSelector = "field,"
+		err = p.Init()
+		expectedMessage = "error parsing the specified field selector(s): invalid selector: 'field,'; can't understand 'field'"
+		require.Error(t, err, expectedMessage)
+
+		p.KubernetesFieldSelector = "spec.containerNames=containerNames"
+		err = p.Init()
+		expectedMessage = "the field selector spec.containerNames is not supported for pods"
+		require.Error(t, err, expectedMessage)
+	})
 }
 
 func TestInitConfigSelectors(t *testing.T) {
