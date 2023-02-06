@@ -2,12 +2,13 @@
 
 This document presents the input plugin to read WMI classes on Windows
 operating systems. With the win_wmi plugin, it is possible to
-capture and filter virtually any configuration or metric value exposed through
-the Windows Management Instrumentation
-([WMI](https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page))
-service. At minimum, the telegraf service user must have permission to
-[read](https://learn.microsoft.com/en-us/windows/win32/wmisdk/access-to-wmi-namespaces)
-the WMI namespace that is being queried.
+capture and filter virtually any configuration or metric value exposed
+through the Windows Management Instrumentation ([WMI][WMIdoc])
+service. At minimum, the telegraf service user must have permission
+to [read][ACL] the WMI namespace that is being queried.
+
+[ACL]: https://learn.microsoft.com/en-us/windows/win32/wmisdk/access-to-wmi-namespaces
+[WMIdoc]: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -55,9 +56,9 @@ An array of strings representing the properties of the WMI class to be queried.
 ### filter
 
 A string specifying a WHERE clause to use as a filter for the WMI Query
-Language (WQL). See
-[WHERE Clause](https://learn.microsoft.com/en-us/windows/win32/wmisdk/where-clause?source=recommendations)
-for more information.
+Language (WQL). See [WHERE Clause][WHERE] for more information.
+
+[WHERE]: https://learn.microsoft.com/en-us/windows/win32/wmisdk/where-clause?source=recommendations
 
 ### tag_properties
 
