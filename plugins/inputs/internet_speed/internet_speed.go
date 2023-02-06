@@ -52,7 +52,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	// if not caching, go find closest server each time
 	if !is.Cache || is.server == nil {
 		if err := is.FindClosestServer(); err != nil {
-			return fmt.Errorf("unable to find closest server: %s", err)
+			return fmt.Errorf("unable to find closest server: %w", err)
 		}
 	}
 
