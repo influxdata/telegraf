@@ -391,12 +391,7 @@ func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 			continue
 		}
 		for _, file := range files {
-			file = "file://" + file
-			u, err := url.Parse(file)
-			if err != nil {
-				return urls, fmt.Errorf("failed to parse cert location - %s", err.Error())
-			}
-			urls = append(urls, u)
+			urls = append(urls, &url.URL{Scheme: "file", Path: filepath.ToSlash(file)})
 		}
 	}
 
