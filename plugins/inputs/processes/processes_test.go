@@ -172,8 +172,8 @@ func TestParkedProcess(t *testing.T) {
 		testutil.IgnoreTime())
 }
 
-func testExecPS(out string) func() ([]byte, error) {
-	return func() ([]byte, error) { return []byte(out), nil }
+func testExecPS(out string) func(_ bool) ([]byte, error) {
+	return func(_ bool) ([]byte, error) { return []byte(out), nil }
 }
 
 // struct for counting calls to testProcFile
@@ -191,7 +191,7 @@ func (t *tester) testProcFile2(_ string) ([]byte, error) {
 	return []byte(fmt.Sprintf(testProcStat2, "S", "2")), nil
 }
 
-func testExecPSError() ([]byte, error) {
+func testExecPSError(_ bool) ([]byte, error) {
 	return []byte("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"), fmt.Errorf("error")
 }
 

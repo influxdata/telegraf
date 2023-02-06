@@ -18,7 +18,9 @@ import (
 )
 
 type Processes struct {
-	execPS       func() ([]byte, error)
+	UseSudo bool `toml:"use_sudo"`
+
+	execPS       func(UseSudo bool) ([]byte, error)
 	readProcFile func(filename string) ([]byte, error)
 
 	Log telegraf.Logger
@@ -87,7 +89,7 @@ func getEmptyFields() map[string]interface{} {
 
 // exec `ps` to get all process states
 func (p *Processes) gatherFromPS(fields map[string]interface{}) error {
-	out, err := p.execPS()
+	out, err := p.execPS(p.UseSudo)
 	if err != nil {
 		return err
 	}
@@ -208,13 +210,18 @@ func readProcFile(filename string) ([]byte, error) {
 	return data, nil
 }
 
-func execPS() ([]byte, error) {
+func execPS(useSudo bool) ([]byte, error) {
 	bin, err := exec.LookPath("ps")
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := exec.Command(bin, "axo", "state").Output()
+	cmd := []string{bin, "axo", "state"}
+	if useSudo {
+		cmd = append([]string{"sudo", "-n"}, cmd...)
+	}
+
+	out, err := exec.Command(cmd[0], cmd[1:]...).Output()
 	if err != nil {
 		return nil, err
 	}
