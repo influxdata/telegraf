@@ -402,7 +402,7 @@ func TestSourcesToURLs(t *testing.T) {
 		"smtp://influxdata.com:25",
 	}
 
-	for _, p := range []string{"/dummy_test_path_file.pem", "/windows/temp/test.pem", "C:/windows/temp/test.pem"} {
+	for _, p := range []string{"/dummy_test_path_file.pem", "/windows/temp/test.pem", "C:\\windows\\temp\\test.pem"} {
 		expected = append(expected, filepath.FromSlash(p))
 	}
 
