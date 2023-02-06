@@ -123,7 +123,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # password = ""
 
   ## Optional custom HTTP headers
-  # headers = {"X-Special-Header" = "Special-Value"}
+  # http_headers = {"X-Special-Header" = "Special-Value"}
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
