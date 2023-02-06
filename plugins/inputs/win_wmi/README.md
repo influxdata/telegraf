@@ -1,14 +1,13 @@
 # Windows Management Instrumentation Input Plugin
 
 This document presents the input plugin to read WMI classes on Windows
-operating systems. With the win_wmi plugin, an administrator is enabled to
+operating systems. With the win_wmi plugin, it is possible to
 capture and filter virtually any configuration or metric value exposed through
 the Windows Management Instrumentation
 ([WMI](https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page))
-service.
-
-If telegraf is configured with a logfile and the plugin's configuration
-contains an invalid namespace, class, or property, an error is logged.
+service. At minimum, the telegraf service user must have permission to
+[read](https://learn.microsoft.com/en-us/windows/win32/wmisdk/access-to-wmi-namespaces)
+the WMI namespace that is being queried.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -56,7 +55,9 @@ An array of strings representing the properties of the WMI class to be queried.
 ### filter
 
 A string specifying a WHERE clause to use as a filter for the WMI Query
-Language (WQL).
+Language (WQL). See
+[WHERE Clause](https://learn.microsoft.com/en-us/windows/win32/wmisdk/where-clause?source=recommendations)
+for more information.
 
 ### tag_properties
 

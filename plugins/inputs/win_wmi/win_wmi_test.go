@@ -34,9 +34,9 @@ var testWmi Wmi = Wmi{Queries: []Query{testQuery}, Log: logger}
 
 // test DoQuery
 func TestWmi_DoQuery(t *testing.T) {
-	require.NoError(t, CompileInputs(&testWmi))
+	require.NoError(t, compileInputs(&testWmi))
 	for _, q := range testWmi.Queries {
-		require.NoError(t, q.DoQuery(acc))
+		require.NoError(t, q.doQuery(acc))
 	}
 	// no errors in accumulator
 	require.Len(t, acc.Errors, 0, "found errors accumulated by AddError()")

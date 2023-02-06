@@ -7,10 +7,8 @@ import (
 	_ "embed"
 	"fmt"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	ole "github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
@@ -56,15 +54,10 @@ func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
 
 // Init function
 func (s *Wmi) Init() error {
-	if err := CompileInputs(s); err != nil {
+	if err := compileInputs(s); err != nil {
 		return err
 	}
 	return nil
-}
-
-// Description function
-func (s *Wmi) Description() string {
-	return "returns WMI query results as metrics"
 }
 
 // SampleConfig function
@@ -72,18 +65,18 @@ func (s *Wmi) SampleConfig() string {
 	return sampleConfig
 }
 
-func CompileInputs(s *Wmi) error {
-	BuildWqlStatements(s)
-	if err := CompileTagFilters(s); err != nil {
+func compileInputs(s *Wmi) error {
+	buildWqlStatements(s)
+	if err := compileTagFilters(s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func CompileTagFilters(s *Wmi) error {
+func compileTagFilters(s *Wmi) error {
 	var err error
 	for i, q := range s.Queries {
-		s.Queries[i].tagFilter, err = CompileTagFilter(q)
+		s.Queries[i].tagFilter, err = compileTagFilter(q)
 		if err != nil {
 			return err
 		}
@@ -91,7 +84,7 @@ func CompileTagFilters(s *Wmi) error {
 	return nil
 }
 
-func CompileTagFilter(q Query) (filter.Filter, error) {
+func compileTagFilter(q Query) (filter.Filter, error) {
 	tagFilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagPropertiesInclude, nil, false, false)
 	if err != nil {
 		return nil, fmt.Errorf("creating tag filter failed: %v", err)
@@ -99,14 +92,14 @@ func CompileTagFilter(q Query) (filter.Filter, error) {
 	return tagFilter, nil
 }
 
-func BuildWqlStatements(s *Wmi) {
+func buildWqlStatements(s *Wmi) {
 	for i, q := range s.Queries {
-		s.Queries[i].query = BuildWqlStatement(q)
+		s.Queries[i].query = buildWqlStatement(q)
 	}
 }
 
 // build a WMI query from input configuration
-func BuildWqlStatement(q Query) string {
+func buildWqlStatement(q Query) string {
 	wql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(q.Properties, ", "), q.ClassName)
 	if len(q.Filter) > 0 {
 		wql = fmt.Sprintf("%s WHERE %s", wql, q.Filter)
@@ -114,7 +107,7 @@ func BuildWqlStatement(q Query) string {
 	return wql
 }
 
-func (q *Query) DoQuery(acc telegraf.Accumulator) error {
+func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across
@@ -200,13 +193,7 @@ func (q *Query) DoQuery(acc telegraf.Accumulator) error {
 						case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
 							fieldValue = v
 						case string:
-							// still might be an int because WMI
-							valInt, err := strconv.ParseInt(v, 10, 64)
-							if err == nil {
-								fieldValue = valInt
-							} else {
-								fieldValue = v
-							}
+							fieldValue = v
 						case bool:
 							fieldValue = v
 						case []byte:
@@ -246,13 +233,10 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(q Query) {
 			defer wg.Done()
-			start := time.Now()
-			err := q.DoQuery(acc)
+			err := q.doQuery(acc)
 			if err != nil {
 				acc.AddError(err)
 			}
-			elapsed := time.Since(start)
-			s.Log.Debugf("Query \"%s\" took %s", q.query, elapsed)
 		}(query)
 	}
 	wg.Wait()
