@@ -42,7 +42,7 @@ func (is *InternetSpeed) Init() error {
 	var err error
 	is.serverFilter, err = filter.NewIncludeExcludeFilter(is.ServerIDInclude, is.ServerIDExclude)
 	if err != nil {
-		return fmt.Errorf("error compiling server ID filters: %v", err)
+		return fmt.Errorf("error compiling server ID filters: %w", err)
 	}
 
 	return nil
