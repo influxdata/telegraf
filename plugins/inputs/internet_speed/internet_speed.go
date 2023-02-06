@@ -51,14 +51,14 @@ func (is *InternetSpeed) Init() error {
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	// if not caching, go find closest server each time
 	if !is.Cache || is.server == nil {
-		if err := is.FindClosestServer(); err != nil {
+		if err := is.findClosestServer(); err != nil {
 			return fmt.Errorf("unable to find closest server: %w", err)
 		}
 	}
 
 	err := is.server.PingTest()
 	if err != nil {
-		return fmt.Errorf("ping test failed: %v", err)
+		return fmt.Errorf("ping test failed: %w", err)
 	}
 	err = is.server.DownloadTest(is.MemorySavingMode)
 	if err != nil {
@@ -83,14 +83,14 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (is *InternetSpeed) FindClosestServer() error {
+func (is *InternetSpeed) findClosestServer() error {
 	user, err := speedtest.FetchUserInfo()
 	if err != nil {
-		return fmt.Errorf("fetching user info failed: %v", err)
+		return fmt.Errorf("fetching user info failed: %w", err)
 	}
 	serverList, err := speedtest.FetchServers(user)
 	if err != nil {
-		return fmt.Errorf("fetching server list failed: %v", err)
+		return fmt.Errorf("fetching server list failed: %w", err)
 	}
 
 	if len(serverList) < 1 {
@@ -99,17 +99,14 @@ func (is *InternetSpeed) FindClosestServer() error {
 
 	// return the first match
 	for _, server := range serverList {
-		fmt.Printf("checking if server '%s' is in filter\n", server.ID)
 		if is.serverFilter.Match(server.ID) {
 			is.server = server
 			is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
 			return nil
 		}
-
-		fmt.Println("nope!")
 	}
 
-	return fmt.Errorf("no servers found, filter exclude all?")
+	return fmt.Errorf("no server set: filter excluded all servers")
 }
 
 func init() {
