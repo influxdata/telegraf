@@ -62,7 +62,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	}
 	err = is.server.DownloadTest(is.MemorySavingMode)
 	if err != nil {
-		return fmt.Errorf("download test failed, try `memory_saving_mode = true` if this fails consistently: %v", err)
+		return fmt.Errorf("download test failed, try `memory_saving_mode = true` if this fails consistently: %w", err)
 	}
 	err = is.server.UploadTest(is.MemorySavingMode)
 	if err != nil {
