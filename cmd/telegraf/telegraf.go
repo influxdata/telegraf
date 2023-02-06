@@ -111,7 +111,7 @@ func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 }
 
 func (t *Telegraf) reloadLoop() error {
-	_, err := t.loadConfiguration()
+	cfg, err := t.loadConfiguration()
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (t *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := t.runAgent(ctx)
+		err := t.runAgent(ctx, cfg)
 		if err != nil && err != context.Canceled {
 			return fmt.Errorf("[telegraf] Error running agent: %v", err)
 		}
@@ -230,12 +230,7 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	return c, nil
 }
 
-func (t *Telegraf) runAgent(ctx context.Context) error {
-	c, err := t.loadConfiguration()
-	if err != nil {
-		return err
-	}
-
+func (t *Telegraf) runAgent(ctx context.Context, c *config.Config) error {
 	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {
 		return errors.New("no outputs found, did you provide a valid config file?")
 	}
