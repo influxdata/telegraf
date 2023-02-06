@@ -406,7 +406,7 @@ func TestSourcesToURLs(t *testing.T) {
 		expected = append(expected, filepath.FromSlash(p))
 	}
 
-	var actual []string
+	actual := make([]string, 0, len(m.globpaths)+len(m.locations))
 	for _, p := range m.globpaths {
 		actual = append(actual, p.GetRoots()...)
 	}

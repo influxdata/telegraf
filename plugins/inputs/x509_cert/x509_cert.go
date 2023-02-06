@@ -86,12 +86,9 @@ func (c *X509Cert) Init() error {
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
-	collectedUrls, err := c.collectCertURLs()
-	if err != nil {
-		acc.AddError(fmt.Errorf("getting some certificates failed: %w", err))
-	}
 
-	for _, location := range append(c.locations, collectedUrls...) {
+	collectedUrls := append(c.locations, c.collectCertURLs()...)
+	for _, location := range collectedUrls {
 		certs, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
@@ -381,7 +378,7 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 	return tags
 }
 
-func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
+func (c *X509Cert) collectCertURLs() []*url.URL {
 	var urls []*url.URL
 
 	for _, path := range c.globpaths {
@@ -395,7 +392,7 @@ func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 		}
 	}
 
-	return urls, nil
+	return urls
 }
 
 func init() {
