@@ -66,7 +66,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	}
 	err = is.server.UploadTest(is.MemorySavingMode)
 	if err != nil {
-		return fmt.Errorf("upload test failed failed, try `memory_saving_mode = true` if this fails consistently: %v", err)
+		return fmt.Errorf("upload test failed failed, try `memory_saving_mode = true` if this fails consistently: %w", err)
 	}
 
 	fields := map[string]any{
