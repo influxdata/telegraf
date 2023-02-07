@@ -259,6 +259,7 @@ following works:
 - github.com/opencontainers/runc [Apache License 2.0](https://github.com/opencontainers/runc/blob/main/LICENSE)
 - github.com/opensearch-project/opensearch-go [Apache License 2.0](https://github.com/opensearch-project/opensearch-go/blob/main/LICENSE.txt)
 - github.com/opentracing/opentracing-go [Apache License 2.0](https://github.com/opentracing/opentracing-go/blob/master/LICENSE)
+- github.com/p4lang/p4runtime [Apache License 2.0](https://github.com/p4lang/p4runtime/blob/main/LICENSE)
 - github.com/pborman/ansi [BSD 3-Clause "New" or "Revised" License](https://github.com/pborman/ansi/blob/master/LICENSE)
 - github.com/philhofer/fwd [MIT License](https://github.com/philhofer/fwd/blob/master/LICENSE.md)
 - github.com/pierrec/lz4 [BSD 3-Clause "New" or "Revised" License](https://github.com/pierrec/lz4/blob/master/LICENSE)
