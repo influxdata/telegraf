@@ -84,7 +84,7 @@ func compileTagFilters(s *Wmi) error {
 func compileTagFilter(q Query) (filter.Filter, error) {
 	tagFilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagPropertiesInclude, nil, false, false)
 	if err != nil {
-		return nil, fmt.Errorf("creating tag filter failed: %v", err)
+		return nil, fmt.Errorf("creating tag filter failed: %w", err)
 	}
 	return tagFilter, nil
 }
