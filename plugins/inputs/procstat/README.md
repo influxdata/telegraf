@@ -123,6 +123,7 @@ the `win_perf_counters` input plugin as a more mature alternative.
     - num_fds (int, *telegraf* may need to be ran as **root**)
     - num_threads (int)
     - pid (int)
+    - ppid (int)
     - read_bytes (int, *telegraf* may need to be ran as **root**)
     - read_count (int, *telegraf* may need to be ran as **root**)
     - realtime_priority (int)
