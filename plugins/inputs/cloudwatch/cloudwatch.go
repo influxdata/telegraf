@@ -132,6 +132,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	// Get all of the possible queries so we can send groups of 100.
 	queries := c.getDataQueries(filteredMetrics)
 	if len(queries) == 0 {
+		fmt.Println("no queries to run")
 		return nil
 	}
 
@@ -207,6 +208,10 @@ func (c *CloudWatch) initializeCloudWatch() error {
 			Timeout: time.Duration(c.Timeout),
 		}
 	})
+	fmt.Printf("init client with endpoint: %q\n", c.EndpointURL)
+	if proxy != nil {
+		fmt.Printf("init client with proxy function: %+v\n", proxy)
+	}
 
 	// Initialize regex matchers for each Dimension value.
 	for _, m := range c.Metrics {
@@ -314,6 +319,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() []types.Metric {
 	metrics := []types.Metric{}
 
 	for _, namespace := range c.Namespaces {
+		fmt.Printf("fetching namespace metrics for: %q\n", namespace)
 		params := &cwClient.ListMetricsInput{
 			Dimensions: []types.DimensionFilter{},
 			Namespace:  aws.String(namespace),

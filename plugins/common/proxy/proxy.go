@@ -17,12 +17,14 @@ type proxyFunc func(req *http.Request) (*url.URL, error)
 
 func (p *HTTPProxy) Proxy() (proxyFunc, error) {
 	if p.UseSystemProxy {
+		fmt.Printf("using proxy from enviornment")
 		return http.ProxyFromEnvironment, nil
 	} else if len(p.HTTPProxyURL) > 0 {
 		address, err := url.Parse(p.HTTPProxyURL)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing proxy url %q: %w", p.HTTPProxyURL, err)
 		}
+		fmt.Printf("using provided proxy URL: %q\n", address)
 		return http.ProxyURL(address), nil
 	}
 
