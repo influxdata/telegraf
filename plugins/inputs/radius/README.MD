@@ -4,19 +4,7 @@ The Radius plugin collects radius response times.
 
 ### Configuration:
 
-```toml @sample.conf
-[[inputs.radius]]
-  ## An array of Server IPs and ports to gather from.
-  servers = ["127.0.0.1:1812"]
-
-  ## Credentials for radius authentication.
-  # username = "myuser"
-  # password = "mypassword"
-  # secret = "mysecret"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-```
+toml @sample.conf
 
 ### Measurements & Fields:
 
