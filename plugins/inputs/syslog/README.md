@@ -7,7 +7,8 @@ socket, [UDP](https://tools.ietf.org/html/rfc5426),
 framing.
 
 Syslog messages should be formatted according to
-[RFC 5424](https://tools.ietf.org/html/rfc5424) (syslog protocol) or [RFC 3164](https://tools.ietf.org/html/rfc3164) (BSD syslog protocol).
+[RFC 5424](https://tools.ietf.org/html/rfc5424) (syslog protocol) or
+[RFC 3164](https://tools.ietf.org/html/rfc3164) (BSD syslog protocol).
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
