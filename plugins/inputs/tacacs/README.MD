@@ -6,10 +6,10 @@ The Tacacs plugin collects tacacs authentication response times.
 
 ```toml @sample.conf
 [[inputs.tacacs]]
-  ## An array of Server IPs to gather from, default localhost
+  ## An array of Server IPs to gather from, default localhost.
   servers = ["127.0.0.1"]
 
-  ## Request source server IP, normally the server running telegraf
+  ## Request source server IP, normally the server running telegraf.
   remaddr = "127.0.0.1"
 
   ## Credentials for tacacs authentication.

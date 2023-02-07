@@ -2,6 +2,7 @@ package tacacs
 
 import (
 	"context"
+	_ "embed"
 	"sync"
 	"time"
 
@@ -22,21 +23,8 @@ type Tacacs struct {
 	Log             telegraf.Logger
 }
 
-var sampleConfig = `
-  ## An array of Server IPs to gather from, default localhost
-  servers = ["127.0.0.1"]
-
-  ## Request source server IP, normally the server running telegraf
-  remaddr = "127.0.0.1"
-
-  ## Credentials for tacacs authentication.
-  # username = "myuser"
-  # password = "mypassword"
-  # secret = "mysecret"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-`
+//go:embed sample.conf
+var sampleConfig string
 
 func (n *Tacacs) SampleConfig() string {
 	return sampleConfig

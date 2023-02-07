@@ -2,11 +2,13 @@ package radius
 
 import (
 	"context"
-	"layeh.com/radius"
-	"layeh.com/radius/rfc2865"
+	_ "embed"
 	"net"
 	"sync"
 	"time"
+
+	"layeh.com/radius"
+	"layeh.com/radius/rfc2865"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -22,18 +24,8 @@ type Radius struct {
 	Log             telegraf.Logger
 }
 
-var sampleConfig = `
-  ## An array of Server IPs to gather from
-  servers = ["127.0.0.1:1812"]
-
-  ## Credentials for radius authentication.
-  # username = "myuser"
-  # password = "mypassword"
-  # secret = "mysecret"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-`
+//go:embed sample.conf
+var sampleConfig string
 
 func (n *Radius) SampleConfig() string {
 	return sampleConfig
@@ -86,7 +78,7 @@ func (n *Radius) pollServer(server string, acc telegraf.Accumulator) error {
 	defer cancel()
 	startTime := time.Now()
 	response, err := client.Exchange(ctx, packet, server)
-	duration := time.Now().Sub(startTime)
+	duration := time.Since(startTime)
 
 	if err != nil {
 		n.Log.Warnf("error on new request to %s : %s", server, err)
