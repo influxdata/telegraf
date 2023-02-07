@@ -88,7 +88,7 @@ func (s *SignalFx) Connect() error {
 	if s.IngestURL != "" {
 		client.DatapointEndpoint = datapointEndpointForIngestURL(s.IngestURL)
 		client.EventEndpoint = eventEndpointForIngestURL(s.IngestURL)
-	} else if s.SignalFxRealm != "" { //nolint: revive // "Simplifying" if c {...} else {... return } would not simplify anything at all in this case
+	} else if s.SignalFxRealm != "" {
 		client.DatapointEndpoint = datapointEndpointForRealm(s.SignalFxRealm)
 		client.EventEndpoint = eventEndpointForRealm(s.SignalFxRealm)
 	} else {

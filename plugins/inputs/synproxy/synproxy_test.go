@@ -58,9 +58,7 @@ func TestSynproxyFileInvalidHex(t *testing.T) {
 func TestNoSynproxyFile(t *testing.T) {
 	tmpfile := makeFakeSynproxyFile([]byte(synproxyFileNormal))
 	// Remove file to generate "no such file" error
-	// Ignore errors if file does not yet exist
-	//nolint:errcheck,revive
-	os.Remove(tmpfile)
+	os.Remove(tmpfile) //nolint:revive // Ignore errors if file does not yet exist
 
 	k := Synproxy{
 		statFile: tmpfile,
