@@ -1,4 +1,4 @@
-//go:build !custom || inputs || radius.opcua
+//go:build !custom || inputs || inputs.radius
 
 package all
 
