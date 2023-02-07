@@ -337,7 +337,9 @@ $(include_packages):
 	@mkdir -p $(pkgdir)
 
 	@if [ "$(suffix $@)" = ".rpm" ]; then \
-		echo -e "# DO NOT EDIT OR REMOVE\n# This file prevents rpm from changing permissions on this directory\n# and the files within it\n" > $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
+		echo "# DO NOT EDIT OR REMOVE" > $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
+		echo "# This file prevents rpm from changing permissions on this directory" >> $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
+		echo "# and the files within it" >> $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
 		fpm --force \
 			--log info \
 			--architecture $(basename $@) \
