@@ -126,12 +126,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # headers = {"X-Special-Header" = "Special-Value"}
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
+  # timeout = "3s"
+  
   ##   deprecated in 1.26; use the timeout option
   # response_timeout = "3s"
-
-  ## Specify timeout duration for slower prometheus clients (default is 3s)
-  # timeout = "3s"
-
+  
   ## HTTP Proxy support
   # use_system_proxy = false
   # http_proxy_url = ""
