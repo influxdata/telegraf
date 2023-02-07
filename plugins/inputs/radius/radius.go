@@ -1,13 +1,13 @@
 package radius
 
 import (
-	"net"
-	"sync"
-	"time"
 	"context"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
-	
+	"net"
+	"sync"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -17,9 +17,9 @@ type Radius struct {
 	Servers         []string
 	Username        string
 	Password        string
-	Secret			string
+	Secret          string
 	ResponseTimeout config.Duration
-	Log 			telegraf.Logger
+	Log             telegraf.Logger
 }
 
 var sampleConfig = `
@@ -75,12 +75,12 @@ func (n *Radius) pollServer(server string, acc telegraf.Accumulator) error {
 	var client = &radius.Client{
 		Retry: 0,
 	}
-	
+
 	// Create the radius packet with PAP authentication
 	packet := radius.New(radius.CodeAccessRequest, []byte(n.Secret))
 	rfc2865.UserName_SetString(packet, n.Username)
 	rfc2865.UserPassword_SetString(packet, n.Password)
-	
+
 	// Do the radius request
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(n.ResponseTimeout))
 	defer cancel()
@@ -100,7 +100,7 @@ func (n *Radius) pollServer(server string, acc telegraf.Accumulator) error {
 		fields["responsetime"] = duration.Seconds()
 		fields["responsetime_ms"] = duration.Milliseconds()
 	}
-	
+
 	acc.AddFields("radius", fields, tags)
 	return nil
 }
