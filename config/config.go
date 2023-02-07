@@ -822,13 +822,19 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 
 	var storeid string
 	c.getFieldString(table, "id", &storeid)
+	if storeid == "" {
+		return fmt.Errorf("%q secret-store without ID", name)
+	}
+	if !secretStorePattern.MatchString(storeid) {
+		return fmt.Errorf("invalid secret-store ID %q, must only contain letters, numbers or underscore", storeid)
+	}
 
 	creator, ok := secretstores.SecretStores[name]
 	if !ok {
 		// Handle removed, deprecated plugins
 		if di, deprecated := secretstores.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("secretstores", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 		return fmt.Errorf("undefined but requested secretstores: %s", name)
 	}

@@ -18,6 +18,9 @@ import (
 // list.
 var unlinkedSecrets = make([]*Secret, 0)
 
+// secretStorePattern is a regex to validate secret-store IDs
+var secretStorePattern = regexp.MustCompile(`^\w+$`)
+
 // secretPattern is a regex to extract references to secrets stored
 // in a secret-store.
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
