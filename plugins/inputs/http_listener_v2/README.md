@@ -37,6 +37,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## HTTP methods to accept.
   # methods = ["POST", "PUT"]
 
+  ## Optional HTTP headers
+  ## These headers are applied to the server that is listening for HTTP
+  ## requests and included in responses.
+  # http_headers = {"HTTP_HEADER" = "TAG_NAME"}
+
   ## maximum duration before timing out read of the request
   # read_timeout = "10s"
   ## maximum duration before timing out write of the response

@@ -49,6 +49,7 @@ type HTTPListenerV2 struct {
 	Paths          []string          `toml:"paths"`
 	PathTag        bool              `toml:"path_tag"`
 	Methods        []string          `toml:"methods"`
+	HTTPHeaders    map[string]string `toml:"http_headers"`
 	DataSource     string            `toml:"data_source"`
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
 	WriteTimeout   config.Duration   `toml:"write_timeout"`
@@ -168,6 +169,10 @@ func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	if !choice.Contains(req.URL.Path, h.Paths) {
 		handler = http.NotFound
+	}
+
+	for key, value := range h.HTTPHeaders {
+		res.Header().Set(key, value)
 	}
 
 	h.authenticateIfSet(handler, res, req)
