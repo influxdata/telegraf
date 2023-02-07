@@ -196,6 +196,63 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(4 * time.Second)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:     testutil.Logger{},
+		URLs:    []string{ts.URL},
+		URLTag:  "url",
+		Timeout: config.Duration(time.Second * 5),
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+
+	err = acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	require.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
+	require.True(t, acc.HasFloatField("go_goroutines", "gauge"))
+	require.True(t, acc.HasFloatField("test_metric", "value"))
+	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+	require.False(t, acc.HasTag("test_metric", "address"))
+	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+}
+
+func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(6 * time.Second)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:     testutil.Logger{},
+		URLs:    []string{ts.URL},
+		URLTag:  "url",
+		Timeout: config.Duration(time.Second * 5),
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+
+	err = acc.GatherError(p.Gather)
+	errMessage := fmt.Sprintf("error making HTTP request to %s/metrics: Get \"%s/metrics\": "+
+		"context deadline exceeded (Client.Timeout exceeded while awaiting headers)", ts.URL, ts.URL)
+	errExpected := errors.New(errMessage)
+	require.Equal(t, errExpected, err)
+	require.Error(t, err)
+}
+
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintln(w, sampleSummaryTextFormat)
