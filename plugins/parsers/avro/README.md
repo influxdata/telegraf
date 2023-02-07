@@ -68,21 +68,16 @@ The message is supposed to be encoded as follows:
 
   ## Avro fields to be used as timestamp; if empty, current time will
   ## be used for the measurement timestamp.
-  avro_timestamp = "TIMESTAMP"
-
-  ## Timestamp format
-  avro_timestamp_format = "unix"
+  # avro_timestamp = ""
+  # avro_timestamp_format = "unix"
   
-  ## If true, any array values received by Avro will be silently
-  ## discarded; otherwise they will be converted into a series of
-  ## scalars, e.g. a=["a", "b", "c"] would become a0="a", a1="b",
-  ## a2="c".
-  # avro_discard_arrays = true
-
   ## Used to separate parts of array structures.  As above, the default
   ## is the empty string, so a=["a", "b"] becomes a0="a", a1="b".
   ## If this were set to "_", then it would be a_0="a", a_1="b".
   # avro_field_separator = "_"
+
+  ## Default values for given tags: optional
+  # avro_default_tags = { "application": "hermes", "region": "central" }
 
 ```
 
@@ -91,9 +86,7 @@ The message is supposed to be encoded as follows:
 By default the current time will be used for all created metrics; to set
 the time using the Avro message you can use the `avro_timestamp` and
 `avro_timestamp_format` options together to set the time to a value in
-the parsed document, and you can use `avro_round_timestamp_to` to round
-the timestamp to seconds, milliseconds, or microseconds if using `unix`
-timestamp format.
+the parsed document.
 
 The `avro_timestamp` option specifies the field containing the time
 value.  It must be set to `unix`, `unix_ms`, `unix_us` or `unix_ns`.

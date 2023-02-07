@@ -200,6 +200,11 @@ require (
 )
 
 require (
+	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4 // indirect
+	github.com/pkg/xattr v0.4.9 // indirect
+)
+
+require (
 	cloud.google.com/go v0.107.0 // indirect
 	cloud.google.com/go/compute v1.14.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.2 // indirect

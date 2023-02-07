@@ -85,7 +85,6 @@ func BuildParser(buf []byte) (*Parser, error) {
 		Fields:           pinput.Fields,
 		Timestamp:        pinput.Timestamp,
 		TimestampFormat:  pinput.TimestampFormat,
-		DiscardArrays:    pinput.DiscardArrays,
 		FieldSeparator:   pinput.FieldSeparator,
 		DefaultTags:      pinput.DefaultTags,
 	}
@@ -120,7 +119,7 @@ func TestMultipleConfigs(t *testing.T) {
 	folders, err := os.ReadDir("testdata")
 	require.NoError(t, err)
 	// Make sure testdata contains data
-	require.Greater(t, len(folders), 0)
+	require.NotEmpty(t, folders)
 
 	commonPath := filepath.Join("testdata", "common")
 	for _, f := range folders {
@@ -182,11 +181,8 @@ func TestMultipleConfigs(t *testing.T) {
 
 			// Load the schema and message; produce the Avro
 			// format message.
-
 			var schema string
 			var message []byte
-			// var rawConfig []byte
-
 			schemaBytes, err := os.ReadFile(testSchema)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {

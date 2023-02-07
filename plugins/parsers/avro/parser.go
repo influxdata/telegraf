@@ -4,13 +4,15 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/jeremywohl/flatten/v2"
+	"github.com/linkedin/goavro/v2"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/jeremywohl/flatten"
-	"github.com/linkedin/goavro/v2"
-	"time"
 )
 
 type Parser struct {
@@ -22,20 +24,11 @@ type Parser struct {
 	Fields           []string          `toml:"avro_fields"`
 	Timestamp        string            `toml:"avro_timestamp"`
 	TimestampFormat  string            `toml:"avro_timestamp_format"`
-	DiscardArrays    bool              `toml:"avro_discard_arrays"`
 	FieldSeparator   string            `toml:"avro_field_separator"`
 	DefaultTags      map[string]string `toml:"-"`
 
 	Log          telegraf.Logger `toml:"-"`
 	registryObj  *SchemaRegistry
-	createMetric func(interface{}, string) (telegraf.Metric, error)
-}
-
-type metricInput struct {
-	Name      string
-	Tags      map[string]string
-	Fields    map[string]interface{}
-	Timestamp time.Time
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -65,7 +58,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := p.createMetric(native, schema)
+	// Cast to string-to-interface
+	codecSchema := native.(map[string]interface{})
+	m, err := p.createMetric(codecSchema, schema)
 	if err != nil {
 		return nil, err
 	}
@@ -100,27 +95,12 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, error) {
-	badReturn := metricInput{
-		Name:      "",
-		Tags:      nil,
-		Fields:    nil,
-		Timestamp: time.Time{},
-	}
-
-	deep, ok := native.(map[string]interface{})
-	if !ok {
-		return badReturn, fmt.Errorf("cannot cast native interface {} to map[string]interface{}")
-	}
-
-	timestamp := nestedValue(deep[p.Timestamp])
-	if timestamp == nil {
-		timestamp = time.Now()
-	}
-
-	metricTime, err := internal.ParseTimestamp(p.TimestampFormat, timestamp, "UTC")
+func (p *Parser) createMetric(data map[string]interface{}, schema string) (telegraf.Metric, error) {
+	
+	now := time.Now()
+	timestamp, err := internal.ParseTimestamp(p.TimestampFormat, now, "UTC")
 	if err != nil {
-		return badReturn, err
+		return nil, fmt.Errorf("parsing timestamp from %q failed: %w", p.Timestamp, err)
 	}
 
 	// Tags differ from fields, in that tags are inherently strings.
@@ -128,49 +108,61 @@ func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, er
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
+	// Set default tag values
 	for k, v := range p.DefaultTags {
 		tags[k] = v
 	}
+	// Avro doesn't have a Tag/Field distinction, so we have to tell
+	// Telegraf which items are our tags.
 	for _, tag := range p.Tags {
-		if value, ok := deep[tag]; ok {
-			tags[tag], err = internal.ToString(nestedValue(value))
-			if err != nil {
-				p.Log.Warnf("Could not convert %v to string", nestedValue(value))
-			}
-		} else {
-			// It wouldn't unpack.  Probably not fatal, but does
-			// mean we can't get this column.  This should
-			// be very rare, since the tag is a string.
-			p.Log.Warnf("tag %s value was %v; not added to tags", tag, value)
+		tags[tag], err = internal.ToString(data[tag])
+		if err != nil {
+			p.Log.Warnf("Could not convert %v to string for tag %q: %v", data[tag], tag, err)
 		}
 	}
-	fieldList := make([]string, len(p.Fields), (cap(p.Fields)))
-	copy(fieldList, p.Fields)
-	if len(fieldList) == 0 { // Get fields from whatever we just unpacked
-		for k := range deep {
+	var fieldList []string
+	if len(p.Fields) != 0 {
+		// If you have specified your fields in the config, you
+		// get what you asked for.
+		fieldList = p.Fields
+	} else {
+		for k := range data {
+			// Otherwise, that which is not a tag is a field
 			if _, ok := tags[k]; !ok {
 				fieldList = append(fieldList, k)
 			}
 		}
 	}
-	for _, field := range fieldList {
-		if value, ok := deep[field]; ok {
-			fields[field] = nestedValue(value)
-		} else {
-			// It wouldn't unpack.  Probably not fatal, but does
-			// mean we can't get this column.
-			p.Log.Warnf("field %s value was %v; not added to fields", field, value)
+	flatFields:= make(map[string]interface{})
+	// We need to flatten out our fields.  The default (the separator
+	// string is empty) is equivalent to what streamreactor does.
+	sep := flatten.SeparatorStyle{
+		Before: "",
+		Middle: p.FieldSeparator,
+		After:  "",
+	}
+	for _,fld := range fieldList {
+		candidate := make(map[string]interface{})
+		candidate[fld] = data[fld]  // 1-item map
+		flat, err := flatten.Flatten(candidate, "", sep)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to flatten field %s: %v", fld, err)
+		}
+		for k, v := range flat {
+			flatFields[k] = v
 		}
 	}
-	var schemaObj map[string]interface{}
+	for fieldName, field := range flatFields {
+		fields[fieldName] = field
+	}
 
-	err = json.Unmarshal([]byte(schema), &schemaObj)
-	if err != nil {
-		return badReturn, err
+	var schemaObj map[string]interface{}
+	if err := json.Unmarshal([]byte(schema), &schemaObj);  err != nil {
+		return nil, fmt.Errorf("unmarshaling schema failed: %w", err)
 	}
 	if len(fields) == 0 {
 		// A telegraf metric needs at least one field.
-		return badReturn, fmt.Errorf("number of fields is 0; unable to create metric")
+		return nil, fmt.Errorf("number of fields is 0; unable to create metric")
 	}
 	// Now some fancy stuff to extract the measurement.
 	// If it's set in the configuration, use that.
@@ -190,7 +182,7 @@ func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, er
 
 		nStr, ok := schemaObj["name"].(string)
 		if !ok {
-			return badReturn, fmt.Errorf("could not determine name from schema %s", schema)
+			return nil, fmt.Errorf("could not determine name from schema %s", schema)
 		}
 		name = nsStr + separator + nStr
 	}
@@ -201,50 +193,9 @@ func (p *Parser) setupMetric(native interface{}, schema string) (metricInput, er
 	}
 	// Nothing?  Give up.
 	if name == "" {
-		return badReturn, fmt.Errorf("could not determine measurement name")
+		return nil, fmt.Errorf("could not determine measurement name")
 	}
-	return metricInput{
-		Name:      name,
-		Tags:      tags,
-		Fields:    fields,
-		Timestamp: metricTime,
-	}, nil
-}
-
-func (p *Parser) createScalarMetric(native interface{}, schema string) (telegraf.Metric, error) {
-	m, err := p.setupMetric(native, schema)
-	if err != nil {
-		return nil, err
-	}
-	return metric.New(m.Name, m.Tags, m.Fields, m.Timestamp), nil
-}
-
-func (p *Parser) createComplexMetric(native interface{}, schema string) (telegraf.Metric, error) {
-	m, err := p.setupMetric(native, schema)
-	if err != nil {
-		return nil, err
-	}
-	// The default (the separator string is empty) is equivalent to
-	// what streamreactor does.
-	sep := flatten.SeparatorStyle{
-		Before: "",
-		Middle: p.FieldSeparator,
-		After:  "",
-	}
-	flat, err := flatten.Flatten(m.Fields, "", sep)
-	if err != nil {
-		return nil, err
-	}
-	return metric.New(m.Name, m.Tags, flat, m.Timestamp), nil
-}
-
-func nestedValue(deep interface{}) interface{} {
-	if m, ok := deep.(map[string]interface{}); ok {
-		for _, value := range m {
-			return nestedValue(value)
-		}
-	}
-	return deep
+	return metric.New(name, tags, fields, timestamp), nil
 }
 
 func init() {
@@ -263,11 +214,6 @@ func (p *Parser) Init() error {
 	}
 	if p.TimestampFormat == "" {
 		return fmt.Errorf("must specify 'timestamp_format'")
-	}
-
-	p.createMetric = p.createComplexMetric
-	if p.DiscardArrays {
-		p.createMetric = p.createScalarMetric
 	}
 	return nil
 }
