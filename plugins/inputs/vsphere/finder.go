@@ -99,9 +99,7 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	if err != nil {
 		return err
 	}
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	defer v.Destroy(ctx)
+	defer v.Destroy(ctx) //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 	var content []types.ObjectContent
 
 	fields := []string{"name"}
@@ -119,9 +117,7 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			if err != nil {
 				return err
 			}
-			// Ignore the returned error as we cannot do anything about it anyway
-			//nolint:errcheck,revive
-			defer v2.Destroy(ctx)
+			defer v2.Destroy(ctx) //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 			err = v2.Retrieve(ctx, []string{resType}, fields, &content)
 			if err != nil {
 				return err
