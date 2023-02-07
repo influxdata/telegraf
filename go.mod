@@ -129,6 +129,7 @@ require (
 	github.com/netsampler/goflow2 v1.1.1
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
+	github.com/nwaples/tacplus v0.0.3
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/openconfig/gnmi v0.0.0-20220920173703-480bf53a74d2
 	github.com/opensearch-project/opensearch-go/v2 v2.1.0
@@ -196,6 +197,7 @@ require (
 	k8s.io/api v0.25.3
 	k8s.io/apimachinery v0.25.6
 	k8s.io/client-go v0.25.0
+	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.19.2
 )
 
