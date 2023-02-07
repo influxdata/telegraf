@@ -2,12 +2,14 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/awnumar/memguard"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/secretstores"
 	"github.com/stretchr/testify/require"
 )
 
@@ -538,6 +540,46 @@ func TestSecretStoreDynamic(t *testing.T) {
 	}
 }
 
+func TestSecretStoreDeclarationMissingID(t *testing.T) {
+	cfg := []byte(`[[secretstores.mockup]]`)
+
+	c := NewConfig()
+	err := c.LoadConfigData(cfg)
+	require.ErrorContains(t, err, `error parsing mockup, "mockup" secret-store without ID`)
+}
+
+func TestSecretStoreDeclarationInvalidID(t *testing.T) {
+	invalidIDs := []string{"foo.bar", "dummy-123", "test!", "wohoo+"}
+	tmpl := `
+  [[secretstores.mockup]]
+    id = %q
+`
+	for _, id := range invalidIDs {
+		t.Run(id, func(t *testing.T) {
+			cfg := []byte(fmt.Sprintf(tmpl, id))
+			c := NewConfig()
+			err := c.LoadConfigData(cfg)
+			require.ErrorContains(t, err, `error parsing mockup, invalid secret-store ID`)
+		})
+	}
+}
+
+func TestSecretStoreDeclarationValidID(t *testing.T) {
+	validIDs := []string{"foobar", "dummy123", "test_id", "W0Hoo_lala123"}
+	tmpl := `
+  [[secretstores.mockup]]
+    id = %q
+`
+	for _, id := range validIDs {
+		t.Run(id, func(t *testing.T) {
+			cfg := []byte(fmt.Sprintf(tmpl, id))
+			c := NewConfig()
+			err := c.LoadConfigData(cfg)
+			require.NoError(t, err)
+		})
+	}
+}
+
 /*** Mockup (input) plugin for testing to avoid cyclic dependencies ***/
 type MockupSecretPlugin struct {
 	Secret   Secret `toml:"secret"`
@@ -590,4 +632,7 @@ func (s *MockupSecretStore) GetResolver(key string) (telegraf.ResolveFunc, error
 func init() {
 	// Register the mockup input plugin for the required names
 	inputs.Add("mockup", func() telegraf.Input { return &MockupSecretPlugin{} })
+	secretstores.Add("mockup", func(id string) telegraf.SecretStore {
+		return &MockupSecretStore{}
+	})
 }

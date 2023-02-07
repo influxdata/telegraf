@@ -166,6 +166,8 @@ configurations. A reference to a secret is specified in form
 `@{<secret store id>:<secret name>}`, where the `secret store id` is the unique
 ID you defined for your secret-store and `secret name` is the name of the secret
 to use.
+**NOTE:** Both, the `secret store id` as well as the `secret name` can only
+consist of letters (both upper- and lowercase), numbers and underscores.
 
 **Example**:
 
