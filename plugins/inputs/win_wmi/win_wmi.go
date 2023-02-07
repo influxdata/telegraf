@@ -49,8 +49,7 @@ func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
 	}
 	defer func() { _ = v.Clear() }()
 
-	i := v.Val
-	return i, nil
+	return v.Val, nil
 }
 
 // Init function
