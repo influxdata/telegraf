@@ -54,10 +54,7 @@ func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
 
 // Init function
 func (s *Wmi) Init() error {
-	if err := compileInputs(s); err != nil {
-		return err
-	}
-	return nil
+	return compileInputs(s)
 }
 
 // SampleConfig function
