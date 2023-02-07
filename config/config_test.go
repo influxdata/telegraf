@@ -480,8 +480,7 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	defer ts.Close()
 
 	c := NewConfig()
-	err := os.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
-	require.NoError(t, err)
+	t.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
 	configPath, err := getDefaultConfigPath()
 	require.NoError(t, err)
 	require.Equal(t, ts.URL, configPath)
