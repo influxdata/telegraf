@@ -12,6 +12,7 @@ import (
 )
 
 type traceService struct {
+	ptraceotlp.UnimplementedGRPCServer
 	converter *otel2influx.OtelTracesToLineProtocol
 }
 
@@ -34,6 +35,7 @@ func (s *traceService) Export(ctx context.Context, req ptraceotlp.ExportRequest)
 }
 
 type metricsService struct {
+	pmetricotlp.UnimplementedGRPCServer
 	converter *otel2influx.OtelMetricsToLineProtocol
 }
 
@@ -65,6 +67,7 @@ func (s *metricsService) Export(ctx context.Context, req pmetricotlp.ExportReque
 }
 
 type logsService struct {
+	plogotlp.UnimplementedGRPCServer
 	converter *otel2influx.OtelLogsToLineProtocol
 }
 
