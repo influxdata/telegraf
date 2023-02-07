@@ -47,7 +47,7 @@ func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer func() { _ = v.Clear() }()
+	defer v.Clear()
 
 	return v.Val, nil
 }
@@ -71,8 +71,8 @@ func compileInputs(s *Wmi) error {
 }
 
 func compileTagFilters(s *Wmi) error {
-	var err error
 	for i, q := range s.Queries {
+		var err error
 		s.Queries[i].tagFilter, err = compileTagFilter(q)
 		if err != nil {
 			return err
