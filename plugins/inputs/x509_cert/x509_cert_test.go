@@ -390,6 +390,7 @@ func TestSourcesToURLs(t *testing.T) {
 			"file:///dummy_test_path_file.pem",
 			"file:///windows/temp/test.pem",
 			`file://C:\windows\temp\test.pem`,
+			`file:///C:/windows/temp/test.pem`,
 			"/tmp/dummy_test_path_glob*.pem",
 		},
 		Log: testutil.Logger{},
@@ -402,7 +403,14 @@ func TestSourcesToURLs(t *testing.T) {
 		"smtp://influxdata.com:25",
 	}
 
-	for _, p := range []string{"/dummy_test_path_file.pem", "/windows/temp/test.pem", "C:\\windows\\temp\\test.pem"} {
+	expectedPaths := []string{
+		"/dummy_test_path_file.pem",
+		"/windows/temp/test.pem",
+		"C:\\windows\\temp\\test.pem",
+		"C:/windows/temp/test.pem",
+	}
+
+	for _, p := range expectedPaths {
 		expected = append(expected, filepath.FromSlash(p))
 	}
 
@@ -413,7 +421,7 @@ func TestSourcesToURLs(t *testing.T) {
 	for _, p := range m.locations {
 		actual = append(actual, p.String())
 	}
-	require.Equal(t, len(m.globpaths), 4)
+	require.Equal(t, len(m.globpaths), 5)
 	require.Equal(t, len(m.locations), 3)
 	require.ElementsMatch(t, expected, actual)
 }

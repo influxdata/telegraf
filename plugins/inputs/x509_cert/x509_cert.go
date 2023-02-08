@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -31,6 +32,9 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+// Regexp for handling file URIs containing a drive letter and leading slash
+var reDriveLetter = regexp.MustCompile(`^/([a-zA-Z]:/)`)
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
@@ -150,9 +154,11 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
-		if strings.HasPrefix(source, "file://") ||
-			strings.HasPrefix(source, "/") {
+		if strings.HasPrefix(source, "file://") || strings.HasPrefix(source, "/") {
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
+			// Removing leading slash in Windows path containing a drive-letter
+			// like "file:///C:/Windows/..."
+			source = reDriveLetter.ReplaceAllString(source, "$1")
 			g, err := globpath.Compile(source)
 			if err != nil {
 				return fmt.Errorf("could not compile glob %v: %v", source, err)
@@ -384,11 +390,12 @@ func (c *X509Cert) collectCertURLs() []*url.URL {
 	for _, path := range c.globpaths {
 		files := path.Match()
 		if len(files) <= 0 {
-			c.Log.Errorf("could not find file: %v", path)
+			c.Log.Errorf("could not find file: %v", path.GetRoots())
 			continue
 		}
 		for _, file := range files {
-			urls = append(urls, &url.URL{Scheme: "file", Path: filepath.ToSlash(file)})
+			fn := filepath.ToSlash(file)
+			urls = append(urls, &url.URL{Scheme: "file", Path: fn})
 		}
 	}
 
