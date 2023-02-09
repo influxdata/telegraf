@@ -44,7 +44,7 @@ This implementation tries to maintain compatibility with the apcupsd metrics:
     - ups_name
     - model
   - fields:
-    - status_flags ([status-bits][])
+    - status_flags ([status-bits][rfc9271-sec5.1])
     - input_voltage
     - load_percent
     - battery_charge_percent
@@ -65,6 +65,8 @@ With the exception of:
   - status (string representing the set status_flags)
 - fields:
   - time_on_battery_ns
+
+[rfc9271-sec5.1]: https://www.rfc-editor.org/rfc/rfc9271.html#section-5.1
 
 ## Example Output
 

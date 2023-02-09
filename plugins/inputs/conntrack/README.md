@@ -57,8 +57,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-A detailed explanation of each fields can be found in [kernel documentation](
-https://www.kernel.org/doc/Documentation/networking/nf_conntrack-sysctl.txt).
+A detailed explanation of each fields can be found in
+[kernel documentation][kerneldoc]
+
+[kerneldoc]: https://www.kernel.org/doc/Documentation/networking/nf_conntrack-sysctl.txt
 
 - conntrack
   - `ip_conntrack_count` `(int, count)`: The number of entries in the conntrack table
