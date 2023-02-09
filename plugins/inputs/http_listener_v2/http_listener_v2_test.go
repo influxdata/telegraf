@@ -686,6 +686,27 @@ func TestWriteHTTPFormData(t *testing.T) {
 	)
 }
 
+func TestServerHeaders(t *testing.T) {
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
+
+	listener.HTTPHeaders = map[string]string{
+		"key": "value",
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+	require.Equal(t, "value", resp.Header.Get("key"))
+}
+
 func mustReadHugeMetric() []byte {
 	filePath := "testdata/huge_metric"
 	data, err := os.ReadFile(filePath)
