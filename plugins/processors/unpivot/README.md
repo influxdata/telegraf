@@ -20,18 +20,36 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Rotate multi field metric into several single field metrics
 [[processors.unpivot]]
+  ## Metric mode to pivot to
+  ## Set to "original", metrics are pivoted to the original measurement name
+  ## Set to "field" creates a new metric called the field name. With this
+  ## option the tag_key is ignored. Be aware that this could lead to metric
+  ## name conflicts!
+  # metric_mode = "original"
+
   ## Tag to use for the name.
-  tag_key = "name"
+  # tag_key = "name"
+
   ## Field to use for the name of the value.
-  value_key = "value"
+  # value_key = "value"
 ```
 
 ## Example
+
+Metric mode `original`:
 
 ```diff
 - cpu,cpu=cpu0 time_idle=42i,time_user=43i
 + cpu,cpu=cpu0,name=time_idle value=42i
 + cpu,cpu=cpu0,name=time_user value=43i
+```
+
+Metric mode `field`:
+
+```diff
+- cpu,cpu=cpu0 time_idle=42i,time_user=43i
++ time_idle,cpu=cpu0 value=42i
++ time_user,cpu=cpu0 value=43i
 ```
 
 [pivot]: /plugins/processors/pivot/README.md
