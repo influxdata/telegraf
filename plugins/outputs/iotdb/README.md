@@ -22,7 +22,7 @@ Before using this plugin, please configure the IP address, port number,
 user name, password and other information of the database server,
 as well as some data type conversion, time unit and other configurations.
 
-Please see the [configuration section](#Configuration) for an example
+Please see the [configuration section](#configuration) for an example
 configuration.
 
 ## Metric Translation
@@ -54,9 +54,8 @@ Other options are `second`, `millisecond`, `microsecond`.
 
 ### Metadata (tags)
 
-IoTDB uses a tree model for metadata while Telegraf uses a tag model.
-(See [InfluxDB-Protocol Adapter](
-https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html)
+IoTDB uses a tree model for metadata while Telegraf uses a tag model
+(see [InfluxDB-Protocol Adapter][InfluxDB-Protocol Adapter]).
 There are two available options of converting tags, which are specified by
 setting `convert_tags_to`:
 
@@ -73,6 +72,8 @@ Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2
 
 - `fields`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"`
 - `device_id`, result: `root.sg.device.private.working, s1=100, s2="hello"`
+
+[InfluxDB-Protocol Adapter]: https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
