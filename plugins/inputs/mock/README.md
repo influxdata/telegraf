@@ -67,6 +67,10 @@ The available algorithms for generating mock data include:
 * Step - always add the step value, negative values accepted
 * Stock - generate fake, stock-like price values based on a volatility variable
 
+## Metrics
+
+Metrics are entirely based on the user's own configuration and settings.
+
 ## Example Output
 
 The following example shows all available algorithms configured with an

@@ -123,3 +123,7 @@ configuration.
 
 [tail]: /plugins/inputs/tail/README.md
 [grok parser]: /plugins/parsers/grok/README.md
+
+## Metrics
+
+## Example Output

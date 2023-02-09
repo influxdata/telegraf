@@ -33,7 +33,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # insecure_skip_verify = false
 ```
 
-## Measurements and fields
+## Metrics
+
+### Measurements and fields
 
 - [kapacitor](#kapacitor)
   - [num_enabled_tasks](#num_enabled_tasks) _(integer)_

@@ -360,3 +360,5 @@ error would be raised.
 * All measurements have the following tags
   * host (host of the system)
   * name (the type of the metric: snmp, snmp6 or netstat)
+
+## Example Output

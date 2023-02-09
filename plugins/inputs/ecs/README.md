@@ -229,7 +229,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - started_at
     - type
 
-## Example
+## Example Output
 
 ```shell
 ecs_task,cluster=test,family=nginx,host=c4b301d4a123,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a desired_status="RUNNING",known_status="RUNNING",limit_cpu=0.5,limit_mem=512 1542641488000000000

@@ -66,3 +66,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - list_stats_unsub_rate (double, percentage)
     - list_stats_open_rate (double, percentage)
     - list_stats_click_rate (double, percentage)
+
+## Example Output

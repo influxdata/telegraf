@@ -108,3 +108,7 @@ Sort key: shard_id
 
 [kinesis]: https://aws.amazon.com/kinesis/
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
+
+## Metrics
+
+## Example Output

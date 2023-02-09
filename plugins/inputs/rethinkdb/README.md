@@ -66,3 +66,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - total_reads (integer, reads)
     - written_docs_per_sec (integer, writes)
     - total_writes (integer, writes)
+
+## Example Output

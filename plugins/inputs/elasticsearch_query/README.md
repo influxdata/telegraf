@@ -193,3 +193,7 @@ of the examples below.
 
 [joda]: https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-aggregations-bucket-daterange-aggregation.html#date-format-pattern
 [agg]: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html
+
+## Metrics
+
+## Example Output

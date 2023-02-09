@@ -34,7 +34,7 @@ On many systems this can be accomplished by adding the `telegraf` user to the
 usermod telegraf -a -G pdns
 ```
 
-## Measurements & Fields
+## Metrics
 
 - powerdns
   - corrupt-packets

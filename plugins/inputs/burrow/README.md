@@ -112,3 +112,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   * cluster (string)
   * topic (string)
   * partition (int)
+
+## Example Output

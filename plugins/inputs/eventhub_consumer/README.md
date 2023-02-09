@@ -116,3 +116,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [Full documentation of the available environment variables][envvar].
 
 [envvar]: https://github.com/Azure/azure-event-hubs-go#environment-variables
+
+## Metrics
+
+## Example Output

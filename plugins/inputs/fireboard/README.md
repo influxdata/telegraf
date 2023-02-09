@@ -59,7 +59,7 @@ values are included if they are less than a minute old.
   - fields:
     - temperature (float, unit)
 
-## Example
+## Example Output
 
 This section shows example output in Line Protocol format.  You can often use
 `telegraf --input-filter <plugin-name> --test` or use the `file` output to get

@@ -45,6 +45,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     conversion = "float(3)"
 ```
 
+## Metrics
+
 Each file table can contain the following options:
 
 * `file`:

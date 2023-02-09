@@ -186,3 +186,5 @@ dots in the nsd-control stat name are replaced by underscores (see
     - server
   - fields:
     - queries
+
+## Example Output

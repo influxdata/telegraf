@@ -83,3 +83,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # ]
   # files = ["*"]
 ```
+
+## Example Output

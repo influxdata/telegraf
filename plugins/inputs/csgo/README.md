@@ -47,3 +47,5 @@ If no servers are specified, no data will be collected
     - sv_ms (float)
     - variance_ms (float)
     - tick_ms (float)
+
+## Example Output
