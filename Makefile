@@ -340,6 +340,8 @@ $(include_packages):
 	@mkdir -p $(pkgdir)
 
 	@if [ "$(suffix $@)" = ".rpm" ]; then \
+		echo "# DO NOT EDIT OR REMOVE" > $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
+		echo "# This file prevents the rpm from changing permissions on this directory" >> $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
 		fpm --force \
 			--log info \
 			--architecture $(basename $@) \
@@ -350,6 +352,7 @@ $(include_packages):
 			--license MIT \
 			--maintainer support@influxdb.com \
 			--config-files /etc/telegraf/telegraf.conf \
+			--config-files /etc/telegraf/telegraf.d/.ignore \
 			--config-files /etc/logrotate.d/telegraf \
 			--after-install scripts/rpm/post-install.sh \
 			--before-install scripts/rpm/pre-install.sh \
