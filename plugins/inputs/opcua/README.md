@@ -200,7 +200,7 @@ This example group configuration has three groups with two nodes each:
       name = "name"
       identifier = "1002"
       default_tags = {node1_tag = "val3"}
-  
+
   # Group 2
   [[inputs.opcua.group]]
     name = "group2_metric_name"
@@ -214,7 +214,7 @@ This example group configuration has three groups with two nodes each:
     [[inputs.opcua.group.nodes]]
       name = "sin"
       identifier = "1004"
-  
+
   # Group 3
   [[inputs.opcua.group]]
     name = "group3_metric_name"

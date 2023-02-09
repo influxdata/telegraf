@@ -116,7 +116,7 @@ const sampleJSON = `
       "buffer_stage_byte_size": 0,
       "buffer_queue_byte_size": 0,
       "buffer_available_buffer_space_ratios": 0
-    }, 
+    },
     {
       "plugin_id": "object:output_td_2",
       "plugin_category": "output",

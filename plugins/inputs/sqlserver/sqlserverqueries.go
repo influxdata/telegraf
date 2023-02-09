@@ -203,7 +203,7 @@ DECLARE
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 
-IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0' 
+IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0'
 	SET @Columns = N'
 	,CASE [virtual_machine_type_desc]
 		WHEN ''NONE'' THEN ''PHYSICAL Machine''
@@ -1143,7 +1143,7 @@ BEGIN TRY
 END TRY
 BEGIN CATCH
    IF (ERROR_NUMBER() <> 976) --Avoid possible errors from secondary replica
-        THROW; 
+        THROW;
 END CATCH
 `
 

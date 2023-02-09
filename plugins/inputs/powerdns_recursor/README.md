@@ -33,7 +33,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Version 3: PowerDNS >=4.6.0
   ## By default this is set to 1.
   # control_protocol_version = 1
-  
+
 ```
 
 ### Newer PowerDNS Recursor versions

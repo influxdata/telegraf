@@ -393,7 +393,7 @@ func TestTOMLConfig(t *testing.T) {
   url = "https://localhost:3000"
   data_format = "carbon2"
   [outputs.sumologic.headers]
-    X-Sumo-Name = "dummy"       
+    X-Sumo-Name = "dummy"
     X-Sumo-Host = "dummy"
     X-Sumo-Category  = "dummy"
     X-Sumo-Dimensions = "dummy"

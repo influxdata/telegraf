@@ -9,7 +9,7 @@ import (
 // ------------------ Azure Sql Elastic Pool ------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 const sqlAzurePoolResourceStats = `
-IF SERVERPROPERTY('EngineEdition') <> 5 
+IF SERVERPROPERTY('EngineEdition') <> 5
    OR NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL database in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -30,16 +30,16 @@ SELECT TOP(1)
   ,cast([max_data_space_kb]/1024. as int) AS [storage_limit_mb]
   ,cast([avg_instance_cpu_percent] as float) AS [avg_instance_cpu_percent]
   ,cast([avg_allocated_storage_percent] as float) AS [avg_allocated_storage_percent]
-FROM 
+FROM
   sys.dm_resource_governor_resource_pools_history_ex
-WHERE 
+WHERE
   [name] = 'SloSharedPool1'
 ORDER BY
   [snapshot_time] DESC;
 `
 
 const sqlAzurePoolResourceGovernance = `
-IF SERVERPROPERTY('EngineEdition') <> 5 
+IF SERVERPROPERTY('EngineEdition') <> 5
    OR NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL database in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -81,13 +81,13 @@ SELECT
 	,[volume_type_external_xstore_iops]
 	,[volume_pfs_iops]
 	,[volume_type_pfs_iops]
-FROM 
+FROM
 	sys.dm_user_db_resource_governance
 WHERE database_id = DB_ID();
 `
 
 const sqlAzurePoolDatabaseIO = `
-IF SERVERPROPERTY('EngineEdition') <> 5 
+IF SERVERPROPERTY('EngineEdition') <> 5
    OR NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL database in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -107,9 +107,9 @@ SELECT
 	 END AS [database_name]
 	,vfs.[database_id]
 	,vfs.[file_id]
-	,CASE 
+	,CASE
 		WHEN vfs.[file_id] = 2 THEN 'LOG'
-		ELSE 'ROWS' 
+		ELSE 'ROWS'
 	 END AS [file_type]
 	,vfs.[num_of_reads] AS [reads]
 	,vfs.[num_of_bytes_read] AS [read_bytes]
@@ -121,15 +121,15 @@ SELECT
 	,vfs.[io_stall_queued_write_ms] AS [rg_write_stall_ms]
 	,[size_on_disk_bytes]
 	,ISNULL([size_on_disk_bytes],0)/(1024*1024) AS [size_on_disk_mb]
-FROM 
+FROM
 	sys.dm_io_virtual_file_stats(NULL,NULL) AS vfs
-LEFT OUTER JOIN 
+LEFT OUTER JOIN
 	sys.dm_user_db_resource_governance AS gov
 ON vfs.[database_id] = gov.[database_id];
 `
 
 const sqlAzurePoolOsWaitStats = `
-IF SERVERPROPERTY('EngineEdition') <> 5 
+IF SERVERPROPERTY('EngineEdition') <> 5
    OR NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL database in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -156,7 +156,7 @@ SELECT
 		WHEN ws.[wait_type] LIKE 'RESOURCE_SEMAPHORE_QUERY_COMPILE%' THEN 'Compilation'
 		WHEN ws.[wait_type] LIKE 'CLR[_]%' OR ws.[wait_type] LIKE 'SQLCLR%' THEN 'SQL CLR'
 		WHEN ws.[wait_type] LIKE 'DBMIRROR_%' THEN 'Mirroring'
-		WHEN ws.[wait_type] LIKE 'DTC[_]%' OR ws.[wait_type] LIKE 'DTCNEW%' OR ws.[wait_type] LIKE 'TRAN_%' 
+		WHEN ws.[wait_type] LIKE 'DTC[_]%' OR ws.[wait_type] LIKE 'DTCNEW%' OR ws.[wait_type] LIKE 'TRAN_%'
      		OR ws.[wait_type] LIKE 'XACT%' OR ws.[wait_type] LIKE 'MSQL_XACT%' THEN 'Transaction'
 		WHEN ws.[wait_type] LIKE 'SLEEP[_]%' OR ws.[wait_type] IN (
 			'LAZYWRITER_SLEEP', 'SQLTRACE_BUFFER_FLUSH', 'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
@@ -172,7 +172,7 @@ SELECT
 			'WRITELOG','LOGBUFFER','LOGMGR_RESERVE_APPEND',
 			'LOGMGR_FLUSH', 'LOGMGR_PMM_LOG')  THEN 'Tran Log IO'
 		WHEN ws.[wait_type] LIKE 'LOG_RATE%' then 'Log Rate Governor'
-		WHEN ws.[wait_type] LIKE 'HADR_THROTTLE[_]%' 
+		WHEN ws.[wait_type] LIKE 'HADR_THROTTLE[_]%'
 			OR ws.[wait_type] = 'THROTTLE_LOG_RATE_LOG_STORAGE' THEN 'HADR Log Rate Governor'
 		WHEN ws.[wait_type] LIKE 'RBIO_RG%' OR ws.[wait_type] LIKE 'WAIT_RBIO_RG%' THEN 'VLDB Log Rate Governor'
 		WHEN ws.[wait_type] LIKE 'RBIO[_]%' OR ws.[wait_type] LIKE 'WAIT_RBIO[_]%' THEN 'VLDB RBIO'
@@ -188,16 +188,16 @@ SELECT
 			'RESERVED_MEMORY_ALLOCATION_EXT', 'MEMORY_GRANT_UPDATE')  THEN 'Memory'
 		WHEN ws.[wait_type] IN ('WAITFOR','WAIT_FOR_RESULTS')  THEN 'User Wait'
 		WHEN ws.[wait_type] LIKE 'HADR[_]%' or ws.[wait_type] LIKE 'PWAIT_HADR%'
-			OR ws.[wait_type] LIKE 'REPLICA[_]%' or ws.[wait_type] LIKE 'REPL_%' 
+			OR ws.[wait_type] LIKE 'REPLICA[_]%' or ws.[wait_type] LIKE 'REPL_%'
 			OR ws.[wait_type] LIKE 'SE_REPL[_]%'
-			OR ws.[wait_type] LIKE 'FCB_REPLICA%' THEN 'Replication' 
-		WHEN ws.[wait_type] LIKE 'SQLTRACE[_]%' 
+			OR ws.[wait_type] LIKE 'FCB_REPLICA%' THEN 'Replication'
+		WHEN ws.[wait_type] LIKE 'SQLTRACE[_]%'
 			OR ws.[wait_type] IN (
 				'TRACEWRITE', 'SQLTRACE_LOCK', 'SQLTRACE_FILE_BUFFER', 'SQLTRACE_FILE_WRITE_IO_COMPLETION',
 				'SQLTRACE_FILE_READ_IO_COMPLETION', 'SQLTRACE_PENDING_BUFFER_WRITERS', 'SQLTRACE_SHUTDOWN',
 				'QUERY_TRACEOUT', 'TRACE_EVTNOTIF') THEN 'Tracing'
 		WHEN ws.[wait_type] IN (
-			'FT_RESTART_CRAWL', 'FULLTEXT GATHERER', 'MSSEARCH', 'FT_METADATA_MUTEX', 
+			'FT_RESTART_CRAWL', 'FULLTEXT GATHERER', 'MSSEARCH', 'FT_METADATA_MUTEX',
   			'FT_IFTSHC_MUTEX', 'FT_IFTSISM_MUTEX', 'FT_IFTS_RWLOCK', 'FT_COMPROWSET_RWLOCK',
   			'FT_MASTER_MERGE', 'FT_PROPERTYLIST_CACHE', 'FT_MASTER_MERGE_COORDINATOR',
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
@@ -231,7 +231,7 @@ WHERE
         N'SLEEP_DCOMSTARTUP', N'SLEEP_MASTERDBREADY', N'SLEEP_MASTERMDREADY',
         N'SLEEP_MASTERUPGRADED', N'SLEEP_MSDBSTARTUP', N'SLEEP_SYSTEMTASK', N'SLEEP_TASK',
         N'SLEEP_TEMPDBSTARTUP', N'SNI_HTTP_ACCEPT', N'SP_SERVER_DIAGNOSTICS_SLEEP',
-		N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP', 
+		N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
 		N'SQLTRACE_WAIT_ENTRIES', N'WAIT_FOR_RESULTS', N'WAITFOR', N'WAITFOR_TASKSHUTDOWN',
 		N'WAIT_XTP_HOST_WAIT', N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG', N'WAIT_XTP_CKPT_CLOSE',
         N'XE_BUFFERMGR_ALLPROCESSED_EVENT', N'XE_DISPATCHER_JOIN',
@@ -243,7 +243,7 @@ AND [wait_time_ms] > 100;
 `
 
 const sqlAzurePoolMemoryClerks = `
-IF SERVERPROPERTY('EngineEdition') <> 5 
+IF SERVERPROPERTY('EngineEdition') <> 5
    OR NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL database in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -256,11 +256,11 @@ SELECT
 	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives WHERE database_id = DB_ID()) AS [elastic_pool_name]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
-FROM 
+FROM
 	sys.dm_os_memory_clerks AS mc
 GROUP BY
 	mc.[type]
-HAVING 
+HAVING
 	SUM(mc.[pages_kb]) >= 1024
 OPTION(RECOMPILE);
 `
@@ -274,7 +274,7 @@ OPTION(RECOMPILE);
 // The corresponding base value is the performance counter Buffer Manager:Buffer cache hit ratio base where the cntr_type column value is 1073939712.
 const sqlAzurePoolPerformanceCounters = `
 SET DEADLOCK_PRIORITY -10;
-IF SERVERPROPERTY('EngineEdition') <> 5 
+IF SERVERPROPERTY('EngineEdition') <> 5
    OR NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL database in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -292,7 +292,7 @@ DECLARE @PCounters TABLE
 );
 
 WITH PerfCounters AS (
-	SELECT DISTINCT 
+	SELECT DISTINCT
 		 RTRIM(pc.[object_name]) AS [object_name]
 		,RTRIM(pc.[counter_name]) AS [counter_name]
 		,ISNULL(gov.[database_name], RTRIM(pc.instance_name)) AS [instance_name]
@@ -300,7 +300,7 @@ WITH PerfCounters AS (
 		,pc.[cntr_type] AS [cntr_type]
 	FROM sys.dm_os_performance_counters AS pc
 	LEFT JOIN sys.dm_user_db_resource_governance AS gov
-	ON 
+	ON
 		TRY_CONVERT([uniqueidentifier], pc.[instance_name]) = gov.[physical_database_guid]
 	WHERE
 		/*filter out unnecessary SQL DB system database counters, other than master and tempdb*/
@@ -421,15 +421,15 @@ SELECT
 	,pc.[counter_name] AS [counter]
 	,CASE pc.[instance_name] WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.[instance_name],'') END AS [instance]
 	,CAST(
-		 CASE WHEN pc.[cntr_type] = 537003264 AND base.[cntr_value] > 0 
-			THEN (pc.[cntr_value] * 1.0) / (base.[cntr_value] * 1.0) * 100 
-			ELSE pc.[cntr_value] 
-		 END 
+		 CASE WHEN pc.[cntr_type] = 537003264 AND base.[cntr_value] > 0
+			THEN (pc.[cntr_value] * 1.0) / (base.[cntr_value] * 1.0) * 100
+			ELSE pc.[cntr_value]
+		 END
 	 AS float) AS [value]
 	,CAST(pc.[cntr_type] AS varchar(25)) AS [counter_type]
 FROM @PCounters AS pc
 LEFT OUTER JOIN @PCounters AS base
-ON 
+ON
 	pc.[counter_name] = REPLACE(base.[counter_name],' base','')
 	AND pc.[object_name] = base.[object_name]
 	AND pc.[instance_name] = base.[instance_name]
@@ -440,7 +440,7 @@ OPTION(RECOMPILE)
 `
 
 const sqlAzurePoolSchedulers = `
-IF SERVERPROPERTY('EngineEdition') <> 5 
+IF SERVERPROPERTY('EngineEdition') <> 5
    OR NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL database in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -473,6 +473,6 @@ SELECT
 	,[total_cpu_idle_capped_ms]
 	,[total_scheduler_delay_ms]
 	,[ideal_workers_limit]
-FROM 
+FROM
 	sys.dm_os_schedulers;
 `
