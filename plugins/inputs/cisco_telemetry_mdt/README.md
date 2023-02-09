@@ -49,7 +49,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Include the delete field in every telemetry message.
   # include_delete_field = false
-  
+
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
@@ -76,7 +76,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## removed, and adding subsequent subscriptions does not keep a stable session.
   # permit_keepalive_without_calls = false
 
-  ## GRPC minimum timeout between successive pings, decreasing this value may 
+  ## GRPC minimum timeout between successive pings, decreasing this value may
   ## help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
   # keepalive_minimum_time = "5m"
 ```

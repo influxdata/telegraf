@@ -93,7 +93,7 @@ func TestIptables_Gather(t *testing.T) {
 				`Chain FORWARD (policy ACCEPT 58 packets, 5096 bytes)
 		                pkts      bytes target     prot opt in     out     source               destination
 		                300     4520 RETURN     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0  /* bar */
-		                400     4520 RETURN     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0 
+		                400     4520 RETURN     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0
 		                500     4520 RETURN     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0 /* foobar */
 		                `,
 			},
