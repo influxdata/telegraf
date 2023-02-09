@@ -1,12 +1,32 @@
 # github webhooks
 
-You should configure your Organization's Webhooks to point at the `webhooks` service. To do this go to `github.com/{my_organization}` and click `Settings > Webhooks > Add webhook`. In the resulting menu set `Payload URL` to `http://<my_ip>:1619/github`, `Content type` to `application/json` and under the section `Which events would you like to trigger this webhook?` select 'Send me **everything**'. By default all of the events will write to the `github_webhooks` measurement, this is configurable by setting the `measurement_name` in the config file.
+You should configure your Organization's Webhooks to point at the `webhooks`
+service. To do this go to `github.com/{my_organization}` and click
+`Settings > Webhooks > Add webhook`. In the resulting menu set `Payload URL` to
+`http://<my_ip>:1619/github`, `Content type` to `application/json` and under
+the section `Which events would you like to trigger this webhook?` select
+'Send me **everything**'. By default all of the events will write to the
+`github_webhooks` measurement, this is configurable by setting the
+`measurement_name` in the config file.
 
-You can also add a secret that will be used by telegraf to verify the authenticity of the requests.
+You can also add a secret that will be used by telegraf to verify the
+authenticity of the requests.
 
-## Events
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-The titles of the following sections are links to the full payloads and details for each event. The body contains what information from the event is persisted. The format is as follows:
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Configuration
+
+## Metrics
+
+The titles of the following sections are links to the full payloads and details
+for each event. The body contains what information from the event is persisted. The format is as follows:
 
 ```toml
 # TAGS
@@ -15,7 +35,8 @@ The titles of the following sections are links to the full payloads and details 
 * 'fieldKey' = `fieldValue` type
 ```
 
-The tag values and field values show the place on the incoming JSON object where the data is sourced from.
+The tag values and field values show the place on the incoming JSON object
+where the data is sourced from.
 
 ### [`commit_comment` event](https://developer.github.com/v3/activity/events/types/#commitcommentevent)
 
@@ -404,3 +425,5 @@ The tag values and field values show the place on the incoming JSON object where
 * 'stars' = `event.repository.stargazers_count` int
 * 'forks' = `event.repository.forks_count` int
 * 'issues' = `event.repository.open_issues_count` int
+
+## Example Output

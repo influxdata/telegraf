@@ -1,6 +1,10 @@
 # particle webhooks
 
-You should configure your Particle.io's Webhooks to point at the `webhooks` service. To do this go to [https://console.particle.io](https://console.particle.io/) and click `Integrations > New Integration > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/particle`, and  under `Advanced Settings` click on `JSON` and add:
+You should configure your Particle.io's Webhooks to point at the `webhooks`
+service. To do this go to [https://console.particle.io][particle.io]
+and click `Integrations > New Integration > Webhook`. In the resulting page set
+`URL` to `http://<my_ip>:1619/particle`, and  under `Advanced Settings` click
+on `JSON` and add:
 
 ```json
 {
@@ -10,9 +14,25 @@ You should configure your Particle.io's Webhooks to point at the `webhooks` serv
 
 If required, enter your username and password, etc. and then click `Save`
 
+[particle.io]: https://console.particle.io/
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Configuration
+
+## Metrics
+
 ## Events
 
-Your Particle device should publish an event that contains a JSON in the form of:
+Your Particle device should publish an event that contains a JSON in the form
+of:
 
 ```json
 String data = String::format("{ \"tags\" : {
@@ -29,8 +49,12 @@ String data = String::format("{ \"tags\" : {
 ```
 
 Escaping the "" is required in the source file.
-The number of tag values and field values is not restricted so you can send as many values per webhook call as you'd like.
+The number of tag values and field values is not restricted so you can send as
+many values per webhook call as you'd like.
 
-You will need to enable JSON messages in the Webhooks setup of Particle.io, and make sure to check the "include default data" box as well.
+You will need to enable JSON messages in the Webhooks setup of Particle.io, and
+make sure to check the "include default data" box as well.
 
 See [webhook doc](https://docs.particle.io/reference/webhooks/)
+
+## Example Output
