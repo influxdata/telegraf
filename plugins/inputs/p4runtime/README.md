@@ -32,7 +32,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Define the endpoint of P4Runtime gRPC server to collect metrics.
   # endpoint = "127.0.0.1:9559"
   ## Set DeviceID required for Client Arbitration.
-  ## https://p4.org/p4-spec/p4runtime/main/P4Runtime-Spec.html#sec-client-arbitration-and-controller-replication 
+  ## https://p4.org/p4-spec/p4runtime/main/P4Runtime-Spec.html#sec-client-arbitration-and-controller-replication
   # device_id = 1
   ## Filter counters by their names that should be observed.
   ## Example: counter_names_include=["ingressCounter", "egressCounter"]

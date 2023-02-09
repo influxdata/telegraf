@@ -11,7 +11,7 @@ The titles of the following sections are links to the full payloads and details 
 ```toml
 # TAGS
 * 'tagKey' = `tagValue` type
-# FIELDS 
+# FIELDS
 * 'fieldKey' = `fieldValue` type
 ```
 

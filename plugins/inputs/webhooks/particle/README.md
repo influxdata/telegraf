@@ -16,12 +16,12 @@ Your Particle device should publish an event that contains a JSON in the form of
 
 ```json
 String data = String::format("{ \"tags\" : {
-     \"tag_name\": \"tag_value\", 
+     \"tag_name\": \"tag_value\",
      \"other_tag\": \"other_value\"
-    }, 
+    },
  \"values\": {
-     \"value_name\": %f, 
-  \"other_value\": %f, 
+     \"value_name\": %f,
+  \"other_value\": %f,
     }
     }",  value_value, other_value
  );

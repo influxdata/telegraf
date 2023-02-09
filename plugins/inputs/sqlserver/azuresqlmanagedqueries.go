@@ -15,7 +15,7 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RETURN
 END
 
-SELECT TOP 1 
+SELECT TOP 1
 	 'sqlserver_server_properties' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,[virtual_core_count] AS [cpu_count]
@@ -36,7 +36,7 @@ SELECT TOP 1
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.server_resource_stats
 CROSS APPLY	(
-	SELECT  
+	SELECT
 		 SUM( CASE WHEN [state] = 0 THEN 1 ELSE 0 END ) AS [db_online]
 		,SUM( CASE WHEN [state] = 1 THEN 1 ELSE 0 END ) AS [db_restoring]
 		,SUM( CASE WHEN [state] = 2 THEN 1 ELSE 0 END ) AS [db_recovering]
@@ -44,8 +44,8 @@ CROSS APPLY	(
 		,SUM( CASE WHEN [state] = 4 THEN 1 ELSE 0 END ) AS [db_suspect]
 		,SUM( CASE WHEN [state] IN (6,10) THEN 1 ELSE 0 END ) AS [db_offline]
 	FROM sys.databases
-) AS dbs	
-ORDER BY 
+) AS dbs
+ORDER BY
 	[start_time] DESC;
 `
 
@@ -105,7 +105,7 @@ SELECT
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,DB_NAME(mf.[database_id]) AS [database_name]
 	,COALESCE(mf.[physical_name],'RBPEX') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-	,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
+	,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
 	,mf.[type_desc] AS [file_type]
 	,vfs.[io_stall_read_ms] AS [read_latency_ms]
 	,vfs.[num_of_reads] AS [reads]
@@ -113,12 +113,12 @@ SELECT
 	,vfs.[io_stall_write_ms] AS [write_latency_ms]
 	,vfs.[num_of_writes] AS [writes]
 	,vfs.[num_of_bytes_written] AS [write_bytes]
-	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
+	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
 	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 LEFT OUTER JOIN sys.master_files AS mf WITH (NOLOCK)
-	ON vfs.[database_id] = mf.[database_id] 
+	ON vfs.[database_id] = mf.[database_id]
 	AND vfs.[file_id] = mf.[file_id]
 WHERE
 	vfs.[database_id] < 32760
@@ -161,7 +161,7 @@ SELECT
 	,[signal_wait_time_ms]
 	,[max_wait_time_ms]
 	,[waiting_tasks_count]
-	,CASE 
+	,CASE
 		WHEN ws.[wait_type] LIKE 'SOS_SCHEDULER_YIELD' then 'CPU'
 		WHEN ws.[wait_type] = 'THREADPOOL' THEN 'Worker Thread'
 		WHEN ws.[wait_type] LIKE 'LCK[_]%' THEN 'Lock'
@@ -171,7 +171,7 @@ SELECT
 		WHEN ws.[wait_type] LIKE 'RESOURCE_SEMAPHORE_QUERY_COMPILE%' THEN 'Compilation'
 		WHEN ws.[wait_type] LIKE 'CLR[_]%' or ws.[wait_type] like 'SQLCLR%' THEN 'SQL CLR'
 		WHEN ws.[wait_type] LIKE 'DBMIRROR_%' THEN 'Mirroring'
-		WHEN ws.[wait_type] LIKE 'DTC[_]%' or ws.[wait_type] LIKE 'DTCNEW%' or ws.[wait_type] LIKE 'TRAN_%' 
+		WHEN ws.[wait_type] LIKE 'DTC[_]%' or ws.[wait_type] LIKE 'DTCNEW%' or ws.[wait_type] LIKE 'TRAN_%'
      		or ws.[wait_type] LIKE 'XACT%' or ws.[wait_type] like 'MSQL_XACT%' THEN 'Transaction'
 		WHEN ws.[wait_type] LIKE 'SLEEP[_]%'
 			or ws.[wait_type] IN (
@@ -188,7 +188,7 @@ SELECT
 			'WRITELOG','LOGBUFFER','LOGMGR_RESERVE_APPEND',
 			'LOGMGR_FLUSH', 'LOGMGR_PMM_LOG')  THEN 'Tran Log IO'
 		WHEN ws.[wait_type] LIKE 'LOG_RATE%' then 'Log Rate Governor'
-		WHEN ws.[wait_type] LIKE 'HADR_THROTTLE[_]%' 
+		WHEN ws.[wait_type] LIKE 'HADR_THROTTLE[_]%'
 			or ws.[wait_type] = 'THROTTLE_LOG_RATE_LOG_STORAGE' THEN 'HADR Log Rate Governor'
 		WHEN ws.[wait_type] LIKE 'RBIO_RG%' or ws.[wait_type] like 'WAIT_RBIO_RG%' then 'VLDB Log Rate Governor'
 		WHEN ws.[wait_type] LIKE 'RBIO[_]%' or ws.[wait_type] like 'WAIT_RBIO[_]%' then 'VLDB RBIO'
@@ -204,16 +204,16 @@ SELECT
 			'RESERVED_MEMORY_ALLOCATION_EXT', 'MEMORY_GRANT_UPDATE')  THEN 'Memory'
 		WHEN ws.[wait_type] IN ('WAITFOR','WAIT_FOR_RESULTS')  THEN 'User Wait'
 		WHEN ws.[wait_type] LIKE 'HADR[_]%' or ws.[wait_type] LIKE 'PWAIT_HADR%'
-			or ws.[wait_type] LIKE 'REPLICA[_]%' or ws.[wait_type] LIKE 'REPL_%' 
+			or ws.[wait_type] LIKE 'REPLICA[_]%' or ws.[wait_type] LIKE 'REPL_%'
 			or ws.[wait_type] LIKE 'SE_REPL[_]%'
-			or ws.[wait_type] LIKE 'FCB_REPLICA%' THEN 'Replication' 
-		WHEN ws.[wait_type] LIKE 'SQLTRACE[_]%' 
+			or ws.[wait_type] LIKE 'FCB_REPLICA%' THEN 'Replication'
+		WHEN ws.[wait_type] LIKE 'SQLTRACE[_]%'
 			or ws.[wait_type] IN (
 				'TRACEWRITE', 'SQLTRACE_LOCK', 'SQLTRACE_FILE_BUFFER', 'SQLTRACE_FILE_WRITE_IO_COMPLETION',
 				'SQLTRACE_FILE_READ_IO_COMPLETION', 'SQLTRACE_PENDING_BUFFER_WRITERS', 'SQLTRACE_SHUTDOWN',
 				'QUERY_TRACEOUT', 'TRACE_EVTNOTIF') THEN 'Tracing'
 		WHEN ws.[wait_type] IN (
-			'FT_RESTART_CRAWL', 'FULLTEXT GATHERER', 'MSSEARCH', 'FT_METADATA_MUTEX', 
+			'FT_RESTART_CRAWL', 'FULLTEXT GATHERER', 'MSSEARCH', 'FT_METADATA_MUTEX',
   			'FT_IFTSHC_MUTEX', 'FT_IFTSISM_MUTEX', 'FT_IFTS_RWLOCK', 'FT_COMPROWSET_RWLOCK',
   			'FT_MASTER_MERGE', 'FT_PROPERTYLIST_CACHE', 'FT_MASTER_MERGE_COORDINATOR',
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
@@ -292,7 +292,7 @@ WITH PerfCounters AS (
 		OR RTRIM(spi.[object_name]) LIKE '%:Advanced Analytics')
 		AND TRY_CONVERT([uniqueidentifier], spi.[instance_name]) IS NOT NULL -- for cloud only
 			THEN ISNULL(d.[name],RTRIM(spi.instance_name)) -- Elastic Pools counters exist for all databases but sys.databases only has current DB value
-		WHEN 
+		WHEN
 			RTRIM([object_name]) LIKE '%:Availability Replica'
 			AND TRY_CONVERT([uniqueidentifier], spi.[instance_name]) IS NOT NULL -- for cloud only
 				THEN ISNULL(d.[name],RTRIM(spi.[instance_name])) + RTRIM(SUBSTRING(spi.[instance_name], 37, LEN(spi.[instance_name])))
@@ -300,7 +300,7 @@ WITH PerfCounters AS (
 	END AS [instance_name]
 	,CAST(spi.[cntr_value] AS BIGINT) AS [cntr_value]
 	,spi.[cntr_type]
-	FROM sys.dm_os_performance_counters AS spi 
+	FROM sys.dm_os_performance_counters AS spi
 	LEFT JOIN sys.databases AS d
 		ON LEFT(spi.[instance_name], 36) -- some instance_name values have an additional identifier appended after the GUID
 		= CASE
@@ -418,14 +418,14 @@ WITH PerfCounters AS (
 
 INSERT INTO @PCounters select * from PerfCounters
 
-SELECT 
+SELECT
 	'sqlserver_performance' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,pc.[object_name] AS [object]
 	,pc.[counter_name] AS [counter]
-	,CASE pc.[instance_name] 
-		WHEN '_Total' THEN 'Total' 
-		ELSE ISNULL(pc.[instance_name],'') 
+	,CASE pc.[instance_name]
+		WHEN '_Total' THEN 'Total'
+		ELSE ISNULL(pc.[instance_name],'')
 	END AS [instance]
 	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
@@ -468,7 +468,7 @@ BEGIN TRY
 		,replica_updateability
 		,[session_db_name],[open_transaction]
 	FROM (
-		SELECT	
+		SELECT
 			'sqlserver_requests' AS [measurement]
 			,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 			,DB_NAME() as [database_name]
@@ -491,18 +491,18 @@ BEGIN TRY
 			,s.[login_name]
 			,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
 			,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
-				WHEN 0 THEN '0-Read Committed' 
-				WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
-				WHEN 2 THEN '2-Read Committed' 
-				WHEN 3 THEN '3-Repeatable Read' 
-				WHEN 4 THEN '4-Serializable' 
-				WHEN 5 THEN '5-Snapshot' 
-				ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + '-UNKNOWN' 
+				WHEN 0 THEN '0-Read Committed'
+				WHEN 1 THEN '1-Read Uncommitted (NOLOCK)'
+				WHEN 2 THEN '2-Read Committed'
+				WHEN 3 THEN '3-Repeatable Read'
+				WHEN 4 THEN '4-Serializable'
+				WHEN 5 THEN '5-Snapshot'
+				ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + '-UNKNOWN'
 			END, 30) AS [transaction_isolation_level]
 			,r.[granted_query_memory] AS [granted_query_memory_pages]
 			,r.[percent_complete]
 			,SUBSTRING(
-				qt.[text], 
+				qt.[text],
 				r.[statement_start_offset] / 2 + 1,
 				(CASE WHEN r.[statement_end_offset] = -1
 					THEN DATALENGTH(qt.[text])
@@ -518,7 +518,7 @@ BEGIN TRY
 			,s.[is_user_process]
 			,[blocking_or_blocked] = COUNT(*) OVER(PARTITION BY ISNULL(NULLIF(r.[blocking_session_id], 0),s.[session_id]))
 		FROM sys.dm_exec_sessions AS s
-		LEFT OUTER JOIN sys.dm_exec_requests AS r 
+		LEFT OUTER JOIN sys.dm_exec_requests AS r
 			ON s.[session_id] = r.[session_id]
 		OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
 	) AS data
@@ -532,12 +532,12 @@ BEGIN TRY
 				OR [status] COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
 			)
 			AND [session_id] <> @@SPID
-		)  
+		)
 	OPTION(MAXDOP 1);
 END TRY
 BEGIN CATCH
     IF (ERROR_NUMBER() <> 976) --Avoid possible errors from secondary replica
-        THROW; 
+        THROW;
 END CATCH
 `
 

@@ -34,7 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Read more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-  
+
   ## Optional. Filepath for GCP credentials JSON file to authorize calls to
   ## Google Cloud Storage APIs. If not set explicitly, Telegraf will attempt to use
   ## Application Default Credentials, which is preferred.
@@ -74,8 +74,8 @@ The example output
 2022-09-17T17:52:19Z I! Starting Telegraf 1.25.0-a93ec9a0
 2022-09-17T17:52:19Z I! Available plugins: 209 inputs, 9 aggregators, 26 processors, 20 parsers, 57 outputs
 2022-09-17T17:52:19Z I! Loaded inputs: google_cloud_storage
-2022-09-17T17:52:19Z I! Loaded aggregators: 
-2022-09-17T17:52:19Z I! Loaded processors: 
+2022-09-17T17:52:19Z I! Loaded aggregators:
+2022-09-17T17:52:19Z I! Loaded processors:
 2022-09-17T17:52:19Z I! Loaded outputs: influxdb
 2022-09-17T17:52:19Z I! Tags enabled: host=user-N9RXNWKWY3
 2022-09-17T17:52:19Z I! [agent] Config: Interval:10s, Quiet:false, Hostname:"user-N9RXNWKWY3", Flush Interval:10s
