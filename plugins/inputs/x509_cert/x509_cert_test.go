@@ -325,6 +325,7 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 
 	require.Len(t, acc.Errors, 0)
 	require.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
 }
 
 func TestGatherTCPCert(t *testing.T) {
@@ -361,6 +362,7 @@ func TestGatherCertIntegration(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 
 	require.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
 }
 
 func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
@@ -379,6 +381,7 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
 }
 
 func TestSourcesToURLs(t *testing.T) {
