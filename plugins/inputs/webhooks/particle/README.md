@@ -16,19 +16,6 @@ If required, enter your username and password, etc. and then click `Save`
 
 [particle.io]: https://console.particle.io/
 
-## Global configuration options <!-- @/docs/includes/plugin_config.md -->
-
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
-
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
-
-## Configuration
-
-## Metrics
-
 ## Events
 
 Your Particle device should publish an event that contains a JSON in the form
@@ -56,5 +43,3 @@ You will need to enable JSON messages in the Webhooks setup of Particle.io, and
 make sure to check the "include default data" box as well.
 
 See [webhook doc](https://docs.particle.io/reference/webhooks/)
-
-## Example Output

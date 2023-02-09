@@ -12,21 +12,11 @@ the section `Which events would you like to trigger this webhook?` select
 You can also add a secret that will be used by telegraf to verify the
 authenticity of the requests.
 
-## Global configuration options <!-- @/docs/includes/plugin_config.md -->
-
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
-
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
-
-## Configuration
-
 ## Metrics
 
 The titles of the following sections are links to the full payloads and details
-for each event. The body contains what information from the event is persisted. The format is as follows:
+for each event. The body contains what information from the event is persisted.
+The format is as follows:
 
 ```toml
 # TAGS
@@ -425,5 +415,3 @@ where the data is sourced from.
 * 'stars' = `event.repository.stargazers_count` int
 * 'forks' = `event.repository.forks_count` int
 * 'issues' = `event.repository.open_issues_count` int
-
-## Example Output
