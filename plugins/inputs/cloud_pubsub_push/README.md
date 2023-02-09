@@ -82,3 +82,7 @@ This plugin assumes you have already created a PUSH subscription for a given
 PubSub topic.
 
 [pubsub]: https://cloud.google.com/pubsub
+
+## Metrics
+
+## Example Output

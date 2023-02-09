@@ -45,3 +45,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - used_cpu_user_children
     - registered_jobs
     - registered_queues
+
+## Example Output

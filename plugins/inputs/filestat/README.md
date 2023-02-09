@@ -25,7 +25,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   md5 = false
 ```
 
-## Measurements & Fields
+## Metrics
+
+### Measurements & Fields
 
 - filestat
   - exists (int, 0 | 1)
@@ -33,12 +35,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - modification_time (int, unix time nanoseconds)
   - md5 (optional, string)
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - file (the path the to file, as specified in the config)
 
-### Example
+## Example Output
 
 ```shell
 $ telegraf --config /etc/telegraf/telegraf.conf --input-filter filestat --test

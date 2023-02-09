@@ -276,3 +276,5 @@ mem.cached.localhost:256|g
 
 Consult the [Template Patterns](/docs/TEMPLATE_PATTERN.md) documentation for
 additional details.
+
+## Example Output

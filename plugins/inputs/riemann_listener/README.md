@@ -50,3 +50,7 @@ configuration above.
 Riemann `Service` is mapped as `measurement`. `metric` and `TTL` are converted
 into field values.  As Riemann tags as simply an array, they are converted into
 the `influx_line` format key-value, where both key and value are the tags.
+
+## Metrics
+
+## Example Output

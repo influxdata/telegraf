@@ -20,3 +20,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # socket_listener plugin
   # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener
 ```
+
+## Metrics
+
+## Example Output

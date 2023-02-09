@@ -55,3 +55,7 @@ Running integration tests requires running Zookeeper & Kafka. See Makefile
 for kafka container command.
 
 [Kafka Consumer input plugin]: ../kafka_consumer/README.md
+
+## Metrics
+
+## Example Output

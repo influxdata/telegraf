@@ -36,7 +36,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # password = "pa$$word"
 ```
 
-## Example output of gathered metrics
+## Metrics
+
+## Example Output
 
 ```shell
 ➜  ~ telegraf -config telegraf.conf -input-filter solr -test
