@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	cwClient "github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
@@ -190,7 +189,7 @@ func (c *CloudWatch) initializeCloudWatch() error {
 
 	var customResolver cwClient.EndpointResolver
 	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
-		customResolver = cloudwatch.EndpointResolverFromURL(c.CredentialConfig.EndpointURL)
+		customResolver = cwClient.EndpointResolverFromURL(c.CredentialConfig.EndpointURL)
 	}
 
 	c.client = cwClient.NewFromConfig(awsCreds, func(options *cwClient.Options) {
