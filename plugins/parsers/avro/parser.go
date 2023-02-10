@@ -97,7 +97,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 
 func (p *Parser) createMetric(data map[string]interface{}, schema string) (telegraf.Metric, error) {
 	
-	now := time.Now()
+	now := time.Now().Unix()
 	timestamp, err := internal.ParseTimestamp(p.TimestampFormat, now, "UTC")
 	if err != nil {
 		return nil, fmt.Errorf("parsing timestamp from %q failed: %w", p.Timestamp, err)
