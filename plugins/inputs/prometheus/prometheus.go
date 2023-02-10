@@ -71,7 +71,8 @@ type Prometheus struct {
 
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
-	ResponseTimeout config.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
+	Timeout         config.Duration `toml:"timeout"`
 
 	MetricVersion int `toml:"metric_version"`
 
