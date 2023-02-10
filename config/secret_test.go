@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/awnumar/memguard"
@@ -325,7 +324,7 @@ func TestSecretEnvironmentVariable(t *testing.T) {
 [[inputs.mockup]]
 	secret = "$SOME_ENV_SECRET"
 `)
-	require.NoError(t, os.Setenv("SOME_ENV_SECRET", "an env secret"))
+	t.Setenv("SOME_ENV_SECRET", "an env secret")
 
 	c := NewConfig()
 	err := c.LoadConfigData(cfg)

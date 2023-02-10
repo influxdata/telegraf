@@ -58,8 +58,8 @@ func TestReadBinaryFile(t *testing.T) {
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
-	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
-	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
+	t.Setenv("MY_TEST_SERVER", "192.168.1.1")
+	t.Setenv("TEST_INTERVAL", "10s")
 	require.NoError(t, c.LoadConfig("./testdata/single_plugin_env_vars.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
