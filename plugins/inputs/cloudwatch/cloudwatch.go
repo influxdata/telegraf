@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	cwClient "github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
@@ -183,7 +183,18 @@ func (c *CloudWatch) initializeCloudWatch() error {
 		return err
 	}
 
-	clientOptions := func(options *cwClient.Options) {
+	awsCreds, err := c.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
+
+	var customResolver cwClient.EndpointResolver
+	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
+		customResolver = cloudwatch.EndpointResolverFromURL(c.CredentialConfig.EndpointURL)
+	}
+
+	c.client = cwClient.NewFromConfig(awsCreds, func(options *cwClient.Options) {
+		options.EndpointResolver = customResolver
 		options.ClientLogMode = 0
 		options.HTTPClient = &http.Client{
 			// use values from DefaultTransport
@@ -201,34 +212,7 @@ func (c *CloudWatch) initializeCloudWatch() error {
 			},
 			Timeout: time.Duration(c.Timeout),
 		}
-	}
-
-	awsCreds, err := c.CredentialConfig.Credentials()
-	if err != nil {
-		return err
-	}
-
-	if c.CredentialConfig.EndpointURL == "" || c.CredentialConfig.Region == "" {
-		c.client = cwClient.NewFromConfig(awsCreds, clientOptions)
-	} else {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				PartitionID:   "aws",
-				URL:           c.CredentialConfig.EndpointURL,
-				SigningRegion: c.CredentialConfig.Region,
-			}, nil
-		})
-
-		cfg, err := awsConfig.LoadDefaultConfig(context.TODO(), awsConfig.WithEndpointResolverWithOptions(customResolver))
-		if err != nil {
-			return fmt.Errorf("unable to load AWS SDK config: " + err.Error())
-		}
-		cfg.Credentials = awsCreds.Credentials
-
-		c.client = cwClient.NewFromConfig(cfg, clientOptions, func(o *cwClient.Options) {
-			o.Region = c.CredentialConfig.Region
-		})
-	}
+	})
 
 	// Initialize regex matchers for each Dimension value.
 	for _, m := range c.Metrics {
