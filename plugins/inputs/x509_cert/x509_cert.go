@@ -144,12 +144,34 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			}
 			// OCSPResponse only for leaf cert
 			if i == 0 && ocspresp != nil && len(*ocspresp) > 0 {
-				resp, err := ocsp.ParseResponse(*ocspresp, nil)
+				var ocspissuer *x509.Certificate = nil
+				for _, chaincert := range certs[1:] {
+					if cert.Issuer.CommonName == chaincert.Subject.CommonName &&
+						cert.Issuer.SerialNumber == chaincert.Subject.SerialNumber {
+						ocspissuer = chaincert
+						break
+					}
+				}
+				resp, err := ocsp.ParseResponse(*ocspresp, ocspissuer)
+				if err != nil {
+					if ocspissuer == nil {
+						tags["ocsp_stapled"] = "no"
+						fields["ocsp_error"] = err.Error()
+					} else {
+						ocspissuer = nil // retry parsing w/out issuer cert
+						resp, err = ocsp.ParseResponse(*ocspresp, ocspissuer)
+					}
+				}
 				if err != nil {
 					tags["ocsp_stapled"] = "no"
 					fields["ocsp_error"] = err.Error()
 				} else {
 					tags["ocsp_stapled"] = "yes"
+					if ocspissuer != nil {
+						tags["ocsp_verified"] = "yes"
+					} else {
+						tags["ocsp_verified"] = "no"
+					}
 					// resp.Status: 0=Good 1=Revoked 2=Unknown
 					fields["ocsp_status_code"] = resp.Status
 					switch resp.Status {
