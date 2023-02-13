@@ -1,6 +1,42 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.25.2 [2023-02-13]
+
+### Bugfixes
+
+- [#12607](https://github.com/influxdata/telegraf/pull/12607) `agent` Only read the config once
+- [#12586](https://github.com/influxdata/telegraf/pull/12586) `docs` Fix link to license for Google flatbuffers
+- [#12637](https://github.com/influxdata/telegraf/pull/12637) `inputs.cisco_telemetry_mdt` Check subfield sizes to avoid panics
+- [#12657](https://github.com/influxdata/telegraf/pull/12657) `inputs.cloudwatch` Enable custom endpoint support
+- [#12603](https://github.com/influxdata/telegraf/pull/12603) `inputs.conntrack` Resolve segfault when setting collect field
+- [#12512](https://github.com/influxdata/telegraf/pull/12512) `inputs.gnmi` Handle both new-style `tag_subscription` and old-style `tag_only`
+- [#12599](https://github.com/influxdata/telegraf/pull/12599) `inputs.mongodb` Improve error logging
+- [#12604](https://github.com/influxdata/telegraf/pull/12604) `inputs.mongodb` SIGSEGV when restarting MongoDB node
+- [#12576](https://github.com/influxdata/telegraf/pull/12576) `inputs.mysql` Avoid side-effects for TLS between plugin instances
+- [#12626](https://github.com/influxdata/telegraf/pull/12626) `inputs.prometheus` Deprecate and rename the timeout variable
+- [#12648](https://github.com/influxdata/telegraf/pull/12648) `inputs.tail` Fix typo in the README
+- [#12543](https://github.com/influxdata/telegraf/pull/12543) `inputs.upsd` Add additional fields
+- [#12629](https://github.com/influxdata/telegraf/pull/12629) `inputs.x509_cert` Fix Windows path handling
+- [#12560](https://github.com/influxdata/telegraf/pull/12560) `outputs.prometheus_client` Expire with ticker, not add/collect
+- [#12644](https://github.com/influxdata/telegraf/pull/12644) `secretstores` Check store id format and presence
+
+### Dependency Updates
+
+- [#12630](https://github.com/influxdata/telegraf/pull/12630) `deps` Bump cloud.google.com/go/bigquery from 1.44.0 to 1.45.0
+- [#12568](https://github.com/influxdata/telegraf/pull/12568) `deps` Bump github.com/99designs/keyring from 1.2.1 to 1.2.2
+- [#12634](https://github.com/influxdata/telegraf/pull/12634) `deps` Bump github.com/antchfx/xmlquery from 1.3.12 to 1.3.15
+- [#12633](https://github.com/influxdata/telegraf/pull/12633) `deps` Bump github.com/antchfx/xpath from 1.2.2 to 1.2.3
+- [#12571](https://github.com/influxdata/telegraf/pull/12571) `deps` Bump github.com/coreos/go-semver from 0.3.0 to 0.3.1
+- [#12632](https://github.com/influxdata/telegraf/pull/12632) `deps` Bump github.com/moby/ipvs from 1.0.2 to 1.1.0
+- [#12572](https://github.com/influxdata/telegraf/pull/12572) `deps` Bump github.com/multiplay/go-ts3 from 1.0.1 to 1.1.0
+- [#12581](https://github.com/influxdata/telegraf/pull/12581) `deps` Bump github.com/prometheus/client_golang from 1.13.1 to 1.14.0
+- [#12580](https://github.com/influxdata/telegraf/pull/12580) `deps` Bump github.com/shirou/gopsutil from 3.22.9 to 3.22.12
+- [#12570](https://github.com/influxdata/telegraf/pull/12570) `deps` Bump go.mongodb.org/mongo-driver from 1.11.0 to 1.11.1
+- [#12582](https://github.com/influxdata/telegraf/pull/12582) `deps` Bump golang/x dependencies
+- [#12583](https://github.com/influxdata/telegraf/pull/12583) `deps` Bump google.golang.org/grpc from 1.51.0 to 1.52.0
+- [#12631](https://github.com/influxdata/telegraf/pull/12631) `deps` Bump google.golang.org/grpc from 1.52.0 to 1.52.3
+
 ## v1.25.1 [2023-01-30]
 
 ### Bugfixes
