@@ -13,9 +13,9 @@ import (
 var sampleConfig string
 
 type Unpivot struct {
-	MetricMode string `toml:"metric_mode"`
-	TagKey     string `toml:"tag_key"`
-	ValueKey   string `toml:"value_key"`
+	FieldNameAs string `toml:"use_fieldname_as"`
+	TagKey      string `toml:"tag_key"`
+	ValueKey    string `toml:"value_key"`
 }
 
 func copyWithoutFields(metric telegraf.Metric) telegraf.Metric {
@@ -38,12 +38,12 @@ func (*Unpivot) SampleConfig() string {
 }
 
 func (p *Unpivot) Init() error {
-	switch p.MetricMode {
-	case "", "original":
-		p.MetricMode = "original"
-	case "field":
+	switch p.FieldNameAs {
+	case "metric":
+	case "", "tag":
+		p.FieldNameAs = "tag"
 	default:
-		return fmt.Errorf("unrecognized metric mode: %q", p.MetricMode)
+		return fmt.Errorf("unrecognized metric mode: %q", p.FieldNameAs)
 	}
 
 	if p.TagKey == "" {
@@ -69,10 +69,10 @@ func (p *Unpivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			newMetric := base.Copy()
 			newMetric.AddField(p.ValueKey, field.Value)
 
-			switch p.MetricMode {
-			case "field":
+			switch p.FieldNameAs {
+			case "metric":
 				newMetric.SetName(field.Key)
-			case "", "original":
+			case "", "tag":
 				newMetric.AddTag(p.TagKey, field.Key)
 			}
 

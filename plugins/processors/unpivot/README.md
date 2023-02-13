@@ -21,11 +21,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Rotate multi field metric into several single field metrics
 [[processors.unpivot]]
   ## Metric mode to pivot to
-  ## Set to "original", metrics are pivoted to the original measurement name
-  ## Set to "field" creates a new metric called the field name. With this
+  ## Set to "tag", field keys are pivoted to a tag value and the metric is kept
+  ## as the original measurement name. Tag key name is set by tag_key value.
+  ## Set to "metric" creates a new metric named the field key. With this
   ## option the tag_key is ignored. Be aware that this could lead to metric
   ## name conflicts!
-  # metric_mode = "original"
+  # use_fieldname_as = "tag"
 
   ## Tag to use for the name.
   # tag_key = "name"
@@ -36,7 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example
 
-Metric mode `original`:
+Metric mode `tag`:
 
 ```diff
 - cpu,cpu=cpu0 time_idle=42i,time_user=43i
@@ -44,7 +45,7 @@ Metric mode `original`:
 + cpu,cpu=cpu0,name=time_user value=43i
 ```
 
-Metric mode `field`:
+Metric mode `metric`:
 
 ```diff
 - cpu,cpu=cpu0 time_idle=42i,time_user=43i

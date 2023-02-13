@@ -12,13 +12,13 @@ import (
 func TestUnpivot_defaults(t *testing.T) {
 	unpivot := &Unpivot{}
 	require.NoError(t, unpivot.Init())
-	require.Equal(t, "original", unpivot.MetricMode)
+	require.Equal(t, "tag", unpivot.FieldNameAs)
 	require.Equal(t, "name", unpivot.TagKey)
 	require.Equal(t, "value", unpivot.ValueKey)
 }
 
 func TestUnpivot_invalidMetricMode(t *testing.T) {
-	unpivot := &Unpivot{MetricMode: "unknown"}
+	unpivot := &Unpivot{FieldNameAs: "unknown"}
 	require.Error(t, unpivot.Init())
 }
 
@@ -114,9 +114,9 @@ func TestUnpivot_fieldMode(t *testing.T) {
 		{
 			name: "simple",
 			unpivot: &Unpivot{
-				MetricMode: "field",
-				TagKey:     "name",
-				ValueKey:   "value",
+				FieldNameAs: "metric",
+				TagKey:      "name",
+				ValueKey:    "value",
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric("cpu",
@@ -140,9 +140,9 @@ func TestUnpivot_fieldMode(t *testing.T) {
 		{
 			name: "multi fields",
 			unpivot: &Unpivot{
-				MetricMode: "field",
-				TagKey:     "name",
-				ValueKey:   "value",
+				FieldNameAs: "metric",
+				TagKey:      "name",
+				ValueKey:    "value",
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric("cpu",
@@ -174,9 +174,9 @@ func TestUnpivot_fieldMode(t *testing.T) {
 		{
 			name: "multi fields and tags",
 			unpivot: &Unpivot{
-				MetricMode: "field",
-				TagKey:     "name",
-				ValueKey:   "value",
+				FieldNameAs: "metric",
+				TagKey:      "name",
+				ValueKey:    "value",
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric("cpu",
