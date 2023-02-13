@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -31,6 +32,9 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+// Regexp for handling file URIs containing a drive letter and leading slash
+var reDriveLetter = regexp.MustCompile(`^/([a-zA-Z]:/)`)
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
@@ -86,12 +90,9 @@ func (c *X509Cert) Init() error {
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
-	collectedUrls, err := c.collectCertURLs()
-	if err != nil {
-		acc.AddError(fmt.Errorf("getting some certificates failed: %w", err))
-	}
 
-	for _, location := range append(c.locations, collectedUrls...) {
+	collectedUrls := append(c.locations, c.collectCertURLs()...)
+	for _, location := range collectedUrls {
 		certs, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
@@ -153,9 +154,11 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
-		if strings.HasPrefix(source, "file://") ||
-			strings.HasPrefix(source, "/") {
+		if strings.HasPrefix(source, "file://") || strings.HasPrefix(source, "/") {
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
+			// Removing leading slash in Windows path containing a drive-letter
+			// like "file:///C:/Windows/..."
+			source = reDriveLetter.ReplaceAllString(source, "$1")
 			g, err := globpath.Compile(source)
 			if err != nil {
 				return fmt.Errorf("could not compile glob %v: %v", source, err)
@@ -381,26 +384,22 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 	return tags
 }
 
-func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
+func (c *X509Cert) collectCertURLs() []*url.URL {
 	var urls []*url.URL
 
 	for _, path := range c.globpaths {
 		files := path.Match()
 		if len(files) <= 0 {
-			c.Log.Errorf("could not find file: %v", path)
+			c.Log.Errorf("could not find file: %v", path.GetRoots())
 			continue
 		}
 		for _, file := range files {
-			file = "file://" + file
-			u, err := url.Parse(file)
-			if err != nil {
-				return urls, fmt.Errorf("failed to parse cert location - %s", err.Error())
-			}
-			urls = append(urls, u)
+			fn := filepath.ToSlash(file)
+			urls = append(urls, &url.URL{Scheme: "file", Path: fn})
 		}
 	}
 
-	return urls, nil
+	return urls
 }
 
 func init() {
