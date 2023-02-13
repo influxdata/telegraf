@@ -134,7 +134,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/p4lang/p4runtime v1.3.0
 	github.com/pborman/ansi v1.0.0
-	github.com/pion/dtls/v2 v2.1.5
+	github.com/pion/dtls/v2 v2.2.4
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-community/pro-bing v0.1.0
 	github.com/prometheus/client_golang v1.14.0
@@ -195,6 +195,8 @@ require (
 	k8s.io/client-go v0.25.0
 	modernc.org/sqlite v1.19.2
 )
+
+require github.com/pion/transport/v2 v2.0.0 // indirect
 
 require (
 	cloud.google.com/go v0.107.0 // indirect
@@ -369,8 +371,7 @@ require (
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pion/logging v0.2.2 // indirect
-	github.com/pion/transport v0.13.0 // indirect
-	github.com/pion/udp v0.1.1 // indirect
+	github.com/pion/udp v0.1.4 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/pkg/xattr v0.4.9 // indirect
@@ -423,7 +424,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/crypto v0.3.0 // indirect
+	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20230202163644-54bba9f4231b
 	golang.org/x/time v0.1.0 // indirect
 	golang.org/x/tools v0.2.0 // indirect
