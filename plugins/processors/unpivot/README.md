@@ -21,9 +21,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Rotate multi field metric into several single field metrics
 [[processors.unpivot]]
   ## Metric mode to pivot to
-  ## Set to "tag", field keys are pivoted to a tag value and the metric is kept
-  ## as the original measurement name. Tag key name is set by tag_key value.
-  ## Set to "metric" creates a new metric named the field key. With this
+  ## Set to "tag", metrics are pivoted as a tag and the metric is kept as
+  ## the original measurement name. Tag key name is set by tag_key value.
+  ## Set to "metric" creates a new metric named the field name. With this
   ## option the tag_key is ignored. Be aware that this could lead to metric
   ## name conflicts!
   # use_fieldname_as = "tag"
