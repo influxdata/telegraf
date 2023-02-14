@@ -2,7 +2,6 @@ package mqtt
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/metric"
 	"path/filepath"
 	"testing"
 	"time"
@@ -10,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -104,6 +105,12 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 		serializer: s,
 		KeepAlive:  30,
 		Log:        testutil.Logger{Name: "mqttv5-integration-test"},
+		V5PublishProperties: &mqttv5PublishProperties{
+			MessageExpiry: config.Duration(10 * time.Minute),
+			UserProperties: map[string]string{
+				"key": "value",
+			},
+		},
 	}
 
 	// Verify that we can connect to the MQTT broker

@@ -35,10 +35,11 @@ type MQTT struct {
 	QoS         int             `toml:"qos"`
 	ClientID    string          `toml:"client_id"`
 	tls.ClientConfig
-	BatchMessage bool            `toml:"batch"`
-	Retain       bool            `toml:"retain"`
-	KeepAlive    int64           `toml:"keep_alive"`
-	Log          telegraf.Logger `toml:"-"`
+	BatchMessage        bool                     `toml:"batch"`
+	Retain              bool                     `toml:"retain"`
+	KeepAlive           int64                    `toml:"keep_alive"`
+	V5PublishProperties *mqttv5PublishProperties `toml:"v5"`
+	Log                 telegraf.Logger          `toml:"-"`
 
 	client     Client
 	serializer serializers.Serializer
