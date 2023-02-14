@@ -1,4 +1,6 @@
 //go:generate ../../../tools/readme_config_includer/generator
+//go:build (amd64 || arm64 || ppc64le || s390x) && !windows
+
 package bigquery
 
 import (
