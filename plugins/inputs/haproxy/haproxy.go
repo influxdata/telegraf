@@ -49,7 +49,7 @@ func (h *haproxy) Gather(acc telegraf.Accumulator) error {
 	endpoints := make([]string, 0, len(h.Servers))
 
 	for _, endpoint := range h.Servers {
-		if strings.HasPrefix(endpoint, "http") {
+		if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") || strings.HasPrefix(endpoint, "tcp://") {
 			endpoints = append(endpoints, endpoint)
 			continue
 		}
@@ -85,21 +85,29 @@ func (h *haproxy) Gather(acc telegraf.Accumulator) error {
 }
 
 func (h *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
-	socketPath := getSocketAddr(addr)
+	var network string
+	var address string
+	if strings.HasPrefix(addr, "tcp://") {
+		network = "tcp"
+		address = strings.TrimPrefix(addr, "tcp://")
+	} else {
+		network = "unix"
+		address = getSocketAddr(addr)
+	}
 
-	c, err := net.Dial("unix", socketPath)
+	c, err := net.Dial(network, address)
 
 	if err != nil {
-		return fmt.Errorf("could not connect to socket '%s': %s", addr, err)
+		return fmt.Errorf("could not connect to '%s://%s': %s", network, address, err)
 	}
 
 	_, errw := c.Write([]byte("show stat\n"))
 
 	if errw != nil {
-		return fmt.Errorf("could not write to socket '%s': %s", addr, errw)
+		return fmt.Errorf("could not write to socket '%s://%s': %s", network, address, errw)
 	}
 
-	return h.importCsvResult(c, acc, socketPath)
+	return h.importCsvResult(c, acc, address)
 }
 
 func (h *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {

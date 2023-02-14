@@ -31,10 +31,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # password = "admin"
 
   ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
-  servers = ["http://myhaproxy.com:1936/haproxy?stats"]
+  servers = ["http://myhaproxy.com:1936/haproxy?stats", "tcp://127.0.0.1:1936"]
 
   ## You can also use local socket with standard wildcard globbing.
-  ## Server address not starting with 'http' will be treated as a possible
+  ## Server address not starting with 'http://', 'https://', 'tcp://' will be treated as a possible
   ## socket, so both examples below are valid.
   # servers = ["socket:/run/haproxy/admin.sock", "/run/haproxy/*.sock"]
 
