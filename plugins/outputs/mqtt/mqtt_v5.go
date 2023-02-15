@@ -40,25 +40,23 @@ func newMQTTv5Client(cfg *MQTT) *mqttv5Client {
 // config.
 // These should not change during the lifecycle of the client.
 func buildPublishProperties(cfg *MQTT) *mqttv5.PublishProperties {
-	cfgProps := cfg.V5PublishProperties
-
-	if cfgProps == nil {
+	if cfg.V5PublishProperties == nil {
 		return nil
 	}
 
 	publishProperties := &mqttv5.PublishProperties{
-		ContentType:   cfgProps.ContentType,
-		ResponseTopic: cfgProps.ResponseTopic,
-		TopicAlias:    cfgProps.TopicAlias,
-		User:          make([]mqttv5.UserProperty, 0, len(cfgProps.UserProperties)),
+		ContentType:   cfg.V5PublishProperties.ContentType,
+		ResponseTopic: cfg.V5PublishProperties.ResponseTopic,
+		TopicAlias:    cfg.V5PublishProperties.TopicAlias,
+		User:          make([]mqttv5.UserProperty, 0, len(cfg.V5PublishProperties.UserProperties)),
 	}
 
-	messageExpiry := time.Duration(cfgProps.MessageExpiry)
+	messageExpiry := time.Duration(cfg.V5PublishProperties.MessageExpiry)
 	if expirySeconds := uint32(messageExpiry.Seconds()); expirySeconds > 0 {
 		publishProperties.MessageExpiry = &expirySeconds
 	}
 
-	for k, v := range cfgProps.UserProperties {
+	for k, v := range cfg.V5PublishProperties.UserProperties {
 		publishProperties.User.Add(k, v)
 	}
 

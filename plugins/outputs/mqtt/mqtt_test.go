@@ -99,26 +99,55 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
 	s := serializers.NewInfluxSerializer()
-	m := &MQTT{
-		Servers:    []string{url},
-		Protocol:   "5",
-		serializer: s,
-		KeepAlive:  30,
-		Log:        testutil.Logger{Name: "mqttv5-integration-test"},
-		V5PublishProperties: &mqttv5PublishProperties{
-			MessageExpiry: config.Duration(10 * time.Minute),
-			UserProperties: map[string]string{
-				"key": "value",
-			},
+
+	tests := []struct {
+		name       string
+		properties *mqttv5PublishProperties
+	}{
+		{
+			name:       "no publish properties",
+			properties: nil,
+		},
+		{
+			name:       "content type set",
+			properties: &mqttv5PublishProperties{ContentType: "text/plain"},
+		},
+		{
+			name:       "response topic set",
+			properties: &mqttv5PublishProperties{ResponseTopic: "test/topic"},
+		},
+		{
+			name:       "message expiry set",
+			properties: &mqttv5PublishProperties{MessageExpiry: config.Duration(10 * time.Minute)},
+		},
+		{
+			name:       "topic alias set",
+			properties: &mqttv5PublishProperties{TopicAlias: new(uint16)},
+		},
+		{
+			name:       "user properties set",
+			properties: &mqttv5PublishProperties{UserProperties: map[string]string{"key": "value"}},
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MQTT{
+				Servers:             []string{url},
+				Protocol:            "5",
+				serializer:          s,
+				KeepAlive:           30,
+				Log:                 testutil.Logger{Name: "mqttv5-integration-test"},
+				V5PublishProperties: tt.properties,
+			}
 
-	// Verify that we can connect to the MQTT broker
-	require.NoError(t, m.Init())
-	require.NoError(t, m.Connect())
+			// Verify that we can connect to the MQTT broker
+			require.NoError(t, m.Init())
+			require.NoError(t, m.Connect())
 
-	// Verify that we can successfully write data to the mqtt broker
-	require.NoError(t, m.Write(testutil.MockMetrics()))
+			// Verify that we can successfully write data to the mqtt broker
+			require.NoError(t, m.Write(testutil.MockMetrics()))
+		})
+	}
 }
 
 func TestMQTTTopicGenerationTemplateIsValid(t *testing.T) {
