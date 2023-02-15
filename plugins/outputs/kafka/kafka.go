@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"

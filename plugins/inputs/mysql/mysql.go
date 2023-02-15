@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
