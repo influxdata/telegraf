@@ -193,7 +193,10 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	}
 
 	c.client = cwClient.NewFromConfig(awsCreds, func(options *cwClient.Options) {
-		options.EndpointResolver = customResolver
+		if customResolver != nil {
+			options.EndpointResolver = customResolver
+		}
+
 		options.ClientLogMode = 0
 		options.HTTPClient = &http.Client{
 			// use values from DefaultTransport
