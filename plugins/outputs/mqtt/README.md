@@ -106,10 +106,12 @@ to use them.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
-  ## Optional publish properties that are specific to MQTT 5.
-  ## These will only have an effect if the "procotol" property is set
-  ## to 5. Read more about them here:
-  ## https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109.
+  ## Optional MQTT 5 publish properties
+  ## These setting only apply if the "protocol" property is set to 5. This must
+  ## be defined at the end of the plugin settings, otherwise TOML will assume
+  ## anything else is part of this table. For more details on publish properties
+  ## see the spec:
+  ## https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109
   # [outputs.mqtt.v5]
   #   content_type = ""
   #   response_topic = ""

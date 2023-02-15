@@ -54,7 +54,6 @@ func buildPublishProperties(cfg *MQTT) *mqttv5.PublishProperties {
 	}
 
 	messageExpiry := time.Duration(cfgProps.MessageExpiry)
-
 	if expirySeconds := uint32(messageExpiry.Seconds()); expirySeconds > 0 {
 		publishProperties.MessageExpiry = &expirySeconds
 	}
