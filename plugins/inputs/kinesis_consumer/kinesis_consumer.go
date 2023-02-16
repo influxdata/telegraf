@@ -88,13 +88,16 @@ func (k *KinesisConsumer) SetParser(parser telegraf.Parser) {
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	cfg, err := k.CredentialConfig.Credentials()
 	if err != nil {
+		k.Log.Info("error creating credentials")
 		return err
 	}
 	client := kinesis.NewFromConfig(cfg)
+	k.Log.Info("client created")
 
 	k.checkpoint = &noopStore{}
 	if k.DynamoDB != nil {
 		var err error
+		k.Log.Info("creating new checkpoint")
 		k.checkpoint, err = ddb.New(
 			k.DynamoDB.AppName,
 			k.DynamoDB.TableName,
@@ -102,6 +105,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 			ddb.WithMaxInterval(time.Second*10),
 		)
 		if err != nil {
+			k.Log.Info("error creating new checkpoint")
 			return err
 		}
 	}
@@ -113,11 +117,11 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		consumer.WithStore(k),
 	)
 	if err != nil {
+		k.Log.Info("error creating new consumer")
 		return err
 	}
 
 	k.cons = cons
-
 	k.acc = ac.WithTracking(k.MaxUndeliveredMessages)
 	k.records = make(map[telegraf.TrackingID]string, k.MaxUndeliveredMessages)
 	k.checkpoints = make(map[string]checkpoint, k.MaxUndeliveredMessages)
@@ -144,8 +148,8 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 			}
 			err := k.onMessage(k.acc, r)
 			if err != nil {
+				k.Log.Errorf("Scan parser error: %s", err.Error())
 				<-k.sem
-				k.Log.Errorf("Scan parser error: %v", err)
 			}
 
 			return nil
@@ -161,6 +165,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 }
 
 func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
+	k.Log.Info("starting plugin")
 	err := k.connect(ac)
 	if err != nil {
 		return err
@@ -170,12 +175,15 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 }
 
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
+	k.Log.Info("got a message")
 	data, err := k.processContentEncodingFunc(r.Data)
 	if err != nil {
+		k.Log.Info("onMessage: error processing encoding")
 		return err
 	}
 	metrics, err := k.parser.Parse(data)
 	if err != nil {
+		k.Log.Info("onMessage: error parsing data")
 		return err
 	}
 
@@ -220,10 +228,10 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 
 				k.lastSeqNum = strToBint(sequenceNum)
 				if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
-					k.Log.Debugf("Setting checkpoint failed: %v", err)
+					k.Log.Info("Setting checkpoint failed: %v", err)
 				}
 			} else {
-				k.Log.Debug("Metric group failed to process")
+				k.Log.Info("Metric group failed to process")
 			}
 		}
 	}
@@ -246,6 +254,7 @@ func (k *KinesisConsumer) Stop() {
 
 func (k *KinesisConsumer) Gather(acc telegraf.Accumulator) error {
 	if k.cons == nil {
+		k.Log.Info("connection is nil, reconnecting")
 		return k.connect(acc)
 	}
 	k.lastSeqNum = maxSeq
