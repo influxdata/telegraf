@@ -708,7 +708,7 @@ func TestParseTimestampInvalid(t *testing.T) {
 			name:      "layout not matching time",
 			format:    "rfc3339",
 			timestamp: "09.07.2019 00:11:00",
-			expected:  "cannot parse \"09.07.2019 00:11:00\" as \"2006\"",
+			expected:  "parsing time \"09.07.2019 00:11:00\" as \"2006-01-02T15:04:05Z07:00\": cannot parse",
 		},
 		{
 			name:      "unix wrong type",
