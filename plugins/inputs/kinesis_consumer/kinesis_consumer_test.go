@@ -199,6 +199,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 
 	k := &KinesisConsumer{
 		ContentEncoding: "notsupported",
+		Log:             testutil.Logger{},
 	}
 	err := k.Init()
 	require.NotNil(t, err)
@@ -209,6 +210,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				ContentEncoding: tt.fields.ContentEncoding,
 				parser:          tt.fields.parser,
 				records:         tt.fields.records,
+				Log:             testutil.Logger{},
 			}
 			err := k.Init()
 			require.Nil(t, err)
