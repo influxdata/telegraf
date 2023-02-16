@@ -91,7 +91,12 @@ func TestTOMLParsingStringDurations(t *testing.T) {
 		"42m",
 		"100ms",
 		"100us",
-		"100ns"
+		"100ns",
+		"1d",
+		"7.5d",
+		"7d8h15m",
+		"3d7d",
+		"15m8h3.5d"
 	]
 `)
 
@@ -107,6 +112,11 @@ func TestTOMLParsingStringDurations(t *testing.T) {
 		100 * time.Millisecond,
 		100 * time.Microsecond,
 		100 * time.Nanosecond,
+		24 * time.Hour,
+		7*24*time.Hour + 12*time.Hour,
+		7*24*time.Hour + 8*time.Hour + 15*time.Minute,
+		10 * 24 * time.Hour,
+		3*24*time.Hour + 12*time.Hour + 8*time.Hour + 15*time.Minute,
 	}
 
 	// Load the data
