@@ -383,7 +383,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 		go s.connect()
 	}
 
-	err = s.start()
+	err = s.setup()
 	if err != nil {
 		return err
 	}
@@ -401,15 +401,18 @@ func (s *SQL) connect() {
 		reconnectInterval *= 2
 	}
 
+	dsn, _ := s.Dsn.Get()
+	defer config.ReleaseSecret(dsn)
+
 	var err error
-	s.db, err = dbsql.Open(s.driverName, s.Dsn)
+	s.db, err = dbsql.Open(s.driverName, string(dsn))
 	for err != nil {
 		s.connect()
 	}
 
 	// We have connected, let's start to prepare statements, at which point
 	// Gather will begin to run queries against the DB on the next call
-	err = s.start()
+	err = s.setup()
 	for err != nil {
 		// This start could be a failed connection when we re-connect with PingContext
 		// or it could be a failure to prepare statement (e.g. bad query).
@@ -421,8 +424,8 @@ func (s *SQL) connect() {
 	}
 }
 
-// start sets connection limits and attempts to prepare query statements
-func (s *SQL) start() error {
+// setup sets connection limits and attempts to prepare query statements
+func (s *SQL) setup() error {
 	// Set the connection limits
 	// s.db.SetConnMaxIdleTime(time.Duration(s.MaxIdleTime)) // Requires go >= 1.15
 	s.db.SetConnMaxLifetime(time.Duration(s.MaxLifetime))
