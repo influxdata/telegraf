@@ -13,13 +13,54 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
+// mqtt v5-specific publish properties.
+// See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109
+type mqttv5PublishProperties struct {
+	ContentType    string            `toml:"content_type"`
+	ResponseTopic  string            `toml:"response_topic"`
+	MessageExpiry  config.Duration   `toml:"message_expiry"`
+	TopicAlias     *uint16           `toml:"topic_alias"`
+	UserProperties map[string]string `toml:"user_properties"`
+}
+
 type mqttv5Client struct {
 	*MQTT
-	client *mqttv5auto.ConnectionManager
+	client            *mqttv5auto.ConnectionManager
+	publishProperties *mqttv5.PublishProperties
 }
 
 func newMQTTv5Client(cfg *MQTT) *mqttv5Client {
-	return &mqttv5Client{MQTT: cfg}
+	return &mqttv5Client{
+		MQTT:              cfg,
+		publishProperties: buildPublishProperties(cfg),
+	}
+}
+
+// Build the v5 specific publish properties if they are present in the
+// config.
+// These should not change during the lifecycle of the client.
+func buildPublishProperties(cfg *MQTT) *mqttv5.PublishProperties {
+	if cfg.V5PublishProperties == nil {
+		return nil
+	}
+
+	publishProperties := &mqttv5.PublishProperties{
+		ContentType:   cfg.V5PublishProperties.ContentType,
+		ResponseTopic: cfg.V5PublishProperties.ResponseTopic,
+		TopicAlias:    cfg.V5PublishProperties.TopicAlias,
+		User:          make([]mqttv5.UserProperty, 0, len(cfg.V5PublishProperties.UserProperties)),
+	}
+
+	messageExpiry := time.Duration(cfg.V5PublishProperties.MessageExpiry)
+	if expirySeconds := uint32(messageExpiry.Seconds()); expirySeconds > 0 {
+		publishProperties.MessageExpiry = &expirySeconds
+	}
+
+	for k, v := range cfg.V5PublishProperties.UserProperties {
+		publishProperties.User.Add(k, v)
+	}
+
+	return publishProperties
 }
 
 func (m *mqttv5Client) Connect() error {
@@ -92,10 +133,11 @@ func (m *mqttv5Client) Publish(topic string, body []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.Timeout))
 	defer cancel()
 	_, err := m.client.Publish(ctx, &mqttv5.Publish{
-		Topic:   topic,
-		QoS:     byte(m.QoS),
-		Retain:  m.Retain,
-		Payload: body,
+		Topic:      topic,
+		QoS:        byte(m.QoS),
+		Retain:     m.Retain,
+		Payload:    body,
+		Properties: m.publishProperties,
 	})
 	if err != nil {
 		return err
