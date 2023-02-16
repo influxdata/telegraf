@@ -4,14 +4,14 @@ package mqtt
 import (
 	// Blank import to support go:embed compile directive
 	_ "embed"
+	"errors"
 	"fmt"
-	"net/url"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/mqtt"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -19,42 +19,18 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	defaultKeepAlive = 30
-)
-
 type MQTT struct {
-	Servers     []string      `toml:"servers"`
-	Protocol    string        `toml:"protocol"`
-	Username    config.Secret `toml:"username"`
-	Password    config.Secret `toml:"password"`
-	Database    string
-	Timeout     config.Duration `toml:"timeout"`
-	TopicPrefix string          `toml:"topic_prefix" deprecated:"1.25.0;use 'topic' instead"`
-	Topic       string          `toml:"topic"`
-	QoS         int             `toml:"qos"`
-	ClientID    string          `toml:"client_id"`
-	tls.ClientConfig
-	BatchMessage        bool                     `toml:"batch"`
-	Retain              bool                     `toml:"retain"`
-	KeepAlive           int64                    `toml:"keep_alive"`
-	V5PublishProperties *mqttv5PublishProperties `toml:"v5"`
-	Log                 telegraf.Logger          `toml:"-"`
+	TopicPrefix  string          `toml:"topic_prefix" deprecated:"1.25.0;use 'topic' instead"`
+	Topic        string          `toml:"topic"`
+	BatchMessage bool            `toml:"batch"`
+	Log          telegraf.Logger `toml:"-"`
+	mqtt.MqttConfig
 
-	client     Client
+	client     mqtt.Client
 	serializer serializers.Serializer
 	generator  *TopicNameGenerator
 
 	sync.Mutex
-}
-
-// Client is a protocol neutral MQTT client for connecting,
-// disconnecting, and publishing data to a topic.
-// The protocol specific clients must implement this interface
-type Client interface {
-	Connect() error
-	Publish(topic string, data []byte) error
-	Close() error
 }
 
 func (*MQTT) SampleConfig() string {
@@ -62,31 +38,35 @@ func (*MQTT) SampleConfig() string {
 }
 
 func (m *MQTT) Init() error {
+	if len(m.Servers) == 0 {
+		return errors.New("no servers specified")
+	}
+
+	if m.PersistentSession && m.ClientID == "" {
+		return errors.New("persistent_session requires client_id")
+	}
+
+	if m.QoS > 2 || m.QoS < 0 {
+		return fmt.Errorf("qos value must be 0, 1, or 2: %d", m.QoS)
+	}
+
 	var err error
 	m.generator, err = NewTopicNameGenerator(m.TopicPrefix, m.Topic)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (m *MQTT) Connect() error {
 	m.Lock()
 	defer m.Unlock()
-	if m.QoS > 2 || m.QoS < 0 {
-		return fmt.Errorf("MQTT Output, invalid QoS value: %d", m.QoS)
-	}
 
-	switch m.Protocol {
-	case "", "3.1.1":
-		m.client = newMQTTv311Client(m)
-	case "5":
-		m.client = newMQTTv5Client(m)
-	default:
-		return fmt.Errorf("unsuported protocol %q: must be \"3.1.1\" or \"5\"", m.Protocol)
+	client, err := mqtt.NewClient(&m.MqttConfig)
+	if err != nil {
+		return err
 	}
+	m.client = client
 
-	return m.client.Connect()
+	_, err = m.client.Connect()
+	return err
 }
 
 func (m *MQTT) SetSerializer(serializer serializers.Serializer) {
@@ -146,26 +126,14 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func parseServers(servers []string) ([]*url.URL, error) {
-	urls := make([]*url.URL, 0, len(servers))
-	for _, svr := range servers {
-		if !strings.Contains(svr, "://") {
-			urls = append(urls, &url.URL{Scheme: "tcp", Host: svr})
-		} else {
-			u, err := url.Parse(svr)
-			if err != nil {
-				return nil, err
-			}
-			urls = append(urls, u)
-		}
-	}
-	return urls, nil
-}
-
 func init() {
 	outputs.Add("mqtt", func() telegraf.Output {
 		return &MQTT{
-			KeepAlive: defaultKeepAlive,
+			MqttConfig: mqtt.MqttConfig{
+				KeepAlive:     30,
+				Timeout:       config.Duration(5 * time.Second),
+				AutoReconnect: true,
+			},
 		}
 	})
 }
