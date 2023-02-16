@@ -181,6 +181,7 @@ func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consume
 		k.Log.Info("onMessage: error processing encoding")
 		return err
 	}
+	k.Log.Info(string(data))
 	metrics, err := k.parser.Parse(data)
 	if err != nil {
 		k.Log.Info("onMessage: error parsing data")
