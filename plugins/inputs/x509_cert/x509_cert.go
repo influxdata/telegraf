@@ -144,7 +144,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			}
 			// OCSPResponse only for leaf cert
 			if i == 0 && ocspresp != nil && len(*ocspresp) > 0 {
-				var ocspissuer *x509.Certificate = nil
+				var ocspissuer *x509.Certificate
 				for _, chaincert := range certs[1:] {
 					if cert.Issuer.CommonName == chaincert.Subject.CommonName &&
 						cert.Issuer.SerialNumber == chaincert.Subject.SerialNumber {
