@@ -185,9 +185,7 @@ func TestHaproxyGeneratesMetricsUsingTcp(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-
-	err = r.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, r.Gather(&acc))
 
 	fields := HaproxyGetFieldValues()
 
