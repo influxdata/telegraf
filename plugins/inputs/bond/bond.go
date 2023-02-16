@@ -245,6 +245,9 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 			fields["failures"] = count
 			if !scanPast {
 				acc.AddFields("bond_slave", fields, tags)
+				fields = map[string]interface{}{
+					"status": 0,
+				}
 			}
 		}
 		if strings.Contains(name, "Actor Churned Count") {
@@ -262,6 +265,9 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 			fields["partner_churned"] = count
 			fields["total_churned"] = fields["actor_churned"].(int) + fields["partner_churned"].(int)
 			acc.AddFields("bond_slave", fields, tags)
+			fields = map[string]interface{}{
+				"status": 0,
+			}
 		}
 	}
 	tags = map[string]string{
