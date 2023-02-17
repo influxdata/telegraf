@@ -77,8 +77,7 @@ type Statsd struct {
 	DeleteTimings   bool     `toml:"delete_timings"`
 	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
 
-	EnableStartTimeField bool `toml:"enable_start_time_field"`
-	EnableTemporalityTag bool `toml:"enable_temporality_tag"`
+	EnableAggregationTemporality bool `toml:"enable_aggregation_temporality"`
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string `toml:"metric_separator"`
@@ -231,7 +230,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		fields := map[string]interface{}{
 			defaultFieldName: m.value,
 		}
-		if s.EnableStartTimeField {
+		if s.EnableAggregationTemporality {
 			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
 		}
 		acc.AddFields(m.name, fields, m.tags, now)
@@ -260,7 +259,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 				fields[name] = stats.Percentile(float64(percentile))
 			}
 		}
-		if s.EnableStartTimeField {
+		if s.EnableAggregationTemporality {
 			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
 		}
 
@@ -271,7 +270,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, m := range s.gauges {
-		if s.EnableStartTimeField && m.fields != nil {
+		if s.EnableAggregationTemporality && m.fields != nil {
 			m.fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
 		}
 
@@ -282,7 +281,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, m := range s.counters {
-		if s.EnableStartTimeField && m.fields != nil {
+		if s.EnableAggregationTemporality && m.fields != nil {
 			m.fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
 		}
 
@@ -297,7 +296,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		for field, set := range m.fields {
 			fields[field] = int64(len(set))
 		}
-		if s.EnableStartTimeField {
+		if s.EnableAggregationTemporality {
 			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
 		}
 
@@ -671,7 +670,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "c":
 			m.tags["metric_type"] = "counter"
 
-			if s.EnableTemporalityTag {
+			if s.EnableAggregationTemporality {
 				if s.DeleteCounters {
 					m.tags["temporality"] = "delta"
 				} else {

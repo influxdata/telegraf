@@ -2006,10 +2006,9 @@ func TestParse_DeltaCounter(t *testing.T) {
 		TCPKeepAlive:           true,
 		NumberWorkerThreads:    5,
 		// Delete Counters causes Delta temporality to be added
-		DeleteCounters:       true,
-		lastGatherTime:       time.Now(),
-		EnableTemporalityTag: true,
-		EnableStartTimeField: true,
+		DeleteCounters:               true,
+		lastGatherTime:               time.Now(),
+		EnableAggregationTemporality: true,
 	}
 
 	acc := &testutil.Accumulator{}
