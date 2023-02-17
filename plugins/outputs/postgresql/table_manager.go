@@ -385,7 +385,7 @@ func (tm *TableManager) update(ctx context.Context,
 		stmt := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS 'tag'",
 			tmplTable.String(), sqltemplate.QuoteIdentifier(col.Name))
 		if _, err := tx.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("setting column role comment: %s", err)
+			return fmt.Errorf("setting column role comment: %w", err)
 		}
 	}
 

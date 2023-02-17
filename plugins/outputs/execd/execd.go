@@ -89,7 +89,7 @@ func (e *Execd) Write(metrics []telegraf.Metric) error {
 		}
 
 		if _, err = e.process.Stdin.Write(b); err != nil {
-			return fmt.Errorf("error writing metrics %s", err)
+			return fmt.Errorf("error writing metrics %w", err)
 		}
 	}
 	return nil

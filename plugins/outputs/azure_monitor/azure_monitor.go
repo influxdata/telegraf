@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -187,7 +188,7 @@ func (a *AzureMonitor) initHTTPClient() {
 func vmInstanceMetadata(c *http.Client) (region string, resourceID string, err error) {
 	req, err := http.NewRequest("GET", vmInstanceMetadataURL, nil)
 	if err != nil {
-		return "", "", fmt.Errorf("error creating request: %v", err)
+		return "", "", fmt.Errorf("error creating request: %w", err)
 	}
 	req.Header.Set("Metadata", "true")
 
@@ -323,12 +324,13 @@ func (a *AzureMonitor) send(body []byte) error {
 	// refresh the token if needed.
 	req, err = autorest.CreatePreparer(a.auth.WithAuthorization()).Prepare(req)
 	if err != nil {
-		return fmt.Errorf("unable to fetch authentication credentials: %v", err)
+		return fmt.Errorf("unable to fetch authentication credentials: %w", err)
 	}
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		if err.(*url.Error).Unwrap() == context.DeadlineExceeded {
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) && errors.Is(urlErr, context.DeadlineExceeded) {
 			a.initHTTPClient()
 		}
 

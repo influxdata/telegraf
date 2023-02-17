@@ -69,7 +69,7 @@ func (nr *NewRelic) Connect() error {
 			}
 		})
 	if err != nil {
-		return fmt.Errorf("unable to connect to newrelic %v", err)
+		return fmt.Errorf("unable to connect to newrelic %w", err)
 	}
 
 	nr.dc = cumulative.NewDeltaCalculator()

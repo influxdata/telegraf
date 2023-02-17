@@ -108,7 +108,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 
 		err = n.conn.Publish(n.Subject, buf)
 		if err != nil {
-			return fmt.Errorf("FAILED to send NATS message: %s", err)
+			return fmt.Errorf("FAILED to send NATS message: %w", err)
 		}
 	}
 	return nil

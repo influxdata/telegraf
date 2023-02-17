@@ -84,7 +84,7 @@ func (q *STOMP) Write(metrics []telegraf.Metric) error {
 		}
 		err = q.stomp.Send(q.QueueName, "text/plain", values, nil)
 		if err != nil {
-			return fmt.Errorf("sending metric failed: %s", err)
+			return fmt.Errorf("sending metric failed: %w", err)
 		}
 	}
 	return nil

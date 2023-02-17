@@ -354,8 +354,9 @@ func isTempError(err error) bool {
 		return false
 	}
 
-	if err, ok := err.(interface{ Temporary() bool }); ok {
-		return err.Temporary()
+	var tempErr interface{ Temporary() bool }
+	if errors.As(err, &tempErr) {
+		return tempErr.Temporary()
 	}
 
 	// Assume that any other error is permanent.
@@ -398,9 +399,9 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 	}
 
 	if p.TagsAsForeignKeys {
-		if err := p.writeTagTable(ctx, db, tableSource); err != nil {
+		if err = p.writeTagTable(ctx, db, tableSource); err != nil {
 			if p.ForeignTagConstraint {
-				return fmt.Errorf("writing to tag table '%s': %s", tableSource.Name()+p.TagTableSuffix, err)
+				return fmt.Errorf("writing to tag table '%s': %w", tableSource.Name()+p.TagTableSuffix, err)
 			}
 			// log and continue. As the admin can correct the issue, and tags don't change over time, they can be
 			// added from future metrics after issue is corrected.
