@@ -1,6 +1,7 @@
 package execd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -156,10 +157,11 @@ func runCountMultiplierProgram() {
 	for {
 		m, err := parser.Next()
 		if err != nil {
-			if err == influx.EOF {
+			if errors.Is(err, influx.EOF) {
 				return // stream ended
 			}
-			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+			var parseErr *influx.ParseError
+			if errors.As(err, &parseErr) {
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				//nolint:revive // os.Exit called intentionally
 				os.Exit(1)

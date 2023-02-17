@@ -61,7 +61,7 @@ func (r *Regex) Init() error {
 			c.ResultKey = "keep"
 		}
 		if err := choice.Check(c.ResultKey, resultOptions); err != nil {
-			return fmt.Errorf("invalid metrics result_key: %v", err)
+			return fmt.Errorf("invalid metrics result_key: %w", err)
 		}
 
 		if _, compiled := r.regexCache[c.Pattern]; !compiled {
@@ -78,7 +78,7 @@ func (r *Regex) Init() error {
 			c.ResultKey = "keep"
 		}
 		if err := choice.Check(c.ResultKey, resultOptions); err != nil {
-			return fmt.Errorf("invalid metrics result_key: %v", err)
+			return fmt.Errorf("invalid metrics result_key: %w", err)
 		}
 
 		if _, compiled := r.regexCache[c.Pattern]; !compiled {

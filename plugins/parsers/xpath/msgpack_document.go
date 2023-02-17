@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/tinylib/msgp/msgp"
-
 	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
+	"github.com/tinylib/msgp/msgp"
 )
 
 type msgpackDocument jsonDocument
@@ -17,7 +16,7 @@ func (d *msgpackDocument) Parse(buf []byte) (dataNode, error) {
 
 	// Unmarshal the message-pack binary message to JSON and proceed with the jsonquery class
 	if _, err := msgp.UnmarshalAsJSON(&json, buf); err != nil {
-		return nil, fmt.Errorf("unmarshalling to json failed: %v", err)
+		return nil, fmt.Errorf("unmarshalling to json failed: %w", err)
 	}
 	return jsonquery.Parse(&json)
 }

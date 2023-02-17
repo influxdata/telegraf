@@ -85,7 +85,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 	for {
 		err := p.machine.Next()
-		if err == EOF {
+		if errors.Is(err, EOF) {
 			break
 		}
 
@@ -203,11 +203,12 @@ func (sp *StreamParser) SetTimePrecision(u time.Duration) {
 // function if it returns ParseError to get the next metric or error.
 func (sp *StreamParser) Next() (telegraf.Metric, error) {
 	err := sp.machine.Next()
-	if err == EOF {
+	if errors.Is(err, EOF) {
 		return nil, err
 	}
 
-	if e, ok := err.(*readErr); ok {
+	var e *readErr
+	if errors.As(err, &e) {
 		return nil, e.Err
 	}
 
