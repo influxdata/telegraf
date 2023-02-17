@@ -156,7 +156,7 @@ statements. This allows for complete control of the schema by the user.
 
 Documentation on how to write templates can be found [sqltemplate docs][1]
 
-[1]: https://pkg.go.dev/github.com/influxdb/telegraf/plugins/outputs/postgresql/sqltemplate
+[1]: https://pkg.go.dev/github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate
 
 ### Samples
 
