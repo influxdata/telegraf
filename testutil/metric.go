@@ -128,6 +128,8 @@ func IgnoreTime() cmp.Option {
 	return cmpopts.IgnoreFields(metricDiff{}, "Time")
 }
 
+// IgnoreFields disables comparison of the fields with the given names.
+// The field-names are case-sensitive!
 func IgnoreFields(names ...string) cmp.Option {
 	return cmpopts.IgnoreSliceElements(
 		func(f *telegraf.Field) bool {
