@@ -652,6 +652,12 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		switch m.mtype {
 		case "c":
 			m.tags["metric_type"] = "counter"
+
+			if s.DeleteCounters {
+				m.tags["temporality"] = "delta"
+			} else {
+				m.tags["temporality"] = "cumulative"
+			}
 		case "g":
 			m.tags["metric_type"] = "gauge"
 		case "s":

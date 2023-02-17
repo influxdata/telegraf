@@ -1810,6 +1810,7 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 			"cpu_time_idle",
 			map[string]string{
 				"metric_type": "counter",
+				"aggregation": "cumulative",
 			},
 			map[string]interface{}{
 				"value": 42,
