@@ -854,6 +854,7 @@ func TestParse_DataDogTags(t *testing.T) {
 						"environment": "prod",
 						"host":        "localhost",
 						"metric_type": "counter",
+						"temporality": "cumulative",
 					},
 					map[string]interface{}{
 						"value": 1,
@@ -930,6 +931,7 @@ func TestParse_DataDogTags(t *testing.T) {
 					"cpu",
 					map[string]string{
 						"metric_type": "counter",
+						"temporality": "cumulative",
 					},
 					map[string]interface{}{
 						"value": 42,
@@ -1056,6 +1058,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 				"valid",
 				map[string]string{
 					"metric_type": "counter",
+					"temporality": "cumulative",
 				},
 				map[string]interface{}{
 					"value": 90,
@@ -1067,6 +1070,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 				"valid",
 				map[string]string{
 					"metric_type": "counter",
+					"temporality": "cumulative",
 				},
 				map[string]interface{}{
 					"value": 90,
@@ -1078,6 +1082,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 				"valid",
 				map[string]string{
 					"metric_type": "counter",
+					"temporality": "cumulative",
 				},
 				map[string]interface{}{
 					"value": 45,
@@ -1614,6 +1619,7 @@ func TestTCP(t *testing.T) {
 				"cpu_time_idle",
 				map[string]string{
 					"metric_type": "counter",
+					"temporality": "cumulative",
 				},
 				map[string]interface{}{
 					"value": 42,
@@ -1658,6 +1664,7 @@ func TestUdp(t *testing.T) {
 				"cpu_time_idle",
 				map[string]string{
 					"metric_type": "counter",
+					"temporality": "cumulative",
 				},
 				map[string]interface{}{
 					"value": 42,
@@ -1810,7 +1817,53 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 			"cpu_time_idle",
 			map[string]string{
 				"metric_type": "counter",
-				"aggregation": "cumulative",
+				"temporality": "cumulative",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+	require.NoError(t, conn.Close())
+}
+
+func TestParse_DeltaCounter(t *testing.T) {
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "tcp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      250,
+		TCPKeepAlive:           true,
+		// Delete Counters causes Delta temporality to be added
+		DeleteCounters: true,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, statsd.Start(acc))
+	defer statsd.Stop()
+
+	addr := statsd.TCPlistener.Addr().String()
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, statsd.Gather(acc))
+	acc.Wait(1)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu_time_idle",
+			map[string]string{
+				"metric_type": "counter",
+				"temporality": "delta",
 			},
 			map[string]interface{}{
 				"value": 42,
