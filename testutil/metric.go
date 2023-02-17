@@ -128,6 +128,19 @@ func IgnoreTime() cmp.Option {
 	return cmpopts.IgnoreFields(metricDiff{}, "Time")
 }
 
+func IgnoreFields(names ...string) cmp.Option {
+	return cmpopts.IgnoreSliceElements(
+		func(f *telegraf.Field) bool {
+			for _, n := range names {
+				if f.Key == n {
+					return true
+				}
+			}
+			return false
+		},
+	)
+}
+
 // MetricEqual returns true if the metrics are equal.
 func MetricEqual(expected, actual telegraf.Metric, opts ...cmp.Option) bool {
 	var lhs, rhs *metricDiff
