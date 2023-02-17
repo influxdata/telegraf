@@ -1995,3 +1995,68 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 
 	require.NoError(t, conn.Close())
 }
+
+func TestParse_DeltaCounter(t *testing.T) {
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "tcp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      250,
+		TCPKeepAlive:           true,
+		NumberWorkerThreads:    5,
+		// Delete Counters causes Delta temporality to be added
+		DeleteCounters:       true,
+		lastGatherTime:       time.Now(),
+		EnableTemporalityTag: true,
+		EnableStartTimeField: true,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, statsd.Start(acc))
+	defer statsd.Stop()
+
+	addr := statsd.TCPlistener.Addr().String()
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+
+	require.Eventuallyf(t, func() bool {
+		require.NoError(t, statsd.Gather(acc))
+		acc.Lock()
+		defer acc.Unlock()
+
+		fmt.Println(acc.NMetrics())
+		expected := []telegraf.Metric{
+			testutil.MustMetric(
+				"cpu_time_idle",
+				map[string]string{
+					"metric_type": "counter",
+					"temporality": "delta",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+		}
+		got := acc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, expected, got, testutil.IgnoreTime(), testutil.IgnoreFields("start_time"))
+
+		startTime, ok := got[0].GetField("start_time")
+		require.True(t, ok, "expected start_time field")
+
+		startTimeStr, ok := startTime.(string)
+		require.True(t, ok, "expected start_time field to be a string")
+
+		_, err = time.Parse(time.RFC3339, startTimeStr)
+		require.NoError(t, err, "execpted start_time field to be in RFC3339 format")
+
+		return acc.NMetrics() >= 1
+	}, time.Second, 100*time.Millisecond, "Expected 1 metric found %d", acc.NMetrics())
+
+	require.NoError(t, conn.Close())
+}
