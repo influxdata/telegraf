@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pion/dtls/v2"
+	"golang.org/x/crypto/ocsp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -93,7 +94,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 	collectedUrls := append(c.locations, c.collectCertURLs()...)
 	for _, location := range collectedUrls {
-		certs, err := c.getCert(location, time.Duration(c.Timeout))
+		certs, ocspresp, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
@@ -141,6 +142,55 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				fields["verification_code"] = 1
 				fields["verification_error"] = err.Error()
 			}
+			// OCSPResponse only for leaf cert
+			if i == 0 && ocspresp != nil && len(*ocspresp) > 0 {
+				var ocspissuer *x509.Certificate
+				for _, chaincert := range certs[1:] {
+					if cert.Issuer.CommonName == chaincert.Subject.CommonName &&
+						cert.Issuer.SerialNumber == chaincert.Subject.SerialNumber {
+						ocspissuer = chaincert
+						break
+					}
+				}
+				resp, err := ocsp.ParseResponse(*ocspresp, ocspissuer)
+				if err != nil {
+					if ocspissuer == nil {
+						tags["ocsp_stapled"] = "no"
+						fields["ocsp_error"] = err.Error()
+					} else {
+						ocspissuer = nil // retry parsing w/out issuer cert
+						resp, err = ocsp.ParseResponse(*ocspresp, ocspissuer)
+					}
+				}
+				if err != nil {
+					tags["ocsp_stapled"] = "no"
+					fields["ocsp_error"] = err.Error()
+				} else {
+					tags["ocsp_stapled"] = "yes"
+					if ocspissuer != nil {
+						tags["ocsp_verified"] = "yes"
+					} else {
+						tags["ocsp_verified"] = "no"
+					}
+					// resp.Status: 0=Good 1=Revoked 2=Unknown
+					fields["ocsp_status_code"] = resp.Status
+					switch resp.Status {
+					case 0:
+						tags["ocsp_status"] = "good"
+					case 1:
+						tags["ocsp_status"] = "revoked"
+						// Status=Good: revoked_at always = -62135596800
+						fields["ocsp_revoked_at"] = resp.RevokedAt.Unix()
+					default:
+						tags["ocsp_status"] = "unknown"
+					}
+					fields["ocsp_produced_at"] = resp.ProducedAt.Unix()
+					fields["ocsp_this_update"] = resp.ThisUpdate.Unix()
+					fields["ocsp_next_update"] = resp.NextUpdate.Unix()
+				}
+			} else {
+				tags["ocsp_stapled"] = "no"
+			}
 
 			acc.AddFields("x509_cert", fields, tags)
 			if c.ExcludeRootCerts {
@@ -186,13 +236,13 @@ func (c *X509Cert) serverName(u *url.URL) string {
 	return u.Hostname()
 }
 
-func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
+func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, *[]byte, error) {
 	protocol := u.Scheme
 	switch u.Scheme {
 	case "udp", "udp4", "udp6":
 		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		defer ipConn.Close()
 
@@ -204,7 +254,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		conn, err := dtls.Client(ipConn, dtlsCfg)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		defer conn.Close()
 
@@ -213,7 +263,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		for _, rawCert := range rawCerts {
 			parsed, err := x509.ParseCertificate(rawCert)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			if parsed != nil {
@@ -221,7 +271,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			}
 		}
 
-		return certs, nil
+		return certs, nil, nil
 	case "https":
 		protocol = "tcp"
 		if u.Port() == "" {
@@ -231,11 +281,11 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 	case "tcp", "tcp4", "tcp6":
 		dialer, err := c.Proxy()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		defer ipConn.Close()
 
@@ -248,28 +298,29 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		hsErr := conn.Handshake()
 		if hsErr != nil {
-			return nil, hsErr
+			return nil, nil, hsErr
 		}
 
 		certs := conn.ConnectionState().PeerCertificates
+		ocspresp := conn.ConnectionState().OCSPResponse
 
-		return certs, nil
+		return certs, &ocspresp, nil
 	case "file":
 		content, err := os.ReadFile(u.Path)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		var certs []*x509.Certificate
 		for {
 			block, rest := pem.Decode(bytes.TrimSpace(content))
 			if block == nil {
-				return nil, fmt.Errorf("failed to parse certificate PEM")
+				return nil, nil, fmt.Errorf("failed to parse certificate PEM")
 			}
 
 			if block.Type == "CERTIFICATE" {
 				cert, err := x509.ParseCertificate(block.Bytes)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				certs = append(certs, cert)
 			}
@@ -278,11 +329,11 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			}
 			content = rest
 		}
-		return certs, nil
+		return certs, nil, nil
 	case "smtp":
 		ipConn, err := net.DialTimeout("tcp", u.Host, timeout)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		defer ipConn.Close()
 
@@ -292,24 +343,24 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		smtpConn, err := smtp.NewClient(ipConn, u.Host)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		err = smtpConn.Hello(downloadTLSCfg.ServerName)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		id, err := smtpConn.Text.Cmd("STARTTLS")
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		smtpConn.Text.StartResponse(id)
 		defer smtpConn.Text.EndResponse(id)
 		_, _, err = smtpConn.Text.ReadResponse(220)
 		if err != nil {
-			return nil, fmt.Errorf("did not get 220 after STARTTLS: %s", err.Error())
+			return nil, nil, fmt.Errorf("did not get 220 after STARTTLS: %s", err.Error())
 		}
 
 		tlsConn := tls.Client(ipConn, downloadTLSCfg)
@@ -317,14 +368,15 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		hsErr := tlsConn.Handshake()
 		if hsErr != nil {
-			return nil, hsErr
+			return nil, nil, hsErr
 		}
 
 		certs := tlsConn.ConnectionState().PeerCertificates
+		ocspresp := tlsConn.ConnectionState().OCSPResponse
 
-		return certs, nil
+		return certs, &ocspresp, nil
 	default:
-		return nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())
+		return nil, nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())
 	}
 }
 
