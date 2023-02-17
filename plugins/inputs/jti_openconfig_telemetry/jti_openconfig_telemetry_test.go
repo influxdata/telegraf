@@ -46,6 +46,14 @@ var dataWithStringValues = &telemetry.OpenConfigData{
 		{Key: "strKey[tag='tagValue']/strValue", Value: &telemetry.KeyValue_StrValue{StrValue: "10"}}},
 }
 
+var dataWithTimestamp = &telemetry.OpenConfigData{
+	Path: "/sensor_with_timestamp",
+	Kv: []*telemetry.KeyValue{
+		{Key: "/sensor[tag='tagValue']/intKey", Value: &telemetry.KeyValue_IntValue{IntValue: 10}},
+	},
+	Timestamp: 1676560510002,
+}
+
 type openConfigTelemetryServer struct {
 	telemetry.UnimplementedOpenConfigTelemetryServer
 }
@@ -64,6 +72,8 @@ func (s *openConfigTelemetryServer) TelemetrySubscribe(
 		return stream.Send(dataWithMultipleTags)
 	case "/sensor_with_string_values":
 		return stream.Send(dataWithStringValues)
+	case "/sensor_with_timestamp":
+		return stream.Send(dataWithTimestamp)
 	}
 	return nil
 }
@@ -122,6 +132,32 @@ func TestOpenConfigTelemetryData(t *testing.T) {
 
 	require.Eventually(t, func() bool { return acc.HasMeasurement("/sensor") }, 5*time.Second, 10*time.Millisecond)
 	acc.AssertContainsTaggedFields(t, "/sensor", fields, tags)
+}
+
+func TestOpenConfigTelemetryData_timestamp(t *testing.T) {
+	var acc testutil.Accumulator
+	cfg.TimestampSource = "data"
+	cfg.Sensors = []string{"/sensor_with_timestamp"}
+	require.NoError(t, cfg.Start(&acc))
+
+	timestamp := int64(1676560510002)
+	tags := map[string]string{
+		"device":       "127.0.0.1",
+		"/sensor/@tag": "tagValue",
+		"system_id":    "",
+		"path":         "/sensor_with_timestamp",
+	}
+	fields := map[string]interface{}{
+		"/sensor/intKey":   int64(10),
+		"_sequence":        uint64(0),
+		"_timestamp":       uint64(timestamp),
+		"_component_id":    uint32(0),
+		"_subcomponent_id": uint32(0),
+	}
+
+	require.Eventually(t, func() bool { return acc.HasMeasurement("/sensor_with_timestamp") }, 5*time.Second, 10*time.Millisecond)
+	require.Equal(t, time.UnixMilli(timestamp), acc.Metrics[0].Time)
+	acc.AssertContainsTaggedFields(t, "/sensor_with_timestamp", fields, tags)
 }
 
 func TestOpenConfigTelemetryDataWithPrefix(t *testing.T) {
