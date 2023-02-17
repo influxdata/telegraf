@@ -78,13 +78,13 @@ func extractIncludeBlock(txt []byte, includesEx *regexp.Regexp, root string) *in
 func insertInclude(buf *bytes.Buffer, include string) error {
 	file, err := os.Open(include)
 	if err != nil {
-		return fmt.Errorf("opening include %q failed: %v", include, err)
+		return fmt.Errorf("opening include %q failed: %w", include, err)
 	}
 	defer file.Close()
 
 	// Write the include and make sure we get a newline
 	if _, err := io.Copy(buf, file); err != nil {
-		return fmt.Errorf("inserting include %q failed: %v", include, err)
+		return fmt.Errorf("inserting include %q failed: %w", include, err)
 	}
 	return nil
 }
