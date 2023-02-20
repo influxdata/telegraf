@@ -41,7 +41,7 @@ func (is *InternetSpeed) Init() error {
 	is.MemorySavingMode = is.MemorySavingMode || is.EnableFileDownload
 
 	var err error
-	is.serverFilter, err = filter.NewIncludeExcludeFilter(is.ServerIDInclude, is.ServerIDExclude)
+	is.serverFilter, err = filter.NewIncludeExcludeFilterDefaults(is.ServerIDInclude, is.ServerIDExclude, false, false)
 	if err != nil {
 		return fmt.Errorf("error compiling server ID filters: %w", err)
 	}
