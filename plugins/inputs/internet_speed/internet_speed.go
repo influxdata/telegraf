@@ -4,6 +4,7 @@ package internet_speed
 import (
 	_ "embed"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
@@ -49,7 +50,7 @@ func (is *InternetSpeed) Init() error {
 }
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
-	// if not caching, go find closest server each time
+	// if not caching, go find the closest server each time
 	if !is.Cache || is.server == nil {
 		if err := is.findClosestServer(); err != nil {
 			return fmt.Errorf("unable to find closest server: %w", err)
@@ -73,6 +74,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		"download": is.server.DLSpeed,
 		"upload":   is.server.ULSpeed,
 		"latency":  timeDurationMillisecondToFloat64(is.server.Latency),
+		"jitter":   timeDurationMillisecondToFloat64(is.server.Jitter),
 	}
 	tags := map[string]string{
 		"server_id": is.server.ID,
@@ -106,7 +108,25 @@ func (is *InternetSpeed) findClosestServer() error {
 		}
 	}
 
-	return fmt.Errorf("no server set: filter excluded all servers")
+	// return the server with the lowest latency if filter mismatch all servers
+	var min int64 = math.MaxInt64
+	var minIndex int
+	for index, server := range serverList {
+		if server.Latency <= 0 {
+			continue
+		}
+		if min > server.Latency.Milliseconds() {
+			min = server.Latency.Milliseconds()
+			minIndex = index
+		}
+	}
+	if min != math.MaxInt64 {
+		is.server = serverList[minIndex]
+		is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
+		return nil
+	}
+
+	return fmt.Errorf("no server set: filter excluded all servers or no available server found")
 }
 
 func init() {
