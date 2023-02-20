@@ -99,29 +99,25 @@ func (is *InternetSpeed) findClosestServer() error {
 		return fmt.Errorf("no servers found")
 	}
 
-	// return the first match
-	for _, server := range serverList {
+	// return the first match or the server with the lowest latency
+	// when filter mismatch all servers.
+	var min int64 = math.MaxInt64
+	selectIndex := -1
+	for index, server := range serverList {
 		if is.serverFilter.Match(server.ID) {
-			is.server = server
-			is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
-			return nil
+			selectIndex = index
+			break
+		}
+		if server.Latency > 0 {
+			if min > server.Latency.Milliseconds() {
+				min = server.Latency.Milliseconds()
+				selectIndex = index
+			}
 		}
 	}
 
-	// return the server with the lowest latency if filter mismatch all servers
-	var min int64 = math.MaxInt64
-	var minIndex int
-	for index, server := range serverList {
-		if server.Latency <= 0 {
-			continue
-		}
-		if min > server.Latency.Milliseconds() {
-			min = server.Latency.Milliseconds()
-			minIndex = index
-		}
-	}
-	if min != math.MaxInt64 {
-		is.server = serverList[minIndex]
+	if selectIndex != -1 {
+		is.server = serverList[selectIndex]
 		is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
 		return nil
 	}
