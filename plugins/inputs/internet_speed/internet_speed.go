@@ -80,7 +80,8 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		"server_id": is.server.ID,
 		"host":      is.server.Host,
 	}
-
+	// recycle the detailed data of each test to prevent data backlog
+	is.server.Context.Reset()
 	acc.AddFields(measurement, fields, tags)
 	return nil
 }
