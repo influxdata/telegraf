@@ -3,7 +3,6 @@ package avro
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -53,11 +52,6 @@ func JSONToAvroMessage(schemaID int32, schema string, message []byte) ([]byte, e
 	return binaryMsg, nil
 }
 
-var CommonSchema string
-var CommonMessage []byte
-var CommonAvro []byte
-var CommonConfig *config.Config
-
 type AvroCfg struct {
 	Inputs struct {
 		File []struct {
@@ -77,41 +71,18 @@ func BuildParser(buf []byte) (*Parser, error) {
 
 	pinput := cfg.Inputs.File[0].Parser
 	p := Parser{
-		MetricName:       pinput.MetricName,
-		SchemaRegistry:   pinput.SchemaRegistry,
-		Schema:           pinput.Schema,
-		Measurement:      pinput.Measurement,
-		Tags:             pinput.Tags,
-		Fields:           pinput.Fields,
-		Timestamp:        pinput.Timestamp,
-		TimestampFormat:  pinput.TimestampFormat,
-		FieldSeparator:   pinput.FieldSeparator,
-		DefaultTags:      pinput.DefaultTags,
+		MetricName:      pinput.MetricName,
+		SchemaRegistry:  pinput.SchemaRegistry,
+		Schema:          pinput.Schema,
+		Measurement:     pinput.Measurement,
+		Tags:            pinput.Tags,
+		Fields:          pinput.Fields,
+		Timestamp:       pinput.Timestamp,
+		TimestampFormat: pinput.TimestampFormat,
+		FieldSeparator:  pinput.FieldSeparator,
+		DefaultTags:     pinput.DefaultTags,
 	}
 	return &p, nil
-}
-
-func TestCommonLoadConfig(t *testing.T) {
-	// Load our common schema, message, and configuration
-	commonSchemaBytes, err := os.ReadFile("testdata/common/schema.json")
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	CommonSchema = string(commonSchemaBytes)
-	CommonMessage, err = os.ReadFile("testdata/common/message.json")
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	CommonAvro, err = JSONToAvroMessage(1, CommonSchema, CommonMessage)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	CommonConfig = config.NewConfig()
-	require.NoError(t, CommonConfig.LoadConfig("testdata/common/telegraf.conf"))
-}
-
-func TestRoundTrip(t *testing.T) {
-
 }
 
 func TestMultipleConfigs(t *testing.T) {
@@ -121,12 +92,8 @@ func TestMultipleConfigs(t *testing.T) {
 	// Make sure testdata contains data
 	require.NotEmpty(t, folders)
 
-	commonPath := filepath.Join("testdata", "common")
 	for _, f := range folders {
 		fname := f.Name()
-		if fname == "common" {
-			continue
-		}
 		testdataPath := filepath.Join("testdata", fname)
 		configFilename := filepath.Join(testdataPath, "telegraf.conf")
 		testSchema := filepath.Join(testdataPath, "schema.json")
@@ -156,28 +123,12 @@ func TestMultipleConfigs(t *testing.T) {
 
 			// Configure the plugin
 			rawConfig, err := os.ReadFile(configFilename)
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					configFilename = filepath.Join(commonPath, "telegraf.conf")
-					rawConfig, err = os.ReadFile(configFilename)
-					if err != nil {
-						require.NoError(t, err) // will fail
-					}
-				} else {
-					require.NoError(t, err) // will fail
-				}
-			}
+			require.NoError(t, err)
 			cfg := config.NewConfig()
-			cfg.LoadConfigData(rawConfig)
+			err = cfg.LoadConfigData(rawConfig)
+			require.NoError(t, err)
 			// Gather the metrics from the input file configure
-			// var acc testutil.Accumulator
 			var actualErrorMsgs []string
-			// for _, input := range cfg.Inputs {
-			//        require.NoError(t, input.Init())
-			//        if err := input.Gather(&acc); err != nil {
-			//                actualErrorMsgs = append(actualErrorMsgs, err.Error())
-			//       }
-			//}
 
 			// Load the schema and message; produce the Avro
 			// format message.
@@ -185,22 +136,14 @@ func TestMultipleConfigs(t *testing.T) {
 			var message []byte
 			schemaBytes, err := os.ReadFile(testSchema)
 			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					schema = CommonSchema
-				} else {
-					actualErrorMsgs = append(actualErrorMsgs, err.Error())
-				}
+				actualErrorMsgs = append(actualErrorMsgs, err.Error())
 			} else {
 				schema = string(schemaBytes)
 			}
 
 			message, err = os.ReadFile(testJSON)
 			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					message = CommonMessage
-				} else {
-					actualErrorMsgs = append(actualErrorMsgs, err.Error())
-				}
+				actualErrorMsgs = append(actualErrorMsgs, err.Error())
 			}
 			avroMessage, err := JSONToAvroMessage(1, schema, message)
 			if err != nil {
@@ -209,6 +152,10 @@ func TestMultipleConfigs(t *testing.T) {
 
 			// Get a new parser each time, because it may need
 			// reconfiguration.
+
+			// This is the bit where I should use the file plugin
+			// and Gather, but I don't understand how to do that.
+
 			parser, err := BuildParser(rawConfig)
 			require.NoError(t, err)
 			err = parser.Init()

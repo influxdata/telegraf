@@ -45,12 +45,10 @@ func TestRegistry_BackwardCompatibility(t *testing.T) {
 	}
 
 	// Define parsers that do not have an old-school init
-	newStyleOnly := []string{"binary"}
-
+	newStyleOnly := []string{"binary", "avro"}
 	for name, creator := range parsers.Parsers {
-		if name == "avro" {
-			// Avro has no backwards-compatibility accommodation
-			t.Logf("skipping %q...", name)
+		if choice.Contains(name, newStyleOnly) {
+			t.Logf("skipping new-style-only %q...", name)
 			continue
 		}
 		t.Logf("testing %q...", name)

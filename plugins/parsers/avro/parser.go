@@ -16,19 +16,19 @@ import (
 )
 
 type Parser struct {
-	MetricName       string            `toml:"metric_name"`
-	SchemaRegistry   string            `toml:"avro_schema_registry"`
-	Schema           string            `toml:"avro_schema"`
-	Measurement      string            `toml:"avro_measurement"`
-	Tags             []string          `toml:"avro_tags"`
-	Fields           []string          `toml:"avro_fields"`
-	Timestamp        string            `toml:"avro_timestamp"`
-	TimestampFormat  string            `toml:"avro_timestamp_format"`
-	FieldSeparator   string            `toml:"avro_field_separator"`
-	DefaultTags      map[string]string `toml:"-"`
+	MetricName      string            `toml:"metric_name"`
+	SchemaRegistry  string            `toml:"avro_schema_registry"`
+	Schema          string            `toml:"avro_schema"`
+	Measurement     string            `toml:"avro_measurement"`
+	Tags            []string          `toml:"avro_tags"`
+	Fields          []string          `toml:"avro_fields"`
+	Timestamp       string            `toml:"avro_timestamp"`
+	TimestampFormat string            `toml:"avro_timestamp_format"`
+	FieldSeparator  string            `toml:"avro_field_separator"`
+	DefaultTags     map[string]string `toml:"-"`
 
-	Log          telegraf.Logger `toml:"-"`
-	registryObj  *SchemaRegistry
+	Log         telegraf.Logger `toml:"-"`
+	registryObj *SchemaRegistry
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -96,7 +96,6 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *Parser) createMetric(data map[string]interface{}, schema string) (telegraf.Metric, error) {
-	
 	now := time.Now().Unix()
 	timestamp, err := internal.ParseTimestamp(p.TimestampFormat, now, "UTC")
 	if err != nil {
@@ -133,7 +132,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			}
 		}
 	}
-	flatFields:= make(map[string]interface{})
+	flatFields := make(map[string]interface{})
 	// We need to flatten out our fields.  The default (the separator
 	// string is empty) is equivalent to what streamreactor does.
 	sep := flatten.SeparatorStyle{
@@ -141,9 +140,9 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		Middle: p.FieldSeparator,
 		After:  "",
 	}
-	for _,fld := range fieldList {
+	for _, fld := range fieldList {
 		candidate := make(map[string]interface{})
-		candidate[fld] = data[fld]  // 1-item map
+		candidate[fld] = data[fld] // 1-item map
 		flat, err := flatten.Flatten(candidate, "", sep)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to flatten field %s: %v", fld, err)
@@ -157,7 +156,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 
 	var schemaObj map[string]interface{}
-	if err := json.Unmarshal([]byte(schema), &schemaObj);  err != nil {
+	if err := json.Unmarshal([]byte(schema), &schemaObj); err != nil {
 		return nil, fmt.Errorf("unmarshaling schema failed: %w", err)
 	}
 	if len(fields) == 0 {
