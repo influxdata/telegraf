@@ -206,7 +206,6 @@ func (n *NetResponse) Init() error {
 // It will call either UDPGather or TCPGather based on the configuration and
 // also fill an Accumulator that is supplied.
 func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
-
 	// Prepare host and port
 	host, port, err := net.SplitHostPort(n.Address)
 	if err != nil {

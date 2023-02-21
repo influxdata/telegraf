@@ -83,7 +83,7 @@ func TestTCPError(t *testing.T) {
 			"result_type": "connection_failed",
 		},
 		map[string]string{
-			"server":   "",
+			"server":   "localhost",
 			"port":     "9999",
 			"protocol": "tcp",
 			"result":   "connection_failed",
@@ -211,7 +211,7 @@ func TestUDPError(t *testing.T) {
 		},
 		map[string]string{
 			"result":   "read_failed",
-			"server":   "",
+			"server":   "localhost",
 			"port":     "9999",
 			"protocol": "udp",
 		},
