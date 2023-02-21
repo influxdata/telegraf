@@ -64,10 +64,7 @@ func (s *Wmi) SampleConfig() string {
 
 func compileInputs(s *Wmi) error {
 	buildWqlStatements(s)
-	if err := compileTagFilters(s); err != nil {
-		return err
-	}
-	return nil
+	return compileTagFilters(s)
 }
 
 func compileTagFilters(s *Wmi) error {
@@ -89,19 +86,15 @@ func compileTagFilter(q Query) (filter.Filter, error) {
 	return tagFilter, nil
 }
 
+// build a WMI query from input configuration
 func buildWqlStatements(s *Wmi) {
 	for i, q := range s.Queries {
-		s.Queries[i].query = buildWqlStatement(q)
+		wql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(q.Properties, ", "), q.ClassName)
+		if len(q.Filter) > 0 {
+			wql = fmt.Sprintf("%s WHERE %s", wql, q.Filter)
+		}
+		s.Queries[i].query = wql
 	}
-}
-
-// build a WMI query from input configuration
-func buildWqlStatement(q Query) string {
-	wql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(q.Properties, ", "), q.ClassName)
-	if len(q.Filter) > 0 {
-		wql = fmt.Sprintf("%s WHERE %s", wql, q.Filter)
-	}
-	return wql
 }
 
 func (q *Query) doQuery(acc telegraf.Accumulator) error {
@@ -127,98 +120,84 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	unknown, err := oleutil.CreateObject("WbemScripting.SWbemLocator")
 	if err != nil {
 		return err
-	} else if unknown == nil {
-		return fmt.Errorf("failed to create WbemScripting.SWbemLocator, is WMI broken?")
+	}
+	if unknown == nil {
+		return fmt.Errorf("failed to create WbemScripting.SWbemLocator, maybe WMI is broken")
 	}
 	defer unknown.Release()
 
 	wmi, err := unknown.QueryInterface(ole.IID_IDispatch)
 	if err != nil {
-		return fmt.Errorf("failed to QueryInterface: %v", err)
+		return fmt.Errorf("failed to QueryInterface: %w", err)
 	}
 	defer wmi.Release()
 
 	// service is a SWbemServices
 	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", nil, q.Namespace)
 	if err != nil {
-		return fmt.Errorf("failed calling method ConnectServer: %v", err)
+		return fmt.Errorf("failed calling method ConnectServer: %w", err)
 	}
 	service := serviceRaw.ToIDispatch()
-	defer func() { _ = serviceRaw.Clear() }()
+	defer serviceRaw.Clear()
 
 	// result is a SWBemObjectSet
 	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", q.query)
 	if err != nil {
-		return fmt.Errorf("failed calling method ExecQuery for query %s: %v", q.query, err)
+		return fmt.Errorf("failed calling method ExecQuery for query %s: %w", q.query, err)
 	}
 	result := resultRaw.ToIDispatch()
-	defer func() { _ = resultRaw.Clear() }()
+	defer resultRaw.Clear()
 
 	count, err := oleInt64(result, "Count")
 	if err != nil {
-		return fmt.Errorf("failed getting Count: %v", err)
+		return fmt.Errorf("failed getting Count: %w", err)
 	}
 
 	for i := int64(0); i < count; i++ {
 		// item is a SWbemObject
 		itemRaw, err := oleutil.CallMethod(result, "ItemIndex", i)
 		if err != nil {
-			return fmt.Errorf("failed calling method ItemIndex: %v", err)
+			return fmt.Errorf("failed calling method ItemIndex: %w", err)
 		}
 
-		outerErr := func() error {
-			item := itemRaw.ToIDispatch()
-			defer item.Release()
+		item := itemRaw.ToIDispatch()
+		defer item.Release()
 
-			for _, wmiProperty := range q.Properties {
-				innerErr := func() error {
-					prop, err := oleutil.GetProperty(item, wmiProperty)
-					if err != nil {
-						return fmt.Errorf("failed GetProperty: %v", err)
-					}
-					defer func() { _ = prop.Clear() }()
-
-					if q.tagFilter.Match(wmiProperty) {
-						valStr, err := internal.ToString(prop.Value())
-						if err != nil {
-							return fmt.Errorf("converting property %q failed: %v", wmiProperty, err)
-						}
-						tags[wmiProperty] = valStr
-					} else {
-						var fieldValue interface{}
-						switch v := prop.Value().(type) {
-						case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-							fieldValue = v
-						case string:
-							fieldValue = v
-						case bool:
-							fieldValue = v
-						case []byte:
-							fieldValue = string(v)
-						case fmt.Stringer:
-							fieldValue = v.String()
-						case nil:
-							fieldValue = nil
-						default:
-							return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
-						}
-						fields[wmiProperty] = fieldValue
-					}
-
-					return nil
-				}()
-
-				if innerErr != nil {
-					return innerErr
-				}
+		for _, wmiProperty := range q.Properties {
+			prop, err := oleutil.GetProperty(item, wmiProperty)
+			if err != nil {
+				return fmt.Errorf("failed GetProperty: %w", err)
 			}
-			acc.AddFields(q.ClassName, fields, tags)
-			return nil
-		}()
+			defer prop.Clear()
 
-		if outerErr != nil {
-			return outerErr
+			if q.tagFilter.Match(wmiProperty) {
+				valStr, err := internal.ToString(prop.Value())
+				if err != nil {
+					return fmt.Errorf("converting property %q failed: %w", wmiProperty, err)
+				}
+				tags[wmiProperty] = valStr
+			} else {
+				var fieldValue interface{}
+				switch v := prop.Value().(type) {
+				case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+					fieldValue = v
+				case string:
+					fieldValue = v
+				case bool:
+					fieldValue = v
+				case []byte:
+					fieldValue = string(v)
+				case fmt.Stringer:
+					fieldValue = v.String()
+				case nil:
+					fieldValue = nil
+				default:
+					return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
+				}
+				fields[wmiProperty] = fieldValue
+			}
 		}
+		acc.AddFields(q.ClassName, fields, tags)
 	}
 	return nil
 }

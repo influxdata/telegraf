@@ -72,6 +72,8 @@ instead included with the metric as a tag.
 
 ## Troubleshooting
 
+### Errors
+
 If you are getting an error about an invalid WMI namespace, class, or property,
 use the `Get-WmiObject` or `Get-CimInstance` PowerShell commands in order to
 verify their validity. For example:
@@ -82,6 +84,19 @@ Get-WmiObject -Namespace root\cimv2 -Class Win32_Volume -Property Capacity, Free
 
 ```powershell
 Get-CimInstance -Namespace root\cimv2 -ClassName Win32_Volume -Property Capacity, FreeSpace, Name -Filter 'NOT Name LIKE "\\\\?\\%"'
+```
+
+### Data types
+
+Some WMI classes will return the incorrect data type for a field. In those
+cases, it is necessary to use a processor to convert the data type. For
+example, the Capacity and FreeSpace properties of the Win32_Volume class must
+be converted to integers:
+
+```toml
+[[processors.converter]]
+  [processors.converter.fields]
+    integer = ["Capacity", "FreeSpace"]
 ```
 
 ## Example Output
