@@ -310,7 +310,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		}
 	}
 	e.hwMarks.Put(hwMarksKeyPrefix+clusterRef.ref.Value, "generic", latest)
-	return commonError 
+	return commonError
 }
 
 // queryDiskUsage adds 'FreeCapacityB' and 'TotalCapacityB' metrics to telegraf accumulator
