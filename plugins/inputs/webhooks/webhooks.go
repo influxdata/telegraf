@@ -109,8 +109,6 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 }
 
 func (wb *Webhooks) Stop() {
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	wb.srv.Close()
+	wb.srv.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 	wb.Log.Infof("Stopping the Webhooks service")
 }

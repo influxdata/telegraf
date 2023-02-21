@@ -11,6 +11,7 @@ linters:
     - errcheck
     - errname
     - exportloopref
+    - gocheckcompilerdirectives
     - goprintffuncname
     - gosimple
     - govet
@@ -20,11 +21,13 @@ linters:
     - makezero
     - nakedret
     - nilerr
+    - nolintlint
     - prealloc
     - predeclared
     - revive
     - sqlclosecheck
     - staticcheck
+    - tenv
     - tparallel
     - typecheck
     - unconvert
@@ -79,6 +82,13 @@ linters-settings:
     # Tab width in spaces.
     # Default: 1
     tab-width: 4
+  nolintlint:
+    # Enable to require an explanation of nonzero length after each nolint directive.
+    # Default: false
+    require-explanation: true
+    # Enable to require nolint directives to mention the specific linter being suppressed.
+    # Default: false
+    require-specific: true
   prealloc:
     # Report pre-allocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
     # Default: true
@@ -130,7 +140,7 @@ linters-settings:
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unhandled-error
-        arguments: [ "outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
+        arguments: [ "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
       - name: unnecessary-stmt
       - name: unreachable-code
       - name: unused-parameter
@@ -140,6 +150,11 @@ linters-settings:
   nakedret:
     # make an issue if func has more lines of code than this setting and it has naked returns; default is 30
     max-func-lines: 1
+  tenv:
+    # The option `all` will run against whole test files (`_test.go`) regardless of method/function signatures.
+    # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
+    # Default: false
+    all: true
 
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m
@@ -182,6 +197,9 @@ issues:
 
     - path: cmd/telegraf/(main|printer).go
       text: "Error return value of `outputBuffer.Write` is not checked"
+
+    - path: cmd/telegraf/(main|printer).go
+      text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
 
 # output configuration options
 output:

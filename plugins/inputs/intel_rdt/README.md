@@ -7,7 +7,7 @@ hardware framework to monitor and control the utilization of shared resources
 
 ## About Intel RDT
 
-Intel’s Resource Director Technology (RDT) framework consists of:  
+Intel’s Resource Director Technology (RDT) framework consists of:
 
 - Cache Monitoring Technology (CMT)
 - Memory Bandwidth Monitoring (MBM)
@@ -105,12 +105,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read Intel RDT metrics
 [[inputs.intel_rdt]]
-  ## Optionally set sampling interval to Nx100ms. 
+  ## Optionally set sampling interval to Nx100ms.
   ## This value is propagated to pqos tool. Interval format is defined by pqos itself.
   ## If not provided or provided 0, will be set to 10 = 10x100ms = 1s.
   # sampling_interval = "10"
- 
-  ## Optionally specify the path to pqos executable. 
+
+  ## Optionally specify the path to pqos executable.
   ## If not provided, auto discovery will be performed.
   # pqos_path = "/usr/local/bin/pqos"
 
@@ -118,7 +118,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If not provided, default value is false.
   # shortened_metrics = false
 
-  ## Specify the list of groups of CPU core(s) to be provided as pqos input. 
+  ## Specify the list of groups of CPU core(s) to be provided as pqos input.
   ## Mandatory if processes aren't set and forbidden if processes are specified.
   ## e.g. ["0-3", "4,5,6"] or ["1-3,4"]
   # cores = ["0-3"]
@@ -133,7 +133,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # use_sudo = false
 ```
 
-## Exposed metrics
+## Metrics
 
 | Name          | Full name                                     | Description |
 |---------------|-----------------------------------------------|-------------|

@@ -13,6 +13,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -118,9 +127,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Google API Auth
 
-The `google_application_credentials` setting is used with Google Cloud APIs. It specifies the json key file. To learn about creating Google service accounts, consult Google's
-[oauth2 service account documentation][create_service_account]. An example use case is a metrics proxy deployed to
-Cloud Run. In this example, the service account must have the "run.routes.invoke" permission.
+The `google_application_credentials` setting is used with Google Cloud APIs.
+It specifies the json key file. To learn about creating Google service accounts,
+consult Google's [oauth2 service account documentation][create_service_account].
+An example use case is a metrics proxy deployed to Cloud Run. In this example,
+the service account must have the "run.routes.invoke" permission.
 
 [create_service_account]: https://cloud.google.com/docs/authentication/production#create_service_account
 

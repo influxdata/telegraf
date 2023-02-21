@@ -136,3 +136,7 @@ end
 
 [Input Data Formats]: ../../../docs/DATA_FORMATS_INPUT.md
 [inputs.exec]: ../exec/README.md
+
+## Metrics
+
+## Example Output

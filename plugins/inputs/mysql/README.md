@@ -384,3 +384,5 @@ The unit of fields varies by the tags.
   * engine
   * row_format
   * create_options
+
+## Example Output

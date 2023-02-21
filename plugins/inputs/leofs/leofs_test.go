@@ -140,10 +140,8 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 	currentWorkingDirectory, err := os.Getwd()
 	require.NoError(t, err)
 
-	envPathOrigin := os.Getenv("PATH")
 	// Refer to the fake snmpwalk
-	require.NoError(t, os.Setenv("PATH", currentWorkingDirectory))
-	defer os.Setenv("PATH", envPathOrigin)
+	t.Setenv("PATH", currentWorkingDirectory)
 
 	l := &LeoFS{
 		Servers: []string{endpoint},

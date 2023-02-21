@@ -2,10 +2,10 @@
 
 set -eux
 
-GO_VERSION="1.19.5"
+GO_VERSION="1.20.1"
 GO_ARCH="linux-amd64"
 # from https://golang.org/dl
-GO_VERSION_SHA="36519702ae2fd573c9869461990ae550c8c0d955cd28d2827a6b159fda81ff95"
+GO_VERSION_SHA="000a5b1fca4f75895f78befeb2eecf10bfff3c428597f3f1e69133b63b911b02"
 
 # Download Go and verify Go tarball
 setup_go () {

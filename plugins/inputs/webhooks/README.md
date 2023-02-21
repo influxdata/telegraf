@@ -74,7 +74,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## HTTP basic auth
     #username = ""
     #password = ""
-  
+
   [inputs.webhooks.artifactory]
     path = "/artifactory"
 ```
@@ -96,3 +96,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 1. Import your plugin in the `webhooks.go` file and add it to the `Webhooks` struct
 
 Both [Github](github/) and [Rollbar](rollbar/) are good example to follow.
+
+## Metrics
+
+## Example Output

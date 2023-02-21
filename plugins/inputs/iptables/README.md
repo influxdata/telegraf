@@ -97,13 +97,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   chains = [ "INPUT" ]
 ```
 
-## Measurements & Fields
+## Metrics
+
+### Measurements & Fields
 
 * iptables
   * pkts (integer, count)
   * bytes (integer, bytes)
 
-## Tags
+### Tags
 
 * All measurements have the following tags:
   * table

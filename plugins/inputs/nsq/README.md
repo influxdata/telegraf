@@ -29,3 +29,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
+
+## Metrics
+
+## Example Output

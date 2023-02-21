@@ -166,6 +166,8 @@ configurations. A reference to a secret is specified in form
 `@{<secret store id>:<secret name>}`, where the `secret store id` is the unique
 ID you defined for your secret-store and `secret name` is the name of the secret
 to use.
+**NOTE:** Both, the `secret store id` as well as the `secret name` can only
+consist of letters (both upper- and lowercase), numbers and underscores.
 
 **Example**:
 
@@ -399,6 +401,16 @@ Emit measurements with two additional tags: `tag1=foo` and `tag2=bar`
     tag2 = "bar"
 ```
 
+Alternatively, when using the inline table syntax, the tags do not need
+to go at the end:
+
+```toml
+[[inputs.cpu]]
+  tags = {tag1 = "foo", tag2 = "bar"}
+  percpu = false
+  totalcpu = true
+```
+
 Utilize `name_override`, `name_prefix`, or `name_suffix` config options to
 avoid measurement collisions when defining multiple plugins:
 
@@ -589,15 +601,20 @@ is tested on metrics after they have passed the `namepass` test.
 - **tagpass**:
 A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
-patterns is emitted.
+patterns is emitted. This can either use the explicit table synax (e.g.
+a subsection using a `[...]` header) or inline table syntax (e.g like
+a JSON table with `{...}`.
 
 - **tagdrop**:
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
 
-> NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
-defined at the **end** of the plugin definition, otherwise subsequent plugin config
-options will be interpreted as part of the tagpass/tagdrop tables.
+> NOTE: Due to the way TOML is parsed, when using the explicit table
+> syntax (with `[...]`) for `tagpass` and `tagdrop` parameters, they
+> must be defined at the **end** of the plugin definition, otherwise subsequent
+> plugin config options will be interpreted as part of the tagpass/tagdrop
+> tables. This limitation does not apply when using the inline table
+> syntax (`{...}`).
 
 ### Modifiers
 
@@ -657,8 +674,8 @@ tags and the agent `host` tag.
     ]
     Measurement = "win_net"
   # Don't send metrics where the Windows interface name (instance) begins with isatap or Local
-  [inputs.win_perf_counters.tagdrop]
-    instance = ["isatap*", "Local*"]
+  # This illustrates the inline table syntax
+  tagdrop = {instance = ["isatap*", "Local*"]}
 ```
 
 #### Using fieldpass and fielddrop

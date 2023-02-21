@@ -22,3 +22,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Monitor pool name
   pools = ["redis_pool", "mc_pool"]
 ```
+
+## Metrics
+
+## Example Output

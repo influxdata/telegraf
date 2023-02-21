@@ -50,14 +50,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Shard iterator type (only 'TRIM_HORIZON' and 'LATEST' currently supported)
   # shard_iterator_type = "TRIM_HORIZON"
 
-  ## Maximum messages to read from the broker that have not been written by an
-  ## output.  For best throughput set based on the number of metrics within
-  ## each message and the size of the output's metric_batch_size.
+  ## Max undelivered messages
+  ## This plugin uses tracking metrics, which ensure messages are read to
+  ## outputs before acknowledging them to the original broker to ensure data
+  ## is not lost. This option sets the maximum messages to read from the
+  ## broker that have not been written by an output.
   ##
-  ## For example, if each message from the queue contains 10 metrics and the
-  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
-  ## full batch is collected and the write is triggered immediately without
-  ## waiting until the next flush_interval.
+  ## This value needs to be picked with awareness of the agent's
+  ## metric_batch_size value as well. Setting max undelivered messages too high
+  ## can result in a constant stream of data batches to the output. While
+  ## setting it too low may never flush the broker's messages.
   # max_undelivered_messages = 1000
 
   ## Data format to consume.
@@ -108,3 +110,7 @@ Sort key: shard_id
 
 [kinesis]: https://aws.amazon.com/kinesis/
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
+
+## Metrics
+
+## Example Output

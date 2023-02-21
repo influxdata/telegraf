@@ -75,6 +75,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## the statsd server will start dropping packets
   allowed_pending_messages = 10000
 
+  ## Number of worker threads used to parse the incoming messages.
+  # number_workers_threads = 5
+
   ## Number of timing/histogram values to track per-measurement in the
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
@@ -276,3 +279,5 @@ mem.cached.localhost:256|g
 
 Consult the [Template Patterns](/docs/TEMPLATE_PATTERN.md) documentation for
 additional details.
+
+## Example Output

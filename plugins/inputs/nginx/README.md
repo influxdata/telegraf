@@ -34,7 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   response_timeout = "5s"
 ```
 
-## Measurements & Fields
+## Metrics
 
 - Measurement
   - accepts

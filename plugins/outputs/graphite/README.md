@@ -6,7 +6,6 @@ For details on the translation between Telegraf Metrics and Graphite output,
 see the [Graphite Data Format][2].
 
 [1]: http://graphite.readthedocs.org/en/latest/index.html
-
 [2]: ../../../docs/DATA_FORMATS_OUTPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

@@ -240,7 +240,7 @@ func (p *Postgresql) writeSequential(tableSources map[string]*TableSource) error
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
-	defer tx.Rollback(p.dbContext) //nolint:errcheck
+	defer tx.Rollback(p.dbContext) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
 
 	for _, tableSource := range tableSources {
 		sp := tx
@@ -317,19 +317,16 @@ func isTempError(err error) bool {
 		errClass := pgErr.Code[:2]
 		switch errClass {
 		case "23": // Integrity Constraint Violation
-			switch pgErr.Code { //nolint:revive
-			case "23505": // unique_violation
-				if strings.Contains(err.Error(), "pg_type_typname_nsp_index") {
-					// Happens when you try to create 2 tables simultaneously.
-					return true
-				}
+			//23505 - unique_violation
+			if pgErr.Code == "23505" && strings.Contains(err.Error(), "pg_type_typname_nsp_index") {
+				// Happens when you try to create 2 tables simultaneously.
+				return true
 			}
 		case "25": // Invalid Transaction State
 			// If we're here, this is a bug, but recoverable
 			return true
 		case "40": // Transaction Rollback
-			switch pgErr.Code { //nolint:revive
-			case "40P01": // deadlock_detected
+			if pgErr.Code == "40P01" { // deadlock_detected
 				return true
 			}
 		case "42": // Syntax Error or Access Rule Violation
@@ -433,7 +430,7 @@ func (p *Postgresql) writeTagTable(ctx context.Context, db dbh, tableSource *Tab
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
+	defer tx.Rollback(ctx) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
 
 	ident := pgx.Identifier{ttsrc.postgresql.Schema, ttsrc.Name()}
 	identTemp := pgx.Identifier{ttsrc.Name() + "_temp"}

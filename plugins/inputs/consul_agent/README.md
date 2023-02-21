@@ -45,3 +45,5 @@ Consul collects various metrics. For every details, please have a look at Consul
 following documentation:
 
 - [https://www.consul.io/api/agent#view-metrics](https://www.consul.io/api/agent#view-metrics)
+
+## Example Output

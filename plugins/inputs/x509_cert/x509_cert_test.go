@@ -325,6 +325,7 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 
 	require.Len(t, acc.Errors, 0)
 	require.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
 }
 
 func TestGatherTCPCert(t *testing.T) {
@@ -361,6 +362,7 @@ func TestGatherCertIntegration(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 
 	require.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
 }
 
 func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
@@ -379,6 +381,7 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
 }
 
 func TestSourcesToURLs(t *testing.T) {
@@ -388,14 +391,42 @@ func TestSourcesToURLs(t *testing.T) {
 			"tcp://influxdata.com:443",
 			"smtp://influxdata.com:25",
 			"file:///dummy_test_path_file.pem",
+			"file:///windows/temp/test.pem",
+			`file://C:\windows\temp\test.pem`,
+			`file:///C:/windows/temp/test.pem`,
 			"/tmp/dummy_test_path_glob*.pem",
 		},
 		Log: testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
-	require.Equal(t, len(m.globpaths), 2)
+	expected := []string{
+		"https://www.influxdata.com:443",
+		"tcp://influxdata.com:443",
+		"smtp://influxdata.com:25",
+	}
+
+	expectedPaths := []string{
+		"/dummy_test_path_file.pem",
+		"/windows/temp/test.pem",
+		"C:\\windows\\temp\\test.pem",
+		"C:/windows/temp/test.pem",
+	}
+
+	for _, p := range expectedPaths {
+		expected = append(expected, filepath.FromSlash(p))
+	}
+
+	actual := make([]string, 0, len(m.globpaths)+len(m.locations))
+	for _, p := range m.globpaths {
+		actual = append(actual, p.GetRoots()...)
+	}
+	for _, p := range m.locations {
+		actual = append(actual, p.String())
+	}
+	require.Equal(t, len(m.globpaths), 5)
 	require.Equal(t, len(m.locations), 3)
+	require.ElementsMatch(t, expected, actual)
 }
 
 func TestServerName(t *testing.T) {

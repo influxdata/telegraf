@@ -1,21 +1,32 @@
 # github webhooks
 
-You should configure your Organization's Webhooks to point at the `webhooks` service. To do this go to `github.com/{my_organization}` and click `Settings > Webhooks > Add webhook`. In the resulting menu set `Payload URL` to `http://<my_ip>:1619/github`, `Content type` to `application/json` and under the section `Which events would you like to trigger this webhook?` select 'Send me **everything**'. By default all of the events will write to the `github_webhooks` measurement, this is configurable by setting the `measurement_name` in the config file.
+You should configure your Organization's Webhooks to point at the `webhooks`
+service. To do this go to `github.com/{my_organization}` and click
+`Settings > Webhooks > Add webhook`. In the resulting menu set `Payload URL` to
+`http://<my_ip>:1619/github`, `Content type` to `application/json` and under
+the section `Which events would you like to trigger this webhook?` select
+'Send me **everything**'. By default all of the events will write to the
+`github_webhooks` measurement, this is configurable by setting the
+`measurement_name` in the config file.
 
-You can also add a secret that will be used by telegraf to verify the authenticity of the requests.
+You can also add a secret that will be used by telegraf to verify the
+authenticity of the requests.
 
-## Events
+## Metrics
 
-The titles of the following sections are links to the full payloads and details for each event. The body contains what information from the event is persisted. The format is as follows:
+The titles of the following sections are links to the full payloads and details
+for each event. The body contains what information from the event is persisted.
+The format is as follows:
 
 ```toml
 # TAGS
 * 'tagKey' = `tagValue` type
-# FIELDS 
+# FIELDS
 * 'fieldKey' = `fieldValue` type
 ```
 
-The tag values and field values show the place on the incoming JSON object where the data is sourced from.
+The tag values and field values show the place on the incoming JSON object
+where the data is sourced from.
 
 ### [`commit_comment` event](https://developer.github.com/v3/activity/events/types/#commitcommentevent)
 
