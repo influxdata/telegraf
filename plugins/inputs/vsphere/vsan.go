@@ -213,6 +213,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 	e.Parent.Log.Debugf("[vSAN] Query vsan performance for time interval: %s ~ %s", start, end)
 	latest := start
 
+	var commonError error
 	for entityRefID := range metrics {
 		if !strings.HasPrefix(entityRefID, perfPrefix) {
 			continue
@@ -236,6 +237,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		if err != nil {
 			if err.Error() == "ServerFaultCode: NotFound" {
 				e.Parent.Log.Errorf("[vSAN] Is vSAN performance service enabled for %s? Skipping ...", clusterRef.name)
+				commonError = err
 				break
 			}
 			e.Parent.Log.Errorf("[vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefID, err)
@@ -308,7 +310,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		}
 	}
 	e.hwMarks.Put(hwMarksKeyPrefix+clusterRef.ref.Value, "generic", latest)
-	return nil
+	return commonError 
 }
 
 // queryDiskUsage adds 'FreeCapacityB' and 'TotalCapacityB' metrics to telegraf accumulator
