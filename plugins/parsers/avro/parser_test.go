@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func JSONToAvroMessage(schemaID int32, schema string, message []byte) ([]byte, error) {
+func jsonToAvroMessage(schemaID int32, schema string, message []byte) ([]byte, error) {
 	codec, err := goavro.NewCodec(schema)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ type AvroCfg struct {
 	}
 }
 
-func BuildParser(buf []byte) (*Parser, error) {
+func buildParser(buf []byte) (*Parser, error) {
 	var cfg AvroCfg
 
 	err := toml.Unmarshal(buf, &cfg)
@@ -145,7 +145,7 @@ func TestMultipleConfigs(t *testing.T) {
 			if err != nil {
 				actualErrorMsgs = append(actualErrorMsgs, err.Error())
 			}
-			avroMessage, err := JSONToAvroMessage(1, schema, message)
+			avroMessage, err := jsonToAvroMessage(1, schema, message)
 			if err != nil {
 				actualErrorMsgs = append(actualErrorMsgs, err.Error())
 			}
@@ -156,7 +156,7 @@ func TestMultipleConfigs(t *testing.T) {
 			// This is the bit where I should use the file plugin
 			// and Gather, but I don't understand how to do that.
 
-			parser, err := BuildParser(rawConfig)
+			parser, err := buildParser(rawConfig)
 			require.NoError(t, err)
 			err = parser.Init()
 			var actual []telegraf.Metric

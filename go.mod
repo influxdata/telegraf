@@ -1,6 +1,6 @@
 module github.com/influxdata/telegraf
 
-go 1.20
+go 1.19
 
 require (
 	cloud.google.com/go/bigquery v1.45.0
@@ -375,7 +375,7 @@ require (
 	github.com/pion/udp v0.1.4 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
-	github.com/pkg/xattr v0.4.9  // indirect
+	github.com/pkg/xattr v0.4.9 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20220216144756-c35f1ee13d7c // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
