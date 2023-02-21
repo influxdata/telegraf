@@ -107,7 +107,7 @@ require (
 	github.com/jackc/pgtype v1.12.0
 	github.com/jackc/pgx/v4 v4.17.1
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
-	github.com/jeremywohl/flatten v1.0.1
+	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
 	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.2.2
@@ -197,11 +197,6 @@ require (
 	k8s.io/apimachinery v0.25.6
 	k8s.io/client-go v0.25.0
 	modernc.org/sqlite v1.19.2
-)
-
-require (
-	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4 // indirect
-	github.com/pkg/xattr v0.4.9 // indirect
 )
 
 require (
@@ -380,6 +375,7 @@ require (
 	github.com/pion/udp v0.1.4 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
+	github.com/pkg/xattr v0.4.9  // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20220216144756-c35f1ee13d7c // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
