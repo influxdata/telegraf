@@ -1286,9 +1286,11 @@ func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
 
 	c.getFieldStringSlice(tbl, "pass", &f.FieldPass)
 	c.getFieldStringSlice(tbl, "fieldpass", &f.FieldPass)
+	c.getFieldStringSlice(tbl, "fieldinclude", &f.FieldPass)
 
 	c.getFieldStringSlice(tbl, "drop", &f.FieldDrop)
 	c.getFieldStringSlice(tbl, "fielddrop", &f.FieldDrop)
+	c.getFieldStringSlice(tbl, "fieldexclude", &f.FieldDrop)
 
 	c.getFieldTagFilter(tbl, "tagpass", &f.TagPassFilters)
 	c.getFieldTagFilter(tbl, "tagdrop", &f.TagDropFilters)
@@ -1436,7 +1438,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "alias",
 		"collection_jitter", "collection_offset",
 		"data_format", "delay", "drop", "drop_original",
-		"fielddrop", "fieldpass", "flush_interval", "flush_jitter",
+		"fielddrop", "fieldexclude", "fieldinclude", "fieldpass", "flush_interval", "flush_jitter",
 		"grace",
 		"interval",
 		"lvm", // What is this used for?
