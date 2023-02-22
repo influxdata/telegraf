@@ -1,0 +1,43 @@
+{
+  "applicationID":"1",
+  "applicationName":"Test",
+  "deviceName":"TcsSensorNode",
+  "deviceProfileName":"TcsSensor",
+  "deviceProfileID":"100ca98d-e075-4b1b-8cd3-41edbab355f5",
+  "devEUI":"27c0817d2aba3052",
+  "timestamp": 1677099936000000000,
+  "rxInfo":[
+     {
+        "gatewayID":"b827ebfffeaa4582",
+        "uplinkID":"659cbfab-3216-42fd-9f71-f2c470b7f9da",
+        "name":"local",
+        "rssi":-60,
+        "loRaSNR":7.5
+     },
+     {
+        "gatewayID":"ca925641ce08b33e",
+        "uplinkID":"15ca3b44-17a0-4662-82c9-aa23b40e16eb",
+        "name":"local",
+        "rssi":-98,
+        "loRaSNR":4.2
+     }
+  ],
+  "txInfo":{
+     "frequency":868500000,
+     "dr":5
+  },
+  "adr":true,
+  "fCnt":71,
+  "fPort":2,
+  "data":"AGhCAGcA0g==",
+  "object":{
+     "humiditySensor":{
+        "0":33,
+        "1":25.5
+     },
+     "temperatureSensor":{
+        "0":21,
+        "1":19.3
+     }
+  }
+}
