@@ -756,7 +756,7 @@ func TestTCPDialoutOverflow(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
 	_, err = conn.Read([]byte{0})
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	require.NoError(t, conn.Close())
 
 	c.Stop()
@@ -838,7 +838,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	_, err = conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
 	require.NoError(t, err)
 	_, err = conn2.Read([]byte{0})
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
@@ -851,7 +851,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	_, err = conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
 	require.NoError(t, err)
 	_, err = conn.Read([]byte{0})
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	c.Stop()
 	require.NoError(t, conn.Close())
 
@@ -889,7 +889,7 @@ func TestGRPCDialoutError(t *testing.T) {
 
 	// Wait for the server to close
 	_, err = stream.Recv()
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	c.Stop()
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
@@ -928,7 +928,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	require.NoError(t, stream2.Send(args))
 	require.NoError(t, stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
 	_, err = stream2.Recv()
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
@@ -938,7 +938,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	require.NoError(t, stream.Send(args))
 	require.NoError(t, stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
 	_, err = stream.Recv()
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 
 	c.Stop()
 	require.NoError(t, conn.Close())

@@ -48,7 +48,7 @@ func (d *DiskIO) Init() error {
 		if hasMeta(device) {
 			deviceFilter, err := filter.Compile(d.Devices)
 			if err != nil {
-				return fmt.Errorf("error compiling device pattern: %s", err.Error())
+				return fmt.Errorf("error compiling device pattern: %w", err)
 			}
 			d.deviceFilter = deviceFilter
 		}
@@ -66,7 +66,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 
 	diskio, err := d.ps.DiskIO(devices)
 	if err != nil {
-		return fmt.Errorf("error getting disk io info: %s", err.Error())
+		return fmt.Errorf("error getting disk io info: %w", err)
 	}
 
 	for _, io := range diskio {
