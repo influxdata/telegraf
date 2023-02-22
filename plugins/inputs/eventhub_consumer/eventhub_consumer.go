@@ -146,7 +146,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	for _, partitionID := range partitions {
 		_, err := e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
 		if err != nil {
-			return fmt.Errorf("creating receiver for partition %q: %v", partitionID, err)
+			return fmt.Errorf("creating receiver for partition %q: %w", partitionID, err)
 		}
 	}
 

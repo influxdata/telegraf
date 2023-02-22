@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -223,7 +224,8 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 
 	for {
 		conn, err := c.listener.Accept()
-		if neterr, ok := err.(*net.OpError); ok && (neterr.Timeout() || neterr.Temporary()) {
+		var neterr *net.OpError
+		if errors.As(err, &neterr) && (neterr.Timeout() || neterr.Temporary()) {
 			continue
 		} else if err != nil {
 			break // Stop() will close the connection so Accept() will fail here
@@ -318,8 +320,8 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 	for {
 		packet, err := stream.Recv()
 		if err != nil {
-			if err != io.EOF {
-				c.acc.AddError(fmt.Errorf("GRPC dialout receive error: %v", err))
+			if !errors.Is(err, io.EOF) {
+				c.acc.AddError(fmt.Errorf("GRPC dialout receive error: %w", err))
 			}
 			break
 		}
@@ -334,7 +336,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 			c.handleTelemetry(packet.Data)
 		} else if int(packet.TotalSize) <= c.MaxMsgSize {
 			if _, err := chunkBuffer.Write(packet.Data); err != nil {
-				c.acc.AddError(fmt.Errorf("writing packet %q failed: %v", packet.Data, err))
+				c.acc.AddError(fmt.Errorf("writing packet %q failed: %w", packet.Data, err))
 			}
 			if chunkBuffer.Len() >= int(packet.TotalSize) {
 				c.handleTelemetry(chunkBuffer.Bytes())
@@ -357,7 +359,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	msg := &telemetry.Telemetry{}
 	err := proto.Unmarshal(data, msg)
 	if err != nil {
-		c.acc.AddError(fmt.Errorf("failed to decode: %v", err))
+		c.acc.AddError(fmt.Errorf("failed to decode: %w", err))
 		return
 	}
 

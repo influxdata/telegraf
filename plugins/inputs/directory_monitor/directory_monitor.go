@@ -103,7 +103,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 				return processFile(path)
 			})
 		// We've been cancelled via Stop().
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		if err != nil {
@@ -123,7 +123,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 			path := monitor.Directory + "/" + file.Name()
 			err := processFile(path)
 			// We've been cancelled via Stop().
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil
 			}
 		}
@@ -199,7 +199,8 @@ func (monitor *DirectoryMonitor) processFile(path string) {
 func (monitor *DirectoryMonitor) read(filePath string) {
 	// Open, read, and parse the contents of the file.
 	err := monitor.ingestFile(filePath)
-	if _, isPathError := err.(*os.PathError); isPathError {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
 		return
 	}
 
