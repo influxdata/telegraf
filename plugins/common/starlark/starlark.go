@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/influxdata/telegraf"
 	"go.starlark.net/lib/json"
 	"go.starlark.net/lib/math"
 	"go.starlark.net/lib/time"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Common struct {
@@ -108,7 +109,7 @@ func (s *Common) addConstants(builtins *starlark.StringDict) error {
 	for key, val := range s.Constants {
 		sVal, err := asStarlarkValue(val)
 		if err != nil {
-			return fmt.Errorf("converting type %T failed: %v", val, err)
+			return fmt.Errorf("converting type %T failed: %w", val, err)
 		}
 		(*builtins)[key] = sVal
 	}
@@ -138,7 +139,8 @@ func (s *Common) Call(name string) (starlark.Value, error) {
 }
 
 func (s *Common) LogError(err error) {
-	if evalErr, ok := err.(*starlark.EvalError); ok {
+	var evalErr *starlark.EvalError
+	if errors.As(err, &evalErr) {
 		for _, line := range strings.Split(evalErr.Backtrace(), "\n") {
 			s.Log.Error(line)
 		}

@@ -7,7 +7,7 @@ import (
 	"math"
 	"time"
 
-	jsonata "github.com/blues/jsonata-go"
+	"github.com/blues/jsonata-go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -62,7 +62,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		var err error
 		if obj, err = s.transform(obj); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
-				return nil, fmt.Errorf("%v (maybe configured for batch mode?)", err)
+				return nil, fmt.Errorf("%w (maybe configured for batch mode?)", err)
 			}
 			return nil, err
 		}
@@ -93,7 +93,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		var err error
 		if obj, err = s.transform(obj); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
-				return nil, fmt.Errorf("%v (maybe configured for non-batch mode?)", err)
+				return nil, fmt.Errorf("%w (maybe configured for non-batch mode?)", err)
 			}
 			return nil, err
 		}
