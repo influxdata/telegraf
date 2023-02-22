@@ -64,12 +64,9 @@ func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"mode":   mountOpts.Mode(),
 		}
 
-		m := strings.Count(device, "/dev/")
-		if m > 0 {
-			label, _ := disk.Label(strings.Replace(device, "/dev/", "", 1))
-			if label != "" {
-				tags["label"] = label
-			}
+		label, err := disk.Label(strings.TrimPrefix(device, "/dev/"))
+		if err == nil && label != "" {
+			tags["label"] = label
 		}
 
 		var usedPercent float64
