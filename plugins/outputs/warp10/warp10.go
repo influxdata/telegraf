@@ -122,7 +122,7 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	addr := w.WarpURL + "/api/v0/update"
 	req, err := http.NewRequest("POST", addr, bytes.NewBufferString(payload))
 	if err != nil {
-		return fmt.Errorf("unable to create new request '%s': %w", addr, err)
+		return fmt.Errorf("unable to create new request %q: %w", addr, err)
 	}
 
 	req.Header.Set("Content-Type", "text/plain")

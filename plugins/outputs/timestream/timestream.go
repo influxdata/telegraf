@@ -286,8 +286,7 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
 			// log error and return error to telegraf to retry in next flush interval
 			// We need this is to avoid data drop when there are no tables present in the database
-			return fmt.Errorf("failed to write to Timestream database '%s' table '%s', Error: '%w'",
-				t.DatabaseName, *writeRecordsInput.TableName, err)
+			return fmt.Errorf("failed to write to Timestream database %q table %q: %w", t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
 
 		var rejected *types.RejectedRecordsException

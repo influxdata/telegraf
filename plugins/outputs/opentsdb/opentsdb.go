@@ -189,7 +189,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 
 			_, err = connection.Write([]byte(messageLine))
 			if err != nil {
-				return fmt.Errorf("OpenTSDB: Telnet writing error %w", err)
+				return fmt.Errorf("telnet writing error: %w", err)
 			}
 		}
 	}

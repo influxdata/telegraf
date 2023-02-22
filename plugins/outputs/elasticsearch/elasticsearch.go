@@ -370,7 +370,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl.String()).Do(ctx)
 
 		if errCreateTemplate != nil {
-			return fmt.Errorf("elasticsearch failed to create index template %s : %w", a.TemplateName, errCreateTemplate)
+			return fmt.Errorf("elasticsearch failed to create index template %s: %w", a.TemplateName, errCreateTemplate)
 		}
 
 		a.Log.Debugf("Template %s created or updated\n", a.TemplateName)

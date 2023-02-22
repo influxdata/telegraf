@@ -405,7 +405,7 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 			}
 			// log and continue. As the admin can correct the issue, and tags don't change over time, they can be
 			// added from future metrics after issue is corrected.
-			p.Logger.Errorf("writing to tag table '%s': %s", tableSource.Name()+p.TagTableSuffix, err)
+			p.Logger.Errorf("writing to tag table %q: %s", tableSource.Name()+p.TagTableSuffix, err)
 		}
 	}
 

@@ -13,7 +13,6 @@ import (
 	"hash/fnv"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -329,8 +328,7 @@ func (a *AzureMonitor) send(body []byte) error {
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) && errors.Is(urlErr, context.DeadlineExceeded) {
+		if errors.Is(err, context.DeadlineExceeded) {
 			a.initHTTPClient()
 		}
 
