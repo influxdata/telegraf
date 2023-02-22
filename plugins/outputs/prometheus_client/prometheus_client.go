@@ -113,7 +113,7 @@ func (p *PrometheusClient) Init() error {
 	for _, cidr := range p.IPRange {
 		_, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {
-			return fmt.Errorf("error parsing ip_range: %v", err)
+			return fmt.Errorf("error parsing ip_range: %w", err)
 		}
 
 		ipRange = append(ipRange, ipNet)

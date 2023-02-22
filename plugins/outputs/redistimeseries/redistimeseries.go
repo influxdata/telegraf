@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/go-redis/redis/v7"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -66,7 +67,7 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 			addSlice = append(addSlice, tags...)
 
 			if err := r.client.Do(addSlice...).Err(); err != nil {
-				return fmt.Errorf("adding sample failed: %v", err)
+				return fmt.Errorf("adding sample failed: %w", err)
 			}
 		}
 	}

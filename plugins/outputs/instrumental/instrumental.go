@@ -4,6 +4,7 @@ package instrumental
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -79,7 +80,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	if i.conn == nil {
 		err := i.Connect()
 		if err != nil {
-			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %s", err)
+			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %w", err)
 		}
 	}
 
@@ -148,7 +149,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	_, err = fmt.Fprint(i.conn, allPoints)
 
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			_ = i.Close()
 		}
 

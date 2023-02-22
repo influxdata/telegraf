@@ -104,7 +104,7 @@ func (g *Groundwork) Init() error {
 func (g *Groundwork) Connect() error {
 	err := g.client.Connect()
 	if err != nil {
-		return fmt.Errorf("could not log in: %v", err)
+		return fmt.Errorf("could not log in: %w", err)
 	}
 	return nil
 }
@@ -112,7 +112,7 @@ func (g *Groundwork) Connect() error {
 func (g *Groundwork) Close() error {
 	err := g.client.Disconnect()
 	if err != nil {
-		return fmt.Errorf("could not log out: %v", err)
+		return fmt.Errorf("could not log out: %w", err)
 	}
 	return nil
 }

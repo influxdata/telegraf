@@ -121,7 +121,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 			err = m.client.Publish(topic, buf)
 			if err != nil {
-				return fmt.Errorf("could not write to MQTT server, %s", err)
+				return fmt.Errorf("could not write to MQTT server: %w", err)
 			}
 		}
 	}
@@ -134,7 +134,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		}
 		err = m.client.Publish(key, buf)
 		if err != nil {
-			return fmt.Errorf("could not write to MQTT server, %s", err)
+			return fmt.Errorf("could not write to MQTT server: %w", err)
 		}
 	}
 

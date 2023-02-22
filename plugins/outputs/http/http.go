@@ -15,6 +15,8 @@ import (
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/idtoken"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -22,8 +24,6 @@ import (
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"golang.org/x/oauth2"
-	"google.golang.org/api/idtoken"
 )
 
 //go:embed sample.conf
@@ -227,7 +227,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
+		return fmt.Errorf("when writing to [%s] received error: %w", h.URL, err)
 	}
 
 	return nil
@@ -250,12 +250,12 @@ func (h *HTTP) getAccessToken(ctx context.Context, audience string) (*oauth2.Tok
 
 	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(h.CredentialsFile))
 	if err != nil {
-		return nil, fmt.Errorf("error creating oauth2 token source: %s", err)
+		return nil, fmt.Errorf("error creating oauth2 token source: %w", err)
 	}
 
 	token, err := ts.Token()
 	if err != nil {
-		return nil, fmt.Errorf("error fetching oauth2 token: %s", err)
+		return nil, fmt.Errorf("error fetching oauth2 token: %w", err)
 	}
 
 	h.oauth2Token = token

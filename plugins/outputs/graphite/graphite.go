@@ -138,7 +138,7 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 		return err
 	}
 	num, err := conn.Read(b)
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		g.Log.Debugf("Conn %s is closed. closing conn explicitly", conn.RemoteAddr().String())
 		err = conn.Close()
 		g.Log.Debugf("Failed to close the connection: %v", err)
@@ -149,7 +149,8 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 		g.Log.Infof("conn %s .conn.Read data? did not expect that. data: %s", conn, b[:num])
 	}
 	// Log non-timeout errors and close.
-	if e, ok := err.(net.Error); !(ok && e.Timeout()) {
+	var netErr net.Error
+	if !(errors.As(err, &netErr) && netErr.Timeout()) {
 		g.Log.Debugf("conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s", conn, err)
 		err = conn.Close()
 		g.Log.Debugf("Failed to close the connection: %v", err)
@@ -184,7 +185,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		g.Log.Debugf("Reconnecting and retrying for the following servers: %s", strings.Join(g.failedServers, ","))
 		err = g.Connect()
 		if err != nil {
-			return fmt.Errorf("Failed to reconnect: %v", err)
+			return fmt.Errorf("failed to reconnect: %w", err)
 		}
 		err = g.send(batch)
 	}

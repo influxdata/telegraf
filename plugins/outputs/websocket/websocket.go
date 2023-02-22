@@ -68,12 +68,12 @@ func (w *WebSocket) Init() error {
 func (w *WebSocket) Connect() error {
 	tlsCfg, err := w.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("error creating TLS config: %v", err)
+		return fmt.Errorf("error creating TLS config: %w", err)
 	}
 
 	dialProxy, err := w.HTTPProxy.Proxy()
 	if err != nil {
-		return fmt.Errorf("error creating proxy: %v", err)
+		return fmt.Errorf("error creating proxy: %w", err)
 	}
 
 	dialer := &ws.Dialer{
@@ -85,7 +85,7 @@ func (w *WebSocket) Connect() error {
 	if w.Socks5ProxyEnabled {
 		netDialer, err := w.Socks5ProxyConfig.GetDialer()
 		if err != nil {
-			return fmt.Errorf("error connecting to socks5 proxy: %v", err)
+			return fmt.Errorf("error connecting to socks5 proxy: %w", err)
 		}
 		dialer.NetDial = netDialer.Dial
 	}
@@ -97,7 +97,7 @@ func (w *WebSocket) Connect() error {
 
 	conn, resp, err := dialer.Dial(w.URL, headers)
 	if err != nil {
-		return fmt.Errorf("error dial: %v", err)
+		return fmt.Errorf("error dial: %w", err)
 	}
 	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusSwitchingProtocols {
@@ -162,7 +162,7 @@ func (w *WebSocket) Write(metrics []telegraf.Metric) error {
 
 	if w.WriteTimeout > 0 {
 		if err := w.conn.SetWriteDeadline(time.Now().Add(time.Duration(w.WriteTimeout))); err != nil {
-			return fmt.Errorf("error setting write deadline: %v", err)
+			return fmt.Errorf("error setting write deadline: %w", err)
 		}
 	}
 	messageType := ws.BinaryMessage
@@ -173,7 +173,7 @@ func (w *WebSocket) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		_ = w.conn.Close()
 		w.conn = nil
-		return fmt.Errorf("error writing to connection: %v", err)
+		return fmt.Errorf("error writing to connection: %w", err)
 	}
 	return nil
 }

@@ -4,6 +4,7 @@ package amqp
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"strings"
 	"time"
 
@@ -160,7 +161,8 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			// If this is the first attempt to publish and the connection is
 			// closed, try to reconnect and retry once.
 
-			if aerr, ok := err.(*amqp.Error); first && ok && aerr == amqp.ErrClosed {
+			var aerr *amqp.Error
+			if first && errors.As(err, &aerr) && errors.Is(aerr, amqp.ErrClosed) {
 				q.client = nil
 				err := q.publish(key, body)
 				if err != nil {
