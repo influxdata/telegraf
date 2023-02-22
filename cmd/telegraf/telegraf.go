@@ -151,9 +151,9 @@ func (t *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := t.runAgent(ctx, cfg)
-		if err != nil && err != context.Canceled {
-			return fmt.Errorf("[telegraf] Error running agent: %v", err)
+		err = t.runAgent(ctx, cfg)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("[telegraf] Error running agent: %w", err)
 		}
 	}
 

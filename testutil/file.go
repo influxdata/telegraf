@@ -78,7 +78,7 @@ func ParseMetricsFrom(lines []string, header string, parser LineParser) ([]teleg
 
 		m, err := parser.ParseLine(content)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse metric in %q failed: %v", content, err)
+			return nil, fmt.Errorf("unable to parse metric in %q failed: %w", content, err)
 		}
 		metrics = append(metrics, m)
 	}
@@ -104,7 +104,7 @@ func ParseMetricsFromFile(filename string, parser telegraf.Parser) ([]telegraf.M
 
 		nonutc, err := parser.Parse(line)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse metric in %q failed: %v", line, err)
+			return nil, fmt.Errorf("unable to parse metric in %q failed: %w", line, err)
 		}
 		for _, m := range nonutc {
 			// The timezone needs to be UTC to match the timestamp test results

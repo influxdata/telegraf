@@ -32,12 +32,12 @@ func (c *Container) Create(image string) error {
 	c.client = LXDClient{}
 	err := c.client.Connect()
 	if err != nil {
-		return fmt.Errorf("failed to connect to lxd: %v", err)
+		return fmt.Errorf("failed to connect to lxd: %w", err)
 	}
 
 	err = c.client.Create(c.Name, "images", image)
 	if err != nil {
-		return fmt.Errorf("failed to create instance: %v", err)
+		return fmt.Errorf("failed to create instance: %w", err)
 	}
 
 	// at this point the container is created, so on any error during setup
@@ -45,7 +45,7 @@ func (c *Container) Create(image string) error {
 	err = c.client.Start(c.Name)
 	if err != nil {
 		c.Delete()
-		return fmt.Errorf("failed to start instance: %v", err)
+		return fmt.Errorf("failed to start instance: %w", err)
 	}
 
 	if err := c.detectPackageManager(); err != nil {
