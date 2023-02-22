@@ -4,6 +4,7 @@ package internet_speed
 import (
 	_ "embed"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
@@ -40,7 +41,7 @@ func (is *InternetSpeed) Init() error {
 	is.MemorySavingMode = is.MemorySavingMode || is.EnableFileDownload
 
 	var err error
-	is.serverFilter, err = filter.NewIncludeExcludeFilter(is.ServerIDInclude, is.ServerIDExclude)
+	is.serverFilter, err = filter.NewIncludeExcludeFilterDefaults(is.ServerIDInclude, is.ServerIDExclude, false, false)
 	if err != nil {
 		return fmt.Errorf("error compiling server ID filters: %w", err)
 	}
@@ -49,7 +50,7 @@ func (is *InternetSpeed) Init() error {
 }
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
-	// if not caching, go find closest server each time
+	// if not caching, go find the closest server each time
 	if !is.Cache || is.server == nil {
 		if err := is.findClosestServer(); err != nil {
 			return fmt.Errorf("unable to find closest server: %w", err)
@@ -73,12 +74,14 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		"download": is.server.DLSpeed,
 		"upload":   is.server.ULSpeed,
 		"latency":  timeDurationMillisecondToFloat64(is.server.Latency),
+		"jitter":   timeDurationMillisecondToFloat64(is.server.Jitter),
 	}
 	tags := map[string]string{
 		"server_id": is.server.ID,
 		"host":      is.server.Host,
 	}
-
+	// recycle the detailed data of each test to prevent data backlog
+	is.server.Context.Reset()
 	acc.AddFields(measurement, fields, tags)
 	return nil
 }
@@ -97,16 +100,30 @@ func (is *InternetSpeed) findClosestServer() error {
 		return fmt.Errorf("no servers found")
 	}
 
-	// return the first match
-	for _, server := range serverList {
+	// return the first match or the server with the lowest latency
+	// when filter mismatch all servers.
+	var min int64 = math.MaxInt64
+	selectIndex := -1
+	for index, server := range serverList {
 		if is.serverFilter.Match(server.ID) {
-			is.server = server
-			is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
-			return nil
+			selectIndex = index
+			break
+		}
+		if server.Latency > 0 {
+			if min > server.Latency.Milliseconds() {
+				min = server.Latency.Milliseconds()
+				selectIndex = index
+			}
 		}
 	}
 
-	return fmt.Errorf("no server set: filter excluded all servers")
+	if selectIndex != -1 {
+		is.server = serverList[selectIndex]
+		is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
+		return nil
+	}
+
+	return fmt.Errorf("no server set: filter excluded all servers or no available server found")
 }
 
 func init() {
