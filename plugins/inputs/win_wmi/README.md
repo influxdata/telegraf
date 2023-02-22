@@ -95,6 +95,7 @@ be converted to integers:
 
 ```toml
 [[processors.converter]]
+  namepass = ["win_wmi_Win32_Volume"]
   [processors.converter.fields]
     integer = ["Capacity", "FreeSpace"]
 ```

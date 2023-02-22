@@ -15,8 +15,6 @@ import (
 
 // initialize test data
 var sysDrive = fmt.Sprintf(`%s\`, os.Getenv("SystemDrive")) // C:\
-var logger = new(testutil.Logger)
-var acc = new(testutil.Accumulator)
 
 // include Name as a tag, FreeSpace as a field, and Purpose as a known-null class property
 var testQuery Query = Query{
@@ -33,6 +31,7 @@ var expectedWql = fmt.Sprintf(
 
 // test buildWqlStatements
 func TestWmi_buildWqlStatements(t *testing.T) {
+	var logger = new(testutil.Logger)
 	plugin := Wmi{Queries: []Query{testQuery}, Log: logger}
 	require.NoError(t, compileInputs(&plugin))
 	require.Equal(t, expectedWql, plugin.Queries[0].query)
@@ -40,13 +39,15 @@ func TestWmi_buildWqlStatements(t *testing.T) {
 
 // test DoQuery
 func TestWmi_DoQuery(t *testing.T) {
+	var logger = new(testutil.Logger)
+	var acc = new(testutil.Accumulator)
 	plugin := Wmi{Queries: []Query{testQuery}, Log: logger}
 	require.NoError(t, compileInputs(&plugin))
 	for _, q := range plugin.Queries {
 		require.NoError(t, q.doQuery(acc))
 	}
 	// no errors in accumulator
-	require.Len(t, acc.Errors, 0, "found errors accumulated by AddError()")
+	require.Empty(t, acc.Errors)
 	// Only one metric was returned (because we filtered for SystemDrive)
 	require.Len(t, acc.Metrics, 1)
 	// Name property collected and is the SystemDrive
@@ -57,12 +58,18 @@ func TestWmi_DoQuery(t *testing.T) {
 
 // test Init function
 func TestWmi_Init(t *testing.T) {
+	var logger = new(testutil.Logger)
 	plugin := Wmi{Queries: []Query{testQuery}, Log: logger}
 	require.NoError(t, plugin.Init())
 }
 
 // test Gather function
 func TestWmi_Gather(t *testing.T) {
+	var logger = new(testutil.Logger)
+	var acc = new(testutil.Accumulator)
 	plugin := Wmi{Queries: []Query{testQuery}, Log: logger}
+	plugin.Init()
 	require.NoError(t, plugin.Gather(acc))
+	// no errors in accumulator
+	require.Empty(t, acc.Errors)
 }
