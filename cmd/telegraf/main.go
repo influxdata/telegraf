@@ -196,7 +196,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
 			err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
 			if err != nil && err2 != nil {
-				return fmt.Errorf("%w and %s", err, err2)
+				return fmt.Errorf("%w and %w", err, err2)
 			}
 			return nil
 		// DEPRECATED
