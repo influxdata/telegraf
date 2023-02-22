@@ -99,7 +99,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	for _, location := range collectedUrls {
 		certs, ocspresp, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
-			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
+			acc.AddError(fmt.Errorf("cannot get SSL cert %q: %w", location, err))
 		}
 
 		// Add all returned certs to the pool of intermediates except for
@@ -446,7 +446,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, &ocspresp, nil
 	default:
-		return nil, nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())
+		return nil, nil, fmt.Errorf("unsupported scheme %q in location %s", u.Scheme, u.String())
 	}
 }
 

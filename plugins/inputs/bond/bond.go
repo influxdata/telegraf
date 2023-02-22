@@ -137,7 +137,7 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	return fmt.Errorf("Couldn't find status info for '%s' ", bondName)
+	return fmt.Errorf("Couldn't find status info for %q", bondName)
 }
 
 func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {

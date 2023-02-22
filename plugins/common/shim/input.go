@@ -56,7 +56,7 @@ func (s *Shim) RunInput(pollInterval time.Duration) error {
 	go func() {
 		err := s.writeProcessedMetrics()
 		if err != nil {
-			s.log.Warnf("%s", err)
+			s.log.Warn(err.Error())
 		}
 		wg.Done()
 	}()

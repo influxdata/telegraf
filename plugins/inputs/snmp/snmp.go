@@ -768,7 +768,7 @@ func fieldConvert(tr Translator, conv string, ent gosnmp.SnmpPDU) (v interface{}
 		return tr.SnmpFormatEnum(ent.Name, ent.Value, true)
 	}
 
-	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
+	return nil, fmt.Errorf("invalid conversion type %q", conv)
 }
 
 func init() {

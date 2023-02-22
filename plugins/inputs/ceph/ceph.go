@@ -70,18 +70,18 @@ func (c *Ceph) Gather(acc telegraf.Accumulator) error {
 func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 	sockets, err := findSockets(c)
 	if err != nil {
-		return fmt.Errorf("failed to find sockets at path '%s': %v", c.SocketDir, err)
+		return fmt.Errorf("failed to find sockets at path %q: %w", c.SocketDir, err)
 	}
 
 	for _, s := range sockets {
 		dump, err := perfDump(c.CephBinary, s)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error reading from socket '%s': %v", s.socket, err))
+			acc.AddError(fmt.Errorf("error reading from socket %q: %w", s.socket, err))
 			continue
 		}
 		data, err := c.parseDump(dump)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error parsing dump from socket '%s': %v", s.socket, err))
+			acc.AddError(fmt.Errorf("error parsing dump from socket %q: %w", s.socket, err))
 			continue
 		}
 		for tag, metrics := range data {
@@ -107,11 +107,11 @@ func (c *Ceph) gatherClusterStats(acc telegraf.Accumulator) error {
 	for _, job := range jobs {
 		output, err := c.execute(job.command)
 		if err != nil {
-			return fmt.Errorf("error executing command: %v", err)
+			return fmt.Errorf("error executing command: %w", err)
 		}
 		err = job.parser(acc, output)
 		if err != nil {
-			return fmt.Errorf("error parsing output: %v", err)
+			return fmt.Errorf("error parsing output: %w", err)
 		}
 	}
 
@@ -166,7 +166,7 @@ var perfDump = func(binary string, socket *socket) (string, error) {
 var findSockets = func(c *Ceph) ([]*socket, error) {
 	listing, err := os.ReadDir(c.SocketDir)
 	if err != nil {
-		return []*socket{}, fmt.Errorf("Failed to read socket directory '%s': %v", c.SocketDir, err)
+		return []*socket{}, fmt.Errorf("Failed to read socket directory %q: %w", c.SocketDir, err)
 	}
 	sockets := make([]*socket, 0, len(listing))
 	for _, info := range listing {
@@ -239,7 +239,7 @@ func (c *Ceph) parseDump(dump string) (taggedMetricMap, error) {
 	data := make(map[string]interface{})
 	err := json.Unmarshal([]byte(dump), &data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse json: '%s': %v", dump, err)
+		return nil, fmt.Errorf("failed to parse json: %q: %w", dump, err)
 	}
 
 	return c.newTaggedMetricMap(data), nil
@@ -378,7 +378,7 @@ type CephStatus struct {
 func decodeStatus(acc telegraf.Accumulator, input string) error {
 	data := &CephStatus{}
 	if err := json.Unmarshal([]byte(input), data); err != nil {
-		return fmt.Errorf("failed to parse json: '%s': %v", input, err)
+		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
 
 	decoders := []func(telegraf.Accumulator, *CephStatus) error{
@@ -539,7 +539,7 @@ type CephDf struct {
 func decodeDf(acc telegraf.Accumulator, input string) error {
 	data := &CephDf{}
 	if err := json.Unmarshal([]byte(input), data); err != nil {
-		return fmt.Errorf("failed to parse json: '%s': %v", input, err)
+		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
 
 	// ceph.usage: records global utilization and number of objects
@@ -618,7 +618,7 @@ type CephOSDPoolStats []struct {
 func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 	data := CephOSDPoolStats{}
 	if err := json.Unmarshal([]byte(input), &data); err != nil {
-		return fmt.Errorf("failed to parse json: '%s': %v", input, err)
+		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
 
 	// ceph.pool.stats: records pre pool IO and recovery throughput

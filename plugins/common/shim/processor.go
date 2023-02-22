@@ -47,7 +47,7 @@ func (s *Shim) RunProcessor() error {
 	go func() {
 		err := s.writeProcessedMetrics()
 		if err != nil {
-			s.log.Warnf("%s", err)
+			s.log.Warn(err.Error())
 		}
 		wg.Done()
 	}()

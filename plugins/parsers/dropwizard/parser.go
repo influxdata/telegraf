@@ -103,7 +103,7 @@ func (p *Parser) readTags(buf []byte) map[string]string {
 		var tags map[string]string
 		err := json.Unmarshal(tagsBytes, &tags)
 		if err != nil {
-			p.Log.Warnf("Failed to parse tags from JSON path '%s': %s\n", p.TagsPath, err)
+			p.Log.Warnf("Failed to parse tags from JSON path %q: %w\n", p.TagsPath, err)
 		} else if len(tags) > 0 {
 			return tags
 		}

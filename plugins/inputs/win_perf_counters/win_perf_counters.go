@@ -357,7 +357,7 @@ func (m *WinPerfCounters) ParseConfig() error {
 			}
 			for _, counter := range PerfObject.Counters {
 				if len(PerfObject.Instances) == 0 {
-					m.Log.Warnf("Missing 'Instances' param for object '%s'\n", PerfObject.ObjectName)
+					m.Log.Warnf("Missing 'Instances' param for object %q", PerfObject.ObjectName)
 				}
 				for _, instance := range PerfObject.Instances {
 					objectname := PerfObject.ObjectName
@@ -367,7 +367,7 @@ func (m *WinPerfCounters) ParseConfig() error {
 					err := m.AddItem(counterPath, computer, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							m.Log.Errorf("invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
+							m.Log.Errorf("invalid counterPath %q: %w", counterPath, err)
 						}
 						if PerfObject.FailOnMissing {
 							return err
@@ -440,7 +440,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 			err := m.gatherComputerCounters(hostInfo, acc)
 			m.Log.Debugf("gathering from %s finished in %.3fs", hostInfo.computer, time.Since(start))
 			if err != nil {
-				acc.AddError(fmt.Errorf("error during collecting data on host '%s': %s", hostInfo.computer, err.Error()))
+				acc.AddError(fmt.Errorf("error during collecting data on host %q: %w", hostInfo.computer, err)))
 			}
 			wg.Done()
 		}(hostCounterInfo)

@@ -84,7 +84,7 @@ func (e *ElasticsearchQuery) Init() error {
 		}
 		err = e.initAggregation(ctx, agg, i)
 		if err != nil {
-			e.Log.Errorf("%s", err)
+			e.Log.Error(err.Error())
 			return nil
 		}
 	}
@@ -100,7 +100,7 @@ func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregat
 
 	for _, metricField := range agg.MetricFields {
 		if _, ok := agg.mapMetricFields[metricField]; !ok {
-			return fmt.Errorf("metric field '%s' not found on index '%s'", metricField, agg.Index)
+			return fmt.Errorf("metric field %q not found on index %q", metricField, agg.Index)
 		}
 	}
 

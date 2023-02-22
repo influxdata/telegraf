@@ -381,7 +381,7 @@ func fetchJSON(t *testing.T, boundary string, rc io.ReadCloser) (string, error) 
 	splits := strings.Split(string(bodyBytes), boundary)
 	offsetPart := splits[2]
 	offsets := strings.Split(offsetPart, "\n")
-	fmt.Printf("%s", offsets[3])
+	fmt.Print(offsets[3])
 	return offsets[3], nil
 }
 

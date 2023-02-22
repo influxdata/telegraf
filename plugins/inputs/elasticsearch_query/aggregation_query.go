@@ -210,7 +210,7 @@ func getFunctionAggregation(function string, aggfield string) (elastic5.Aggregat
 	case "max":
 		agg = elastic5.NewMaxAggregation().Field(aggfield)
 	default:
-		return nil, fmt.Errorf("aggregation function '%s' not supported", function)
+		return nil, fmt.Errorf("aggregation function %q not supported", function)
 	}
 
 	return agg, nil

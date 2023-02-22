@@ -112,7 +112,7 @@ func (c *Container) LookupMappedPorts() error {
 		if err != nil {
 			return fmt.Errorf("failed to find %q: %w", port, err)
 		}
-		fmt.Printf("mapped container port '%s' to host port '%s'\n", port, p.Port())
+		fmt.Printf("mapped container port %q to host port %q\n", port, p.Port())
 		c.Ports[port] = p.Port()
 	}
 

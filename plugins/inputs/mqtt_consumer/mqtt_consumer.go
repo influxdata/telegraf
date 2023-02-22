@@ -403,17 +403,17 @@ func typeConvert(types map[string]string, topicValue string, key string) (interf
 		case "uint":
 			newType, err = strconv.ParseUint(topicValue, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type uint: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type uint: %w", topicValue, err)
 			}
 		case "int":
 			newType, err = strconv.ParseInt(topicValue, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type int: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type int: %w", topicValue, err)
 			}
 		case "float":
 			newType, err = strconv.ParseFloat(topicValue, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type float: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type float: %w", topicValue, err)
 			}
 		default:
 			return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)

@@ -28,7 +28,7 @@ func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		if err != nil {
 			continue
 		}
-		fmt.Printf("%s", octets)
+		fmt.Print(octets)
 	}
 	return in
 }

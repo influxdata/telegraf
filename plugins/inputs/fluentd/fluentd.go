@@ -79,7 +79,7 @@ func (*Fluentd) SampleConfig() string {
 func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 	_, err := url.Parse(h.Endpoint)
 	if err != nil {
-		return fmt.Errorf("invalid URL \"%s\"", h.Endpoint)
+		return fmt.Errorf("invalid URL %q", h.Endpoint)
 	}
 
 	if h.client == nil {
@@ -98,7 +98,7 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 	resp, err := h.client.Get(h.Endpoint)
 
 	if err != nil {
-		return fmt.Errorf("unable to perform HTTP client GET on \"%s\": %v", h.Endpoint, err)
+		return fmt.Errorf("unable to perform HTTP client GET on %q: %w", h.Endpoint, err)
 	}
 
 	defer resp.Body.Close()
@@ -106,7 +106,7 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 	body, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		return fmt.Errorf("unable to read the HTTP body \"%s\": %v", string(body), err)
+		return fmt.Errorf("unable to read the HTTP body %q: %w", string(body), err)
 	}
 
 	if resp.StatusCode != http.StatusOK {

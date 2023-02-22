@@ -88,7 +88,7 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 	ctx := context.TODO()
 
 	for marker := (azqueue.Marker{}); marker.NotDone(); {
-		a.Log.Debugf("Listing queues of storage account '%s'", a.StorageAccountName)
+		a.Log.Debugf("Listing queues of storage account %q", a.StorageAccountName)
 		queuesSegment, err := serviceURL.ListQueuesSegment(ctx, marker,
 			azqueue.ListQueuesSegmentOptions{
 				Detail: azqueue.ListQueuesSegmentDetails{Metadata: false},
@@ -99,11 +99,11 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 		marker = queuesSegment.NextMarker
 
 		for _, queueItem := range queuesSegment.QueueItems {
-			a.Log.Debugf("Processing queue '%s' of storage account '%s'", queueItem.Name, a.StorageAccountName)
+			a.Log.Debugf("Processing queue %q of storage account %q", queueItem.Name, a.StorageAccountName)
 			queueURL := serviceURL.NewQueueURL(queueItem.Name)
 			properties, err := queueURL.GetProperties(ctx)
 			if err != nil {
-				a.Log.Errorf("Error getting properties for queue %s: %s", queueItem.Name, err.Error())
+				a.Log.Errorf("Error getting properties for queue %s: %w", queueItem.Name, err)
 				continue
 			}
 			var peekedMessage *azqueue.PeekedMessage
@@ -111,7 +111,7 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 				messagesURL := queueURL.NewMessagesURL()
 				messagesResponse, err := messagesURL.Peek(ctx, 1)
 				if err != nil {
-					a.Log.Errorf("Error peeking queue %s: %s", queueItem.Name, err.Error())
+					a.Log.Errorf("Error peeking queue %s: %w", queueItem.Name, err)
 				} else if messagesResponse.NumMessages() > 0 {
 					peekedMessage = messagesResponse.Message(0)
 				}

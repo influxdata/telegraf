@@ -430,8 +430,8 @@ func TestReadMaxFD(t *testing.T) {
 		require.Zero(t, result)
 	})
 
-	openErrorMsg := fmt.Sprintf("cannot open `%s` file", fileMaxPath)
-	parseErrorMsg := fmt.Sprintf("cannot parse file content of `%s`", fileMaxPath)
+	openErrorMsg := fmt.Sprintf("cannot open %q file", fileMaxPath)
+	parseErrorMsg := fmt.Sprintf("cannot parse file content of %q", fileMaxPath)
 
 	tests := []struct {
 		name    string
@@ -489,7 +489,7 @@ func TestAddFiles(t *testing.T) {
 
 		err := checkFiles(paths, mFileInfo)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("cannot obtain file info of `%s`", file))
+		require.Contains(t, err.Error(), fmt.Sprintf("cannot obtain file info of %q", file))
 		mFileInfo.AssertExpectations(t)
 	})
 
@@ -500,7 +500,7 @@ func TestAddFiles(t *testing.T) {
 
 		err := checkFiles(paths, mFileInfo)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("file `%s` doesn't exist", file))
+		require.Contains(t, err.Error(), fmt.Sprintf("file %q doesn't exist", file))
 		mFileInfo.AssertExpectations(t)
 	})
 
@@ -524,7 +524,7 @@ func TestAddFiles(t *testing.T) {
 
 		err := checkFiles(paths, mFileInfo)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("file `%s` doesn't point to a reagular file", file))
+		require.Contains(t, err.Error(), fmt.Sprintf("file %q doesn't point to a reagular file", file))
 		mFileInfo.AssertExpectations(t)
 	})
 

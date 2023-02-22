@@ -93,7 +93,7 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
 		s.isStream = false
 	default:
-		return fmt.Errorf("unknown protocol '%s' in '%s'", scheme, s.Address)
+		return fmt.Errorf("unknown protocol %q in %q", scheme, s.Address)
 	}
 
 	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
@@ -150,12 +150,12 @@ func (s *Syslog) Stop() {
 func getAddressParts(a string) (scheme string, host string, err error) {
 	parts := strings.SplitN(a, "://", 2)
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("missing protocol within address '%s'", a)
+		return "", "", fmt.Errorf("missing protocol within address %q", a)
 	}
 
 	u, err := url.Parse(filepath.ToSlash(a)) //convert backslashes to slashes (to make Windows path a valid URL)
 	if err != nil {
-		return "", "", fmt.Errorf("could not parse address '%s': %v", a, err)
+		return "", "", fmt.Errorf("could not parse address %q: %w", a, err)
 	}
 	switch u.Scheme {
 	case "unix", "unixpacket", "unixgram":

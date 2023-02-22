@@ -69,7 +69,7 @@ func (d *Disque) Gather(acc telegraf.Accumulator) error {
 	for _, serv := range d.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
-			acc.AddError(fmt.Errorf("unable to parse to address '%s': %s", serv, err))
+			acc.AddError(fmt.Errorf("unable to parse to address %q: %w", serv, err))
 			continue
 		} else if u.Scheme == "" {
 			// fallback to simple string based address (i.e. "10.0.0.1:10000")
@@ -100,7 +100,7 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 
 		c, err := net.DialTimeout("tcp", addr.Host, defaultTimeout)
 		if err != nil {
-			return fmt.Errorf("unable to connect to disque server '%s': %s", addr.Host, err)
+			return fmt.Errorf("unable to connect to disque server %q: %w", addr.Host, err)
 		}
 
 		if addr.User != nil {
@@ -117,7 +117,7 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 					return err
 				}
 				if line[0] != '+' {
-					return fmt.Errorf("%s", strings.TrimSpace(line)[1:])
+					return errors.New(strings.TrimSpace(line)[1:])
 				}
 			}
 		}

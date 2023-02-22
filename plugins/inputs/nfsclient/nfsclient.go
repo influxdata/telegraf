@@ -307,7 +307,6 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		n.Log.Errorf("%s", err)
 		return err
 	}
 

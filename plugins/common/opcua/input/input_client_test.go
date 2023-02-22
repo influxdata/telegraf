@@ -1,7 +1,11 @@
 package input
 
 import (
+	"errors"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -9,8 +13,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestTagsSliceToMap(t *testing.T) {
@@ -74,7 +76,7 @@ func TestValidateOPCTags(t *testing.T) {
 					},
 				},
 			},
-			fmt.Errorf("name 'fn' is duplicated (metric name 'mn', tags 't1=v1, t2=v2')"),
+			errors.New(`name "fn" is duplicated (metric name "mn", tags "t1=v1, t2=v2")`),
 		},
 		{
 			"empty tag value not allowed",
@@ -352,7 +354,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				}, map[string]string{})
 				return nmm
 			}(),
-			err: fmt.Errorf("empty name in ''"),
+			err: errors.New(`empty name in ""`),
 		},
 		{
 			name:     "empty namespace not allowed",
@@ -382,7 +384,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				}, map[string]string{})
 				return nmm
 			}(),
-			err: fmt.Errorf("invalid identifier type '' in 'f'"),
+			err: errors.New(`invalid identifier type "" in "f"`),
 		},
 		{
 			name:     "invalid identifier type not allowed",
@@ -397,7 +399,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				}, map[string]string{})
 				return nmm
 			}(),
-			err: fmt.Errorf("invalid identifier type 'j' in 'f'"),
+			err: errors.New(`invalid identifier type "j" in "f"`),
 		},
 		{
 			name: "duplicate metric not allowed",
@@ -414,7 +416,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				}, map[string]string{})
 				return nmm
 			}(),
-			err: fmt.Errorf("name 'f' is duplicated (metric name 'testmetric', tags 't1=v1, t2=v2')"),
+			err: errors.New(`name "f" is duplicated (metric name "testmetric", tags "t1=v1, t2=v2")`),
 		},
 		{
 			name:     "identifier type mismatch",
@@ -429,7 +431,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				}, map[string]string{})
 				return nmm
 			}(),
-			err: fmt.Errorf("identifier type 'i' does not match the type of identifier 'hf'"),
+			err: errors.New(`identifier type "i" does not match the type of identifier "hf"`),
 		},
 	}
 

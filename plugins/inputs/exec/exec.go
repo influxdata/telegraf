@@ -143,7 +143,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 
 	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
 	if !e.parseDespiteError && runErr != nil {
-		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errBuf))
+		err := fmt.Errorf("exec: %s for command %q: %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
 	}

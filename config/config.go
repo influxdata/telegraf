@@ -399,7 +399,7 @@ func getDefaultConfigPath() ([]string, error) {
 	if _, err := os.Stat(etcfolder); err == nil {
 		files, err := WalkDirectory(etcfolder)
 		if err != nil {
-			log.Printf("W! unable walk '%s': %s", etcfolder, err)
+			log.Printf("W! unable walk %q: %s", etcfolder, err)
 		}
 		for _, file := range files {
 			log.Printf("I! Using config file: %s", file)
