@@ -196,36 +196,31 @@ func (a *Agent) initPlugins() error {
 		}
 		err := input.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize input %s: %v",
-				input.LogName(), err)
+			return fmt.Errorf("could not initialize input %s: %w", input.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.Processors {
 		err := processor.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.LogName(), err)
+			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
 		}
 	}
 	for _, aggregator := range a.Config.Aggregators {
 		err := aggregator.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize aggregator %s: %v",
-				aggregator.LogName(), err)
+			return fmt.Errorf("could not initialize aggregator %s: %w", aggregator.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.AggProcessors {
 		err := processor.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.LogName(), err)
+			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
 		}
 	}
 	for _, output := range a.Config.Outputs {
 		err := output.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize output %s: %v",
-				output.LogName(), err)
+			return fmt.Errorf("could not initialize output %s: %w", output.LogName(), err)
 		}
 	}
 	return nil
