@@ -47,7 +47,7 @@ func (ds *DiskStats) Init() error {
 func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
 	disks, partitions, err := ds.ps.DiskUsage(ds.MountPoints, ds.IgnoreMountOpts, ds.IgnoreFS)
 	if err != nil {
-		return fmt.Errorf("error getting disk usage info: %s", err)
+		return fmt.Errorf("error getting disk usage info: %w", err)
 	}
 	for i, du := range disks {
 		if du.Total == 0 {

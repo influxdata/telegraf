@@ -128,7 +128,7 @@ func (b *Bcache) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 		if err := b.gatherBcache(bdev, acc); err != nil {
-			return fmt.Errorf("gathering bcache failed: %v", err)
+			return fmt.Errorf("gathering bcache failed: %w", err)
 		}
 	}
 	return nil
