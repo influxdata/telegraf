@@ -102,7 +102,7 @@ Counters
 		{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
 State Table                          Total             Rate
-  current entries                      -23               
+  current entries                      -23
   searches                           11325            7.2/s
   inserts                                5            0.0/s
   removals                               3            0.0/s
@@ -128,7 +128,7 @@ Counters
 		{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
 State Table                          Total             Rate
-  current entries                        2               
+  current entries                        2
   searches                           11325            7.2/s
   inserts                                5            0.0/s
   removals                               3            0.0/s

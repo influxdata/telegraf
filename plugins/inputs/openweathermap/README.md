@@ -17,7 +17,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -67,6 +67,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - humidity (int, percent)
     - pressure (float, atmospheric pressure hPa)
     - rain (float, rain volume for the last 1-3 hours (depending on API response) in mm)
+    - snow (float, snow volume for the last 1-3 hours (depending on API response) in mm)
     - sunrise (int, nanoseconds since unix epoch)
     - sunset (int, nanoseconds since unix epoch)
     - temperature (float, degrees)

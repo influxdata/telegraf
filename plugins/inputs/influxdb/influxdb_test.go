@@ -82,7 +82,7 @@ func TestInfluxDB(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
-	require.Len(t, acc.Metrics, 34)
+	require.Len(t, acc.Metrics, 35)
 
 	fields := map[string]interface{}{
 		"heap_inuse":      int64(18046976),
@@ -119,6 +119,13 @@ func TestInfluxDB(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "influxdb_memstats", fields, tags)
 
+	fields = map[string]interface{}{
+		"current_time": "2023-01-11T16:51:52.723166944Z",
+		"started":      "2023-01-11T16:51:23.355766023Z",
+		"uptime":       uint64(29),
+	}
+	acc.AssertContainsTaggedFields(t, "influxdb_system", fields, tags)
+
 	acc.AssertContainsTaggedFields(t, "influxdb",
 		map[string]interface{}{
 			"n_shards": 1,
@@ -147,12 +154,22 @@ func TestInfluxDB2(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
-	require.Len(t, acc.Metrics, 34)
+	require.Len(t, acc.Metrics, 35)
 
 	acc.AssertContainsTaggedFields(t, "influxdb",
 		map[string]interface{}{
 			"n_shards": 1,
 		}, map[string]string{})
+
+	fields := map[string]interface{}{
+		"current_time": "2023-01-11T17:04:59.928454705Z",
+		"started":      "2023-01-11T16:51:23.355766023Z",
+		"uptime":       uint64(816),
+	}
+	tags := map[string]string{
+		"url": fakeInfluxServer.URL + "/endpoint",
+	}
+	acc.AssertContainsTaggedFields(t, "influxdb_system", fields, tags)
 }
 
 func TestErrorHandling(t *testing.T) {

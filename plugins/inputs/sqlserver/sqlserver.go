@@ -25,7 +25,7 @@ var sampleConfig string
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string        `toml:"servers"`
+	Servers      []config.Secret `toml:"servers"`
 	QueryTimeout config.Duration `toml:"query_timeout"`
 	AuthMethod   string          `toml:"auth_method"`
 	QueryVersion int             `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
@@ -206,12 +206,17 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			wg.Add(1)
 			go func(pool *sql.DB, query Query, serverIndex int) {
 				defer wg.Done()
-				connectionString := s.Servers[serverIndex]
-				queryError := s.gatherServer(pool, query, acc, connectionString)
+				dsn, err := s.Servers[serverIndex].Get()
+				if err != nil {
+					acc.AddError(err)
+					return
+				}
+				defer config.ReleaseSecret(dsn)
+				queryError := s.gatherServer(pool, query, acc, string(dsn))
 
 				if s.HealthMetric {
 					mutex.Lock()
-					s.gatherHealth(healthMetrics, connectionString, queryError)
+					s.gatherHealth(healthMetrics, string(dsn), queryError)
 					mutex.Unlock()
 				}
 
@@ -244,19 +249,24 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 
 		switch strings.ToLower(s.AuthMethod) {
 		case "connection_string":
+			// Get the connection string potentially containing secrets
+			dsn, err := serv.Get()
+			if err != nil {
+				acc.AddError(err)
+				continue
+			}
+
 			// Use the DSN (connection string) directly. In this case,
 			// empty username/password causes use of Windows
 			// integrated authentication.
-			var err error
-			pool, err = sql.Open("mssql", serv)
-
+			pool, err = sql.Open("mssql", string(dsn))
+			config.ReleaseSecret(dsn)
 			if err != nil {
 				acc.AddError(err)
 				continue
 			}
 		case "aad":
 			// AAD Auth with system-assigned managed identity (MSI)
-
 			// AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
 			if s.DatabaseType == "SQLServer" {
 				err := errors.New("database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
@@ -271,7 +281,14 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 				continue
 			}
 
-			connector, err := mssql.NewAccessTokenConnector(serv, tokenProvider)
+			// Get the connection string potentially containing secrets
+			dsn, err := serv.Get()
+			if err != nil {
+				acc.AddError(err)
+				continue
+			}
+			connector, err := mssql.NewAccessTokenConnector(string(dsn), tokenProvider)
+			config.ReleaseSecret(dsn)
 			if err != nil {
 				acc.AddError(fmt.Errorf("error creating the SQL connector : %s", err.Error()))
 				continue
@@ -529,7 +546,7 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{
-			Servers:    []string{defaultServer},
+			Servers:    []config.Secret{config.NewSecret([]byte(defaultServer))},
 			AuthMethod: "connection_string",
 		}
 	})

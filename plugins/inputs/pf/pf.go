@@ -92,11 +92,10 @@ func (pf *PF) parsePfctlOutput(pfoutput string, acc telegraf.Accumulator) error 
 				for !anyTableHeaderRE.MatchString(line) {
 					stanzaLines = append(stanzaLines, line)
 					more := scanner.Scan()
-					if more {
-						line = scanner.Text()
-					} else {
+					if !more {
 						break
 					}
+					line = scanner.Text()
 				}
 				if perr := s.ParseFunc(stanzaLines, fields); perr != nil {
 					return perr

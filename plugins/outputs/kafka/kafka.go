@@ -3,12 +3,13 @@ package kafka
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
@@ -146,7 +147,7 @@ func (k *Kafka) Init() error {
 
 		dialer, err := k.Socks5ProxyConfig.GetDialer()
 		if err != nil {
-			return fmt.Errorf("connecting to proxy server failed: %s", err)
+			return fmt.Errorf("connecting to proxy server failed: %w", err)
 		}
 		config.Net.Proxy.Dialer = dialer
 	}
@@ -209,7 +210,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 
 		key, err := k.routingKey(metric)
 		if err != nil {
-			return fmt.Errorf("could not generate routing key: %v", err)
+			return fmt.Errorf("could not generate routing key: %w", err)
 		}
 
 		if key != "" {
@@ -221,13 +222,14 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	err := k.producer.SendMessages(msgs)
 	if err != nil {
 		// We could have many errors, return only the first encountered.
-		if errs, ok := err.(sarama.ProducerErrors); ok {
+		var errs sarama.ProducerErrors
+		if errors.As(err, &errs) {
 			for _, prodErr := range errs {
-				if prodErr.Err == sarama.ErrMessageSizeTooLarge {
+				if errors.Is(prodErr.Err, sarama.ErrMessageSizeTooLarge) {
 					k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping batch")
 					return nil
 				}
-				if prodErr.Err == sarama.ErrInvalidTimestamp {
+				if errors.Is(prodErr.Err, sarama.ErrInvalidTimestamp) {
 					k.Log.Error(
 						"The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; " +
 							"dropping batch",

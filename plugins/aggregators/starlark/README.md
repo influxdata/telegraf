@@ -29,7 +29,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -125,4 +125,3 @@ documentation about the Starlark processor.
 Open a Pull Request to add any other useful Starlark examples.
 
 [Starlark specification]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md
-[dict]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md#dictionaries

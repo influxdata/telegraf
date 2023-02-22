@@ -17,7 +17,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -34,20 +34,38 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Caches the closest server location
   # cache = false
+
+  ## Server ID exclude filter
+  ## Allows the user to exclude or include specific server IDs received by
+  ## speedtest-go. Values in the exclude option will be skipped over. Values in
+  ## the include option are the only options that will be picked from.
+  ##
+  ## See the list of servers speedtest-go will return at:
+  ##     https://www.speedtest.net/api/js/servers?engine=js&limit=10
+  ##
+  # server_id_exclude = []
+  # server_id_include = []
 ```
 
 ## Metrics
 
-It collects latency, download speed and upload speed
+It collects the following fields:
 
-| Name           | filed name | type    | Unit |
+| Name           | field name | type    | Unit |
 | -------------- | ---------- | ------- | ---- |
 | Download Speed | download   | float64 | Mbps |
 | Upload Speed   | upload     | float64 | Mbps |
 | Latency        | latency    | float64 | ms   |
 
+And the following tags:
+
+| Name      | tag name  |
+| --------- | --------- |
+| Host      | host      |
+| Server ID | server_id |
+
 ## Example Output
 
 ```sh
-internet_speed,host=Sanyam-Ubuntu download=41.791,latency=28.518,upload=59.798 1631031183000000000
+internet_speed,host=speedtest02.z4internet.com:8080,server_id=54619 download=318.37580265897725,upload=30.444407341274385,latency=37.73174 1675458921000000000
 ```

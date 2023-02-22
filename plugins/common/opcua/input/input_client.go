@@ -198,19 +198,11 @@ func newMP(n *NodeMetricMapping) metricParts {
 	var sb strings.Builder
 	for i, key := range keys {
 		if i != 0 {
-			// Writes to a string-builder will always succeed
-			//nolint:errcheck,revive
-			sb.WriteString(", ")
+			sb.WriteString(", ") //nolint:revive // writes to a string-builder will always succeed
 		}
-		// Writes to a string-builder will always succeed
-		//nolint:errcheck,revive
-		sb.WriteString(key)
-		// Writes to a string-builder will always succeed
-		//nolint:errcheck,revive
-		sb.WriteString("=")
-		// Writes to a string-builder will always succeed
-		//nolint:errcheck,revive
-		sb.WriteString(n.MetricTags[key])
+		sb.WriteString(key)               //nolint:revive // writes to a string-builder will always succeed
+		sb.WriteString("=")               //nolint:revive // writes to a string-builder will always succeed
+		sb.WriteString(n.MetricTags[key]) //nolint:revive // writes to a string-builder will always succeed
 	}
 	x := metricParts{
 		metricName: n.metricName,
@@ -336,13 +328,13 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 }
 
 func (o *OpcUAInputClient) initNodeIDs() error {
-	o.NodeIDs = make([]*ua.NodeID, len(o.NodeMetricMapping))
-	for i, node := range o.NodeMetricMapping {
+	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
+	for _, node := range o.NodeMetricMapping {
 		nid, err := ua.ParseNodeID(node.Tag.NodeID())
 		if err != nil {
 			return err
 		}
-		o.NodeIDs[i] = nid
+		o.NodeIDs = append(o.NodeIDs, nid)
 	}
 
 	return nil

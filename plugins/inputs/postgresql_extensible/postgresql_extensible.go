@@ -147,9 +147,7 @@ func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery s
 	p.AdditionalTags = nil
 	if tagValue != "" {
 		tagList := strings.Split(tagValue, ",")
-		for t := range tagList {
-			p.AdditionalTags = append(p.AdditionalTags, tagList[t])
-		}
+		p.AdditionalTags = append(p.AdditionalTags, tagList...)
 	}
 
 	p.Timestamp = timestamp

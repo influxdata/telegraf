@@ -1222,16 +1222,18 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		oldStat.ExtraInfo.PageFaults != nil && newStat.ExtraInfo.PageFaults != nil {
 		returnVal.Faults, returnVal.FaultsCnt = diff(*(newStat.ExtraInfo.PageFaults), *(oldStat.ExtraInfo.PageFaults), sampleSecs)
 	}
-	if !returnVal.IsMongos && oldStat.Locks != nil {
-		globalCheck, hasGlobal := oldStat.Locks["Global"]
-		if hasGlobal && globalCheck.AcquireCount != nil {
+	if !returnVal.IsMongos && oldStat.Locks != nil && newStat.Locks != nil {
+		globalCheckOld, hasGlobalOld := oldStat.Locks["Global"]
+		globalCheckNew, hasGlobalNew := newStat.Locks["Global"]
+		if hasGlobalOld && globalCheckOld.AcquireCount != nil && hasGlobalNew && globalCheckNew.AcquireCount != nil {
 			// This appears to be a 3.0+ server so the data in these fields do *not* refer to
 			// actual namespaces and thus we can't compute lock %.
 			returnVal.HighestLocked = nil
 
 			// Check if it's a 3.0+ MMAP server so we can still compute collection locks
-			collectionCheck, hasCollection := oldStat.Locks["Collection"]
-			if hasCollection && collectionCheck.AcquireWaitCount != nil {
+			collectionCheckOld, hasCollectionOld := oldStat.Locks["Collection"]
+			collectionCheckNew, hasCollectionNew := newStat.Locks["Collection"]
+			if hasCollectionOld && collectionCheckOld.AcquireWaitCount != nil && hasCollectionNew && collectionCheckNew.AcquireWaitCount != nil {
 				readWaitCountDiff := newStat.Locks["Collection"].AcquireWaitCount.Read - oldStat.Locks["Collection"].AcquireWaitCount.Read
 				readTotalCountDiff := newStat.Locks["Collection"].AcquireCount.Read - oldStat.Locks["Collection"].AcquireCount.Read
 				writeWaitCountDiff := newStat.Locks["Collection"].AcquireWaitCount.Write - oldStat.Locks["Collection"].AcquireWaitCount.Write

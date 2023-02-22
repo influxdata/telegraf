@@ -20,7 +20,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -78,6 +78,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # partition_ids = ["0","1"]
 
   ## Max undelivered messages
+  ## This plugin uses tracking metrics, which ensure messages are read to
+  ## outputs before acknowledging them to the original broker to ensure data
+  ## is not lost. This option sets the maximum messages to read from the
+  ## broker that have not been written by an output.
+  ##
+  ## This value needs to be picked with awareness of the agent's
+  ## metric_batch_size value as well. Setting max undelivered messages too high
+  ## can result in a constant stream of data batches to the output. While
+  ## setting it too low may never flush the broker's messages.
   # max_undelivered_messages = 1000
 
   ## Set either option below to true to use a system property as timestamp.
@@ -116,3 +125,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [Full documentation of the available environment variables][envvar].
 
 [envvar]: https://github.com/Azure/azure-event-hubs-go#environment-variables
+
+## Metrics
+
+## Example Output

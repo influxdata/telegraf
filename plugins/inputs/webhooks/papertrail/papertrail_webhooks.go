@@ -73,7 +73,7 @@ func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request
 			}
 			pt.acc.AddFields("papertrail", fields, tags, e.ReceivedAt)
 		}
-	} else if payload.Counts != nil { //nolint:revive // Not simplifying here to stay in the structure for better understanding the code
+	} else if payload.Counts != nil {
 		// Handle count-based payload
 		for _, c := range payload.Counts {
 			for ts, count := range *c.TimeSeries {

@@ -52,9 +52,9 @@ func requiredSections(t *T, root ast.Node, headings []string) error {
 		if child == nil {
 			continue
 		}
-		title := string(child.Text(t.markdown))
+		title := strings.TrimSpace(string(child.Text(t.markdown)))
 		if headingsSet.has(title) && h.Level != expectedLevel {
-			t.assertNodef(n, "has required section '%s' but wrong heading level. Expected level %d, found %d",
+			t.assertNodef(n, "has required section %q but wrong heading level. Expected level %d, found %d",
 				title, expectedLevel, h.Level)
 		}
 
@@ -63,7 +63,7 @@ func requiredSections(t *T, root ast.Node, headings []string) error {
 
 	headingsSet.forEach(func(title string) {
 		if _, exists := titleCounts[title]; !exists {
-			t.assertf("missing required section '%s'", title)
+			t.assertf("missing required section %q", title)
 		}
 	})
 
@@ -157,7 +157,7 @@ func configSection(t *T, root ast.Node) error {
 	}
 
 	if config == nil {
-		t.assertf("missing section '%s'", expectedTitle)
+		t.assertf("missing required section %q", expectedTitle)
 		return nil
 	}
 

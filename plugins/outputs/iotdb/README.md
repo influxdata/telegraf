@@ -22,7 +22,7 @@ Before using this plugin, please configure the IP address, port number,
 user name, password and other information of the database server,
 as well as some data type conversion, time unit and other configurations.
 
-Please see the [configuration section](#Configuration) for an example
+Please see the [configuration section](#configuration) for an example
 configuration.
 
 ## Metric Translation
@@ -54,9 +54,8 @@ Other options are `second`, `millisecond`, `microsecond`.
 
 ### Metadata (tags)
 
-IoTDB uses a tree model for metadata while Telegraf uses a tag model.
-(See [InfluxDB-Protocol Adapter](
-https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html)
+IoTDB uses a tree model for metadata while Telegraf uses a tag model
+(see [InfluxDB-Protocol Adapter][InfluxDB-Protocol Adapter]).
 There are two available options of converting tags, which are specified by
 setting `convert_tags_to`:
 
@@ -74,6 +73,8 @@ Name="root.sg.device", Tags={tag1="private", tag2="working"}, Fields={s1=100, s2
 - `fields`, result: `root.sg.device, s1=100, s2="hello", tag1="private", tag2="working"`
 - `device_id`, result: `root.sg.device.private.working, s1=100, s2="hello"`
 
+[InfluxDB-Protocol Adapter]: https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -81,7 +82,16 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -101,7 +111,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # timeout = "5s"
 
   ## Configuration of type conversion for 64-bit unsigned int
-  ## IoTDB currently DOES NOT support unsigned integers (version 13.x). 
+  ## IoTDB currently DOES NOT support unsigned integers (version 13.x).
   ## 32-bit unsigned integers are safely converted into 64-bit signed integers by the plugin,
   ## however, this is not true for 64-bit values in general as overflows may occur.
   ## The following setting allows to specify the handling of 64-bit unsigned integers.
@@ -112,16 +122,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # uint64_conversion = "int64_clip"
 
   ## Configuration of TimeStamp
-  ## TimeStamp is always saved in 64bits int. timestamp_precision specifies the unit of timestamp. 
+  ## TimeStamp is always saved in 64bits int. timestamp_precision specifies the unit of timestamp.
   ## Available value:
   ## "second", "millisecond", "microsecond", "nanosecond"(default)
   # timestamp_precision = "nanosecond"
 
   ## Handling of tags
-  ## Tags are not fully supported by IoTDB. 
+  ## Tags are not fully supported by IoTDB.
   ## A guide with suggestions on how to handle tags can be found here:
   ##     https://iotdb.apache.org/UserGuide/Master/API/InfluxDB-Protocol.html
-  ## 
+  ##
   ## Available values are:
   ##   - "fields"     --  convert tags to fields in the measurement
   ##   - "device_id"  --  attach tags to the device ID

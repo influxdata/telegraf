@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -21,7 +22,7 @@ func TestWrite(t *testing.T) {
 
 	i := Instrumental{
 		Host:     "127.0.0.1",
-		APIToken: "abc123token",
+		APIToken: config.NewSecret([]byte("abc123token")),
 		Prefix:   "my.prefix",
 	}
 

@@ -51,8 +51,8 @@ type HTTPResponse struct {
 	ResponseStatusCode  int
 	Interface           string
 	// HTTP Basic Auth Credentials
-	Username string `toml:"username"`
-	Password string `toml:"password"`
+	Username config.Secret `toml:"username"`
+	Password config.Secret `toml:"password"`
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -219,8 +219,8 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		}
 	}
 
-	if h.Username != "" || h.Password != "" {
-		request.SetBasicAuth(h.Username, h.Password)
+	if err := h.setRequestAuth(request); err != nil {
+		return nil, nil, err
 	}
 
 	// Start Timer
@@ -395,6 +395,23 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields("http_response", fields, tags)
 	}
 
+	return nil
+}
+
+func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
+	username, err := h.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %v", err)
+	}
+	defer config.ReleaseSecret(username)
+	password, err := h.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %v", err)
+	}
+	defer config.ReleaseSecret(password)
+	if len(username) != 0 || len(password) != 0 {
+		request.SetBasicAuth(string(username), string(password))
+	}
 	return nil
 }
 

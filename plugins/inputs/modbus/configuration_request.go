@@ -178,39 +178,47 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 			}
 		}
 
+		params := groupingParams{
+			MaxExtraRegisters: def.MaxExtraRegisters,
+			Optimization:      def.Optimization,
+			Tags:              def.Tags,
+		}
 		switch def.RegisterType {
 		case "coil":
-			maxQuantity := maxQuantityCoils
+			params.MaxBatchSize = maxQuantityCoils
 			if c.workarounds.OnRequestPerField {
-				maxQuantity = 1
+				params.MaxBatchSize = 1
 			}
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization, def.MaxExtraRegisters)
+			params.EnforceFromZero = c.workarounds.ReadCoilsStartingAtZero
+			requests := groupFieldsToRequests(fields, params)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
-			maxQuantity := maxQuantityDiscreteInput
+			params.MaxBatchSize = maxQuantityDiscreteInput
 			if c.workarounds.OnRequestPerField {
-				maxQuantity = 1
+				params.MaxBatchSize = 1
 			}
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization, def.MaxExtraRegisters)
+			requests := groupFieldsToRequests(fields, params)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
-			maxQuantity := maxQuantityHoldingRegisters
+			params.MaxBatchSize = maxQuantityHoldingRegisters
 			if c.workarounds.OnRequestPerField {
-				maxQuantity = 1
+				params.MaxBatchSize = 1
 			}
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization, def.MaxExtraRegisters)
+			requests := groupFieldsToRequests(fields, params)
 			set.holding = append(set.holding, requests...)
 		case "input":
-			maxQuantity := maxQuantityInputRegisters
+			params.MaxBatchSize = maxQuantityInputRegisters
 			if c.workarounds.OnRequestPerField {
-				maxQuantity = 1
+				params.MaxBatchSize = 1
 			}
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantity, def.Optimization, def.MaxExtraRegisters)
+			requests := groupFieldsToRequests(fields, params)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
 		}
-		result[def.SlaveID] = set
+		if !set.Empty() {
+			result[def.SlaveID] = set
+		}
 	}
 
 	return result, nil

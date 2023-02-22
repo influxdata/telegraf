@@ -25,10 +25,11 @@ var sampleConfigStart string
 var sampleConfigEnd string
 
 type ModbusWorkarounds struct {
-	AfterConnectPause config.Duration `toml:"pause_after_connect"`
-	PollPause         config.Duration `toml:"pause_between_requests"`
-	CloseAfterGather  bool            `toml:"close_connection_after_gather"`
-	OnRequestPerField bool            `toml:"one_request_per_field"`
+	AfterConnectPause       config.Duration `toml:"pause_after_connect"`
+	PollPause               config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather        bool            `toml:"close_connection_after_gather"`
+	OnRequestPerField       bool            `toml:"one_request_per_field"`
+	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
 }
 
 // Modbus holds all data relevant to the plugin
@@ -66,6 +67,14 @@ type requestSet struct {
 	discrete []request
 	holding  []request
 	input    []request
+}
+
+func (r requestSet) Empty() bool {
+	l := len(r.coil)
+	l += len(r.discrete)
+	l += len(r.holding)
+	l += len(r.input)
+	return l == 0
 }
 
 type field struct {

@@ -40,6 +40,8 @@ const (
 	MonitorMethodSettingsAndAnnotations MonitorMethod = "settings+annotations"
 )
 
+type PodID string
+
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
 	URLs []string `toml:"urls"`
@@ -69,7 +71,8 @@ type Prometheus struct {
 
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
-	ResponseTimeout config.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
+	Timeout         config.Duration `toml:"timeout"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -92,7 +95,7 @@ type Prometheus struct {
 	PodNamespace          string `toml:"monitor_kubernetes_pods_namespace"`
 	PodNamespaceLabelName string `toml:"pod_namespace_label_name"`
 	lock                  sync.Mutex
-	kubernetesPods        map[string]URLAndAddress
+	kubernetesPods        map[PodID]URLAndAddress
 	cancel                context.CancelFunc
 	wg                    sync.WaitGroup
 
@@ -161,6 +164,7 @@ func (p *Prometheus) Init() error {
 	}
 
 	ctx := context.Background()
+	p.HTTPClientConfig.Timeout = p.ResponseTimeout
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
 	if err != nil {
 		return err
@@ -201,7 +205,7 @@ type URLAndAddress struct {
 }
 
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
-	allURLs := make(map[string]URLAndAddress)
+	allURLs := make(map[string]URLAndAddress, len(p.URLs)+len(p.consulServices)+len(p.kubernetesPods))
 	for _, u := range p.URLs {
 		address, err := url.Parse(u)
 		if err != nil {
@@ -218,8 +222,8 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 		allURLs[k] = v
 	}
 	// loop through all pods scraped via the prometheus annotation on the pods
-	for k, v := range p.kubernetesPods {
-		allURLs[k] = v
+	for _, v := range p.kubernetesPods {
+		allURLs[v.URL.String()] = v
 	}
 
 	for _, service := range p.KubernetesServices {
@@ -452,7 +456,7 @@ func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
 			ResponseTimeout: config.Duration(time.Second * 3),
-			kubernetesPods:  map[string]URLAndAddress{},
+			kubernetesPods:  map[PodID]URLAndAddress{},
 			consulServices:  map[string]URLAndAddress{},
 			URLTag:          "url",
 		}

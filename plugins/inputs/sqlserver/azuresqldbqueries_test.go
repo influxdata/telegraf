@@ -4,8 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestAzureSQLIntegration_Database_ResourceStats_Query(t *testing.T) {
@@ -18,9 +20,10 @@ func TestAzureSQLIntegration_Database_ResourceStats_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBResourceStats"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -63,9 +66,10 @@ func TestAzureSQLIntegration_Database_ResourceGovernance_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBResourceGovernance"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -124,9 +128,10 @@ func TestAzureSQLIntegration_Database_WaitStats_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBWaitStats"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -161,9 +166,10 @@ func TestAzureSQLIntegration_Database_DatabaseIO_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBDatabaseIO"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -207,9 +213,10 @@ func TestAzureSQLIntegration_Database_ServerProperties_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBServerProperties"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -248,9 +255,10 @@ func TestAzureSQLIntegration_Database_OsWaitstats_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBOsWaitstats"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -286,9 +294,10 @@ func TestAzureSQLIntegration_Database_MemoryClerks_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBMemoryClerks"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -319,9 +328,10 @@ func TestAzureSQLIntegration_Database_PerformanceCounters_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBPerformanceCounters"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -355,9 +365,10 @@ func TestAzureSQLIntegration_Database_Requests_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBRequests"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",
@@ -413,9 +424,10 @@ func TestAzureSQLIntegration_Database_Schedulers_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_DB_CONNECTION_STRING")
+	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
 
 	server := &SQLServer{
-		Servers:      []string{connectionString},
+		Servers:      serversList,
 		IncludeQuery: []string{"AzureSQLDBSchedulers"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLDB",

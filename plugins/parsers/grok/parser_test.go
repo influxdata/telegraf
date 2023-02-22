@@ -795,15 +795,15 @@ func TestShortPatternRegression(t *testing.T) {
 	}
 	require.NoError(t, p.Compile())
 
-	metric, err := p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`)
+	m, err := p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`)
 	require.NoError(t, err)
-	require.NotNil(t, metric)
+	require.NotNil(t, m)
 
 	require.Equal(t,
 		map[string]interface{}{
 			"value": int64(42),
 		},
-		metric.Fields())
+		m.Fields())
 }
 
 func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {

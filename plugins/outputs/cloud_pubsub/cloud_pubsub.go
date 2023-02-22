@@ -89,9 +89,9 @@ func (ps *PubSub) Write(metrics []telegraf.Metric) error {
 	cctx, cancel := context.WithCancel(context.Background())
 
 	// Publish all messages - each call to Publish returns a future.
-	ps.publishResults = make([]publishResult, len(msgs))
-	for i, m := range msgs {
-		ps.publishResults[i] = ps.t.Publish(cctx, m)
+	ps.publishResults = make([]publishResult, 0, len(msgs))
+	for _, m := range msgs {
+		ps.publishResults = append(ps.publishResults, ps.t.Publish(cctx, m))
 	}
 
 	// topic.Stop() forces all published messages to be sent, even
@@ -122,7 +122,7 @@ func (ps *PubSub) initPubSubClient() error {
 		option.WithUserAgent(internal.ProductToken()),
 	)
 	if err != nil {
-		return fmt.Errorf("unable to generate PubSub client: %v", err)
+		return fmt.Errorf("unable to generate PubSub client: %w", err)
 	}
 	ps.c = client
 	return nil
@@ -180,8 +180,8 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 		return []*pubsub.Message{msg}, nil
 	}
 
-	msgs := make([]*pubsub.Message, len(metrics))
-	for i, m := range metrics {
+	msgs := make([]*pubsub.Message, 0, len(metrics))
+	for _, m := range metrics {
 		b, err := ps.serializer.Serialize(m)
 		if err != nil {
 			ps.Log.Debugf("Could not serialize metric: %v", err)
@@ -193,12 +193,13 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			b = []byte(encoded)
 		}
 
-		msgs[i] = &pubsub.Message{
+		msg := &pubsub.Message{
 			Data: b,
 		}
 		if ps.Attributes != nil {
-			msgs[i].Attributes = ps.Attributes
+			msg.Attributes = ps.Attributes
 		}
+		msgs = append(msgs, msg)
 	}
 
 	return msgs, nil

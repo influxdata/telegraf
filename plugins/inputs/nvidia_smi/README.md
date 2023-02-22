@@ -11,7 +11,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -19,7 +19,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
   ## Optional: path to nvidia-smi binary, defaults "/usr/bin/nvidia-smi"
-  ## We will first try to locate the nvidia-smi binary with the explicitly specified value (or default value), 
+  ## We will first try to locate the nvidia-smi binary with the explicitly specified value (or default value),
   ## if it is not found, we will try to locate it on PATH(exec.LookPath), if it is still not found, an error will be returned
   # bin_path = "/usr/bin/nvidia-smi"
 

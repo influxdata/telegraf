@@ -10,7 +10,16 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `usernane` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -47,14 +56,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Connection timeout for initial connection in seconds
   # connection_timeout = "30s"
 
-  ## Maximum messages to read from the broker that have not been written by an
-  ## output.  For best throughput set based on the number of metrics within
-  ## each message and the size of the output's metric_batch_size.
+  ## Max undelivered messages
+  ## This plugin uses tracking metrics, which ensure messages are read to
+  ## outputs before acknowledging them to the original broker to ensure data
+  ## is not lost. This option sets the maximum messages to read from the
+  ## broker that have not been written by an output.
   ##
-  ## For example, if each message from the queue contains 10 metrics and the
-  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
-  ## full batch is collected and the write is triggered immediately without
-  ## waiting until the next flush_interval.
+  ## This value needs to be picked with awareness of the agent's
+  ## metric_batch_size value as well. Setting max undelivered messages too high
+  ## can result in a constant stream of data batches to the output. While
+  ## setting it too low may never flush the broker's messages.
   # max_undelivered_messages = 1000
 
   ## Persistent session disables clearing of the client session on connection.
@@ -206,7 +217,7 @@ sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 - when [[inputs.internal]] is set:
   - payload_size (int): get the cumulative size in bytes that have been received from incoming messages
   - messages_received (int): count of the number of messages that have been received from mqtt
-  
+
 This will result in the following metric:
 
 ```text

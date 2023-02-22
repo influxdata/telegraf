@@ -18,6 +18,9 @@ import (
 // list.
 var unlinkedSecrets = make([]*Secret, 0)
 
+// secretStorePattern is a regex to validate secret-store IDs
+var secretStorePattern = regexp.MustCompile(`^\w+$`)
+
 // secretPattern is a regex to extract references to secrets stored
 // in a secret-store.
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
@@ -41,9 +44,9 @@ func NewSecret(b []byte) Secret {
 	return s
 }
 
-// UnmarshalTOML creates a secret from a toml value.
-func (s *Secret) UnmarshalTOML(b []byte) error {
-	// Unmarshal raw secret from TOML and put it into protected memory
+// UnmarshalText creates a secret from a toml value following the "string" rule.
+func (s *Secret) UnmarshalText(b []byte) error {
+	// Unmarshal secret from TOML and put it into protected memory
 	s.init(b)
 
 	// Keep track of secrets that contain references to secret-stores
@@ -56,9 +59,7 @@ func (s *Secret) UnmarshalTOML(b []byte) error {
 }
 
 // Initialize the secret content
-func (s *Secret) init(b []byte) {
-	secret := unquoteTomlString(b)
-
+func (s *Secret) init(secret []byte) {
 	// Remember if the secret is completely empty
 	s.notempty = len(secret) != 0
 
@@ -93,6 +94,26 @@ func (s *Secret) Empty() bool {
 	return !s.notempty
 }
 
+// EqualTo performs a constant-time comparison of the secret to the given reference
+func (s *Secret) EqualTo(ref []byte) (bool, error) {
+	if s.enclave == nil {
+		return false, nil
+	}
+
+	if len(s.unlinked) > 0 {
+		return false, fmt.Errorf("unlinked parts in secret: %v", strings.Join(s.unlinked, ";"))
+	}
+
+	// Get a locked-buffer of the secret to perform the comparison
+	lockbuf, err := s.enclave.Open()
+	if err != nil {
+		return false, fmt.Errorf("opening enclave failed: %w", err)
+	}
+	defer lockbuf.Destroy()
+
+	return lockbuf.EqualTo(ref), nil
+}
+
 // Get return the string representation of the secret
 func (s *Secret) Get() ([]byte, error) {
 	if s.enclave == nil {
@@ -106,7 +127,7 @@ func (s *Secret) Get() ([]byte, error) {
 	// Decrypt the secret so we can return it
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
-		return nil, fmt.Errorf("opening enclave failed: %v", err)
+		return nil, fmt.Errorf("opening enclave failed: %w", err)
 	}
 	defer lockbuf.Destroy()
 	secret := lockbuf.Bytes()
@@ -158,7 +179,7 @@ func (s *Secret) Link(resolvers map[string]telegraf.ResolveFunc) error {
 	}
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
-		return fmt.Errorf("opening enclave failed: %v", err)
+		return fmt.Errorf("opening enclave failed: %w", err)
 	}
 	defer lockbuf.Destroy()
 	secret := lockbuf.Bytes()

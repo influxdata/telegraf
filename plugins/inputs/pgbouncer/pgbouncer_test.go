@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -48,13 +49,15 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
 
+	addr := fmt.Sprintf(
+		"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=%s sslmode=disable",
+		container.Address,
+		container.Ports[pgBouncerServicePort],
+	)
+
 	p := &PgBouncer{
 		Service: postgresql.Service{
-			Address: fmt.Sprintf(
-				"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=%s sslmode=disable",
-				container.Address,
-				container.Ports[pgBouncerServicePort],
-			),
+			Address:     config.NewSecret([]byte(addr)),
 			IsPgBouncer: true,
 		},
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
@@ -369,10 +370,14 @@ func TestSenderURLFromHostAndPort(t *testing.T) {
 }
 
 func TestSenderURLFromURLAndToken(t *testing.T) {
-	url, err := senderURLFromURLAndToken("https://surf.wavefront.com", "11111111-2222-3333-4444-555555555555")
-	require.Nil(t, err)
-	require.Equal(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com",
-		url)
+	w := &Wavefront{
+		URL:   "https://surf.wavefront.com",
+		Token: config.NewSecret([]byte("11111111-2222-3333-4444-555555555555")),
+	}
+
+	url, err := w.senderURLFromURLAndToken()
+	require.NoError(t, err)
+	require.Equal(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com", url)
 }
 
 func TestDefaults(t *testing.T) {

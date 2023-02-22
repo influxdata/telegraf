@@ -11,7 +11,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -23,7 +23,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   servers = ["127.0.0.1:4010"]
 ```
 
-## Measurements & Fields
+## Metrics
 
 ### Statistics specific to the internals of LeoManager
 
@@ -162,9 +162,9 @@ All measurements have the following tags:
 
 - node
 
-### Example output
+## Example Output
 
-#### LeoManager
+### LeoManager
 
 ```bash
 $ ./telegraf --config ./plugins/inputs/leofs/leo_manager.conf --input-filter leofs --test
@@ -186,7 +186,7 @@ $ ./telegraf --config ./plugins/inputs/leofs/leo_manager.conf --input-filter leo
   1524105758000000000
 ```
 
-#### LeoStorage
+### LeoStorage
 
 ```bash
 $ ./telegraf --config ./plugins/inputs/leofs/leo_storage.conf --input-filter leofs --test
@@ -233,7 +233,7 @@ $ ./telegraf --config ./plugins/inputs/leofs/leo_storage.conf --input-filter leo
   1524529826000000000
 ```
 
-#### LeoGateway
+### LeoGateway
 
 ```shell
 $ ./telegraf --config ./plugins/inputs/leofs/leo_gateway.conf --input-filter leofs --test

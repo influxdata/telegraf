@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -123,11 +123,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # password = ""
 
   ## Optional custom HTTP headers
-  # headers = {"X-Special-Header" = "Special-Value"}
+  # http_headers = {"X-Special-Header" = "Special-Value"}
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
+  # timeout = "3s"
+  
+  ##   deprecated in 1.26; use the timeout option
   # response_timeout = "3s"
-
+  
   ## HTTP Proxy support
   # use_system_proxy = false
   # http_proxy_url = ""

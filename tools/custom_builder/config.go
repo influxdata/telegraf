@@ -95,11 +95,11 @@ func (s *selection) importFiles(configurations []string) error {
 	for _, cfg := range configurations {
 		buf, err := config.LoadConfigFile(cfg)
 		if err != nil {
-			return fmt.Errorf("reading %q failed: %v", cfg, err)
+			return fmt.Errorf("reading %q failed: %w", cfg, err)
 		}
 
 		if err := s.extractPluginsFromConfig(buf); err != nil {
-			return fmt.Errorf("extracting plugins from %q failed: %v", cfg, err)
+			return fmt.Errorf("extracting plugins from %q failed: %w", cfg, err)
 		}
 	}
 

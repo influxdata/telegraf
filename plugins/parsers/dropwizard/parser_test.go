@@ -39,7 +39,7 @@ func TestParseValidEmptyJSON(t *testing.T) {
 const validCounterJSON = `
 {
 	"version": 		"3.0.0",
-	"counters" : 	{ 
+	"counters" : 	{
 		"measurement" : {
 			"count" : 1
 		}
@@ -75,7 +75,7 @@ const validEmbeddedCounterJSON = `
 		"tag3 space,comma=equals" : "red ,="
 	},
 	"metrics" : {
-		"counters" : 	{ 
+		"counters" : 	{
 			"measurement" : {
 				"count" : 1
 			}
@@ -130,7 +130,7 @@ const validMeterJSON1 = `
 {
 	"version": 		"3.0.0",
 	"counters" : 	{},
-	"meters" : 		{ 
+	"meters" : 		{
 		"measurement1" : {
 			"count" : 1,
 			"m15_rate" : 1.0,
@@ -171,7 +171,7 @@ const validMeterJSON2 = `
 {
 	"version": 		"3.0.0",
 	"counters" : 	{},
-	"meters" : 		{ 
+	"meters" : 		{
 		"measurement2,key=value" : {
 			"count" : 2,
 			"m15_rate" : 2.0,

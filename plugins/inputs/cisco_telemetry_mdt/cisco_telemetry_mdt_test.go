@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"testing"
+	"time"
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
@@ -15,6 +16,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -94,6 +97,174 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 	tags = map[string]string{"path": "type:model/some/path", "name": "str2", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"bool": false}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+}
+
+func TestIncludeDeleteField(t *testing.T) {
+	type TelemetryEntry struct {
+		name        string
+		fieldName   string
+		uint32Value uint32
+		uint64Value uint64
+		stringValue string
+	}
+	encodingPath := TelemetryEntry{
+		name:        "path",
+		stringValue: "openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv6/addresses/address",
+	}
+	name := TelemetryEntry{name: "name", stringValue: "Loopback10"}
+	index := TelemetryEntry{name: "index", stringValue: "0"}
+	ip := TelemetryEntry{name: "ip", fieldName: "state/ip", stringValue: "10::10"}
+	prefixLength := TelemetryEntry{name: "prefix-length", fieldName: "state/prefix_length", uint32Value: uint32(128), uint64Value: 128}
+	origin := TelemetryEntry{name: "origin", fieldName: "state/origin", stringValue: "STATIC"}
+	status := TelemetryEntry{name: "status", fieldName: "state/status", stringValue: "PREFERRED"}
+	source := TelemetryEntry{name: "source", stringValue: "hostname"}
+	subscription := TelemetryEntry{name: "subscription", stringValue: "subscription"}
+	deleteKey := "delete"
+	stateKey := "state"
+
+	testCases := []struct {
+		telemetry *telemetryBis.Telemetry
+		expected  []telegraf.Metric
+	}{{
+		telemetry: &telemetryBis.Telemetry{
+			MsgTimestamp: 1543236572000,
+			EncodingPath: encodingPath.stringValue,
+			NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: source.stringValue},
+			Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: subscription.stringValue},
+			DataGpbkv: []*telemetryBis.TelemetryField{
+				{
+					Fields: []*telemetryBis.TelemetryField{
+						{
+							Name: "keys",
+							Fields: []*telemetryBis.TelemetryField{
+								{
+									Name:        name.name,
+									ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: name.stringValue},
+								},
+								{
+									Name:        index.name,
+									ValueByType: &telemetryBis.TelemetryField_Uint32Value{Uint32Value: index.uint32Value},
+								},
+								{
+									Name:        ip.name,
+									ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: ip.stringValue},
+								},
+							},
+						},
+						{
+							Name: "content",
+							Fields: []*telemetryBis.TelemetryField{
+								{
+									Name: stateKey,
+									Fields: []*telemetryBis.TelemetryField{
+										{
+											Name:        ip.name,
+											ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: ip.stringValue},
+										},
+										{
+											Name:        prefixLength.name,
+											ValueByType: &telemetryBis.TelemetryField_Uint32Value{Uint32Value: prefixLength.uint32Value},
+										},
+										{
+											Name:        origin.name,
+											ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: origin.stringValue},
+										},
+										{
+											Name:        status.name,
+											ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: status.stringValue},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		expected: []telegraf.Metric{
+			metric.New(
+				"deleted",
+				map[string]string{
+					encodingPath.name: encodingPath.stringValue,
+					name.name:         name.stringValue,
+					index.name:        index.stringValue,
+					ip.name:           ip.stringValue,
+					source.name:       source.stringValue,
+					subscription.name: subscription.stringValue,
+				},
+				map[string]interface{}{
+					deleteKey:              false,
+					ip.fieldName:           ip.stringValue,
+					prefixLength.fieldName: prefixLength.uint64Value,
+					origin.fieldName:       origin.stringValue,
+					status.fieldName:       status.stringValue,
+				},
+				time.Now(),
+			)},
+	},
+		{
+			telemetry: &telemetryBis.Telemetry{
+				MsgTimestamp: 1543236572000,
+				EncodingPath: encodingPath.stringValue,
+				NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: source.stringValue},
+				Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: subscription.stringValue},
+				DataGpbkv: []*telemetryBis.TelemetryField{
+					{
+						Delete: true,
+						Fields: []*telemetryBis.TelemetryField{
+							{
+								Name: "keys",
+								Fields: []*telemetryBis.TelemetryField{
+									{
+										Name:        name.name,
+										ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: name.stringValue},
+									},
+									{
+										Name:        index.name,
+										ValueByType: &telemetryBis.TelemetryField_Uint32Value{Uint32Value: index.uint32Value},
+									},
+									{
+										Name:        ip.name,
+										ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: ip.stringValue},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"deleted",
+					map[string]string{
+						encodingPath.name: encodingPath.stringValue,
+						name.name:         name.stringValue,
+						index.name:        index.stringValue,
+						ip.name:           ip.stringValue,
+						source.name:       source.stringValue,
+						subscription.name: subscription.stringValue,
+					},
+					map[string]interface{}{deleteKey: true},
+					time.Now(),
+				)},
+		},
+	}
+	for _, test := range testCases {
+		c := &CiscoTelemetryMDT{
+			Log:                testutil.Logger{},
+			Transport:          "dummy",
+			Aliases:            map[string]string{"deleted": encodingPath.stringValue},
+			IncludeDeleteField: true}
+		acc := &testutil.Accumulator{}
+		// error is expected since we are passing in dummy transport
+		require.ErrorContains(t, c.Start(acc), "dummy")
+		data, err := proto.Marshal(test.telemetry)
+		require.NoError(t, err)
+
+		c.handleTelemetry(data)
+		actual := acc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, test.expected, actual, testutil.IgnoreTime())
+	}
 }
 
 func TestHandleTelemetrySingleNested(t *testing.T) {

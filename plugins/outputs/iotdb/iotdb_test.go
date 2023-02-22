@@ -511,8 +511,8 @@ func TestIntegrationInserts(t *testing.T) {
 	testClient := &IoTDB{
 		Host:            container.Address,
 		Port:            container.Ports[iotdbPort],
-		User:            "root",
-		Password:        "root",
+		User:            config.NewSecret([]byte("root")),
+		Password:        config.NewSecret([]byte("root")),
 		Timeout:         config.Duration(time.Second * 5),
 		ConvertUint64To: "int64_clip",
 		TimeStampUnit:   "nanosecond",

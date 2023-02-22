@@ -26,7 +26,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -107,7 +107,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## The preserve_newline option can be true or false (defaults to false).
     ## If true, the newline character is preserved for multiline elements,
     ## this is useful to preserve message-structure e.g. for logging outputs.
-    #preserver_newline = false
+    #preserve_newline = false
 
     #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
     #timeout = 5s

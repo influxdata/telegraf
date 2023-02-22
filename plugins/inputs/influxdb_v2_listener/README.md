@@ -18,7 +18,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -70,3 +70,5 @@ curl -i -XPOST 'http://localhost:8186/api/v2/write' --data-binary 'cpu_load_shor
 ```
 
 [influxdb_http_api]: https://docs.influxdata.com/influxdb/latest/api/
+
+## Example Output

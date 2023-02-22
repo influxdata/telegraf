@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -88,8 +89,8 @@ type HTTPConfig struct {
 	URL                       *url.URL
 	UserAgent                 string
 	Timeout                   time.Duration
-	Username                  string
-	Password                  string
+	Username                  config.Secret
+	Password                  config.Secret
 	TLSConfig                 *tls.Config
 	Proxy                     *url.URL
 	Headers                   map[string]string
@@ -120,72 +121,72 @@ type httpClient struct {
 	log telegraf.Logger
 }
 
-func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
-	if config.URL == nil {
+func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
+	if cfg.URL == nil {
 		return nil, ErrMissingURL
 	}
 
-	if config.Database == "" {
-		config.Database = defaultDatabase
+	if cfg.Database == "" {
+		cfg.Database = defaultDatabase
 	}
 
-	if config.Timeout == 0 {
-		config.Timeout = defaultRequestTimeout
+	if cfg.Timeout == 0 {
+		cfg.Timeout = defaultRequestTimeout
 	}
 
-	userAgent := config.UserAgent
+	userAgent := cfg.UserAgent
 	if userAgent == "" {
 		userAgent = internal.ProductToken()
 	}
 
-	if config.Headers == nil {
-		config.Headers = make(map[string]string)
+	if cfg.Headers == nil {
+		cfg.Headers = make(map[string]string)
 	}
-	config.Headers["User-Agent"] = userAgent
-	for k, v := range config.Headers {
-		config.Headers[k] = v
+	cfg.Headers["User-Agent"] = userAgent
+	for k, v := range cfg.Headers {
+		cfg.Headers[k] = v
 	}
 
 	var proxy func(*http.Request) (*url.URL, error)
-	if config.Proxy != nil {
-		proxy = http.ProxyURL(config.Proxy)
+	if cfg.Proxy != nil {
+		proxy = http.ProxyURL(cfg.Proxy)
 	} else {
 		proxy = http.ProxyFromEnvironment
 	}
 
-	if config.Serializer == nil {
-		config.Serializer = influx.NewSerializer()
+	if cfg.Serializer == nil {
+		cfg.Serializer = influx.NewSerializer()
 	}
 
 	var transport *http.Transport
-	switch config.URL.Scheme {
+	switch cfg.URL.Scheme {
 	case "http", "https":
 		transport = &http.Transport{
 			Proxy:           proxy,
-			TLSClientConfig: config.TLSConfig,
+			TLSClientConfig: cfg.TLSConfig,
 		}
 	case "unix":
 		transport = &http.Transport{
 			Dial: func(_, _ string) (net.Conn, error) {
 				return net.DialTimeout(
-					config.URL.Scheme,
-					config.URL.Path,
+					cfg.URL.Scheme,
+					cfg.URL.Path,
 					defaultRequestTimeout,
 				)
 			},
 		}
 	default:
-		return nil, fmt.Errorf("unsupported scheme %q", config.URL.Scheme)
+		return nil, fmt.Errorf("unsupported scheme %q", cfg.URL.Scheme)
 	}
 
 	client := &httpClient{
 		client: &http.Client{
-			Timeout:   config.Timeout,
+			Timeout:   cfg.Timeout,
 			Transport: transport,
 		},
 		createDatabaseExecuted: make(map[string]bool),
-		config:                 config,
-		log:                    config.Log,
+		config:                 cfg,
+		log:                    cfg.Log,
 	}
 	return client, nil
 }
@@ -329,24 +330,21 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
 	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
-		return fmt.Errorf("failed making write url: %s", err.Error())
+		return fmt.Errorf("failed making write url: %w", err)
 	}
 
-	reader, err := c.requestBodyReader(metrics)
-	if err != nil {
-		return err
-	}
+	reader := c.requestBodyReader(metrics)
 	defer reader.Close()
 
 	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
-		return fmt.Errorf("failed making write req: %s", err.Error())
+		return fmt.Errorf("failed making write req: %w", err)
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		internal.OnClientError(c.client, err)
-		return fmt.Errorf("failed doing req: %s", err.Error())
+		return fmt.Errorf("failed doing req: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -451,9 +449,11 @@ func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	c.addHeaders(req)
+	if err := c.addHeaders(req); err != nil {
+		return nil, err
+	}
 
-	return req, nil
+	return req, err
 }
 
 func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
@@ -461,11 +461,13 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 
 	req, err := http.NewRequest("POST", address, body)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating new request: %s", err.Error())
+		return nil, fmt.Errorf("failed creating new request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
-	c.addHeaders(req)
+	if err := c.addHeaders(req); err != nil {
+		return nil, err
+	}
 
 	if c.config.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
@@ -476,29 +478,37 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 
 // requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
 // side of the connection in case of error
-func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser, error) {
+func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
 	reader := influx.NewReader(metrics, c.config.Serializer)
 
 	if c.config.ContentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reader)
-		if err != nil {
-			return nil, err
-		}
-
-		return rc, nil
+		return internal.CompressWithGzip(reader)
 	}
 
-	return io.NopCloser(reader), nil
+	return io.NopCloser(reader)
 }
 
-func (c *httpClient) addHeaders(req *http.Request) {
-	if c.config.Username != "" || c.config.Password != "" {
-		req.SetBasicAuth(c.config.Username, c.config.Password)
+func (c *httpClient) addHeaders(req *http.Request) error {
+	if !c.config.Username.Empty() || !c.config.Password.Empty() {
+		username, err := c.config.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		defer config.ReleaseSecret(username)
+		password, err := c.config.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(password)
+
+		req.SetBasicAuth(string(username), string(password))
 	}
 
 	for header, value := range c.config.Headers {
 		req.Header.Set(header, value)
 	}
+
+	return nil
 }
 
 func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {

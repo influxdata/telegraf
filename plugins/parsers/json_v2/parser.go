@@ -75,12 +75,12 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	body, _ := utfbom.Skip(reader)
 	input, err := io.ReadAll(body)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read body after BOM removal: %v", err)
+		return nil, fmt.Errorf("unable to read body after BOM removal: %w", err)
 	}
 
 	// Only valid JSON is supported
 	if !gjson.Valid(string(input)) {
-		return nil, fmt.Errorf("invalid JSON provided, unable to parse")
+		return nil, fmt.Errorf("invalid JSON provided, unable to parse: %s", string(input))
 	}
 
 	var metrics []telegraf.Metric
@@ -102,7 +102,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 			if result.Type == gjson.Null {
 				p.Log.Debugf("Message: %s", input)
-				return nil, fmt.Errorf("The timestamp path %s returned NULL", c.TimestampPath)
+				return nil, fmt.Errorf("the timestamp path %s returned NULL", c.TimestampPath)
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
@@ -586,25 +586,25 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 		case "uint":
 			r, err := strconv.ParseUint(inputType, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type uint: %v", name, err)
+				return nil, fmt.Errorf("unable to convert field '%s' to type uint: %w", name, err)
 			}
 			return r, nil
 		case "int":
 			r, err := strconv.ParseInt(inputType, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type int: %v", name, err)
+				return nil, fmt.Errorf("unable to convert field '%s' to type int: %w", name, err)
 			}
 			return r, nil
 		case "float":
 			r, err := strconv.ParseFloat(inputType, 64)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type float: %v", name, err)
+				return nil, fmt.Errorf("unable to convert field '%s' to type float: %w", name, err)
 			}
 			return r, nil
 		case "bool":
 			r, err := strconv.ParseBool(inputType)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type bool: %v", name, err)
+				return nil, fmt.Errorf("unable to convert field '%s' to type bool: %w", name, err)
 			}
 			return r, nil
 		}
@@ -639,7 +639,7 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 			} else if inputType == 1 {
 				return true, nil
 			} else {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type bool", name)
+				return nil, fmt.Errorf("unable to convert field '%s' to type bool", name)
 			}
 		}
 	default:

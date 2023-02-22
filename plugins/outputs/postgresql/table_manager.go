@@ -93,12 +93,12 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 		}
 
 		if len(missingCols) > 0 {
-			colDefs := make([]string, len(missingCols))
-			for i, col := range missingCols {
+			colDefs := make([]string, 0, len(missingCols))
+			for _, col := range missingCols {
 				if err := rowSource.DropColumn(col); err != nil {
 					return fmt.Errorf("metric/table mismatch: Unable to omit field/column from \"%s\": %w", tagTable.name, err)
 				}
-				colDefs[i] = col.Name + " " + col.Type
+				colDefs = append(colDefs, col.Name+" "+col.Type)
 			}
 			tm.Logger.Errorf("table '%s' is missing tag columns (dropping metrics): %s",
 				tagTable.name,
@@ -124,12 +124,12 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 	}
 
 	if len(missingCols) > 0 {
-		colDefs := make([]string, len(missingCols))
-		for i, col := range missingCols {
+		colDefs := make([]string, 0, len(missingCols))
+		for _, col := range missingCols {
 			if err := rowSource.DropColumn(col); err != nil {
 				return fmt.Errorf("metric/table mismatch: Unable to omit field/column from \"%s\": %w", metricTable.name, err)
 			}
-			colDefs[i] = col.Name + " " + col.Type
+			colDefs = append(colDefs, col.Name+" "+col.Type)
 		}
 		tm.Logger.Errorf("table '%s' is missing columns (omitting fields): %s",
 			metricTable.name,
@@ -148,7 +148,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 // If the table cannot be modified, the returned column list is the columns which are missing from the table. This
 // includes when an error is returned.
 //
-//nolint:revive
+//nolint:revive //argument-limit conditionally more arguments allowed
 func (tm *TableManager) EnsureStructure(
 	ctx context.Context,
 	db dbh,
@@ -248,7 +248,7 @@ func (tm *TableManager) EnsureStructure(
 	if err != nil {
 		return append(addColumns, invalidColumns...), err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
+	defer tx.Rollback(ctx) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
 	// It's possible to have multiple telegraf processes, in which we can't ensure they all lock tables in the same
 	// order. So to prevent possible deadlocks, we have to have a single lock for all schema modifications.
 	if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", schemaAdvisoryLockID); err != nil {
@@ -346,7 +346,7 @@ func (tm *TableManager) getColumns(ctx context.Context, db dbh, name string) (ma
 	return cols, rows.Err()
 }
 
-//nolint:revive
+//nolint:revive //argument-limit conditionally more arguments allowed
 func (tm *TableManager) update(ctx context.Context,
 	tx pgx.Tx,
 	state *tableState,
@@ -385,7 +385,7 @@ func (tm *TableManager) update(ctx context.Context,
 		stmt := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS 'tag'",
 			tmplTable.String(), sqltemplate.QuoteIdentifier(col.Name))
 		if _, err := tx.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("setting column role comment: %s", err)
+			return fmt.Errorf("setting column role comment: %w", err)
 		}
 	}
 

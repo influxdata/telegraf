@@ -286,8 +286,7 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
 			// log error and return error to telegraf to retry in next flush interval
 			// We need this is to avoid data drop when there are no tables present in the database
-			return fmt.Errorf("failed to write to Timestream database '%s' table '%s', Error: '%s'",
-				t.DatabaseName, *writeRecordsInput.TableName, err)
+			return fmt.Errorf("failed to write to Timestream database %q table %q: %w", t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
 
 		var rejected *types.RejectedRecordsException
@@ -301,20 +300,20 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 
 		var throttling *types.ThrottlingException
 		if errors.As(err, &throttling) {
-			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %w",
 				t.DatabaseName, *writeRecordsInput.TableName, throttling)
 		}
 
 		var internal *types.InternalServerException
 		if errors.As(err, &internal) {
-			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %w",
 				t.DatabaseName, *writeRecordsInput.TableName, internal)
 		}
 
 		var operation *smithy.OperationError
 		if !errors.As(err, &operation) {
 			// Retry other, non-aws errors.
-			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %w",
 				t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
 		t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
@@ -368,7 +367,8 @@ func (t *Timestream) createTable(tableName *string) error {
 
 	_, err := t.svc.CreateTable(context.Background(), createTableInput)
 	if err != nil {
-		if _, ok := err.(*types.ConflictException); ok {
+		var e *types.ConflictException
+		if errors.As(err, &e) {
 			// if the table was created in the meantime, it's ok.
 			return nil
 		}
