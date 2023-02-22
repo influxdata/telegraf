@@ -68,7 +68,7 @@ require (
 	github.com/eclipse/paho.mqtt.golang v1.4.2
 	github.com/fatih/color v1.13.0
 	github.com/go-ldap/ldap/v3 v3.4.4
-	github.com/go-logfmt/logfmt v0.5.1
+	github.com/go-logfmt/logfmt v0.6.0
 	github.com/go-redis/redis/v7 v7.4.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.6.0
