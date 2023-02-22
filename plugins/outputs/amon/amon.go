@@ -83,17 +83,17 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
-		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
+		return fmt.Errorf("unable to marshal TimeSeries: %w", err)
 	}
 	req, err := http.NewRequest("POST", a.authenticatedURL(), bytes.NewBuffer(tsBytes))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s", err.Error())
+		return fmt.Errorf("unable to create http.Request: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s", err.Error())
+		return fmt.Errorf("error POSTing metrics: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -113,7 +113,7 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 	for k, v := range m.Fields() {
 		var p Point
 		if err := p.setValue(v); err != nil {
-			return ms, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+			return ms, fmt.Errorf("unable to extract value from Fields: %w", err)
 		}
 		p[0] = float64(m.Time().Unix())
 		ms[k] = p

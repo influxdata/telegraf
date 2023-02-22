@@ -169,7 +169,7 @@ func (a *Elasticsearch) Connect() error {
 
 	elasticURL, err := url.Parse(a.URLs[0])
 	if err != nil {
-		return fmt.Errorf("parsing URL failed: %v", err)
+		return fmt.Errorf("parsing URL failed: %w", err)
 	}
 
 	clientOptions = append(clientOptions,
@@ -205,7 +205,7 @@ func (a *Elasticsearch) Connect() error {
 	esVersion, err := client.ElasticsearchVersion(a.URLs[0])
 
 	if err != nil {
-		return fmt.Errorf("elasticsearch version check failed: %s", err)
+		return fmt.Errorf("elasticsearch version check failed: %w", err)
 	}
 
 	// quit if ES version is not supported
@@ -310,7 +310,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	res, err := bulkRequest.Do(ctx)
 
 	if err != nil {
-		return fmt.Errorf("error sending bulk request to Elasticsearch: %s", err)
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
 
 	if res.Errors {
@@ -338,7 +338,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
 
 	if errExists != nil {
-		return fmt.Errorf("elasticsearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
+		return fmt.Errorf("elasticsearch template check failed, template name: %s, error: %w", a.TemplateName, errExists)
 	}
 
 	templatePattern := a.IndexName
@@ -370,7 +370,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl.String()).Do(ctx)
 
 		if errCreateTemplate != nil {
-			return fmt.Errorf("elasticsearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
+			return fmt.Errorf("elasticsearch failed to create index template %s: %w", a.TemplateName, errCreateTemplate)
 		}
 
 		a.Log.Debugf("Template %s created or updated\n", a.TemplateName)
