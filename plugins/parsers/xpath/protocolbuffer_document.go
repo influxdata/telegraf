@@ -43,7 +43,7 @@ func (d *protobufDocument) Init() error {
 	}
 	fds, err := parser.ParseFiles(d.MessageDefinition)
 	if err != nil {
-		return fmt.Errorf("parsing protocol-buffer definition in %q failed: %v", d.MessageDefinition, err)
+		return fmt.Errorf("parsing protocol-buffer definition in %q failed: %w", d.MessageDefinition, err)
 	}
 	if len(fds) < 1 {
 		return fmt.Errorf("file %q does not contain file descriptors", d.MessageDefinition)
@@ -52,7 +52,7 @@ func (d *protobufDocument) Init() error {
 	// Register all definitions in the file in the global registry
 	registry, err := protodesc.NewFiles(desc.ToFileDescriptorSet(fds...))
 	if err != nil {
-		return fmt.Errorf("constructing registry failed: %v", err)
+		return fmt.Errorf("constructing registry failed: %w", err)
 	}
 
 	// Lookup given type in the loaded file descriptors

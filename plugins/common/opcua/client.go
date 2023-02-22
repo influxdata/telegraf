@@ -9,6 +9,7 @@ import (
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 )
@@ -184,7 +185,7 @@ func (o *OpcUAClient) Connect() error {
 		defer cancel()
 		if err := o.Client.Connect(ctx); err != nil {
 			o.State = Disconnected
-			return fmt.Errorf("error in Client Connection: %s", err)
+			return fmt.Errorf("error in Client Connection: %w", err)
 		}
 
 		o.State = Connected

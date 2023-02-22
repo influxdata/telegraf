@@ -91,7 +91,7 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
 		var err error
 		t.tagsGlobs, err = filter.Compile(t.GroupBy)
 		if err != nil {
-			return "", fmt.Errorf("could not compile pattern: %v %v", t.GroupBy, err)
+			return "", fmt.Errorf("could not compile pattern: %v %w", t.GroupBy, err)
 		}
 	}
 

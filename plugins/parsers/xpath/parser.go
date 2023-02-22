@@ -212,7 +212,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 	if len(config.MetricQuery) > 0 {
 		v, err := p.executeQuery(doc, selected, config.MetricQuery)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query metric name: %v", err)
+			return nil, fmt.Errorf("failed to query metric name: %w", err)
 		}
 		var ok bool
 		if metricname, ok = v.(string); !ok {
@@ -229,7 +229,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 	if len(config.Timestamp) > 0 {
 		v, err := p.executeQuery(doc, selected, config.Timestamp)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query timestamp: %v", err)
+			return nil, fmt.Errorf("failed to query timestamp: %w", err)
 		}
 		if v != nil {
 			timestamp, err = internal.ParseTimestamp(config.TimestampFmt, v, "")
@@ -245,7 +245,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		// Execute the query and cast the returned values into strings
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query tag '%s': %v", name, err)
+			return nil, fmt.Errorf("failed to query tag '%s': %w", name, err)
 		}
 		switch v := v.(type) {
 		case string:
@@ -282,7 +282,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			for _, selectedtag := range selectedTagNodes {
 				n, err := p.executeQuery(doc, selectedtag, tagnamequery)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query tag name with query '%s': %v", tagnamequery, err)
+					return nil, fmt.Errorf("failed to query tag name with query '%s': %w", tagnamequery, err)
 				}
 				name, ok := n.(string)
 				if !ok {
@@ -290,7 +290,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				}
 				v, err := p.executeQuery(doc, selectedtag, tagvaluequery)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query tag value for '%s': %v", name, err)
+					return nil, fmt.Errorf("failed to query tag value for '%s': %w", name, err)
 				}
 
 				if config.TagNameExpand {
@@ -333,13 +333,13 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		// Execute the query and cast the returned values into integers
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query field (int) '%s': %v", name, err)
+			return nil, fmt.Errorf("failed to query field (int) '%s': %w", name, err)
 		}
 		switch v := v.(type) {
 		case string:
 			fields[name], err = strconv.ParseInt(v, 10, 54)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse field (int) '%s': %v", name, err)
+				return nil, fmt.Errorf("failed to parse field (int) '%s': %w", name, err)
 			}
 		case bool:
 			fields[name] = int64(0)
@@ -359,7 +359,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		// Execute the query and store the result in fields
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query field '%s': %v", name, err)
+			return nil, fmt.Errorf("failed to query field '%s': %w", name, err)
 		}
 		fields[name] = v
 	}
@@ -385,7 +385,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			for _, selectedfield := range selectedFieldNodes {
 				n, err := p.executeQuery(doc, selectedfield, fieldnamequery)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query field name with query '%s': %v", fieldnamequery, err)
+					return nil, fmt.Errorf("failed to query field name with query '%s': %w", fieldnamequery, err)
 				}
 				name, ok := n.(string)
 				if !ok {
@@ -393,7 +393,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				}
 				v, err := p.executeQuery(doc, selectedfield, fieldvaluequery)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query field value for '%s': %v", name, err)
+					return nil, fmt.Errorf("failed to query field value for '%s': %w", name, err)
 				}
 
 				if config.FieldNameExpand {
@@ -439,7 +439,7 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 	// Compile the query
 	expr, err := path.Compile(query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile query '%s': %v", query, err)
+		return nil, fmt.Errorf("failed to compile query '%s': %w", query, err)
 	}
 
 	// Evaluate the compiled expression and handle returned node-iterators

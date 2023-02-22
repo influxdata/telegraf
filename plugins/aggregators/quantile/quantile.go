@@ -115,7 +115,7 @@ func (q *Quantile) Init() error {
 		return fmt.Errorf("unknown algorithm type %q", q.AlgorithmType)
 	}
 	if _, err := q.newAlgorithm(q.Compression); err != nil {
-		return fmt.Errorf("cannot create %q algorithm: %v", q.AlgorithmType, err)
+		return fmt.Errorf("cannot create %q algorithm: %w", q.AlgorithmType, err)
 	}
 
 	if len(q.Quantiles) == 0 {
