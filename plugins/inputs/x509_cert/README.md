@@ -54,6 +54,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - x509_cert
   - tags:
+    - type   - "leaf", "intermediate" or "root" classification of certificate
     - source - source of the certificate
     - organization
     - organizational_unit
