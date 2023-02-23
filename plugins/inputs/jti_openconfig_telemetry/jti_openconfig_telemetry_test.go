@@ -136,7 +136,6 @@ func TestOpenConfigTelemetryData(t *testing.T) {
 
 func TestOpenConfigTelemetryData_timestamp(t *testing.T) {
 	var acc testutil.Accumulator
-	cfg.TimestampSource = "data"
 	cfg.Sensors = []string{"/sensor_with_timestamp"}
 	require.NoError(t, cfg.Start(&acc))
 
