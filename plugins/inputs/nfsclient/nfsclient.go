@@ -306,11 +306,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	return nil
+	return scanner.Err()
 }
 
 func (n *NFSClient) Init() error {
