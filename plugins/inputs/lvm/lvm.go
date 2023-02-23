@@ -285,7 +285,6 @@ type lvsReport struct {
 func init() {
 	inputs.Add("lvm", func() telegraf.Input {
 		return &LVM{
-			UseSudo:   false,
 			PVSBinary: "/usr/sbin/pvs",
 			VGSBinary: "/usr/sbin/vgs",
 			LVSBinary: "/usr/sbin/lvs",

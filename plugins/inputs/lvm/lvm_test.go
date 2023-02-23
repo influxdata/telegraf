@@ -14,7 +14,6 @@ func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 
 	lvm := LVM{
-		UseSudo:   false,
 		PVSBinary: "/usr/sbin/pvs",
 		VGSBinary: "/usr/sbin/vgs",
 		LVSBinary: "/usr/sbin/lvs",
@@ -134,7 +133,6 @@ func TestGatherNoLVM(t *testing.T) {
 	var acc testutil.Accumulator
 
 	noLVM := LVM{
-		UseSudo:   false,
 		PVSBinary: "/usr/sbin/pvs",
 		VGSBinary: "/usr/sbin/vgs",
 		LVSBinary: "/usr/sbin/lvs",

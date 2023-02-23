@@ -21,13 +21,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   use_sudo = false
 
   ## The default location of the pvs binary can be overridden with:
-  pvs_binary = "/usr/sbin/pvs"
+  #pvs_binary = "/usr/sbin/pvs"
 
   ## The default location of the vgs binary can be overridden with:
-  vgs_binary = "/usr/sbin/vgs"
+  #vgs_binary = "/usr/sbin/vgs"
 
   ## The default location of the lvs binary can be overridden with:
-  lvs_binary = "/usr/sbin/lvs"
+  #lvs_binary = "/usr/sbin/lvs"
 ```
 
 The LVM commands requires elevated permissions. If the user has configured sudo
