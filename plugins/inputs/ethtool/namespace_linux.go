@@ -36,7 +36,6 @@ func (n *NamespaceGoroutine) Interfaces() ([]NamespacedInterface, error) {
 	interfaces, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
 		interfaces, err := net.Interfaces()
 		if err != nil {
-			n.Log.Errorf("Could not get interfaces in namespace %q: %s", n.name, err.Error())
 			return nil, err
 		}
 		namespacedInterfaces := make([]NamespacedInterface, 0, len(interfaces))
