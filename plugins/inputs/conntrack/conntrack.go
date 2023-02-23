@@ -106,7 +106,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 		perCPU := metric == "percpu"
 		stats, err := c.ps.NetConntrack(perCPU)
 		if err != nil {
-			acc.AddError(fmt.Errorf("failed to retrieve conntrack statistics: %v", err))
+			acc.AddError(fmt.Errorf("failed to retrieve conntrack statistics: %w", err))
 		}
 
 		if len(stats) == 0 {

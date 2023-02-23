@@ -4,6 +4,7 @@ package dovecot
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -74,7 +75,7 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 
 		_, _, err := net.SplitHostPort(addr)
 		if err != nil {
-			return fmt.Errorf("%q on url %s", err.Error(), addr)
+			return fmt.Errorf("%w on url %q", err, addr)
 		}
 	}
 
@@ -103,7 +104,8 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 		// We need to accept the timeout here as reading from the connection will only terminate on EOF
 		// or on a timeout to happen. As EOF for TCP connections will only be sent on connection closing,
 		// the only way to get the whole message is to wait for the timeout to happen.
-		if nerr, ok := err.(net.Error); !ok || !nerr.Timeout() {
+		var nerr net.Error
+		if !errors.As(err, &nerr) || !nerr.Timeout() {
 			return fmt.Errorf("copying message failed for dovecot server %q: %w", addr, err)
 		}
 	}

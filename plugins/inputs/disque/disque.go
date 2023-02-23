@@ -142,7 +142,7 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	if line[0] != '$' {
-		return fmt.Errorf("bad line start: %s", ErrProtocolError)
+		return fmt.Errorf("bad line start: %w", ErrProtocolError)
 	}
 
 	line = strings.TrimSpace(line)
@@ -151,7 +151,7 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 
 	sz, err := strconv.Atoi(szStr)
 	if err != nil {
-		return fmt.Errorf("bad size string <<%s>>: %s", szStr, ErrProtocolError)
+		return fmt.Errorf("bad size string <<%s>>: %w", szStr, ErrProtocolError)
 	}
 
 	var read int

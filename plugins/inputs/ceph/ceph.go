@@ -157,7 +157,7 @@ var perfDump = func(binary string, socket *socket) (string, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("error running ceph dump: %s", err)
+		return "", fmt.Errorf("error running ceph dump: %w", err)
 	}
 
 	return out.String(), nil
@@ -166,7 +166,7 @@ var perfDump = func(binary string, socket *socket) (string, error) {
 var findSockets = func(c *Ceph) ([]*socket, error) {
 	listing, err := os.ReadDir(c.SocketDir)
 	if err != nil {
-		return []*socket{}, fmt.Errorf("Failed to read socket directory %q: %w", c.SocketDir, err)
+		return []*socket{}, fmt.Errorf("failed to read socket directory %q: %w", c.SocketDir, err)
 	}
 	sockets := make([]*socket, 0, len(listing))
 	for _, info := range listing {
@@ -299,7 +299,7 @@ func (c *Ceph) execute(command string) (string, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("error running ceph %v: %s", command, err)
+		return "", fmt.Errorf("error running ceph %q: %w", command, err)
 	}
 
 	output := out.String()

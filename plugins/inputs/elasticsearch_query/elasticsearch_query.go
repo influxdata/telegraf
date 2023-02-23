@@ -95,7 +95,7 @@ func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregat
 	// retrieve field mapping and build queries only once
 	agg.mapMetricFields, err = e.getMetricFields(ctx, agg)
 	if err != nil {
-		return fmt.Errorf("not possible to retrieve fields: %v", err.Error())
+		return fmt.Errorf("not possible to retrieve fields: %w", err)
 	}
 
 	for _, metricField := range agg.MetricFields {
@@ -153,7 +153,7 @@ func (e *ElasticsearchQuery) connectToES() error {
 	// check for ES version on first node
 	esVersion, err := client.ElasticsearchVersion(e.URLs[0])
 	if err != nil {
-		return fmt.Errorf("elasticsearch version check failed: %s", err)
+		return fmt.Errorf("elasticsearch version check failed: %w", err)
 	}
 
 	esVersionSplit := strings.Split(esVersion, ".")
@@ -187,7 +187,7 @@ func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := e.esAggregationQuery(acc, agg, i)
 			if err != nil {
-				acc.AddError(fmt.Errorf("elasticsearch query aggregation %s: %s ", agg.MeasurementName, err.Error()))
+				acc.AddError(fmt.Errorf("elasticsearch query aggregation %s: %w", agg.MeasurementName, err))
 			}
 		}(agg, i)
 	}

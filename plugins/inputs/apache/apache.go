@@ -91,7 +91,7 @@ func (n *Apache) createHTTPClient() (*http.Client, error) {
 func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
-		return fmt.Errorf("error on new request to %s : %s", addr.String(), err)
+		return fmt.Errorf("error on new request to %q: %w", addr.String(), err)
 	}
 
 	if len(n.Username) != 0 && len(n.Password) != 0 {
@@ -100,7 +100,7 @@ func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 
 	resp, err := n.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s", addr.String(), err)
+		return fmt.Errorf("error on request to %q: %w", addr.String(), err)
 	}
 	defer resp.Body.Close()
 
