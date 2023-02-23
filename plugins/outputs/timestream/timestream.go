@@ -279,7 +279,7 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 		var notFound *types.ResourceNotFoundException
 		if errors.As(err, &notFound) {
 			if resourceNotFoundRetry {
-				t.Log.Warnf("Failed to write to Timestream database %q table %q: %w",
+				t.Log.Warnf("Failed to write to Timestream database %q table %q: %s",
 					t.DatabaseName, *writeRecordsInput.TableName, notFound)
 				return t.createTableAndRetry(writeRecordsInput)
 			}
@@ -322,8 +322,8 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 }
 
 func (t *Timestream) logWriteToTimestreamError(err error, tableName *string) {
-	t.Log.Errorf("Failed to write to Timestream database %q table %q: %w. Skipping metric!",
-		t.DatabaseName, *tableName, err)
+	t.Log.Errorf("Failed to write to Timestream database %q table %q: %s. Skipping metric!",
+		t.DatabaseName, *tableName, err.Error())
 }
 
 func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.WriteRecordsInput) error {
@@ -338,7 +338,7 @@ func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.Writ
 			t.Log.Infof("Table %q in database %q created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
 			return t.writeToTimestream(writeRecordsInput, false)
 		}
-		t.Log.Errorf("Failed to create table %q in database %q: %w. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
+		t.Log.Errorf("Failed to create table %q in database %q: %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err.Error())
 	} else {
 		t.Log.Errorf("Not trying to create table %q in database %q, as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!",
 			*writeRecordsInput.TableName, t.DatabaseName)

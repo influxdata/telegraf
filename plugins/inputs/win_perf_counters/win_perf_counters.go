@@ -367,7 +367,7 @@ func (m *WinPerfCounters) ParseConfig() error {
 					err := m.AddItem(counterPath, computer, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							m.Log.Errorf("invalid counterPath %q: %w", counterPath, err)
+							m.Log.Errorf("invalid counterPath %q: %s", counterPath, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err

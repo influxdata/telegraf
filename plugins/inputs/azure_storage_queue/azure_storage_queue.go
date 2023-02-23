@@ -103,7 +103,7 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 			queueURL := serviceURL.NewQueueURL(queueItem.Name)
 			properties, err := queueURL.GetProperties(ctx)
 			if err != nil {
-				a.Log.Errorf("Error getting properties for queue %s: %w", queueItem.Name, err)
+				a.Log.Errorf("Error getting properties for queue %s: %s", queueItem.Name, err.Error())
 				continue
 			}
 			var peekedMessage *azqueue.PeekedMessage
@@ -111,7 +111,7 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 				messagesURL := queueURL.NewMessagesURL()
 				messagesResponse, err := messagesURL.Peek(ctx, 1)
 				if err != nil {
-					a.Log.Errorf("Error peeking queue %s: %w", queueItem.Name, err)
+					a.Log.Errorf("Error peeking queue %s: %s", queueItem.Name, err.Error())
 				} else if messagesResponse.NumMessages() > 0 {
 					peekedMessage = messagesResponse.Message(0)
 				}

@@ -36,7 +36,7 @@ func (n *NamespaceGoroutine) Interfaces() ([]NamespacedInterface, error) {
 	interfaces, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
 		interfaces, err := net.Interfaces()
 		if err != nil {
-			n.Log.Errorf("Could not get interfaces in namespace %q: %w", n.name, err)
+			n.Log.Errorf("Could not get interfaces in namespace %q: %s", n.name, err.Error())
 			return nil, err
 		}
 		namespacedInterfaces := make([]NamespacedInterface, 0, len(interfaces))
@@ -94,7 +94,7 @@ func (n *NamespaceGoroutine) Start() error {
 		}
 		if !initialNamespace.Equal(n.handle) {
 			if err := netns.Set(n.handle); err != nil {
-				n.Log.Errorf("Could not switch to namespace %q: %w", n.name, err)
+				n.Log.Errorf("Could not switch to namespace %q: %s", n.name, err.Error())
 				started <- err
 				return
 			}
@@ -103,7 +103,7 @@ func (n *NamespaceGoroutine) Start() error {
 		// Every namespace needs its own connection to ethtool
 		e, err := ethtoolLib.NewEthtool()
 		if err != nil {
-			n.Log.Errorf("Could not create ethtool client for namespace %q: %w", n.name, err)
+			n.Log.Errorf("Could not create ethtool client for namespace %q: %s", n.name, err.Error())
 			started <- err
 			return
 		}
