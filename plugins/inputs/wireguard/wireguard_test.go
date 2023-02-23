@@ -65,6 +65,7 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 		"persistent_keepalive_interval_ns": int64(60000000000),
 		"protocol_version":                 0,
 		"allowed_ips":                      2,
+		"allowed_peer_cidr":                "<nil>,<nil>",
 	}
 	expectGauges := map[string]interface{}{
 		"last_handshake_time_ns": int64(100000000000),
@@ -78,7 +79,7 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 
 	wg.gatherDevicePeerMetrics(&acc, device, peer)
 
-	require.Equal(t, 6, acc.NFields())
+	require.Equal(t, 7, acc.NFields())
 	acc.AssertDoesNotContainMeasurement(t, measurementDevice)
 	acc.AssertContainsTaggedFields(t, measurementPeer, expectFields, expectTags)
 	acc.AssertContainsTaggedFields(t, measurementPeer, expectGauges, expectTags)
