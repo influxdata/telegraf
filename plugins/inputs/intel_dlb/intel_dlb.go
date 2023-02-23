@@ -156,12 +156,12 @@ func (d *IntelDLB) readRasMetrics(devicePath, metricPath string) (map[string]int
 	for _, metric := range metrics {
 		metricPart := strings.Split(metric, " ")
 		if len(metricPart) < 2 {
-			return nil, fmt.Errorf("error occurred: no value to parse - %+q", metricPart)
+			return nil, fmt.Errorf("no value to parse: %+q", metricPart)
 		}
 
 		metricVal, err := strconv.ParseUint(metricPart[1], 10, 10)
 		if err != nil {
-			return nil, fmt.Errorf("error occurred: failed to parse value '%s': '%s'", metricPart[1], err)
+			return nil, fmt.Errorf("failed to parse value %q: %w", metricPart[1], err)
 		}
 		rasMetric[metricPart[0]] = metricVal
 	}

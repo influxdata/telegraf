@@ -273,7 +273,7 @@ func (m *Ipmi) extractFieldsFromRegex(re *regexp.Regexp, input string) map[strin
 	results := make(map[string]string)
 	subexpNames := re.SubexpNames()
 	if len(subexpNames) > len(submatches) {
-		m.Log.Debugf("No matches found in '%s'", input)
+		m.Log.Debugf("No matches found in %q", input)
 		return results
 	}
 	for i, name := range subexpNames {

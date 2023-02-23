@@ -90,7 +90,7 @@ func (o *OpensearchQuery) Init() error {
 func (o *OpensearchQuery) initAggregation(agg osAggregation, i int) (err error) {
 	for _, metricField := range agg.MetricFields {
 		if _, ok := agg.mapMetricFields[metricField]; !ok {
-			return fmt.Errorf("metric field '%s' not found on index '%s'", metricField, agg.Index)
+			return fmt.Errorf("metric field %q not found on index %q", metricField, agg.Index)
 		}
 	}
 

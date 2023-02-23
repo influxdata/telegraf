@@ -51,7 +51,7 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			acc.AddError(fmt.Errorf("Unable to parse address %q: %w", u, err))
 			continue
 		}
 

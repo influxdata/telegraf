@@ -426,7 +426,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
 		} else {
-			a.Log.Debugf("Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
+			a.Log.Debugf("Tag %q not found, using %q on index name instead\n", key, a.DefaultTagValue)
 			tagValues = append(tagValues, a.DefaultTagValue)
 		}
 	}

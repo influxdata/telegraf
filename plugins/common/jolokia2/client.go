@@ -134,7 +134,7 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestBody))
 	if err != nil {
 		//err is not contained in returned error - it may contain sensitive data (password) which should not be logged
-		return nil, fmt.Errorf("unable to create new request for: '%s'", c.URL)
+		return nil, fmt.Errorf("unable to create new request for: %q", c.URL)
 	}
 
 	req.Header.Add("Content-type", "application/json")
@@ -149,7 +149,7 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		return nil, fmt.Errorf("response from url %q has status code %d (%s), expected %d (%s)",
 			c.URL, resp.StatusCode, http.StatusText(resp.StatusCode), http.StatusOK, http.StatusText(http.StatusOK))
 	}
 

@@ -202,7 +202,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, tmpfile string,
 		return err
 	}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("running command '%s' failed: %s", strings.Join(cmd.Args, " "), err)
+		return fmt.Errorf("running command %q failed: %w", strings.Join(cmd.Args, " "), err)
 	}
 
 	r := bufio.NewReader(stdout)

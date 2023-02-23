@@ -59,7 +59,7 @@ var errInvalidURL = errors.New("invalid websocket URL")
 // Init the output plugin.
 func (w *WebSocket) Init() error {
 	if parsedURL, err := url.Parse(w.URL); err != nil || (parsedURL.Scheme != "ws" && parsedURL.Scheme != "wss") {
-		return fmt.Errorf("%w: \"%s\"", errInvalidURL, w.URL)
+		return fmt.Errorf("%w: %q", errInvalidURL, w.URL)
 	}
 	return nil
 }

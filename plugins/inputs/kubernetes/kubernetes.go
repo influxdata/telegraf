@@ -6,15 +6,16 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -129,7 +130,7 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 	for _, n := range nodes.Items {
 		address := getNodeAddress(n)
 		if address == "" {
-			log.Warn("Unable to node addresses for Node '%s'", n.Name)
+			log.Warnf("Unable to node addresses for Node %q", n.Name)
 			continue
 		}
 		nodeUrls = append(nodeUrls, "https://"+address+":10250")

@@ -402,7 +402,7 @@ func (m *Smart) Init() error {
 	}
 
 	if !contains(knownReadMethods, m.ReadMethod) {
-		return fmt.Errorf("provided read method `%s` is not valid", m.ReadMethod)
+		return fmt.Errorf("provided read method %q is not valid", m.ReadMethod)
 	}
 
 	err := validatePath(m.PathSmartctl)
@@ -864,7 +864,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					}
 
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
-						acc.AddError(fmt.Errorf("error parsing %s: '%s': %s", attr.Name, matches[2], err.Error()))
+						acc.AddError(fmt.Errorf("error parsing %s: %q: %w", attr.Name, matches[2], err))
 						continue
 					}
 					// if the field is classified as an attribute, only add it
@@ -923,7 +923,7 @@ func parseRawValue(rawVal string) (int64, error) {
 	unit := regexp.MustCompile("^(.*)([hms])$")
 	parts := strings.Split(rawVal, "+")
 	if len(parts) == 0 {
-		return 0, fmt.Errorf("couldn't parse RAW_VALUE '%s'", rawVal)
+		return 0, fmt.Errorf("couldn't parse RAW_VALUE %q", rawVal)
 	}
 
 	duration := int64(0)

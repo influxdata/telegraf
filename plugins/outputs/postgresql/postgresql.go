@@ -401,11 +401,11 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 	if p.TagsAsForeignKeys {
 		if err = p.writeTagTable(ctx, db, tableSource); err != nil {
 			if p.ForeignTagConstraint {
-				return fmt.Errorf("writing to tag table '%s': %w", tableSource.Name()+p.TagTableSuffix, err)
+				return fmt.Errorf("writing to tag table %q: %w", tableSource.Name()+p.TagTableSuffix, err)
 			}
 			// log and continue. As the admin can correct the issue, and tags don't change over time, they can be
 			// added from future metrics after issue is corrected.
-			p.Logger.Errorf("writing to tag table %q: %s", tableSource.Name()+p.TagTableSuffix, err)
+			p.Logger.Errorf("writing to tag table %q: %s", tableSource.Name()+p.TagTableSuffix, err.Error())
 		}
 	}
 

@@ -108,7 +108,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	// Parse value.
 	v, err := strconv.ParseFloat(fields[1], 64)
 	if err != nil {
-		return nil, fmt.Errorf(`field "%s" value: %w`, fields[0], err)
+		return nil, fmt.Errorf(`field %q value: %w`, fields[0], err)
 	}
 
 	fieldValues := map[string]interface{}{}
@@ -125,7 +125,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		// Parse timestamp.
 		unixTime, err := strconv.ParseFloat(fields[2], 64)
 		if err != nil {
-			return nil, fmt.Errorf(`field "%s" time: %w`, fields[0], err)
+			return nil, fmt.Errorf(`field %q time: %w`, fields[0], err)
 		}
 
 		// -1 is a special value that gets converted to current UTC time

@@ -132,14 +132,14 @@ func assertContainsTaggedFloat(
 							return
 						}
 					} else {
-						require.Fail(t, fmt.Sprintf("Measurement \"%s\" does not have type float64", measurement))
+						require.Fail(t, fmt.Sprintf("Measurement %q does not have type float64", measurement))
 					}
 				}
 			}
 		}
 	}
 	msg := fmt.Sprintf(
-		"Could not find measurement \"%s\" with requested tags within %f of %f, Actual: %f",
+		"Could not find measurement %q with requested tags within %f of %f, Actual: %f",
 		measurement, delta, expectedValue, actualValue)
 	require.Fail(t, msg)
 }

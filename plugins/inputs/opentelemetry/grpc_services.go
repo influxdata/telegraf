@@ -49,7 +49,7 @@ var metricsSchemata = map[string]common.MetricsSchema{
 func newMetricsService(logger common.Logger, writer *writeToAccumulator, schema string) (*metricsService, error) {
 	ms, found := metricsSchemata[schema]
 	if !found {
-		return nil, fmt.Errorf("schema '%s' not recognized", schema)
+		return nil, fmt.Errorf("schema %q not recognized", schema)
 	}
 
 	converter, err := otel2influx.NewOtelMetricsToLineProtocol(logger, writer, ms)

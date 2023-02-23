@@ -117,7 +117,7 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 					return err
 				}
 				if line[0] != '+' {
-					return fmt.Errorf("%s", strings.TrimSpace(line)[1:])
+					return errors.New(strings.TrimSpace(line)[1:])
 				}
 			}
 		}

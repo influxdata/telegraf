@@ -567,7 +567,7 @@ func PdhFormatError(msgId uint32) string {
 	buf := make([]uint16, 300)
 	_, err := windows.FormatMessage(flags, uintptr(libpdhDll.Handle), msgId, 0, buf, nil)
 	if err == nil {
-		return fmt.Sprintf("%s", UTF16PtrToString(&buf[0]))
+		return UTF16PtrToString(&buf[0])
 	}
 	return fmt.Sprintf("(pdhErr=%d) %s", msgId, err.Error())
 }

@@ -75,7 +75,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	case "newest":
 		config.Offsets.Initial = sarama.OffsetNewest
 	default:
-		k.Log.Infof("WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
+		k.Log.Infof("WARNING: Kafka consumer invalid offset %q, using 'oldest'\n",
 			k.Offset)
 		config.Offsets.Initial = sarama.OffsetOldest
 	}

@@ -77,7 +77,7 @@ type builtinMethod func(b *starlark.Builtin, args starlark.Tuple, kwargs []starl
 func builtinAttr(recv starlark.Value, name string, methods map[string]builtinMethod) (starlark.Value, error) {
 	method := methods[name]
 	if method == nil {
-		return starlark.None, fmt.Errorf("no such method '%s'", name)
+		return starlark.None, fmt.Errorf("no such method %q", name)
 	}
 
 	// Allocate a closure over 'method'.
