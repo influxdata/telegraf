@@ -255,13 +255,11 @@ func (a *Agent) initPersister() error {
 	for _, input := range a.Config.Inputs {
 		plugin, ok := input.Input.(telegraf.StatefulPlugin)
 		if !ok {
-			log.Printf("D! [agent] Skipping registration of non-stateful plugin %q...", input.LogName())
 			continue
 		}
 
 		name := input.LogName()
 		id := input.ID()
-		log.Printf("D! [agent] Registering plugin %q with id %q...", name, id)
 		if err := a.Config.Persister.Register(id, plugin); err != nil {
 			return fmt.Errorf("could not register input %s: %w", name, err)
 		}
@@ -270,7 +268,6 @@ func (a *Agent) initPersister() error {
 	for _, processor := range a.Config.Processors {
 		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
 		if !ok {
-			log.Printf("D! [agent] Skipping registration of non-stateful plugin %q...", processor.LogName())
 			continue
 		}
 
@@ -284,7 +281,6 @@ func (a *Agent) initPersister() error {
 	for _, aggregator := range a.Config.Aggregators {
 		plugin, ok := aggregator.Aggregator.(telegraf.StatefulPlugin)
 		if !ok {
-			log.Printf("D! [agent] Skipping registration of non-stateful plugin %q...", aggregator.LogName())
 			continue
 		}
 
@@ -298,7 +294,6 @@ func (a *Agent) initPersister() error {
 	for _, processor := range a.Config.AggProcessors {
 		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
 		if !ok {
-			log.Printf("D! [agent] Skipping registration of non-stateful plugin %q...", processor.LogName())
 			continue
 		}
 
@@ -312,13 +307,11 @@ func (a *Agent) initPersister() error {
 	for _, output := range a.Config.Outputs {
 		plugin, ok := output.Output.(telegraf.StatefulPlugin)
 		if !ok {
-			log.Printf("D! [agent] Skipping registration of plugin %q...", output.LogName())
 			continue
 		}
 
 		name := output.LogName()
 		id := output.ID()
-		log.Printf("D! [agent] Registering plugin %q with id %q...", name, id)
 		if err := a.Config.Persister.Register(id, plugin); err != nil {
 			return fmt.Errorf("could not register output %s: %w", name, err)
 		}
