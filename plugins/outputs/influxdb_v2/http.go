@@ -194,6 +194,13 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 				}
 			}
 
+			// Close connection after a Context Deadline Exceeded error
+			// These are usually network related, but may lead to not recovering.
+			if errors.Is(err, context.DeadlineExceeded) {
+				fmt.Println("caught context deadline exceeded, closing idle connections")
+				c.client.CloseIdleConnections()
+			}
+
 			return err
 		}
 	} else {
@@ -225,6 +232,13 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 					if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
 						return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
 					}
+				}
+
+				// Close connection after a Context Deadline Exceeded error
+				// These are usually network related, but may lead to not recovering.
+				if errors.Is(err, context.DeadlineExceeded) {
+					fmt.Println("caught context deadline exceeded, closing idle connections")
+					c.client.CloseIdleConnections()
 				}
 
 				return err

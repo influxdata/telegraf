@@ -1,10 +1,8 @@
 package internal
 
 import (
-	"context"
 	"crypto/subtle"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -140,12 +138,6 @@ func OnClientError(client *http.Client, err error) {
 	//   https://github.com/golang/go/issues/36026
 	var urlErr *url.Error
 	if errors.As(err, &urlErr) && urlErr.Timeout() {
-		client.CloseIdleConnections()
-	}
-	// Close connection after a Context Deadline Exceeded error
-	// These are usually network related, but may lead to not recovering.
-	if err.(*url.Error).Unwrap() == context.DeadlineExceeded {
-		fmt.Println("caught context deadline exceeded, closing idle connections")
 		client.CloseIdleConnections()
 	}
 }
