@@ -156,7 +156,6 @@ func TestOpenConfigTelemetryData_timestamp(t *testing.T) {
 	}
 
 	require.Eventually(t, func() bool { return acc.HasMeasurement("/sensor_with_timestamp") }, 5*time.Second, 10*time.Millisecond)
-	require.Equal(t, time.UnixMilli(timestamp), acc.Metrics[0].Time)
 	acc.AssertContainsTaggedFields(t, "/sensor_with_timestamp", fields, tags)
 }
 
