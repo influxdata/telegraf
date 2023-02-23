@@ -12,7 +12,7 @@ vCenter servers.
 
 ## Supported versions of vSphere
 
-ports vSphere version 6.5, 6.7, 7.0 and 8.0.
+This plugin supports vSphere version 6.5, 6.7, 7.0 and 8.0.
 It may work with versions 5.1, 5.5 and 6.0, but neither are
 officially supported.
 
@@ -785,7 +785,7 @@ For example:
 
 ## Example Output
 
-```shell
+```text
 vsphere_vm_cpu,esxhostname=DC0_H0,guest=other,host=host.example.com,moid=vm-35,os=Mac,source=DC0_H0_VM0,vcenter=localhost:8989,vmname=DC0_H0_VM0 run_summation=2608i,ready_summation=129i,usage_average=5.01,used_summation=2134i,demand_average=326i 1535660299000000000
 vsphere_vm_net,esxhostname=DC0_H0,guest=other,host=host.example.com,moid=vm-35,os=Mac,source=DC0_H0_VM0,vcenter=localhost:8989,vmname=DC0_H0_VM0 bytesRx_average=321i,bytesTx_average=335i 1535660299000000000
 vsphere_vm_virtualDisk,esxhostname=DC0_H0,guest=other,host=host.example.com,moid=vm-35,os=Mac,source=DC0_H0_VM0,vcenter=localhost:8989,vmname=DC0_H0_VM0 write_average=144i,read_average=4i 1535660299000000000
@@ -894,7 +894,7 @@ vsphere_host_net,clustername=DC0_C0,esxhostname=DC0_C0_H0,host=host.example.com,
 
 ## vSAN Sample Output
 
-```shell
+```text
 vsphere_vsan_performance_hostdomclient,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,hostname=DC0_C0_H0,moid=domain-c8,source=Example-VSAN,vcenter=localhost:8898 iops_read=7,write_congestion=0,unmap_congestion=0,read_count=2199,iops=8,latency_max_write=8964,latency_avg_unmap=0,latency_avg_write=1883,write_count=364,num_oio=12623,throughput=564127,client_cache_hits=0,latency_max_read=17821,latency_max_unmap=0,read_congestion=0,latency_avg=1154,congestion=0,throughput_read=554721,latency_avg_read=1033,throughput_write=9406,client_cache_hit_rate=0,iops_unmap=0,throughput_unmap=0,latency_stddev=1315,io_count=2563,oio=4,iops_write=1,unmap_count=0 1578955200000000000
 vsphere_vsan_performance_clusterdomcompmgr,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,moid=domain-c7,source=Example-VSAN,uuid=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXX,vcenter=localhost:8898 latency_avg_rec_write=0,latency_avg_write=9886,congestion=0,iops_resync_read=0,lat_avg_resync_read=0,iops_read=289,latency_avg_read=1184,throughput_write=50137368,iops_rec_write=0,throughput_rec_write=0,tput_resync_read=0,throughput_read=9043654,iops_write=1272,oio=97 1578954900000000000
 vsphere_vsan_performance_clusterdomclient,clustername=Example-VSAN,dcname=Example-DC,host=host.example.com,moid=domain-c7,source=Example-VSAN,uuid=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXX,vcenter=localhost:8898 latency_avg_write=1011,congestion=0,oio=26,iops_read=6,throughput_read=489093,latency_avg_read=1085,iops_write=43,throughput_write=435142 1578955200000000000

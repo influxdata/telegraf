@@ -182,7 +182,7 @@ func init() {
 			DatastoreMetricExclude:    nil,
 			DatastoreInclude:          []string{"/*/datastore/**"},
 			VSANMetricInclude:         nil,
-			VSANMetricExclude:         nil,
+			VSANMetricExclude:         []string{"*"},
 			VSANMetricSkipVerify:      false,
 			VSANClusterInclude:        []string{"/*/host/**"},
 			Separator:                 "_",

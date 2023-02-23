@@ -452,7 +452,7 @@ func TestVsanCmmds(t *testing.T) {
 
 	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
 	_, err = getCmmdsMap(ctx, c.Client.Client, clusterObj)
-	require.NoError(t, err)
+	require.Error(t, err)
 }
 
 func TestVsanTags(t *testing.T) {

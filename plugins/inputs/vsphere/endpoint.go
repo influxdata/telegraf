@@ -940,7 +940,7 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 				defer wg.Done()
 				var err error
 				if k == "vsan" {
-					err = e.collectVsan(ctx, k, acc)
+					err = e.collectVsan(ctx, acc)
 				} else {
 					err = e.collectResource(ctx, k, acc)
 				}

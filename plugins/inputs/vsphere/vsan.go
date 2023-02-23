@@ -39,14 +39,15 @@ var (
 )
 
 // collectVsan is the entry point for vsan metrics collection
-func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
+func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) error {
+	//resourceType := "vsan"
 	lower := versionLowerThan(e.apiVersion, "5.5")
 	if lower {
 		return fmt.Errorf("a minimum API version of 5.5 is required for vSAN. Found: %s. Skipping vCenter: %s", e.apiVersion, e.URL.Host)
 	}
 	vsanPerfMetricsName = strings.Join([]string{"vsphere", "vsan", "performance"}, e.Parent.Separator)
 	vsanSummaryMetricsName = strings.Join([]string{"vsphere", "vsan", "summary"}, e.Parent.Separator)
-	res := e.resourceKinds[resourceType]
+	res := e.resourceKinds["vsan"]
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return fmt.Errorf("fail to get client when collect vsan: %v", err)
