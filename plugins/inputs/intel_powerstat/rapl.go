@@ -57,7 +57,7 @@ func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 	}
 	socketEnergyUjFile, err := os.Open(socketEnergyUjPath)
 	if err != nil {
-		return fmt.Errorf("error opening socket energy_uj file on path %s, err: %v", socketEnergyUjPath, err)
+		return fmt.Errorf("error opening socket energy_uj file on path %q, err: %w", socketEnergyUjPath, err)
 	}
 	defer socketEnergyUjFile.Close()
 
@@ -69,7 +69,7 @@ func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 	}
 	dramEnergyUjFile, err := os.Open(dramEnergyUjPath)
 	if err != nil {
-		return fmt.Errorf("error opening dram energy_uj file on path %s, err: %v", dramEnergyUjPath, err)
+		return fmt.Errorf("error opening dram energy_uj file on path %q, err: %w", dramEnergyUjPath, err)
 	}
 	defer dramEnergyUjFile.Close()
 
@@ -80,7 +80,7 @@ func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 	}
 	socketMaxEnergyUjFile, err := os.Open(socketMaxEnergyUjPath)
 	if err != nil {
-		return fmt.Errorf("error opening socket max_energy_range_uj file on path %s, err: %v", socketMaxEnergyUjPath, err)
+		return fmt.Errorf("error opening socket max_energy_range_uj file on path %q, err: %w", socketMaxEnergyUjPath, err)
 	}
 	defer socketMaxEnergyUjFile.Close()
 
@@ -91,7 +91,7 @@ func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 	}
 	dramMaxEnergyUjFile, err := os.Open(dramMaxEnergyUjPath)
 	if err != nil {
-		return fmt.Errorf("error opening dram max_energy_range_uj file on path %s, err: %v", dramMaxEnergyUjPath, err)
+		return fmt.Errorf("error opening dram max_energy_range_uj file on path %q, err: %w", dramMaxEnergyUjPath, err)
 	}
 	defer dramMaxEnergyUjFile.Close()
 
@@ -107,7 +107,7 @@ func (r *raplServiceImpl) getConstraintMaxPowerWatts(socketID string) (float64, 
 	}
 	socketMaxPowerFile, err := os.Open(socketMaxPowerPath)
 	if err != nil {
-		return 0, fmt.Errorf("error opening constraint_0_max_power_uw file on path %s, err: %v", socketMaxPowerPath, err)
+		return 0, fmt.Errorf("error opening constraint_0_max_power_uw file on path %q, err: %w", socketMaxPowerPath, err)
 	}
 	defer socketMaxPowerFile.Close()
 

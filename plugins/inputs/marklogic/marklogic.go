@@ -133,7 +133,7 @@ func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 		go func(serv string) {
 			defer wg.Done()
 			if err := c.fetchAndInsertData(accumulator, serv); err != nil {
-				accumulator.AddError(fmt.Errorf("[host=%s]: %s", serv, err))
+				accumulator.AddError(fmt.Errorf("[host=%s]: %w", serv, err))
 			}
 		}(serv)
 	}

@@ -4,6 +4,7 @@ package mysql
 import (
 	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -93,7 +94,7 @@ func (m *Mysql) Init() error {
 	tlsid := "custom-" + tlsuuid.String()
 	tlsConfig, err := m.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("registering TLS config: %s", err)
+		return fmt.Errorf("registering TLS config: %w", err)
 	}
 	if tlsConfig != nil {
 		if err := mysql.RegisterTLSConfig(tlsid, tlsConfig); err != nil {
@@ -571,7 +572,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, servtag string, acc telegraf.A
 
 		value, err := m.parseGlobalVariables(key, val)
 		if err != nil {
-			errString := fmt.Errorf("error parsing mysql global variable %q=%q: %v", key, string(val), err)
+			errString := fmt.Errorf("error parsing mysql global variable %q=%q: %w", key, string(val), err)
 			if m.MetricVersion < 2 {
 				m.Log.Debug(errString)
 			} else {
@@ -668,7 +669,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 
 			value, err := m.parseValueByDatabaseTypeName(colValue, col.DatabaseTypeName())
 			if err != nil {
-				errString := fmt.Errorf("error parsing mysql slave status %q=%q: %v", colName, string(colValue), err)
+				errString := fmt.Errorf("error parsing mysql slave status %q=%q: %w", colName, string(colValue), err)
 				if m.MetricVersion < 2 {
 					m.Log.Debug(errString)
 				} else {
@@ -787,42 +788,42 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			case "Queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["queries"] = i
 				}
 			case "Questions":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["questions"] = i
 				}
 			case "Slow_queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["slow_queries"] = i
 				}
 			case "Connections":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["connections"] = i
 				}
 			case "Syncs":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["syncs"] = i
 				}
 			case "Uptime":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["uptime"] = i
 				}
@@ -831,7 +832,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			key = strings.ToLower(key)
 			value, err := v2.ConvertGlobalStatus(key, val)
 			if err != nil {
-				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %v", key, string(val), err))
+				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %w", key, string(val), err))
 			} else {
 				fields[key] = value
 			}
@@ -1304,7 +1305,7 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, servtag string, acc telegraf.Acc
 		key = strings.ToLower(key)
 		value, err := m.parseValueByDatabaseTypeName(val, "BIGINT")
 		if err != nil {
-			acc.AddError(fmt.Errorf("error parsing mysql InnoDB metric %q=%q: %v", key, string(val), err))
+			acc.AddError(fmt.Errorf("error parsing mysql InnoDB metric %q=%q: %w", key, string(val), err))
 			continue
 		}
 
@@ -1469,7 +1470,7 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegra
 	var tableName string
 	err := db.QueryRow(perfSchemaTablesQuery, "table_lock_waits_summary_by_table").Scan(&tableName)
 	switch {
-	case err == sql.ErrNoRows:
+	case errors.Is(err, sql.ErrNoRows):
 		return nil
 	case err != nil:
 		return err
@@ -1694,7 +1695,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, servtag string, acc teleg
 
 	var (
 		schemaName, digest, digestText       string
-		count, queryTime, errors, warnings   float64
+		count, queryTime, errs, warnings     float64
 		rowsAffected, rowsSent, rowsExamined float64
 		tmpTables, tmpDiskTables             float64
 		sortMergePasses, sortRows            float64
@@ -1708,7 +1709,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, servtag string, acc teleg
 	for rows.Next() {
 		err = rows.Scan(
 			&schemaName, &digest, &digestText,
-			&count, &queryTime, &errors, &warnings,
+			&count, &queryTime, &errs, &warnings,
 			&rowsAffected, &rowsSent, &rowsExamined,
 			&tmpTables, &tmpDiskTables,
 			&sortMergePasses, &sortRows,
@@ -1725,7 +1726,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, servtag string, acc teleg
 		fields := map[string]interface{}{
 			"events_statements_total":                   count,
 			"events_statements_seconds_total":           queryTime / picoSeconds,
-			"events_statements_errors_total":            errors,
+			"events_statements_errors_total":            errs,
 			"events_statements_warnings_total":          warnings,
 			"events_statements_rows_affected_total":     rowsAffected,
 			"events_statements_rows_sent_total":         rowsSent,

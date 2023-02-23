@@ -3,6 +3,7 @@ package gnmi
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -62,7 +63,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 
 	client, err := grpc.DialContext(ctx, h.address, opts...)
 	if err != nil {
-		return fmt.Errorf("failed to dial: %v", err)
+		return fmt.Errorf("failed to dial: %w", err)
 	}
 	defer client.Close()
 
@@ -73,7 +74,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 
 	// If io.EOF is returned, the stream may have ended and stream status
 	// can be determined by calling Recv.
-	if err := subscribeClient.Send(request); err != nil && err != io.EOF {
+	if err := subscribeClient.Send(request); err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("failed to send subscription request: %w", err)
 	}
 
@@ -82,7 +83,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 	for ctx.Err() == nil {
 		var reply *gnmiLib.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
-			if err != io.EOF && ctx.Err() == nil {
+			if !errors.Is(err, io.EOF) && ctx.Err() == nil {
 				return fmt.Errorf("aborted gNMI subscription: %w", err)
 			}
 			break

@@ -139,7 +139,7 @@ func (c *ConfigurationPerRequest) Check() error {
 			// Check for duplicate field definitions
 			id, err := c.fieldID(seed, def, f)
 			if err != nil {
-				return fmt.Errorf("cannot determine field id for %q: %v", f.Name, err)
+				return fmt.Errorf("cannot determine field id for %q: %w", f.Name, err)
 			}
 			if seenFields[id] {
 				return fmt.Errorf("field %q duplicated in measurement %q (slave %d/%q)", f.Name, f.Measurement, def.SlaveID, def.RegisterType)
@@ -230,7 +230,7 @@ func (c *ConfigurationPerRequest) initFields(fieldDefs []requestFieldDefinition,
 	for _, def := range fieldDefs {
 		f, err := c.newFieldFromDefinition(def, typed, byteOrder)
 		if err != nil {
-			return nil, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
+			return nil, fmt.Errorf("initializing field %q failed: %w", def.Name, err)
 		}
 		fields = append(fields, f)
 	}

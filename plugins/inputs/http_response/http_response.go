@@ -65,9 +65,6 @@ type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// ErrRedirectAttempted indicates that a redirect occurred
-var ErrRedirectAttempted = errors.New("redirect")
-
 // Set the proxy. A configured proxy overwrites the system wide proxy.
 func getProxyFunc(httpProxy string) func(*http.Request) (*url.URL, error) {
 	if httpProxy == "" {
@@ -157,27 +154,30 @@ func setResult(resultString string, fields map[string]interface{}, tags map[stri
 }
 
 func setError(err error, fields map[string]interface{}, tags map[string]string) error {
-	if timeoutError, ok := err.(net.Error); ok && timeoutError.Timeout() {
+	var timeoutError net.Error
+	if errors.As(err, &timeoutError) && timeoutError.Timeout() {
 		setResult("timeout", fields, tags)
 		return timeoutError
 	}
 
-	urlErr, isURLErr := err.(*url.Error)
-	if !isURLErr {
+	var urlErr *url.Error
+	if !errors.As(err, &urlErr) {
 		return nil
 	}
 
-	opErr, isNetErr := (urlErr.Err).(*net.OpError)
-	if isNetErr {
-		switch e := (opErr.Err).(type) {
-		case *net.DNSError:
+	var opErr *net.OpError
+	if errors.As(urlErr, &opErr) {
+		var dnsErr *net.DNSError
+		var parseErr *net.ParseError
+
+		if errors.As(opErr, &dnsErr) {
 			setResult("dns_error", fields, tags)
-			return e
-		case *net.ParseError:
+			return dnsErr
+		} else if errors.As(opErr, &parseErr) {
 			// Parse error has to do with parsing of IP addresses, so we
 			// group it with address errors
 			setResult("address_error", fields, tags)
-			return e
+			return parseErr
 		}
 	}
 
@@ -339,7 +339,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		var err error
 		h.compiledStringMatch, err = regexp.Compile(h.ResponseStringMatch)
 		if err != nil {
-			return fmt.Errorf("failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
+			return fmt.Errorf("failed to compile regular expression %q: %w", h.ResponseStringMatch, err)
 		}
 	}
 
@@ -401,12 +401,12 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
 	username, err := h.Username.Get()
 	if err != nil {
-		return fmt.Errorf("getting username failed: %v", err)
+		return fmt.Errorf("getting username failed: %w", err)
 	}
 	defer config.ReleaseSecret(username)
 	password, err := h.Password.Get()
 	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
+		return fmt.Errorf("getting password failed: %w", err)
 	}
 	defer config.ReleaseSecret(password)
 	if len(username) != 0 || len(password) != 0 {

@@ -244,8 +244,7 @@ func (m *OpenConfigTelemetry) collectData(
 					rpcStatus, _ := status.FromError(err)
 					// If service is currently unavailable and may come back later, retry
 					if rpcStatus.Code() != codes.Unavailable {
-						acc.AddError(fmt.Errorf("could not subscribe to %s: %v", grpcServer,
-							err))
+						acc.AddError(fmt.Errorf("could not subscribe to %q: %w", grpcServer, err))
 						return
 					}
 
@@ -262,7 +261,7 @@ func (m *OpenConfigTelemetry) collectData(
 					if err != nil {
 						// If we encounter error in the stream, break so we can retry
 						// the connection
-						acc.AddError(fmt.Errorf("failed to read from %s: %s", grpcServer, err))
+						acc.AddError(fmt.Errorf("failed to read from %q: %w", grpcServer, err))
 						break
 					}
 

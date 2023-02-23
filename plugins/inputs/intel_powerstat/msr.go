@@ -85,7 +85,7 @@ func (m *msrServiceImpl) retrieveCPUFrequencyForCore(core string) (float64, erro
 	}
 	cpuFreqFile, err := os.Open(cpuFreqPath)
 	if err != nil {
-		return 0, fmt.Errorf("error opening scaling_cur_freq file on path %s, err: %v", cpuFreqPath, err)
+		return 0, fmt.Errorf("error opening scaling_cur_freq file on path %q, err: %w", cpuFreqPath, err)
 	}
 	defer cpuFreqFile.Close()
 
@@ -96,7 +96,7 @@ func (m *msrServiceImpl) retrieveCPUFrequencyForCore(core string) (float64, erro
 func (m *msrServiceImpl) retrieveUncoreFrequency(socketID string, typeFreq string, kind string, die string) (float64, error) {
 	uncoreFreqPath, err := createUncoreFreqPath(socketID, typeFreq, kind, die)
 	if err != nil {
-		return 0, fmt.Errorf("unable to create uncore freq read path for socketID %s, and frequency type %s err: %v", socketID, typeFreq, err)
+		return 0, fmt.Errorf("unable to create uncore freq read path for socketID %q, and frequency type %q: %w", socketID, typeFreq, err)
 	}
 	err = checkFile(uncoreFreqPath)
 	if err != nil {
@@ -104,7 +104,7 @@ func (m *msrServiceImpl) retrieveUncoreFrequency(socketID string, typeFreq strin
 	}
 	uncoreFreqFile, err := os.Open(uncoreFreqPath)
 	if err != nil {
-		return 0, fmt.Errorf("error opening uncore frequncy file on %s, err: %v", uncoreFreqPath, err)
+		return 0, fmt.Errorf("error opening uncore frequncy file on %q: %w", uncoreFreqPath, err)
 	}
 	defer uncoreFreqFile.Close()
 
@@ -144,13 +144,13 @@ func (m *msrServiceImpl) openAndReadMsr(core string) error {
 	}
 	msrFile, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("error opening MSR file on path %s, err: %v", path, err)
+		return fmt.Errorf("error opening MSR file on path %q: %w", path, err)
 	}
 	defer msrFile.Close()
 
 	err = m.readDataFromMsr(core, msrFile)
 	if err != nil {
-		return fmt.Errorf("error reading data from MSR for core %s, err: %v", core, err)
+		return fmt.Errorf("error reading data from MSR for core %q: %w", core, err)
 	}
 	return nil
 }
@@ -163,7 +163,7 @@ func (m *msrServiceImpl) readSingleMsr(core string, msr string) (uint64, error) 
 	}
 	msrFile, err := os.Open(path)
 	if err != nil {
-		return 0, fmt.Errorf("error opening MSR file on path %s, err: %v", path, err)
+		return 0, fmt.Errorf("error opening MSR file on path %q: %w", path, err)
 	}
 	defer msrFile.Close()
 
@@ -213,7 +213,7 @@ func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error 
 
 				err := m.readValueFromFileAtOffset(ctx, ch, reader, off)
 				if err != nil {
-					return fmt.Errorf("error reading MSR file, err: %v", err)
+					return fmt.Errorf("error reading MSR file, err: %w", err)
 				}
 
 				return nil
@@ -231,7 +231,7 @@ func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error 
 	newTemp := <-msrOffsetsWithChannels[temperatureLocation]
 
 	if err := g.Wait(); err != nil {
-		return fmt.Errorf("received error during reading MSR values in goroutines: %v", err)
+		return fmt.Errorf("received error during reading MSR values in goroutines: %w", err)
 	}
 
 	m.cpuCoresData[core].c3Delta = newC3 - m.cpuCoresData[core].c3

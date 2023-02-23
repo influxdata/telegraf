@@ -3,6 +3,7 @@ package modbus
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -135,18 +136,18 @@ func (m *Modbus) Init() error {
 
 	// Check and process the configuration
 	if err := cfg.Check(); err != nil {
-		return fmt.Errorf("configuration invalid: %v", err)
+		return fmt.Errorf("configuration invalid: %w", err)
 	}
 
 	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process configuration: %v", err)
+		return fmt.Errorf("cannot process configuration: %w", err)
 	}
 	m.requests = r
 
 	// Setup client
 	if err := m.initClient(); err != nil {
-		return fmt.Errorf("initializing client failed: %v", err)
+		return fmt.Errorf("initializing client failed: %w", err)
 	}
 	for slaveID, rqs := range m.requests {
 		var nHoldingRegs, nInputsRegs, nDiscreteRegs, nCoilRegs uint16
@@ -192,8 +193,8 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
 		if err := m.readSlaveData(slaveID, requests); err != nil {
 			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
-			mberr, ok := err.(*mb.Error)
-			if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+			var mbErr *mb.Error
+			if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 				m.Log.Debugf("Reconnecting to %s...", m.Controller)
 				if err := m.disconnect(); err != nil {
 					return fmt.Errorf("disconnecting failed: %w", err)
@@ -337,8 +338,8 @@ func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
 		}
 
 		// Exit in case a non-recoverable error occurred
-		mberr, ok := err.(*mb.Error)
-		if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+		var mbErr *mb.Error
+		if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 			return err
 		}
 

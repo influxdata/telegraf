@@ -91,7 +91,7 @@ func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error)
 	// Unmarshal json
 	var jsonOut []map[string]interface{}
 	if err = json.Unmarshal(body, &jsonOut); err != nil {
-		return nil, fmt.Errorf("error decoding JSON response: %s: %s", err, body)
+		return nil, fmt.Errorf("error decoding JSON response %q: %w", body, err)
 	}
 
 	return jsonOut, nil
@@ -216,12 +216,12 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 
 		req, err := j.prepareRequest(server, metrics)
 		if err != nil {
-			acc.AddError(fmt.Errorf("unable to create request: %s", err))
+			acc.AddError(fmt.Errorf("unable to create request: %w", err))
 			continue
 		}
 		out, err := j.doRequest(req)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error performing request: %s", err))
+			acc.AddError(fmt.Errorf("error performing request: %w", err))
 			continue
 		}
 

@@ -46,7 +46,7 @@ func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEnt
 
 		coreEntity.parsedCores, err = cp.parseCores(coreEntity.Cores)
 		if err != nil {
-			return fmt.Errorf("error during cores parsing: %v", err)
+			return fmt.Errorf("error during cores parsing: %w", err)
 		}
 	}
 
@@ -69,7 +69,7 @@ func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEnt
 
 		uncoreEntity.parsedSockets, err = cp.parseSockets(uncoreEntity.Sockets)
 		if err != nil {
-			return fmt.Errorf("error during sockets parsing: %v", err)
+			return fmt.Errorf("error during sockets parsing: %w", err)
 		}
 	}
 	return nil
@@ -99,7 +99,7 @@ func (cp *configParser) parseCores(cores []string) ([]int, error) {
 		}
 		cores, err := cp.sys.allCPUs()
 		if err != nil {
-			return nil, fmt.Errorf("cannot obtain all cpus: %v", err)
+			return nil, fmt.Errorf("cannot obtain all cpus: %w", err)
 		}
 		return cores, nil
 	}
@@ -124,7 +124,7 @@ func (cp *configParser) parseSockets(sockets []string) ([]int, error) {
 		}
 		sockets, err := cp.sys.allSockets()
 		if err != nil {
-			return nil, fmt.Errorf("cannot obtain all sockets: %v", err)
+			return nil, fmt.Errorf("cannot obtain all sockets: %w", err)
 		}
 		return sockets, nil
 	}

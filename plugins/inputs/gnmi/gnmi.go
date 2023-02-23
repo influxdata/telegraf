@@ -338,11 +338,11 @@ func (s *Subscription) buildAlias(aliases map[string]string) error {
 
 	longPath, _, err := handlePath(gnmiLongPath, nil, nil, "")
 	if err != nil {
-		return fmt.Errorf("handling long-path failed: %v", err)
+		return fmt.Errorf("handling long-path failed: %w", err)
 	}
 	shortPath, _, err := handlePath(gnmiShortPath, nil, nil, "")
 	if err != nil {
-		return fmt.Errorf("handling short-path failed: %v", err)
+		return fmt.Errorf("handling short-path failed: %w", err)
 	}
 
 	// If the user didn't provide a measurement name, use last path element

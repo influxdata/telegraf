@@ -579,8 +579,9 @@ func TestConnection(t *testing.T) {
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	_, ok := err.(*url.Error)
-	require.True(t, ok)
+
+	var urlErr *url.Error
+	require.ErrorAs(t, err, &urlErr)
 }
 
 func TestInvalidUsernameOrPassword(t *testing.T) {

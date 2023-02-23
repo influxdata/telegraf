@@ -60,7 +60,7 @@ func (lvm *LVM) gatherPhysicalVolumes(acc telegraf.Accumulator) error {
 	var report pvsReport
 	err = json.Unmarshal(out, &report)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal physical volume JSON: %s", err)
+		return fmt.Errorf("failed to unmarshal physical volume JSON: %w", err)
 	}
 
 	if len(report.Report) > 0 {
@@ -115,7 +115,7 @@ func (lvm *LVM) gatherVolumeGroups(acc telegraf.Accumulator) error {
 	var report vgsReport
 	err = json.Unmarshal(out, &report)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal vol group JSON: %s", err)
+		return fmt.Errorf("failed to unmarshal vol group JSON: %w", err)
 	}
 
 	if len(report.Report) > 0 {
@@ -179,7 +179,7 @@ func (lvm *LVM) gatherLogicalVolumes(acc telegraf.Accumulator) error {
 	var report lvsReport
 	err = json.Unmarshal(out, &report)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal logical vol JSON: %s", err)
+		return fmt.Errorf("failed to unmarshal logical vol JSON: %w", err)
 	}
 
 	if len(report.Report) > 0 {
@@ -234,8 +234,7 @@ func (lvm *LVM) runCmd(cmd string, args []string) ([]byte, error) {
 	out, err := internal.StdOutputTimeout(execCmd, 5*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"failed to run command %s: %s - %s",
-			strings.Join(execCmd.Args, " "), err, string(out),
+			"failed to run command %s: %w - %s", strings.Join(execCmd.Args, " "), err, string(out),
 		)
 	}
 
