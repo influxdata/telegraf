@@ -978,17 +978,16 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
+	// Setup the processor running before the aggregators
 	processorBeforeConfig, err := c.buildProcessor("processors", name, table)
 	if err != nil {
 		return err
 	}
-
-	// Setup the processor running before the aggregators
 	processorBefore, hasParser, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
 	if err != nil {
 		return err
 	}
-	rf := models.NewRunningProcessor(processorBefore, processorConfig)
+	rf := models.NewRunningProcessor(processorBefore, processorBeforeConfig)
 	c.fileProcessors = append(c.fileProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Setup another (new) processor instance running after the aggregator
@@ -996,7 +995,11 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	if err != nil {
 		return err
 	}
-	rf = models.NewRunningProcessor(processorAfter, processorConfig)
+	processorAfter, _, err := c.setupProcessor(processorAfterConfig.Name, creator, table)
+	if err != nil {
+		return err
+	}
+	rf = models.NewRunningProcessor(processorAfter, processorAfterConfig)
 	c.fileAggProcessors = append(c.fileAggProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Check the number of misses against the threshold

@@ -1395,7 +1395,7 @@ func (m *MockupStatePlugin) SampleConfig() string {
 	return "Mockup test plugin"
 }
 
-func (m *MockupStatePlugin) Gather(acc telegraf.Accumulator) error {
+func (m *MockupStatePlugin) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

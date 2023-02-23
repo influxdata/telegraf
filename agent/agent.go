@@ -117,11 +117,10 @@ func (a *Agent) Run(ctx context.Context) error {
 			return err
 		}
 		if err := a.Config.Persister.Load(); err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				log.Print("I! [agent] State file does not exist... Skip restoring states...")
-			} else {
+			if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
+			log.Print("I! [agent] State file does not exist... Skip restoring states...")
 		}
 	}
 
