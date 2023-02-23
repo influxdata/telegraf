@@ -1,12 +1,15 @@
 $tempCertFile = New-TemporaryFile
+
+# Retrieve environment variables for cert/password.
 $certText = $env:windowsCert
+$CertPass = $env:windowsCertPassword
 
 # Create a Cert object by converting the cert string to bytes.
 $finalFileName = $tempCertFile.FullName
 $certBytes = [Convert]::FromBase64String($certText)
 [System.IO.File]::WriteAllBytes($finalFileName, $certBytes)
 $CertPath = $finalFileName
-$Cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath)
+$Cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath, $CertPass)
 
 # Go through the artifacts directory and sign the 'windows' artifacts.
 $artifactDirectory = "./build/dist"
