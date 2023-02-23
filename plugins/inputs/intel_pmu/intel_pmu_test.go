@@ -251,7 +251,7 @@ func TestGather(t *testing.T) {
 					tag:    "BIG_FISH",
 				},
 			},
-			errMSg: "cannot process `I_AM_TOO_BIG` scaled value `36893488147419103230`: exceeds uint64",
+			errMSg: `cannot process "I_AM_TOO_BIG" scaled value "36893488147419103230": exceeds uint64`,
 		},
 		{
 			name: "uncore scaled value greater then max uint64",
@@ -262,7 +262,7 @@ func TestGather(t *testing.T) {
 					tag:    "BIG_FISH",
 				},
 			},
-			errMSg: "cannot process `I_AM_TOO_BIG_UNCORE` scaled value `36893488147419103230`: exceeds uint64",
+			errMSg: `cannot process "I_AM_TOO_BIG_UNCORE" scaled value "36893488147419103230": exceeds uint64`,
 		},
 	}
 
@@ -430,7 +430,7 @@ func TestReadMaxFD(t *testing.T) {
 		require.Zero(t, result)
 	})
 
-	openErrorMsg := fmt.Sprintf("cannot open %q file", fileMaxPath)
+	openErrorMsg := fmt.Sprintf("cannot open file %q", fileMaxPath)
 	parseErrorMsg := fmt.Sprintf("cannot parse file content of %q", fileMaxPath)
 
 	tests := []struct {
@@ -512,7 +512,7 @@ func TestAddFiles(t *testing.T) {
 
 		err := checkFiles(paths, mFileInfo)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("file %s is a symlink", file))
+		require.Contains(t, err.Error(), fmt.Sprintf("file %q is a symlink", file))
 		mFileInfo.AssertExpectations(t)
 	})
 
