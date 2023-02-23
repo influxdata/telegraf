@@ -96,11 +96,11 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 			colDefs := make([]string, 0, len(missingCols))
 			for _, col := range missingCols {
 				if err := rowSource.DropColumn(col); err != nil {
-					return fmt.Errorf("metric/table mismatch: Unable to omit field/column from \"%s\": %w", tagTable.name, err)
+					return fmt.Errorf("metric/table mismatch: Unable to omit field/column from %q: %w", tagTable.name, err)
 				}
 				colDefs = append(colDefs, col.Name+" "+col.Type)
 			}
-			tm.Logger.Errorf("table '%s' is missing tag columns (dropping metrics): %s",
+			tm.Logger.Errorf("table %q is missing tag columns (dropping metrics): %s",
 				tagTable.name,
 				strings.Join(colDefs, ", "))
 		}
@@ -127,11 +127,11 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 		colDefs := make([]string, 0, len(missingCols))
 		for _, col := range missingCols {
 			if err := rowSource.DropColumn(col); err != nil {
-				return fmt.Errorf("metric/table mismatch: Unable to omit field/column from \"%s\": %w", metricTable.name, err)
+				return fmt.Errorf("metric/table mismatch: Unable to omit field/column from %q: %w", metricTable.name, err)
 			}
 			colDefs = append(colDefs, col.Name+" "+col.Type)
 		}
-		tm.Logger.Errorf("table '%s' is missing columns (omitting fields): %s",
+		tm.Logger.Errorf("table %q is missing columns (omitting fields): %s",
 			metricTable.name,
 			strings.Join(colDefs, ", "))
 	}
@@ -187,9 +187,9 @@ func (tm *TableManager) EnsureStructure(
 		}
 
 		if col.Role == utils.TagColType {
-			return nil, fmt.Errorf("column name too long: \"%s\"", col.Name)
+			return nil, fmt.Errorf("column name too long: %q", col.Name)
 		}
-		tm.Postgresql.Logger.Errorf("column name too long: \"%s\"", col.Name)
+		tm.Postgresql.Logger.Errorf("column name too long: %q", col.Name)
 		invalidColumns = append(invalidColumns, col)
 	}
 
@@ -370,7 +370,7 @@ func (tm *TableManager) update(ctx context.Context,
 			return err
 		}
 		if _, err := tx.Exec(ctx, string(sql)); err != nil {
-			return fmt.Errorf("executing `%s`: %w", sql, err)
+			return fmt.Errorf("executing %q: %w", sql, err)
 		}
 	}
 

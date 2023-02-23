@@ -37,9 +37,9 @@ var tests = []SnakeTest{
 
 func TestSnakeCase(t *testing.T) {
 	for _, test := range tests {
-		if SnakeCase(test.input) != test.output {
-			t.Errorf(`SnakeCase("%s"), wanted "%s", got \%s"`, test.input, test.output, SnakeCase(test.input))
-		}
+		t.Run(test.input, func(t *testing.T) {
+			require.Equal(t, test.output, SnakeCase(test.input))
+		})
 	}
 }
 

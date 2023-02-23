@@ -766,9 +766,7 @@ func TestApplyTemplateSpecific(t *testing.T) {
 	if !ok {
 		t.Error("Expected for template to apply a 'service' tag, but not found")
 	}
-	if service != "facebook" {
-		t.Errorf("Expected service='facebook' tag, got service='%s'", service)
-	}
+	require.Equal(t, "facebook", service)
 }
 
 func TestApplyTemplateTags(t *testing.T) {
@@ -785,9 +783,7 @@ func TestApplyTemplateTags(t *testing.T) {
 	if !ok {
 		t.Error("Expected for template to apply a 'region' tag, but not found")
 	}
-	if region != "us-west" {
-		t.Errorf("Expected region='us-west' tag, got region='%s'", region)
-	}
+	require.Equal(t, "us-west", region)
 }
 
 func TestApplyTemplateField(t *testing.T) {

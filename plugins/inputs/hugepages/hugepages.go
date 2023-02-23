@@ -195,7 +195,7 @@ func (h *Hugepages) gatherFromHugepagePath(
 
 			metricValue, err := strconv.Atoi(string(bytes.TrimSuffix(metricBytes, newlineByte)))
 			if err != nil {
-				return fmt.Errorf("failed to convert content of '%s': %v", metricFullPath, err)
+				return fmt.Errorf("failed to convert content of %q: %w", metricFullPath, err)
 			}
 
 			metrics[metricName] = metricValue
@@ -238,7 +238,7 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 
 		fieldValue, err := strconv.Atoi(string(fields[1]))
 		if err != nil {
-			return fmt.Errorf("failed to convert content of '%s': %v", fieldName, err)
+			return fmt.Errorf("failed to convert content of %q: %w", fieldName, err)
 		}
 
 		metrics[metricName] = fieldValue
@@ -270,7 +270,7 @@ func (h *Hugepages) parseHugepagesConfig() error {
 		case meminfoHugepages:
 			h.gatherMeminfo = true
 		default:
-			return fmt.Errorf("provided hugepages type `%s` is not valid", hugepagesType)
+			return fmt.Errorf("provided hugepages type %q is not valid", hugepagesType)
 		}
 	}
 

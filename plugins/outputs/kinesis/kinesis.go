@@ -133,7 +133,7 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 			// Default partition name if default is not set
 			return "telegraf"
 		default:
-			k.Log.Errorf("You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
+			k.Log.Errorf("You have configured a Partition method of %q which is not supported", k.Partition.Method)
 		}
 	}
 	if k.RandomPartitionKey {

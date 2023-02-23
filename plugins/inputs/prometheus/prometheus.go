@@ -284,7 +284,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		addr := "http://localhost" + path
 		req, err = http.NewRequest("GET", addr, nil)
 		if err != nil {
-			return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+			return fmt.Errorf("unable to create new request %q: %w", addr, err)
 		}
 
 		// ignore error because it's been handled before getting here
@@ -306,7 +306,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
 		if err != nil {
-			return fmt.Errorf("unable to create new request '%s': %s", u.URL.String(), err)
+			return fmt.Errorf("unable to create new request %q: %w", u.URL.String(), err)
 		}
 	}
 

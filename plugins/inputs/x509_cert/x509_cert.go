@@ -95,7 +95,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	for _, location := range collectedUrls {
 		certs, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
-			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
+			acc.AddError(fmt.Errorf("cannot get SSL cert %q: %w", location, err))
 		}
 
 		dnsName := c.serverName(location)
@@ -324,7 +324,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, nil
 	default:
-		return nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())
+		return nil, fmt.Errorf("unsupported scheme %q in location %s", u.Scheme, u.String())
 	}
 }
 

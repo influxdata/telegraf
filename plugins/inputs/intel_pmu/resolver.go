@@ -40,10 +40,10 @@ func (e *iaEntitiesResolver) resolveEntities(coreEntities []*CoreEventEntity, un
 			}
 			customEvent, err := e.resolveEvent(event.name, event.qualifiers)
 			if err != nil {
-				return fmt.Errorf("failed to resolve core event `%s`: %v", event.name, err)
+				return fmt.Errorf("failed to resolve core event %q: %w", event.name, err)
 			}
 			if customEvent.Event.Uncore {
-				return fmt.Errorf("uncore event `%s` found in core entity", event.name)
+				return fmt.Errorf("uncore event %q found in core entity", event.name)
 			}
 			event.custom = customEvent
 		}
@@ -66,10 +66,10 @@ func (e *iaEntitiesResolver) resolveEntities(coreEntities []*CoreEventEntity, un
 			}
 			customEvent, err := e.resolveEvent(event.name, event.qualifiers)
 			if err != nil {
-				return fmt.Errorf("failed to resolve uncore event `%s`: %v", event.name, err)
+				return fmt.Errorf("failed to resolve uncore event %q: %w", event.name, err)
 			}
 			if !customEvent.Event.Uncore {
-				return fmt.Errorf("core event `%s` found in uncore entity", event.name)
+				return fmt.Errorf("core event %q found in uncore entity", event.name)
 			}
 			event.custom = customEvent
 		}
@@ -109,7 +109,7 @@ func (e *iaEntitiesResolver) resolveAllEvents() (coreEvents []*eventWithQuals, u
 		// build options for event
 		newEvent.custom.Options, err = ia.NewOptions().Build()
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to build options for event `%s`: %v", perfEvent.Name, err)
+			return nil, nil, fmt.Errorf("failed to build options for event %q: %w", perfEvent.Name, err)
 		}
 		if perfEvent.Uncore {
 			uncoreEvents = append(uncoreEvents, newEvent)
@@ -134,12 +134,12 @@ func (e *iaEntitiesResolver) resolveEvent(name string, qualifiers []string) (ia.
 		return custom, fmt.Errorf("failed to transform perf events: %v", err)
 	}
 	if len(perfEvents) < 1 {
-		return custom, fmt.Errorf("failed to resolve unknown event `%s`", name)
+		return custom, fmt.Errorf("failed to resolve unknown event %q", name)
 	}
 	// build options for event
 	options, err := ia.NewOptions().SetAttrModifiers(qualifiers).Build()
 	if err != nil {
-		return custom, fmt.Errorf("failed to build options for event `%s`: %v", name, err)
+		return custom, fmt.Errorf("failed to build options for event %q: %w", name, err)
 	}
 	custom = ia.CustomizableEvent{
 		Event:   perfEvents[0],

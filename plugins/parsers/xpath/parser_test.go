@@ -166,7 +166,7 @@ func TestInvalidTypeQueriesFail(t *testing.T) {
 				},
 			},
 			defaultTags:   map[string]string{},
-			expectedError: "failed to parse field (int) 'a': strconv.ParseInt: parsing \"this is a test\": invalid syntax",
+			expectedError: `failed to parse field (int) "a": strconv.ParseInt: parsing "this is a test": invalid syntax`,
 		},
 	}
 

@@ -50,13 +50,13 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	switch o.SecurityPolicy {
 	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.Endpoint)
+		return fmt.Errorf("invalid security type %q in %q", o.SecurityPolicy, o.Endpoint)
 	}
 
 	switch o.SecurityMode {
 	case "None", "Sign", "SignAndEncrypt", "auto":
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.Endpoint)
+		return fmt.Errorf("invalid security type %q in %q", o.SecurityMode, o.Endpoint)
 	}
 
 	return nil

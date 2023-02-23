@@ -47,10 +47,10 @@ func main() {
 		},
 		Action: func(c *cli.Context) error {
 			if image != "" && packageFile != "" {
-				fmt.Printf("test package '%s' on image '%s'\n", packageFile, image)
+				fmt.Printf("test package %q on image %q\n", packageFile, image)
 				return launchTests(packageFile, []string{image})
 			} else if packageFile != "" {
-				fmt.Printf("test package '%s' on all applicable images\n", packageFile)
+				fmt.Printf("test package %q on all applicable images\n", packageFile)
 
 				extension := filepath.Ext(packageFile)
 				switch extension {

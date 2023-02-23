@@ -526,5 +526,5 @@ func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricNa
 		return
 	}
 
-	require.Fail(t, fmt.Sprintf("unknown measurement '%s' with tags: %v, fields: %v", metricName, tags, fields))
+	require.Fail(t, fmt.Sprintf("unknown measurement %q with tags: %v, fields: %v", metricName, tags, fields))
 }

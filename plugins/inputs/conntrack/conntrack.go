@@ -97,7 +97,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 			fields[metricKey], err = strconv.ParseFloat(v, 64)
 			if err != nil {
 				acc.AddError(fmt.Errorf("failed to parse metric, expected number but "+
-					" found '%s': %v", v, err))
+					" found %q: %w", v, err))
 			}
 		}
 	}

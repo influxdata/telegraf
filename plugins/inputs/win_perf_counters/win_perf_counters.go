@@ -281,7 +281,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 		for _, PerfObject := range m.Object {
 			for _, counter := range PerfObject.Counters {
 				if len(PerfObject.Instances) == 0 {
-					m.Log.Warnf("Missing 'Instances' param for object '%s'\n", PerfObject.ObjectName)
+					m.Log.Warnf("Missing 'Instances' param for object %q", PerfObject.ObjectName)
 				}
 				for _, instance := range PerfObject.Instances {
 					objectname := PerfObject.ObjectName
@@ -292,7 +292,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							m.Log.Errorf("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
+							m.Log.Errorf("invalid counterPath %q: %s", counterPath, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err

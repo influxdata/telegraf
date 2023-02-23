@@ -710,7 +710,7 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 	err := output.Output.Connect()
 	if err != nil {
 		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, "+
-			"error was '%s'", output.LogName(), err)
+			"error was %q", output.LogName(), err)
 
 		err := internal.SleepContext(ctx, 15*time.Second)
 		if err != nil {

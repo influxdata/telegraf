@@ -196,9 +196,9 @@ func (tsrc *TableSource) DropColumn(col utils.Column) error {
 	case utils.FieldColType:
 		return tsrc.dropFieldColumn(col)
 	case utils.TimeColType, utils.TagsIDColType:
-		return fmt.Errorf("critical column \"%s\"", col.Name)
+		return fmt.Errorf("critical column %q", col.Name)
 	default:
-		return fmt.Errorf("internal error: unknown column \"%s\"", col.Name)
+		return fmt.Errorf("internal error: unknown column %q", col.Name)
 	}
 }
 

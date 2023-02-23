@@ -3,13 +3,14 @@ package opcua_listener
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
+
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
-	"reflect"
-	"time"
 )
 
 type SubscribeClientConfig struct {
@@ -140,7 +141,7 @@ func (o *SubscribeClient) processReceivedNotifications() {
 					i := int(monitoredItemNotif.ClientHandle)
 					oldValue := o.LastReceivedData[i].Value
 					o.UpdateNodeValue(i, monitoredItemNotif.Value)
-					o.Log.Debugf("Data change notification: node '%s' value changed from %f to %f",
+					o.Log.Debugf("Data change notification: node %q value changed from %f to %f",
 						o.NodeIDs[i].String(), oldValue, o.LastReceivedData[i].Value)
 					o.metrics <- o.MetricForNode(i)
 				}

@@ -129,12 +129,12 @@ func (h *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 
 	u, err := url.Parse(addr)
 	if err != nil {
-		return fmt.Errorf("unable parse server address '%s': %s", addr, err)
+		return fmt.Errorf("unable parse server address %q: %w", addr, err)
 	}
 
 	req, err := http.NewRequest("GET", addr, nil)
 	if err != nil {
-		return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+		return fmt.Errorf("unable to create new request %q: %w", addr, err)
 	}
 	if u.User != nil {
 		p, _ := u.User.Password()
@@ -149,16 +149,16 @@ func (h *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 
 	res, err := h.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("unable to connect to haproxy server '%s': %s", addr, err)
+		return fmt.Errorf("unable to connect to haproxy server %q: %w", addr, err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("unable to get valid stat result from '%s', http response code : %d", addr, res.StatusCode)
+		return fmt.Errorf("unable to get valid stat result from %q, http response code : %d", addr, res.StatusCode)
 	}
 
 	if err := h.importCsvResult(res.Body, acc, u.Host); err != nil {
-		return fmt.Errorf("unable to parse stat result from '%s': %s", addr, err)
+		return fmt.Errorf("unable to parse stat result from %q: %w", addr, err)
 	}
 
 	return nil
@@ -238,7 +238,7 @@ func (h *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 			case "type":
 				vi, err := strconv.ParseInt(v, 10, 64)
 				if err != nil {
-					return fmt.Errorf("unable to parse type value '%s'", v)
+					return fmt.Errorf("unable to parse type value %q", v)
 				}
 				if vi >= int64(len(typeNames)) {
 					return fmt.Errorf("received unknown type value: %d", vi)

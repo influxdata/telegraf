@@ -468,7 +468,7 @@ func assertMapContains(t *testing.T, expected, actual map[string]string) {
 
 	for k, v := range expected {
 		av, ok := actual[k]
-		require.True(t, ok, "Actual map does not contain a value for key '%s'", k)
-		require.Equal(t, v, av, "The expected value for key '%s' is '%s' but the actual value is '%s", k, v, av)
+		require.True(t, ok, "Actual map does not contain a value for key %q", k)
+		require.Equal(t, v, av, "The expected value for key %q is %q but the actual value is %q", k, v, av)
 	}
 }
