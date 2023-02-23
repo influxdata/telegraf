@@ -85,7 +85,7 @@ func (m *msrServiceImpl) retrieveCPUFrequencyForCore(core string) (float64, erro
 	}
 	cpuFreqFile, err := os.Open(cpuFreqPath)
 	if err != nil {
-		return 0, fmt.Errorf("error opening scaling_cur_freq file on path %q, err: %w", cpuFreqPath, err)
+		return 0, fmt.Errorf("error opening scaling_cur_freq file on path %q: %w", cpuFreqPath, err)
 	}
 	defer cpuFreqFile.Close()
 
@@ -213,7 +213,7 @@ func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error 
 
 				err := m.readValueFromFileAtOffset(ctx, ch, reader, off)
 				if err != nil {
-					return fmt.Errorf("error reading MSR file, err: %w", err)
+					return fmt.Errorf("error reading MSR file: %w", err)
 				}
 
 				return nil
