@@ -118,7 +118,7 @@ func (j *Jenkins) initialize(client *http.Client) error {
 	// init filters
 	j.jobFilter, err = filter.NewIncludeExcludeFilter(j.JobInclude, j.JobExclude)
 	if err != nil {
-		return fmt.Errorf("error compiling job filters [%q]: %w", j.URL, err)
+		return fmt.Errorf("error compiling job filters %q: %w", j.URL, err)
 	}
 	j.nodeFilter, err = filter.NewIncludeExcludeFilter(j.NodeInclude, j.NodeExclude)
 	if err != nil {
