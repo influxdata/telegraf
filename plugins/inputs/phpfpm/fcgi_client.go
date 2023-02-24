@@ -61,7 +61,7 @@ READ_LOOP:
 	for {
 		err1 = rec.read(c.rwc)
 		if err1 != nil && strings.Contains(err1.Error(), "use of closed network connection") {
-			if err1 != io.EOF {
+			if !errors.Is(err1, io.EOF) {
 				err = err1
 			}
 			break

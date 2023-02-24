@@ -4,10 +4,11 @@ package nsq_consumer
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"sync"
 
-	nsq "github.com/nsqio/go-nsq"
+	"github.com/nsqio/go-nsq"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -117,14 +118,14 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 
 	if len(n.Nsqlookupd) > 0 {
 		err := n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
-		if err != nil && err != nsq.ErrAlreadyConnected {
+		if err != nil && !errors.Is(err, nsq.ErrAlreadyConnected) {
 			return err
 		}
 	}
 
 	if len(n.Nsqd) > 0 {
 		err := n.consumer.ConnectToNSQDs(n.Nsqd)
-		if err != nil && err != nsq.ErrAlreadyConnected {
+		if err != nil && !errors.Is(err, nsq.ErrAlreadyConnected) {
 			return err
 		}
 	}
