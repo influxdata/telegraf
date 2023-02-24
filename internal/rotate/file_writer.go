@@ -99,6 +99,11 @@ func (w *FileWriter) Close() (err error) {
 		return err
 	}
 
+	// Close the file if we did not rotate
+	if err = w.current.Close(); err != nil {
+		return err
+	}
+
 	w.current = nil
 	return nil
 }
