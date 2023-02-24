@@ -142,7 +142,7 @@ func (fs *fileServiceImpl) readFileAtOffsetToUint64(reader io.ReaderAt, offset i
 
 	_, err := reader.ReadAt(buffer, offset)
 	if err != nil {
-		return 0, fmt.Errorf("error on reading file at offset %q: %w", offset, err)
+		return 0, fmt.Errorf("error on reading file at offset %d: %w", offset, err)
 	}
 
 	return binary.LittleEndian.Uint64(buffer), nil

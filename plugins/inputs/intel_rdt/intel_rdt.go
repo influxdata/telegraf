@@ -414,7 +414,7 @@ func parseCoresConfig(cores []string) ([]string, error) {
 				return nil, fmt.Errorf("wrong cores input config data format: %w", err)
 			}
 			if checkForDuplicates(allCores, actualCores) {
-				return nil, fmt.Errorf("wrong cores input config data format: core value cannot be duplicated")
+				return nil, errors.New("wrong cores input config data format: core value cannot be duplicated")
 			}
 			actualGroupOfCores = append(actualGroupOfCores, actualCores...)
 			allCores = append(allCores, actualGroupOfCores...)
