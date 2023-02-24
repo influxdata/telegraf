@@ -129,7 +129,7 @@ func TestFileWriter_DeleteArchives(t *testing.T) {
 	}
 }
 
-func TestFileWriter_CloseRotates(t *testing.T) {
+func TestFileWriter_CloseDoesNotRotate(t *testing.T) {
 	tempDir := t.TempDir()
 	maxSize := int64(9)
 	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), 0, maxSize, -1)
@@ -138,5 +138,5 @@ func TestFileWriter_CloseRotates(t *testing.T) {
 
 	files, _ := os.ReadDir(tempDir)
 	assert.Equal(t, 1, len(files))
-	assert.Regexp(t, "^test\\.[^\\.]+\\.log$", files[0].Name())
+	assert.Regexp(t, "^test.log$", files[0].Name())
 }
