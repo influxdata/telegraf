@@ -13,7 +13,11 @@ import (
 func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 
-	lvm := LVM{UseSudo: false}
+	lvm := LVM{
+		PVSBinary: "/usr/sbin/pvs",
+		VGSBinary: "/usr/sbin/vgs",
+		LVSBinary: "/usr/sbin/lvs",
+	}
 
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
@@ -128,7 +132,11 @@ func TestHelperProcess(_ *testing.T) {
 func TestGatherNoLVM(t *testing.T) {
 	var acc testutil.Accumulator
 
-	noLVM := LVM{UseSudo: false}
+	noLVM := LVM{
+		PVSBinary: "/usr/sbin/pvs",
+		VGSBinary: "/usr/sbin/vgs",
+		LVSBinary: "/usr/sbin/lvs",
+	}
 
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommandNoLVM
