@@ -335,6 +335,67 @@ func TestSerializeTransformationBatch(t *testing.T) {
 	}
 }
 
+func TestSerializeTransformationIssue12734(t *testing.T) {
+	input := []telegraf.Metric{
+		metric.New(
+			"data",
+			map[string]string{"key": "a"},
+			map[string]interface{}{"value": 10.1},
+			time.Unix(0, 1676285135457000000),
+		),
+		metric.New(
+			"data",
+			map[string]string{"key": "b"},
+			map[string]interface{}{"value": 20.2},
+			time.Unix(0, 1676285135457000000),
+		),
+		metric.New(
+			"data",
+			map[string]string{"key": "c"},
+			map[string]interface{}{"value": 30.3},
+			time.Unix(0, 1676285135457000000),
+		),
+	}
+
+	transformation := `
+	{
+		"valueRows": metrics{$string(timestamp): fields.value[]} ~> $each(function($v, $k) {
+			{
+				"timestamp": $number($k),
+				"values": $v
+			}
+		})
+	}
+	`
+
+	expected := map[string]interface{}{
+		"valueRows": map[string]interface{}{
+			"timestamp": 1.676285135e+9,
+			"values":    []interface{}{10.1, 20.2, 30.3},
+		},
+	}
+
+	// Setup serializer
+	serializer, err := NewSerializer(
+		FormatConfig{
+			Transformation: transformation,
+		},
+	)
+	require.NoError(t, err)
+
+	// Check multiple serializations as issue #12734 shows that the
+	// transformation breaks after the first iteration
+	for i := 1; i <= 3; i++ {
+		buf, err := serializer.SerializeBatch(input)
+		require.NoErrorf(t, err, "broke in iteration %d", i)
+
+		// Compare
+		var actual interface{}
+		require.NoError(t, json.Unmarshal(buf, &actual))
+		require.EqualValuesf(t, expected, actual, "broke in iteration %d", i)
+	}
+}
+
 func TestSerializeNesting(t *testing.T) {
 	var tests = []struct {
 		name     string
