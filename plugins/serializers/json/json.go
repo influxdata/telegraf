@@ -25,7 +25,7 @@ type Serializer struct {
 	TimestampUnits  time.Duration
 	TimestampFormat string
 
-	transformation *jsonata.Expr
+	transformation string
 	nestedfields   filter.Filter
 }
 
@@ -33,14 +33,7 @@ func NewSerializer(cfg FormatConfig) (*Serializer, error) {
 	s := &Serializer{
 		TimestampUnits:  truncateDuration(cfg.TimestampUnits),
 		TimestampFormat: cfg.TimestampFormat,
-	}
-
-	if cfg.Transformation != "" {
-		e, err := jsonata.Compile(cfg.Transformation)
-		if err != nil {
-			return nil, err
-		}
-		s.transformation = e
+		transformation:  cfg.Transformation,
 	}
 
 	if len(cfg.NestedFieldsInclude) > 0 || len(cfg.NestedFieldsExclude) > 0 {
@@ -58,7 +51,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	var obj interface{}
 	obj = s.createObject(metric)
 
-	if s.transformation != nil {
+	if s.transformation != "" {
 		var err error
 		if obj, err = s.transform(obj); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
@@ -89,7 +82,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		"metrics": objects,
 	}
 
-	if s.transformation != nil {
+	if s.transformation != "" {
 		var err error
 		if obj, err = s.transform(obj); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
@@ -150,7 +143,12 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{}
 }
 
 func (s *Serializer) transform(obj interface{}) (interface{}, error) {
-	return s.transformation.Eval(obj)
+	transformation, err := jsonata.Compile(s.transformation)
+	if err != nil {
+		return nil, err
+	}
+
+	return transformation.Eval(obj)
 }
 
 func truncateDuration(units time.Duration) time.Duration {
