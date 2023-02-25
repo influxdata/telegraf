@@ -1,6 +1,6 @@
 # Radius Input Plugin
 
-The Radius plugin collects radius response times.
+The Radius plugin collects radius authentication response times.
 
 ### Configuration:
 
@@ -27,10 +27,10 @@ The Radius plugin collects radius response times.
 
 - All measurements have the following tags:
     - port
-    - server
+    - source
 
 ### Example Output:
 
 ```
-radius,port=1812,server=debian-stretch-radius responsetime=0.011 1502489900000000000
+radius,port=1812,source=debian-stretch-radius responsetime=0.011 1502489900000000000
 ```

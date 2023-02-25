@@ -29,10 +29,10 @@ The Tacacs plugin collects tacacs authentication response times.
 ### Tags:
 
 - All measurements have the following tags:
-    - server
+    - source
 
 ### Example Output:
 
 ```
-tacacs,server=debian-stretch-tacacs responsetime=0.011 1502489900000000000
+tacacs,source=debian-stretch-tacacs responsetime=0.011 1502489900000000000
 ```
