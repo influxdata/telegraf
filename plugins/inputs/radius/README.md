@@ -2,7 +2,16 @@
 
 The Radius plugin collects radius authentication response times.
 
-### Configuration:
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Configuration
 
 ```toml @sample.conf
 [[inputs.radius]]
@@ -18,19 +27,17 @@ The Radius plugin collects radius authentication response times.
   # response_timeout = "5s"
 ```
 
-### Measurements & Fields:
+## Metrics
 
 - radius
-  - responsetime (float)
-
-### Tags:
-
-- All measurements have the following tags:
+  - tags:
     - port
     - source
+  - fields:
+    - responsetime (float)
 
-### Example Output:
+## Example Output
 
-```
+```shell
 radius,port=1812,source=debian-stretch-radius responsetime=0.011 1502489900000000000
 ```
