@@ -147,11 +147,8 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			return nil, fmt.Errorf("Failed to flatten field %s: %v", fld, err)
 		}
 		for k, v := range flat {
-			flatFields[k] = v
+			fields[k] = v
 		}
-	}
-	for fieldName, field := range flatFields {
-		fields[fieldName] = field
 	}
 
 	var schemaObj map[string]interface{}
