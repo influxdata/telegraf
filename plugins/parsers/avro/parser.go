@@ -164,9 +164,8 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	name := p.Measurement
 	separator := "."
 	if name == "" {
-		// get Measurement name from schema.  Try using the
-		// namespace concatenated to the name, but if no namespace,
-		// just use the name.
+		// Try using the namespace defined in the schema. In case there
+		// is none, just use the schema's name definition.
 		nsStr, ok := schemaObj["namespace"].(string)
 		// namespace is optional
 		if !ok {
