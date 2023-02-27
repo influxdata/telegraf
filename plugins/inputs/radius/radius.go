@@ -64,7 +64,7 @@ func (r *Radius) Gather(acc telegraf.Accumulator) error {
 func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	// Create the fields for this metric
 	host, port, err := net.SplitHostPort(server)
-	tags := map[string]string{"source": host, "port": port}
+	tags := map[string]string{"source": host, "source_port": port}
 	fields := make(map[string]interface{})
 
 	secret, err := r.Secret.Get()
@@ -91,22 +91,24 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	rfc2865.UserPassword_Set(packet, password)
 
 	// Do the radius request
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.ResponseTimeout))
-	defer cancel()
+	ctx := context.Background()
+	if r.ResponseTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(r.ResponseTimeout))
+		defer cancel()
+	}
+
 	startTime := time.Now()
 	response, err := r.client.Exchange(ctx, packet, server)
 	duration := time.Since(startTime)
 
 	if err != nil {
 		r.Log.Warnf("error on new request to %s : %s", server, err)
-		fields["responsetime"] = time.Duration(r.ResponseTimeout).Seconds()
 		fields["responsetime_ms"] = time.Duration(r.ResponseTimeout).Milliseconds()
 	} else if response.Code != radius.CodeAccessAccept {
 		r.Log.Warnf("Got radius return code: %d", response.Code)
-		fields["responsetime"] = time.Duration(r.ResponseTimeout).Seconds()
 		fields["responsetime_ms"] = time.Duration(r.ResponseTimeout).Milliseconds()
 	} else {
-		fields["responsetime"] = duration.Seconds()
 		fields["responsetime_ms"] = duration.Milliseconds()
 	}
 

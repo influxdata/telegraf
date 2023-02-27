@@ -31,13 +31,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - radius
   - tags:
-    - port
     - source
+    - source_port
   - fields:
-    - responsetime (float)
+    - responsetime_ms (int)
 
 ## Example Output
 
 ```shell
-radius,port=1812,source=debian-stretch-radius responsetime=0.011 1502489900000000000
+radius,source=hostname.com,source_port=1812 responsetime_ms=311i 1677526200000000000
 ```
