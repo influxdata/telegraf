@@ -161,11 +161,9 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 	// Now some fancy stuff to extract the measurement.
 	// If it's set in the configuration, use that.
-	name := ""
+	name := p.Measurement
 	separator := "."
-	if p.Measurement != "" {
-		name = p.Measurement
-	} else {
+	if name == "" {
 		// get Measurement name from schema.  Try using the
 		// namespace concatenated to the name, but if no namespace,
 		// just use the name.
