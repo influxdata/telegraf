@@ -3,8 +3,9 @@ package avro
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/linkedin/goavro/v2"
 	"net/http"
+
+	"github.com/linkedin/goavro/v2"
 )
 
 type SchemaAndCodec struct {
@@ -17,9 +18,7 @@ type SchemaRegistry struct {
 	cache map[int]*SchemaAndCodec
 }
 
-const (
-	schemaByID = "%s/schemas/ids/%d"
-)
+const schemaByID = "%s/schemas/ids/%d"
 
 func NewSchemaRegistry(url string) *SchemaRegistry {
 	return &SchemaRegistry{url: url, cache: make(map[int]*SchemaAndCodec)}
@@ -37,8 +36,7 @@ func (sr *SchemaRegistry) getSchemaAndCodec(id int) (*SchemaAndCodec, error) {
 
 	var jsonResponse map[string]interface{}
 
-	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
-	if err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&jsonResponse); err != nil {
 		return nil, err
 	}
 

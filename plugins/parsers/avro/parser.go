@@ -144,7 +144,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		candidate[fld] = data[fld] // 1-item map
 		flat, err := flatten.Flatten(candidate, "", sep)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to flatten field %s: %v", fld, err)
+			return nil, fmt.Errorf("flatten field %q failed: %w", fld, err)
 		}
 		for k, v := range flat {
 			fields[k] = v
@@ -185,7 +185,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 	// Nothing?  Give up.
 	if name == "" {
-		return nil, fmt.Errorf("could not determine measurement name")
+		return nil, errors.New("could not determine measurement name")
 	}
 	return metric.New(name, tags, fields, timestamp), nil
 }
@@ -199,13 +199,13 @@ func init() {
 
 func (p *Parser) Init() error {
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
-		return fmt.Errorf("exactly one of 'schema_registry' or 'schema' must be specified")
+		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
 	}
 	if p.SchemaRegistry != "" {
 		p.registryObj = NewSchemaRegistry(p.SchemaRegistry)
 	}
 	if p.TimestampFormat == "" {
-		return fmt.Errorf("must specify 'timestamp_format'")
+		return errors.New("must specify 'timestamp_format'")
 	}
 	return nil
 }
