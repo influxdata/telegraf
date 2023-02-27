@@ -59,7 +59,7 @@ func (*OpenConfigTelemetry) SampleConfig() string {
 
 func (m *OpenConfigTelemetry) Init() error {
 	switch m.TimestampSource {
-	case "", "current":
+	case "", "collection":
 	case "data":
 	default:
 		return fmt.Errorf("unknown option for timestamp_source: %q", m.TimestampSource)
@@ -382,7 +382,7 @@ func init() {
 		return &OpenConfigTelemetry{
 			RetryDelay:      config.Duration(time.Second),
 			StrAsTags:       false,
-			TimestampSource: "current",
+			TimestampSource: "collection",
 		}
 	})
 }

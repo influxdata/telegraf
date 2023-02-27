@@ -55,9 +55,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ]
 
   ## Timestamp Source
-  ## Set to 'current' for time of collection, and 'data' for using the time
+  ## Set to 'collection' for time of collection, and 'data' for using the time
   ## provided by the _timestamp field.
-  # timestamp_source = "current"
+  # timestamp_source = "collection"
 
   ## Optional TLS Config
   # enable_tls = false
