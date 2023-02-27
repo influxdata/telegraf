@@ -8,23 +8,23 @@ import (
 	"github.com/linkedin/goavro/v2"
 )
 
-type SchemaAndCodec struct {
+type schemaAndCodec struct {
 	Schema string
 	Codec  *goavro.Codec
 }
 
-type SchemaRegistry struct {
+type schemaRegistry struct {
 	url   string
-	cache map[int]*SchemaAndCodec
+	cache map[int]*schemaAndCodec
 }
 
 const schemaByID = "%s/schemas/ids/%d"
 
-func NewSchemaRegistry(url string) *SchemaRegistry {
-	return &SchemaRegistry{url: url, cache: make(map[int]*SchemaAndCodec)}
+func newSchemaRegistry(url string) *schemaRegistry {
+	return &schemaRegistry{url: url, cache: make(map[int]*schemaAndCodec)}
 }
 
-func (sr *SchemaRegistry) getSchemaAndCodec(id int) (*SchemaAndCodec, error) {
+func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
 	if v, ok := sr.cache[id]; ok {
 		return v, nil
 	}
@@ -53,7 +53,7 @@ func (sr *SchemaRegistry) getSchemaAndCodec(id int) (*SchemaAndCodec, error) {
 	if err != nil {
 		return nil, err
 	}
-	retval := &SchemaAndCodec{Schema: schemaValue, Codec: codec}
+	retval := &schemaAndCodec{Schema: schemaValue, Codec: codec}
 	sr.cache[id] = retval
 	return retval, nil
 }

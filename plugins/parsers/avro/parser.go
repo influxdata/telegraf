@@ -3,6 +3,7 @@ package avro
 import (
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,7 +29,20 @@ type Parser struct {
 	DefaultTags     map[string]string `toml:"-"`
 
 	Log         telegraf.Logger `toml:"-"`
-	registryObj *SchemaRegistry
+	registryObj *schemaRegistry
+}
+
+func (p *Parser) Init() error {
+	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
+		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
+	}
+	if p.SchemaRegistry != "" {
+		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
+	}
+	if p.TimestampFormat == "" {
+		return errors.New("must specify 'timestamp_format'")
+	}
+	return nil
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -88,7 +102,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) != 1 {
-		return nil, fmt.Errorf("line contains multiple metrics")
+		return nil, errors.New("line contains multiple metrics")
 	}
 
 	return metrics[0], nil
@@ -99,8 +113,6 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *Parser) createMetric(data map[string]interface{}, schema string) (telegraf.Metric, error) {
-	now := time.Now()
-
 	// Tags differ from fields, in that tags are inherently strings.
 	// fields can be of any type.
 	fields := make(map[string]interface{})
@@ -113,10 +125,11 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	// Avro doesn't have a Tag/Field distinction, so we have to tell
 	// Telegraf which items are our tags.
 	for _, tag := range p.Tags {
-		tags[tag], err = internal.ToString(data[tag])
+		sTag, err := internal.ToString(data[tag])
 		if err != nil {
 			p.Log.Warnf("Could not convert %v to string for tag %q: %v", data[tag], tag, err)
 		}
+		tags[tag] = sTag
 	}
 	var fieldList []string
 	if len(p.Fields) != 0 {
@@ -131,7 +144,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			}
 		}
 	}
-	flatFields := make(map[string]interface{})
 	// We need to flatten out our fields.  The default (the separator
 	// string is empty) is equivalent to what streamreactor does.
 	sep := flatten.SeparatorStyle{
@@ -157,7 +169,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 	if len(fields) == 0 {
 		// A telegraf metric needs at least one field.
-		return nil, fmt.Errorf("number of fields is 0; unable to create metric")
+		return nil, errors.New("number of fields is 0; unable to create metric")
 	}
 	// Now some fancy stuff to extract the measurement.
 	// If it's set in the configuration, use that.
@@ -187,7 +199,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	if name == "" {
 		return nil, errors.New("could not determine measurement name")
 	}
-	return metric.New(name, tags, fields, timestamp), nil
+	return metric.New(name, tags, fields, time.Now()), nil
 }
 
 func init() {
@@ -195,17 +207,4 @@ func init() {
 		func(defaultMetricName string) telegraf.Parser {
 			return &Parser{MetricName: defaultMetricName}
 		})
-}
-
-func (p *Parser) Init() error {
-	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
-		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
-	}
-	if p.SchemaRegistry != "" {
-		p.registryObj = NewSchemaRegistry(p.SchemaRegistry)
-	}
-	if p.TimestampFormat == "" {
-		return errors.New("must specify 'timestamp_format'")
-	}
-	return nil
 }
