@@ -304,7 +304,7 @@ telegraf/modbus/device-2/supplied/$datatype       boolean
 #### Important notes and limitations
 
 It is important to notice that the __"devices" and "nodes" are dynamically
-changing_ in Telegraf as the metrics and their structure is not known a-priori.
+changing__ in Telegraf as the metrics and their structure is not known a-priori.
 As a consequence, the content of both `$nodes` and `$properties` topics are
 changing as new `device-id`s, `node-id`s and `properties` (i.e. tags and fields)
 appear. Best effort is made to limit the number of changes by keeping a
