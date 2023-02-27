@@ -2,6 +2,8 @@ package nats_consumer
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/parsing"
 	"testing"
 	"time"
 
@@ -33,9 +35,12 @@ func (f *FakeClient) JetStream(...nats.JSOpt) (nats.JetStreamContext, error) {
 	return &FakeJetStreamContext{}, nil
 }
 
+//revive:disable:var-naming
 func (f *FakeClient) ConnectedUrl() string {
 	return f.url
 }
+
+//revive:enable:var-naming
 
 func (f *FakeClient) IsClosed() bool {
 	return f.closed
@@ -185,13 +190,15 @@ func TestMessageParsing(t *testing.T) {
 			},
 			subjectParsing: []SubjectParsingConfig{
 				{
-					Subject:     "telegraf.123.test",
-					Measurement: "_._.measurement",
-					Tags:        "testTag._._",
-					Fields:      "_.testNumber._",
-					FieldTypes: map[string]string{
-						"testNumber": "int",
+					ConfigEntry: parsing.ConfigEntry{
+						Measurement: "_._.measurement",
+						Tags:        "testTag._._",
+						Fields:      "_.testNumber._",
+						FieldTypes: map[string]string{
+							"testNumber": "int",
+						},
 					},
+					Base: "telegraf.123.test",
 				},
 			},
 			expected: []telegraf.Metric{
@@ -217,13 +224,15 @@ func TestMessageParsing(t *testing.T) {
 			},
 			subjectParsing: []SubjectParsingConfig{
 				{
-					Subject:     "telegraf.*.test.hello",
-					Measurement: "_._.measurement._",
-					Tags:        "testTag._._._",
-					Fields:      "_.testNumber._.testString",
-					FieldTypes: map[string]string{
-						"testNumber": "int",
+					ConfigEntry: parsing.ConfigEntry{
+						Measurement: "_._.measurement._",
+						Tags:        "testTag._._._",
+						Fields:      "_.testNumber._.testString",
+						FieldTypes: map[string]string{
+							"testNumber": "int",
+						},
 					},
+					Base: "telegraf.*.test.hello",
 				},
 			},
 			expected: []telegraf.Metric{
@@ -251,13 +260,15 @@ func TestMessageParsing(t *testing.T) {
 			expectedError: fmt.Errorf("config error subject parsing: fields length does not equal subject length"),
 			subjectParsing: []SubjectParsingConfig{
 				{
-					Subject:     "telegraf.*.test.hello",
-					Measurement: "_._.measurement._",
-					Tags:        "testTag._._._",
-					Fields:      "_._.testNumber._.testString",
-					FieldTypes: map[string]string{
-						"testNumber": "int",
+					ConfigEntry: parsing.ConfigEntry{
+						Measurement: "_._.measurement._",
+						Tags:        "testTag._._._",
+						Fields:      "_._.testNumber._.testString",
+						FieldTypes: map[string]string{
+							"testNumber": "int",
+						},
 					},
+					Base: "telegraf.*.test.hello",
 				},
 			},
 		},
@@ -271,13 +282,15 @@ func TestMessageParsing(t *testing.T) {
 			expectedError: fmt.Errorf("config error subject parsing: tags length does not equal subject length"),
 			subjectParsing: []SubjectParsingConfig{
 				{
-					Subject:     "telegraf.*.test.hello",
-					Measurement: "_._.measurement._",
-					Tags:        "testTag._._._._",
-					Fields:      "_._.testNumber.testString",
-					FieldTypes: map[string]string{
-						"testNumber": "int",
+					ConfigEntry: parsing.ConfigEntry{
+						Measurement: "_._.measurement._",
+						Tags:        "testTag._._._._",
+						Fields:      "_._.testNumber.testString",
+						FieldTypes: map[string]string{
+							"testNumber": "int",
+						},
 					},
+					Base: "telegraf.*.test.hello",
 				},
 			},
 		},
@@ -288,16 +301,18 @@ func TestMessageParsing(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			expectedError: fmt.Errorf("config error subject parsing: measurement length does not equal subject length"),
+			expectedError: fmt.Errorf("config error subject parsing: measurement length 5 does not equal subject length 4"),
 			subjectParsing: []SubjectParsingConfig{
 				{
-					Subject:     "telegraf.*.test.hello",
-					Measurement: "_._.measurement._._",
-					Tags:        "testTag._._._",
-					Fields:      "_._.testNumber.testString",
-					FieldTypes: map[string]string{
-						"testNumber": "int",
+					ConfigEntry: parsing.ConfigEntry{
+						Measurement: "_._.measurement._._",
+						Tags:        "testTag._._._",
+						Fields:      "_._.testNumber.testString",
+						FieldTypes: map[string]string{
+							"testNumber": "int",
+						},
 					},
+					Base: "telegraf.*.test.hello",
 				},
 			},
 		},
@@ -310,12 +325,14 @@ func TestMessageParsing(t *testing.T) {
 			},
 			subjectParsing: []SubjectParsingConfig{
 				{
-					Subject:     "telegraf.*.test.hello",
-					Measurement: "_._.measurement._",
-					Tags:        "testTag._._._",
-					FieldTypes: map[string]string{
-						"testNumber": "int",
+					ConfigEntry: parsing.ConfigEntry{
+						Measurement: "_._.measurement._",
+						Tags:        "testTag._._._",
+						FieldTypes: map[string]string{
+							"testNumber": "int",
+						},
 					},
+					Base: "telegraf.*.test.hello",
 				},
 			},
 			expected: []telegraf.Metric{
@@ -340,12 +357,14 @@ func TestMessageParsing(t *testing.T) {
 			},
 			subjectParsing: []SubjectParsingConfig{
 				{
-					Subject: "telegraf.*.test.hello",
-					Tags:    "testTag._._._",
-					Fields:  "_.testNumber._.testString",
-					FieldTypes: map[string]string{
-						"testNumber": "int",
+					ConfigEntry: parsing.ConfigEntry{
+						Tags:   "testTag._._._",
+						Fields: "_.testNumber._.testString",
+						FieldTypes: map[string]string{
+							"testNumber": "int",
+						},
 					},
+					Base: "telegraf.*.test.hello",
 				},
 			},
 			expected: []telegraf.Metric{
@@ -372,12 +391,14 @@ func TestMessageParsing(t *testing.T) {
 			},
 			subjectParsing: []SubjectParsingConfig{
 				{
-					Subject:     "telegraf.*.test.hello",
-					Measurement: "_._.measurement._",
-					Fields:      "_.testNumber._.testString",
-					FieldTypes: map[string]string{
-						"testNumber": "int",
+					ConfigEntry: parsing.ConfigEntry{
+						Measurement: "_._.measurement._",
+						Fields:      "_.testNumber._.testString",
+						FieldTypes: map[string]string{
+							"testNumber": "int",
+						},
 					},
+					Base: "telegraf.*.test.hello",
 				},
 			},
 			expected: []telegraf.Metric{
@@ -442,6 +463,21 @@ func TestMessageParsing(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
 		})
 	}
+}
+
+func TestConfig(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/config.toml"))
+
+	plugin, ok := c.Inputs[0].Input.(*natsConsumer)
+	require.True(t, ok)
+	require.Len(t, plugin.SubjectParsing, 1)
+	require.Equal(t, "telegraf.one.cpu.23", plugin.SubjectParsing[0].Base)
+	require.Equal(t, "_._.measurement._", plugin.SubjectParsing[0].Measurement)
+	require.Equal(t, "tag._._._", plugin.SubjectParsing[0].Tags)
+	require.Equal(t, "_._._.test", plugin.SubjectParsing[0].Fields)
+	require.Len(t, plugin.SubjectParsing[0].FieldTypes, 1)
+	require.Equal(t, "int", plugin.SubjectParsing[0].FieldTypes["test"])
 }
 
 // FakeParser satisfies parsers.Parser

@@ -2,6 +2,7 @@ package mqtt_consumer
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/plugins/common/parsing"
 	"testing"
 	"time"
 
@@ -193,7 +194,7 @@ func TestTopicTag(t *testing.T) {
 		topic         string
 		topicTag      func() *string
 		expectedError error
-		topicParsing  []TopicParsingConfig
+		topicParsing  []parsing.ConfigEntry
 		expected      []telegraf.Metric
 	}{
 		{
@@ -260,9 +261,9 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			topicParsing: []TopicParsingConfig{
+			topicParsing: []parsing.ConfigEntry{
 				{
-					Topic:       "telegraf/123/test",
+					Base:        "telegraf/123/test",
 					Measurement: "_/_/measurement",
 					Tags:        "testTag/_/_",
 					Fields:      "_/testNumber/_",
@@ -292,9 +293,9 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			topicParsing: []TopicParsingConfig{
+			topicParsing: []parsing.ConfigEntry{
 				{
-					Topic:       "telegraf/+/test/hello",
+					Base:        "telegraf/+/test/hello",
 					Measurement: "_/_/measurement/_",
 					Tags:        "testTag/_/_/_",
 					Fields:      "_/testNumber/_/testString",
@@ -326,15 +327,15 @@ func TestTopicTag(t *testing.T) {
 				return &tag
 			},
 			expectedError: fmt.Errorf("config error topic parsing: fields length does not equal topic length"),
-			topicParsing: []TopicParsingConfig{
+			topicParsing: []parsing.ConfigEntry{
 				{
-					Topic:       "telegraf/+/test/hello",
 					Measurement: "_/_/measurement/_",
 					Tags:        "testTag/_/_/_",
 					Fields:      "_/_/testNumber:int/_/testString:string",
 					FieldTypes: map[string]string{
 						"testNumber": "int",
 					},
+					Base: "telegraf/+/test/hello",
 				},
 			},
 			expected: []telegraf.Metric{
@@ -359,14 +360,14 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			topicParsing: []TopicParsingConfig{
+			topicParsing: []parsing.ConfigEntry{
 				{
-					Topic:       "telegraf/+/test/hello",
 					Measurement: "_/_/measurement/_",
 					Tags:        "testTag/_/_/_",
 					FieldTypes: map[string]string{
 						"testNumber": "int",
 					},
+					Base: "telegraf/+/test/hello",
 				},
 			},
 			expected: []telegraf.Metric{
@@ -389,14 +390,14 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			topicParsing: []TopicParsingConfig{
+			topicParsing: []parsing.ConfigEntry{
 				{
-					Topic:  "telegraf/+/test/hello",
 					Tags:   "testTag/_/_/_",
 					Fields: "_/testNumber/_/testString",
 					FieldTypes: map[string]string{
 						"testNumber": "int",
 					},
+					Base: "telegraf/+/test/hello",
 				},
 			},
 			expected: []telegraf.Metric{
@@ -421,15 +422,15 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			topicParsing: []TopicParsingConfig{
+			topicParsing: []parsing.ConfigEntry{
 				{
-					Topic:       "/telegraf/+/test/hello",
 					Measurement: "/_/_/measurement/_",
 					Tags:        "/testTag/_/_/_",
 					Fields:      "/_/testNumber/_/testString",
 					FieldTypes: map[string]string{
 						"testNumber": "int",
 					},
+					Base: "/telegraf/+/test/hello",
 				},
 			},
 			expected: []telegraf.Metric{

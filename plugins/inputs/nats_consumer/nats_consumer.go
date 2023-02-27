@@ -4,8 +4,8 @@ package nats_consumer
 import (
 	"context"
 	_ "embed"
-	"fmt"
-	"strconv"
+	"github.com/influxdata/telegraf/plugins/common/parsing"
+	"github.com/nats-io/nats.go"
 	"strings"
 	"sync"
 
@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/nats-io/nats.go"
 )
 
 //go:embed sample.conf
@@ -27,16 +26,8 @@ type empty struct{}
 type semaphore chan empty
 
 type SubjectParsingConfig struct {
-	Subject     string            `toml:"subject"`
-	Measurement string            `toml:"measurement"`
-	Tags        string            `toml:"tags"`
-	Fields      string            `toml:"fields"`
-	FieldTypes  map[string]string `toml:"types"`
-
-	measurementIndex int
-	splitTags        []string
-	splitFields      []string
-	splitSubject     []string
+	parsing.ConfigEntry
+	Base string `toml:"subject"`
 }
 
 type client interface {
@@ -89,6 +80,8 @@ type natsConsumer struct {
 	sem           semaphore
 	messages      map[telegraf.TrackingID]bool
 	messagesMutex sync.Mutex
+
+	parsingConfig *parsing.Config
 }
 
 func (*natsConsumer) SampleConfig() string {
@@ -105,36 +98,22 @@ func (n *natsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 
 func (n *natsConsumer) Init() error {
 	n.messages = map[telegraf.TrackingID]bool{}
+	n.parsingConfig = parsing.NewConfig(transformConfig(n.SubjectParsing), "subject", ".", "*", n.Log)
+	return n.parsingConfig.Init()
+}
 
-	for i, p := range n.SubjectParsing {
-		splitMeasurement := strings.Split(p.Measurement, ".")
-		for j := range splitMeasurement {
-			if splitMeasurement[j] != "_" {
-				n.SubjectParsing[i].measurementIndex = j
-				break
-			}
-		}
-		n.SubjectParsing[i].splitTags = strings.Split(p.Tags, ".")
-		n.SubjectParsing[i].splitFields = strings.Split(p.Fields, ".")
-		n.SubjectParsing[i].splitSubject = strings.Split(p.Subject, ".")
-
-		if len(splitMeasurement) != len(n.SubjectParsing[i].splitSubject) && len(splitMeasurement) != 1 {
-			n.Log.Errorf("config error subject parsing: measurement length %d does not equal subject length %d",
-				len(splitMeasurement), len(n.SubjectParsing[i].splitSubject))
-			return fmt.Errorf("config error subject parsing: measurement length does not equal subject length")
-		}
-
-		if len(n.SubjectParsing[i].splitFields) != len(n.SubjectParsing[i].splitSubject) && p.Fields != "" {
-			n.Log.Error("config error subject parsing: fields length does not equal subject length")
-			return fmt.Errorf("config error subject parsing: fields length does not equal subject length")
-		}
-
-		if len(n.SubjectParsing[i].splitTags) != len(n.SubjectParsing[i].splitSubject) && p.Tags != "" {
-			n.Log.Error("config error subject parsing: tags length does not equal subject length")
-			return fmt.Errorf("config error subject parsing: tags length does not equal subject length")
+func transformConfig(subjectParsing []SubjectParsingConfig) []parsing.ConfigEntry {
+	ret := make([]parsing.ConfigEntry, len(subjectParsing))
+	for i, c := range subjectParsing {
+		ret[i] = parsing.ConfigEntry{
+			Base:        c.Base,
+			Measurement: c.Measurement,
+			Tags:        c.Tags,
+			Fields:      c.Fields,
+			FieldTypes:  c.FieldTypes,
 		}
 	}
-	return nil
+	return ret
 }
 
 // Start the nats consumer. Caller must call *natsConsumer.Stop() to clean up.
@@ -258,28 +237,10 @@ func (n *natsConsumer) onMessage(acc telegraf.TrackingAccumulator, msg *nats.Msg
 			metric.AddTag(*n.SubjectTag, msg.Subject)
 		}
 
-		for _, p := range n.SubjectParsing {
-			values := strings.Split(msg.Subject, ".")
-			if !compareSubjects(p.splitSubject, values) {
-				continue
-			}
-
-			if p.Measurement != "" {
-				metric.SetName(values[p.measurementIndex])
-			}
-
-			if p.Tags != "" {
-				err := parseMetric(p.splitTags, values, p.FieldTypes, true, metric)
-				if err != nil {
-					return err
-				}
-			}
-
-			if p.Fields != "" {
-				err := parseMetric(p.splitFields, values, p.FieldTypes, false, metric)
-				if err != nil {
-					return err
-				}
+		if n.parsingConfig != nil {
+			err := n.parsingConfig.Parse(msg.Subject, metric)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -289,71 +250,6 @@ func (n *natsConsumer) onMessage(acc telegraf.TrackingAccumulator, msg *nats.Msg
 	n.messages[id] = true
 	n.messagesMutex.Unlock()
 	return nil
-}
-
-// compareSubjects is used to support the nats wild card `*` which allows for one subject of any value
-func compareSubjects(expected []string, incoming []string) bool {
-	if len(expected) != len(incoming) {
-		return false
-	}
-
-	for i, expected := range expected {
-		if incoming[i] != expected && expected != "*" {
-			return false
-		}
-	}
-
-	return true
-}
-
-// parseMetric gets multiple fields from the subject based on the user configuration (SubjectParsingConfig.Fields)
-func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
-	for i, k := range keys {
-		if k == "_" {
-			continue
-		}
-		if isTag {
-			metric.AddTag(k, values[i])
-		} else {
-			newType, err := typeConvert(types, values[i], k)
-			if err != nil {
-				return err
-			}
-			metric.AddField(k, newType)
-		}
-	}
-	return nil
-}
-
-func typeConvert(types map[string]string, subjectValue string, key string) (interface{}, error) {
-	var newType interface{}
-	var err error
-	// If the user configured inputs.mqtt_consumer.subject.types, check for the desired type
-	if desiredType, ok := types[key]; ok {
-		switch desiredType {
-		case "uint":
-			newType, err = strconv.ParseUint(subjectValue, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type uint: %v", subjectValue, err)
-			}
-		case "int":
-			newType, err = strconv.ParseInt(subjectValue, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type int: %v", subjectValue, err)
-			}
-		case "float":
-			newType, err = strconv.ParseFloat(subjectValue, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type float: %v", subjectValue, err)
-			}
-		default:
-			return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)
-		}
-	} else {
-		newType = subjectValue
-	}
-
-	return newType, nil
 }
 
 func (n *natsConsumer) clean() {
