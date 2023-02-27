@@ -107,6 +107,7 @@ require (
 	github.com/jackc/pgtype v1.12.0
 	github.com/jackc/pgx/v4 v4.17.1
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
+	github.com/jellydator/ttlcache/v3 v3.0.1
 	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.2.2
@@ -192,6 +193,16 @@ require (
 	k8s.io/apimachinery v0.25.3
 	k8s.io/client-go v0.25.0
 	modernc.org/sqlite v1.19.2
+)
+
+require (
+	github.com/Masterminds/semver/v3 v3.2.0 // indirect
+	github.com/elastic/go-elasticsearch/v7 v7.6.0 // indirect
+	github.com/fatih/structs v1.1.0 // indirect
+	github.com/gosimple/slug v1.1.1 // indirect
+	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
+	github.com/shopspring/decimal v1.2.0 // indirect
+	github.com/spf13/cast v1.5.0 // indirect
 )
 
 require (
@@ -307,7 +318,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/packer-plugin-sdk v0.3.1 // indirect
 	github.com/hashicorp/serf v0.10.1 // indirect
-	github.com/huandu/xstrings v1.3.2 // indirect
+	github.com/huandu/xstrings v1.3.3 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -456,3 +467,14 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
+
+// fork
+require (
+	github.com/Masterminds/sprig/v3 v3.2.3
+	github.com/aquasecurity/esquery v0.2.0
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
+	github.com/grafana-tools/sdk v0.0.0-00010101000000-000000000000
+	github.com/jinzhu/copier v0.3.5
+)
+
+replace github.com/grafana-tools/sdk => github.com/devopsext/sdk v0.9.6

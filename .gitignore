@@ -15,3 +15,5 @@ process.yml
 /*.conf
 resource.syso
 versioninfo.json
+vscode.sh
+issues.json
