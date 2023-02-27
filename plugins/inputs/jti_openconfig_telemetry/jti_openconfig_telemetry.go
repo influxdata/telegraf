@@ -296,7 +296,12 @@ func (m *OpenConfigTelemetry) collectData(
 					for _, group := range dgroups {
 						if m.TimestampSource == "data" {
 							// OpenConfig timestamp is in milliseconds since epoch
-							timestamp = time.UnixMilli(int64(group.data["_timestamp"].(uint64)))
+							ts, ok := group.data["_timestamp"].(uint64)
+							if ok {
+								timestamp = time.UnixMilli(int64(ts))
+							} else {
+								m.Log.Warnf("invalid type %T for _timestamp %v", group.data["_timestamp"], group.data["_timestamp"])
+							}
 						}
 
 						if len(group.tags) == 0 {
