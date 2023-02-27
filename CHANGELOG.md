@@ -1,6 +1,31 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.25.3 [2023-02-27]
+
+### Bugfixes
+
+- [#12721](https://github.com/influxdata/telegraf/pull/12721) `agent` Fix reload config on config update/SIGHUP
+- [#12462](https://github.com/influxdata/telegraf/pull/12462) `inputs.bond` Reset slave stats for each interface
+- [#12677](https://github.com/influxdata/telegraf/pull/12677) `inputs.cloudwatch` Verify endpoint is not nil
+- [#12725](https://github.com/influxdata/telegraf/pull/12725) `inputs.lvm` Add options to specify path to binaries
+- [#12724](https://github.com/influxdata/telegraf/pull/12724) `parsers.xpath` Fix panic for JSON name expansion
+- [#12735](https://github.com/influxdata/telegraf/pull/12735) `serializers.json` Fix stateful transformations
+
+### Dependency Updates
+
+- [#12714](https://github.com/influxdata/telegraf/pull/12714) `deps` Bump cloud.google.com/go/pubsub from 1.27.1 to 1.28.0
+- [#12693](https://github.com/influxdata/telegraf/pull/12693) `deps` Bump github.com/containerd/containerd from 1.6.8 to 1.6.18
+- [#12715](https://github.com/influxdata/telegraf/pull/12715) `deps` Bump github.com/go-logfmt/logfmt from 0.5.1 to 0.6.0
+- [#12668](https://github.com/influxdata/telegraf/pull/12668) `deps` Bump github.com/gofrs/uuid from 4.3.1 to 5.0.0
+- [#12712](https://github.com/influxdata/telegraf/pull/12712) `deps` Bump github.com/gophercloud/gophercloud from 1.0.0 to 1.2.0
+- [#12667](https://github.com/influxdata/telegraf/pull/12667) `deps` Bump github.com/pion/dtls/v2 from 2.1.5 to 2.2.4
+- [#12699](https://github.com/influxdata/telegraf/pull/12699) `deps` Bump golang.org/x/net from 0.5.0 to 0.7.0
+- [#12670](https://github.com/influxdata/telegraf/pull/12670) `deps` Bump golang.org/x/sys from 0.4.0 to 0.5.0
+- [#12713](https://github.com/influxdata/telegraf/pull/12713) `deps` Bump google.golang.org/grpc from 1.52.3 to 1.53.0
+- [#12669](https://github.com/influxdata/telegraf/pull/12669) `deps` Bump k8s.io/apimachinery from 0.25.3 to 0.25.6
+- [#12698](https://github.com/influxdata/telegraf/pull/12698) `deps` Bump testcontainers from 0.14.0 to 0.18.0
+
 ## v1.25.2 [2023-02-13]
 
 ### Bugfixes
