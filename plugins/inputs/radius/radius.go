@@ -50,7 +50,7 @@ func (r *Radius) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			acc.AddError(r.pollServer(server, acc))
+			acc.AddError(r.pollServer(acc, server))
 		}(server)
 	}
 
@@ -58,7 +58,7 @@ func (r *Radius) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *Radius) pollServer(server string, acc telegraf.Accumulator) error {
+func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	// Create the fields for this metric
 	host, port, err := net.SplitHostPort(server)
 	tags := map[string]string{"source": host, "port": port}

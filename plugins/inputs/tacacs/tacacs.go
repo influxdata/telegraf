@@ -49,7 +49,7 @@ func (t *Tacacs) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			acc.AddError(t.pollServer(server, acc))
+			acc.AddError(t.pollServer(acc, server))
 		}(server)
 	}
 
@@ -57,7 +57,7 @@ func (t *Tacacs) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *Tacacs) pollServer(server string, acc telegraf.Accumulator) error {
+func (t *Tacacs) pollServer(acc telegraf.Accumulator, server string) error {
 	// Create the fields for this metric
 	tags := map[string]string{"source": server}
 	fields := make(map[string]interface{})
