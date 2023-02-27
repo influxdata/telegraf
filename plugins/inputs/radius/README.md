@@ -10,9 +10,9 @@ The Radius plugin collects radius authentication response times.
   servers = ["127.0.0.1:1812","hostname.domain.com:1812"]
 
   ## Credentials for radius authentication.
-  # username = "myuser"
-  # password = "mypassword"
-  # secret = "mysecret"
+  username = "myuser"
+  password = "mypassword"
+  secret = "mysecret"
 
   ## Maximum time to receive response.
   # response_timeout = "5s"

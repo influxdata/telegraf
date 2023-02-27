@@ -36,9 +36,6 @@ func (t *Tacacs) Init() error {
 	if len(t.Servers) == 0 {
 		t.Servers = []string{"127.0.0.1"}
 	}
-	if t.ResponseTimeout < config.Duration(time.Second) {
-		t.ResponseTimeout = config.Duration(time.Second * 5)
-	}
 	return nil
 }
 
@@ -66,14 +63,19 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, server string) error {
 	if err != nil {
 		return fmt.Errorf("getting secret failed: %v", err)
 	}
+	defer config.ReleaseSecret(secret)
+
 	username, err := t.Username.Get()
 	if err != nil {
 		return fmt.Errorf("getting username failed: %v", err)
 	}
+	defer config.ReleaseSecret(username)
+
 	password, err := t.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %v", err)
 	}
+	defer config.ReleaseSecret(password)
 
 	// Create the tacacs client
 	client := &tacplus.Client{
@@ -157,6 +159,6 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, server string) error {
 
 func init() {
 	inputs.Add("tacacs", func() telegraf.Input {
-		return &Tacacs{}
+		return &Tacacs{ResponseTimeout: config.Duration(time.Second * 5)}
 	})
 }

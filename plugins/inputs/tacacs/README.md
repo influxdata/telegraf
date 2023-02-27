@@ -13,9 +13,9 @@ The Tacacs plugin collects tacacs authentication response times.
   remaddr = "127.0.0.1"
 
   ## Credentials for tacacs authentication.
-  # username = "myuser"
-  # password = "mypassword"
-  # secret = "mysecret"
+  username = "myuser"
+  password = "mypassword"
+  secret = "mysecret"
 
   ## Maximum time to receive response.
   # response_timeout = "5s"

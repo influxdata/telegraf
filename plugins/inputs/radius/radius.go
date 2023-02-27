@@ -24,6 +24,7 @@ type Radius struct {
 	Secret          config.Secret   `toml:"secret"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
+	RadiusClient    radius.Client
 }
 
 //go:embed sample.conf
@@ -37,9 +38,11 @@ func (r *Radius) Init() error {
 	if len(r.Servers) == 0 {
 		r.Servers = []string{"127.0.0.1:1812"}
 	}
-	if r.ResponseTimeout < config.Duration(time.Second) {
-		r.ResponseTimeout = config.Duration(time.Second * 5)
+
+	r.RadiusClient = radius.Client{
+		Retry: 0,
 	}
+
 	return nil
 }
 
@@ -64,23 +67,23 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	tags := map[string]string{"source": host, "port": port}
 	fields := make(map[string]interface{})
 
-	// Create the radius Client
-	client := &radius.Client{
-		Retry: 0,
-	}
-
 	secret, err := r.Secret.Get()
 	if err != nil {
 		return fmt.Errorf("getting secret failed: %v", err)
 	}
+	defer config.ReleaseSecret(secret)
+
 	username, err := r.Username.Get()
 	if err != nil {
 		return fmt.Errorf("getting username failed: %v", err)
 	}
+	defer config.ReleaseSecret(username)
+
 	password, err := r.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %v", err)
 	}
+	defer config.ReleaseSecret(password)
 
 	// Create the radius packet with PAP authentication
 	packet := radius.New(radius.CodeAccessRequest, secret)
@@ -91,7 +94,7 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.ResponseTimeout))
 	defer cancel()
 	startTime := time.Now()
-	response, err := client.Exchange(ctx, packet, server)
+	response, err := r.RadiusClient.Exchange(ctx, packet, server)
 	duration := time.Since(startTime)
 
 	if err != nil {
@@ -113,6 +116,6 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 
 func init() {
 	inputs.Add("radius", func() telegraf.Input {
-		return &Radius{}
+		return &Radius{ResponseTimeout: config.Duration(time.Second * 5)}
 	})
 }
