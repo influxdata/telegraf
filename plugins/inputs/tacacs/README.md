@@ -2,7 +2,16 @@
 
 The Tacacs plugin collects tacacs authentication response times.
 
-### Configuration:
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Configuration
 
 ```toml @sample.conf
 [[inputs.tacacs]]
@@ -21,18 +30,16 @@ The Tacacs plugin collects tacacs authentication response times.
   # response_timeout = "5s"
 ```
 
-### Measurements & Fields:
+## Metrics
 
 - tacacs
-  - responsetime (float)
-
-### Tags:
-
-- All measurements have the following tags:
+  - tags:
     - source
+  - fields:
+    - responsetime (float)
 
-### Example Output:
+## Example Output
 
-```
+```shell
 tacacs,source=debian-stretch-tacacs responsetime=0.011 1502489900000000000
 ```
