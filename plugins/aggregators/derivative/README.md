@@ -140,7 +140,7 @@ To avoid thinking about border values, we consider periods to be inclusive at
 the start but exclusive in the end.  Using `period = "10s"` and `max_roll_over =
 0` we would get the following aggregates:
 
-| timestamp | value | aggregate | explanantion |
+| timestamp | value | aggregate | explanation |
 |-----------|-------|-----------|--------------|
 |  0        |  0.0  |
 |  2        |  2.0  |
@@ -162,7 +162,7 @@ aggregator will emit the log messages `Same first and last event for "test",
 skipping.`.  This changes, if we use `max_roll_over = 1`, since now end
 measurements of a period are taking as start for the next period.
 
-| timestamp | value | aggregate | explanantion |
+| timestamp | value | aggregate | explanation |
 |-----------|-------|-----------|--------------|
 |  0        |  0.0  |
 |  2        |  2.0  |  1.0      | (2.0 - 0.0) / (2 - 0) |
@@ -183,25 +183,24 @@ There may be a slight difference in the calculation when using `max_roll_over`
 compared to running without.  To illustrate this, let us compare the derivatives
 for `period = "7s"`.
 
-| timestamp | value | `max_roll_over = 0` | `max_roll_over = 1` |
-|-----------|-------|-----------|--------------|
+| timestamp | value | `max_roll_over = 0` | explanation | `max_roll_over = 1` | explanation |
+|-----------|-------|---------------------|-------------|---------------------|-------------|
 |  0        |  0.0  |
 |  2        |  2.0  |
 |  4        |  4.0  |
 |  6        |  6.0  |
-|||  1.0 | 1.0 |
+|  7        |       | 0.8571... | (6-0) / (7-0) | 0.8571... | (6-0) / (7-0)
 |  8        |  8.0  |
 | 10        | 10.0  |
 | 12        |  8.0  |
-|||  0.0 | 0.33... |
-| 14        |  6.0  |
+| 14        |  8.0  | 0.0 | (8-8) / (14-7) | 0.2857... | (8-6) / (14-7)
 | 16        |  4.0  |
 | 18        |  2.0  |
 | 20        |  0.0  |
 ||| -1.0 | -1.0 |
 
 The difference stems from the change of the value between periods, e.g. from 6.0
-to 8.0 between first and second period.  Thoses changes are omitted with
+to 8.0 between first and second period.  Those changes are omitted with
 `max_roll_over = 0` but are respected with `max_roll_over = 1`.  That there are
 no more differences in the calculated derivatives is due to the example data,
 which has constant derivatives in during the first and last period, even when
