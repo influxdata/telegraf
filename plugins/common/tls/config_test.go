@@ -528,3 +528,37 @@ func TestConnectWrongDNS(t *testing.T) {
 		require.NoError(t, err)
 	}
 }
+
+func TestEnableFlagAuto(t *testing.T) {
+	cfgEmpty := tls.ClientConfig{}
+	cfg, err := cfgEmpty.TLSConfig()
+	require.NoError(t, err)
+	require.Nil(t, cfg)
+
+	cfgSet := tls.ClientConfig{InsecureSkipVerify: true}
+	cfg, err = cfgSet.TLSConfig()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+}
+
+func TestEnableFlagDisabled(t *testing.T) {
+	enabled := false
+	cfgSet := tls.ClientConfig{
+		InsecureSkipVerify: true,
+		Enable:             &enabled,
+	}
+	cfg, err := cfgSet.TLSConfig()
+	require.NoError(t, err)
+	require.Nil(t, cfg)
+}
+
+func TestEnableFlagEnabled(t *testing.T) {
+	enabled := true
+	cfgSet := tls.ClientConfig{Enable: &enabled}
+	cfg, err := cfgSet.TLSConfig()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	expected := &cryptotls.Config{}
+	require.Equal(t, expected, cfg)
+}
