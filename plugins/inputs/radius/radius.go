@@ -24,7 +24,7 @@ type Radius struct {
 	Secret          config.Secret   `toml:"secret"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
-	RadiusClient    radius.Client
+	client          radius.Client
 }
 
 //go:embed sample.conf
@@ -39,7 +39,7 @@ func (r *Radius) Init() error {
 		r.Servers = []string{"127.0.0.1:1812"}
 	}
 
-	r.RadiusClient = radius.Client{
+	r.client = radius.Client{
 		Retry: 0,
 	}
 
@@ -94,7 +94,7 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.ResponseTimeout))
 	defer cancel()
 	startTime := time.Now()
-	response, err := r.RadiusClient.Exchange(ctx, packet, server)
+	response, err := r.client.Exchange(ctx, packet, server)
 	duration := time.Since(startTime)
 
 	if err != nil {
