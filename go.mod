@@ -137,6 +137,7 @@ require (
 	github.com/netsampler/goflow2 v1.3.3
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
+	github.com/nwaples/tacplus v0.0.3
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/openconfig/gnmi v0.9.1
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
