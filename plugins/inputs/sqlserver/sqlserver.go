@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	mssql "github.com/denisenkom/go-mssqldb"
+	mssql "github.com/microsoft/go-mssqldb"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
