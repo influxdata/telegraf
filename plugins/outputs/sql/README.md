@@ -190,7 +190,7 @@ Use this metric type to SQL type conversion:
 See [ClickHouse data
 types](https://clickhouse.com/docs/en/sql-reference/data-types/) for more info.
 
-### denisenkom/go-mssqldb
+### microsoft/go-mssqldb
 
 Telegraf doesn't have unit tests for go-mssqldb so it should be treated as
 experimental.
