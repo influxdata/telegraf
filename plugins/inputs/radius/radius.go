@@ -65,7 +65,7 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	// Create the fields for this metric
 	host, port, err := net.SplitHostPort(server)
 	if err != nil {
-		return fmt.Errorf("Splitting host and port failed: %w", err)
+		return fmt.Errorf("splitting host and port failed: %w", err)
 	}
 	tags := map[string]string{"source": host, "source_port": port}
 	fields := make(map[string]interface{})
@@ -92,11 +92,11 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	packet := radius.New(radius.CodeAccessRequest, secret)
 	err = rfc2865.UserName_Set(packet, username)
 	if err != nil {
-		return fmt.Errorf("Setting username for radius auth failed: %w", err)
+		return fmt.Errorf("setting username for radius auth failed: %w", err)
 	}
 	err = rfc2865.UserPassword_Set(packet, password)
 	if err != nil {
-		return fmt.Errorf("Setting password for radius auth failed: %w", err)
+		return fmt.Errorf("setting password for radius auth failed: %w", err)
 	}
 
 	// Do the radius request
