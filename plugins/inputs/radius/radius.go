@@ -64,31 +64,40 @@ func (r *Radius) Gather(acc telegraf.Accumulator) error {
 func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	// Create the fields for this metric
 	host, port, err := net.SplitHostPort(server)
+	if err != nil {
+		return fmt.Errorf("Splitting host and port failed: %w", err)
+	}
 	tags := map[string]string{"source": host, "source_port": port}
 	fields := make(map[string]interface{})
 
 	secret, err := r.Secret.Get()
 	if err != nil {
-		return fmt.Errorf("getting secret failed: %v", err)
+		return fmt.Errorf("getting secret failed: %w", err)
 	}
 	defer config.ReleaseSecret(secret)
 
 	username, err := r.Username.Get()
 	if err != nil {
-		return fmt.Errorf("getting username failed: %v", err)
+		return fmt.Errorf("getting username failed: %w", err)
 	}
 	defer config.ReleaseSecret(username)
 
 	password, err := r.Password.Get()
 	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
+		return fmt.Errorf("getting password failed: %w", err)
 	}
 	defer config.ReleaseSecret(password)
 
 	// Create the radius packet with PAP authentication
 	packet := radius.New(radius.CodeAccessRequest, secret)
-	rfc2865.UserName_Set(packet, username)
-	rfc2865.UserPassword_Set(packet, password)
+	err = rfc2865.UserName_Set(packet, username)
+	if err != nil {
+		return fmt.Errorf("Setting username for radius auth failed: %w", err)
+	}
+	err = rfc2865.UserPassword_Set(packet, password)
+	if err != nil {
+		return fmt.Errorf("Setting password for radius auth failed: %w", err)
+	}
 
 	// Do the radius request
 	ctx := context.Background()
