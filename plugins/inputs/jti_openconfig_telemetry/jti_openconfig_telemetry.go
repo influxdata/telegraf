@@ -2,6 +2,7 @@
 package jti_openconfig_telemetry
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"net"
@@ -10,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -34,6 +34,7 @@ type OpenConfigTelemetry struct {
 	Username        string          `toml:"username"`
 	Password        string          `toml:"password"`
 	ClientID        string          `toml:"client_id"`
+	TimestampSource string          `toml:"timestamp_source"`
 	SampleFrequency config.Duration `toml:"sample_frequency"`
 	StrAsTags       bool            `toml:"str_as_tags"`
 	RetryDelay      config.Duration `toml:"retry_delay"`
@@ -54,6 +55,17 @@ var (
 
 func (*OpenConfigTelemetry) SampleConfig() string {
 	return sampleConfig
+}
+
+func (m *OpenConfigTelemetry) Init() error {
+	switch m.TimestampSource {
+	case "", "collection":
+	case "data":
+	default:
+		return fmt.Errorf("unknown option for timestamp_source: %q", m.TimestampSource)
+	}
+
+	return nil
 }
 
 func (m *OpenConfigTelemetry) Gather(_ telegraf.Accumulator) error {
@@ -279,13 +291,23 @@ func (m *OpenConfigTelemetry) collectData(
 					// Print final data collection
 					m.Log.Debugf("Available collection for %s is: %v", grpcServer, dgroups)
 
-					tnow := time.Now()
+					timestamp := time.Now()
 					// Iterate through data groups and add them
 					for _, group := range dgroups {
+						if m.TimestampSource == "data" {
+							// OpenConfig timestamp is in milliseconds since epoch
+							ts, ok := group.data["_timestamp"].(uint64)
+							if ok {
+								timestamp = time.UnixMilli(int64(ts))
+							} else {
+								m.Log.Warnf("invalid type %T for _timestamp %v", group.data["_timestamp"], group.data["_timestamp"])
+							}
+						}
+
 						if len(group.tags) == 0 {
-							acc.AddFields(sensor.measurementName, group.data, tags, tnow)
+							acc.AddFields(sensor.measurementName, group.data, tags, timestamp)
 						} else {
-							acc.AddFields(sensor.measurementName, group.data, group.tags, tnow)
+							acc.AddFields(sensor.measurementName, group.data, group.tags, timestamp)
 						}
 					}
 				}
@@ -363,8 +385,9 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("jti_openconfig_telemetry", func() telegraf.Input {
 		return &OpenConfigTelemetry{
-			RetryDelay: config.Duration(time.Second),
-			StrAsTags:  false,
+			RetryDelay:      config.Duration(time.Second),
+			StrAsTags:       false,
+			TimestampSource: "collection",
 		}
 	})
 }
