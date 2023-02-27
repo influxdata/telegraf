@@ -59,7 +59,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 	// Cast to string-to-interface
-	codecSchema := native.(map[string]interface{})
+	codecSchema, ok := native.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("native is of unsupported type %T", native)
+	}
 	m, err := p.createMetric(codecSchema, schema)
 	if err != nil {
 		return nil, err
