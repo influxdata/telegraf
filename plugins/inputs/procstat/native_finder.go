@@ -45,8 +45,7 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	var pids []PID
 	pidString, err := os.ReadFile(path)
 	if err != nil {
-		return pids, fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'",
-			path, err)
+		return pids, fmt.Errorf("Failed to read pidfile %q: %w", path, err)
 	}
 	pid, err := strconv.ParseInt(strings.TrimSpace(string(pidString)), 10, 32)
 	if err != nil {
@@ -87,9 +86,9 @@ func (pg *NativeFinder) FastProcessList() ([]*process.Process, error) {
 		return nil, err
 	}
 
-	result := make([]*process.Process, len(pids))
-	for i, pid := range pids {
-		result[i] = &process.Process{Pid: pid}
+	result := make([]*process.Process, 0, len(pids))
+	for _, pid := range pids {
+		result = append(result, &process.Process{Pid: pid})
 	}
 	return result, nil
 }

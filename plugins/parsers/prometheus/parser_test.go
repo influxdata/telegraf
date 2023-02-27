@@ -496,12 +496,12 @@ func TestParserProtobufHeader(t *testing.T) {
 	defer ts.Close()
 	req, err := http.NewRequest("GET", ts.URL, nil)
 	if err != nil {
-		t.Fatalf("unable to create new request '%s': %s", ts.URL, err)
+		t.Fatalf("unable to create new request %q: %s", ts.URL, err)
 	}
 	var resp *http.Response
 	resp, err = uClient.Do(req)
 	if err != nil {
-		t.Fatalf("error making HTTP request to %s: %s", ts.URL, err)
+		t.Fatalf("error making HTTP request to %q: %s", ts.URL, err)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
@@ -511,7 +511,7 @@ func TestParserProtobufHeader(t *testing.T) {
 	parser := Parser{Header: resp.Header}
 	metrics, err := parser.Parse(body)
 	if err != nil {
-		t.Fatalf("error reading metrics for %s: %s", ts.URL, err)
+		t.Fatalf("error reading metrics for %q: %s", ts.URL, err)
 	}
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }

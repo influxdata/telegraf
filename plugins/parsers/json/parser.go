@@ -161,12 +161,12 @@ func (p *Parser) Init() error {
 
 	p.stringFilter, err = filter.Compile(p.StringFields)
 	if err != nil {
-		return fmt.Errorf("compiling string-fields filter failed: %v", err)
+		return fmt.Errorf("compiling string-fields filter failed: %w", err)
 	}
 
 	p.tagFilter, err = filter.Compile(p.TagKeys)
 	if err != nil {
-		return fmt.Errorf("compiling tag-key filter failed: %v", err)
+		return fmt.Errorf("compiling tag-key filter failed: %w", err)
 	}
 
 	return nil

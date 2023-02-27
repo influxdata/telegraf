@@ -57,7 +57,7 @@ func (pf *PF) Gather(acc telegraf.Accumulator) error {
 var errParseHeader = fmt.Errorf("Cannot find header in %s output", pfctlCommand)
 
 func errMissingData(tag string) error {
-	return fmt.Errorf("struct data for tag \"%s\" not found in %s output", tag, pfctlCommand)
+	return fmt.Errorf("struct data for tag %q not found in %s output", tag, pfctlCommand)
 }
 
 type pfctlOutputStanza struct {
@@ -92,11 +92,10 @@ func (pf *PF) parsePfctlOutput(pfoutput string, acc telegraf.Accumulator) error 
 				for !anyTableHeaderRE.MatchString(line) {
 					stanzaLines = append(stanzaLines, line)
 					more := scanner.Scan()
-					if more {
-						line = scanner.Text()
-					} else {
+					if !more {
 						break
 					}
+					line = scanner.Text()
 				}
 				if perr := s.ParseFunc(stanzaLines, fields); perr != nil {
 					return perr

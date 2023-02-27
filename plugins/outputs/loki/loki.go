@@ -35,8 +35,8 @@ type Loki struct {
 	Domain       string            `toml:"domain"`
 	Endpoint     string            `toml:"endpoint"`
 	Timeout      config.Duration   `toml:"timeout"`
-	Username     string            `toml:"username"`
-	Password     string            `toml:"password"`
+	Username     config.Secret     `toml:"username"`
+	Password     config.Secret     `toml:"password"`
 	Headers      map[string]string `toml:"http_headers"`
 	ClientID     string            `toml:"client_id"`
 	ClientSecret string            `toml:"client_secret"`
@@ -143,10 +143,7 @@ func (l *Loki) writeMetrics(s Streams) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(bs)
 
 	if l.GZipRequest {
-		rc, err := internal.CompressWithGzip(reqBodyBuffer)
-		if err != nil {
-			return err
-		}
+		rc := internal.CompressWithGzip(reqBodyBuffer)
 		defer rc.Close()
 		reqBodyBuffer = rc
 	}
@@ -156,8 +153,19 @@ func (l *Loki) writeMetrics(s Streams) error {
 		return err
 	}
 
-	if l.Username != "" {
-		req.SetBasicAuth(l.Username, l.Password)
+	if !l.Username.Empty() {
+		username, err := l.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		defer config.ReleaseSecret(username)
+		password, err := l.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(password)
+
+		req.SetBasicAuth(string(username), string(password))
 	}
 
 	for k, v := range l.Headers {
@@ -180,7 +188,8 @@ func (l *Loki) writeMetrics(s Streams) error {
 	_ = resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("when writing to [%s] received status code: %d", l.url, resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("when writing to [%s] received status code, %d: %s", l.url, resp.StatusCode, body)
 	}
 
 	return nil

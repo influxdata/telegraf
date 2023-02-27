@@ -14,13 +14,14 @@ const TLSMinVersionDefault = tls.VersionTLS12
 
 // ClientConfig represents the standard client TLS config.
 type ClientConfig struct {
-	TLSCA              string `toml:"tls_ca"`
-	TLSCert            string `toml:"tls_cert"`
-	TLSKey             string `toml:"tls_key"`
-	TLSKeyPwd          string `toml:"tls_key_pwd"`
-	TLSMinVersion      string `toml:"tls_min_version"`
-	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
-	ServerName         string `toml:"tls_server_name"`
+	TLSCA               string `toml:"tls_ca"`
+	TLSCert             string `toml:"tls_cert"`
+	TLSKey              string `toml:"tls_key"`
+	TLSKeyPwd           string `toml:"tls_key_pwd"`
+	TLSMinVersion       string `toml:"tls_min_version"`
+	InsecureSkipVerify  bool   `toml:"insecure_skip_verify"`
+	ServerName          string `toml:"tls_server_name"`
+	RenegotiationMethod string `toml:"tls_renegotiation_method"`
 
 	SSLCA   string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	SSLCert string `toml:"ssl_cert" deprecated:"1.7.0;use 'tls_cert' instead"`
@@ -58,15 +59,30 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	// a TLS connection. That is, any of:
 	//     * client certificate settings,
 	//     * peer certificate authorities,
-	//     * disabled security, or
-	//     * an SNI server name.
-	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" && !c.InsecureSkipVerify && c.ServerName == "" {
+	//     * disabled security,
+	//     * an SNI server name, or
+	//     * empty/never renegotiation method
+	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" &&
+		!c.InsecureSkipVerify && c.ServerName == "" &&
+		(c.RenegotiationMethod == "" || c.RenegotiationMethod == "never") {
 		return nil, nil
+	}
+
+	var renegotiationMethod tls.RenegotiationSupport
+	switch c.RenegotiationMethod {
+	case "", "never":
+		renegotiationMethod = tls.RenegotiateNever
+	case "once":
+		renegotiationMethod = tls.RenegotiateOnceAsClient
+	case "freely":
+		renegotiationMethod = tls.RenegotiateFreelyAsClient
+	default:
+		return nil, fmt.Errorf("unrecognized renegotation method %q, choose from: 'never', 'once', 'freely'", c.RenegotiationMethod)
 	}
 
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.InsecureSkipVerify,
-		Renegotiation:      tls.RenegotiateNever,
+		Renegotiation:      renegotiationMethod,
 	}
 
 	if c.TLSCA != "" {
@@ -133,7 +149,7 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		cipherSuites, err := ParseCiphers(c.TLSCipherSuites)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"could not parse server cipher suites %s: %v", strings.Join(c.TLSCipherSuites, ","), err)
+				"could not parse server cipher suites %s: %w", strings.Join(c.TLSCipherSuites, ","), err)
 		}
 		tlsConfig.CipherSuites = cipherSuites
 	}
@@ -142,7 +158,7 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		version, err := ParseTLSVersion(c.TLSMaxVersion)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"could not parse tls max version %q: %v", c.TLSMaxVersion, err)
+				"could not parse tls max version %q: %w", c.TLSMaxVersion, err)
 		}
 		tlsConfig.MaxVersion = version
 	}
@@ -155,15 +171,13 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 	if c.TLSMinVersion != "" {
 		version, err := ParseTLSVersion(c.TLSMinVersion)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"could not parse tls min version %q: %v", c.TLSMinVersion, err)
+			return nil, fmt.Errorf("could not parse tls min version %q: %w", c.TLSMinVersion, err)
 		}
 		tlsConfig.MinVersion = version
 	}
 
 	if tlsConfig.MinVersion != 0 && tlsConfig.MaxVersion != 0 && tlsConfig.MinVersion > tlsConfig.MaxVersion {
-		return nil, fmt.Errorf(
-			"tls min version %q can't be greater than tls max version %q", tlsConfig.MinVersion, tlsConfig.MaxVersion)
+		return nil, fmt.Errorf("tls min version %q can't be greater than tls max version %q", tlsConfig.MinVersion, tlsConfig.MaxVersion)
 	}
 
 	// Since clientAuth is tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
@@ -180,12 +194,10 @@ func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 	for _, certFile := range certFiles {
 		pem, err := os.ReadFile(certFile)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"could not read certificate %q: %v", certFile, err)
+			return nil, fmt.Errorf("could not read certificate %q: %w", certFile, err)
 		}
 		if !pool.AppendCertsFromPEM(pem) {
-			return nil, fmt.Errorf(
-				"could not parse any PEM certificates %q: %v", certFile, err)
+			return nil, fmt.Errorf("could not parse any PEM certificates %q: %w", certFile, err)
 		}
 	}
 	return pool, nil
@@ -194,8 +206,7 @@ func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 func loadCertificate(config *tls.Config, certFile, keyFile string) error {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		return fmt.Errorf(
-			"could not load keypair %s:%s: %v", certFile, keyFile, err)
+		return fmt.Errorf("could not load keypair %s:%s: %w", certFile, keyFile, err)
 	}
 
 	config.Certificates = []tls.Certificate{cert}
@@ -207,7 +218,7 @@ func (c *ServerConfig) verifyPeerCertificate(rawCerts [][]byte, _ [][]*x509.Cert
 	// Let's review the client certificate.
 	cert, err := x509.ParseCertificate(rawCerts[0])
 	if err != nil {
-		return fmt.Errorf("could not validate peer certificate: %v", err)
+		return fmt.Errorf("could not validate peer certificate: %w", err)
 	}
 
 	for _, name := range cert.DNSNames {

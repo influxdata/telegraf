@@ -69,9 +69,7 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 // Stop causes the plugin to cease collecting JSON data from the socket provided
 // to Suricata.
 func (s *Suricata) Stop() {
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	s.inputListener.Close()
+	s.inputListener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 	if s.cancel != nil {
 		s.cancel()
 	}
@@ -184,7 +182,7 @@ func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]interf
 		return
 	}
 
-	fields := make(map[string](map[string]interface{}))
+	fields := make(map[string]map[string]interface{})
 	totalmap := make(map[string]interface{})
 	for k, v := range result["stats"].(map[string]interface{}) {
 		if k == "threads" {

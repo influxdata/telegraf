@@ -58,8 +58,8 @@ func TestReadBinaryFile(t *testing.T) {
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
-	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
-	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
+	t.Setenv("MY_TEST_SERVER", "192.168.1.1")
+	t.Setenv("TEST_INTERVAL", "10s")
 	require.NoError(t, c.LoadConfig("./testdata/single_plugin_env_vars.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
@@ -480,11 +480,10 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	defer ts.Close()
 
 	c := NewConfig()
-	err := os.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
-	require.NoError(t, err)
+	t.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
 	configPath, err := getDefaultConfigPath()
 	require.NoError(t, err)
-	require.Equal(t, ts.URL, configPath)
+	require.Equal(t, []string{ts.URL}, configPath)
 	err = c.LoadConfig("")
 	require.NoError(t, err)
 }
@@ -825,9 +824,11 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			c := NewConfig()
-			for _, f := range test.filename {
-				require.NoError(t, c.LoadConfig(filepath.Join("./testdata/processor_order", f)))
+			filenames := make([]string, 0, len(test.filename))
+			for _, fn := range test.filename {
+				filenames = append(filenames, filepath.Join("./testdata/processor_order", fn))
 			}
+			require.NoError(t, c.LoadAll(filenames...))
 
 			require.Equal(t, len(test.expectedOrder), len(c.Processors))
 
@@ -862,7 +863,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 	}
 
 	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/processors_with_parsers.toml"))
+	require.NoError(t, c.LoadAll("./testdata/processors_with_parsers.toml"))
 	require.Len(t, c.Processors, len(formats))
 
 	override := map[string]struct {

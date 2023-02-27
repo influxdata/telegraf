@@ -256,7 +256,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 
 			handle, err := netns.GetFromPath(filepath.Join(namespaceDirectory, name))
 			if err != nil {
-				c.Log.Warnf(`Could not get handle for namespace "%s": %s`, name, err)
+				c.Log.Warnf("Could not get handle for namespace %q: %s", name, err.Error())
 				continue
 			}
 			handles[name] = handle
@@ -282,7 +282,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 				Log:    c.Log,
 			}
 			if err := c.namespaceGoroutines[namespace].Start(); err != nil {
-				c.Log.Errorf(`Failed to start goroutine for namespace "%s": %s`, namespace, err)
+				c.Log.Errorf("Failed to start goroutine for namespace %q: %s", namespace, err.Error())
 				delete(c.namespaceGoroutines, namespace)
 				continue
 			}
@@ -290,7 +290,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 
 		interfaces, err := c.namespaceGoroutines[namespace].Interfaces()
 		if err != nil {
-			c.Log.Warnf(`Could not get interfaces from namespace "%s": %s`, namespace, err)
+			c.Log.Warnf("Could not get interfaces from namespace %q: %s", namespace, err.Error())
 			continue
 		}
 		allInterfaces = append(allInterfaces, interfaces...)

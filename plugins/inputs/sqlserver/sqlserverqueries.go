@@ -203,7 +203,7 @@ DECLARE
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 
-IF @MajorMinorVersion >= 1050
+IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0'
 	SET @Columns = N'
 	,CASE [virtual_machine_type_desc]
 		WHEN ''NONE'' THEN ''PHYSICAL Machine''
@@ -214,12 +214,15 @@ SET @SqlStatement = '
 SELECT
 	 ''sqlserver_server_properties'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+	,@@SERVICENAME AS [service_name]
 	,si.[cpu_count]
 	,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
+	,(SELECT [available_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [available_server_memory]
 	,SERVERPROPERTY(''Edition'') AS [sku]
 	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
+	,SERVERPROPERTY(''IsClustered'') AS [instance_type]
 	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
 	,dbs.[db_online]
 	,dbs.[db_restoring]
@@ -371,6 +374,7 @@ SELECT DISTINCT
 			,'Free list stalls/sec'
 			,'Buffer cache hit ratio'
 			,'Buffer cache hit ratio base'
+			,'Database Pages'
 			,'Backup/Restore Throughput/sec'
 			,'Total Server Memory (KB)'
 			,'Target Server Memory (KB)'
@@ -1123,17 +1127,25 @@ FROM (
 	OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
 ) AS data
 WHERE
-	[blocking_or_blocked] > 1	--Always include blocking or blocked sessions/requests
+	   [blocking_or_blocked] > 1 --Always include blocking or blocked sessions/requests
+	OR [open_transaction] >= 1   --Always include sessions with open transactions
 	OR (
 		[request_id] IS NOT NULL	--A request must exists
 		AND (	--Always fetch user process (in any state), fetch system process only if active
 			[is_user_process] = 1
 			OR [status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')
 		)
+		AND [session_id] <> @@SPID  --Exclude current SPID
 	)
 OPTION(MAXDOP 1)'
 
-EXEC sp_executesql @SqlStatement
+BEGIN TRY
+	EXEC sp_executesql @SqlStatement
+END TRY
+BEGIN CATCH
+   IF (ERROR_NUMBER() <> 976) --Avoid possible errors from secondary replica
+        THROW;
+END CATCH
 `
 
 const sqlServerVolumeSpace string = `
@@ -1147,7 +1159,7 @@ END
 DECLARE
 	@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 
-IF @MajorMinorVersion >= 1050 BEGIN
+IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0' BEGIN
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('MachineName') AS [server_name]

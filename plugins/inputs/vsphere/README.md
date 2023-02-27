@@ -11,8 +11,9 @@ vCenter servers.
 
 ## Supported versions of vSphere
 
-This plugin supports vSphere version 6.5, 6.7 and 7.0. It may work with versions
-5.1, 5.5 and 6.0, but neither are officially supported.
+This plugin supports vSphere version 6.5, 6.7, 7.0 and 8.0.
+It may work with versions 5.1, 5.5 and 6.0, but neither are
+officially supported.
 
 Compatibility information is available from the govmomi project
 [here](https://github.com/vmware/govmomi/tree/v0.26.0#compatibility)
@@ -24,7 +25,16 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -392,7 +402,7 @@ instance. For example:
 [[inputs.vsphere]]
 
   interval = "300s"
-  
+
   vcenters = [ "https://someaddress/sdk" ]
   username = "someuser@vsphere.local"
   password = "secret"

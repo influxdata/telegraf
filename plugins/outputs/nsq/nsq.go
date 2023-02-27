@@ -63,7 +63,7 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 
 		err = n.producer.Publish(n.Topic, buf)
 		if err != nil {
-			return fmt.Errorf("failed to send NSQD message: %s", err)
+			return fmt.Errorf("failed to send NSQD message: %w", err)
 		}
 	}
 	return nil

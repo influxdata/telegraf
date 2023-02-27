@@ -65,8 +65,8 @@ type MQTTConsumer struct {
 	Topics                 []string             `toml:"topics"`
 	TopicTag               *string              `toml:"topic_tag"`
 	TopicParsing           []TopicParsingConfig `toml:"topic_parsing"`
-	Username               string               `toml:"username"`
-	Password               string               `toml:"password"`
+	Username               config.Secret        `toml:"username"`
+	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
@@ -320,7 +320,11 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 	opts.ConnectTimeout = time.Duration(m.ConnectionTimeout)
 	if m.ClientID == "" {
-		opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))
+		randomString, err := internal.RandomString(5)
+		if err != nil {
+			return nil, fmt.Errorf("generating random string for client ID failed: %w", err)
+		}
+		opts.SetClientID("Telegraf-Consumer-" + randomString)
 	} else {
 		opts.SetClientID(m.ClientID)
 	}
@@ -331,16 +335,25 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	if tlsCfg != nil {
 		opts.SetTLSConfig(tlsCfg)
 	}
-	user := m.Username
-	if user != "" {
-		opts.SetUsername(user)
+	if !m.Username.Empty() {
+		user, err := m.Username.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting username failed: %w", err)
+		}
+		opts.SetUsername(string(user))
+		config.ReleaseSecret(user)
 	}
-	password := m.Password
-	if password != "" {
-		opts.SetPassword(password)
+
+	if !m.Password.Empty() {
+		password, err := m.Password.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting password failed: %w", err)
+		}
+		opts.SetPassword(string(password))
+		config.ReleaseSecret(password)
 	}
 	if len(m.Servers) == 0 {
-		return opts, fmt.Errorf("could not get host informations")
+		return opts, fmt.Errorf("could not get host information")
 	}
 	for _, server := range m.Servers {
 		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4
@@ -390,17 +403,17 @@ func typeConvert(types map[string]string, topicValue string, key string) (interf
 		case "uint":
 			newType, err = strconv.ParseUint(topicValue, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type uint: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type uint: %w", topicValue, err)
 			}
 		case "int":
 			newType, err = strconv.ParseInt(topicValue, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type int: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type int: %w", topicValue, err)
 			}
 		case "float":
 			newType, err = strconv.ParseFloat(topicValue, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type float: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type float: %w", topicValue, err)
 			}
 		default:
 			return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)

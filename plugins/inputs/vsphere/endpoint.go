@@ -257,7 +257,7 @@ func anythingEnabled(ex []string) bool {
 func newFilterOrPanic(include []string, exclude []string) filter.Filter {
 	f, err := filter.NewIncludeExcludeFilter(include, exclude)
 	if err != nil {
-		panic(fmt.Sprintf("Include/exclude filters are invalid: %s", err))
+		panic(fmt.Sprintf("Include/exclude filters are invalid: %v", err))
 	}
 	return f
 }
@@ -551,11 +551,9 @@ func (e *Endpoint) simpleMetadataSelect(ctx context.Context, client *Client, res
 func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind, objects objectMap) {
 	// We're only going to get metadata from maxMetadataSamples resources. If we have
 	// more resources than that, we pick maxMetadataSamples samples at random.
-	sampledObjects := make([]*objectRef, len(objects))
-	i := 0
+	sampledObjects := make([]*objectRef, 0, len(objects))
 	for _, obj := range objects {
-		sampledObjects[i] = obj
-		i++
+		sampledObjects = append(sampledObjects, obj)
 	}
 	n := len(sampledObjects)
 	if n > maxMetadataSamples {
@@ -969,7 +967,10 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			if !ok {
 				start = latest.Add(time.Duration(-res.sampling) * time.Second * (time.Duration(e.Parent.MetricLookback) - 1))
 			}
-			start = start.Truncate(20 * time.Second) // Truncate to maximum resolution
+
+			if !start.Truncate(time.Second).Before(now.Truncate(time.Second)) {
+				e.log.Debugf("Start >= end (rounded to seconds): %s > %s", start, now)
+			}
 
 			// Create bucket if we don't already have it
 			bucket, ok := timeBuckets[start.Unix()]
@@ -1243,7 +1244,8 @@ func (e *Endpoint) collectChunk(
 				count++
 
 				// Update hiwater marks
-				e.hwMarks.Put(moid, name, ts)
+				adjTs := ts.Add(interval).Truncate(interval).Add(-time.Second)
+				e.hwMarks.Put(moid, name, adjTs)
 			}
 			if nValues == 0 {
 				e.log.Debugf("Missing value for: %s, %s", name, objectRef.name)

@@ -16,7 +16,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -55,3 +55,7 @@ Running integration tests requires running Zookeeper & Kafka. See Makefile
 for kafka container command.
 
 [Kafka Consumer input plugin]: ../kafka_consumer/README.md
+
+## Metrics
+
+## Example Output

@@ -115,7 +115,7 @@ func (q *Quantile) Init() error {
 		return fmt.Errorf("unknown algorithm type %q", q.AlgorithmType)
 	}
 	if _, err := q.newAlgorithm(q.Compression); err != nil {
-		return fmt.Errorf("cannot create %q algorithm: %v", q.AlgorithmType, err)
+		return fmt.Errorf("cannot create %q algorithm: %w", q.AlgorithmType, err)
 	}
 
 	if len(q.Quantiles) == 0 {
@@ -123,8 +123,8 @@ func (q *Quantile) Init() error {
 	}
 
 	duplicates := make(map[float64]bool)
-	q.suffixes = make([]string, len(q.Quantiles))
-	for i, qtl := range q.Quantiles {
+	q.suffixes = make([]string, 0, len(q.Quantiles))
+	for _, qtl := range q.Quantiles {
 		if qtl < 0.0 || qtl > 1.0 {
 			return fmt.Errorf("quantile %v out of range", qtl)
 		}
@@ -132,7 +132,7 @@ func (q *Quantile) Init() error {
 			return fmt.Errorf("duplicate quantile %v", qtl)
 		}
 		duplicates[qtl] = true
-		q.suffixes[i] = fmt.Sprintf("_%03d", int(qtl*100.0))
+		q.suffixes = append(q.suffixes, fmt.Sprintf("_%03d", int(qtl*100.0)))
 	}
 
 	q.Reset()

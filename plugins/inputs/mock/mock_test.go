@@ -3,8 +3,9 @@ package mock
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGather(t *testing.T) {
@@ -62,6 +63,7 @@ func TestGather(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
+	require.NoError(t, m.Init())
 	require.NoError(t, m.Gather(&acc))
 
 	require.Len(t, acc.Metrics, 1)
@@ -100,6 +102,7 @@ func TestGatherEmpty(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
+	require.NoError(t, m.Init())
 	require.NoError(t, m.Gather(&acc))
 
 	acc.AssertDoesNotContainMeasurement(t, "test_empty")

@@ -160,13 +160,13 @@ func checkFile(path string) error {
 	lInfo, err := os.Lstat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("file `%s` doesn't exist", path)
+			return fmt.Errorf("file %q doesn't exist", path)
 		}
-		return fmt.Errorf("cannot obtain file info of `%s`: %v", path, err)
+		return fmt.Errorf("cannot obtain file info of %q: %w", path, err)
 	}
 	mode := lInfo.Mode()
 	if mode&os.ModeSymlink != 0 {
-		return fmt.Errorf("file `%s` is a symlink", path)
+		return fmt.Errorf("file %q is a symlink", path)
 	}
 	return nil
 }

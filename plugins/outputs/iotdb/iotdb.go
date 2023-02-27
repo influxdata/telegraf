@@ -24,8 +24,8 @@ var sampleConfig string
 type IoTDB struct {
 	Host            string          `toml:"host"`
 	Port            string          `toml:"port"`
-	User            string          `toml:"user"`
-	Password        string          `toml:"password"`
+	User            config.Secret   `toml:"user"`
+	Password        config.Secret   `toml:"password"`
 	Timeout         config.Duration `toml:"timeout"`
 	ConvertUint64To string          `toml:"uint64_conversion"`
 	TimeStampUnit   string          `toml:"timestamp_precision"`
@@ -64,16 +64,36 @@ func (s *IoTDB) Init() error {
 	if !choice.Contains(s.TreatTagsAs, []string{"fields", "device_id"}) {
 		return fmt.Errorf("unknown 'convert_tags_to' method %q", s.TreatTagsAs)
 	}
+
+	if s.User.Empty() {
+		s.User.Destroy()
+		s.User = config.NewSecret([]byte("root"))
+	}
+	if s.Password.Empty() {
+		s.Password.Destroy()
+		s.Password = config.NewSecret([]byte("root"))
+	}
+
 	s.Log.Info("Initialization completed.")
 	return nil
 }
 
 func (s *IoTDB) Connect() error {
+	username, err := s.User.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	defer config.ReleaseSecret(username)
+	password, err := s.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+	defer config.ReleaseSecret(password)
 	sessionConf := &client.Config{
 		Host:     s.Host,
 		Port:     s.Port,
-		UserName: s.User,
-		Password: s.Password,
+		UserName: string(username),
+		Password: string(password),
 	}
 	var ss = client.NewSession(sessionConf)
 	s.session = &ss
@@ -265,8 +285,6 @@ func newIoTDB() *IoTDB {
 	return &IoTDB{
 		Host:            "localhost",
 		Port:            "6667",
-		User:            "root",
-		Password:        "root",
 		Timeout:         config.Duration(time.Second * 5),
 		ConvertUint64To: "int64_clip",
 		TimeStampUnit:   "nanosecond",

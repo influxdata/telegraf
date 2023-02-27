@@ -3,6 +3,7 @@ package snmp
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"log" //nolint:depguard // Allow exceptional but valid use of log here.
 	"os/exec"
@@ -59,7 +60,7 @@ var snmpTableCachesLock sync.Mutex
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
 //
-//nolint:revive
+//nolint:revive //function-result-limit conditionally 5 return results allowed
 func (n *netsnmpTranslator) SnmpTable(oid string) (
 	mibName string, oidNum string, oidText string,
 	fields []Field,
@@ -80,7 +81,7 @@ func (n *netsnmpTranslator) SnmpTable(oid string) (
 	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 }
 
-//nolint:revive
+//nolint:revive //function-result-limit conditionally 5 return results allowed
 func (n *netsnmpTranslator) snmpTableCall(oid string) (
 	mibName string, oidNum string, oidText string,
 	fields []Field,
@@ -156,7 +157,7 @@ var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
 //
-//nolint:revive
+//nolint:revive //function-result-limit conditionally 5 return results allowed
 func (n *netsnmpTranslator) SnmpTranslate(oid string) (
 	mibName string, oidNum string, oidText string,
 	conversion string,
@@ -186,7 +187,7 @@ func (n *netsnmpTranslator) SnmpTranslate(oid string) (
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
 }
 
-//nolint:revive
+//nolint:revive //function-result-limit conditionally 5 return results allowed
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	var out []byte
 	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
@@ -255,4 +256,8 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	}
 
 	return mibName, oidNum, oidText, conversion, nil
+}
+
+func (n *netsnmpTranslator) SnmpFormatEnum(_ string, _ interface{}, _ bool) (string, error) {
+	return "", errors.New("not implemented in netsnmp translator")
 }

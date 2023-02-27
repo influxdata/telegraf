@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
@@ -369,10 +370,14 @@ func TestSenderURLFromHostAndPort(t *testing.T) {
 }
 
 func TestSenderURLFromURLAndToken(t *testing.T) {
-	url, err := senderURLFromURLAndToken("https://surf.wavefront.com", "11111111-2222-3333-4444-555555555555")
-	require.Nil(t, err)
-	require.Equal(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com",
-		url)
+	w := &Wavefront{
+		URL:   "https://surf.wavefront.com",
+		Token: config.NewSecret([]byte("11111111-2222-3333-4444-555555555555")),
+	}
+
+	url, err := w.senderURLFromURLAndToken()
+	require.NoError(t, err)
+	require.Equal(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com", url)
 }
 
 func TestDefaults(t *testing.T) {
@@ -380,7 +385,7 @@ func TestDefaults(t *testing.T) {
 	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
 }
 
-// Benchmarks to test performance of string replacement via Regex and Replacer
+// Benchmarks to test performance of string replacement via Regex and Sanitize
 var testString = "this_is*my!test/string\\for=replacement"
 
 func BenchmarkReplaceAllString(b *testing.B) {
@@ -397,6 +402,6 @@ func BenchmarkReplaceAllLiteralString(b *testing.B) {
 
 func BenchmarkReplacer(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		sanitizedChars.Replace(testString)
+		serializer.Sanitize(false, testString)
 	}
 }

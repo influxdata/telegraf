@@ -13,7 +13,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -54,6 +54,7 @@ docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_PROC=/hostfs/pro
     - device (device file)
     - path (mount point path)
     - mode (whether the mount is rw or ro)
+    - label (devicemapper labels, only if present)
   - fields:
     - free (integer, bytes)
     - total (integer, bytes)
@@ -88,6 +89,7 @@ disk,fstype=hfs,mode=ro,path=/ free=398407520256i,inodes_free=97267461i,inodes_t
 disk,fstype=devfs,mode=rw,path=/dev free=0i,inodes_free=0i,inodes_total=628i,inodes_used=628i,total=185856i,used=185856i,used_percent=100 1453832006274137913
 disk,fstype=autofs,mode=rw,path=/net free=0i,inodes_free=0i,inodes_total=0i,inodes_used=0i,total=0i,used=0i,used_percent=0 1453832006274157077
 disk,fstype=autofs,mode=rw,path=/home free=0i,inodes_free=0i,inodes_total=0i,inodes_used=0i,total=0i,used=0i,used_percent=0 1453832006274169688
+disk,device=dm-1,fstype=xfs,label=lvg-lv,mode=rw,path=/mnt inodes_free=8388605i,inodes_used=3i,total=17112760320i,free=16959598592i,used=153161728i,used_percent=0.8950147441789215,inodes_total=8388608i 1677001387000000000
 ```
 
 [statfs]: http://man7.org/linux/man-pages/man2/statfs.2.html

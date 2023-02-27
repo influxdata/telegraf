@@ -165,7 +165,7 @@ func buildURL(e string) (*url.URL, error) {
 	u := fmt.Sprintf(requestPattern, e)
 	addr, err := url.Parse(u)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse address '%s': %s", u, err)
+		return nil, fmt.Errorf("unable to parse address %q: %w", u, err)
 	}
 	return addr, nil
 }

@@ -126,16 +126,16 @@ func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
 }
 
 func (am *AzureMonitor) setReceiver() error {
-	var resourceTargets []*receiver.ResourceTarget
-	var resourceGroupTargets []*receiver.ResourceGroupTarget
-	var subscriptionTargets []*receiver.Resource
+	resourceTargets := make([]*receiver.ResourceTarget, 0, len(am.ResourceTargets))
+	resourceGroupTargets := make([]*receiver.ResourceGroupTarget, 0, len(am.ResourceGroupTargets))
+	subscriptionTargets := make([]*receiver.Resource, 0, len(am.SubscriptionTargets))
 
 	for _, target := range am.ResourceTargets {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
 
 	for _, target := range am.ResourceGroupTargets {
-		var resources []*receiver.Resource
+		resources := make([]*receiver.Resource, 0, len(target.Resources))
 		for _, resource := range target.Resources {
 			resources = append(resources, receiver.NewResource(resource.ResourceType, resource.Metrics, resource.Aggregations))
 		}

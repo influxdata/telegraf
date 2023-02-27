@@ -1710,7 +1710,7 @@ func TestMachine(t *testing.T) {
 
 			for i := 0; i < 20; i++ {
 				err := fsm.Next()
-				if err != nil && err == influx.EOF {
+				if err != nil && errors.Is(err, influx.EOF) {
 					break
 				}
 				handler.Result(err)
@@ -2138,7 +2138,7 @@ func TestHandlerErrorRecovery(t *testing.T) {
 
 			for i := 0; i < 20; i++ {
 				err := fsm.Next()
-				if err != nil && err == influx.EOF {
+				if err != nil && errors.Is(err, influx.EOF) {
 					break
 				}
 				tt.handler.Result(err)
@@ -2177,7 +2177,7 @@ func TestStreamMachine(t *testing.T) {
 			// isn't terminated.
 			for i := 0; i < 20; i++ {
 				err := fsm.Next()
-				if err != nil && err == influx.EOF {
+				if err != nil && errors.Is(err, influx.EOF) {
 					break
 				}
 				handler.Result(err)

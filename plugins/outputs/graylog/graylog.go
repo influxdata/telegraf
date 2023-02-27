@@ -356,8 +356,8 @@ func (g *Graylog) Connect() error {
 		servers := strings.Join(unconnected, ",")
 		return fmt.Errorf("connect: connection failed for %s", servers)
 	}
-	var writers []io.Writer
-	var closers []io.WriteCloser
+	writers := make([]io.Writer, 0, len(gelfs))
+	closers := make([]io.WriteCloser, 0, len(gelfs))
 	for _, w := range gelfs {
 		writers = append(writers, w)
 		closers = append(closers, w)
@@ -457,9 +457,9 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, value := range values {
-			_, err := writer.Write([]byte(value))
+			_, err = writer.Write([]byte(value))
 			if err != nil {
-				return fmt.Errorf("error writing message: %q, %v", value, err)
+				return fmt.Errorf("error writing message: %q: %w", value, err)
 			}
 		}
 	}

@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -156,7 +156,7 @@ statements. This allows for complete control of the schema by the user.
 
 Documentation on how to write templates can be found [sqltemplate docs][1]
 
-[1]: https://pkg.go.dev/github.com/influxdb/telegraf/plugins/outputs/postgresql/sqltemplate
+[1]: https://pkg.go.dev/github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate
 
 ### Samples
 

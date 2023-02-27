@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"k8s.io/client-go/tools/cache"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -153,7 +154,9 @@ func TestAddMultipleDuplicatePods(t *testing.T) {
 	registerPod(p, prom)
 	p.Name = "Pod2"
 	registerPod(p, prom)
-	require.Equal(t, 1, len(prom.kubernetesPods))
+
+	urls, _ := prom.GetAllURLs()
+	require.Equal(t, 1, len(urls))
 }
 
 func TestAddMultiplePods(t *testing.T) {
@@ -174,7 +177,9 @@ func TestDeletePods(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	unregisterPod(p, prom)
+
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	unregisterPod(PodID(podID), prom)
 	require.Equal(t, 0, len(prom.kubernetesPods))
 }
 
@@ -184,7 +189,9 @@ func TestKeepDefaultNamespaceLabelName(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	tags := prom.kubernetesPods["http://127.0.0.1:9102/metrics"].Tags
+
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	tags := prom.kubernetesPods[PodID(podID)].Tags
 	require.Equal(t, "default", tags["namespace"])
 }
 
@@ -194,7 +201,9 @@ func TestChangeNamespaceLabelName(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	tags := prom.kubernetesPods["http://127.0.0.1:9102/metrics"].Tags
+
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	tags := prom.kubernetesPods[PodID(podID)].Tags
 	require.Equal(t, "default", tags["pod_namespace"])
 	require.Equal(t, "", tags["namespace"])
 }

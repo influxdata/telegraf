@@ -2,13 +2,20 @@
 package kubernetes
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -38,11 +45,13 @@ type Kubernetes struct {
 
 	tls.ClientConfig
 
+	Log telegraf.Logger `toml:"-"`
+
 	RoundTripper http.RoundTripper
 }
 
 const (
-	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 func init() {
@@ -70,13 +79,81 @@ func (k *Kubernetes) Init() error {
 	}
 	k.labelFilter = labelFilter
 
+	if k.URL == "" {
+		k.InsecureSkipVerify = true
+	}
+
 	return nil
 }
 
 // Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
-	acc.AddError(k.gatherSummary(k.URL, acc))
+	if k.URL != "" {
+		acc.AddError(k.gatherSummary(k.URL, acc))
+		return nil
+	}
+
+	var wg sync.WaitGroup
+	nodeBaseURLs, err := getNodeURLs(k.Log)
+	if err != nil {
+		return err
+	}
+
+	for _, url := range nodeBaseURLs {
+		wg.Add(1)
+		go func(url string) {
+			defer wg.Done()
+			acc.AddError(k.gatherSummary(url, acc))
+		}(url)
+	}
+	wg.Wait()
+
 	return nil
+}
+
+func getNodeURLs(log telegraf.Logger) ([]string, error) {
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+	client, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes, err := client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	nodeUrls := make([]string, 0, len(nodes.Items))
+	for _, n := range nodes.Items {
+		address := getNodeAddress(n)
+		if address == "" {
+			log.Warnf("Unable to node addresses for Node %q", n.Name)
+			continue
+		}
+		nodeUrls = append(nodeUrls, "https://"+address+":10250")
+	}
+
+	return nodeUrls, nil
+}
+
+// Prefer internal addresses, if none found, use ExternalIP
+func getNodeAddress(node v1.Node) string {
+	extAddresses := make([]string, 0)
+
+	for _, addr := range node.Status.Addresses {
+		if addr.Type == v1.NodeInternalIP {
+			return addr.Address
+		}
+		extAddresses = append(extAddresses, addr.Address)
+	}
+
+	if len(extAddresses) > 0 {
+		return extAddresses[0]
+	}
+	return ""
 }
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {

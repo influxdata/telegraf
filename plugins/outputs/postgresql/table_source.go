@@ -179,9 +179,9 @@ func (tsrc *TableSource) TagTableColumns() []utils.Column {
 
 func (tsrc *TableSource) ColumnNames() []string {
 	cols := tsrc.MetricTableColumns()
-	names := make([]string, len(cols))
-	for i, col := range cols {
-		names[i] = col.Name
+	names := make([]string, 0, len(cols))
+	for _, col := range cols {
+		names = append(names, col.Name)
 	}
 	return names
 }
@@ -196,9 +196,9 @@ func (tsrc *TableSource) DropColumn(col utils.Column) error {
 	case utils.FieldColType:
 		return tsrc.dropFieldColumn(col)
 	case utils.TimeColType, utils.TagsIDColType:
-		return fmt.Errorf("critical column \"%s\"", col.Name)
+		return fmt.Errorf("critical column %q", col.Name)
 	default:
-		return fmt.Errorf("internal error: unknown column \"%s\"", col.Name)
+		return fmt.Errorf("internal error: unknown column %q", col.Name)
 	}
 }
 
@@ -370,9 +370,9 @@ func (ttsrc *TagTableSource) cacheTouch(tagID int64) {
 
 func (ttsrc *TagTableSource) ColumnNames() []string {
 	cols := ttsrc.TagTableColumns()
-	names := make([]string, len(cols))
-	for i, col := range cols {
-		names[i] = col.Name
+	names := make([]string, 0, len(cols))
+	for _, col := range cols {
+		names = append(names, col.Name)
 	}
 	return names
 }

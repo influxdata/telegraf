@@ -37,9 +37,7 @@ func getHTTPServer() *httptest.Server {
 		body, code := getResponseJSON(r.RequestURI)
 		w.WriteHeader(code)
 		w.Header().Set("Content-Type", "application/json")
-		// Ignore the returned error as the test will fail anyway
-		//nolint:errcheck,revive
-		w.Write(body)
+		w.Write(body) //nolint:errcheck,revive // ignore the returned error as the test will fail anyway
 	}))
 }
 
@@ -63,9 +61,7 @@ func getHTTPServerBasicAuth() *httptest.Server {
 		body, code := getResponseJSON(r.RequestURI)
 		w.WriteHeader(code)
 		w.Header().Set("Content-Type", "application/json")
-		// Ignore the returned error as the test will fail anyway
-		//nolint:errcheck,revive
-		w.Write(body)
+		w.Write(body) //nolint:errcheck,revive // ignore the returned error as the test will fail anyway
 	}))
 }
 

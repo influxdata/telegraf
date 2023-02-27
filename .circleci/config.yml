@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.19.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.20.1'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -368,16 +368,6 @@ jobs:
       - package-build:
           type: mips
           nightly: << parameters.nightly >>
-  static-package:
-    parameters:
-      nightly:
-        type: boolean
-        default: false
-    executor: telegraf-ci
-    steps:
-      - package-build:
-          type: static
-          nightly: << parameters.nightly >>
   armhf-package:
     parameters:
       nightly:
@@ -633,15 +623,6 @@ workflows:
                 - master
             tags:
               only: /.*/
-      - 'static-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            branches:
-              ignore:
-                - master
-            tags:
-              only: /.*/
       - 'mipsel-package':
           requires:
             - 'test-go-linux'
@@ -687,7 +668,6 @@ workflows:
             - 'darwin-amd64-package'
             - 'darwin-arm64-package'
             - 'windows-package'
-            - 'static-package'
             - 'arm64-package'
             - 'armhf-package'
           filters:
@@ -723,7 +703,6 @@ workflows:
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
-            - 'static-package'
             - 'arm64-package'
             - 'armhf-package'
             - 'riscv64-package'
@@ -799,11 +778,6 @@ workflows:
           nightly: true
           requires:
             - 'test-go-linux'
-      - 'static-package':
-          name: 'static-package-nightly'
-          nightly: true
-          requires:
-            - 'test-go-linux'
       - 'mipsel-package':
           name: 'mipsel-package-nightly'
           nightly: true
@@ -835,7 +809,6 @@ workflows:
             - 'ppc64le-package-nightly'
             - 'riscv64-package-nightly'
             - 's390x-package-nightly'
-            - 'static-package-nightly'
             - 'windows-package-nightly'
       - docker-nightly:
           requires:

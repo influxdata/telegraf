@@ -19,7 +19,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -47,6 +47,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
  ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
  # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
 
+  ## Include the delete field in every telemetry message.
+  # include_delete_field = false
+
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
@@ -73,7 +76,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## removed, and adding subsequent subscriptions does not keep a stable session.
   # permit_keepalive_without_calls = false
 
-  ## GRPC minimum timeout between successive pings, decreasing this value may 
+  ## GRPC minimum timeout between successive pings, decreasing this value may
   ## help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
   # keepalive_minimum_time = "5m"
 ```

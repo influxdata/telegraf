@@ -381,7 +381,7 @@ func fetchJSON(t *testing.T, boundary string, rc io.ReadCloser) (string, error) 
 	splits := strings.Split(string(bodyBytes), boundary)
 	offsetPart := splits[2]
 	offsets := strings.Split(offsetPart, "\n")
-	fmt.Printf("%s", offsets[3])
+	fmt.Print(offsets[3])
 	return offsets[3], nil
 }
 
@@ -416,7 +416,5 @@ func readJSON(t *testing.T, jsonFilePath string) []byte {
 }
 
 func emulatorSetEnv(t *testing.T, srv *httptest.Server) {
-	if err := os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", "")); err != nil {
-		t.Error(err)
-	}
+	t.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
 }

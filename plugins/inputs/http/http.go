@@ -2,7 +2,6 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -30,8 +30,8 @@ type HTTP struct {
 	Headers map[string]string `toml:"headers"`
 
 	// HTTP Basic Auth Credentials
-	Username string `toml:"username"`
-	Password string `toml:"password"`
+	Username config.Secret `toml:"username"`
+	Password config.Secret `toml:"password"`
 
 	// Absolute path to file with Bearer token
 	BearerToken string `toml:"bearer_token"`
@@ -103,11 +103,7 @@ func (h *HTTP) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
 ) error {
-	body, err := makeRequestBodyReader(h.ContentEncoding, h.Body)
-	if err != nil {
-		return err
-	}
-
+	body := makeRequestBodyReader(h.ContentEncoding, h.Body)
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
 		return err
@@ -134,8 +130,8 @@ func (h *HTTP) gatherURL(
 		}
 	}
 
-	if h.Username != "" || h.Password != "" {
-		request.SetBasicAuth(h.Username, h.Password)
+	if err := h.setRequestAuth(request); err != nil {
+		return err
 	}
 
 	resp, err := h.client.Do(request)
@@ -184,25 +180,39 @@ func (h *HTTP) gatherURL(
 	return nil
 }
 
-func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
+func (h *HTTP) setRequestAuth(request *http.Request) error {
+	if h.Username.Empty() && h.Password.Empty() {
+		return nil
+	}
+
+	username, err := h.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %v", err)
+	}
+	defer config.ReleaseSecret(username)
+
+	password, err := h.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %v", err)
+	}
+	defer config.ReleaseSecret(password)
+
+	request.SetBasicAuth(string(username), string(password))
+
+	return nil
+}
+
+func makeRequestBodyReader(contentEncoding, body string) io.Reader {
 	if body == "" {
-		return nil, nil
+		return nil
 	}
 
 	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reader)
-		if err != nil {
-			return nil, err
-		}
-		data, err := io.ReadAll(rc)
-		if err != nil {
-			return nil, err
-		}
-		return bytes.NewReader(data), nil
+		return internal.CompressWithGzip(reader)
 	}
 
-	return reader, nil
+	return reader
 }
 
 func init() {

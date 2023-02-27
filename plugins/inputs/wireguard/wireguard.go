@@ -4,6 +4,7 @@ package wireguard
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -112,6 +113,14 @@ func (wg *Wireguard) gatherDevicePeerMetrics(acc telegraf.Accumulator, device *w
 		"persistent_keepalive_interval_ns": peer.PersistentKeepaliveInterval.Nanoseconds(),
 		"protocol_version":                 peer.ProtocolVersion,
 		"allowed_ips":                      len(peer.AllowedIPs),
+	}
+
+	if len(peer.AllowedIPs) > 0 {
+		cidrs := []string{}
+		for _, ip := range peer.AllowedIPs {
+			cidrs = append(cidrs, ip.String())
+		}
+		fields["allowed_peer_cidr"] = strings.Join(cidrs, ",")
 	}
 
 	gauges := map[string]interface{}{

@@ -1,12 +1,17 @@
 package config
 
 import (
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/units"
 )
+
+// Regexp for day specifications in durations
+var durationDayRe = regexp.MustCompile(`(\d+(?:\.\d+)?)d`)
 
 // Duration is a time.Duration
 type Duration time.Duration
@@ -15,7 +20,7 @@ type Duration time.Duration
 type Size int64
 
 // UnmarshalTOML parses the duration from the TOML config file
-func (d *Duration) UnmarshalTOML(b []byte) error {
+func (d *Duration) UnmarshalText(b []byte) error {
 	// convert to string
 	durStr := string(b)
 
@@ -30,22 +35,25 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	// Second try parsing as float seconds
 	sF, err := strconv.ParseFloat(durStr, 64)
 	if err == nil {
-		dur := time.Second * time.Duration(sF)
+		dur := float64(time.Second) * sF
 		*d = Duration(dur)
 		return nil
 	}
 
 	// Finally, try value is a TOML string (e.g. "3s", 3s) or literal (e.g. '3s')
-	durStr = strings.ReplaceAll(durStr, "'", "")
-	durStr = strings.ReplaceAll(durStr, "\"", "")
 	if durStr == "" {
-		durStr = "0s"
+		*d = Duration(0)
+		return nil
 	}
-	// special case: logging interval had a default of 0d, which silently
-	// failed, but in order to prevent issues with default configs that had
-	// uncommented the option, change it from zero days to zero hours.
-	if durStr == "0d" {
-		durStr = "0h"
+
+	// Handle "day" intervals and replace them with the "hours" equivalent
+	for _, m := range durationDayRe.FindAllStringSubmatch(durStr, -1) {
+		days, err := strconv.ParseFloat(m[1], 64)
+		if err != nil {
+			return fmt.Errorf("converting %q to hours failed: %w", durStr, err)
+		}
+		hours := strconv.FormatFloat(days*24, 'f', -1, 64) + "h"
+		durStr = strings.Replace(durStr, m[0], hours, 1)
 	}
 
 	dur, err := time.ParseDuration(durStr)
@@ -57,23 +65,12 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	return nil
 }
 
-func (d *Duration) UnmarshalText(text []byte) error {
-	return d.UnmarshalTOML(text)
-}
-
-func (s *Size) UnmarshalTOML(b []byte) error {
-	var err error
+func (s *Size) UnmarshalText(b []byte) error {
 	if len(b) == 0 {
 		return nil
 	}
-	str := string(b)
-	if b[0] == '"' || b[0] == '\'' {
-		str, err = strconv.Unquote(str)
-		if err != nil {
-			return err
-		}
-	}
 
+	str := string(b)
 	val, err := strconv.ParseInt(str, 10, 64)
 	if err == nil {
 		*s = Size(val)
@@ -85,8 +82,4 @@ func (s *Size) UnmarshalTOML(b []byte) error {
 	}
 	*s = Size(val)
 	return nil
-}
-
-func (s *Size) UnmarshalText(text []byte) error {
-	return s.UnmarshalTOML(text)
 }

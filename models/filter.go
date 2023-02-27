@@ -54,41 +54,41 @@ func (f *Filter) Compile() error {
 	var err error
 	f.nameDropFilter, err = filter.Compile(f.NameDrop)
 	if err != nil {
-		return fmt.Errorf("error compiling 'namedrop', %s", err)
+		return fmt.Errorf("error compiling 'namedrop', %w", err)
 	}
 	f.namePassFilter, err = filter.Compile(f.NamePass)
 	if err != nil {
-		return fmt.Errorf("error compiling 'namepass', %s", err)
+		return fmt.Errorf("error compiling 'namepass', %w", err)
 	}
 
 	f.fieldDropFilter, err = filter.Compile(f.FieldDrop)
 	if err != nil {
-		return fmt.Errorf("error compiling 'fielddrop', %s", err)
+		return fmt.Errorf("error compiling 'fielddrop', %w", err)
 	}
 	f.fieldPassFilter, err = filter.Compile(f.FieldPass)
 	if err != nil {
-		return fmt.Errorf("error compiling 'fieldpass', %s", err)
+		return fmt.Errorf("error compiling 'fieldpass', %w", err)
 	}
 
 	f.tagExcludeFilter, err = filter.Compile(f.TagExclude)
 	if err != nil {
-		return fmt.Errorf("error compiling 'tagexclude', %s", err)
+		return fmt.Errorf("error compiling 'tagexclude', %w", err)
 	}
 	f.tagIncludeFilter, err = filter.Compile(f.TagInclude)
 	if err != nil {
-		return fmt.Errorf("error compiling 'taginclude', %s", err)
+		return fmt.Errorf("error compiling 'taginclude', %w", err)
 	}
 
 	for i := range f.TagDropFilters {
 		f.TagDropFilters[i].filter, err = filter.Compile(f.TagDropFilters[i].Values)
 		if err != nil {
-			return fmt.Errorf("error compiling 'tagdrop', %s", err)
+			return fmt.Errorf("error compiling 'tagdrop', %w", err)
 		}
 	}
 	for i := range f.TagPassFilters {
 		f.TagPassFilters[i].filter, err = filter.Compile(f.TagPassFilters[i].Values)
 		if err != nil {
-			return fmt.Errorf("error compiling 'tagpass', %s", err)
+			return fmt.Errorf("error compiling 'tagpass', %w", err)
 		}
 	}
 	return nil

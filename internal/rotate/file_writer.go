@@ -131,7 +131,7 @@ func (w *FileWriter) rotateIfNeeded() error {
 		(w.maxSizeInBytes > 0 && w.bytesWritten >= w.maxSizeInBytes) {
 		if err := w.rotate(); err != nil {
 			//Ignore rotation errors and keep the log open
-			fmt.Printf("unable to rotate the file '%s', %s", w.filename, err.Error())
+			fmt.Printf("unable to rotate the file %q, %s", w.filename, err.Error())
 		}
 		return w.openCurrent()
 	}

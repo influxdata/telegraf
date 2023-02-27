@@ -103,7 +103,7 @@ func (p *Parser) readTags(buf []byte) map[string]string {
 		var tags map[string]string
 		err := json.Unmarshal(tagsBytes, &tags)
 		if err != nil {
-			p.Log.Warnf("Failed to parse tags from JSON path '%s': %s\n", p.TagsPath, err)
+			p.Log.Warnf("Failed to parse tags from JSON path %q: %s", p.TagsPath, err.Error())
 		} else if len(tags) > 0 {
 			return tags
 		}
@@ -128,7 +128,7 @@ func (p *Parser) parseTime(buf []byte) (time.Time, error) {
 		}
 		t, err := time.Parse(timeFormat, timeString)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("time %s cannot be parsed with format %s, %s", timeString, timeFormat, err)
+			return time.Time{}, fmt.Errorf("time %s cannot be parsed with format %s, %w", timeString, timeFormat, err)
 		}
 		return t.UTC(), nil
 	}
@@ -154,7 +154,7 @@ func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
 	var jsonOut map[string]interface{}
 	err := json.Unmarshal(registryBytes, &jsonOut)
 	if err != nil {
-		err = fmt.Errorf("unable to parse dropwizard metric registry from JSON document, %s", err)
+		err = fmt.Errorf("unable to parse dropwizard metric registry from JSON document, %w", err)
 		return nil, err
 	}
 	return jsonOut, nil

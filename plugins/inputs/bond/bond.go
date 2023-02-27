@@ -55,13 +55,13 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 		bondAbsPath := bond.HostProc + "/net/bonding/" + bondName
 		file, err := os.ReadFile(bondAbsPath)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error inspecting %q interface: %v", bondAbsPath, err))
+			acc.AddError(fmt.Errorf("error inspecting %q interface: %w", bondAbsPath, err))
 			continue
 		}
 		rawProcFile := strings.TrimSpace(string(file))
 		err = bond.gatherBondInterface(bondName, rawProcFile, acc)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error inspecting %q interface: %v", bondName, err))
+			acc.AddError(fmt.Errorf("error inspecting %q interface: %w", bondName, err))
 		}
 
 		/*
@@ -137,7 +137,7 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	return fmt.Errorf("Couldn't find status info for '%s' ", bondName)
+	return fmt.Errorf("Couldn't find status info for %q", bondName)
 }
 
 func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
@@ -153,18 +153,18 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 
 	file, err := os.ReadFile(bondDir + "/bonding/mode")
 	if err != nil {
-		return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/mode", err)
+		return sysFiles{}, fmt.Errorf("error inspecting %q interface: %w", bondDir+"/bonding/mode", err)
 	}
 	output.ModeFile = strings.TrimSpace(string(file))
 	file, err = os.ReadFile(bondDir + "/bonding/slaves")
 	if err != nil {
-		return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/slaves", err)
+		return sysFiles{}, fmt.Errorf("error inspecting %q interface: %w", bondDir+"/bonding/slaves", err)
 	}
 	output.SlaveFile = strings.TrimSpace(string(file))
 	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
 		file, err = os.ReadFile(bondDir + "/bonding/ad_num_ports")
 		if err != nil {
-			return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/ad_num_ports", err)
+			return sysFiles{}, fmt.Errorf("error inspecting %q interface: %w", bondDir+"/bonding/ad_num_ports", err)
 		}
 		output.ADPortsFile = strings.TrimSpace(string(file))
 	}
@@ -245,6 +245,9 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 			fields["failures"] = count
 			if !scanPast {
 				acc.AddFields("bond_slave", fields, tags)
+				fields = map[string]interface{}{
+					"status": 0,
+				}
 			}
 		}
 		if strings.Contains(name, "Actor Churned Count") {
@@ -262,6 +265,9 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 			fields["partner_churned"] = count
 			fields["total_churned"] = fields["actor_churned"].(int) + fields["partner_churned"].(int)
 			acc.AddFields("bond_slave", fields, tags)
+			fields = map[string]interface{}{
+				"status": 0,
+			}
 		}
 	}
 	tags = map[string]string{

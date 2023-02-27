@@ -14,7 +14,7 @@ func (s *Shim) AddOutput(output telegraf.Output) error {
 	if p, ok := output.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
-			return fmt.Errorf("failed to init input: %s", err)
+			return fmt.Errorf("failed to init input: %w", err)
 		}
 	}
 

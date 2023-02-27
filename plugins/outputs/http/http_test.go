@@ -395,55 +395,46 @@ func TestBasicAuth(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name   string
-		plugin *HTTP
+		name     string
+		username string
+		password string
 	}{
 		{
 			name: "default",
-			plugin: &HTTP{
-				URL: u.String(),
-			},
 		},
 		{
-			name: "username only",
-			plugin: &HTTP{
-				URL:      u.String(),
-				Username: "username",
-			},
+			name:     "username only",
+			username: "username",
 		},
 		{
-			name: "password only",
-			plugin: &HTTP{
-				URL:      u.String(),
-				Password: "pa$$word",
-			},
+			name:     "password only",
+			password: "pa$$word",
 		},
 		{
-			name: "username and password",
-			plugin: &HTTP{
-				URL:      u.String(),
-				Username: "username",
-				Password: "pa$$word",
-			},
+			name:     "username and password",
+			username: "username",
+			password: "pa$$word",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			plugin := &HTTP{
+				URL:      u.String(),
+				Username: config.NewSecret([]byte(tt.username)),
+				Password: config.NewSecret([]byte(tt.password)),
+			}
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				username, password, _ := r.BasicAuth()
-				require.Equal(t, tt.plugin.Username, username)
-				require.Equal(t, tt.plugin.Password, password)
+				require.Equal(t, tt.username, username)
+				require.Equal(t, tt.password, password)
 				w.WriteHeader(http.StatusOK)
 			})
 
 			serializer := influx.NewSerializer()
-			tt.plugin.SetSerializer(serializer)
-			err = tt.plugin.Connect()
-			require.NoError(t, err)
-
-			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
-			require.NoError(t, err)
+			plugin.SetSerializer(serializer)
+			require.NoError(t, plugin.Connect())
+			require.NoError(t, plugin.Write([]telegraf.Metric{getMetric()}))
 		})
 	}
 }

@@ -30,7 +30,6 @@ func (p *Parser) SetParser(parser telegraf.Parser) {
 
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	results := []telegraf.Metric{}
-
 	for _, metric := range metrics {
 		newMetrics := []telegraf.Metric{}
 		if !p.DropOriginal {
@@ -65,7 +64,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						// prior to returning.
 						newMetrics = append(newMetrics, fromFieldMetric...)
 					default:
-						p.Log.Errorf("field '%s' not a string, skipping", key)
+						p.Log.Errorf("field %q not a string, skipping", key)
 					}
 				}
 			}
@@ -80,7 +79,13 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 				}
 
 				for _, m := range fromTagMetric {
-					if m.Name() == "" {
+					// The parser get the parent plugin's name as
+					// default measurement name. Thus, in case the
+					// parsed metric does not provide a name itself,
+					// the parser  will return 'parser' as we are in
+					// processors.parser. In those cases we want to
+					// keep the original metric name.
+					if m.Name() == "" || m.Name() == "parser" {
 						m.SetName(metric.Name())
 					}
 				}

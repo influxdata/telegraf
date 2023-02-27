@@ -51,7 +51,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
 
-	var testopctags = []OPCTags{
+	testopctags := []OPCTags{
 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
 		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
 		{"ManufacturerName", "0", "i", "2263", "open62541"},
@@ -59,7 +59,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 		{"goodnode", "1", "s", "the.answer", int32(42)},
 		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
 	}
-	var tagsRemaining = make([]string, 0, len(testopctags))
+	tagsRemaining := make([]string, 0, len(testopctags))
 	for i, tag := range testopctags {
 		if tag.Want != nil {
 			tagsRemaining = append(tagsRemaining, testopctags[i].Name)
@@ -89,10 +89,10 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	o, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
 	require.NoError(t, err)
 
-	// give init a couple extra attempts, seconds as on CircleCI this can
-	// be attempted to soon
+	// give initial setup a couple extra attempts, as on CircleCI this can be
+	// attempted to soon
 	require.Eventually(t, func() bool {
-		return o.Init() == nil
+		return o.SetupOptions() == nil
 	}, 5*time.Second, 10*time.Millisecond)
 
 	err = o.Connect()

@@ -11,7 +11,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -34,8 +34,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # poolMetrics = false
 
   ## By default, don't gather dataset stats
-  ## On FreeBSD, if the user has enabled listsnapshots in the pool property,
-  ## telegraf may not be able to correctly parse the output.
   # datasetMetrics = false
 ```
 

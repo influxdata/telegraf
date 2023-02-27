@@ -13,10 +13,10 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"google.golang.org/api/iterator"
 	distributionpb "google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -66,6 +66,8 @@ type (
 	ListTimeSeriesFilter struct {
 		ResourceLabels []*Label `json:"resource_labels"`
 		MetricLabels   []*Label `json:"metric_labels"`
+		UserLabels     []*Label `json:"user_labels"`
+		SystemLabels   []*Label `json:"system_labels"`
 	}
 
 	// Label contains key and value
@@ -270,15 +272,15 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 
 	var valueFmt string
 	if len(s.Filter.ResourceLabels) > 0 {
-		resourceLabelsFilter := make([]string, len(s.Filter.ResourceLabels))
-		for i, resourceLabel := range s.Filter.ResourceLabels {
+		resourceLabelsFilter := make([]string, 0, len(s.Filter.ResourceLabels))
+		for _, resourceLabel := range s.Filter.ResourceLabels {
 			// check if resource label value contains function
 			if includeExcludeHelper(resourceLabel.Value, functions, nil) {
 				valueFmt = `resource.labels.%s = %s`
 			} else {
 				valueFmt = `resource.labels.%s = "%s"`
 			}
-			resourceLabelsFilter[i] = fmt.Sprintf(valueFmt, resourceLabel.Key, resourceLabel.Value)
+			resourceLabelsFilter = append(resourceLabelsFilter, fmt.Sprintf(valueFmt, resourceLabel.Key, resourceLabel.Value))
 		}
 		if len(resourceLabelsFilter) == 1 {
 			filterString += fmt.Sprintf(" AND %s", resourceLabelsFilter[0])
@@ -288,20 +290,56 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 	}
 
 	if len(s.Filter.MetricLabels) > 0 {
-		metricLabelsFilter := make([]string, len(s.Filter.MetricLabels))
-		for i, metricLabel := range s.Filter.MetricLabels {
+		metricLabelsFilter := make([]string, 0, len(s.Filter.MetricLabels))
+		for _, metricLabel := range s.Filter.MetricLabels {
 			// check if metric label value contains function
 			if includeExcludeHelper(metricLabel.Value, functions, nil) {
 				valueFmt = `metric.labels.%s = %s`
 			} else {
 				valueFmt = `metric.labels.%s = "%s"`
 			}
-			metricLabelsFilter[i] = fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value)
+			metricLabelsFilter = append(metricLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
 		}
 		if len(metricLabelsFilter) == 1 {
 			filterString += fmt.Sprintf(" AND %s", metricLabelsFilter[0])
 		} else {
 			filterString += fmt.Sprintf(" AND (%s)", strings.Join(metricLabelsFilter, " OR "))
+		}
+	}
+
+	if len(s.Filter.UserLabels) > 0 {
+		userLabelsFilter := make([]string, 0, len(s.Filter.UserLabels))
+		for _, metricLabel := range s.Filter.UserLabels {
+			// check if metric label value contains function
+			if includeExcludeHelper(metricLabel.Value, functions, nil) {
+				valueFmt = `metadata.user_labels."%s" = %s`
+			} else {
+				valueFmt = `metadata.user_labels."%s" = "%s"`
+			}
+			userLabelsFilter = append(userLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
+		}
+		if len(userLabelsFilter) == 1 {
+			filterString += fmt.Sprintf(" AND %s", userLabelsFilter[0])
+		} else {
+			filterString += fmt.Sprintf(" AND (%s)", strings.Join(userLabelsFilter, " OR "))
+		}
+	}
+
+	if len(s.Filter.SystemLabels) > 0 {
+		systemLabelsFilter := make([]string, 0, len(s.Filter.SystemLabels))
+		for _, metricLabel := range s.Filter.SystemLabels {
+			// check if metric label value contains function
+			if includeExcludeHelper(metricLabel.Value, functions, nil) {
+				valueFmt = `metadata.system_labels."%s" = %s`
+			} else {
+				valueFmt = `metadata.system_labels."%s" = "%s"`
+			}
+			systemLabelsFilter = append(systemLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
+		}
+		if len(systemLabelsFilter) == 1 {
+			filterString += fmt.Sprintf(" AND %s", systemLabelsFilter[0])
+		} else {
+			filterString += fmt.Sprintf(" AND (%s)", strings.Join(systemLabelsFilter, " OR "))
 		}
 	}
 
@@ -429,9 +467,9 @@ func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 		return nil
 	}
 
-	metricTypeFilters := make([]string, len(s.MetricTypePrefixInclude))
-	for i, metricTypePrefix := range s.MetricTypePrefixInclude {
-		metricTypeFilters[i] = fmt.Sprintf(`metric.type = starts_with(%q)`, metricTypePrefix)
+	metricTypeFilters := make([]string, 0, len(s.MetricTypePrefixInclude))
+	for _, metricTypePrefix := range s.MetricTypePrefixInclude {
+		metricTypeFilters = append(metricTypeFilters, fmt.Sprintf(`metric.type = starts_with(%q)`, metricTypePrefix))
 	}
 	return metricTypeFilters
 }

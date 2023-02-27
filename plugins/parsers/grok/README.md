@@ -124,6 +124,9 @@ Debug](https://grokdebug.herokuapp.com) application quite useful!
   ## When set to "disable" timestamp will not incremented if there is a
   ## duplicate.
   # grok_unique_timestamp = "auto"
+
+  ## Enable multiline messages to be processed.
+  # grok_multiline = false
 ```
 
 ### Timestamp Examples

@@ -22,7 +22,7 @@ import (
 var sampleConfig string
 
 const (
-	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 // KubernetesInventory represents the config object for the plugin.

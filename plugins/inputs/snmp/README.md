@@ -16,7 +16,21 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## SNMP backend: gosmi and netsnmp
+
+Telegraf has two backends to translate SNMP objects. By default, Telegraf will
+use `netsnmp`, however, this option is deprecated and it is encouraged that
+users migrate to `gosmi`. If users find issues with `gosmi` that do not occur
+with `netsnmp` please open a project issue on GitHub.
+
+The SNMP backend setting is a global-level setting that applies to all use of
+SNMP in Telegraf. Users can set this option in the `[agent]` configuration via
+the `snmp_translator` option. See the [agent configuration][AGENT] for more
+details.
+
+[AGENT]: ../../../docs/CONFIGURATION.md#agent
 
 ## Configuration
 
@@ -43,7 +57,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## When true, SNMP reponses are accepted from any address not just
   ## the requested address. This can be useful when gathering from
   ## redundant/failover systems.
-  # unconnected_udp_socket = false 
+  # unconnected_udp_socket = false
 
   ## Path to mib files
   ## Used by the gosmi translator.
@@ -147,6 +161,10 @@ option operate similar to the `snmpget` utility.
     ##                or hextoint:BigEndian:uint32. Valid options for the Endian are:
     ##                BigEndian and LittleEndian. For the bit size: uint16, uint32
     ##                and uint64.
+    ##   enum(1):     Convert the value according to its syntax in the MIB (full).
+    ##                (Only supported with gosmi translator)
+    ##   enum:        Convert the value according to its syntax in the MIB.
+    ##                (Only supported with gosmi translator)
     ##
     # conversion = ""
 ```

@@ -182,14 +182,22 @@ func (c *CloudWatch) initializeCloudWatch() error {
 		return err
 	}
 
-	cfg, err := c.CredentialConfig.Credentials()
+	awsCreds, err := c.CredentialConfig.Credentials()
 	if err != nil {
 		return err
 	}
-	c.client = cwClient.NewFromConfig(cfg, func(options *cwClient.Options) {
-		// Disable logging
-		options.ClientLogMode = 0
 
+	var customResolver cwClient.EndpointResolver
+	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
+		customResolver = cwClient.EndpointResolverFromURL(c.CredentialConfig.EndpointURL)
+	}
+
+	c.client = cwClient.NewFromConfig(awsCreds, func(options *cwClient.Options) {
+		if customResolver != nil {
+			options.EndpointResolver = customResolver
+		}
+
+		options.ClientLogMode = 0
 		options.HTTPClient = &http.Client{
 			// use values from DefaultTransport
 			Transport: &http.Transport{
@@ -241,12 +249,12 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 		for _, m := range c.Metrics {
 			metrics := []types.Metric{}
 			if !hasWildcard(m.Dimensions) {
-				dimensions := make([]types.Dimension, len(m.Dimensions))
-				for k, d := range m.Dimensions {
-					dimensions[k] = types.Dimension{
+				dimensions := make([]types.Dimension, 0, len(m.Dimensions))
+				for _, d := range m.Dimensions {
+					dimensions = append(dimensions, types.Dimension{
 						Name:  aws.String(d.Name),
 						Value: aws.String(d.Value),
-					}
+					})
 				}
 				for _, name := range m.MetricNames {
 					for _, namespace := range c.Namespaces {
@@ -457,7 +465,7 @@ func (c *CloudWatch) gatherMetrics(
 	for {
 		resp, err := c.client.GetMetricData(context.Background(), params)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get metric data: %v", err)
+			return nil, fmt.Errorf("failed to get metric data: %w", err)
 		}
 
 		results = append(results, resp.MetricDataResults...)

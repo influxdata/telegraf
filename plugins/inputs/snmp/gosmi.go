@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/sleepinggenius2/gosmi"
+	"github.com/sleepinggenius2/gosmi/models"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/snmp"
@@ -33,13 +34,13 @@ type gosmiSnmpTranslateCache struct {
 var gosmiSnmpTranslateCachesLock sync.Mutex
 var gosmiSnmpTranslateCaches map[string]gosmiSnmpTranslateCache
 
-//nolint:revive
-func (g *gosmiTranslator) SnmpTranslate(oid string) (string, string, string, string, error) {
-	a, b, c, d, _, e := g.SnmpTranslateFull(oid)
-	return a, b, c, d, e
+//nolint:revive //function-result-limit conditionally 5 return results allowed
+func (g *gosmiTranslator) SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+	mibName, oidNum, oidText, conversion, _, err = g.SnmpTranslateFull(oid)
+	return mibName, oidNum, oidText, conversion, err
 }
 
-//nolint:revive
+//nolint:revive //function-result-limit conditionally 6 return results allowed
 func (g *gosmiTranslator) SnmpTranslateFull(oid string) (
 	mibName string, oidNum string, oidText string,
 	conversion string,
@@ -121,4 +122,22 @@ func (g *gosmiTranslator) SnmpTableCall(oid string) (mibName string, oidNum stri
 	}
 
 	return mibName, oidNum, oidText, fields, nil
+}
+
+func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full bool) (string, error) {
+	//nolint:dogsled // only need to get the node
+	_, _, _, _, node, err := g.SnmpTranslateFull(oid)
+
+	if err != nil {
+		return "", err
+	}
+
+	var v models.Value
+	if full {
+		v = node.FormatValue(value, models.FormatEnumName, models.FormatEnumValue)
+	} else {
+		v = node.FormatValue(value, models.FormatEnumName)
+	}
+
+	return v.Formatted, nil
 }

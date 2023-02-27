@@ -12,10 +12,10 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -69,9 +69,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	// Ignore the returned error as the tests will fail anyway
-	//nolint:errcheck,revive
-	go serv.Serve(lis)
+	go serv.Serve(lis) //nolint:errcheck // Ignore the returned error as the tests will fail anyway
 
 	opt := grpc.WithTransportCredentials(insecure.NewCredentials())
 	conn, err := grpc.Dial(lis.Addr().String(), opt)

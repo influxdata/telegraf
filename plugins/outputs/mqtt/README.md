@@ -19,7 +19,16 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -39,8 +48,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## MQTT Topic for Producer Messages
   ## MQTT outputs send metrics to this topic format:
-  ## <topic_prefix>/<hostname>/<pluginname>/ (e.g. prefix/web01.example.com/mem)
-  topic_prefix = "telegraf"
+  ## {{ .TopicPrefix }}/{{ .Hostname }}/{{ .PluginName }}/{{ .Tag "tag_key" }}
+  ## (e.g. prefix/web01.example.com/mem/some_tag_value)
+  ## Each path segment accepts either a template placeholder, an environment variable, or a tag key
+  ## of the form `{{.Tag "tag_key_name"}}`. Empty path elements as well as special MQTT characters
+  ## (such as `+` or `#`) are invalid to form the topic name and will lead to an error.
+  ## In case a tag is missing in the metric, that path segment omitted for the final topic.
+  topic = "telegraf/{{ .Hostname }}/{{ .PluginName }}"
 
   ## QoS policy for messages
   ## The mqtt QoS policy for sending messages.
@@ -91,4 +105,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
+
+  ## Optional MQTT 5 publish properties
+  ## These setting only apply if the "protocol" property is set to 5. This must
+  ## be defined at the end of the plugin settings, otherwise TOML will assume
+  ## anything else is part of this table. For more details on publish properties
+  ## see the spec:
+  ## https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109
+  # [outputs.mqtt.v5]
+  #   content_type = ""
+  #   response_topic = ""
+  #   message_expiry = "0s"
+  #   topic_alias = 0
+  # [outputs.mqtt.v5.user_properties]
+  #   "key1" = "value 1"
+  #   "key2" = "value 2"
 ```

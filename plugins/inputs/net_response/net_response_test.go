@@ -13,42 +13,38 @@ import (
 )
 
 func TestBadProtocol(t *testing.T) {
-	var acc testutil.Accumulator
 	// Init plugin
 	c := NetResponse{
 		Protocol: "unknownprotocol",
 		Address:  ":9999",
 	}
 	// Error
-	err := c.Gather(&acc)
+	err := c.Init()
 	require.Error(t, err)
-	require.Equal(t, "bad protocol", err.Error())
+	require.Equal(t, "config option protocol: unknown choice unknownprotocol", err.Error())
 }
 
 func TestNoPort(t *testing.T) {
-	var acc testutil.Accumulator
 	c := NetResponse{
 		Protocol: "tcp",
 		Address:  ":",
 	}
-	err := c.Gather(&acc)
+	err := c.Init()
 	require.Error(t, err)
-	require.Equal(t, "bad port", err.Error())
+	require.Equal(t, "bad port in config option address", err.Error())
 }
 
 func TestAddressOnly(t *testing.T) {
-	var acc testutil.Accumulator
 	c := NetResponse{
 		Protocol: "tcp",
 		Address:  "127.0.0.1",
 	}
-	err := c.Gather(&acc)
+	err := c.Init()
 	require.Error(t, err)
 	require.Equal(t, "address 127.0.0.1: missing port in address", err.Error())
 }
 
 func TestSendExpectStrings(t *testing.T) {
-	var acc testutil.Accumulator
 	tc := NetResponse{
 		Protocol: "udp",
 		Address:  "127.0.0.1:7",
@@ -61,10 +57,10 @@ func TestSendExpectStrings(t *testing.T) {
 		Send:     "toast",
 		Expect:   "",
 	}
-	err := tc.Gather(&acc)
+	err := tc.Init()
 	require.Error(t, err)
 	require.Equal(t, "send string cannot be empty", err.Error())
-	err = uc.Gather(&acc)
+	err = uc.Init()
 	require.Error(t, err)
 	require.Equal(t, "expected string cannot be empty", err.Error())
 }
@@ -77,6 +73,7 @@ func TestTCPError(t *testing.T) {
 		Address:  ":9999",
 		Timeout:  config.Duration(time.Second * 30),
 	}
+	require.NoError(t, c.Init())
 	// Gather
 	require.NoError(t, c.Gather(&acc))
 	acc.AssertContainsTaggedFields(t,
@@ -86,7 +83,7 @@ func TestTCPError(t *testing.T) {
 			"result_type": "connection_failed",
 		},
 		map[string]string{
-			"server":   "",
+			"server":   "localhost",
 			"port":     "9999",
 			"protocol": "tcp",
 			"result":   "connection_failed",
@@ -106,6 +103,7 @@ func TestTCPOK1(t *testing.T) {
 		Timeout:     config.Duration(time.Second),
 		Protocol:    "tcp",
 	}
+	require.NoError(t, c.Init())
 	// Start TCP server
 	wg.Add(1)
 	go TCPServer(t, &wg)
@@ -150,6 +148,7 @@ func TestTCPOK2(t *testing.T) {
 		Timeout:     config.Duration(time.Second),
 		Protocol:    "tcp",
 	}
+	require.NoError(t, c.Init())
 	// Start TCP server
 	wg.Add(1)
 	go TCPServer(t, &wg)
@@ -192,6 +191,7 @@ func TestUDPError(t *testing.T) {
 		Expect:   "test",
 		Protocol: "udp",
 	}
+	require.NoError(t, c.Init())
 	// Gather
 	require.NoError(t, c.Gather(&acc))
 	acc.Wait(1)
@@ -211,7 +211,7 @@ func TestUDPError(t *testing.T) {
 		},
 		map[string]string{
 			"result":   "read_failed",
-			"server":   "",
+			"server":   "localhost",
 			"port":     "9999",
 			"protocol": "udp",
 		},
@@ -230,6 +230,7 @@ func TestUDPOK1(t *testing.T) {
 		Timeout:     config.Duration(time.Second),
 		Protocol:    "udp",
 	}
+	require.NoError(t, c.Init())
 	// Start UDP server
 	wg.Add(1)
 	go UDPServer(t, &wg)

@@ -47,6 +47,8 @@ type KafkaConsumer struct {
 
 	kafka.ReadConfig
 
+	kafka.Logger
+
 	Log telegraf.Logger `toml:"-"`
 
 	ConsumerCreator ConsumerGroupCreator `toml:"-"`
@@ -83,6 +85,8 @@ func (k *KafkaConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KafkaConsumer) Init() error {
+	k.SetLogger()
+
 	if k.MaxUndeliveredMessages == 0 {
 		k.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
 	}
@@ -200,9 +204,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			err := k.consumer.Consume(ctx, k.Topics, handler)
 			if err != nil {
 				acc.AddError(fmt.Errorf("consume: %w", err))
-				// Ignore returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
-				internal.SleepContext(ctx, reconnectDelay)
+				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
 			}
 		}
 		err = k.consumer.Close()

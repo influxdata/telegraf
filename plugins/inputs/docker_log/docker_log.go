@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -189,7 +190,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			defer d.removeFromContainerList(container.ID)
 
 			err = d.tailContainerLogs(ctx, acc, container, containerName)
-			if err != nil && err != context.Canceled {
+			if err != nil && !errors.Is(err, context.Canceled) {
 				acc.AddError(err)
 			}
 		}(container)
@@ -284,7 +285,7 @@ func parseLine(line []byte) (time.Time, string, error) {
 
 	ts, err := time.Parse(time.RFC3339Nano, tsString)
 	if err != nil {
-		return time.Time{}, "", fmt.Errorf("error parsing timestamp %q: %v", tsString, err)
+		return time.Time{}, "", fmt.Errorf("error parsing timestamp %q: %w", tsString, err)
 	}
 
 	return ts, string(message), nil
@@ -360,12 +361,9 @@ func tailMultiplexed(
 	}()
 
 	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
-	//nolint:errcheck,revive // we cannot do anything if the closing fails
-	outWriter.Close()
-	//nolint:errcheck,revive // we cannot do anything if the closing fails
-	errWriter.Close()
-	//nolint:errcheck,revive // we cannot do anything if the closing fails
-	src.Close()
+	outWriter.Close() //nolint:revive // we cannot do anything if the closing fails
+	errWriter.Close() //nolint:revive // we cannot do anything if the closing fails
+	src.Close()       //nolint:revive // we cannot do anything if the closing fails
 	wg.Wait()
 	return err
 }

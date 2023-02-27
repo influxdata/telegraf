@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	nut "github.com/robbiet480/go.nut"
@@ -21,11 +22,13 @@ const defaultAddress = "127.0.0.1"
 const defaultPort = 3493
 
 type Upsd struct {
-	Server   string
-	Port     int
-	Username string
-	Password string
-	Log      telegraf.Logger `toml:"-"`
+	Server     string `toml:"server"`
+	Port       int    `toml:"port"`
+	Username   string `toml:"username"`
+	Password   string `toml:"password"`
+	ForceFloat bool   `toml:"force_float"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	batteryRuntimeTypeWarningIssued bool
 }
@@ -70,21 +73,57 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	}
 
 	fields := map[string]interface{}{
-		"status_flags":            status,
-		"ups_status":              metrics["ups.status"],
-		"input_voltage":           metrics["input.voltage"],
-		"load_percent":            metrics["ups.load"],
-		"battery_charge_percent":  metrics["battery.charge"],
-		"time_left_ns":            timeLeftS * 1_000_000_000, //Compatibility with apcupsd metrics format
-		"output_voltage":          metrics["output.voltage"],
-		"internal_temp":           metrics["ups.temperature"],
-		"battery_voltage":         metrics["battery.voltage"],
-		"input_frequency":         metrics["input.frequency"],
-		"nominal_input_voltage":   metrics["input.voltage.nominal"],
-		"nominal_battery_voltage": metrics["battery.voltage.nominal"],
-		"nominal_power":           metrics["ups.realpower.nominal"],
-		"firmware":                metrics["ups.firmware"],
-		"battery_date":            metrics["battery.mfr.date"],
+		"battery_date":     metrics["battery.date"],
+		"battery_mfr_date": metrics["battery.mfr.date"],
+		"status_flags":     status,
+		"ups_status":       metrics["ups.status"],
+
+		//Compatibility with apcupsd metrics format
+		"time_left_ns": timeLeftS * 1_000_000_000,
+	}
+
+	floatValues := map[string]string{
+		"battery_charge_percent":  "battery.charge",
+		"battery_runtime_low":     "battery.runtime.low",
+		"battery_voltage":         "battery.voltage",
+		"input_frequency":         "input.frequency",
+		"input_transfer_high":     "input.transfer.high",
+		"input_transfer_low":      "input.transfer.low",
+		"input_voltage":           "input.voltage",
+		"internal_temp":           "ups.temperature",
+		"load_percent":            "ups.load",
+		"nominal_battery_voltage": "battery.voltage.nominal",
+		"nominal_input_voltage":   "input.voltage.nominal",
+		"nominal_power":           "ups.realpower.nominal",
+		"output_voltage":          "output.voltage",
+		"ups_delay_shutdown":      "ups.delay.shutdown",
+		"ups_delay_start":         "ups.delay.start",
+	}
+
+	for key, rawValue := range floatValues {
+		if metrics[rawValue] == nil {
+			continue
+		}
+
+		if !u.ForceFloat {
+			fields[key] = metrics[rawValue]
+			continue
+		}
+
+		// Force expected float values to actually being float (e.g. if delivered as int)
+		float, err := internal.ToFloat64(metrics[rawValue])
+		if err != nil {
+			acc.AddError(fmt.Errorf("converting %s=%v failed: %v", rawValue, metrics[rawValue], err))
+			continue
+		}
+		fields[key] = float
+	}
+
+	val, err := internal.ToString(metrics["ups.firmware"])
+	if err != nil {
+		acc.AddError(fmt.Errorf("converting ups.firmware=%v failed: %v", metrics["ups.firmware"], err))
+	} else {
+		fields["firmware"] = val
 	}
 
 	acc.AddFields("upsd", fields, tags)

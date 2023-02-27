@@ -105,14 +105,14 @@ func NewTrace(spans []Span) (trace.Trace, error) {
 
 // NewAnnotations converts a slice of Annotation into a slice of new Annotations
 func NewAnnotations(annotations []Annotation, endpoint Endpoint) []trace.Annotation {
-	formatted := make([]trace.Annotation, len(annotations))
-	for i, annotation := range annotations {
-		formatted[i] = trace.Annotation{
+	formatted := make([]trace.Annotation, 0, len(annotations))
+	for _, annotation := range annotations {
+		formatted = append(formatted, trace.Annotation{
 			Host:        endpoint.Host(),
 			ServiceName: endpoint.Name(),
 			Timestamp:   annotation.Timestamp(),
 			Value:       annotation.Value(),
-		}
+		})
 	}
 
 	return formatted
@@ -121,14 +121,14 @@ func NewAnnotations(annotations []Annotation, endpoint Endpoint) []trace.Annotat
 // NewBinaryAnnotations is very similar to NewAnnotations, but it
 // converts BinaryAnnotations instead of the normal Annotation
 func NewBinaryAnnotations(annotations []BinaryAnnotation, endpoint Endpoint) []trace.BinaryAnnotation {
-	formatted := make([]trace.BinaryAnnotation, len(annotations))
-	for i, annotation := range annotations {
-		formatted[i] = trace.BinaryAnnotation{
+	formatted := make([]trace.BinaryAnnotation, 0, len(annotations))
+	for _, annotation := range annotations {
+		formatted = append(formatted, trace.BinaryAnnotation{
 			Host:        endpoint.Host(),
 			ServiceName: endpoint.Name(),
 			Key:         annotation.Key(),
 			Value:       annotation.Value(),
-		}
+		})
 	}
 	return formatted
 }

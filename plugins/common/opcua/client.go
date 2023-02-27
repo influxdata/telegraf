@@ -9,6 +9,7 @@ import (
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 )
@@ -49,13 +50,13 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	switch o.SecurityPolicy {
 	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.Endpoint)
+		return fmt.Errorf("invalid security type %q in %q", o.SecurityPolicy, o.Endpoint)
 	}
 
 	switch o.SecurityMode {
 	case "None", "Sign", "SignAndEncrypt", "auto":
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.Endpoint)
+		return fmt.Errorf("invalid security type %q in %q", o.SecurityMode, o.Endpoint)
 	}
 
 	return nil
@@ -101,12 +102,8 @@ type OpcUAClient struct {
 	codes []ua.StatusCode
 }
 
-func (o *OpcUAClient) Init() error {
-	return o.setupOptions()
-}
-
 // / setupOptions read the endpoints from the specified server and setup all authentication
-func (o *OpcUAClient) setupOptions() error {
+func (o *OpcUAClient) SetupOptions() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Config.ConnectTimeout))
 	defer cancel()
 	// Get a list of the endpoints for our target server
@@ -138,11 +135,11 @@ func (o *OpcUAClient) setupOptions() error {
 func (o *OpcUAClient) setupWorkarounds() error {
 	o.codes = []ua.StatusCode{ua.StatusOK}
 	for _, c := range o.Config.Workarounds.AdditionalValidStatusCodes {
-		val, err := strconv.ParseInt(c, 0, 32) // setting 32 bits to allow for safe conversion
+		val, err := strconv.ParseUint(c, 0, 32) // setting 32 bits to allow for safe conversion
 		if err != nil {
 			return err
 		}
-		o.codes = append(o.codes, ua.StatusCode(uint32(val)))
+		o.codes = append(o.codes, ua.StatusCode(val))
 	}
 
 	return nil
@@ -169,6 +166,11 @@ func (o *OpcUAClient) Connect() error {
 	case "opc.tcp":
 		o.State = Connecting
 
+		err = o.SetupOptions()
+		if err != nil {
+			return err
+		}
+
 		if o.Client != nil {
 			o.Log.Warnf("Closing connection due to Connect called while already instantiated", u)
 			if err := o.Client.Close(); err != nil {
@@ -183,7 +185,7 @@ func (o *OpcUAClient) Connect() error {
 		defer cancel()
 		if err := o.Client.Connect(ctx); err != nil {
 			o.State = Disconnected
-			return fmt.Errorf("error in Client Connection: %s", err)
+			return fmt.Errorf("error in Client Connection: %w", err)
 		}
 
 		o.State = Connected
@@ -206,7 +208,6 @@ func (o *OpcUAClient) Disconnect(ctx context.Context) error {
 	case "opc.tcp":
 		o.State = Disconnected
 		// We can't do anything about failing to close a connection
-		//nolint:errcheck,revive
 		err := o.Client.CloseWithContext(ctx)
 		o.Client = nil
 		return err

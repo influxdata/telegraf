@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
@@ -56,7 +57,7 @@ func determineEndianess(endianess string) binary.ByteOrder {
 	case "be":
 		return binary.BigEndian
 	case "host":
-		return hostEndianess
+		return internal.HostEndianess
 	}
 	panic(fmt.Errorf("unknown endianess %q", endianess))
 }
@@ -218,7 +219,7 @@ func TestFilterNoMatch(t *testing.T) {
 		}
 		require.NoError(t, parser.Init())
 
-		data, err := generateBinary(testdata, hostEndianess)
+		data, err := generateBinary(testdata, internal.HostEndianess)
 		require.NoError(t, err)
 
 		_, err = parser.Parse(data)
@@ -239,7 +240,7 @@ func TestFilterNoMatch(t *testing.T) {
 		}
 		require.NoError(t, parser.Init())
 
-		data, err := generateBinary(testdata, hostEndianess)
+		data, err := generateBinary(testdata, internal.HostEndianess)
 		require.NoError(t, err)
 
 		metrics, err := parser.Parse(data)
@@ -389,7 +390,7 @@ func TestFilterLength(t *testing.T) {
 			}
 			require.NoError(t, parser.Init())
 
-			data, err := generateBinary(tt.data, hostEndianess)
+			data, err := generateBinary(tt.data, internal.HostEndianess)
 			require.NoError(t, err)
 
 			metrics, err := parser.Parse(data)

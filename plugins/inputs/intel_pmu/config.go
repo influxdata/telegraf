@@ -83,7 +83,7 @@ func (cp *configParser) parseEvents(events []string) []*eventWithQuals {
 	events, duplications := removeDuplicateStrings(events)
 	for _, duplication := range duplications {
 		if cp.log != nil {
-			cp.log.Warnf("duplicated event `%s` will be removed", duplication)
+			cp.log.Warnf("duplicated event %q will be removed", duplication)
 		}
 	}
 	return parseEventsWithQualifiers(events)
@@ -198,7 +198,7 @@ func parseIDs(allIDsStrings []string) ([]int, error) {
 			// Single value
 			num, err := strconv.Atoi(id)
 			if err != nil {
-				return nil, fmt.Errorf("wrong format for id number `%s`: %v", id, err)
+				return nil, fmt.Errorf("wrong format for id number %q: %w", id, err)
 			}
 			if len(result)+1 > maxIDsSize {
 				return nil, fmt.Errorf("requested number of IDs exceeds max size `%d`", maxIDsSize)
