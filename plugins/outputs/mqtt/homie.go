@@ -27,7 +27,6 @@ func (m *MQTT) collectHomieDeviceMessages(topic string, metric telegraf.Metric) 
 		messages = append(messages, message{topic + "/$name", []byte(deviceName)})
 		messages = append(messages, message{topic + "/$state", []byte("ready")})
 		m.homieSeen[topic] = make(map[string]bool)
-		// TODO: Declare last will
 	}
 
 	// Generate the node-ID from the metric and fixup invalid characters
