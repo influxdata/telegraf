@@ -43,9 +43,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
     ## Optional tag to use as metric timestamp
     # timestmap = ""
-    ## Optional format of the timestamp determined by the tag above.
-    ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
-    ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
+
+    ## Format of the timestamp determined by the tag above. This can be any of
+    ## "unix", "unix_ms", "unix_us", "unix_ns", or a valid Golang time format.
     # timestamp_format = ""
 
   ## Fields to convert
@@ -64,9 +64,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
     ## Optional field to use as metric timestamp
     # timestmap = ""
-    ## Optional format of the timestamp determined by the field above.
-    ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
-    ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
+
+    ## Format of the timestamp determined by the field above. This can be any
+    ## of "unix", "unix_ms", "unix_us", "unix_ns", or a valid Golang time
+    ## format.
     # timestamp_format = ""
 ```
 
