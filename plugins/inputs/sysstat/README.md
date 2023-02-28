@@ -19,6 +19,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Sysstat metrics collector
+# This plugin ONLY supports Linux
 [[inputs.sysstat]]
   ## Path to the sadc command.
   #

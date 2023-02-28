@@ -22,6 +22,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Gather indicators from established connections, using iproute2's ss command.
+# This plugin ONLY supports non-Windows
 [[inputs.socketstat]]
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
   ## Specify here the types you want to gather

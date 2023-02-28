@@ -104,6 +104,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Read Intel RDT metrics
+# This plugin ONLY supports non-Windows
 [[inputs.intel_rdt]]
   ## Optionally set sampling interval to Nx100ms.
   ## This value is propagated to pqos tool. Interval format is defined by pqos itself.

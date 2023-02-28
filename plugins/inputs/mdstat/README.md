@@ -26,6 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Get kernel statistics from /proc/mdstat
+# This plugin ONLY supports Linux
 [[inputs.mdstat]]
   ## Sets file path
   ## If not specified, then default is /proc/mdstat

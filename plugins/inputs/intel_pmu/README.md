@@ -27,6 +27,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Intel Performance Monitoring Unit plugin exposes Intel PMU metrics available through Linux Perf subsystem
+# This plugin ONLY supports Linux on amd64
 [[inputs.intel_pmu]]
   ## List of filesystem locations of JSON files that contain PMU event definitions.
   event_definitions = ["/var/cache/pmu/GenuineIntel-6-55-4-core.json", "/var/cache/pmu/GenuineIntel-6-55-4-uncore.json"]
