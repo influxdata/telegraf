@@ -116,8 +116,10 @@ func TestNode(t *testing.T) {
 					nodeMeasurement,
 					map[string]string{
 						"node_name": "node1",
+						"cluster_namespace": "ns1",
 						"condition": "Ready",
 						"status":    "True",
+						"version":           "v1.10.3",
 					},
 					map[string]interface{}{
 						"status_condition": int64(1),

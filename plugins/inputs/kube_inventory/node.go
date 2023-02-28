@@ -67,7 +67,9 @@ func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulato
 		conditiontags := map[string]string{}
 		conditiontags["status"] = string(val.Status)
 		conditiontags["condition"] = string(val.Type)
-		conditiontags["node_name"] = n.Name
+		for k, v := range tags {
+			conditiontags[k] = v
+		}
 		running := 0
 		nodeready := 0
 		if val.Status == "True" {
