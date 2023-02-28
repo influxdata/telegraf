@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-//init initializes the plugin context
+// init initializes the plugin context
 func init() {
 	outputs.Add("signalfx", func() telegraf.Output {
 		return NewSignalFx()

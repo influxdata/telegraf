@@ -158,11 +158,13 @@ func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
 
 // Gathers data from a particular URL
 // Parameters:
-//     acc    : The telegraf Accumulator to use
-//     url    : endpoint to send request to
+//
+//	acc    : The telegraf Accumulator to use
+//	url    : endpoint to send request to
 //
 // Returns:
-//     error: Any error that may have occurred
+//
+//	error: Any error that may have occurred
 func (h *HTTP) gatherURL(
 	acc telegraf.Accumulator,
 	url string,

@@ -33,7 +33,7 @@ type Example struct {
 }
 
 // Usually the default (example) configuration is contained in this constant.
-// Please use '## '' to denote comments and '# ' to specify default settings and start each line with two spaces.
+// Please use '## ” to denote comments and '# ' to specify default settings and start each line with two spaces.
 const sampleConfig = `
   ## Device name used as a tag
   ## This is a mandatory option that needs to be set by the user, so we do not

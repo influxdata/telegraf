@@ -468,7 +468,7 @@ func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix
 	return builder.String(), aliasPath, nil
 }
 
-//ParsePath from XPath-like string to gNMI path structure
+// ParsePath from XPath-like string to gNMI path structure
 func parsePath(origin string, pathToParse string, target string) (*gnmiLib.Path, error) {
 	var err error
 	gnmiPath := gnmiLib.Path{Origin: origin, Target: target}

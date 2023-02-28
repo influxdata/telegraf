@@ -170,8 +170,8 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	require.NotEmpty(t, acc.Errors)
 }
 
-//When not passing server config, we default to localhost
-//We just want to make sure we did request stat from localhost
+// When not passing server config, we default to localhost
+// We just want to make sure we did request stat from localhost
 func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
 	r := &haproxy{}
 

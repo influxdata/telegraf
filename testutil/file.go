@@ -11,7 +11,7 @@ type LineParser interface {
 	ParseLine(line string) (telegraf.Metric, error)
 }
 
-//ParseRawLinesFrom returns the raw lines between the given header and a trailing blank line
+// ParseRawLinesFrom returns the raw lines between the given header and a trailing blank line
 func ParseRawLinesFrom(lines []string, header string) ([]string, error) {
 	if len(lines) < 2 {
 		// We need a line for HEADER and EMPTY TRAILING LINE
@@ -45,7 +45,7 @@ func ParseRawLinesFrom(lines []string, header string) ([]string, error) {
 	return output, nil
 }
 
-//ParseMetricsFrom parses metrics from the given lines in line-protocol following a header, with a trailing blank line
+// ParseMetricsFrom parses metrics from the given lines in line-protocol following a header, with a trailing blank line
 func ParseMetricsFrom(lines []string, header string, parser LineParser) ([]telegraf.Metric, error) {
 	if len(lines) < 2 {
 		// We need a line for HEADER and EMPTY TRAILING LINE

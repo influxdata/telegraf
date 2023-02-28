@@ -76,12 +76,12 @@ func init() {
 	})
 }
 
-//SampleConfig returns a sample config
+// SampleConfig returns a sample config
 func (k *Kubernetes) SampleConfig() string {
 	return sampleConfig
 }
 
-//Description returns the description of this plugin
+// Description returns the description of this plugin
 func (k *Kubernetes) Description() string {
 	return "Read metrics from the kubernetes kubelet api"
 }
@@ -109,7 +109,7 @@ func (k *Kubernetes) Init() error {
 	return nil
 }
 
-//Gather collects kubernetes metrics from a given URL
+// Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	acc.AddError(k.gatherSummary(k.URL, acc))
 	return nil

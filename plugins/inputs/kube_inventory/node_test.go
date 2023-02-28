@@ -130,6 +130,7 @@ func TestNode(t *testing.T) {
 					map[string]string{
 						"node_name":         "node1",
 						"cluster_namespace": "ns1",
+						"version":           "v1.10.3",
 					},
 					map[string]interface{}{
 						"capacity_cpu_cores":         int64(16),

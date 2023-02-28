@@ -25,7 +25,7 @@ type logStreamContainer struct {
 	sequenceToken         string
 }
 
-//Cloudwatch Logs service interface
+// Cloudwatch Logs service interface
 type cloudWatchLogs interface {
 	DescribeLogGroups(context.Context, *cloudwatchlogs.DescribeLogGroupsInput, ...func(options *cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
 	DescribeLogStreams(context.Context, *cloudwatchlogs.DescribeLogStreamsInput, ...func(options *cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogStreamsOutput, error)

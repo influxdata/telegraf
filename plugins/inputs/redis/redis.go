@@ -494,7 +494,9 @@ func gatherInfoOutput(
 
 // Parse the special Keyspace line at end of redis stats
 // This is a special line that looks something like:
-//     db0:keys=2,expires=0,avg_ttl=0
+//
+//	db0:keys=2,expires=0,avg_ttl=0
+//
 // And there is one for each db on the redis instance
 func gatherKeyspaceLine(
 	name string,
@@ -523,7 +525,9 @@ func gatherKeyspaceLine(
 
 // Parse the special cmdstat lines.
 // Example:
-//     cmdstat_publish:calls=33791,usec=208789,usec_per_call=6.18
+//
+//	cmdstat_publish:calls=33791,usec=208789,usec_per_call=6.18
+//
 // Tag: cmdstat=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
 func gatherCommandstateLine(
 	name string,
@@ -568,7 +572,9 @@ func gatherCommandstateLine(
 
 // Parse the special Replication line
 // Example:
-//     slave0:ip=127.0.0.1,port=7379,state=online,offset=4556468,lag=0
+//
+//	slave0:ip=127.0.0.1,port=7379,state=online,offset=4556468,lag=0
+//
 // This line will only be visible when a node has a replica attached.
 func gatherReplicationLine(
 	name string,

@@ -91,7 +91,7 @@ var sampleConfig = `
 
 var description = "Input plugin to report Windows services info."
 
-//WinServices is an implementation if telegraf.Input interface, providing info about Windows Services
+// WinServices is an implementation if telegraf.Input interface, providing info about Windows Services
 type WinServices struct {
 	Log telegraf.Logger
 

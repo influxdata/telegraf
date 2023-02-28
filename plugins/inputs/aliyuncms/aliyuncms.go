@@ -438,7 +438,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 	return nil
 }
 
-//tag helper
+// tag helper
 func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string, err error) {
 	var (
 		ok        bool

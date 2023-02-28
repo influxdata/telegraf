@@ -63,7 +63,7 @@ func (c *mockCloudWatchLogs) PutLogEvents(_ context.Context, input *cloudwatchlo
 	return output, nil
 }
 
-//Ensure mockCloudWatchLogs implement cloudWatchLogs interface
+// Ensure mockCloudWatchLogs implement cloudWatchLogs interface
 var _ cloudWatchLogs = (*mockCloudWatchLogs)(nil)
 
 func RandStringBytes(n int) string {

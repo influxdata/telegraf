@@ -46,9 +46,11 @@ type inputUnit struct {
 	inputs []*models.RunningInput
 }
 
-//  ______     ┌───────────┐     ______
+//	______     ┌───────────┐     ______
+//
 // ()_____)──▶ │ Processor │──▶ ()_____)
-//             └───────────┘
+//
+//	└───────────┘
 type processorUnit struct {
 	src       <-chan telegraf.Metric
 	dst       chan<- telegraf.Metric
@@ -59,17 +61,19 @@ type processorUnit struct {
 // Typically the aggregators write to a processor channel and pass the original
 // metrics to the output channel.  The sink channels may be the same channel.
 //
-//                 ┌────────────┐
-//            ┌──▶ │ Aggregator │───┐
-//            │    └────────────┘   │
-//  ______    │    ┌────────────┐   │     ______
+//	               ┌────────────┐
+//	          ┌──▶ │ Aggregator │───┐
+//	          │    └────────────┘   │
+//	______    │    ┌────────────┐   │     ______
+//
 // ()_____)───┼──▶ │ Aggregator │───┼──▶ ()_____)
-//            │    └────────────┘   │
-//            │    ┌────────────┐   │
-//            ├──▶ │ Aggregator │───┘
-//            │    └────────────┘
-//            │                           ______
-//            └────────────────────────▶ ()_____)
+//
+//	│    └────────────┘   │
+//	│    ┌────────────┐   │
+//	├──▶ │ Aggregator │───┘
+//	│    └────────────┘
+//	│                           ______
+//	└────────────────────────▶ ()_____)
 type aggregatorUnit struct {
 	src         <-chan telegraf.Metric
 	aggC        chan<- telegraf.Metric
@@ -80,15 +84,17 @@ type aggregatorUnit struct {
 // outputUnit is a group of Outputs and their source channel.  Metrics on the
 // channel are written to all outputs.
 //
-//                            ┌────────┐
-//                       ┌──▶ │ Output │
-//                       │    └────────┘
-//  ______     ┌─────┐   │    ┌────────┐
+//	                          ┌────────┐
+//	                     ┌──▶ │ Output │
+//	                     │    └────────┘
+//	______     ┌─────┐   │    ┌────────┐
+//
 // ()_____)──▶ │ Fan │───┼──▶ │ Output │
-//             └─────┘   │    └────────┘
-//                       │    ┌────────┐
-//                       └──▶ │ Output │
-//                            └────────┘
+//
+//	└─────┘   │    └────────┘
+//	          │    ┌────────┐
+//	          └──▶ │ Output │
+//	               └────────┘
 type outputUnit struct {
 	src     <-chan telegraf.Metric
 	outputs []*models.RunningOutput

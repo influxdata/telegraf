@@ -156,13 +156,13 @@ func (p *Ping) args(url string, system string) []string {
 
 // processPingOutput takes in a string output from the ping command, like:
 //
-//     ping www.google.com (173.194.115.84): 56 data bytes
-//     64 bytes from 173.194.115.84: icmp_seq=0 ttl=54 time=52.172 ms
-//     64 bytes from 173.194.115.84: icmp_seq=1 ttl=54 time=34.843 ms
+//	ping www.google.com (173.194.115.84): 56 data bytes
+//	64 bytes from 173.194.115.84: icmp_seq=0 ttl=54 time=52.172 ms
+//	64 bytes from 173.194.115.84: icmp_seq=1 ttl=54 time=34.843 ms
 //
-//     --- www.google.com ping statistics ---
-//     2 packets transmitted, 2 packets received, 0.0% packet loss
-//     round-trip min/avg/max/stddev = 34.843/43.508/52.172/8.664 ms
+//	--- www.google.com ping statistics ---
+//	2 packets transmitted, 2 packets received, 0.0% packet loss
+//	round-trip min/avg/max/stddev = 34.843/43.508/52.172/8.664 ms
 //
 // It returns (<transmitted packets>, <received packets>, <average response>)
 func processPingOutput(out string) (stats, error) {

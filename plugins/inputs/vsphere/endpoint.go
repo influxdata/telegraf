@@ -653,7 +653,7 @@ func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilte
 	return m, nil
 }
 
-//noinspection GoUnusedParameter
+// noinspection GoUnusedParameter
 func getHosts(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
 	var resources []mo.HostSystem
 	err := resourceFilter.FindAll(ctx, &resources)

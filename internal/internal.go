@@ -69,8 +69,9 @@ func ReadLines(filename string) ([]string, error) {
 // ReadLines reads contents from file and splits them by new line.
 // The offset tells at which line number to start.
 // The count determines the number of lines to read (starting from offset):
-//   n >= 0: at most n lines
-//   n < 0: whole file
+//
+//	n >= 0: at most n lines
+//	n < 0: whole file
 func ReadLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -231,9 +232,10 @@ func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
 
 // ParseTimestamp parses a Time according to the standard Telegraf options.
 // These are generally displayed in the toml similar to:
-//   json_time_key= "timestamp"
-//   json_time_format = "2006-01-02T15:04:05Z07:00"
-//   json_timezone = "America/Los_Angeles"
+//
+//	json_time_key= "timestamp"
+//	json_time_format = "2006-01-02T15:04:05Z07:00"
+//	json_timezone = "America/Los_Angeles"
 //
 // The format can be one of "unix", "unix_ms", "unix_us", "unix_ns", or a Go
 // time layout suitable for time.Parse.
@@ -282,7 +284,8 @@ func parseUnix(format string, timestamp interface{}) (time.Time, error) {
 // Returns the integers before and after an optional decimal point.  Both '.'
 // and ',' are supported for the decimal point.  The timestamp can be an int64,
 // float64, or string.
-//   ex: "42.5" -> (42, 5, nil)
+//
+//	ex: "42.5" -> (42, 5, nil)
 func parseComponents(timestamp interface{}) (int64, int64, error) {
 	switch ts := timestamp.(type) {
 	case string:

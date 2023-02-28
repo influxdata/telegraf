@@ -140,11 +140,13 @@ type stats struct {
 
 // Gathers data from a particular URL
 // Parameters:
-//     acc    : The telegraf Accumulator to use
-//     url    : endpoint to send request to
+//
+//	acc    : The telegraf Accumulator to use
+//	url    : endpoint to send request to
 //
 // Returns:
-//     error: Any error that may have occurred
+//
+//	error: Any error that may have occurred
 func (k *Kapacitor) gatherURL(
 	acc telegraf.Accumulator,
 	url string,

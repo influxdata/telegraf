@@ -7,7 +7,7 @@ import (
 // Trace is an array (or a series) of spans
 type Trace []Span
 
-//Span represents a specific zipkin span. It holds the majority of the same
+// Span represents a specific zipkin span. It holds the majority of the same
 // data as a zipkin span sent via the thrift protocol, but is presented in a
 // format which is more straightforward for storage purposes.
 type Span struct {

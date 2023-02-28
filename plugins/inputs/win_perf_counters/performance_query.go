@@ -11,13 +11,13 @@ import (
 	"unsafe"
 )
 
-//PerformanceQuery is abstraction for PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
+// PerformanceQuery is abstraction for PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
 type CounterValue struct {
 	InstanceName string
 	Value        interface{}
 }
 
-//PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
+// PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
 type PerformanceQuery interface {
 	Open() error
 	Close() error
@@ -34,7 +34,7 @@ type PerformanceQuery interface {
 	IsVistaOrNewer() bool
 }
 
-//PdhError represents error returned from Performance Counters API
+// PdhError represents error returned from Performance Counters API
 type PdhError struct {
 	ErrorCode uint32
 	errorText string
@@ -51,7 +51,7 @@ func NewPdhError(code uint32) error {
 	}
 }
 
-//PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
+// PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
 type PerformanceQueryImpl struct {
 	query PDH_HQUERY
 }
@@ -110,7 +110,7 @@ func (m *PerformanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (PDH
 	return counterHandle, nil
 }
 
-//GetCounterPath return counter information for given handle
+// GetCounterPath return counter information for given handle
 func (m *PerformanceQueryImpl) GetCounterPath(counterHandle PDH_HCOUNTER) (string, error) {
 	var bufSize uint32
 	var buff []byte
@@ -144,7 +144,7 @@ func (m *PerformanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string,
 	return nil, NewPdhError(ret)
 }
 
-//GetFormattedCounterValueDouble computes a displayable value for the specified counter
+// GetFormattedCounterValueDouble computes a displayable value for the specified counter
 func (m *PerformanceQueryImpl) GetFormattedCounterValueDouble(hCounter PDH_HCOUNTER) (float64, error) {
 	var counterType uint32
 	var value PDH_FMT_COUNTERVALUE_DOUBLE
