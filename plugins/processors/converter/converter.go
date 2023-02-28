@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -19,13 +20,15 @@ import (
 var sampleConfig string
 
 type Conversion struct {
-	Measurement []string `toml:"measurement"`
-	Tag         []string `toml:"tag"`
-	String      []string `toml:"string"`
-	Integer     []string `toml:"integer"`
-	Unsigned    []string `toml:"unsigned"`
-	Boolean     []string `toml:"boolean"`
-	Float       []string `toml:"float"`
+	Measurement     []string `toml:"measurement"`
+	Tag             []string `toml:"tag"`
+	String          []string `toml:"string"`
+	Integer         []string `toml:"integer"`
+	Unsigned        []string `toml:"unsigned"`
+	Boolean         []string `toml:"boolean"`
+	Float           []string `toml:"float"`
+	Timestamp       string   `toml:"timestamp"`
+	TimestampFormat string   `toml:"timestamp_format"`
 }
 
 type Converter struct {
@@ -45,6 +48,7 @@ type ConversionFilter struct {
 	Unsigned    filter.Filter
 	Boolean     filter.Filter
 	Float       filter.Filter
+	Timestamp   filter.Filter
 }
 
 func (*Converter) SampleConfig() string {
@@ -125,6 +129,11 @@ func compileFilter(conv *Conversion) (*ConversionFilter, error) {
 		return nil, err
 	}
 
+	cf.Timestamp, err = filter.Compile([]string{conv.Timestamp})
+	if err != nil {
+		return nil, err
+	}
+
 	return cf, nil
 }
 
@@ -195,6 +204,18 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 
 			metric.RemoveTag(key)
 			metric.AddField(key, v)
+			continue
+		}
+
+		if p.tagConversions.Timestamp != nil && p.tagConversions.Timestamp.Match(key) {
+			time, err := internal.ParseTimestamp(p.Tags.TimestampFormat, value, "")
+			if err != nil {
+				p.Log.Errorf("error converting to timestamp [%T]: %v", value, value)
+				continue
+			}
+
+			metric.RemoveTag(key)
+			metric.SetTime(time)
 			continue
 		}
 	}
@@ -295,6 +316,18 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 
 			metric.RemoveField(key)
 			metric.AddField(key, v)
+			continue
+		}
+
+		if p.fieldConversions.Timestamp != nil && p.fieldConversions.Timestamp.Match(key) {
+			time, err := internal.ParseTimestamp(p.Fields.TimestampFormat, value, "")
+			if err != nil {
+				p.Log.Errorf("error converting to timestamp [%T]: %v", value, value)
+				continue
+			}
+
+			metric.RemoveField(key)
+			metric.SetTime(time)
 			continue
 		}
 	}

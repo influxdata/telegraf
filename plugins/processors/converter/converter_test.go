@@ -464,6 +464,148 @@ func TestConverter(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "from unix timestamp field",
+			converter: &Converter{
+				Fields: &Conversion{
+					Timestamp:       "time",
+					TimestampFormat: "unix",
+				},
+			},
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":    42.0,
+					"time": 1111111111,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"a": 42.0,
+					},
+					time.Unix(1111111111, 0),
+				),
+			},
+		},
+		{
+			name: "from unix timestamp tag",
+			converter: &Converter{
+				Tags: &Conversion{
+					Timestamp:       "time",
+					TimestampFormat: "unix",
+				},
+			},
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"time": "1677610769",
+				},
+				map[string]interface{}{
+					"a": 41.0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"a": 41.0,
+					},
+					time.Unix(1677610769, 0),
+				),
+			},
+		},
+		{
+			name: "from rfc3339 timestamp field",
+			converter: &Converter{
+				Fields: &Conversion{
+					Timestamp:       "time",
+					TimestampFormat: "rfc3339",
+				},
+			},
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":    42.0,
+					"time": "2009-02-13T23:31:30Z",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"a": 42.0,
+					},
+					time.Unix(1234567890, 0),
+				),
+			},
+		},
+		{
+			name: "from custom timestamp field",
+			converter: &Converter{
+				Fields: &Conversion{
+					Timestamp:       "time",
+					TimestampFormat: "2006-01-02 15:04:05 MST",
+				},
+			},
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":    42.0,
+					"time": "2016-03-01 02:39:59 MST",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"a": 42.0,
+					},
+					time.Unix(1456799999, 0),
+				),
+			},
+		},
+		{
+			name: "invalid timestamp format",
+			converter: &Converter{
+				Fields: &Conversion{
+					Timestamp:       "time",
+					TimestampFormat: "2006-01-0",
+				},
+			},
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":    42.0,
+					"time": "2022-07-04 01:30:59 MST",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"a":    42.0,
+						"time": "2022-07-04 01:30:59 MST",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

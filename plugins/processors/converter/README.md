@@ -41,6 +41,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     boolean = []
     float = []
 
+    ## Optional tag to use as metric timestamp
+    # timestmap = ""
+    ## Optional format of the timestamp determined by the tag above.
+    ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
+    ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
+    # timestamp_format = ""
+
   ## Fields to convert
   ##
   ## The table key determines the target type, and the array of key-values
@@ -54,6 +61,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     unsigned = []
     boolean = []
     float = []
+
+    ## Optional field to use as metric timestamp
+    # timestmap = ""
+    ## Optional format of the timestamp determined by the field above.
+    ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
+    ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
+    # timestamp_format = ""
 ```
 
 ### Example
@@ -96,3 +110,19 @@ Rename the measurement from a tag value:
 - mqtt_consumer,topic=sensor temp=42
 + sensor temp=42
 ```
+
+Set the metric timestamp from a tag:
+
+```toml
+[[processors.converter]]
+  [processors.converter.tags]
+    timestamp = ["time"]
+    timestamp_format = "unix
+```
+
+```diff
+- metric,time="1677610769" temp=42
++ metric temp=42 1677610769
+```
+
+This is also possible via the fields converter.
