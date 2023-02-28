@@ -16,6 +16,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+// If SchemaRegistry is set, we assume that our input will be in
+// Confluent Wire Format
+// (https://docs.confluent.io/platform/current/schema-registry/serdes-develop/index.html#wire-format) and we will load the schema from the registry.
+
+// If Schema is set, we assume the input will be Avro binary format, without
+// an attached schema or schema fingerprint
+
 type Parser struct {
 	MetricName      string            `toml:"metric_name"`
 	SchemaRegistry  string            `toml:"avro_schema_registry"`
@@ -46,29 +53,42 @@ func (p *Parser) Init() error {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	schemaID, binaryData, err := p.extractSchemaAndMessage(buf)
-	if err != nil {
-		return nil, err
-	}
-
 	var schema string
 	var codec *goavro.Codec
+	var err error
+	var message []byte
+	message = buf[:]
 
 	if p.SchemaRegistry != "" {
+		// The input must be Confluent Wire Protocol
+		if buf[0] != 0 {
+			return nil, errors.New("First byte is not 0: not Confluent Wire Protocol")
+		}
+		schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
 		schemastruct, err := p.registryObj.getSchemaAndCodec(schemaID)
 		if err != nil {
 			return nil, err
 		}
 		schema = schemastruct.Schema
 		codec = schemastruct.Codec
+		message = buf[5:]
 	} else {
+		// Check for single-object encoding
+		magicBytes := int(binary.BigEndian.Uint16(buf[:2]))
+		expectedMagic := int(binary.BigEndian.Uint16([]byte("c301")))
+		if magicBytes == expectedMagic {
+			message = buf[10:]
+			// We could in theory validate the fingerprint against
+			// the schema.  Maybe later.
+			// We would get the fingerprint as int(binary.LittleEndian.Uint64(buf[2:10]))
+		} // Otherwise we assume bare Avro binary
 		schema = p.Schema
 		codec, err = goavro.NewCodec(schema)
 		if err != nil {
 			return nil, err
 		}
 	}
-	native, _, err := codec.NativeFromBinary(binaryData)
+	native, _, err := codec.NativeFromBinary(message)
 	if err != nil {
 		return nil, err
 	}
@@ -83,16 +103,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	return []telegraf.Metric{m}, nil
-}
-
-func (p *Parser) extractSchemaAndMessage(buf []byte) (int, []byte, error) {
-	if len(buf) < 5 {
-		err := fmt.Errorf("buf is %d bytes; must be at least 5", len(buf))
-		return 0, nil, err
-	}
-	schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
-	binaryData := buf[5:]
-	return schemaID, binaryData, nil
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {

@@ -1,2 +1,2 @@
-exactly one of 'schema_registry' or 'schema' must be specified
+could not instantiate parser: exactly one of 'schema_registry' or 'schema' must be specified
 
