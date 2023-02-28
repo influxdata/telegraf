@@ -67,6 +67,11 @@ func (*Kubernetes) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns the description of this plugin
+func (k *Kubernetes) Description() string {
+	return "Read metrics from the kubernetes kubelet api"
+}
+
 func (k *Kubernetes) Init() error {
 	// If neither are provided, use the default service account.
 	if k.BearerToken == "" && k.BearerTokenString == "" {

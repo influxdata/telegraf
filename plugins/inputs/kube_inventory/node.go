@@ -35,6 +35,7 @@ func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulato
 	tags := map[string]string{
 		"node_name":         n.Name,
 		"cluster_namespace": n.Annotations["cluster.x-k8s.io/cluster-namespace"],
+		"version":           n.Status.NodeInfo.KubeletVersion,
 	}
 
 	for resourceName, val := range n.Status.Capacity {
