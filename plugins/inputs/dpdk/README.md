@@ -57,6 +57,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Reads metrics from DPDK applications using v2 telemetry interface.
+# This plugin ONLY supports Linux
 [[inputs.dpdk]]
   ## Path to DPDK telemetry socket. This shall point to v2 version of DPDK
   ## telemetry interface.

@@ -76,6 +76,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Gather packets and bytes throughput from iptables
+# This plugin ONLY supports Linux
 [[inputs.iptables]]
   ## iptables require root access on most systems.
   ## Setting 'use_sudo' to true will make use of sudo to run iptables.
