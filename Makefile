@@ -74,6 +74,7 @@ all: deps docs telegraf
 help:
 	@echo 'Targets:'
 	@echo '  all          - download dependencies and compile telegraf binary'
+	@echo '  config       - generate the config from current repo state'
 	@echo '  deps         - download dependencies'
 	@echo '  docs         - embed sample-configurations into READMEs'
 	@echo '  telegraf     - compile telegraf binary'
@@ -116,6 +117,11 @@ embed_readme_%:
 	GOOS=linux go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 	GOOS=windows go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 	GOOS=darwin go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+
+.PHONY: config
+config:
+	@echo "generating default config"
+	go run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
 docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
@@ -218,6 +224,7 @@ check-deps:
 clean:
 	rm -f telegraf
 	rm -f telegraf.exe
+	rm -f etc/telegraf.conf
 	rm -rf build
 	rm -rf cmd/telegraf/resource.syso
 	rm -rf cmd/telegraf/versioninfo.json
@@ -327,7 +334,7 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: docs $(include_packages)
+package: docs config $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
