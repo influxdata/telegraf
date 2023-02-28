@@ -31,13 +31,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - radius
   - tags:
+    - response_code
     - source
     - source_port
   - fields:
-    - responsetime_ms (int)
+    - responsetime_ms (int64)
 
 ## Example Output
 
 ```shell
-radius,source=hostname.com,source_port=1812 responsetime_ms=311i 1677526200000000000
+radius,response_code=Access-Accept,source=hostname.com,source_port=1812 responsetime_ms=311i 1677526200000000000
 ```

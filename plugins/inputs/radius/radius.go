@@ -114,11 +114,14 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	if err != nil {
 		r.Log.Warnf("error on new request to %s : %s", server, err)
 		fields["responsetime_ms"] = time.Duration(r.ResponseTimeout).Milliseconds()
+		tags["response_code"] = ""
 	} else if response.Code != radius.CodeAccessAccept {
 		r.Log.Warnf("Got radius return code: %d", response.Code)
 		fields["responsetime_ms"] = time.Duration(r.ResponseTimeout).Milliseconds()
+		tags["response_code"] = response.Code.String()
 	} else {
 		fields["responsetime_ms"] = duration.Milliseconds()
+		tags["response_code"] = response.Code.String()
 	}
 
 	acc.AddFields("radius", fields, tags)
