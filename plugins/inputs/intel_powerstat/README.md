@@ -23,6 +23,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Intel PowerStat plugin enables monitoring of platform metrics (power, TDP)
 # and per-CPU metrics like temperature, power and utilization.
+# This plugin ONLY supports Linux
 [[inputs.intel_powerstat]]
   ## The user can choose which package metrics are monitored by the plugin with
   ## the package_metrics setting:

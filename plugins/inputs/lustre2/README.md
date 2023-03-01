@@ -19,6 +19,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Read metrics from local Lustre service on OST, MDS
+# This plugin ONLY supports Linux
 [[inputs.lustre2]]
   ## An array of /proc globs to search for Lustre stats
   ## If not specified, the default will work on Lustre 2.5.x
