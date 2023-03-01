@@ -19,6 +19,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Monitor sensors, requires lm-sensors package
+# This plugin ONLY supports Linux
 [[inputs.sensors]]
   ## Remove numbers from field names.
   ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
