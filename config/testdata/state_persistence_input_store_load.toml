@@ -1,0 +1,17 @@
+[[inputs.statetest]]
+  servers = ["myserverA.org"]
+  port = 42
+  method = "strange"
+
+[[inputs.statetest]]
+  servers = ["myserverB.org"]
+  port = 23
+  method = "strange"
+
+[[inputs.statetest]]
+  servers = ["myserverC.org"]
+  port = 80
+  method = "strange"
+  [inputs.statetest.params]
+    a = "foo"
+    b = "bar"

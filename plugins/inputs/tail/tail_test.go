@@ -620,6 +620,7 @@ func TestCharacterEncoding(t *testing.T) {
 			}
 
 			plugin.SetParserFunc(NewInfluxParser)
+			require.NoError(t, plugin.Init())
 
 			if tt.offset != 0 {
 				plugin.offsets = map[string]int64{
@@ -627,12 +628,8 @@ func TestCharacterEncoding(t *testing.T) {
 				}
 			}
 
-			err := plugin.Init()
-			require.NoError(t, err)
-
 			var acc testutil.Accumulator
-			err = plugin.Start(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Start(&acc))
 			acc.Wait(len(tt.expected))
 			plugin.Stop()
 
