@@ -24,6 +24,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Input plugin to collect Windows Event Log messages
+# This plugin ONLY supports Windows
 [[inputs.win_eventlog]]
   ## Telegraf should have Administrator permissions to subscribe for some Windows Events channels
   ## (System log, for example)

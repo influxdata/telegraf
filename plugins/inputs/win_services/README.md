@@ -18,6 +18,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Input plugin to report Windows services info.
+# This plugin ONLY supports Windows
 [[inputs.win_services]]
   ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted. Case sensitive.
   service_names = [

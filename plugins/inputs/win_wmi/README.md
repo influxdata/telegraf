@@ -23,6 +23,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Input plugin to query Windows Management Instrumentation
+# This plugin ONLY supports Windows
 [[inputs.win_wmi]]
   # specifies a prefix to attach to the measurement name
   name_prefix = "win_wmi_"
