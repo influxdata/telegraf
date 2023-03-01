@@ -479,5 +479,8 @@ func (d *PacketDecoder) decodeUDPHeader(r io.Reader) (h UDPHeader, err error) {
 
 func read(r io.Reader, data interface{}, name string) error {
 	err := binary.Read(r, binary.BigEndian, data)
-	return fmt.Errorf("failed to read %q: %w", name, err)
+	if err != nil {
+		return fmt.Errorf("failed to read %q: %w", name, err)
+	}
+	return nil
 }
