@@ -110,7 +110,7 @@ func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field
 	for _, def := range fieldDefs {
 		f, err := c.newFieldFromDefinition(def)
 		if err != nil {
-			return nil, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
+			return nil, fmt.Errorf("initializing field %q failed: %w", def.Name, err)
 		}
 		fields = append(fields, f)
 	}

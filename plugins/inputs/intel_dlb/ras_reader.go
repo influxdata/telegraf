@@ -21,7 +21,7 @@ type rasReaderImpl struct {
 func (rasReaderImpl) gatherPaths(pattern string) ([]string, error) {
 	filePaths, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("glob failed for pattern: %s: %v", pattern, err)
+		return nil, fmt.Errorf("glob failed for pattern %q: %w", pattern, err)
 	}
 
 	if len(filePaths) == 0 {

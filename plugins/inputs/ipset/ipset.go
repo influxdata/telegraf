@@ -111,7 +111,7 @@ func setList(timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
 	cmd.Stdout = &out
 	err = internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running ipset save: %s", err)
+		return &out, fmt.Errorf("error running ipset save: %w", err)
 	}
 
 	return &out, nil

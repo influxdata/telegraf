@@ -29,7 +29,7 @@ func (e *iaEntitiesResolver) resolveEntities(coreEntities []*CoreEventEntity, un
 		if entity.allEvents {
 			newEvents, _, err := e.resolveAllEvents()
 			if err != nil {
-				return fmt.Errorf("failed to resolve all events: %v", err)
+				return fmt.Errorf("failed to resolve all events: %w", err)
 			}
 			entity.parsedEvents = newEvents
 			continue
@@ -55,7 +55,7 @@ func (e *iaEntitiesResolver) resolveEntities(coreEntities []*CoreEventEntity, un
 		if entity.allEvents {
 			_, newEvents, err := e.resolveAllEvents()
 			if err != nil {
-				return fmt.Errorf("failed to resolve all events: %v", err)
+				return fmt.Errorf("failed to resolve all events: %w", err)
 			}
 			entity.parsedEvents = newEvents
 			continue
@@ -84,8 +84,8 @@ func (e *iaEntitiesResolver) resolveAllEvents() (coreEvents []*eventWithQuals, u
 
 	perfEvents, err := e.transformer.Transform(e.reader, ia.NewNameMatcher())
 	if err != nil {
-		re, ok := err.(*ia.TransformationError)
-		if !ok {
+		var re *ia.TransformationError
+		if !errors.As(err, &re) {
 			return nil, nil, err
 		}
 		if e.log != nil && re != nil {
@@ -131,7 +131,7 @@ func (e *iaEntitiesResolver) resolveEvent(name string, qualifiers []string) (ia.
 	matcher := ia.NewNameMatcher(name)
 	perfEvents, err := e.transformer.Transform(e.reader, matcher)
 	if err != nil {
-		return custom, fmt.Errorf("failed to transform perf events: %v", err)
+		return custom, fmt.Errorf("failed to transform perf events: %w", err)
 	}
 	if len(perfEvents) < 1 {
 		return custom, fmt.Errorf("failed to resolve unknown event %q", name)

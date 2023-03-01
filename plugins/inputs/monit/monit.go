@@ -235,7 +235,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	decoder := xml.NewDecoder(resp.Body)
 	decoder.CharsetReader = charset.NewReaderLabel
 	if err := decoder.Decode(&status); err != nil {
-		return fmt.Errorf("error parsing input: %v", err)
+		return fmt.Errorf("error parsing input: %w", err)
 	}
 
 	tags := map[string]string{

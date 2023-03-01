@@ -96,7 +96,7 @@ func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error
 	if entity.PerfGroup {
 		err := ea.activateCoreEventsGroup(entity)
 		if err != nil {
-			return fmt.Errorf("failed to activate core events group: %v", err)
+			return fmt.Errorf("failed to activate core events group: %w", err)
 		}
 	} else {
 		for _, event := range entity.parsedEvents {
@@ -169,7 +169,7 @@ func (ea *iaEntitiesActivator) activateCoreEventsGroup(entity *CoreEventEntity) 
 
 	placements, err := ea.placementMaker.makeCorePlacements(entity.parsedCores, leader.Event)
 	if err != nil {
-		return fmt.Errorf("failed to make core placements: %v", err)
+		return fmt.Errorf("failed to make core placements: %w", err)
 	}
 
 	for _, plc := range placements {

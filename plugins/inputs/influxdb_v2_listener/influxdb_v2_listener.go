@@ -152,7 +152,7 @@ func (h *InfluxDBV2Listener) Start(acc telegraf.Accumulator) error {
 
 	go func() {
 		err = h.server.Serve(h.listener)
-		if err != http.ErrServerClosed {
+		if !errors.Is(err, http.ErrServerClosed) {
 			h.Log.Infof("Error serving HTTP on %s", h.ServiceAddress)
 		}
 	}()
@@ -250,7 +250,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		if h.ParserType == "upstream" {
 			parser := influx_upstream.Parser{}
 			err = parser.Init()
-			if err != ErrEOF && err != nil {
+			if !errors.Is(err, ErrEOF) && err != nil {
 				h.Log.Debugf("Error initializing parser: %v", err.Error())
 				return
 			}
@@ -265,7 +265,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		} else {
 			parser := influx.Parser{}
 			err = parser.Init()
-			if err != ErrEOF && err != nil {
+			if !errors.Is(err, ErrEOF) && err != nil {
 				h.Log.Debugf("Error initializing parser: %v", err.Error())
 				return
 			}
@@ -279,7 +279,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			metrics, err = parser.Parse(bytes)
 		}
 
-		if err != ErrEOF && err != nil {
+		if !errors.Is(err, ErrEOF) && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, Invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)
