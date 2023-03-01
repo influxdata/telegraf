@@ -156,7 +156,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 	decoder := xml.NewDecoder(bytes.NewReader(stat))
 	decoder.CharsetReader = charset.NewReaderLabel
 	if err := decoder.Decode(&p); err != nil {
-		return fmt.Errorf("cannot parse input with error: %v", err)
+		return fmt.Errorf("cannot parse input with error: %w", err)
 	}
 
 	tags := map[string]string{

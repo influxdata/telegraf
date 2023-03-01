@@ -58,7 +58,8 @@ func (n *NetResponse) TCPGather() (map[string]string, map[string]interface{}, er
 	responseTime := time.Since(start).Seconds()
 	// Handle error
 	if err != nil {
-		if e, ok := err.(net.Error); ok && e.Timeout() {
+		var e net.Error
+		if errors.As(err, &e) && e.Timeout() {
 			setResult(Timeout, fields, tags, n.Expect)
 		} else {
 			setResult(ConnectionFailed, fields, tags, n.Expect)

@@ -104,7 +104,7 @@ var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)
 func (p *Service) Start(telegraf.Accumulator) (err error) {
 	addr, err := p.Address.Get()
 	if err != nil {
-		return fmt.Errorf("getting address failed: %v", err)
+		return fmt.Errorf("getting address failed: %w", err)
 	}
 	defer config.ReleaseSecret(addr)
 
@@ -156,7 +156,7 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 
 	addr, err := p.Address.Get()
 	if err != nil {
-		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %v", err)
+		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %w", err)
 	}
 	defer config.ReleaseSecret(addr)
 

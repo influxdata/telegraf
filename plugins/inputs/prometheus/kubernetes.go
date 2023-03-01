@@ -50,26 +50,26 @@ func loadConfig(kubeconfigPath string) (*rest.Config, error) {
 func (p *Prometheus) startK8s(ctx context.Context) error {
 	config, err := loadConfig(p.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("failed to get rest.Config from %v - %v", p.KubeConfig, err)
+		return fmt.Errorf("failed to get rest.Config from %q: %w", p.KubeConfig, err)
 	}
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		u, err := user.Current()
 		if err != nil {
-			return fmt.Errorf("failed to get current user - %v", err)
+			return fmt.Errorf("failed to get current user: %w", err)
 		}
 
 		kubeconfig := filepath.Join(u.HomeDir, ".kube/config")
 
 		config, err = loadConfig(kubeconfig)
 		if err != nil {
-			return fmt.Errorf("failed to get rest.Config from %v - %v", kubeconfig, err)
+			return fmt.Errorf("failed to get rest.Config from %q: %w", kubeconfig, err)
 		}
 
 		client, err = kubernetes.NewForConfig(config)
 		if err != nil {
-			return fmt.Errorf("failed to get kubernetes client - %v", err)
+			return fmt.Errorf("failed to get kubernetes client: %w", err)
 		}
 	}
 
@@ -240,7 +240,7 @@ func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 	// Will have expected type errors for some parts of corev1.Pod struct for some unused fields
 	// Instead have nil checks for every used field in case of incorrect decoding
 	if err := json.NewDecoder(resp.Body).Decode(&cadvisorPodsResponse); err != nil {
-		return fmt.Errorf("decoding response failed: %v", err)
+		return fmt.Errorf("decoding response failed: %w", err)
 	}
 	pods := cadvisorPodsResponse.Items
 

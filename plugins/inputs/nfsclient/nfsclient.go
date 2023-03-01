@@ -4,6 +4,7 @@ package nfsclient
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -50,8 +51,9 @@ func convertToUint64(line []string) ([]uint64, error) {
 	for _, l := range line[1:] {
 		val, err := strconv.ParseUint(l, 10, 64)
 		if err != nil {
-			if numError, ok := err.(*strconv.NumError); ok {
-				if numError.Err == strconv.ErrRange {
+			var numError *strconv.NumError
+			if errors.As(err, &numError) {
+				if errors.Is(numError.Err, strconv.ErrRange) {
 					return nil, fmt.Errorf("errrange: line:[%v] raw:[%v] -> parsed:[%v]", line, l, val)
 				}
 			}

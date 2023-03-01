@@ -4,6 +4,7 @@ package powerdns
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -73,7 +74,7 @@ func (p *Powerdns) gatherServer(address string, acc telegraf.Accumulator) error 
 	for {
 		n, err := rw.Read(tmp)
 		if err != nil {
-			if err != io.EOF {
+			if !errors.Is(err, io.EOF) {
 				return err
 			}
 

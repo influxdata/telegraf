@@ -149,15 +149,15 @@ func (p *Prometheus) Init() error {
 		var err error
 		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
 		if err != nil {
-			return fmt.Errorf("error parsing the specified label selector(s): %s", err.Error())
+			return fmt.Errorf("error parsing the specified label selector(s): %w", err)
 		}
 		p.podFieldSelector, err = fields.ParseSelector(p.KubernetesFieldSelector)
 		if err != nil {
-			return fmt.Errorf("error parsing the specified field selector(s): %s", err.Error())
+			return fmt.Errorf("error parsing the specified field selector(s): %w", err)
 		}
 		isValid, invalidSelector := fieldSelectorIsSupported(p.podFieldSelector)
 		if !isValid {
-			return fmt.Errorf("the field selector %s is not supported for pods", invalidSelector)
+			return fmt.Errorf("the field selector %q is not supported for pods", invalidSelector)
 		}
 
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
@@ -339,17 +339,17 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		resp, err = uClient.Do(req)
 	}
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", u.URL, err)
+		return fmt.Errorf("error making HTTP request to %q: %w", u.URL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s returned HTTP status %s", u.URL, resp.Status)
+		return fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error reading body: %s", err)
+		return fmt.Errorf("error reading body: %w", err)
 	}
 
 	if p.MetricVersion == 2 {
@@ -363,8 +363,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading metrics for %s: %s",
-			u.URL, err)
+		return fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}
 
 	for _, metric := range metrics {
