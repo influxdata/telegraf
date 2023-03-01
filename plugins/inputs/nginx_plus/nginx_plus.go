@@ -5,6 +5,7 @@ import (
 	"bufio"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -273,7 +274,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	dec := json.NewDecoder(r)
 	status := &Status{}
 	if err := dec.Decode(status); err != nil {
-		return fmt.Errorf("error while decoding JSON response")
+		return errors.New("error while decoding JSON response")
 	}
 	status.Gather(tags, acc)
 	return nil
