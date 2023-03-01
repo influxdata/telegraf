@@ -6,6 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -116,7 +117,7 @@ func (s *Suricata) handleServerConnection(ctx context.Context, acc telegraf.Accu
 			// we want to handle EOF as an opportunity to wait for a new
 			// connection -- this could, for example, happen when Suricata is
 			// restarted while Telegraf is running.
-			if err != io.EOF {
+			if !errors.Is(err, io.EOF) {
 				acc.AddError(err)
 				return
 			}

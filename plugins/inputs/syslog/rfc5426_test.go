@@ -1,6 +1,7 @@
 package syslog
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -258,8 +259,9 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 			_, err = conn.Write(tc.data)
 			conn.Close()
 			if err != nil {
-				if err, ok := err.(*net.OpError); ok {
-					if err.Err.Error() == "write: message too long" {
+				var opErr *net.OpError
+				if errors.As(err, &opErr) {
+					if opErr.Err.Error() == "write: message too long" {
 						return
 					}
 				}

@@ -80,7 +80,7 @@ func (r *RethinkDB) gatherServer(server *Server, acc telegraf.Accumulator) error
 
 	server.session, err = gorethink.Connect(connectOpts)
 	if err != nil {
-		return fmt.Errorf("unable to connect to RethinkDB, %s", err.Error())
+		return fmt.Errorf("unable to connect to RethinkDB: %w", err)
 	}
 	defer server.session.Close()
 

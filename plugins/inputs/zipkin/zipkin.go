@@ -133,7 +133,7 @@ func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
 		// This interferes with telegraf's internal data collection,
 		// by making it appear as if a serious error occurred.
 		if err != http.ErrServerClosed {
-			acc.AddError(fmt.Errorf("error listening: %v", err))
+			acc.AddError(fmt.Errorf("error listening: %w", err))
 		}
 	}
 }

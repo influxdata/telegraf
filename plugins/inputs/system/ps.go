@@ -1,6 +1,7 @@
 package system
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -198,7 +199,7 @@ func (s *SystemPS) NetConntrack(perCPU bool) ([]net.ConntrackStat, error) {
 
 func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
 	m, err := disk.IOCounters(names...)
-	if err == internal.ErrNotImplemented {
+	if errors.Is(err, internal.ErrNotImplemented) {
 		return nil, nil
 	}
 
