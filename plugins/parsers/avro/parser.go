@@ -43,11 +43,11 @@ func (p *Parser) Init() error {
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
 		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
 	}
-	if p.SchemaRegistry != "" {
-		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
-	}
 	if p.TimestampFormat == "" {
 		return errors.New("must specify 'timestamp_format'")
+	}
+	if p.SchemaRegistry != "" {
+		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
 	}
 	return nil
 }
@@ -59,10 +59,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var message []byte
 	message = buf[:]
 
-	if p.SchemaRegistry != "" {
+	if p.registryObj != nil {
 		// The input must be Confluent Wire Protocol
 		if buf[0] != 0 {
-			return nil, errors.New("First byte is not 0: not Confluent Wire Protocol")
+			return nil, errors.New("first byte is not 0: not Confluent Wire Protocol")
 		}
 		schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
 		schemastruct, err := p.registryObj.getSchemaAndCodec(schemaID)

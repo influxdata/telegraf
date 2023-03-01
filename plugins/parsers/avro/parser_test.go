@@ -22,8 +22,10 @@ func TestCases(t *testing.T) {
 	// Make sure testdata contains data
 	require.NotEmpty(t, folders)
 
-	testdataParser := &influx.Parser{}
-	require.NoError(t, testdataParser.Init())
+	// Set up for file inputs
+	inputs.Add("file", func() telegraf.Input {
+		return &file.File{}
+	})
 
 	for _, f := range folders {
 		fname := f.Name()
@@ -33,9 +35,9 @@ func TestCases(t *testing.T) {
 		expectedErrorFilename := filepath.Join(testdataPath, "expected.err")
 
 		t.Run(fname, func(t *testing.T) {
-			inputs.Add("file", func() telegraf.Input {
-				return &file.File{}
-			})
+			// Get parser to parse expected output
+			testdataParser := &influx.Parser{}
+			require.NoError(t, testdataParser.Init())
 
 			var expected []telegraf.Metric
 			if _, err := os.Stat(expectedFilename); err == nil {
@@ -62,19 +64,13 @@ func TestCases(t *testing.T) {
 			// Configure the plugin
 			cfg := config.NewConfig()
 			err := cfg.LoadConfig(configFilename)
-			if err != nil {
-				actualErrors = append(actualErrors, err.Error())
-			} else {
-				for _, input := range cfg.Inputs {
-					err := input.Init()
-					if err != nil {
-						actualErrors = append(actualErrors, err.Error())
-					} else {
-						err := input.Gather(&acc)
-						if err != nil {
-							actualErrors = append(actualErrors, err.Error())
-						}
-					}
+			require.NoError(t, err)
+
+			for _, input := range cfg.Inputs {
+				require.NoError(t, input.Init())
+
+				if err := input.Gather(&acc); err != nil {
+					actualErrors = append(actualErrors, err.Error())
 				}
 			}
 			require.ElementsMatch(t, actualErrors, expectedErrors)

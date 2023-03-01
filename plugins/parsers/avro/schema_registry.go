@@ -35,7 +35,6 @@ func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
 	defer resp.Body.Close()
 
 	var jsonResponse map[string]interface{}
-
 	if err := json.NewDecoder(resp.Body).Decode(&jsonResponse); err != nil {
 		return nil, err
 	}
