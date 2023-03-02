@@ -362,7 +362,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	}
 
 	// Make sure we safely erase secrets
-	memguard.CatchInterrupt()
 	defer memguard.Purge()
 
 	return app.Run(args)
