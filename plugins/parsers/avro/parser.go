@@ -215,24 +215,16 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	if name == "" {
 		return nil, errors.New("could not determine measurement name")
 	}
-	timestamp := time.Now()
+	var timestamp time.Time
 	if p.Timestamp != "" {
-		rawTime := fields[p.Timestamp]
-		timeIncs, ok := rawTime.(int64)
-		if !ok {
-			return nil, fmt.Errorf("timestamp %v could not be converted to int64", rawTime)
+		rawTime := fmt.Sprintf("%v", fields[p.Timestamp])
+		var err error
+		timestamp, err = internal.ParseTimestamp(p.TimestampFormat, rawTime, "")
+		if err != nil {
+			return nil, fmt.Errorf("could not parse '%s' to '%s'", rawTime, p.TimestampFormat)
 		}
-		if p.TimestampFormat == "unix_us" {
-			timestamp = time.UnixMicro(timeIncs)
-		} else if p.TimestampFormat == "unix_ms" {
-			timestamp = time.UnixMilli(timeIncs)
-		} else if p.TimestampFormat == "unix_ns" {
-			// If it's a single Avro field, it's less than
-			// 2**63 - 1 ... which will last a while
-			timestamp = time.Unix(0, timeIncs)
-		} else {
-			timestamp = time.Unix(timeIncs, 0)
-		}
+	} else {
+		timestamp = time.Now()
 	}
 	return metric.New(name, tags, fields, timestamp), nil
 }
