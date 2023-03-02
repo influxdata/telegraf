@@ -300,22 +300,20 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 		return nil, err
 	}
 
+	var evterr error
 	for _, eventHandle := range eventHandles {
-		if eventHandle != 0 {
-			event, err := w.renderEvent(eventHandle)
-			if err == nil {
-				events = append(events, event)
-			}
+		if eventHandle == 0 {
+			continue
 		}
-	}
+		if event, err := w.renderEvent(eventHandle); err == nil {
+			events = append(events, event)
+		}
 
-	for i := 0; i < len(eventHandles); i++ {
-		err := _EvtClose(eventHandles[i])
-		if err != nil {
-			return events, err
+		if err := _EvtClose(eventHandle); err != nil && evterr == nil {
+			evterr = err
 		}
 	}
-	return events, nil
+	return events, evterr
 }
 
 func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
