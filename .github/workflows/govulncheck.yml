@@ -3,9 +3,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
   schedule:
     # Trigger every day at 16:00 UTC
     - cron: '0 16 * * *'
