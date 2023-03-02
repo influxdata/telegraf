@@ -69,6 +69,8 @@ The message is supposed to be encoded as follows:
   ## Avro fields to be used as timestamp; if empty, current time will
   ## be used for the measurement timestamp.
   # avro_timestamp = ""
+  ## If avro_timestamp is specified, avro_timestamp_format must be set
+  ## to one of 'unix', 'unix_ms', 'unix_us', or 'unix_ns'
   # avro_timestamp_format = "unix"
   
   ## Used to separate parts of array structures.  As above, the default
@@ -81,15 +83,24 @@ The message is supposed to be encoded as follows:
 
 ```
 
-### avro_timestamp and avro_timestamp_format
+### `avro_timestamp` and `avro_timestamp_format`
 
-By default the current time will be used for all created metrics; to set
-the time using the Avro message you can use the `avro_timestamp` and
-`avro_timestamp_format` options together to set the time to a value in
-the parsed document.
+By default the current time at ingestion will be used for all created
+metrics; to set the time using the Avro message you can use the
+`avro_timestamp` and `avro_timestamp_format` options together to set the
+time to a value in the parsed document.
 
 The `avro_timestamp` option specifies the field containing the time
-value.  It must be set to `unix`, `unix_ms`, `unix_us` or `unix_ns`.
+value.  If it is not set, the time of record ingestion is used.  If it
+is set, the field may be any numerical type: notably, it is *not*
+constrained to an Avro `long` (int64) (which Avro uses for timestamps in
+millisecond or microsecond resolution).  However, it must represent the
+number of time increments since the Unix epoch (00:00 UTC 1 Jan 1970).
+
+The `avro_timestamp_format` option specifies the precision of the timestamp
+field, and, if set, must be one of `unix`, `unix_ms`, `unix_us`, or
+`unix_ns`.  If `avro_timestamp` is set, `avro_timestamp_format` must be
+as well.
 
 ## Metrics
 

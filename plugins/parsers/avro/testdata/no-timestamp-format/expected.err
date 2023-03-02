@@ -1,1 +1,1 @@
-could not instantiate parser: must specify 'timestamp_format'
+could not instantiate parser: if 'timestamp' field is specified, 'timestamp_format' must be as well

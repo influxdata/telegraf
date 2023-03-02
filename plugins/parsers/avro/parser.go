@@ -44,7 +44,12 @@ func (p *Parser) Init() error {
 		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
 	}
 	if p.TimestampFormat == "" {
-		return errors.New("must specify 'timestamp_format'")
+		if p.Timestamp != "" {
+			return errors.New("if 'timestamp' field is specified, 'timestamp_format' must be as well")
+		}
+		if p.TimestampFormat != "unix" && p.TimestampFormat != "unix_us" && p.TimestampFormat != "unix_ms" && p.TimestampFormat != "unix_ns" {
+			return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
+		}
 	}
 	if p.SchemaRegistry != "" {
 		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
@@ -138,6 +143,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		sTag, err := internal.ToString(data[tag])
 		if err != nil {
 			p.Log.Warnf("Could not convert %v to string for tag %q: %v", data[tag], tag, err)
+			continue
 		}
 		tags[tag] = sTag
 	}
@@ -209,7 +215,26 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	if name == "" {
 		return nil, errors.New("could not determine measurement name")
 	}
-	return metric.New(name, tags, fields, time.Now()), nil
+	timestamp := time.Now()
+	if p.Timestamp != "" {
+		rawTime := fields[p.Timestamp]
+		timeIncs, ok := rawTime.(int64)
+		if !ok {
+			return nil, fmt.Errorf("timestamp %v could not be converted to int64", rawTime)
+		}
+		if p.TimestampFormat == "unix_us" {
+			timestamp = time.UnixMicro(timeIncs)
+		} else if p.TimestampFormat == "unix_ms" {
+			timestamp = time.UnixMilli(timeIncs)
+		} else if p.TimestampFormat == "unix_ns" {
+			// If it's a single Avro field, it's less than
+			// 2**63 - 1 ... which will last a while
+			timestamp = time.Unix(0, timeIncs)
+		} else {
+			timestamp = time.Unix(timeIncs, 0)
+		}
+	}
+	return metric.New(name, tags, fields, timestamp), nil
 }
 
 func init() {
