@@ -79,7 +79,7 @@ The message is supposed to be encoded as follows:
   # avro_field_separator = "_"
 
   ## Default values for given tags: optional
-  # avro_default_tags = { "application": "hermes", "region": "central" }
+  # tags = { "application": "hermes", "region": "central" }
 
 ```
 
