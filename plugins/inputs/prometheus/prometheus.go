@@ -352,6 +352,11 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("error reading body: %s", err)
 	}
 
+	fmt.Printf("---\n%s\n---\n", string(body))
+	for k, v := range resp.Header {
+		fmt.Printf("%s: %s\n", k, v)
+	}
+
 	if p.MetricVersion == 2 {
 		parser := parserV2.Parser{
 			Header:          resp.Header,

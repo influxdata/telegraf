@@ -33,8 +33,10 @@ func Parse(buf []byte, header http.Header, ignoreTimestamp bool) ([]telegraf.Met
 	metricFamilies := make(map[string]*dto.MetricFamily)
 
 	if isProtobuf(header) {
+		fmt.Println("parsing protobuf message")
 		for {
 			mf := &dto.MetricFamily{}
+			fmt.Printf("###\n%s\n###\n", mf.String())
 			if _, ierr := pbutil.ReadDelimited(reader, mf); ierr != nil {
 				if ierr == io.EOF {
 					break
