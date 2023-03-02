@@ -9,8 +9,6 @@ on:
   schedule:
     # Trigger every day at 16:00 UTC
     - cron: '0 16 * * *'
-permissions:
-  security-events: write
 jobs:
   analyze:
     runs-on: ubuntu-latest
