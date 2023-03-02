@@ -126,6 +126,32 @@ func (d *DockerLogs) Init() error {
 	return nil
 }
 
+// State persistence interfaces
+func (d *DockerLogs) GetState() interface{} {
+	d.lastRecordMtx.Lock()
+	recordOffsets := make(map[string]time.Time, len(d.lastRecord))
+	for k, v := range d.lastRecord {
+		recordOffsets[k] = v
+	}
+	d.lastRecordMtx.Unlock()
+
+	return recordOffsets
+}
+
+func (d *DockerLogs) SetState(state interface{}) error {
+	recordOffsets, ok := state.(map[string]time.Time)
+	if !ok {
+		return fmt.Errorf("state has wrong type %T", state)
+	}
+	d.lastRecordMtx.Lock()
+	for k, v := range recordOffsets {
+		d.lastRecord[k] = v
+	}
+	d.lastRecordMtx.Unlock()
+
+	return nil
+}
+
 func (d *DockerLogs) addToContainerList(containerID string, cancel context.CancelFunc) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
