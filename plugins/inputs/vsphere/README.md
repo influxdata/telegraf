@@ -625,8 +625,8 @@ you must turn on vSAN performance service.
   ]
   # by default vsan_metric_skip_verify = false
   vsan_metric_skip_verify = true
-  # vsan_metric_exclude = ["*"]
-  vsan_cluster_include = ["/*/host/**"]
+  # vsan_metric_exclude = [ ]
+  # vsan_cluster_include = [ "/*/host/**" ] # Inventory path to clusters to collect (by default all are collected)
   
   collect_concurrency = 5
   discover_concurrency = 5
@@ -641,8 +641,8 @@ you must turn on vSAN performance service.
 
 * Use `vsan_metric_include = [...]` to define the vSAN metrics that you want to collect.
 For example, `vsan_metric_include = ["summary.*", "performance.host-domclient", "performance.cache-disk", "performance.disk-group", "performance.capacity-disk"]`.
-To include all supported vSAN metrics, use `vsan_metric_include = [ "*" ]`
-To disable all the vSAN metrics, use `vsan_metric_exclude = [ "*" ]`
+To include all supported vSAN metrics, use `vsan_metric_include = [ "*" ]`.
+To disable all the vSAN metrics, use `vsan_metric_exclude = [ "*" ]`.
 
 * `vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes).
 This option is given because some performance entities are not returned by the API, but we want to offer the flexibility if you really need the stats.
