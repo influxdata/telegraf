@@ -44,7 +44,9 @@ type WinEventLog struct {
 	ExcludeEmpty           []string        `toml:"exclude_empty"`
 	Log                    telegraf.Logger `toml:"-"`
 
-	subscription EvtHandle
+	subscription     EvtHandle
+	subscriptionFlag EvtSubscribeFlag
+	bookmark         EvtHandle
 }
 
 const bufferSize = 1 << 14
@@ -54,6 +56,21 @@ func (*WinEventLog) SampleConfig() string {
 }
 
 func (w *WinEventLog) Init() error {
+	w.subscriptionFlag = EvtSubscribeToFutureEvents
+	if w.FromBeginning {
+		w.subscriptionFlag = EvtSubscribeStartAtOldestRecord
+	}
+
+	bookmark, err := _EvtCreateBookmark(nil)
+	if err != nil {
+		return err
+	}
+	w.bookmark = bookmark
+
+	return nil
+}
+
+func (w *WinEventLog) Start(_ telegraf.Accumulator) error {
 	subscription, err := w.evtSubscribe()
 	if err != nil {
 		return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
@@ -62,6 +79,10 @@ func (w *WinEventLog) Init() error {
 	w.Log.Debug("Subscription handle id:", w.subscription)
 
 	return nil
+}
+
+func (w *WinEventLog) Stop() {
+	_ = _EvtClose(w.subscription)
 }
 
 // Gather Windows Event Log entries
@@ -260,11 +281,7 @@ func (w *WinEventLog) evtSubscribe() (EvtHandle, error) {
 		return 0, err
 	}
 
-	flag := EvtSubscribeToFutureEvents
-	if w.FromBeginning {
-		flag = EvtSubscribeStartAtOldestRecord
-	}
-	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr, 0, 0, 0, flag)
+	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr, 0, 0, 0, w.subscriptionFlag)
 	if err != nil {
 		return 0, err
 	}
@@ -306,6 +323,9 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 		}
 		if event, err := w.renderEvent(eventHandle); err == nil {
 			events = append(events, event)
+		}
+		if err := _EvtUpdateBookmark(w.bookmark, eventHandle); err != nil && evterr == nil {
+			evterr = err
 		}
 
 		if err := _EvtClose(eventHandle); err != nil && evterr == nil {

@@ -25,6 +25,7 @@ type EvtSubscribeFlag uint32
 const (
 	EvtSubscribeToFutureEvents      EvtSubscribeFlag = 1
 	EvtSubscribeStartAtOldestRecord EvtSubscribeFlag = 2
+	EvtSubscribeStartAfterBookmark  EvtSubscribeFlag = 3
 )
 
 // EvtRenderFlag uint32
@@ -33,9 +34,9 @@ type EvtRenderFlag uint32
 // EVT_RENDER_FLAGS enumeration
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385563(v=vs.85).aspx
 const (
-	//revive:disable:var-naming
 	// Render the event as an XML string. For details on the contents of the
 	// XML string, see the Event schema.
 	EvtRenderEventXml EvtRenderFlag = 1
-	//revive:enable:var-naming
+	// Render bookmark
+	EvtRenderBookmark EvtRenderFlag = 2
 )
