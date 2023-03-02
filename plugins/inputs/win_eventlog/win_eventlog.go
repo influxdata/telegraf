@@ -85,6 +85,37 @@ func (w *WinEventLog) Stop() {
 	_ = _EvtClose(w.subscription)
 }
 
+func (w *WinEventLog) GetState() interface{} {
+	bookmarkXML, err := w.renderBookmark(w.bookmark)
+	if err != nil {
+		w.Log.Errorf("State-persistence failed, cannot render bookmark: %w", err)
+		return ""
+	}
+	w.Log.Debugf("bookmark: %q", bookmarkXML)
+	return bookmarkXML
+}
+
+func (w *WinEventLog) SetState(state interface{}) error {
+	bookmarkXML, ok := state.(string)
+	if !ok {
+		return fmt.Errorf("invalid type %T for state", state)
+	}
+
+	ptr, err := syscall.UTF16PtrFromString(bookmarkXML)
+	if err != nil {
+		return err
+	}
+
+	bookmark, err := _EvtCreateBookmark(ptr)
+	if err != nil {
+		return err
+	}
+	w.bookmark = bookmark
+	w.subscriptionFlag = EvtSubscribeStartAfterBookmark
+
+	return nil
+}
+
 // Gather Windows Event Log entries
 func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 	for {
@@ -333,6 +364,19 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 		}
 	}
 	return events, evterr
+}
+
+func (w *WinEventLog) renderBookmark(bookmark EvtHandle) (string, error) {
+	var bufferUsed, propertyCount uint32
+
+	buf := make([]byte, bufferSize)
+	err := _EvtRender(0, bookmark, EvtRenderBookmark, uint32(len(buf)), &buf[0], &bufferUsed, &propertyCount)
+	if err != nil {
+		return "", err
+	}
+
+	x, err := DecodeUTF16(buf[:bufferUsed])
+	return string(x), err
 }
 
 func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
