@@ -91,7 +91,6 @@ func (w *WinEventLog) GetState() interface{} {
 		w.Log.Errorf("State-persistence failed, cannot render bookmark: %w", err)
 		return ""
 	}
-	w.Log.Debugf("bookmark: %q", bookmarkXML)
 	return bookmarkXML
 }
 
@@ -103,12 +102,12 @@ func (w *WinEventLog) SetState(state interface{}) error {
 
 	ptr, err := syscall.UTF16PtrFromString(bookmarkXML)
 	if err != nil {
-		return err
+		return fmt.Errorf("convertion to pointer failed: %w", err)
 	}
 
 	bookmark, err := _EvtCreateBookmark(ptr)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating bookmark failed: %w", err)
 	}
 	w.bookmark = bookmark
 	w.subscriptionFlag = EvtSubscribeStartAfterBookmark
@@ -312,7 +311,11 @@ func (w *WinEventLog) evtSubscribe() (EvtHandle, error) {
 		return 0, err
 	}
 
-	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr, 0, 0, 0, w.subscriptionFlag)
+	var bookmark EvtHandle
+	if w.subscriptionFlag == EvtSubscribeStartAfterBookmark {
+		bookmark = w.bookmark
+	}
+	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr, bookmark, 0, 0, w.subscriptionFlag)
 	if err != nil {
 		return 0, err
 	}
@@ -376,6 +379,12 @@ func (w *WinEventLog) renderBookmark(bookmark EvtHandle) (string, error) {
 	}
 
 	x, err := DecodeUTF16(buf[:bufferUsed])
+	if err != nil {
+		return "", err
+	}
+	if x[len(x)-1] == 0 {
+		x = x[:len(x)-1]
+	}
 	return string(x), err
 }
 
