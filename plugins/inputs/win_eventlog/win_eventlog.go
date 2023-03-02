@@ -67,17 +67,14 @@ func (w *WinEventLog) Init() error {
 
 // Gather Windows Event Log entries
 func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
-loop:
 	for {
 		events, err := w.fetchEvents(w.subscription)
 		if err != nil {
-			switch {
-			case err == ERROR_NO_MORE_ITEMS:
-				break loop
-			case err != nil:
-				w.Log.Errorf("Error getting events: %v", err)
-				return err
+			if err == ERROR_NO_MORE_ITEMS {
+				break
 			}
+			w.Log.Errorf("Error getting events: %v", err)
+			return err
 		}
 
 		for _, event := range events {
