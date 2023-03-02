@@ -33,7 +33,7 @@ type Parser struct {
 	Timestamp       string            `toml:"avro_timestamp"`
 	TimestampFormat string            `toml:"avro_timestamp_format"`
 	FieldSeparator  string            `toml:"avro_field_separator"`
-	DefaultTags     map[string]string `toml:"-"`
+	DefaultTags     map[string]string `toml:"tags"`
 
 	Log         telegraf.Logger `toml:"-"`
 	registryObj *schemaRegistry
@@ -152,6 +152,24 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		// If you have specified your fields in the config, you
 		// get what you asked for.
 		fieldList = p.Fields
+
+		// Except...if you specify the timestamp field, and it's
+		// not listed in your fields, you'll get it anyway.
+		// This will randomize your field ordering, which isn't
+		// ideal.  If you care, list the timestamp field.
+		if p.Timestamp != "" {
+			// quick list-to-set-to-list implementation
+			fieldSet := make(map[string]bool)
+			for k := range fieldList {
+				fieldSet[fieldList[k]] = true
+			}
+			fieldSet[p.Timestamp] = true
+			var newList []string
+			for s := range fieldSet {
+				newList = append(newList, s)
+			}
+			fieldList = newList
+		}
 	} else {
 		for k := range data {
 			// Otherwise, that which is not a tag is a field
