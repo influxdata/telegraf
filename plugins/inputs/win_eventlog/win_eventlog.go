@@ -45,10 +45,9 @@ type WinEventLog struct {
 	Log                    telegraf.Logger `toml:"-"`
 
 	subscription EvtHandle
-	buf          []byte
 }
 
-var bufferSize = 1 << 14
+const bufferSize = 1 << 14
 
 func (*WinEventLog) SampleConfig() string {
 	return sampleConfig
@@ -319,13 +318,14 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	var bufferUsed, propertyCount uint32
 
+	buf := make([]byte, bufferSize)
 	event := Event{}
-	err := _EvtRender(0, eventHandle, EvtRenderEventXml, uint32(len(w.buf)), &w.buf[0], &bufferUsed, &propertyCount)
+	err := _EvtRender(0, eventHandle, EvtRenderEventXml, uint32(len(buf)), &buf[0], &bufferUsed, &propertyCount)
 	if err != nil {
 		return event, err
 	}
 
-	eventXML, err := DecodeUTF16(w.buf[:bufferUsed])
+	eventXML, err := DecodeUTF16(buf[:bufferUsed])
 	if err != nil {
 		return event, err
 	}
@@ -482,7 +482,6 @@ func openPublisherMetadata(
 func init() {
 	inputs.Add("win_eventlog", func() telegraf.Input {
 		return &WinEventLog{
-			buf:                    make([]byte, bufferSize),
 			ProcessUserData:        true,
 			ProcessEventData:       true,
 			Separator:              "_",
