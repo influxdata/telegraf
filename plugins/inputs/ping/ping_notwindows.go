@@ -201,7 +201,7 @@ func processPingOutput(out string) (stats, error) {
 }
 
 func getPacketStats(line string) (trans int, recv int, err error) {
-	trans, recv = 0, 0
+	recv = 0
 
 	stats := strings.Split(line, ", ")
 	// Transmitted packets
