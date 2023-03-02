@@ -23,7 +23,8 @@ type EvtSubscribeFlag uint32
 // EVT_SUBSCRIBE_FLAGS enumeration
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385588(v=vs.85).aspx
 const (
-	EvtSubscribeToFutureEvents EvtSubscribeFlag = 1
+	EvtSubscribeToFutureEvents      EvtSubscribeFlag = 1
+	EvtSubscribeStartAtOldestRecord EvtSubscribeFlag = 2
 )
 
 // EvtRenderFlag uint32

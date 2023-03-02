@@ -29,21 +29,23 @@ var sampleConfig string
 
 // WinEventLog config
 type WinEventLog struct {
-	Locale                 uint32   `toml:"locale"`
-	EventlogName           string   `toml:"eventlog_name"`
-	Query                  string   `toml:"xpath_query"`
-	ProcessUserData        bool     `toml:"process_userdata"`
-	ProcessEventData       bool     `toml:"process_eventdata"`
-	Separator              string   `toml:"separator"`
-	OnlyFirstLineOfMessage bool     `toml:"only_first_line_of_message"`
-	TimeStampFromEvent     bool     `toml:"timestamp_from_event"`
-	EventTags              []string `toml:"event_tags"`
-	EventFields            []string `toml:"event_fields"`
-	ExcludeFields          []string `toml:"exclude_fields"`
-	ExcludeEmpty           []string `toml:"exclude_empty"`
-	subscription           EvtHandle
-	buf                    []byte
-	Log                    telegraf.Logger
+	Locale                 uint32          `toml:"locale"`
+	EventlogName           string          `toml:"eventlog_name"`
+	Query                  string          `toml:"xpath_query"`
+	FromBeginning          bool            `toml:"from_beginning"`
+	ProcessUserData        bool            `toml:"process_userdata"`
+	ProcessEventData       bool            `toml:"process_eventdata"`
+	Separator              string          `toml:"separator"`
+	OnlyFirstLineOfMessage bool            `toml:"only_first_line_of_message"`
+	TimeStampFromEvent     bool            `toml:"timestamp_from_event"`
+	EventTags              []string        `toml:"event_tags"`
+	EventFields            []string        `toml:"event_fields"`
+	ExcludeFields          []string        `toml:"exclude_fields"`
+	ExcludeEmpty           []string        `toml:"exclude_empty"`
+	Log                    telegraf.Logger `toml:"-"`
+
+	subscription EvtHandle
+	buf          []byte
 }
 
 var bufferSize = 1 << 14
@@ -52,18 +54,19 @@ func (*WinEventLog) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather Windows Event Log entries
-func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
-
-	var err error
-	if w.subscription == 0 {
-		w.subscription, err = w.evtSubscribe(w.EventlogName, w.Query)
-		if err != nil {
-			return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
-		}
+func (w *WinEventLog) Init() error {
+	subscription, err := w.evtSubscribe()
+	if err != nil {
+		return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
 	}
+	w.subscription = subscription
 	w.Log.Debug("Subscription handle id:", w.subscription)
 
+	return nil
+}
+
+// Gather Windows Event Log entries
+func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 loop:
 	for {
 		events, err := w.fetchEvents(w.subscription)
@@ -244,27 +247,28 @@ func (w *WinEventLog) shouldExcludeEmptyField(field string, fieldType string, fi
 	return false
 }
 
-func (w *WinEventLog) evtSubscribe(logName, xquery string) (EvtHandle, error) {
-	var logNamePtr, xqueryPtr *uint16
-
+func (w *WinEventLog) evtSubscribe() (EvtHandle, error) {
 	sigEvent, err := windows.CreateEvent(nil, 0, 0, nil)
 	if err != nil {
 		return 0, err
 	}
 	defer windows.CloseHandle(sigEvent)
 
-	logNamePtr, err = syscall.UTF16PtrFromString(logName)
+	logNamePtr, err := syscall.UTF16PtrFromString(w.EventlogName)
 	if err != nil {
 		return 0, err
 	}
 
-	xqueryPtr, err = syscall.UTF16PtrFromString(xquery)
+	xqueryPtr, err := syscall.UTF16PtrFromString(w.Query)
 	if err != nil {
 		return 0, err
 	}
 
-	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr,
-		0, 0, 0, EvtSubscribeToFutureEvents)
+	flag := EvtSubscribeToFutureEvents
+	if w.FromBeginning {
+		flag = EvtSubscribeStartAtOldestRecord
+	}
+	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr, 0, 0, 0, flag)
 	if err != nil {
 		return 0, err
 	}
