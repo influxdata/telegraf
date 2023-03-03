@@ -142,6 +142,17 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Use the given name as the SNI server name on each URL
+  # tls_server_name = ""
+
+  ## TLS renegotiation method, choose from "never", "once", "freely"
+  # tls_renegotiation_method = "never"
+
+  ## Enable/disable TLS
+  ## Set to true/false to enforce TLS being enabled/disabled. If not set,
+  ## enable TLS only if any of the other options are specified.
+  # tls_enable =
 ```
 
 `urls` can contain a unix socket as well. If a different path is required
