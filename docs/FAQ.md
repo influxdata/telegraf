@@ -1,6 +1,6 @@
 # Frequently Asked Questions
 
-# When will my PR or fix get released?
+## When will my PR or fix get released?
 
 Telegraf has four minor releases a year in March, June, September, and
 December. In between each of those minor releases, there are 2-4 bug fix
