@@ -68,7 +68,7 @@ type ParserCompatibility interface {
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
-	// DataFormat can be one of: json, influx, graphite, value, nagios
+	// DataFormat can be one of: avro, json, influx, graphite, value, nagios
 	DataFormat string `toml:"data_format"`
 
 	// Separator only applied to Graphite data.

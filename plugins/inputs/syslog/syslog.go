@@ -241,7 +241,7 @@ func (s *Syslog) listenStream(acc telegraf.Accumulator) {
 		s.connectionsMu.Unlock()
 
 		if err := s.setKeepAlive(tcpConn); err != nil {
-			acc.AddError(fmt.Errorf("unable to configure keep alive (%s): %s", s.Address, err))
+			acc.AddError(fmt.Errorf("unable to configure keep alive %q: %w", s.Address, err))
 		}
 
 		go s.handle(conn, acc)
@@ -274,7 +274,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		s.store(*r, conn.RemoteAddr(), acc)
 		if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
 			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
-				acc.AddError(fmt.Errorf("setting read deadline failed: %v", err))
+				acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
 			}
 		}
 	}
@@ -301,7 +301,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 
 	if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
 		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
-			acc.AddError(fmt.Errorf("setting read deadline failed: %v", err))
+			acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
 		}
 	}
 }

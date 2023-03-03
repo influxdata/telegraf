@@ -92,13 +92,13 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 
 	ln, err := net.Listen("tcp", wb.ServiceAddress)
 	if err != nil {
-		return fmt.Errorf("error starting server: %v", err)
+		return fmt.Errorf("error starting server: %w", err)
 	}
 
 	go func() {
 		if err := wb.srv.Serve(ln); err != nil {
 			if err != http.ErrServerClosed {
-				acc.AddError(fmt.Errorf("error listening: %v", err))
+				acc.AddError(fmt.Errorf("error listening: %w", err))
 			}
 		}
 	}()

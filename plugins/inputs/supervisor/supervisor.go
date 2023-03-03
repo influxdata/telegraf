@@ -62,20 +62,20 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 	var rawProcessData []processInfo
 	err := s.rpcClient.Call("supervisor.getAllProcessInfo", nil, &rawProcessData)
 	if err != nil {
-		return fmt.Errorf("failed to get processes info: %v", err)
+		return fmt.Errorf("failed to get processes info: %w", err)
 	}
 
 	// API call to get information about instance status
 	var status supervisorInfo
 	err = s.rpcClient.Call("supervisor.getState", nil, &status)
 	if err != nil {
-		return fmt.Errorf("failed to get processes info: %v", err)
+		return fmt.Errorf("failed to get processes info: %w", err)
 	}
 
 	// API call to get identification string
 	err = s.rpcClient.Call("supervisor.getIdentification", nil, &status.Ident)
 	if err != nil {
-		return fmt.Errorf("failed to get instance identification: %v", err)
+		return fmt.Errorf("failed to get instance identification: %w", err)
 	}
 
 	// Iterating through array of structs with processes info and adding fields to accumulator
@@ -90,7 +90,7 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 	// Adding instance info fields to accumulator
 	instanceTags, instanceFields, err := s.parseInstanceData(status)
 	if err != nil {
-		return fmt.Errorf("failed to parse instance data: %v", err)
+		return fmt.Errorf("failed to parse instance data: %w", err)
 	}
 	acc.AddFields("supervisor_instance", instanceFields, instanceTags)
 	return nil
@@ -113,7 +113,7 @@ func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) 
 	}
 	splittedURL, err := beautifyServerString(s.Server)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse server string: %v", err)
+		return nil, nil, fmt.Errorf("failed to parse server string: %w", err)
 	}
 	tags["id"] = status.Ident
 	tags["source"] = splittedURL[0]
@@ -125,7 +125,7 @@ func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) 
 func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string, map[string]interface{}, error) {
 	splittedURL, err := beautifyServerString(s.Server)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse server string: %v", err)
+		return nil, nil, fmt.Errorf("failed to parse server string: %w", err)
 	}
 	tags := map[string]string{}
 	tags["id"] = status.Ident
@@ -144,12 +144,12 @@ func (s *Supervisor) Init() error {
 	// Initializing XML-RPC client
 	s.rpcClient, err = xmlrpc.NewClient(s.Server, nil)
 	if err != nil {
-		return fmt.Errorf("XML-RPC client initialization failed: %v", err)
+		return fmt.Errorf("XML-RPC client initialization failed: %w", err)
 	}
 	// Setting filter for additional metrics
 	s.fieldFilter, err = filter.NewIncludeExcludeFilter(s.MetricsInc, s.MetricsExc)
 	if err != nil {
-		return fmt.Errorf("metrics filter setup failed: %v", err)
+		return fmt.Errorf("metrics filter setup failed: %w", err)
 	}
 	return nil
 }

@@ -173,15 +173,15 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 
 		secname, err := s.SecName.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
 		privPasswd, err := s.PrivPassword.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
 		authPasswd, err := s.AuthPassword.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
 		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
 			UserName:                 string(secname),

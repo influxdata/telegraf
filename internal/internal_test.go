@@ -44,7 +44,7 @@ func TestSnakeCase(t *testing.T) {
 }
 
 var (
-	sleepbin, _ = exec.LookPath("sleep") //nolint:unused // Used in skipped tests
+	sleepbin, _ = exec.LookPath("sleep")
 	echobin, _  = exec.LookPath("echo")
 	shell, _    = exec.LookPath("sh")
 )

@@ -68,7 +68,7 @@ func socketList(cmdName string, proto string, timeout config.Duration) (*bytes.B
 	cmd.Stdout = &out
 	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running ss -in --%s: %v", proto, err)
+		return &out, fmt.Errorf("error running ss -in --%s: %w", proto, err)
 	}
 	return &out, nil
 }
