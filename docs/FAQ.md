@@ -14,9 +14,9 @@ new features are held for the next minor release.
 Telegraf has options to select certain metrics or tags as well as filter out
 specific tags or fields:
 
-* **Selectors** allow a user to include or exclude entire metrics based on the
+- **Selectors** allow a user to include or exclude entire metrics based on the
   metric name or tag key/pair values.
-* **Modifiers** allow a user to remove tags and fields based on specific keys,
+- **Modifiers** allow a user to remove tags and fields based on specific keys,
   with glob support.
 
 For more details and examples, see the [Metric Filtering][Metric Filtering]
@@ -24,7 +24,7 @@ section in the docs.
 
 [Metric Filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
 
-## Could not find a usable config.yml, you may have revoked the CircleCI OAuth app.
+## Could not find a usable config.yml, you may have revoked the CircleCI OAuth app
 
 This is an error from CircleCI during test runs.
 
