@@ -21,6 +21,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Get the number of processes and group them by status
+# This plugin ONLY supports non-Windows
 [[inputs.processes]]
   ## Use sudo to run ps command on *BSD systems. Linux systems will read
   ## /proc, so this does not apply there.

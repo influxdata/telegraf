@@ -19,6 +19,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Gets counters from all InfiniBand cards and ports installed
+# This plugin ONLY supports Linux
 [[inputs.infiniband]]
   # no configuration
 ```

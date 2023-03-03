@@ -16,6 +16,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Returns ethtool statistics for given interfaces
+# This plugin ONLY supports Linux
 [[inputs.ethtool]]
   ## List of interfaces to pull metrics for
   # interface_include = ["eth0"]
