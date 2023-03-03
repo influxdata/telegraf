@@ -625,7 +625,7 @@ you must turn on vSAN performance service.
   ]
   # by default vsan_metric_skip_verify = false
   vsan_metric_skip_verify = true
-  # vsan_metric_exclude = [ ]
+  vsan_metric_exclude = [ ]
   # vsan_cluster_include = [ "/*/host/**" ] # Inventory path to clusters to collect (by default all are collected)
   
   collect_concurrency = 5
