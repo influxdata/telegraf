@@ -44,6 +44,27 @@ and/or other network issue.
 The error should be temporary and Telegraf will recover shortly after without
 the loss of data.
 
+## How do I set the timestamp format for parsing data?
+
+Telegraf's `timestamp_format` config option requires the use
+[Go's reference time][go ref time] to correctly translate the timestamp. For
+example, if you have the time:
+
+```s
+2023-03-01T00:00:42.586+0800
+```
+
+A user needs the timestamp format:
+
+```s
+2006-01-02T15:04:05.000-0700
+```
+
+User's can try this out in the [Go playground][playground].
+
+[go ref time]: https://pkg.go.dev/time#pkg-constants
+[playground]: https://goplay.tools/snippet/hi9GIOG_gVQ
+
 ## Q: How can I monitor the Docker Engine Host from within a container?
 
 You will need to setup several volume mounts as well as some environment
