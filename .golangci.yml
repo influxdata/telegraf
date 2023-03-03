@@ -10,6 +10,7 @@ linters:
     - dogsled
     - errcheck
     - errname
+    - errorlint
     - exportloopref
     - gocheckcompilerdirectives
     - goprintffuncname
