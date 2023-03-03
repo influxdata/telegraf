@@ -87,6 +87,7 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 			for _, m := range metrics {
 				buf, err := serializer.Serialize(m)
 				require.NoError(t, err)
+				serializer.writer.UseCRLF = false
 				_, err = actual.ReadFrom(bytes.NewReader(buf))
 				require.NoError(t, err)
 			}
@@ -149,6 +150,7 @@ func TestSerializeTransformationBatch(t *testing.T) {
 			// Serialize
 			serializer, err := NewSerializer(cfg.TimestampFormat, cfg.Separator, cfg.Header, cfg.Prefix)
 			require.NoError(t, err)
+			serializer.writer.UseCRLF = false
 			actual, err := serializer.SerializeBatch(metrics)
 			require.NoError(t, err)
 
