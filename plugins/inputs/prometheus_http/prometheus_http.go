@@ -165,7 +165,9 @@ func (p *PrometheusHttp) setExtraMetricTag(t *template.Template, tags map[string
 		p.Log.Errorf("failed to execute template: %v", err)
 		return ""
 	}
-	return b.String()
+	r := b.String()
+	// simplify <no value> => empty string
+	return strings.ReplaceAll(r, "<no value>", "")
 }
 
 func (p *PrometheusHttp) getExtraMetricTags(tags map[string]string, m *PrometheusHttpMetric) map[string]string {
