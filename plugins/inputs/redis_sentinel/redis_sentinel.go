@@ -62,7 +62,7 @@ func (r *RedisSentinel) Init() error {
 	for _, serv := range r.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("unable to parse to address %q: %v", serv, err)
+			return fmt.Errorf("unable to parse to address %q: %w", serv, err)
 		}
 
 		password := ""
@@ -136,7 +136,7 @@ func castFieldValue(value string, fieldType configFieldType) (interface{}, error
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("casting value %v failed: %v", value, err)
+		return nil, fmt.Errorf("casting value %q failed: %w", value, err)
 	}
 
 	return castedValue, nil

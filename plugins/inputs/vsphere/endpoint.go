@@ -281,7 +281,7 @@ func (e *Endpoint) startDiscovery(ctx context.Context) {
 			select {
 			case <-e.discoveryTicker.C:
 				err := e.discover(ctx)
-				if err != nil && err != context.Canceled {
+				if err != nil && !errors.Is(err, context.Canceled) {
 					e.log.Errorf("Discovery for %s: %s", e.URL.Host, err.Error())
 				}
 			case <-ctx.Done():
@@ -295,7 +295,7 @@ func (e *Endpoint) startDiscovery(ctx context.Context) {
 
 func (e *Endpoint) initalDiscovery(ctx context.Context) {
 	err := e.discover(ctx)
-	if err != nil && err != context.Canceled {
+	if err != nil && !errors.Is(err, context.Canceled) {
 		e.log.Errorf("Discovery for %s: %s", e.URL.Host, err.Error())
 	}
 	e.startDiscovery(ctx)
@@ -997,7 +997,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 					len(bucket.MetricId), len(res.metrics)-metricIdx, res.name, e.URL.Host, len(res.objects))
 
 				// Don't send work items if the context has been cancelled.
-				if ctx.Err() == context.Canceled {
+				if errors.Is(ctx.Err(), context.Canceled) {
 					return
 				}
 
