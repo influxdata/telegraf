@@ -3,10 +3,10 @@
 package ethtool
 
 import (
+	"errors"
 	"net"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"

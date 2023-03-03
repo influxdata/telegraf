@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/vishvananda/netns"
 
 	"github.com/influxdata/telegraf"
@@ -115,8 +114,7 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 
 	driverName, err := e.command.DriverName(iface)
 	if err != nil {
-		driverErr := errors.Wrapf(err, "%s driver", iface.Name)
-		acc.AddError(driverErr)
+		acc.AddError(fmt.Errorf("%q driver: %w", iface.Name, err))
 		return
 	}
 
@@ -125,8 +123,7 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 	fields := make(map[string]interface{})
 	stats, err := e.command.Stats(iface)
 	if err != nil {
-		statsErr := errors.Wrapf(err, "%s stats", iface.Name)
-		acc.AddError(statsErr)
+		acc.AddError(fmt.Errorf("%q stats: %w", iface.Name, err))
 		return
 	}
 
