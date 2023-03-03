@@ -3,19 +3,19 @@
 package kernel
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Kernel struct {
 }
 
-func (k *Kernel) Description() string {
-	return "Get kernel statistics from /proc/stat"
-}
-
-func (k *Kernel) SampleConfig() string { return "" }
-
+func (k *Kernel) SampleConfig() string { return sampleConfig }
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
