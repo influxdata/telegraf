@@ -2,9 +2,11 @@
 package internet_speed
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"math"
+	"os"
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
@@ -27,7 +29,8 @@ type InternetSpeed struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	server       *speedtest.Server
+	server       *speedtest.Server // The main(best) server
+	servers      speedtest.Servers // Auxiliary servers
 	serverFilter filter.Filter
 }
 
@@ -50,7 +53,9 @@ func (is *InternetSpeed) Init() error {
 }
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
-	// if not caching, go find the closest server each time
+	// If not caching, go find the closest server each time.
+	// We will find the best server as the main server. And
+	// the remaining servers will be auxiliary candidates.
 	if !is.Cache || is.server == nil {
 		if err := is.findClosestServer(); err != nil {
 			return fmt.Errorf("unable to find closest server: %w", err)
@@ -61,11 +66,11 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("ping test failed: %w", err)
 	}
-	err = is.server.DownloadTest(is.MemorySavingMode)
+	err = is.server.MultiDownloadTestContext(context.Background(), is.servers)
 	if err != nil {
 		return fmt.Errorf("download test failed, try `memory_saving_mode = true` if this fails consistently: %w", err)
 	}
-	err = is.server.UploadTest(is.MemorySavingMode)
+	err = is.server.MultiUploadTestContext(context.Background(), is.servers)
 	if err != nil {
 		return fmt.Errorf("upload test failed failed, try `memory_saving_mode = true` if this fails consistently: %w", err)
 	}
@@ -80,31 +85,39 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		"server_id": is.server.ID,
 		"host":      is.server.Host,
 	}
-	// recycle the detailed data of each test to prevent data backlog
+	// Recycle the history of each test to prevent data backlog.
 	is.server.Context.Reset()
 	acc.AddFields(measurement, fields, tags)
 	return nil
 }
 
 func (is *InternetSpeed) findClosestServer() error {
-	user, err := speedtest.FetchUserInfo()
+	var client = speedtest.New()
+	config := &speedtest.UserConfig{
+		UserAgent:  fmt.Sprintf("Telegraf SpeedTestGO/%s", speedtest.Version()),
+		ICMP:       os.Geteuid() == 0 || os.Geteuid() == -1,
+		SavingMode: is.MemorySavingMode,
+	}
+	speedtest.WithUserConfig(config)(client)
+
+	user, err := client.FetchUserInfo()
 	if err != nil {
 		return fmt.Errorf("fetching user info failed: %w", err)
 	}
-	serverList, err := speedtest.FetchServers(user)
+	is.servers, err = client.FetchServers(user)
 	if err != nil {
 		return fmt.Errorf("fetching server list failed: %w", err)
 	}
 
-	if len(serverList) < 1 {
+	if len(is.servers) < 1 {
 		return fmt.Errorf("no servers found")
 	}
 
-	// return the first match or the server with the lowest latency
+	// Return the first match or the server with the lowest latency
 	// when filter mismatch all servers.
 	var min int64 = math.MaxInt64
 	selectIndex := -1
-	for index, server := range serverList {
+	for index, server := range is.servers {
 		if is.serverFilter.Match(server.ID) {
 			selectIndex = index
 			break
@@ -118,7 +131,7 @@ func (is *InternetSpeed) findClosestServer() error {
 	}
 
 	if selectIndex != -1 {
-		is.server = serverList[selectIndex]
+		is.server = is.servers[selectIndex]
 		is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
 		return nil
 	}
