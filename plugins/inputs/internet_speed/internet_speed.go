@@ -92,14 +92,12 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 }
 
 func (is *InternetSpeed) findClosestServer() error {
-	var client = speedtest.New()
-	client.SetNThread(10)
-	config := &speedtest.UserConfig{
+	var client = speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
 		UserAgent:  fmt.Sprintf("Telegraf SpeedTestGO/%s", speedtest.Version()),
 		ICMP:       os.Geteuid() == 0 || os.Geteuid() == -1,
 		SavingMode: is.MemorySavingMode,
-	}
-	speedtest.WithUserConfig(config)(client)
+	}))
+	client.SetNThread(10)
 
 	user, err := client.FetchUserInfo()
 	if err != nil {
