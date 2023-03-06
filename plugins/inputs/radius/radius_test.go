@@ -37,10 +37,12 @@ func TestRadiusLocal(t *testing.T) {
 		SecretSource: radius.StaticSecretSource([]byte(`testsecret`)),
 		Addr:         ":1813",
 	}
-	var ErrServerShutdown = errors.New("radius: server shutdown")
+
 	go func() {
-		if err := server.ListenAndServe(); err != ErrServerShutdown && err != nil {
-			require.NoError(t, err, "local radius server failed")
+		if err := server.ListenAndServe(); err != nil {
+			if !errors.Is(err, radius.ErrServerShutdown) {
+				require.NoError(t, err, "local radius server failed")
+			}
 		}
 	}()
 
