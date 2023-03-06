@@ -53,6 +53,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Get kernel statistics from /proc/stat
+# This plugin ONLY supports Linux
 [[inputs.kernel]]
   # no configuration
 ```

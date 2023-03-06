@@ -17,6 +17,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Get synproxy counter statistics from procfs
+# This plugin ONLY supports Linux
 [[inputs.synproxy]]
   # no configuration
 ```

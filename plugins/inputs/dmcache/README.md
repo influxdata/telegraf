@@ -22,6 +22,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Provide a native collection for dmsetup based statistics for dm-cache
+# This plugin ONLY supports Linux
 [[inputs.dmcache]]
   ## Whether to report per-device stats or not
   per_device = true
