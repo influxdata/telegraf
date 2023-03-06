@@ -36,15 +36,18 @@ func TestRadiusLocal(t *testing.T) {
 		Addr:         ":1813",
 	}
 
-	if err := server.ListenAndServe(); err != nil {
-		require.NoError(t, err, "failed to start local radius server")
-	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			require.NoError(t, err, "failed to start local radius server")
+		}
+	}()
 
 	plugin := &Radius{
 		Servers:  []string{"localhost:1813"},
 		Username: config.NewSecret([]byte(`testusername`)),
 		Password: config.NewSecret([]byte(`testpassword`)),
 		Secret:   config.NewSecret([]byte(`testsecret`)),
+		Log:      testutil.Logger{},
 	}
 	var acc testutil.Accumulator
 
@@ -62,7 +65,9 @@ func TestRadiusLocal(t *testing.T) {
 	require.Equal(t, acc.TagValue("radius", "response_code"), radius.CodeAccessAccept.String())
 	require.Equal(t, acc.HasInt64Field("radius", "responsetime_ms"), true)
 
-	server.Shutdown(context.Background())
+	if err := server.Shutdown(context.Background()); err != nil {
+		require.NoError(t, err, "failed to properly shutdown local radius server")
+	}
 }
 
 func TestRadiusIntegration(t *testing.T) {
