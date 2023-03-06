@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/influxdata/telegraf"
@@ -19,6 +20,7 @@ var sampleConfig string
 
 type Processor struct {
 	Filenames   []string        `toml:"files"`
+	Fileformat  string          `toml:"format"`
 	KeyTemplate string          `toml:"key"`
 	Log         telegraf.Logger `toml:"-"`
 
@@ -46,13 +48,12 @@ func (p *Processor) Init() error {
 	p.tmpl = tmpl
 
 	p.mappings = make(map[string][]telegraf.Tag)
-	for _, fn := range p.Filenames {
-		if err := p.loadFileJSON(fn); err != nil {
-			return fmt.Errorf("loading %q failed: %w", fn, err)
-		}
+	switch strings.ToLower(p.Fileformat) {
+	case "", "json":
+		return p.loadJsonFiles()
 	}
 
-	return nil
+	return fmt.Errorf("invalid format %q", p.Fileformat)
 }
 
 func (p *Processor) Apply(in ...telegraf.Metric) []telegraf.Metric {
@@ -76,23 +77,24 @@ func (p *Processor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return out
 }
 
-func (p *Processor) loadFileJSON(filename string) error {
-	buf, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
+func (p *Processor) loadJsonFiles() error {
+	for _, fn := range p.Filenames {
+		buf, err := os.ReadFile(fn)
+		if err != nil {
+			return fmt.Errorf("loading %q failed: %w", fn, err)
+		}
 
-	var data map[string]map[string]string
-	if err := json.Unmarshal(buf, &data); err != nil {
-		return err
-	}
+		var data map[string]map[string]string
+		if err := json.Unmarshal(buf, &data); err != nil {
+			return fmt.Errorf("parsing %q failed: %w", fn, err)
+		}
 
-	for key, tags := range data {
-		for k, v := range tags {
-			p.mappings[key] = append(p.mappings[key], telegraf.Tag{Key: k, Value: v})
+		for key, tags := range data {
+			for k, v := range tags {
+				p.mappings[key] = append(p.mappings[key], telegraf.Tag{Key: k, Value: v})
+			}
 		}
 	}
-
 	return nil
 }
 

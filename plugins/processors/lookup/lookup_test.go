@@ -27,6 +27,13 @@ func TestInit(t *testing.T) {
 		KeyTemplate: "lala",
 	}
 	require.ErrorContains(t, plugin.Init(), "no such file or directory")
+
+	plugin = &Processor{
+		Filenames:   []string{"blah.json"},
+		Fileformat:  "foo",
+		KeyTemplate: "lala",
+	}
+	require.ErrorContains(t, plugin.Init(), "invalid format")
 }
 
 func TestCases(t *testing.T) {
