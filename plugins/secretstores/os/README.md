@@ -81,8 +81,6 @@ Please use _generic credentials_ and respect the special
 `<keyring>:<collection>:<key>` format of the secret key. The
 secret value needs to be stored in the `Password` field.
 
-## Other Platforms
-
 ### Docker
 
 Access to the kernel keyring is __disabled by default__ in docker containers
