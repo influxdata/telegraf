@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/doclambda/protobufquery"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
@@ -34,6 +36,7 @@ type Parser struct {
 	ProtobufMessageDef  string            `toml:"xpath_protobuf_file"`
 	ProtobufMessageType string            `toml:"xpath_protobuf_type"`
 	ProtobufImportPaths []string          `toml:"xpath_protobuf_import_paths"`
+	ProtobufSkipBytes   int64             `toml:"xpath_protobuf_skip_bytes"`
 	PrintDocument       bool              `toml:"xpath_print_document"`
 	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
 	NativeTypes         bool              `toml:"xpath_native_types"`
@@ -44,9 +47,9 @@ type Parser struct {
 
 	// Required for backward compatibility
 	ConfigsXML     []xpath.Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsJSON    []xpath.Config `toml:"xpath_json"`
-	ConfigsMsgPack []xpath.Config `toml:"xpath_msgpack"`
-	ConfigsProto   []xpath.Config `toml:"xpath_protobuf"`
+	ConfigsJSON    []xpath.Config `toml:"xpath_json" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsMsgPack []xpath.Config `toml:"xpath_msgpack" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsProto   []xpath.Config `toml:"xpath_protobuf" deprecated:"1.23.1;use 'xpath' instead"`
 
 	document dataDocument
 }
@@ -94,6 +97,7 @@ func (p *Parser) Init() error {
 			MessageDefinition: p.ProtobufMessageDef,
 			MessageType:       p.ProtobufMessageType,
 			ImportPaths:       p.ProtobufImportPaths,
+			SkipBytes:         p.ProtobufSkipBytes,
 			Log:               p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {
@@ -119,6 +123,23 @@ func (p *Parser) Init() error {
 		return errors.New("missing default metric name")
 	}
 
+	// Update the configs with default values
+	for i, config := range p.Configs {
+		if config.Selection == "" {
+			config.Selection = "/"
+		}
+		if config.TimestampFmt == "" {
+			config.TimestampFmt = "unix"
+		}
+		f, err := filter.Compile(config.FieldsHex)
+		if err != nil {
+			return fmt.Errorf("creating hex-fields filter failed: %w", err)
+		}
+		config.FieldsHexFilter = f
+
+		p.Configs[i] = config
+	}
+
 	return nil
 }
 
@@ -138,9 +159,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 	p.Log.Debugf("Number of configs: %d", len(p.Configs))
 	for _, config := range p.Configs {
-		if len(config.Selection) == 0 {
-			config.Selection = "/"
-		}
 		selectedNodes, err := p.document.QueryAll(doc, config.Selection)
 		if err != nil {
 			return nil, err
@@ -194,7 +212,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 	if len(config.MetricQuery) > 0 {
 		v, err := p.executeQuery(doc, selected, config.MetricQuery)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query metric name: %v", err)
+			return nil, fmt.Errorf("failed to query metric name: %w", err)
 		}
 		var ok bool
 		if metricname, ok = v.(string); !ok {
@@ -211,44 +229,13 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 	if len(config.Timestamp) > 0 {
 		v, err := p.executeQuery(doc, selected, config.Timestamp)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query timestamp: %v", err)
+			return nil, fmt.Errorf("failed to query timestamp: %w", err)
 		}
-		switch v := v.(type) {
-		case string:
-			// Parse the string with the given format or assume the string to contain
-			// a unix timestamp in seconds if no format is given.
-			if len(config.TimestampFmt) < 1 || strings.HasPrefix(config.TimestampFmt, "unix") {
-				var nanoseconds int64
-
-				t, err := strconv.ParseFloat(v, 64)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse unix timestamp: %v", err)
-				}
-
-				switch config.TimestampFmt {
-				case "unix_ns":
-					nanoseconds = int64(t)
-				case "unix_us":
-					nanoseconds = int64(t * 1e3)
-				case "unix_ms":
-					nanoseconds = int64(t * 1e6)
-				default:
-					nanoseconds = int64(t * 1e9)
-				}
-				timestamp = time.Unix(0, nanoseconds)
-			} else {
-				timestamp, err = time.Parse(config.TimestampFmt, v)
-				if err != nil {
-					return nil, fmt.Errorf("failed to query timestamp format: %v", err)
-				}
+		if v != nil {
+			timestamp, err = internal.ParseTimestamp(config.TimestampFmt, v, "")
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse timestamp: %w", err)
 			}
-		case float64:
-			// Assume the value to contain a timestamp in seconds and fractions thereof.
-			timestamp = time.Unix(0, int64(v*1e9))
-		case nil:
-			// No timestamp found. Just ignore the time and use "starttime"
-		default:
-			return nil, fmt.Errorf("unknown format '%T' for timestamp query '%v'", v, config.Timestamp)
 		}
 	}
 
@@ -258,7 +245,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		// Execute the query and cast the returned values into strings
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query tag '%s': %v", name, err)
+			return nil, fmt.Errorf("failed to query tag %q: %w", name, err)
 		}
 		switch v := v.(type) {
 		case string:
@@ -270,7 +257,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		case nil:
 			continue
 		default:
-			return nil, fmt.Errorf("unknown format '%T' for tag '%s'", v, name)
+			return nil, fmt.Errorf("unknown format '%T' for tag %q", v, name)
 		}
 	}
 
@@ -295,15 +282,15 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			for _, selectedtag := range selectedTagNodes {
 				n, err := p.executeQuery(doc, selectedtag, tagnamequery)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query tag name with query '%s': %v", tagnamequery, err)
+					return nil, fmt.Errorf("failed to query tag name with query %q: %w", tagnamequery, err)
 				}
 				name, ok := n.(string)
 				if !ok {
-					return nil, fmt.Errorf("failed to query tag name with query '%s': result is not a string (%v)", tagnamequery, n)
+					return nil, fmt.Errorf("failed to query tag name with query %q: result is not a string (%v)", tagnamequery, n)
 				}
 				v, err := p.executeQuery(doc, selectedtag, tagvaluequery)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query tag value for '%s': %v", name, err)
+					return nil, fmt.Errorf("failed to query tag value for %q: %w", name, err)
 				}
 
 				if config.TagNameExpand {
@@ -327,7 +314,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				// Convert the tag to be a string
 				s, err := internal.ToString(v)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query tag value for '%s': result is not a string (%v)", name, v)
+					return nil, fmt.Errorf("failed to query tag value for %q: result is not a string (%v)", name, v)
 				}
 				tags[name] = s
 			}
@@ -346,13 +333,13 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		// Execute the query and cast the returned values into integers
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query field (int) '%s': %v", name, err)
+			return nil, fmt.Errorf("failed to query field (int) %q: %w", name, err)
 		}
 		switch v := v.(type) {
 		case string:
 			fields[name], err = strconv.ParseInt(v, 10, 54)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse field (int) '%s': %v", name, err)
+				return nil, fmt.Errorf("failed to parse field (int) %q: %w", name, err)
 			}
 		case bool:
 			fields[name] = int64(0)
@@ -364,7 +351,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		case nil:
 			continue
 		default:
-			return nil, fmt.Errorf("unknown format '%T' for field (int) '%s'", v, name)
+			return nil, fmt.Errorf("unknown format '%T' for field (int) %q", v, name)
 		}
 	}
 
@@ -372,7 +359,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		// Execute the query and store the result in fields
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query field '%s': %v", name, err)
+			return nil, fmt.Errorf("failed to query field %q: %w", name, err)
 		}
 		fields[name] = v
 	}
@@ -398,15 +385,15 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			for _, selectedfield := range selectedFieldNodes {
 				n, err := p.executeQuery(doc, selectedfield, fieldnamequery)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query field name with query '%s': %v", fieldnamequery, err)
+					return nil, fmt.Errorf("failed to query field name with query %q: %w", fieldnamequery, err)
 				}
 				name, ok := n.(string)
 				if !ok {
-					return nil, fmt.Errorf("failed to query field name with query '%s': result is not a string (%v)", fieldnamequery, n)
+					return nil, fmt.Errorf("failed to query field name with query %q: result is not a string (%v)", fieldnamequery, n)
 				}
 				v, err := p.executeQuery(doc, selectedfield, fieldvaluequery)
 				if err != nil {
-					return nil, fmt.Errorf("failed to query field value for '%s': %v", name, err)
+					return nil, fmt.Errorf("failed to query field value for %q: %w", name, err)
 				}
 
 				if config.FieldNameExpand {
@@ -427,6 +414,11 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 					}
 				}
 
+				if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+					if b, ok := v.([]byte); ok {
+						v = hex.EncodeToString(b)
+					}
+				}
 				fields[name] = v
 			}
 		} else {
@@ -447,7 +439,7 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 	// Compile the query
 	expr, err := path.Compile(query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile query '%s': %v", query, err)
+		return nil, fmt.Errorf("failed to compile query %q: %w", query, err)
 	}
 
 	// Evaluate the compiled expression and handle returned node-iterators
@@ -507,8 +499,8 @@ func splitLastPathElement(query string) []string {
 		base = "/"
 	}
 
-	elements := make([]string, 1)
-	elements[0] = base
+	elements := make([]string, 0, 3)
+	elements = append(elements, base)
 
 	offset := seperatorIdx
 	if i := strings.Index(query[offset:], "::"); i >= 0 {

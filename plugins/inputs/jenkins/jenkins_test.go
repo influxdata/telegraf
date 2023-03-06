@@ -97,9 +97,8 @@ func (h mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	// Ignore the returned error as the tests will fail anyway
-	//nolint:errcheck,revive
-	w.Write(b)
+
+	w.Write(b) //nolint:errcheck,revive // ignore the returned error as the tests will fail anyway
 }
 
 func TestGatherNodeData(t *testing.T) {
@@ -360,7 +359,8 @@ func TestGatherNodeData(t *testing.T) {
 					}
 					for k, m := range test.output.Metrics[i].Fields {
 						if acc.Metrics[i].Fields[k] != m {
-							t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", test.name, k, m, m, acc.Metrics[0].Fields[k], acc.Metrics[0].Fields[k])
+							t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n",
+								test.name, k, m, m, acc.Metrics[0].Fields[k], acc.Metrics[0].Fields[k])
 						}
 					}
 				}
@@ -874,7 +874,8 @@ func TestGatherJobs(t *testing.T) {
 					}
 					for k, m := range test.output.Metrics[i].Fields {
 						if acc.Metrics[i].Fields[k] != m {
-							t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", test.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[0].Fields[k])
+							t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n",
+								test.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[0].Fields[k])
 						}
 					}
 				}

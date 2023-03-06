@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -335,7 +336,7 @@ func shutDownPqos(pqos *exec.Cmd) error {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		for {
-			if err := pqos.Process.Signal(syscall.Signal(0)); err == os.ErrProcessDone {
+			if err := pqos.Process.Signal(syscall.Signal(0)); errors.Is(err, os.ErrProcessDone) {
 				return nil
 			} else if ctx.Err() != nil {
 				break
@@ -347,7 +348,7 @@ func shutDownPqos(pqos *exec.Cmd) error {
 		// fixed in https://github.com/intel/intel-cmt-cat/issues/197
 		err := pqos.Process.Kill()
 		if err != nil {
-			return fmt.Errorf("failed to shut down pqos: %v", err)
+			return fmt.Errorf("failed to shut down pqos: %w", err)
 		}
 	}
 	return nil
@@ -400,10 +401,9 @@ func validatePqosPath(pqosPath string) error {
 }
 
 func parseCoresConfig(cores []string) ([]string, error) {
-	var parsedCores []string
 	var allCores []int
-	configError := fmt.Errorf("wrong cores input config data format")
 
+	parsedCores := make([]string, 0, len(cores))
 	for _, singleCoreGroup := range cores {
 		var actualGroupOfCores []int
 		separatedCores := strings.Split(singleCoreGroup, ",")
@@ -411,16 +411,17 @@ func parseCoresConfig(cores []string) ([]string, error) {
 		for _, coreStr := range separatedCores {
 			actualCores, err := validateAndParseCores(coreStr)
 			if err != nil {
-				return nil, fmt.Errorf("%v: %v", configError, err)
+				return nil, fmt.Errorf("wrong cores input config data format: %w", err)
 			}
 			if checkForDuplicates(allCores, actualCores) {
-				return nil, fmt.Errorf("%v: %v", configError, "core value cannot be duplicated")
+				return nil, errors.New("wrong cores input config data format: core value cannot be duplicated")
 			}
 			actualGroupOfCores = append(actualGroupOfCores, actualCores...)
 			allCores = append(allCores, actualGroupOfCores...)
 		}
 		parsedCores = append(parsedCores, arrayToString(actualGroupOfCores))
 	}
+
 	return parsedCores, nil
 }
 

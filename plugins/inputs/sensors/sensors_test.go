@@ -371,10 +371,8 @@ Vcore Voltage:
 	cmd, _ := args[3], args[4:]
 
 	if cmd == "sensors" {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
-		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)

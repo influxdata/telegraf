@@ -3,6 +3,7 @@ package prometheus
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -36,17 +37,17 @@ func Parse(buf []byte, header http.Header, ignoreTimestamp bool) ([]telegraf.Met
 		for {
 			mf := &dto.MetricFamily{}
 			if _, ierr := pbutil.ReadDelimited(reader, mf); ierr != nil {
-				if ierr == io.EOF {
+				if errors.Is(ierr, io.EOF) {
 					break
 				}
-				return nil, fmt.Errorf("reading metric family protocol buffer failed: %s", ierr)
+				return nil, fmt.Errorf("reading metric family protocol buffer failed: %w", ierr)
 			}
 			metricFamilies[mf.GetName()] = mf
 		}
 	} else {
 		metricFamilies, err = parser.TextToMetricFamilies(reader)
 		if err != nil {
-			return nil, fmt.Errorf("reading text format failed: %s", err)
+			return nil, fmt.Errorf("reading text format failed: %w", err)
 		}
 	}
 

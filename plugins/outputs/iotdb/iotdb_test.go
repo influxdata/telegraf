@@ -504,17 +504,15 @@ func TestIntegrationInserts(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start IoTDB container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating IoTDB container failed")
-	}()
+	defer container.Terminate()
 
 	t.Logf("Container Address:%q, ExposedPorts:[%v:%v]", container.Address, container.Ports[iotdbPort], iotdbPort)
 	// create a client and tests two groups of insertion
 	testClient := &IoTDB{
 		Host:            container.Address,
 		Port:            container.Ports[iotdbPort],
-		User:            "root",
-		Password:        "root",
+		User:            config.NewSecret([]byte("root")),
+		Password:        config.NewSecret([]byte("root")),
 		Timeout:         config.Duration(time.Second * 5),
 		ConvertUint64To: "int64_clip",
 		TimeStampUnit:   "nanosecond",

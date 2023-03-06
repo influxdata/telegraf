@@ -3,7 +3,6 @@ package shim
 import (
 	"bufio"
 	"io"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -113,8 +112,8 @@ func (i *testInput) Stop() {
 }
 
 func TestLoadConfig(t *testing.T) {
-	require.NoError(t, os.Setenv("SECRET_TOKEN", "xxxxxxxxxx"))
-	require.NoError(t, os.Setenv("SECRET_VALUE", `test"\test`))
+	t.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
+	t.Setenv("SECRET_VALUE", `test"\test`)
 
 	inputs.Add("test", func() telegraf.Input {
 		return &serviceInput{}

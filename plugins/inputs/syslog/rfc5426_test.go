@@ -1,6 +1,7 @@
 package syslog
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -83,7 +84,10 @@ func getTestCasesForRFC5426(hasRemoteAddr bool) []testCasePacket {
 		},
 		{
 			name: "average",
-			data: []byte(`<29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
+			data: []byte(
+				`<29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] ` +
+					`"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
+			),
 			wantBestEffort: testutil.MustMetric(
 				"syslog",
 				map[string]string{
@@ -255,8 +259,9 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 			_, err = conn.Write(tc.data)
 			conn.Close()
 			if err != nil {
-				if err, ok := err.(*net.OpError); ok {
-					if err.Err.Error() == "write: message too long" {
+				var opErr *net.OpError
+				if errors.As(err, &opErr) {
+					if opErr.Err.Error() == "write: message too long" {
 						return
 					}
 				}

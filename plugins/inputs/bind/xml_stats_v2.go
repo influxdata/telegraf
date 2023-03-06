@@ -75,9 +75,7 @@ func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, sta
 			tags[k] = v
 		}
 
-		if err := grouper.Add("bind_counter", tags, ts, c.Name, c.Value); err != nil {
-			acc.AddError(fmt.Errorf("adding field %q to group failed: %v", c.Name, err))
-		}
+		grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 	}
 
 	//Add grouped metrics
@@ -103,7 +101,7 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
-		return fmt.Errorf("unable to decode XML document: %s", err)
+		return fmt.Errorf("unable to decode XML document: %w", err)
 	}
 
 	tags := map[string]string{"url": addr.Host}

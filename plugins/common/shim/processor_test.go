@@ -22,9 +22,9 @@ func TestProcessorShim(t *testing.T) {
 
 func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
 	letters := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]rune, bufio.MaxScanTokenSize*2)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+	b := make([]rune, 0, bufio.MaxScanTokenSize*2)
+	for i := 0; i < bufio.MaxScanTokenSize*2; i++ {
+		b = append(b, letters[rand.Intn(len(letters))])
 	}
 
 	testSendAndReceive(t, "f1", string(b))
@@ -52,7 +52,7 @@ func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 		wg.Done()
 	}()
 
-	serializer, _ := serializers.NewInfluxSerializer()
+	serializer := serializers.NewInfluxSerializer()
 	parser := influx.Parser{}
 	require.NoError(t, parser.Init())
 

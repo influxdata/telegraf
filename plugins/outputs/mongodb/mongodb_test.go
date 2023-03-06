@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestConnectAndWriteIntegrationNoAuth(t *testing.T) {
@@ -30,9 +31,7 @@ func TestConnectAndWriteIntegrationNoAuth(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Run test
 	plugin := &MongoDB{
@@ -69,14 +68,12 @@ func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
-			wait.ForLog("Waiting for connections"),
+			wait.ForLog("Waiting for connections").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	tests := []struct {
 		name        string
@@ -89,8 +86,8 @@ func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {
 				Dsn: fmt.Sprintf("mongodb://%s:%s/admin",
 					container.Address, container.Ports[servicePort]),
 				AuthenticationType: "SCRAM",
-				Username:           "root",
-				Password:           "changeme",
+				Username:           config.NewSecret([]byte("root")),
+				Password:           config.NewSecret([]byte("changeme")),
 				MetricDatabase:     "telegraf_test",
 				MetricGranularity:  "seconds",
 			},
@@ -104,8 +101,8 @@ func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {
 				Dsn: fmt.Sprintf("mongodb://%s:%s/admin",
 					container.Address, container.Ports[servicePort]),
 				AuthenticationType:  "SCRAM",
-				Username:            "root",
-				Password:            "root",
+				Username:            config.NewSecret([]byte("root")),
+				Password:            config.NewSecret([]byte("root")),
 				MetricDatabase:      "telegraf_test",
 				MetricGranularity:   "seconds",
 				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
@@ -174,14 +171,12 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
-			wait.ForLog("Waiting for connections"),
+			wait.ForLog("Waiting for connections").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	tests := []struct {
 		name        string
@@ -385,7 +380,7 @@ func TestConfiguration(t *testing.T) {
 			plugin: &MongoDB{
 				Dsn:                "mongodb://localhost:27017",
 				AuthenticationType: "SCRAM",
-				Password:           "somerandompasswordthatwontwork",
+				Password:           config.NewSecret([]byte("somerandompasswordthatwontwork")),
 				MetricDatabase:     "telegraf_test",
 				MetricGranularity:  "seconds",
 			},
@@ -395,7 +390,7 @@ func TestConfiguration(t *testing.T) {
 			plugin: &MongoDB{
 				Dsn:                "mongodb://localhost:27017",
 				AuthenticationType: "SCRAM",
-				Username:           "somerandomusernamethatwontwork",
+				Username:           config.NewSecret([]byte("somerandomusernamethatwontwork")),
 				MetricDatabase:     "telegraf_test",
 				MetricGranularity:  "seconds",
 			},

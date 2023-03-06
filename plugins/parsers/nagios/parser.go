@@ -27,8 +27,8 @@ func getExitCode(err error) (int, error) {
 		return 0, nil
 	}
 
-	ee, ok := err.(*exec.ExitError)
-	if !ok {
+	var ee *exec.ExitError
+	if !errors.As(err, &ee) {
 		return unknownExitCode, err
 	}
 
@@ -97,7 +97,9 @@ type Parser struct {
 // https://github.com/Alignak-monitoring/alignak/blob/develop/alignak/misc/perfdata.py
 var (
 	perfSplitRegExp = regexp.MustCompile(`([^=]+=\S+)`)
-	nagiosRegExp    = regexp.MustCompile(`^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*);?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*`)
+	nagiosRegExp    = regexp.MustCompile(
+		`^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*);?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*`,
+	)
 )
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {

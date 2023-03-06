@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -130,7 +131,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
-		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
+		return fmt.Errorf("unable to marshal TimeSeries: %w", err)
 	}
 
 	var req *http.Request
@@ -168,7 +169,9 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
-		return fmt.Errorf("received bad status code, %d", resp.StatusCode)
+		// err can be ignored
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("received bad status code, %d: %s", resp.StatusCode, string(body))
 	}
 
 	return nil
@@ -189,7 +192,7 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 		}
 		var p Point
 		if err := p.setValue(field.Value); err != nil {
-			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", field.Key, err.Error())
+			return ms, fmt.Errorf("unable to extract value from Field %v: %w", field.Key, err)
 		}
 		p[0] = float64(m.Time().Unix())
 		ms[field.Key] = p
@@ -198,11 +201,9 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 }
 
 func buildTags(tagList []*telegraf.Tag) []string {
-	tags := make([]string, len(tagList))
-	index := 0
+	tags := make([]string, 0, len(tagList))
 	for _, tag := range tagList {
-		tags[index] = fmt.Sprintf("%s:%s", tag.Key, tag.Value)
-		index++
+		tags = append(tags, fmt.Sprintf("%s:%s", tag.Key, tag.Value))
 	}
 	return tags
 }

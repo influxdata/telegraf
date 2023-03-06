@@ -2,16 +2,19 @@ package json_v2
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dimchansky/utfbom"
+	"github.com/tidwall/gjson"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
-	"github.com/tidwall/gjson"
 )
 
 // Parser adheres to the parser interface, contains the parser configuration, and data required to parse JSON
@@ -68,9 +71,16 @@ func (p *Parser) Init() error {
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
+	reader := strings.NewReader(string(input))
+	body, _ := utfbom.Skip(reader)
+	input, err := io.ReadAll(body)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read body after BOM removal: %w", err)
+	}
+
 	// Only valid JSON is supported
 	if !gjson.Valid(string(input)) {
-		return nil, fmt.Errorf("invalid JSON provided, unable to parse")
+		return nil, fmt.Errorf("invalid JSON provided, unable to parse: %s", string(input))
 	}
 
 	var metrics []telegraf.Metric
@@ -92,7 +102,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 			if result.Type == gjson.Null {
 				p.Log.Debugf("Message: %s", input)
-				return nil, fmt.Errorf("The timestamp path %s returned NULL", c.TimestampPath)
+				return nil, fmt.Errorf("the timestamp path %s returned NULL", c.TimestampPath)
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
@@ -151,8 +161,7 @@ func (p *Parser) processMetric(input []byte, data []json_v2.DataSet, tag bool, t
 	}
 
 	p.iterateObjects = false
-	var metrics [][]telegraf.Metric
-
+	metrics := make([][]telegraf.Metric, 0, len(data))
 	for _, c := range data {
 		if c.Path == "" {
 			return nil, fmt.Errorf("GJSON path is required")
@@ -220,14 +229,12 @@ func cartesianProduct(a, b []telegraf.Metric) []telegraf.Metric {
 	if len(b) == 0 {
 		return a
 	}
-	p := make([]telegraf.Metric, len(a)*len(b))
-	i := 0
+	p := make([]telegraf.Metric, 0, len(a)*len(b))
 	for _, a := range a {
 		for _, b := range b {
 			m := a.Copy()
 			mergeMetric(b, m)
-			p[i] = m
-			i++
+			p = append(p, m)
 		}
 	}
 
@@ -563,7 +570,7 @@ func (p *Parser) isExcluded(key string) bool {
 	return false
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(_ string) (telegraf.Metric, error) {
 	return nil, fmt.Errorf("ParseLine is designed for parsing influx line protocol, therefore not implemented for parsing JSON")
 }
 
@@ -579,25 +586,25 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 		case "uint":
 			r, err := strconv.ParseUint(inputType, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type uint: %v", name, err)
+				return nil, fmt.Errorf("unable to convert field %q to type uint: %w", name, err)
 			}
 			return r, nil
 		case "int":
 			r, err := strconv.ParseInt(inputType, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type int: %v", name, err)
+				return nil, fmt.Errorf("unable to convert field %q to type int: %w", name, err)
 			}
 			return r, nil
 		case "float":
 			r, err := strconv.ParseFloat(inputType, 64)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type float: %v", name, err)
+				return nil, fmt.Errorf("unable to convert field %q to type float: %w", name, err)
 			}
 			return r, nil
 		case "bool":
 			r, err := strconv.ParseBool(inputType)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type bool: %v", name, err)
+				return nil, fmt.Errorf("unable to convert field %q to type bool: %w", name, err)
 			}
 			return r, nil
 		}
@@ -632,11 +639,11 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 			} else if inputType == 1 {
 				return true, nil
 			} else {
-				return nil, fmt.Errorf("Unable to convert field '%s' to type bool", name)
+				return nil, fmt.Errorf("unable to convert field %q to type bool", name)
 			}
 		}
 	default:
-		return nil, fmt.Errorf("unknown format '%T' for field  '%s'", inputType, name)
+		return nil, fmt.Errorf("unknown format '%T' for field  %q", inputType, name)
 	}
 
 	return input.Value(), nil

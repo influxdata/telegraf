@@ -117,19 +117,24 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	tags := map[string]string{
+		"source": s.URL,
+	}
+
 	// add tomcat_jvm_memory measurements
 	tcm := map[string]interface{}{
 		"free":  status.TomcatJvm.JvmMemory.Free,
 		"total": status.TomcatJvm.JvmMemory.Total,
 		"max":   status.TomcatJvm.JvmMemory.Max,
 	}
-	acc.AddFields("tomcat_jvm_memory", tcm, nil)
+	acc.AddFields("tomcat_jvm_memory", tcm, tags)
 
 	// add tomcat_jvm_memorypool measurements
 	for _, mp := range status.TomcatJvm.JvmMemoryPools {
 		tcmpTags := map[string]string{
-			"name": mp.Name,
-			"type": mp.Type,
+			"name":   mp.Name,
+			"type":   mp.Type,
+			"source": s.URL,
 		}
 
 		tcmpFields := map[string]interface{}{
@@ -150,7 +155,8 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		}
 
 		tccTags := map[string]string{
-			"name": name,
+			"name":   name,
+			"source": s.URL,
 		}
 
 		tccFields := map[string]interface{}{

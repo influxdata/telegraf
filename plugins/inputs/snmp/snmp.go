@@ -36,6 +36,11 @@ type Translator interface {
 		fields []Field,
 		err error,
 	)
+
+	SnmpFormatEnum(oid string, value interface{}, full bool) (
+		formatted string,
+		err error,
+	)
 }
 
 // Snmp holds the configuration for the plugin.
@@ -214,6 +219,7 @@ type Field struct {
 	//  "int" will conver the value into an integer.
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
+	//  "enum"/"enum(1)" will convert the value according to its syntax. (Only supported with gosmi translator)
 	Conversion string
 	// Translate tells if the value of the field should be snmptranslated
 	Translate bool
@@ -424,7 +430,7 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 				}
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
-				fv, err := fieldConvert(f.Conversion, ent.Value)
+				fv, err := fieldConvert(tr, f.Conversion, ent)
 				if err != nil {
 					return nil, fmt.Errorf("converting %q (OID %s) for field %s: %w", ent.Value, ent.Name, f.Name, err)
 				}
@@ -468,7 +474,7 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 					}
 				}
 
-				fv, err := fieldConvert(f.Conversion, ent.Value)
+				fv, err := fieldConvert(tr, f.Conversion, ent)
 				if err != nil {
 					return &walkError{
 						msg: fmt.Sprintf("converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name),
@@ -482,7 +488,8 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 				// Our callback always wraps errors in a walkError.
 				// If this error isn't a walkError, we know it's not
 				// from the callback
-				if _, ok := err.(*walkError); !ok {
+				var walkErr *walkError
+				if !errors.As(err, &walkErr) {
 					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
 				}
 			}
@@ -599,16 +606,17 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 }
 
 // fieldConvert converts from any type according to the conv specification
-func fieldConvert(conv string, v interface{}) (interface{}, error) {
+func fieldConvert(tr Translator, conv string, ent gosnmp.SnmpPDU) (v interface{}, err error) {
 	if conv == "" {
-		if bs, ok := v.([]byte); ok {
+		if bs, ok := ent.Value.([]byte); ok {
 			return string(bs), nil
 		}
-		return v, nil
+		return ent.Value, nil
 	}
 
 	var d int
 	if _, err := fmt.Sscanf(conv, "float(%d)", &d); err == nil || conv == "float" {
+		v = ent.Value
 		switch vt := v.(type) {
 		case float32:
 			v = float64(vt) / math.Pow10(d)
@@ -645,6 +653,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	}
 
 	if conv == "int" {
+		v = ent.Value
 		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
@@ -679,7 +688,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	}
 
 	if conv == "hwaddr" {
-		switch vt := v.(type) {
+		switch vt := ent.Value.(type) {
 		case string:
 			v = net.HardwareAddr(vt).String()
 		case []byte:
@@ -695,9 +704,9 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		endian := split[1]
 		bit := split[2]
 
-		bv, ok := v.([]byte)
+		bv, ok := ent.Value.([]byte)
 		if !ok {
-			return v, nil
+			return ent.Value, nil
 		}
 
 		switch endian {
@@ -733,7 +742,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "ipaddr" {
 		var ipbs []byte
 
-		switch vt := v.(type) {
+		switch vt := ent.Value.(type) {
 		case string:
 			ipbs = []byte(vt)
 		case []byte:
@@ -752,7 +761,15 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		return v, nil
 	}
 
-	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
+	if conv == "enum" {
+		return tr.SnmpFormatEnum(ent.Name, ent.Value, false)
+	}
+
+	if conv == "enum(1)" {
+		return tr.SnmpFormatEnum(ent.Name, ent.Value, true)
+	}
+
+	return nil, fmt.Errorf("invalid conversion type %q", conv)
 }
 
 func init() {

@@ -1,0 +1,4 @@
+test,foo=bar v=1i 123456789
+test,foo=baz v=2i 123456790
+test,foo=zab v=3i 123456791
+test,foo=bie v=42i,temp=24.1 1665510032

@@ -3,6 +3,15 @@
 This output plugin writes metrics to PostgreSQL (or compatible database).
 The plugin manages the schema, automatically updating missing columns.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -147,7 +156,7 @@ statements. This allows for complete control of the schema by the user.
 
 Documentation on how to write templates can be found [sqltemplate docs][1]
 
-[1]: https://pkg.go.dev/github.com/influxdb/telegraf/plugins/outputs/postgresql/sqltemplate
+[1]: https://pkg.go.dev/github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate
 
 ### Samples
 
@@ -188,12 +197,12 @@ create_templates = [
 ]
 add_column_templates = [
     '''ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}''',
-    '''DROP VIEW {{ .table.WithSchema "public" }} IF EXISTS''',
+    '''DROP VIEW IF EXISTS {{ .table.WithSchema "public" }}''',
     '''CREATE VIEW {{ .table.WithSchema "public" }} AS SELECT time, {{ (.tagTable.Columns.Tags.Concat .allColumns.Fields).Identifiers | join "," }} FROM {{ .table }} t, {{ .tagTable }} tt WHERE t.tag_id = tt.tag_id''',
 ]
 tag_table_add_column_templates = [
     '''ALTER TABLE {{.table}} ADD COLUMN IF NOT EXISTS {{.columns|join ", ADD COLUMN IF NOT EXISTS "}}''',
-    '''DROP VIEW {{ .metricTable.WithSchema "public" }} IF EXISTS''',
+    '''DROP VIEW IF EXISTS {{ .metricTable.WithSchema "public" }}''',
     '''CREATE VIEW {{ .metricTable.WithSchema "public" }} AS SELECT time, {{ (.allColumns.Tags.Concat .metricTable.Columns.Fields).Identifiers | join "," }} FROM {{ .metricTable }} t, {{ .tagTable }} tt WHERE t.tag_id = tt.tag_id''',
 ]
 ```

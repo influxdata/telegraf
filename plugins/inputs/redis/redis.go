@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -228,9 +229,8 @@ func (r *Redis) connect() error {
 		r.Servers = []string{"tcp://localhost:6379"}
 	}
 
-	r.clients = make([]Client, len(r.Servers))
-
-	for i, serv := range r.Servers {
+	r.clients = make([]Client, 0, len(r.Servers))
+	for _, serv := range r.Servers {
 		if !strings.HasPrefix(serv, "tcp://") && !strings.HasPrefix(serv, "unix://") {
 			r.Log.Warn("Server URL found without scheme; please update your configuration file")
 			serv = "tcp://" + serv
@@ -238,7 +238,7 @@ func (r *Redis) connect() error {
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
+			return fmt.Errorf("unable to parse to address %q: %w", serv, err)
 		}
 
 		username := ""
@@ -288,10 +288,10 @@ func (r *Redis) connect() error {
 			tags["port"] = u.Port()
 		}
 
-		r.clients[i] = &RedisClient{
+		r.clients = append(r.clients, &RedisClient{
 			client: client,
 			tags:   tags,
-		}
+		})
 	}
 
 	r.connected = true
@@ -329,7 +329,7 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 		val, err := client.Do(command.Type, command.Command...)
 		if err != nil {
 			if strings.Contains(err.Error(), "unexpected type=") {
-				return fmt.Errorf("could not get command result: %s", err)
+				return fmt.Errorf("could not get command result: %w", err)
 			}
 
 			return err

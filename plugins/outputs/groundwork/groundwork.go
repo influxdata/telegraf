@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -31,8 +32,8 @@ type metricMeta struct {
 type Groundwork struct {
 	Server              string          `toml:"url"`
 	AgentID             string          `toml:"agent_id"`
-	Username            string          `toml:"username"`
-	Password            string          `toml:"password"`
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
 	DefaultAppType      string          `toml:"default_app_type"`
 	DefaultHost         string          `toml:"default_host"`
 	DefaultServiceState string          `toml:"default_service_state"`
@@ -53,10 +54,10 @@ func (g *Groundwork) Init() error {
 	if g.AgentID == "" {
 		return errors.New(`no "agent_id" provided`)
 	}
-	if g.Username == "" {
+	if g.Username.Empty() {
 		return errors.New(`no "username" provided`)
 	}
-	if g.Password == "" {
+	if g.Password.Empty() {
 		return errors.New(`no "password" provided`)
 	}
 	if g.DefaultAppType == "" {
@@ -72,13 +73,23 @@ func (g *Groundwork) Init() error {
 		return errors.New(`invalid "default_service_state" provided`)
 	}
 
+	username, err := g.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	defer config.ReleaseSecret(username)
+	password, err := g.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+	defer config.ReleaseSecret(password)
 	g.client = clients.GWClient{
 		AppName: "telegraf",
 		AppType: g.DefaultAppType,
 		GWConnection: &clients.GWConnection{
 			HostName:           g.Server,
-			UserName:           g.Username,
-			Password:           g.Password,
+			UserName:           string(username),
+			Password:           string(password),
 			IsDynamicInventory: true,
 		},
 	}
@@ -104,7 +115,7 @@ func (g *Groundwork) Init() error {
 func (g *Groundwork) Connect() error {
 	err := g.client.Connect()
 	if err != nil {
-		return fmt.Errorf("could not log in: %v", err)
+		return fmt.Errorf("could not log in: %w", err)
 	}
 	return nil
 }
@@ -112,7 +123,7 @@ func (g *Groundwork) Connect() error {
 func (g *Groundwork) Close() error {
 	err := g.client.Disconnect()
 	if err != nil {
-		return fmt.Errorf("could not log out: %v", err)
+		return fmt.Errorf("could not log out: %w", err)
 	}
 	return nil
 }
@@ -121,11 +132,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	groupMap := make(map[string][]transit.ResourceRef)
 	resourceToServicesMap := make(map[string][]transit.MonitoredService)
 	for _, metric := range metrics {
-		meta, service, err := g.parseMetric(metric)
-		if err != nil {
-			g.Log.Errorf("%v", err)
-			continue
-		}
+		meta, service := g.parseMetric(metric)
 		resource := meta.resource
 		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], *service)
 
@@ -153,7 +160,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 		})
 	}
 
-	var resources []transit.MonitoredResource
+	resources := make([]transit.MonitoredResource, 0, len(resourceToServicesMap))
 	for resourceName, services := range resourceToServicesMap {
 		resources = append(resources, transit.MonitoredResource{
 			BaseResource: transit.BaseResource{
@@ -210,7 +217,7 @@ func init() {
 	})
 }
 
-func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.MonitoredService, error) {
+func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.MonitoredService) {
 	group, _ := metric.GetTag(g.GroupTag)
 
 	resource := g.DefaultHost
@@ -376,7 +383,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		serviceObject.Status = status
 	}()
 
-	return metricMeta{resource: resource, group: group}, &serviceObject, nil
+	return metricMeta{resource: resource, group: group}, &serviceObject
 }
 
 func validStatus(status string) bool {
@@ -391,7 +398,7 @@ func validStatus(status string) bool {
 func adaptLog(fields interface{}, format string, a ...interface{}) string {
 	buf := &bytes.Buffer{}
 	if format != "" {
-		_, _ = fmt.Fprintf(buf, format, a...)
+		fmt.Fprintf(buf, format, a...)
 	}
 	fmtField := func(k string, v interface{}) {
 		format := " %s:"
@@ -403,7 +410,7 @@ func adaptLog(fields interface{}, format string, a ...interface{}) string {
 		} else {
 			format += "%q"
 		}
-		_, _ = fmt.Fprintf(buf, format, k, v)
+		fmt.Fprintf(buf, format, k, v)
 	}
 	if ff, ok := fields.(interface {
 		LogFields() (map[string]interface{}, map[string][]byte)

@@ -21,6 +21,7 @@ const (
 type OutputConfig struct {
 	Name   string
 	Alias  string
+	ID     string
 	Filter Filter
 
 	FlushInterval     time.Duration
@@ -128,6 +129,13 @@ func (r *RunningOutput) Init() error {
 	return nil
 }
 
+func (r *RunningOutput) ID() string {
+	if p, ok := r.Output.(telegraf.PluginWithID); ok {
+		return p.ID()
+	}
+	return r.Config.ID
+}
+
 // AddMetric adds a metric to the output.
 //
 // Takes ownership of metric
@@ -198,7 +206,7 @@ func (r *RunningOutput) Write() error {
 			break
 		}
 
-		err := r.write(batch)
+		err := r.writeMetrics(batch)
 		if err != nil {
 			r.buffer.Reject(batch)
 			return err
@@ -215,7 +223,7 @@ func (r *RunningOutput) WriteBatch() error {
 		return nil
 	}
 
-	err := r.write(batch)
+	err := r.writeMetrics(batch)
 	if err != nil {
 		r.buffer.Reject(batch)
 		return err
@@ -233,7 +241,7 @@ func (r *RunningOutput) Close() {
 	}
 }
 
-func (r *RunningOutput) write(metrics []telegraf.Metric) error {
+func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
 	dropped := atomic.LoadInt64(&r.droppedMetrics)
 	if dropped > 0 {
 		r.log.Warnf("Metric buffer overflow; %d metrics have been dropped", dropped)

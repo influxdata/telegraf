@@ -6,14 +6,32 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
+	"github.com/influxdata/influxdb-observability/otel2influx"
+
 	"github.com/influxdata/telegraf"
+)
+
+var (
+	_ otel2influx.InfluxWriter      = (*writeToAccumulator)(nil)
+	_ otel2influx.InfluxWriterBatch = (*writeToAccumulator)(nil)
 )
 
 type writeToAccumulator struct {
 	accumulator telegraf.Accumulator
 }
 
-func (w *writeToAccumulator) WritePoint(_ context.Context, measurement string, tags map[string]string, fields map[string]interface{}, ts time.Time, vType common.InfluxMetricValueType) error {
+func (w *writeToAccumulator) NewBatch() otel2influx.InfluxWriterBatch {
+	return w
+}
+
+func (w *writeToAccumulator) WritePoint(
+	_ context.Context,
+	measurement string,
+	tags map[string]string,
+	fields map[string]interface{},
+	ts time.Time,
+	vType common.InfluxMetricValueType,
+) error {
 	switch vType {
 	case common.InfluxMetricValueTypeUntyped:
 		w.accumulator.AddFields(measurement, fields, tags, ts)
@@ -28,5 +46,9 @@ func (w *writeToAccumulator) WritePoint(_ context.Context, measurement string, t
 	default:
 		return fmt.Errorf("unrecognized InfluxMetricValueType %q", vType)
 	}
+	return nil
+}
+
+func (w *writeToAccumulator) FlushBatch(_ context.Context) error {
 	return nil
 }

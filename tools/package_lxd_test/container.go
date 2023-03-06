@@ -13,7 +13,7 @@ name = InfluxData Repository - Stable
 baseurl = https://repos.influxdata.com/stable/\$basearch/main
 enabled = 1
 gpgcheck = 1
-gpgkey = https://repos.influxdata.com/influxdb.key
+gpgkey = https://repos.influxdata.com/influxdata-archive_compat.key
 `
 
 type Container struct {
@@ -32,12 +32,12 @@ func (c *Container) Create(image string) error {
 	c.client = LXDClient{}
 	err := c.client.Connect()
 	if err != nil {
-		return fmt.Errorf("failed to connect to lxd: %v", err)
+		return fmt.Errorf("failed to connect to lxd: %w", err)
 	}
 
 	err = c.client.Create(c.Name, "images", image)
 	if err != nil {
-		return fmt.Errorf("failed to create instance: %v", err)
+		return fmt.Errorf("failed to create instance: %w", err)
 	}
 
 	// at this point the container is created, so on any error during setup
@@ -45,7 +45,7 @@ func (c *Container) Create(image string) error {
 	err = c.client.Start(c.Name)
 	if err != nil {
 		c.Delete()
-		return fmt.Errorf("failed to start instance: %v", err)
+		return fmt.Errorf("failed to start instance: %w", err)
 	}
 
 	if err := c.detectPackageManager(); err != nil {
@@ -95,16 +95,29 @@ func (c *Container) Install(packageName ...string) error {
 }
 
 func (c *Container) CheckStatus(serviceName string) error {
-	// the RPM does not start automatically service on install
-	if c.packageManager != "apt" {
-		err := c.client.Exec(c.Name, "systemctl", "start", serviceName)
-		if err != nil {
-			return err
-		}
+	// push a valid config first, then start the service
+	err := c.client.Exec(
+		c.Name,
+		"bash",
+		"-c",
+		"--",
+		"echo '[[inputs.cpu]]\n[[outputs.file]]' | "+
+			"tee /etc/telegraf/telegraf.conf",
+	)
+	if err != nil {
+		return err
 	}
 
-	err := c.client.Exec(c.Name, "systemctl", "status", serviceName)
+	err = c.client.Exec(c.Name, "systemctl", "start", serviceName)
 	if err != nil {
+		_ = c.client.Exec(c.Name, "systemctl", "status", serviceName)
+		_ = c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
+		return err
+	}
+
+	err = c.client.Exec(c.Name, "systemctl", "status", serviceName)
+	if err != nil {
+		_ = c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
 		return err
 	}
 
@@ -134,23 +147,31 @@ func (c *Container) configureApt() error {
 		return err
 	}
 
-	err = c.client.Exec(c.Name, "wget", "https://repos.influxdata.com/influxdb.key")
+	err = c.client.Exec(c.Name, "wget", "https://repos.influxdata.com/influxdata-archive_compat.key")
 	if err != nil {
 		return err
 	}
 
 	err = c.client.Exec(
 		c.Name,
-		"bash", "-c", "--",
-		"echo '23a1c8836f0afc5ed24e0486339d7cc8f6790b83886c4c96995b88a061c5bb5d influxdb.key' | sha256sum -c && cat influxdb.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdb.gpg > /dev/null",
+		"bash",
+		"-c",
+		"--",
+		"echo '393e8779c89ac8d958f81f942f9ad7fb82a25e133faddaf92e15b16e6ac9ce4c influxdata-archive_compat.key' | "+
+			"sha256sum -c && cat influxdata-archive_compat.key | gpg --dearmor | "+
+			"sudo tee /etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg > /dev/null",
 	)
 	if err != nil {
 		return err
 	}
 
-	err = c.client.Exec(c.Name,
-		"bash", "-c", "--",
-		"echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdb.gpg] https://repos.influxdata.com/debian stable main' | tee /etc/apt/sources.list.d/influxdata.list",
+	err = c.client.Exec(
+		c.Name,
+		"bash",
+		"-c",
+		"--",
+		"echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main' | "+
+			"tee /etc/apt/sources.list.d/influxdata.list",
 	)
 	if err != nil {
 		return err

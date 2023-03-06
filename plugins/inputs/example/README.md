@@ -6,6 +6,15 @@ additional information can be found.
 
 Telegraf minimum version: Telegraf x.x Plugin minimum tested version: x.x
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -66,13 +75,13 @@ SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar A
 This optional section can provide basic troubleshooting steps that a user can
 perform.
 
-## Example
+## Example Output
 
 This section shows example output in Line Protocol format.  You can often use
 `telegraf --input-filter <plugin-name> --test` or use the `file` output to get
 this information.
 
-```shell
+```text
 measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
 measurement2,tag1=foo,tag2=bar,tag3=baz field3=1i 1453831884664956455
 ```

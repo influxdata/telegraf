@@ -70,7 +70,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 
 	if r.client == nil {
 		if err := r.Connect(); err != nil {
-			return fmt.Errorf("failed to (re)connect to Riemann: %s", err.Error())
+			return fmt.Errorf("failed to (re)connect to Riemann: %w", err)
 		}
 	}
 
@@ -83,7 +83,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 
 	if err := r.client.SendMulti(events); err != nil {
 		r.Close() //nolint:revive // There is another error which will be returned here
-		return fmt.Errorf("failed to send riemann message: %s", err)
+		return fmt.Errorf("failed to send riemann message: %w", err)
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func (r *Riemann) tags(tags map[string]string) []string {
 	}
 
 	// otherwise add all values from telegraf tag key/value pairs
-	var keys []string
+	keys := make([]string, 0, len(tags))
 	for key := range tags {
 		keys = append(keys, key)
 	}

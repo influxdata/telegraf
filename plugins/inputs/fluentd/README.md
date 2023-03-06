@@ -23,6 +23,15 @@ example configuration with `@id` parameter for http plugin:
 [1]: https://docs.fluentd.org/input/monitor_agent
 [2]: https://docs.fluentd.org/configuration/config-file#common-plugin-parameter
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -42,7 +51,9 @@ example configuration with `@id` parameter for http plugin:
   ]
 ```
 
-## Measurements & Fields
+## Metrics
+
+### Measurements & Fields
 
 Fields may vary depending on the plugin type
 
@@ -60,9 +71,9 @@ Fields may vary depending on the plugin type
   - buffer_stage_length      (float, unit)
   - buffer_queue_byte_size   (float, unit)
   - buffer_stage_byte_size   (float, unit)
-  - buffer_available_buffer_space_ratios (float, unit)  
+  - buffer_available_buffer_space_ratios (float, unit)
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - plugin_id        (unique plugin id)

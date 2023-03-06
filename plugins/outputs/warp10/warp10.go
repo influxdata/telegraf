@@ -31,7 +31,7 @@ const (
 type Warp10 struct {
 	Prefix             string          `toml:"prefix"`
 	WarpURL            string          `toml:"warp_url"`
-	Token              string          `toml:"token"`
+	Token              config.Secret   `toml:"token"`
 	Timeout            config.Duration `toml:"timeout"`
 	PrintErrorBody     bool            `toml:"print_error_body"`
 	MaxStringErrorSize int             `toml:"max_string_error_size"`
@@ -122,11 +122,16 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	addr := w.WarpURL + "/api/v0/update"
 	req, err := http.NewRequest("POST", addr, bytes.NewBufferString(payload))
 	if err != nil {
-		return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+		return fmt.Errorf("unable to create new request %q: %w", addr, err)
 	}
 
-	req.Header.Set("X-Warp10-Token", w.Token)
 	req.Header.Set("Content-Type", "text/plain")
+	token, err := w.Token.Get()
+	if err != nil {
+		return fmt.Errorf("getting token failed: %w", err)
+	}
+	req.Header.Set("X-Warp10-Token", string(token))
+	config.ReleaseSecret(token)
 
 	resp, err := w.client.Do(req)
 	if err != nil {
@@ -151,16 +156,13 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 }
 
 func buildTags(tags []*telegraf.Tag) []string {
-	tagsString := make([]string, len(tags)+1)
-	indexSource := 0
-	for index, tag := range tags {
+	tagsString := make([]string, 0, len(tags)+1)
+	for _, tag := range tags {
 		key := url.QueryEscape(tag.Key)
 		value := url.QueryEscape(tag.Value)
-		tagsString[index] = fmt.Sprintf("%s=%s", key, value)
-		indexSource = index
+		tagsString = append(tagsString, fmt.Sprintf("%s=%s", key, value))
 	}
-	indexSource++
-	tagsString[indexSource] = "source=telegraf"
+	tagsString = append(tagsString, "source=telegraf")
 	sort.Strings(tagsString)
 	return tagsString
 }

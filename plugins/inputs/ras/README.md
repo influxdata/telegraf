@@ -6,10 +6,20 @@ This plugin is only available on Linux (only for `386`, `amd64`, `arm` and
 The `RAS` plugin gathers and counts errors provided by
 [RASDaemon](https://github.com/mchehab/rasdaemon).
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
 # RAS plugin exposes counter metrics for Machine Check Errors provided by RASDaemon (sqlite3 output is required).
+# This plugin ONLY supports Linux on 386, amd64, arm, and arm64
 [[inputs.ras]]
   ## Optional path to RASDaemon sqlite3 database.
   ## Default: /var/lib/rasdaemon/ras-mc_event.db

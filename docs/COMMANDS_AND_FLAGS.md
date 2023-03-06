@@ -1,68 +1,57 @@
 # Telegraf Commands & Flags
 
+The following page describes some of the commands and flags available via the
+Telegraf command line interface.
+
 ## Usage
 
-```shell
-telegraf [commands]
-telegraf [flags]
+General usage of Telegraf, requires passing in at least one config file with
+the plugins the user wishes to use:
+
+```bash
+telegraf --config config.toml
 ```
 
-## Commands
+## Help
 
-|command|description|
-|--------|-----------------------------------------------|
-|`config` |print out full sample configuration to stdout|
-|`version`|print the version to stdout|
+To get the full list of subcommands and flags run:
 
-## Flags
+```bash
+telegraf help
+```
 
-|flag|description|
-|-------------------|------------|
-|`--aggregator-filter <filter>`   |filter the aggregators to enable, separator is `:`|
-|`--config <file>`                |configuration file to load|
-|`--config-directory <directory>` |directory containing additional *.conf files|
-|`--watch-config`                 |Telegraf will restart on local config changes. Monitor changes using either fs notifications or polling. Valid values: `inotify` or `poll`. Monitoring is off by default.|
-|`--plugin-directory`             |directory containing *.so files, this directory will be searched recursively. Any Plugin found will be loaded and namespaced.|
-|`--debug`                        |turn on debug logging|
-|`--deprecation-list`             |print all deprecated plugins or plugin options|
-|`--input-filter <filter>`        |filter the inputs to enable, separator is `:`|
-|`--input-list`                   |print available input plugins.|
-|`--output-filter <filter>`       |filter the outputs to enable, separator is `:`|
-|`--output-list`                  |print available output plugins.|
-|`--pidfile <file>`               |file to write our pid to|
-|`--pprof-addr <address>`         |pprof address to listen on, don't activate pprof if empty|
-|`--processor-filter <filter>`    |filter the processors to enable, separator is `:`|
-|`--quiet`                        |run in quiet mode|
-|`--section-filter`               |filter config sections to output, separator is `:`.  Valid values are `agent`, `global_tags`, `outputs`, `processors`, `aggregators` and `inputs`|
-|`--sample-config`                |print out full sample configuration|
-|`--once`                         |enable once mode: gather metrics once, write them, and exit|
-|`--test`                         |enable test mode: gather metrics once and print them. **No outputs are executed!**|
-|`--test-wait`                    |wait up to this many seconds for service inputs to complete in test or once mode.  **Implies `--test` if not used with `--once`**|
-|`--usage <plugin>`               |print usage for a plugin, ie, `telegraf --usage mysql`|
-|`--version`                      |display the version and exit|
+Here are some commonly used flags that users should be aware of:
 
-## Examples
+* `--config-directory`: Read all config files from a directory
+* `--debug`: Enable additional debug logging
+* `--once`: Run one collection and flush interval then exit
+* `--test`: Run only inputs, output to stdout, and exit
 
-**Generate a telegraf config file:**
+Check out the full help out for more available flags and options.
 
-`telegraf config > telegraf.conf`
+## Version
 
-**Generate config with only cpu input & influxdb output plugins defined:**
+While telegraf will print out the version when running, if a user is uncertain
+what version their binary is, run the version subcommand:
 
-`telegraf config --input-filter cpu --output-filter influxdb`
+```bash
+telegraf version
+```
 
-**Run a single telegraf collection, outputting metrics to stdout:**
+## Config
 
-`telegraf --config telegraf.conf --test`
+The config subcommand allows users to print out a sample configuration to
+stdout. This subcommand can very quickly print out the default values for all
+or any of the plugins available in Telegraf.
 
-**Run telegraf with all plugins defined in config file:**
+For example to print the example config for all plugins run:
 
-`telegraf --config telegraf.conf`
+```bash
+telegraf config > telegraf.conf
+```
 
-**Run telegraf, enabling the cpu & memory input, and influxdb output plugins:**
+If a user only wanted certain inputs or outputs, then the filters can be used:
 
-`telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb`
-
-**Run telegraf with pprof:**
-
-`telegraf --config telegraf.conf --pprof-addr localhost:6060`
+```bash
+telegraf config --input-filter cpu --output-filter influxdb
+```

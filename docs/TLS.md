@@ -10,6 +10,11 @@ documented in the sample configuration.
 For client TLS support we have the following options:
 
 ```toml
+## Enable/disable TLS
+## Set to true/false to enforce TLS being enabled/disabled. If not set,
+## enable TLS only if any of the other options are specified.
+# tls_enable =
+
 ## Root certificates for verifying server certificates encoded in PEM format.
 # tls_ca = "/etc/telegraf/ca.pem"
 
@@ -21,6 +26,7 @@ For client TLS support we have the following options:
 # insecure_skip_verify = false
 ## Send the specified TLS server name via SNI.
 # tls_server_name = "foo.example.com"
+#
 ```
 
 ### Server Configuration
@@ -46,7 +52,7 @@ The server TLS configuration provides support for TLS mutual authentication:
 #### Advanced Configuration
 
 For plugins using the standard server configuration you can also set several
-advanced settings.  These options are not included in the sample configuration
+advanced settings. These options are not included in the sample configuration
 for the interest of brevity.
 
 ```toml

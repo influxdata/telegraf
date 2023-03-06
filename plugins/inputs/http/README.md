@@ -6,6 +6,24 @@ formats](../../../docs/DATA_FORMATS_INPUT.md).  Each data format has its own
 unique set of configuration options which can be added to the input
 configuration.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -44,6 +62,7 @@ configuration.
   # scopes = ["urn:opc:idm:__myscopes__"]
 
   ## HTTP Proxy support
+  # use_system_proxy = false
   # http_proxy_url = ""
 
   ## Optional TLS Config

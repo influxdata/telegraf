@@ -13,6 +13,15 @@ plugin, with some ECS specific modifications for AWS metadata and stats formats.
 The amazon-ecs-agent (though it _is_ a container running on the host) is not
 present in the metadata/stats endpoints.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -220,7 +229,7 @@ present in the metadata/stats endpoints.
     - started_at
     - type
 
-## Example
+## Example Output
 
 ```shell
 ecs_task,cluster=test,family=nginx,host=c4b301d4a123,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a desired_status="RUNNING",known_status="RUNNING",limit_cpu=0.5,limit_mem=512 1542641488000000000

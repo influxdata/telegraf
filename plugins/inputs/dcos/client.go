@@ -292,8 +292,7 @@ func (c *ClusterClient) doGet(ctx context.Context, address string, v interface{}
 		return err
 	}
 	defer func() {
-		//nolint:errcheck,revive // we cannot do anything if the closing fails
-		resp.Body.Close()
+		resp.Body.Close() //nolint:revive // we cannot do anything if the closing fails
 		<-c.semaphore
 	}()
 

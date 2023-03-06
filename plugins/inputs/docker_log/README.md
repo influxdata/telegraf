@@ -12,6 +12,15 @@ The docker plugin uses the [Official Docker Client][] to gather logs from the
 [Official Docker Client]: https://github.com/moby/moby/tree/master/client
 [Engine API]: https://docs.docker.com/engine/api/v1.24/
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -22,8 +31,9 @@ The docker plugin uses the [Official Docker Client][] to gather logs from the
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   # endpoint = "unix:///var/run/docker.sock"
 
-  ## When true, container logs are read from the beginning; otherwise
-  ## reading begins at the end of the log.
+  ## When true, container logs are read from the beginning; otherwise reading
+  ## begins at the end of the log. If state-persistence is enabled for Telegraf,
+  ## the reading continues at the last previously processed timestamp.
   # from_beginning = false
 
   ## Timeout for Docker API calls.

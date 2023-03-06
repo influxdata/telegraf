@@ -36,8 +36,11 @@ var (
 	//vcl name and backend restriction regexp [A-Za-z][A-Za-z0-9_-]*
 	defaultRegexps = []*regexp.Regexp{
 		//dynamic backends
+		//nolint:lll // conditionally long line allowed to have a better understanding of following regexp
 		//VBE.VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx.goto.000007c8.(xx.xx.xxx.xx).(http://xxxxxxx-xxxxx-xxxxx-xxxxxx-xx-xxxx-x-xxxx.xx-xx-xxxx-x.amazonaws.com:80).(ttl:5.000000).fail_eaddrnotavail
-		regexp.MustCompile(`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.[[:alnum:]]+\.\((?P<backend>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server>.*)\)\.\(ttl:\d*\.\d*.*\)`),
+		regexp.MustCompile(
+			`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.[[:alnum:]]+\.\((?P<backend>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server>.*)\)\.\(ttl:\d*\.\d*.*\)`,
+		),
 
 		//VBE.reload_20210622_153544_23757.default.unhealthy
 		regexp.MustCompile(`^VBE\.(?P<_vcl>[\w\-]*)\.(?P<backend>[\w\-]*)\.([\w\-]*)`),
@@ -89,7 +92,7 @@ func varnishRunner(cmdName string, useSudo bool, cmdArgs []string, timeout confi
 
 	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running %s %v - %s", cmdName, cmdArgs, err)
+		return &out, fmt.Errorf("error running %q %q: %w", cmdName, cmdArgs, err)
 	}
 
 	return &out, nil
@@ -100,11 +103,11 @@ func (*Varnish) SampleConfig() string {
 }
 
 func (s *Varnish) Init() error {
-	var customRegexps []*regexp.Regexp
+	customRegexps := make([]*regexp.Regexp, 0, len(s.Regexps))
 	for _, re := range s.Regexps {
 		compiled, err := regexp.Compile(re)
 		if err != nil {
-			return fmt.Errorf("error parsing regexp: %s", err)
+			return fmt.Errorf("error parsing regexp: %w", err)
 		}
 		customRegexps = append(customRegexps, compiled)
 	}
@@ -139,7 +142,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 
 	statOut, err := s.run(s.Binary, s.UseSudo, statsArgs, s.Timeout)
 	if err != nil {
-		return fmt.Errorf("error gathering metrics: %s", err)
+		return fmt.Errorf("error gathering metrics: %w", err)
 	}
 
 	if s.MetricVersion == 2 {
@@ -148,11 +151,11 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 		if s.admRun != nil {
 			admOut, err := s.admRun(s.AdmBinary, s.UseSudo, admArgs, s.Timeout)
 			if err != nil {
-				return fmt.Errorf("error gathering metrics: %s", err)
+				return fmt.Errorf("error gathering metrics: %w", err)
 			}
 			activeVcl, err = getActiveVCLJson(admOut)
 			if err != nil {
-				return fmt.Errorf("error gathering metrics: %s", err)
+				return fmt.Errorf("error gathering metrics: %w", err)
 			}
 		}
 		return s.processMetricsV2(activeVcl, acc, statOut)
@@ -268,12 +271,12 @@ func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, o
 				//parse bitmap value
 				if flag == "b" {
 					if metricValue, parseError = strconv.ParseUint(number.String(), 10, 64); parseError != nil {
-						parseError = fmt.Errorf("%s value uint64 error: %s", fieldName, parseError)
+						parseError = fmt.Errorf("%q value uint64 error: %w", fieldName, parseError)
 					}
 				} else if metricValue, parseError = number.Int64(); parseError != nil {
 					//try parse float
 					if metricValue, parseError = number.Float64(); parseError != nil {
-						parseError = fmt.Errorf("stat %s value %v is not valid number: %s", fieldName, value, parseError)
+						parseError = fmt.Errorf("stat %q value %q is not valid number: %w", fieldName, value, parseError)
 					}
 				}
 			} else {

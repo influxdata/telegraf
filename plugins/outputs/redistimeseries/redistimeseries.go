@@ -1,35 +1,26 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redistimeseries
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 
 	"github.com/go-redis/redis/v7"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const sampleConfig = `
-  ## The address of the RedisTimeSeries server.
-  address = "127.0.0.1:6379"
-
-  ## Redis ACL credentials
-  # username = ""
-  # password = ""
-  # database = 0
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  # insecure_skip_verify = false
-`
+//go:embed sample.conf
+var sampleConfig string
 
 type RedisTimeSeries struct {
 	Address  string          `toml:"address"`
-	Username string          `toml:"username"`
-	Password string          `toml:"password"`
+	Username config.Secret   `toml:"username"`
+	Password config.Secret   `toml:"password"`
 	Database int             `toml:"database"`
 	Log      telegraf.Logger `toml:"-"`
 	tls.ClientConfig
@@ -40,10 +31,23 @@ func (r *RedisTimeSeries) Connect() error {
 	if r.Address == "" {
 		return errors.New("redis address must be specified")
 	}
+
+	username, err := r.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	defer config.ReleaseSecret(username)
+
+	password, err := r.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+	defer config.ReleaseSecret(password)
+
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.Address,
-		Password: r.Password,
-		Username: r.Username,
+		Username: string(username),
+		Password: string(password),
 		DB:       r.Database,
 	})
 	return r.client.Ping().Err()
@@ -77,7 +81,7 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 			addSlice = append(addSlice, tags...)
 
 			if err := r.client.Do(addSlice...).Err(); err != nil {
-				return fmt.Errorf("adding sample failed: %v", err)
+				return fmt.Errorf("adding sample failed: %w", err)
 			}
 		}
 	}

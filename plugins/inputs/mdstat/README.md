@@ -13,10 +13,20 @@ Stat collection based on Prometheus' [mdstat collection library][prom-lib].
 
 [prom-lib]: https://github.com/prometheus/procfs/blob/master/mdstat.go
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
 # Get kernel statistics from /proc/mdstat
+# This plugin ONLY supports Linux
 [[inputs.mdstat]]
   ## Sets file path
   ## If not specified, then default is /proc/mdstat

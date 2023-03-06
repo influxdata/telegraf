@@ -52,7 +52,7 @@ func TestGatherAttributes(t *testing.T) {
 			err := s.Gather(&acc)
 
 			require.NoError(t, err)
-			assert.Equal(t, 66, acc.NFields(), "Wrong number of fields gathered")
+			assert.Equal(t, 68, acc.NFields(), "Wrong number of fields gathered")
 
 			for _, test := range testsAda0Attributes {
 				acc.AssertContainsTaggedFields(t, "smart_attribute", test.fields, test.tags)
@@ -171,7 +171,7 @@ func TestGatherNoAttributes(t *testing.T) {
 		err := s.Gather(&acc)
 
 		require.NoError(t, err)
-		assert.Equal(t, 9, acc.NFields(), "Wrong number of fields gathered")
+		assert.Equal(t, 11, acc.NFields(), "Wrong number of fields gathered")
 		acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
 
 		for _, test := range testsAda0Device {
@@ -212,7 +212,7 @@ func TestGatherSATAInfo(t *testing.T) {
 	wg.Add(1)
 
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 101, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 106, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
@@ -228,7 +228,7 @@ func TestGatherSATAInfo65(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 91, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 96, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
@@ -293,7 +293,7 @@ func TestGatherSSD(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 106, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 110, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
@@ -309,7 +309,7 @@ func TestGatherSSDRaid(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 75, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 77, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
@@ -1411,12 +1411,14 @@ var (
 	}{
 		{
 			map[string]interface{}{
-				"exit_status":         int(0),
-				"health_ok":           bool(true),
-				"read_error_rate":     int64(0),
-				"temp_c":              int64(34),
-				"udma_crc_errors":     int64(0),
-				"wear_leveling_count": int64(185),
+				"exit_status":               int(0),
+				"health_ok":                 bool(true),
+				"read_error_rate":           int64(0),
+				"temp_c":                    int64(34),
+				"udma_crc_errors":           int64(0),
+				"wear_leveling_count":       int64(185),
+				"pending_sector_count":      int64(0),
+				"reallocated_sectors_count": int64(0),
 			},
 			map[string]string{
 				"device":    "ada0",

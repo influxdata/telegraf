@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/bsonx"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Server struct {
@@ -254,7 +255,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 					},
 				}, colStatLine)
 				if err != nil {
-					s.authLog(fmt.Errorf("error getting col stats from %q: %v", colName, err))
+					s.authLog(fmt.Errorf("error getting col stats from %q: %w", colName, err))
 					continue
 				}
 				collection := &Collection{
@@ -269,7 +270,14 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, gatherTopStat bool, colStatsDbs []string) error {
+func (s *Server) gatherData(
+	acc telegraf.Accumulator,
+	gatherClusterStatus bool,
+	gatherDbStats bool,
+	gatherColStats bool,
+	gatherTopStat bool,
+	colStatsDbs []string,
+) error {
 	serverStatus, err := s.gatherServerStatus()
 	if err != nil {
 		return err
@@ -288,7 +296,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 	if replSetStatus != nil {
 		oplogStats, err = s.gatherOplogStats()
 		if err != nil {
-			s.authLog(fmt.Errorf("Unable to get oplog stats: %v", err))
+			s.authLog(fmt.Errorf("unable to get oplog stats: %w", err))
 		}
 	}
 
@@ -303,7 +311,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 
 	shardStats, err := s.gatherShardConnPoolStats(serverStatus.Version)
 	if err != nil {
-		s.authLog(fmt.Errorf("unable to gather shard connection pool stats: %s", err.Error()))
+		s.authLog(fmt.Errorf("unable to gather shard connection pool stats: %w", err))
 	}
 
 	var collectionStats *ColStats

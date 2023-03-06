@@ -33,6 +33,7 @@ const (
 	packageThermalDesignPower          = "thermal_design_power"
 	packageTurboLimit                  = "max_turbo_frequency"
 	packageUncoreFrequency             = "uncore_frequency"
+	packageCPUBaseFrequency            = "cpu_base_frequency"
 	percentageMultiplier               = 100
 )
 
@@ -46,21 +47,25 @@ type PowerStat struct {
 	rapl raplService
 	msr  msrService
 
-	cpuFrequency                       bool
-	cpuBusyFrequency                   bool
-	cpuTemperature                     bool
-	cpuC0StateResidency                bool
-	cpuC1StateResidency                bool
-	cpuC6StateResidency                bool
-	cpuBusyCycles                      bool
+	cpuFrequency        bool
+	cpuBusyFrequency    bool
+	cpuTemperature      bool
+	cpuC0StateResidency bool
+	cpuC1StateResidency bool
+	cpuC6StateResidency bool
+	cpuBusyCycles       bool
+
 	packageTurboLimit                  bool
 	packageCurrentPowerConsumption     bool
 	packageCurrentDramPowerConsumption bool
 	packageThermalDesignPower          bool
 	packageUncoreFrequency             bool
-	cpuInfo                            map[string]*cpuInfo
-	skipFirstIteration                 bool
-	logOnce                            map[string]error
+	packageCPUBaseFrequency            bool
+
+	cpuBusClockValue   float64
+	cpuInfo            map[string]*cpuInfo
+	skipFirstIteration bool
+	logOnce            map[string]error
 }
 
 func (*PowerStat) SampleConfig() string {
@@ -75,20 +80,46 @@ func (p *PowerStat) Init() error {
 	if err != nil {
 		return err
 	}
-	// Initialize MSR service only when there is at least one metric enabled
-	if p.cpuFrequency || p.cpuBusyFrequency || p.cpuTemperature || p.cpuC0StateResidency || p.cpuC1StateResidency ||
-		p.cpuC6StateResidency || p.cpuBusyCycles || p.packageTurboLimit || p.packageUncoreFrequency {
-		p.msr = newMsrServiceWithFs(p.Log, p.fs)
-	}
-	if p.packageCurrentPowerConsumption || p.packageCurrentDramPowerConsumption || p.packageThermalDesignPower || p.packageTurboLimit || p.packageUncoreFrequency {
-		p.rapl = newRaplServiceWithFs(p.Log, p.fs)
-	}
+
+	p.initMSR()
+	p.initRaplService()
 
 	if !p.areCoreMetricsEnabled() && !p.areGlobalMetricsEnabled() {
 		return fmt.Errorf("all configuration options are empty or invalid. Did not find anything to gather")
 	}
 
+	p.fillCPUBusClock()
 	return nil
+}
+
+func (p *PowerStat) initMSR() {
+	// Initialize MSR service only when there is at least one metric enabled
+	if p.cpuFrequency || p.cpuBusyFrequency || p.cpuTemperature || p.cpuC0StateResidency || p.cpuC1StateResidency ||
+		p.cpuC6StateResidency || p.cpuBusyCycles || p.packageTurboLimit || p.packageUncoreFrequency || p.packageCPUBaseFrequency {
+		p.msr = newMsrServiceWithFs(p.Log, p.fs)
+	}
+}
+
+func (p *PowerStat) initRaplService() {
+	if p.packageCurrentPowerConsumption || p.packageCurrentDramPowerConsumption || p.packageThermalDesignPower || p.packageTurboLimit ||
+		p.packageUncoreFrequency || p.packageCPUBaseFrequency {
+		p.rapl = newRaplServiceWithFs(p.Log, p.fs)
+	}
+}
+
+// fill CPUBusClockValue if required
+func (p *PowerStat) fillCPUBusClock() {
+	if p.packageCPUBaseFrequency {
+		// cpuBusClock is the same for every core/socket.
+		busClockInfo := p.getBusClock("0")
+		if busClockInfo == 0 {
+			p.Log.Warn("Disabling package metric: cpu_base_frequency_mhz. Can't detect bus clock value")
+			p.packageCPUBaseFrequency = false
+			return
+		}
+
+		p.cpuBusClockValue = busClockInfo
+	}
 }
 
 // Gather takes in an accumulator and adds the metrics that the Input gathers
@@ -130,6 +161,10 @@ func (p *PowerStat) addGlobalMetrics(acc telegraf.Accumulator) {
 			for actualDie := 0; actualDie < die; actualDie++ {
 				p.addUncoreFreq(socketID, strconv.Itoa(actualDie), acc)
 			}
+		}
+
+		if p.packageCPUBaseFrequency {
+			p.addCPUBaseFreq(socketID, acc)
 		}
 
 		err := p.rapl.retrieveAndCalculateData(socketID)
@@ -188,22 +223,17 @@ func (p *PowerStat) addUncoreFreq(socketID string, die string, acc telegraf.Accu
 
 func (p *PowerStat) readUncoreFreq(typeFreq string, socketID string, die string, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{}
-	cpuID := ""
 	if typeFreq == "current" {
 		if p.areCoreMetricsEnabled() && p.msr.isMsrLoaded() {
 			p.logOnce[socketID+"msr"] = nil
-			for _, v := range p.cpuInfo {
-				if v.physicalID == socketID {
-					cpuID = v.cpuID
-				}
-			}
-			if cpuID == "" {
-				p.Log.Debugf("error while reading socket ID")
+			cpuID, err := p.GetCPUIDFromSocketID(socketID)
+			if err != nil {
+				p.Log.Debugf("error while reading socket ID: %v", err)
 				return
 			}
-			actualUncoreFreq, err := p.msr.readSingleMsr(cpuID, "MSR_UNCORE_PERF_STATUS")
+			actualUncoreFreq, err := p.msr.readSingleMsr(cpuID, msrUncorePerfStatusString)
 			if err != nil {
-				p.Log.Debugf("error while reading MSR_UNCORE_PERF_STATUS: %v", err)
+				p.Log.Debugf("error while reading %s: %v", msrUncorePerfStatusString, err)
 				return
 			}
 			actualUncoreFreq = (actualUncoreFreq & 0x3F) * 100
@@ -374,7 +404,8 @@ func (p *PowerStat) addCPUTemperatureMetric(cpuID string, acc telegraf.Accumulat
 }
 
 func calculateTurboRatioGroup(coreCounts uint64, msr uint64, group map[int]uint64) {
-	from := coreCounts & 0xFF // value of number of active cores of bucket 1 is written in the first 8 bits. The next buckets values are saved on the following 8-bit sides
+	// value of number of active cores of bucket 1 is written in the first 8 bits. The next buckets values are saved on the following 8-bit sides
+	from := coreCounts & 0xFF
 	for i := 0; i < 8; i++ {
 		to := (coreCounts >> (i * 8)) & 0xFF
 		if to == 0 {
@@ -404,15 +435,15 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 		}
 	}
 	if cpuID == "" || model == "" {
-		p.Log.Debugf("error while reading socket ID")
+		p.Log.Debug("error while reading socket ID")
 		return
 	}
 	// dump_hsw_turbo_ratio_limit
 	if model == strconv.FormatInt(0x3F, 10) { // INTEL_FAM6_HASWELL_X
 		coreCounts := uint64(0x1211) // counting the number of active cores 17 and 18
-		msrTurboRatioLimit2, err := p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT2")
+		msrTurboRatioLimit2, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimit2String)
 		if err != nil {
-			p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT2: %v", err)
+			p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimit2String, err)
 			return
 		}
 
@@ -423,9 +454,9 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 	if (model == strconv.FormatInt(0x3E, 10)) || // INTEL_FAM6_IVYBRIDGE_X
 		(model == strconv.FormatInt(0x3F, 10)) { // INTEL_FAM6_HASWELL_X
 		coreCounts := uint64(0x100F0E0D0C0B0A09) // counting the number of active cores 9 to 16
-		msrTurboRatioLimit1, err := p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT1")
+		msrTurboRatioLimit1, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimit1String)
 		if err != nil {
-			p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT1: %v", err)
+			p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimit1String, err)
 			return
 		}
 		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit1, turboRatioLimitGroups)
@@ -444,17 +475,17 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 			(model == strconv.FormatInt(0x6C, 10) || model == strconv.FormatInt(0x8F, 10) || model == strconv.FormatInt(0x6A, 10)) || // INTEL_FAM6_ICELAKE_X
 			(model == strconv.FormatInt(0x5F, 10)) || // INTEL_FAM6_ATOM_GOLDMONT_D
 			(model == strconv.FormatInt(0x86, 10)) { // INTEL_FAM6_ATOM_TREMONT_D
-			coreCounts, err = p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT1")
+			coreCounts, err = p.msr.readSingleMsr(cpuID, msrTurboRatioLimit1String)
 
 			if err != nil {
-				p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT1: %v", err)
+				p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimit1String, err)
 				return
 			}
 		}
 
-		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT")
+		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimitString)
 		if err != nil {
-			p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT: %v", err)
+			p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimitString, err)
 			return
 		}
 		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit, turboRatioLimitGroups)
@@ -464,10 +495,10 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 		model == strconv.FormatInt(0x4A, 10) || // INTEL_FAM6_ATOM_SILVERMONT_MID:
 		model == strconv.FormatInt(0x5A, 10) { // INTEL_FAM6_ATOM_AIRMONT_MID
 		coreCounts := uint64(0x04030201) // counting the number of active cores 1 to 4
-		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, "MSR_ATOM_CORE_TURBO_RATIOS")
+		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrAtomCoreTurboRatiosString)
 
 		if err != nil {
-			p.Log.Debugf("error while reading MSR_ATOM_CORE_TURBO_RATIOS: %v", err)
+			p.Log.Debugf("error while reading %s: %v", msrAtomCoreTurboRatiosString, err)
 			return
 		}
 		value := uint64(0)
@@ -482,9 +513,9 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 	}
 	// dump_knl_turbo_ratio_limits
 	if model == strconv.FormatInt(0x57, 10) { // INTEL_FAM6_XEON_PHI_KNL
-		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT")
+		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimitString)
 		if err != nil {
-			p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT: %v", err)
+			p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimitString, err)
 			return
 		}
 
@@ -652,6 +683,79 @@ func (p *PowerStat) addCPUC0StateResidencyMetric(cpuID string, acc telegraf.Accu
 	}
 }
 
+func (p *PowerStat) addCPUBaseFreq(socketID string, acc telegraf.Accumulator) {
+	cpuID, err := p.GetCPUIDFromSocketID(socketID)
+	if err != nil {
+		p.Log.Debugf("error while getting CPU ID from Socket ID: %v", err)
+		return
+	}
+
+	msrPlatformInfoMsr, err := p.msr.readSingleMsr(cpuID, msrPlatformInfoString)
+	if err != nil {
+		p.Log.Debugf("error while reading %s: %v", msrPlatformInfoString, err)
+		return
+	}
+
+	// the value of the freq ratio is saved in bits 15 to 8.
+	// to get the freq -> ratio * busClock
+	cpuBaseFreq := float64((msrPlatformInfoMsr>>8)&0xFF) * p.cpuBusClockValue
+	if cpuBaseFreq == 0 {
+		p.Log.Debugf("error while adding CPU base frequency, cpuBaseFreq is zero for the socket: %s", socketID)
+		return
+	}
+
+	tags := map[string]string{
+		"package_id": socketID,
+	}
+	fields := map[string]interface{}{
+		"cpu_base_frequency_mhz": uint64(cpuBaseFreq),
+	}
+	acc.AddGauge("powerstat_package", fields, tags)
+}
+
+func (p *PowerStat) getBusClock(cpuID string) float64 {
+	cpuInfo, ok := p.cpuInfo[cpuID]
+	if !ok {
+		p.Log.Debugf("cannot find cpuInfo for cpu: %s", cpuID)
+		return 0
+	}
+
+	model := cpuInfo.model
+	busClock100 := []int64{0x2A, 0x2D, 0x3A, 0x3E, 0x3C, 0x3F, 0x45, 0x46, 0x3D, 0x47, 0x4F, 0x56, 0x4E, 0x5E, 0x55, 0x8E, 0x9E, 0xA5, 0xA6, 0x66, 0x6A, 0x6C,
+		0x7D, 0x7E, 0x9D, 0x8A, 0xA7, 0x8C, 0x8D, 0x8F, 0x97, 0x9A, 0xBE, 0xB7, 0xBA, 0xBF, 0xAC, 0xAA, 0x5C, 0x5F, 0x7A, 0x86, 0x96, 0x9C, 0x57, 0x85}
+	busClock133 := []int64{0x1E, 0x1F, 0x1A, 0x2E, 0x25, 0x2C, 0x2F, 0x4C}
+	busClockCalculate := []int64{0x37, 0x4D}
+
+	if contains(convertIntegerArrayToStringArray(busClock100), model) {
+		return 100.0
+	} else if contains(convertIntegerArrayToStringArray(busClock133), model) {
+		return 133.0
+	} else if contains(convertIntegerArrayToStringArray(busClockCalculate), model) {
+		return p.getSilvermontBusClock(cpuID)
+	}
+
+	p.Log.Debugf("couldn't find the freq for the model: %d", model)
+	return 0.0
+}
+
+func (p *PowerStat) getSilvermontBusClock(cpuID string) float64 {
+	silvermontFreqTable := []float64{83.3, 100.0, 133.3, 116.7, 80.0}
+	msr, err := p.msr.readSingleMsr(cpuID, msrFSBFreqString)
+	if err != nil {
+		p.Log.Debugf("error while reading %s: %v", msrFSBFreqString, err)
+		return 0.0
+	}
+
+	i := int(msr & 0xf)
+	if i >= len(silvermontFreqTable) {
+		p.Log.Debugf("unknown msr value: %d, using default bus clock value: %d", i, silvermontFreqTable[3])
+		//same behaviour as in turbostat
+		i = 3
+	}
+
+	return silvermontFreqTable[i]
+}
+
 func (p *PowerStat) parsePackageMetricsConfig() {
 	if p.PackageMetrics == nil {
 		// if Package Metric config is empty, use the default settings.
@@ -676,6 +780,9 @@ func (p *PowerStat) parsePackageMetricsConfig() {
 	}
 	if contains(p.PackageMetrics, packageUncoreFrequency) {
 		p.packageUncoreFrequency = true
+	}
+	if contains(p.PackageMetrics, packageCPUBaseFrequency) {
+		p.packageCPUBaseFrequency = true
 	}
 }
 
@@ -717,7 +824,7 @@ func (p *PowerStat) verifyProcessor() error {
 	allowedProcessorModelsForC1C6 := []int64{0x37, 0x4D, 0x5C, 0x5F, 0x7A, 0x4C, 0x86, 0x96, 0x9C,
 		0x1A, 0x1E, 0x1F, 0x2E, 0x25, 0x2C, 0x2F, 0x2A, 0x2D, 0x3A, 0x3E, 0x4E, 0x5E, 0x55, 0x8E,
 		0x9E, 0x6A, 0x6C, 0x7D, 0x7E, 0x9D, 0x3C, 0x3F, 0x45, 0x46, 0x3D, 0x47, 0x4F, 0x56,
-		0x66, 0x57, 0x85, 0xA5, 0xA6, 0x8F, 0x8C, 0x8D}
+		0x66, 0x57, 0x85, 0xA5, 0xA6, 0x8A, 0x8F, 0x8C, 0x8D, 0xA7, 0x97, 0x9A, 0xBE, 0xB7, 0xBA, 0xBF, 0xAC, 0xAA}
 	stats, err := p.fs.getCPUInfoStats()
 	if err != nil {
 		return err
@@ -741,6 +848,7 @@ func (p *PowerStat) verifyProcessor() error {
 	}
 
 	if !strings.Contains(firstCPU.flags, "msr") {
+		p.packageCPUBaseFrequency = false
 		p.cpuTemperature = false
 		p.cpuC6StateResidency = false
 		p.cpuC0StateResidency = false
@@ -763,9 +871,9 @@ func (p *PowerStat) verifyProcessor() error {
 	return nil
 }
 
-func contains(slice []string, str string) bool {
-	for _, v := range slice {
-		if v == str {
+func contains[T comparable](s []T, e T) bool {
+	for _, v := range s {
+		if v == e {
 			return true
 		}
 	}
@@ -780,24 +888,21 @@ func (p *PowerStat) areGlobalMetricsEnabled() bool {
 	return p.rapl != nil
 }
 
+func (p *PowerStat) GetCPUIDFromSocketID(socketID string) (string, error) {
+	for _, v := range p.cpuInfo {
+		if v.physicalID == socketID {
+			return v.cpuID, nil
+		}
+	}
+	return "", fmt.Errorf("can't find cpuID for socketID: %s", socketID)
+}
+
 // newPowerStat creates and returns PowerStat struct
 func newPowerStat(fs fileService) *PowerStat {
 	p := &PowerStat{
-		cpuFrequency:                       false,
-		cpuC0StateResidency:                false,
-		cpuC1StateResidency:                false,
-		cpuC6StateResidency:                false,
-		cpuBusyCycles:                      false,
-		cpuTemperature:                     false,
-		cpuBusyFrequency:                   false,
-		packageTurboLimit:                  false,
-		packageUncoreFrequency:             false,
-		packageCurrentPowerConsumption:     false,
-		packageCurrentDramPowerConsumption: false,
-		packageThermalDesignPower:          false,
-		skipFirstIteration:                 true,
-		fs:                                 fs,
-		logOnce:                            make(map[string]error),
+		skipFirstIteration: true,
+		fs:                 fs,
+		logOnce:            make(map[string]error),
 	}
 
 	return p

@@ -142,7 +142,7 @@ func mapHostname(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 
 func mapTimestamp(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	timestamp := metric.Time()
-	//nolint: revive // Need switch with only one case to handle `.(type)`
+
 	if value, ok := metric.GetField("timestamp"); ok {
 		if v, ok := value.(int64); ok {
 			timestamp = time.Unix(0, v).UTC()

@@ -4,6 +4,7 @@ package tengine
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -51,7 +52,7 @@ func (n *Tengine) Gather(acc telegraf.Accumulator) error {
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			acc.AddError(fmt.Errorf("Unable to parse address %q: %w", u, err))
 			continue
 		}
 
@@ -123,7 +124,7 @@ func (n *Tengine) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	var tengineStatus TengineStatus
 	resp, err := n.client.Get(addr.String())
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
+		return fmt.Errorf("error making HTTP request to %q: %w", addr.String(), err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -134,7 +135,7 @@ func (n *Tengine) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	for {
 		line, err := r.ReadString('\n')
 
-		if err != nil || io.EOF == err {
+		if err != nil || errors.Is(err, io.EOF) {
 			break
 		}
 		lineSplit := strings.Split(strings.TrimSpace(line), ",")

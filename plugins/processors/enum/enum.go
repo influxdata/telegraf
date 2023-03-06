@@ -47,7 +47,7 @@ func (mapper *EnumMapper) Init() error {
 		if mapping.Tag != "" {
 			tagFilter, err := filter.NewIncludeExcludeFilter([]string{mapping.Tag}, nil)
 			if err != nil {
-				return fmt.Errorf("failed to create new tag filter: %s", err)
+				return fmt.Errorf("failed to create new tag filter: %w", err)
 			}
 			mapper.TagFilters[mapping.Tag] = tagFilter
 		}

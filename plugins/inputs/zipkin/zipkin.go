@@ -120,9 +120,7 @@ func (z *Zipkin) Stop() {
 	defer z.waitGroup.Wait()
 	defer cancel()
 
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	z.server.Shutdown(ctx)
+	z.server.Shutdown(ctx) //nolint:errcheck,revive // Ignore the returned error as we cannot do anything about it anyway
 }
 
 // Listen creates an http server on the zipkin instance it is called with, and
@@ -135,7 +133,7 @@ func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
 		// This interferes with telegraf's internal data collection,
 		// by making it appear as if a serious error occurred.
 		if err != http.ErrServerClosed {
-			acc.AddError(fmt.Errorf("error listening: %v", err))
+			acc.AddError(fmt.Errorf("error listening: %w", err))
 		}
 	}
 }

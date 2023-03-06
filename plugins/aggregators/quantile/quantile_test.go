@@ -46,7 +46,10 @@ func TestConfigInvalidQuantiles(t *testing.T) {
 func TestSingleMetricTDigest(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{Compression: 100}
+	q := Quantile{
+		Compression: 100,
+		Log:         testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -81,9 +84,9 @@ func TestSingleMetricTDigest(t *testing.T) {
 		),
 	}
 
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -98,7 +101,7 @@ func TestSingleMetricTDigest(t *testing.T) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
 
 	for _, m := range metrics {
@@ -113,7 +116,10 @@ func TestSingleMetricTDigest(t *testing.T) {
 func TestMultipleMetricsTDigest(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{Compression: 100}
+	q := Quantile{
+		Compression: 100,
+		Log:         testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -138,23 +144,22 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 		),
 	}
 
-	metricsA := make([]telegraf.Metric, 100)
-	metricsB := make([]telegraf.Metric, 100)
-	for i := range metricsA {
-		metricsA[i] = testutil.MustMetric(
+	metricsA := make([]telegraf.Metric, 0, 100)
+	metricsB := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metricsA = append(metricsA, testutil.MustMetric(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
-		)
-	}
-	for i := range metricsB {
-		metricsB[i] = testutil.MustMetric(
+		))
+
+		metricsB = append(metricsB, testutil.MustMetric(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
 			time.Now(),
-		)
+		))
 	}
 
 	for _, m := range metricsA {
@@ -173,7 +178,10 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 func TestSingleMetricExactR7(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{AlgorithmType: "exact R7"}
+	q := Quantile{
+		AlgorithmType: "exact R7",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -208,9 +216,9 @@ func TestSingleMetricExactR7(t *testing.T) {
 		),
 	}
 
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -225,7 +233,7 @@ func TestSingleMetricExactR7(t *testing.T) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
 
 	for _, m := range metrics {
@@ -240,7 +248,10 @@ func TestSingleMetricExactR7(t *testing.T) {
 func TestMultipleMetricsExactR7(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{AlgorithmType: "exact R7"}
+	q := Quantile{
+		AlgorithmType: "exact R7",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -265,23 +276,22 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 		),
 	}
 
-	metricsA := make([]telegraf.Metric, 100)
-	metricsB := make([]telegraf.Metric, 100)
-	for i := range metricsA {
-		metricsA[i] = testutil.MustMetric(
+	metricsA := make([]telegraf.Metric, 0, 100)
+	metricsB := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metricsA = append(metricsA, testutil.MustMetric(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
-		)
-	}
-	for i := range metricsB {
-		metricsB[i] = testutil.MustMetric(
+		))
+
+		metricsB = append(metricsB, testutil.MustMetric(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
 			time.Now(),
-		)
+		))
 	}
 
 	for _, m := range metricsA {
@@ -300,7 +310,10 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 func TestSingleMetricExactR8(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{AlgorithmType: "exact R8"}
+	q := Quantile{
+		AlgorithmType: "exact R8",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -335,9 +348,9 @@ func TestSingleMetricExactR8(t *testing.T) {
 		),
 	}
 
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -352,7 +365,7 @@ func TestSingleMetricExactR8(t *testing.T) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
 
 	for _, m := range metrics {
@@ -367,7 +380,10 @@ func TestSingleMetricExactR8(t *testing.T) {
 func TestMultipleMetricsExactR8(t *testing.T) {
 	acc := testutil.Accumulator{}
 
-	q := Quantile{AlgorithmType: "exact R8"}
+	q := Quantile{
+		AlgorithmType: "exact R8",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(t, err)
 
@@ -392,23 +408,22 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 		),
 	}
 
-	metricsA := make([]telegraf.Metric, 100)
-	metricsB := make([]telegraf.Metric, 100)
-	for i := range metricsA {
-		metricsA[i] = testutil.MustMetric(
+	metricsA := make([]telegraf.Metric, 0, 100)
+	metricsB := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metricsA = append(metricsA, testutil.MustMetric(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
-		)
-	}
-	for i := range metricsB {
-		metricsB[i] = testutil.MustMetric(
+		))
+
+		metricsB = append(metricsB, testutil.MustMetric(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
 			time.Now(),
-		)
+		))
 	}
 
 	for _, m := range metricsA {
@@ -425,9 +440,9 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 }
 
 func BenchmarkDefaultTDigest(b *testing.B) {
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -441,10 +456,13 @@ func BenchmarkDefaultTDigest(b *testing.B) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
 
-	q := Quantile{Compression: 100}
+	q := Quantile{
+		Compression: 100,
+		Log:         testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -458,9 +476,9 @@ func BenchmarkDefaultTDigest(b *testing.B) {
 }
 
 func BenchmarkDefaultTDigest100Q(b *testing.B) {
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -474,14 +492,18 @@ func BenchmarkDefaultTDigest100Q(b *testing.B) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
-	quantiles := make([]float64, 100)
-	for i := range quantiles {
-		quantiles[i] = 0.01 * float64(i)
+	quantiles := make([]float64, 0, 100)
+	for i := 0; i < 100; i++ {
+		quantiles = append(quantiles, 0.01*float64(i))
 	}
 
-	q := Quantile{Compression: 100, Quantiles: quantiles}
+	q := Quantile{
+		Compression: 100,
+		Quantiles:   quantiles,
+		Log:         testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -495,9 +517,9 @@ func BenchmarkDefaultTDigest100Q(b *testing.B) {
 }
 
 func BenchmarkDefaultExactR7(b *testing.B) {
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -511,10 +533,13 @@ func BenchmarkDefaultExactR7(b *testing.B) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
 
-	q := Quantile{AlgorithmType: "exact R7"}
+	q := Quantile{
+		AlgorithmType: "exact R7",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -528,9 +553,9 @@ func BenchmarkDefaultExactR7(b *testing.B) {
 }
 
 func BenchmarkDefaultExactR7100Q(b *testing.B) {
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -544,14 +569,18 @@ func BenchmarkDefaultExactR7100Q(b *testing.B) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
-	quantiles := make([]float64, 100)
-	for i := range quantiles {
-		quantiles[i] = 0.01 * float64(i)
+	quantiles := make([]float64, 0, 100)
+	for i := 0; i < 100; i++ {
+		quantiles = append(quantiles, 0.01*float64(i))
 	}
 
-	q := Quantile{AlgorithmType: "exact R7", Quantiles: quantiles}
+	q := Quantile{
+		AlgorithmType: "exact R7",
+		Quantiles:     quantiles,
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -565,9 +594,9 @@ func BenchmarkDefaultExactR7100Q(b *testing.B) {
 }
 
 func BenchmarkDefaultExactR8(b *testing.B) {
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -581,10 +610,13 @@ func BenchmarkDefaultExactR8(b *testing.B) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
 
-	q := Quantile{AlgorithmType: "exact R8"}
+	q := Quantile{
+		AlgorithmType: "exact R8",
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 
@@ -598,9 +630,9 @@ func BenchmarkDefaultExactR8(b *testing.B) {
 }
 
 func BenchmarkDefaultExactR8100Q(b *testing.B) {
-	metrics := make([]telegraf.Metric, 100)
-	for i := range metrics {
-		metrics[i] = testutil.MustMetric(
+	metrics := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		metrics = append(metrics, testutil.MustMetric(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -614,14 +646,18 @@ func BenchmarkDefaultExactR8100Q(b *testing.B) {
 				"x2": true,
 			},
 			time.Now(),
-		)
+		))
 	}
-	quantiles := make([]float64, 100)
-	for i := range quantiles {
-		quantiles[i] = 0.01 * float64(i)
+	quantiles := make([]float64, 0, 100)
+	for i := 0; i < 100; i++ {
+		quantiles = append(quantiles, 0.01*float64(i))
 	}
 
-	q := Quantile{AlgorithmType: "exact R8", Quantiles: quantiles}
+	q := Quantile{
+		AlgorithmType: "exact R8",
+		Quantiles:     quantiles,
+		Log:           testutil.Logger{},
+	}
 	err := q.Init()
 	require.NoError(b, err)
 

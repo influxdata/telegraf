@@ -2,6 +2,15 @@
 
 The powerdns plugin gathers metrics about PowerDNS using unix socket.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -25,7 +34,7 @@ On many systems this can be accomplished by adding the `telegraf` user to the
 usermod telegraf -a -G pdns
 ```
 
-## Measurements & Fields
+## Metrics
 
 - powerdns
   - corrupt-packets

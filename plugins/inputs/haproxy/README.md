@@ -7,27 +7,32 @@ using the [stats socket][2] or [HTTP statistics page][3] of a HAProxy server.
 [2]: https://cbonte.github.io/haproxy-dconv/1.9/management.html#9.3
 [3]: https://cbonte.github.io/haproxy-dconv/1.9/management.html#9
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
-# Read metrics of HAProxy, via socket or HTTP stats page
+# Read metrics of HAProxy, via stats socket or http endpoints
 [[inputs.haproxy]]
-  ## An array of address to gather stats about. Specify an ip on hostname
-  ## with optional port. ie localhost, 10.10.3.33:1936, etc.
-  ## Make sure you specify the complete path to the stats endpoint
-  ## including the protocol, ie http://10.10.3.33:1936/haproxy?stats
-
-  ## Credentials for basic HTTP authentication
-  # username = "admin"
-  # password = "admin"
-
-  ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
+  ## List of stats endpoints. Metrics can be collected from both http and socket
+  ## endpoints. Examples of valid endpoints:
+  ##   - http://myhaproxy.com:1936/haproxy?stats
+  ##   - https://myhaproxy.com:8000/stats
+  ##   - socket:/run/haproxy/admin.sock
+  ##   - /run/haproxy/*.sock
+  ##   - tcp://127.0.0.1:1936
+  ##
+  ## Server addresses not starting with 'http://', 'https://', 'tcp://' will be
+  ## treated as possible sockets. When specifying local socket, glob patterns are
+  ## supported.
   servers = ["http://myhaproxy.com:1936/haproxy?stats"]
-
-  ## You can also use local socket with standard wildcard globbing.
-  ## Server address not starting with 'http' will be treated as a possible
-  ## socket, so both examples below are valid.
-  # servers = ["socket:/run/haproxy/admin.sock", "/run/haproxy/*.sock"]
 
   ## By default, some of the fields are renamed from what haproxy calls them.
   ## Setting this option to true results in the plugin keeping the original

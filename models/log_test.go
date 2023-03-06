@@ -177,3 +177,84 @@ func TestPluginOptionDeprecation(t *testing.T) {
 		})
 	}
 }
+
+func TestPluginOptionValueDeprecation(t *testing.T) {
+	info := telegraf.DeprecationInfo{
+		Since:     "1.25.0",
+		RemovalIn: "2.0.0",
+		Notice:    "please check",
+	}
+	var tests = []struct {
+		name     string
+		level    telegraf.Escalation
+		value    interface{}
+		expected string
+	}{
+		{
+			name:     "Error level",
+			level:    telegraf.Error,
+			value:    "foobar",
+			expected: `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+		},
+		{
+			name:     "Warn level",
+			level:    telegraf.Warn,
+			value:    "foobar",
+			expected: `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+		},
+		{
+			name:     "None",
+			level:    telegraf.None,
+			expected: ``,
+		},
+		{
+			name:     "nil value",
+			level:    telegraf.Error,
+			value:    nil,
+			expected: `Value "<nil>" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+		},
+		{
+			name:     "Boolean value",
+			level:    telegraf.Error,
+			value:    true,
+			expected: `Value "true" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+		},
+		{
+			name:     "Integer value",
+			level:    telegraf.Error,
+			value:    123,
+			expected: `Value "123" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+		},
+	}
+
+	// Switch the logger to log to a buffer
+	var buf bytes.Buffer
+	previous := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(previous)
+
+	timeout := 1 * time.Second
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf.Reset()
+			PrintOptionValueDeprecationNotice(tt.level, "test", "option", tt.value, info)
+
+			if tt.expected != "" {
+				require.Eventually(t, func() bool {
+					return strings.HasSuffix(buf.String(), "\n")
+				}, timeout, 100*time.Millisecond)
+
+				// Remove the time for comparison
+				parts := strings.SplitN(strings.TrimSpace(buf.String()), " ", 3)
+				require.Len(t, parts, 3)
+				actual := parts[2]
+				expected := deprecationPrefix(tt.level) + ": " + tt.expected
+				require.Equal(t, expected, actual)
+			} else {
+				time.Sleep(timeout)
+				require.Empty(t, buf.String())
+			}
+		})
+	}
+}

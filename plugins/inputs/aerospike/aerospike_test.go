@@ -32,9 +32,7 @@ func TestAerospikeStatisticsIntegration(t *testing.T) {
 	}
 
 	container := launchTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])},
@@ -61,9 +59,7 @@ func TestAerospikeStatisticsPartialErrIntegration(t *testing.T) {
 	}
 
 	container := launchTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{
@@ -90,9 +86,7 @@ func TestSelectNamespacesIntegration(t *testing.T) {
 	}
 
 	container := launchTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	// Select nonexistent namespace
 	a := &Aerospike{
@@ -129,9 +123,7 @@ func TestDisableQueryNamespacesIntegration(t *testing.T) {
 	}
 
 	container := launchTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{
@@ -161,9 +153,7 @@ func TestQuerySetsIntegration(t *testing.T) {
 	}
 
 	container := launchTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	portInt, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
@@ -218,9 +208,7 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 	}
 
 	container := launchTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	portInt, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
@@ -276,9 +264,7 @@ func TestDisableTTLHistogramIntegration(t *testing.T) {
 	}
 
 	container := launchTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{
@@ -303,9 +289,7 @@ func TestDisableObjectSizeLinearHistogramIntegration(t *testing.T) {
 	}
 
 	container := launchTestServer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{

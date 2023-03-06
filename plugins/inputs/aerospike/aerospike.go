@@ -338,7 +338,14 @@ func (a *Aerospike) getTTLHistogram(acc telegraf.Accumulator, hostPort string, n
 	return nil
 }
 
-func (a *Aerospike) getObjectSizeLinearHistogram(acc telegraf.Accumulator, hostPort string, namespace string, set string, n *as.Node, infoPolicy *as.InfoPolicy) error {
+func (a *Aerospike) getObjectSizeLinearHistogram(
+	acc telegraf.Accumulator,
+	hostPort string,
+	namespace string,
+	set string,
+	n *as.Node,
+	infoPolicy *as.InfoPolicy,
+) error {
 	stats, err := a.getHistogram(namespace, set, "object-size-linear", n, infoPolicy)
 	if err != nil {
 		return err

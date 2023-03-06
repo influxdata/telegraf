@@ -40,6 +40,10 @@ func TestGather(t *testing.T) {
 		"update_interval": 507.2,
 	}
 
+	// tests on linux with go1.20 will add a warning about code coverage
+	// due to the code coverage dir not being set
+	delete(acc.Metrics[0].Tags, "warning")
+
 	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
 
 	// test with dns lookup
@@ -94,14 +98,11 @@ Leap status     : Not synchronized
 
 	if cmd == "chronyc" {
 		if args[0] == "tracking" {
-			//nolint:errcheck,revive // test will fail anyway
 			fmt.Fprint(os.Stdout, lookup+mockData)
 		} else {
-			//nolint:errcheck,revive // test will fail anyway
 			fmt.Fprint(os.Stdout, noLookup+mockData)
 		}
 	} else {
-		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)

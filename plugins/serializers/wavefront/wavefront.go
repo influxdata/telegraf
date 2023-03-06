@@ -3,11 +3,9 @@ package wavefront
 import (
 	"log"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs/wavefront" // TODO: this dependency is going the wrong way: Move MetricPoint into the serializer.
 )
 
 // WavefrontSerializer : WavefrontSerializer struct
@@ -20,35 +18,22 @@ type WavefrontSerializer struct {
 	mu                       sync.Mutex // buffer mutex
 }
 
-// catch many of the invalid chars that could appear in a metric or tag name
-var sanitizedChars = strings.NewReplacer(
-	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
-	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
-	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
-	">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
-	"=", "-",
-)
+type MetricPoint struct {
+	Metric    string
+	Value     float64
+	Timestamp int64
+	Source    string
+	Tags      map[string]string
+}
 
-// catch many of the invalid chars that could appear in a metric or tag name
-var strictSanitizedChars = strings.NewReplacer(
-	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
-	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
-	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
-	">", "-", "?", "-", "\\", "-", "|", "-", " ", "-", "=", "-",
-)
-
-var tagValueReplacer = strings.NewReplacer("\"", "\\\"", "*", "-")
-
-var pathReplacer = strings.NewReplacer("_", ".")
-
-func NewSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversion bool) (*WavefrontSerializer, error) {
+func NewSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversion bool) *WavefrontSerializer {
 	s := &WavefrontSerializer{
 		Prefix:                   prefix,
 		UseStrict:                useStrict,
 		SourceOverride:           sourceOverride,
 		DisablePrefixConversions: disablePrefixConversion,
 	}
-	return s, nil
+	return s
 }
 
 func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
@@ -63,11 +48,7 @@ func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
 			name = s.Prefix + m.Name() + metricSeparator + fieldName
 		}
 
-		if s.UseStrict {
-			name = strictSanitizedChars.Replace(name)
-		} else {
-			name = sanitizedChars.Replace(name)
-		}
+		name = Sanitize(s.UseStrict, name)
 
 		if !s.DisablePrefixConversions {
 			name = pathReplacer.Replace(name)
@@ -79,7 +60,7 @@ func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
 			continue
 		}
 		source, tags := buildTags(m.Tags(), s)
-		metric := wavefront.MetricPoint{
+		metric := MetricPoint{
 			Metric:    name,
 			Timestamp: m.Time().Unix(),
 			Value:     metricValue,
@@ -162,7 +143,7 @@ func buildValue(v interface{}, name string) (val float64, valid bool) {
 	}
 }
 
-func formatMetricPoint(b *buffer, metricPoint *wavefront.MetricPoint, s *WavefrontSerializer) []byte {
+func formatMetricPoint(b *buffer, metricPoint *MetricPoint, s *WavefrontSerializer) []byte {
 	b.WriteChar('"')
 	b.WriteString(metricPoint.Metric)
 	b.WriteString(`" `)
@@ -175,11 +156,7 @@ func formatMetricPoint(b *buffer, metricPoint *wavefront.MetricPoint, s *Wavefro
 
 	for k, v := range metricPoint.Tags {
 		b.WriteString(` "`)
-		if s.UseStrict {
-			b.WriteString(strictSanitizedChars.Replace(k))
-		} else {
-			b.WriteString(sanitizedChars.Replace(k))
-		}
+		b.WriteString(Sanitize(s.UseStrict, k))
 		b.WriteString(`"="`)
 		b.WriteString(tagValueReplacer.Replace(v))
 		b.WriteChar('"')
@@ -195,9 +172,8 @@ type buffer []byte
 func (b *buffer) Reset() { *b = (*b)[:0] }
 
 func (b *buffer) Copy() []byte {
-	p := make([]byte, len(*b))
-	copy(p, *b)
-	return p
+	p := make([]byte, 0, len(*b))
+	return append(p, *b...)
 }
 
 func (b *buffer) WriteString(s string) {

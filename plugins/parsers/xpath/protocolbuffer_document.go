@@ -1,28 +1,28 @@
 package xpath
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
 
-	"github.com/influxdata/telegraf"
-
+	path "github.com/antchfx/xpath"
+	"github.com/doclambda/protobufquery"
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoparse"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/protoparse"
-
-	path "github.com/antchfx/xpath"
-	"github.com/doclambda/protobufquery"
+	"github.com/influxdata/telegraf"
 )
 
 type protobufDocument struct {
 	MessageDefinition string
 	MessageType       string
 	ImportPaths       []string
+	SkipBytes         int64
 	Log               telegraf.Logger
 	msg               *dynamicpb.Message
 }
@@ -43,7 +43,7 @@ func (d *protobufDocument) Init() error {
 	}
 	fds, err := parser.ParseFiles(d.MessageDefinition)
 	if err != nil {
-		return fmt.Errorf("parsing protocol-buffer definition in %q failed: %v", d.MessageDefinition, err)
+		return fmt.Errorf("parsing protocol-buffer definition in %q failed: %w", d.MessageDefinition, err)
 	}
 	if len(fds) < 1 {
 		return fmt.Errorf("file %q does not contain file descriptors", d.MessageDefinition)
@@ -52,7 +52,7 @@ func (d *protobufDocument) Init() error {
 	// Register all definitions in the file in the global registry
 	registry, err := protodesc.NewFiles(desc.ToFileDescriptorSet(fds...))
 	if err != nil {
-		return fmt.Errorf("constructing registry failed: %v", err)
+		return fmt.Errorf("constructing registry failed: %w", err)
 	}
 
 	// Lookup given type in the loaded file descriptors
@@ -94,7 +94,9 @@ func (d *protobufDocument) Parse(buf []byte) (dataNode, error) {
 	msg := d.msg.New()
 
 	// Unmarshal the received buffer
-	if err := proto.Unmarshal(buf, msg.Interface()); err != nil {
+	if err := proto.Unmarshal(buf[d.SkipBytes:], msg.Interface()); err != nil {
+		hexbuf := hex.EncodeToString(buf)
+		d.Log.Debugf("raw data (hex): %q (skip %d bytes)", hexbuf, d.SkipBytes)
 		return nil, err
 	}
 
@@ -108,9 +110,9 @@ func (d *protobufDocument) QueryAll(node dataNode, expr string) ([]dataNode, err
 		return nil, err
 	}
 
-	nodes := make([]dataNode, len(native))
-	for i, n := range native {
-		nodes[i] = n
+	nodes := make([]dataNode, 0, len(native))
+	for _, n := range native {
+		nodes = append(nodes, n)
 	}
 	return nodes, nil
 }

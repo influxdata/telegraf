@@ -43,9 +43,8 @@ type Serializer struct {
 	config FormatConfig
 }
 
-func NewSerializer(config FormatConfig) (*Serializer, error) {
-	s := &Serializer{config: config}
-	return s, nil
+func NewSerializer(config FormatConfig) *Serializer {
+	return &Serializer{config: config}
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -237,7 +236,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	pb := &prompb.WriteRequest{Timeseries: promTS}
 	data, err := pb.Marshal()
 	if err != nil {
-		return nil, fmt.Errorf("unable to marshal protobuf: %v", err)
+		return nil, fmt.Errorf("unable to marshal protobuf: %w", err)
 	}
 	encoded := snappy.Encode(nil, data)
 	buf.Write(encoded) //nolint:revive // from buffer.go: "err is always nil"

@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFilter_ApplyEmpty(t *testing.T) {
@@ -26,11 +27,11 @@ func TestFilter_ApplyTagsDontPass(t *testing.T) {
 	filters := []TagFilter{
 		{
 			Name:   "cpu",
-			Filter: []string{"cpu-*"},
+			Values: []string{"cpu-*"},
 		},
 	}
 	f := Filter{
-		TagDrop: filters,
+		TagDropFilters: filters,
 	}
 	require.NoError(t, f.Compile())
 	require.NoError(t, f.Compile())
@@ -243,14 +244,14 @@ func TestFilter_TagPass(t *testing.T) {
 	filters := []TagFilter{
 		{
 			Name:   "cpu",
-			Filter: []string{"cpu-*"},
+			Values: []string{"cpu-*"},
 		},
 		{
 			Name:   "mem",
-			Filter: []string{"mem_free"},
+			Values: []string{"mem_free"},
 		}}
 	f := Filter{
-		TagPass: filters,
+		TagPassFilters: filters,
 	}
 	require.NoError(t, f.Compile())
 
@@ -287,14 +288,14 @@ func TestFilter_TagDrop(t *testing.T) {
 	filters := []TagFilter{
 		{
 			Name:   "cpu",
-			Filter: []string{"cpu-*"},
+			Values: []string{"cpu-*"},
 		},
 		{
 			Name:   "mem",
-			Filter: []string{"mem_free"},
+			Values: []string{"mem_free"},
 		}}
 	f := Filter{
-		TagDrop: filters,
+		TagDropFilters: filters,
 	}
 	require.NoError(t, f.Compile())
 
@@ -445,24 +446,24 @@ func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
 	filterPass := []TagFilter{
 		{
 			Name:   "tag1",
-			Filter: []string{"1", "4"},
+			Values: []string{"1", "4"},
 		},
 	}
 
 	filterDrop := []TagFilter{
 		{
 			Name:   "tag1",
-			Filter: []string{"4"},
+			Values: []string{"4"},
 		},
 		{
 			Name:   "tag2",
-			Filter: []string{"3"},
+			Values: []string{"3"},
 		},
 	}
 
 	f := Filter{
-		TagDrop: filterDrop,
-		TagPass: filterPass,
+		TagDropFilters: filterDrop,
+		TagPassFilters: filterPass,
 	}
 
 	require.NoError(t, f.Compile())

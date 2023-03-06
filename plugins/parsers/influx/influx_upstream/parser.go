@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/line-protocol/v2/lineprotocol"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -88,13 +89,13 @@ func (e *ParseError) Error() string {
 
 // convertToParseError attempts to convert a lineprotocol.DecodeError to a ParseError
 func convertToParseError(input []byte, rawErr error) error {
-	err, ok := rawErr.(*lineprotocol.DecodeError)
-	if !ok {
+	var decErr *lineprotocol.DecodeError
+	if !errors.As(rawErr, &decErr) {
 		return rawErr
 	}
 
 	return &ParseError{
-		DecodeError: err,
+		DecodeError: decErr,
 		buf:         string(input),
 	}
 }
@@ -226,7 +227,7 @@ func (sp *StreamParser) SetTimeFunc(f TimeFunc) {
 	sp.defaultTime = f
 }
 
-func (sp *StreamParser) SetTimePrecision(u time.Duration) {
+func (sp *StreamParser) SetTimePrecision(u time.Duration) error {
 	switch u {
 	case time.Nanosecond:
 		sp.precision = lineprotocol.Nanosecond
@@ -236,14 +237,20 @@ func (sp *StreamParser) SetTimePrecision(u time.Duration) {
 		sp.precision = lineprotocol.Millisecond
 	case time.Second:
 		sp.precision = lineprotocol.Second
+	case time.Minute:
+		return fmt.Errorf("time precision 'm' is not supported")
+	case time.Hour:
+		return fmt.Errorf("time precision 'h' is not supported")
 	}
+
+	return nil
 }
 
 // Next parses the next item from the stream.  You can repeat calls to this
 // function if it returns ParseError to get the next metric or error.
 func (sp *StreamParser) Next() (telegraf.Metric, error) {
 	if !sp.decoder.Next() {
-		if err := sp.decoder.Err(); err != nil && err != sp.lastError {
+		if err := sp.decoder.Err(); err != nil && !errors.Is(err, sp.lastError) {
 			sp.lastError = err
 			return nil, err
 		}

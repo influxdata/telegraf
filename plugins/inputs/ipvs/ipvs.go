@@ -35,7 +35,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 	if i.handle == nil {
 		h, err := ipvs.New("") // TODO: make the namespace configurable
 		if err != nil {
-			return fmt.Errorf("unable to open IPVS handle: %v", err)
+			return fmt.Errorf("unable to open IPVS handle: %w", err)
 		}
 		i.handle = h
 	}
@@ -44,7 +44,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		i.handle.Close()
 		i.handle = nil // trigger a reopen on next call to gather
-		return fmt.Errorf("failed to list IPVS services: %v", err)
+		return fmt.Errorf("failed to list IPVS services: %w", err)
 	}
 	for _, s := range services {
 		fields := map[string]interface{}{

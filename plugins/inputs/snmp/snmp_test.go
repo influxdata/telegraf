@@ -121,11 +121,11 @@ func TestFieldInit(t *testing.T) {
 	for _, txl := range translations {
 		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
 		err := f.init(tr)
-		if !assert.NoError(t, err, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName) {
+		if !assert.NoError(t, err, "inputOid=%q inputName=%q", txl.inputOid, txl.inputName) {
 			continue
 		}
-		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
-		assert.Equal(t, txl.expectedName, f.Name, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
+		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid=%q inputName=%q inputConversion=%q", txl.inputOid, txl.inputName, txl.inputConversion)
+		assert.Equal(t, txl.expectedName, f.Name, "inputOid=%q inputName=%q inputConversion=%q", txl.inputOid, txl.inputName, txl.inputConversion)
 	}
 }
 
@@ -287,44 +287,26 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 }
 
 func TestGetSNMPConnectionTCP(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go stubTCPServer(&wg)
-	wg.Wait()
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	tcpServer, err := net.ListenTCP("tcp", tcpAddr)
+	require.NoError(t, err)
+	defer tcpServer.Close()
 
 	s := &Snmp{
-		Agents: []string{"tcp://127.0.0.1:56789"},
+		Agents: []string{fmt.Sprintf("tcp://%s", tcpServer.Addr())},
 		ClientConfig: snmp.ClientConfig{
 			Translator: "netsnmp",
 		},
 	}
-	err := s.Init()
-	require.NoError(t, err)
+	require.NoError(t, s.Init())
 
-	wg.Add(1)
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
-	assert.EqualValues(t, 56789, gs.Port)
 	assert.Equal(t, "tcp", gs.Transport)
-	wg.Wait()
-}
-
-func stubTCPServer(wg *sync.WaitGroup) {
-	defer wg.Done()
-	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:56789")
-	if err != nil {
-		fmt.Print(err)
-	}
-	tcpServer, err := net.ListenTCP("tcp", tcpAddr)
-	if err != nil {
-		fmt.Print(err)
-	}
-	defer tcpServer.Close()
-	wg.Done()
-	conn, _ := tcpServer.AcceptTCP()
-	defer conn.Close()
 }
 
 func TestGetSNMPConnection_v3(t *testing.T) {
@@ -901,7 +883,7 @@ func TestFieldConvert(t *testing.T) {
 	}
 
 	for _, tc := range testTable {
-		act, err := fieldConvert(tc.conv, tc.input)
+		act, err := fieldConvert(NewNetsnmpTranslator(), tc.conv, gosnmp.SnmpPDU{Value: tc.input})
 		if !assert.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected) {
 			continue
 		}

@@ -7,9 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 type pluginState map[string]bool
@@ -51,7 +52,7 @@ func ImportConfigurations(files, dirs []string) (*selection, int, error) {
 	return &sel, len(filenames), err
 }
 
-func (s *selection) Filter(p packageCollection) (*packageCollection, error) {
+func (s *selection) Filter(p packageCollection) *packageCollection {
 	enabled := packageCollection{
 		packages: map[string][]packageInfo{},
 	}
@@ -87,18 +88,18 @@ func (s *selection) Filter(p packageCollection) (*packageCollection, error) {
 		enabled.packages["parsers"] = parsers
 	}
 
-	return &enabled, nil
+	return &enabled
 }
 
 func (s *selection) importFiles(configurations []string) error {
 	for _, cfg := range configurations {
 		buf, err := config.LoadConfigFile(cfg)
 		if err != nil {
-			return fmt.Errorf("reading %q failed: %v", cfg, err)
+			return fmt.Errorf("reading %q failed: %w", cfg, err)
 		}
 
 		if err := s.extractPluginsFromConfig(buf); err != nil {
-			return fmt.Errorf("extracting plugins from %q failed: %v", cfg, err)
+			return fmt.Errorf("extracting plugins from %q failed: %w", cfg, err)
 		}
 	}
 

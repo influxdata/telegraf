@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -152,7 +153,7 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 
 	go func() {
 		err = h.server.Serve(h.listener)
-		if err != http.ErrServerClosed {
+		if !errors.Is(err, http.ErrServerClosed) {
 			h.Log.Infof("Error serving HTTP on %s", h.ServiceAddress)
 		}
 	}()
@@ -286,7 +287,8 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 		lastPos = pos
 
 		// Continue parsing metrics even if some are malformed
-		if parseErr, ok := err.(*influx.ParseError); ok {
+		var parseErr *influx.ParseError
+		if errors.As(err, &parseErr) {
 			parseErrorCount++
 			errStr := parseErr.Error()
 			if firstParseErrorStr == "" {
@@ -309,7 +311,7 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 
 		h.acc.AddMetric(m)
 	}
-	if err != influx.EOF {
+	if !errors.Is(err, influx.EOF) {
 		h.Log.Debugf("Error parsing the request body: %v", err.Error())
 		if err := badRequest(res, err.Error()); err != nil {
 			h.Log.Debugf("error in bad-request: %v", err)
@@ -371,7 +373,14 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 	precisionStr := req.URL.Query().Get("precision")
 	if precisionStr != "" {
 		precision := getPrecisionMultiplier(precisionStr)
-		parser.SetTimePrecision(precision)
+		err := parser.SetTimePrecision(precision)
+		if err != nil {
+			h.Log.Debugf("error in upstream parser: %v", err)
+			if err := badRequest(res, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
+			return
+		}
 	}
 
 	if req.ContentLength >= 0 {
@@ -394,7 +403,8 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 		m, err = parser.Next()
 
 		// Continue parsing metrics even if some are malformed
-		if parseErr, ok := err.(*influx_upstream.ParseError); ok {
+		var parseErr *influx_upstream.ParseError
+		if errors.As(err, &parseErr) {
 			parseErrorCount++
 			errStr := parseErr.Error()
 			if firstParseErrorStr == "" {
@@ -417,7 +427,7 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 
 		h.acc.AddMetric(m)
 	}
-	if err != influx_upstream.ErrEOF {
+	if !errors.Is(err, influx_upstream.ErrEOF) {
 		h.Log.Debugf("Error parsing the request body: %v", err.Error())
 		if err := badRequest(res, err.Error()); err != nil {
 			h.Log.Debugf("error in bad-request: %v", err)

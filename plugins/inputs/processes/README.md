@@ -8,12 +8,24 @@ it requires access to execute `ps`.
 
 **Supported Platforms**: Linux, FreeBSD, Darwin
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
 # Get the number of processes and group them by status
+# This plugin ONLY supports non-Windows
 [[inputs.processes]]
-  # no configuration
+  ## Use sudo to run ps command on *BSD systems. Linux systems will read
+  ## /proc, so this does not apply there.
+  use_sudo = false
 ```
 
 Another possible configuration is to define an alternative path for resolving
@@ -21,6 +33,28 @@ the /proc location.  Using the environment variable `HOST_PROC` the plugin will
 retrieve process information from the specified location.
 
 `docker run -v /proc:/rootfs/proc:ro -e HOST_PROC=/rootfs/proc`
+
+### Using sudo
+
+Linux systems will read from `/proc`, while BSD systems will use the `ps`
+command. The `ps` command generally does not require elevated permissions.
+However, if a user wants to collect system-wide stats, elevated permissions are
+required. If the user has configured sudo with the ability to run this
+command, then set the `use_sudo` to true.
+
+If your account does not already have the ability to run commands with
+passwordless sudo then updates to the sudoers file are required. Below is an
+example to allow the requires ps commands:
+
+First, use the `visudo` command to start editing the sudoers file. Then add
+the following content, where `<username>` is the username of the user that
+needs this access:
+
+```text
+Cmnd_Alias PS = /bin/ps
+<username> ALL=(root) NOPASSWD: PS
+Defaults!PS !logfile, !syslog, !pam_session
+```
 
 ## Metrics
 

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"testing"
+	"time"
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
@@ -15,6 +16,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -94,6 +97,174 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 	tags = map[string]string{"path": "type:model/some/path", "name": "str2", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"bool": false}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+}
+
+func TestIncludeDeleteField(t *testing.T) {
+	type TelemetryEntry struct {
+		name        string
+		fieldName   string
+		uint32Value uint32
+		uint64Value uint64
+		stringValue string
+	}
+	encodingPath := TelemetryEntry{
+		name:        "path",
+		stringValue: "openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv6/addresses/address",
+	}
+	name := TelemetryEntry{name: "name", stringValue: "Loopback10"}
+	index := TelemetryEntry{name: "index", stringValue: "0"}
+	ip := TelemetryEntry{name: "ip", fieldName: "state/ip", stringValue: "10::10"}
+	prefixLength := TelemetryEntry{name: "prefix-length", fieldName: "state/prefix_length", uint32Value: uint32(128), uint64Value: 128}
+	origin := TelemetryEntry{name: "origin", fieldName: "state/origin", stringValue: "STATIC"}
+	status := TelemetryEntry{name: "status", fieldName: "state/status", stringValue: "PREFERRED"}
+	source := TelemetryEntry{name: "source", stringValue: "hostname"}
+	subscription := TelemetryEntry{name: "subscription", stringValue: "subscription"}
+	deleteKey := "delete"
+	stateKey := "state"
+
+	testCases := []struct {
+		telemetry *telemetryBis.Telemetry
+		expected  []telegraf.Metric
+	}{{
+		telemetry: &telemetryBis.Telemetry{
+			MsgTimestamp: 1543236572000,
+			EncodingPath: encodingPath.stringValue,
+			NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: source.stringValue},
+			Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: subscription.stringValue},
+			DataGpbkv: []*telemetryBis.TelemetryField{
+				{
+					Fields: []*telemetryBis.TelemetryField{
+						{
+							Name: "keys",
+							Fields: []*telemetryBis.TelemetryField{
+								{
+									Name:        name.name,
+									ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: name.stringValue},
+								},
+								{
+									Name:        index.name,
+									ValueByType: &telemetryBis.TelemetryField_Uint32Value{Uint32Value: index.uint32Value},
+								},
+								{
+									Name:        ip.name,
+									ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: ip.stringValue},
+								},
+							},
+						},
+						{
+							Name: "content",
+							Fields: []*telemetryBis.TelemetryField{
+								{
+									Name: stateKey,
+									Fields: []*telemetryBis.TelemetryField{
+										{
+											Name:        ip.name,
+											ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: ip.stringValue},
+										},
+										{
+											Name:        prefixLength.name,
+											ValueByType: &telemetryBis.TelemetryField_Uint32Value{Uint32Value: prefixLength.uint32Value},
+										},
+										{
+											Name:        origin.name,
+											ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: origin.stringValue},
+										},
+										{
+											Name:        status.name,
+											ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: status.stringValue},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		expected: []telegraf.Metric{
+			metric.New(
+				"deleted",
+				map[string]string{
+					encodingPath.name: encodingPath.stringValue,
+					name.name:         name.stringValue,
+					index.name:        index.stringValue,
+					ip.name:           ip.stringValue,
+					source.name:       source.stringValue,
+					subscription.name: subscription.stringValue,
+				},
+				map[string]interface{}{
+					deleteKey:              false,
+					ip.fieldName:           ip.stringValue,
+					prefixLength.fieldName: prefixLength.uint64Value,
+					origin.fieldName:       origin.stringValue,
+					status.fieldName:       status.stringValue,
+				},
+				time.Now(),
+			)},
+	},
+		{
+			telemetry: &telemetryBis.Telemetry{
+				MsgTimestamp: 1543236572000,
+				EncodingPath: encodingPath.stringValue,
+				NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: source.stringValue},
+				Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: subscription.stringValue},
+				DataGpbkv: []*telemetryBis.TelemetryField{
+					{
+						Delete: true,
+						Fields: []*telemetryBis.TelemetryField{
+							{
+								Name: "keys",
+								Fields: []*telemetryBis.TelemetryField{
+									{
+										Name:        name.name,
+										ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: name.stringValue},
+									},
+									{
+										Name:        index.name,
+										ValueByType: &telemetryBis.TelemetryField_Uint32Value{Uint32Value: index.uint32Value},
+									},
+									{
+										Name:        ip.name,
+										ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: ip.stringValue},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"deleted",
+					map[string]string{
+						encodingPath.name: encodingPath.stringValue,
+						name.name:         name.stringValue,
+						index.name:        index.stringValue,
+						ip.name:           ip.stringValue,
+						source.name:       source.stringValue,
+						subscription.name: subscription.stringValue,
+					},
+					map[string]interface{}{deleteKey: true},
+					time.Now(),
+				)},
+		},
+	}
+	for _, test := range testCases {
+		c := &CiscoTelemetryMDT{
+			Log:                testutil.Logger{},
+			Transport:          "dummy",
+			Aliases:            map[string]string{"deleted": encodingPath.stringValue},
+			IncludeDeleteField: true}
+		acc := &testutil.Accumulator{}
+		// error is expected since we are passing in dummy transport
+		require.ErrorContains(t, c.Start(acc), "dummy")
+		data, err := proto.Marshal(test.telemetry)
+		require.NoError(t, err)
+
+		c.handleTelemetry(data)
+		actual := acc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, test.expected, actual, testutil.IgnoreTime())
+	}
 }
 
 func TestHandleTelemetrySingleNested(t *testing.T) {
@@ -395,7 +566,14 @@ func TestHandleNXAPIXformNXAPI(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags1 := map[string]string{"path": "show processes cpu", "foo": "bar", "TABLE_process_cpu": "i1", "row_number": "0", "source": "hostname", "subscription": "subscription"}
+	tags1 := map[string]string{
+		"path":              "show processes cpu",
+		"foo":               "bar",
+		"TABLE_process_cpu": "i1",
+		"row_number":        "0",
+		"source":            "hostname",
+		"subscription":      "subscription",
+	}
 	fields1 := map[string]interface{}{"value": "foo"}
 	acc.AssertContainsTaggedFields(t, "show processes cpu", fields1, tags1)
 }
@@ -578,7 +756,7 @@ func TestTCPDialoutOverflow(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
 	_, err = conn.Read([]byte{0})
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	require.NoError(t, conn.Close())
 
 	c.Stop()
@@ -660,7 +838,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	_, err = conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
 	require.NoError(t, err)
 	_, err = conn2.Read([]byte{0})
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
@@ -673,7 +851,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	_, err = conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
 	require.NoError(t, err)
 	_, err = conn.Read([]byte{0})
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	c.Stop()
 	require.NoError(t, conn.Close())
 
@@ -711,7 +889,7 @@ func TestGRPCDialoutError(t *testing.T) {
 
 	// Wait for the server to close
 	_, err = stream.Recv()
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	c.Stop()
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
@@ -750,7 +928,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	require.NoError(t, stream2.Send(args))
 	require.NoError(t, stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
 	_, err = stream2.Recv()
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
@@ -760,7 +938,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	require.NoError(t, stream.Send(args))
 	require.NoError(t, stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
 	_, err = stream.Recv()
-	require.True(t, err == nil || err == io.EOF)
+	require.True(t, err == nil || errors.Is(err, io.EOF))
 
 	c.Stop()
 	require.NoError(t, conn.Close())

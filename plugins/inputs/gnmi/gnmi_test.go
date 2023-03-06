@@ -2,9 +2,12 @@ package gnmi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -13,9 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -96,8 +102,9 @@ func TestWaitError(t *testing.T) {
 	grpcServer.Stop()
 	wg.Wait()
 
-	require.Contains(t, acc.Errors,
-		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = testerror"))
+	// Check if the expected error text is among the errors
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "aborted gNMI subscription: rpc error: code = Unknown desc = testerror")
 }
 
 func TestUsernamePassword(t *testing.T) {
@@ -154,8 +161,9 @@ func TestUsernamePassword(t *testing.T) {
 	grpcServer.Stop()
 	wg.Wait()
 
-	require.Contains(t, acc.Errors,
-		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = success"))
+	// Check if the expected error text is among the errors
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "aborted gNMI subscription: rpc error: code = Unknown desc = success")
 }
 
 func mockGNMINotification() *gnmiLib.Notification {
@@ -478,10 +486,9 @@ func TestNotification(t *testing.T) {
 				testutil.MustMetric(
 					"oc-intf-counters",
 					map[string]string{
-						"path":         "",
-						"source":       "127.0.0.1",
-						"name":         "Ethernet1",
-						"oc-intf-desc": "foo",
+						"source":                   "127.0.0.1",
+						"name":                     "Ethernet1",
+						"oc-intf-desc/description": "foo",
 					},
 					map[string]interface{}{
 						"in_broadcast_pkts": 42,
@@ -491,7 +498,7 @@ func TestNotification(t *testing.T) {
 			},
 		},
 		{
-			name: "iss #11011",
+			name: "issue #11011",
 			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
@@ -626,6 +633,7 @@ func TestNotification(t *testing.T) {
 							},
 						},
 					}
+
 					return server.Send(taggedResponse)
 				},
 			},
@@ -633,16 +641,263 @@ func TestNotification(t *testing.T) {
 				testutil.MustMetric(
 					"oc-neigh-state",
 					map[string]string{
-						"path":             "",
-						"source":           "127.0.0.1",
-						"neighbor_address": "192.0.2.1",
-						"name":             "default",
-						"oc-neigh-desc":    "EXAMPLE-PEER",
+						"source":                    "127.0.0.1",
+						"neighbor_address":          "192.0.2.1",
+						"name":                      "default",
+						"oc-neigh-desc/description": "EXAMPLE-PEER",
 						"/network-instances/network-instance/protocols/protocol/name": "BGP",
 						"identifier": "BGP",
 					},
 					map[string]interface{}{
 						"session_state": "ESTABLISHED",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "issue #12257 Arista",
+			plugin: &GNMI{
+				Log:      testutil.Logger{},
+				Encoding: "proto",
+				Redial:   config.Duration(1 * time.Second),
+				Subscriptions: []Subscription{
+					{
+						Name:             "interfaces",
+						Origin:           "openconfig",
+						Path:             "/interfaces/interface/state/counters",
+						SubscriptionMode: "sample",
+						SampleInterval:   config.Duration(1 * time.Second),
+					},
+				},
+			},
+			server: &MockServer{
+				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+						return err
+					}
+					response := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
+								Timestamp: 1668762813698611837,
+								Prefix: &gnmiLib.Path{
+									Origin: "openconfig",
+									Elem: []*gnmiLib.PathElem{
+										{Name: "interfaces"},
+										{Name: "interface", Key: map[string]string{"name": "Ethernet1"}},
+										{Name: "state"},
+										{Name: "counters"},
+									},
+									Target: "OC-YANG",
+								},
+								Update: []*gnmiLib.Update{
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-broadcast-pkts"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-discards"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-errors"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-fcs-errors"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-unicast-pkts"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-broadcast-pkts"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-discards"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-errors"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-multicast-pkts"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-octets"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-pkts"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+									{
+										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-unicast-pkts"}}},
+										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+									},
+								},
+							},
+						},
+					}
+					return server.Send(response)
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"interfaces",
+					map[string]string{
+						"path":   "openconfig:/interfaces/interface/state/counters",
+						"source": "127.0.0.1",
+						"name":   "Ethernet1",
+					},
+					map[string]interface{}{
+						"in_broadcast_pkts":  uint64(0),
+						"in_discards":        uint64(0),
+						"in_errors":          uint64(0),
+						"in_fcs_errors":      uint64(0),
+						"in_unicast_pkts":    uint64(0),
+						"out_broadcast_pkts": uint64(0),
+						"out_discards":       uint64(0),
+						"out_errors":         uint64(0),
+						"out_multicast_pkts": uint64(0),
+						"out_octets":         uint64(0),
+						"out_pkts":           uint64(0),
+						"out_unicast_pkts":   uint64(0),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "issue #12257 Sonic",
+			plugin: &GNMI{
+				Log:      testutil.Logger{},
+				Encoding: "proto",
+				Redial:   config.Duration(1 * time.Second),
+				Subscriptions: []Subscription{
+					{
+						Name:             "temperature",
+						Origin:           "openconfig-platform",
+						Path:             "/components/component[name=TEMP 1]/state",
+						SubscriptionMode: "sample",
+						SampleInterval:   config.Duration(1 * time.Second),
+					},
+				},
+			},
+			server: &MockServer{
+				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+						return err
+					}
+					response := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
+								Timestamp: 1668771585733542546,
+								Prefix: &gnmiLib.Path{
+									Elem: []*gnmiLib.PathElem{
+										{Name: "openconfig-platform:components"},
+										{Name: "component", Key: map[string]string{"name": "TEMP 1"}},
+										{Name: "state"},
+									},
+									Target: "OC-YANG",
+								},
+								Update: []*gnmiLib.Update{
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{Name: "temperature"},
+												{Name: "low-threshold"},
+											}},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_FloatVal{FloatVal: 0},
+										},
+									},
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{Name: "temperature"},
+												{Name: "timestamp"},
+											}},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_StringVal{StringVal: "2022-11-18T11:39:26Z"},
+										},
+									},
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{Name: "temperature"},
+												{Name: "warning-status"},
+											}},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_BoolVal{BoolVal: false},
+										},
+									},
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{Name: "name"},
+											}},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_StringVal{StringVal: "CPU On-board"},
+										},
+									},
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{Name: "temperature"},
+												{Name: "critical-high-threshold"},
+											}},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_FloatVal{FloatVal: 94},
+										},
+									},
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{Name: "temperature"},
+												{Name: "current"},
+											}},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_FloatVal{FloatVal: 29},
+										},
+									},
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{Name: "temperature"},
+												{Name: "high-threshold"},
+											}},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_FloatVal{FloatVal: 90},
+										},
+									},
+								},
+							},
+						},
+					}
+					return server.Send(response)
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"temperature",
+					map[string]string{
+						"path":   "openconfig-platform:/components/component/state",
+						"source": "127.0.0.1",
+						"name":   "TEMP 1",
+					},
+					map[string]interface{}{
+						"temperature/timestamp":               "2022-11-18T11:39:26Z",
+						"temperature/low_threshold":           float64(0),
+						"temperature/current":                 float64(29),
+						"temperature/high_threshold":          float64(90),
+						"temperature/critical_high_threshold": float64(94),
+						"temperature/warning_status":          false,
+						"name":                                "CPU On-board",
 					},
 					time.Unix(0, 0),
 				),
@@ -695,18 +950,6 @@ func (l *MockLogger) Errorf(format string, args ...interface{}) {
 	l.lastArgs = args
 }
 
-func TestSubscribeResponseError(t *testing.T) {
-	me := "mock error message"
-	var mc uint32 = 7
-	ml := &MockLogger{}
-	plugin := &GNMI{Log: ml}
-	// TODO: FIX SA1019: gnmi.Error is deprecated: Do not use.
-	errorResponse := &gnmiLib.SubscribeResponse_Error{Error: &gnmiLib.Error{Message: me, Code: mc}}
-	plugin.handleSubscribeResponse(&Worker{address: "127.0.0.1:0"}, &gnmiLib.SubscribeResponse{Response: errorResponse})
-	require.NotEmpty(t, ml.lastFormat)
-	require.Equal(t, []interface{}{mc, me}, ml.lastArgs)
-}
-
 func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -716,6 +959,7 @@ func TestRedial(t *testing.T) {
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
 		Redial:    config.Duration(10 * time.Millisecond),
+		Aliases:   map[string]string{"dummy": "type:/model"},
 	}
 
 	grpcServer := grpc.NewServer()
@@ -774,193 +1018,128 @@ func TestRedial(t *testing.T) {
 	wg.Wait()
 }
 
-func TestTagNode(t *testing.T) {
-	type insertOp struct {
-		keys  []*gnmiLib.PathElem
-		name  string
-		value *gnmiLib.TypedValue
-	}
-	interfaceElemSingleKey := &gnmiLib.PathElem{
-		Name: "interface",
-		Key:  map[string]string{"name": "Management0"},
-	}
-	networkInstanceSingleKey := &gnmiLib.PathElem{
-		Name: "network-instance",
-		Key:  map[string]string{"name": "default"},
-	}
-	protocolDoubleKey := &gnmiLib.PathElem{
-		Name: "protocol",
-		Key:  map[string]string{"name": "BGP", "protocol": "BGP"},
-	}
-	neighborSingleKey := &gnmiLib.PathElem{
-		Name: "neighbor",
-		Key:  map[string]string{"neighbor_address": "192.0.2.1"},
-	}
-	tests := []struct {
-		name      string
-		insertOps []insertOp
-		expected  *tagNode
-	}{
-		{
-			name: "single elem single key insert",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey},
-					name:  "tagFoo",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 1}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"interface": {
-						{
-							elem:    interfaceElemSingleKey,
-							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 1}},
-							tagName: "tagFoo",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "double elem single key insert",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey, networkInstanceSingleKey},
-					name:  "tagBar",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "rocks"}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"interface": {
-						{
-							elem: interfaceElemSingleKey,
-							tagStore: map[string][]*tagNode{
-								"network-instance": {
-									{
-										elem:    networkInstanceSingleKey,
-										value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "rocks"}},
-										tagName: "tagBar",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "single elem double key insert",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{protocolDoubleKey},
-					name:  "doubleKey",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte("{}")}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"protocol": {
-						{
-							elem:    protocolDoubleKey,
-							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte("{}")}},
-							tagName: "doubleKey",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "multi elem unrelated insert",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{interfaceElemSingleKey},
-					name:  "intf_desc",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "mgmt"}},
-				},
-				{
-					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey, protocolDoubleKey, neighborSingleKey},
-					name:  "bgp_neigh_desc",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "example-neighbor"}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"interface": {
-						{
-							elem:    interfaceElemSingleKey,
-							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "mgmt"}},
-							tagName: "intf_desc",
-						},
-					},
-					"network-instance": {
-						{
-							elem: networkInstanceSingleKey,
-							tagStore: map[string][]*tagNode{
-								"protocol": {
-									{
-										elem: protocolDoubleKey,
-										tagStore: map[string][]*tagNode{
-											"neighbor": {
-												{
-													elem:    neighborSingleKey,
-													value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "example-neighbor"}},
-													tagName: "bgp_neigh_desc",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "values at multiple levels",
-			insertOps: []insertOp{
-				{
-					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey},
-					name:  "vrf_stuff",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"}},
-				},
-				{
-					keys:  []*gnmiLib.PathElem{networkInstanceSingleKey, protocolDoubleKey},
-					name:  "protocol_stuff",
-					value: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "bar"}},
-				},
-			},
-			expected: &tagNode{
-				tagStore: map[string][]*tagNode{
-					"network-instance": {
-						{
-							elem:    networkInstanceSingleKey,
-							value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"}},
-							tagName: "vrf_stuff",
-							tagStore: map[string][]*tagNode{
-								"protocol": {
-									{
-										elem:    protocolDoubleKey,
-										value:   &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "bar"}},
-										tagName: "protocol_stuff",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rootNode := new(tagNode)
-			for _, s := range tt.insertOps {
-				rootNode.insert(s.keys, s.name, s.value)
+func TestCases(t *testing.T) {
+	// Get all testcase directories
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("gnmi", New)
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			inputFilename := filepath.Join(testcasePath, "responses.json")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+			// Load the input data
+			buf, err := os.ReadFile(inputFilename)
+			require.NoError(t, err)
+			var entries []json.RawMessage
+			require.NoError(t, json.Unmarshal(buf, &entries))
+			responses := make([]gnmiLib.SubscribeResponse, len(entries))
+			for i, entry := range entries {
+				require.NoError(t, protojson.Unmarshal(entry, &responses[i]))
 			}
-			require.Equal(t, rootNode, tt.expected)
+
+			// Prepare the influx parser for expectations
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Prepare the server response
+			responseFunction := func(server gnmiLib.GNMI_SubscribeServer) error {
+				sync := &gnmiLib.SubscribeResponse{
+					Response: &gnmiLib.SubscribeResponse_SyncResponse{
+						SyncResponse: true,
+					},
+				}
+				_ = sync
+				for i := range responses {
+					if err := server.Send(&responses[i]); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			}
+
+			// Setup a mock server
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			require.NoError(t, err)
+			grpcServer := grpc.NewServer()
+			gnmiServer := &MockServer{
+				SubscribeF: responseFunction,
+				GRPCServer: grpcServer,
+			}
+			gnmiLib.RegisterGNMIServer(grpcServer, gnmiServer)
+
+			// Setup the plugin
+			plugin := cfg.Inputs[0].Input.(*GNMI)
+			plugin.Addresses = []string{listener.Addr().String()}
+			plugin.Log = testutil.Logger{}
+
+			// Start the server
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err := grpcServer.Serve(listener)
+				require.NoError(t, err)
+			}()
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+
+			require.Eventually(t,
+				func() bool {
+					return acc.NMetrics() >= uint64(len(expected))
+				}, 1*time.Second, 100*time.Millisecond)
+			plugin.Stop()
+			grpcServer.Stop()
+			wg.Wait()
+
+			// Check for errors
+			require.Len(t, acc.Errors, len(expectedErrors))
+			if len(acc.Errors) > 0 {
+				var actualErrorMsgs []string
+				for _, err := range acc.Errors {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+			}
+
+			// Check the metric nevertheless as we might get some metrics despite errors.
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 		})
 	}
 }

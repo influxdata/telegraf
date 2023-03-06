@@ -72,7 +72,6 @@ func parseConnectionStringKeyValue(connectionString string) (sqlInstance string,
 
 // parseConnectionStringURL parses a URL-formatted connection string and returns the SQL instance and database name
 func parseConnectionStringURL(connectionString string) (sqlInstance string, databaseName string) {
-	sqlInstance = emptySQLInstance
 	databaseName = emptyDatabaseName
 
 	u, err := url.Parse(connectionString)
@@ -81,7 +80,6 @@ func parseConnectionStringURL(connectionString string) (sqlInstance string, data
 	}
 
 	sqlInstance = u.Hostname()
-
 	if len(u.Path) > 1 {
 		// There was a SQL instance name specified in addition to the host
 		// E.g. "the.host.com:1234/InstanceName" or "the.host.com/InstanceName"

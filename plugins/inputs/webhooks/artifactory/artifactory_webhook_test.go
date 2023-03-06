@@ -136,7 +136,13 @@ func TestDestinationDeleteFailedEvent(t *testing.T) {
 }
 
 func TestEventWithSignatureSuccess(t *testing.T) {
-	ArtifactoryWebhookRequestWithSignature("watch", ArtifactDeployedEventJSON(), t, generateSignature("signature", []byte(ArtifactDeployedEventJSON())), http.StatusOK)
+	ArtifactoryWebhookRequestWithSignature(
+		"watch",
+		ArtifactDeployedEventJSON(),
+		t,
+		generateSignature("signature", []byte(ArtifactDeployedEventJSON())),
+		http.StatusOK,
+	)
 }
 
 func TestCheckSignatureSuccess(t *testing.T) {

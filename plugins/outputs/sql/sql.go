@@ -141,7 +141,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 }
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
-	var columns []string
+	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+1)
 	//  ##  {KEY_COLUMNS} is a comma-separated list of key columns (timestamp and tags)
 	//var pk []string
 
@@ -171,7 +171,8 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 }
 
 func (p *SQL) generateInsert(tablename string, columns []string) string {
-	var placeholders, quotedColumns []string
+	placeholders := make([]string, 0, len(columns))
+	quotedColumns := make([]string, 0, len(columns))
 	for _, column := range columns {
 		quotedColumns = append(quotedColumns, quoteIdent(column))
 	}
@@ -241,26 +242,26 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			// ClickHouse needs to batch inserts with prepared statements
 			tx, err := p.db.Begin()
 			if err != nil {
-				return fmt.Errorf("begin failed: %v", err)
+				return fmt.Errorf("begin failed: %w", err)
 			}
 			stmt, err := tx.Prepare(sql)
 			if err != nil {
-				return fmt.Errorf("prepare failed: %v", err)
+				return fmt.Errorf("prepare failed: %w", err)
 			}
 			defer stmt.Close() //nolint:revive // We cannot do anything about a failing close.
 
 			_, err = stmt.Exec(values...)
 			if err != nil {
-				return fmt.Errorf("execution failed: %v", err)
+				return fmt.Errorf("execution failed: %w", err)
 			}
 			err = tx.Commit()
 			if err != nil {
-				return fmt.Errorf("commit failed: %v", err)
+				return fmt.Errorf("commit failed: %w", err)
 			}
 		default:
 			_, err = p.db.Exec(sql, values...)
 			if err != nil {
-				return fmt.Errorf("execution failed: %v", err)
+				return fmt.Errorf("execution failed: %w", err)
 			}
 		}
 	}

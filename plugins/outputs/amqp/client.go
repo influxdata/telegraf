@@ -1,6 +1,7 @@
 package amqp
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -69,7 +70,7 @@ func newClient(config *ClientConfig) (*client, error) {
 
 	channel, err := client.conn.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("error opening channel: %v", err)
+		return nil, fmt.Errorf("error opening channel: %w", err)
 	}
 	client.channel = channel
 
@@ -109,7 +110,7 @@ func (c *client) DeclareExchange() error {
 		)
 	}
 	if err != nil {
-		return fmt.Errorf("error declaring exchange: %v", err)
+		return fmt.Errorf("error declaring exchange: %w", err)
 	}
 	return nil
 }
@@ -117,7 +118,8 @@ func (c *client) DeclareExchange() error {
 func (c *client) Publish(key string, body []byte) error {
 	// Note that since the channel is not in confirm mode, the absence of
 	// an error does not indicate successful delivery.
-	return c.channel.Publish(
+	return c.channel.PublishWithContext(
+		context.Background(),
 		c.config.exchange, // exchange
 		key,               // routing key
 		false,             // mandatory
@@ -137,7 +139,7 @@ func (c *client) Close() error {
 	}
 
 	err := c.conn.Close()
-	if err != nil && err != amqp.ErrClosed {
+	if err != nil && !errors.Is(err, amqp.ErrClosed) {
 		return err
 	}
 	return nil

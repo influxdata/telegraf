@@ -4,6 +4,15 @@ The Wireguard input plugin collects statistics on the local Wireguard server
 using the [`wgctrl`](https://github.com/WireGuard/wgctrl-go) library. It
 reports gauge metrics for Wireguard interface device(s) and its peers.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -36,6 +45,7 @@ reports gauge metrics for Wireguard interface device(s) and its peers.
     - `last_handshake_time_ns` (int, Unix timestamp of the last handshake for this peer in nanoseconds)
     - `rx_bytes` (int, number of bytes received from this peer)
     - `tx_bytes` (int, number of bytes transmitted to this peer)
+    - `allowed_peer_cidr` (string, comma separated list of allowed peer CIDRs)
 
 ## Troubleshooting
 
@@ -68,6 +78,6 @@ those printed by this command.
 ```shell
 wireguard_device,host=WGVPN,name=wg0,type=linux_kernel firewall_mark=51820i,listen_port=58216i 1582513589000000000
 wireguard_device,host=WGVPN,name=wg0,type=linux_kernel peers=1i 1582513589000000000
-wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= allowed_ips=2i,persistent_keepalive_interval_ns=60000000000i,protocol_version=1i 1582513589000000000
+wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= allowed_ips=2i,persistent_keepalive_interval_ns=60000000000i,protocol_version=1i,allowed_peer_cidr=192.168.1.0/24,10.0.0.0/8 1582513589000000000
 wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= last_handshake_time_ns=1582513584530013376i,rx_bytes=6484i,tx_bytes=13540i 1582513589000000000
 ```

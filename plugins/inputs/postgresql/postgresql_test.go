@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -40,17 +41,17 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
+
+	addr := fmt.Sprintf(
+		"host=%s port=%s user=postgres sslmode=disable",
+		container.Address,
+		container.Ports[servicePort],
+	)
 
 	p := &Postgresql{
 		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s port=%s user=postgres sslmode=disable",
-				container.Address,
-				container.Ports[servicePort],
-			),
+			Address:     config.NewSecret([]byte(addr)),
 			IsPgBouncer: false,
 		},
 		Databases: []string{"postgres"},
@@ -131,17 +132,17 @@ func TestPostgresqlTagsMetricsWithDatabaseNameIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
+
+	addr := fmt.Sprintf(
+		"host=%s port=%s user=postgres sslmode=disable",
+		container.Address,
+		container.Ports[servicePort],
+	)
 
 	p := &Postgresql{
 		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s port=%s user=postgres sslmode=disable",
-				container.Address,
-				container.Ports[servicePort],
-			),
+			Address: config.NewSecret([]byte(addr)),
 		},
 		Databases: []string{"postgres"},
 	}
@@ -163,17 +164,17 @@ func TestPostgresqlDefaultsToAllDatabasesIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
+
+	addr := fmt.Sprintf(
+		"host=%s port=%s user=postgres sslmode=disable",
+		container.Address,
+		container.Ports[servicePort],
+	)
 
 	p := &Postgresql{
 		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s port=%s user=postgres sslmode=disable",
-				container.Address,
-				container.Ports[servicePort],
-			),
+			Address: config.NewSecret([]byte(addr)),
 		},
 	}
 
@@ -202,17 +203,17 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
+
+	addr := fmt.Sprintf(
+		"host=%s port=%s user=postgres sslmode=disable",
+		container.Address,
+		container.Ports[servicePort],
+	)
 
 	p := &Postgresql{
 		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s port=%s user=postgres sslmode=disable",
-				container.Address,
-				container.Ports[servicePort],
-			),
+			Address: config.NewSecret([]byte(addr)),
 		},
 	}
 
@@ -231,17 +232,17 @@ func TestPostgresqlDatabaseWhitelistTestIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
+
+	addr := fmt.Sprintf(
+		"host=%s port=%s user=postgres sslmode=disable",
+		container.Address,
+		container.Ports[servicePort],
+	)
 
 	p := &Postgresql{
 		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s port=%s user=postgres sslmode=disable",
-				container.Address,
-				container.Ports[servicePort],
-			),
+			Address: config.NewSecret([]byte(addr)),
 		},
 		Databases: []string{"template0"},
 	}
@@ -277,17 +278,17 @@ func TestPostgresqlDatabaseBlacklistTestIntegration(t *testing.T) {
 	}
 
 	container := launchTestContainer(t)
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
+
+	addr := fmt.Sprintf(
+		"host=%s port=%s user=postgres sslmode=disable",
+		container.Address,
+		container.Ports[servicePort],
+	)
 
 	p := &Postgresql{
 		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s port=%s user=postgres sslmode=disable",
-				container.Address,
-				container.Ports[servicePort],
-			),
+			Address: config.NewSecret([]byte(addr)),
 		},
 		IgnoredDatabases: []string{"template0"},
 	}

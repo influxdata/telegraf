@@ -4,6 +4,24 @@ This plugin sends metrics in a HTTP message encoded using one of the output data
 formats. For data_formats that support batching, metrics are sent in batch
 format by default.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -109,9 +127,11 @@ format by default.
 
 ### Google API Auth
 
-The `google_application_credentials` setting is used with Google Cloud APIs. It specifies the json key file. To learn about creating Google service accounts, consult Google's
-[oauth2 service account documentation][create_service_account]. An example use case is a metrics proxy deployed to
-Cloud Run. In this example, the service account must have the "run.routes.invoke" permission.
+The `google_application_credentials` setting is used with Google Cloud APIs.
+It specifies the json key file. To learn about creating Google service accounts,
+consult Google's [oauth2 service account documentation][create_service_account].
+An example use case is a metrics proxy deployed to Cloud Run. In this example,
+the service account must have the "run.routes.invoke" permission.
 
 [create_service_account]: https://cloud.google.com/docs/authentication/production#create_service_account
 

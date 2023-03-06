@@ -74,13 +74,13 @@ func (ea *iaEntitiesActivator) activateEntities(coreEntities []*CoreEventEntity,
 	for _, coreEventsEntity := range coreEntities {
 		err := ea.activateCoreEvents(coreEventsEntity)
 		if err != nil {
-			return fmt.Errorf("failed to activate core events `%s`: %v", coreEventsEntity.EventsTag, err)
+			return fmt.Errorf("failed to activate core events %q: %w", coreEventsEntity.EventsTag, err)
 		}
 	}
 	for _, uncoreEventsEntity := range uncoreEntities {
 		err := ea.activateUncoreEvents(uncoreEventsEntity)
 		if err != nil {
-			return fmt.Errorf("failed to activate uncore events `%s`: %v", uncoreEventsEntity.EventsTag, err)
+			return fmt.Errorf("failed to activate uncore events %q: %w", uncoreEventsEntity.EventsTag, err)
 		}
 	}
 	return nil
@@ -96,7 +96,7 @@ func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error
 	if entity.PerfGroup {
 		err := ea.activateCoreEventsGroup(entity)
 		if err != nil {
-			return fmt.Errorf("failed to activate core events group: %v", err)
+			return fmt.Errorf("failed to activate core events group: %w", err)
 		}
 	} else {
 		for _, event := range entity.parsedEvents {
@@ -105,13 +105,13 @@ func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error
 			}
 			placements, err := ea.placementMaker.makeCorePlacements(entity.parsedCores, event.custom.Event)
 			if err != nil {
-				return fmt.Errorf("failed to create core placements for event `%s`: %v", event.name, err)
+				return fmt.Errorf("failed to create core placements for event %q: %w", event.name, err)
 			}
-			activeEvent, err := ea.activateEventForPlacements(event, placements)
+			activeEvents, err := ea.activateEventForPlacements(event, placements)
 			if err != nil {
-				return fmt.Errorf("failed to activate core event `%s`: %v", event.name, err)
+				return fmt.Errorf("failed to activate core event %q: %w", event.name, err)
 			}
-			entity.activeEvents = append(entity.activeEvents, activeEvent...)
+			entity.activeEvents = append(entity.activeEvents, activeEvents...)
 		}
 	}
 	return nil
@@ -130,18 +130,18 @@ func (ea *iaEntitiesActivator) activateUncoreEvents(entity *UncoreEventEntity) e
 		}
 		perfEvent := event.custom.Event
 		if perfEvent == nil {
-			return fmt.Errorf("perf event of `%s` event is nil", event.name)
+			return fmt.Errorf("perf event of %q event is nil", event.name)
 		}
 		options := event.custom.Options
 
 		for _, socket := range entity.parsedSockets {
 			placements, err := ea.placementMaker.makeUncorePlacements(socket, perfEvent)
 			if err != nil {
-				return fmt.Errorf("failed to create uncore placements for event `%s`: %v", event.name, err)
+				return fmt.Errorf("failed to create uncore placements for event %q: %w", event.name, err)
 			}
 			activeMultiEvent, err := ea.perfActivator.activateMulti(perfEvent, placements, options)
 			if err != nil {
-				return fmt.Errorf("failed to activate multi event `%s`: %v", event.name, err)
+				return fmt.Errorf("failed to activate multi event %q: %w", event.name, err)
 			}
 			events := activeMultiEvent.Events()
 			entity.activeMultiEvents = append(entity.activeMultiEvents, multiEvent{events, perfEvent, socket})
@@ -158,7 +158,7 @@ func (ea *iaEntitiesActivator) activateCoreEventsGroup(entity *CoreEventEntity) 
 		return fmt.Errorf("missing parsed events")
 	}
 
-	var events []ia.CustomizableEvent
+	events := make([]ia.CustomizableEvent, 0, len(entity.parsedEvents))
 	for _, event := range entity.parsedEvents {
 		if event == nil {
 			return fmt.Errorf("core event is nil")
@@ -169,7 +169,7 @@ func (ea *iaEntitiesActivator) activateCoreEventsGroup(entity *CoreEventEntity) 
 
 	placements, err := ea.placementMaker.makeCorePlacements(entity.parsedCores, leader.Event)
 	if err != nil {
-		return fmt.Errorf("failed to make core placements: %v", err)
+		return fmt.Errorf("failed to make core placements: %w", err)
 	}
 
 	for _, plc := range placements {
@@ -189,14 +189,15 @@ func (ea *iaEntitiesActivator) activateEventForPlacements(event *eventWithQuals,
 	if ea.perfActivator == nil {
 		return nil, fmt.Errorf("missing perf activator")
 	}
-	var activeEvents []*ia.ActiveEvent
+
+	activeEvents := make([]*ia.ActiveEvent, 0, len(placements))
 	for _, placement := range placements {
 		perfEvent := event.custom.Event
 		options := event.custom.Options
 
 		activeEvent, err := ea.perfActivator.activateEvent(perfEvent, placement, options)
 		if err != nil {
-			return nil, fmt.Errorf("failed to activate event `%s`: %v", event.name, err)
+			return nil, fmt.Errorf("failed to activate event %q: %w", event.name, err)
 		}
 		activeEvents = append(activeEvents, activeEvent)
 	}

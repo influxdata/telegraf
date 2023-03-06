@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log" //nolint:revive // log is ok here as the logging facility is not set-up yet
+	"log"
 	"reflect"
 	"sort"
 	"strings"
@@ -35,14 +35,14 @@ func (di *DeprecationInfo) determineEscalation(telegrafVersion *semver.Version) 
 
 	since, err := semver.NewVersion(di.info.Since)
 	if err != nil {
-		return fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since, err)
+		return fmt.Errorf("cannot parse 'since' version %q: %w", di.info.Since, err)
 	}
 
 	var removal *semver.Version
 	if di.info.RemovalIn != "" {
 		removal, err = semver.NewVersion(di.info.RemovalIn)
 		if err != nil {
-			return fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn, err)
+			return fmt.Errorf("cannot parse 'removal' version %q: %w", di.info.RemovalIn, err)
 		}
 	} else {
 		removal = &semver.Version{Major: since.Major}
@@ -116,7 +116,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		}
 	}
 	if err := info.determineEscalation(c.version); err != nil {
-		panic(fmt.Errorf("plugin %q: %v", info.Name, err))
+		panic(fmt.Errorf("plugin %q: %w", info.Name, err))
 	}
 	if info.LogLevel != telegraf.None {
 		c.incrementPluginDeprecations(category)
@@ -148,7 +148,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 			optionInfo.info.RemovalIn = tags[1]
 		}
 		if err := optionInfo.determineEscalation(c.version); err != nil {
-			panic(fmt.Errorf("plugin %q option %q: %v", info.Name, field.Name, err))
+			panic(fmt.Errorf("plugin %q option %q: %w", info.Name, field.Name, err))
 		}
 
 		if optionInfo.LogLevel != telegraf.None {
@@ -258,7 +258,7 @@ func (c *Config) PrintDeprecationList(plugins []PluginDeprecationInfo) {
 	for _, plugin := range plugins {
 		switch plugin.LogLevel {
 		case telegraf.Warn, telegraf.Error:
-			_, _ = fmt.Printf(
+			fmt.Printf(
 				"  %-40s %-5s since %-5s removal in %-5s %s\n",
 				plugin.Name, plugin.LogLevel, plugin.info.Since, plugin.info.RemovalIn, plugin.info.Notice,
 			)
@@ -269,7 +269,7 @@ func (c *Config) PrintDeprecationList(plugins []PluginDeprecationInfo) {
 		}
 		sort.Slice(plugin.Options, func(i, j int) bool { return plugin.Options[i].Name < plugin.Options[j].Name })
 		for _, option := range plugin.Options {
-			_, _ = fmt.Printf(
+			fmt.Printf(
 				"  %-40s %-5s since %-5s removal in %-5s %s\n",
 				plugin.Name+"/"+option.Name, option.LogLevel, option.info.Since, option.info.RemovalIn, option.info.Notice,
 			)

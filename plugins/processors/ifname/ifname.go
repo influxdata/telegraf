@@ -144,11 +144,11 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 
 	d.ifTable, err = d.makeTable("1.3.6.1.2.1.2.2.1.2")
 	if err != nil {
-		return fmt.Errorf("preparing ifTable: %v", err)
+		return fmt.Errorf("preparing ifTable: %w", err)
 	}
 	d.ifXTable, err = d.makeTable("1.3.6.1.2.1.31.1.1.1.1")
 	if err != nil {
-		return fmt.Errorf("preparing ifXTable: %v", err)
+		return fmt.Errorf("preparing ifXTable: %w", err)
 	}
 
 	fn := func(m telegraf.Metric) []telegraf.Metric {
@@ -172,9 +172,8 @@ func (d *IfName) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *IfName) Stop() error {
+func (d *IfName) Stop() {
 	d.parallel.Stop()
-	return nil
 }
 
 // getMap gets the interface names map either from cache or from the SNMP

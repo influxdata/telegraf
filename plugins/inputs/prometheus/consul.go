@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
+
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -55,7 +56,7 @@ func (p *Prometheus) startConsul(ctx context.Context) error {
 
 	consul, err := api.NewClient(consulAPIConfig)
 	if err != nil {
-		return fmt.Errorf("cannot connect to the Consul agent: %v", err)
+		return fmt.Errorf("cannot connect to the Consul agent: %w", err)
 	}
 
 	// Parse the template for metrics URL, drop queries with template parse errors

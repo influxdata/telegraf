@@ -3,9 +3,11 @@ package modbus
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -24,8 +26,11 @@ var sampleConfigStart string
 var sampleConfigEnd string
 
 type ModbusWorkarounds struct {
-	PollPause        config.Duration `toml:"pause_between_requests"`
-	CloseAfterGather bool            `toml:"close_connection_after_gather"`
+	AfterConnectPause       config.Duration `toml:"pause_after_connect"`
+	PollPause               config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather        bool            `toml:"close_connection_after_gather"`
+	OnRequestPerField       bool            `toml:"one_request_per_field"`
+	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
 }
 
 // Modbus holds all data relevant to the plugin
@@ -63,6 +68,14 @@ type requestSet struct {
 	discrete []request
 	holding  []request
 	input    []request
+}
+
+func (r requestSet) Empty() bool {
+	l := len(r.coil)
+	l += len(r.discrete)
+	l += len(r.holding)
+	l += len(r.input)
+	return l == 0
 }
 
 type field struct {
@@ -112,8 +125,10 @@ func (m *Modbus) Init() error {
 	var cfg Configuration
 	switch m.ConfigurationType {
 	case "", "register":
+		m.ConfigurationOriginal.workarounds = m.Workarounds
 		cfg = &m.ConfigurationOriginal
 	case "request":
+		m.ConfigurationPerRequest.workarounds = m.Workarounds
 		cfg = &m.ConfigurationPerRequest
 	default:
 		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
@@ -121,20 +136,48 @@ func (m *Modbus) Init() error {
 
 	// Check and process the configuration
 	if err := cfg.Check(); err != nil {
-		return fmt.Errorf("configuraton invalid: %v", err)
+		return fmt.Errorf("configuration invalid: %w", err)
 	}
 
 	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process configuraton: %v", err)
+		return fmt.Errorf("cannot process configuration: %w", err)
 	}
 	m.requests = r
 
 	// Setup client
 	if err := m.initClient(); err != nil {
-		return fmt.Errorf("initializing client failed: %v", err)
+		return fmt.Errorf("initializing client failed: %w", err)
 	}
+	for slaveID, rqs := range m.requests {
+		var nHoldingRegs, nInputsRegs, nDiscreteRegs, nCoilRegs uint16
+		var nHoldingFields, nInputsFields, nDiscreteFields, nCoilFields int
 
+		for _, r := range rqs.holding {
+			nHoldingRegs += r.length
+			nHoldingFields += len(r.fields)
+		}
+		for _, r := range rqs.input {
+			nInputsRegs += r.length
+			nInputsFields += len(r.fields)
+		}
+		for _, r := range rqs.discrete {
+			nDiscreteRegs += r.length
+			nDiscreteFields += len(r.fields)
+		}
+		for _, r := range rqs.coil {
+			nCoilRegs += r.length
+			nCoilFields += len(r.fields)
+		}
+		m.Log.Infof("Got %d request(s) touching %d holding registers for %d fields (slave %d)",
+			len(rqs.holding), nHoldingRegs, nHoldingFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d inputs registers for %d fields (slave %d)",
+			len(rqs.input), nInputsRegs, nInputsFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d discrete registers for %d fields (slave %d)",
+			len(rqs.discrete), nDiscreteRegs, nDiscreteFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d coil registers for %d fields (slave %d)",
+			len(rqs.coil), nCoilRegs, nCoilFields, slaveID)
+	}
 	return nil
 }
 
@@ -150,14 +193,14 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
 		if err := m.readSlaveData(slaveID, requests); err != nil {
 			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
-			mberr, ok := err.(*mb.Error)
-			if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+			var mbErr *mb.Error
+			if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 				m.Log.Debugf("Reconnecting to %s...", m.Controller)
 				if err := m.disconnect(); err != nil {
 					return fmt.Errorf("disconnecting failed: %w", err)
 				}
 				if err := m.connect(); err != nil {
-					return fmt.Errorf("connecting failed: %w", err)
+					return fmt.Errorf("slave %d: connecting failed: %w", slaveID, err)
 				}
 			}
 			continue
@@ -202,6 +245,13 @@ func (m *Modbus) initClient() error {
 			return err
 		}
 		switch m.TransmissionMode {
+		case "", "auto", "TCP":
+			handler := mb.NewTCPClientHandler(host + ":" + port)
+			handler.Timeout = time.Duration(m.Timeout)
+			if m.DebugConnection {
+				handler.Logger = m
+			}
+			m.handler = handler
 		case "RTUoverTCP":
 			handler := mb.NewRTUOverTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
@@ -217,17 +267,16 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		default:
-			handler := mb.NewTCPClientHandler(host + ":" + port)
-			handler.Timeout = time.Duration(m.Timeout)
-			if m.DebugConnection {
-				handler.Logger = m
-			}
-			m.handler = handler
+			return fmt.Errorf("invalid transmission mode %q for %q", m.TransmissionMode, u.Scheme)
 		}
-	case "file":
+	case "", "file":
+		path := filepath.Join(u.Host, u.Path)
+		if path == "" {
+			return fmt.Errorf("invalid path for controller %q", m.Controller)
+		}
 		switch m.TransmissionMode {
-		case "RTU":
-			handler := mb.NewRTUClientHandler(u.Path)
+		case "", "auto", "RTU":
+			handler := mb.NewRTUClientHandler(path)
 			handler.Timeout = time.Duration(m.Timeout)
 			handler.BaudRate = m.BaudRate
 			handler.DataBits = m.DataBits
@@ -238,7 +287,7 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		case "ASCII":
-			handler := mb.NewASCIIClientHandler(u.Path)
+			handler := mb.NewASCIIClientHandler(path)
 			handler.Timeout = time.Duration(m.Timeout)
 			handler.BaudRate = m.BaudRate
 			handler.DataBits = m.DataBits
@@ -249,7 +298,7 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		default:
-			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
+			return fmt.Errorf("invalid transmission mode %q for %q", m.TransmissionMode, u.Scheme)
 		}
 	default:
 		return fmt.Errorf("invalid controller %q", m.Controller)
@@ -265,6 +314,10 @@ func (m *Modbus) initClient() error {
 func (m *Modbus) connect() error {
 	err := m.handler.Connect()
 	m.isConnected = err == nil
+	if m.isConnected && m.Workarounds.AfterConnectPause != 0 {
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.AfterConnectPause))
+		time.Sleep(time.Until(nextRequest))
+	}
 	return err
 }
 
@@ -285,8 +338,8 @@ func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
 		}
 
 		// Exit in case a non-recoverable error occurred
-		mberr, ok := err.(*mb.Error)
-		if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+		var mbErr *mb.Error
+		if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 			return err
 		}
 
@@ -436,10 +489,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			if err := grouper.Add(measurement, rtags, timestamp, field.name, field.value); err != nil {
-				acc.AddError(fmt.Errorf("cannot add field %q for measurement %q: %v", field.name, measurement, err))
-				continue
-			}
+			grouper.Add(measurement, rtags, timestamp, field.name, field.value)
 		}
 	}
 

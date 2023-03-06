@@ -47,7 +47,7 @@ func (*CPUStats) SampleConfig() string {
 func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 	times, err := c.ps.CPUTimes(c.PerCPU, c.TotalCPU)
 	if err != nil {
-		return fmt.Errorf("error getting CPU info: %s", err)
+		return fmt.Errorf("error getting CPU info: %w", err)
 	}
 	now := time.Now()
 

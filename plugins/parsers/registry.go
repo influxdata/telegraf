@@ -68,7 +68,7 @@ type ParserCompatibility interface {
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
-	// DataFormat can be one of: json, influx, graphite, value, nagios
+	// DataFormat can be one of: avro, json, influx, graphite, value, nagios
 	DataFormat string `toml:"data_format"`
 
 	// Separator only applied to Graphite data.
@@ -139,6 +139,7 @@ type Config struct {
 	GrokCustomPatternFiles []string `toml:"grok_custom_pattern_files"`
 	GrokTimezone           string   `toml:"grok_timezone"`
 	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
+	GrokMultiline          bool     `toml:"grok_multiline"`
 
 	//csv configuration
 	CSVColumnNames        []string `toml:"csv_column_names"`
@@ -150,6 +151,7 @@ type Config struct {
 	CSVSkipColumns        int      `toml:"csv_skip_columns"`
 	CSVSkipRows           int      `toml:"csv_skip_rows"`
 	CSVTagColumns         []string `toml:"csv_tag_columns"`
+	CSVTagOverwrite       bool     `toml:"csv_tag_overwrite"`
 	CSVTimestampColumn    string   `toml:"csv_timestamp_column"`
 	CSVTimestampFormat    string   `toml:"csv_timestamp_format"`
 	CSVTimezone           string   `toml:"csv_timezone"`

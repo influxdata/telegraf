@@ -4,6 +4,7 @@ package vsphere
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"sync"
 	"time"
 
@@ -22,8 +23,8 @@ var sampleConfig string
 // and a list of connected vSphere endpoints
 type VSphere struct {
 	Vcenters                  []string
-	Username                  string
-	Password                  string
+	Username                  config.Secret `toml:"username"`
+	Password                  config.Secret `toml:"password"`
 	DatacenterInstances       bool
 	DatacenterMetricInclude   []string
 	DatacenterMetricExclude   []string
@@ -91,8 +92,8 @@ func (v *VSphere) Start(_ telegraf.Accumulator) error {
 	v.cancel = cancel
 
 	// Create endpoints, one for each vCenter we're monitoring
-	v.endpoints = make([]*Endpoint, len(v.Vcenters))
-	for i, rawURL := range v.Vcenters {
+	v.endpoints = make([]*Endpoint, 0, len(v.Vcenters))
+	for _, rawURL := range v.Vcenters {
 		u, err := soap.ParseURL(rawURL)
 		if err != nil {
 			return err
@@ -101,7 +102,7 @@ func (v *VSphere) Start(_ telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		v.endpoints[i] = ep
+		v.endpoints = append(v.endpoints, ep)
 	}
 	return nil
 }
@@ -136,7 +137,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		go func(endpoint *Endpoint) {
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
-			if err == context.Canceled {
+			if errors.Is(err, context.Canceled) {
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}

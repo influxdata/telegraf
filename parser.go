@@ -24,16 +24,16 @@ type Parser interface {
 
 type ParserFunc func() (Parser, error)
 
-// ParserInput is an interface for input plugins that are able to parse
+// ParserPlugin is an interface for plugins that are able to parse
 // arbitrary data formats.
-type ParserInput interface {
+type ParserPlugin interface {
 	// SetParser sets the parser function for the interface
 	SetParser(parser Parser)
 }
 
-// ParserFuncInput is an interface for input plugins that are able to parse
+// ParserFuncPlugin is an interface for plugins that are able to parse
 // arbitrary data formats.
-type ParserFuncInput interface {
+type ParserFuncPlugin interface {
 	// GetParser returns a new parser.
 	SetParserFunc(fn ParserFunc)
 }

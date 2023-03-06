@@ -13,10 +13,10 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"google.golang.org/api/iterator"
 	distributionpb "google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -66,6 +66,8 @@ type (
 	ListTimeSeriesFilter struct {
 		ResourceLabels []*Label `json:"resource_labels"`
 		MetricLabels   []*Label `json:"metric_labels"`
+		UserLabels     []*Label `json:"user_labels"`
+		SystemLabels   []*Label `json:"system_labels"`
 	}
 
 	// Label contains key and value
@@ -122,10 +124,10 @@ func (g *lockedSeriesGrouper) Add(
 	tm time.Time,
 	field string,
 	fieldValue interface{},
-) error {
+) {
 	g.Lock()
 	defer g.Unlock()
-	return g.SeriesGrouper.Add(measurement, tags, tm, field, fieldValue)
+	g.SeriesGrouper.Add(measurement, tags, tm, field, fieldValue)
 }
 
 // ListMetricDescriptors implements metricClient interface
@@ -145,7 +147,7 @@ func (smc *stackdriverMetricClient) ListMetricDescriptors(
 		for {
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
-				if mdErr != iterator.Done {
+				if !errors.Is(mdErr, iterator.Done) {
 					smc.log.Errorf("Failed iterating metric descriptor responses: %q: %v", req.String(), mdErr)
 				}
 				break
@@ -174,7 +176,7 @@ func (smc *stackdriverMetricClient) ListTimeSeries(
 		for {
 			tsDesc, tsErr := tsResp.Next()
 			if tsErr != nil {
-				if tsErr != iterator.Done {
+				if !errors.Is(tsErr, iterator.Done) {
 					smc.log.Errorf("Failed iterating time series responses: %q: %v", req.String(), tsErr)
 				}
 				break
@@ -270,15 +272,15 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 
 	var valueFmt string
 	if len(s.Filter.ResourceLabels) > 0 {
-		resourceLabelsFilter := make([]string, len(s.Filter.ResourceLabels))
-		for i, resourceLabel := range s.Filter.ResourceLabels {
+		resourceLabelsFilter := make([]string, 0, len(s.Filter.ResourceLabels))
+		for _, resourceLabel := range s.Filter.ResourceLabels {
 			// check if resource label value contains function
 			if includeExcludeHelper(resourceLabel.Value, functions, nil) {
 				valueFmt = `resource.labels.%s = %s`
 			} else {
 				valueFmt = `resource.labels.%s = "%s"`
 			}
-			resourceLabelsFilter[i] = fmt.Sprintf(valueFmt, resourceLabel.Key, resourceLabel.Value)
+			resourceLabelsFilter = append(resourceLabelsFilter, fmt.Sprintf(valueFmt, resourceLabel.Key, resourceLabel.Value))
 		}
 		if len(resourceLabelsFilter) == 1 {
 			filterString += fmt.Sprintf(" AND %s", resourceLabelsFilter[0])
@@ -288,20 +290,56 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 	}
 
 	if len(s.Filter.MetricLabels) > 0 {
-		metricLabelsFilter := make([]string, len(s.Filter.MetricLabels))
-		for i, metricLabel := range s.Filter.MetricLabels {
+		metricLabelsFilter := make([]string, 0, len(s.Filter.MetricLabels))
+		for _, metricLabel := range s.Filter.MetricLabels {
 			// check if metric label value contains function
 			if includeExcludeHelper(metricLabel.Value, functions, nil) {
 				valueFmt = `metric.labels.%s = %s`
 			} else {
 				valueFmt = `metric.labels.%s = "%s"`
 			}
-			metricLabelsFilter[i] = fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value)
+			metricLabelsFilter = append(metricLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
 		}
 		if len(metricLabelsFilter) == 1 {
 			filterString += fmt.Sprintf(" AND %s", metricLabelsFilter[0])
 		} else {
 			filterString += fmt.Sprintf(" AND (%s)", strings.Join(metricLabelsFilter, " OR "))
+		}
+	}
+
+	if len(s.Filter.UserLabels) > 0 {
+		userLabelsFilter := make([]string, 0, len(s.Filter.UserLabels))
+		for _, metricLabel := range s.Filter.UserLabels {
+			// check if metric label value contains function
+			if includeExcludeHelper(metricLabel.Value, functions, nil) {
+				valueFmt = `metadata.user_labels."%s" = %s`
+			} else {
+				valueFmt = `metadata.user_labels."%s" = "%s"`
+			}
+			userLabelsFilter = append(userLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
+		}
+		if len(userLabelsFilter) == 1 {
+			filterString += fmt.Sprintf(" AND %s", userLabelsFilter[0])
+		} else {
+			filterString += fmt.Sprintf(" AND (%s)", strings.Join(userLabelsFilter, " OR "))
+		}
+	}
+
+	if len(s.Filter.SystemLabels) > 0 {
+		systemLabelsFilter := make([]string, 0, len(s.Filter.SystemLabels))
+		for _, metricLabel := range s.Filter.SystemLabels {
+			// check if metric label value contains function
+			if includeExcludeHelper(metricLabel.Value, functions, nil) {
+				valueFmt = `metadata.system_labels."%s" = %s`
+			} else {
+				valueFmt = `metadata.system_labels."%s" = "%s"`
+			}
+			systemLabelsFilter = append(systemLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
+		}
+		if len(systemLabelsFilter) == 1 {
+			filterString += fmt.Sprintf(" AND %s", systemLabelsFilter[0])
+		} else {
+			filterString += fmt.Sprintf(" AND (%s)", strings.Join(systemLabelsFilter, " OR "))
 		}
 	}
 
@@ -370,7 +408,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 	if s.client == nil {
 		client, err := monitoring.NewMetricClient(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to create stackdriver monitoring client: %v", err)
+			return fmt.Errorf("failed to create stackdriver monitoring client: %w", err)
 		}
 
 		tags := map[string]string{
@@ -429,9 +467,9 @@ func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 		return nil
 	}
 
-	metricTypeFilters := make([]string, len(s.MetricTypePrefixInclude))
-	for i, metricTypePrefix := range s.MetricTypePrefixInclude {
-		metricTypeFilters[i] = fmt.Sprintf(`metric.type = starts_with(%q)`, metricTypePrefix)
+	metricTypeFilters := make([]string, 0, len(s.MetricTypePrefixInclude))
+	for _, metricTypePrefix := range s.MetricTypePrefixInclude {
+		metricTypeFilters = append(metricTypeFilters, fmt.Sprintf(`metric.type = starts_with(%q)`, metricTypePrefix))
 	}
 	return metricTypeFilters
 }
@@ -554,9 +592,7 @@ func (s *Stackdriver) gatherTimeSeries(
 					value = p.Value.GetStringValue()
 				}
 
-				if err := grouper.Add(tsConf.measurement, tags, ts, tsConf.fieldKey, value); err != nil {
-					return err
-				}
+				grouper.Add(tsConf.measurement, tags, ts, tsConf.fieldKey, value)
 			}
 		}
 	}
@@ -638,23 +674,13 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 	field := tsConf.fieldKey
 	name := tsConf.measurement
 
-	if err := grouper.Add(name, tags, ts, field+"_count", dist.Count); err != nil {
-		return err
-	}
-	if err := grouper.Add(name, tags, ts, field+"_mean", dist.Mean); err != nil {
-		return err
-	}
-	if err := grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", dist.SumOfSquaredDeviation); err != nil {
-		return err
-	}
+	grouper.Add(name, tags, ts, field+"_count", dist.Count)
+	grouper.Add(name, tags, ts, field+"_mean", dist.Mean)
+	grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", dist.SumOfSquaredDeviation)
 
 	if dist.Range != nil {
-		if err := grouper.Add(name, tags, ts, field+"_range_min", dist.Range.Min); err != nil {
-			return err
-		}
-		if err := grouper.Add(name, tags, ts, field+"_range_max", dist.Range.Max); err != nil {
-			return err
-		}
+		grouper.Add(name, tags, ts, field+"_range_min", dist.Range.Min)
+		grouper.Add(name, tags, ts, field+"_range_max", dist.Range.Max)
 	}
 
 	bucket, err := NewBucket(dist)
@@ -680,9 +706,7 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 		if i < int32(len(dist.BucketCounts)) {
 			count += dist.BucketCounts[i]
 		}
-		if err := grouper.Add(name, tags, ts, field+"_bucket", count); err != nil {
-			return err
-		}
+		grouper.Add(name, tags, ts, field+"_bucket", count)
 	}
 
 	return nil

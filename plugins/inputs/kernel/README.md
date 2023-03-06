@@ -40,15 +40,25 @@ processes 86031
 Number of forks since boot.
 ```
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
 # Get kernel statistics from /proc/stat
+# This plugin ONLY supports Linux
 [[inputs.kernel]]
   # no configuration
 ```
 
-## Measurements & Fields
+## Metrics
 
 - kernel
   - boot_time (integer, seconds since epoch, `btime`)
@@ -58,10 +68,6 @@ Number of forks since boot.
   - interrupts (integer, `intr`)
   - processes_forked (integer, `processes`)
   - entropy_avail (integer, `entropy_available`)
-
-## Tags
-
-None
 
 ## Example Output
 

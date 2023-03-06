@@ -33,25 +33,37 @@ avoid cardinality issues:
 - Consult the [InfluxDB documentation][influx-docs] for the most up-to-date
   techniques.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
 # Read metrics from the Kubernetes api
 [[inputs.kube_inventory]]
-  ## URL for the Kubernetes API
-  url = "https://127.0.0.1"
+  ## URL for the Kubernetes API.
+  ## If empty in-cluster config with POD's service account token will be used.
+  # url = ""
 
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ##
+  ## Ignored if url is empty and in-cluster config is used.
+  ##
   ## If both of these are empty, we'll use the default serviceaccount:
-  ## at: /run/secrets/kubernetes.io/serviceaccount/token
+  ## at: /var/run/secrets/kubernetes.io/serviceaccount/token
   ##
   ## To auto-refresh the token, please use a file with the bearer_token option.
   ## If given a string, Telegraf cannot refresh the token periodically.
-  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
+  # bearer_token = "/var/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
   ## deprecated in 1.24.0; use bearer_token with a file
   # bearer_token_string = "abc_123"
@@ -151,13 +163,12 @@ subjects:
 ## Quickstart in k3s
 
 When monitoring [k3s](https://k3s.io) server instances one can re-use already
-generated administration token.  This is less secure than using the more
+generated administration token. This is less secure than using the more
 restrictive dedicated telegraf user but more convienient to set up.
 
 ```console
-# an empty token will make telegraf use the client cert/key files instead
-$ touch /run/telegraf-kubernetes-token
 # replace `telegraf` with the user the telegraf process is running as
+$ install -o telegraf -m400 /var/lib/rancher/k3s/server/token /run/telegraf-kubernetes-token
 $ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.crt /run/telegraf-kubernetes-cert
 $ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.key /run/telegraf-kubernetes-key
 ```

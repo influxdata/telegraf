@@ -48,11 +48,7 @@ func (s *SFlow) Init() error {
 // Start starts this sFlow listener listening on the configured network for sFlow packets
 func (s *SFlow) Start(acc telegraf.Accumulator) error {
 	s.decoder.OnPacket(func(p *V5Format) {
-		metrics, err := makeMetrics(p)
-		if err != nil {
-			s.Log.Errorf("Failed to make metric from packet: %s", err)
-			return
-		}
+		metrics := makeMetrics(p)
 		for _, m := range metrics {
 			acc.AddMetric(m)
 		}
@@ -94,9 +90,7 @@ func (s *SFlow) Gather(_ telegraf.Accumulator) error {
 
 func (s *SFlow) Stop() {
 	if s.closer != nil {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		s.closer.Close()
+		s.closer.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
 	}
 	s.wg.Wait()
 }
@@ -121,7 +115,7 @@ func (s *SFlow) read(acc telegraf.Accumulator, conn net.PacketConn) {
 
 func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
 	if err := s.decoder.Decode(bytes.NewBuffer(buf)); err != nil {
-		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
+		acc.AddError(fmt.Errorf("unable to parse incoming packet: %w", err))
 	}
 }
 

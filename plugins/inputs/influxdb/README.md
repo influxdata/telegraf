@@ -1,12 +1,37 @@
 # InfluxDB Input Plugin
 
-The InfluxDB plugin will collect metrics on the given InfluxDB servers. Read
-our [documentation][1] for detailed information about `influxdb` metrics.
+The InfluxDB plugin will collect metrics on the given InfluxDB v1 servers from
+the `/debug/vars` endpoint. Read the [documentation][1] for detailed
+information about `influxdb` metrics. For InfluxDB v2 and the `metrics`
+endpoint please see the section below.
 
 This plugin can also gather metrics from endpoints that expose
 InfluxDB-formatted endpoints. See below for more information.
 
 [1]: https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/
+
+## InfluxDB v2 Metrics
+
+For [InfluxDB v2 metrics][2] are produced in Prometheus plain-text format. To
+collect metrics at the new `/metrics` endpoint, please use the Prometheus
+input plugin. This is an example to collect from a local database:
+
+```toml
+[[inputs.prometheus]]
+  urls = ["http://localhost:8086/metrics"]
+  metric_version = 1
+```
+
+[2]: https://docs.influxdata.com/influxdb/latest/reference/internals/metrics/
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -38,7 +63,7 @@ InfluxDB-formatted endpoints. See below for more information.
   timeout = "5s"
 ```
 
-## Measurements & Fields
+## Metrics
 
 **Note:** The measurements and fields included in this plugin are dynamically
 built from the InfluxDB source, and may vary between versions:

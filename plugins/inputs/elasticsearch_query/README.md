@@ -15,6 +15,15 @@ The following is supported:
 This plugins is tested against Elasticsearch 5.x and 6.x releases.
 Currently it is known to break on 7.x or greater versions.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -184,3 +193,7 @@ of the examples below.
 
 [joda]: https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-aggregations-bucket-daterange-aggregation.html#date-format-pattern
 [agg]: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html
+
+## Metrics
+
+## Example Output

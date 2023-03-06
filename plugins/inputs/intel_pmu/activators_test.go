@@ -37,7 +37,7 @@ func TestActivateEntities(t *testing.T) {
 		mEntities := []*CoreEventEntity{{EventsTag: tag}}
 		err := mEntitiesActivator.activateEntities(mEntities, nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate core events `%s`", tag))
+		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate core events %q", tag))
 	})
 
 	// more uncore test cases in TestActivateUncoreEvents
@@ -46,7 +46,7 @@ func TestActivateEntities(t *testing.T) {
 		mEntities := []*UncoreEventEntity{{EventsTag: tag}}
 		err := mEntitiesActivator.activateEntities(nil, mEntities)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate uncore events `%s`", tag))
+		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate uncore events %q", tag))
 	})
 
 	t.Run("nothing to do", func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 		mEntity := &UncoreEventEntity{parsedEvents: []*eventWithQuals{{name: name, custom: ia.CustomizableEvent{Event: nil}}}}
 		err := mEntitiesActivator.activateUncoreEvents(mEntity)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("perf event of `%s` event is nil", name))
+		require.Contains(t, err.Error(), fmt.Sprintf("perf event of %q event is nil", name))
 	})
 
 	t.Run("placement maker and perf activator is nil", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 		err := mEntitiesActivator.activateUncoreEvents(mEntity)
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("ailed to create uncore placements for event `%s`", eventName))
+		require.Contains(t, err.Error(), fmt.Sprintf("ailed to create uncore placements for event %q", eventName))
 		mMaker.AssertExpectations(t)
 	})
 
@@ -117,7 +117,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 
 		err := mEntitiesActivator.activateUncoreEvents(mEntity)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate multi event `%s`", eventName))
+		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate multi event %q", eventName))
 		mMaker.AssertExpectations(t)
 		mActivator.AssertExpectations(t)
 	})
@@ -188,7 +188,7 @@ func TestActivateCoreEvents(t *testing.T) {
 		err := mEntitiesActivator.activateCoreEvents(mEntity)
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("failed to create core placements for event `%s`", parsedEvents[0].name))
+		require.Contains(t, err.Error(), fmt.Sprintf("failed to create core placements for event %q", parsedEvents[0].name))
 		mMaker.AssertExpectations(t)
 	})
 
@@ -206,7 +206,7 @@ func TestActivateCoreEvents(t *testing.T) {
 
 		err := mEntitiesActivator.activateCoreEvents(mEntity)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate core event `%s`", parsedEvents[0].name))
+		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate core event %q", parsedEvents[0].name))
 		mMaker.AssertExpectations(t)
 		mActivator.AssertExpectations(t)
 	})
@@ -272,7 +272,7 @@ func TestActivateCoreEventsGroup(t *testing.T) {
 		parsedCores:  nil,
 	}
 
-	var events []ia.CustomizableEvent
+	events := make([]ia.CustomizableEvent, 0, len(parsedEvents))
 	for _, event := range parsedEvents {
 		events = append(events, event.custom)
 	}
@@ -386,7 +386,7 @@ func TestActivateEventForPlacement(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(nil, mPlacements)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "core event is nil")
-		require.Nil(t, activeEvents)
+		require.Empty(t, activeEvents)
 	})
 
 	t.Run("perf activator is nil", func(t *testing.T) {
@@ -394,20 +394,20 @@ func TestActivateEventForPlacement(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(mEvent, mPlacements)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing perf activator")
-		require.Nil(t, activeEvents)
+		require.Empty(t, activeEvents)
 	})
 
 	t.Run("placements are nil", func(t *testing.T) {
 		activeEvents, err := mActivator.activateEventForPlacements(mEvent, nil)
 		require.NoError(t, err)
-		require.Nil(t, activeEvents)
+		require.Empty(t, activeEvents)
 	})
 
 	t.Run("activation error", func(t *testing.T) {
 		mPerfActivator.On("activateEvent", mPerfEvent, placement1, mOptions).Once().Return(nil, errors.New("err"))
 		activeEvents, err := mActivator.activateEventForPlacements(mEvent, mPlacements)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate event `%s`", mEvent.name))
+		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate event %q", mEvent.name))
 		require.Nil(t, activeEvents)
 		mPerfActivator.AssertExpectations(t)
 	})

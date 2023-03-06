@@ -14,6 +14,15 @@ Processes can be selected for monitoring using one of several methods:
 - cgroup
 - win_service
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -114,6 +123,7 @@ the `win_perf_counters` input plugin as a more mature alternative.
     - num_fds (int, *telegraf* may need to be ran as **root**)
     - num_threads (int)
     - pid (int)
+    - ppid (int)
     - read_bytes (int, *telegraf* may need to be ran as **root**)
     - read_count (int, *telegraf* may need to be ran as **root**)
     - realtime_priority (int)

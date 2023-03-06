@@ -35,20 +35,20 @@ values.
 
   ## Indicates the number of rows to skip before looking for metadata and header information.
   csv_skip_rows = 0
-  
-  ## Indicates the number of rows to parse as metadata before looking for header information. 
-  ## By default, the parser assumes there are no metadata rows to parse. 
+
+  ## Indicates the number of rows to parse as metadata before looking for header information.
+  ## By default, the parser assumes there are no metadata rows to parse.
   ## If set, the parser would use the provided separators in the csv_metadata_separators to look for metadata.
-  ## Please note that by default, the (key, value) pairs will be added as tags. 
+  ## Please note that by default, the (key, value) pairs will be added as tags.
   ## If fields are required, use the converter processor.
   csv_metadata_rows = 0
-  
+
   ## A list of metadata separators. If csv_metadata_rows is set,
   ## csv_metadata_separators must contain at least one separator.
   ## Please note that separators are case sensitive and the sequence of the seperators are respected.
   csv_metadata_separators = [":", "="]
-  
-  ## A set of metadata trim characters. 
+
+  ## A set of metadata trim characters.
   ## If csv_metadata_trim_set is not set, no trimming is performed.
   ## Please note that the trim cutset is case sensitive.
   csv_metadata_trim_set = ""
@@ -59,6 +59,10 @@ values.
 
   ## The separator between csv fields
   ## By default, the parser assumes a comma (",")
+  ## Please note that if you use invalid delimiters (e.g. "\u0000"), commas
+  ## will be changed to "\ufffd", the invalid delimiters changed to a comma
+  ## during parsing, and afterwards the invalid characters and commas are
+  ## returned to their original values.
   csv_delimiter = ","
 
   ## The character reserved for marking a row as a comment row
@@ -72,6 +76,9 @@ values.
   ## Columns listed here will be added as tags. Any other columns
   ## will be added as fields.
   csv_tag_columns = []
+
+  ## Set to true to let the column tags overwrite the metadata and default tags.
+  csv_tag_overwrite = false
 
   ## The column to extract the name of the metric from. Will not be
   ## included as field in metric.
@@ -167,7 +174,7 @@ Config:
   csv_metadata_separators = [":", "="]
   csv_metadata_trim_set = " #"
   csv_header_row_count = 1
-  csv_tag_columns = ["Version","File Created"]
+  csv_tag_columns = ["Version","cpu"]
   csv_timestamp_column = "time"
   csv_timestamp_format = "2006-01-02T15:04:05Z07:00"
 ```
@@ -177,14 +184,46 @@ Input:
 ```csv
 # Version=1.1
 # File Created: 2021-11-17T07:02:45+10:00
-measurement,cpu,time_user,time_system,time_idle,time
-cpu,cpu0,42,42,42,2018-09-13T13:03:28Z
+Version,measurement,cpu,time_user,time_system,time_idle,time
+1.2,cpu,cpu0,42,42,42,2018-09-13T13:03:28Z
 ```
 
 Output:
 
 ```text
-cpu,File\ Created=2021-11-17T07:02:45+10:00,Version=1.1 cpu=cpu0,time_user=42,time_system=42,time_idle=42 1536869008000000000
+cpu,cpu=cpu0,File\ Created=2021-11-17T07:02:45+10:00,Version=1.1 time_user=42,time_system=42,time_idle=42 1536869008000000000
 ```
 
+Config:
+
+```toml
+[[inputs.file]]
+  files = ["example"]
+  data_format = "csv"
+  csv_metadata_rows = 2
+  csv_metadata_separators = [":", "="]
+  csv_metadata_trim_set = " #"
+  csv_header_row_count = 1
+  csv_tag_columns = ["Version","cpu"]
+  csv_tag_overwrite = true
+  csv_timestamp_column = "time"
+  csv_timestamp_format = "2006-01-02T15:04:05Z07:00"
+```
+
+Input:
+
+```csv
+# Version=1.1
+# File Created: 2021-11-17T07:02:45+10:00
+Version,measurement,cpu,time_user,time_system,time_idle,time
+1.2,cpu,cpu0,42,42,42,2018-09-13T13:03:28Z
+```
+
+Output:
+
+```text
+cpu,cpu=cpu0,File\ Created=2021-11-17T07:02:45+10:00,Version=1.2 time_user=42,time_system=42,time_idle=42 1536869008000000000
+```
+
+[time parse]: https://pkg.go.dev/time#Parse
 [metric filtering]: /docs/CONFIGURATION.md#metric-filtering

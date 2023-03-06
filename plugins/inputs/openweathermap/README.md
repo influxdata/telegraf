@@ -10,6 +10,15 @@ of the URL: <https://openweathermap.org/city/2643743>. Language
 identifiers can be found in the [lang list][]. Documentation for
 condition ID, icon, and main is at [weather conditions][].
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -58,6 +67,7 @@ condition ID, icon, and main is at [weather conditions][].
     - humidity (int, percent)
     - pressure (float, atmospheric pressure hPa)
     - rain (float, rain volume for the last 1-3 hours (depending on API response) in mm)
+    - snow (float, snow volume for the last 1-3 hours (depending on API response) in mm)
     - sunrise (int, nanoseconds since unix epoch)
     - sunset (int, nanoseconds since unix epoch)
     - temperature (float, degrees)

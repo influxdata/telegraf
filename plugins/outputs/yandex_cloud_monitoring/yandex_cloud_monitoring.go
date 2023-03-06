@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -122,13 +123,19 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	var yandexCloudMonitoringMetrics []yandexCloudMonitoringMetric
 	for _, m := range metrics {
 		for _, field := range m.FieldList() {
+			value, err := internal.ToFloat64(field.Value)
+			if err != nil {
+				a.Log.Errorf("skipping value: %w", err.Error())
+				continue
+			}
+
 			yandexCloudMonitoringMetrics = append(
 				yandexCloudMonitoringMetrics,
 				yandexCloudMonitoringMetric{
 					Name:   field.Key,
 					Labels: m.Tags(),
 					TS:     fmt.Sprint(m.Time().Format(time.RFC3339)),
-					Value:  field.Value.(float64),
+					Value:  value,
 				},
 			)
 		}
@@ -151,7 +158,7 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error) {
 	req, err := http.NewRequest("GET", metadataURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %v", err)
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 	req.Header.Set("Metadata-Flavor", "Google")
 	resp, err := c.Do(req)
@@ -179,7 +186,7 @@ func (a *YandexCloudMonitoring) getFolderIDFromMetadata() (string, error) {
 	}
 	folderID := string(body)
 	if folderID == "" {
-		return "", fmt.Errorf("unable to fetch folder id from URL %s: %v", a.MetadataFolderURL, err)
+		return "", fmt.Errorf("unable to fetch folder id from URL %s: %w", a.MetadataFolderURL, err)
 	}
 	return folderID, nil
 }
@@ -195,7 +202,7 @@ func (a *YandexCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
 		return "", 0, err
 	}
 	if metadata.AccessToken == "" || metadata.ExpiresIn == 0 {
-		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %v", a.MetadataTokenURL, err)
+		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %w", a.MetadataTokenURL, err)
 	}
 	return metadata.AccessToken, int(metadata.ExpiresIn), nil
 }

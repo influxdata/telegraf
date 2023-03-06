@@ -6,12 +6,11 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestConnectAndWrite(t *testing.T) {
@@ -27,22 +26,23 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
-	defer func() {
-		require.NoError(t, container.Terminate(), "terminating container failed")
-	}()
+	defer container.Terminate()
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
-	s, err := serializers.NewJSONSerializer(10*time.Second, "yyy-dd-mmThh:mm:ss", "")
+	s, err := serializers.NewJSONSerializer(
+		&serializers.Config{
+			TimestampUnits:  10 * time.Second,
+			TimestampFormat: "yyy-dd-mmThh:mm:ss",
+		})
 	require.NoError(t, err)
 	st := &STOMP{
 		Host:          url,
 		QueueName:     "test_queue",
 		HeartBeatSend: 0,
 		HeartBeatRec:  0,
+		Log:           testutil.Logger{},
 		serialize:     s,
 	}
-	err = st.Connect()
-	require.NoError(t, err)
+	require.NoError(t, st.Connect())
 
-	err = st.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, st.Write(testutil.MockMetrics()))
 }

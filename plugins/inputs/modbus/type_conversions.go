@@ -11,6 +11,14 @@ func determineConverter(inType, byteOrder, outType string, scale float64) (field
 
 func determineConverterScale(inType, byteOrder, outType string, scale float64) (fieldConverterFunc, error) {
 	switch inType {
+	case "INT8L":
+		return determineConverterI8LScale(outType, byteOrder, scale)
+	case "INT8H":
+		return determineConverterI8HScale(outType, byteOrder, scale)
+	case "UINT8L":
+		return determineConverterU8LScale(outType, byteOrder, scale)
+	case "UINT8H":
+		return determineConverterU8HScale(outType, byteOrder, scale)
 	case "INT16":
 		return determineConverterI16Scale(outType, byteOrder, scale)
 	case "UINT16":
@@ -23,6 +31,8 @@ func determineConverterScale(inType, byteOrder, outType string, scale float64) (
 		return determineConverterI64Scale(outType, byteOrder, scale)
 	case "UINT64":
 		return determineConverterU64Scale(outType, byteOrder, scale)
+	case "FLOAT16":
+		return determineConverterF16Scale(outType, byteOrder, scale)
 	case "FLOAT32":
 		return determineConverterF32Scale(outType, byteOrder, scale)
 	case "FLOAT64":
@@ -33,6 +43,14 @@ func determineConverterScale(inType, byteOrder, outType string, scale float64) (
 
 func determineConverterNoScale(inType, byteOrder, outType string) (fieldConverterFunc, error) {
 	switch inType {
+	case "INT8L":
+		return determineConverterI8L(outType, byteOrder)
+	case "INT8H":
+		return determineConverterI8H(outType, byteOrder)
+	case "UINT8L":
+		return determineConverterU8L(outType, byteOrder)
+	case "UINT8H":
+		return determineConverterU8H(outType, byteOrder)
 	case "INT16":
 		return determineConverterI16(outType, byteOrder)
 	case "UINT16":
@@ -45,6 +63,8 @@ func determineConverterNoScale(inType, byteOrder, outType string) (fieldConverte
 		return determineConverterI64(outType, byteOrder)
 	case "UINT64":
 		return determineConverterU64(outType, byteOrder)
+	case "FLOAT16":
+		return determineConverterF16(outType, byteOrder)
 	case "FLOAT32":
 		return determineConverterF32(outType, byteOrder)
 	case "FLOAT64":

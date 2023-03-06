@@ -2,6 +2,7 @@ package internal
 
 import (
 	"crypto/subtle"
+	"errors"
 	"net"
 	"net/http"
 	"net/url"
@@ -135,7 +136,8 @@ func OnClientError(client *http.Client, err error) {
 	// connection this ensures that next interval a new connection will be
 	// used and name lookup will be performed.
 	//   https://github.com/golang/go/issues/36026
-	if err, ok := err.(*url.Error); ok && err.Timeout() {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) && urlErr.Timeout() {
 		client.CloseIdleConnections()
 	}
 }

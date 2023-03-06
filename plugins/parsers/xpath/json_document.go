@@ -22,9 +22,9 @@ func (d *jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) 
 		return nil, err
 	}
 
-	nodes := make([]dataNode, len(native))
-	for i, n := range native {
-		nodes[i] = n
+	nodes := make([]dataNode, 0, len(native))
+	for _, n := range native {
+		nodes = append(nodes, n)
 	}
 	return nodes, nil
 }
@@ -44,7 +44,12 @@ func (d *jsonDocument) GetNodePath(node, relativeTo dataNode, sep string) string
 	// Climb up the tree and collect the node names
 	n := nativeNode.Parent
 	for n != nil && n != nativeRelativeTo {
-		switch reflect.TypeOf(n.Parent.Value()).Kind() {
+		kind := reflect.Invalid
+		if n.Parent != nil && n.Parent.Value() != nil {
+			kind = reflect.TypeOf(n.Parent.Value()).Kind()
+		}
+
+		switch kind {
 		case reflect.Slice, reflect.Array:
 			// Determine the index for array elements
 			names = append(names, d.index(n))

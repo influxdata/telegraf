@@ -5,6 +5,15 @@
 The httpjson plugin collects data from HTTP URLs which respond with JSON.  It
 flattens the JSON and finds all numeric values, treating them as floats.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -56,7 +65,9 @@ flattens the JSON and finds all numeric values, treating them as floats.
   #   apiVersion = "v1"
 ```
 
-## Measurements & Fields
+## Metrics
+
+### Measurements & Fields
 
 - httpjson
   - response_time (float): Response time in seconds
@@ -64,7 +75,7 @@ flattens the JSON and finds all numeric values, treating them as floats.
 Additional fields are dependant on the response of the remote service being
 polled.
 
-## Tags
+### Tags
 
 - All measurements have the following tags:
   - server: HTTP origin as defined in configuration as `servers`.
@@ -74,7 +85,7 @@ tags.  Top level keys are defined as keys in the root level of the object in a
 single object response, or in the root level of each object within an array of
 objects.
 
-## Examples Output
+## Example Output
 
 This plugin understands responses containing a single JSON object, or a JSON
 Array of Objects.

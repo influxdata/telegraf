@@ -14,12 +14,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 )
 
@@ -257,7 +257,7 @@ func anythingEnabled(ex []string) bool {
 func newFilterOrPanic(include []string, exclude []string) filter.Filter {
 	f, err := filter.NewIncludeExcludeFilter(include, exclude)
 	if err != nil {
-		panic(fmt.Sprintf("Include/exclude filters are invalid: %s", err))
+		panic(fmt.Sprintf("Include/exclude filters are invalid: %v", err))
 	}
 	return f
 }
@@ -281,7 +281,7 @@ func (e *Endpoint) startDiscovery(ctx context.Context) {
 			select {
 			case <-e.discoveryTicker.C:
 				err := e.discover(ctx)
-				if err != nil && err != context.Canceled {
+				if err != nil && !errors.Is(err, context.Canceled) {
 					e.log.Errorf("Discovery for %s: %s", e.URL.Host, err.Error())
 				}
 			case <-ctx.Done():
@@ -295,7 +295,7 @@ func (e *Endpoint) startDiscovery(ctx context.Context) {
 
 func (e *Endpoint) initalDiscovery(ctx context.Context) {
 	err := e.discover(ctx)
-	if err != nil && err != context.Canceled {
+	if err != nil && !errors.Is(err, context.Canceled) {
 		e.log.Errorf("Discovery for %s: %s", e.URL.Host, err.Error())
 	}
 	e.startDiscovery(ctx)
@@ -369,7 +369,13 @@ func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache 
 	return e.getAncestorName(ctx, client, "Datacenter", cache, r)
 }
 
-func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resourceType string, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
+func (e *Endpoint) getAncestorName(
+	ctx context.Context,
+	client *Client,
+	resourceType string,
+	cache map[string]string,
+	r types.ManagedObjectReference,
+) (string, bool) {
 	path := make([]string, 0)
 	returnVal := ""
 	here := r
@@ -545,11 +551,9 @@ func (e *Endpoint) simpleMetadataSelect(ctx context.Context, client *Client, res
 func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind, objects objectMap) {
 	// We're only going to get metadata from maxMetadataSamples resources. If we have
 	// more resources than that, we pick maxMetadataSamples samples at random.
-	sampledObjects := make([]*objectRef, len(objects))
-	i := 0
+	sampledObjects := make([]*objectRef, 0, len(objects))
 	for _, obj := range objects {
-		sampledObjects[i] = obj
-		i++
+		sampledObjects = append(sampledObjects, obj)
 	}
 	n := len(sampledObjects)
 	if n > maxMetadataSamples {
@@ -963,7 +967,10 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			if !ok {
 				start = latest.Add(time.Duration(-res.sampling) * time.Second * (time.Duration(e.Parent.MetricLookback) - 1))
 			}
-			start = start.Truncate(20 * time.Second) // Truncate to maximum resolution
+
+			if !start.Truncate(time.Second).Before(now.Truncate(time.Second)) {
+				e.log.Debugf("Start >= end (rounded to seconds): %s > %s", start, now)
+			}
 
 			// Create bucket if we don't already have it
 			bucket, ok := timeBuckets[start.Unix()]
@@ -990,7 +997,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 					len(bucket.MetricId), len(res.metrics)-metricIdx, res.name, e.URL.Host, len(res.objects))
 
 				// Don't send work items if the context has been cancelled.
-				if ctx.Err() == context.Canceled {
+				if errors.Is(ctx.Err(), context.Canceled) {
 					return
 				}
 
@@ -1139,7 +1146,13 @@ func (e *Endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, int
 	return rInfo, rValues
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resourceKind, acc telegraf.Accumulator, interval time.Duration) (int, time.Time, error) {
+func (e *Endpoint) collectChunk(
+	ctx context.Context,
+	pqs queryChunk,
+	res *resourceKind,
+	acc telegraf.Accumulator,
+	interval time.Duration,
+) (int, time.Time, error) {
 	e.log.Debugf("Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0
@@ -1231,7 +1244,8 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resour
 				count++
 
 				// Update hiwater marks
-				e.hwMarks.Put(moid, name, ts)
+				adjTs := ts.Add(interval).Truncate(interval).Add(-time.Second)
+				e.hwMarks.Put(moid, name, adjTs)
 			}
 			if nValues == 0 {
 				e.log.Debugf("Missing value for: %s, %s", name, objectRef.name)

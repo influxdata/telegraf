@@ -2,6 +2,15 @@
 
 The `csgo` plugin gather metrics from Counter-Strike: Global Offensive servers.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
@@ -38,3 +47,5 @@ If no servers are specified, no data will be collected
     - sv_ms (float)
     - variance_ms (float)
     - tick_ms (float)
+
+## Example Output

@@ -157,6 +157,47 @@ parsed:
   bucket = "replace_with_your_bucket_name"
 ```
 
+## Secret-store secrets
+
+Additional or instead of environment variables, you can use secret-stores
+to fill in credentials or similar. To do so, you need to configure one or more
+secret-store plugin(s) and then reference the secret in your plugin
+configurations. A reference to a secret is specified in form
+`@{<secret store id>:<secret name>}`, where the `secret store id` is the unique
+ID you defined for your secret-store and `secret name` is the name of the secret
+to use.
+**NOTE:** Both, the `secret store id` as well as the `secret name` can only
+consist of letters (both upper- and lowercase), numbers and underscores.
+
+**Example**:
+
+This example illustrates the use of secret-store(s) in plugins
+
+```toml
+[global_tags]
+  user = "alice"
+
+[[secretstores.os]]
+  id = "local_secrets"
+
+[[secretstores.jose]]
+  id = "cloud_secrets"
+  path = "/etc/telegraf/secrets"
+  # Optional reference to another secret store to unlock this one.
+  password = "@{local_secrets:cloud_store_passwd}"
+
+[[inputs.http]]
+  urls = ["http://server.company.org/metrics"]
+  username = "@{local_secrets:company_server_http_metric_user}"
+  password = "@{local_secrets:company_server_http_metric_pass}"
+
+[[outputs.influxdb_v2]]
+  urls = ["https://us-west-2-1.aws.cloud2.influxdata.com"]
+  token = "@{cloud_secrets:influxdb_token}"
+  organization = "yourname@yourcompany.com"
+  bucket = "replace_with_your_bucket_name"
+```
+
 ## Intervals
 
 Intervals are durations of time and can be specified for supporting settings by
@@ -263,9 +304,15 @@ The agent table configures Telegraf and the defaults used across all plugins.
   If set to true, do no set the "host" tag in the telegraf agent.
 
 - **snmp_translator**:
-  Method of translating SNMP objects. Can be "netsnmp" which
-  translates by calling external programs snmptranslate and snmptable,
+  Method of translating SNMP objects. Can be "netsnmp" (deprecated) which
+  translates by calling external programs `snmptranslate` and `snmptable`,
   or "gosmi" which translates using the built-in gosmi library.
+
+- **statefile**:
+  Name of the file to load the states of plugins from and store the states to.
+  If uncommented and not empty, this file will be used to save the state of
+  stateful plugins on termination of Telegraf. If the file exists on start,
+  the state in the file will be restored for the plugins.
 
 ## Plugins
 
@@ -360,6 +407,16 @@ Emit measurements with two additional tags: `tag1=foo` and `tag2=bar`
     tag2 = "bar"
 ```
 
+Alternatively, when using the inline table syntax, the tags do not need
+to go at the end:
+
+```toml
+[[inputs.cpu]]
+  tags = {tag1 = "foo", tag2 = "bar"}
+  percpu = false
+  totalcpu = true
+```
+
 Utilize `name_override`, `name_prefix`, or `name_suffix` config options to
 avoid measurement collisions when defining multiple plugins:
 
@@ -429,8 +486,10 @@ input plugins and before any aggregator plugins.
 Parameters that can be used with any processor plugin:
 
 - **alias**: Name an instance of a plugin.
-- **order**: The order in which the processor(s) are executed. If this is not
-  specified then processor execution order will be random.
+- **order**: The order in which the processor(s) are executed. starting with 1.
+  If this is not specified then processor execution order will be the order in
+  the config. Processors without "order" will take precedence over those
+  with a defined order.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 handled by the processor.  Excluded metrics are passed downstream to the next
@@ -548,15 +607,20 @@ is tested on metrics after they have passed the `namepass` test.
 - **tagpass**:
 A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
-patterns is emitted.
+patterns is emitted. This can either use the explicit table synax (e.g.
+a subsection using a `[...]` header) or inline table syntax (e.g like
+a JSON table with `{...}`.
 
 - **tagdrop**:
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
 
-> NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
-defined at the **end** of the plugin definition, otherwise subsequent plugin config
-options will be interpreted as part of the tagpass/tagdrop tables.
+> NOTE: Due to the way TOML is parsed, when using the explicit table
+> syntax (with `[...]`) for `tagpass` and `tagdrop` parameters, they
+> must be defined at the **end** of the plugin definition, otherwise subsequent
+> plugin config options will be interpreted as part of the tagpass/tagdrop
+> tables. This limitation does not apply when using the inline table
+> syntax (`{...}`).
 
 ### Modifiers
 
@@ -616,8 +680,8 @@ tags and the agent `host` tag.
     ]
     Measurement = "win_net"
   # Don't send metrics where the Windows interface name (instance) begins with isatap or Local
-  [inputs.win_perf_counters.tagdrop]
-    instance = ["isatap*", "Local*"]
+  # This illustrates the inline table syntax
+  tagdrop = {instance = ["isatap*", "Local*"]}
 ```
 
 #### Using fieldpass and fielddrop

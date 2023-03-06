@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
+	"github.com/shirou/gopsutil/v3/disk"
 )
 
 //go:embed sample.conf
@@ -46,20 +47,28 @@ func (ds *DiskStats) Init() error {
 func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
 	disks, partitions, err := ds.ps.DiskUsage(ds.MountPoints, ds.IgnoreMountOpts, ds.IgnoreFS)
 	if err != nil {
-		return fmt.Errorf("error getting disk usage info: %s", err)
+		return fmt.Errorf("error getting disk usage info: %w", err)
 	}
 	for i, du := range disks {
 		if du.Total == 0 {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
 			continue
 		}
+
+		device := partitions[i].Device
 		mountOpts := MountOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,
-			"device": strings.ReplaceAll(partitions[i].Device, "/dev/", ""),
+			"device": strings.ReplaceAll(device, "/dev/", ""),
 			"fstype": du.Fstype,
 			"mode":   mountOpts.Mode(),
 		}
+
+		label, err := disk.Label(strings.TrimPrefix(device, "/dev/"))
+		if err == nil && label != "" {
+			tags["label"] = label
+		}
+
 		var usedPercent float64
 		if du.Used+du.Free > 0 {
 			usedPercent = float64(du.Used) /

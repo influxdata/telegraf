@@ -34,22 +34,31 @@ avoid cardinality issues:
 - Monitor your databases [series cardinality][].
 - Consult the [InfluxDB documentation][influx-docs] for the most up-to-date techniques.
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
 # Read metrics from the kubernetes kubelet api
 [[inputs.kubernetes]]
-  ## URL for the kubelet
+  ## URL for the kubelet, if empty read metrics from all nodes in the cluster
   url = "http://127.0.0.1:10255"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ## If both of these are empty, we'll use the default serviceaccount:
-  ## at: /run/secrets/kubernetes.io/serviceaccount/token
+  ## at: /var/run/secrets/kubernetes.io/serviceaccount/token
   ##
   ## To re-read the token at each interval, please use a file with the
   ## bearer_token option. If given a string, Telegraf will always use that
   ## token.
-  # bearer_token = "/run/secrets/kubernetes.io/serviceaccount/token"
+  # bearer_token = "/var/run/secrets/kubernetes.io/serviceaccount/token"
   ## OR
   # bearer_token_string = "abc_123"
 

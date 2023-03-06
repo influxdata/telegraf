@@ -46,7 +46,7 @@ func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEnt
 
 		coreEntity.parsedCores, err = cp.parseCores(coreEntity.Cores)
 		if err != nil {
-			return fmt.Errorf("error during cores parsing: %v", err)
+			return fmt.Errorf("error during cores parsing: %w", err)
 		}
 	}
 
@@ -69,7 +69,7 @@ func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEnt
 
 		uncoreEntity.parsedSockets, err = cp.parseSockets(uncoreEntity.Sockets)
 		if err != nil {
-			return fmt.Errorf("error during sockets parsing: %v", err)
+			return fmt.Errorf("error during sockets parsing: %w", err)
 		}
 	}
 	return nil
@@ -83,7 +83,7 @@ func (cp *configParser) parseEvents(events []string) []*eventWithQuals {
 	events, duplications := removeDuplicateStrings(events)
 	for _, duplication := range duplications {
 		if cp.log != nil {
-			cp.log.Warnf("duplicated event `%s` will be removed", duplication)
+			cp.log.Warnf("duplicated event %q will be removed", duplication)
 		}
 	}
 	return parseEventsWithQualifiers(events)
@@ -99,7 +99,7 @@ func (cp *configParser) parseCores(cores []string) ([]int, error) {
 		}
 		cores, err := cp.sys.allCPUs()
 		if err != nil {
-			return nil, fmt.Errorf("cannot obtain all cpus: %v", err)
+			return nil, fmt.Errorf("cannot obtain all cpus: %w", err)
 		}
 		return cores, nil
 	}
@@ -124,7 +124,7 @@ func (cp *configParser) parseSockets(sockets []string) ([]int, error) {
 		}
 		sockets, err := cp.sys.allSockets()
 		if err != nil {
-			return nil, fmt.Errorf("cannot obtain all sockets: %v", err)
+			return nil, fmt.Errorf("cannot obtain all sockets: %w", err)
 		}
 		return sockets, nil
 	}
@@ -157,8 +157,7 @@ func (cp *configParser) parseIntRanges(ranges []string) ([]int, error) {
 }
 
 func parseEventsWithQualifiers(events []string) []*eventWithQuals {
-	var result []*eventWithQuals
-
+	result := make([]*eventWithQuals, 0, len(events))
 	for _, event := range events {
 		newEventWithQualifiers := &eventWithQuals{}
 
@@ -170,6 +169,7 @@ func parseEventsWithQualifiers(events []string) []*eventWithQuals {
 		}
 		result = append(result, newEventWithQualifiers)
 	}
+
 	return result
 }
 
@@ -198,7 +198,7 @@ func parseIDs(allIDsStrings []string) ([]int, error) {
 			// Single value
 			num, err := strconv.Atoi(id)
 			if err != nil {
-				return nil, fmt.Errorf("wrong format for id number `%s`: %v", id, err)
+				return nil, fmt.Errorf("wrong format for id number %q: %w", id, err)
 			}
 			if len(result)+1 > maxIDsSize {
 				return nil, fmt.Errorf("requested number of IDs exceeds max size `%d`", maxIDsSize)

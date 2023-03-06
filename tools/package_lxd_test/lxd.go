@@ -143,6 +143,8 @@ func (c *LXDClient) Exec(name string, command ...string) error {
 		return fmt.Errorf(output.String())
 	}
 
+	fmt.Println(output.String())
+
 	return nil
 }
 
@@ -151,7 +153,7 @@ func (c *LXDClient) Push(name string, src string, dst string) error {
 	fmt.Printf("cp %s %s%s\n", src, name, dst)
 	f, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("error reading %s: %v", src, err)
+		return fmt.Errorf("error reading %s: %w", src, err)
 	}
 	defer f.Close()
 
