@@ -61,13 +61,13 @@ func TestRadiusLocal(t *testing.T) {
 	if !acc.HasMeasurement("radius") {
 		t.Errorf("acc.HasMeasurement: expected radius")
 	}
-	require.Equal(t, acc.HasTag("radius", "source"), true)
-	require.Equal(t, acc.HasTag("radius", "source_port"), true)
-	require.Equal(t, acc.HasTag("radius", "response_code"), true)
-	require.Equal(t, acc.TagValue("radius", "source"), "localhost")
-	require.Equal(t, acc.TagValue("radius", "source_port"), "1813")
-	require.Equal(t, acc.TagValue("radius", "response_code"), radius.CodeAccessAccept.String())
-	require.Equal(t, acc.HasInt64Field("radius", "responsetime_ms"), true)
+	require.Equal(t, true, acc.HasTag("radius", "source"))
+	require.Equal(t, true, acc.HasTag("radius", "source_port"))
+	require.Equal(t, true, acc.HasTag("radius", "response_code"))
+	require.Equal(t, "localhost", acc.TagValue("radius", "source"))
+	require.Equal(t, "1813", acc.TagValue("radius", "source_port"))
+	require.Equal(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
+	require.Equal(t, true, acc.HasInt64Field("radius", "responsetime_ms"))
 
 	if err := server.Shutdown(context.Background()); err != nil {
 		require.NoError(t, err, "failed to properly shutdown local radius server")
@@ -97,6 +97,8 @@ func TestRadiusIntegration(t *testing.T) {
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
+
+	port = container.Ports[port]
 
 	// Define the testset
 	var testset = []struct {
@@ -169,16 +171,16 @@ func TestRadiusIntegration(t *testing.T) {
 			if !acc.HasMeasurement("radius") {
 				t.Errorf("acc.HasMeasurement: expected radius")
 			}
-			require.Equal(t, acc.HasTag("radius", "source"), true)
-			require.Equal(t, acc.HasTag("radius", "source_port"), true)
-			require.Equal(t, acc.HasTag("radius", "response_code"), true)
-			require.Equal(t, acc.TagValue("radius", "source"), tt.expectedSource)
-			require.Equal(t, acc.TagValue("radius", "source_port"), tt.expectedSourcePort)
-			require.Equal(t, acc.HasInt64Field("radius", "responsetime_ms"), true)
+			require.Equal(t, true, acc.HasTag("radius", "source"))
+			require.Equal(t, true, acc.HasTag("radius", "source_port"))
+			require.Equal(t, true, acc.HasTag("radius", "response_code"))
+			require.Equal(t, tt.expectedSource, acc.TagValue("radius", "source"))
+			require.Equal(t, tt.expectedSourcePort, acc.TagValue("radius", "source_port"))
+			require.Equal(t, true, acc.HasInt64Field("radius", "responsetime_ms"), true)
 			if tt.expectSuccess {
-				require.Equal(t, acc.TagValue("radius", "response_code"), radius.CodeAccessAccept.String())
+				require.Equal(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
 			} else {
-				require.NotEqual(t, acc.TagValue("radius", "response_code"), radius.CodeAccessAccept.String())
+				require.NotEqual(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
 			}
 
 			if tt.name == "unreachable" {
