@@ -16,7 +16,6 @@ import (
 )
 
 func TestRadiusLocal(t *testing.T) {
-
 	handler := func(w radius.ResponseWriter, r *radius.Request) {
 		username := rfc2865.UserName_GetString(r.Packet)
 		password := rfc2865.UserPassword_GetString(r.Packet)
@@ -27,7 +26,9 @@ func TestRadiusLocal(t *testing.T) {
 		} else {
 			code = radius.CodeAccessReject
 		}
-		w.Write(r.Response(code))
+		if err := w.Write(r.Response(code)); err != nil {
+			require.NoError(t, err, "failed writing radius server response")
+		}
 	}
 
 	server := radius.PacketServer{
@@ -96,49 +97,49 @@ func TestRadiusIntegration(t *testing.T) {
 
 	// Define the testset
 	var testset = []struct {
-		name                 string
-		testing_timeout      config.Duration
-		expected_source      string
-		expected_source_port string
-		server_to_test       string
-		expect_success       bool
-		used_password        string
+		name               string
+		testingTimeout     config.Duration
+		expectedSource     string
+		expectedSourcePort string
+		serverToTest       string
+		expectSuccess      bool
+		usedPassword       string
 	}{
 		{
-			name:                 "timeout_5s",
-			testing_timeout:      config.Duration(time.Second * 5),
-			expected_source:      container.Address,
-			expected_source_port: port,
-			server_to_test:       container.Address + ":" + port,
-			expect_success:       true,
-			used_password:        "testpassword",
+			name:               "timeout_5s",
+			testingTimeout:     config.Duration(time.Second * 5),
+			expectedSource:     container.Address,
+			expectedSourcePort: port,
+			serverToTest:       container.Address + ":" + port,
+			expectSuccess:      true,
+			usedPassword:       "testpassword",
 		},
 		{
-			name:                 "timeout_0s",
-			testing_timeout:      config.Duration(0),
-			expected_source:      container.Address,
-			expected_source_port: port,
-			server_to_test:       container.Address + ":" + port,
-			expect_success:       true,
-			used_password:        "testpassword",
+			name:               "timeout_0s",
+			testingTimeout:     config.Duration(0),
+			expectedSource:     container.Address,
+			expectedSourcePort: port,
+			serverToTest:       container.Address + ":" + port,
+			expectSuccess:      true,
+			usedPassword:       "testpassword",
 		},
 		{
-			name:                 "wrong_pw",
-			testing_timeout:      config.Duration(time.Second * 5),
-			expected_source:      container.Address,
-			expected_source_port: port,
-			server_to_test:       container.Address + ":" + port,
-			expect_success:       false,
-			used_password:        "wrongpass",
+			name:               "wrong_pw",
+			testingTimeout:     config.Duration(time.Second * 5),
+			expectedSource:     container.Address,
+			expectedSourcePort: port,
+			serverToTest:       container.Address + ":" + port,
+			expectSuccess:      false,
+			usedPassword:       "wrongpass",
 		},
 		{
-			name:                 "unreachable",
-			testing_timeout:      config.Duration(5),
-			expected_source:      "unreachable.unreachable.com",
-			expected_source_port: "7777",
-			server_to_test:       "unreachable.unreachable.com:7777",
-			expect_success:       false,
-			used_password:        "testpassword",
+			name:               "unreachable",
+			testingTimeout:     config.Duration(5),
+			expectedSource:     "unreachable.unreachable.com",
+			expectedSourcePort: "7777",
+			serverToTest:       "unreachable.unreachable.com:7777",
+			expectSuccess:      false,
+			usedPassword:       "testpassword",
 		},
 	}
 
@@ -146,11 +147,12 @@ func TestRadiusIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
 			plugin := &Radius{
-				ResponseTimeout: tt.testing_timeout,
-				Servers:         []string{tt.server_to_test},
+				ResponseTimeout: tt.testingTimeout,
+				Servers:         []string{tt.serverToTest},
 				Username:        config.NewSecret([]byte(`testusername`)),
-				Password:        config.NewSecret([]byte(tt.used_password)),
+				Password:        config.NewSecret([]byte(tt.usedPassword)),
 				Secret:          config.NewSecret([]byte(`testsecret`)),
+				Log:             testutil.Logger{},
 			}
 			var acc testutil.Accumulator
 
@@ -167,17 +169,17 @@ func TestRadiusIntegration(t *testing.T) {
 			require.Equal(t, acc.HasTag("radius", "source"), true)
 			require.Equal(t, acc.HasTag("radius", "source_port"), true)
 			require.Equal(t, acc.HasTag("radius", "response_code"), true)
-			require.Equal(t, acc.TagValue("radius", "source"), tt.expected_source)
-			require.Equal(t, acc.TagValue("radius", "source_port"), tt.expected_source_port)
+			require.Equal(t, acc.TagValue("radius", "source"), tt.expectedSource)
+			require.Equal(t, acc.TagValue("radius", "source_port"), tt.expectedSourcePort)
 			require.Equal(t, acc.HasInt64Field("radius", "responsetime_ms"), true)
-			if tt.expect_success {
+			if tt.expectSuccess {
 				require.Equal(t, acc.TagValue("radius", "response_code"), radius.CodeAccessAccept.String())
 			} else {
 				require.NotEqual(t, acc.TagValue("radius", "response_code"), radius.CodeAccessAccept.String())
 			}
 
 			if tt.name == "unreachable" {
-				require.Equal(t, time.Duration(tt.testing_timeout).Milliseconds(), acc.Metrics[0].Fields["responsetime_ms"])
+				require.Equal(t, time.Duration(tt.testingTimeout).Milliseconds(), acc.Metrics[0].Fields["responsetime_ms"])
 			}
 		})
 	}
