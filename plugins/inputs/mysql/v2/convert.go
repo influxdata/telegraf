@@ -3,6 +3,7 @@ package v2
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -14,7 +15,8 @@ func ParseInt(value sql.RawBytes) (interface{}, error) {
 
 	// Ignore ErrRange.  When this error is set the returned value is "the
 	// maximum magnitude integer of the appropriate bitSize and sign."
-	if err, ok := err.(*strconv.NumError); ok && err.Err == strconv.ErrRange {
+	var numErr *strconv.NumError
+	if errors.As(err, &numErr) && errors.Is(numErr, strconv.ErrRange) {
 		return v, nil
 	}
 
