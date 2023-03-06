@@ -153,7 +153,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Set to true/false to enforce TLS being enabled/disabled. If not set,
   ## enable TLS only if any of the other options are specified.
   # tls_enable = true
-  # tls_enable =
+
   ## Control pod scraping based on pod namespace annotations
   ## Pass and drop here act like tagpass and tagdrop, but instead
   ## of filtering metrics they filters pod candidates for scraping
