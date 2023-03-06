@@ -20,8 +20,8 @@ func (k *KernelVmstat) Init() error {
 	k.Log.Warn("current platform is not supported")
 	return nil
 }
-func (k *KernelVmstat) SampleConfig() string                { return sampleConfig }
-func (k *KernelVmstat) Gather(_ telegraf.Accumulator) error { return nil }
+func (*KernelVmstat) SampleConfig() string                { return sampleConfig }
+func (*KernelVmstat) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("kernel_vmstat", func() telegraf.Input {

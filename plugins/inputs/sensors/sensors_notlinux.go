@@ -20,8 +20,8 @@ func (s *Sensors) Init() error {
 	s.Log.Warn("current platform is not supported")
 	return nil
 }
-func (s *Sensors) SampleConfig() string                { return sampleConfig }
-func (s *Sensors) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Sensors) SampleConfig() string                { return sampleConfig }
+func (*Sensors) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("sensors", func() telegraf.Input {

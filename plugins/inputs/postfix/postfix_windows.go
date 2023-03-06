@@ -20,8 +20,8 @@ func (p *Postfix) Init() error {
 	p.Log.Warn("current platform is not supported")
 	return nil
 }
-func (p *Postfix) SampleConfig() string                { return sampleConfig }
-func (p *Postfix) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Postfix) SampleConfig() string                { return sampleConfig }
+func (*Postfix) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("postfix", func() telegraf.Input {

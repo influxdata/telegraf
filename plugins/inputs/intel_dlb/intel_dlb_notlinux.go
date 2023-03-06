@@ -20,8 +20,8 @@ func (i *IntelDLB) Init() error {
 	i.Log.Warn("current platform is not supported")
 	return nil
 }
-func (i *IntelDLB) SampleConfig() string                { return sampleConfig }
-func (i *IntelDLB) Gather(_ telegraf.Accumulator) error { return nil }
+func (*IntelDLB) SampleConfig() string                { return sampleConfig }
+func (*IntelDLB) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("intel_dlb", func() telegraf.Input {

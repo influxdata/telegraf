@@ -20,8 +20,8 @@ func (i *IntelPowerstat) Init() error {
 	i.Log.Warn("current platform is not supported")
 	return nil
 }
-func (i *IntelPowerstat) SampleConfig() string                { return sampleConfig }
-func (i *IntelPowerstat) Gather(_ telegraf.Accumulator) error { return nil }
+func (*IntelPowerstat) SampleConfig() string                { return sampleConfig }
+func (*IntelPowerstat) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("intel_powerstat", func() telegraf.Input {

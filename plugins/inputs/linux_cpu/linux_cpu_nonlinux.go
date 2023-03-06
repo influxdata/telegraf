@@ -20,8 +20,8 @@ func (l *LinuxCPU) Init() error {
 	l.Log.Warn("current platform is not supported")
 	return nil
 }
-func (l *LinuxCPU) SampleConfig() string                { return sampleConfig }
-func (l *LinuxCPU) Gather(_ telegraf.Accumulator) error { return nil }
+func (*LinuxCPU) SampleConfig() string                { return sampleConfig }
+func (*LinuxCPU) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("linux_cpu", func() telegraf.Input {

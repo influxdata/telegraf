@@ -20,8 +20,8 @@ func (h *Hugepages) Init() error {
 	h.Log.Warn("current platform is not supported")
 	return nil
 }
-func (h *Hugepages) SampleConfig() string                { return sampleConfig }
-func (h *Hugepages) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Hugepages) SampleConfig() string                { return sampleConfig }
+func (*Hugepages) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("hugepages", func() telegraf.Input {

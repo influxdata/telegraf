@@ -20,8 +20,8 @@ func (d *Dpdk) Init() error {
 	d.Log.Warn("current platform is not supported")
 	return nil
 }
-func (d *Dpdk) SampleConfig() string                { return sampleConfig }
-func (d *Dpdk) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Dpdk) SampleConfig() string                { return sampleConfig }
+func (*Dpdk) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("dpdk", func() telegraf.Input {

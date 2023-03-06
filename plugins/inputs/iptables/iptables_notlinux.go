@@ -20,8 +20,8 @@ func (i *Iptables) Init() error {
 	i.Log.Warn("current platform is not supported")
 	return nil
 }
-func (i *Iptables) SampleConfig() string                { return sampleConfig }
-func (i *Iptables) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Iptables) SampleConfig() string                { return sampleConfig }
+func (*Iptables) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("iptables", func() telegraf.Input {

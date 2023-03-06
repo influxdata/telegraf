@@ -20,10 +20,10 @@ func (i *IntelPMU) Init() error {
 	i.Log.Warn("current platform is not supported")
 	return nil
 }
-func (i *IntelPMU) SampleConfig() string                { return sampleConfig }
-func (i *IntelPMU) Gather(_ telegraf.Accumulator) error { return nil }
-func (i *IntelPMU) Start(_ telegraf.Accumulator) error  { return nil }
-func (i *IntelPMU) Stop()                               {}
+func (*IntelPMU) SampleConfig() string                { return sampleConfig }
+func (*IntelPMU) Gather(_ telegraf.Accumulator) error { return nil }
+func (*IntelPMU) Start(_ telegraf.Accumulator) error  { return nil }
+func (*IntelPMU) Stop()                               {}
 
 func init() {
 	inputs.Add("intel_pmu", func() telegraf.Input {

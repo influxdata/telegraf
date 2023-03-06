@@ -20,8 +20,8 @@ func (m *Mdstat) Init() error {
 	m.Log.Warn("current platform is not supported")
 	return nil
 }
-func (m *Mdstat) SampleConfig() string                { return sampleConfig }
-func (m *Mdstat) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Mdstat) SampleConfig() string                { return sampleConfig }
+func (*Mdstat) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("mdstat", func() telegraf.Input {

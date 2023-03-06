@@ -20,8 +20,8 @@ func (s *Sysstat) Init() error {
 	s.Log.Warn("current platform is not supported")
 	return nil
 }
-func (s *Sysstat) SampleConfig() string                { return sampleConfig }
-func (s *Sysstat) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Sysstat) SampleConfig() string                { return sampleConfig }
+func (*Sysstat) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("sysstat", func() telegraf.Input {

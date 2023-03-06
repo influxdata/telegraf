@@ -13,12 +13,15 @@ import (
 var sampleConfig string
 
 type Kernel struct {
+	Log telegraf.Logger `toml:"-"`
 }
 
-func (k *Kernel) SampleConfig() string { return sampleConfig }
-func (k *Kernel) Gather(acc telegraf.Accumulator) error {
+func (k *Kernel) Init() error {
+	k.Log.Warn("current platform is not supported")
 	return nil
 }
+func (*Kernel) SampleConfig() string                  { return sampleConfig }
+func (*Kernel) Gather(acc telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("kernel", func() telegraf.Input {

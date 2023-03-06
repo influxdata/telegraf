@@ -20,8 +20,8 @@ func (l *Lustre2) Init() error {
 	l.Log.Warn("current platform is not supported")
 	return nil
 }
-func (l *Lustre2) SampleConfig() string                { return sampleConfig }
-func (l *Lustre2) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Lustre2) SampleConfig() string                { return sampleConfig }
+func (*Lustre2) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("lustre2", func() telegraf.Input {

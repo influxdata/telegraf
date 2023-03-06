@@ -20,8 +20,8 @@ func (c *Conntrack) Init() error {
 	c.Log.Warn("current platform is not supported")
 	return nil
 }
-func (c *Conntrack) SampleConfig() string                { return sampleConfig }
-func (c *Conntrack) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Conntrack) SampleConfig() string                { return sampleConfig }
+func (*Conntrack) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("conntrack", func() telegraf.Input {

@@ -20,10 +20,10 @@ func (r *Ras) Init() error {
 	r.Log.Warn("current platform is not supported")
 	return nil
 }
-func (r *Ras) SampleConfig() string                { return sampleConfig }
-func (r *Ras) Gather(_ telegraf.Accumulator) error { return nil }
-func (r *Ras) Start(_ telegraf.Accumulator) error  { return nil }
-func (r *Ras) Stop()                               {}
+func (*Ras) SampleConfig() string                { return sampleConfig }
+func (*Ras) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Ras) Start(_ telegraf.Accumulator) error  { return nil }
+func (*Ras) Stop()                               {}
 
 func init() {
 	inputs.Add("ras", func() telegraf.Input {
