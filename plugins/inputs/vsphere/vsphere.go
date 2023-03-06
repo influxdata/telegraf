@@ -60,6 +60,7 @@ type VSphere struct {
 	UseIntSamples             bool
 	IPAddresses               []string
 	MetricLookback            int
+	DisconnectedServersBehavior string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -69,6 +70,7 @@ type VSphere struct {
 	ObjectDiscoveryInterval config.Duration
 	Timeout                 config.Duration
 	HistoricalInterval      config.Duration
+
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -194,6 +196,7 @@ func init() {
 			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
 			Timeout:                 config.Duration(time.Second * 60),
 			HistoricalInterval:      config.Duration(time.Second * 300),
+			DisconnectedServersBehavior: "error",
 		}
 	})
 }

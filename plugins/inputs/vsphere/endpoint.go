@@ -58,6 +58,7 @@ type Endpoint struct {
 	customAttrFilter  filter.Filter
 	customAttrEnabled bool
 	metricNameLookup  map[int32]string
+	deferredInit bool
 	metricNameMux     sync.RWMutex
 	log               telegraf.Logger
 }
@@ -127,6 +128,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
 		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
 		log:               log,
+		deferredInit: true,
 	}
 
 	e.resourceKinds = map[string]*resourceKind{
@@ -304,7 +306,12 @@ func (e *Endpoint) initalDiscovery(ctx context.Context) {
 func (e *Endpoint) init(ctx context.Context) error {
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
-		return err
+		if e.Parent.DisconnectedServersBehavior == "error" {
+			return err
+		}
+		// Ignore the error and postpone the init until next collection cycle
+		e.log.Warnf("Error connecting to vCenter on init: %s", err)
+		e.deferredInit = true
 	}
 
 	// Initial load of custom field metadata
@@ -889,6 +896,16 @@ func (e *Endpoint) Close() {
 
 // Collect runs a round of data collections as specified in the configuration.
 func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error {
+	// Connection could have failed on init, so we need to check for a deferred
+	// init request.
+	if e.deferredInit {
+		e.log.Debug("Performing deferred init")
+		err := e.init(ctx)
+		if err != nil {
+			return err
+		}
+		e.deferredInit = false
+	}
 	// If we never managed to do a discovery, collection will be a no-op. Therefore,
 	// we need to check that a connection is available, or the collection will
 	// silently fail.
