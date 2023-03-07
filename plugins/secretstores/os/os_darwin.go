@@ -3,16 +3,12 @@
 package os
 
 import (
-	_ "embed"
 	"fmt"
 
 	"github.com/99designs/keyring"
 
 	"github.com/influxdata/telegraf/config"
 )
-
-//go:embed sample_darwin.conf
-var sampleConfig string
 
 func (o *OS) createKeyringConfig() (keyring.Config, error) {
 	passwd, err := o.Password.Get()
