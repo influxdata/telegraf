@@ -52,7 +52,7 @@ func (p *Processor) Init() error {
 	p.mappings = make(map[string][]telegraf.Tag)
 	switch strings.ToLower(p.Fileformat) {
 	case "", "json":
-		return p.loadJsonFiles()
+		return p.loadJSONFiles()
 	case "csv_key_name_value":
 		return p.loadCSVKeyNameValueFiles()
 	}
@@ -81,7 +81,7 @@ func (p *Processor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return out
 }
 
-func (p *Processor) loadJsonFiles() error {
+func (p *Processor) loadJSONFiles() error {
 	for _, fn := range p.Filenames {
 		buf, err := os.ReadFile(fn)
 		if err != nil {
