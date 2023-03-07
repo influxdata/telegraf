@@ -8,9 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 func processFilterOnlySecretStoreFlags(ctx *cli.Context) Filters {
@@ -78,6 +79,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 							config:     cCtx.StringSlice("config"),
 							configDir:  cCtx.StringSlice("config-directory"),
 							plugindDir: cCtx.String("plugin-directory"),
+							password:   cCtx.String("password"),
 							debug:      cCtx.Bool("debug"),
 						}
 						w := WindowFlags{}
@@ -155,6 +157,7 @@ with the ID 'mystore'.
 							config:     cCtx.StringSlice("config"),
 							configDir:  cCtx.StringSlice("config-directory"),
 							plugindDir: cCtx.String("plugin-directory"),
+							password:   cCtx.String("password"),
 							debug:      cCtx.Bool("debug"),
 						}
 						w := WindowFlags{}
@@ -218,6 +221,7 @@ you will be prompted to enter the value of the secret.
 							config:     cCtx.StringSlice("config"),
 							configDir:  cCtx.StringSlice("config-directory"),
 							plugindDir: cCtx.String("plugin-directory"),
+							password:   cCtx.String("password"),
 							debug:      cCtx.Bool("debug"),
 						}
 						w := WindowFlags{}

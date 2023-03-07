@@ -224,6 +224,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			watchConfig: cCtx.String("watch-config"),
 			pidFile:     cCtx.String("pidfile"),
 			plugindDir:  cCtx.String("plugin-directory"),
+			password:    cCtx.String("password"),
 			test:        cCtx.Bool("test"),
 			debug:       cCtx.Bool("debug"),
 			once:        cCtx.Bool("once"),
@@ -280,6 +281,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.StringFlag{
 					Name:  "pidfile",
 					Usage: "file to write our pid to",
+				},
+				&cli.StringFlag{
+					Name:  "password",
+					Usage: "password to unlock secret-stores",
 				},
 				//
 				// Bool flags
