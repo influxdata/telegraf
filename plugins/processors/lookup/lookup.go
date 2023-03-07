@@ -4,9 +4,11 @@ package lookup
 import (
 	"bytes"
 	_ "embed"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"text/template"
@@ -51,6 +53,8 @@ func (p *Processor) Init() error {
 	switch strings.ToLower(p.Fileformat) {
 	case "", "json":
 		return p.loadJsonFiles()
+	case "csv_key_name_value":
+		return p.loadCSVKeyNameValueFiles()
 	}
 
 	return fmt.Errorf("invalid format %q", p.Fileformat)
@@ -95,6 +99,51 @@ func (p *Processor) loadJsonFiles() error {
 			}
 		}
 	}
+	return nil
+}
+
+func (p *Processor) loadCSVKeyNameValueFiles() error {
+	for _, fn := range p.Filenames {
+		if err := p.loadCSVKeyNameValueFile(fn); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *Processor) loadCSVKeyNameValueFile(fn string) error {
+	f, err := os.Open(fn)
+	if err != nil {
+		return fmt.Errorf("loading %q failed: %w", fn, err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.Comment = '#'
+	reader.FieldsPerRecord = -1
+	reader.TrimLeadingSpace = true
+
+	line := 0
+	for {
+		line++
+		data, err := reader.Read()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return fmt.Errorf("reading line %d in %q failed: %w", line, fn, err)
+		}
+		if len(data) < 3 {
+			return fmt.Errorf("line %d in %q has not enough fields, requiring at least `key,name,value`", line, fn)
+		}
+
+		key := data[0]
+		for i := 1; i < len(data)-1; i += 2 {
+			k, v := data[i], data[i+1]
+			p.mappings[key] = append(p.mappings[key], telegraf.Tag{Key: k, Value: v})
+		}
+	}
+
 	return nil
 }
 

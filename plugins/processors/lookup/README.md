@@ -30,6 +30,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## List of files containing the lookup-table
   files = ["path/to/lut.json", "path/to/another_lut.json"]
 
+  ## Format of the lookup file(s)
+  ## Available formats are:
+  ##    json               -- JSON file with 'key: {tag-key: tag-value, ...}' mapping
+  ##    csv_key_name_value -- CSV file with 'key,tag-key,tag-value,...,tag-key,tag-value' mapping
+  # format = "json"
+
   ## Template for generating the lookup-key from the metric.
   ## This is a Golang template (see https://pkg.go.dev/text/template) to
   ## access the metric name (`{{.Name}}`), a tag value (`{{.Tag "name"}}`) or
