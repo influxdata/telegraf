@@ -79,16 +79,19 @@ func TestRadiusIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	port := "1812"
+	port := "1812/udp"
 
-	testdata, err := filepath.Abs("testdata/raddb")
-	require.NoError(t, err, "determining absolute path of test-data failed")
+	testdataClients, err := filepath.Abs("testdata/raddb/clients.conf")
+	require.NoError(t, err, "determining absolute path of test-data clients.conf failed")
+	testdataAuthorize, err := filepath.Abs("testdata/raddb/mods-config/files/authorize")
+	require.NoError(t, err, "determining absolute path of test-data authorize failed")
 
 	container := testutil.Container{
 		Image:        "freeradius/freeradius-server",
 		ExposedPorts: []string{port},
 		BindMounts: map[string]string{
-			"/etc/raddb": testdata,
+			"/etc/raddb/clients.conf":                testdataClients,
+			"/etc/raddb/mods-config/files/authorize": testdataAuthorize,
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(port)),
