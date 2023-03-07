@@ -12,7 +12,6 @@ import (
 	"time"
 
 	mb "github.com/grid-x/modbus"
-	"github.com/grid-x/serial"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -45,21 +44,21 @@ type RS485Config struct {
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name              string              `toml:"name"`
-	Controller        string              `toml:"controller"`
-	TransmissionMode  string              `toml:"transmission_mode"`
-	BaudRate          int                 `toml:"baud_rate"`
-	DataBits          int                 `toml:"data_bits"`
-	Parity            string              `toml:"parity"`
-	StopBits          int                 `toml:"stop_bits"`
-	RS485             *serial.RS485Config `toml:"rs485"`
-	Timeout           config.Duration     `toml:"timeout"`
-	Retries           int                 `toml:"busy_retries"`
-	RetriesWaitTime   config.Duration     `toml:"busy_retries_wait"`
-	DebugConnection   bool                `toml:"debug_connection"`
-	Workarounds       ModbusWorkarounds   `toml:"workarounds"`
-	ConfigurationType string              `toml:"configuration_type"`
-	Log               telegraf.Logger     `toml:"-"`
+	Name              string            `toml:"name"`
+	Controller        string            `toml:"controller"`
+	TransmissionMode  string            `toml:"transmission_mode"`
+	BaudRate          int               `toml:"baud_rate"`
+	DataBits          int               `toml:"data_bits"`
+	Parity            string            `toml:"parity"`
+	StopBits          int               `toml:"stop_bits"`
+	RS485             *RS485Config      `toml:"rs485"`
+	Timeout           config.Duration   `toml:"timeout"`
+	Retries           int               `toml:"busy_retries"`
+	RetriesWaitTime   config.Duration   `toml:"busy_retries_wait"`
+	DebugConnection   bool              `toml:"debug_connection"`
+	Workarounds       ModbusWorkarounds `toml:"workarounds"`
+	ConfigurationType string            `toml:"configuration_type"`
+	Log               telegraf.Logger   `toml:"-"`
 
 	// Configuration type specific settings
 	ConfigurationOriginal
@@ -299,8 +298,8 @@ func (m *Modbus) initClient() error {
 			}
 			if m.RS485 != nil {
 				handler.RS485.Enabled = true
-				handler.RS485.DelayRtsBeforeSend = m.RS485.DelayRtsBeforeSend
-				handler.RS485.DelayRtsAfterSend = m.RS485.DelayRtsAfterSend
+				handler.RS485.DelayRtsBeforeSend = time.Duration(m.RS485.DelayRtsBeforeSend)
+				handler.RS485.DelayRtsAfterSend = time.Duration(m.RS485.DelayRtsAfterSend)
 				handler.RS485.RtsHighDuringSend = m.RS485.RtsHighDuringSend
 				handler.RS485.RtsHighAfterSend = m.RS485.RtsHighAfterSend
 				handler.RS485.RxDuringTx = m.RS485.RxDuringTx
@@ -318,8 +317,8 @@ func (m *Modbus) initClient() error {
 			}
 			if m.RS485 != nil {
 				handler.RS485.Enabled = true
-				handler.RS485.DelayRtsBeforeSend = m.RS485.DelayRtsBeforeSend
-				handler.RS485.DelayRtsAfterSend = m.RS485.DelayRtsAfterSend
+				handler.RS485.DelayRtsBeforeSend = time.Duration(m.RS485.DelayRtsBeforeSend)
+				handler.RS485.DelayRtsAfterSend = time.Duration(m.RS485.DelayRtsAfterSend)
 				handler.RS485.RtsHighDuringSend = m.RS485.RtsHighDuringSend
 				handler.RS485.RtsHighAfterSend = m.RS485.RtsHighAfterSend
 				handler.RS485.RxDuringTx = m.RS485.RxDuringTx
