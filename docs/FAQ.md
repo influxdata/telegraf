@@ -19,10 +19,8 @@ specific tags or fields:
 - **Modifiers** allow a user to remove tags and fields based on specific keys,
   with glob support.
 
-For more details and examples, see the [Metric Filtering][Metric Filtering]
+For more details and examples, see the [Metric Filtering][metric filtering]
 section in the docs.
-
-[Metric Filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
 
 ## Could not find a usable config.yml, you may have revoked the CircleCI OAuth app
 
