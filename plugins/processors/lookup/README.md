@@ -34,6 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Available formats are:
   ##    json               -- JSON file with 'key: {tag-key: tag-value, ...}' mapping
   ##    csv_key_name_value -- CSV file with 'key,tag-key,tag-value,...,tag-key,tag-value' mapping
+  ##    csv_key_values     -- CSV file with a header and 'key,tag-value,...,tag-value' mapping
   # format = "json"
 
   ## Template for generating the lookup-key from the metric.
@@ -77,8 +78,7 @@ The `csv_key_name_value` format specifies comma-separated-value files with
 the following format
 
 ```csv
-# Some comments or header
-# lines
+# Optional comments
 keyA,tag-name1,tag-value1,...,tag-nameN,tag-valueN
 keyB,tag-name1,tag-value1
 ...
@@ -89,6 +89,27 @@ The formatting uses colons (`,`) as separators and allows for comments defined
 as lines starting with a hash (`#`). All lines can have different numbers but
 must at least contain three columns and follow the name/value pair format, i.e.
 there cannot be a name without value.
+
+### `csv_key_values` format
+
+This setting specifies comma-separated-value files with the following format
+
+```csv
+# Optional comments
+ignored,tag-name1,...,tag-nameN
+keyA,,tag-value1,...,tag-valueN
+keyB,tag-name1,tag-value1,,,,...,
+...
+keyZ,tag-name1,tag-value1,...,tag-nameM,tag-valueM,...,
+```
+
+The formatting uses colons (`,`) as separators and allows for comments defined
+as lines starting with a hash (`#`). All lines __must__ contain the same number
+of columns. The first non-comment line __must__ contain a header specifying the
+tag-names. As the first column contains the key to match the first header value
+is ignored. There have to be at least two columns.
+
+Please note that empty tag-values will be ignored and the tag will not be added.
 
 ## Example
 

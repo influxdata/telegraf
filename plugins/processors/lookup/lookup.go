@@ -55,6 +55,8 @@ func (p *Processor) Init() error {
 		return p.loadJSONFiles()
 	case "csv_key_name_value":
 		return p.loadCSVKeyNameValueFiles()
+	case "csv_key_values":
+		return p.loadCSVKeyValuesFiles()
 	}
 
 	return fmt.Errorf("invalid format %q", p.Fileformat)
@@ -134,7 +136,7 @@ func (p *Processor) loadCSVKeyNameValueFile(fn string) error {
 			return fmt.Errorf("reading line %d in %q failed: %w", line, fn, err)
 		}
 		if len(data) < 3 {
-			return fmt.Errorf("line %d in %q has not enough fields, requiring at least `key,name,value`", line, fn)
+			return fmt.Errorf("line %d in %q has not enough columns, requiring at least `key,name,value`", line, fn)
 		}
 		if len(data)%2 != 1 {
 			return fmt.Errorf("line %d in %q has a tag-name without value", line, fn)
@@ -150,6 +152,61 @@ func (p *Processor) loadCSVKeyNameValueFile(fn string) error {
 	return nil
 }
 
+func (p *Processor) loadCSVKeyValuesFiles() error {
+	for _, fn := range p.Filenames {
+		if err := p.loadCSVKeyValuesFile(fn); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *Processor) loadCSVKeyValuesFile(fn string) error {
+	f, err := os.Open(fn)
+	if err != nil {
+		return fmt.Errorf("loading %q failed: %w", fn, err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.Comment = '#'
+	reader.TrimLeadingSpace = true
+
+	// Read the first line which should be the header
+	header, err := reader.Read()
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return fmt.Errorf("missing header in %q", fn)
+		}
+		return fmt.Errorf("reading header in %q failed: %w", fn, err)
+	}
+	if len(header) < 2 {
+		return fmt.Errorf("header in %q has not enough columns, requiring at least `key,value`", fn)
+	}
+	header = header[1:]
+
+	line := 1
+	for {
+		line++
+		data, err := reader.Read()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return fmt.Errorf("reading line %d in %q failed: %w", line, fn, err)
+		}
+
+		key := data[0]
+		for i, v := range data[1:] {
+			v = strings.TrimSpace(v)
+			if v != "" {
+				p.mappings[key] = append(p.mappings[key], telegraf.Tag{Key: header[i], Value: v})
+			}
+		}
+	}
+
+	return nil
+}
 func init() {
 	processors.Add("lookup", func() telegraf.Processor {
 		return &Processor{}

@@ -1,0 +1,7 @@
+# Some comment
+# lines
+host,location,type,os,cabinet
+cpu-Hugin,at home,desktop,,
+cpu-Munin,,mobile,Android,
+cpu-Thor,eu-west1,server,,r15-02
+disk-Hugin,,desktop,,
