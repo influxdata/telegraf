@@ -136,6 +136,9 @@ func (p *Processor) loadCSVKeyNameValueFile(fn string) error {
 		if len(data) < 3 {
 			return fmt.Errorf("line %d in %q has not enough fields, requiring at least `key,name,value`", line, fn)
 		}
+		if len(data)%2 != 1 {
+			return fmt.Errorf("line %d in %q has a tag-name without value", line, fn)
+		}
 
 		key := data[0]
 		for i := 1; i < len(data)-1; i += 2 {
