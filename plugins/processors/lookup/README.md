@@ -43,6 +43,53 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   key = '{{.Tag "host"}}'
 ```
 
+## File formats
+
+The following descriptions assume `key`s to be unique identifiers used for
+matching the configured `key`. The `tag-name`/`tag-value` pairs are the tags
+added to a metric if the key matches.
+
+### `json` format
+
+In the `json` format, the input `files` must have the following format
+
+```json
+{
+  "keyA": {
+    "tag-name1": "tag-value1",
+    ...
+    "tag-nameN": "tag-valueN",
+  },
+  ...
+  "keyZ": {
+    "tag-name1": "tag-value1",
+    ...
+    "tag-nameM": "tag-valueM",
+  }
+}
+```
+
+Please note that only _strings_ are supported for all elements.
+
+### `csv_key_name_value` format
+
+The `csv_key_name_value` format specifies comma-separated-value files with
+the following format
+
+```csv
+# Some comments or header
+# lines
+keyA,tag-name1,tag-value1,...,tag-nameN,tag-valueN
+keyB,tag-name1,tag-value1
+...
+keyZ,tag-name1,tag-value1,...,tag-nameM,tag-valueM
+```
+
+The formatting uses colons (`,`) as separators and allows for comments defined
+as lines starting with a hash (`#`). All lines can have different numbers but
+must at least contain three columns and follow the name/value pair format, i.e.
+there cannot be a name without value.
+
 ## Example
 
 With a lookup table of
