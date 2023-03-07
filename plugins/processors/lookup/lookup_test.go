@@ -26,7 +26,7 @@ func TestInit(t *testing.T) {
 		Filenames:   []string{"blah.json"},
 		KeyTemplate: "lala",
 	}
-	require.ErrorContains(t, plugin.Init(), "no such file or directory")
+	require.ErrorIs(t, plugin.Init(), os.ErrNotExist)
 
 	plugin = &Processor{
 		Filenames:   []string{"blah.json"},
