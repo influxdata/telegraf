@@ -41,6 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   controller = "tcp://localhost:502"
 
   ## Serial (RS485; RS232)
+  ## For RS485 specific setting check the end of the configuration.
   ## For unix-like operating systems use:
   # controller = "file:///dev/ttyUSB0"
   ## For Windows operating systems use:
@@ -234,6 +235,21 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     [inputs.modbus.request.tags]
       machine = "impresser"
       location = "main building"
+
+  ## RS485 specific settings. Only take effect for serial controllers.
+  ## Note: This has to be at the end of the modbus configuration due to
+  ## TOML constraints.
+  # [inputs.modbus.rs485]
+    ## Delay RTS prior to sending
+    # delay_rts_before_send = "0ms"
+    ## Delay RTS after to sending
+    # delay_rts_after_send = "0ms"
+    ## Pull RTS line to high during sending
+    # rts_high_during_send = false
+    ## Pull RTS line to high after sending
+    # rts_high_after_send = false
+    ## Enabling receiving (Rx) during transmission (Tx)
+    # rx_during_tx = false
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.modbus.workarounds]
