@@ -1,9 +1,10 @@
 # Lookup Processor Plugin
 
 The Lookup Processor allows to use one or more files containing a lookup-table
-for annotating incoming metrics. The main use-case for this is to annotate
-metrics with additional tags e.g. dependent on their source. Multiple tags can
-be added depending on the lookup-table _files_.
+for annotating incoming metrics. The lookup is _static_ as the files are only
+used on startup. The main use-case for this is to annotate metrics with
+additional tags e.g. dependent on their source. Multiple tags can be added
+depending on the lookup-table _files_.
 
 The lookup key can be generated using a Golang template with the ability to
 access the metric name via `{{.Name}}`, the tag values via `{{.Tag "mytag"}}`,
