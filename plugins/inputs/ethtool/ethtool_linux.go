@@ -132,6 +132,16 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 		fields[e.normalizeKey(k)] = v
 	}
 
+	cmdget, err := e.command.Get(iface)
+	if err != nil {
+		acc.AddError(fmt.Errorf("%q get: %w", iface.Name, err))
+		return
+	}
+
+	for k, v := range cmdget {
+		fields[e.normalizeKey(k)] = v
+	}
+
 	acc.AddFields(pluginName, fields, tags)
 }
 
@@ -219,6 +229,10 @@ func (c *CommandEthtool) DriverName(intf NamespacedInterface) (driver string, er
 
 func (c *CommandEthtool) Stats(intf NamespacedInterface) (stats map[string]uint64, err error) {
 	return intf.Namespace.Stats(intf)
+}
+
+func (c *CommandEthtool) Get(intf NamespacedInterface) (stats map[string]uint64, err error) {
+	return intf.Namespace.Get(intf)
 }
 
 func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterface, error) {
