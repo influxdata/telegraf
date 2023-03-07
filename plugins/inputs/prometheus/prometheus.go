@@ -6,7 +6,9 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/influxdata/telegraf/models"
 	"io"
+	"k8s.io/client-go/tools/cache"
 	"net"
 	"net/http"
 	"net/url"
@@ -87,6 +89,11 @@ type Prometheus struct {
 	client  *http.Client
 	headers map[string]string
 
+	nsStore cache.Store
+
+	nsAnnotationPass []models.TagFilter
+	nsAnnotationDrop []models.TagFilter
+
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods           bool   `toml:"monitor_kubernetes_pods"`
 	PodScrapeScope        string `toml:"pod_scrape_scope"`
@@ -108,6 +115,9 @@ type Prometheus struct {
 	MonitorKubernetesPodsScheme string        `toml:"monitor_kubernetes_pods_scheme"`
 	MonitorKubernetesPodsPath   string        `toml:"monitor_kubernetes_pods_path"`
 	MonitorKubernetesPodsPort   int           `toml:"monitor_kubernetes_pods_port"`
+
+	NamespaceAnnotationPass map[string][]string `toml:"namespace_annotation_pass"`
+	NamespaceAnnotationDrop map[string][]string `toml:"namespace_annotation_drop"`
 
 	// Only for monitor_kubernetes_pods=true
 	CacheRefreshInterval int `toml:"cache_refresh_interval"`
@@ -163,6 +173,26 @@ func (p *Prometheus) Init() error {
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
 	}
 
+	for k, vs := range p.NamespaceAnnotationPass {
+		tagFilter := models.TagFilter{}
+		tagFilter.Name = k
+		tagFilter.Values = append(tagFilter.Values, vs...)
+		if err := tagFilter.Compile(); err != nil {
+			return fmt.Errorf("error compiling 'namespace_annotation_pass', %w", err)
+		}
+		p.nsAnnotationPass = append(p.nsAnnotationPass, tagFilter)
+	}
+
+	for k, vs := range p.NamespaceAnnotationDrop {
+		tagFilter := models.TagFilter{}
+		tagFilter.Name = k
+		tagFilter.Values = append(tagFilter.Values, vs...)
+		if err := tagFilter.Compile(); err != nil {
+			return fmt.Errorf("error compiling 'namespace_annotation_drop', %w", err)
+		}
+		p.nsAnnotationDrop = append(p.nsAnnotationDrop, tagFilter)
+	}
+
 	ctx := context.Background()
 	p.HTTPClientConfig.Timeout = p.ResponseTimeout
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
@@ -202,6 +232,7 @@ type URLAndAddress struct {
 	URL         *url.URL
 	Address     string
 	Tags        map[string]string
+	Namespace   string
 }
 
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
@@ -223,7 +254,9 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 	}
 	// loop through all pods scraped via the prometheus annotation on the pods
 	for _, v := range p.kubernetesPods {
-		allURLs[v.URL.String()] = v
+		if namespaceAnnotationMatch(v.Namespace, p) {
+			allURLs[v.URL.String()] = v
+		}
 	}
 
 	for _, service := range p.KubernetesServices {
