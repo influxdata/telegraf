@@ -14,6 +14,9 @@ in an empty string or `nil` respectively. In case the key cannot be found, the
 metric is passed-trough unchanged. By default all matching tags are added and
 existing tag-values are overwritten.
 
+Please note: The plugin only supports the addition of tags and thus all mapped
+tag-values need to be strings!
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -35,7 +38,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Available formats are:
   ##    json               -- JSON file with 'key: {tag-key: tag-value, ...}' mapping
   ##    csv_key_name_value -- CSV file with 'key,tag-key,tag-value,...,tag-key,tag-value' mapping
-  ##    csv_key_values     -- CSV file with a header and 'key,tag-value,...,tag-value' mapping
+  ##    csv_key_values     -- CSV file with a header containing tag-names and
+  ##                          rows with 'key,tag-value,...,tag-value' mappings
   # format = "json"
 
   ## Template for generating the lookup-key from the metric.
@@ -97,11 +101,11 @@ This setting specifies comma-separated-value files with the following format
 
 ```csv
 # Optional comments
-ignored,tag-name1,...,tag-nameN
-keyA,,tag-value1,...,tag-valueN
-keyB,tag-name1,tag-value1,,,,...,
+ignored,tag-name1,...,tag-valueN
+keyA,tag-value1,...,,,,
+keyB,tag-value1,,,,...,
 ...
-keyZ,tag-name1,tag-value1,...,tag-nameM,tag-valueM,...,
+keyZ,tag-value1,...,tag-valueM,...,
 ```
 
 The formatting uses colons (`,`) as separators and allows for comments defined
@@ -129,7 +133,7 @@ With a lookup table of
 }
 ```
 
-and a `key` of `key = '{{.Name}}-{{.Tag "host"}}'` you get
+in `format = "json"` and a `key` of `key = '{{.Name}}-{{.Tag "host"}}'` you get
 
 ```diff
 - xyzzy,host=green value=3.14 1502489900000000000
@@ -137,4 +141,19 @@ and a `key` of `key = '{{.Name}}-{{.Tag "host"}}'` you get
 + xyzzy,host=green,location=eu-central,rack=C12-01 value=3.14 1502489900000000000
 + xyzzy,host=red,location=us-west,rack=C01-42 value=2.71 1502499100000000000
 xyzzy,host=blue  value=6.62 1502499700000000000
+```
+
+The same results can be achieved with `format = "csv_key_name_value"` and
+
+```csv
+xyzzy-green,location,eu-central,rack,C12-01
+xyzzy-red,location,us-west,rack,C01-42
+```
+
+or `format = "csv_key_values"` and
+
+```csv
+-,location,rack
+xyzzy-green,eu-central,C12-01
+xyzzy-red,us-west,C01-42
 ```
