@@ -104,9 +104,9 @@ func (c *Container) LookupMappedPorts() error {
 		}
 
 		// strip off the transport: 80/tcp -> 80
-		if strings.Contains(port, "/") {
-			port = strings.Split(port, "/")[0]
-		}
+		//if strings.Contains(port, "/") {
+		//	port = strings.Split(port, "/")[0]
+		//}
 
 		p, err := c.container.MappedPort(c.ctx, nat.Port(port))
 		if err != nil {

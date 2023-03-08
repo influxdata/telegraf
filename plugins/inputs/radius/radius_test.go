@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -81,20 +80,23 @@ func TestRadiusIntegration(t *testing.T) {
 
 	port := "1812/udp"
 
-	testdataClients, err := filepath.Abs("testdata/raddb/clients.conf")
+	testdata, err := filepath.Abs("testdata/raddb/clients.conf")
 	require.NoError(t, err, "determining absolute path of test-data clients.conf failed")
-	testdataAuthorize, err := filepath.Abs("testdata/raddb/mods-config/files/authorize")
+	testdataa, err := filepath.Abs("testdata/raddb/mods-config/files/authorize")
 	require.NoError(t, err, "determining absolute path of test-data authorize failed")
+	testdataaa, err := filepath.Abs("testdata/raddb/radiusd.conf")
+	require.NoError(t, err, "determining absolute path of test-data radiusd.conf failed")
 
 	container := testutil.Container{
 		Image:        "freeradius/freeradius-server",
 		ExposedPorts: []string{port},
 		BindMounts: map[string]string{
-			"/etc/raddb/clients.conf":                testdataClients,
-			"/etc/raddb/mods-config/files/authorize": testdataAuthorize,
+			"/etc/raddb/clients.conf":                testdata,
+			"/etc/raddb/mods-config/files/authorize": testdataa,
+			"/etc/raddb/radiusd.conf":                testdataaa,
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(port)),
+			wait.ForLog("Ready to process requests"),
 		),
 	}
 	err = container.Start()
