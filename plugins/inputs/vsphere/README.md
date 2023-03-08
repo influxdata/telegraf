@@ -345,6 +345,21 @@ We can extend this to looking at a cluster level:
 `/DC0/host/Cluster1/*/hadoop*`. This selects any VM matching "hadoop*" on any
 host in Cluster1.
 
+#### Inventory paths and top-level folders
+
+If your datacenter is in a folder and not directly below the inventory root, the
+default inventory paths will not work. This is intentional, since recursive wildcards
+may be slow in very large environments. 
+
+If your datacenter is in a folder, you have two options:
+1. Explicitly include the folder in the path. For example, if your datacenter is in 
+a folder named ```F1``` you could use the following path to get to your hosts:
+   ```/F1/MyDatacenter/host/**```
+2. Use a recursive wildcard to search an arbitrarily long chain of nested folders. To
+get to the hosts, you could use the following path: ```/**/host/**```. Note that
+this may run slowly in a very large environment, since a large number of nodes will
+be traversed.
+
 ## Performance Considerations
 
 ### Realtime vs. historical metrics
