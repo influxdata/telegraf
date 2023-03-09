@@ -392,11 +392,9 @@ func getDefaultConfigPath() ([]string, error) {
 
 	for _, path := range []string{envfile, homefile} {
 		if isURL(path) {
-			log.Printf("I! Using config url: %s", path)
 			return []string{path}, nil
 		}
 		if _, err := os.Stat(path); err == nil {
-			log.Printf("I! Using config file: %s", path)
 			return []string{path}, nil
 		}
 	}
@@ -405,16 +403,12 @@ func getDefaultConfigPath() ([]string, error) {
 	// populated and return them all.
 	confFiles := []string{}
 	if _, err := os.Stat(etcfile); err == nil {
-		log.Printf("I! Using config file: %s", etcfile)
 		confFiles = append(confFiles, etcfile)
 	}
 	if _, err := os.Stat(etcfolder); err == nil {
 		files, err := WalkDirectory(etcfolder)
 		if err != nil {
 			log.Printf("W! unable walk %q: %s", etcfolder, err)
-		}
-		for _, file := range files {
-			log.Printf("I! Using config file: %s", file)
 		}
 		confFiles = append(confFiles, files...)
 	}
@@ -701,6 +695,7 @@ func escapeEnv(value string) string {
 
 func LoadConfigFile(config string) ([]byte, error) {
 	if fetchURLRe.MatchString(config) {
+		log.Printf("I! Loading config url: %s", config)
 		u, err := url.Parse(config)
 		if err != nil {
 			return nil, err
@@ -715,6 +710,7 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
+	log.Printf("I! Loading config file: %s", config)
 	buffer, err := os.ReadFile(config)
 	if err != nil {
 		return nil, err
