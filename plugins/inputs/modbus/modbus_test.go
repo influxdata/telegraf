@@ -21,6 +21,11 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestMain(m *testing.M) {
+	telegraf.Debug = false
+	os.Exit(m.Run())
+}
+
 func TestControllers(t *testing.T) {
 	var tests = []struct {
 		name       string
@@ -2651,7 +2656,15 @@ func TestConfigurationPerRequest(t *testing.T) {
 					Address:     uint16(2),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
+					Measurement: "modbus",
+				},
+				{
+					Name:        "coil-3",
+					Address:     uint16(3),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "BOOL",
 					Measurement: "modbus",
 				},
 			},
@@ -2661,20 +2674,28 @@ func TestConfigurationPerRequest(t *testing.T) {
 			RegisterType: "coil",
 			Fields: []requestFieldDefinition{
 				{
-					Name:    "coil-3",
+					Name:    "coil-4",
 					Address: uint16(6),
 				},
 				{
-					Name:    "coil-4",
+					Name:    "coil-5",
 					Address: uint16(7),
 					Omit:    true,
 				},
 				{
-					Name:        "coil-5",
+					Name:        "coil-6",
 					Address:     uint16(8),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
+					Measurement: "modbus",
+				},
+				{
+					Name:        "coil-7",
+					Address:     uint16(9),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "BOOL",
 					Measurement: "modbus",
 				},
 			},
@@ -2698,7 +2719,15 @@ func TestConfigurationPerRequest(t *testing.T) {
 					Address:     uint16(2),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
+					Measurement: "modbus",
+				},
+				{
+					Name:        "discrete-3",
+					Address:     uint16(3),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "BOOL",
 					Measurement: "modbus",
 				},
 			},
@@ -2793,7 +2822,7 @@ func TestConfigurationPerRequestWithTags(t *testing.T) {
 					Address:     uint16(2),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
 					Measurement: "modbus",
 				},
 			},
@@ -2821,7 +2850,7 @@ func TestConfigurationPerRequestWithTags(t *testing.T) {
 					Address:     uint16(8),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
 					Measurement: "modbus",
 				},
 			},
@@ -2850,7 +2879,7 @@ func TestConfigurationPerRequestWithTags(t *testing.T) {
 					Address:     uint16(2),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
 					Measurement: "modbus",
 				},
 			},
@@ -3151,7 +3180,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuration: initializing field \"holding-0\" failed: unknown output type \"UINT8\"",
+			errormsg: `configuration invalid: unknown output data-type "UINT8" for field "holding-0"`,
 		},
 		{
 			name: "duplicate fields (holding)",
@@ -3263,7 +3292,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuration: initializing field \"input-0\" failed: unknown output type \"UINT8\"",
+			errormsg: `configuration invalid: unknown output data-type "UINT8" for field "input-0"`,
 		},
 		{
 			name: "duplicate fields (input)",
