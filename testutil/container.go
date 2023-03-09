@@ -103,15 +103,16 @@ func (c *Container) LookupMappedPorts() error {
 			port = strings.Split(port, ":")[1]
 		}
 
-		// strip off the transport: 80/tcp -> 80
-		//if strings.Contains(port, "/") {
-		//	port = strings.Split(port, "/")[0]
-		//}
-
 		p, err := c.container.MappedPort(c.ctx, nat.Port(port))
 		if err != nil {
 			return fmt.Errorf("failed to find %q: %w", port, err)
 		}
+
+		// strip off the transport: 80/tcp -> 80
+		if strings.Contains(port, "/") {
+			port = strings.Split(port, "/")[0]
+		}
+
 		fmt.Printf("mapped container port %q to host port %q\n", port, p.Port())
 		c.Ports[port] = p.Port()
 	}
