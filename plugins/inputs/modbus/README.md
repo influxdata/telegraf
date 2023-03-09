@@ -322,7 +322,7 @@ floating-point-number. The size of the output type is assumed to be large enough
 for all supported input types. The mapping from the input type to the output
 type is fixed and cannot be configured.
 
-##### Booleans: `BOOL`:
+##### Booleans: `BOOL`
 
 This type is only valid for _coil_ and _discrete_ registers. The value will be
 `true` if the register has a non-zero (ON) value and `false` otherwise.
