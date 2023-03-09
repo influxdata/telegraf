@@ -1,6 +1,7 @@
 package ethtool
 
 import (
+	"math"
 	"net"
 	"runtime"
 
@@ -66,6 +67,36 @@ func (n *NamespaceGoroutine) Stats(intf NamespacedInterface) (map[string]uint64,
 		return n.ethtoolClient.Stats(intf.Name)
 	})
 	return driver.(map[string]uint64), err
+}
+
+func (n *NamespaceGoroutine) Get(intf NamespacedInterface) (map[string]uint64, error) {
+	result, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
+		ecmd := ethtoolLib.EthtoolCmd{}
+		speed32, err := n.ethtoolClient.CmdGet(&ecmd, intf.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		var speed = uint64(speed32)
+		if speed == math.MaxUint32 {
+			speed = math.MaxUint64
+		}
+
+		var link32 uint32
+		link32, err = n.ethtoolClient.LinkState(intf.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]uint64{
+			"speed":   speed,
+			"duplex":  uint64(ecmd.Duplex),
+			"autoneg": uint64(ecmd.Autoneg),
+			"link":    uint64(link32),
+		}, nil
+	})
+
+	return result.(map[string]uint64), err
 }
 
 // Start locks a goroutine to an OS thread and ties it to the namespace, then
