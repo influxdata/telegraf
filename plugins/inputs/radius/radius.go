@@ -4,6 +4,7 @@ package radius
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
