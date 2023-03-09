@@ -347,8 +347,8 @@ host in Cluster1.
 #### Inventory paths and top-level folders
 
 If your datacenter is in a folder and not directly below the inventory root, the
-default inventory paths will not work. This is intentional, since recursive wildcards
-may be slow in very large environments.
+default inventory paths will not work. This is intentional, since recursive
+wildcards may be slow in very large environments.
 
 If your datacenter is in a folder, you have two options:
 
