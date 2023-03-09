@@ -76,6 +76,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Digital Variables, Discrete Inputs and Coils
   ## measurement - the (optional) measurement name, defaults to "modbus"
   ## name        - the variable name
+  ## data_type   - the (optional) output type, can be BOOL or UINT16 (default)
   ## address     - variable address
 
   discrete_inputs = [
@@ -321,6 +322,11 @@ floating-point-number. The size of the output type is assumed to be large enough
 for all supported input types. The mapping from the input type to the output
 type is fixed and cannot be configured.
 
+##### Booleans: `BOOL`:
+
+This type is only valid for _coil_ and _discrete_ registers. The value will be
+`true` if the register has a non-zero (ON) value and `false` otherwise.
+
 ##### Integers: `INT8L`, `INT8H`, `UINT8L`, `UINT8H`
 
 These types are used for 8-bit integer values. Select the one that matches your
@@ -330,7 +336,7 @@ the register respectively.
 ##### Integers: `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64`, `UINT64`
 
 These types are used for integer input values. Select the one that matches your
-modbus data source.
+modbus data source. For _coil_ and _discrete_ registers only `UINT16` is valid.
 
 ##### Floating Point: `FLOAT16-IEEE`, `FLOAT32-IEEE`, `FLOAT64-IEEE`
 
@@ -513,10 +519,11 @@ non-zero value, the output type is `FLOAT64`. Otherwise, the output type
 corresponds to the register datatype _class_, i.e. `INT*` will result in
 `INT64`, `UINT*` in `UINT64` and `FLOAT*` in `FLOAT64`.
 
-This setting is ignored if the field's `omit` is set to `true` or if the
-`register` type is a bit-type (`coil` or `discrete`) and can be omitted in these
-cases. For `coil` and `discrete` registers the field-value is output as zero or
-one in `UINT16` format.
+This setting is ignored if the field's `omit` is set to `true` and can be
+omitted. In case the `register` type is a bit-type (`coil` or `discrete`) only
+`UINT16` or `BOOL` are valid with the former being the default if omitted.
+For `coil` and `discrete` registers the field-value is output as zero or one in
+`UINT16` format or as `true` and `false` in `BOOL` format.
 
 #### per-field measurement setting
 

@@ -130,6 +130,13 @@ func (c *ConfigurationPerRequest) Check() error {
 				default:
 					return fmt.Errorf("unknown output data-type %q for field %q", f.OutputType, f.Name)
 				}
+			} else {
+				// Bit register types can only be UINT64 or BOOL
+				switch f.OutputType {
+				case "", "UINT16", "BOOL":
+				default:
+					return fmt.Errorf("unknown output data-type %q for field %q", f.OutputType, f.Name)
+				}
 			}
 
 			// Handle the default for measurement
@@ -257,6 +264,14 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 		address:     def.Address,
 		length:      fieldLength,
 		omit:        def.Omit,
+	}
+
+	// Handle type conversions for coil and discrete registers
+	if !typed {
+		f.converter, err = determineUntypedConverter(def.OutputType)
+		if err != nil {
+			return field{}, err
+		}
 	}
 
 	// No more processing for un-typed (coil and discrete registers) or omitted fields

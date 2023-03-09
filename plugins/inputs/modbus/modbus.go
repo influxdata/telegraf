@@ -406,8 +406,9 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 			idx := offset / 8
 			bit := offset % 8
 
-			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
-			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
+			v := (bytes[idx] >> bit) & 0x01
+			request.fields[i].value = field.converter([]byte{v})
+			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, v, request.fields[i].value)
 		}
 
 		// Some (serial) devices require a pause between requests...
@@ -432,8 +433,9 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 			idx := offset / 8
 			bit := offset % 8
 
-			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
-			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
+			v := (bytes[idx] >> bit) & 0x01
+			request.fields[i].value = field.converter([]byte{v})
+			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, v, request.fields[i].value)
 		}
 
 		// Some (serial) devices require a pause between requests...

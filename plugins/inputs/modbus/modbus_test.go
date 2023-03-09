@@ -154,65 +154,96 @@ func TestCoils(t *testing.T) {
 	var coilTests = []struct {
 		name     string
 		address  uint16
+		dtype    string
 		quantity uint16
 		write    []byte
-		read     uint16
+		read     interface{}
 	}{
 		{
 			name:     "coil0_turn_off",
 			address:  0,
 			quantity: 1,
 			write:    []byte{0x00},
-			read:     0,
+			read:     uint16(0),
 		},
 		{
 			name:     "coil0_turn_on",
 			address:  0,
 			quantity: 1,
 			write:    []byte{0x01},
-			read:     1,
+			read:     uint16(1),
 		},
 		{
 			name:     "coil1_turn_on",
 			address:  1,
 			quantity: 1,
 			write:    []byte{0x01},
-			read:     1,
+			read:     uint16(1),
 		},
 		{
 			name:     "coil2_turn_on",
 			address:  2,
 			quantity: 1,
 			write:    []byte{0x01},
-			read:     1,
+			read:     uint16(1),
 		},
 		{
 			name:     "coil3_turn_on",
 			address:  3,
 			quantity: 1,
 			write:    []byte{0x01},
-			read:     1,
+			read:     uint16(1),
 		},
 		{
 			name:     "coil1_turn_off",
 			address:  1,
 			quantity: 1,
 			write:    []byte{0x00},
-			read:     0,
+			read:     uint16(0),
 		},
 		{
 			name:     "coil2_turn_off",
 			address:  2,
 			quantity: 1,
 			write:    []byte{0x00},
-			read:     0,
+			read:     uint16(0),
 		},
 		{
 			name:     "coil3_turn_off",
 			address:  3,
 			quantity: 1,
 			write:    []byte{0x00},
-			read:     0,
+			read:     uint16(0),
+		},
+		{
+			name:     "coil4_turn_off",
+			address:  4,
+			quantity: 1,
+			write:    []byte{0x00},
+			read:     uint16(0),
+		},
+		{
+			name:     "coil4_turn_on",
+			address:  4,
+			quantity: 1,
+			write:    []byte{0x01},
+			read:     uint16(1),
+		},
+		{
+			name:     "coil4_turn_off_bool",
+			address:  4,
+			quantity: 1,
+			dtype:    "BOOL",
+			write:    []byte{0x00},
+			read:     false,
+		},
+		{
+			name:     "coil4_turn_on_bool",
+			address:  4,
+			quantity: 1,
+			dtype:    "BOOL",
+			write:    []byte{0x01},
+			read:     true,
 		},
 	}
 
@@ -238,8 +269,9 @@ func TestCoils(t *testing.T) {
 			modbus.SlaveID = 1
 			modbus.Coils = []fieldDefinition{
 				{
-					Name:    ct.name,
-					Address: []uint16{ct.address},
+					Name:     ct.name,
+					Address:  []uint16{ct.address},
+					DataType: ct.dtype,
 				},
 			}
 
@@ -252,6 +284,101 @@ func TestCoils(t *testing.T) {
 						"name":     modbus.Name,
 					},
 					map[string]interface{}{ct.name: ct.read},
+					time.Unix(0, 0),
+				),
+			}
+
+			var acc testutil.Accumulator
+			require.NoError(t, modbus.Init())
+			require.NotEmpty(t, modbus.requests)
+			require.NoError(t, modbus.Gather(&acc))
+			acc.Wait(len(expected))
+
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestRequestTypesCoil(t *testing.T) {
+	tests := []struct {
+		name        string
+		address     uint16
+		dataTypeOut string
+		write       uint16
+		read        interface{}
+	}{
+		{
+			name:    "coil-1-off",
+			address: 1,
+			write:   0,
+			read:    uint16(0),
+		},
+		{
+			name:    "coil-2-on",
+			address: 2,
+			write:   0xFF00,
+			read:    uint16(1),
+		},
+		{
+			name:        "coil-3-false",
+			address:     3,
+			dataTypeOut: "BOOL",
+			write:       0,
+			read:        false,
+		},
+		{
+			name:        "coil-4-true",
+			address:     4,
+			dataTypeOut: "BOOL",
+			write:       0xFF00,
+			read:        true,
+		},
+	}
+
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	for _, hrt := range tests {
+		t.Run(hrt.name, func(t *testing.T) {
+			_, err := client.WriteSingleCoil(hrt.address, hrt.write)
+			require.NoError(t, err)
+
+			modbus := Modbus{
+				Name:              "TestRequestTypesCoil",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			modbus.Requests = []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "coil",
+					Fields: []requestFieldDefinition{
+						{
+							Name:       hrt.name,
+							OutputType: hrt.dataTypeOut,
+							Address:    hrt.address,
+						},
+					},
+				},
+			}
+
+			expected := []telegraf.Metric{
+				testutil.MustMetric(
+					"modbus",
+					map[string]string{
+						"type":     cCoils,
+						"slave_id": "1",
+						"name":     modbus.Name,
+					},
+					map[string]interface{}{hrt.name: hrt.read},
 					time.Unix(0, 0),
 				),
 			}
