@@ -169,7 +169,6 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 					// Tokens match and we're looking ahead at a container type that's not a leaf
 					// Consume this token and the next.
 					inc = 2
-
 				}
 			}
 		} else {

@@ -348,10 +348,11 @@ host in Cluster1.
 
 If your datacenter is in a folder and not directly below the inventory root, the
 default inventory paths will not work. This is intentional, since recursive wildcards
-may be slow in very large environments. 
+may be slow in very large environments.
 
 If your datacenter is in a folder, you have two options:
-1. Explicitly include the folder in the path. For example, if your datacenter is in 
+
+1. Explicitly include the folder in the path. For example, if your datacenter is in
 a folder named ```F1``` you could use the following path to get to your hosts:
    ```/F1/MyDatacenter/host/**```
 2. Use a recursive wildcard to search an arbitrarily long chain of nested folders. To
@@ -368,8 +369,6 @@ metrics.
 
 * Realtime metrics: Available at a 20 second granularity. These metrics are stored in memory and are very fast and cheap to query. Our tests have shown that a complete set of realtime metrics for 7000 virtual machines can be obtained in less than 20 seconds. Realtime metrics are only available on **ESXi hosts** and **virtual machine** resources. Realtime metrics are only stored for 1 hour in vCenter.
 * Historical metrics: Available at a (default) 5 minute, 30 minutes, 2 hours and 24 hours rollup levels. The vSphere Telegraf plugin only uses the most granular rollup which defaults to 5 minutes but can be changed in vCenter to other interval durations. These metrics are stored in the vCenter database and can be expensive and slow to query. Historical metrics are the only type of metrics available for **clusters**, **datastores**, **resource pools** and **datacenters**.
-
-For more information, refer to the vSphere [documentation][vsphere-16].
 
 This distinction has an impact on how Telegraf collects metrics. A single
 instance of an input plugin can have one and only one collection interval, which
@@ -430,8 +429,6 @@ instance. For example:
   max_query_metrics = 256
   collect_concurrency = 3
 ```
-
-[vsphere-16]: https://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch16_Performance.18.2.html
 
 ### Configuring max_query_metrics setting
 
