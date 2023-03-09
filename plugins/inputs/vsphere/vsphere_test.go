@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -451,7 +452,19 @@ func TestCollectionNoClusterMetrics(t *testing.T) {
 }
 
 func TestDisconnectedServerBehavior(t *testing.T) {
-	
+	u, err := url.Parse("https://definitely.not.a.valid.host")
+	require.NoError(t, err)
+	v := defaultVSphere()
+	v.DisconnectedServersBehavior = "error"
+	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	require.Error(t, err)
+	v.DisconnectedServersBehavior = "ignore"
+	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	require.NoError(t, err)
+	v.DisconnectedServersBehavior = "something else"
+	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	require.Error(t, err)
+	require.Equal(t, err.Error(), "'something else' is not a valid value for disconnected_servers_behavior")
 }
 
 func testCollection(t *testing.T, excludeClusters bool) {
