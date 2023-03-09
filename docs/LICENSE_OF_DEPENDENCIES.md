@@ -377,6 +377,7 @@ following works:
 - k8s.io/klog [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/kube-openapi [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/utils [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+- layeh.com/radius [Mozilla Public License 2.0](https://github.com/layeh/radius/blob/master/LICENSE)
 - modernc.org/libc [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/libc/-/blob/master/LICENSE)
 - modernc.org/mathutil [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/mathutil/-/blob/master/LICENSE)
 - modernc.org/memory [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/memory/-/blob/master/LICENSE)
