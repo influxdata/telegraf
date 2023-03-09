@@ -2,12 +2,12 @@ ifneq (,$(filter $(OS),Windows_NT Windows))
 	EXEEXT=.exe
 endif
 
-next_version := $(shell cat build_version.txt)
+cat := $(if $(filter $(OS),sh.exe),type,cat)
+next_version := $(shell $(cat) build_version.txt)
 tag := $(shell git describe --exact-match --tags 2>/dev/null)
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
-glibc_version := 2.17
 
 ifdef NIGHTLY
 	version := $(next_version)
@@ -75,6 +75,7 @@ all: deps docs telegraf
 help:
 	@echo 'Targets:'
 	@echo '  all          - download dependencies and compile telegraf binary'
+	@echo '  config       - generate the config from current repo state'
 	@echo '  deps         - download dependencies'
 	@echo '  docs         - embed sample-configurations into READMEs'
 	@echo '  telegraf     - compile telegraf binary'
@@ -111,16 +112,22 @@ build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
 	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+
+.PHONY: config
+config:
+	@echo "generating default config"
+	go run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
 docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
 
 .PHONY: build
 build:
-	go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
 telegraf: build
@@ -165,7 +172,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -190,8 +197,7 @@ lint-branch:
 		echo "golangci-lint not found, please run: make lint-install"; \
 		exit 1; \
 	}
-
-	golangci-lint run --new-from-rev master
+	golangci-lint run
 
 .PHONY: tidy
 tidy:
@@ -217,6 +223,7 @@ check-deps:
 clean:
 	rm -f telegraf
 	rm -f telegraf.exe
+	rm -f etc/telegraf.conf
 	rm -rf build
 	rm -rf cmd/telegraf/resource.syso
 	rm -rf cmd/telegraf/versioninfo.json
@@ -224,6 +231,8 @@ clean:
 	rm -rf tools/custom_builder/custom_builder.exe
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
+	rm -rf tools/readme_linter/readme_linter
+	rm -rf tools/readme_linter/readme_linter.exe
 	rm -rf tools/package_lxd_test/package_lxd_test
 	rm -rf tools/package_lxd_test/package_lxd_test.exe
 	rm -rf tools/license_checker/license_checker
@@ -238,8 +247,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.19.4 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.19.4
+	docker build -t quay.io/influxdb/telegraf-ci:1.20.1 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.20.1
 
 .PHONY: install
 install: $(buildbin)
@@ -252,8 +261,7 @@ install: $(buildbin)
 	@cp -fv $(buildbin) $(DESTDIR)$(bindir)
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)$(sysconfdir)/telegraf/telegraf.conf$(conf_suffix); fi
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/logrotate.d/telegraf $(DESTDIR)$(sysconfdir)/logrotate.d; fi
-	@if [ $(GOOS) = "windows" ]; then cp -fv etc/telegraf_windows.conf $(DESTDIR)/telegraf.conf; fi
-	@if [ $(GOOS) = "linux" ]; then scripts/check-dynamic-glibc-versions.sh $(buildbin) $(glibc_version); fi
+	@if [ $(GOOS) = "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)/telegraf.conf; fi
 	@if [ $(GOOS) = "linux" ]; then mkdir -pv $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
 	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/telegraf.service $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
 	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/init.sh $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
@@ -264,7 +272,7 @@ install: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -284,10 +292,6 @@ amd64 += freebsd_amd64.tar.gz linux_amd64.tar.gz amd64.deb x86_64.rpm
 .PHONY: amd64
 amd64:
 	@ echo $(amd64)
-static += static_linux_amd64.tar.gz
-.PHONY: static
-static:
-	@ echo $(static)
 armel += linux_armel.tar.gz armel.rpm armel.deb
 .PHONY: armel
 armel:
@@ -326,10 +330,10 @@ darwin-arm64 += darwin_arm64.tar.gz
 darwin-arm64:
 	@ echo $(darwin-arm64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: docs $(include_packages)
+package: docs config $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
@@ -339,6 +343,8 @@ $(include_packages):
 	@mkdir -p $(pkgdir)
 
 	@if [ "$(suffix $@)" = ".rpm" ]; then \
+		echo "# DO NOT EDIT OR REMOVE" > $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
+		echo "# This file prevents the rpm from changing permissions on this directory" >> $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
 		fpm --force \
 			--log info \
 			--architecture $(basename $@) \
@@ -349,6 +355,7 @@ $(include_packages):
 			--license MIT \
 			--maintainer support@influxdb.com \
 			--config-files /etc/telegraf/telegraf.conf \
+			--config-files /etc/telegraf/telegraf.d/.ignore \
 			--config-files /etc/logrotate.d/telegraf \
 			--after-install scripts/rpm/post-install.sh \
 			--before-install scripts/rpm/pre-install.sh \
@@ -394,9 +401,6 @@ $(include_packages):
 
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOARCH := amd64
-
-static_linux_amd64.tar.gz: export cgo := -nocgo
-static_linux_amd64.tar.gz: export CGO_ENABLED := 0
 
 i386.deb i386.rpm linux_i386.tar.gz: export GOOS := linux
 i386.deb i386.rpm linux_i386.tar.gz: export GOARCH := 386
@@ -475,6 +479,6 @@ windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 %.zip: export pkg := zip
 %.zip: export prefix := /
 
-%.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)$(cgo)-$(pkg)/telegraf-$(version)
-%.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)$(cgo)/telegraf$(EXEEXT)
+%.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)-$(pkg)/telegraf-$(version)
+%.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)/telegraf$(EXEEXT)
 %.deb %.rpm %.tar.gz %.zip: export LDFLAGS = -w -s

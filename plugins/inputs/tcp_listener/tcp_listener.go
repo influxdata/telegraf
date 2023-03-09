@@ -127,9 +127,8 @@ func (t *TCPListener) Stop() {
 	t.Lock()
 	defer t.Unlock()
 	close(t.done)
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	t.listener.Close()
+
+	t.listener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 
 	// Close all open TCP connections
 	//  - get all conns from the t.conns map and put into slice
@@ -142,9 +141,7 @@ func (t *TCPListener) Stop() {
 	}
 	t.cleanup.Unlock()
 	for _, conn := range conns {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		conn.Close()
+		conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 	}
 
 	t.wg.Wait()
@@ -170,10 +167,16 @@ func (t *TCPListener) tcpListen() {
 
 			select {
 			case <-t.accept:
+				// generate a random id for this TCPConn
+				id, err := internal.RandomString(6)
+				if err != nil {
+					t.Log.Errorf("generating a random id for TCP connection failed: %v", err)
+					return
+				}
+
 				// not over connection limit, handle the connection properly.
 				t.wg.Add(1)
-				// generate a random id for this TCPConn
-				id := internal.RandomString(6)
+
 				t.remember(id, conn)
 				go t.handler(conn, id)
 			default:
@@ -190,8 +193,8 @@ func (t *TCPListener) refuser(conn *net.TCPConn) {
 	fmt.Fprintf(conn, "Telegraf maximum concurrent TCP connections (%d)"+
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)
-	//nolint:errcheck,revive
-	conn.Close()
+
+	conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 	t.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	t.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }

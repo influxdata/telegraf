@@ -3,6 +3,7 @@ package modbus
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -25,29 +26,41 @@ var sampleConfigStart string
 var sampleConfigEnd string
 
 type ModbusWorkarounds struct {
-	AfterConnectPause config.Duration `toml:"pause_after_connect"`
-	PollPause         config.Duration `toml:"pause_between_requests"`
-	CloseAfterGather  bool            `toml:"close_connection_after_gather"`
-	OnRequestPerField bool            `toml:"one_request_per_field"`
+	AfterConnectPause       config.Duration `toml:"pause_after_connect"`
+	PollPause               config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather        bool            `toml:"close_connection_after_gather"`
+	OnRequestPerField       bool            `toml:"one_request_per_field"`
+	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
+}
+
+// According to github.com/grid-x/serial
+type RS485Config struct {
+	DelayRtsBeforeSend config.Duration `toml:"delay_rts_before_send"`
+	DelayRtsAfterSend  config.Duration `toml:"delay_rts_after_send"`
+	RtsHighDuringSend  bool            `toml:"rts_high_during_send"`
+	RtsHighAfterSend   bool            `toml:"rts_high_after_send"`
+	RxDuringTx         bool            `toml:"rx_during_tx"`
 }
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name             string            `toml:"name"`
-	Controller       string            `toml:"controller"`
-	TransmissionMode string            `toml:"transmission_mode"`
-	BaudRate         int               `toml:"baud_rate"`
-	DataBits         int               `toml:"data_bits"`
-	Parity           string            `toml:"parity"`
-	StopBits         int               `toml:"stop_bits"`
-	Timeout          config.Duration   `toml:"timeout"`
-	Retries          int               `toml:"busy_retries"`
-	RetriesWaitTime  config.Duration   `toml:"busy_retries_wait"`
-	DebugConnection  bool              `toml:"debug_connection"`
-	Workarounds      ModbusWorkarounds `toml:"workarounds"`
-	Log              telegraf.Logger   `toml:"-"`
-	// Register configuration
-	ConfigurationType string `toml:"configuration_type"`
+	Name              string            `toml:"name"`
+	Controller        string            `toml:"controller"`
+	TransmissionMode  string            `toml:"transmission_mode"`
+	BaudRate          int               `toml:"baud_rate"`
+	DataBits          int               `toml:"data_bits"`
+	Parity            string            `toml:"parity"`
+	StopBits          int               `toml:"stop_bits"`
+	RS485             *RS485Config      `toml:"rs485"`
+	Timeout           config.Duration   `toml:"timeout"`
+	Retries           int               `toml:"busy_retries"`
+	RetriesWaitTime   config.Duration   `toml:"busy_retries_wait"`
+	DebugConnection   bool              `toml:"debug_connection"`
+	Workarounds       ModbusWorkarounds `toml:"workarounds"`
+	ConfigurationType string            `toml:"configuration_type"`
+	Log               telegraf.Logger   `toml:"-"`
+
+	// Configuration type specific settings
 	ConfigurationOriginal
 	ConfigurationPerRequest
 
@@ -66,6 +79,14 @@ type requestSet struct {
 	discrete []request
 	holding  []request
 	input    []request
+}
+
+func (r requestSet) Empty() bool {
+	l := len(r.coil)
+	l += len(r.discrete)
+	l += len(r.holding)
+	l += len(r.input)
+	return l == 0
 }
 
 type field struct {
@@ -126,18 +147,18 @@ func (m *Modbus) Init() error {
 
 	// Check and process the configuration
 	if err := cfg.Check(); err != nil {
-		return fmt.Errorf("configuration invalid: %v", err)
+		return fmt.Errorf("configuration invalid: %w", err)
 	}
 
 	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process configuration: %v", err)
+		return fmt.Errorf("cannot process configuration: %w", err)
 	}
 	m.requests = r
 
 	// Setup client
 	if err := m.initClient(); err != nil {
-		return fmt.Errorf("initializing client failed: %v", err)
+		return fmt.Errorf("initializing client failed: %w", err)
 	}
 	for slaveID, rqs := range m.requests {
 		var nHoldingRegs, nInputsRegs, nDiscreteRegs, nCoilRegs uint16
@@ -183,8 +204,8 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
 		if err := m.readSlaveData(slaveID, requests); err != nil {
 			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
-			mberr, ok := err.(*mb.Error)
-			if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+			var mbErr *mb.Error
+			if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 				m.Log.Debugf("Reconnecting to %s...", m.Controller)
 				if err := m.disconnect(); err != nil {
 					return fmt.Errorf("disconnecting failed: %w", err)
@@ -275,6 +296,14 @@ func (m *Modbus) initClient() error {
 			if m.DebugConnection {
 				handler.Logger = m
 			}
+			if m.RS485 != nil {
+				handler.RS485.Enabled = true
+				handler.RS485.DelayRtsBeforeSend = time.Duration(m.RS485.DelayRtsBeforeSend)
+				handler.RS485.DelayRtsAfterSend = time.Duration(m.RS485.DelayRtsAfterSend)
+				handler.RS485.RtsHighDuringSend = m.RS485.RtsHighDuringSend
+				handler.RS485.RtsHighAfterSend = m.RS485.RtsHighAfterSend
+				handler.RS485.RxDuringTx = m.RS485.RxDuringTx
+			}
 			m.handler = handler
 		case "ASCII":
 			handler := mb.NewASCIIClientHandler(path)
@@ -285,6 +314,14 @@ func (m *Modbus) initClient() error {
 			handler.StopBits = m.StopBits
 			if m.DebugConnection {
 				handler.Logger = m
+			}
+			if m.RS485 != nil {
+				handler.RS485.Enabled = true
+				handler.RS485.DelayRtsBeforeSend = time.Duration(m.RS485.DelayRtsBeforeSend)
+				handler.RS485.DelayRtsAfterSend = time.Duration(m.RS485.DelayRtsAfterSend)
+				handler.RS485.RtsHighDuringSend = m.RS485.RtsHighDuringSend
+				handler.RS485.RtsHighAfterSend = m.RS485.RtsHighAfterSend
+				handler.RS485.RxDuringTx = m.RS485.RxDuringTx
 			}
 			m.handler = handler
 		default:
@@ -328,8 +365,8 @@ func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
 		}
 
 		// Exit in case a non-recoverable error occurred
-		mberr, ok := err.(*mb.Error)
-		if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+		var mbErr *mb.Error
+		if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 			return err
 		}
 

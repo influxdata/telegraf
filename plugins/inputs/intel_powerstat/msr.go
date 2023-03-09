@@ -33,6 +33,18 @@ const (
 	turboRatioLimit2Location           = 0x1AF
 	atomCoreTurboRatiosLocation        = 0x66C
 	uncorePerfStatusLocation           = 0x621
+	platformInfo                       = 0xCE
+	fsbFreq                            = 0xCD
+)
+
+const (
+	msrTurboRatioLimitString     = "MSR_TURBO_RATIO_LIMIT"
+	msrTurboRatioLimit1String    = "MSR_TURBO_RATIO_LIMIT1"
+	msrTurboRatioLimit2String    = "MSR_TURBO_RATIO_LIMIT2"
+	msrAtomCoreTurboRatiosString = "MSR_ATOM_CORE_TURBO_RATIOS"
+	msrUncorePerfStatusString    = "MSR_UNCORE_PERF_STATUS"
+	msrPlatformInfoString        = "MSR_PLATFORM_INFO"
+	msrFSBFreqString             = "MSR_FSB_FREQ"
 )
 
 // msrService is responsible for interactions with MSR.
@@ -73,7 +85,7 @@ func (m *msrServiceImpl) retrieveCPUFrequencyForCore(core string) (float64, erro
 	}
 	cpuFreqFile, err := os.Open(cpuFreqPath)
 	if err != nil {
-		return 0, fmt.Errorf("error opening scaling_cur_freq file on path %s, err: %v", cpuFreqPath, err)
+		return 0, fmt.Errorf("error opening scaling_cur_freq file on path %q: %w", cpuFreqPath, err)
 	}
 	defer cpuFreqFile.Close()
 
@@ -84,7 +96,7 @@ func (m *msrServiceImpl) retrieveCPUFrequencyForCore(core string) (float64, erro
 func (m *msrServiceImpl) retrieveUncoreFrequency(socketID string, typeFreq string, kind string, die string) (float64, error) {
 	uncoreFreqPath, err := createUncoreFreqPath(socketID, typeFreq, kind, die)
 	if err != nil {
-		return 0, fmt.Errorf("unable to create uncore freq read path for socketID %s, and frequency type %s err: %v", socketID, typeFreq, err)
+		return 0, fmt.Errorf("unable to create uncore freq read path for socketID %q, and frequency type %q: %w", socketID, typeFreq, err)
 	}
 	err = checkFile(uncoreFreqPath)
 	if err != nil {
@@ -92,7 +104,7 @@ func (m *msrServiceImpl) retrieveUncoreFrequency(socketID string, typeFreq strin
 	}
 	uncoreFreqFile, err := os.Open(uncoreFreqPath)
 	if err != nil {
-		return 0, fmt.Errorf("error opening uncore frequncy file on %s, err: %v", uncoreFreqPath, err)
+		return 0, fmt.Errorf("error opening uncore frequncy file on %q: %w", uncoreFreqPath, err)
 	}
 	defer uncoreFreqFile.Close()
 
@@ -132,13 +144,13 @@ func (m *msrServiceImpl) openAndReadMsr(core string) error {
 	}
 	msrFile, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("error opening MSR file on path %s, err: %v", path, err)
+		return fmt.Errorf("error opening MSR file on path %q: %w", path, err)
 	}
 	defer msrFile.Close()
 
 	err = m.readDataFromMsr(core, msrFile)
 	if err != nil {
-		return fmt.Errorf("error reading data from MSR for core %s, err: %v", core, err)
+		return fmt.Errorf("error reading data from MSR for core %q: %w", core, err)
 	}
 	return nil
 }
@@ -151,22 +163,26 @@ func (m *msrServiceImpl) readSingleMsr(core string, msr string) (uint64, error) 
 	}
 	msrFile, err := os.Open(path)
 	if err != nil {
-		return 0, fmt.Errorf("error opening MSR file on path %s, err: %v", path, err)
+		return 0, fmt.Errorf("error opening MSR file on path %q: %w", path, err)
 	}
 	defer msrFile.Close()
 
 	var msrAddress int64
 	switch msr {
-	case "MSR_TURBO_RATIO_LIMIT":
+	case msrTurboRatioLimitString:
 		msrAddress = turboRatioLimitLocation
-	case "MSR_TURBO_RATIO_LIMIT1":
+	case msrTurboRatioLimit1String:
 		msrAddress = turboRatioLimit1Location
-	case "MSR_TURBO_RATIO_LIMIT2":
+	case msrTurboRatioLimit2String:
 		msrAddress = turboRatioLimit2Location
-	case "MSR_ATOM_CORE_TURBO_RATIOS":
+	case msrAtomCoreTurboRatiosString:
 		msrAddress = atomCoreTurboRatiosLocation
-	case "MSR_UNCORE_PERF_STATUS":
+	case msrUncorePerfStatusString:
 		msrAddress = uncorePerfStatusLocation
+	case msrPlatformInfoString:
+		msrAddress = platformInfo
+	case msrFSBFreqString:
+		msrAddress = fsbFreq
 	default:
 		return 0, fmt.Errorf("incorect name of MSR %s", msr)
 	}
@@ -197,7 +213,7 @@ func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error 
 
 				err := m.readValueFromFileAtOffset(ctx, ch, reader, off)
 				if err != nil {
-					return fmt.Errorf("error reading MSR file, err: %v", err)
+					return fmt.Errorf("error reading MSR file: %w", err)
 				}
 
 				return nil
@@ -215,7 +231,7 @@ func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error 
 	newTemp := <-msrOffsetsWithChannels[temperatureLocation]
 
 	if err := g.Wait(); err != nil {
-		return fmt.Errorf("received error during reading MSR values in goroutines: %v", err)
+		return fmt.Errorf("received error during reading MSR values in goroutines: %w", err)
 	}
 
 	m.cpuCoresData[core].c3Delta = newC3 - m.cpuCoresData[core].c3

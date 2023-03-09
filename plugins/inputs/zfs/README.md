@@ -11,12 +11,13 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, pools and datasets
+# This plugin ONLY supports Linux & FreeBSD
 [[inputs.zfs]]
   ## ZFS kstat path. Ignored on FreeBSD
   ## If not specified, then default is:

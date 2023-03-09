@@ -64,7 +64,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						// prior to returning.
 						newMetrics = append(newMetrics, fromFieldMetric...)
 					default:
-						p.Log.Errorf("field '%s' not a string, skipping", key)
+						p.Log.Errorf("field %q not a string, skipping", key)
 					}
 				}
 			}

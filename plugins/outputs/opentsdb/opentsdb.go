@@ -67,17 +67,17 @@ func (o *OpenTSDB) Connect() error {
 	// Test Connection to OpenTSDB Server
 	u, err := url.Parse(o.Host)
 	if err != nil {
-		return fmt.Errorf("error in parsing host url: %s", err.Error())
+		return fmt.Errorf("error in parsing host url: %w", err)
 	}
 
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB TCP address cannot be resolved: %s", err)
+		return fmt.Errorf("OpenTSDB TCP address cannot be resolved: %w", err)
 	}
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB Telnet connect fail: %s", err)
+		return fmt.Errorf("OpenTSDB Telnet connect fail: %w", err)
 	}
 	defer connection.Close()
 	return nil
@@ -90,7 +90,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 
 	u, err := url.Parse(o.Host)
 	if err != nil {
-		return fmt.Errorf("error in parsing host url: %s", err.Error())
+		return fmt.Errorf("error in parsing host url: %w", err)
 	}
 
 	if u.Scheme == "" || u.Scheme == "tcp" {
@@ -187,9 +187,9 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 				sanitize(fmt.Sprintf("%s%s%s%s", o.Prefix, m.Name(), o.Separator, fieldName)),
 				now, metricValue, tags)
 
-			_, err := connection.Write([]byte(messageLine))
+			_, err = connection.Write([]byte(messageLine))
 			if err != nil {
-				return fmt.Errorf("OpenTSDB: Telnet writing error %s", err.Error())
+				return fmt.Errorf("telnet writing error: %w", err)
 			}
 		}
 	}

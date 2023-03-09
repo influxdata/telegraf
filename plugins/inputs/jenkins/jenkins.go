@@ -84,7 +84,7 @@ func (j *Jenkins) Gather(acc telegraf.Accumulator) error {
 func (j *Jenkins) newHTTPClient() (*http.Client, error) {
 	tlsCfg, err := j.ClientConfig.TLSConfig()
 	if err != nil {
-		return nil, fmt.Errorf("error parse jenkins config[%s]: %v", j.URL, err)
+		return nil, fmt.Errorf("error parse jenkins config %q: %w", j.URL, err)
 	}
 	return &http.Client{
 		Transport: &http.Transport{
@@ -118,11 +118,11 @@ func (j *Jenkins) initialize(client *http.Client) error {
 	// init filters
 	j.jobFilter, err = filter.NewIncludeExcludeFilter(j.JobInclude, j.JobExclude)
 	if err != nil {
-		return fmt.Errorf("error compiling job filters[%s]: %v", j.URL, err)
+		return fmt.Errorf("error compiling job filters %q: %w", j.URL, err)
 	}
 	j.nodeFilter, err = filter.NewIncludeExcludeFilter(j.NodeInclude, j.NodeExclude)
 	if err != nil {
-		return fmt.Errorf("error compiling node filters[%s]: %v", j.URL, err)
+		return fmt.Errorf("error compiling node filters %q: %w", j.URL, err)
 	}
 
 	// init tcp pool with default value

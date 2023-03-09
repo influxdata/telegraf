@@ -76,7 +76,7 @@ scan:
 		irqs = append(irqs, *irq)
 	}
 	if scanner.Err() != nil {
-		return nil, fmt.Errorf("error scanning file: %s", scanner.Err())
+		return nil, fmt.Errorf("error scanning file: %w", scanner.Err())
 	}
 	return irqs, nil
 }
@@ -116,7 +116,7 @@ func parseFile(file string) ([]IRQ, error) {
 
 	irqs, err := parseInterrupts(f)
 	if err != nil {
-		return nil, fmt.Errorf("parsing %s: %s", file, err)
+		return nil, fmt.Errorf("parsing %q: %w", file, err)
 	}
 	return irqs, nil
 }

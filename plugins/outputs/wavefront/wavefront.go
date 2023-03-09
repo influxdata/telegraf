@@ -11,6 +11,7 @@ import (
 	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
@@ -22,7 +23,7 @@ const maxTagLength = 254
 
 type Wavefront struct {
 	URL                  string                          `toml:"url"`
-	Token                string                          `toml:"token"`
+	Token                config.Secret                   `toml:"token"`
 	Host                 string                          `toml:"host" deprecated:"2.4.0;use url instead"`
 	Port                 int                             `toml:"port" deprecated:"2.4.0;use url instead"`
 	Prefix               string                          `toml:"prefix"`
@@ -53,10 +54,20 @@ func (*Wavefront) SampleConfig() string {
 	return sampleConfig
 }
 
-func senderURLFromURLAndToken(rawURL, token string) (string, error) {
-	newURL, err := url.Parse(rawURL)
+func (w *Wavefront) senderURLFromURLAndToken() (string, error) {
+	newURL, err := url.Parse(w.URL)
 	if err != nil {
-		return "", fmt.Errorf("could not parse the provided Url: %s", rawURL)
+		return "", fmt.Errorf("could not parse the provided URL: %s", w.URL)
+	}
+
+	token := "DUMMY_TOKEN"
+	if !w.Token.Empty() {
+		b, err := w.Token.Get()
+		if err != nil {
+			return "", fmt.Errorf("getting token failed: %w", err)
+		}
+		token = string(b)
+		config.ReleaseSecret(b)
 	}
 	newURL.User = url.User(token)
 
@@ -75,7 +86,7 @@ func (w *Wavefront) Connect() error {
 	var connectionURL string
 	if w.URL != "" {
 		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
-		connectionURLWithToken, err := senderURLFromURLAndToken(w.URL, w.Token)
+		connectionURLWithToken, err := w.senderURLFromURLAndToken()
 		if err != nil {
 			return err
 		}
@@ -115,9 +126,9 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 					if flushErr := w.sender.Flush(); flushErr != nil {
 						w.Log.Errorf("wavefront flushing error: %v", flushErr)
 					}
-					return fmt.Errorf("wavefront sending error: %v", err)
+					return fmt.Errorf("wavefront sending error: %w", err)
 				}
-				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
+				w.Log.Errorf("non-retryable error during Wavefront.Write: %w", err)
 				w.Log.Debugf(
 					"Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ",
 					point.Metric,
@@ -287,7 +298,6 @@ func (w *Wavefront) Close() error {
 func init() {
 	outputs.Add("wavefront", func() telegraf.Output {
 		return &Wavefront{
-			Token:                "DUMMY_TOKEN",
 			MetricSeparator:      ".",
 			ConvertPaths:         true,
 			ConvertBool:          true,

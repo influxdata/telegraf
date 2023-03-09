@@ -54,10 +54,11 @@ type Config struct {
 	SASLAuth
 	tls.ClientConfig
 
-	Version          string `toml:"version"`
-	ClientID         string `toml:"client_id"`
-	CompressionCodec int    `toml:"compression_codec"`
-	EnableTLS        *bool  `toml:"enable_tls"`
+	Version          string           `toml:"version"`
+	ClientID         string           `toml:"client_id"`
+	CompressionCodec int              `toml:"compression_codec"`
+	EnableTLS        *bool            `toml:"enable_tls"`
+	KeepAlivePeriod  *tgConf.Duration `toml:"keep_alive_period"`
 
 	MetadataRetryMax         int             `toml:"metadata_retry_max"`
 	MetadataRetryType        string          `toml:"metadata_retry_type"`
@@ -116,6 +117,11 @@ func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 		if k.EnableTLS == nil {
 			config.Net.TLS.Enable = true
 		}
+	}
+
+	if k.KeepAlivePeriod != nil {
+		// Defaults to OS setting (15s currently)
+		config.Net.KeepAlive = time.Duration(*k.KeepAlivePeriod)
 	}
 
 	if k.MetadataFull != nil {

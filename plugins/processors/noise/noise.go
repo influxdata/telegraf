@@ -94,7 +94,7 @@ func (*Noise) SampleConfig() string {
 func (p *Noise) Init() error {
 	fieldFilter, err := filter.NewIncludeExcludeFilter(p.IncludeFields, p.ExcludeFields)
 	if err != nil {
-		return fmt.Errorf("creating fieldFilter failed: %v", err)
+		return fmt.Errorf("creating fieldFilter failed: %w", err)
 	}
 	p.fieldFilter = fieldFilter
 

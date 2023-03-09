@@ -19,7 +19,6 @@ import (
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/debug"
 	"github.com/gopcua/opcua/ua"
-	"github.com/pkg/errors"
 )
 
 // SELF SIGNED CERT FUNCTIONS
@@ -47,7 +46,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate private key: %s", err)
+		return "", "", fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	notBefore := time.Now()
@@ -56,7 +55,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate serial number: %s", err)
+		return "", "", fmt.Errorf("failed to generate serial number: %w", err)
 	}
 
 	template := x509.Certificate{
@@ -87,33 +86,33 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create certificate: %s", err)
+		return "", "", fmt.Errorf("failed to create certificate: %w", err)
 	}
 
 	certOut, err := os.Create(certFile)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to open %s for writing: %s", certFile, err)
+		return "", "", fmt.Errorf("failed to open %s for writing: %w", certFile, err)
 	}
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		return "", "", fmt.Errorf("failed to write data to %s: %s", certFile, err)
+		return "", "", fmt.Errorf("failed to write data to %s: %w", certFile, err)
 	}
 	if err := certOut.Close(); err != nil {
-		return "", "", fmt.Errorf("error closing %s: %s", certFile, err)
+		return "", "", fmt.Errorf("error closing %s: %w", certFile, err)
 	}
 
 	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to open %s for writing: %s", keyFile, err)
+		return "", "", fmt.Errorf("failed to open %s for writing: %w", keyFile, err)
 	}
 	keyBlock, err := pemBlockForKey(priv)
 	if err != nil {
-		return "", "", fmt.Errorf("error generating block: %v", err)
+		return "", "", fmt.Errorf("error generating block: %w", err)
 	}
 	if err := pem.Encode(keyOut, keyBlock); err != nil {
-		return "", "", fmt.Errorf("failed to write data to %s: %s", keyFile, err)
+		return "", "", fmt.Errorf("failed to write data to %s: %w", keyFile, err)
 	}
 	if err := keyOut.Close(); err != nil {
-		return "", "", fmt.Errorf("error closing %s: %s", keyFile, err)
+		return "", "", fmt.Errorf("error closing %s: %w", keyFile, err)
 	}
 
 	return certFile, keyFile, nil
@@ -137,7 +136,7 @@ func pemBlockForKey(priv interface{}) (*pem.Block, error) {
 	case *ecdsa.PrivateKey:
 		b, err := x509.MarshalECPrivateKey(k)
 		if err != nil {
-			return nil, fmt.Errorf("unable to marshal ECDSA private key: %v", err)
+			return nil, fmt.Errorf("unable to marshal ECDSA private key: %w", err)
 		}
 		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}, nil
 	default:
@@ -282,7 +281,7 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	// Check that the selected endpoint is a valid combo
 	err = validateEndpointConfig(endpoints, secPolicy, secMode, authMode)
 	if err != nil {
-		return nil, fmt.Errorf("error validating input: %s", err)
+		return nil, fmt.Errorf("error validating input: %w", err)
 	}
 
 	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))
@@ -304,13 +303,13 @@ func (o *OpcUAClient) generateAuth(a string, cert []byte, un, pw string) (ua.Use
 
 		if un == "" {
 			if err != nil {
-				return 0, nil, fmt.Errorf("error reading the username input: %s", err)
+				return 0, nil, fmt.Errorf("error reading the username input: %w", err)
 			}
 		}
 
 		if pw == "" {
 			if err != nil {
-				return 0, nil, fmt.Errorf("error reading the password input: %s", err)
+				return 0, nil, fmt.Errorf("error reading the password input: %w", err)
 			}
 		}
 
@@ -345,6 +344,5 @@ func validateEndpointConfig(endpoints []*ua.EndpointDescription, secPolicy strin
 		}
 	}
 
-	err := errors.Errorf("server does not support an endpoint with security : %s , %s", secPolicy, secMode)
-	return err
+	return fmt.Errorf("server does not support an endpoint with security: %q, %q", secPolicy, secMode)
 }

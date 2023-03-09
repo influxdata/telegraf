@@ -1,0 +1,3 @@
+interfaces_logical_status,descr/description=Core:PacketFabric:abc-def-dmn1-staging:{PF-BC-DAL-SFO-12345},index=1410,name=xe-0/1/1,path=/interfaces/interface/subinterfaces/subinterface,source=127.0.0.1 oper_status="UP" 1674081667250570407
+interfaces_logical_status,descr/description=Core:PacketFabric:uvw-xyz-dmn1-staging:{PF-BC-CHI-SFO-67890},index=1412,name=xe-0/1/1,path=/interfaces/interface/subinterfaces/subinterface,source=127.0.0.1 oper_status="UP" 1674081667250784367
+interfaces_logical_status,index=32767,name=xe-0/1/1,path=/interfaces/interface/subinterfaces/subinterface,source=127.0.0.1 oper_status="UP" 1674081667250994907

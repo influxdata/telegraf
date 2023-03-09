@@ -326,7 +326,7 @@ func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
 			rsl.listen(ctx)
 		}()
 	default:
-		return fmt.Errorf("unknown protocol '%s' in '%s'", protocol, rsl.ServiceAddress)
+		return fmt.Errorf("unknown protocol %q in %q", protocol, rsl.ServiceAddress)
 	}
 
 	return nil

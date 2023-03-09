@@ -11,17 +11,27 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `address` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
 ```toml @sample.conf
 # Read metrics from one or many postgresql servers
 [[inputs.postgresql]]
-  ## specify address via a url matching:
+  ## Specify address via a url matching:
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]&statement_timeout=...
   ## or a simple string:
   ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
+  ## Users can pass the path to the socket as the host value to use a socket
+  ## connection (e.g. `/var/run/postgresql`).
   ##
   ## All connection parameters are optional.
   ##
@@ -31,6 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## to grab metrics for.
   ##
   address = "host=localhost user=postgres sslmode=disable"
+
   ## A custom name for the database that will be used as the "server" tag in the
   ## measurement output. If not specified, a default one generated from
   ## the connection address is used.
@@ -69,6 +80,9 @@ Or via an url matching:
 ```text
 postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]
 ```
+
+Users can pass the path to the socket as the host value to use a socket
+connection (e.g. `/var/run/postgresql`).
 
 It is also possible to specify a query timeout maximum execution time (in ms)
 for any individual statement passed over the connection

@@ -39,11 +39,10 @@ func TestConnectAndWrite(t *testing.T) {
 		QueueName:     "test_queue",
 		HeartBeatSend: 0,
 		HeartBeatRec:  0,
+		Log:           testutil.Logger{},
 		serialize:     s,
 	}
-	err = st.Connect()
-	require.NoError(t, err)
+	require.NoError(t, st.Connect())
 
-	err = st.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, st.Write(testutil.MockMetrics()))
 }

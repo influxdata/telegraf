@@ -220,11 +220,8 @@ func (n *mockNSQD) handle(conn net.Conn) {
 	}
 
 exit:
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	n.tcpListener.Close()
-	//nolint:errcheck,revive
-	conn.Close()
+	n.tcpListener.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+	conn.Close()          //nolint:revive // ignore the returned error as we cannot do anything about it anyway
 }
 
 func framedResponse(frameType int32, data []byte) ([]byte, error) {

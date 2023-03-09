@@ -3,13 +3,15 @@ package opcua_listener
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
+
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
-	"reflect"
-	"time"
 )
 
 type SubscribeClientConfig struct {
@@ -98,14 +100,13 @@ func (o *SubscribeClient) StartStreamValues(ctx context.Context) (<-chan telegra
 
 	resp, err := o.sub.MonitorWithContext(ctx, ua.TimestampsToReturnBoth, o.monitoredItemsReqs...)
 	if err != nil {
-		o.Log.Error("Failed to create monitored items ", err)
-		return nil, fmt.Errorf("failed to start monitoring items %s", err)
+		return nil, fmt.Errorf("failed to start monitoring items: %w", err)
 	}
 	o.Log.Debug("Monitoring items")
 
 	for _, res := range resp.Results {
 		if !o.StatusCodeOK(res.StatusCode) {
-			return nil, fmt.Errorf("creating monitored item failed with status code %d", res.StatusCode)
+			return nil, fmt.Errorf("creating monitored item failed with status code: %w", res.StatusCode)
 		}
 	}
 
@@ -140,7 +141,7 @@ func (o *SubscribeClient) processReceivedNotifications() {
 					i := int(monitoredItemNotif.ClientHandle)
 					oldValue := o.LastReceivedData[i].Value
 					o.UpdateNodeValue(i, monitoredItemNotif.Value)
-					o.Log.Debugf("Data change notification: node '%s' value changed from %f to %f",
+					o.Log.Debugf("Data change notification: node %q value changed from %f to %f",
 						o.NodeIDs[i].String(), oldValue, o.LastReceivedData[i].Value)
 					o.metrics <- o.MetricForNode(i)
 				}

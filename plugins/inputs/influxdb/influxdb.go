@@ -123,6 +123,12 @@ type memstats struct {
 	GCCPUFraction float64    `json:"GCCPUFraction"`
 }
 
+type system struct {
+	CurrentTime string `json:"currentTime"`
+	Started     string `json:"started"`
+	Uptime      uint64 `json:"uptime"`
+}
+
 // Gathers data from a particular URL
 // Parameters:
 //
@@ -189,6 +195,24 @@ func (i *InfluxDB) gatherURL(
 		}
 
 		if keyStr, ok := key.(string); ok {
+			if keyStr == "system" {
+				var p system
+				if err := dec.Decode(&p); err != nil {
+					continue
+				}
+
+				acc.AddFields("influxdb_system",
+					map[string]interface{}{
+						"current_time": p.CurrentTime,
+						"started":      p.Started,
+						"uptime":       p.Uptime,
+					},
+					map[string]string{
+						"url": url,
+					},
+				)
+			}
+
 			if keyStr == "memstats" {
 				var m memstats
 				if err := dec.Decode(&m); err != nil {

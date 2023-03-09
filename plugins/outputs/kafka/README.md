@@ -10,7 +10,16 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `sasl_username`,
+`sasl_password` and `sasl_access_token` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -95,7 +104,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  2 : Snappy
   ##  3 : LZ4
   ##  4 : ZSTD
-   # compression_codec = 0
+  # compression_codec = 0
 
   ## Idempotent Writes
   ## If enabled, exactly one copy of each message is written.
@@ -132,6 +141,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Period between keep alive probes.
+  ## Defaults to the OS configuration if not specified or zero.
+  # keep_alive_period = "15s"
 
   ## Optional SOCKS5 proxy to use when connecting to brokers
   # socks5_enabled = true

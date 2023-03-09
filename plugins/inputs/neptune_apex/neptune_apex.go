@@ -94,8 +94,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	r := xmlReply{}
 	err := xml.Unmarshal(data, &r)
 	if err != nil {
-		return fmt.Errorf("unable to unmarshal XML: %v\nXML DATA: %q",
-			err, data)
+		return fmt.Errorf("unable to unmarshal XML: %w\nXML DATA: %q", err, data)
 	}
 
 	mainFields := map[string]interface{}{
@@ -143,9 +142,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 				strings.TrimSpace(r.Probe[pos].Value), 64)
 			if err != nil {
 				acc.AddError(
-					fmt.Errorf(
-						"cannot convert string value %q to float64: %v",
-						r.Probe[pos].Value, err))
+					fmt.Errorf("cannot convert string value %q to float64: %w", r.Probe[pos].Value, err))
 				continue // Skip the whole outlet.
 			}
 			fields["watt"] = value
@@ -157,9 +154,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 				strings.TrimSpace(r.Probe[pos].Value), 64)
 			if err != nil {
 				acc.AddError(
-					fmt.Errorf(
-						"cannot convert string value %q to float64: %v",
-						r.Probe[pos].Value, err))
+					fmt.Errorf("cannot convert string value %q to float64: %w", r.Probe[pos].Value, err))
 				break // // Skip the whole outlet.
 			}
 			fields["amp"] = value
@@ -196,9 +191,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	for _, p := range r.Probe {
 		value, err := strconv.ParseFloat(strings.TrimSpace(p.Value), 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf(
-				"cannot convert string value %q to float64: %v",
-				p.Value, err))
+			acc.AddError(fmt.Errorf("cannot convert string value %q to float64: %w", p.Value, err))
 			continue
 		}
 		fields := map[string]interface{}{
@@ -246,7 +239,7 @@ func parseTime(val string, tz float64) (time.Time, error) {
 	ts := fmt.Sprintf("%s %s", val, tzs)
 	t, err := time.Parse(timeLayout, ts)
 	if err != nil {
-		return time.Now(), fmt.Errorf("unable to parse %q (%v)", ts, err)
+		return time.Now(), fmt.Errorf("unable to parse %q: %w", ts, err)
 	}
 	return t, nil
 }
@@ -255,7 +248,7 @@ func (n *NeptuneApex) sendRequest(server string) ([]byte, error) {
 	url := fmt.Sprintf("%s/cgi-bin/status.xml", server)
 	resp, err := n.httpClient.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("http GET failed: %v", err)
+		return nil, fmt.Errorf("http GET failed: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -266,7 +259,7 @@ func (n *NeptuneApex) sendRequest(server string) ([]byte, error) {
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read output from %q: %v", url, err)
+		return nil, fmt.Errorf("unable to read output from %q: %w", url, err)
 	}
 	return body, nil
 }

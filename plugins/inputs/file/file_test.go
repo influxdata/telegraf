@@ -11,9 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -370,4 +372,81 @@ func TestStatefulParsers(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCSVBehavior(t *testing.T) {
+	// Setup the CSV parser creator function
+	parserFunc := func() (telegraf.Parser, error) {
+		parser := &csv.Parser{
+			MetricName:     "file",
+			HeaderRowCount: 1,
+		}
+		err := parser.Init()
+		return parser, err
+	}
+
+	// Setup the plugin
+	plugin := &File{
+		Files: []string{filepath.Join("testdata", "csv_behavior_input.csv")},
+	}
+	plugin.SetParserFunc(parserFunc)
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"file",
+			map[string]string{},
+			map[string]interface{}{
+				"a": int64(1),
+				"b": int64(2),
+			},
+			time.Unix(0, 1),
+		),
+		metric.New(
+			"file",
+			map[string]string{},
+			map[string]interface{}{
+				"a": int64(3),
+				"b": int64(4),
+			},
+			time.Unix(0, 2),
+		),
+		metric.New(
+			"file",
+			map[string]string{},
+			map[string]interface{}{
+				"a": int64(1),
+				"b": int64(2),
+			},
+			time.Unix(0, 3),
+		),
+		metric.New(
+			"file",
+			map[string]string{},
+			map[string]interface{}{
+				"a": int64(3),
+				"b": int64(4),
+			},
+			time.Unix(0, 4),
+		),
+	}
+
+	var acc testutil.Accumulator
+	// Run gather once
+	require.NoError(t, plugin.Gather(&acc))
+	// Run gather a second time
+	require.NoError(t, plugin.Gather(&acc))
+	require.Eventuallyf(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return acc.NMetrics() >= uint64(len(expected))
+	}, time.Second, 100*time.Millisecond, "Expected %d metrics found %d", len(expected), acc.NMetrics())
+
+	// Check the result
+	options := []cmp.Option{
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
 }

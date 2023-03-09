@@ -18,7 +18,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -36,7 +36,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # password = "pa$$word"
 ```
 
-## Example output of gathered metrics
+## Metrics
+
+## Example Output
 
 ```shell
 ➜  ~ telegraf -config telegraf.conf -input-filter solr -test

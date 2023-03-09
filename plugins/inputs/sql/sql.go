@@ -110,7 +110,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 				}
 				if !skipParsing {
 					if timestamp, err = internal.ParseTimestamp(q.TimeFormat, fieldvalue, ""); err != nil {
-						return 0, fmt.Errorf("parsing time failed: %v", err)
+						return 0, fmt.Errorf("parsing time failed: %w", err)
 					}
 				}
 			}
@@ -118,7 +118,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.tagFilter.Match(name) {
 				tagvalue, err := internal.ToString(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting tag column %q failed: %v", name, err)
+					return 0, fmt.Errorf("converting tag column %q failed: %w", name, err)
 				}
 				if v := strings.TrimSpace(tagvalue); v != "" {
 					tags[name] = v
@@ -129,7 +129,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterFloat.Match(name) {
 				v, err := internal.ToFloat64(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to float failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to float failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -138,7 +138,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterInt.Match(name) {
 				v, err := internal.ToInt64(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to int failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to int failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -147,7 +147,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterUint.Match(name) {
 				v, err := internal.ToUint64(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to uint failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to uint failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -156,7 +156,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterBool.Match(name) {
 				v, err := internal.ToBool(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to bool failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to bool failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -165,7 +165,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterString.Match(name) {
 				v, err := internal.ToString(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to string failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to string failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -255,7 +255,7 @@ func (s *SQL) Init() error {
 		if q.Script != "" {
 			query, err := os.ReadFile(q.Script)
 			if err != nil {
-				return fmt.Errorf("reading script %q failed: %v", q.Script, err)
+				return fmt.Errorf("reading script %q failed: %w", q.Script, err)
 			}
 			s.Queries[i].Query = string(query)
 		}
@@ -268,45 +268,45 @@ func (s *SQL) Init() error {
 		// Compile the tag-filter
 		tagfilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagColumnsInclude, q.TagColumnsExclude, false, false)
 		if err != nil {
-			return fmt.Errorf("creating tag filter failed: %v", err)
+			return fmt.Errorf("creating tag filter failed: %w", err)
 		}
 		s.Queries[i].tagFilter = tagfilter
 
 		// Compile the explicit type field-filter
 		fieldfilterFloat, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsFloat, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for float failed: %v", err)
+			return fmt.Errorf("creating field filter for float failed: %w", err)
 		}
 		s.Queries[i].fieldFilterFloat = fieldfilterFloat
 
 		fieldfilterInt, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsInt, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for int failed: %v", err)
+			return fmt.Errorf("creating field filter for int failed: %w", err)
 		}
 		s.Queries[i].fieldFilterInt = fieldfilterInt
 
 		fieldfilterUint, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsUint, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for uint failed: %v", err)
+			return fmt.Errorf("creating field filter for uint failed: %w", err)
 		}
 		s.Queries[i].fieldFilterUint = fieldfilterUint
 
 		fieldfilterBool, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsBool, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for bool failed: %v", err)
+			return fmt.Errorf("creating field filter for bool failed: %w", err)
 		}
 		s.Queries[i].fieldFilterBool = fieldfilterBool
 
 		fieldfilterString, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsString, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for string failed: %v", err)
+			return fmt.Errorf("creating field filter for string failed: %w", err)
 		}
 		s.Queries[i].fieldFilterString = fieldfilterString
 
 		// Compile the field-filter
 		fieldfilter, err := filter.NewIncludeExcludeFilter(q.FieldColumnsInclude, q.FieldColumnsExclude)
 		if err != nil {
-			return fmt.Errorf("creating field filter failed: %v", err)
+			return fmt.Errorf("creating field filter failed: %w", err)
 		}
 		s.Queries[i].fieldFilter = fieldfilter
 
@@ -360,7 +360,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	// Connect to the database server
 	dsn, err := s.Dsn.Get()
 	if err != nil {
-		return fmt.Errorf("getting DSN failed: %v", err)
+		return fmt.Errorf("getting DSN failed: %w", err)
 	}
 	defer config.ReleaseSecret(dsn)
 	s.Log.Debug("Connecting...")
@@ -381,7 +381,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	err = s.db.PingContext(ctx)
 	cancel()
 	if err != nil {
-		return fmt.Errorf("connecting to database failed: %v", err)
+		return fmt.Errorf("connecting to database failed: %w", err)
 	}
 
 	// Prepare the statements
@@ -391,7 +391,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 		stmt, err := s.db.PrepareContext(ctx, q.Query)
 		cancel()
 		if err != nil {
-			return fmt.Errorf("preparing query %q failed: %v", q.Query, err)
+			return fmt.Errorf("preparing query %q failed: %w", q.Query, err)
 		}
 		s.Queries[i].statement = stmt
 	}

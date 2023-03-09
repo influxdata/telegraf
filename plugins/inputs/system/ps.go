@@ -1,6 +1,7 @@
 package system
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -198,7 +199,7 @@ func (s *SystemPS) NetConntrack(perCPU bool) ([]net.ConntrackStat, error) {
 
 func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
 	m, err := disk.IOCounters(names...)
-	if err == internal.ErrNotImplemented {
+	if errors.Is(err, internal.ErrNotImplemented) {
 		return nil, nil
 	}
 
@@ -214,14 +215,7 @@ func (s *SystemPS) SwapStat() (*mem.SwapMemoryStat, error) {
 }
 
 func (s *SystemPS) Temperature() ([]host.TemperatureStat, error) {
-	temp, err := host.SensorsTemperatures()
-	if err != nil {
-		_, ok := err.(*host.Warnings)
-		if !ok {
-			return temp, err
-		}
-	}
-	return temp, nil
+	return host.SensorsTemperatures()
 }
 
 func (s *SystemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {

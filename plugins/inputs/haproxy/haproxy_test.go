@@ -170,6 +170,37 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	require.NotEmpty(t, acc.Errors)
 }
 
+func TestHaproxyGeneratesMetricsUsingTcp(t *testing.T) {
+	l, err := net.Listen("tcp", "localhost:8192")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+
+	s := statServer{}
+	go s.serverSocket(l)
+
+	r := &haproxy{
+		Servers: []string{"tcp://" + l.Addr().String()},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, r.Gather(&acc))
+
+	fields := HaproxyGetFieldValues()
+
+	tags := map[string]string{
+		"server": l.Addr().String(),
+		"proxy":  "git",
+		"sv":     "www",
+		"type":   "server",
+	}
+
+	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+
+	require.NoError(t, r.Gather(&acc))
+}
+
 // When not passing server config, we default to localhost
 // We just want to make sure we did request stat from localhost
 func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {

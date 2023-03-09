@@ -165,15 +165,15 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 
 		port := "4020"
 		if len(results) > 2 {
-			acc.AddError(fmt.Errorf("Unable to parse address %q", endpoint))
+			acc.AddError(fmt.Errorf("unable to parse address %q", endpoint))
 			continue
 		} else if len(results) == 2 {
-			if _, err := strconv.Atoi(results[1]); err == nil {
-				port = results[1]
-			} else {
-				acc.AddError(fmt.Errorf("Unable to parse port from %q", endpoint))
+			_, err := strconv.Atoi(results[1])
+			if err != nil {
+				acc.AddError(fmt.Errorf("unable to parse port from %q", endpoint))
 				continue
 			}
+			port = results[1]
 		}
 
 		st, ok := serverTypeMapping[port]
@@ -203,12 +203,10 @@ func (l *LeoFS) gatherServer(
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	defer internal.WaitTimeout(cmd, time.Second*5)
+	defer internal.WaitTimeout(cmd, time.Second*5) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 	scanner := bufio.NewScanner(stdout)
 	if !scanner.Scan() {
-		return fmt.Errorf("Unable to retrieve the node name")
+		return fmt.Errorf("unable to retrieve the node name")
 	}
 	nodeName, err := retrieveTokenAfterColon(scanner.Text())
 	if err != nil {
@@ -229,7 +227,7 @@ func (l *LeoFS) gatherServer(
 		}
 		fVal, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			return fmt.Errorf("Unable to parse the value:%s, err:%s", val, err)
+			return fmt.Errorf("unable to parse the value %q: %w", val, err)
 		}
 		fields[key] = fVal
 		i++

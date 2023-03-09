@@ -121,8 +121,8 @@ func TestConnectHTTPConfig(t *testing.T) {
 		RetentionPolicy:  "default",
 		WriteConsistency: "any",
 		Timeout:          config.Duration(5 * time.Second),
-		Username:         "guy",
-		Password:         "smiley",
+		Username:         config.NewSecret([]byte("guy")),
+		Password:         config.NewSecret([]byte("smiley")),
 		UserAgent:        "telegraf",
 		HTTPProxy:        "http://localhost:8086",
 		HTTPHeaders: map[string]string{

@@ -126,7 +126,7 @@ func (r *RavenDB) requestJSON(u string, target interface{}) error {
 
 	r.Log.Debugf("%s: %s", u, resp.Status)
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("invalid response code to request '%s': %d - %s", r.URL, resp.StatusCode, resp.Status)
+		return fmt.Errorf("invalid response code to request %q: %d - %s", r.URL, resp.StatusCode, resp.Status)
 	}
 
 	return json.NewDecoder(resp.Body).Decode(target)

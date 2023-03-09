@@ -47,17 +47,18 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Get kernel statistics from /proc/stat
+# This plugin ONLY supports Linux
 [[inputs.kernel]]
   # no configuration
 ```
 
-## Measurements & Fields
+## Metrics
 
 - kernel
   - boot_time (integer, seconds since epoch, `btime`)
@@ -67,10 +68,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - interrupts (integer, `intr`)
   - processes_forked (integer, `processes`)
   - entropy_avail (integer, `entropy_available`)
-
-## Tags
-
-None
 
 ## Example Output
 

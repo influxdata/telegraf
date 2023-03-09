@@ -4,6 +4,7 @@ package smart
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -402,14 +403,14 @@ func (m *Smart) Init() error {
 	}
 
 	if !contains(knownReadMethods, m.ReadMethod) {
-		return fmt.Errorf("provided read method `%s` is not valid", m.ReadMethod)
+		return fmt.Errorf("provided read method %q is not valid", m.ReadMethod)
 	}
 
 	err := validatePath(m.PathSmartctl)
 	if err != nil {
 		m.PathSmartctl = ""
 		//without smartctl, plugin will not be able to gather basic metrics
-		return fmt.Errorf("smartctl not found: verify that smartctl is installed and it is in your PATH (or specified in config): %s", err.Error())
+		return fmt.Errorf("smartctl not found: verify that smartctl is installed and it is in your PATH (or specified in config): %w", err)
 	}
 
 	err = validatePath(m.PathNVMe)
@@ -502,7 +503,7 @@ func distinguishNVMeDevices(userDevices []string, availableNVMeDevices []string)
 func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, error) {
 	out, err := runCmd(m.Timeout, m.UseSudo, m.PathSmartctl, scanArgs...)
 	if err != nil {
-		return []string{}, fmt.Errorf("failed to run command '%s %s': %s - %s", m.PathSmartctl, scanArgs, err, string(out))
+		return []string{}, fmt.Errorf("failed to run command '%s %s': %w - %s", m.PathSmartctl, scanArgs, err, string(out))
 	}
 	var devices []string
 	for _, line := range strings.Split(string(out), "\n") {
@@ -567,7 +568,7 @@ func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 
 	for _, device := range nvmeDevices {
 		if contains(m.EnableExtensions, "auto-on") {
-			// nolint:revive // one case switch on purpose to demonstrate potential extensions
+			//nolint:revive // one case switch on purpose to demonstrate potential extensions
 			switch device.vendorID {
 			case intelVID:
 				wg.Add(1)
@@ -666,7 +667,7 @@ func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, uses
 
 	_, er := exitStatus(e)
 	if er != nil {
-		acc.AddError(fmt.Errorf("failed to run command '%s %s': %s - %s", nvme, strings.Join(args, " "), e, outStr))
+		acc.AddError(fmt.Errorf("failed to run command '%s %s': %w - %s", nvme, strings.Join(args, " "), e, outStr))
 		return
 	}
 
@@ -735,7 +736,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 	// Ignore all exit statuses except if it is a command line parse error
 	exitStatus, er := exitStatus(e)
 	if er != nil {
-		acc.AddError(fmt.Errorf("failed to run command '%s %s': %s - %s", m.PathSmartctl, strings.Join(args, " "), e, outStr))
+		acc.AddError(fmt.Errorf("failed to run command '%s %s': %w - %s", m.PathSmartctl, strings.Join(args, " "), e, outStr))
 		return
 	}
 
@@ -864,7 +865,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					}
 
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
-						acc.AddError(fmt.Errorf("error parsing %s: '%s': %s", attr.Name, matches[2], err.Error()))
+						acc.AddError(fmt.Errorf("error parsing %s: %q: %w", attr.Name, matches[2], err))
 						continue
 					}
 					// if the field is classified as an attribute, only add it
@@ -882,8 +883,9 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 // Command line parse errors are denoted by the exit code having the 0 bit set.
 // All other errors are drive/communication errors and should be ignored.
 func exitStatus(err error) (int, error) {
-	if exiterr, ok := err.(*exec.ExitError); ok {
-		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 			return status.ExitStatus(), nil
 		}
 	}
@@ -923,7 +925,7 @@ func parseRawValue(rawVal string) (int64, error) {
 	unit := regexp.MustCompile("^(.*)([hms])$")
 	parts := strings.Split(rawVal, "+")
 	if len(parts) == 0 {
-		return 0, fmt.Errorf("couldn't parse RAW_VALUE '%s'", rawVal)
+		return 0, fmt.Errorf("couldn't parse RAW_VALUE %q", rawVal)
 	}
 
 	duration := int64(0)

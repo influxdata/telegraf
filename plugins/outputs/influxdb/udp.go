@@ -85,7 +85,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 	if c.conn == nil {
 		conn, err := c.dialer.DialContext(ctx, c.url.Scheme, c.url.Host)
 		if err != nil {
-			return fmt.Errorf("error dialing address [%s]: %s", c.url, err)
+			return fmt.Errorf("error dialing address [%s]: %w", c.url, err)
 		}
 		c.conn = conn
 	}

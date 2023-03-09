@@ -81,8 +81,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 
 		stat, err := times.Stat(path)
 		if err != nil {
-			// Don't stop traversing if there is an eror
-			return nil //nolint:nilerr
+			return nil //nolint:nilerr // don't stop traversing if there is an error
 		}
 
 		timeThresholdExceeded := time.Since(stat.AccessTime()) >= time.Duration(monitor.DirectoryDurationThreshold)
@@ -104,8 +103,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 				return processFile(path)
 			})
 		// We've been cancelled via Stop().
-		if err == io.EOF {
-			//nolint:nilerr // context cancelation is not an error
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		if err != nil {
@@ -125,8 +123,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 			path := monitor.Directory + "/" + file.Name()
 			err := processFile(path)
 			// We've been cancelled via Stop().
-			if err == io.EOF {
-				//nolint:nilerr // context cancelation is not an error
+			if errors.Is(err, io.EOF) {
 				return nil
 			}
 		}
@@ -202,7 +199,8 @@ func (monitor *DirectoryMonitor) processFile(path string) {
 func (monitor *DirectoryMonitor) read(filePath string) {
 	// Open, read, and parse the contents of the file.
 	err := monitor.ingestFile(filePath)
-	if _, isPathError := err.(*os.PathError); isPathError {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
 		return
 	}
 

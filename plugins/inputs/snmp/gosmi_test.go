@@ -104,10 +104,10 @@ func TestFieldInitGosmi(t *testing.T) {
 	for _, txl := range translations {
 		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
 		err := f.init(tr)
-		require.NoError(t, err, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName)
+		require.NoError(t, err, "inputOid=%q inputName=%q", txl.inputOid, txl.inputName)
 
-		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
-		assert.Equal(t, txl.expectedName, f.Name, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
+		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid=%q inputName=%q inputConversion=%q", txl.inputOid, txl.inputName, txl.inputConversion)
+		assert.Equal(t, txl.expectedName, f.Name, "inputOid=%q inputName=%q inputConversion=%q", txl.inputOid, txl.inputName, txl.inputConversion)
 	}
 }
 

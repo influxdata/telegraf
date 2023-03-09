@@ -14,7 +14,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -53,6 +53,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
    "2000ms collection /components",
    "/interfaces",
   ]
+
+  ## Timestamp Source
+  ## Set to 'collection' for time of collection, and 'data' for using the time
+  ## provided by the _timestamp field.
+  # timestamp_source = "collection"
 
   ## Optional TLS Config
   # enable_tls = false

@@ -177,7 +177,7 @@ func assertFoundSocket(t *testing.T, dir, sockType string, i int, sockets []*soc
 		require.NoError(t, err)
 		if s.socket == expected {
 			found = true
-			require.Equal(t, s.sockType, sockType, "Unexpected socket type for '%s'", s)
+			require.Equal(t, s.sockType, sockType, "Unexpected socket type for %q", s)
 			require.Equal(t, s.sockID, strconv.Itoa(i))
 		}
 	}

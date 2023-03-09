@@ -56,7 +56,7 @@ this playground to test out your GJSON path here:
                 rename = "new name" # A string with a new name for the tag key
                 type = "int" # A string specifying the type (int,uint,float,string,bool)
 
-            ### Configuration to modify the resutling line protocol ###
+            ### Configuration to modify the resulting line protocol ###
             disable_prepend_keys = false (or true, just not both)
             [inputs.file.json_v2.object.renames] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a new name for the tag key
                 key = "new name"

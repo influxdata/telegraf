@@ -4,6 +4,7 @@ package mysql
 import (
 	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,8 +12,10 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
@@ -23,38 +26,36 @@ import (
 var sampleConfig string
 
 type Mysql struct {
-	Servers                             []string `toml:"servers"`
-	PerfEventsStatementsDigestTextLimit int64    `toml:"perf_events_statements_digest_text_limit"`
-	PerfEventsStatementsLimit           int64    `toml:"perf_events_statements_limit"`
-	PerfEventsStatementsTimeLimit       int64    `toml:"perf_events_statements_time_limit"`
-	TableSchemaDatabases                []string `toml:"table_schema_databases"`
-	GatherProcessList                   bool     `toml:"gather_process_list"`
-	GatherUserStatistics                bool     `toml:"gather_user_statistics"`
-	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
-	GatherInnoDBMetrics                 bool     `toml:"gather_innodb_metrics"`
-	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
-	GatherAllSlaveChannels              bool     `toml:"gather_all_slave_channels"`
-	MariadbDialect                      bool     `toml:"mariadb_dialect"`
-	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
-	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
-	GatherTableLockWaits                bool     `toml:"gather_table_lock_waits"`
-	GatherIndexIOWaits                  bool     `toml:"gather_index_io_waits"`
-	GatherEventWaits                    bool     `toml:"gather_event_waits"`
-	GatherTableSchema                   bool     `toml:"gather_table_schema"`
-	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
-	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
-	GatherGlobalVars                    bool     `toml:"gather_global_variables"`
-	GatherPerfSummaryPerAccountPerEvent bool     `toml:"gather_perf_sum_per_acc_per_event"`
-	PerfSummaryEvents                   []string `toml:"perf_summary_events"`
-	IntervalSlow                        string   `toml:"interval_slow"`
-	MetricVersion                       int      `toml:"metric_version"`
+	Servers                             []config.Secret `toml:"servers"`
+	PerfEventsStatementsDigestTextLimit int64           `toml:"perf_events_statements_digest_text_limit"`
+	PerfEventsStatementsLimit           int64           `toml:"perf_events_statements_limit"`
+	PerfEventsStatementsTimeLimit       int64           `toml:"perf_events_statements_time_limit"`
+	TableSchemaDatabases                []string        `toml:"table_schema_databases"`
+	GatherProcessList                   bool            `toml:"gather_process_list"`
+	GatherUserStatistics                bool            `toml:"gather_user_statistics"`
+	GatherInfoSchemaAutoInc             bool            `toml:"gather_info_schema_auto_inc"`
+	GatherInnoDBMetrics                 bool            `toml:"gather_innodb_metrics"`
+	GatherSlaveStatus                   bool            `toml:"gather_slave_status"`
+	GatherAllSlaveChannels              bool            `toml:"gather_all_slave_channels"`
+	MariadbDialect                      bool            `toml:"mariadb_dialect"`
+	GatherBinaryLogs                    bool            `toml:"gather_binary_logs"`
+	GatherTableIOWaits                  bool            `toml:"gather_table_io_waits"`
+	GatherTableLockWaits                bool            `toml:"gather_table_lock_waits"`
+	GatherIndexIOWaits                  bool            `toml:"gather_index_io_waits"`
+	GatherEventWaits                    bool            `toml:"gather_event_waits"`
+	GatherTableSchema                   bool            `toml:"gather_table_schema"`
+	GatherFileEventsStats               bool            `toml:"gather_file_events_stats"`
+	GatherPerfEventsStatements          bool            `toml:"gather_perf_events_statements"`
+	GatherGlobalVars                    bool            `toml:"gather_global_variables"`
+	GatherPerfSummaryPerAccountPerEvent bool            `toml:"gather_perf_sum_per_acc_per_event"`
+	PerfSummaryEvents                   []string        `toml:"perf_summary_events"`
+	IntervalSlow                        config.Duration `toml:"interval_slow"`
+	MetricVersion                       int             `toml:"metric_version"`
 
 	Log telegraf.Logger `toml:"-"`
 	tls.ClientConfig
-	lastT            time.Time
-	initDone         bool
-	scanIntervalSlow uint32
-	getStatusQuery   string
+	lastT          time.Time
+	getStatusQuery string
 }
 
 const (
@@ -70,48 +71,74 @@ func (*Mysql) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Mysql) InitMysql() {
-	if len(m.IntervalSlow) > 0 {
-		interval, err := time.ParseDuration(m.IntervalSlow)
-		if err == nil && interval.Seconds() >= 1.0 {
-			m.scanIntervalSlow = uint32(interval.Seconds())
-		}
-	}
+func (m *Mysql) Init() error {
 	if m.MariadbDialect {
 		m.getStatusQuery = slaveStatusQueryMariadb
 	} else {
 		m.getStatusQuery = slaveStatusQuery
 	}
-	m.initDone = true
-}
 
-func (m *Mysql) Gather(acc telegraf.Accumulator) error {
+	// Default to localhost if nothing specified.
 	if len(m.Servers) == 0 {
-		// default to localhost if nothing specified.
-		return m.gatherServer(localhost, acc)
-	}
-	// Initialise additional query intervals
-	if !m.initDone {
-		m.InitMysql()
+		m.Servers = append(m.Servers, config.NewSecret([]byte(localhost)))
 	}
 
+	// Register the TLS configuration. Due to the registry being a global
+	// one for the mysql package, we need to define unique IDs to avoid
+	// side effects and races between different plugin instances. Therefore,
+	// we decorate the "custom" naming of the "tls" parameter with an UUID.
+	tlsuuid, err := uuid.NewV7()
+	if err != nil {
+		return fmt.Errorf("cannot create UUID: %w", err)
+	}
+	tlsid := "custom-" + tlsuuid.String()
 	tlsConfig, err := m.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("registering TLS config: %s", err)
+		return fmt.Errorf("registering TLS config: %w", err)
 	}
-
 	if tlsConfig != nil {
-		if err := mysql.RegisterTLSConfig("custom", tlsConfig); err != nil {
+		if err := mysql.RegisterTLSConfig(tlsid, tlsConfig); err != nil {
 			return err
 		}
 	}
 
+	// Adapt the DSN string
+	for i, server := range m.Servers {
+		s, err := server.Get()
+		if err != nil {
+			return fmt.Errorf("getting server %d failed", i)
+		}
+		dsn := string(s)
+		config.ReleaseSecret(s)
+		conf, err := mysql.ParseDSN(dsn)
+		if err != nil {
+			return fmt.Errorf("parsing %q failed: %w", dsn, err)
+		}
+
+		// Set the default timeout if none specified
+		if conf.Timeout == 0 {
+			conf.Timeout = time.Second * 5
+		}
+
+		// Reference the custom TLS config of _THIS_ plugin instance
+		if conf.TLSConfig == "custom" {
+			conf.TLSConfig = tlsid
+		}
+
+		server.Destroy()
+		m.Servers[i] = config.NewSecret([]byte(conf.FormatDSN()))
+	}
+
+	return nil
+}
+
+func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	// Loop through each server and collect metrics
 	for _, server := range m.Servers {
 		wg.Add(1)
-		go func(s string) {
+		go func(s config.Secret) {
 			defer wg.Done()
 			acc.AddError(m.gatherServer(s, acc))
 		}(server)
@@ -384,130 +411,130 @@ const (
 	`
 )
 
-func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
-	serv, err := dsnAddTimeout(serv)
+func (m *Mysql) gatherServer(server config.Secret, acc telegraf.Accumulator) error {
+	s, err := server.Get()
 	if err != nil {
 		return err
 	}
+	dsn := string(s)
+	config.ReleaseSecret(s)
+	servtag := getDSNTag(dsn)
 
-	db, err := sql.Open("mysql", serv)
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return err
 	}
-
 	defer db.Close()
 
-	err = m.gatherGlobalStatuses(db, serv, acc)
+	err = m.gatherGlobalStatuses(db, servtag, acc)
 	if err != nil {
 		return err
 	}
 
 	if m.GatherGlobalVars {
 		// Global Variables may be gathered less often
-		if len(m.IntervalSlow) > 0 {
-			if uint32(time.Since(m.lastT).Seconds()) >= m.scanIntervalSlow {
-				err = m.gatherGlobalVariables(db, serv, acc)
-				if err != nil {
-					return err
-				}
-				m.lastT = time.Now()
+		interval := time.Duration(m.IntervalSlow)
+		if interval >= time.Second && time.Since(m.lastT) >= interval {
+			if err := m.gatherGlobalVariables(db, servtag, acc); err != nil {
+				return err
 			}
+			m.lastT = time.Now()
 		}
 	}
 
 	if m.GatherBinaryLogs {
-		err = m.gatherBinaryLogs(db, serv, acc)
+		err = m.gatherBinaryLogs(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherProcessList {
-		err = m.GatherProcessListStatuses(db, serv, acc)
+		err = m.gatherProcessListStatuses(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherUserStatistics {
-		err = m.GatherUserStatisticsStatuses(db, serv, acc)
+		err = m.gatherUserStatisticsStatuses(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherSlaveStatus {
-		err = m.gatherSlaveStatuses(db, serv, acc)
+		err = m.gatherSlaveStatuses(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherInfoSchemaAutoInc {
-		err = m.gatherInfoSchemaAutoIncStatuses(db, serv, acc)
+		err = m.gatherInfoSchemaAutoIncStatuses(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherInnoDBMetrics {
-		err = m.gatherInnoDBMetrics(db, serv, acc)
+		err = m.gatherInnoDBMetrics(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherPerfSummaryPerAccountPerEvent {
-		err = m.gatherPerfSummaryPerAccountPerEvent(db, serv, acc)
+		err = m.gatherPerfSummaryPerAccountPerEvent(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherTableIOWaits {
-		err = m.gatherPerfTableIOWaits(db, serv, acc)
+		err = m.gatherPerfTableIOWaits(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherIndexIOWaits {
-		err = m.gatherPerfIndexIOWaits(db, serv, acc)
+		err = m.gatherPerfIndexIOWaits(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherTableLockWaits {
-		err = m.gatherPerfTableLockWaits(db, serv, acc)
+		err = m.gatherPerfTableLockWaits(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherEventWaits {
-		err = m.gatherPerfEventWaits(db, serv, acc)
+		err = m.gatherPerfEventWaits(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherFileEventsStats {
-		err = m.gatherPerfFileEventsStatuses(db, serv, acc)
+		err = m.gatherPerfFileEventsStatuses(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherPerfEventsStatements {
-		err = m.gatherPerfEventsStatements(db, serv, acc)
+		err = m.gatherPerfEventsStatements(db, servtag, acc)
 		if err != nil {
 			return err
 		}
 	}
 
 	if m.GatherTableSchema {
-		err = m.gatherTableSchema(db, serv, acc)
+		err = m.gatherTableSchema(db, servtag, acc)
 		if err != nil {
 			return err
 		}
@@ -517,7 +544,7 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 // gatherGlobalVariables can be used to fetch all global variables from
 // MySQL environment.
-func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherGlobalVariables(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	// run query
 	rows, err := db.Query(globalVariablesQuery)
 	if err != nil {
@@ -529,7 +556,6 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 	var val sql.RawBytes
 
 	// parse DSN and save server tag
-	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
@@ -546,7 +572,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 
 		value, err := m.parseGlobalVariables(key, val)
 		if err != nil {
-			errString := fmt.Errorf("error parsing mysql global variable %q=%q: %v", key, string(val), err)
+			errString := fmt.Errorf("error parsing mysql global variable %q=%q: %w", key, string(val), err)
 			if m.MetricVersion < 2 {
 				m.Log.Debug(errString)
 			} else {
@@ -580,7 +606,7 @@ func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{
 // When the server is slave, then it returns only one row.
 // If the multi-source replication is set, then everything works differently
 // This code does not work with multi-source replication.
-func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	// run query
 	var rows *sql.Rows
 	var err error
@@ -590,8 +616,6 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		return err
 	}
 	defer rows.Close()
-
-	servtag := getDSNTag(serv)
 
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
@@ -645,7 +669,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 
 			value, err := m.parseValueByDatabaseTypeName(colValue, col.DatabaseTypeName())
 			if err != nil {
-				errString := fmt.Errorf("error parsing mysql slave status %q=%q: %v", colName, string(colValue), err)
+				errString := fmt.Errorf("error parsing mysql slave status %q=%q: %w", colName, string(colValue), err)
 				if m.MetricVersion < 2 {
 					m.Log.Debug(errString)
 				} else {
@@ -670,7 +694,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 
 // gatherBinaryLogs can be used to collect size and count of all binary files
 // binlogs metric requires the MySQL server to turn it on in configuration
-func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherBinaryLogs(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	// run query
 	rows, err := db.Query(binaryLogsQuery)
 	if err != nil {
@@ -679,7 +703,6 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	defer rows.Close()
 
 	// parse DSN and save host as a tag
-	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	var (
 		size      uint64
@@ -722,7 +745,7 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 // gatherGlobalStatuses can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
-func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	// run query
 	rows, err := db.Query(globalStatusQuery)
 	if err != nil {
@@ -731,7 +754,6 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 	defer rows.Close()
 
 	// parse the DSN and save host name as a tag
-	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
@@ -766,42 +788,42 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			case "Queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["queries"] = i
 				}
 			case "Questions":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["questions"] = i
 				}
 			case "Slow_queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["slow_queries"] = i
 				}
 			case "Connections":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["connections"] = i
 				}
 			case "Syncs":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["syncs"] = i
 				}
 			case "Uptime":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["uptime"] = i
 				}
@@ -810,7 +832,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			key = strings.ToLower(key)
 			value, err := v2.ConvertGlobalStatus(key, val)
 			if err != nil {
-				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %v", key, string(val), err))
+				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %w", key, string(val), err))
 			} else {
 				fields[key] = value
 			}
@@ -832,7 +854,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 
 // GatherProcessList can be used to collect metrics on each running command
 // and its state with its running count
-func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherProcessListStatuses(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	// run query
 	rows, err := db.Query(infoSchemaProcessListQuery)
 	if err != nil {
@@ -846,9 +868,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 		count   uint32
 	)
 
-	var servtag string
 	fields := make(map[string]interface{})
-	servtag = getDSNTag(serv)
 
 	// mapping of state with its counts
 	stateCounts := make(map[string]uint32, len(generalThreadStates))
@@ -906,7 +926,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 
 // GatherUserStatisticsStatuses can be used to collect metrics on each running command
 // and its state with its running count
-func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherUserStatisticsStatuses(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	// run query
 	rows, err := db.Query(infoSchemaUserStatisticsQuery)
 	if err != nil {
@@ -929,7 +949,6 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 		return err
 	}
 
-	servtag := getDSNTag(serv)
 	for rows.Next() {
 		err = rows.Scan(read...)
 		if err != nil {
@@ -1120,7 +1139,7 @@ func getColSlice(l int) ([]interface{}, error) {
 
 // gatherPerfTableIOWaits can be used to get total count and time
 // of I/O wait event for each table and process
-func (m *Mysql) gatherPerfTableIOWaits(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherPerfTableIOWaits(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	rows, err := db.Query(perfTableIOWaitsQuery)
 	if err != nil {
 		return err
@@ -1128,12 +1147,10 @@ func (m *Mysql) gatherPerfTableIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 
 	defer rows.Close()
 	var (
-		objSchema, objName, servtag                       string
+		objSchema, objName                                string
 		countFetch, countInsert, countUpdate, countDelete float64
 		timeFetch, timeInsert, timeUpdate, timeDelete     float64
 	)
-
-	servtag = getDSNTag(serv)
 
 	for rows.Next() {
 		err = rows.Scan(&objSchema, &objName,
@@ -1169,7 +1186,7 @@ func (m *Mysql) gatherPerfTableIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 
 // gatherPerfIndexIOWaits can be used to get total count and time
 // of I/O wait event for each index and process
-func (m *Mysql) gatherPerfIndexIOWaits(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherPerfIndexIOWaits(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	rows, err := db.Query(perfIndexIOWaitsQuery)
 	if err != nil {
 		return err
@@ -1177,12 +1194,10 @@ func (m *Mysql) gatherPerfIndexIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 	defer rows.Close()
 
 	var (
-		objSchema, objName, indexName, servtag            string
+		objSchema, objName, indexName                     string
 		countFetch, countInsert, countUpdate, countDelete float64
 		timeFetch, timeInsert, timeUpdate, timeDelete     float64
 	)
-
-	servtag = getDSNTag(serv)
 
 	for rows.Next() {
 		err = rows.Scan(&objSchema, &objName, &indexName,
@@ -1222,7 +1237,7 @@ func (m *Mysql) gatherPerfIndexIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 }
 
 // gatherInfoSchemaAutoIncStatuses can be used to get auto incremented values of the column
-func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	rows, err := db.Query(infoSchemaAutoIncQuery)
 	if err != nil {
 		return err
@@ -1233,8 +1248,6 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 		schema, table, column string
 		incValue, maxInt      uint64
 	)
-
-	servtag := getDSNTag(serv)
 
 	for rows.Next() {
 		if err := rows.Scan(&schema, &table, &column, &incValue, &maxInt); err != nil {
@@ -1261,7 +1274,7 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 
 // gatherInnoDBMetrics can be used to fetch enabled metrics from
 // information_schema.INNODB_METRICS
-func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	var (
 		query string
 	)
@@ -1280,7 +1293,6 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 	defer rows.Close()
 
 	// parse DSN and save server tag
-	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
@@ -1293,7 +1305,7 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 		key = strings.ToLower(key)
 		value, err := m.parseValueByDatabaseTypeName(val, "BIGINT")
 		if err != nil {
-			acc.AddError(fmt.Errorf("error parsing mysql InnoDB metric %q=%q: %v", key, string(val), err))
+			acc.AddError(fmt.Errorf("error parsing mysql InnoDB metric %q=%q: %w", key, string(val), err))
 			continue
 		}
 
@@ -1314,7 +1326,7 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 
 // gatherPerfSummaryPerAccountPerEvent can be used to fetch enabled metrics from
 // performance_schema.events_statements_summary_by_account_by_event_name
-func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	sqlQuery := perfSummaryPerAccountPerEvent
 
 	var rows *sql.Rows
@@ -1375,7 +1387,6 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc
 	defer rows.Close()
 
 	// parse DSN and save server tag
-	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	for rows.Next() {
 		if err := rows.Scan(
@@ -1452,14 +1463,14 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc
 // the total number and time for SQL and external lock wait events
 // for each table and operation
 // requires the MySQL server to be enabled to save this metric
-func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	// check if table exists,
 	// if performance_schema is not enabled, tables do not exist
 	// then there is no need to scan them
 	var tableName string
 	err := db.QueryRow(perfSchemaTablesQuery, "table_lock_waits_summary_by_table").Scan(&tableName)
 	switch {
-	case err == sql.ErrNoRows:
+	case errors.Is(err, sql.ErrNoRows):
 		return nil
 	case err != nil:
 		return err
@@ -1470,8 +1481,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 		return err
 	}
 	defer rows.Close()
-
-	servtag := getDSNTag(serv)
 
 	var (
 		objectSchema               string
@@ -1581,7 +1590,7 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 }
 
 // gatherPerfEventWaits can be used to get total time and number of event waits
-func (m *Mysql) gatherPerfEventWaits(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherPerfEventWaits(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	rows, err := db.Query(perfEventWaitsQuery)
 	if err != nil {
 		return err
@@ -1593,7 +1602,6 @@ func (m *Mysql) gatherPerfEventWaits(db *sql.DB, serv string, acc telegraf.Accum
 		starCount, timeWait float64
 	)
 
-	servtag := getDSNTag(serv)
 	tags := map[string]string{
 		"server": servtag,
 	}
@@ -1613,7 +1621,7 @@ func (m *Mysql) gatherPerfEventWaits(db *sql.DB, serv string, acc telegraf.Accum
 }
 
 // gatherPerfFileEvents can be used to get stats on file events
-func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	rows, err := db.Query(perfFileEventsQuery)
 	if err != nil {
 		return err
@@ -1628,7 +1636,6 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 		sumNumBytesRead, sumNumBytesWrite         float64
 	)
 
-	servtag := getDSNTag(serv)
 	tags := map[string]string{
 		"server": servtag,
 	}
@@ -1671,7 +1678,7 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 }
 
 // gatherPerfEventsStatements can be used to get attributes of each event
-func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	query := fmt.Sprintf(
 		perfEventsStatementsQuery,
 		m.PerfEventsStatementsDigestTextLimit,
@@ -1688,14 +1695,13 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 
 	var (
 		schemaName, digest, digestText       string
-		count, queryTime, errors, warnings   float64
+		count, queryTime, errs, warnings     float64
 		rowsAffected, rowsSent, rowsExamined float64
 		tmpTables, tmpDiskTables             float64
 		sortMergePasses, sortRows            float64
 		noIndexUsed                          float64
 	)
 
-	servtag := getDSNTag(serv)
 	tags := map[string]string{
 		"server": servtag,
 	}
@@ -1703,7 +1709,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 	for rows.Next() {
 		err = rows.Scan(
 			&schemaName, &digest, &digestText,
-			&count, &queryTime, &errors, &warnings,
+			&count, &queryTime, &errs, &warnings,
 			&rowsAffected, &rowsSent, &rowsExamined,
 			&tmpTables, &tmpDiskTables,
 			&sortMergePasses, &sortRows,
@@ -1720,7 +1726,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 		fields := map[string]interface{}{
 			"events_statements_total":                   count,
 			"events_statements_seconds_total":           queryTime / picoSeconds,
-			"events_statements_errors_total":            errors,
+			"events_statements_errors_total":            errs,
 			"events_statements_warnings_total":          warnings,
 			"events_statements_rows_affected_total":     rowsAffected,
 			"events_statements_rows_sent_total":         rowsSent,
@@ -1738,9 +1744,8 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 }
 
 // gatherTableSchema can be used to gather stats on each schema
-func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherTableSchema(db *sql.DB, servtag string, acc telegraf.Accumulator) error {
 	var dbList []string
-	servtag := getDSNTag(serv)
 
 	// if the list of databases if empty, then get all databases
 	if len(m.TableSchemaDatabases) == 0 {
@@ -1928,19 +1933,6 @@ func copyTags(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
-}
-
-func dsnAddTimeout(dsn string) (string, error) {
-	conf, err := mysql.ParseDSN(dsn)
-	if err != nil {
-		return "", err
-	}
-
-	if conf.Timeout == 0 {
-		conf.Timeout = time.Second * 5
-	}
-
-	return conf.FormatDSN(), nil
 }
 
 func getDSNTag(dsn string) string {

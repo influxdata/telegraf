@@ -1,7 +1,6 @@
 package shim
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -14,10 +13,8 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	err := os.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
-	require.NoError(t, err)
-	err = os.Setenv("SECRET_VALUE", `test"\test`)
-	require.NoError(t, err)
+	t.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
+	t.Setenv("SECRET_VALUE", `test"\test`)
 
 	inputs.Add("test", func() telegraf.Input {
 		return &serviceInput{}

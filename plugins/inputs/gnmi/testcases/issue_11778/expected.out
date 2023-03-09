@@ -1,0 +1,1 @@
+ifcounters,path=openconfig-interfaces:/interfaces/interface/state,name=eth42,descr/description=eth42,source=127.0.0.1 counters=5678i 1673608605875353770

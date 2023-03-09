@@ -123,7 +123,7 @@ func (b *burrow) Gather(acc telegraf.Accumulator) error {
 	for _, addr := range b.Servers {
 		u, err := url.Parse(addr)
 		if err != nil {
-			acc.AddError(fmt.Errorf("unable to parse address '%s': %s", addr, err))
+			acc.AddError(fmt.Errorf("unable to parse address %q: %w", addr, err))
 			continue
 		}
 		if u.Path == "" {
