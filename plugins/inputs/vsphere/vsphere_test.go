@@ -141,6 +141,7 @@ func defaultVSphere() *VSphere {
 		CollectConcurrency:      1,
 		Separator:               ".",
 		HistoricalInterval:      config.Duration(time.Second * 300),
+		DisconnectedServersBehavior: "error",
 	}
 }
 
@@ -447,6 +448,10 @@ func TestCollectionNoClusterMetrics(t *testing.T) {
 	}
 
 	testCollection(t, true)
+}
+
+func TestDisconnectedServerBehavior(t *testing.T) {
+	
 }
 
 func testCollection(t *testing.T, excludeClusters bool) {
