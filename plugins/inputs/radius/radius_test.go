@@ -101,7 +101,7 @@ func TestRadiusIntegration(t *testing.T) {
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
 
-	port = container.Ports["1812"]
+	port := container.Ports["1812"]
 
 	// Define the testset
 	var testset = []struct {
