@@ -1405,16 +1405,6 @@ func TestMultipleConfigs(t *testing.T) {
 		return &file.File{}
 	})
 
-	// Prepare the influx parser for expectations
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-
-	// Compare options
-	options := []cmp.Option{
-		testutil.IgnoreTime(),
-		testutil.SortMetrics(),
-	}
-
 	for _, f := range folders {
 		// Only handle folders
 		if !f.IsDir() || f.Name() == "protos" {
@@ -1426,12 +1416,23 @@ func TestMultipleConfigs(t *testing.T) {
 		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
 		t.Run(f.Name(), func(t *testing.T) {
+			// Prepare the influx parser for expectations
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			parser.SetTimeFunc(func() time.Time { return time.Time{} })
+
+			// Compare options
+			options := []cmp.Option{testutil.SortMetrics()}
+
 			// Read the expected output if any
 			var expected []telegraf.Metric
 			if _, err := os.Stat(expectedFilename); err == nil {
 				var err error
 				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
 				require.NoError(t, err)
+			}
+			if len(expected) > 0 && expected[0].Time().IsZero() {
+				options = append(options, testutil.IgnoreTime())
 			}
 
 			// Read the expected output if any
