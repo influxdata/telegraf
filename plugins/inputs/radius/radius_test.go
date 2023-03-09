@@ -78,8 +78,6 @@ func TestRadiusIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	port := "1812/udp"
-
 	testdata, err := filepath.Abs("testdata/raddb/clients.conf")
 	require.NoError(t, err, "determining absolute path of test-data clients.conf failed")
 	testdataa, err := filepath.Abs("testdata/raddb/mods-config/files/authorize")
@@ -89,7 +87,7 @@ func TestRadiusIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "freeradius/freeradius-server",
-		ExposedPorts: []string{port},
+		ExposedPorts: []string{"1812/udp"},
 		BindMounts: map[string]string{
 			"/etc/raddb/clients.conf":                testdata,
 			"/etc/raddb/mods-config/files/authorize": testdataa,
@@ -103,7 +101,7 @@ func TestRadiusIntegration(t *testing.T) {
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
 
-	port = container.Ports[port]
+	port = container.Ports["1812"]
 
 	// Define the testset
 	var testset = []struct {
