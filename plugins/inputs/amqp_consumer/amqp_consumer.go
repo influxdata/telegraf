@@ -439,6 +439,10 @@ func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
 }
 
 func (a *AMQPConsumer) Stop() {
+	// We did not connect successfully so there is nothing to do here.
+	if a.conn == nil || a.conn.IsClosed() {
+		return
+	}
 	a.cancel()
 	a.wg.Wait()
 	err := a.conn.Close()
