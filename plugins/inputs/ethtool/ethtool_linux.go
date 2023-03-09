@@ -243,6 +243,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 		c.Log.Errorf("Could not get initial namespace: %s", err)
 		return nil, err
 	}
+	defer initialNamespace.Close()
 
 	// Gather the list of namespace names to from which to retrieve interfaces.
 	initialNamespaceIsNamed := false
