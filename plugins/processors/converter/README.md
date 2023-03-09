@@ -14,6 +14,10 @@ string value to a numeric type, precision may be lost if the number is too
 large. The largest numeric type this plugin supports is `float64`, and if a
 string 'number' exceeds its size limit, accuracy may be lost.
 
+**Note on multiple measurement or timestamps:** Users can provide multiple
+tags or fields to use as the measurement name or timestamp. However, note that
+the order in the array is not guaranteed!
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -42,10 +46,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     float = []
 
     ## Optional tag to use as metric timestamp
-    # timestmap = ""
+    # timestamp = []
 
     ## Format of the timestamp determined by the tag above. This can be any of
     ## "unix", "unix_ms", "unix_us", "unix_ns", or a valid Golang time format.
+    ## It is required, when using the timestamp option.
     # timestamp_format = ""
 
   ## Fields to convert
@@ -63,11 +68,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     float = []
 
     ## Optional field to use as metric timestamp
-    # timestmap = ""
+    # timestamp = []
 
     ## Format of the timestamp determined by the field above. This can be any
     ## of "unix", "unix_ms", "unix_us", "unix_ns", or a valid Golang time
-    ## format.
+    ## format. It is required, when using the timestamp option.
     # timestamp_format = ""
 ```
 

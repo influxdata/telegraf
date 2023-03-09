@@ -27,7 +27,7 @@ type Conversion struct {
 	Unsigned        []string `toml:"unsigned"`
 	Boolean         []string `toml:"boolean"`
 	Float           []string `toml:"float"`
-	Timestamp       string   `toml:"timestamp"`
+	Timestamp       []string `toml:"timestamp"`
 	TimestampFormat string   `toml:"timestamp_format"`
 }
 
@@ -129,7 +129,7 @@ func compileFilter(conv *Conversion) (*ConversionFilter, error) {
 		return nil, err
 	}
 
-	cf.Timestamp, err = filter.Compile([]string{conv.Timestamp})
+	cf.Timestamp, err = filter.Compile(conv.Timestamp)
 	if err != nil {
 		return nil, err
 	}
