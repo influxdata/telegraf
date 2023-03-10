@@ -15,6 +15,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # A plugin to collect stats from Varnish HTTP Cache
+# This plugin ONLY supports non-Windows
 [[inputs.varnish]]
   ## If running as a restricted user you can prepend sudo for additional access:
   #use_sudo = false

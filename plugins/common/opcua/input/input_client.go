@@ -236,7 +236,7 @@ func tagsSliceToMap(tags [][]string) (map[string]string, error) {
 
 func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping) error {
 	if nmm.Tag.FieldName == "" {
-		return fmt.Errorf("empty name in '%s'", nmm.Tag.FieldName)
+		return fmt.Errorf("empty name in %q", nmm.Tag.FieldName)
 	}
 
 	if len(nmm.Tag.Namespace) == 0 {
@@ -249,19 +249,19 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 
 	mp := newMP(nmm)
 	if _, exists := existing[mp]; exists {
-		return fmt.Errorf("name '%s' is duplicated (metric name '%s', tags '%s')",
+		return fmt.Errorf("name %q is duplicated (metric name %q, tags %q)",
 			mp.fieldName, mp.metricName, mp.tags)
 	}
 
 	switch nmm.Tag.IdentifierType {
 	case "i":
 		if _, err := strconv.Atoi(nmm.Tag.Identifier); err != nil {
-			return fmt.Errorf("identifier type '%s' does not match the type of identifier '%s'", nmm.Tag.IdentifierType, nmm.Tag.Identifier)
+			return fmt.Errorf("identifier type %q does not match the type of identifier %q", nmm.Tag.IdentifierType, nmm.Tag.Identifier)
 		}
 	case "s", "g", "b":
 		// Valid identifier type - do nothing.
 	default:
-		return fmt.Errorf("invalid identifier type '%s' in '%s'", nmm.Tag.IdentifierType, nmm.Tag.FieldName)
+		return fmt.Errorf("invalid identifier type %q in %q", nmm.Tag.IdentifierType, nmm.Tag.FieldName)
 	}
 
 	existing[mp] = struct{}{}
@@ -382,7 +382,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.LastReceivedData[nodeIdx].Quality))
 	if !o.StatusCodeOK(o.LastReceivedData[nodeIdx].Quality) {
 		mp := newMP(nmm)
-		o.Log.Debugf("status not OK for node '%s'(metric name '%s', tags '%s')",
+		o.Log.Debugf("status not OK for node %q(metric name %q, tags %q)",
 			mp.fieldName, mp.metricName, mp.tags)
 	}
 

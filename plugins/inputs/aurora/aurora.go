@@ -81,7 +81,7 @@ func (a *Aurora) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			role, err := a.gatherRole(ctx, u)
 			if err != nil {
-				acc.AddError(fmt.Errorf("%s: %v", u, err))
+				acc.AddError(fmt.Errorf("%s: %w", u, err))
 				return
 			}
 
@@ -91,7 +91,7 @@ func (a *Aurora) Gather(acc telegraf.Accumulator) error {
 
 			err = a.gatherScheduler(ctx, u, role, acc)
 			if err != nil {
-				acc.AddError(fmt.Errorf("%s: %v", u, err))
+				acc.AddError(fmt.Errorf("%s: %w", u, err))
 			}
 		}(u)
 	}
@@ -167,7 +167,7 @@ func (a *Aurora) gatherRole(ctx context.Context, origin *url.URL) (RoleType, err
 		return Unknown, err
 	}
 	if err := resp.Body.Close(); err != nil {
-		return Unknown, fmt.Errorf("closing body failed: %v", err)
+		return Unknown, fmt.Errorf("closing body failed: %w", err)
 	}
 
 	switch resp.StatusCode {
@@ -212,7 +212,7 @@ func (a *Aurora) gatherScheduler(
 	decoder.UseNumber()
 	err = decoder.Decode(&vars)
 	if err != nil {
-		return fmt.Errorf("decoding response: %v", err)
+		return fmt.Errorf("decoding response: %w", err)
 	}
 
 	var fields = make(map[string]interface{}, len(vars))

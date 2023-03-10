@@ -122,7 +122,7 @@ func (ps *PubSub) initPubSubClient() error {
 		option.WithUserAgent(internal.ProductToken()),
 	)
 	if err != nil {
-		return fmt.Errorf("unable to generate PubSub client: %v", err)
+		return fmt.Errorf("unable to generate PubSub client: %w", err)
 	}
 	ps.c = client
 	return nil

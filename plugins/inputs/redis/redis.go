@@ -238,7 +238,7 @@ func (r *Redis) connect() error {
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
+			return fmt.Errorf("unable to parse to address %q: %w", serv, err)
 		}
 
 		username := ""
@@ -329,7 +329,7 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 		val, err := client.Do(command.Type, command.Command...)
 		if err != nil {
 			if strings.Contains(err.Error(), "unexpected type=") {
-				return fmt.Errorf("could not get command result: %s", err)
+				return fmt.Errorf("could not get command result: %w", err)
 			}
 
 			return err

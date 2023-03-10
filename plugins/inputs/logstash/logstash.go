@@ -124,7 +124,7 @@ func (*Logstash) SampleConfig() string {
 func (logstash *Logstash) Init() error {
 	err := choice.CheckSlice(logstash.Collect, []string{"pipelines", "process", "jvm"})
 	if err != nil {
-		return fmt.Errorf(`cannot verify "collect" setting: %v`, err)
+		return fmt.Errorf(`cannot verify "collect" setting: %w`, err)
 	}
 	return nil
 }

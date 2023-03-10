@@ -128,7 +128,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		case "authpriv":
 			s.listener.Params.MsgFlags = gosnmp.AuthPriv
 		default:
-			return fmt.Errorf("unknown security level '%s'", s.SecLevel)
+			return fmt.Errorf("unknown security level %q", s.SecLevel)
 		}
 
 		var authenticationProtocol gosnmp.SnmpV3AuthProtocol
@@ -148,7 +148,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		case "":
 			authenticationProtocol = gosnmp.NoAuth
 		default:
-			return fmt.Errorf("unknown authentication protocol '%s'", s.AuthProtocol)
+			return fmt.Errorf("unknown authentication protocol %q", s.AuthProtocol)
 		}
 
 		var privacyProtocol gosnmp.SnmpV3PrivProtocol
@@ -168,20 +168,20 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		case "":
 			privacyProtocol = gosnmp.NoPriv
 		default:
-			return fmt.Errorf("unknown privacy protocol '%s'", s.PrivProtocol)
+			return fmt.Errorf("unknown privacy protocol %q", s.PrivProtocol)
 		}
 
 		secname, err := s.SecName.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
 		privPasswd, err := s.PrivPassword.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
 		authPasswd, err := s.AuthPassword.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
 		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
 			UserName:                 string(secname),
@@ -211,7 +211,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	// gosnmp.TrapListener currently supports udp only.  For forward
 	// compatibility, require udp in the service address
 	if protocol != "udp" {
-		return fmt.Errorf("unknown protocol '%s' in '%s'", protocol, s.ServiceAddress)
+		return fmt.Errorf("unknown protocol %q in %q", protocol, s.ServiceAddress)
 	}
 
 	// If (*TrapListener).Listen immediately returns an error we need

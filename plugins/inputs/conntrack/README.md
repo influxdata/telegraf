@@ -37,6 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Collects conntrack stats from the configured directories and files.
+# This plugin ONLY supports Linux
 [[inputs.conntrack]]
   ## The following defaults would work with multiple versions of conntrack.
   ## Note the nf_ and ip_ filename prefixes are mutually exclusive across

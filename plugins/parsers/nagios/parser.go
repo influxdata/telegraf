@@ -27,8 +27,8 @@ func getExitCode(err error) (int, error) {
 		return 0, nil
 	}
 
-	ee, ok := err.(*exec.ExitError)
-	if !ok {
+	var ee *exec.ExitError
+	if !errors.As(err, &ee) {
 		return unknownExitCode, err
 	}
 

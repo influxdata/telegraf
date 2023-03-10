@@ -9,6 +9,7 @@ import (
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 )
@@ -49,13 +50,13 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	switch o.SecurityPolicy {
 	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.Endpoint)
+		return fmt.Errorf("invalid security type %q in %q", o.SecurityPolicy, o.Endpoint)
 	}
 
 	switch o.SecurityMode {
 	case "None", "Sign", "SignAndEncrypt", "auto":
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.Endpoint)
+		return fmt.Errorf("invalid security type %q in %q", o.SecurityMode, o.Endpoint)
 	}
 
 	return nil
@@ -184,7 +185,7 @@ func (o *OpcUAClient) Connect() error {
 		defer cancel()
 		if err := o.Client.Connect(ctx); err != nil {
 			o.State = Disconnected
-			return fmt.Errorf("error in Client Connection: %s", err)
+			return fmt.Errorf("error in Client Connection: %w", err)
 		}
 
 		o.State = Connected

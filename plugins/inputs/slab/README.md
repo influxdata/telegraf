@@ -27,6 +27,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Get slab statistics from procfs
+# This plugin ONLY supports Linux
 [[inputs.slab]]
   # no configuration - please see the plugin's README for steps to configure
   # sudo properly

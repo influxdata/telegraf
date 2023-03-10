@@ -3,12 +3,13 @@ package filecount
 
 import (
 	_ "embed"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/karrick/godirwalk"
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -177,7 +178,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		Unsorted:             true,
 		FollowSymbolicLinks:  fc.FollowSymlinks,
 		ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
-			if os.IsPermission(errors.Cause(err)) {
+			if errors.Is(err, fs.ErrPermission) {
 				fc.Log.Debug(err)
 				return godirwalk.SkipNode
 			}

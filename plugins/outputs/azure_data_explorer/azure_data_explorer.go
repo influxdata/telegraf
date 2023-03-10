@@ -190,12 +190,12 @@ func (adx *AzureDataExplorer) getMetricIngestor(ctx context.Context, tableName s
 
 	if ingestor == nil {
 		if err := adx.createAzureDataExplorerTable(ctx, tableName); err != nil {
-			return nil, fmt.Errorf("creating table for %q failed: %v", tableName, err)
+			return nil, fmt.Errorf("creating table for %q failed: %w", tableName, err)
 		}
 		//create a new ingestor client for the table
 		tempIngestor, err := createIngestorByTable(adx.kustoClient, adx.Database, tableName, adx.IngestionType)
 		if err != nil {
-			return nil, fmt.Errorf("creating ingestor for %q failed: %v", tableName, err)
+			return nil, fmt.Errorf("creating ingestor for %q failed: %w", tableName, err)
 		}
 		adx.metricIngestors[tableName] = tempIngestor
 		adx.Log.Debugf("Ingestor for table %s created", tableName)
@@ -225,21 +225,21 @@ func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, 
 
 func (adx *AzureDataExplorer) Init() error {
 	if adx.Endpoint == "" {
-		return errors.New("Endpoint configuration cannot be empty")
+		return errors.New("endpoint configuration cannot be empty")
 	}
 	if adx.Database == "" {
-		return errors.New("Database configuration cannot be empty")
+		return errors.New("database configuration cannot be empty")
 	}
 
 	adx.MetricsGrouping = strings.ToLower(adx.MetricsGrouping)
 	if adx.MetricsGrouping == singleTable && adx.TableName == "" {
-		return errors.New("Table name cannot be empty for SingleTable metrics grouping type")
+		return errors.New("table name cannot be empty for SingleTable metrics grouping type")
 	}
 	if adx.MetricsGrouping == "" {
 		adx.MetricsGrouping = tablePerMetric
 	}
 	if !(adx.MetricsGrouping == singleTable || adx.MetricsGrouping == tablePerMetric) {
-		return errors.New("Metrics grouping type is not valid")
+		return errors.New("metrics grouping type is not valid")
 	}
 
 	if adx.IngestionType == "" {

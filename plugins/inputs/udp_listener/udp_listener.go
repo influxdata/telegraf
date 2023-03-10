@@ -3,6 +3,7 @@ package udp_listener
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -140,7 +141,7 @@ func (u *UDPListener) udpListen() error {
 	if u.UDPBufferSize > 0 {
 		err = u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default
 		if err != nil {
-			return fmt.Errorf("failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
+			return fmt.Errorf("failed to set UDP read buffer to %d: %w", u.UDPBufferSize, err)
 		}
 	}
 
@@ -164,7 +165,8 @@ func (u *UDPListener) udpListenLoop() {
 
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil {
-				if err, ok := err.(net.Error); !ok || !err.Timeout() {
+				var netErr net.Error
+				if !errors.As(err, &netErr) || !netErr.Timeout() {
 					u.Log.Error(err.Error())
 				}
 				continue

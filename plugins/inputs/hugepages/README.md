@@ -21,6 +21,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Gathers huge pages measurements.
+# This plugin ONLY supports Linux
 [[inputs.hugepages]]
   ## Supported huge page types:
   ##   - "root"     - based on root huge page control directory:

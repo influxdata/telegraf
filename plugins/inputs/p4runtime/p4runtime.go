@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -213,7 +214,7 @@ func (p *P4runtime) readAllEntries(counterID uint32) ([]*p4v1.Entity, error) {
 	}
 
 	rep, err := stream.Recv()
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
 	}
 

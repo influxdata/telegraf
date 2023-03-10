@@ -52,10 +52,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 It collects the following fields:
 
 | Name           | field name | type    | Unit |
-| -------------- | ---------- | ------- | ---- |
+|----------------|------------| ------- | ---- |
 | Download Speed | download   | float64 | Mbps |
 | Upload Speed   | upload     | float64 | Mbps |
 | Latency        | latency    | float64 | ms   |
+| Jitter         | jitter     | float64 | ms   |
 
 And the following tags:
 
@@ -67,5 +68,5 @@ And the following tags:
 ## Example Output
 
 ```sh
-internet_speed,host=speedtest02.z4internet.com:8080,server_id=54619 download=318.37580265897725,upload=30.444407341274385,latency=37.73174 1675458921000000000
+internet_speed,host=speedtest02.z4internet.com:8080,server_id=54619 download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810 1675458921000000000
 ```

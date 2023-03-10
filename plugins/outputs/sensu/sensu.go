@@ -351,7 +351,7 @@ func (s *Sensu) setEntity() error {
 		} else {
 			defaultHostname, err := os.Hostname()
 			if err != nil {
-				return fmt.Errorf("resolving hostname failed: %v", err)
+				return fmt.Errorf("resolving hostname failed: %w", err)
 			}
 			entityName = defaultHostname
 		}

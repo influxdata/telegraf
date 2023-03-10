@@ -193,15 +193,14 @@ func (m *MQTTConsumer) connect() error {
 	subscribeToken := m.client.SubscribeMultiple(topics, m.recvMessage)
 	subscribeToken.Wait()
 	if subscribeToken.Error() != nil {
-		m.acc.AddError(fmt.Errorf("subscription error: topics: %s: %v",
-			strings.Join(m.Topics[:], ","), subscribeToken.Error()))
+		m.acc.AddError(fmt.Errorf("subscription error: topics %q: %w", strings.Join(m.Topics[:], ","), subscribeToken.Error()))
 	}
 	return nil
 }
 func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 	// Should already be disconnected, but make doubly sure
 	m.client.Disconnect(5)
-	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
+	m.acc.AddError(fmt.Errorf("connection lost: %w", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
 	m.state = Disconnected
 }
@@ -403,17 +402,17 @@ func typeConvert(types map[string]string, topicValue string, key string) (interf
 		case "uint":
 			newType, err = strconv.ParseUint(topicValue, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type uint: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type uint: %w", topicValue, err)
 			}
 		case "int":
 			newType, err = strconv.ParseInt(topicValue, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type int: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type int: %w", topicValue, err)
 			}
 		case "float":
 			newType, err = strconv.ParseFloat(topicValue, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert field '%s' to type float: %v", topicValue, err)
+				return nil, fmt.Errorf("unable to convert field %q to type float: %w", topicValue, err)
 			}
 		default:
 			return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)

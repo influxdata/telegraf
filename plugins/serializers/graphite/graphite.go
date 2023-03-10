@@ -224,7 +224,7 @@ func InitGraphiteTemplates(templates []string) ([]*GraphiteTemplate, string, err
 		}
 
 		if len(parts) > 2 {
-			return nil, "", fmt.Errorf("invalid template format: '%s'", t)
+			return nil, "", fmt.Errorf("invalid template format: %q", t)
 		}
 
 		tFilter, err := filter.Compile([]string{parts[0]})

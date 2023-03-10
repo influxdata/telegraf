@@ -3,6 +3,7 @@ package dns_query
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -87,7 +88,8 @@ func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 
 				fields, tags, err := d.query(domain, server)
 				if err != nil {
-					if opErr, ok := err.(*net.OpError); !ok || !opErr.Timeout() {
+					var opErr *net.OpError
+					if !errors.As(err, &opErr) || !opErr.Timeout() {
 						acc.AddError(err)
 					}
 				}
@@ -130,7 +132,8 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 	addr := net.JoinHostPort(server, strconv.Itoa(d.Port))
 	r, rtt, err := c.Exchange(&msg, addr)
 	if err != nil {
-		if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+		var opErr *net.OpError
+		if errors.As(err, &opErr) && opErr.Timeout() {
 			tags["result"] = "timeout"
 			fields["result_code"] = uint64(Timeout)
 			return fields, tags, err

@@ -4,6 +4,7 @@ package aliyuncms
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
 	"github.com/jmespath/go-jmespath"
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -142,11 +142,11 @@ func (s *AliyunCMS) Init() error {
 	}
 	credential, err := providers.NewChainProvider(credentialProviders).Retrieve()
 	if err != nil {
-		return errors.Errorf("failed to retrieve credential: %v", err)
+		return fmt.Errorf("failed to retrieve credential: %w", err)
 	}
 	s.client, err = cms.NewClientWithOptions("", sdk.NewConfig(), credential)
 	if err != nil {
-		return errors.Errorf("failed to create cms client: %v", err)
+		return fmt.Errorf("failed to create cms client: %w", err)
 	}
 
 	//check metrics dimensions consistency
@@ -162,7 +162,7 @@ func (s *AliyunCMS) Init() error {
 				err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdArr)
 
 				if err != nil {
-					return errors.Errorf("cannot parse dimensions (neither obj, nor array) %q :%v", metric.Dimensions, err)
+					return fmt.Errorf("cannot parse dimensions (neither obj, nor array) %q: %w", metric.Dimensions, err)
 				}
 			}
 		}
@@ -282,7 +282,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 		for more := true; more; {
 			resp, err := s.client.DescribeMetricList(req)
 			if err != nil {
-				return errors.Errorf("failed to query metricName list: %v", err)
+				return fmt.Errorf("failed to query metricName list: %w", err)
 			}
 			if resp.Code != "200" {
 				s.Log.Errorf("failed to query metricName list: %v", resp.Message)
@@ -291,7 +291,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 
 			var datapoints []map[string]interface{}
 			if err := json.Unmarshal([]byte(resp.Datapoints), &datapoints); err != nil {
-				return errors.Errorf("failed to decode response datapoints: %v", err)
+				return fmt.Errorf("failed to decode response datapoints: %w", err)
 			}
 
 			if len(datapoints) == 0 {
@@ -356,8 +356,7 @@ func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string,
 
 	tagRawValue, err := jmespath.Search(queryPath, data)
 	if err != nil {
-		return "", "", errors.Errorf("Can't query data from discovery data using query path %q: %v",
-			queryPath, err)
+		return "", "", fmt.Errorf("can't query data from discovery data using query path %q: %w", queryPath, err)
 	}
 
 	if tagRawValue == nil { //Nothing found
@@ -366,8 +365,7 @@ func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string,
 
 	tagValue, ok = tagRawValue.(string)
 	if !ok {
-		return "", "", errors.Errorf("Tag value %v parsed by query %q is not a string value",
-			tagRawValue, queryPath)
+		return "", "", fmt.Errorf("tag value %q parsed by query %q is not a string value", tagRawValue, queryPath)
 	}
 
 	return tagKey, tagValue, nil

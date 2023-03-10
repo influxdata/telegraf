@@ -7,6 +7,7 @@ type Namespace interface {
 	Interfaces() ([]NamespacedInterface, error)
 	DriverName(intf NamespacedInterface) (string, error)
 	Stats(intf NamespacedInterface) (map[string]uint64, error)
+	Get(intf NamespacedInterface) (map[string]uint64, error)
 }
 
 type NamespacedInterface struct {

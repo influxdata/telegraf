@@ -6,15 +6,16 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -129,7 +130,7 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 	for _, n := range nodes.Items {
 		address := getNodeAddress(n)
 		if address == "" {
-			log.Warn("Unable to node addresses for Node '%s'", n.Name)
+			log.Warnf("Unable to node addresses for Node %q", n.Name)
 			continue
 		}
 		nodeUrls = append(nodeUrls, "https://"+address+":10250")
@@ -264,7 +265,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	req.Header.Add("Accept", "application/json")
 	resp, err = k.RoundTripper.RoundTrip(req)
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return fmt.Errorf("error making HTTP request to %q: %w", url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -273,7 +274,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
-		return fmt.Errorf(`Error parsing response: %s`, err)
+		return fmt.Errorf("error parsing response: %w", err)
 	}
 
 	return nil

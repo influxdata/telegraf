@@ -172,7 +172,7 @@ type fileFormat struct {
 	parser  func(measurement string, fields map[string]interface{}, b []byte)
 }
 
-const keyPattern = "[[:alnum:]:_]+"
+const keyPattern = "[[:alnum:]:_.]+"
 const valuePattern = "[\\d-]+"
 
 var fileFormats = [...]fileFormat{

@@ -38,6 +38,7 @@ type GlobalFlags struct {
 	watchConfig string
 	pidFile     string
 	plugindDir  string
+	password    string
 	test        bool
 	debug       bool
 	once        bool
@@ -81,6 +82,11 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	t.secretstoreFilters = f.secretstore
 	t.GlobalFlags = g
 	t.WindowFlags = w
+
+	// Set global password
+	if g.password != "" {
+		config.Password = config.NewSecret([]byte(g.password))
+	}
 }
 
 func (t *Telegraf) ListSecretStores() ([]string, error) {
@@ -111,6 +117,7 @@ func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 }
 
 func (t *Telegraf) reloadLoop() error {
+	reloadConfig := false
 	cfg, err := t.loadConfiguration()
 	if err != nil {
 		return err
@@ -151,10 +158,11 @@ func (t *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := t.runAgent(ctx, cfg)
-		if err != nil && err != context.Canceled {
-			return fmt.Errorf("[telegraf] Error running agent: %v", err)
+		err := t.runAgent(ctx, cfg, reloadConfig)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("[telegraf] Error running agent: %w", err)
 		}
+		reloadConfig = true
 	}
 
 	return nil
@@ -231,7 +239,14 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	return c, nil
 }
 
-func (t *Telegraf) runAgent(ctx context.Context, c *config.Config) error {
+func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig bool) error {
+	var err error
+	if reloadConfig {
+		if c, err = t.loadConfiguration(); err != nil {
+			return err
+		}
+	}
+
 	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {
 		return errors.New("no outputs found, did you provide a valid config file?")
 	}

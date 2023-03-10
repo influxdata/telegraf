@@ -64,6 +64,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Read metrics of bcache from stats_total and dirty_data
+# This plugin ONLY supports Linux
 [[inputs.bcache]]
   ## Bcache sets path
   ## If not specified, then default is:

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -72,7 +73,7 @@ func findHashes(body io.Reader, version string) (map[string]string, error) {
 		//the end of the file, or the HTML was malformed
 		if tokenType == html.ErrorToken {
 			err := htmlTokens.Err()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				//end of the file, break out of the loop
 				break
 			}
@@ -158,6 +159,11 @@ func main() {
 		},
 		{
 			FileName: ".github/workflows/golangci-lint.yml",
+			Regex:    `(go-version).*`,
+			Replace:  fmt.Sprintf("$1: '%s'", noPatchVersion),
+		},
+		{
+			FileName: ".github/workflows/govulncheck.yml",
 			Regex:    `(go-version).*`,
 			Replace:  fmt.Sprintf("$1: '%s'", noPatchVersion),
 		},

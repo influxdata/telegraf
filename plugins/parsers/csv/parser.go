@@ -163,7 +163,7 @@ func (p *Parser) Init() error {
 	}
 
 	if err := p.initializeMetadataSeparators(); err != nil {
-		return fmt.Errorf("initializing separators failed: %v", err)
+		return fmt.Errorf("initializing separators failed: %w", err)
 	}
 
 	if p.TimeFunc == nil {
@@ -393,17 +393,17 @@ outer:
 				case "int":
 					val, err = strconv.ParseInt(value, 10, 64)
 					if err != nil {
-						return nil, fmt.Errorf("column type: parse int error %s", err)
+						return nil, fmt.Errorf("column type: parse int error %w", err)
 					}
 				case "float":
 					val, err = strconv.ParseFloat(value, 64)
 					if err != nil {
-						return nil, fmt.Errorf("column type: parse float error %s", err)
+						return nil, fmt.Errorf("column type: parse float error %w", err)
 					}
 				case "bool":
 					val, err = strconv.ParseBool(value)
 					if err != nil {
-						return nil, fmt.Errorf("column type: parse bool error %s", err)
+						return nil, fmt.Errorf("column type: parse bool error %w", err)
 					}
 				default:
 					val = value

@@ -4,6 +4,7 @@ package rabbitmq
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -381,7 +382,8 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 		return err
 	}
 	if err := json.Unmarshal(buf, target); err != nil {
-		if _, ok := err.(*json.UnmarshalTypeError); ok {
+		var jsonErr *json.UnmarshalTypeError
+		if errors.As(err, &jsonErr) {
 			// Try to get the error reason from the response
 			var errResponse ErrorResponse
 			if json.Unmarshal(buf, &errResponse) == nil && errResponse.Error != "" {
@@ -390,7 +392,7 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 			}
 		}
 
-		return fmt.Errorf("decoding answer from %q failed: %v", u, err)
+		return fmt.Errorf("decoding answer from %q failed: %w", u, err)
 	}
 
 	return nil

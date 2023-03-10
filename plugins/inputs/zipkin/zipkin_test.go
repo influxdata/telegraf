@@ -654,7 +654,7 @@ func postThriftData(datafile, address, contentType string) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("HTTP POST request to zipkin endpoint %s failed %v", address, err)
+		return fmt.Errorf("HTTP POST request to zipkin endpoint %q failed: %w", address, err)
 	}
 
 	defer resp.Body.Close()

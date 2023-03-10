@@ -124,6 +124,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Get kernel statistics from /proc/vmstat
+# This plugin ONLY supports Linux
 [[inputs.kernel_vmstat]]
   # no configuration
 ```

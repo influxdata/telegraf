@@ -18,6 +18,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Collect virtual and real server stats from Linux IPVS
+# This plugin ONLY supports Linux
 [[inputs.ipvs]]
   # no configuration
 ```

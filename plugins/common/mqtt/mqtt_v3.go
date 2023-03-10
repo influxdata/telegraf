@@ -107,7 +107,9 @@ func (m *mqttv311Client) Connect() (bool, error) {
 
 func (m *mqttv311Client) Publish(topic string, body []byte) error {
 	token := m.client.Publish(topic, byte(m.qos), m.retain, body)
-	token.WaitTimeout(m.timeout)
+	if !token.WaitTimeout(m.timeout) {
+		return internal.ErrTimeout
+	}
 	return token.Error()
 }
 
@@ -123,7 +125,7 @@ func (m *mqttv311Client) AddRoute(topic string, callback mqttv3.MessageHandler) 
 
 func (m *mqttv311Client) Close() error {
 	if m.client.IsConnected() {
-		m.client.Disconnect(20)
+		m.client.Disconnect(100)
 	}
 	return nil
 }

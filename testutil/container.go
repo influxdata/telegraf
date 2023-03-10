@@ -63,7 +63,7 @@ func (c *Container) Start() error {
 
 	container, err := testcontainers.GenericContainer(c.ctx, req)
 	if err != nil {
-		return fmt.Errorf("container failed to start: %s", err)
+		return fmt.Errorf("container failed to start: %w", err)
 	}
 	c.container = container
 
@@ -73,7 +73,7 @@ func (c *Container) Start() error {
 	c.container.FollowOutput(&c.Logs)
 	err = c.container.StartLogProducer(c.ctx)
 	if err != nil {
-		return fmt.Errorf("log producer failed: %s", err)
+		return fmt.Errorf("log producer failed: %w", err)
 	}
 
 	c.Address = "localhost"
@@ -81,7 +81,7 @@ func (c *Container) Start() error {
 	err = c.LookupMappedPorts()
 	if err != nil {
 		c.Terminate()
-		return fmt.Errorf("port lookup failed: %s", err)
+		return fmt.Errorf("port lookup failed: %w", err)
 	}
 
 	return nil
@@ -103,16 +103,17 @@ func (c *Container) LookupMappedPorts() error {
 			port = strings.Split(port, ":")[1]
 		}
 
+		p, err := c.container.MappedPort(c.ctx, nat.Port(port))
+		if err != nil {
+			return fmt.Errorf("failed to find %q: %w", port, err)
+		}
+
 		// strip off the transport: 80/tcp -> 80
 		if strings.Contains(port, "/") {
 			port = strings.Split(port, "/")[0]
 		}
 
-		p, err := c.container.MappedPort(c.ctx, nat.Port(port))
-		if err != nil {
-			return fmt.Errorf("failed to find '%s' - %s", port, err)
-		}
-		fmt.Printf("mapped container port '%s' to host port '%s'\n", port, p.Port())
+		fmt.Printf("mapped container port %q to host port %q\n", port, p.Port())
 		c.Ports[port] = p.Port()
 	}
 

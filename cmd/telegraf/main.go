@@ -196,7 +196,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
 			err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
 			if err != nil && err2 != nil {
-				return fmt.Errorf("%s and %s", err, err2)
+				return fmt.Errorf("%w and %w", err, err2)
 			}
 			return nil
 		// DEPRECATED
@@ -224,6 +224,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			watchConfig: cCtx.String("watch-config"),
 			pidFile:     cCtx.String("pidfile"),
 			plugindDir:  cCtx.String("plugin-directory"),
+			password:    cCtx.String("password"),
 			test:        cCtx.Bool("test"),
 			debug:       cCtx.Bool("debug"),
 			once:        cCtx.Bool("once"),
@@ -280,6 +281,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.StringFlag{
 					Name:  "pidfile",
 					Usage: "file to write our pid to",
+				},
+				&cli.StringFlag{
+					Name:  "password",
+					Usage: "password to unlock secret-stores",
 				},
 				//
 				// Bool flags
@@ -362,7 +367,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	}
 
 	// Make sure we safely erase secrets
-	memguard.CatchInterrupt()
 	defer memguard.Purge()
 
 	return app.Run(args)

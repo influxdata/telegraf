@@ -465,7 +465,7 @@ func (c *CloudWatch) gatherMetrics(
 	for {
 		resp, err := c.client.GetMetricData(context.Background(), params)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get metric data: %v", err)
+			return nil, fmt.Errorf("failed to get metric data: %w", err)
 		}
 
 		results = append(results, resp.MetricDataResults...)

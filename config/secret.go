@@ -107,7 +107,7 @@ func (s *Secret) EqualTo(ref []byte) (bool, error) {
 	// Get a locked-buffer of the secret to perform the comparison
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
-		return false, fmt.Errorf("opening enclave failed: %v", err)
+		return false, fmt.Errorf("opening enclave failed: %w", err)
 	}
 	defer lockbuf.Destroy()
 
@@ -127,7 +127,7 @@ func (s *Secret) Get() ([]byte, error) {
 	// Decrypt the secret so we can return it
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
-		return nil, fmt.Errorf("opening enclave failed: %v", err)
+		return nil, fmt.Errorf("opening enclave failed: %w", err)
 	}
 	defer lockbuf.Destroy()
 	secret := lockbuf.Bytes()
@@ -179,7 +179,7 @@ func (s *Secret) Link(resolvers map[string]telegraf.ResolveFunc) error {
 	}
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
-		return fmt.Errorf("opening enclave failed: %v", err)
+		return fmt.Errorf("opening enclave failed: %w", err)
 	}
 	defer lockbuf.Destroy()
 	secret := lockbuf.Bytes()

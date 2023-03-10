@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -13,8 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -519,7 +518,7 @@ func (s *Statsd) parser() error {
 					}
 				default:
 					if err := s.parseStatsdLine(line); err != nil {
-						if errors.Cause(err) != errParsing {
+						if !errors.Is(err, errParsing) {
 							// Ignore parsing errors but error out on
 							// everything else...
 							return err
@@ -945,9 +944,14 @@ func (s *Statsd) Stop() {
 	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
 	if s.isUDP() {
-		s.UDPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		if s.UDPlistener != nil {
+			s.UDPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		}
 	} else {
-		s.TCPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		if s.TCPlistener != nil {
+			s.TCPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		}
+
 		// Close all open TCP connections
 		//  - get all conns from the s.conns map and put into slice
 		//  - this is so the forget() function doesnt conflict with looping

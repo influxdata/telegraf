@@ -38,7 +38,7 @@ func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 	for _, serv := range r.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
-			acc.AddError(fmt.Errorf("unable to parse to address '%s': %s", serv, err))
+			acc.AddError(fmt.Errorf("unable to parse to address %q: %w", serv, err))
 			continue
 		} else if u.Scheme == "" {
 			// fallback to simple string based address (i.e. "10.0.0.1:10000")
@@ -80,7 +80,7 @@ func (r *RethinkDB) gatherServer(server *Server, acc telegraf.Accumulator) error
 
 	server.session, err = gorethink.Connect(connectOpts)
 	if err != nil {
-		return fmt.Errorf("unable to connect to RethinkDB, %s", err.Error())
+		return fmt.Errorf("unable to connect to RethinkDB: %w", err)
 	}
 	defer server.session.Close()
 

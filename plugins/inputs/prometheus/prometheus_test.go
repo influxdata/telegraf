@@ -189,11 +189,11 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
 	var acc testutil.Accumulator
 
 	err = acc.GatherError(p.Gather)
-	errMessage := fmt.Sprintf("error making HTTP request to %s/metrics: Get \"%s/metrics\": "+
+	errMessage := fmt.Sprintf("error making HTTP request to \"%s/metrics\": Get \"%s/metrics\": "+
 		"context deadline exceeded (Client.Timeout exceeded while awaiting headers)", ts.URL, ts.URL)
 	errExpected := errors.New(errMessage)
-	require.Equal(t, errExpected, err)
 	require.Error(t, err)
+	require.Equal(t, errExpected.Error(), err.Error())
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) {
@@ -246,7 +246,7 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 	var acc testutil.Accumulator
 
 	err = acc.GatherError(p.Gather)
-	require.ErrorContains(t, err, "error making HTTP request to "+ts.URL+"/metrics")
+	require.ErrorContains(t, err, "error making HTTP request to \""+ts.URL+"/metrics\"")
 }
 
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {

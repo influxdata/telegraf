@@ -187,8 +187,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	if c.BucketTag == "" {
 		err := c.writeBatch(ctx, c.Bucket, metrics)
 		if err != nil {
-			if err, ok := err.(*APIError); ok {
-				if err.StatusCode == http.StatusRequestEntityTooLarge {
+			var apiErr *APIError
+			if errors.As(err, &apiErr) {
+				if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
 					return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
 				}
 			}
@@ -219,8 +220,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		for bucket, batch := range batches {
 			err := c.writeBatch(ctx, bucket, batch)
 			if err != nil {
-				if err, ok := err.(*APIError); ok {
-					if err.StatusCode == http.StatusRequestEntityTooLarge {
+				var apiErr *APIError
+				if errors.As(err, &apiErr) {
+					if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
 						return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
 					}
 				}

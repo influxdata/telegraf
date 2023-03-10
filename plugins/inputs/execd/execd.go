@@ -107,10 +107,11 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 	for {
 		metric, err := parser.Next()
 		if err != nil {
-			if err == influx.EOF {
+			if errors.Is(err, influx.EOF) {
 				break // stream ended
 			}
-			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+			var parseErr *influx.ParseError
+			if errors.As(err, &parseErr) {
 				// parse error.
 				e.acc.AddError(parseErr)
 				continue

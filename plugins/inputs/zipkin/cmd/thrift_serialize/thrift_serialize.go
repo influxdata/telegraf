@@ -90,7 +90,7 @@ func jsonToZipkinThrift(jsonRaw []byte) ([]byte, error) {
 	var spans []*zipkincore.Span
 	err := json.Unmarshal(jsonRaw, &spans)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling: %v", err)
+		return nil, fmt.Errorf("error unmarshalling: %w", err)
 	}
 
 	var zspans []*zipkincore.Span
@@ -103,18 +103,18 @@ func jsonToZipkinThrift(jsonRaw []byte) ([]byte, error) {
 	transport := thrift.NewTBinaryProtocolConf(buf, nil)
 
 	if err = transport.WriteListBegin(context.Background(), thrift.STRUCT, len(spans)); err != nil {
-		return nil, fmt.Errorf("error in beginning thrift write: %v", err)
+		return nil, fmt.Errorf("error in beginning thrift write: %w", err)
 	}
 
 	for _, span := range zspans {
 		err = span.Write(context.Background(), transport)
 		if err != nil {
-			return nil, fmt.Errorf("error converting zipkin struct to thrift: %v", err)
+			return nil, fmt.Errorf("error converting zipkin struct to thrift: %w", err)
 		}
 	}
 
 	if err = transport.WriteListEnd(context.Background()); err != nil {
-		return nil, fmt.Errorf("error finishing thrift write: %v", err)
+		return nil, fmt.Errorf("error finishing thrift write: %w", err)
 	}
 
 	return buf.Bytes(), nil

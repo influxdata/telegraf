@@ -1,0 +1,5 @@
+# key, tag-name, tag-value,...,tag-name,tag-value
+cpu-Hugin,location,at home,type,desktop
+cpu-Munin,os,Android,type,mobile
+cpu-Thor,location,eu-west1,type,server,cabinet,r15-02
+disk-Hugin,type,desktop

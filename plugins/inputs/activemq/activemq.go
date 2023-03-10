@@ -229,7 +229,7 @@ func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
 	queues := Queues{}
 	err = xml.Unmarshal(dataQueues, &queues)
 	if err != nil {
-		return fmt.Errorf("queues XML unmarshal error: %v", err)
+		return fmt.Errorf("queues XML unmarshal error: %w", err)
 	}
 
 	dataTopics, err := a.GetMetrics(a.TopicsURL())
@@ -239,7 +239,7 @@ func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
 	topics := Topics{}
 	err = xml.Unmarshal(dataTopics, &topics)
 	if err != nil {
-		return fmt.Errorf("topics XML unmarshal error: %v", err)
+		return fmt.Errorf("topics XML unmarshal error: %w", err)
 	}
 
 	dataSubscribers, err := a.GetMetrics(a.SubscribersURL())
@@ -249,7 +249,7 @@ func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
 	subscribers := Subscribers{}
 	err = xml.Unmarshal(dataSubscribers, &subscribers)
 	if err != nil {
-		return fmt.Errorf("subscribers XML unmarshal error: %v", err)
+		return fmt.Errorf("subscribers XML unmarshal error: %w", err)
 	}
 
 	a.GatherQueuesMetrics(acc, queues)

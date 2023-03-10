@@ -15,6 +15,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Provides Linux CPU metrics
+# This plugin ONLY supports Linux
 [[inputs.linux_cpu]]
   ## Path for sysfs filesystem.
   ## See https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt

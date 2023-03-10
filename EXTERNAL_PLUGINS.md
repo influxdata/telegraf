@@ -41,6 +41,7 @@ Pull requests welcome.
 
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
 - [firehose](https://github.com/muhlba91/telegraf-output-kinesis-data-firehose) - Sends metrics in batches to Amazon Kinesis Data Firehose.
+- [playfab](https://github.com/dgkanatsios/telegraftoplayfab) - Sends metrics to [Azure PlayFab](https://learn.microsoft.com/en-us/gaming/playfab/).
 
 ## Processors
 

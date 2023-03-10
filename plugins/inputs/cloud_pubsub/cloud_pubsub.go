@@ -102,7 +102,7 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 	} else {
 		subRef, err := ps.getGCPSubscription(ps.Subscription)
 		if err != nil {
-			return fmt.Errorf("unable to create subscription handle: %v", err)
+			return fmt.Errorf("unable to create subscription handle: %w", err)
 		}
 		ps.sub = subRef
 	}
@@ -157,11 +157,11 @@ func (ps *PubSub) startReceiver(parentCtx context.Context) error {
 	cctx, ccancel := context.WithCancel(parentCtx)
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
 		if err := ps.onMessage(ctx, msg); err != nil {
-			ps.acc.AddError(fmt.Errorf("unable to add message from subscription %s: %v", ps.sub.ID(), err))
+			ps.acc.AddError(fmt.Errorf("unable to add message from subscription %s: %w", ps.sub.ID(), err))
 		}
 	})
 	if err != nil {
-		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %v", ps.sub.ID(), err))
+		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %w", ps.sub.ID(), err))
 	} else {
 		ps.Log.Info("Subscription pull ended (no error, most likely stopped)")
 	}
@@ -180,7 +180,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	if ps.Base64Data {
 		strData, err := base64.StdEncoding.DecodeString(string(msg.Data()))
 		if err != nil {
-			return fmt.Errorf("unable to base64 decode message: %v", err)
+			return fmt.Errorf("unable to base64 decode message: %w", err)
 		}
 		data = strData
 	} else {
@@ -266,7 +266,7 @@ func (ps *PubSub) getPubSubClient() (*pubsub.Client, error) {
 		option.WithUserAgent(internal.ProductToken()),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate PubSub client: %v", err)
+		return nil, fmt.Errorf("unable to generate PubSub client: %w", err)
 	}
 	return client, nil
 }

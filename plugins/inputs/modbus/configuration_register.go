@@ -110,7 +110,7 @@ func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field
 	for _, def := range fieldDefs {
 		f, err := c.newFieldFromDefinition(def)
 		if err != nil {
-			return nil, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
+			return nil, fmt.Errorf("initializing field %q failed: %w", def.Name, err)
 		}
 		fields = append(fields, f)
 	}
@@ -163,13 +163,13 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 	for _, item := range fieldDefs {
 		//check empty name
 		if item.Name == "" {
-			return fmt.Errorf("empty name in '%s'", registerType)
+			return fmt.Errorf("empty name in %q", registerType)
 		}
 
 		//search name duplicate
 		canonicalName := item.Measurement + "." + item.Name
 		if nameEncountered[canonicalName] {
-			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, registerType, item.Name)
+			return fmt.Errorf("name %q is duplicated in measurement %q %q - %q", item.Name, item.Measurement, registerType, item.Name)
 		}
 		nameEncountered[canonicalName] = true
 
@@ -178,7 +178,7 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 			switch item.ByteOrder {
 			case "AB", "BA", "ABCD", "CDAB", "BADC", "DCBA", "ABCDEFGH", "HGFEDCBA", "BADCFEHG", "GHEFCDAB":
 			default:
-				return fmt.Errorf("invalid byte order '%s' in '%s' - '%s'", item.ByteOrder, registerType, item.Name)
+				return fmt.Errorf("invalid byte order %q in %q - %q", item.ByteOrder, registerType, item.Name)
 			}
 
 			// search data type
@@ -187,31 +187,31 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 				"UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64",
 				"FLOAT16-IEEE", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
 			default:
-				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, registerType, item.Name)
+				return fmt.Errorf("invalid data type %q in %q - %q", item.DataType, registerType, item.Name)
 			}
 
 			// check scale
 			if item.Scale == 0.0 {
-				return fmt.Errorf("invalid scale '%f' in '%s' - '%s'", item.Scale, registerType, item.Name)
+				return fmt.Errorf("invalid scale '%f' in %q - %q", item.Scale, registerType, item.Name)
 			}
 		}
 
 		// check address
 		if len(item.Address) != 1 && len(item.Address) != 2 && len(item.Address) != 4 {
-			return fmt.Errorf("invalid address '%v' length '%v' in '%s' - '%s'", item.Address, len(item.Address), registerType, item.Name)
+			return fmt.Errorf("invalid address '%v' length '%v' in %q - %q", item.Address, len(item.Address), registerType, item.Name)
 		}
 
 		if registerType == cInputRegisters || registerType == cHoldingRegisters {
 			if 2*len(item.Address) != len(item.ByteOrder) {
-				return fmt.Errorf("invalid byte order '%s' and address '%v'  in '%s' - '%s'", item.ByteOrder, item.Address, registerType, item.Name)
+				return fmt.Errorf("invalid byte order %q and address '%v'  in %q - %q", item.ByteOrder, item.Address, registerType, item.Name)
 			}
 
 			// search duplicated
 			if len(item.Address) > len(removeDuplicates(item.Address)) {
-				return fmt.Errorf("duplicate address '%v'  in '%s' - '%s'", item.Address, registerType, item.Name)
+				return fmt.Errorf("duplicate address '%v'  in %q - %q", item.Address, registerType, item.Name)
 			}
 		} else if len(item.Address) != 1 {
-			return fmt.Errorf("invalid address'%v' length'%v' in '%s' - '%s'", item.Address, len(item.Address), registerType, item.Name)
+			return fmt.Errorf("invalid address'%v' length'%v' in %q - %q", item.Address, len(item.Address), registerType, item.Name)
 		}
 	}
 	return nil

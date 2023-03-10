@@ -207,7 +207,7 @@ func setSystemctl(timeout config.Duration, unitType string, pattern string) (*by
 	cmd.Stdout = &out
 	err = internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running systemctl %s: %s", strings.Join(params, " "), err)
+		return &out, fmt.Errorf("error running systemctl %q: %w", strings.Join(params, " "), err)
 	}
 	return &out, nil
 }

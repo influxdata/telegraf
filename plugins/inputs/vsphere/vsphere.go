@@ -4,6 +4,7 @@ package vsphere
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"sync"
 	"time"
 
@@ -139,7 +140,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		go func(endpoint *Endpoint) {
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
-			if err == context.Canceled {
+			if errors.Is(err, context.Canceled) {
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}
