@@ -464,7 +464,7 @@ func TestDisconnectedServerBehavior(t *testing.T) {
 	v.DisconnectedServersBehavior = "something else"
 	_, err = NewEndpoint(context.Background(), v, u, v.Log)
 	require.Error(t, err)
-	require.Equal(t, err.Error(), "'something else' is not a valid value for disconnected_servers_behavior")
+	require.Equal(t, err.Error(), `"something else" is not a valid value for disconnected_servers_behavior`)
 }
 
 func testCollection(t *testing.T, excludeClusters bool) {
