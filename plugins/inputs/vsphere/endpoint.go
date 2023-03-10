@@ -312,7 +312,7 @@ func (e *Endpoint) init(ctx context.Context) error {
 			e.log.Warnf("Error connecting to vCenter on init: %s", err)
 			return nil
 		default:
-			return fmt.Errorf("'%s' is not a valid value for disconnected_servers_behavior",
+			return fmt.Errorf("%q is not a valid value for disconnected_servers_behavior",
 				e.Parent.DisconnectedServersBehavior)
 		}
 	}
