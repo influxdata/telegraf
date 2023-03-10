@@ -319,7 +319,6 @@ func NewGraphiteSerializer(
 			return nil, fmt.Errorf("invalid regex provided %q: %w", strictRegex, err)
 		}
 	}
-	fmt.Printf("using regex: %s\n", strictAllowedChars)
 
 	return &graphite.GraphiteSerializer{
 		Prefix:             prefix,
