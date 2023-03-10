@@ -48,6 +48,10 @@ type GraphiteSerializer struct {
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+	if s.StrictAllowedChars == nil {
+		s.StrictAllowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	}
+
 	out := []byte{}
 
 	// Convert UnixNano to Unix timestamps
