@@ -50,7 +50,7 @@ func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) er
 	res := e.resourceKinds["vsan"]
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
-		return fmt.Errorf("fail to get client when collect vsan: %v", err)
+		return fmt.Errorf("fail to get client when collect vsan: %w", err)
 	}
 	// Create vSAN client
 	vimClient := client.Client.Client
@@ -82,17 +82,17 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *object
 	// Do collection
 	if _, ok := metrics["summary.disk-usage"]; ok {
 		if err := e.queryDiskUsage(ctx, vsanClient, clusterRef, acc); err != nil {
-			acc.AddError(fmt.Errorf("error querying disk usage for cluster %s: %v", clusterRef.name, err))
+			acc.AddError(fmt.Errorf("error querying disk usage for cluster %s: %w", clusterRef.name, err))
 		}
 	}
 	if _, ok := metrics["summary.health"]; ok {
 		if err := e.queryHealthSummary(ctx, vsanClient, clusterRef, acc); err != nil {
-			acc.AddError(fmt.Errorf("error querying vsan health summary for cluster %s: %v", clusterRef.name, err))
+			acc.AddError(fmt.Errorf("error querying vsan health summary for cluster %s: %w", clusterRef.name, err))
 		}
 	}
 	if _, ok := metrics["summary.resync"]; ok {
 		if err := e.queryResyncSummary(ctx, vsanClient, cluster, clusterRef, acc); err != nil {
-			acc.AddError(fmt.Errorf("error querying vsan resync summary for cluster %s: %v", clusterRef.name, err))
+			acc.AddError(fmt.Errorf("error querying vsan resync summary for cluster %s: %w", clusterRef.name, err))
 		}
 	}
 	cmmds, err := getCmmdsMap(ctx, vimClient, cluster)
@@ -101,7 +101,7 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *object
 		cmmds = make(map[string]CmmdsEntity)
 	}
 	if err := e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
-		acc.AddError(fmt.Errorf("error querying performance metrics for cluster %s: %v", clusterRef.name, err))
+		acc.AddError(fmt.Errorf("error querying performance metrics for cluster %s: %w", clusterRef.name, err))
 	}
 }
 
@@ -156,7 +156,7 @@ func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client,
 func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.ClusterComputeResource) (map[string]CmmdsEntity, error) {
 	hosts, err := clusterObj.Hosts(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("fail to get host: %v", err)
+		return nil, fmt.Errorf("fail to get host: %w", err)
 	}
 
 	if len(hosts) == 0 {
