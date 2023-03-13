@@ -82,6 +82,7 @@ func TestOpenTelemetry(t *testing.T) {
 var _ pmetricotlp.GRPCServer = (*mockOtelService)(nil)
 
 type mockOtelService struct {
+	pmetricotlp.UnimplementedGRPCServer
 	t          *testing.T
 	listener   net.Listener
 	grpcServer *grpc.Server
