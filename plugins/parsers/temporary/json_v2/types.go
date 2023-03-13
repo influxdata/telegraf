@@ -1,5 +1,7 @@
 package json_v2
 
+import "time"
+
 // Config definition for backward compatibility ONLY.
 // We need this here to avoid cyclic dependencies. However, we need
 // to move this to plugins/parsers/json_v2 once we deprecate parser
@@ -14,6 +16,8 @@ type Config struct {
 	Fields      []DataSet `toml:"field"`
 	Tags        []DataSet `toml:"tag"`
 	JSONObjects []Object  `toml:"object"`
+
+	Location *time.Location
 }
 
 type DataSet struct {
