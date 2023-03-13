@@ -161,14 +161,7 @@ func (f *Filter) shouldNamePass(key string) bool {
 // shouldFieldPass returns true if the metric should pass, false if it should drop
 // based on the drop/pass filter parameters
 func (f *Filter) shouldFieldPass(key string) bool {
-	if f.fieldPassFilter != nil && f.fieldDropFilter != nil {
-		return f.fieldPassFilter.Match(key) && !f.fieldDropFilter.Match(key)
-	} else if f.fieldPassFilter != nil {
-		return f.fieldPassFilter.Match(key)
-	} else if f.fieldDropFilter != nil {
-		return !f.fieldDropFilter.Match(key)
-	}
-	return true
+	return ShouldPassFilters(f.fieldPassFilter, f.fieldDropFilter, key)
 }
 
 // shouldTagsPass returns true if the metric should pass, false if it should drop
@@ -215,6 +208,17 @@ func (f *Filter) filterTags(metric telegraf.Metric) {
 	for _, key := range filterKeys {
 		metric.RemoveTag(key)
 	}
+}
+
+func ShouldPassFilters(include filter.Filter, exclude filter.Filter, key string) bool {
+	if include != nil && exclude != nil {
+		return include.Match(key) && !exclude.Match(key)
+	} else if include != nil {
+		return include.Match(key)
+	} else if exclude != nil {
+		return !exclude.Match(key)
+	}
+	return true
 }
 
 func ShouldTagsPass(passFilters []TagFilter, dropFilters []TagFilter, tags []*telegraf.Tag) bool {

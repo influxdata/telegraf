@@ -1,8 +1,9 @@
 package prometheus
 
 import (
-	"k8s.io/client-go/tools/cache"
 	"testing"
+
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -262,6 +263,96 @@ func TestInvalidFieldSelector(t *testing.T) {
 
 	_, err := fields.ParseSelector(prom.KubernetesFieldSelector)
 	require.NotEqual(t, err, nil)
+}
+
+func TestAnnotationFilters(t *testing.T) {
+	p := pod()
+	p.Annotations = map[string]string{
+		"prometheus.io/scrape": "true",
+		"includeme":            "true",
+		"excludeme":            "true",
+		"neutral":              "true",
+	}
+
+	cases := []struct {
+		desc         string
+		include      []string
+		exclude      []string
+		expectedTags []string
+	}{
+		{"Just include",
+			[]string{"includeme"},
+			nil,
+			[]string{"includeme"}},
+		{"Just exclude",
+			nil,
+			[]string{"excludeme"},
+			[]string{"includeme", "neutral"}},
+		{"Include & exclude",
+			[]string{"includeme"},
+			[]string{"exludeme"},
+			[]string{"includeme"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			prom := &Prometheus{Log: testutil.Logger{}}
+			prom.PodAnnotationInclude = tc.include
+			prom.PodAnnotationExclude = tc.exclude
+			require.NoError(t, prom.initFilters())
+			registerPod(p, prom)
+			for _, pd := range prom.kubernetesPods {
+				for _, tagKey := range tc.expectedTags {
+					require.Contains(t, pd.Tags, tagKey)
+				}
+			}
+		})
+	}
+}
+
+func TestLabelFilters(t *testing.T) {
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	p.Labels = map[string]string{
+		"includeme": "true",
+		"excludeme": "true",
+		"neutral":   "true",
+	}
+
+	cases := []struct {
+		desc         string
+		include      []string
+		exclude      []string
+		expectedTags []string
+	}{
+		{"Just include",
+			[]string{"includeme"},
+			nil,
+			[]string{"includeme"}},
+		{"Just exclude",
+			nil,
+			[]string{"excludeme"},
+			[]string{"includeme", "neutral"}},
+		{"Include & exclude",
+			[]string{"includeme"},
+			[]string{"exludeme"},
+			[]string{"includeme"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			prom := &Prometheus{Log: testutil.Logger{}}
+			prom.PodLabelInclude = tc.include
+			prom.PodLabelExclude = tc.exclude
+			require.NoError(t, prom.initFilters())
+			registerPod(p, prom)
+			for _, pd := range prom.kubernetesPods {
+				for _, tagKey := range tc.expectedTags {
+					require.Contains(t, pd.Tags, tagKey)
+				}
+			}
+		})
+	}
 }
 
 func pod() *corev1.Pod {

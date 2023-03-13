@@ -95,6 +95,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # eg. To scrape pods on a specific node
   # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
 
+  ## Filter which pod annotations and labels will be added to metric tags
+  #
+  # pod_annotation_include = ["annotation-key-1"]
+  # pod_annotation_exclude = ["exclude-me"]
+  # pod_label_include = ["label-key-1"]
+  # pod_label_exclude = ["exclude-me"]
+
   # cache refresh interval to set the interval for re-sync of pods list.
   # Default is 60 minutes.
   # cache_refresh_interval = 60
