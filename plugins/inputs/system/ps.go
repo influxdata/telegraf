@@ -217,8 +217,8 @@ func (s *SystemPS) SwapStat() (*mem.SwapMemoryStat, error) {
 func (s *SystemPS) Temperature() ([]host.TemperatureStat, error) {
 	temp, err := host.SensorsTemperatures()
 	if err != nil {
-		_, ok := err.(*host.Warnings)
-		if !ok {
+		var hostWarnings *host.Warnings
+		if errors.As(err, &hostWarnings) {
 			return temp, err
 		}
 	}
