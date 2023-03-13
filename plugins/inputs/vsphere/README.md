@@ -771,7 +771,6 @@ For example:
   cluster_metric_exclude = ["*"]
   
   vsan_metric_include = [ "summary.*" ]
-  vsan_metric_exclude = [ ]
   vsan_metric_skip_verify = false
 
   collect_concurrency = 5
@@ -796,7 +795,6 @@ For example:
   cluster_metric_exclude = ["*"]
   
   vsan_metric_include = [ "performance.*" ]
-  vsan_metric_exclude = [ ]
   vsan_metric_skip_verify = false
   
   collect_concurrency = 5
