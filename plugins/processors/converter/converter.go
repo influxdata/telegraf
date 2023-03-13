@@ -208,7 +208,7 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 		}
 
 		if p.tagConversions.Timestamp != nil && p.tagConversions.Timestamp.Match(key) {
-			time, err := internal.ParseTimestamp(p.Tags.TimestampFormat, value, "")
+			time, err := internal.ParseTimestamp(p.Tags.TimestampFormat, value, nil)
 			if err != nil {
 				p.Log.Errorf("error converting to timestamp [%T]: %v", value, value)
 				continue
@@ -320,7 +320,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 		}
 
 		if p.fieldConversions.Timestamp != nil && p.fieldConversions.Timestamp.Match(key) {
-			time, err := internal.ParseTimestamp(p.Fields.TimestampFormat, value, "")
+			time, err := internal.ParseTimestamp(p.Fields.TimestampFormat, value, nil)
 			if err != nil {
 				p.Log.Errorf("error converting to timestamp [%T]: %v", value, value)
 				continue

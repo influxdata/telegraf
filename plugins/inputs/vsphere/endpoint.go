@@ -322,7 +322,17 @@ func (e *Endpoint) initalDiscovery(ctx context.Context) {
 func (e *Endpoint) init(ctx context.Context) error {
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
-		return err
+		switch e.Parent.DisconnectedServersBehavior {
+		case "error":
+			return err
+		case "ignore":
+			// Ignore the error and postpone the init until next collection cycle
+			e.log.Warnf("Error connecting to vCenter on init: %s", err)
+			return nil
+		default:
+			return fmt.Errorf("%q is not a valid value for disconnected_servers_behavior",
+				e.Parent.DisconnectedServersBehavior)
+		}
 	}
 
 	// Initial load of custom field metadata
@@ -911,6 +921,15 @@ func (e *Endpoint) Close() {
 
 // Collect runs a round of data collections as specified in the configuration.
 func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error {
+	// Connection could have failed on init, so we need to check for a deferred
+	// init request.
+	if !e.initialized {
+		e.log.Debug("Performing deferred init")
+		err := e.init(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	// If we never managed to do a discovery, collection will be a no-op. Therefore,
 	// we need to check that a connection is available, or the collection will
 	// silently fail.

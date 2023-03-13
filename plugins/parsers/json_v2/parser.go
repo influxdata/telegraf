@@ -66,6 +66,13 @@ func (p *Parser) Init() error {
 		if cfg.MeasurementName == "" {
 			p.Configs[i].MeasurementName = p.DefaultMetricName
 		}
+		if cfg.TimestampTimezone != "" {
+			loc, err := time.LoadLocation(cfg.TimestampTimezone)
+			if err != nil {
+				return fmt.Errorf("invalid timezone in config %d: %w", i+1, err)
+			}
+			p.Configs[i].Location = loc
+		}
 	}
 	return nil
 }
@@ -111,7 +118,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 				}
 
 				var err error
-				timestamp, err = internal.ParseTimestamp(c.TimestampFormat, result.String(), c.TimestampTimezone)
+				timestamp, err = internal.ParseTimestamp(c.TimestampFormat, result.String(), c.Location)
 
 				if err != nil {
 					return nil, err
@@ -321,7 +328,15 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
 				return nil, err
 			}
-			timestamp, err := internal.ParseTimestamp(p.objectConfig.TimestampFormat, result.String(), p.objectConfig.TimestampTimezone)
+			var loc *time.Location
+			if p.objectConfig.TimestampTimezone != "" {
+				var err error
+				loc, err = time.LoadLocation(p.objectConfig.TimestampTimezone)
+				if err != nil {
+					return nil, fmt.Errorf("invalid timezone: %w", err)
+				}
+			}
+			timestamp, err := internal.ParseTimestamp(p.objectConfig.TimestampFormat, result.String(), loc)
 			if err != nil {
 				return nil, err
 			}

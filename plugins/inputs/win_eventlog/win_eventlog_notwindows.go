@@ -20,8 +20,10 @@ func (w *WinEventLog) Init() error {
 	w.Log.Warn("current platform is not supported")
 	return nil
 }
-func (w *WinEventLog) SampleConfig() string                { return sampleConfig }
-func (w *WinEventLog) Gather(_ telegraf.Accumulator) error { return nil }
+func (*WinEventLog) SampleConfig() string                { return sampleConfig }
+func (*WinEventLog) Gather(_ telegraf.Accumulator) error { return nil }
+func (*WinEventLog) Start(_ telegraf.Accumulator) error  { return nil }
+func (*WinEventLog) Stop()                               {}
 
 func init() {
 	inputs.Add("win_eventlog", func() telegraf.Input {

@@ -140,6 +140,11 @@ This is a list of known headers and the corresponding values for
     ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
     ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
     # timestamp_format = "2006-01-02T15:04:05Z"
+    ## Optional: Timezone of the parsed time
+    ## This will locate the parsed time to the given timezone. Please note that
+    ## for times with timezone-offsets (e.g. RFC3339) the timestamp is unchanged.
+    ## This is ignored for all (unix) timestamp formats.
+    # timezone = "UTC"
 
     ## Optional: List of fields to convert to hex-strings if they are
     ## containing byte-arrays. This might be the case for e.g. protocol-buffer
@@ -286,7 +291,7 @@ By specifying `metric_name` you can override the metric/measurement name with
 the result of the given [XPath][xpath] query. If not specified, the default
 metric name is used.
 
-### timestamp, timestamp_format (optional)
+### timestamp, timestamp_format, timezone (optional)
 
 By default the current time will be used for all created metrics. To set the
 time from values in the XML document you can specify a [XPath][xpath] query in
@@ -297,6 +302,16 @@ an accepted [Go "reference time"][time const]. Consult the Go [time][time parse]
 package for details and additional examples on how to set the time format.  If
 `timestamp_format` is omitted `unix` format is assumed as result of the
 `timestamp` query.
+
+The `timezone` setting will be used to locate the parsed time in the given
+timezone. This is helpful for cases where the time does not contain timezone
+information, e.g. `2023-03-09 14:04:40` and is not located in _UTC_, which is
+the default setting. It is also possible to set the `timezone` to `Local` which
+used the configured host timezone.
+
+For time formats with timezone information, e.g. RFC3339, the resulting
+timestamp is unchanged. The `timezone` setting is ignored for all `unix`
+timestamp formats.
 
 ### tags sub-section
 

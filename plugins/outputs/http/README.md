@@ -44,6 +44,7 @@ to use them.
   # client_id = "clientid"
   # client_secret = "secret"
   # token_url = "https://indentityprovider/oauth2/v1/token"
+  # audience = ""
   # scopes = ["urn:opc:idm:__myscopes__"]
 
   ## Goole API Auth
