@@ -5,20 +5,20 @@
 
 ### Important Changes
 
-* Static Builds: Linux builds are now statically built. Other operating systems
+- Static Builds: Linux builds are now statically built. Other operating systems
   were cross-built in the past and as a result, already static. Users should
   not notice any change in behavior. The `_static` specific Linux binary is no
   longer produced as a result.
-* telegraf.d Behavior: The default behavior of reading
+- telegraf.d Behavior: The default behavior of reading
   `/etc/telegraf/telegraf.conf` now includes any .conf files under
   `/etc/telegraf/telegraf.d/`. This change will apply to the official Telegraf
   Docker image as well. This will simplify docker usage when using multiple
   configuration files.
-* Default Configuration: The `telegraf config` command and default config file
+- Default Configuration: The `telegraf config` command and default config file
   provided by Telegraf now includes all plugins and produces the same output
   across all operating systems. Plugin comments specify what platforms are
   supported or not.
-* State Persistence: State persistence is now available in select plugins. This
+- State Persistence: State persistence is now available in select plugins. This
   will allow plugins to start collecting data, where they left off. A
   configuration with state persistence cannot change or it will not be able to
   recover.
