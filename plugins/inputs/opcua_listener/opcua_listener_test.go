@@ -205,8 +205,8 @@ additional_valid_status_codes = ["0xC0"]
 	require.Equal(t, "/etc/telegraf/cert.pem", o.SubscribeClientConfig.Certificate)
 	require.Equal(t, "/etc/telegraf/key.pem", o.SubscribeClientConfig.PrivateKey)
 	require.Equal(t, "Anonymous", o.SubscribeClientConfig.AuthMethod)
-	require.Equal(t, "", o.SubscribeClientConfig.Username)
-	require.Equal(t, "", o.SubscribeClientConfig.Password)
+	require.True(t, o.SubscribeClientConfig.Username.Empty())
+	require.True(t, o.SubscribeClientConfig.Password.Empty())
 	require.Equal(t, []input.NodeSettings{
 		{
 			FieldName:      "name",
