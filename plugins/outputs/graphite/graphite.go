@@ -165,7 +165,7 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteTagSanitizeMode, g.GraphiteSeparator, g.Templates)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, "", g.GraphiteTagSupport, g.GraphiteTagSanitizeMode, g.GraphiteSeparator, g.Templates)
 	if err != nil {
 		return err
 	}

@@ -1393,9 +1393,10 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
+
+	c.getFieldString(tbl, "graphite_strict_sanitize_regex", &sc.GraphiteStrictRegex)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
 	c.getFieldString(tbl, "graphite_tag_sanitize_mode", &sc.GraphiteTagSanitizeMode)
-
 	c.getFieldString(tbl, "graphite_separator", &sc.GraphiteSeparator)
 
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
@@ -1485,6 +1486,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "prefix", "template", "templates",
 		"carbon2_format", "carbon2_sanitize_replace_char",
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
+		"graphite_strict_sanitize_regex",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
 		"json_timestamp_format", "json_timestamp_units", "json_transformation",
