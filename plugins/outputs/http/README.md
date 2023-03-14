@@ -11,7 +11,16 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -35,6 +44,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # client_id = "clientid"
   # client_secret = "secret"
   # token_url = "https://indentityprovider/oauth2/v1/token"
+  # audience = ""
   # scopes = ["urn:opc:idm:__myscopes__"]
 
   ## Goole API Auth
@@ -118,9 +128,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Google API Auth
 
-The `google_application_credentials` setting is used with Google Cloud APIs. It specifies the json key file. To learn about creating Google service accounts, consult Google's
-[oauth2 service account documentation][create_service_account]. An example use case is a metrics proxy deployed to
-Cloud Run. In this example, the service account must have the "run.routes.invoke" permission.
+The `google_application_credentials` setting is used with Google Cloud APIs.
+It specifies the json key file. To learn about creating Google service accounts,
+consult Google's [oauth2 service account documentation][create_service_account].
+An example use case is a metrics proxy deployed to Cloud Run. In this example,
+the service account must have the "run.routes.invoke" permission.
 
 [create_service_account]: https://cloud.google.com/docs/authentication/production#create_service_account
 

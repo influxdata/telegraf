@@ -9,7 +9,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -29,7 +29,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # [inputs.jolokia.proxy]
   #   host = "127.0.0.1"
   #   port = "8080"
-  
+
   ## Optional http timeouts
   ##
   ## response_header_timeout, if non-zero, specifies the amount of time to wait
@@ -76,9 +76,11 @@ The Jolokia plugin collects JVM metrics exposed as MBean's attributes through
 jolokia REST endpoint. All metrics are collected for each server configured.
 See [official Jolokia website](https://jolokia.org/) for more information.
 
-## Measurements
+## Metrics
 
 Jolokia plugin produces one measure for each metric configured,
 adding Server's `jolokia_name`, `jolokia_host` and `jolokia_port` as tags.
 
 [jolokia2]: /plugins/inputs/jolokia2
+
+## Example Output

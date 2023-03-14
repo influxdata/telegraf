@@ -4,6 +4,7 @@ package instrumental
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -28,7 +29,7 @@ var (
 
 type Instrumental struct {
 	Host       string          `toml:"host"`
-	APIToken   string          `toml:"api_token"`
+	APIToken   config.Secret   `toml:"api_token"`
 	Prefix     string          `toml:"prefix"`
 	DataFormat string          `toml:"data_format"`
 	Template   string          `toml:"template"`
@@ -79,11 +80,11 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	if i.conn == nil {
 		err := i.Connect()
 		if err != nil {
-			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %s", err)
+			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %w", err)
 		}
 	}
 
-	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false, "strict", ".", i.Templates)
+	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, "", false, "strict", ".", i.Templates)
 	if err != nil {
 		return err
 	}
@@ -148,7 +149,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	_, err = fmt.Fprint(i.conn, allPoints)
 
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			_ = i.Close()
 		}
 
@@ -164,8 +165,13 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {
-	_, err := fmt.Fprintf(conn, HandshakeFormat, i.APIToken)
+	token, err := i.APIToken.Get()
 	if err != nil {
+		return fmt.Errorf("getting token failed: %w", err)
+	}
+	defer config.ReleaseSecret(token)
+
+	if _, err := fmt.Fprintf(conn, HandshakeFormat, string(token)); err != nil {
 		return err
 	}
 

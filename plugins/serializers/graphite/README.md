@@ -2,8 +2,10 @@
 
 The Graphite data format is translated from Telegraf Metrics using either the
 template pattern or tag support method.  You can select between the two
-methods using the [`graphite_tag_support`](#graphite-tag-support) option.  When set, the tag support
-method is used, otherwise the [Template Pattern](templates) is used.
+methods using the [`graphite_tag_support`](#graphite_tag_support) option.  When set, the tag support
+method is used, otherwise the [Template Pattern][templates] is used.
+
+[templates]: /docs/TEMPLATE_PATTERN.md
 
 ## Configuration
 
@@ -33,10 +35,22 @@ method is used, otherwise the [Template Pattern](templates) is used.
   #  "host.measurement.tags.field"
   #]
 
+  ## Strict sanitization regex
+  ## This is the default sanitization regex that is used on data passed to the
+  ## graphite serializer. Users can add additional characters here if required.
+  ## Be aware that the characters, '/' '@' '*' are always replaced with '_',
+  ## '..' is replaced with '.', and '\' is removed even if added to the
+  ## following regex.
+  # graphite_strict_sanitize_regex = '[^a-zA-Z0-9-:._=\p{L}]'
+
   ## Support Graphite tags, recommended to enable when using Graphite 1.1 or later.
   # graphite_tag_support = false
-  ## Enable Graphite tags to support the full list of allowed characters
-  # graphite_tag_new_sanitize = false
+
+  ## Applied sanitization mode when graphite tag support is enabled.
+  ## * strict - uses the regex specified above
+  ## * compatible - allows for greater number of characters
+  # graphite_tag_sanitize_mode = "strict"
+
   ## Character for separating metric name and field for Graphite tags
   # graphite_separator = "."
 ```
@@ -74,5 +88,3 @@ The `graphite_tag_sanitize_mode` option defines how we should sanitize the tag n
 When in `strict` mode Telegraf uses the same rules as metrics when not using tags.
 When in `compatible` mode Telegraf allows more characters through, and is based on the Graphite specification:
 >Tag names must have a length >= 1 and may contain any ascii characters except `;!^=`. Tag values must also have a length >= 1, they may contain any ascii characters except `;` and the first character must not be `~`. UTF-8 characters may work for names and values, but they are not well tested and it is not recommended to use non-ascii characters in metric names or tags. Metric names get indexed under the special tag name, if a metric name starts with one or multiple ~ they simply get removed from the derived tag value because the ~ character is not allowed to be in the first position of the tag value. If a metric name consists of no other characters than ~, then it is considered invalid and may get dropped.
-
-[templates]: /docs/TEMPLATE_PATTERN.md

@@ -10,6 +10,8 @@ import (
 	"io"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 const requestID uint16 = 1
@@ -242,9 +244,7 @@ func TestChildServeCleansUp(t *testing.T) {
 		) {
 			// block on reading body of request
 			_, err := io.Copy(io.Discard, r.Body)
-			if err != tt.err {
-				t.Errorf("Expected %#v, got %#v", tt.err, err)
-			}
+			require.ErrorIs(t, err, tt.err)
 			// not reached if body of request isn't closed
 			done <- true
 		}))

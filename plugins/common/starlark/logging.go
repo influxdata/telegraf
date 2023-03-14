@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/influxdata/telegraf"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
+
+	"github.com/influxdata/telegraf"
 )
 
 // Builds a module that defines all the supported logging functions which will log using the provided logger
@@ -29,7 +30,7 @@ func LogModule(logger telegraf.Logger) *starlarkstruct.Module {
 func log(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple, logger telegraf.Logger) (starlark.Value, error) {
 	var msg starlark.String
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &msg); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+		return starlark.None, fmt.Errorf("%s: %w", b.Name(), err)
 	}
 	switch b.Name() {
 	case "log.debug":

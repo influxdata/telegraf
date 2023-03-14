@@ -50,7 +50,7 @@ func (f *Fail2ban) Init() error {
 	if f.path == "" {
 		path, err := exec.LookPath(cmd)
 		if err != nil {
-			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+			return fmt.Errorf("looking up %q failed: %w", cmd, err)
 		}
 		f.path = path
 	}
@@ -81,7 +81,7 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 	cmd := execCommand(name, args...)
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+		return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	lines := strings.Split(string(out), "\n")
 	const targetString = "Jail list:"
@@ -102,7 +102,7 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 		cmd := execCommand(name, args...)
 		out, err := cmd.Output()
 		if err != nil {
-			return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+			return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 		}
 
 		lines := strings.Split(string(out), "\n")

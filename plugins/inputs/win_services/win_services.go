@@ -26,7 +26,7 @@ type ServiceErr struct {
 }
 
 func (e *ServiceErr) Error() string {
-	return fmt.Sprintf("%s: '%s': %v", e.Message, e.Service, e.Err)
+	return fmt.Sprintf("%s: %q: %v", e.Message, e.Service, e.Err)
 }
 
 func IsPermission(err error) bool {

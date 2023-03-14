@@ -2,6 +2,7 @@ package influx
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -113,7 +114,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, m := range metrics {
 		err := s.Write(&s.buf, m)
 		if err != nil {
-			if _, ok := err.(*MetricError); ok {
+			var mErr *MetricError
+			if errors.As(err, &mErr) {
 				continue
 			}
 			return nil, err

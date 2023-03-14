@@ -12,28 +12,31 @@ import (
 )
 
 type traceService struct {
+	ptraceotlp.UnimplementedGRPCServer
 	converter *otel2influx.OtelTracesToLineProtocol
-	writer    *writeToAccumulator
 }
 
 var _ ptraceotlp.GRPCServer = (*traceService)(nil)
 
-func newTraceService(logger common.Logger, writer *writeToAccumulator) *traceService {
-	converter := otel2influx.NewOtelTracesToLineProtocol(logger)
+func newTraceService(logger common.Logger, writer *writeToAccumulator) (*traceService, error) {
+	converter, err := otel2influx.NewOtelTracesToLineProtocol(logger, writer)
+	if err != nil {
+		return nil, err
+	}
+
 	return &traceService{
 		converter: converter,
-		writer:    writer,
-	}
+	}, nil
 }
 
 func (s *traceService) Export(ctx context.Context, req ptraceotlp.ExportRequest) (ptraceotlp.ExportResponse, error) {
-	err := s.converter.WriteTraces(ctx, req.Traces(), s.writer)
+	err := s.converter.WriteTraces(ctx, req.Traces())
 	return ptraceotlp.NewExportResponse(), err
 }
 
 type metricsService struct {
+	pmetricotlp.UnimplementedGRPCServer
 	converter *otel2influx.OtelMetricsToLineProtocol
-	writer    *writeToAccumulator
 }
 
 var _ pmetricotlp.GRPCServer = (*metricsService)(nil)
@@ -46,40 +49,38 @@ var metricsSchemata = map[string]common.MetricsSchema{
 func newMetricsService(logger common.Logger, writer *writeToAccumulator, schema string) (*metricsService, error) {
 	ms, found := metricsSchemata[schema]
 	if !found {
-		return nil, fmt.Errorf("schema '%s' not recognized", schema)
+		return nil, fmt.Errorf("schema %q not recognized", schema)
 	}
 
-	converter, err := otel2influx.NewOtelMetricsToLineProtocol(logger, ms)
+	converter, err := otel2influx.NewOtelMetricsToLineProtocol(logger, writer, ms)
 	if err != nil {
 		return nil, err
 	}
 	return &metricsService{
 		converter: converter,
-		writer:    writer,
 	}, nil
 }
 
 func (s *metricsService) Export(ctx context.Context, req pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
-	err := s.converter.WriteMetrics(ctx, req.Metrics(), s.writer)
+	err := s.converter.WriteMetrics(ctx, req.Metrics())
 	return pmetricotlp.NewExportResponse(), err
 }
 
 type logsService struct {
+	plogotlp.UnimplementedGRPCServer
 	converter *otel2influx.OtelLogsToLineProtocol
-	writer    *writeToAccumulator
 }
 
 var _ plogotlp.GRPCServer = (*logsService)(nil)
 
 func newLogsService(logger common.Logger, writer *writeToAccumulator) *logsService {
-	converter := otel2influx.NewOtelLogsToLineProtocol(logger)
+	converter := otel2influx.NewOtelLogsToLineProtocol(logger, writer)
 	return &logsService{
 		converter: converter,
-		writer:    writer,
 	}
 }
 
 func (s *logsService) Export(ctx context.Context, req plogotlp.ExportRequest) (plogotlp.ExportResponse, error) {
-	err := s.converter.WriteLogs(ctx, req.Logs(), s.writer)
+	err := s.converter.WriteLogs(ctx, req.Logs())
 	return plogotlp.NewExportResponse(), err
 }

@@ -124,7 +124,7 @@ func (*Logstash) SampleConfig() string {
 func (logstash *Logstash) Init() error {
 	err := choice.CheckSlice(logstash.Collect, []string{"pipelines", "process", "jvm"})
 	if err != nil {
-		return fmt.Errorf(`cannot verify "collect" setting: %v`, err)
+		return fmt.Errorf(`cannot verify "collect" setting: %w`, err)
 	}
 	return nil
 }
@@ -264,11 +264,11 @@ func (logstash *Logstash) gatherPluginsStats(
 			accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
 		}
 		/*
-			The elasticsearch output produces additional stats around
-			bulk requests and document writes (that are elasticsearch specific).
-			Collect those here
+			The elasticsearch & opensearch output produces additional stats
+			around bulk requests and document writes (that are elasticsearch
+			and opensearch specific). Collect those below:
 		*/
-		if pluginType == "output" && plugin.Name == "elasticsearch" {
+		if pluginType == "output" && (plugin.Name == "elasticsearch" || plugin.Name == "opensearch") {
 			/*
 				The "bulk_requests" section has details about batch writes
 				into Elasticsearch

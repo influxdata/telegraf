@@ -629,7 +629,7 @@ func TestStreamParser(t *testing.T) {
 			for {
 				m, err := parser.Next()
 				if err != nil {
-					if err == EOF {
+					if errors.Is(err, EOF) {
 						break
 					}
 					require.Equal(t, tt.err, err)
@@ -816,7 +816,7 @@ func TestStreamParserErrorString(t *testing.T) {
 			var errs []error
 			for i := 0; i < 20; i++ {
 				_, err := parser.Next()
-				if err == EOF {
+				if errors.Is(err, EOF) {
 					break
 				}
 

@@ -98,7 +98,7 @@ func (ss *SlabStats) runCmd(cmd string, args []string) ([]byte, error) {
 
 	out, err := internal.StdOutputTimeout(execCmd, 5*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("failed to run command %s: %s - %v", execCmd.Args, err, out)
+		return nil, fmt.Errorf("failed to run command %q: %w - %v", execCmd.Args, err, out)
 	}
 
 	return out, nil

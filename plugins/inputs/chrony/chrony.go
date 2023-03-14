@@ -50,7 +50,7 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 	cmd := execCommand(c.path, flags...)
 	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+		return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	fields, tags, err := processChronycOutput(string(out))
 	if err != nil {

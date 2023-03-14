@@ -36,6 +36,7 @@ type Parser struct {
 	DefaultTags map[string]string `toml:"-"`
 	Log         telegraf.Logger   `toml:"-"`
 
+	location     *time.Location
 	tagFilter    filter.Filter
 	stringFilter filter.Filter
 }
@@ -95,7 +96,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 			return nil, err
 		}
 
-		timestamp, err = internal.ParseTimestamp(p.TimeFormat, f.Fields[p.TimeKey], p.Timezone)
+		timestamp, err = internal.ParseTimestamp(p.TimeFormat, f.Fields[p.TimeKey], p.location)
 		if err != nil {
 			return nil, err
 		}
@@ -161,12 +162,20 @@ func (p *Parser) Init() error {
 
 	p.stringFilter, err = filter.Compile(p.StringFields)
 	if err != nil {
-		return fmt.Errorf("compiling string-fields filter failed: %v", err)
+		return fmt.Errorf("compiling string-fields filter failed: %w", err)
 	}
 
 	p.tagFilter, err = filter.Compile(p.TagKeys)
 	if err != nil {
-		return fmt.Errorf("compiling tag-key filter failed: %v", err)
+		return fmt.Errorf("compiling tag-key filter failed: %w", err)
+	}
+
+	if p.Timezone != "" {
+		loc, err := time.LoadLocation(p.Timezone)
+		if err != nil {
+			return fmt.Errorf("invalid timezone: %w", err)
+		}
+		p.location = loc
 	}
 
 	return nil

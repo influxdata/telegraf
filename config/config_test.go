@@ -21,6 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/persister"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -58,8 +59,8 @@ func TestReadBinaryFile(t *testing.T) {
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
-	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
-	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
+	t.Setenv("MY_TEST_SERVER", "192.168.1.1")
+	t.Setenv("TEST_INTERVAL", "10s")
 	require.NoError(t, c.LoadConfig("./testdata/single_plugin_env_vars.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
@@ -91,9 +92,10 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	}
 	inputConfig.Tags = make(map[string]string)
 
-	// Ignore Log and Parser
+	// Ignore Log, Parser and ID
 	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
 	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
+	c.Inputs[0].Config.ID = ""
 	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct mockup struct.")
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct input metadata.")
 }
@@ -131,9 +133,10 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	}
 	inputConfig.Tags = make(map[string]string)
 
-	// Ignore Log and Parser
+	// Ignore Log, Parser and ID
 	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
 	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
+	c.Inputs[0].Config.ID = ""
 	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct memcached struct.")
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
@@ -257,6 +260,9 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		// Ignore the parsers for further comparisons
 		input.parser = nil
 		expectedPlugins[i].parser = nil
+
+		// Ignore the ID
+		plugin.Config.ID = ""
 
 		require.Equalf(t, expectedPlugins[i], plugin.Input, "Plugin %d: incorrect struct produced", i)
 		require.Equalf(t, expectedConfigs[i], plugin.Config, "Plugin %d: incorrect config produced", i)
@@ -480,11 +486,10 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	defer ts.Close()
 
 	c := NewConfig()
-	err := os.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
-	require.NoError(t, err)
+	t.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
 	configPath, err := getDefaultConfigPath()
 	require.NoError(t, err)
-	require.Equal(t, ts.URL, configPath)
+	require.Equal(t, []string{ts.URL}, configPath)
 	err = c.LoadConfig("")
 	require.NoError(t, err)
 }
@@ -965,6 +970,151 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 	}
 }
 
+func TestConfigPluginIDsDifferent(t *testing.T) {
+	c := NewConfig()
+	c.Agent.Statefile = "/dev/null"
+	require.NoError(t, c.LoadConfig("./testdata/state_persistence_input_all_different.toml"))
+	require.NotEmpty(t, c.Inputs)
+
+	// Compare generated IDs
+	for i, pi := range c.Inputs {
+		refid := pi.Config.ID
+		require.NotEmpty(t, refid)
+
+		// Cross-comparison
+		for j, pj := range c.Inputs {
+			testid := pj.Config.ID
+			if i == j {
+				require.Equal(t, refid, testid)
+				continue
+			}
+			require.NotEqualf(t, refid, testid, "equal for %d, %d", i, j)
+		}
+	}
+}
+
+func TestConfigPluginIDsSame(t *testing.T) {
+	c := NewConfig()
+	c.Agent.Statefile = "/dev/null"
+	require.NoError(t, c.LoadConfig("./testdata/state_persistence_input_all_same.toml"))
+	require.NotEmpty(t, c.Inputs)
+
+	// Compare generated IDs
+	for i, pi := range c.Inputs {
+		refid := pi.Config.ID
+		require.NotEmpty(t, refid)
+
+		// Cross-comparison
+		for j, pj := range c.Inputs {
+			testid := pj.Config.ID
+			require.Equal(t, refid, testid, "not equal for %d, %d", i, j)
+		}
+	}
+}
+
+func TestPersisterInputStoreLoad(t *testing.T) {
+	// Reserve a temporary state file
+	file, err := os.CreateTemp("", "telegraf_state-*.json")
+	require.NoError(t, err)
+	filename := file.Name()
+	require.NoError(t, file.Close())
+	defer os.Remove(filename)
+
+	// Load the plugins
+	cstore := NewConfig()
+	require.NoError(t, cstore.LoadConfig("testdata/state_persistence_input_store_load.toml"))
+
+	// Initialize the persister for storing the state
+	persisterStore := persister.Persister{
+		Filename: filename,
+	}
+	require.NoError(t, persisterStore.Init())
+
+	expected := make(map[string]interface{})
+	for i, plugin := range cstore.Inputs {
+		require.NoError(t, plugin.Init())
+
+		// Register
+		p := plugin.Input.(*MockupStatePlugin)
+		require.NoError(t, persisterStore.Register(plugin.ID(), p))
+
+		// Change the state
+		p.state.Name += "_" + strings.Repeat("a", i+1)
+		p.state.Version++
+		p.state.Offset += uint64(i + 1)
+		p.state.Bits = append(p.state.Bits, len(p.state.Bits))
+		p.state.Modified, _ = time.Parse(time.RFC3339, "2022-11-03T16:49:00+02:00")
+
+		// Store the state for later comparison
+		expected[plugin.ID()] = p.GetState()
+	}
+
+	// Write state
+	require.NoError(t, persisterStore.Store())
+
+	// Load the plugins
+	cload := NewConfig()
+	require.NoError(t, cload.LoadConfig("testdata/state_persistence_input_store_load.toml"))
+	require.Len(t, cload.Inputs, len(expected))
+
+	// Initialize the persister for loading the state
+	persisterLoad := persister.Persister{
+		Filename: filename,
+	}
+	require.NoError(t, persisterLoad.Init())
+
+	for _, plugin := range cload.Inputs {
+		require.NoError(t, plugin.Init())
+
+		// Register
+		p := plugin.Input.(*MockupStatePlugin)
+		require.NoError(t, persisterLoad.Register(plugin.ID(), p))
+
+		// Check that the states are not yet restored
+		require.NotNil(t, expected[plugin.ID()])
+		require.NotEqual(t, expected[plugin.ID()], p.GetState())
+	}
+
+	// Restore states
+	require.NoError(t, persisterLoad.Load())
+
+	// Check we got what we saved.
+	for _, plugin := range cload.Inputs {
+		p := plugin.Input.(*MockupStatePlugin)
+		require.Equal(t, expected[plugin.ID()], p.GetState())
+	}
+}
+
+func TestPersisterProcessorRegistration(t *testing.T) {
+	// Load the plugins
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("testdata/state_persistence_processors.toml"))
+	require.NotEmpty(t, c.Processors)
+	require.NotEmpty(t, c.AggProcessors)
+
+	// Initialize the persister for test
+	dut := persister.Persister{
+		Filename: "/tmp/doesn_t_matter.json",
+	}
+	require.NoError(t, dut.Init())
+
+	// Register the processors
+	for _, plugin := range c.Processors {
+		unwrapped := plugin.Processor.(unwrappable).Unwrap()
+
+		p := unwrapped.(*MockupProcessorPlugin)
+		require.NoError(t, dut.Register(plugin.ID(), p))
+	}
+
+	// Register the after-aggregator processors
+	for _, plugin := range c.AggProcessors {
+		unwrapped := plugin.Processor.(unwrappable).Unwrap()
+
+		p := unwrapped.(*MockupProcessorPlugin)
+		require.NoError(t, dut.Register(plugin.ID(), p))
+	}
+}
+
 /*** Mockup INPUT plugin for (old) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserOld struct {
 	Parser     parsers.Parser
@@ -1090,7 +1240,10 @@ func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) {
 }
 
 /*** Mockup PROCESSOR plugin without parser ***/
-type MockupProcessorPlugin struct{}
+type MockupProcessorPlugin struct {
+	Option string `toml:"option"`
+	state  []uint64
+}
 
 func (m *MockupProcessorPlugin) Start(_ telegraf.Accumulator) error {
 	return nil
@@ -1104,6 +1257,18 @@ func (m *MockupProcessorPlugin) Apply(_ ...telegraf.Metric) []telegraf.Metric {
 	return nil
 }
 func (m *MockupProcessorPlugin) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
+	return nil
+}
+func (m *MockupProcessorPlugin) GetState() interface{} {
+	return m.state
+}
+func (m *MockupProcessorPlugin) SetState(state interface{}) error {
+	s, ok := state.([]uint64)
+	if !ok {
+		return fmt.Errorf("invalid state type %T", state)
+	}
+	m.state = s
+
 	return nil
 }
 
@@ -1176,6 +1341,64 @@ func (m *MockupOuputPlugin) Write(_ []telegraf.Metric) error {
 	return nil
 }
 
+/*** Mockup INPUT plugin with state for testing to avoid cyclic dependencies ***/
+type MockupState struct {
+	Name     string
+	Version  uint64
+	Offset   uint64
+	Bits     []int
+	Modified time.Time
+}
+
+type MockupStatePluginSettings struct {
+	Name     string  `toml:"name"`
+	Factor   float64 `toml:"factor"`
+	Enabled  bool    `toml:"enabled"`
+	BitField []int   `toml:"bits"`
+}
+
+type MockupStatePlugin struct {
+	Servers  []string                    `toml:"servers"`
+	Method   string                      `toml:"method"`
+	Settings map[string]string           `toml:"params"`
+	Port     int                         `toml:"port"`
+	Setups   []MockupStatePluginSettings `toml:"setup"`
+	state    MockupState
+}
+
+func (m *MockupStatePlugin) Init() error {
+	t0, _ := time.Parse(time.RFC3339, "2021-04-24T23:42:00+02:00")
+	m.state = MockupState{
+		Name:     "mockup",
+		Bits:     []int{},
+		Modified: t0,
+	}
+
+	return nil
+}
+
+func (m *MockupStatePlugin) GetState() interface{} {
+	return m.state
+}
+
+func (m *MockupStatePlugin) SetState(state interface{}) error {
+	s, ok := state.(MockupState)
+	if !ok {
+		return fmt.Errorf("invalid state type %T", state)
+	}
+	m.state = s
+
+	return nil
+}
+
+func (m *MockupStatePlugin) SampleConfig() string {
+	return "Mockup test plugin"
+}
+
+func (m *MockupStatePlugin) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
 // Register the mockup plugin on loading
 func init() {
 	// Register the mockup input plugin for the required names
@@ -1206,6 +1429,9 @@ func init() {
 	inputs.Add("procstat", func() telegraf.Input {
 		return &MockupInputPlugin{}
 	})
+	inputs.Add("statetest", func() telegraf.Input {
+		return &MockupStatePlugin{}
+	})
 
 	// Register the mockup processor plugin for the required names
 	processors.Add("parser_test", func() telegraf.Processor {
@@ -1219,6 +1445,9 @@ func init() {
 	})
 	processors.Add("processor_parserfunc", func() telegraf.Processor {
 		return &MockupProcessorPluginParserFunc{}
+	})
+	processors.Add("statetest", func() telegraf.Processor {
+		return &MockupProcessorPlugin{}
 	})
 
 	// Register the mockup output plugin for the required names

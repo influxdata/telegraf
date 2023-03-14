@@ -101,7 +101,7 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
-		return fmt.Errorf("unable to decode XML document: %s", err)
+		return fmt.Errorf("unable to decode XML document: %w", err)
 	}
 
 	tags := map[string]string{"url": addr.Host}

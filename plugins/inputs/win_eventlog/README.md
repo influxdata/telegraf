@@ -18,12 +18,13 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Input plugin to collect Windows Event Log messages
+# This plugin ONLY supports Windows
 [[inputs.win_eventlog]]
   ## Telegraf should have Administrator permissions to subscribe for some Windows Events channels
   ## (System log, for example)
@@ -63,6 +64,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     </Query>
   </QueryList>
   '''
+
+  ## When true, event logs are read from the beginning; otherwise only future events
+  ## will be logged.
+  # from_beginning = false
 
   ## System field names:
   ##   "Source", "EventID", "Version", "Level", "Task", "Opcode", "Keywords", "TimeCreated",

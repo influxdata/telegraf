@@ -457,9 +457,9 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, value := range values {
-			_, err := writer.Write([]byte(value))
+			_, err = writer.Write([]byte(value))
 			if err != nil {
-				return fmt.Errorf("error writing message: %q, %v", value, err)
+				return fmt.Errorf("error writing message: %q: %w", value, err)
 			}
 		}
 	}

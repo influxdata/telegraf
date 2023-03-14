@@ -60,14 +60,14 @@ func (n *ConsulAgent) Init() error {
 	if n.TokenFile != "" {
 		token, err := os.ReadFile(n.TokenFile)
 		if err != nil {
-			return fmt.Errorf("reading file failed: %v", err)
+			return fmt.Errorf("reading file failed: %w", err)
 		}
 		n.Token = strings.TrimSpace(string(token))
 	}
 
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("setting up TLS configuration failed: %v", err)
+		return fmt.Errorf("setting up TLS configuration failed: %w", err)
 	}
 
 	n.roundTripper = &http.Transport{
@@ -100,7 +100,7 @@ func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 
 	resp, err := n.roundTripper.RoundTrip(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return nil, fmt.Errorf("error making HTTP request to %q: %w", url, err)
 	}
 	defer resp.Body.Close()
 
@@ -111,7 +111,7 @@ func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 	var metrics AgentInfo
 	err = json.NewDecoder(resp.Body).Decode(&metrics)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing json response: %s", err)
+		return nil, fmt.Errorf("error parsing json response: %w", err)
 	}
 
 	return &metrics, nil
@@ -121,7 +121,7 @@ func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 func buildConsulAgent(acc telegraf.Accumulator, agentInfo *AgentInfo) error {
 	t, err := time.Parse(timeLayout, agentInfo.Timestamp)
 	if err != nil {
-		return fmt.Errorf("error parsing time: %s", err)
+		return fmt.Errorf("error parsing time: %w", err)
 	}
 
 	for _, counters := range agentInfo.Counters {

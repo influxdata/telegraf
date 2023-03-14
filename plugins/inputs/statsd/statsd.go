@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -13,8 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -38,8 +37,6 @@ const (
 
 	defaultSeparator           = "_"
 	defaultAllowPendingMessage = 10000
-
-	parserGoRoutines = 5
 )
 
 var errParsing = errors.New("error parsing statsd line")
@@ -63,25 +60,25 @@ type Statsd struct {
 	Protocol string `toml:"protocol"`
 
 	// Address & Port to serve from
-	ServiceAddress string
+	ServiceAddress string `toml:"service_address"`
 
 	// Number of messages allowed to queue up in between calls to Gather. If this
 	// fills up, packets will get dropped until the next Gather interval is ran.
-	AllowedPendingMessages int
+	AllowedPendingMessages int `toml:"allowed_pending_messages"`
+	NumberWorkerThreads    int `toml:"number_workers_threads"`
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []Number
-	PercentileLimit int
-
-	DeleteGauges   bool
-	DeleteCounters bool
-	DeleteSets     bool
-	DeleteTimings  bool
-	ConvertNames   bool `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
+	Percentiles     []Number `toml:"percentiles"`
+	PercentileLimit int      `toml:"percentile_limit"`
+	DeleteGauges    bool     `toml:"delete_gauges"`
+	DeleteCounters  bool     `toml:"delete_counters"`
+	DeleteSets      bool     `toml:"delete_sets"`
+	DeleteTimings   bool     `toml:"delete_timings"`
+	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
 
 	// MetricSeparator is the separator between parts of the metric name.
-	MetricSeparator string
+	MetricSeparator string `toml:"metric_separator"`
 	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;use 'datadog_extensions' instead"`
@@ -102,9 +99,16 @@ type Statsd struct {
 	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;2.0.0;option is ignored"`
 
-	ReadBufferSize int `toml:"read_buffer_size"`
+	ReadBufferSize      int              `toml:"read_buffer_size"`
+	SanitizeNamesMethod string           `toml:"sanitize_name_method"`
+	Templates           []string         `toml:"templates"` // bucket -> influx templates
+	MaxTCPConnections   int              `toml:"max_tcp_connections"`
+	TCPKeepAlive        bool             `toml:"tcp_keep_alive"`
+	TCPKeepAlivePeriod  *config.Duration `toml:"tcp_keep_alive_period"`
 
-	SanitizeNamesMethod string `toml:"sanitize_name_method"`
+	// Max duration for each metric to stay cached without being updated.
+	MaxTTL config.Duration `toml:"max_ttl"`
+	Log    telegraf.Logger `toml:"-"`
 
 	sync.Mutex
 	// Lock for preventing a data race during resource cleanup
@@ -131,28 +135,17 @@ type Statsd struct {
 	timings       map[string]cachedtimings
 	distributions []cacheddistributions
 
-	// bucket -> influx templates
-	Templates []string
-
 	// Protocol listeners
 	UDPlistener *net.UDPConn
 	TCPlistener *net.TCPListener
 
 	// track current connections so we can close them in Stop()
-	conns map[string]*net.TCPConn
-
-	MaxTCPConnections int `toml:"max_tcp_connections"`
-
-	TCPKeepAlive       bool             `toml:"tcp_keep_alive"`
-	TCPKeepAlivePeriod *config.Duration `toml:"tcp_keep_alive_period"`
-
-	// Max duration for each metric to stay cached without being updated.
-	MaxTTL config.Duration `toml:"max_ttl"`
-
+	conns          map[string]*net.TCPConn
 	graphiteParser *graphite.Parser
+	acc            telegraf.Accumulator
+	bufPool        sync.Pool // pool of byte slices to handle parsing
 
-	acc telegraf.Accumulator
-
+	// Internal statistics counters
 	MaxConnections     selfstat.Stat
 	CurrentConnections selfstat.Stat
 	TotalConnections   selfstat.Stat
@@ -162,11 +155,7 @@ type Statsd struct {
 	UDPPacketsDrop     selfstat.Stat
 	UDPBytesRecv       selfstat.Stat
 	ParseTimeNS        selfstat.Stat
-
-	Log telegraf.Logger `toml:"-"`
-
-	// A pool of byte slices to handle parsing
-	bufPool sync.Pool
+	PendingMessages    selfstat.Stat
 }
 
 type input struct {
@@ -330,6 +319,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.UDPPacketsDrop = selfstat.Register("statsd", "udp_packets_dropped", tags)
 	s.UDPBytesRecv = selfstat.Register("statsd", "udp_bytes_received", tags)
 	s.ParseTimeNS = selfstat.Register("statsd", "parse_time_ns", tags)
+	s.PendingMessages = selfstat.Register("statsd", "pending_messages", tags)
 
 	s.in = make(chan input, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
@@ -391,7 +381,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		}()
 	}
 
-	for i := 1; i <= parserGoRoutines; i++ {
+	for i := 1; i <= s.NumberWorkerThreads; i++ {
 		// Start the line parser
 		s.wg.Add(1)
 		go func() {
@@ -435,7 +425,11 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 				// not over connection limit, handle the connection properly.
 				s.wg.Add(1)
 				// generate a random id for this TCPConn
-				id := internal.RandomString(6)
+				id, err := internal.RandomString(6)
+				if err != nil {
+					return err
+				}
+
 				s.remember(id, conn)
 				go s.handler(conn, id)
 			default:
@@ -483,6 +477,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 				Buffer: b,
 				Time:   time.Now(),
 				Addr:   addr.IP.String()}:
+				s.PendingMessages.Set(int64(len(s.in)))
 			default:
 				s.UDPPacketsDrop.Incr(1)
 				s.drops++
@@ -505,6 +500,7 @@ func (s *Statsd) parser() error {
 		case <-s.done:
 			return nil
 		case in := <-s.in:
+			s.PendingMessages.Set(int64(len(s.in)))
 			start := time.Now()
 			lines := strings.Split(in.Buffer.String(), "\n")
 			s.bufPool.Put(in.Buffer)
@@ -522,7 +518,7 @@ func (s *Statsd) parser() error {
 					}
 				default:
 					if err := s.parseStatsdLine(line); err != nil {
-						if errors.Cause(err) != errParsing {
+						if !errors.Is(err, errParsing) {
 							// Ignore parsing errors but error out on
 							// everything else...
 							return err
@@ -872,10 +868,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 	// connection cleanup function
 	defer func() {
 		s.wg.Done()
-
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		conn.Close()
+		conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 
 		// Add one connection potential back to channel when this one closes
 		s.accept <- true
@@ -907,14 +900,12 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
-			// Writes to a bytes buffer always succeed, so do not check the errors here
-			//nolint:errcheck,revive
-			b.Write(scanner.Bytes())
-			//nolint:errcheck,revive
-			b.WriteByte('\n')
+			b.Write(scanner.Bytes()) //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
+			b.WriteByte('\n')        //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
 
 			select {
 			case s.in <- input{Buffer: b, Time: time.Now(), Addr: remoteIP}:
+				s.PendingMessages.Set(int64(len(s.in)))
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
@@ -929,9 +920,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	conn.Close()
+	conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 	s.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	s.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
@@ -955,13 +944,14 @@ func (s *Statsd) Stop() {
 	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
 	if s.isUDP() {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		s.UDPlistener.Close()
+		if s.UDPlistener != nil {
+			s.UDPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		}
 	} else {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		s.TCPlistener.Close()
+		if s.TCPlistener != nil {
+			s.TCPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		}
+
 		// Close all open TCP connections
 		//  - get all conns from the s.conns map and put into slice
 		//  - this is so the forget() function doesnt conflict with looping
@@ -973,9 +963,7 @@ func (s *Statsd) Stop() {
 		}
 		s.cleanup.Unlock()
 		for _, conn := range conns {
-			// Ignore the returned error as we cannot do anything about it anyway
-			//nolint:errcheck,revive
-			conn.Close()
+			conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
 		}
 	}
 	s.Unlock()
@@ -1032,14 +1020,13 @@ func init() {
 			Protocol:               defaultProtocol,
 			ServiceAddress:         ":8125",
 			MaxTCPConnections:      250,
-			TCPKeepAlive:           false,
 			MetricSeparator:        "_",
 			AllowedPendingMessages: defaultAllowPendingMessage,
 			DeleteCounters:         true,
 			DeleteGauges:           true,
 			DeleteSets:             true,
 			DeleteTimings:          true,
-			SanitizeNamesMethod:    "",
+			NumberWorkerThreads:    5,
 		}
 	})
 }

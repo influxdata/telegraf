@@ -22,7 +22,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -74,7 +74,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## HTTP basic auth
     #username = ""
     #password = ""
-  
+
   [inputs.webhooks.artifactory]
     path = "/artifactory"
 ```
@@ -96,3 +96,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 1. Import your plugin in the `webhooks.go` file and add it to the `Webhooks` struct
 
 Both [Github](github/) and [Rollbar](rollbar/) are good example to follow.
+
+## Metrics
+
+## Example Output

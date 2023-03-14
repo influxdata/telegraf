@@ -27,10 +27,12 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/persister"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -49,6 +51,9 @@ var (
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
+
+	// Password specified via command-line
+	Password Secret
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -82,6 +87,8 @@ type Config struct {
 
 	Deprecations map[string][]int64
 	version      *semver.Version
+
+	Persister *persister.Persister
 }
 
 // Ordered plugins used to keep the order in which they appear in a file
@@ -242,6 +249,12 @@ type AgentConfig struct {
 	// Method for translating SNMP objects. 'netsnmp' to call external programs,
 	// 'gosmi' to use the built-in library.
 	SnmpTranslator string `toml:"snmp_translator"`
+
+	// Name of the file to load the state of plugins from and store the state to.
+	// If uncommented and not empty, this file will be used to save the state of
+	// stateful plugins on termination of Telegraf. If the file exists on start,
+	// the state in the file will be restored for the plugins.
+	Statefile string `toml:"statefile"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -361,32 +374,51 @@ func WalkDirectory(path string) ([]string, error) {
 // Try to find a default config file at these locations (in order):
 //  1. $TELEGRAF_CONFIG_PATH
 //  2. $HOME/.telegraf/telegraf.conf
-//  3. /etc/telegraf/telegraf.conf
-func getDefaultConfigPath() (string, error) {
+//  3. /etc/telegraf/telegraf.conf and /etc/telegraf/telegraf.d/*.conf
+func getDefaultConfigPath() ([]string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
+	etcfolder := "/etc/telegraf/telegraf.conf.d"
+
 	if runtime.GOOS == "windows" {
 		programFiles := os.Getenv("ProgramFiles")
 		if programFiles == "" { // Should never happen
 			programFiles = `C:\Program Files`
 		}
 		etcfile = programFiles + `\Telegraf\telegraf.conf`
+		etcfolder = programFiles + `\Telegraf\telegraf.conf.d\`
 	}
-	for _, path := range []string{envfile, homefile, etcfile} {
+
+	for _, path := range []string{envfile, homefile} {
 		if isURL(path) {
-			log.Printf("I! Using config url: %s", path)
-			return path, nil
+			return []string{path}, nil
 		}
 		if _, err := os.Stat(path); err == nil {
-			log.Printf("I! Using config file: %s", path)
-			return path, nil
+			return []string{path}, nil
 		}
 	}
 
+	// At this point we need to check if the files under /etc/telegraf are
+	// populated and return them all.
+	confFiles := []string{}
+	if _, err := os.Stat(etcfile); err == nil {
+		confFiles = append(confFiles, etcfile)
+	}
+	if _, err := os.Stat(etcfolder); err == nil {
+		files, err := WalkDirectory(etcfolder)
+		if err != nil {
+			log.Printf("W! unable walk %q: %s", etcfolder, err)
+		}
+		confFiles = append(confFiles, files...)
+	}
+	if len(confFiles) > 0 {
+		return confFiles, nil
+	}
+
 	// if we got here, we didn't find a file in a default location
-	return "", fmt.Errorf("no config file specified, and could not find one"+
-		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
+	return nil, fmt.Errorf("no config file specified, and could not find one"+
+		" in $TELEGRAF_CONFIG_PATH, %s, %s, or %s/*.conf", homefile, etcfile, etcfolder)
 }
 
 // isURL checks if string is valid url
@@ -395,22 +427,30 @@ func isURL(str string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-// LoadConfig loads the given config file and applies it to c
+// LoadConfig loads the given config files and applies it to c
 func (c *Config) LoadConfig(path string) error {
 	var err error
+	paths := []string{}
+
 	if path == "" {
-		if path, err = getDefaultConfigPath(); err != nil {
+		if paths, err = getDefaultConfigPath(); err != nil {
 			return err
 		}
-	}
-	data, err := LoadConfigFile(path)
-	if err != nil {
-		return fmt.Errorf("error loading config file %s: %w", path, err)
+	} else {
+		paths = append(paths, path)
 	}
 
-	if err = c.LoadConfigData(data); err != nil {
-		return fmt.Errorf("error loading config file %s: %w", path, err)
+	for _, path := range paths {
+		data, err := LoadConfigFile(path)
+		if err != nil {
+			return fmt.Errorf("error loading config file %s: %w", path, err)
+		}
+
+		if err = c.LoadConfigData(data); err != nil {
+			return fmt.Errorf("error loading config file %s: %w", path, err)
+		}
 	}
+
 	return nil
 }
 
@@ -426,6 +466,11 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	sort.Stable(c.Processors)
 	sort.Stable(c.AggProcessors)
 
+	// Set snmp agent translator default
+	if c.Agent.SnmpTranslator == "" {
+		c.Agent.SnmpTranslator = "netsnmp"
+	}
+
 	// Let's link all secrets to their secret-stores
 	return c.LinkSecrets()
 }
@@ -434,7 +479,7 @@ func (c *Config) LoadAll(configFiles ...string) error {
 func (c *Config) LoadConfigData(data []byte) error {
 	tbl, err := parseConfig(data)
 	if err != nil {
-		return fmt.Errorf("error parsing data: %s", err)
+		return fmt.Errorf("error parsing data: %w", err)
 	}
 
 	// Parse tags tables first:
@@ -445,7 +490,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				return fmt.Errorf("invalid configuration, bad table name %q", tableName)
 			}
 			if err = c.toml.UnmarshalTable(subTable, c.Tags); err != nil {
-				return fmt.Errorf("error parsing table name %q: %s", tableName, err)
+				return fmt.Errorf("error parsing table name %q: %w", tableName, err)
 			}
 		}
 	}
@@ -482,9 +527,12 @@ func (c *Config) LoadConfigData(data []byte) error {
 			Notice:    "Use 'gosmi' instead",
 		})
 	}
-	// Set snmp agent translator default
-	if c.Agent.SnmpTranslator == "" {
-		c.Agent.SnmpTranslator = "netsnmp"
+
+	// Setup the persister if requested
+	if c.Agent.Statefile != "" {
+		c.Persister = &persister.Persister{
+			Filename: c.Agent.Statefile,
+		}
 	}
 
 	if len(c.UnusedFields) > 0 {
@@ -579,7 +627,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addAggregator(pluginName, t); err != nil {
-							return fmt.Errorf("error parsing %s, %s", pluginName, err)
+							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
 				default:
@@ -597,7 +645,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addSecretStore(pluginName, t); err != nil {
-							return fmt.Errorf("error parsing %s, %s", pluginName, err)
+							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
 				default:
@@ -613,7 +661,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 		// identifiers are present
 		default:
 			if err = c.addInput(name, subTable); err != nil {
-				return fmt.Errorf("error parsing %s, %s", name, err)
+				return fmt.Errorf("error parsing %s, %w", name, err)
 			}
 		}
 	}
@@ -647,6 +695,7 @@ func escapeEnv(value string) string {
 
 func LoadConfigFile(config string) ([]byte, error) {
 	if fetchURLRe.MatchString(config) {
+		log.Printf("I! Loading config url: %s", config)
 		u, err := url.Parse(config)
 		if err != nil {
 			return nil, err
@@ -661,6 +710,7 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
+	log.Printf("I! Loading config file: %s", config)
 	buffer, err := os.ReadFile(config)
 	if err != nil {
 		return nil, err
@@ -691,7 +741,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 		body, err, retry := func() ([]byte, error, bool) {
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				return nil, fmt.Errorf("retry %d of %d failed connecting to HTTP config server %s", i, retries, err), false
+				return nil, fmt.Errorf("retry %d of %d failed connecting to HTTP config server: %w", i, retries, err), false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
@@ -787,13 +837,19 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 
 	var storeid string
 	c.getFieldString(table, "id", &storeid)
+	if storeid == "" {
+		return fmt.Errorf("%q secret-store without ID", name)
+	}
+	if !secretStorePattern.MatchString(storeid) {
+		return fmt.Errorf("invalid secret-store ID %q, must only contain letters, numbers or underscore", storeid)
+	}
 
 	creator, ok := secretstores.SecretStores[name]
 	if !ok {
 		// Handle removed, deprecated plugins
 		if di, deprecated := secretstores.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("secretstores", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 		return fmt.Errorf("undefined but requested secretstores: %s", name)
 	}
@@ -808,7 +864,7 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 	}
 
 	if err := store.Init(); err != nil {
-		return fmt.Errorf("error initializing secretstore: %w", err)
+		return fmt.Errorf("error initializing secret-store %q: %w", storeid, err)
 	}
 
 	if _, found := c.SecretStores[storeid]; found {
@@ -830,13 +886,13 @@ func (c *Config) LinkSecrets() error {
 			}
 			resolver, err := store.GetResolver(key)
 			if err != nil {
-				return fmt.Errorf("retrieving resolver for %q failed: %v", ref, err)
+				return fmt.Errorf("retrieving resolver for %q failed: %w", ref, err)
 			}
 			resolvers[ref] = resolver
 		}
 		// Inject the resolver list into the secret
 		if err := s.Link(resolvers); err != nil {
-			return fmt.Errorf("retrieving resolver failed: %v", err)
+			return fmt.Errorf("retrieving resolver failed: %w", err)
 		}
 	}
 	return nil
@@ -881,6 +937,14 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 	}
 	parser := creator(parentname)
 
+	// Handle reset-mode of CSV parsers to stay backward compatible (see issue #12022)
+	if dataformat == "csv" && parentcategory == "inputs" {
+		if parentname == "exec" {
+			csvParser := parser.(*csv.Parser)
+			csvParser.ResetMode = "always"
+		}
+	}
+
 	conf := c.buildParser(parentname, table)
 	if err := c.toml.UnmarshalTable(table, parser); err != nil {
 		return nil, err
@@ -913,25 +977,28 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
-	processorConfig, err := c.buildProcessor(name, table)
-	if err != nil {
-		return err
-	}
-
 	// Setup the processor running before the aggregators
-	processorBefore, hasParser, err := c.setupProcessor(processorConfig.Name, creator, table)
+	processorBeforeConfig, err := c.buildProcessor("processors", name, table)
 	if err != nil {
 		return err
 	}
-	rf := models.NewRunningProcessor(processorBefore, processorConfig)
+	processorBefore, hasParser, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
+	if err != nil {
+		return err
+	}
+	rf := models.NewRunningProcessor(processorBefore, processorBeforeConfig)
 	c.fileProcessors = append(c.fileProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Setup another (new) processor instance running after the aggregator
-	processorAfter, _, err := c.setupProcessor(processorConfig.Name, creator, table)
+	processorAfterConfig, err := c.buildProcessor("aggprocessors", name, table)
 	if err != nil {
 		return err
 	}
-	rf = models.NewRunningProcessor(processorAfter, processorConfig)
+	processorAfter, _, err := c.setupProcessor(processorAfterConfig.Name, creator, table)
+	if err != nil {
+		return err
+	}
+	rf = models.NewRunningProcessor(processorAfter, processorAfterConfig)
 	c.fileAggProcessors = append(c.fileAggProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Check the number of misses against the threshold
@@ -1186,7 +1253,10 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 	if err != nil {
 		return conf, err
 	}
-	return conf, nil
+
+	// Generate an ID for the plugin
+	conf.ID, err = generatePluginID("aggregators."+name, tbl)
+	return conf, err
 }
 
 // buildParser parses Parser specific items from the ast.Table,
@@ -1207,7 +1277,7 @@ func (c *Config) buildParser(name string, tbl *ast.Table) *models.ParserConfig {
 // buildProcessor parses Processor specific items from the ast.Table,
 // builds the filter and returns a
 // models.ProcessorConfig to be inserted into models.RunningProcessor
-func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
 
 	c.getFieldInt64(tbl, "order", &conf.Order)
@@ -1222,7 +1292,10 @@ func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorC
 	if err != nil {
 		return conf, err
 	}
-	return conf, nil
+
+	// Generate an ID for the plugin
+	conf.ID, err = generatePluginID(category+"."+name, tbl)
+	return conf, err
 }
 
 // buildFilter builds a Filter
@@ -1290,7 +1363,10 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	if err != nil {
 		return cp, err
 	}
-	return cp, nil
+
+	// Generate an ID for the plugin
+	cp.ID, err = generatePluginID("inputs."+name, tbl)
+	return cp, err
 }
 
 // buildSerializer grabs the necessary entries from the ast.Table for creating
@@ -1317,9 +1393,10 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
+
+	c.getFieldString(tbl, "graphite_strict_sanitize_regex", &sc.GraphiteStrictRegex)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
 	c.getFieldString(tbl, "graphite_tag_sanitize_mode", &sc.GraphiteTagSanitizeMode)
-
 	c.getFieldString(tbl, "graphite_separator", &sc.GraphiteSeparator)
 
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
@@ -1378,7 +1455,9 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 		return nil, c.firstErr()
 	}
 
-	return oc, nil
+	// Generate an ID for the plugin
+	oc.ID, err = generatePluginID("outputs."+name, tbl)
+	return oc, err
 }
 
 func (c *Config) missingTomlField(_ reflect.Type, key string) error {
@@ -1397,6 +1476,9 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"pass", "period", "precision",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
 
+	// Secret-store options to ignore
+	case "id":
+
 	// Parser options to ignore
 	case "data_type", "influx_parser_type":
 
@@ -1404,6 +1486,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "prefix", "template", "templates",
 		"carbon2_format", "carbon2_sanitize_replace_char",
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
+		"graphite_strict_sanitize_regex",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
 		"json_timestamp_format", "json_timestamp_units", "json_transformation",

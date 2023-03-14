@@ -82,8 +82,8 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 }
 
 func insertSQL(table string, keyReplacement string, metrics []telegraf.Metric) (string, error) {
-	rows := make([]string, len(metrics))
-	for i, m := range metrics {
+	rows := make([]string, 0, len(metrics))
+	for _, m := range metrics {
 		cols := []interface{}{
 			hashID(m),
 			m.Time().UTC(),
@@ -92,15 +92,15 @@ func insertSQL(table string, keyReplacement string, metrics []telegraf.Metric) (
 			m.Fields(),
 		}
 
-		escapedCols := make([]string, len(cols))
-		for i, col := range cols {
+		escapedCols := make([]string, 0, len(cols))
+		for _, col := range cols {
 			escaped, err := escapeValue(col, keyReplacement)
 			if err != nil {
 				return "", err
 			}
-			escapedCols[i] = escaped
+			escapedCols = append(escapedCols, escaped)
 		}
-		rows[i] = `(` + strings.Join(escapedCols, ", ") + `)`
+		rows = append(rows, `(`+strings.Join(escapedCols, ", ")+`)`)
 	}
 	query := `INSERT INTO ` + table + ` ("hash_id", "timestamp", "name", "tags", "fields")
 VALUES
@@ -204,11 +204,9 @@ func hashID(m telegraf.Metric) int64 {
 	h := sha512.New()
 	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
 	tags := m.Tags()
-	tmp := make([]string, len(tags))
-	i := 0
+	tmp := make([]string, 0, len(tags))
 	for k, v := range tags {
-		tmp[i] = k + v
-		i++
+		tmp = append(tmp, k+v)
 	}
 	sort.Strings(tmp)
 

@@ -7,7 +7,8 @@ socket, [UDP](https://tools.ietf.org/html/rfc5426),
 framing.
 
 Syslog messages should be formatted according to
-[RFC 5424](https://tools.ietf.org/html/rfc5424).
+[RFC 5424](https://tools.ietf.org/html/rfc5424) (syslog protocol) or
+[RFC 3164](https://tools.ietf.org/html/rfc3164) (BSD syslog protocol).
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -16,7 +17,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 

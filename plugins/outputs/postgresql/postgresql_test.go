@@ -354,7 +354,7 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 	// Lock the table so that we ensure the writes hangs and the plugin has to open another connection.
 	tx, err := p.db.Begin(ctx)
 	require.NoError(t, err)
-	defer tx.Rollback(ctx) //nolint:errcheck
+	defer tx.Rollback(ctx) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 	_, err = tx.Exec(ctx, "LOCK TABLE "+utils.QuoteIdentifier(t.Name()+"_a"))
 	require.NoError(t, err)
 

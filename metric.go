@@ -32,7 +32,8 @@ type Field struct {
 // Metric is the type of data that is processed by Telegraf.  Input plugins,
 // and to a lesser degree, Processor and Aggregator plugins create new Metrics
 // and Output plugins write them.
-// nolint:interfacebloat // conditionally allow to contain more methods
+//
+//nolint:interfacebloat // conditionally allow to contain more methods
 type Metric interface {
 	// Name is the primary identifier for the Metric and corresponds to the
 	// measurement in the InfluxDB data model.
@@ -121,4 +122,13 @@ type Metric interface {
 	// Drop marks the metric as processed successfully without being written
 	// to any output.
 	Drop()
+}
+
+// TemplateMetric is an interface to use in templates (e.g text/template)
+// to generate complex strings from metric properties
+// e.g. '{{.Neasurement}}-{{.Tag "foo"}}-{{.Field "bar"}}'
+type TemplateMetric interface {
+	Name() string
+	Tag(key string) string
+	Field(key string) interface{}
 }

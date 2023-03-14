@@ -16,13 +16,14 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Intel PowerStat plugin enables monitoring of platform metrics (power, TDP)
 # and per-CPU metrics like temperature, power and utilization.
+# This plugin ONLY supports Linux
 [[inputs.intel_powerstat]]
   ## The user can choose which package metrics are monitored by the plugin with
   ## the package_metrics setting:
@@ -33,7 +34,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   supported options list
   ## Supported options:
   ##   "current_power_consumption", "current_dram_power_consumption",
-  ##   "thermal_design_power", "max_turbo_frequency", "uncore_frequency"
+  ##   "thermal_design_power", "max_turbo_frequency", "uncore_frequency",
+  ##   "cpu_base_frequency"
   # package_metrics = ["current_power_consumption", "current_dram_power_consumption", "thermal_design_power"]
 
   ## The user can choose which per-CPU metrics are monitored by the plugin in
@@ -125,7 +127,7 @@ integrated in kernel). Modules might have to be manually enabled by using
 ```sh
 # kernel 5.x.x:
 sudo modprobe rapl
-subo modprobe msr
+sudo modprobe msr
 sudo modprobe intel_rapl_common
 sudo modprobe intel_rapl_msr
 
@@ -151,6 +153,7 @@ and to retrieve data for calculation per-package specific metric:
 
 - `max_turbo_frequency_mhz`
 - `uncore_frequency_mhz_cur`
+- `cpu_base_frequency_mhz`
 
 To expose other Intel PowerStat metrics root access may or may not be required
 (depending on OS type or configuration).
@@ -180,57 +183,68 @@ are required by the plugin:
     _powerstat\_core.cpu\_c1\_state\_residency_
   - "_dts_" shall be present to collect _powerstat\_core.cpu\_temperature_
 - Processor _Model number_ must be one of the following values for plugin to
-  read _powerstat\_core.cpu\_c1\_state\_residency_ and
-  _powerstat\_core.cpu\_c6\_state\_residency_ metrics:
+  read _powerstat\_core.cpu\_c1\_state\_residency_ /
+  _powerstat\_core.cpu\_c6\_state\_residency_ and
+  _powerstat\_package.cpu\_base\_frequency_ metrics:
 
-| Model number | Processor name |
-|-----|-------------|
-| 0x37 | Intel Atom® Bay Trail |
-| 0x4D | Intel Atom® Avaton |
-| 0x5C | Intel Atom® Apollo Lake |
-| 0x5F | Intel Atom® Denverton |
-| 0x7A | Intel Atom® Goldmont |
-| 0x4C | Intel Atom® Airmont |
-| 0x86 | Intel Atom® Jacobsville |
-| 0x96 | Intel Atom® Elkhart Lake |
-| 0x9C | Intel Atom® Jasper Lake |
-| 0x1A | Intel Nehalem-EP |
-| 0x1E | Intel Nehalem |
-| 0x1F | Intel Nehalem-G |
-| 0x2E | Intel Nehalem-EX |
-| 0x25 | Intel Westmere |
-| 0x2C | Intel Westmere-EP |
-| 0x2F | Intel Westmere-EX |
-| 0x2A | Intel Sandybridge |
-| 0x2D | Intel Sandybridge-X |
-| 0x3A | Intel Ivybridge |
-| 0x3E | Intel Ivybridge-X |
-| 0x4E | Intel Atom® Silvermont-MID |
-| 0x5E | Intel Skylake |
-| 0x55 | Intel Skylake-X |
-| 0x8E | Intel Kabylake-L |
-| 0x9E | Intel Kabylake |
-| 0x6A | Intel Icelake-X |
-| 0x6C | Intel Icelake-D |
-| 0x7D | Intel Icelake |
-| 0x7E | Intel Icelake-L |
-| 0x9D | Intel Icelake-NNPI |
-| 0x3C | Intel Haswell |
-| 0x3F | Intel Haswell-X |
-| 0x45 | Intel Haswell-L |
-| 0x46 | Intel Haswell-G |
-| 0x3D | Intel Broadwell |
-| 0x47 | Intel Broadwell-G |
-| 0x4F | Intel Broadwell-X |
-| 0x56 | Intel Broadwell-D |
-| 0x66 | Intel Cannonlake-L |
-| 0x57 | Intel Xeon® PHI Knights Landing |
-| 0x85 | Intel Xeon® PHI Knights Mill |
-| 0xA5 | Intel CometLake |
-| 0xA6 | Intel CometLake-L |
-| 0x8F | Intel Sapphire Rapids X |
-| 0x8C | Intel TigerLake-L |
-| 0x8D | Intel TigerLake |
+| Model number | Processor name                  |
+|--------------|---------------------------------|
+| 0x37         | Intel Atom® Bay Trail           |
+| 0x4D         | Intel Atom® Avaton              |
+| 0x5C         | Intel Atom® Apollo Lake         |
+| 0x5F         | Intel Atom® Denverton           |
+| 0x7A         | Intel Atom® Goldmont            |
+| 0x4C         | Intel Atom® Airmont             |
+| 0x86         | Intel Atom® Jacobsville         |
+| 0x96         | Intel Atom® Elkhart Lake        |
+| 0x9C         | Intel Atom® Jasper Lake         |
+| 0x1A         | Intel Nehalem-EP                |
+| 0x1E         | Intel Nehalem                   |
+| 0x1F         | Intel Nehalem-G                 |
+| 0x2E         | Intel Nehalem-EX                |
+| 0x25         | Intel Westmere                  |
+| 0x2C         | Intel Westmere-EP               |
+| 0x2F         | Intel Westmere-EX               |
+| 0x2A         | Intel Sandybridge               |
+| 0x2D         | Intel Sandybridge-X             |
+| 0x3A         | Intel Ivybridge                 |
+| 0x3E         | Intel Ivybridge-X               |
+| 0x4E         | Intel Atom® Silvermont-MID      |
+| 0x5E         | Intel Skylake                   |
+| 0x55         | Intel Skylake-X                 |
+| 0x8E         | Intel KabyLake-L                |
+| 0x9E         | Intel KabyLake                  |
+| 0x6A         | Intel IceLake-X                 |
+| 0x6C         | Intel IceLake-D                 |
+| 0x7D         | Intel IceLake                   |
+| 0x7E         | Intel IceLake-L                 |
+| 0x9D         | Intel IceLake-NNPI              |
+| 0x3C         | Intel Haswell                   |
+| 0x3F         | Intel Haswell-X                 |
+| 0x45         | Intel Haswell-L                 |
+| 0x46         | Intel Haswell-G                 |
+| 0x3D         | Intel Broadwell                 |
+| 0x47         | Intel Broadwell-G               |
+| 0x4F         | Intel Broadwell-X               |
+| 0x56         | Intel Broadwell-D               |
+| 0x66         | Intel CannonLake-L              |
+| 0x57         | Intel Xeon® PHI Knights Landing |
+| 0x85         | Intel Xeon® PHI Knights Mill    |
+| 0xA5         | Intel CometLake                 |
+| 0xA6         | Intel CometLake-L               |
+| 0x8A         | Intel Lakefield                 |
+| 0x8F         | Intel Sapphire Rapids X         |
+| 0x8C         | Intel TigerLake-L               |
+| 0x8D         | Intel TigerLake                 |
+| 0xA7         | Intel RocketLake                |
+| 0x97         | Intel AlderLake                 |
+| 0x9A         | Intel AlderLake-L               |
+| 0xBE         | Intel AlderLake-N               |
+| 0xB7         | Intel RaptorLake                |
+| 0xBA         | Intel RaptorLake-P              |
+| 0xBF         | Intel RaptorLake-S              |
+| 0xAC         | Intel MeteorLake                |
+| 0xAA         | Intel MeteorLake-L              |
 
 ## Metrics
 
@@ -290,6 +304,7 @@ value.
       | `uncore_frequency_limit_mhz_min`| Minimum uncore frequency limit for die in processor package | MHz
       | `uncore_frequency_limit_mhz_max`| Maximum uncore frequency limit for die in processor package | MHz
       | `uncore_frequency_mhz_cur`| Current uncore frequency for die in processor package. Available only with tag `current`. Since this value is not yet available from `intel-uncore-frequency` module it needs to be accessed via MSR. In case of lack of loaded msr, only `uncore_frequency_limit_mhz_min` and `uncore_frequency_limit_mhz_max` metrics will be collected | MHz
+      | `cpu_base_frequency_mhz`| CPU Base Frequency (maximum non-turbo frequency) for the processor package | MHz
 
 ### Known issues
 
@@ -310,9 +325,10 @@ sudo chmod -R a+rx /sys/devices/virtual/powercap/intel-rapl/
 
 ## Example Output
 
-```shell
+```text
 powerstat_package,host=ubuntu,package_id=0 thermal_design_power_watts=160 1606494744000000000
 powerstat_package,host=ubuntu,package_id=0 current_power_consumption_watts=35 1606494744000000000
+powerstat_package,host=ubuntu,package_id=0 cpu_base_frequency_mhz=2400i 1669118424000000000
 powerstat_package,host=ubuntu,package_id=0 current_dram_power_consumption_watts=13.94 1606494744000000000
 powerstat_package,host=ubuntu,package_id=0,active_cores=0 max_turbo_frequency_mhz=3000i 1606494744000000000
 powerstat_package,host=ubuntu,package_id=0,active_cores=1 max_turbo_frequency_mhz=2800i 1606494744000000000

@@ -58,6 +58,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 type InputConfig struct {
 	Name             string
 	Alias            string
+	ID               string
 	Interval         time.Duration
 	CollectionJitter time.Duration
 	CollectionOffset time.Duration
@@ -86,6 +87,13 @@ func (r *RunningInput) Init() error {
 		}
 	}
 	return nil
+}
+
+func (r *RunningInput) ID() string {
+	if p, ok := r.Input.(telegraf.PluginWithID); ok {
+		return p.ID()
+	}
+	return r.Config.ID
 }
 
 func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {

@@ -432,7 +432,7 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 		}
 		pid, err := strconv.ParseInt(string(kv[1]), 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
+			return nil, fmt.Errorf("invalid pid %q", kv[1])
 		}
 		pids = append(pids, PID(pid))
 	}
@@ -448,7 +448,7 @@ func (p *Procstat) cgroupPIDs() []PidsTags {
 
 	items, err := filepath.Glob(procsPath)
 	if err != nil {
-		return []PidsTags{{nil, nil, fmt.Errorf("glob failed '%s'", err)}}
+		return []PidsTags{{nil, nil, fmt.Errorf("glob failed: %w", err)}}
 	}
 
 	pidTags := make([]PidsTags, 0, len(items))
@@ -483,7 +483,7 @@ func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
 		}
 		pid, err := strconv.ParseInt(string(pidBS), 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pid '%s'", pidBS)
+			return nil, fmt.Errorf("invalid pid %q", pidBS)
 		}
 		pids = append(pids, PID(pid))
 	}

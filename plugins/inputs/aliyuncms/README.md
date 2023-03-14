@@ -30,7 +30,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -144,7 +144,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Allow metrics without discovery data, if discovery is enabled.
   ## If set to true, then metric without discovery data would be emitted, otherwise dropped.
   ## This cane be of help, in case debugging dimension filters, or partial coverage of
-  ## discovery scope vs monitoring scope 
+  ## discovery scope vs monitoring scope
   # allow_dps_without_discovery = false
 ```
 

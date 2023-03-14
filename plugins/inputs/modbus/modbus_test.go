@@ -21,6 +21,11 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestMain(m *testing.M) {
+	telegraf.Debug = false
+	os.Exit(m.Run())
+}
+
 func TestControllers(t *testing.T) {
 	var tests = []struct {
 		name       string
@@ -149,65 +154,96 @@ func TestCoils(t *testing.T) {
 	var coilTests = []struct {
 		name     string
 		address  uint16
+		dtype    string
 		quantity uint16
 		write    []byte
-		read     uint16
+		read     interface{}
 	}{
 		{
 			name:     "coil0_turn_off",
 			address:  0,
 			quantity: 1,
 			write:    []byte{0x00},
-			read:     0,
+			read:     uint16(0),
 		},
 		{
 			name:     "coil0_turn_on",
 			address:  0,
 			quantity: 1,
 			write:    []byte{0x01},
-			read:     1,
+			read:     uint16(1),
 		},
 		{
 			name:     "coil1_turn_on",
 			address:  1,
 			quantity: 1,
 			write:    []byte{0x01},
-			read:     1,
+			read:     uint16(1),
 		},
 		{
 			name:     "coil2_turn_on",
 			address:  2,
 			quantity: 1,
 			write:    []byte{0x01},
-			read:     1,
+			read:     uint16(1),
 		},
 		{
 			name:     "coil3_turn_on",
 			address:  3,
 			quantity: 1,
 			write:    []byte{0x01},
-			read:     1,
+			read:     uint16(1),
 		},
 		{
 			name:     "coil1_turn_off",
 			address:  1,
 			quantity: 1,
 			write:    []byte{0x00},
-			read:     0,
+			read:     uint16(0),
 		},
 		{
 			name:     "coil2_turn_off",
 			address:  2,
 			quantity: 1,
 			write:    []byte{0x00},
-			read:     0,
+			read:     uint16(0),
 		},
 		{
 			name:     "coil3_turn_off",
 			address:  3,
 			quantity: 1,
 			write:    []byte{0x00},
-			read:     0,
+			read:     uint16(0),
+		},
+		{
+			name:     "coil4_turn_off",
+			address:  4,
+			quantity: 1,
+			write:    []byte{0x00},
+			read:     uint16(0),
+		},
+		{
+			name:     "coil4_turn_on",
+			address:  4,
+			quantity: 1,
+			write:    []byte{0x01},
+			read:     uint16(1),
+		},
+		{
+			name:     "coil4_turn_off_bool",
+			address:  4,
+			quantity: 1,
+			dtype:    "BOOL",
+			write:    []byte{0x00},
+			read:     false,
+		},
+		{
+			name:     "coil4_turn_on_bool",
+			address:  4,
+			quantity: 1,
+			dtype:    "BOOL",
+			write:    []byte{0x01},
+			read:     true,
 		},
 	}
 
@@ -233,8 +269,9 @@ func TestCoils(t *testing.T) {
 			modbus.SlaveID = 1
 			modbus.Coils = []fieldDefinition{
 				{
-					Name:    ct.name,
-					Address: []uint16{ct.address},
+					Name:     ct.name,
+					Address:  []uint16{ct.address},
+					DataType: ct.dtype,
 				},
 			}
 
@@ -247,6 +284,101 @@ func TestCoils(t *testing.T) {
 						"name":     modbus.Name,
 					},
 					map[string]interface{}{ct.name: ct.read},
+					time.Unix(0, 0),
+				),
+			}
+
+			var acc testutil.Accumulator
+			require.NoError(t, modbus.Init())
+			require.NotEmpty(t, modbus.requests)
+			require.NoError(t, modbus.Gather(&acc))
+			acc.Wait(len(expected))
+
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestRequestTypesCoil(t *testing.T) {
+	tests := []struct {
+		name        string
+		address     uint16
+		dataTypeOut string
+		write       uint16
+		read        interface{}
+	}{
+		{
+			name:    "coil-1-off",
+			address: 1,
+			write:   0,
+			read:    uint16(0),
+		},
+		{
+			name:    "coil-2-on",
+			address: 2,
+			write:   0xFF00,
+			read:    uint16(1),
+		},
+		{
+			name:        "coil-3-false",
+			address:     3,
+			dataTypeOut: "BOOL",
+			write:       0,
+			read:        false,
+		},
+		{
+			name:        "coil-4-true",
+			address:     4,
+			dataTypeOut: "BOOL",
+			write:       0xFF00,
+			read:        true,
+		},
+	}
+
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	for _, hrt := range tests {
+		t.Run(hrt.name, func(t *testing.T) {
+			_, err := client.WriteSingleCoil(hrt.address, hrt.write)
+			require.NoError(t, err)
+
+			modbus := Modbus{
+				Name:              "TestRequestTypesCoil",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			modbus.Requests = []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "coil",
+					Fields: []requestFieldDefinition{
+						{
+							Name:       hrt.name,
+							OutputType: hrt.dataTypeOut,
+							Address:    hrt.address,
+						},
+					},
+				},
+			}
+
+			expected := []telegraf.Metric{
+				testutil.MustMetric(
+					"modbus",
+					map[string]string{
+						"type":     cCoils,
+						"slave_id": "1",
+						"name":     modbus.Name,
+					},
+					map[string]interface{}{hrt.name: hrt.read},
 					time.Unix(0, 0),
 				),
 			}
@@ -2651,7 +2783,15 @@ func TestConfigurationPerRequest(t *testing.T) {
 					Address:     uint16(2),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
+					Measurement: "modbus",
+				},
+				{
+					Name:        "coil-3",
+					Address:     uint16(3),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "BOOL",
 					Measurement: "modbus",
 				},
 			},
@@ -2661,20 +2801,28 @@ func TestConfigurationPerRequest(t *testing.T) {
 			RegisterType: "coil",
 			Fields: []requestFieldDefinition{
 				{
-					Name:    "coil-3",
+					Name:    "coil-4",
 					Address: uint16(6),
 				},
 				{
-					Name:    "coil-4",
+					Name:    "coil-5",
 					Address: uint16(7),
 					Omit:    true,
 				},
 				{
-					Name:        "coil-5",
+					Name:        "coil-6",
 					Address:     uint16(8),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
+					Measurement: "modbus",
+				},
+				{
+					Name:        "coil-7",
+					Address:     uint16(9),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "BOOL",
 					Measurement: "modbus",
 				},
 			},
@@ -2698,7 +2846,15 @@ func TestConfigurationPerRequest(t *testing.T) {
 					Address:     uint16(2),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
+					Measurement: "modbus",
+				},
+				{
+					Name:        "discrete-3",
+					Address:     uint16(3),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "BOOL",
 					Measurement: "modbus",
 				},
 			},
@@ -2793,7 +2949,7 @@ func TestConfigurationPerRequestWithTags(t *testing.T) {
 					Address:     uint16(2),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
 					Measurement: "modbus",
 				},
 			},
@@ -2821,7 +2977,7 @@ func TestConfigurationPerRequestWithTags(t *testing.T) {
 					Address:     uint16(8),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
 					Measurement: "modbus",
 				},
 			},
@@ -2850,7 +3006,7 @@ func TestConfigurationPerRequestWithTags(t *testing.T) {
 					Address:     uint16(2),
 					InputType:   "INT64",
 					Scale:       1.2,
-					OutputType:  "FLOAT64",
+					OutputType:  "UINT16",
 					Measurement: "modbus",
 				},
 			},
@@ -3151,7 +3307,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuration: initializing field \"holding-0\" failed: unknown output type \"UINT8\"",
+			errormsg: `configuration invalid: unknown output data-type "UINT8" for field "holding-0"`,
 		},
 		{
 			name: "duplicate fields (holding)",
@@ -3263,7 +3419,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuration: initializing field \"input-0\" failed: unknown output type \"UINT8\"",
+			errormsg: `configuration invalid: unknown output data-type "UINT8" for field "input-0"`,
 		},
 		{
 			name: "duplicate fields (input)",
@@ -3466,6 +3622,91 @@ func TestRequestsStartingWithOmits(t *testing.T) {
 	require.NoError(t, modbus.Gather(&acc))
 	acc.Wait(len(expected))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestRequestsWithOmittedFieldsOnly(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT16",
+					Omit:      true,
+				},
+			},
+		},
+	}
+	require.NoError(t, modbus.Init())
+	require.Empty(t, modbus.requests)
+}
+
+func TestRequestsGroupWithOmittedFieldsOnly(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-8",
+					Address:   uint16(8),
+					InputType: "INT16",
+				},
+			},
+		},
+	}
+	require.NoError(t, modbus.Init())
+	require.Len(t, modbus.requests, 1)
+	require.NotNil(t, modbus.requests[1])
+	require.Len(t, modbus.requests[1].holding, 1)
+	require.Equal(t, uint16(8), modbus.requests[1].holding[0].address)
+	require.Equal(t, uint16(1), modbus.requests[1].holding[0].length)
 }
 
 func TestRequestsEmptyFields(t *testing.T) {
@@ -4399,102 +4640,6 @@ func TestRequestOptimizationAggressive(t *testing.T) {
 	}
 }
 
-func TestRequestsWorkaroundsOneRequestPerField(t *testing.T) {
-	plugin := Modbus{
-		Name:              "Test",
-		Controller:        "tcp://localhost:1502",
-		ConfigurationType: "request",
-		Log:               testutil.Logger{},
-		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
-	}
-	plugin.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-1",
-					Address:   uint16(1),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-2",
-					Address:   uint16(2),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-3",
-					Address:   uint16(3),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-4",
-					Address:   uint16(4),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-5",
-					Address:   uint16(5),
-					InputType: "INT16",
-				},
-			},
-		},
-	}
-	require.NoError(t, plugin.Init())
-	require.Len(t, plugin.requests[1].holding, len(plugin.Requests[0].Fields))
-}
-
-func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
-	plugin := Modbus{
-		Name:              "Test",
-		Controller:        "tcp://localhost:1502",
-		ConfigurationType: "register",
-		Log:               testutil.Logger{},
-		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
-	}
-	plugin.SlaveID = 1
-	plugin.HoldingRegisters = []fieldDefinition{
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-1",
-			Address:   []uint16{1},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-2",
-			Address:   []uint16{2},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-3",
-			Address:   []uint16{3},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-4",
-			Address:   []uint16{4},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-5",
-			Address:   []uint16{5},
-			Scale:     1.0,
-		},
-	}
-	require.NoError(t, plugin.Init())
-	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
-}
-
 func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 	maxsize := maxQuantityHoldingRegisters
 	maxExtraRegisters := uint16(5)
@@ -4626,4 +4771,169 @@ func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 			requireEqualRequests(t, expected, plugin.requests[slaveID].holding)
 		})
 	}
+}
+func TestRequestsWorkaroundsOneRequestPerField(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
+	}
+	plugin.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-3",
+					Address:   uint16(3),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-4",
+					Address:   uint16(4),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-5",
+					Address:   uint16(5),
+					InputType: "INT16",
+				},
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].holding, len(plugin.Requests[0].Fields))
+}
+
+func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "register",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
+	}
+	plugin.SlaveID = 1
+	plugin.HoldingRegisters = []fieldDefinition{
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-1",
+			Address:   []uint16{1},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-2",
+			Address:   []uint16{2},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-3",
+			Address:   []uint16{3},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-4",
+			Address:   []uint16{4},
+			Scale:     1.0,
+		},
+		{
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Name:      "holding-5",
+			Address:   []uint16{5},
+			Scale:     1.0,
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
+}
+
+func TestRequestsWorkaroundsReadCoilsStartingAtZeroRequest(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{ReadCoilsStartingAtZero: true},
+	}
+	plugin.SlaveID = 1
+	plugin.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			RegisterType: "coil",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "coil-8",
+					Address: uint16(8),
+				},
+				{
+					Name:    "coil-new-group",
+					Address: maxQuantityCoils,
+				},
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].coil, 2)
+
+	// First group should now start at zero and have the cumulated length
+	require.Equal(t, uint16(0), plugin.requests[1].coil[0].address)
+	require.Equal(t, uint16(9), plugin.requests[1].coil[0].length)
+
+	// The second field should form a new group as the previous request
+	// is now too large (beyond max-coils-per-read) after zero enforcement.
+	require.Equal(t, maxQuantityCoils, plugin.requests[1].coil[1].address)
+	require.Equal(t, uint16(1), plugin.requests[1].coil[1].length)
+}
+
+func TestRequestsWorkaroundsReadCoilsStartingAtZeroRegister(t *testing.T) {
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "register",
+		Log:               testutil.Logger{},
+		Workarounds:       ModbusWorkarounds{ReadCoilsStartingAtZero: true},
+	}
+	plugin.SlaveID = 1
+	plugin.Coils = []fieldDefinition{
+		{
+			Name:    "coil-8",
+			Address: []uint16{8},
+		},
+		{
+			Name:    "coil-new-group",
+			Address: []uint16{maxQuantityCoils},
+		},
+	}
+	require.NoError(t, plugin.Init())
+	require.Len(t, plugin.requests[1].coil, 2)
+
+	// First group should now start at zero and have the cumulated length
+	require.Equal(t, uint16(0), plugin.requests[1].coil[0].address)
+	require.Equal(t, uint16(9), plugin.requests[1].coil[0].length)
+
+	// The second field should form a new group as the previous request
+	// is now too large (beyond max-coils-per-read) after zero enforcement.
+	require.Equal(t, maxQuantityCoils, plugin.requests[1].coil[1].address)
+	require.Equal(t, uint16(1), plugin.requests[1].coil[1].length)
 }

@@ -6,7 +6,9 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/influxdata/telegraf/models"
 	"io"
+	"k8s.io/client-go/tools/cache"
 	"net"
 	"net/http"
 	"net/url"
@@ -40,6 +42,8 @@ const (
 	MonitorMethodSettingsAndAnnotations MonitorMethod = "settings+annotations"
 )
 
+type PodID string
+
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
 	URLs []string `toml:"urls"`
@@ -69,7 +73,8 @@ type Prometheus struct {
 
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
-	ResponseTimeout config.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
+	Timeout         config.Duration `toml:"timeout"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -84,6 +89,11 @@ type Prometheus struct {
 	client  *http.Client
 	headers map[string]string
 
+	nsStore cache.Store
+
+	nsAnnotationPass []models.TagFilter
+	nsAnnotationDrop []models.TagFilter
+
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods           bool   `toml:"monitor_kubernetes_pods"`
 	PodScrapeScope        string `toml:"pod_scrape_scope"`
@@ -92,7 +102,7 @@ type Prometheus struct {
 	PodNamespace          string `toml:"monitor_kubernetes_pods_namespace"`
 	PodNamespaceLabelName string `toml:"pod_namespace_label_name"`
 	lock                  sync.Mutex
-	kubernetesPods        map[string]URLAndAddress
+	kubernetesPods        map[PodID]URLAndAddress
 	cancel                context.CancelFunc
 	wg                    sync.WaitGroup
 
@@ -105,6 +115,9 @@ type Prometheus struct {
 	MonitorKubernetesPodsScheme string        `toml:"monitor_kubernetes_pods_scheme"`
 	MonitorKubernetesPodsPath   string        `toml:"monitor_kubernetes_pods_path"`
 	MonitorKubernetesPodsPort   int           `toml:"monitor_kubernetes_pods_port"`
+
+	NamespaceAnnotationPass map[string][]string `toml:"namespace_annotation_pass"`
+	NamespaceAnnotationDrop map[string][]string `toml:"namespace_annotation_drop"`
 
 	// Only for monitor_kubernetes_pods=true
 	CacheRefreshInterval int `toml:"cache_refresh_interval"`
@@ -146,21 +159,42 @@ func (p *Prometheus) Init() error {
 		var err error
 		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
 		if err != nil {
-			return fmt.Errorf("error parsing the specified label selector(s): %s", err.Error())
+			return fmt.Errorf("error parsing the specified label selector(s): %w", err)
 		}
 		p.podFieldSelector, err = fields.ParseSelector(p.KubernetesFieldSelector)
 		if err != nil {
-			return fmt.Errorf("error parsing the specified field selector(s): %s", err.Error())
+			return fmt.Errorf("error parsing the specified field selector(s): %w", err)
 		}
 		isValid, invalidSelector := fieldSelectorIsSupported(p.podFieldSelector)
 		if !isValid {
-			return fmt.Errorf("the field selector %s is not supported for pods", invalidSelector)
+			return fmt.Errorf("the field selector %q is not supported for pods", invalidSelector)
 		}
 
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
 	}
 
+	for k, vs := range p.NamespaceAnnotationPass {
+		tagFilter := models.TagFilter{}
+		tagFilter.Name = k
+		tagFilter.Values = append(tagFilter.Values, vs...)
+		if err := tagFilter.Compile(); err != nil {
+			return fmt.Errorf("error compiling 'namespace_annotation_pass', %w", err)
+		}
+		p.nsAnnotationPass = append(p.nsAnnotationPass, tagFilter)
+	}
+
+	for k, vs := range p.NamespaceAnnotationDrop {
+		tagFilter := models.TagFilter{}
+		tagFilter.Name = k
+		tagFilter.Values = append(tagFilter.Values, vs...)
+		if err := tagFilter.Compile(); err != nil {
+			return fmt.Errorf("error compiling 'namespace_annotation_drop', %w", err)
+		}
+		p.nsAnnotationDrop = append(p.nsAnnotationDrop, tagFilter)
+	}
+
 	ctx := context.Background()
+	p.HTTPClientConfig.Timeout = p.ResponseTimeout
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
 	if err != nil {
 		return err
@@ -198,10 +232,11 @@ type URLAndAddress struct {
 	URL         *url.URL
 	Address     string
 	Tags        map[string]string
+	Namespace   string
 }
 
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
-	allURLs := make(map[string]URLAndAddress)
+	allURLs := make(map[string]URLAndAddress, len(p.URLs)+len(p.consulServices)+len(p.kubernetesPods))
 	for _, u := range p.URLs {
 		address, err := url.Parse(u)
 		if err != nil {
@@ -218,8 +253,10 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 		allURLs[k] = v
 	}
 	// loop through all pods scraped via the prometheus annotation on the pods
-	for k, v := range p.kubernetesPods {
-		allURLs[k] = v
+	for _, v := range p.kubernetesPods {
+		if namespaceAnnotationMatch(v.Namespace, p) {
+			allURLs[v.URL.String()] = v
+		}
 	}
 
 	for _, service := range p.KubernetesServices {
@@ -280,7 +317,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		addr := "http://localhost" + path
 		req, err = http.NewRequest("GET", addr, nil)
 		if err != nil {
-			return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+			return fmt.Errorf("unable to create new request %q: %w", addr, err)
 		}
 
 		// ignore error because it's been handled before getting here
@@ -302,7 +339,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
 		if err != nil {
-			return fmt.Errorf("unable to create new request '%s': %s", u.URL.String(), err)
+			return fmt.Errorf("unable to create new request %q: %w", u.URL.String(), err)
 		}
 	}
 
@@ -335,17 +372,17 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		resp, err = uClient.Do(req)
 	}
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", u.URL, err)
+		return fmt.Errorf("error making HTTP request to %q: %w", u.URL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s returned HTTP status %s", u.URL, resp.Status)
+		return fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error reading body: %s", err)
+		return fmt.Errorf("error reading body: %w", err)
 	}
 
 	if p.MetricVersion == 2 {
@@ -359,8 +396,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading metrics for %s: %s",
-			u.URL, err)
+		return fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}
 
 	for _, metric := range metrics {
@@ -452,7 +488,7 @@ func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
 			ResponseTimeout: config.Duration(time.Second * 3),
-			kubernetesPods:  map[string]URLAndAddress{},
+			kubernetesPods:  map[PodID]URLAndAddress{},
 			consulServices:  map[string]URLAndAddress{},
 			URLTag:          "url",
 		}

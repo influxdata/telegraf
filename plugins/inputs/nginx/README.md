@@ -13,7 +13,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -34,7 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   response_timeout = "5s"
 ```
 
-## Measurements & Fields
+## Metrics
 
 - Measurement
   - accepts

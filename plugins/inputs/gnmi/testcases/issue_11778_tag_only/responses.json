@@ -1,0 +1,49 @@
+[
+    {
+        "update": {
+            "timestamp": "1673608605875353770",
+            "prefix": {
+                "origin": "openconfig-interfaces",
+                "elem": [
+                    {
+                        "name": "interfaces"
+                    },
+                    {
+                        "name": "interface",
+                        "key":{"name":"eth42"}
+                    },
+                    {
+                        "name": "state"
+                    }
+                ],
+                "target": "subscription"
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "counters"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "5678"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "description"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "eth42"
+                    }
+                }
+            ]
+        }
+    }
+]

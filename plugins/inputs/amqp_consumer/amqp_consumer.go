@@ -23,10 +23,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	defaultMaxUndeliveredMessages = 1000
-)
-
 type empty struct{}
 type semaphore chan empty
 
@@ -80,21 +76,44 @@ func (a *externalAuth) Response() string {
 	return "\000"
 }
 
-const (
-	DefaultAuthMethod = "PLAIN"
-
-	DefaultBroker = "amqp://localhost:5672/influxdb"
-
-	DefaultExchangeType       = "topic"
-	DefaultExchangeDurability = "durable"
-
-	DefaultQueueDurability = "durable"
-
-	DefaultPrefetchCount = 50
-)
-
 func (*AMQPConsumer) SampleConfig() string {
 	return sampleConfig
+}
+
+func (a *AMQPConsumer) Init() error {
+	// Defaults
+	if a.URL != "" {
+		a.Brokers = append(a.Brokers, a.URL)
+	}
+	if len(a.Brokers) == 0 {
+		a.Brokers = []string{"amqp://localhost:5672/influxdb"}
+	}
+
+	if a.AuthMethod == "" {
+		a.AuthMethod = "PLAIN"
+	}
+
+	if a.ExchangeType == "" {
+		a.ExchangeType = "topic"
+	}
+
+	if a.ExchangeDurability == "" {
+		a.ExchangeDurability = "durable"
+	}
+
+	if a.QueueDurability == "" {
+		a.QueueDurability = "durable"
+	}
+
+	if a.PrefetchCount == 0 {
+		a.PrefetchCount = 50
+	}
+
+	if a.MaxUndeliveredMessages == 0 {
+		a.MaxUndeliveredMessages = 1000
+	}
+
+	return nil
 }
 
 func (a *AMQPConsumer) SetParser(parser parsers.Parser) {
@@ -190,9 +209,6 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 
 func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, error) {
 	brokers := a.Brokers
-	if len(brokers) == 0 {
-		brokers = []string{a.URL}
-	}
 
 	p := rand.Perm(len(brokers))
 	for _, n := range p {
@@ -213,7 +229,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 
 	ch, err := a.conn.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open a channel: %s", err.Error())
+		return nil, fmt.Errorf("failed to open a channel: %w", err)
 	}
 
 	if a.Exchange != "" {
@@ -250,7 +266,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 			nil,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to bind a queue: %s", err)
+			return nil, fmt.Errorf("failed to bind a queue: %w", err)
 		}
 	}
 
@@ -260,7 +276,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		false, // global
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to set QoS: %s", err)
+		return nil, fmt.Errorf("failed to set QoS: %w", err)
 	}
 
 	msgs, err := ch.Consume(
@@ -273,7 +289,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		nil,    // arguments
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed establishing connection to queue: %s", err)
+		return nil, fmt.Errorf("failed establishing connection to queue: %w", err)
 	}
 
 	return msgs, err
@@ -307,7 +323,7 @@ func (a *AMQPConsumer) declareExchange(
 		)
 	}
 	if err != nil {
-		return fmt.Errorf("error declaring exchange: %v", err)
+		return fmt.Errorf("error declaring exchange: %w", err)
 	}
 	return nil
 }
@@ -341,7 +357,7 @@ func (a *AMQPConsumer) declareQueue(channel *amqp.Channel) (*amqp.Queue, error) 
 		)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error declaring queue: %v", err)
+		return nil, fmt.Errorf("error declaring queue: %w", err)
 	}
 	return &queue, nil
 }
@@ -439,10 +455,14 @@ func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
 }
 
 func (a *AMQPConsumer) Stop() {
+	// We did not connect successfully so there is nothing to do here.
+	if a.conn == nil || a.conn.IsClosed() {
+		return
+	}
 	a.cancel()
 	a.wg.Wait()
 	err := a.conn.Close()
-	if err != nil && err != amqp.ErrClosed {
+	if err != nil && !errors.Is(err, amqp.ErrClosed) {
 		a.Log.Errorf("Error closing AMQP connection: %s", err)
 		return
 	}
@@ -450,14 +470,6 @@ func (a *AMQPConsumer) Stop() {
 
 func init() {
 	inputs.Add("amqp_consumer", func() telegraf.Input {
-		return &AMQPConsumer{
-			URL:                    DefaultBroker,
-			AuthMethod:             DefaultAuthMethod,
-			ExchangeType:           DefaultExchangeType,
-			ExchangeDurability:     DefaultExchangeDurability,
-			QueueDurability:        DefaultQueueDurability,
-			PrefetchCount:          DefaultPrefetchCount,
-			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
-		}
+		return &AMQPConsumer{}
 	})
 }

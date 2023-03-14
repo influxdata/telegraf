@@ -70,12 +70,13 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Gather packets and bytes throughput from iptables
+# This plugin ONLY supports Linux
 [[inputs.iptables]]
   ## iptables require root access on most systems.
   ## Setting 'use_sudo' to true will make use of sudo to run iptables.
@@ -97,13 +98,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   chains = [ "INPUT" ]
 ```
 
-## Measurements & Fields
+## Metrics
+
+### Measurements & Fields
 
 * iptables
   * pkts (integer, count)
   * bytes (integer, bytes)
 
-## Tags
+### Tags
 
 * All measurements have the following tags:
   * table

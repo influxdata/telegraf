@@ -1,6 +1,7 @@
 package ethtool
 
 import (
+	"math"
 	"net"
 	"runtime"
 
@@ -36,7 +37,6 @@ func (n *NamespaceGoroutine) Interfaces() ([]NamespacedInterface, error) {
 	interfaces, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
 		interfaces, err := net.Interfaces()
 		if err != nil {
-			n.Log.Errorf(`Could not get interfaces in namespace "%s": %s`, n.name, err)
 			return nil, err
 		}
 		namespacedInterfaces := make([]NamespacedInterface, 0, len(interfaces))
@@ -69,6 +69,36 @@ func (n *NamespaceGoroutine) Stats(intf NamespacedInterface) (map[string]uint64,
 	return driver.(map[string]uint64), err
 }
 
+func (n *NamespaceGoroutine) Get(intf NamespacedInterface) (map[string]uint64, error) {
+	result, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
+		ecmd := ethtoolLib.EthtoolCmd{}
+		speed32, err := n.ethtoolClient.CmdGet(&ecmd, intf.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		var speed = uint64(speed32)
+		if speed == math.MaxUint32 {
+			speed = math.MaxUint64
+		}
+
+		var link32 uint32
+		link32, err = n.ethtoolClient.LinkState(intf.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]uint64{
+			"speed":   speed,
+			"duplex":  uint64(ecmd.Duplex),
+			"autoneg": uint64(ecmd.Autoneg),
+			"link":    uint64(link32),
+		}, nil
+	})
+
+	return result.(map[string]uint64), err
+}
+
 // Start locks a goroutine to an OS thread and ties it to the namespace, then
 // loops for actions to run in the namespace.
 func (n *NamespaceGoroutine) Start() error {
@@ -94,7 +124,7 @@ func (n *NamespaceGoroutine) Start() error {
 		}
 		if !initialNamespace.Equal(n.handle) {
 			if err := netns.Set(n.handle); err != nil {
-				n.Log.Errorf(`Could not switch to namespace "%s": %s`, n.name, err)
+				n.Log.Errorf("Could not switch to namespace %q: %s", n.name, err.Error())
 				started <- err
 				return
 			}
@@ -103,7 +133,7 @@ func (n *NamespaceGoroutine) Start() error {
 		// Every namespace needs its own connection to ethtool
 		e, err := ethtoolLib.NewEthtool()
 		if err != nil {
-			n.Log.Errorf(`Could not create ethtool client for namespace "%s": %s`, n.name, err)
+			n.Log.Errorf("Could not create ethtool client for namespace %q: %s", n.name, err.Error())
 			started <- err
 			return
 		}

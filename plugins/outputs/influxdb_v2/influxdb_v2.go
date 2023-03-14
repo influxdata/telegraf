@@ -35,7 +35,7 @@ type Client interface {
 
 type InfluxDB struct {
 	URLs             []string          `toml:"urls"`
-	Token            string            `toml:"token"`
+	Token            config.Secret     `toml:"token"`
 	Organization     string            `toml:"organization"`
 	Bucket           string            `toml:"bucket"`
 	BucketTag        string            `toml:"bucket_tag"`
@@ -65,14 +65,14 @@ func (i *InfluxDB) Connect() error {
 	for _, u := range i.URLs {
 		parts, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("error parsing url [%q]: %v", u, err)
+			return fmt.Errorf("error parsing url [%q]: %w", u, err)
 		}
 
 		var proxy *url.URL
 		if len(i.HTTPProxy) > 0 {
 			proxy, err = url.Parse(i.HTTPProxy)
 			if err != nil {
-				return fmt.Errorf("error parsing proxy_url [%s]: %v", i.HTTPProxy, err)
+				return fmt.Errorf("error parsing proxy_url [%s]: %w", i.HTTPProxy, err)
 			}
 		}
 
@@ -144,7 +144,7 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, erro
 
 	c, err := NewHTTPClient(httpConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", address, err)
+		return nil, fmt.Errorf("error creating HTTP client [%s]: %w", address, err)
 	}
 
 	return c, nil

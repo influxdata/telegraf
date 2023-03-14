@@ -104,7 +104,7 @@ func (m *Metric) SetField(name string, value starlark.Value) error {
 		return errors.New("cannot set fields")
 	default:
 		return starlark.NoSuchAttrError(
-			fmt.Sprintf("cannot assign to field '%s'", name))
+			fmt.Sprintf("cannot assign to field %q", name))
 	}
 }
 

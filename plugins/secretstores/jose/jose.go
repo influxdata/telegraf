@@ -7,13 +7,12 @@ import (
 	"fmt"
 
 	"github.com/99designs/keyring"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
@@ -37,14 +36,25 @@ func (j *Jose) Init() error {
 		return errors.New("id missing")
 	}
 
-	passwd, err := j.Password.Get()
-	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
+	if j.Path == "" {
+		return errors.New("path missing")
 	}
 
 	// Create the prompt-function in case we need it
 	promptFunc := keyring.TerminalPrompt
-	if len(passwd) != 0 {
+	if !j.Password.Empty() {
+		passwd, err := j.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(passwd)
+		promptFunc = keyring.FixedStringPrompt(string(passwd))
+	} else if !config.Password.Empty() {
+		passwd, err := config.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting global password failed: %w", err)
+		}
+		defer config.ReleaseSecret(passwd)
 		promptFunc = keyring.FixedStringPrompt(string(passwd))
 	}
 
@@ -56,7 +66,7 @@ func (j *Jose) Init() error {
 	}
 	kr, err := keyring.Open(cfg)
 	if err != nil {
-		return fmt.Errorf("opening keyring failed: %v", err)
+		return fmt.Errorf("opening keyring failed: %w", err)
 	}
 	j.ring = kr
 
@@ -100,9 +110,6 @@ func (j *Jose) GetResolver(key string) (telegraf.ResolveFunc, error) {
 // Register the secret-store on load.
 func init() {
 	secretstores.Add("jose", func(id string) telegraf.SecretStore {
-		return &Jose{
-			ID:   id,
-			Path: "secrets",
-		}
+		return &Jose{ID: id}
 	})
 }

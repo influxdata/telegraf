@@ -31,12 +31,13 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Collects conntrack stats from the configured directories and files.
+# This plugin ONLY supports Linux
 [[inputs.conntrack]]
   ## The following defaults would work with multiple versions of conntrack.
   ## Note the nf_ and ip_ filename prefixes are mutually exclusive across
@@ -57,8 +58,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-A detailed explanation of each fields can be found in [kernel documentation](
-https://www.kernel.org/doc/Documentation/networking/nf_conntrack-sysctl.txt).
+A detailed explanation of each fields can be found in
+[kernel documentation][kerneldoc]
+
+[kerneldoc]: https://www.kernel.org/doc/Documentation/networking/nf_conntrack-sysctl.txt
 
 - conntrack
   - `ip_conntrack_count` `(int, count)`: The number of entries in the conntrack table

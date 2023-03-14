@@ -38,8 +38,8 @@ type Client interface {
 type InfluxDB struct {
 	URL                       string            `toml:"url" deprecated:"0.1.9;2.0.0;use 'urls' instead"`
 	URLs                      []string          `toml:"urls"`
-	Username                  string            `toml:"username"`
-	Password                  string            `toml:"password"`
+	Username                  config.Secret     `toml:"username"`
+	Password                  config.Secret     `toml:"password"`
 	Database                  string            `toml:"database"`
 	DatabaseTag               string            `toml:"database_tag"`
 	ExcludeDatabaseTag        bool              `toml:"exclude_database_tag"`
@@ -87,14 +87,14 @@ func (i *InfluxDB) Connect() error {
 	for _, u := range urls {
 		parts, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("error parsing url [%q]: %v", u, err)
+			return fmt.Errorf("error parsing url [%q]: %w", u, err)
 		}
 
 		var proxy *url.URL
 		if len(i.HTTPProxy) > 0 {
 			proxy, err = url.Parse(i.HTTPProxy)
 			if err != nil {
-				return fmt.Errorf("error parsing proxy_url [%s]: %v", i.HTTPProxy, err)
+				return fmt.Errorf("error parsing proxy_url [%s]: %w", i.HTTPProxy, err)
 			}
 		}
 
@@ -145,8 +145,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 
-		switch apiError := err.(type) {
-		case *DatabaseNotFoundError:
+		var apiError *DatabaseNotFoundError
+		if errors.As(err, &apiError) {
 			if i.SkipDatabaseCreation {
 				continue
 			}
@@ -155,9 +155,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			if err := client.CreateDatabase(ctx, apiError.Database); err == nil {
 				return errors.New("database created; retry write")
 			}
-			i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
-				client.URL(), apiError.Database)
-		default:
+			i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate", client.URL(), apiError.Database)
+		} else {
 			allErrorsAreDatabaseNotFoundErrors = false
 		}
 	}
@@ -179,7 +178,7 @@ func (i *InfluxDB) udpClient(address *url.URL) (Client, error) {
 
 	c, err := i.CreateUDPClientF(udpConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error creating UDP client [%s]: %v", address, err)
+		return nil, fmt.Errorf("error creating UDP client [%s]: %w", address, err)
 	}
 
 	return c, nil
@@ -215,7 +214,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, proxy *url.
 
 	c, err := i.CreateHTTPClientF(httpConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", address, err)
+		return nil, fmt.Errorf("error creating HTTP client [%s]: %w", address, err)
 	}
 
 	if !i.SkipDatabaseCreation {

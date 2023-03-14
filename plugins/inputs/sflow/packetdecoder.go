@@ -2,12 +2,12 @@ package sflow
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/sflow/binaryio"
-	"github.com/pkg/errors"
 )
 
 type PacketDecoder struct {
@@ -39,7 +39,7 @@ func (d *PacketDecoder) Decode(r io.Reader) error {
 		}
 		d.onPacket(packet)
 	}
-	if err != nil && errors.Cause(err) == io.EOF {
+	if err != nil && errors.Is(err, io.EOF) {
 		return nil
 	}
 	return err
@@ -479,5 +479,8 @@ func (d *PacketDecoder) decodeUDPHeader(r io.Reader) (h UDPHeader, err error) {
 
 func read(r io.Reader, data interface{}, name string) error {
 	err := binary.Read(r, binary.BigEndian, data)
-	return errors.Wrapf(err, "failed to read %s", name)
+	if err != nil {
+		return fmt.Errorf("failed to read %q: %w", name, err)
+	}
+	return nil
 }

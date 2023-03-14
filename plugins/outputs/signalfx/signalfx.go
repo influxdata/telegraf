@@ -14,6 +14,7 @@ import (
 	"github.com/signalfx/golib/v3/sfxclient"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -29,10 +30,10 @@ func init() {
 
 // SignalFx plugin context
 type SignalFx struct {
-	AccessToken        string   `toml:"access_token"`
-	SignalFxRealm      string   `toml:"signalfx_realm"`
-	IngestURL          string   `toml:"ingest_url"`
-	IncludedEventNames []string `toml:"included_event_names"`
+	AccessToken        config.Secret `toml:"access_token"`
+	SignalFxRealm      string        `toml:"signalfx_realm"`
+	IngestURL          string        `toml:"ingest_url"`
+	IncludedEventNames []string      `toml:"included_event_names"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -66,9 +67,6 @@ func GetMetricType(mtype telegraf.ValueType) (metricType datapoint.MetricType) {
 func NewSignalFx() *SignalFx {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &SignalFx{
-		AccessToken:        "",
-		SignalFxRealm:      "",
-		IngestURL:          "",
 		IncludedEventNames: []string{""},
 		ctx:                ctx,
 		cancel:             cancel,
@@ -83,12 +81,18 @@ func (*SignalFx) SampleConfig() string {
 // Connect establishes a connection to SignalFx
 func (s *SignalFx) Connect() error {
 	client := s.client.(*sfxclient.HTTPSink)
-	client.AuthToken = s.AccessToken
+
+	token, err := s.AccessToken.Get()
+	if err != nil {
+		return fmt.Errorf("getting token failed: %w", err)
+	}
+	client.AuthToken = string(token)
+	config.ReleaseSecret(token)
 
 	if s.IngestURL != "" {
 		client.DatapointEndpoint = datapointEndpointForIngestURL(s.IngestURL)
 		client.EventEndpoint = eventEndpointForIngestURL(s.IngestURL)
-	} else if s.SignalFxRealm != "" { //nolint: revive // "Simplifying" if c {...} else {... return } would not simplify anything at all in this case
+	} else if s.SignalFxRealm != "" {
 		client.DatapointEndpoint = datapointEndpointForRealm(s.SignalFxRealm)
 		client.EventEndpoint = eventEndpointForRealm(s.SignalFxRealm)
 	} else {

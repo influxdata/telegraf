@@ -43,7 +43,7 @@ var rules rulesMap
 func init() {
 	rules = make(rulesMap)
 
-	//rules for all plugin types
+	// Rules for all plugin types
 	all := []ruleFunc{
 		firstSection,
 		noLongLinesInParagraphs(80),
@@ -54,13 +54,35 @@ func init() {
 		rules[i] = all
 	}
 
-	inputRules := []ruleFunc{
+	// Rules for input plugins
+	rules[pluginInput] = append(rules[pluginInput], []ruleFunc{
 		requiredSectionsClose([]string{
 			"Example Output",
 			"Metrics",
+			"Global configuration options",
 		}),
-	}
-	rules[pluginInput] = append(rules[pluginInput], inputRules...)
+	}...)
+
+	// Rules for output plugins
+	rules[pluginOutput] = append(rules[pluginOutput], []ruleFunc{
+		requiredSectionsClose([]string{
+			"Global configuration options",
+		}),
+	}...)
+
+	// Rules for processor pluings
+	rules[pluginProcessor] = append(rules[pluginProcessor], []ruleFunc{
+		requiredSectionsClose([]string{
+			"Global configuration options",
+		}),
+	}...)
+
+	// Rules for aggregator pluings
+	rules[pluginAggregator] = append(rules[pluginAggregator], []ruleFunc{
+		requiredSectionsClose([]string{
+			"Global configuration options",
+		}),
+	}...)
 }
 
 func checkFile(filename string, pluginType plugin, sourceFlag bool) (bool, error) {

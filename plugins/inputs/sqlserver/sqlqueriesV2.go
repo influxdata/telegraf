@@ -130,9 +130,9 @@ LEFT OUTER JOIN ( VALUES
 	,(''MEMORYCLERK_QUERYDISKSTORE_HASHMAP'',''QDS Query/Plan Hash Table'')
 ) AS clerk_names([system_name],[name])
 	ON mc.[type] = clerk_names.[system_name]
-GROUP BY 
+GROUP BY
 	ISNULL(clerk_names.[name], mc.[type])
-HAVING 
+HAVING
 	SUM(' + @Columns + N') >= 1024
 OPTION(RECOMPILE);
 '
@@ -144,7 +144,7 @@ EXEC(@SqlStatement)
 // EngineEdition=5 is Azure SQL DB
 const sqlDatabaseIOV2 = `
 SET DEADLOCK_PRIORITY -10;
-DECLARE 
+DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 
@@ -200,25 +200,25 @@ BEGIN
 	DECLARE @Columns as nvarchar(max) = ''
 	DECLARE @Tables as nvarchar(max) = ''
 
-	IF @MajorMinorVersion >= 1050 BEGIN 
+	IF @MajorMinorVersion >= 1050 BEGIN
 		/*in [volume_mount_point] any trailing "\" char will be removed by telegraf */
 		SET @Columns += N',[volume_mount_point]'
 		SET @Tables += N'CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs'
 	END
-		
+
 	IF @MajorMinorVersion > 1100 BEGIN
 		SET @Columns += N'
-,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
+,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
 ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
 	END
-	
+
 	SET @SqlStatement = N'
 	SELECT
 		''sqlserver_database_io'' AS [measurement]
 		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 		,DB_NAME(vfs.[database_id]) AS [database_name]
 		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
+		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
 		,mf.[type_desc] AS [file_type]
 		,vfs.[io_stall_read_ms] AS [read_latency_ms]
 		,vfs.[num_of_reads] AS [reads]
@@ -232,7 +232,7 @@ BEGIN
 		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
 	'
 	+ @Tables;
-	
+
 	EXEC sp_executesql @SqlStatement
 
 END
@@ -246,7 +246,7 @@ SET DEADLOCK_PRIORITY -10;
 DECLARE
        @SqlStatement AS nvarchar(max) = ''
        ,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-		
+
 IF @EngineEdition = 8  /*Managed Instance*/
       SET @SqlStatement =  'SELECT TOP 1 ''sqlserver_server_properties'' AS [measurement],
 			REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance],
@@ -274,7 +274,7 @@ IF @EngineEdition = 8  /*Managed Instance*/
                                  SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
                                  SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
                         FROM    sys.databases
-			) AS dbs	
+			) AS dbs
 			ORDER BY start_time DESC';
 
 IF @EngineEdition = 5  /*Azure SQL DB*/
@@ -286,17 +286,17 @@ IF @EngineEdition = 5  /*Azure SQL DB*/
                         slo.edition as sku,
                         @EngineEdition  AS engine_edition,
                         slo.service_objective AS hardware_type,
-			CASE 
-				 WHEN slo.edition = ''Hyperscale'' then NULL 
-				 ELSE  cast(DATABASEPROPERTYEX(DB_NAME(),''MaxSizeInBytes'') as bigint)/(1024*1024)  
+			CASE
+				 WHEN slo.edition = ''Hyperscale'' then NULL
+				 ELSE  cast(DATABASEPROPERTYEX(DB_NAME(),''MaxSizeInBytes'') as bigint)/(1024*1024)
 			END AS total_storage_mb,
 			CASE
 				 WHEN slo.edition = ''Hyperscale'' then NULL
 				 ELSE
 				(cast(DATABASEPROPERTYEX(DB_NAME(),''MaxSizeInBytes'') as bigint)/(1024*1024)-
 					(select  SUM(size/128 - CAST(FILEPROPERTY(name, ''SpaceUsed'') AS int)/128)	FROM sys.database_files )
-				)	
-			END AS available_storage_mb,   
+				)
+			END AS available_storage_mb,
                         (select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info)  as uptime
 			FROM     sys.databases d
 			-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
@@ -316,7 +316,7 @@ BEGIN
                 END AS [hardware_type]';
         ELSE /*data not available*/
                 SET @Columns = N',''<n/a>'' AS [hardware_type]';
-  
+
         SET @SqlStatement =  'SELECT	''sqlserver_server_properties'' AS [measurement],
 			REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance],
 			DB_NAME() as [database_name],
@@ -344,7 +344,7 @@ BEGIN
                                         SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
         	                FROM    sys.databases
                 	) AS dbs';
-       
+
  END
  EXEC sp_executesql @SqlStatement , N'@EngineEdition smallint', @EngineEdition = @EngineEdition;
 
@@ -365,7 +365,7 @@ DECLARE
 	END
 
 SET @SqlStatement = N'
-SELECT 
+SELECT
 	 ''sqlserver_schedulers'' AS [measurement]
 	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
 	,DB_NAME() AS [database_name]
@@ -436,7 +436,7 @@ SET @SqlStatement = N'SELECT DISTINCT
                              OR RTRIM(spi.object_name) LIKE ''%:Query Store''
                              OR RTRIM(spi.object_name) LIKE ''%:Columnstore''
                              OR RTRIM(spi.object_name) LIKE ''%:Advanced Analytics'')
-                             AND TRY_CONVERT(uniqueidentifier, spi.instance_name) 
+                             AND TRY_CONVERT(uniqueidentifier, spi.instance_name)
 							 IS NOT NULL -- for cloud only
                 THEN ISNULL(d.name,RTRIM(spi.instance_name)) -- Elastic Pools counters exist for all databases but sys.databases only has current DB value
 			  WHEN RTRIM(object_name) LIKE ''%:Availability Replica''
@@ -451,7 +451,7 @@ SET @SqlStatement = N'SELECT DISTINCT
 		spi.cntr_type
 		FROM	sys.dm_os_performance_counters AS spi '
 +
-CASE 
+CASE
 	WHEN @EngineEdition IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
 	THEN CAST(N'LEFT JOIN sys.databases AS d
 	ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
@@ -1251,7 +1251,7 @@ const sqlServerRequestsV2 string = `
 SET DEADLOCK_PRIORITY -10;
 SET NOCOUNT ON;
 
-DECLARE 
+DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
@@ -1273,7 +1273,7 @@ ELSE
 SET @SqlStatement = N'
 SELECT  blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHERE blocking_session_id != 0
 create index ix_blockingSessions_1 on #blockingSessions (blocking_session_id)
-SELECT 
+SELECT
 ''sqlserver_requests'' AS [measurement]
 , REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 , DB_NAME() as [database_name]
@@ -1293,20 +1293,20 @@ N' , COALESCE(r.status,s.status) AS status
 , s.program_name
 , s.host_name
 , s.nt_user_name '
-+ @Columns + 
++ @Columns +
 N', LEFT (CASE COALESCE(r.transaction_isolation_level, s.transaction_isolation_level)
-			WHEN 0 THEN ''0-Read Committed'' 
-			WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)'' 
-			WHEN 2 THEN ''2-Read Committed'' 
-			WHEN 3 THEN ''3-Repeatable Read'' 
-			WHEN 4 THEN ''4-Serializable'' 
-			WHEN 5 THEN ''5-Snapshot'' 
-			ELSE CONVERT (varchar(30), r.transaction_isolation_level) + ''-UNKNOWN'' 
+			WHEN 0 THEN ''0-Read Committed''
+			WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)''
+			WHEN 2 THEN ''2-Read Committed''
+			WHEN 3 THEN ''3-Repeatable Read''
+			WHEN 4 THEN ''4-Serializable''
+			WHEN 5 THEN ''5-Snapshot''
+			ELSE CONVERT (varchar(30), r.transaction_isolation_level) + ''-UNKNOWN''
 		END, 30) AS transaction_isolation_level
 , r.granted_query_memory as granted_query_memory_pages
 , r.percent_complete
 , SUBSTRING(
-				qt.text, 
+				qt.text,
 				r.statement_start_offset / 2 + 1,
 				(CASE WHEN r.statement_end_offset = -1
 					  THEN DATALENGTH(qt.text)
@@ -1319,16 +1319,22 @@ N', LEFT (CASE COALESCE(r.transaction_isolation_level, s.transaction_isolation_l
 , CONVERT(varchar(20),[query_hash],1) as [query_hash]
 , CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
 FROM sys.dm_exec_sessions AS s
-LEFT OUTER JOIN sys.dm_exec_requests AS r 
+LEFT OUTER JOIN sys.dm_exec_requests AS r
 	ON s.session_id = r.session_id
 OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt
 WHERE 1 = 1
-	AND (r.session_id IS NOT NULL AND (s.is_user_process = 1 
+	AND (r.session_id IS NOT NULL AND (s.is_user_process = 1
 	OR r.status COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')) AND r.session_id <> @@SPID)
 	OR  (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
 OPTION(MAXDOP 1)'
 
-EXEC sp_executesql @SqlStatement
+BEGIN TRY
+	EXEC sp_executesql @SqlStatement
+END TRY
+BEGIN CATCH
+   IF (ERROR_NUMBER() <> 976) --Avoid possible errors from secondary replica
+        THROW;
+END CATCH
 `
 
 const sqlServerVolumeSpaceV2 string = `
@@ -1340,7 +1346,7 @@ Gets data about disk space, only for volumes used by SQL Server (data available 
 DECLARE
 	 @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
-	
+
 IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
 	BEGIN
 	SELECT DISTINCT

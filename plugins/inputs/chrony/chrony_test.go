@@ -40,6 +40,10 @@ func TestGather(t *testing.T) {
 		"update_interval": 507.2,
 	}
 
+	// tests on linux with go1.20 will add a warning about code coverage
+	// due to the code coverage dir not being set
+	delete(acc.Metrics[0].Tags, "warning")
+
 	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
 
 	// test with dns lookup

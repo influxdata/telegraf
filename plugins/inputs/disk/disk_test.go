@@ -609,7 +609,7 @@ func TestDiskUsageIssues(t *testing.T) {
 
 			// Get the partitions in the test-case
 			os.Clearenv()
-			require.NoError(t, os.Setenv("HOST_PROC", hostProcPrefix))
+			t.Setenv("HOST_PROC", hostProcPrefix)
 			partitions, err := diskUtil.Partitions(true)
 			require.NoError(t, err)
 

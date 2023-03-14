@@ -40,14 +40,14 @@ func newDpdkConnector(pathToSocket string, accessTimeout config.Duration) *dpdkC
 func (conn *dpdkConnector) connect() (*initMessage, error) {
 	connection, err := net.Dial("unixpacket", conn.pathToSocket)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the socket - %v", err)
+		return nil, fmt.Errorf("failed to connect to the socket: %w", err)
 	}
 
 	conn.connection = connection
 	result, err := conn.readMaxOutputLen()
 	if err != nil {
 		if closeErr := conn.tryClose(); closeErr != nil {
-			return nil, fmt.Errorf("%v and failed to close connection - %v", err, closeErr)
+			return nil, fmt.Errorf("%w and failed to close connection: %w", err, closeErr)
 		}
 		return nil, err
 	}
@@ -61,35 +61,33 @@ func (conn *dpdkConnector) connect() (*initMessage, error) {
 func (conn *dpdkConnector) getCommandResponse(fullCommand string) ([]byte, error) {
 	connection, err := conn.getConnection()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get connection to execute %v command - %v", fullCommand, err)
+		return nil, fmt.Errorf("failed to get connection to execute %q command: %w", fullCommand, err)
 	}
 
 	err = conn.setTimeout()
 	if err != nil {
-		return nil, fmt.Errorf("failed to set timeout for %v command - %v", fullCommand, err)
+		return nil, fmt.Errorf("failed to set timeout for %q command: %w", fullCommand, err)
 	}
 
 	_, err = connection.Write([]byte(fullCommand))
 	if err != nil {
 		if closeErr := conn.tryClose(); closeErr != nil {
-			return nil, fmt.Errorf("failed to send '%v' command - %v and failed to close connection - %v",
-				fullCommand, err, closeErr)
+			return nil, fmt.Errorf("failed to send %q command: %w and failed to close connection: %w", fullCommand, err, closeErr)
 		}
-		return nil, fmt.Errorf("failed to send '%v' command - %v", fullCommand, err)
+		return nil, fmt.Errorf("failed to send %q command: %w", fullCommand, err)
 	}
 
 	buf := make([]byte, conn.maxOutputLen)
 	messageLength, err := connection.Read(buf)
 	if err != nil {
 		if closeErr := conn.tryClose(); closeErr != nil {
-			return nil, fmt.Errorf("failed read response of '%v' command - %v and failed to close connection - %v",
-				fullCommand, err, closeErr)
+			return nil, fmt.Errorf("failed read response of %q command: %w and failed to close connection: %w", fullCommand, err, closeErr)
 		}
-		return nil, fmt.Errorf("failed to read response of '%v' command - %v", fullCommand, err)
+		return nil, fmt.Errorf("failed to read response of %q command: %w", fullCommand, err)
 	}
 
 	if messageLength == 0 {
-		return nil, fmt.Errorf("got empty response during execution of '%v' command", fullCommand)
+		return nil, fmt.Errorf("got empty response during execution of %q command", fullCommand)
 	}
 	return buf[:messageLength], nil
 }
@@ -134,18 +132,18 @@ func (conn *dpdkConnector) readMaxOutputLen() (*initMessage, error) {
 	buf := make([]byte, maxInitMessageLength)
 	err := conn.setTimeout()
 	if err != nil {
-		return nil, fmt.Errorf("failed to set timeout - %v", err)
+		return nil, fmt.Errorf("failed to set timeout: %w", err)
 	}
 
 	messageLength, err := conn.connection.Read(buf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read InitMessage - %v", err)
+		return nil, fmt.Errorf("failed to read InitMessage: %w", err)
 	}
 
 	var initMessage initMessage
 	err = json.Unmarshal(buf[:messageLength], &initMessage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response - %v", err)
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	if initMessage.MaxOutputLen == 0 {

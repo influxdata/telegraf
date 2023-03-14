@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -132,15 +133,16 @@ func defaultVSphere() *VSphere {
 		DatacenterInclude:         []string{"/**"},
 		ClientConfig:              itls.ClientConfig{InsecureSkipVerify: true},
 
-		MaxQueryObjects:         256,
-		MaxQueryMetrics:         256,
-		ObjectDiscoveryInterval: config.Duration(time.Second * 300),
-		Timeout:                 config.Duration(time.Second * 20),
-		ForceDiscoverOnInit:     true,
-		DiscoverConcurrency:     1,
-		CollectConcurrency:      1,
-		Separator:               ".",
-		HistoricalInterval:      config.Duration(time.Second * 300),
+		MaxQueryObjects:             256,
+		MaxQueryMetrics:             256,
+		ObjectDiscoveryInterval:     config.Duration(time.Second * 300),
+		Timeout:                     config.Duration(time.Second * 20),
+		ForceDiscoverOnInit:         true,
+		DiscoverConcurrency:         1,
+		CollectConcurrency:          1,
+		Separator:                   ".",
+		HistoricalInterval:          config.Duration(time.Second * 300),
+		DisconnectedServersBehavior: "error",
 	}
 }
 
@@ -225,9 +227,7 @@ func TestMaxQuery(t *testing.T) {
 		return
 	}
 	m, s, err := createSim(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer m.Remove()
 	defer s.Close()
 
@@ -235,9 +235,7 @@ func TestMaxQuery(t *testing.T) {
 	v.MaxQueryMetrics = 256
 	ctx := context.Background()
 	c, err := NewClient(ctx, s.URL, v)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.Equal(t, 256, v.MaxQueryMetrics)
 
 	om := object.NewOptionManager(c.Client.Client, *c.Client.Client.ServiceContent.Setting)
@@ -245,16 +243,12 @@ func TestMaxQuery(t *testing.T) {
 		Key:   "config.vpxd.stats.maxQueryMetrics",
 		Value: "42",
 	}})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	v.MaxQueryMetrics = 256
 	ctx = context.Background()
 	c2, err := NewClient(ctx, s.URL, v)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.Equal(t, 42, v.MaxQueryMetrics)
 	c.close()
 	c2.close()
@@ -287,9 +281,7 @@ func TestFinder(t *testing.T) {
 	}
 
 	m, s, err := createSim(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer m.Remove()
 	defer s.Close()
 
@@ -413,9 +405,7 @@ func TestFolders(t *testing.T) {
 	}
 
 	m, s, err := createSim(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer m.Remove()
 	defer s.Close()
 
@@ -461,6 +451,22 @@ func TestCollectionNoClusterMetrics(t *testing.T) {
 	testCollection(t, true)
 }
 
+func TestDisconnectedServerBehavior(t *testing.T) {
+	u, err := url.Parse("https://definitely.not.a.valid.host")
+	require.NoError(t, err)
+	v := defaultVSphere()
+	v.DisconnectedServersBehavior = "error"
+	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	require.Error(t, err)
+	v.DisconnectedServersBehavior = "ignore"
+	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	require.NoError(t, err)
+	v.DisconnectedServersBehavior = "something else"
+	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	require.Error(t, err)
+	require.Equal(t, err.Error(), `"something else" is not a valid value for disconnected_servers_behavior`)
+}
+
 func testCollection(t *testing.T, excludeClusters bool) {
 	mustHaveMetrics := map[string]struct{}{
 		"vsphere.vm.cpu":         {},
@@ -477,8 +483,8 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	v := defaultVSphere()
 	if vCenter != "" {
 		v.Vcenters = []string{vCenter}
-		v.Username = username
-		v.Password = password
+		v.Username = config.NewSecret([]byte(username))
+		v.Password = config.NewSecret([]byte(password))
 	} else {
 		// Don't run test on 32-bit machines due to bug in simulator.
 		// https://github.com/vmware/govmomi/issues/1330
@@ -488,9 +494,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 		}
 
 		m, s, err := createSim(0)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		defer m.Remove()
 		defer s.Close()
 		v.Vcenters = []string{s.URL.String()}

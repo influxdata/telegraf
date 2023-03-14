@@ -45,8 +45,7 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	var pids []PID
 	pidString, err := os.ReadFile(path)
 	if err != nil {
-		return pids, fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'",
-			path, err)
+		return pids, fmt.Errorf("Failed to read pidfile %q: %w", path, err)
 	}
 	pid, err := strconv.ParseInt(strings.TrimSpace(string(pidString)), 10, 32)
 	if err != nil {

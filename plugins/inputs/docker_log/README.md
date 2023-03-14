@@ -19,7 +19,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -31,8 +31,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   # endpoint = "unix:///var/run/docker.sock"
 
-  ## When true, container logs are read from the beginning; otherwise
-  ## reading begins at the end of the log.
+  ## When true, container logs are read from the beginning; otherwise reading
+  ## begins at the end of the log. If state-persistence is enabled for Telegraf,
+  ## the reading continues at the last previously processed timestamp.
   # from_beginning = false
 
   ## Timeout for Docker API calls.
