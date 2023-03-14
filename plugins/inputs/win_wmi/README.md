@@ -17,7 +17,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -25,8 +25,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Input plugin to query Windows Management Instrumentation
 # This plugin ONLY supports Windows
 [[inputs.win_wmi]]
-  # specifies a prefix to attach to the measurement name
-  name_prefix = "win_wmi_"
   [[inputs.win_wmi.query]]
     # a string representing the WMI namespace to be queried
     namespace = "root\\cimv2"
