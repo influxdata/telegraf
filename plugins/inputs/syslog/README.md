@@ -10,6 +10,17 @@ Syslog messages should be formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424) (syslog protocol) or
 [RFC 3164](https://tools.ietf.org/html/rfc3164) (BSD syslog protocol).
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
