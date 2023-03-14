@@ -29,7 +29,7 @@ require (
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.1
 	github.com/antchfx/xmlquery v1.3.15
-	github.com/antchfx/xpath v1.2.3
+	github.com/antchfx/xpath v1.2.4
 	github.com/apache/iotdb-client-go v0.12.2-0.20220722111104-cd17da295b46
 	github.com/apache/thrift v0.16.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
