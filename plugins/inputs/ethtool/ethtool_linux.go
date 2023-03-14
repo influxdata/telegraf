@@ -133,11 +133,10 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 	}
 
 	cmdget, err := e.command.Get(iface)
-	if err != nil {
+	if err != nil && err.Error() != "operation not supported" {
 		acc.AddError(fmt.Errorf("%q get: %w", iface.Name, err))
 		return
 	}
-
 	for k, v := range cmdget {
 		fields[e.normalizeKey(k)] = v
 	}
