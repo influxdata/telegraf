@@ -40,7 +40,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   
   ## Test with multiple servers to get closer to ideal internet speeds.
   ## single mode as default.
-  # multi_mode = fasle
+  # multi_server_mode = fasle
   
   ## Server ID exclude filter
   ## Allows the user to exclude or include specific server IDs received by

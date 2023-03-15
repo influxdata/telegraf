@@ -27,7 +27,7 @@ type InternetSpeed struct {
 	MemorySavingMode   bool     `toml:"memory_saving_mode"`
 	Cache              bool     `toml:"cache"`
 	Connections        int      `toml:"connections"`
-	MultiMode          bool     `toml:"multi_mode"`
+	MultiServerMode    bool     `toml:"multi_server_mode"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -69,7 +69,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("ping test failed: %w", err)
 	}
 
-	if is.MultiMode {
+	if is.MultiServerMode {
 		err = is.server.MultiDownloadTestContext(context.Background(), is.servers)
 		if err != nil {
 			return fmt.Errorf("download test failed: %w", err)
