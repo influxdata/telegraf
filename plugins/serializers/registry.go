@@ -2,6 +2,7 @@ package serializers
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -74,6 +75,9 @@ type Config struct {
 
 	// Character for separating metric name and field for Graphite tags
 	GraphiteSeparator string `toml:"graphite_separator"`
+
+	// Regex string
+	GraphiteStrictRegex string `toml:"graphite_strict_sanitize_regex"`
 
 	// Maximum line length in bytes; influx format only
 	InfluxMaxLineBytes int `toml:"influx_max_line_bytes"`
@@ -155,6 +159,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(
 			config.Prefix,
 			config.Template,
+			config.GraphiteStrictRegex,
 			config.GraphiteTagSupport,
 			config.GraphiteTagSanitizeMode,
 			config.GraphiteSeparator,
@@ -280,9 +285,17 @@ func NewInfluxSerializer() Serializer {
 	return influx.NewSerializer()
 }
 
-func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitizeMode string, separator string, templates []string) (Serializer, error) {
+//nolint:revive //argument-limit conditionally more arguments allowed
+func NewGraphiteSerializer(
+	prefix,
+	template string,
+	strictRegex string,
+	tagSupport bool,
+	tagSanitizeMode string,
+	separator string,
+	templates []string,
+) (Serializer, error) {
 	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
-
 	if err != nil {
 		return nil, err
 	}
@@ -299,13 +312,22 @@ func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitize
 		separator = "."
 	}
 
+	strictAllowedChars := regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	if strictRegex != "" {
+		strictAllowedChars, err = regexp.Compile(strictRegex)
+		if err != nil {
+			return nil, fmt.Errorf("invalid regex provided %q: %w", strictRegex, err)
+		}
+	}
+
 	return &graphite.GraphiteSerializer{
-		Prefix:          prefix,
-		Template:        template,
-		TagSupport:      tagSupport,
-		TagSanitizeMode: tagSanitizeMode,
-		Separator:       separator,
-		Templates:       graphiteTemplates,
+		Prefix:             prefix,
+		Template:           template,
+		StrictAllowedChars: strictAllowedChars,
+		TagSupport:         tagSupport,
+		TagSanitizeMode:    tagSanitizeMode,
+		Separator:          separator,
+		Templates:          graphiteTemplates,
 	}, nil
 }
 

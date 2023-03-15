@@ -1,3 +1,30 @@
 //go:build !linux
 
 package lustre2
+
+import (
+	_ "embed"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+//go:embed sample.conf
+var sampleConfig string
+
+type Lustre2 struct {
+	Log telegraf.Logger `toml:"-"`
+}
+
+func (l *Lustre2) Init() error {
+	l.Log.Warn("current platform is not supported")
+	return nil
+}
+func (*Lustre2) SampleConfig() string                { return sampleConfig }
+func (*Lustre2) Gather(_ telegraf.Accumulator) error { return nil }
+
+func init() {
+	inputs.Add("lustre2", func() telegraf.Input {
+		return &Lustre2{}
+	})
+}

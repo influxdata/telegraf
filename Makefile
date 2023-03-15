@@ -2,7 +2,8 @@ ifneq (,$(filter $(OS),Windows_NT Windows))
 	EXEEXT=.exe
 endif
 
-next_version := $(file < build_version.txt)
+cat := $(if $(filter $(OS),sh.exe),type,cat)
+next_version := $(shell $(cat) build_version.txt)
 tag := $(shell git describe --exact-match --tags 2>/dev/null)
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
@@ -114,9 +115,7 @@ build_tools:
 	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
-	GOOS=linux go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
-	GOOS=windows go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
-	GOOS=darwin go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 
 .PHONY: config
 config:
@@ -128,7 +127,7 @@ docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processo
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
 telegraf: build
@@ -248,8 +247,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.20.1 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.20.1
+	docker build -t quay.io/influxdb/telegraf-ci:1.20.2 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.20.2
 
 .PHONY: install
 install: $(buildbin)

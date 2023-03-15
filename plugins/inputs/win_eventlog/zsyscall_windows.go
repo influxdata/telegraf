@@ -75,6 +75,8 @@ var (
 	procEvtNext                  = modwevtapi.NewProc("EvtNext")
 	procEvtFormatMessage         = modwevtapi.NewProc("EvtFormatMessage")
 	procEvtOpenPublisherMetadata = modwevtapi.NewProc("EvtOpenPublisherMetadata")
+	procEvtCreateBookmark        = modwevtapi.NewProc("EvtCreateBookmark")
+	procEvtUpdateBookmark        = modwevtapi.NewProc("EvtUpdateBookmark")
 )
 
 func _EvtSubscribe(
@@ -230,4 +232,27 @@ func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, log
 		}
 	}
 	return
+}
+
+func _EvtCreateBookmark(bookmarkXML *uint16) (EvtHandle, error) {
+	r0, _, e1 := syscall.Syscall(procEvtCreateBookmark.Addr(), 1, uintptr(unsafe.Pointer(bookmarkXML)), 0, 0)
+	handle := EvtHandle(r0)
+	if handle != 0 {
+		return handle, nil
+	}
+	if e1 != 0 {
+		return handle, errnoErr(e1)
+	}
+	return handle, syscall.EINVAL
+}
+
+func _EvtUpdateBookmark(bookmark, event EvtHandle) error {
+	r0, _, e1 := syscall.Syscall(procEvtUpdateBookmark.Addr(), 2, uintptr(bookmark), uintptr(event), 0)
+	if r0 != 0 {
+		return nil
+	}
+	if e1 != 0 {
+		return errnoErr(e1)
+	}
+	return syscall.EINVAL
 }

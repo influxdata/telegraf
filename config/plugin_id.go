@@ -34,7 +34,7 @@ func processTable(parent string, table *ast.Table) ([]keyValuePair, error) {
 			key := prefix + k
 			childs, err := processTable(key, v)
 			if err != nil {
-				return nil, fmt.Errorf("parsing table for %q failed: %v", key, err)
+				return nil, fmt.Errorf("parsing table for %q failed: %w", key, err)
 			}
 			options = append(options, childs...)
 		case []*ast.Table:
@@ -42,7 +42,7 @@ func processTable(parent string, table *ast.Table) ([]keyValuePair, error) {
 				key := fmt.Sprintf("%s#%d.%s", prefix, i, k)
 				childs, err := processTable(key, t)
 				if err != nil {
-					return nil, fmt.Errorf("parsing table for %q #%d failed: %v", key, i, err)
+					return nil, fmt.Errorf("parsing table for %q #%d failed: %w", key, i, err)
 				}
 				options = append(options, childs...)
 			}

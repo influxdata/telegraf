@@ -41,6 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   controller = "tcp://localhost:502"
 
   ## Serial (RS485; RS232)
+  ## For RS485 specific setting check the end of the configuration.
   ## For unix-like operating systems use:
   # controller = "file:///dev/ttyUSB0"
   ## For Windows operating systems use:
@@ -75,6 +76,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Digital Variables, Discrete Inputs and Coils
   ## measurement - the (optional) measurement name, defaults to "modbus"
   ## name        - the variable name
+  ## data_type   - the (optional) output type, can be BOOL or UINT16 (default)
   ## address     - variable address
 
   discrete_inputs = [
@@ -177,23 +179,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                  FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ## scale *1,2     - (optional) factor to scale the variable with
-    ## output *1,2    - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
+    ## output *1,3    - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
     ##                  "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
     ## measurement *1 - (optional) measurement name, defaults to the setting of the request
     ## omit           - (optional) omit this field. Useful to leave out single values when querying many registers
     ##                  with a single request. Defaults to "false".
     ##
-    ## *1: Those fields are ignored if field is omitted ("omit"=true)
-    ##
-    ## *2: Thise fields are ignored for both "coil" and "discrete"-input type of registers. For those register types
-    ##     the fields are output as zero or one in UINT64 format by default.
+    ## *1: These fields are ignored if field is omitted ("omit"=true)
+    ## *2: These fields are ignored for both "coil" and "discrete"-input type of registers.
+    ## *3: This field can only be "UINT16" or "BOOL" if specified for both "coil"
+    ##     and "discrete"-input type of registers. By default the fields are
+    ##     output as zero or one in UINT16 format unless "BOOL" is used.
 
     ## Coil / discrete input example
     fields = [
       { address=0, name="motor1_run"},
       { address=1, name="jog", measurement="motor"},
       { address=2, name="motor1_stop", omit=true},
-      { address=3, name="motor1_overheating"},
+      { address=3, name="motor1_overheating", output="BOOL"},
     ]
 
     [inputs.modbus.request.tags]
@@ -234,6 +237,21 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     [inputs.modbus.request.tags]
       machine = "impresser"
       location = "main building"
+
+  ## RS485 specific settings. Only take effect for serial controllers.
+  ## Note: This has to be at the end of the modbus configuration due to
+  ## TOML constraints.
+  # [inputs.modbus.rs485]
+    ## Delay RTS prior to sending
+    # delay_rts_before_send = "0ms"
+    ## Delay RTS after to sending
+    # delay_rts_after_send = "0ms"
+    ## Pull RTS line to high during sending
+    # rts_high_during_send = false
+    ## Pull RTS line to high after sending
+    # rts_high_after_send = false
+    ## Enabling receiving (Rx) during transmission (Tx)
+    # rx_during_tx = false
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.modbus.workarounds]
@@ -304,6 +322,11 @@ floating-point-number. The size of the output type is assumed to be large enough
 for all supported input types. The mapping from the input type to the output
 type is fixed and cannot be configured.
 
+##### Booleans: `BOOL`
+
+This type is only valid for _coil_ and _discrete_ registers. The value will be
+`true` if the register has a non-zero (ON) value and `false` otherwise.
+
 ##### Integers: `INT8L`, `INT8H`, `UINT8L`, `UINT8H`
 
 These types are used for 8-bit integer values. Select the one that matches your
@@ -313,7 +336,7 @@ the register respectively.
 ##### Integers: `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64`, `UINT64`
 
 These types are used for integer input values. Select the one that matches your
-modbus data source.
+modbus data source. For _coil_ and _discrete_ registers only `UINT16` is valid.
 
 ##### Floating Point: `FLOAT16-IEEE`, `FLOAT32-IEEE`, `FLOAT64-IEEE`
 
@@ -496,10 +519,11 @@ non-zero value, the output type is `FLOAT64`. Otherwise, the output type
 corresponds to the register datatype _class_, i.e. `INT*` will result in
 `INT64`, `UINT*` in `UINT64` and `FLOAT*` in `FLOAT64`.
 
-This setting is ignored if the field's `omit` is set to `true` or if the
-`register` type is a bit-type (`coil` or `discrete`) and can be omitted in these
-cases. For `coil` and `discrete` registers the field-value is output as zero or
-one in `UINT16` format.
+This setting is ignored if the field's `omit` is set to `true` and can be
+omitted. In case the `register` type is a bit-type (`coil` or `discrete`) only
+`UINT16` or `BOOL` are valid with the former being the default if omitted.
+For `coil` and `discrete` registers the field-value is output as zero or one in
+`UINT16` format or as `true` and `false` in `BOOL` format.
 
 #### per-field measurement setting
 

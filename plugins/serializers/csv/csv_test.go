@@ -83,6 +83,8 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 			// Serialize
 			serializer, err := NewSerializer(cfg.TimestampFormat, cfg.Separator, cfg.Header, cfg.Prefix)
 			require.NoError(t, err)
+			// expected results use LF endings
+			serializer.writer.UseCRLF = false
 			var actual bytes.Buffer
 			for _, m := range metrics {
 				buf, err := serializer.Serialize(m)
@@ -149,6 +151,8 @@ func TestSerializeTransformationBatch(t *testing.T) {
 			// Serialize
 			serializer, err := NewSerializer(cfg.TimestampFormat, cfg.Separator, cfg.Header, cfg.Prefix)
 			require.NoError(t, err)
+			// expected results use LF endings
+			serializer.writer.UseCRLF = false
 			actual, err := serializer.SerializeBatch(metrics)
 			require.NoError(t, err)
 

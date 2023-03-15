@@ -237,7 +237,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	if p.Timestamp != "" {
 		rawTime := fmt.Sprintf("%v", fields[p.Timestamp])
 		var err error
-		timestamp, err = internal.ParseTimestamp(p.TimestampFormat, rawTime, "")
+		timestamp, err = internal.ParseTimestamp(p.TimestampFormat, rawTime, nil)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse '%s' to '%s'", rawTime, p.TimestampFormat)
 		}

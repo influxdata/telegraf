@@ -14,6 +14,10 @@ string value to a numeric type, precision may be lost if the number is too
 large. The largest numeric type this plugin supports is `float64`, and if a
 string 'number' exceeds its size limit, accuracy may be lost.
 
+**Note on multiple measurement or timestamps:** Users can provide multiple
+tags or fields to use as the measurement name or timestamp. However, note that
+the order in the array is not guaranteed!
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -41,6 +45,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     boolean = []
     float = []
 
+    ## Optional tag to use as metric timestamp
+    # timestamp = []
+
+    ## Format of the timestamp determined by the tag above. This can be any of
+    ## "unix", "unix_ms", "unix_us", "unix_ns", or a valid Golang time format.
+    ## It is required, when using the timestamp option.
+    # timestamp_format = ""
+
   ## Fields to convert
   ##
   ## The table key determines the target type, and the array of key-values
@@ -54,6 +66,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     unsigned = []
     boolean = []
     float = []
+
+    ## Optional field to use as metric timestamp
+    # timestamp = []
+
+    ## Format of the timestamp determined by the field above. This can be any
+    ## of "unix", "unix_ms", "unix_us", "unix_ns", or a valid Golang time
+    ## format. It is required, when using the timestamp option.
+    # timestamp_format = ""
 ```
 
 ### Example
@@ -96,3 +116,19 @@ Rename the measurement from a tag value:
 - mqtt_consumer,topic=sensor temp=42
 + sensor temp=42
 ```
+
+Set the metric timestamp from a tag:
+
+```toml
+[[processors.converter]]
+  [processors.converter.tags]
+    timestamp = ["time"]
+    timestamp_format = "unix
+```
+
+```diff
+- metric,time="1677610769" temp=42
++ metric temp=42 1677610769
+```
+
+This is also possible via the fields converter.

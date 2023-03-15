@@ -3,4 +3,6 @@ README.md merge=union
 go.sum merge=union
 plugins/inputs/all/all.go merge=union
 plugins/outputs/all/all.go merge=union
-**/testdata/** test eol=lf
+
+# Always check-out / check-in files with LF line endings.
+* text=auto eol=lf

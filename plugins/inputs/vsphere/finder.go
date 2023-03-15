@@ -155,22 +155,20 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 		var inc int
 		if recurse {
 			inc = 0 // By default, we stay on this token
-			if !isLeaf {
-				// Lookahead to next token.
-				if matchName(tokens[pos+1], c.PropSet) {
-					// Are we looking ahead at a leaf node that has the wanted type?
-					// Rerun the entire level as a leaf. This is needed since all properties aren't loaded
-					// when we're processing non-leaf nodes.
-					if pos == len(tokens)-2 {
-						if c.Obj.Type == resType {
-							rerunAsLeaf = true
-							continue
-						}
-					} else if _, ok := containers[c.Obj.Type]; ok {
-						// Tokens match and we're looking ahead at a container type that's not a leaf
-						// Consume this token and the next.
-						inc = 2
+			// Lookahead to next token.
+			if matchName(tokens[pos+1], c.PropSet) {
+				// Are we looking ahead at a leaf node that has the wanted type?
+				// Rerun the entire level as a leaf. This is needed since all properties aren't loaded
+				// when we're processing non-leaf nodes.
+				if pos == len(tokens)-2 {
+					if c.Obj.Type == resType {
+						rerunAsLeaf = true
+						continue
 					}
+				} else if _, ok := containers[c.Obj.Type]; ok {
+					// Tokens match and we're looking ahead at a container type that's not a leaf
+					// Consume this token and the next.
+					inc = 2
 				}
 			}
 		} else {

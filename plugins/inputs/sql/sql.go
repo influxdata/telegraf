@@ -109,7 +109,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 					return 0, fmt.Errorf("time column %q of type \"%T\" unsupported", name, columnData[i])
 				}
 				if !skipParsing {
-					if timestamp, err = internal.ParseTimestamp(q.TimeFormat, fieldvalue, ""); err != nil {
+					if timestamp, err = internal.ParseTimestamp(q.TimeFormat, fieldvalue, nil); err != nil {
 						return 0, fmt.Errorf("parsing time failed: %w", err)
 					}
 				}

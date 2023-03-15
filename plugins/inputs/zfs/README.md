@@ -17,6 +17,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, pools and datasets
+# This plugin ONLY supports Linux & FreeBSD
 [[inputs.zfs]]
   ## ZFS kstat path. Ignored on FreeBSD
   ## If not specified, then default is:

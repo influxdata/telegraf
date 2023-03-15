@@ -38,6 +38,7 @@ type GlobalFlags struct {
 	watchConfig string
 	pidFile     string
 	plugindDir  string
+	password    string
 	test        bool
 	debug       bool
 	once        bool
@@ -81,6 +82,11 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	t.secretstoreFilters = f.secretstore
 	t.GlobalFlags = g
 	t.WindowFlags = w
+
+	// Set global password
+	if g.password != "" {
+		config.Password = config.NewSecret([]byte(g.password))
+	}
 }
 
 func (t *Telegraf) ListSecretStores() ([]string, error) {

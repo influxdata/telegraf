@@ -51,6 +51,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Read specific statistics per cgroup
+# This plugin ONLY supports Linux
 [[inputs.cgroup]]
   ## Directories in which to look for files, globs are supported.
   ## Consider restricting paths to the set of cgroups you really
