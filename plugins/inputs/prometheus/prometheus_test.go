@@ -205,13 +205,13 @@ func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) 
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:     testutil.Logger{},
-		URLs:    []string{ts.URL},
-		URLTag:  "url",
-		Timeout: config.Duration(time.Second * 5),
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
 	}
 	err := p.Init()
 	require.NoError(t, err)
+	p.client.Timeout = time.Second * 5
 
 	var acc testutil.Accumulator
 
@@ -235,13 +235,13 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:     testutil.Logger{},
-		URLs:    []string{ts.URL},
-		URLTag:  "url",
-		Timeout: config.Duration(time.Second * 5),
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
 	}
 	err := p.Init()
 	require.NoError(t, err)
+	p.client.Timeout = time.Second * 5
 
 	var acc testutil.Accumulator
 
