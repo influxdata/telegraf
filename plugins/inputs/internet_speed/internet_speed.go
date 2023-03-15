@@ -26,6 +26,8 @@ type InternetSpeed struct {
 	EnableFileDownload bool     `toml:"enable_file_download" deprecated:"1.25.0;use 'memory_saving_mode' instead"`
 	MemorySavingMode   bool     `toml:"memory_saving_mode"`
 	Cache              bool     `toml:"cache"`
+	Connections        int      `toml:"connections"`
+	MultiMode          bool     `toml:"multi_mode"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -66,13 +68,25 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("ping test failed: %w", err)
 	}
-	err = is.server.MultiDownloadTestContext(context.Background(), is.servers)
-	if err != nil {
-		return fmt.Errorf("download test failed, try `memory_saving_mode = true` if this fails consistently: %w", err)
-	}
-	err = is.server.MultiUploadTestContext(context.Background(), is.servers)
-	if err != nil {
-		return fmt.Errorf("upload test failed failed, try `memory_saving_mode = true` if this fails consistently: %w", err)
+
+	if is.MultiMode {
+		err = is.server.MultiDownloadTestContext(context.Background(), is.servers)
+		if err != nil {
+			return fmt.Errorf("download test failed: %w", err)
+		}
+		err = is.server.MultiUploadTestContext(context.Background(), is.servers)
+		if err != nil {
+			return fmt.Errorf("upload test failed failed: %w", err)
+		}
+	} else {
+		err = is.server.DownloadTest()
+		if err != nil {
+			return fmt.Errorf("download test failed: %w", err)
+		}
+		err = is.server.UploadTest()
+		if err != nil {
+			return fmt.Errorf("upload test failed failed: %w", err)
+		}
 	}
 
 	fields := map[string]any{
@@ -97,7 +111,9 @@ func (is *InternetSpeed) findClosestServer() error {
 		ICMP:       os.Geteuid() == 0 || os.Geteuid() == -1,
 		SavingMode: is.MemorySavingMode,
 	}))
-	client.SetNThread(10)
+	if is.Connections > 0 {
+		client.SetNThread(is.Connections)
+	}
 
 	user, err := client.FetchUserInfo()
 	if err != nil {
