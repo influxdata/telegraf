@@ -60,11 +60,9 @@ func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) er
 	// Iterate over all clusters, run a goroutine for each cluster
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	for _, obj := range res.objects {
-		func(obj *objectRef) {
-			te.Run(ctx, func() {
-				e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
-			})
-		}(obj)
+		te.Run(ctx, func() {
+			e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
+		})
 	}
 	te.Wait()
 	return nil
@@ -281,7 +279,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 				// 3. Iterate on each data point.
 				for i, values := range strings.Split(counter.Values, ",") {
 					ts := timeStamps[i]
-					if ts == (time.Time{}) {
+					if ts.IsZero() {
 						continue
 					}
 					// Organize the metrics into a bucket per measurement.
@@ -440,7 +438,8 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 		return newTags
 	}
 	// Add additional tags based on CMMDS data
-	if strings.Contains(entityName, "-disk") || strings.Contains(entityName, "disk-") {
+	switch {
+	case strings.Contains(entityName, "-disk") || strings.Contains(entityName, "disk-"):
 		if e, ok := cmmds[uuid]; ok {
 			if host, ok := cmmds[e.Owner]; ok {
 				newTags["hostname"] = host.Content.Hostname
@@ -450,7 +449,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 				newTags["ssduuid"] = e.Content.SsdUUID
 			}
 		}
-	} else if strings.Contains(entityName, "host-memory-") {
+	case strings.Contains(entityName, "host-memory-"):
 		memInfo := strings.Split(uuid, "|")
 		if strings.Contains(entityName, "-slab") && len(memInfo) > 1 {
 			newTags["slabname"] = memInfo[1]
@@ -461,11 +460,11 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 		if e, ok := cmmds[memInfo[0]]; ok {
 			newTags["hostname"] = e.Content.Hostname
 		}
-	} else if strings.Contains(entityName, "host-") || strings.Contains(entityName, "system-mem") {
+	case strings.Contains(entityName, "host-") || strings.Contains(entityName, "system-mem"):
 		if e, ok := cmmds[uuid]; ok {
 			newTags["hostname"] = e.Content.Hostname
 		}
-	} else if strings.Contains(entityName, "vnic-net") {
+	case strings.Contains(entityName, "vnic-net"):
 		nicInfo := strings.Split(uuid, "|")
 		if len(nicInfo) > 2 {
 			newTags["stackname"] = nicInfo[1]
@@ -474,7 +473,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 		if e, ok := cmmds[nicInfo[0]]; ok {
 			newTags["hostname"] = e.Content.Hostname
 		}
-	} else if strings.Contains(entityName, "pnic-net") {
+	case strings.Contains(entityName, "pnic-net"):
 		nicInfo := strings.Split(uuid, "|")
 		if len(nicInfo) > 1 {
 			newTags["pnic"] = nicInfo[1]
@@ -482,7 +481,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 		if e, ok := cmmds[nicInfo[0]]; ok {
 			newTags["hostname"] = e.Content.Hostname
 		}
-	} else if strings.Contains(entityName, "world-cpu") {
+	case strings.Contains(entityName, "world-cpu"):
 		cpuInfo := strings.Split(uuid, "|")
 		if len(cpuInfo) > 1 {
 			newTags["worldname"] = cpuInfo[1]
@@ -490,10 +489,11 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 		if e, ok := cmmds[cpuInfo[0]]; ok {
 			newTags["hostname"] = e.Content.Hostname
 		}
-	}
-	// If no tags are added in previous steps, we add uuid for it
-	if len(newTags) == len(tags) {
-		newTags["uuid"] = uuid
+	default:
+		// If no tags are added in previous steps, we add uuid for it
+		if len(newTags) == len(tags) {
+			newTags["uuid"] = uuid
+		}
 	}
 	return newTags
 }
