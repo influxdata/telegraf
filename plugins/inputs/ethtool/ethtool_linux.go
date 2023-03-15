@@ -132,6 +132,16 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 		fields[e.normalizeKey(k)] = v
 	}
 
+	cmdget, err := e.command.Get(iface)
+	if err != nil {
+		acc.AddError(fmt.Errorf("%q get: %w", iface.Name, err))
+		return
+	}
+
+	for k, v := range cmdget {
+		fields[e.normalizeKey(k)] = v
+	}
+
 	acc.AddFields(pluginName, fields, tags)
 }
 
@@ -221,6 +231,10 @@ func (c *CommandEthtool) Stats(intf NamespacedInterface) (stats map[string]uint6
 	return intf.Namespace.Stats(intf)
 }
 
+func (c *CommandEthtool) Get(intf NamespacedInterface) (stats map[string]uint64, err error) {
+	return intf.Namespace.Get(intf)
+}
+
 func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterface, error) {
 	const namespaceDirectory = "/var/run/netns"
 
@@ -229,6 +243,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 		c.Log.Errorf("Could not get initial namespace: %s", err)
 		return nil, err
 	}
+	defer initialNamespace.Close()
 
 	// Gather the list of namespace names to from which to retrieve interfaces.
 	initialNamespaceIsNamed := false

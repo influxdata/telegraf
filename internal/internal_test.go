@@ -670,7 +670,13 @@ func TestParseTimestamp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tm, err := ParseTimestamp(tt.format, tt.timestamp, tt.location, tt.separator...)
+			var loc *time.Location
+			if tt.location != "" {
+				var err error
+				loc, err = time.LoadLocation(tt.location)
+				require.NoError(t, err)
+			}
+			tm, err := ParseTimestamp(tt.format, tt.timestamp, loc, tt.separator...)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, tm)
 		})
@@ -682,7 +688,6 @@ func TestParseTimestampInvalid(t *testing.T) {
 		name      string
 		format    string
 		timestamp interface{}
-		location  string
 		expected  string
 	}{
 		{
@@ -690,13 +695,6 @@ func TestParseTimestampInvalid(t *testing.T) {
 			format:    "2006-01-02 15:04:05",
 			timestamp: "2019-02-20 21:50",
 			expected:  "cannot parse \"\" as \":\"",
-		},
-		{
-			name:      "invalid timezone",
-			format:    "2006-01-02 15:04:05",
-			timestamp: "2019-02-20 21:50:34",
-			location:  "InvalidTimeZone",
-			expected:  "unknown time zone InvalidTimeZone",
 		},
 		{
 			name:      "invalid layout",
@@ -737,7 +735,7 @@ func TestParseTimestampInvalid(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseTimestamp(tt.format, tt.timestamp, tt.location)
+			_, err := ParseTimestamp(tt.format, tt.timestamp, nil)
 			require.ErrorContains(t, err, tt.expected)
 		})
 	}

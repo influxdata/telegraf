@@ -2,6 +2,7 @@ package graphite
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -671,6 +672,31 @@ func TestSerializeMetricPrefixWithTagSupport(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
+	require.Equal(t, expS, mS)
+}
+
+// test that a custom regex allowing `|` works
+func TestSerializeCustomRegex(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "|us-west-2|",
+	}
+	fields := map[string]interface{}{
+		"value": float64(91.5),
+	}
+	m := metric.New("cpu", tags, fields, now)
+
+	s := GraphiteSerializer{
+		StrictAllowedChars: regexp.MustCompile(`[^a-zA-Z0-9-:._=|\p{L}]`),
+	}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+
+	expS := []string{
+		fmt.Sprintf("localhost.cpu0.|us-west-2|.cpu 91.5 %d", now.Unix()),
+	}
 	require.Equal(t, expS, mS)
 }
 

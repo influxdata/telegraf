@@ -131,6 +131,15 @@ func (p *Parser) Init() error {
 		if config.TimestampFmt == "" {
 			config.TimestampFmt = "unix"
 		}
+		if config.Timezone == "" {
+			config.Location = time.UTC
+		} else {
+			loc, err := time.LoadLocation(config.Timezone)
+			if err != nil {
+				return fmt.Errorf("invalid location in config %d: %w", i+1, err)
+			}
+			config.Location = loc
+		}
 		f, err := filter.Compile(config.FieldsHex)
 		if err != nil {
 			return fmt.Errorf("creating hex-fields filter failed: %w", err)
@@ -232,7 +241,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			return nil, fmt.Errorf("failed to query timestamp: %w", err)
 		}
 		if v != nil {
-			timestamp, err = internal.ParseTimestamp(config.TimestampFmt, v, "")
+			timestamp, err = internal.ParseTimestamp(config.TimestampFmt, v, config.Location)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse timestamp: %w", err)
 			}

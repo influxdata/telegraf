@@ -1,6 +1,115 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.26.0 [2023-03-13]
+
+### Important Changes
+
+- Static Builds: Linux builds are now statically built. Other operating systems
+  were cross-built in the past and as a result, already static. Users should
+  not notice any change in behavior. The `_static` specific Linux binary is no
+  longer produced as a result.
+- telegraf.d Behavior: The default behavior of reading
+  `/etc/telegraf/telegraf.conf` now includes any .conf files under
+  `/etc/telegraf/telegraf.d/`. This change will apply to the official Telegraf
+  Docker image as well. This will simplify docker usage when using multiple
+  configuration files.
+- Default Configuration: The `telegraf config` command and default config file
+  provided by Telegraf now includes all plugins and produces the same output
+  across all operating systems. Plugin comments specify what platforms are
+  supported or not.
+- State Persistence: State persistence is now available in select plugins. This
+  will allow plugins to start collecting data, where they left off. A
+  configuration with state persistence cannot change or it will not be able to
+  recover.
+
+### New Plugins
+
+- [#12393](https://github.com/influxdata/telegraf/pull/12393) `inputs.opensearch_query` Opensearch Query
+- [#12473](https://github.com/influxdata/telegraf/pull/12473) `inputs.p4runtime` P4Runtime
+- [#12736](https://github.com/influxdata/telegraf/pull/12736) `inputs.radius` Radius Auth Response Time
+- [#11250](https://github.com/influxdata/telegraf/pull/11250) `inputs.win_wmi` Windows Management Instrumentation (WMI)
+- [#12809](https://github.com/influxdata/telegraf/pull/12809) `processors.lookup` Lookup
+
+### Features
+
+- [#12600](https://github.com/influxdata/telegraf/pull/12600) Always disable cgo support (static builds)
+- [#12166](https://github.com/influxdata/telegraf/pull/12166) Plugin state-persistence
+- [#12608](https://github.com/influxdata/telegraf/pull/12608) `agent` Add /etc/telegraf/telegraf.d to default config locations
+- [#12827](https://github.com/influxdata/telegraf/pull/12827) `agent` Print loaded configs
+- [#12821](https://github.com/influxdata/telegraf/pull/12821) `common.oauth` Add audience parameter
+- [#12727](https://github.com/influxdata/telegraf/pull/12727) `common.tls` Add enable flag
+- [#12579](https://github.com/influxdata/telegraf/pull/12579) `config` Accept durations given in days (e.g. 7d)
+- [#12798](https://github.com/influxdata/telegraf/pull/12798) `inputs.cgroup` Added support for cpu.stat
+- [#12345](https://github.com/influxdata/telegraf/pull/12345) `inputs.cisco_telemetry_mdt` Include delete field
+- [#12696](https://github.com/influxdata/telegraf/pull/12696) `inputs.disk` Add label as tag
+- [#12519](https://github.com/influxdata/telegraf/pull/12519) `inputs.dns_query` Add IP field(s)
+- [#12775](https://github.com/influxdata/telegraf/pull/12775) `inputs.docker_log` Add state-persistence capabilities
+- [#12814](https://github.com/influxdata/telegraf/pull/12814) `inputs.ethtool` Add support for link speed, duplex, etc.
+- [#12550](https://github.com/influxdata/telegraf/pull/12550) `inputs.example` Add secret-store sample code
+- [#12495](https://github.com/influxdata/telegraf/pull/12495) `inputs.gnmi` Set max gRPC message size
+- [#12680](https://github.com/influxdata/telegraf/pull/12680) `inputs.haproxy` Add support for tcp endpoints in haproxy plugin
+- [#12645](https://github.com/influxdata/telegraf/pull/12645) `inputs.http_listener_v2` Add custom server http headers
+- [#12506](https://github.com/influxdata/telegraf/pull/12506) `inputs.icinga2` Support collecting hosts, services, and endpoint metrics
+- [#12493](https://github.com/influxdata/telegraf/pull/12493) `inputs.influxdb` Collect uptime statistics
+- [#12452](https://github.com/influxdata/telegraf/pull/12452) `inputs.intel_powerstat` Add CPU base frequency metric and add support for new platforms
+- [#12707](https://github.com/influxdata/telegraf/pull/12707) `inputs.internet_speed` Add the best server selection via latency and jitter field
+- [#12617](https://github.com/influxdata/telegraf/pull/12617) `inputs.internet_speed` Server ID include and exclude filter
+- [#12730](https://github.com/influxdata/telegraf/pull/12730) `inputs.jti_openconfig_telemetry` Set timestamp from data
+- [#12786](https://github.com/influxdata/telegraf/pull/12786) `inputs.modbus` Add RS485 specific config options
+- [#12408](https://github.com/influxdata/telegraf/pull/12408) `inputs.modbus` Add workaround to enforce reads from zero for coil registers
+- [#12825](https://github.com/influxdata/telegraf/pull/12825) `inputs.modbus` Allow to convert coil and discrete registers to boolean
+- [#12591](https://github.com/influxdata/telegraf/pull/12591) `inputs.mysql` Add secret-store support
+- [#12466](https://github.com/influxdata/telegraf/pull/12466) `inputs.openweathermap` Add snow parameter
+- [#12628](https://github.com/influxdata/telegraf/pull/12628) `inputs.processes` Add use_sudo option for BSD
+- [#12777](https://github.com/influxdata/telegraf/pull/12777) `inputs.prometheus` Use namespace annotations to filter pods to be scraped
+- [#12496](https://github.com/influxdata/telegraf/pull/12496) `inputs.redfish` Add power control metric
+- [#12400](https://github.com/influxdata/telegraf/pull/12400) `inputs.sqlserver` Get database pages performance counter
+- [#12377](https://github.com/influxdata/telegraf/pull/12377) `inputs.stackdriver` Allow filtering by resource metadata labels
+- [#12318](https://github.com/influxdata/telegraf/pull/12318) `inputs.statsd` Add pending messages stat and allow to configure number of threads
+- [#12828](https://github.com/influxdata/telegraf/pull/12828) `inputs.vsphere` Flag for more lenient behavior when connect fails on startup
+- [#12790](https://github.com/influxdata/telegraf/pull/12790) `inputs.win_eventlog` Add state-persistence capabilities
+- [#12556](https://github.com/influxdata/telegraf/pull/12556) `inputs.win_perf_counters` Add remote system support
+- [#12729](https://github.com/influxdata/telegraf/pull/12729) `inputs.wireguard` Add allowed_peer_cidr field
+- [#12444](https://github.com/influxdata/telegraf/pull/12444) `inputs.x509_cert` Add OCSP stapling information for leaf certificates (#10550)
+- [#12656](https://github.com/influxdata/telegraf/pull/12656) `inputs.x509_cert` Add tag for certificate type-classification
+- [#12697](https://github.com/influxdata/telegraf/pull/12697) `outputs.mqtt` Add option to specify topic layouts
+- [#12678](https://github.com/influxdata/telegraf/pull/12678) `outputs.mqtt` Add support for MQTT 5 publish properties
+- [#12224](https://github.com/influxdata/telegraf/pull/12224) `outputs.mqtt` Enhance routing capabilities
+- [#11816](https://github.com/influxdata/telegraf/pull/11816) `parsers.avro` Add Apache Avro parser
+- [#12820](https://github.com/influxdata/telegraf/pull/12820) `parsers.xpath` Add timezone handling
+- [#12767](https://github.com/influxdata/telegraf/pull/12767) `processors.converter` Convert tag or field as metric timestamp
+- [#12659](https://github.com/influxdata/telegraf/pull/12659) `processors.unpivot` Add mode to create new metrics
+- [#12812](https://github.com/influxdata/telegraf/pull/12812) `secretstores` Add command-line option to specify password
+- [#12067](https://github.com/influxdata/telegraf/pull/12067) `secretstores` Add support for additional input plugins
+- [#12497](https://github.com/influxdata/telegraf/pull/12497) `secretstores` Convert many output plugins
+
+### Bugfixes
+
+- [#12781](https://github.com/influxdata/telegraf/pull/12781) `agent` Allow graceful shutdown on interrupt (e.g. Ctrl-C)
+- [#12740](https://github.com/influxdata/telegraf/pull/12740) `agent` Only rotate log on SIGHUP if needed
+- [#12818](https://github.com/influxdata/telegraf/pull/12818) `inputs.amqp_consumer` Avoid deprecations when handling defaults
+- [#12817](https://github.com/influxdata/telegraf/pull/12817) `inputs.amqp_consumer` Fix panic on Stop() if not connected successfully
+- [#12815](https://github.com/influxdata/telegraf/pull/12815) `inputs.ethtool` Close namespace file to prevent crash
+- [#12778](https://github.com/influxdata/telegraf/pull/12778) `inputs.statsd` On close, verify listener is not nil
+
+### Dependency Updates
+
+- [#12805](https://github.com/influxdata/telegraf/pull/12805) `deps` Bump cloud.google.com/go/storage from 1.28.1 to 1.29.0
+- [#12804](https://github.com/influxdata/telegraf/pull/12804) `deps` Bump github.com/Azure/go-autorest/autorest/adal from 0.9.21 to 0.9.22
+- [#12757](https://github.com/influxdata/telegraf/pull/12757) `deps` Bump github.com/aliyun/alibaba-cloud-sdk-go from 1.62.77 to 1.62.193
+- [#12808](https://github.com/influxdata/telegraf/pull/12808) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.13.2 to 1.13.15
+- [#12756](https://github.com/influxdata/telegraf/pull/12756) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.14.5 to 1.16.0
+- [#12754](https://github.com/influxdata/telegraf/pull/12754) `deps` Bump github.com/coocood/freecache from 1.2.2 to 1.2.3
+- [#12852](https://github.com/influxdata/telegraf/pull/12852) `deps` Bump github.com/opencontainers/runc from 1.1.3 to 1.1.4
+- [#12806](https://github.com/influxdata/telegraf/pull/12806) `deps` Bump github.com/opensearch-project/opensearch-go/v2 from 2.1.0 to 2.2.0
+- [#12753](https://github.com/influxdata/telegraf/pull/12753) `deps` Bump github.com/openzipkin-contrib/zipkin-go-opentracing from 0.4.5 to 0.5.0
+- [#12755](https://github.com/influxdata/telegraf/pull/12755) `deps` Bump github.com/rabbitmq/amqp091-go from 1.5.0 to 1.7.0
+- [#12822](https://github.com/influxdata/telegraf/pull/12822) `deps` Bump github.com/shirou/gopsutil from v3.22.12 to v3.23.2
+- [#12807](https://github.com/influxdata/telegraf/pull/12807) `deps` Bump github.com/stretchr/testify from 1.8.1 to 1.8.2
+- [#12840](https://github.com/influxdata/telegraf/pull/12840) `deps` Bump OpenTelemetry from 0.3.1 to 0.3.3
+- [#12801](https://github.com/influxdata/telegraf/pull/12801) `deps` Downgrade github.com/karrick/godirwalk from v1.17.0 to v1.16.2
+
 ## v1.25.3 [2023-02-27]
 
 ### Bugfixes

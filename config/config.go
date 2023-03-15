@@ -51,6 +51,9 @@ var (
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
+
+	// Password specified via command-line
+	Password Secret
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -389,11 +392,9 @@ func getDefaultConfigPath() ([]string, error) {
 
 	for _, path := range []string{envfile, homefile} {
 		if isURL(path) {
-			log.Printf("I! Using config url: %s", path)
 			return []string{path}, nil
 		}
 		if _, err := os.Stat(path); err == nil {
-			log.Printf("I! Using config file: %s", path)
 			return []string{path}, nil
 		}
 	}
@@ -402,16 +403,12 @@ func getDefaultConfigPath() ([]string, error) {
 	// populated and return them all.
 	confFiles := []string{}
 	if _, err := os.Stat(etcfile); err == nil {
-		log.Printf("I! Using config file: %s", etcfile)
 		confFiles = append(confFiles, etcfile)
 	}
 	if _, err := os.Stat(etcfolder); err == nil {
 		files, err := WalkDirectory(etcfolder)
 		if err != nil {
 			log.Printf("W! unable walk %q: %s", etcfolder, err)
-		}
-		for _, file := range files {
-			log.Printf("I! Using config file: %s", file)
 		}
 		confFiles = append(confFiles, files...)
 	}
@@ -698,6 +695,7 @@ func escapeEnv(value string) string {
 
 func LoadConfigFile(config string) ([]byte, error) {
 	if fetchURLRe.MatchString(config) {
+		log.Printf("I! Loading config url: %s", config)
 		u, err := url.Parse(config)
 		if err != nil {
 			return nil, err
@@ -712,6 +710,7 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
+	log.Printf("I! Loading config file: %s", config)
 	buffer, err := os.ReadFile(config)
 	if err != nil {
 		return nil, err
@@ -1394,9 +1393,10 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
+
+	c.getFieldString(tbl, "graphite_strict_sanitize_regex", &sc.GraphiteStrictRegex)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
 	c.getFieldString(tbl, "graphite_tag_sanitize_mode", &sc.GraphiteTagSanitizeMode)
-
 	c.getFieldString(tbl, "graphite_separator", &sc.GraphiteSeparator)
 
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
@@ -1486,6 +1486,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "prefix", "template", "templates",
 		"carbon2_format", "carbon2_sanitize_replace_char",
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
+		"graphite_strict_sanitize_regex",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
 		"json_timestamp_format", "json_timestamp_units", "json_transformation",
