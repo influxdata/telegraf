@@ -78,7 +78,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	}
 	tags := map[string]string{
 		"server_id": is.server.ID,
-		"host":      is.server.Host,
+		"source":    is.server.Host,
 	}
 	// recycle the detailed data of each test to prevent data backlog
 	is.server.Context.Reset()
