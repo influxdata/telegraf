@@ -73,7 +73,7 @@ type DeliveryInfo interface {
 type TrackingAccumulator interface {
 	Accumulator
 
-	// Add the Metric and arrange for tracking feedback after processing..
+	// Add the Metric and arrange for tracking feedback after processing.
 	AddTrackingMetric(m Metric) TrackingID
 
 	// Add a group of Metrics and arrange for a signal when the group has been
