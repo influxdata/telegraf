@@ -38,7 +38,7 @@ type Accumulator interface {
 		tags map[string]string,
 		t ...time.Time)
 
-	// AddMetric adds an metric to the accumulator.
+	// AddMetric adds a metric to the accumulator.
 	AddMetric(Metric)
 
 	// SetPrecision sets the timestamp rounding precision. All metrics
