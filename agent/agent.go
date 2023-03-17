@@ -776,7 +776,7 @@ func (a *Agent) push(
 }
 
 // startOutputs calls Connect on all outputs and returns the source channel.
-// If an error occurs calling Connect all stared plugins have Close called.
+// If an error occurs calling Connect, all started plugins have Close called.
 func (a *Agent) startOutputs(
 	ctx context.Context,
 	outputs []*models.RunningOutput,
