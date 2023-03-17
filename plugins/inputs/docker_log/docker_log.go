@@ -51,11 +51,13 @@ type DockerLogs struct {
 	ContainerStateInclude []string        `toml:"container_state_include"`
 	ContainerStateExclude []string        `toml:"container_state_exclude"`
 	IncludeSourceTag      bool            `toml:"source_tag"`
+	// Bearer Token authorization file path
+	BearerToken string `toml:"bearer_token"`
 
 	tlsint.ClientConfig
 
 	newEnvClient func() (Client, error)
-	newClient    func(string, *tls.Config) (Client, error)
+	newClient    func(string, string, *tls.Config) (Client, error)
 
 	client          Client
 	labelFilter     filter.Filter
@@ -88,7 +90,7 @@ func (d *DockerLogs) Init() error {
 		if err != nil {
 			return err
 		}
-		d.client, err = d.newClient(d.Endpoint, tlsConfig)
+		d.client, err = d.newClient(d.Endpoint, d.BearerToken, tlsConfig)
 		if err != nil {
 			return err
 		}

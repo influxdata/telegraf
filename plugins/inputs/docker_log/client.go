@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
@@ -30,13 +32,22 @@ func NewEnvClient() (Client, error) {
 	return &SocketClient{client}, nil
 }
 
-func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
+func NewClient(host string, path string, tlsConfig *tls.Config) (Client, error) {
 	transport := &http.Transport{
 		TLSClientConfig: tlsConfig,
 	}
+	header := defaultHeaders
 	httpClient := &http.Client{Transport: transport}
+	if path != "" {
+		token, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		bearerTokenString := strings.TrimSpace(string(token))
+		header = map[string]string{"User-Agent": "engine-api-cli-1.0", "Authorization": "Bearer " + bearerTokenString}
+	}
 	client, err := docker.NewClientWithOpts(
-		docker.WithHTTPHeaders(defaultHeaders),
+		docker.WithHTTPHeaders(header),
 		docker.WithHTTPClient(httpClient),
 		docker.WithVersion(version),
 		docker.WithHost(host))
