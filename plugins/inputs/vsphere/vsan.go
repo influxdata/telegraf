@@ -260,18 +260,14 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			// 1. Construct a timestamp list from sample info
 			formattedEntityName := hyphenReplacer.Replace(entityName)
 			for _, t := range strings.Split(em.SampleInfo, ",") {
-				tsParts := strings.Split(t, " ")
-				if len(tsParts) >= 2 {
-					// The return time string is in UTC time
-					utcTimeStamp := fmt.Sprintf("%sT%sZ", tsParts[0], tsParts[1])
-					ts, ok := time.Parse(time.RFC3339, utcTimeStamp)
-					if ok != nil {
-						e.Parent.Log.Errorf("[vSAN] Failed to parse a timestamp: %s. Skipping", utcTimeStamp)
-						timeStamps = append(timeStamps, time.Time{})
-						continue
-					}
-					timeStamps = append(timeStamps, ts)
+				// Parse the input string to a time.Time object
+				utcTimeStamp, err := time.Parse("2006-01-02 15:04:05", t)
+				if err != nil {
+					e.Parent.Log.Errorf("[vSAN] Failed to parse a timestamp: %s. Skipping", utcTimeStamp)
+					timeStamps = append(timeStamps, time.Time{})
+					continue
 				}
+				timeStamps = append(timeStamps, utcTimeStamp)
 			}
 			// 2. Iterate on each measurement
 			for _, counter := range em.Value {
