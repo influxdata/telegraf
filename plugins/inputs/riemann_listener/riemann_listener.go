@@ -153,7 +153,7 @@ func (rsl *riemannListener) removeConnection(c net.Conn) {
 /*
 readMessages will read Riemann messages in binary format
 from the TCP connection. byte Array p size will depend on the size
-of the riemann  message as sent by the cleint
+of the riemann  message as sent by the client
 */
 func readMessages(r io.Reader, p []byte) error {
 	for len(p) > 0 {
