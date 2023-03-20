@@ -29,11 +29,11 @@ type PrometheusHttpMetric struct {
 	Query     string `toml:"query"`
 	Transform string `toml:"transform"`
 	template  *template.Template
-	Duration  config.Duration   `toml:"duration"`
-	From      string            `toml:"from"`
-	Step      string            `toml:"step"`
+	Duration  config.Duration `toml:"duration"`
+	From      string          `toml:"from"`
+	/*Step      string            `toml:"step"`
 	Params    string            `toml:"params"`
-	Timeout   config.Duration   `toml:"timeout"`
+	Timeout   config.Duration   `toml:"timeout"`*/
 	Interval  config.Duration   `toml:"interval"`
 	Tags      map[string]string `toml:"tags"`
 	UniqueBy  []string          `toml:"unique_by"`
@@ -236,9 +236,9 @@ func (p *PrometheusHttp) uniqueHash(pm *PrometheusHttpMetric, tgs map[string]str
 	return byteHash64(byteSha512([]byte(hash)))
 }
 
-func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric) {
+func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric, ds PrometheusHttpDatasource) {
 
-	timeout := pm.Timeout
+	/*timeout := pm.Timeout
 	if timeout == 0 {
 		timeout = p.Timeout
 	}
@@ -251,7 +251,7 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric)
 	params := pm.Params
 	if params == "" {
 		params = p.Params
-	}
+	}*/
 
 	defer w.Done()
 	var push = func(when time.Time, tgs map[string]string, stamp time.Time, value float64) {
@@ -296,22 +296,21 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric)
 		p.acc.AddFields(p.Prefix, fields, tags, stamp)
 	}
 
-	var ds PrometheusHttpDatasource = nil
-	switch p.Version {
-	case "v1":
-		ds = NewPrometheusHttpV1(p.Log, context.Background(), p.URL, int(timeout), step, params)
-	}
-
-	if ds != nil {
-		period := p.getMetricPeriod(pm)
-		err := ds.GetData(pm.Query, period, push)
-		if err != nil {
-			p.Log.Error(err)
+	/*	var ds PrometheusHttpDatasource = nil
+		switch p.Version {
+		case "v1":
+			ds = NewPrometheusHttpV1(p.Log, context.Background(), p.URL, int(timeout), step, params)
 		}
+	*/
+
+	period := p.getMetricPeriod(pm)
+	err := ds.GetData(pm.Query, period, push)
+	if err != nil {
+		p.Log.Error(err)
 	}
 }
 
-func (p *PrometheusHttp) gatherMetrics() error {
+func (p *PrometheusHttp) gatherMetrics(ds PrometheusHttpDatasource) error {
 
 	var wg sync.WaitGroup
 
@@ -322,7 +321,7 @@ func (p *PrometheusHttp) gatherMetrics() error {
 		}
 
 		wg.Add(1)
-		go p.setMetrics(&wg, m)
+		go p.setMetrics(&wg, m, ds)
 	}
 	wg.Wait()
 	return nil
@@ -419,12 +418,23 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 		return errors.New("no metrics found")
 	}
 
+	p.Log.Debugf("Metrics: %d", len(p.Metrics))
+
 	for _, m := range p.Metrics {
 		p.setDefaultMetric(m)
 	}
 
+	var ds PrometheusHttpDatasource = nil
+	switch p.Version {
+	case "v1":
+		ds = NewPrometheusHttpV1(p.Log, context.Background(), p.URL, int(p.Timeout), p.Step, p.Params)
+	}
+
+	if ds == nil {
+		return fmt.Errorf("no datasource found for %s", p.Version)
+	}
 	// Gather data
-	err := p.gatherMetrics()
+	err := p.gatherMetrics(ds)
 	if err != nil {
 		return err
 	}
