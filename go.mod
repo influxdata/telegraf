@@ -159,7 +159,7 @@ require (
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.18.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.3.4
-	github.com/tidwall/gjson v1.14.3
+	github.com/tidwall/gjson v1.14.4
 	github.com/tinylib/msgp v1.1.6
 	github.com/urfave/cli/v2 v2.23.5
 	github.com/vapourismo/knx-go v0.0.0-20220829185957-fb5458a5389d
