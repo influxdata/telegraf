@@ -14,6 +14,7 @@ import (
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/fatih/color"
 	"github.com/influxdata/tail/watch"
+	"gopkg.in/fsnotify.v1"
 	"gopkg.in/tomb.v1"
 
 	"github.com/influxdata/telegraf"
@@ -134,6 +135,14 @@ func (t *Telegraf) reloadLoop() error {
 					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
 				}
 			}
+			// watch config dirs
+			for _, dir := range t.configDir {
+				if _, err := os.Stat(dir); err == nil {
+					go t.watchLocalConfigDir(signals, dir)
+				} else {
+					log.Printf("W! Cannot watch config dir %s: %s", dir, err)
+				}
+			}
 		}
 		go func() {
 			select {
@@ -153,13 +162,53 @@ func (t *Telegraf) reloadLoop() error {
 		}()
 
 		err := t.runAgent(ctx, cfg, reloadConfig)
-		if err != nil && err != context.Canceled {
-			return fmt.Errorf("[telegraf] Error running agent: %v", err)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("[telegraf] Error running agent: %w", err)
 		}
 		reloadConfig = true
 	}
 
 	return nil
+}
+
+// watch config directory for new/deleted files
+func (t *Telegraf) watchLocalConfigDir(signals chan os.Signal, dir string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Printf("E! Error watching config dir: %s\n", err)
+		return
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				log.Printf("I! Event watching config dir: %s\n", event)
+				if (event.Op&fsnotify.Remove == fsnotify.Remove) ||
+					(event.Op&fsnotify.Create == fsnotify.Create) ||
+					(event.Op&fsnotify.Rename == fsnotify.Rename) {
+					signals <- syscall.SIGHUP
+					return
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Printf("E! Error watching config dir: %s\n", err)
+			}
+		}
+	}()
+
+	err = watcher.Add(dir)
+	if err != nil {
+		log.Printf("E! Error watching config dir: %s\n", err)
+	}
+	<-done
 }
 
 func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
