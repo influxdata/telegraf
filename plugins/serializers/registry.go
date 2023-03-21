@@ -19,6 +19,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
+// Creator is the function to create a new serializer
+type Creator func() Serializer
+
+// Serializers contains the registry of all known serializers (following the new style)
+var Serializers = map[string]Creator{}
+
+// Add adds a serializer to the registry. Usually this function is called in the plugin's init function
+func Add(name string, creator Creator) {
+	Serializers[name] = creator
+}
+
 // SerializerOutput is an interface for output plugins that are able to
 // serialize telegraf metrics into arbitrary data formats.
 type SerializerOutput interface {
@@ -44,6 +55,12 @@ type Serializer interface {
 	// a byte buffer.  This method is not required to be suitable for use with
 	// line oriented framing.
 	SerializeBatch(metrics []telegraf.Metric) ([]byte, error)
+}
+
+// SerializerCompatibility is an interface for backward-compatible initialization of serializers
+type SerializerCompatibility interface {
+	// InitFromConfig sets the serializers internal variables from the old-style config
+	InitFromConfig(config *Config) error
 }
 
 // Config is a struct that covers the data types needed for all serializer types,
@@ -187,7 +204,20 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "msgpack":
 		serializer, err = NewMsgpackSerializer(), nil
 	default:
-		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
+		creator, found := Serializers[config.DataFormat]
+		if !found {
+			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
+		}
+
+		// Try to create new-style serializers the old way...
+		serializer := creator()
+		p, ok := serializer.(SerializerCompatibility)
+		if !ok {
+			return nil, fmt.Errorf("serializer for %q cannot be created the old way", config.DataFormat)
+		}
+		err := p.InitFromConfig(config)
+
+		return serializer, err
 	}
 	return serializer, err
 }
