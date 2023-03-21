@@ -37,6 +37,7 @@ type PrometheusHttpV1 struct {
 	log    telegraf.Logger
 	ctx    context.Context
 	client *http.Client
+	name   string
 	url    string
 	step   string
 	params string
@@ -168,22 +169,23 @@ func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, p
 
 	raw, code, err := p.httpDoRequest("GET", path, params, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s prometheus HTTP error %s", p.name, err)
 	}
+
 	if code != 200 {
-		return fmt.Errorf("prometheus HTTP error %d: returns %s", code, raw)
+		return fmt.Errorf("%s prometheus HTTP error %d: returns %s", p.name, code, raw)
 	}
 
 	var res PrometheusHttpV1Response
 	err = json.Unmarshal(raw, &res)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s prometheus unmarshall error %s", p.name, err)
 	}
 	if res.Status != "success" {
-		return fmt.Errorf("prometheus status %s", res.Status)
+		return fmt.Errorf("%s prometheus status %s", p.name, res.Status)
 	}
 	if res.Data == nil {
-		p.log.Debug("Prometheus has no data")
+		p.log.Debug("%s prometheus has no data", p.name)
 		return nil
 	}
 
@@ -193,12 +195,12 @@ func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, p
 	case "vector":
 		p.processVector(&res, when, push)
 	default:
-		return fmt.Errorf("prometheus result type %s is not supported", res.Data.ResultType)
+		return fmt.Errorf("%s prometheus result type %s is not supported", p.name, res.Data.ResultType)
 	}
 	return nil
 }
 
-func NewPrometheusHttpV1(log telegraf.Logger, ctx context.Context, url string, timeout int, step string, params string) *PrometheusHttpV1 {
+func NewPrometheusHttpV1(name string, log telegraf.Logger, ctx context.Context, url string, timeout int, step string, params string) *PrometheusHttpV1 {
 
 	t := time.Duration(timeout)
 
@@ -218,6 +220,7 @@ func NewPrometheusHttpV1(log telegraf.Logger, ctx context.Context, url string, t
 	}
 
 	return &PrometheusHttpV1{
+		name:   name,
 		log:    log,
 		ctx:    ctx,
 		client: client,
