@@ -104,6 +104,7 @@ following works:
 - github.com/docker/go-connections [Apache License 2.0](https://github.com/docker/go-connections/blob/master/LICENSE)
 - github.com/docker/go-units [Apache License 2.0](https://github.com/docker/go-units/blob/master/LICENSE)
 - github.com/doclambda/protobufquery [MIT License](https://github.com/doclambda/protobufquery/blob/master/LICENSE)
+- github.com/dustin/go-humanize [MIT License](https://github.com/dustin/go-humanize/blob/master/LICENSE)
 - github.com/dvsekhvalnov/jose2go [MIT License](https://github.com/dvsekhvalnov/jose2go/blob/master/LICENSE)
 - github.com/dynatrace-oss/dynatrace-metric-utils-go [Apache License 2.0](https://github.com/dynatrace-oss/dynatrace-metric-utils-go/blob/master/LICENSE)
 - github.com/eapache/go-resiliency [MIT License](https://github.com/eapache/go-resiliency/blob/master/LICENSE)
