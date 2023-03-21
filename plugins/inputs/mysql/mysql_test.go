@@ -37,8 +37,9 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 	defer container.Terminate()
 
 	dsn := fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])
+	s := config.NewSecret([]byte(dsn))
 	m := &Mysql{
-		Servers: []config.Secret{config.NewSecret([]byte(dsn))},
+		Servers: []*config.Secret{&s},
 	}
 	require.NoError(t, m.Init())
 
@@ -72,8 +73,9 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	defer container.Terminate()
 
 	dsn := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
+	s := config.NewSecret([]byte(dsn))
 	m := &Mysql{
-		Servers:          []config.Secret{config.NewSecret([]byte(dsn))},
+		Servers:          []*config.Secret{&s},
 		IntervalSlow:     config.Duration(30 * time.Second),
 		GatherGlobalVars: true,
 		MetricVersion:    2,
@@ -87,8 +89,9 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	// acc should have global variables
 	require.True(t, acc.HasMeasurement("mysql_variables"))
 
+	s2 := config.NewSecret([]byte(dsn))
 	m2 := &Mysql{
-		Servers:       []config.Secret{config.NewSecret([]byte(dsn))},
+		Servers:       []*config.Secret{&s2},
 		MetricVersion: 2,
 	}
 	require.NoError(t, m2.Init())
@@ -205,8 +208,9 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			s := config.NewSecret([]byte(tt.input))
 			m := &Mysql{
-				Servers: []config.Secret{config.NewSecret([]byte(tt.input))},
+				Servers: []*config.Secret{&s},
 			}
 			require.NoError(t, m.Init())
 			equal, err := m.Servers[0].EqualTo([]byte(tt.output))
