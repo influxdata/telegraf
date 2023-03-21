@@ -26,31 +26,31 @@ import (
 var sampleConfig string
 
 type Mysql struct {
-	Servers                             []config.Secret `toml:"servers"`
-	PerfEventsStatementsDigestTextLimit int64           `toml:"perf_events_statements_digest_text_limit"`
-	PerfEventsStatementsLimit           int64           `toml:"perf_events_statements_limit"`
-	PerfEventsStatementsTimeLimit       int64           `toml:"perf_events_statements_time_limit"`
-	TableSchemaDatabases                []string        `toml:"table_schema_databases"`
-	GatherProcessList                   bool            `toml:"gather_process_list"`
-	GatherUserStatistics                bool            `toml:"gather_user_statistics"`
-	GatherInfoSchemaAutoInc             bool            `toml:"gather_info_schema_auto_inc"`
-	GatherInnoDBMetrics                 bool            `toml:"gather_innodb_metrics"`
-	GatherSlaveStatus                   bool            `toml:"gather_slave_status"`
-	GatherAllSlaveChannels              bool            `toml:"gather_all_slave_channels"`
-	MariadbDialect                      bool            `toml:"mariadb_dialect"`
-	GatherBinaryLogs                    bool            `toml:"gather_binary_logs"`
-	GatherTableIOWaits                  bool            `toml:"gather_table_io_waits"`
-	GatherTableLockWaits                bool            `toml:"gather_table_lock_waits"`
-	GatherIndexIOWaits                  bool            `toml:"gather_index_io_waits"`
-	GatherEventWaits                    bool            `toml:"gather_event_waits"`
-	GatherTableSchema                   bool            `toml:"gather_table_schema"`
-	GatherFileEventsStats               bool            `toml:"gather_file_events_stats"`
-	GatherPerfEventsStatements          bool            `toml:"gather_perf_events_statements"`
-	GatherGlobalVars                    bool            `toml:"gather_global_variables"`
-	GatherPerfSummaryPerAccountPerEvent bool            `toml:"gather_perf_sum_per_acc_per_event"`
-	PerfSummaryEvents                   []string        `toml:"perf_summary_events"`
-	IntervalSlow                        config.Duration `toml:"interval_slow"`
-	MetricVersion                       int             `toml:"metric_version"`
+	Servers                             []*config.Secret `toml:"servers"`
+	PerfEventsStatementsDigestTextLimit int64            `toml:"perf_events_statements_digest_text_limit"`
+	PerfEventsStatementsLimit           int64            `toml:"perf_events_statements_limit"`
+	PerfEventsStatementsTimeLimit       int64            `toml:"perf_events_statements_time_limit"`
+	TableSchemaDatabases                []string         `toml:"table_schema_databases"`
+	GatherProcessList                   bool             `toml:"gather_process_list"`
+	GatherUserStatistics                bool             `toml:"gather_user_statistics"`
+	GatherInfoSchemaAutoInc             bool             `toml:"gather_info_schema_auto_inc"`
+	GatherInnoDBMetrics                 bool             `toml:"gather_innodb_metrics"`
+	GatherSlaveStatus                   bool             `toml:"gather_slave_status"`
+	GatherAllSlaveChannels              bool             `toml:"gather_all_slave_channels"`
+	MariadbDialect                      bool             `toml:"mariadb_dialect"`
+	GatherBinaryLogs                    bool             `toml:"gather_binary_logs"`
+	GatherTableIOWaits                  bool             `toml:"gather_table_io_waits"`
+	GatherTableLockWaits                bool             `toml:"gather_table_lock_waits"`
+	GatherIndexIOWaits                  bool             `toml:"gather_index_io_waits"`
+	GatherEventWaits                    bool             `toml:"gather_event_waits"`
+	GatherTableSchema                   bool             `toml:"gather_table_schema"`
+	GatherFileEventsStats               bool             `toml:"gather_file_events_stats"`
+	GatherPerfEventsStatements          bool             `toml:"gather_perf_events_statements"`
+	GatherGlobalVars                    bool             `toml:"gather_global_variables"`
+	GatherPerfSummaryPerAccountPerEvent bool             `toml:"gather_perf_sum_per_acc_per_event"`
+	PerfSummaryEvents                   []string         `toml:"perf_summary_events"`
+	IntervalSlow                        config.Duration  `toml:"interval_slow"`
+	MetricVersion                       int              `toml:"metric_version"`
 
 	Log telegraf.Logger `toml:"-"`
 	tls.ClientConfig
@@ -80,7 +80,8 @@ func (m *Mysql) Init() error {
 
 	// Default to localhost if nothing specified.
 	if len(m.Servers) == 0 {
-		m.Servers = append(m.Servers, config.NewSecret([]byte(localhost)))
+		s := config.NewSecret([]byte(localhost))
+		m.Servers = append(m.Servers, &s)
 	}
 
 	// Register the TLS configuration. Due to the registry being a global
@@ -106,7 +107,7 @@ func (m *Mysql) Init() error {
 	for i, server := range m.Servers {
 		s, err := server.Get()
 		if err != nil {
-			return fmt.Errorf("getting server %d failed", i)
+			return fmt.Errorf("getting server %d failed: %w", i, err)
 		}
 		dsn := string(s)
 		config.ReleaseSecret(s)
@@ -126,7 +127,8 @@ func (m *Mysql) Init() error {
 		}
 
 		server.Destroy()
-		m.Servers[i] = config.NewSecret([]byte(conf.FormatDSN()))
+		adapted := config.NewSecret([]byte(conf.FormatDSN()))
+		m.Servers[i] = &adapted
 	}
 
 	return nil
@@ -138,7 +140,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	// Loop through each server and collect metrics
 	for _, server := range m.Servers {
 		wg.Add(1)
-		go func(s config.Secret) {
+		go func(s *config.Secret) {
 			defer wg.Done()
 			acc.AddError(m.gatherServer(s, acc))
 		}(server)
@@ -411,7 +413,7 @@ const (
 	`
 )
 
-func (m *Mysql) gatherServer(server config.Secret, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherServer(server *config.Secret, acc telegraf.Accumulator) error {
 	s, err := server.Get()
 	if err != nil {
 		return err
