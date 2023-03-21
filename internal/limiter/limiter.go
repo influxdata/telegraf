@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// NewRateLimiter returns a rate limiter that will will emit from the C
+// NewRateLimiter returns a rate limiter that will emit from the C
 // channel only 'n' times every 'rate' seconds.
 func NewRateLimiter(n int, rate time.Duration) *rateLimiter {
 	r := &rateLimiter{
