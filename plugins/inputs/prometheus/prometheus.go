@@ -364,7 +364,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 	if p.HTTPHeaders != nil {
 		for key, value := range p.HTTPHeaders {
-			req.Header.Add(key, value)
+			req.Header.Set(key, value)
 		}
 	}
 
