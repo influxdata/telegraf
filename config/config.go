@@ -1611,6 +1611,8 @@ func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) 
 					return
 				}
 				*target = i
+			} else {
+				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting int", fieldName))
 			}
 		}
 	}
