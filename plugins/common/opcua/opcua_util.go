@@ -19,6 +19,7 @@ import (
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/debug"
 	"github.com/gopcua/opcua/ua"
+	"github.com/influxdata/telegraf/config"
 )
 
 // SELF SIGNED CERT FUNCTIONS
@@ -288,42 +289,42 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	return opts, nil
 }
 
-func (o *OpcUAClient) generateAuth(a string, cert []byte, un, pw string) (ua.UserTokenType, opcua.Option, error) {
-	var err error
-
+func (o *OpcUAClient) generateAuth(a string, cert []byte, user, passwd config.Secret) (ua.UserTokenType, opcua.Option, error) {
 	var authMode ua.UserTokenType
 	var authOption opcua.Option
 	switch strings.ToLower(a) {
 	case "anonymous":
 		authMode = ua.UserTokenTypeAnonymous
 		authOption = opcua.AuthAnonymous()
-
 	case "username":
 		authMode = ua.UserTokenTypeUserName
 
-		if un == "" {
+		var username, password []byte
+		if !user.Empty() {
+			var err error
+			username, err = user.Get()
 			if err != nil {
 				return 0, nil, fmt.Errorf("error reading the username input: %w", err)
 			}
+			defer config.ReleaseSecret(username)
 		}
 
-		if pw == "" {
+		if !passwd.Empty() {
+			var err error
+			password, err = passwd.Get()
 			if err != nil {
 				return 0, nil, fmt.Errorf("error reading the password input: %w", err)
 			}
+			defer config.ReleaseSecret(password)
 		}
-
-		authOption = opcua.AuthUsername(un, pw)
-
+		authOption = opcua.AuthUsername(string(username), string(password))
 	case "certificate":
 		authMode = ua.UserTokenTypeCertificate
 		authOption = opcua.AuthCertificate(cert)
-
 	case "issuedtoken":
 		// todo: this is unsupported, fail here or fail in the opcua package?
 		authMode = ua.UserTokenTypeIssuedToken
 		authOption = opcua.AuthIssuedToken([]byte(nil))
-
 	default:
 		o.Log.Warnf("unknown auth-mode, defaulting to Anonymous")
 		authMode = ua.UserTokenTypeAnonymous

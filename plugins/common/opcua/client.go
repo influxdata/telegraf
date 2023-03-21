@@ -24,8 +24,8 @@ type OpcUAClientConfig struct {
 	SecurityMode   string          `toml:"security_mode"`
 	Certificate    string          `toml:"certificate"`
 	PrivateKey     string          `toml:"private_key"`
-	Username       string          `toml:"username"`
-	Password       string          `toml:"password"`
+	Username       config.Secret   `toml:"username"`
+	Password       config.Secret   `toml:"password"`
 	AuthMethod     string          `toml:"auth_method"`
 	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	RequestTimeout config.Duration `toml:"request_timeout"`

@@ -141,7 +141,7 @@ func (o *SubscribeClient) processReceivedNotifications() {
 					i := int(monitoredItemNotif.ClientHandle)
 					oldValue := o.LastReceivedData[i].Value
 					o.UpdateNodeValue(i, monitoredItemNotif.Value)
-					o.Log.Debugf("Data change notification: node %q value changed from %f to %f",
+					o.Log.Debugf("Data change notification: node %q value changed from %v to %v",
 						o.NodeIDs[i].String(), oldValue, o.LastReceivedData[i].Value)
 					o.metrics <- o.MetricForNode(i)
 				}
