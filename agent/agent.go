@@ -962,9 +962,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s := influx.NewSerializer()
-		s.SetFieldSortOrder(influx.SortFields)
-
+		s := &influx.Serializer{SortFields: true}
 		for metric := range src {
 			octets, err := s.Serialize(metric)
 			if err == nil {

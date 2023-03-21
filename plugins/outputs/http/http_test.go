@@ -112,7 +112,8 @@ func TestMethod(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			if tt.connectError {
@@ -175,7 +176,8 @@ func TestHTTPClientConfig(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			if tt.connectError {
@@ -267,7 +269,8 @@ func TestStatusCode(t *testing.T) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
@@ -316,7 +319,8 @@ func TestContentType(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
@@ -376,7 +380,8 @@ func TestContentEncodingGzip(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
@@ -431,7 +436,8 @@ func TestBasicAuth(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			plugin.SetSerializer(serializer)
 			require.NoError(t, plugin.Connect())
 			require.NoError(t, plugin.Write([]telegraf.Metric{getMetric()}))
@@ -506,7 +512,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				}
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
@@ -604,7 +611,10 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				}
 			})
 
-			tt.plugin.SetSerializer(influx.NewSerializer())
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
+			tt.plugin.SetSerializer(serializer)
+
 			require.NoError(t, tt.plugin.Connect())
 			require.NoError(t, tt.plugin.Write([]telegraf.Metric{getMetric()}))
 			require.NoError(t, err)
@@ -630,7 +640,8 @@ func TestDefaultUserAgent(t *testing.T) {
 			Method: defaultMethod,
 		}
 
-		serializer := influx.NewSerializer()
+		serializer := &influx.Serializer{}
+		require.NoError(t, serializer.Init())
 		client.SetSerializer(serializer)
 		err = client.Connect()
 		require.NoError(t, err)
@@ -652,10 +663,13 @@ func TestBatchedUnbatched(t *testing.T) {
 		Method: defaultMethod,
 	}
 
+	influxSerializer := &influx.Serializer{}
+	require.NoError(t, influxSerializer.Init())
+
 	jsonSerializer, err := json.NewSerializer(json.FormatConfig{TimestampUnits: time.Second})
 	require.NoError(t, err)
 	s := map[string]serializers.Serializer{
-		"influx": influx.NewSerializer(),
+		"influx": influxSerializer,
 		"json":   jsonSerializer,
 	}
 
@@ -726,7 +740,8 @@ func TestAwsCredentials(t *testing.T) {
 				tt.handler(t, w, r)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)

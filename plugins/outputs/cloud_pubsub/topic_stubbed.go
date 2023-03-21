@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	serializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 const (
@@ -62,7 +62,9 @@ type (
 )
 
 func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []testMetric) (*PubSub, *stubTopic, []telegraf.Metric) {
-	s := serializers.NewInfluxSerializer()
+	// Instantiate a Influx line-protocol serializer
+	s := &serializer.Serializer{}
+	_ = s.Init() // We can ignore the error as the Init will never fail
 
 	metrics := make([]telegraf.Metric, 0, len(testM))
 	t := &stubTopic{

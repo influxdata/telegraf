@@ -144,13 +144,8 @@ func (sw *SocketWriter) Close() error {
 	return err
 }
 
-func newSocketWriter() *SocketWriter {
-	s := serializers.NewInfluxSerializer()
-	return &SocketWriter{
-		Serializer: s,
-	}
-}
-
 func init() {
-	outputs.Add("socket_writer", func() telegraf.Output { return newSocketWriter() })
+	outputs.Add("socket_writer", func() telegraf.Output {
+		return &SocketWriter{}
+	})
 }

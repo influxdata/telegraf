@@ -9,7 +9,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
@@ -170,8 +169,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 	switch config.DataFormat {
 	case "csv":
 		serializer, err = NewCSVSerializer(config)
-	case "influx":
-		serializer, err = NewInfluxSerializerConfig(config), nil
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(
 			config.Prefix,
@@ -291,28 +288,6 @@ func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimet
 
 func NewNowSerializer() (Serializer, error) {
 	return nowmetric.NewSerializer()
-}
-
-func NewInfluxSerializerConfig(config *Config) Serializer {
-	var sort influx.FieldSortOrder
-	if config.InfluxSortFields {
-		sort = influx.SortFields
-	}
-
-	var typeSupport influx.FieldTypeSupport
-	if config.InfluxUintSupport {
-		typeSupport = typeSupport + influx.UintSupport
-	}
-
-	s := influx.NewSerializer()
-	s.SetMaxLineBytes(config.InfluxMaxLineBytes)
-	s.SetFieldSortOrder(sort)
-	s.SetFieldTypeSupport(typeSupport)
-	return s
-}
-
-func NewInfluxSerializer() Serializer {
-	return influx.NewSerializer()
 }
 
 //nolint:revive //argument-limit conditionally more arguments allowed
