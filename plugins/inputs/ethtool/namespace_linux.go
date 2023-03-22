@@ -96,7 +96,10 @@ func (n *NamespaceGoroutine) Get(intf NamespacedInterface) (map[string]uint64, e
 		}, nil
 	})
 
-	return result.(map[string]uint64), err
+	if result != nil {
+		return result.(map[string]uint64), err
+	}
+	return nil, err
 }
 
 // Start locks a goroutine to an OS thread and ties it to the namespace, then
