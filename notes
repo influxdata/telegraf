@@ -1,0 +1,4 @@
+Mar 6, 2023
+chore: Fix linter findings for errorlint (part8) (#12785)
+https://github.com/influxdata/telegraf/commit/360edd52b6c1e214f7eac9ec447ab612f4204437
+previous: 5b2346dfa0d31d03d7a259a5eb0db82c34c8c348
