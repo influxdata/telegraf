@@ -1,0 +1,5 @@
+Feb 1, 2023
+feat(inputs.mysql): add secret-store support (#12591)
+https://github.com/influxdata/telegraf/commit/177ce5eea3b600312cf9efb6232dff1b335a0e76
+previous: e6655d534eca6eec7dfbfd0654c2158eb08149dd
+
