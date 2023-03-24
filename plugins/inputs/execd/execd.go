@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -83,20 +84,20 @@ func (e *Execd) Stop() {
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
-	scanner := bufio.NewScanner(out)
-	buf := make([]byte, 0, e.BufferSize * 1024)
-	scanner.Buffer(buf, e.BufferSize * 1024)
+
+	rdr := bufio.NewReaderSize(out, e.BufferSize*1024)
 
 	for {
-		moreData := scanner.Scan()
-		if err := scanner.Err(); err != nil {
-			e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
-			continue;
+		data, err := rdr.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF || errors.Is(err, os.ErrClosed) {
+				break
+			} else {
+				e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
+				continue
+			}
 		}
-		if !moreData {
-			break;
-		}
-		data := scanner.Bytes()
+
 		metrics, err := e.parser.Parse(data)
 		if err != nil {
 			e.acc.AddError(fmt.Errorf("parse error: %w", err))
