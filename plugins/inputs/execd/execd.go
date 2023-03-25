@@ -84,18 +84,16 @@ func (e *Execd) Stop() {
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
-
 	rdr := bufio.NewReaderSize(out, e.BufferSize*1024)
 
 	for {
 		data, err := rdr.ReadBytes('\n')
 		if err != nil {
-			if err == io.EOF || errors.Is(err, os.ErrClosed) {
+			if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
 				break
-			} else {
-				e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
-				continue
 			}
+			e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
+			continue
 		}
 
 		metrics, err := e.parser.Parse(data)
