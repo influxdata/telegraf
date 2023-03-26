@@ -12,7 +12,7 @@ func (i *Infiniband) Init() error {
 	return nil
 }
 
-func (_ *Infiniband) Gather(acc telegraf.Accumulator) error {
+func (*Infiniband) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
