@@ -14,6 +14,7 @@ linters:
     - exportloopref
     - gocheckcompilerdirectives
     - goprintffuncname
+    - gosec
     - gosimple
     - govet
     - ineffassign
@@ -75,6 +76,17 @@ linters-settings:
       - "**/testutil/**"
       - "**/tools/**"
       - "**/*_test.go"
+  gosec:
+    # To select a subset of rules to run.
+    # Available rules: https://github.com/securego/gosec#available-rules
+    # Default: [] - means include all rules
+    includes:
+      - G106
+      - G108
+      - G109
+      - G111
+      - G201
+      - G203
   lll:
     # Max line length, lines longer will be reported.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
