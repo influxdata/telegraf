@@ -6,6 +6,17 @@ and much more. It provides a socket for the Suricata log output to write JSON
 stats output to, and processes the incoming data to fit Telegraf's format.
 It can also report for triggered Suricata IDS/IPS alerts.
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
