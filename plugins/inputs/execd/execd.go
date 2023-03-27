@@ -105,7 +105,6 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 			e.acc.AddMetric(metric)
 		}
 	}
-
 }
 
 func (e *Execd) cmdReadOutStream(out io.Reader) {
