@@ -97,7 +97,7 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	}
 
 	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
-		os.Remove(s.Address) //nolint:revive // Accept success and failure in case the file does not exist
+		os.Remove(s.Address)
 	}
 
 	if s.isStream {
@@ -139,7 +139,7 @@ func (s *Syslog) Stop() {
 	defer s.mu.Unlock()
 
 	if s.Closer != nil {
-		s.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		s.Close()
 	}
 	s.wg.Wait()
 }
@@ -265,7 +265,7 @@ func (s *Syslog) removeConnection(c net.Conn) {
 func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 	defer func() {
 		s.removeConnection(conn)
-		conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		conn.Close()
 	}()
 
 	var p syslog.Parser
@@ -416,7 +416,7 @@ type unixCloser struct {
 
 func (uc unixCloser) Close() error {
 	err := uc.closer.Close()
-	os.Remove(uc.path) //nolint:revive // Accept success and failure in case the file does not exist
+	os.Remove(uc.path)
 	return err
 }
 

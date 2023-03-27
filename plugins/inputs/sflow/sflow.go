@@ -90,7 +90,7 @@ func (s *SFlow) Gather(_ telegraf.Accumulator) error {
 
 func (s *SFlow) Stop() {
 	if s.closer != nil {
-		s.closer.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+		s.closer.Close()
 	}
 	s.wg.Wait()
 }
