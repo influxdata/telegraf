@@ -19,6 +19,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+var downInterfacesBehaviors = []string{"expose", "skip"}
+
 type CommandEthtool struct {
 	Log                 telegraf.Logger
 	namespaceGoroutines map[string]*NamespaceGoroutine

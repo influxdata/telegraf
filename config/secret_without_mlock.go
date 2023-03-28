@@ -6,7 +6,7 @@ import (
 	"github.com/awnumar/memguard"
 )
 
-func protect(secret []byte) error {
+func protect(_ []byte) error {
 	return nil
 }
 

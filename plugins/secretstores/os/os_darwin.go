@@ -13,7 +13,7 @@ import (
 func (o *OS) createKeyringConfig() (keyring.Config, error) {
 	passwd, err := o.Password.Get()
 	if err != nil {
-		return keyring.Config{}, fmt.Errorf("getting password failed: %v", err)
+		return keyring.Config{}, fmt.Errorf("getting password failed: %w", err)
 	}
 	defer config.ReleaseSecret(passwd)
 
