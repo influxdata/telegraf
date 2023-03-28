@@ -52,7 +52,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Buffer size used to read from the command output stream
   ## Optional parameter. Default is 64 Kib, minimum is 16 bytes
-  buffer_size = "64Kib"
+  # buffer_size = "64Kib"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
