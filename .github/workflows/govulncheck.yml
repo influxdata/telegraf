@@ -15,5 +15,5 @@ jobs:
         uses: Templum/govulncheck-action@v0.0.9
         with:
           go-version: '1.20'
-          vulncheck-version: latest
+          vulncheck-version: v0.0.0-20230320232729-bfc1eaef17a4
           package: ./...
