@@ -22,6 +22,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Monitor UPSes connected via Network UPS Tools
 [[inputs.upsd]]
   ## A running NUT server to connect to.
+  ## IPv6 addresses must be enclosed in brackets (e.g. "[::1]")
   # server = "127.0.0.1"
   # port = 3493
   # username = "user"

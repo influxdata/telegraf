@@ -11,8 +11,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var downInterfacesBehaviors = []string{"expose", "skip"}
-
 type Command interface {
 	Init() error
 	DriverName(intf NamespacedInterface) (string, error)

@@ -16,7 +16,7 @@ require (
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
 	github.com/Azure/go-autorest/autorest v0.11.28
 	github.com/Azure/go-autorest/autorest/adal v0.9.22
-	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.12
 	github.com/BurntSushi/toml v1.2.1
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/DATA-DOG/go-sqlmock v1.5.0
@@ -76,7 +76,7 @@ require (
 	github.com/go-stomp/stomp v2.1.4+incompatible
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid/v5 v5.0.0
-	github.com/golang-jwt/jwt/v4 v4.4.2
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v0.0.4
 	github.com/google/gnxi v0.0.0-20221016143401-2aeceb5a2901
@@ -109,7 +109,7 @@ require (
 	github.com/jackc/pgx/v4 v4.17.1
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
-	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
+	github.com/jhump/protoreflect v1.15.1
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.2.2
 	github.com/karrick/godirwalk v1.16.2
@@ -144,7 +144,7 @@ require (
 	github.com/prometheus/common v0.41.0
 	github.com/prometheus/procfs v0.8.0
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
-	github.com/rabbitmq/amqp091-go v1.7.0
+	github.com/rabbitmq/amqp091-go v1.8.0
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/safchain/ethtool v0.2.0
@@ -188,7 +188,7 @@ require (
 	google.golang.org/api v0.106.0
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
 	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.28.2-0.20230222093303-bc1253ad3743
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -251,6 +251,7 @@ require (
 	github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect
+	github.com/bufbuild/protocompile v0.4.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect

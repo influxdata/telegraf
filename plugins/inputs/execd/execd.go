@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -28,6 +29,7 @@ type Execd struct {
 	Signal       string          `toml:"signal"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger `toml:"-"`
+	BufferSize   config.Size     `toml:"buffer_size"`
 
 	process      *process.Process
 	acc          telegraf.Accumulator
@@ -82,10 +84,18 @@ func (e *Execd) Stop() {
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
-	scanner := bufio.NewScanner(out)
+	rdr := bufio.NewReaderSize(out, int(e.BufferSize))
 
-	for scanner.Scan() {
-		data := scanner.Bytes()
+	for {
+		data, err := rdr.ReadBytes('\n')
+		if err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
+				break
+			}
+			e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
+			continue
+		}
+
 		metrics, err := e.parser.Parse(data)
 		if err != nil {
 			e.acc.AddError(fmt.Errorf("parse error: %w", err))
@@ -94,10 +104,6 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 		for _, metric := range metrics {
 			e.acc.AddMetric(metric)
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
 	}
 }
 
@@ -149,6 +155,7 @@ func init() {
 		return &Execd{
 			Signal:       "none",
 			RestartDelay: config.Duration(10 * time.Second),
+			BufferSize:   config.Size(64 * 1024),
 		}
 	})
 }

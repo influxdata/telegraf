@@ -97,6 +97,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"nominal_input_voltage":   "input.voltage.nominal",
 		"nominal_power":           "ups.realpower.nominal",
 		"output_voltage":          "output.voltage",
+		"real_power":              "ups.realpower",
 		"ups_delay_shutdown":      "ups.delay.shutdown",
 		"ups_delay_start":         "ups.delay.start",
 	}
