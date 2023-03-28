@@ -34,14 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Caches the closest server location
   # cache = false
-  
-  ## Set number of concurrent connections. the number of CPU cores as default.
-  # connections = 10
-  
-  ## Test with multiple servers to get closer to ideal internet speeds.
-  ## single mode as default.
-  # multi_server_mode = fasle
-  
+
   ## Server ID exclude filter
   ## Allows the user to exclude or include specific server IDs received by
   ## speedtest-go. Values in the exclude option will be skipped over. Values in
