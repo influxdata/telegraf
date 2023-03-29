@@ -82,7 +82,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	}
 
 	if err := r.client.SendMulti(events); err != nil {
-		r.Close() //nolint:revive // There is another error which will be returned here
+		r.Close()
 		return fmt.Errorf("failed to send riemann message: %w", err)
 	}
 	return nil

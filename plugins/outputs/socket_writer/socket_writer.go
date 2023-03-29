@@ -123,7 +123,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 			var netErr net.Error
 			if errors.As(err, &netErr) {
 				// permanent error. close the connection
-				sw.Close() //nolint:revive // There is another error which will be returned here
+				sw.Close()
 				sw.Conn = nil
 				return fmt.Errorf("closing connection: %w", netErr)
 			}

@@ -37,7 +37,7 @@ func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() {
 
 	cleanFunc := func() {
 		ic.udevDataPath = origUdevPath
-		os.Remove(td.Name()) //nolint:revive // we cannot do anything if file cannot be removed
+		os.Remove(td.Name())
 	}
 
 	ic.udevDataPath = td.Name()

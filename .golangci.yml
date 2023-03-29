@@ -201,9 +201,25 @@ issues:
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
 
+  # List of regexps of issue texts to exclude.
+  #
+  # But independently of this option we use default exclude patterns,
+  # it can be disabled by `exclude-use-default: false`.
+  # To list all excluded by default patterns execute `golangci-lint run --help`
+  #
+  # Default: https://golangci-lint.run/usage/false-positives/#default-exclusions
   exclude:
-    - don't use an underscore in package name #revive:var-naming
+    # revive:var-naming
+    - don't use an underscore in package name
+    # EXC0001 errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
+    - Unhandled error in call to function ((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv)
+    # EXC0013 revive: Annoying issue about not having a comment. The rare codebase has such comments
+    - package comment should be of the form "(.+)...
+    # EXC0015 revive: Annoying issue about not having a comment. The rare codebase has such comments
+    - should have a package comment
 
+  # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     - path: plugins/parsers/influx
       linters:
@@ -214,6 +230,12 @@ issues:
 
     - path: cmd/telegraf/(main|printer).go
       text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
+
+  # Independently of option `exclude` we use default exclude patterns,
+  # it can be disabled by this option.
+  # To list all excluded by default patterns execute `golangci-lint run --help`.
+  # Default: true.
+  exclude-use-default: false
 
 # output configuration options
 output:

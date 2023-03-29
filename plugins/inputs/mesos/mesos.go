@@ -514,7 +514,7 @@ func (m *Mesos) gatherMainMetrics(u *url.URL, role Role, acc telegraf.Accumulato
 	}
 
 	data, err := io.ReadAll(resp.Body)
-	resp.Body.Close() //nolint:revive // ignore the returned error to not shadow the initial one
+	resp.Body.Close()
 	if err != nil {
 		return err
 	}

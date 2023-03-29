@@ -143,7 +143,7 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 
 // Stop stops the services and closes any necessary channels and connections
 func (p *Service) Stop() {
-	p.DB.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+	p.DB.Close()
 }
 
 var kvMatcher, _ = regexp.Compile(`(password|sslcert|sslkey|sslmode|sslrootcert)=\S+ ?`)

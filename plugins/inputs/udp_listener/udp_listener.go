@@ -121,7 +121,7 @@ func (u *UDPListener) Stop() {
 	defer u.Unlock()
 	close(u.done)
 	u.wg.Wait()
-	u.listener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+	u.listener.Close()
 	close(u.in)
 	u.Log.Infof("Stopped service on %q", u.ServiceAddress)
 }
