@@ -767,7 +767,6 @@ func (a *Agent) push(
 		select {
 		case <-time.After(until):
 			aggregator.Push(acc)
-			break
 		case <-ctx.Done():
 			aggregator.Push(acc)
 			return

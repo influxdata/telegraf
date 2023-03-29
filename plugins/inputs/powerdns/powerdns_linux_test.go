@@ -29,7 +29,7 @@ func (s statServer) serverSocket(l net.Listener) {
 			data := buf[:n]
 			if string(data) == "show * \n" {
 				c.Write([]byte(metrics)) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
-				c.Close()                //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				c.Close()
 			}
 		}(conn)
 	}

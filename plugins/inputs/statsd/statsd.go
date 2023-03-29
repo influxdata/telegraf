@@ -868,7 +868,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 	// connection cleanup function
 	defer func() {
 		s.wg.Done()
-		conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		conn.Close()
 
 		// Add one connection potential back to channel when this one closes
 		s.accept <- true
@@ -920,7 +920,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
-	conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+	conn.Close()
 	s.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	s.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
@@ -945,11 +945,11 @@ func (s *Statsd) Stop() {
 	close(s.done)
 	if s.isUDP() {
 		if s.UDPlistener != nil {
-			s.UDPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+			s.UDPlistener.Close()
 		}
 	} else {
 		if s.TCPlistener != nil {
-			s.TCPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+			s.TCPlistener.Close()
 		}
 
 		// Close all open TCP connections
@@ -963,7 +963,7 @@ func (s *Statsd) Stop() {
 		}
 		s.cleanup.Unlock()
 		for _, conn := range conns {
-			conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+			conn.Close()
 		}
 	}
 	s.Unlock()

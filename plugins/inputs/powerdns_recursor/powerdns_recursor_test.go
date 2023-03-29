@@ -112,8 +112,8 @@ func TestV1PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			socket.Close()           //nolint:revive // ignore the returned error as we need to remove the socket file anyway
-			os.Remove(controlSocket) //nolint:revive // ignore the returned error as we want to remove the file and ignore no-such-file errors
+			socket.Close()
+			os.Remove(controlSocket)
 			wg.Done()
 		}()
 
@@ -121,14 +121,14 @@ func TestV1PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			buf := make([]byte, 1024)
 			n, remote, err := socket.ReadFromUnix(buf)
 			if err != nil {
-				socket.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				socket.Close()
 				return
 			}
 
 			data := buf[:n]
 			if string(data) == "get-all\n" {
 				socket.WriteToUnix([]byte(metrics), remote) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
-				socket.Close()                              //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				socket.Close()
 			}
 
 			time.Sleep(100 * time.Millisecond)
@@ -167,8 +167,8 @@ func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			socket.Close()           //nolint:revive // ignore the returned error as we need to remove the socket file anyway
-			os.Remove(controlSocket) //nolint:revive // ignore the returned error as we want to remove the file and ignore no-such-file errors
+			socket.Close()
+			os.Remove(controlSocket)
 			wg.Done()
 		}()
 
@@ -176,14 +176,14 @@ func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			status := make([]byte, 4)
 			n, _, err := socket.ReadFromUnix(status)
 			if err != nil || n != 4 {
-				socket.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				socket.Close()
 				return
 			}
 
 			buf := make([]byte, 1024)
 			n, remote, err := socket.ReadFromUnix(buf)
 			if err != nil {
-				socket.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				socket.Close()
 				return
 			}
 
@@ -191,7 +191,7 @@ func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			if string(data) == "get-all" {
 				socket.WriteToUnix([]byte{0, 0, 0, 0}, remote) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
 				socket.WriteToUnix([]byte(metrics), remote)    //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
-				socket.Close()                                 //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				socket.Close()
 			}
 
 			time.Sleep(100 * time.Millisecond)
@@ -229,8 +229,8 @@ func TestV3PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			socket.Close()           //nolint:revive // ignore the returned error as we need to remove the socket file anyway
-			os.Remove(controlSocket) //nolint:revive // ignore the returned error as we want to remove the file and ignore no-such-file errors
+			socket.Close()
+			os.Remove(controlSocket)
 			wg.Done()
 		}()
 
@@ -262,7 +262,7 @@ func TestV3PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 				metrics := []byte(metrics)
 				writeNativeUIntToConn(conn, uint(len(metrics))) //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
 				conn.Write(metrics)                             //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
-				socket.Close()                                  //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+				socket.Close()
 			}
 
 			time.Sleep(100 * time.Millisecond)

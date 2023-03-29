@@ -179,7 +179,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		var opts []grpc.ServerOption
 		tlsConfig, err := c.ServerConfig.TLSConfig()
 		if err != nil {
-			c.listener.Close() //nolint:revive // we cannot do anything if the closing fails
+			c.listener.Close()
 			return err
 		} else if tlsConfig != nil {
 			opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
@@ -210,7 +210,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		}()
 
 	default:
-		c.listener.Close() //nolint:revive // we cannot do anything if the closing fails
+		c.listener.Close()
 		return fmt.Errorf("invalid Cisco MDT transport: %s", c.Transport)
 	}
 
@@ -731,7 +731,7 @@ func (c *CiscoTelemetryMDT) Stop() {
 		c.grpcServer.Stop()
 	}
 	if c.listener != nil {
-		c.listener.Close() //nolint:revive // we cannot do anything if the closing fails
+		c.listener.Close()
 	}
 	c.wg.Wait()
 }
