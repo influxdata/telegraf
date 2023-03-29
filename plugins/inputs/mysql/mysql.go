@@ -126,9 +126,10 @@ func (m *Mysql) Init() error {
 			conf.TLSConfig = tlsid
 		}
 
-		server.Destroy()
-		adapted := config.NewSecret([]byte(conf.FormatDSN()))
-		m.Servers[i] = &adapted
+		if err := server.Set([]byte(conf.FormatDSN())); err != nil {
+			return fmt.Errorf("replacing server %q failed: %w", dsn, err)
+		}
+		m.Servers[i] = server
 	}
 
 	return nil
