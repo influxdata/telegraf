@@ -1143,8 +1143,12 @@ BEGIN TRY
 	EXEC sp_executesql @SqlStatement
 END TRY
 BEGIN CATCH
+	SET @ErrorMessage = ERROR_MESSAGE();
+	DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+	DECLARE @ErrorState INT = ERROR_STATE();
+
    IF (ERROR_NUMBER() <> 976) --Avoid possible errors from secondary replica
-        THROW;
+	    RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState );
 END CATCH
 `
 
