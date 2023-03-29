@@ -87,6 +87,7 @@ linters-settings:
       - G109
       - G111
       - G201
+      - G202
       - G203
   lll:
     # Max line length, lines longer will be reported.

@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -28,7 +27,7 @@ func createTestContainer(t *testing.T) *testutil.Container {
 			"-Cdiscovery.type=single-node",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("recovered [0] indices into cluster_state"),
 		),
 	}
@@ -48,14 +47,13 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Ports[servicePort])
 
 	fmt.Println(url)
-	table := "testing"
 	db, err := sql.Open("pgx", url)
 	require.NoError(t, err)
 	defer db.Close()
 
 	c := &CrateDB{
 		URL:         url,
-		Table:       table,
+		Table:       "testing",
 		Timeout:     config.Duration(time.Second * 5),
 		TableCreate: true,
 	}
@@ -68,17 +66,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	// the rows using their primary keys in order to take advantage of
 	// read-after-write consistency in CrateDB.
 	for _, m := range metrics {
-		hashIDVal, err := escapeValue(hashID(m), "_")
-		require.NoError(t, err)
-		timestamp, err := escapeValue(m.Time(), "_")
-		require.NoError(t, err)
-
 		var id int64
-		row := db.QueryRow(
-			"SELECT hash_id FROM " + escapeString(table, `"`) + " " +
-				"WHERE hash_id = " + hashIDVal + " " +
-				"AND timestamp = " + timestamp,
-		)
+		row := db.QueryRow("SELECT hash_id FROM testing WHERE hash_id = ? AND timestamp = ?", hashID(m), m.Time())
 		require.NoError(t, row.Scan(&id))
 		// We could check the whole row, but this is meant to be more of a smoke
 		// test, so just checking the HashID seems fine.
@@ -88,7 +77,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	require.NoError(t, c.Close())
 }
 
-func Test_insertSQL(t *testing.T) {
+func TestInsertSQL(t *testing.T) {
 	tests := []struct {
 		Metrics []telegraf.Metric
 		Want    string
@@ -148,7 +137,7 @@ func escapeValueTests() []escapeValueTest {
 	}
 }
 
-func Test_escapeValueIntegration(t *testing.T) {
+func TestEscapeValueIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -169,12 +158,12 @@ func Test_escapeValueIntegration(t *testing.T) {
 		// This is a smoke test that will blow up if our escaping causing a SQL
 		// syntax error, which may allow for an attack.=
 		var reply interface{}
-		row := db.QueryRow("SELECT " + got)
+		row := db.QueryRow("SELECT ?", got)
 		require.NoError(t, row.Scan(&reply))
 	}
 }
 
-func Test_escapeValue(t *testing.T) {
+func TestEscapeValue(t *testing.T) {
 	tests := escapeValueTests()
 	for _, test := range tests {
 		got, err := escapeValue(test.Value, "_")
@@ -183,7 +172,7 @@ func Test_escapeValue(t *testing.T) {
 	}
 }
 
-func Test_circumeventingStringEscape(t *testing.T) {
+func TestCircumventingStringEscape(t *testing.T) {
 	value, err := escapeObject(map[string]interface{}{"a.b": "c"}, `_"`)
 	require.NoError(t, err)
 	require.Equal(t, value, `{"a_""b" = 'c'}`)
