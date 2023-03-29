@@ -81,6 +81,7 @@ linters-settings:
     # Available rules: https://github.com/securego/gosec#available-rules
     # Default: [] - means include all rules
     includes:
+      - G102
       - G106
       - G108
       - G109
