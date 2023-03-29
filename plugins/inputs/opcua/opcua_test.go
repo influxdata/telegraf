@@ -62,10 +62,6 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
 				SecurityPolicy: "None",
 				SecurityMode:   "None",
-				Certificate:    "",
-				PrivateKey:     "",
-				Username:       "",
-				Password:       "",
 				AuthMethod:     "Anonymous",
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
@@ -128,10 +124,6 @@ func TestReadClientIntegration(t *testing.T) {
 				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
 				SecurityPolicy: "None",
 				SecurityMode:   "None",
-				Certificate:    "",
-				PrivateKey:     "",
-				Username:       "",
-				Password:       "",
 				AuthMethod:     "Anonymous",
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
@@ -188,8 +180,8 @@ func TestReadClientIntegrationWithPasswordAuth(t *testing.T) {
 				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
 				SecurityPolicy: "None",
 				SecurityMode:   "None",
-				Username:       "peter",
-				Password:       "peter123",
+				Username:       config.NewSecret([]byte("peter")),
+				Password:       config.NewSecret([]byte("peter123")),
 				AuthMethod:     "UserName",
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
@@ -293,8 +285,8 @@ use_unregistered_reads = true
 	require.Equal(t, "/etc/telegraf/cert.pem", o.ReadClientConfig.Certificate)
 	require.Equal(t, "/etc/telegraf/key.pem", o.ReadClientConfig.PrivateKey)
 	require.Equal(t, "Anonymous", o.ReadClientConfig.AuthMethod)
-	require.Equal(t, "", o.ReadClientConfig.Username)
-	require.Equal(t, "", o.ReadClientConfig.Password)
+	require.True(t, o.ReadClientConfig.Username.Empty())
+	require.True(t, o.ReadClientConfig.Password.Empty())
 	require.Equal(t, []input.NodeSettings{
 		{
 			FieldName:      "name",

@@ -6,9 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf/models"
 	"io"
-	"k8s.io/client-go/tools/cache"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,6 +14,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf/models"
+	"k8s.io/client-go/tools/cache"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -74,7 +75,6 @@ type Prometheus struct {
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
 	ResponseTimeout config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
-	Timeout         config.Duration `toml:"timeout"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -194,7 +194,10 @@ func (p *Prometheus) Init() error {
 	}
 
 	ctx := context.Background()
-	p.HTTPClientConfig.Timeout = p.ResponseTimeout
+	if p.ResponseTimeout != 0 {
+		p.HTTPClientConfig.Timeout = p.ResponseTimeout
+	}
+
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
 	if err != nil {
 		return err
@@ -331,7 +334,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 					return c, err
 				},
 			},
-			Timeout: time.Duration(p.ResponseTimeout),
+		}
+		if p.ResponseTimeout != 0 {
+			uClient.Timeout = time.Duration(p.ResponseTimeout)
 		}
 	} else {
 		if u.URL.Path == "" {
@@ -359,7 +364,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 	if p.HTTPHeaders != nil {
 		for key, value := range p.HTTPHeaders {
-			req.Header.Add(key, value)
+			req.Header.Set(key, value)
 		}
 	}
 
@@ -487,10 +492,9 @@ func (p *Prometheus) Stop() {
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
-			ResponseTimeout: config.Duration(time.Second * 3),
-			kubernetesPods:  map[PodID]URLAndAddress{},
-			consulServices:  map[string]URLAndAddress{},
-			URLTag:          "url",
+			kubernetesPods: map[PodID]URLAndAddress{},
+			consulServices: map[string]URLAndAddress{},
+			URLTag:         "url",
 		}
 	})
 }

@@ -12,7 +12,7 @@ func (e *Ethtool) Init() error {
 	return nil
 }
 
-func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
+func (*Ethtool) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

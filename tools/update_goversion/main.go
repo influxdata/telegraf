@@ -178,6 +178,11 @@ func main() {
 			Replace:  fmt.Sprintf("$1:%s", version),
 		},
 		{
+			FileName: "README.md",
+			Regex:    `(Telegraf requires Go version) (\d.\d*)`,
+			Replace:  fmt.Sprintf("$1 %s", noPatchVersion),
+		},
+		{
 			FileName: "scripts/ci.docker",
 			Regex:    `(FROM golang):(\d.\d*.\d)`,
 			Replace:  fmt.Sprintf("$1:%s", zeroPatchVersion),
