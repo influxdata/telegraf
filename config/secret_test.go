@@ -480,6 +480,8 @@ func TestSecretStoreInvalidReference(t *testing.T) {
 }
 
 func TestSecretStoreStaticChanging(t *testing.T) {
+	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+
 	cfg := []byte(
 		`
 [[inputs.mockup]]
@@ -520,6 +522,8 @@ func TestSecretStoreStaticChanging(t *testing.T) {
 }
 
 func TestSecretStoreDynamic(t *testing.T) {
+	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+
 	cfg := []byte(
 		`
 [[inputs.mockup]]
@@ -554,6 +558,8 @@ func TestSecretStoreDynamic(t *testing.T) {
 }
 
 func TestSecretStoreDeclarationMissingID(t *testing.T) {
+	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+
 	cfg := []byte(`[[secretstores.mockup]]`)
 
 	c := NewConfig()
@@ -562,6 +568,8 @@ func TestSecretStoreDeclarationMissingID(t *testing.T) {
 }
 
 func TestSecretStoreDeclarationInvalidID(t *testing.T) {
+	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+
 	invalidIDs := []string{"foo.bar", "dummy-123", "test!", "wohoo+"}
 	tmpl := `
   [[secretstores.mockup]]
@@ -578,6 +586,8 @@ func TestSecretStoreDeclarationInvalidID(t *testing.T) {
 }
 
 func TestSecretStoreDeclarationValidID(t *testing.T) {
+	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+
 	validIDs := []string{"foobar", "dummy123", "test_id", "W0Hoo_lala123"}
 	tmpl := `
   [[secretstores.mockup]]
@@ -591,6 +601,97 @@ func TestSecretStoreDeclarationValidID(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestSecretSet(t *testing.T) {
+	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+
+	cfg := []byte(`
+      [[inputs.mockup]]
+	    secret = "a secret"
+	`)
+	c := NewConfig()
+	require.NoError(t, c.LoadConfigData(cfg))
+	require.Len(t, c.Inputs, 1)
+	require.NoError(t, c.LinkSecrets())
+
+	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
+
+	secret, err := plugin.Secret.Get()
+	require.NoError(t, err)
+	defer ReleaseSecret(secret)
+	require.EqualValues(t, "a secret", string(secret))
+
+	require.NoError(t, plugin.Secret.Set([]byte("another secret")))
+	newsecret, err := plugin.Secret.Get()
+	require.NoError(t, err)
+	defer ReleaseSecret(newsecret)
+	require.EqualValues(t, "another secret", string(newsecret))
+}
+
+func TestSecretSetResolve(t *testing.T) {
+	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+
+	cfg := []byte(`
+      [[inputs.mockup]]
+	    secret = "@{mock:secret}"
+	`)
+	c := NewConfig()
+	require.NoError(t, c.LoadConfigData(cfg))
+	require.Len(t, c.Inputs, 1)
+
+	// Create a mockup secretstore
+	store := &MockupSecretStore{
+		Secrets: map[string][]byte{"secret": []byte("Ood Bnar")},
+		Dynamic: true,
+	}
+	require.NoError(t, store.Init())
+	c.SecretStores["mock"] = store
+	require.NoError(t, c.LinkSecrets())
+
+	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
+
+	secret, err := plugin.Secret.Get()
+	require.NoError(t, err)
+	defer ReleaseSecret(secret)
+	require.EqualValues(t, "Ood Bnar", string(secret))
+
+	require.NoError(t, plugin.Secret.Set([]byte("@{mock:secret} is cool")))
+	newsecret, err := plugin.Secret.Get()
+	require.NoError(t, err)
+	defer ReleaseSecret(newsecret)
+	require.EqualValues(t, "Ood Bnar is cool", string(newsecret))
+}
+
+func TestSecretSetResolveInvalid(t *testing.T) {
+	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+
+	cfg := []byte(`
+      [[inputs.mockup]]
+	    secret = "@{mock:secret}"
+	`)
+	c := NewConfig()
+	require.NoError(t, c.LoadConfigData(cfg))
+	require.Len(t, c.Inputs, 1)
+
+	// Create a mockup secretstore
+	store := &MockupSecretStore{
+		Secrets: map[string][]byte{"secret": []byte("Ood Bnar")},
+		Dynamic: true,
+	}
+	require.NoError(t, store.Init())
+	c.SecretStores["mock"] = store
+	require.NoError(t, c.LinkSecrets())
+
+	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
+
+	secret, err := plugin.Secret.Get()
+	require.NoError(t, err)
+	defer ReleaseSecret(secret)
+	require.EqualValues(t, "Ood Bnar", string(secret))
+
+	err = plugin.Secret.Set([]byte("@{mock:another_secret}"))
+	require.ErrorContains(t, err, `linking new secrets failed: unlinked part "@{mock:another_secret}"`)
 }
 
 /*** Mockup (input) plugin for testing to avoid cyclic dependencies ***/
