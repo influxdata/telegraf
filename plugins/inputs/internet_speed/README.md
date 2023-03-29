@@ -46,7 +46,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## however, setting to "multi" will reach out to multiple servers in an
   ## attempt to get closer to ideal internet speeds.
   # test_mode = "single"
-  
+
   ## Server ID exclude filter
   ## Allows the user to exclude or include specific server IDs received by
   ## speedtest-go. Values in the exclude option will be skipped over. Values in
