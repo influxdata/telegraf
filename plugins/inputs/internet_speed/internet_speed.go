@@ -47,6 +47,14 @@ func (*InternetSpeed) SampleConfig() string {
 }
 
 func (is *InternetSpeed) Init() error {
+	switch is.TestMode {
+	case testModeSingle, testModeMulti:
+	case "":
+		is.TestMode = testModeSingle
+	default:
+		return fmt.Errorf("unrecognized test mode: %q", is.TestMode)
+	}
+
 	is.MemorySavingMode = is.MemorySavingMode || is.EnableFileDownload
 
 	var err error
@@ -83,8 +91,6 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 			return fmt.Errorf("upload test failed failed: %w", err)
 		}
 	} else {
-		// using single mode as default.
-		is.TestMode = testModeSingle
 		err = is.server.DownloadTest()
 		if err != nil {
 			return fmt.Errorf("download test failed: %w", err)
