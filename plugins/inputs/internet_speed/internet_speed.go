@@ -96,15 +96,15 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	}
 
 	fields := map[string]any{
-		"download":  is.server.DLSpeed,
-		"upload":    is.server.ULSpeed,
-		"latency":   timeDurationMillisecondToFloat64(is.server.Latency),
-		"jitter":    timeDurationMillisecondToFloat64(is.server.Jitter),
-		"test_mode": is.TestMode,
+		"download": is.server.DLSpeed,
+		"upload":   is.server.ULSpeed,
+		"latency":  timeDurationMillisecondToFloat64(is.server.Latency),
+		"jitter":   timeDurationMillisecondToFloat64(is.server.Jitter),
 	}
 	tags := map[string]string{
 		"server_id": is.server.ID,
 		"host":      is.server.Host,
+		"test_mode": is.TestMode,
 	}
 	// Recycle the history of each test to prevent data backlog.
 	is.server.Context.Reset()
