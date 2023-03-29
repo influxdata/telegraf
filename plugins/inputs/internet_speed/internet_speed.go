@@ -27,7 +27,7 @@ type InternetSpeed struct {
 	MemorySavingMode   bool     `toml:"memory_saving_mode"`
 	Cache              bool     `toml:"cache"`
 	Connections        int      `toml:"connections"`
-	MultiServerMode    bool     `toml:"multi_server_mode"`
+	TestMode           string   `toml:"test_mode"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -36,7 +36,11 @@ type InternetSpeed struct {
 	serverFilter filter.Filter
 }
 
-const measurement = "internet_speed"
+const (
+	measurement    = "internet_speed"
+	testModeSingle = "single"
+	testModeMulti  = "multi"
+)
 
 func (*InternetSpeed) SampleConfig() string {
 	return sampleConfig
@@ -69,7 +73,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("ping test failed: %w", err)
 	}
 
-	if is.MultiServerMode {
+	if is.TestMode == testModeMulti {
 		err = is.server.MultiDownloadTestContext(context.Background(), is.servers)
 		if err != nil {
 			return fmt.Errorf("download test failed: %w", err)
@@ -79,6 +83,8 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 			return fmt.Errorf("upload test failed failed: %w", err)
 		}
 	} else {
+		// using single mode as default.
+		is.TestMode = testModeSingle
 		err = is.server.DownloadTest()
 		if err != nil {
 			return fmt.Errorf("download test failed: %w", err)
@@ -90,10 +96,11 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	}
 
 	fields := map[string]any{
-		"download": is.server.DLSpeed,
-		"upload":   is.server.ULSpeed,
-		"latency":  timeDurationMillisecondToFloat64(is.server.Latency),
-		"jitter":   timeDurationMillisecondToFloat64(is.server.Jitter),
+		"download":  is.server.DLSpeed,
+		"upload":    is.server.ULSpeed,
+		"latency":   timeDurationMillisecondToFloat64(is.server.Latency),
+		"jitter":    timeDurationMillisecondToFloat64(is.server.Jitter),
+		"test_mode": is.TestMode,
 	}
 	tags := map[string]string{
 		"server_id": is.server.ID,
