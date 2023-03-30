@@ -3,18 +3,17 @@
 package config
 
 import (
-	"syscall"
-
 	"github.com/awnumar/memguard"
 )
 
 func protect(secret []byte) error {
-	return syscall.Mlock(secret)
+	//return syscall.Mlock(secret)
+	return nil
 }
 
 func ReleaseSecret(secret []byte) {
 	memguard.WipeBytes(secret)
-	if err := syscall.Munlock(secret); err != nil {
-		panic(err)
-	}
+	// if err := syscall.Munlock(secret); err != nil {
+	// 	panic(err)
+	// }
 }
