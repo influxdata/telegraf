@@ -120,7 +120,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 
 func (is *InternetSpeed) findClosestServer() error {
 	client := speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
-		UserAgent:  "Telegraf SpeedTestGO/" + speedtest.Version(),
+		UserAgent:  internal.ProductToken(),
 		ICMP:       os.Geteuid() == 0 || os.Geteuid() == -1,
 		SavingMode: is.MemorySavingMode,
 	}))
