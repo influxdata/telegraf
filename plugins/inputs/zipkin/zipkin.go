@@ -30,7 +30,7 @@ const (
 	defaultRoute = "/api/v1/spans"
 
 	// defaultShutdownTimeout is the max amount of time telegraf will wait for the plugin to shut down
-	defaultShutdownTimeout = 5
+	defaultShutdownTimeout = 5 * time.Second
 
 	defaultReadTimeout  = 10 * time.Second
 	defaultWriteTimeout = 10 * time.Second
