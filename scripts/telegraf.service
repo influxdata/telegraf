@@ -13,8 +13,7 @@ ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartForceExitStatus=SIGPIPE
 KillMode=control-group
-# increase lock memory for secret store library to 8192 kilobytes
-LimitMEMLOCK=8388608
+LimitMEMLOCK=8M:8M
 
 [Install]
 WantedBy=multi-user.target
