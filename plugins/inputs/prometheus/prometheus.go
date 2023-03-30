@@ -252,7 +252,7 @@ func (p *Prometheus) initFilters() error {
 	if p.PodLabelInclude != nil {
 		podLabelInclude, err := filter.Compile(p.PodLabelInclude)
 		if err != nil {
-			return fmt.Errorf("error compiling 'pod_label_exclude': %w", err)
+			return fmt.Errorf("error compiling 'pod_label_include': %w", err)
 		}
 		p.podLabelIncludeFilter = podLabelInclude
 	}
