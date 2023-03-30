@@ -80,6 +80,6 @@ And the following tags:
 
 ## Example Output
 
-```sh
+```text
 internet_speed,source=speedtest02.z4internet.com:8080,server_id=54619,test_mode=single download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810 1675458921000000000
 ```
