@@ -60,7 +60,7 @@ Defaults!FAIL2BAN !logfile, !syslog, !pam_session
 
 ## Example Output
 
-```shell
+```text
 # fail2ban-client status sshd
 Status for the jail: sshd
 |- Filter
@@ -73,6 +73,6 @@ Status for the jail: sshd
    `- Banned IP list:   192.168.0.1 192.168.0.2
 ```
 
-```shell
+```text
 fail2ban,jail=sshd failed=5i,banned=2i 1495868667000000000
 ```

@@ -58,7 +58,7 @@ The following fields are emitted by the plugin when selecting `thermal`:
 
 ## Example Output
 
-```shell
+```text
 > linux_cpu,cpu=0,host=go scaling_max_freq=4700000i,cpuinfo_min_freq=400000i,cpuinfo_max_freq=4700000i,throttle_count=0i,throttle_max_time=0i,throttle_total_time=0i,scaling_cur_freq=803157i,scaling_min_freq=400000i 1617621150000000000
 > linux_cpu,cpu=1,host=go throttle_total_time=0i,scaling_cur_freq=802939i,scaling_min_freq=400000i,scaling_max_freq=4700000i,cpuinfo_min_freq=400000i,cpuinfo_max_freq=4700000i,throttle_count=0i,throttle_max_time=0i 1617621150000000000
 > linux_cpu,cpu=10,host=go throttle_max_time=0i,throttle_total_time=0i,scaling_cur_freq=838343i,scaling_min_freq=400000i,scaling_max_freq=4700000i,cpuinfo_min_freq=400000i,cpuinfo_max_freq=4700000i,throttle_count=0i 1617621150000000000

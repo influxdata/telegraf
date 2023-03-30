@@ -70,7 +70,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 The example output
 
-```shell
+```text
 2022-09-17T17:52:19Z I! Starting Telegraf 1.25.0-a93ec9a0
 2022-09-17T17:52:19Z I! Available plugins: 209 inputs, 9 aggregators, 26 processors, 20 parsers, 57 outputs
 2022-09-17T17:52:19Z I! Loaded inputs: google_cloud_storage

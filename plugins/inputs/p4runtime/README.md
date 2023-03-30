@@ -86,7 +86,7 @@ Fields are constructed in given manner:
 Expected output for p4runtime plugin instance
 running on host named `p4runtime-host`:
 
-```shell
+```text
 p4_runtime,counter_name=MyIngress.egressTunnelCounter,counter_type=BOTH,host=p4 bytes=408i,packets=4i,counter_index=200i 1675175030000000000
 ```
 

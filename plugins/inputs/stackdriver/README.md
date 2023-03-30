@@ -180,7 +180,7 @@ queries will be logged.
 
 ## Example Output
 
-```shell
+```text
 ```
 
 [stackdriver]: https://cloud.google.com/monitoring/api/v3/
