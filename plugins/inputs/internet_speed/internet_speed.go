@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/influxdata/telegraf/internal"
 	"math"
 	"os"
 	"time"
