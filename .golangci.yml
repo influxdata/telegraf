@@ -86,6 +86,8 @@ linters-settings:
       - G108
       - G109
       - G111
+      - G112
+      - G114
       - G201
       - G203
   lll:

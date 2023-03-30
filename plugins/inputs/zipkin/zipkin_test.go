@@ -594,7 +594,7 @@ func TestZipkinPlugin(t *testing.T) {
 
 	// Workaround for Go 1.8
 	// https://github.com/golang/go/issues/18806
-	DefaultNetwork = "tcp4"
+	defaultNetwork = "tcp4"
 
 	z := &Zipkin{
 		Log:  testutil.Logger{},
