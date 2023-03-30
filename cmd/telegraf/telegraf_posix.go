@@ -3,7 +3,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"syscall"
 
 	"github.com/urfave/cli/v2"
@@ -19,10 +19,11 @@ func cliFlags() []cli.Flag {
 }
 
 func getLockedMemoryLimit() uint64 {
-	const RLIMIT_MEMLOCK = 8
+	// From https://elixir.bootlin.com/linux/latest/source/include/uapi/asm-generic/resource.h#L35
+	const rlimit_memlock = 8
 
 	var limit syscall.Rlimit
-	if err := syscall.Getrlimit(RLIMIT_MEMLOCK, &limit); err != nil {
+	if err := syscall.Getrlimit(rlimit_memlock, &limit); err != nil {
 		panic(fmt.Errorf("Cannot get limit for locked memory: %w", err))
 	}
 	return limit.Max
