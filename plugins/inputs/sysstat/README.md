@@ -235,226 +235,224 @@ If you change the group value to false like below:
 you get the following output:
 
 ```text
-$ telegraf -config telegraf.conf -input-filter sysstat -test
-* Plugin: sysstat, Collection 1
-> io_tps value=0.5 1459255780126025822
-> io_rtps value=0 1459255780126025822
-> io_wtps value=0.5 1459255780126025822
-> io_bread_per_s value=0 1459255780126025822
-> io_bwrtn_per_s value=38 1459255780126025822
-> cpu_util_pct_user,device=all value=39.07 1459255780126025822
-> cpu_util_pct_nice,device=all value=0 1459255780126025822
-> cpu_util_pct_system,device=all value=47.94 1459255780126025822
-> cpu_util_pct_iowait,device=all value=0 1459255780126025822
-> cpu_util_pct_steal,device=all value=0 1459255780126025822
-> cpu_util_pct_idle,device=all value=12.98 1459255780126025822
-> swap_pswpin_per_s value=0 1459255780126025822
-> cpu_pct_user,device=all value=39.07 1459255780126025822
-> cpu_pct_nice,device=all value=0 1459255780126025822
-> cpu_pct_system,device=all value=47.94 1459255780126025822
-> cpu_pct_iowait,device=all value=0 1459255780126025822
-> cpu_pct_steal,device=all value=0 1459255780126025822
-> cpu_pct_idle,device=all value=12.98 1459255780126025822
-> per_cpu_pct_user,device=all value=39.07 1459255780126025822
-> per_cpu_pct_nice,device=all value=0 1459255780126025822
-> per_cpu_pct_system,device=all value=47.94 1459255780126025822
-> per_cpu_pct_iowait,device=all value=0 1459255780126025822
-> per_cpu_pct_steal,device=all value=0 1459255780126025822
-> per_cpu_pct_idle,device=all value=12.98 1459255780126025822
-> per_cpu_pct_user,device=cpu0 value=33.5 1459255780126025822
-> per_cpu_pct_nice,device=cpu0 value=0 1459255780126025822
-> per_cpu_pct_system,device=cpu0 value=65.25 1459255780126025822
-> per_cpu_pct_iowait,device=cpu0 value=0 1459255780126025822
-> per_cpu_pct_steal,device=cpu0 value=0 1459255780126025822
-> per_cpu_pct_idle,device=cpu0 value=1.25 1459255780126025822
-> per_cpu_pct_user,device=cpu1 value=44.85 1459255780126025822
-> per_cpu_pct_nice,device=cpu1 value=0 1459255780126025822
-> per_cpu_pct_system,device=cpu1 value=29.55 1459255780126025822
-> per_cpu_pct_iowait,device=cpu1 value=0 1459255780126025822
-> per_cpu_pct_steal,device=cpu1 value=0 1459255780126025822
-> per_cpu_pct_idle,device=cpu1 value=25.59 1459255780126025822
-> hugepages_kbhugfree value=0 1459255780126025822
-> hugepages_kbhugused value=0 1459255780126025822
-> hugepages_pct_hugused value=0 1459255780126025822
-> interrupts_intr_per_s,device=i000 value=0 1459255780126025822
-> inode_dentunusd value=252876 1459255780126025822
-> mem_util_kbmemfree value=1613612 1459255780126025822
-> disk_tps,device=sda,vg=rootvg value=0.5 1459255780126025822
-> swap_pswpout_per_s value=0 1459255780126025822
-> network_rxpck_per_s,device=ens33 value=0 1459255780126025822
-> queue_runq-sz value=4 1459255780126025822
-> task_proc_per_s value=0 1459255780126025822
-> task_cswch_per_s value=2019 1459255780126025822
-> mem_frmpg_per_s value=0 1459255780126025822
-> mem_bufpg_per_s value=0.5 1459255780126025822
-> mem_campg_per_s value=1.25 1459255780126025822
-> interrupts_intr_per_s,device=i001 value=0 1459255780126025822
-> inode_file-nr value=19104 1459255780126025822
-> mem_util_kbmemused value=3741528 1459255780126025822
-> disk_rd_sec_per_s,device=sda,vg=rootvg value=0 1459255780126025822
-> network_txpck_per_s,device=ens33 value=0 1459255780126025822
-> queue_plist-sz value=1512 1459255780126025822
-> paging_pgpgin_per_s value=0 1459255780126025822
-> paging_pgpgout_per_s value=19 1459255780126025822
-> paging_fault_per_s value=0.25 1459255780126025822
-> paging_majflt_per_s value=0 1459255780126025822
-> paging_pgfree_per_s value=34.25 1459255780126025822
-> paging_pgscank_per_s value=0 1459255780126025822
-> paging_pgscand_per_s value=0 1459255780126025822
-> paging_pgsteal_per_s value=0 1459255780126025822
-> paging_pct_vmeff value=0 1459255780126025822
-> interrupts_intr_per_s,device=i002 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i003 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i004 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i005 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i006 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i007 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i008 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i009 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i010 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i011 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i012 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i013 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i014 value=0 1459255780126025822
-> interrupts_intr_per_s,device=i015 value=1 1459255780126025822
-> inode_inode-nr value=94709 1459255780126025822
-> inode_pty-nr value=14 1459255780126025822
-> mem_util_pct_memused value=69.87 1459255780126025822
-> mem_util_kbbuffers value=118252 1459255780126025822
-> mem_util_kbcached value=1045240 1459255780126025822
-> mem_util_kbcommit value=9628152 1459255780126025822
-> mem_util_pct_commit value=150.35 1459255780126025822
-> mem_util_kbactive value=2303752 1459255780126025822
-> mem_util_kbinact value=428340 1459255780126025822
-> mem_util_kbdirty value=104 1459255780126025822
-> mem_util_kbanonpg value=1568676 1459255780126025822
-> mem_util_kbslab value=240032 1459255780126025822
-> mem_util_kbkstack value=26224 1459255780126025822
-> mem_util_kbpgtbl value=98056 1459255780126025822
-> mem_util_kbvmused value=0 1459255780126025822
-> disk_wr_sec_per_s,device=sda,vg=rootvg value=38 1459255780126025822
-> disk_avgrq-sz,device=sda,vg=rootvg value=76 1459255780126025822
-> disk_avgqu-sz,device=sda,vg=rootvg value=0 1459255780126025822
-> disk_await,device=sda,vg=rootvg value=2 1459255780126025822
-> disk_svctm,device=sda,vg=rootvg value=2 1459255780126025822
-> disk_pct_util,device=sda,vg=rootvg value=0.1 1459255780126025822
-> network_rxkB_per_s,device=ens33 value=0 1459255780126025822
-> network_txkB_per_s,device=ens33 value=0 1459255780126025822
-> network_rxcmp_per_s,device=ens33 value=0 1459255780126025822
-> network_txcmp_per_s,device=ens33 value=0 1459255780126025822
-> network_rxmcst_per_s,device=ens33 value=0 1459255780126025822
-> network_pct_ifutil,device=ens33 value=0 1459255780126025822
-> network_rxpck_per_s,device=lo value=10.75 1459255780126025822
-> network_txpck_per_s,device=lo value=10.75 1459255780126025822
-> network_rxkB_per_s,device=lo value=0.77 1459255780126025822
-> network_txkB_per_s,device=lo value=0.77 1459255780126025822
-> network_rxcmp_per_s,device=lo value=0 1459255780126025822
-> network_txcmp_per_s,device=lo value=0 1459255780126025822
-> network_rxmcst_per_s,device=lo value=0 1459255780126025822
-> network_pct_ifutil,device=lo value=0 1459255780126025822
-> network_rxerr_per_s,device=ens33 value=0 1459255780126025822
-> network_txerr_per_s,device=ens33 value=0 1459255780126025822
-> network_coll_per_s,device=ens33 value=0 1459255780126025822
-> network_rxdrop_per_s,device=ens33 value=0 1459255780126025822
-> network_txdrop_per_s,device=ens33 value=0 1459255780126025822
-> network_txcarr_per_s,device=ens33 value=0 1459255780126025822
-> network_rxfram_per_s,device=ens33 value=0 1459255780126025822
-> network_rxfifo_per_s,device=ens33 value=0 1459255780126025822
-> network_txfifo_per_s,device=ens33 value=0 1459255780126025822
-> network_rxerr_per_s,device=lo value=0 1459255780126025822
-> network_txerr_per_s,device=lo value=0 1459255780126025822
-> network_coll_per_s,device=lo value=0 1459255780126025822
-> network_rxdrop_per_s,device=lo value=0 1459255780126025822
-> network_txdrop_per_s,device=lo value=0 1459255780126025822
-> network_txcarr_per_s,device=lo value=0 1459255780126025822
-> network_rxfram_per_s,device=lo value=0 1459255780126025822
-> network_rxfifo_per_s,device=lo value=0 1459255780126025822
-> network_txfifo_per_s,device=lo value=0 1459255780126025822
-> network_call_per_s value=0 1459255780126025822
-> network_retrans_per_s value=0 1459255780126025822
-> network_read_per_s value=0 1459255780126025822
-> network_write_per_s value=0 1459255780126025822
-> network_access_per_s value=0 1459255780126025822
-> network_getatt_per_s value=0 1459255780126025822
-> network_scall_per_s value=0 1459255780126025822
-> network_badcall_per_s value=0 1459255780126025822
-> network_packet_per_s value=0 1459255780126025822
-> network_udp_per_s value=0 1459255780126025822
-> network_tcp_per_s value=0 1459255780126025822
-> network_hit_per_s value=0 1459255780126025822
-> network_miss_per_s value=0 1459255780126025822
-> network_sread_per_s value=0 1459255780126025822
-> network_swrite_per_s value=0 1459255780126025822
-> network_saccess_per_s value=0 1459255780126025822
-> network_sgetatt_per_s value=0 1459255780126025822
-> network_totsck value=4234 1459255780126025822
-> network_tcpsck value=1637 1459255780126025822
-> network_udpsck value=2 1459255780126025822
-> network_rawsck value=0 1459255780126025822
-> network_ip-frag value=0 1459255780126025822
-> network_tcp-tw value=4 1459255780126025822
-> network_irec_per_s value=10.75 1459255780126025822
-> network_fwddgm_per_s value=0 1459255780126025822
-> network_idel_per_s value=10.75 1459255780126025822
-> network_orq_per_s value=10.75 1459255780126025822
-> network_asmrq_per_s value=0 1459255780126025822
-> network_asmok_per_s value=0 1459255780126025822
-> network_fragok_per_s value=0 1459255780126025822
-> network_fragcrt_per_s value=0 1459255780126025822
-> network_ihdrerr_per_s value=0 1459255780126025822
-> network_iadrerr_per_s value=0 1459255780126025822
-> network_iukwnpr_per_s value=0 1459255780126025822
-> network_idisc_per_s value=0 1459255780126025822
-> network_odisc_per_s value=0 1459255780126025822
-> network_onort_per_s value=0 1459255780126025822
-> network_asmf_per_s value=0 1459255780126025822
-> network_fragf_per_s value=0 1459255780126025822
-> network_imsg_per_s value=0 1459255780126025822
-> network_omsg_per_s value=0 1459255780126025822
-> network_iech_per_s value=0 1459255780126025822
-> network_iechr_per_s value=0 1459255780126025822
-> network_oech_per_s value=0 1459255780126025822
-> network_oechr_per_s value=0 1459255780126025822
-> network_itm_per_s value=0 1459255780126025822
-> network_itmr_per_s value=0 1459255780126025822
-> network_otm_per_s value=0 1459255780126025822
-> network_otmr_per_s value=0 1459255780126025822
-> network_iadrmk_per_s value=0 1459255780126025822
-> network_iadrmkr_per_s value=0 1459255780126025822
-> network_oadrmk_per_s value=0 1459255780126025822
-> network_oadrmkr_per_s value=0 1459255780126025822
-> network_ierr_per_s value=0 1459255780126025822
-> network_oerr_per_s value=0 1459255780126025822
-> network_idstunr_per_s value=0 1459255780126025822
-> network_odstunr_per_s value=0 1459255780126025822
-> network_itmex_per_s value=0 1459255780126025822
-> network_otmex_per_s value=0 1459255780126025822
-> network_iparmpb_per_s value=0 1459255780126025822
-> network_oparmpb_per_s value=0 1459255780126025822
-> network_isrcq_per_s value=0 1459255780126025822
-> network_osrcq_per_s value=0 1459255780126025822
-> network_iredir_per_s value=0 1459255780126025822
-> network_oredir_per_s value=0 1459255780126025822
-> network_active_per_s value=0 1459255780126025822
-> network_passive_per_s value=0 1459255780126025822
-> network_iseg_per_s value=10.75 1459255780126025822
-> network_oseg_per_s value=9.5 1459255780126025822
-> network_atmptf_per_s value=0 1459255780126025822
-> network_estres_per_s value=0 1459255780126025822
-> network_retrans_per_s value=1.5 1459255780126025822
-> network_isegerr_per_s value=0.25 1459255780126025822
-> network_orsts_per_s value=0 1459255780126025822
-> network_idgm_per_s value=0 1459255780126025822
-> network_odgm_per_s value=0 1459255780126025822
-> network_noport_per_s value=0 1459255780126025822
-> network_idgmerr_per_s value=0 1459255780126025822
-> queue_ldavg-1 value=2.1 1459255780126025822
-> queue_ldavg-5 value=1.82 1459255780126025822
-> queue_ldavg-15 value=1.44 1459255780126025822
-> queue_blocked value=0 1459255780126025822
-> swap_util_kbswpfree value=1048572 1459255780126025822
-> swap_util_kbswpused value=0 1459255780126025822
-> swap_util_pct_swpused value=0 1459255780126025822
-> swap_util_kbswpcad value=0 1459255780126025822
-> swap_util_pct_swpcad value=0 1459255780126025822
+io_tps value=0.5 1459255780126025822
+io_rtps value=0 1459255780126025822
+io_wtps value=0.5 1459255780126025822
+io_bread_per_s value=0 1459255780126025822
+io_bwrtn_per_s value=38 1459255780126025822
+cpu_util_pct_user,device=all value=39.07 1459255780126025822
+cpu_util_pct_nice,device=all value=0 1459255780126025822
+cpu_util_pct_system,device=all value=47.94 1459255780126025822
+cpu_util_pct_iowait,device=all value=0 1459255780126025822
+cpu_util_pct_steal,device=all value=0 1459255780126025822
+cpu_util_pct_idle,device=all value=12.98 1459255780126025822
+swap_pswpin_per_s value=0 1459255780126025822
+cpu_pct_user,device=all value=39.07 1459255780126025822
+cpu_pct_nice,device=all value=0 1459255780126025822
+cpu_pct_system,device=all value=47.94 1459255780126025822
+cpu_pct_iowait,device=all value=0 1459255780126025822
+cpu_pct_steal,device=all value=0 1459255780126025822
+cpu_pct_idle,device=all value=12.98 1459255780126025822
+per_cpu_pct_user,device=all value=39.07 1459255780126025822
+per_cpu_pct_nice,device=all value=0 1459255780126025822
+per_cpu_pct_system,device=all value=47.94 1459255780126025822
+per_cpu_pct_iowait,device=all value=0 1459255780126025822
+per_cpu_pct_steal,device=all value=0 1459255780126025822
+per_cpu_pct_idle,device=all value=12.98 1459255780126025822
+per_cpu_pct_user,device=cpu0 value=33.5 1459255780126025822
+per_cpu_pct_nice,device=cpu0 value=0 1459255780126025822
+per_cpu_pct_system,device=cpu0 value=65.25 1459255780126025822
+per_cpu_pct_iowait,device=cpu0 value=0 1459255780126025822
+per_cpu_pct_steal,device=cpu0 value=0 1459255780126025822
+per_cpu_pct_idle,device=cpu0 value=1.25 1459255780126025822
+per_cpu_pct_user,device=cpu1 value=44.85 1459255780126025822
+per_cpu_pct_nice,device=cpu1 value=0 1459255780126025822
+per_cpu_pct_system,device=cpu1 value=29.55 1459255780126025822
+per_cpu_pct_iowait,device=cpu1 value=0 1459255780126025822
+per_cpu_pct_steal,device=cpu1 value=0 1459255780126025822
+per_cpu_pct_idle,device=cpu1 value=25.59 1459255780126025822
+hugepages_kbhugfree value=0 1459255780126025822
+hugepages_kbhugused value=0 1459255780126025822
+hugepages_pct_hugused value=0 1459255780126025822
+interrupts_intr_per_s,device=i000 value=0 1459255780126025822
+inode_dentunusd value=252876 1459255780126025822
+mem_util_kbmemfree value=1613612 1459255780126025822
+disk_tps,device=sda,vg=rootvg value=0.5 1459255780126025822
+swap_pswpout_per_s value=0 1459255780126025822
+network_rxpck_per_s,device=ens33 value=0 1459255780126025822
+queue_runq-sz value=4 1459255780126025822
+task_proc_per_s value=0 1459255780126025822
+task_cswch_per_s value=2019 1459255780126025822
+mem_frmpg_per_s value=0 1459255780126025822
+mem_bufpg_per_s value=0.5 1459255780126025822
+mem_campg_per_s value=1.25 1459255780126025822
+interrupts_intr_per_s,device=i001 value=0 1459255780126025822
+inode_file-nr value=19104 1459255780126025822
+mem_util_kbmemused value=3741528 1459255780126025822
+disk_rd_sec_per_s,device=sda,vg=rootvg value=0 1459255780126025822
+network_txpck_per_s,device=ens33 value=0 1459255780126025822
+queue_plist-sz value=1512 1459255780126025822
+paging_pgpgin_per_s value=0 1459255780126025822
+paging_pgpgout_per_s value=19 1459255780126025822
+paging_fault_per_s value=0.25 1459255780126025822
+paging_majflt_per_s value=0 1459255780126025822
+paging_pgfree_per_s value=34.25 1459255780126025822
+paging_pgscank_per_s value=0 1459255780126025822
+paging_pgscand_per_s value=0 1459255780126025822
+paging_pgsteal_per_s value=0 1459255780126025822
+paging_pct_vmeff value=0 1459255780126025822
+interrupts_intr_per_s,device=i002 value=0 1459255780126025822
+interrupts_intr_per_s,device=i003 value=0 1459255780126025822
+interrupts_intr_per_s,device=i004 value=0 1459255780126025822
+interrupts_intr_per_s,device=i005 value=0 1459255780126025822
+interrupts_intr_per_s,device=i006 value=0 1459255780126025822
+interrupts_intr_per_s,device=i007 value=0 1459255780126025822
+interrupts_intr_per_s,device=i008 value=0 1459255780126025822
+interrupts_intr_per_s,device=i009 value=0 1459255780126025822
+interrupts_intr_per_s,device=i010 value=0 1459255780126025822
+interrupts_intr_per_s,device=i011 value=0 1459255780126025822
+interrupts_intr_per_s,device=i012 value=0 1459255780126025822
+interrupts_intr_per_s,device=i013 value=0 1459255780126025822
+interrupts_intr_per_s,device=i014 value=0 1459255780126025822
+interrupts_intr_per_s,device=i015 value=1 1459255780126025822
+inode_inode-nr value=94709 1459255780126025822
+inode_pty-nr value=14 1459255780126025822
+mem_util_pct_memused value=69.87 1459255780126025822
+mem_util_kbbuffers value=118252 1459255780126025822
+mem_util_kbcached value=1045240 1459255780126025822
+mem_util_kbcommit value=9628152 1459255780126025822
+mem_util_pct_commit value=150.35 1459255780126025822
+mem_util_kbactive value=2303752 1459255780126025822
+mem_util_kbinact value=428340 1459255780126025822
+mem_util_kbdirty value=104 1459255780126025822
+mem_util_kbanonpg value=1568676 1459255780126025822
+mem_util_kbslab value=240032 1459255780126025822
+mem_util_kbkstack value=26224 1459255780126025822
+mem_util_kbpgtbl value=98056 1459255780126025822
+mem_util_kbvmused value=0 1459255780126025822
+disk_wr_sec_per_s,device=sda,vg=rootvg value=38 1459255780126025822
+disk_avgrq-sz,device=sda,vg=rootvg value=76 1459255780126025822
+disk_avgqu-sz,device=sda,vg=rootvg value=0 1459255780126025822
+disk_await,device=sda,vg=rootvg value=2 1459255780126025822
+disk_svctm,device=sda,vg=rootvg value=2 1459255780126025822
+disk_pct_util,device=sda,vg=rootvg value=0.1 1459255780126025822
+network_rxkB_per_s,device=ens33 value=0 1459255780126025822
+network_txkB_per_s,device=ens33 value=0 1459255780126025822
+network_rxcmp_per_s,device=ens33 value=0 1459255780126025822
+network_txcmp_per_s,device=ens33 value=0 1459255780126025822
+network_rxmcst_per_s,device=ens33 value=0 1459255780126025822
+network_pct_ifutil,device=ens33 value=0 1459255780126025822
+network_rxpck_per_s,device=lo value=10.75 1459255780126025822
+network_txpck_per_s,device=lo value=10.75 1459255780126025822
+network_rxkB_per_s,device=lo value=0.77 1459255780126025822
+network_txkB_per_s,device=lo value=0.77 1459255780126025822
+network_rxcmp_per_s,device=lo value=0 1459255780126025822
+network_txcmp_per_s,device=lo value=0 1459255780126025822
+network_rxmcst_per_s,device=lo value=0 1459255780126025822
+network_pct_ifutil,device=lo value=0 1459255780126025822
+network_rxerr_per_s,device=ens33 value=0 1459255780126025822
+network_txerr_per_s,device=ens33 value=0 1459255780126025822
+network_coll_per_s,device=ens33 value=0 1459255780126025822
+network_rxdrop_per_s,device=ens33 value=0 1459255780126025822
+network_txdrop_per_s,device=ens33 value=0 1459255780126025822
+network_txcarr_per_s,device=ens33 value=0 1459255780126025822
+network_rxfram_per_s,device=ens33 value=0 1459255780126025822
+network_rxfifo_per_s,device=ens33 value=0 1459255780126025822
+network_txfifo_per_s,device=ens33 value=0 1459255780126025822
+network_rxerr_per_s,device=lo value=0 1459255780126025822
+network_txerr_per_s,device=lo value=0 1459255780126025822
+network_coll_per_s,device=lo value=0 1459255780126025822
+network_rxdrop_per_s,device=lo value=0 1459255780126025822
+network_txdrop_per_s,device=lo value=0 1459255780126025822
+network_txcarr_per_s,device=lo value=0 1459255780126025822
+network_rxfram_per_s,device=lo value=0 1459255780126025822
+network_rxfifo_per_s,device=lo value=0 1459255780126025822
+network_txfifo_per_s,device=lo value=0 1459255780126025822
+network_call_per_s value=0 1459255780126025822
+network_retrans_per_s value=0 1459255780126025822
+network_read_per_s value=0 1459255780126025822
+network_write_per_s value=0 1459255780126025822
+network_access_per_s value=0 1459255780126025822
+network_getatt_per_s value=0 1459255780126025822
+network_scall_per_s value=0 1459255780126025822
+network_badcall_per_s value=0 1459255780126025822
+network_packet_per_s value=0 1459255780126025822
+network_udp_per_s value=0 1459255780126025822
+network_tcp_per_s value=0 1459255780126025822
+network_hit_per_s value=0 1459255780126025822
+network_miss_per_s value=0 1459255780126025822
+network_sread_per_s value=0 1459255780126025822
+network_swrite_per_s value=0 1459255780126025822
+network_saccess_per_s value=0 1459255780126025822
+network_sgetatt_per_s value=0 1459255780126025822
+network_totsck value=4234 1459255780126025822
+network_tcpsck value=1637 1459255780126025822
+network_udpsck value=2 1459255780126025822
+network_rawsck value=0 1459255780126025822
+network_ip-frag value=0 1459255780126025822
+network_tcp-tw value=4 1459255780126025822
+network_irec_per_s value=10.75 1459255780126025822
+network_fwddgm_per_s value=0 1459255780126025822
+network_idel_per_s value=10.75 1459255780126025822
+network_orq_per_s value=10.75 1459255780126025822
+network_asmrq_per_s value=0 1459255780126025822
+network_asmok_per_s value=0 1459255780126025822
+network_fragok_per_s value=0 1459255780126025822
+network_fragcrt_per_s value=0 1459255780126025822
+network_ihdrerr_per_s value=0 1459255780126025822
+network_iadrerr_per_s value=0 1459255780126025822
+network_iukwnpr_per_s value=0 1459255780126025822
+network_idisc_per_s value=0 1459255780126025822
+network_odisc_per_s value=0 1459255780126025822
+network_onort_per_s value=0 1459255780126025822
+network_asmf_per_s value=0 1459255780126025822
+network_fragf_per_s value=0 1459255780126025822
+network_imsg_per_s value=0 1459255780126025822
+network_omsg_per_s value=0 1459255780126025822
+network_iech_per_s value=0 1459255780126025822
+network_iechr_per_s value=0 1459255780126025822
+network_oech_per_s value=0 1459255780126025822
+network_oechr_per_s value=0 1459255780126025822
+network_itm_per_s value=0 1459255780126025822
+network_itmr_per_s value=0 1459255780126025822
+network_otm_per_s value=0 1459255780126025822
+network_otmr_per_s value=0 1459255780126025822
+network_iadrmk_per_s value=0 1459255780126025822
+network_iadrmkr_per_s value=0 1459255780126025822
+network_oadrmk_per_s value=0 1459255780126025822
+network_oadrmkr_per_s value=0 1459255780126025822
+network_ierr_per_s value=0 1459255780126025822
+network_oerr_per_s value=0 1459255780126025822
+network_idstunr_per_s value=0 1459255780126025822
+network_odstunr_per_s value=0 1459255780126025822
+network_itmex_per_s value=0 1459255780126025822
+network_otmex_per_s value=0 1459255780126025822
+network_iparmpb_per_s value=0 1459255780126025822
+network_oparmpb_per_s value=0 1459255780126025822
+network_isrcq_per_s value=0 1459255780126025822
+network_osrcq_per_s value=0 1459255780126025822
+network_iredir_per_s value=0 1459255780126025822
+network_oredir_per_s value=0 1459255780126025822
+network_active_per_s value=0 1459255780126025822
+network_passive_per_s value=0 1459255780126025822
+network_iseg_per_s value=10.75 1459255780126025822
+network_oseg_per_s value=9.5 1459255780126025822
+network_atmptf_per_s value=0 1459255780126025822
+network_estres_per_s value=0 1459255780126025822
+network_retrans_per_s value=1.5 1459255780126025822
+network_isegerr_per_s value=0.25 1459255780126025822
+network_orsts_per_s value=0 1459255780126025822
+network_idgm_per_s value=0 1459255780126025822
+network_odgm_per_s value=0 1459255780126025822
+network_noport_per_s value=0 1459255780126025822
+network_idgmerr_per_s value=0 1459255780126025822
+queue_ldavg-1 value=2.1 1459255780126025822
+queue_ldavg-5 value=1.82 1459255780126025822
+queue_ldavg-15 value=1.44 1459255780126025822
+queue_blocked value=0 1459255780126025822
+swap_util_kbswpfree value=1048572 1459255780126025822
+swap_util_kbswpused value=0 1459255780126025822
+swap_util_pct_swpused value=0 1459255780126025822
+swap_util_kbswpcad value=0 1459255780126025822
+swap_util_pct_swpcad value=0 1459255780126025822
 ```
