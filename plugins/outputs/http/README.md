@@ -105,7 +105,7 @@ to use them.
   #region = "us-east-1"
 
   ## Amazon Credentials
-  ## Amazon Credentials are not attempted unless aws_service is set to a non-empty string and may need to match the name of the service you're outputting to
+  ## Amazon Credentials are not attempted unless aws_service is set to a non-empty string and may need to match the name of the service you're ouputting to
   #aws_service = "execute-api"
 
   ## Credentials are loaded in the following order
