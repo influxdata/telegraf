@@ -105,6 +105,9 @@ to use them.
   #region = "us-east-1"
 
   ## Amazon Credentials
+  ## Amazon Credentials are not attempted unless aws_service is set to a non-empty string and may need to match the name of the service you're outputting to
+  #aws_service = "execute-api"
+
   ## Credentials are loaded in the following order
   ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
   ## 2) Assumed credentials via STS if role_arn is specified
