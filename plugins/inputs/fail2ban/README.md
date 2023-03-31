@@ -60,6 +60,7 @@ Defaults!FAIL2BAN !logfile, !syslog, !pam_session
 
 ## Example Output
 
+### Execute the binary directly
 ```text
 # fail2ban-client status sshd
 Status for the jail: sshd
