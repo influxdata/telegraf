@@ -79,9 +79,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-./telegraf --config telegraf.conf --input-filter bcache --test
-```
-
-```text
 bcache,backing_dev="md10",bcache_dev="bcache0" dirty_data=11639194i,bypassed=5167704440832i,cache_bypass_hits=146270986i,cache_bypass_misses=0i,cache_hit_ratio=90i,cache_hits=511941651i,cache_miss_collisions=157678i,cache_misses=50647396i,cache_readaheads=0i
 ```
