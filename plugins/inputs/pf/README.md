@@ -68,7 +68,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```text
+```shell
 > pfctl -s info
 Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
