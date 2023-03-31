@@ -180,7 +180,6 @@ queries will be logged.
 
 ## Example Output
 
-
 [stackdriver]: https://cloud.google.com/monitoring/api/v3/
 [auth]: https://cloud.google.com/docs/authentication/getting-started
 [pricing]: https://cloud.google.com/stackdriver/pricing#stackdriver_monitoring_services
