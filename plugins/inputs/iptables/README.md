@@ -118,7 +118,7 @@ The `ruleid` is the comment associated to the rule.
 ## Example Output
 
 ```shell
-$ iptables -nvL INPUT
+iptables -nvL INPUT
 ```
 
 ```text
