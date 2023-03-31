@@ -18,10 +18,11 @@ import (
 
 // Common HTTP client struct.
 type HTTPClientConfig struct {
-	Timeout             config.Duration `toml:"timeout"`
-	IdleConnTimeout     config.Duration `toml:"idle_conn_timeout"`
-	MaxIdleConns        int             `toml:"max_idle_conn"`
-	MaxIdleConnsPerHost int             `toml:"max_idle_conn_per_host"`
+	Timeout               config.Duration `toml:"timeout"`
+	IdleConnTimeout       config.Duration `toml:"idle_conn_timeout"`
+	ResponseHeaderTimeout config.Duration `toml:"response_header_timeout"`
+	MaxIdleConns          int             `toml:"max_idle_conn"`
+	MaxIdleConnsPerHost   int             `toml:"max_idle_conn_per_host"`
 
 	proxy.HTTPProxy
 	tls.ClientConfig
@@ -41,11 +42,12 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 	}
 
 	transport := &http.Transport{
-		TLSClientConfig:     tlsCfg,
-		Proxy:               prox,
-		IdleConnTimeout:     time.Duration(h.IdleConnTimeout),
-		MaxIdleConns:        h.MaxIdleConns,
-		MaxIdleConnsPerHost: h.MaxIdleConnsPerHost,
+		TLSClientConfig:       tlsCfg,
+		Proxy:                 prox,
+		IdleConnTimeout:       time.Duration(h.IdleConnTimeout),
+		MaxIdleConns:          h.MaxIdleConns,
+		MaxIdleConnsPerHost:   h.MaxIdleConnsPerHost,
+		ResponseHeaderTimeout: time.Duration(h.ResponseHeaderTimeout),
 	}
 
 	timeout := h.Timeout
