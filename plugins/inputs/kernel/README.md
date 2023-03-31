@@ -71,8 +71,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
-$ telegraf --config ~/ws/telegraf.conf --input-filter kernel --test
-* Plugin: kernel, Collection 1
-> kernel entropy_available=2469i,boot_time=1457505775i,context_switches=2626618i,disk_pages_in=5741i,disk_pages_out=1808i,interrupts=1472736i,processes_forked=10673i 1457613402960879816
+```text
+kernel entropy_available=2469i,boot_time=1457505775i,context_switches=2626618i,disk_pages_in=5741i,disk_pages_out=1808i,interrupts=1472736i,processes_forked=10673i 1457613402960879816
 ```

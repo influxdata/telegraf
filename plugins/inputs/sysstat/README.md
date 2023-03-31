@@ -166,44 +166,42 @@ With the configuration below:
 
 you get the following output:
 
-```shell
-$ telegraf --config telegraf.conf --input-filter sysstat --test
-* Plugin: sysstat, Collection 1
-> cpu_util,device=all pct_idle=98.85,pct_iowait=0,pct_nice=0.38,pct_steal=0,pct_system=0.64,pct_user=0.13 1459255626657883725
-> swap pswpin_per_s=0,pswpout_per_s=0 1459255626658387650
-> per_cpu,device=cpu1 pct_idle=98.98,pct_iowait=0,pct_nice=0.26,pct_steal=0,pct_system=0.51,pct_user=0.26 1459255626659630437
-> per_cpu,device=all pct_idle=98.85,pct_iowait=0,pct_nice=0.38,pct_steal=0,pct_system=0.64,pct_user=0.13 1459255626659670744
-> per_cpu,device=cpu0 pct_idle=98.73,pct_iowait=0,pct_nice=0.76,pct_steal=0,pct_system=0.51,pct_user=0 1459255626659697515
-> hugepages kbhugfree=0,kbhugused=0,pct_hugused=0 1459255626660057517
-> network,device=lo coll_per_s=0,pct_ifutil=0,rxcmp_per_s=0,rxdrop_per_s=0,rxerr_per_s=0,rxfifo_per_s=0,rxfram_per_s=0,rxkB_per_s=0.81,rxmcst_per_s=0,rxpck_per_s=16,txcarr_per_s=0,txcmp_per_s=0,txdrop_per_s=0,txerr_per_s=0,txfifo_per_s=0,txkB_per_s=0.81,txpck_per_s=16 1459255626661197666
-> network access_per_s=0,active_per_s=0,asmf_per_s=0,asmok_per_s=0,asmrq_per_s=0,atmptf_per_s=0,badcall_per_s=0,call_per_s=0,estres_per_s=0,fragcrt_per_s=0,fragf_per_s=0,fragok_per_s=0,fwddgm_per_s=0,getatt_per_s=0,hit_per_s=0,iadrerr_per_s=0,iadrmk_per_s=0,iadrmkr_per_s=0,idel_per_s=16,idgm_per_s=0,idgmerr_per_s=0,idisc_per_s=0,idstunr_per_s=0,iech_per_s=0,iechr_per_s=0,ierr_per_s=0,ihdrerr_per_s=0,imsg_per_s=0,ip-frag=0,iparmpb_per_s=0,irec_per_s=16,iredir_per_s=0,iseg_per_s=16,isegerr_per_s=0,isrcq_per_s=0,itm_per_s=0,itmex_per_s=0,itmr_per_s=0,iukwnpr_per_s=0,miss_per_s=0,noport_per_s=0,oadrmk_per_s=0,oadrmkr_per_s=0,odgm_per_s=0,odisc_per_s=0,odstunr_per_s=0,oech_per_s=0,oechr_per_s=0,oerr_per_s=0,omsg_per_s=0,onort_per_s=0,oparmpb_per_s=0,oredir_per_s=0,orq_per_s=16,orsts_per_s=0,oseg_per_s=16,osrcq_per_s=0,otm_per_s=0,otmex_per_s=0,otmr_per_s=0,packet_per_s=0,passive_per_s=0,rawsck=0,read_per_s=0,retrans_per_s=0,saccess_per_s=0,scall_per_s=0,sgetatt_per_s=0,sread_per_s=0,swrite_per_s=0,tcp-tw=7,tcp_per_s=0,tcpsck=1543,totsck=4052,udp_per_s=0,udpsck=2,write_per_s=0 1459255626661381788
-> network,device=ens33 coll_per_s=0,pct_ifutil=0,rxcmp_per_s=0,rxdrop_per_s=0,rxerr_per_s=0,rxfifo_per_s=0,rxfram_per_s=0,rxkB_per_s=0,rxmcst_per_s=0,rxpck_per_s=0,txcarr_per_s=0,txcmp_per_s=0,txdrop_per_s=0,txerr_per_s=0,txfifo_per_s=0,txkB_per_s=0,txpck_per_s=0 1459255626661533072
-> disk,device=sda,vg=rootvg avgqu-sz=0.01,avgrq-sz=8.5,await=3.31,pct_util=0.1,rd_sec_per_s=0,svctm=0.25,tps=4,wr_sec_per_s=34 1459255626663974389
-> queue blocked=0,ldavg-1=1.61,ldavg-15=1.34,ldavg-5=1.67,plist-sz=1415,runq-sz=0 1459255626664159054
-> paging fault_per_s=0.25,majflt_per_s=0,pct_vmeff=0,pgfree_per_s=19,pgpgin_per_s=0,pgpgout_per_s=17,pgscand_per_s=0,pgscank_per_s=0,pgsteal_per_s=0 1459255626664304249
-> mem_util kbactive=2206568,kbanonpg=1472208,kbbuffers=118020,kbcached=1035252,kbcommit=8717200,kbdirty=156,kbinact=418912,kbkstack=24672,kbmemfree=1744868,kbmemused=3610272,kbpgtbl=87116,kbslab=233804,kbvmused=0,pct_commit=136.13,pct_memused=67.42 1459255626664554981
-> io bread_per_s=0,bwrtn_per_s=34,rtps=0,tps=4,wtps=4 1459255626664596198
-> inode dentunusd=235039,file-nr=17120,inode-nr=94505,pty-nr=14 1459255626664663693
-> interrupts,device=i000 intr_per_s=0 1459255626664800109
-> interrupts,device=i003 intr_per_s=0 1459255626665255145
-> interrupts,device=i004 intr_per_s=0 1459255626665281776
-> interrupts,device=i006 intr_per_s=0 1459255626665297416
-> interrupts,device=i007 intr_per_s=0 1459255626665321008
-> interrupts,device=i010 intr_per_s=0 1459255626665339413
-> interrupts,device=i012 intr_per_s=0 1459255626665361510
-> interrupts,device=i013 intr_per_s=0 1459255626665381327
-> interrupts,device=i015 intr_per_s=1 1459255626665397313
-> interrupts,device=i001 intr_per_s=0.25 1459255626665412985
-> interrupts,device=i002 intr_per_s=0 1459255626665430475
-> interrupts,device=i005 intr_per_s=0 1459255626665453944
-> interrupts,device=i008 intr_per_s=0 1459255626665470650
-> interrupts,device=i011 intr_per_s=0 1459255626665486069
-> interrupts,device=i009 intr_per_s=0 1459255626665502913
-> interrupts,device=i014 intr_per_s=0 1459255626665518152
-> task cswch_per_s=722.25,proc_per_s=0 1459255626665849646
-> cpu,device=all pct_idle=98.85,pct_iowait=0,pct_nice=0.38,pct_steal=0,pct_system=0.64,pct_user=0.13 1459255626666639715
-> mem bufpg_per_s=0,campg_per_s=1.75,frmpg_per_s=-8.25 1459255626666770205
-> swap_util kbswpcad=0,kbswpfree=1048572,kbswpused=0,pct_swpcad=0,pct_swpused=0 1459255626667313276
+```text
+cpu_util,device=all pct_idle=98.85,pct_iowait=0,pct_nice=0.38,pct_steal=0,pct_system=0.64,pct_user=0.13 1459255626657883725
+swap pswpin_per_s=0,pswpout_per_s=0 1459255626658387650
+per_cpu,device=cpu1 pct_idle=98.98,pct_iowait=0,pct_nice=0.26,pct_steal=0,pct_system=0.51,pct_user=0.26 1459255626659630437
+per_cpu,device=all pct_idle=98.85,pct_iowait=0,pct_nice=0.38,pct_steal=0,pct_system=0.64,pct_user=0.13 1459255626659670744
+per_cpu,device=cpu0 pct_idle=98.73,pct_iowait=0,pct_nice=0.76,pct_steal=0,pct_system=0.51,pct_user=0 1459255626659697515
+hugepages kbhugfree=0,kbhugused=0,pct_hugused=0 1459255626660057517
+network,device=lo coll_per_s=0,pct_ifutil=0,rxcmp_per_s=0,rxdrop_per_s=0,rxerr_per_s=0,rxfifo_per_s=0,rxfram_per_s=0,rxkB_per_s=0.81,rxmcst_per_s=0,rxpck_per_s=16,txcarr_per_s=0,txcmp_per_s=0,txdrop_per_s=0,txerr_per_s=0,txfifo_per_s=0,txkB_per_s=0.81,txpck_per_s=16 1459255626661197666
+network access_per_s=0,active_per_s=0,asmf_per_s=0,asmok_per_s=0,asmrq_per_s=0,atmptf_per_s=0,badcall_per_s=0,call_per_s=0,estres_per_s=0,fragcrt_per_s=0,fragf_per_s=0,fragok_per_s=0,fwddgm_per_s=0,getatt_per_s=0,hit_per_s=0,iadrerr_per_s=0,iadrmk_per_s=0,iadrmkr_per_s=0,idel_per_s=16,idgm_per_s=0,idgmerr_per_s=0,idisc_per_s=0,idstunr_per_s=0,iech_per_s=0,iechr_per_s=0,ierr_per_s=0,ihdrerr_per_s=0,imsg_per_s=0,ip-frag=0,iparmpb_per_s=0,irec_per_s=16,iredir_per_s=0,iseg_per_s=16,isegerr_per_s=0,isrcq_per_s=0,itm_per_s=0,itmex_per_s=0,itmr_per_s=0,iukwnpr_per_s=0,miss_per_s=0,noport_per_s=0,oadrmk_per_s=0,oadrmkr_per_s=0,odgm_per_s=0,odisc_per_s=0,odstunr_per_s=0,oech_per_s=0,oechr_per_s=0,oerr_per_s=0,omsg_per_s=0,onort_per_s=0,oparmpb_per_s=0,oredir_per_s=0,orq_per_s=16,orsts_per_s=0,oseg_per_s=16,osrcq_per_s=0,otm_per_s=0,otmex_per_s=0,otmr_per_s=0,packet_per_s=0,passive_per_s=0,rawsck=0,read_per_s=0,retrans_per_s=0,saccess_per_s=0,scall_per_s=0,sgetatt_per_s=0,sread_per_s=0,swrite_per_s=0,tcp-tw=7,tcp_per_s=0,tcpsck=1543,totsck=4052,udp_per_s=0,udpsck=2,write_per_s=0 1459255626661381788
+network,device=ens33 coll_per_s=0,pct_ifutil=0,rxcmp_per_s=0,rxdrop_per_s=0,rxerr_per_s=0,rxfifo_per_s=0,rxfram_per_s=0,rxkB_per_s=0,rxmcst_per_s=0,rxpck_per_s=0,txcarr_per_s=0,txcmp_per_s=0,txdrop_per_s=0,txerr_per_s=0,txfifo_per_s=0,txkB_per_s=0,txpck_per_s=0 1459255626661533072
+disk,device=sda,vg=rootvg avgqu-sz=0.01,avgrq-sz=8.5,await=3.31,pct_util=0.1,rd_sec_per_s=0,svctm=0.25,tps=4,wr_sec_per_s=34 1459255626663974389
+queue blocked=0,ldavg-1=1.61,ldavg-15=1.34,ldavg-5=1.67,plist-sz=1415,runq-sz=0 1459255626664159054
+paging fault_per_s=0.25,majflt_per_s=0,pct_vmeff=0,pgfree_per_s=19,pgpgin_per_s=0,pgpgout_per_s=17,pgscand_per_s=0,pgscank_per_s=0,pgsteal_per_s=0 1459255626664304249
+mem_util kbactive=2206568,kbanonpg=1472208,kbbuffers=118020,kbcached=1035252,kbcommit=8717200,kbdirty=156,kbinact=418912,kbkstack=24672,kbmemfree=1744868,kbmemused=3610272,kbpgtbl=87116,kbslab=233804,kbvmused=0,pct_commit=136.13,pct_memused=67.42 1459255626664554981
+io bread_per_s=0,bwrtn_per_s=34,rtps=0,tps=4,wtps=4 1459255626664596198
+inode dentunusd=235039,file-nr=17120,inode-nr=94505,pty-nr=14 1459255626664663693
+interrupts,device=i000 intr_per_s=0 1459255626664800109
+interrupts,device=i003 intr_per_s=0 1459255626665255145
+interrupts,device=i004 intr_per_s=0 1459255626665281776
+interrupts,device=i006 intr_per_s=0 1459255626665297416
+interrupts,device=i007 intr_per_s=0 1459255626665321008
+interrupts,device=i010 intr_per_s=0 1459255626665339413
+interrupts,device=i012 intr_per_s=0 1459255626665361510
+interrupts,device=i013 intr_per_s=0 1459255626665381327
+interrupts,device=i015 intr_per_s=1 1459255626665397313
+interrupts,device=i001 intr_per_s=0.25 1459255626665412985
+interrupts,device=i002 intr_per_s=0 1459255626665430475
+interrupts,device=i005 intr_per_s=0 1459255626665453944
+interrupts,device=i008 intr_per_s=0 1459255626665470650
+interrupts,device=i011 intr_per_s=0 1459255626665486069
+interrupts,device=i009 intr_per_s=0 1459255626665502913
+interrupts,device=i014 intr_per_s=0 1459255626665518152
+task cswch_per_s=722.25,proc_per_s=0 1459255626665849646
+cpu,device=all pct_idle=98.85,pct_iowait=0,pct_nice=0.38,pct_steal=0,pct_system=0.64,pct_user=0.13 1459255626666639715
+mem bufpg_per_s=0,campg_per_s=1.75,frmpg_per_s=-8.25 1459255626666770205
+swap_util kbswpcad=0,kbswpfree=1048572,kbswpused=0,pct_swpcad=0,pct_swpused=0 1459255626667313276
 ```
 
 If you change the group value to false like below:
@@ -236,7 +234,7 @@ If you change the group value to false like below:
 
 you get the following output:
 
-```shell
+```text
 $ telegraf -config telegraf.conf -input-filter sysstat -test
 * Plugin: sysstat, Collection 1
 > io_tps value=0.5 1459255780126025822

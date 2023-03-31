@@ -96,14 +96,13 @@ Without `"percpu"` the `cpu` tag will have `all` value.
 
 ## Example Output
 
-```shell
-$ ./telegraf --config telegraf.conf --input-filter conntrack --test
+```text
 conntrack,host=myhost ip_conntrack_count=2,ip_conntrack_max=262144 1461620427667995735
 ```
 
 with stats:
 
-```shell
+```text
 $ telegraf --config /etc/telegraf/telegraf.conf --input-filter conntrack --test
 > conntrack,cpu=all,host=localhost delete=0i,delete_list=0i,drop=2i,early_drop=0i,entries=5568i,expect_create=0i,expect_delete=0i,expect_new=0i,found=7i,icmp_error=1962i,ignore=2586413402i,insert=0i,insert_failed=2i,invalid=46853i,new=0i,search_restart=453336i,searched=0i 1615233542000000000
 > conntrack,host=localhost ip_conntrack_count=464,ip_conntrack_max=262144 1615233542000000000

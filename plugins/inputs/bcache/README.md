@@ -78,19 +78,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
+```text
 ./telegraf --config telegraf.conf --input-filter bcache --test
 ```
 
-```shell
-* Plugin: bcache, Collection 1
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_dirty_data value=11639194
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_bypassed value=5167704440832
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_cache_bypass_hits value=146270986
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_cache_bypass_misses value=0
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_cache_hit_ratio value=90
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_cache_hits value=511941651
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_cache_miss_collisions value=157678
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_cache_misses value=50647396
-> [backing_dev="md10" bcache_dev="bcache0"] bcache_cache_readaheads value=0
+```text
+[backing_dev="md10" bcache_dev="bcache0"] bcache_dirty_data value=11639194
+[backing_dev="md10" bcache_dev="bcache0"] bcache_bypassed value=5167704440832
+[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_bypass_hits value=146270986
+[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_bypass_misses value=0
+[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_hit_ratio value=90
+[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_hits value=511941651
+[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_miss_collisions value=157678
+[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_misses value=50647396
+[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_readaheads value=0
 ```

@@ -75,9 +75,7 @@ telegraf.conf:
 /some/path 200
 ```
 
-```shell
-$ telegraf --config telegraf.conf --quiet
-
+```text
 access,url=/some/path,path=/tmp/tst.log,host=localhost.localdomain response="200" 1511948755991487011
 access,url=/some/path,path=/tmp/tst.log,host=localhost.localdomain response="401" 1511948755991522282
 access,url=/some/path,path=/tmp/tst.log,host=localhost.localdomain response="200" 1511948755991531697

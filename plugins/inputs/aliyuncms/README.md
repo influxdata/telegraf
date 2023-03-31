@@ -175,7 +175,6 @@ case](https://en.wikipedia.org/wiki/Snake_case)
 
 ## Example Output
 
-```shell
-$ ./telegraf --config telegraf.conf --input-filter aliyuncms --test
-> aliyuncms_acs_slb_dashboard,instanceId=p-example,regionId=cn-hangzhou,userId=1234567890 latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875
+```text
+aliyuncms_acs_slb_dashboard,instanceId=p-example,regionId=cn-hangzhou,userId=1234567890 latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875
 ```

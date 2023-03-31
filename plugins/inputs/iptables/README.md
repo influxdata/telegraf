@@ -125,8 +125,7 @@ pkts bytes target     prot opt in     out     source               destination
  42   2048   ACCEPT     tcp  --  *      *       192.168.0.0/24       0.0.0.0/0            tcp dpt:80 /* httpd */
 ```
 
-```shell
-$ ./telegraf --config telegraf.conf --input-filter iptables --test
+```text
 iptables,table=filter,chain=INPUT,ruleid=ssh pkts=100i,bytes=1024i 1453831884664956455
 iptables,table=filter,chain=INPUT,ruleid=httpd pkts=42i,bytes=2048i 1453831884664956455
 ```
