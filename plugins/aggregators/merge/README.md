@@ -26,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   drop_original = true
 ```
 
-## Example
+## Example 
 
 ```diff
 - cpu,host=localhost usage_time=42 1567562620000000000

@@ -117,8 +117,11 @@ The `ruleid` is the comment associated to the rule.
 
 ## Example Output
 
-```text
+```shell
 $ iptables -nvL INPUT
+```
+
+```text
 Chain INPUT (policy DROP 0 packets, 0 bytes)
 pkts bytes target     prot opt in     out     source               destination
 100   1024   ACCEPT     tcp  --  *      *       192.168.0.0/24       0.0.0.0/0            tcp dpt:22 /* ssh */

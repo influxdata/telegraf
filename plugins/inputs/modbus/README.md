@@ -614,7 +614,6 @@ an issue or submit a pull-request.
 
 ## Example Output
 
-```sh
-$ ./telegraf -config telegraf.conf -input-filter modbus -test
+```text
 modbus.InputRegisters,host=orangepizero Current=0,Energy=0,Frequency=60,Power=0,PowerFactor=0,Voltage=123.9000015258789 1554079521000000000
 ```

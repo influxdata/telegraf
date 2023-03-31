@@ -79,6 +79,5 @@ telegraf.conf:
 access,url=/some/path,path=/tmp/tst.log,host=localhost.localdomain response="200" 1511948755991487011
 access,url=/some/path,path=/tmp/tst.log,host=localhost.localdomain response="401" 1511948755991522282
 access,url=/some/path,path=/tmp/tst.log,host=localhost.localdomain response="200" 1511948755991531697
-
 access,path=/tmp/tst.log,host=localhost.localdomain,url=/some/path response_200=2i,response_401=1i 1511948761000000000
 ```
