@@ -66,7 +66,7 @@ fail2ban,jail=sshd failed=5i,banned=2i 1495868667000000000
 
 ### Execute the binary directly
 
-```text
+```shell
 # fail2ban-client status sshd
 Status for the jail: sshd
 |- Filter
