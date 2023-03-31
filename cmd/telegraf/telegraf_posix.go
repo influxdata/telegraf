@@ -20,11 +20,12 @@ func cliFlags() []cli.Flag {
 
 func getLockedMemoryLimit() uint64 {
 	// From https://elixir.bootlin.com/linux/latest/source/include/uapi/asm-generic/resource.h#L35
-	const rlimit_memlock = 8
+	const rLimitMemlock = 8
 
 	var limit syscall.Rlimit
-	if err := syscall.Getrlimit(rlimit_memlock, &limit); err != nil {
-		panic(fmt.Errorf("Cannot get limit for locked memory: %w", err))
+	if err := syscall.Getrlimit(rLimitMemlock, &limit); err != nil {
+		log.Printf("E! Cannot get limit for locked memory: %v", err)
+		return 0
 	}
 	return limit.Max
 }
