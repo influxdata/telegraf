@@ -214,11 +214,11 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			wg.Add(1)
 			go func(pool *sql.DB, query Query, dsn string) {
 				defer wg.Done()
-				queryError := s.gatherServer(pool, query, acc, string(dsn))
+				queryError := s.gatherServer(pool, query, acc, dsn)
 
 				if s.HealthMetric {
 					mutex.Lock()
-					s.gatherHealth(healthMetrics, string(dsn), queryError)
+					s.gatherHealth(healthMetrics, dsn, queryError)
 					mutex.Unlock()
 				}
 
