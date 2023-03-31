@@ -41,13 +41,18 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		return nil, fmt.Errorf("failed to set proxy: %w", err)
 	}
 
+	responseHeaderTimeout := h.ResponseHeaderTimeout
+	if responseHeaderTimeout == 0 {
+		responseHeaderTimeout = config.Duration(time.Second * 3)
+	}
+
 	transport := &http.Transport{
 		TLSClientConfig:       tlsCfg,
 		Proxy:                 prox,
 		IdleConnTimeout:       time.Duration(h.IdleConnTimeout),
 		MaxIdleConns:          h.MaxIdleConns,
 		MaxIdleConnsPerHost:   h.MaxIdleConnsPerHost,
-		ResponseHeaderTimeout: time.Duration(h.ResponseHeaderTimeout),
+		ResponseHeaderTimeout: time.Duration(responseHeaderTimeout),
 	}
 
 	timeout := h.Timeout
