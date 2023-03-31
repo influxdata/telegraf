@@ -27,5 +27,6 @@ func getLockedMemoryLimit() uint64 {
 		log.Printf("E! Cannot get limit for locked memory: %v", err)
 		return 0
 	}
-	return limit.Max
+	//nolint:unconvert // required for e.g. FreeBSD that has the field as int64
+	return uint64(limit.Max)
 }
