@@ -202,16 +202,18 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var healthMetrics = make(map[string]*HealthMetric)
 
 	for i, pool := range s.pools {
+		dnsSecret, err := s.Servers[i].Get()
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+		dsn := string(dnsSecret)
+		config.ReleaseSecret(dnsSecret)
+
 		for _, query := range s.queries {
 			wg.Add(1)
-			go func(pool *sql.DB, query Query, serverIndex int) {
+			go func(pool *sql.DB, query Query, dsn string) {
 				defer wg.Done()
-				dsn, err := s.Servers[serverIndex].Get()
-				if err != nil {
-					acc.AddError(err)
-					return
-				}
-				defer config.ReleaseSecret(dsn)
 				queryError := s.gatherServer(pool, query, acc, string(dsn))
 
 				if s.HealthMetric {
@@ -221,7 +223,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 				}
 
 				acc.AddError(queryError)
-			}(pool, query, i)
+			}(pool, query, dsn)
 		}
 	}
 

@@ -77,12 +77,11 @@ func (g *Groundwork) Init() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
 	password, err := g.Password.Get()
 	if err != nil {
+		config.ReleaseSecret(username)
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
 	g.client = clients.GWClient{
 		AppName: "telegraf",
 		AppType: g.DefaultAppType,
@@ -93,6 +92,8 @@ func (g *Groundwork) Init() error {
 			IsDynamicInventory: true,
 		},
 	}
+	config.ReleaseSecret(username)
+	config.ReleaseSecret(password)
 
 	logper.SetLogger(
 		func(fields interface{}, format string, a ...interface{}) {

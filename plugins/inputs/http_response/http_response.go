@@ -399,6 +399,10 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 }
 
 func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
+	if h.Username.Empty() || h.Password.Empty() {
+		return nil
+	}
+
 	username, err := h.Username.Get()
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
@@ -409,9 +413,8 @@ func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
 	defer config.ReleaseSecret(password)
-	if len(username) != 0 || len(password) != 0 {
-		request.SetBasicAuth(string(username), string(password))
-	}
+	request.SetBasicAuth(string(username), string(password))
+
 	return nil
 }
 

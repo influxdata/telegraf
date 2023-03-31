@@ -165,13 +165,14 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {
-	token, err := i.APIToken.Get()
+	tokenSecret, err := i.APIToken.Get()
 	if err != nil {
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	defer config.ReleaseSecret(token)
+	token := string(tokenSecret)
+	config.ReleaseSecret(tokenSecret)
 
-	if _, err := fmt.Fprintf(conn, HandshakeFormat, string(token)); err != nil {
+	if _, err := fmt.Fprintf(conn, HandshakeFormat, token); err != nil {
 		return err
 	}
 

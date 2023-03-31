@@ -183,14 +183,14 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
 		password, err := h.Password.Get()
 		if err != nil {
+			config.ReleaseSecret(username)
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-
 		req.SetBasicAuth(string(username), string(password))
+		config.ReleaseSecret(username)
+		config.ReleaseSecret(password)
 	}
 
 	// google api auth
