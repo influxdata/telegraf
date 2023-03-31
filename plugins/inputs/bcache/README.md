@@ -83,13 +83,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```
 
 ```text
-[backing_dev="md10" bcache_dev="bcache0"] bcache_dirty_data value=11639194
-[backing_dev="md10" bcache_dev="bcache0"] bcache_bypassed value=5167704440832
-[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_bypass_hits value=146270986
-[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_bypass_misses value=0
-[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_hit_ratio value=90
-[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_hits value=511941651
-[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_miss_collisions value=157678
-[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_misses value=50647396
-[backing_dev="md10" bcache_dev="bcache0"] bcache_cache_readaheads value=0
+bcache,backing_dev="md10",bcache_dev="bcache0" dirty_data=11639194i,bypassed=5167704440832i,cache_bypass_hits=146270986i,cache_bypass_misses=0i,cache_hit_ratio=90i,cache_hits=511941651i,cache_miss_collisions=157678i,cache_misses=50647396i,cache_readaheads=0i
 ```
