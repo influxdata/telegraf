@@ -104,7 +104,7 @@ to use them.
   ## Request-Timeout Header.
   ## The Request-Timeout header is a end-to-end request header that indicates the maximum time that a client is prepared to await a response.
   ## Zero means no limit, default value is 3 seconds.
-  # response_header_timeout = 3
+  # response_header_timeout = "3s"
 
   ## Amazon Region
   #region = "us-east-1"
