@@ -34,8 +34,7 @@ func (s statServer) serverSocket(l net.Listener) {
 
 			data := buf[:n]
 			if string(data) == "show stat\n" {
-				//nolint:errcheck,revive // we return anyway
-				c.Write(csvOutputSample)
+				c.Write(csvOutputSample) //nolint:errcheck // we return anyway
 			}
 		}(conn)
 	}

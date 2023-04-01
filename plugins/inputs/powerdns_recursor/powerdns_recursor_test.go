@@ -127,7 +127,7 @@ func TestV1PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 
 			data := buf[:n]
 			if string(data) == "get-all\n" {
-				socket.WriteToUnix([]byte(metrics), remote) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
+				socket.WriteToUnix([]byte(metrics), remote) //nolint:errcheck // ignore the returned error as we need to close the socket anyway
 				socket.Close()
 			}
 
@@ -189,8 +189,8 @@ func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 
 			data := buf[:n]
 			if string(data) == "get-all" {
-				socket.WriteToUnix([]byte{0, 0, 0, 0}, remote) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
-				socket.WriteToUnix([]byte(metrics), remote)    //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
+				socket.WriteToUnix([]byte{0, 0, 0, 0}, remote) //nolint:errcheck // ignore the returned error as we need to close the socket anyway
+				socket.WriteToUnix([]byte(metrics), remote)    //nolint:errcheck // ignore the returned error as we need to close the socket anyway
 				socket.Close()
 			}
 
@@ -258,10 +258,10 @@ func TestV3PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			}
 
 			if string(buf) == "get-all" {
-				conn.Write([]byte{0, 0, 0, 0}) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
+				conn.Write([]byte{0, 0, 0, 0}) //nolint:errcheck // ignore the returned error as we need to close the socket anyway
 				metrics := []byte(metrics)
-				writeNativeUIntToConn(conn, uint(len(metrics))) //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
-				conn.Write(metrics)                             //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
+				writeNativeUIntToConn(conn, uint(len(metrics))) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
+				conn.Write(metrics)                             //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 				socket.Close()
 			}
 

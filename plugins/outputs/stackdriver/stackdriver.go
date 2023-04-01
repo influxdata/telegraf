@@ -114,15 +114,15 @@ type timeSeriesBuckets map[uint64][]*monitoringpb.TimeSeries
 
 func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f *telegraf.Field, ts *monitoringpb.TimeSeries) {
 	h := fnv.New64a()
-	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte{'\n'})     //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte(f.Key))    //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte{'\n'})     //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte(m.Name()))
+	h.Write([]byte{'\n'})
+	h.Write([]byte(f.Key))
+	h.Write([]byte{'\n'})
 	for key, value := range m.Tags() {
-		h.Write([]byte(key))   //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte{'\n'})  //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte(value)) //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte{'\n'})  //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(key))
+		h.Write([]byte{'\n'})
+		h.Write([]byte(value))
+		h.Write([]byte{'\n'})
 	}
 	k := h.Sum64()
 

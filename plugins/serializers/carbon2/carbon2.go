@@ -65,7 +65,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var batch bytes.Buffer
 	for _, metric := range metrics {
-		batch.Write(s.createObject(metric)) //nolint:revive // from buffer.go: "err is always nil"
+		batch.Write(s.createObject(metric))
 	}
 	return batch.Bytes(), nil
 }
@@ -83,27 +83,27 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 
 		switch metricsFormat {
 		case Carbon2FormatFieldSeparate:
-			m.WriteString(serializeMetricFieldSeparate(name, fieldName)) //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString(serializeMetricFieldSeparate(name, fieldName))
 
 		case Carbon2FormatMetricIncludesField:
-			m.WriteString(serializeMetricIncludeField(name, fieldName)) //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString(serializeMetricIncludeField(name, fieldName))
 		}
 
 		for _, tag := range metric.TagList() {
-			m.WriteString(strings.ReplaceAll(tag.Key, " ", "_")) //nolint:revive // from buffer.go: "err is always nil"
-			m.WriteString("=")                                   //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString(strings.ReplaceAll(tag.Key, " ", "_"))
+			m.WriteString("=")
 			value := tag.Value
 			if len(value) == 0 {
 				value = "null"
 			}
-			m.WriteString(strings.ReplaceAll(value, " ", "_")) //nolint:revive // from buffer.go: "err is always nil"
-			m.WriteString(" ")                                 //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString(strings.ReplaceAll(value, " ", "_"))
+			m.WriteString(" ")
 		}
-		m.WriteString(" ")                                         //nolint:revive // from buffer.go: "err is always nil"
-		m.WriteString(formatValue(fieldValue))                     //nolint:revive // from buffer.go: "err is always nil"
-		m.WriteString(" ")                                         //nolint:revive // from buffer.go: "err is always nil"
-		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10)) //nolint:revive // from buffer.go: "err is always nil"
-		m.WriteString("\n")                                        //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString(" ")
+		m.WriteString(formatValue(fieldValue))
+		m.WriteString(" ")
+		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10))
+		m.WriteString("\n")
 	}
 	return m.Bytes()
 }

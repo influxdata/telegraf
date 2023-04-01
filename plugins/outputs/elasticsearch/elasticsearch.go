@@ -237,9 +237,9 @@ func GetPointID(m telegraf.Metric) string {
 	var buffer bytes.Buffer
 	//Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
 
-	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10)) //nolint:revive // from buffer.go: "err is always nil"
-	buffer.WriteString(m.Name())                                           //nolint:revive // from buffer.go: "err is always nil"
-	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))                 //nolint:revive // from buffer.go: "err is always nil"
+	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10))
+	buffer.WriteString(m.Name())
+	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))
 
 	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
 }

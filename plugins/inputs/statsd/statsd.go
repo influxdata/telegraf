@@ -900,8 +900,8 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
-			b.Write(scanner.Bytes()) //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
-			b.WriteByte('\n')        //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
+			b.Write(scanner.Bytes())
+			b.WriteByte('\n')
 
 			select {
 			case s.in <- input{Buffer: b, Time: time.Now(), Addr: remoteIP}:

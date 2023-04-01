@@ -99,7 +99,7 @@ func setUpTestMux() http.Handler {
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/invalidUTF8", func(w http.ResponseWriter, req *http.Request) {
-		w.Write([]byte{0xff, 0xfe, 0xfd}) //nolint:errcheck,revive // ignore the returned error as the test will fail anyway
+		w.Write([]byte{0xff, 0xfe, 0xfd}) //nolint:errcheck // ignore the returned error as the test will fail anyway
 	})
 	mux.HandleFunc("/noheader", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "hit the good page!")

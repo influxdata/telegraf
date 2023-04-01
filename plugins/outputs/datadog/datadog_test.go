@@ -37,8 +37,7 @@ func fakeDatadog() *Datadog {
 func TestUriOverride(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		//nolint:errcheck,revive // Ignore the returned error as the test will fail anyway
-		json.NewEncoder(w).Encode(`{"status":"ok"}`)
+		json.NewEncoder(w).Encode(`{"status":"ok"}`) //nolint:errcheck // Ignore the returned error as the test will fail anyway
 	}))
 	defer ts.Close()
 
@@ -53,8 +52,7 @@ func TestUriOverride(t *testing.T) {
 func TestCompressionOverride(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		//nolint:errcheck,revive // Ignore the returned error as the test will fail anyway
-		json.NewEncoder(w).Encode(`{"status":"ok"}`)
+		json.NewEncoder(w).Encode(`{"status":"ok"}`) //nolint:errcheck // Ignore the returned error as the test will fail anyway
 	}))
 	defer ts.Close()
 

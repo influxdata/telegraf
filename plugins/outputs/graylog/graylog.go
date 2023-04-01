@@ -164,29 +164,29 @@ func (g *gelfUDP) createChunkedMessage(index int, chunkCountInt int, id []byte, 
 	if err != nil {
 		return packet, err
 	}
-	packet.Write(b) //nolint:revive // from buffer.go: "err is always nil"
+	packet.Write(b)
 
 	b, err = g.intToBytes(15)
 	if err != nil {
 		return packet, err
 	}
-	packet.Write(b) //nolint:revive // from buffer.go: "err is always nil"
+	packet.Write(b)
 
-	packet.Write(id) //nolint:revive // from buffer.go: "err is always nil"
+	packet.Write(id)
 
 	b, err = g.intToBytes(index)
 	if err != nil {
 		return packet, err
 	}
-	packet.Write(b) //nolint:revive // from buffer.go: "err is always nil"
+	packet.Write(b)
 
 	b, err = g.intToBytes(chunkCountInt)
 	if err != nil {
 		return packet, err
 	}
-	packet.Write(b) //nolint:revive // from buffer.go: "err is always nil"
+	packet.Write(b)
 
-	packet.Write(compressed.Next(chunksize)) //nolint:revive // from buffer.go: "err is always nil"
+	packet.Write(compressed.Next(chunksize))
 
 	return packet, nil
 }
