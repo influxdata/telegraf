@@ -83,6 +83,7 @@ linters-settings:
     includes:
       - G102
       - G106
+      - G107
       - G108
       - G109
       - G111
