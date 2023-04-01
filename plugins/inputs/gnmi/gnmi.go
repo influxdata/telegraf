@@ -47,6 +47,7 @@ type GNMI struct {
 	Prefix           string            `toml:"prefix"`
 	Target           string            `toml:"target"`
 	UpdatesOnly      bool              `toml:"updates_only"`
+	JnprExtension    bool              `toml:"jnpr_extension"`
 	Username         string            `toml:"username"`
 	Password         string            `toml:"password"`
 	Redial           config.Duration   `toml:"redial"`
@@ -187,7 +188,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log, c.Trace)
+			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.JnprExtension, c.Log, c.Trace)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	jnprHeader "github.com/door7302/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
+	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
@@ -26,20 +28,22 @@ type handler struct {
 	tagsubs            []TagSubscription
 	maxMsgSize         int
 	emptyNameWarnShown bool
+	jnprExtension      bool
 	tagStore           *tagStore
 	trace              bool
 	log                telegraf.Logger
 }
 
-func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger, trace bool) *handler {
+func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, jnprext bool, l telegraf.Logger, trace bool) *handler {
 	return &handler{
-		address:    addr,
-		aliases:    aliases,
-		tagsubs:    subs,
-		maxMsgSize: maxsize,
-		tagStore:   newTagStore(subs),
-		trace:      trace,
-		log:        l,
+		address:       addr,
+		aliases:       aliases,
+		tagsubs:       subs,
+		maxMsgSize:    maxsize,
+		jnprExtension: jnprext,
+		tagStore:      newTagStore(subs),
+		trace:         trace,
+		log:           l,
 	}
 }
 
@@ -107,12 +111,32 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 }
 
 // Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
-func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update) {
+func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update, reply *gnmiLib.SubscribeResponse) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
-
+	// Check if jnpr_extension option is set
+	if h.jnprExtension {
+		// get extention bytes
+		extensions := reply.GetExtension()
+		// If extension is present
+		if len(extensions) > 0 {
+			current_ext := extensions[0].GetRegisteredExt().Msg
+			if current_ext != nil {
+				juniper_header := &jnprHeader.GnmiJuniperTelemetryHeader{}
+				// unmarshal extention
+				result := proto.Unmarshal(current_ext, juniper_header)
+				if result == nil {
+					// Add only relevant Tags from the extension header.
+					// These are requiered for aggregation
+					prefixTags["component_id"] = fmt.Sprint(juniper_header.GetComponentId())
+					prefixTags["component"] = fmt.Sprint(juniper_header.GetComponent())
+					prefixTags["sub_component_id"] = fmt.Sprint(juniper_header.GetSubComponentId())
+				}
+			}
+		}
+	}
 	if response.Update.Prefix != nil {
 		var err error
 		if prefix, prefixAliasPath, err = handlePath(response.Update.Prefix, prefixTags, h.aliases, ""); err != nil {

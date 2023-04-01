@@ -1,0 +1,30 @@
+syntax = "proto3"; 
+// Present as first gNMI update in all packets message 
+option go_package = ".;jnpr_gnmi_extention";
+
+message GnmiJuniperTelemetryHeader {
+    // router name:export IP address
+    string system_id = 1;
+    // line card / RE (slot number)
+    uint32 component_id = 2;
+    // PFE (if applicable)
+    uint32 sub_component_id = 3;
+    // Internal sensor name
+    string sensor_name = 4;
+    // Sensor path in the subscribe request
+    string subscribed_path = 5;
+    // Internal sensor path in junos
+    string streamed_path = 6;
+    string component = 7;
+    // Sequence number, monotonically increasing for each
+    uint64 sequence_number = 8;
+    // Payload get timestamp in milliseconds
+    int64 payload_get_timestamp = 9;
+    // Stream creation timestamp in milliseconds
+    int64 stream_creation_timestamp = 10;
+    // Event timestamp in milliseconds
+    int64 event_timestamp = 11;
+    // Export timestamp in milliseconds
+    int64 export_timestamp = 12;
+}
+
