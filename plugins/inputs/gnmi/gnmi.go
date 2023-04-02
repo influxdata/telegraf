@@ -91,6 +91,12 @@ type TagSubscription struct {
 	Elements []string
 }
 
+// Allow to convey boolean variable to limit the number of arguments (lint)
+type BoolContainer struct {
+	Trace   bool
+	JnprExt bool
+}
+
 func (*GNMI) SampleConfig() string {
 	return sampleConfig
 }
@@ -188,7 +194,8 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.JnprExtension, c.Log, c.Trace)
+			bContainer := BoolContainer{Trace: c.Trace, JnprExt: c.JnprExtension}
+			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log, bContainer)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-        "google.golang.org/protobuf/proto"	
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
@@ -21,6 +20,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 type handler struct {
@@ -35,15 +35,15 @@ type handler struct {
 	log                telegraf.Logger
 }
 
-func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, jnprext bool, l telegraf.Logger, trace bool) *handler {
+func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger, bContainer BoolContainer) *handler {
 	return &handler{
 		address:       addr,
 		aliases:       aliases,
 		tagsubs:       subs,
 		maxMsgSize:    maxsize,
-		jnprExtension: jnprext,
+		jnprExtension: bContainer.JnprExt,
 		tagStore:      newTagStore(subs),
-		trace:         trace,
+		trace:         bContainer.Trace,
 		log:           l,
 	}
 }
