@@ -11,11 +11,12 @@ import (
 	"strings"
 	"time"
 
-	jnprHeader "github.com/door7302/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
+	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+        gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -102,27 +103,24 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 				h.log.Debugf("update_%v: %s", t, string(buf))
 			}
 		}
-
 		if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
-			h.handleSubscribeResponseUpdate(acc, response)
+			h.handleSubscribeResponseUpdate(acc, response, reply.GetExtension())
 		}
 	}
 	return nil
 }
 
 // Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
-func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update, reply *gnmiLib.SubscribeResponse) {
+func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update, extension []*gnmiExt.Extension) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
 	// Check if jnpr_extension option is set
 	if h.jnprExtension {
-		// get extention bytes
-		extensions := reply.GetExtension()
 		// If extension is present
-		if len(extensions) > 0 {
-			current_ext := extensions[0].GetRegisteredExt().Msg
+		if len(extension) > 0 {
+			current_ext := extension[0].GetRegisteredExt().Msg
 			if current_ext != nil {
 				juniper_header := &jnprHeader.GnmiJuniperTelemetryHeader{}
 				// unmarshal extention
