@@ -69,6 +69,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # origin = ""
   # prefix = ""
   # target = ""
+  
+  # Support Juniper Extension 
+  # Some Sensors are directly manages by Linecard. In this case Linecard adds Juniper GNMI Extension Header
+  # By setting up the jnpr_extension flag: this allows the decoding of the Extension header if present
+  # Additionnal tags are directly extracted for this extension header
+  # Tags are: component_id, component_name, sub_component_id
+  # These tags are useful for aggreation 
+  # jnpr_extension = false
 
   ## Define additional aliases to map encoding paths to measurement names
   # [inputs.gnmi.aliases]
