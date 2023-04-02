@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
-	"github.com/golang/protobuf/proto"
+        "google.golang.org/protobuf/proto"	
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
-        gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
+	gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -120,17 +120,17 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	if h.jnprExtension {
 		// If extension is present
 		if len(extension) > 0 {
-			current_ext := extension[0].GetRegisteredExt().Msg
-			if current_ext != nil {
-				juniper_header := &jnprHeader.GnmiJuniperTelemetryHeader{}
+			currentExt := extension[0].GetRegisteredExt().Msg
+			if currentExt != nil {
+				juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeader{}
 				// unmarshal extention
-				result := proto.Unmarshal(current_ext, juniper_header)
+				result := proto.Unmarshal(currentExt, juniperHeader)
 				if result == nil {
 					// Add only relevant Tags from the extension header.
 					// These are requiered for aggregation
-					prefixTags["component_id"] = fmt.Sprint(juniper_header.GetComponentId())
-					prefixTags["component"] = fmt.Sprint(juniper_header.GetComponent())
-					prefixTags["sub_component_id"] = fmt.Sprint(juniper_header.GetSubComponentId())
+					prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
+					prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
+					prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
 				}
 			}
 		}
