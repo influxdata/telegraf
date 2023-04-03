@@ -198,11 +198,11 @@ func newMP(n *NodeMetricMapping) metricParts {
 	var sb strings.Builder
 	for i, key := range keys {
 		if i != 0 {
-			sb.WriteString(", ") //nolint:revive // writes to a string-builder will always succeed
+			sb.WriteString(", ")
 		}
-		sb.WriteString(key)               //nolint:revive // writes to a string-builder will always succeed
-		sb.WriteString("=")               //nolint:revive // writes to a string-builder will always succeed
-		sb.WriteString(n.MetricTags[key]) //nolint:revive // writes to a string-builder will always succeed
+		sb.WriteString(key)
+		sb.WriteString("=")
+		sb.WriteString(n.MetricTags[key])
 	}
 	x := metricParts{
 		metricName: n.metricName,

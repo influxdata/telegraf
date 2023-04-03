@@ -120,7 +120,7 @@ func (z *Zipkin) Stop() {
 	defer z.waitGroup.Wait()
 	defer cancel()
 
-	z.server.Shutdown(ctx) //nolint:errcheck,revive // Ignore the returned error as we cannot do anything about it anyway
+	z.server.Shutdown(ctx) //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 }
 
 // Listen creates an http server on the zipkin instance it is called with, and

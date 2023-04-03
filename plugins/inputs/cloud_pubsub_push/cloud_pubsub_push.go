@@ -136,8 +136,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 // Stop cleans up all resources
 func (p *PubSubPush) Stop() {
 	p.cancel()
-	//nolint:errcheck,revive // we cannot do anything if the shutdown fails
-	p.server.Shutdown(p.ctx)
+	p.server.Shutdown(p.ctx) //nolint:errcheck // we cannot do anything if the shutdown fails
 	p.wg.Wait()
 }
 

@@ -384,8 +384,8 @@ func (cols Columns) Fields() Columns {
 func (cols Columns) Hash() string {
 	hash := fnv.New32a()
 	for _, tc := range cols.Sorted() {
-		hash.Write([]byte(tc.Name)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
-		hash.Write([]byte{0})       //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		hash.Write([]byte(tc.Name))
+		hash.Write([]byte{0})
 	}
 	return strings.ToLower(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(hash.Sum(nil)))
 }

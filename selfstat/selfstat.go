@@ -175,7 +175,7 @@ func (r *Registry) set(key uint64, s Stat) {
 
 func key(measurement string, tags map[string]string) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(measurement)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+	h.Write([]byte(measurement))
 
 	tmp := make([]string, 0, len(tags))
 	for k, v := range tags {
@@ -184,7 +184,7 @@ func key(measurement string, tags map[string]string) uint64 {
 	sort.Strings(tmp)
 
 	for _, s := range tmp {
-		h.Write([]byte(s)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		h.Write([]byte(s))
 	}
 
 	return h.Sum64()

@@ -81,7 +81,7 @@ func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[string]*Table
 
 func NewTableSource(postgresql *Postgresql, name string) *TableSource {
 	h := fnv.New64a()
-	h.Write([]byte(name)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+	h.Write([]byte(name))
 
 	tsrc := &TableSource{
 		postgresql:  postgresql,
