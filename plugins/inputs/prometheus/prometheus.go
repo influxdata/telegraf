@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/models"
 	"k8s.io/client-go/tools/cache"
 
@@ -119,6 +120,17 @@ type Prometheus struct {
 	NamespaceAnnotationPass map[string][]string `toml:"namespace_annotation_pass"`
 	NamespaceAnnotationDrop map[string][]string `toml:"namespace_annotation_drop"`
 
+	PodAnnotationInclude []string `toml:"pod_annotation_include"`
+	PodAnnotationExclude []string `toml:"pod_annotation_exclude"`
+
+	PodLabelInclude []string `toml:"pod_label_include"`
+	PodLabelExclude []string `toml:"pod_label_exclude"`
+
+	podAnnotationIncludeFilter filter.Filter
+	podAnnotationExcludeFilter filter.Filter
+	podLabelIncludeFilter      filter.Filter
+	podLabelExcludeFilter      filter.Filter
+
 	// Only for monitor_kubernetes_pods=true
 	CacheRefreshInterval int `toml:"cache_refresh_interval"`
 
@@ -193,6 +205,10 @@ func (p *Prometheus) Init() error {
 		p.nsAnnotationDrop = append(p.nsAnnotationDrop, tagFilter)
 	}
 
+	if err := p.initFilters(); err != nil {
+		return err
+	}
+
 	ctx := context.Background()
 	if p.ResponseTimeout != 0 {
 		p.HTTPClientConfig.Timeout = p.ResponseTimeout
@@ -208,6 +224,38 @@ func (p *Prometheus) Init() error {
 		"Accept":     acceptHeader,
 	}
 
+	return nil
+}
+
+func (p *Prometheus) initFilters() error {
+	if p.PodAnnotationExclude != nil {
+		podAnnotationExclude, err := filter.Compile(p.PodAnnotationExclude)
+		if err != nil {
+			return fmt.Errorf("error compiling 'pod_annotation_exclude': %w", err)
+		}
+		p.podAnnotationExcludeFilter = podAnnotationExclude
+	}
+	if p.PodAnnotationInclude != nil {
+		podAnnotationInclude, err := filter.Compile(p.PodAnnotationInclude)
+		if err != nil {
+			return fmt.Errorf("error compiling 'pod_annotation_include': %w", err)
+		}
+		p.podAnnotationIncludeFilter = podAnnotationInclude
+	}
+	if p.PodLabelExclude != nil {
+		podLabelExclude, err := filter.Compile(p.PodLabelExclude)
+		if err != nil {
+			return fmt.Errorf("error compiling 'pod_label_exclude': %w", err)
+		}
+		p.podLabelExcludeFilter = podLabelExclude
+	}
+	if p.PodLabelInclude != nil {
+		podLabelInclude, err := filter.Compile(p.PodLabelInclude)
+		if err != nil {
+			return fmt.Errorf("error compiling 'pod_label_include': %w", err)
+		}
+		p.podLabelIncludeFilter = podLabelInclude
+	}
 	return nil
 }
 
