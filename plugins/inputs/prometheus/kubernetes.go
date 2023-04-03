@@ -5,8 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,6 +12,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -369,10 +370,13 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 
 	p.Log.Debugf("will scrape metrics from %q", targetURL.String())
-	// add annotation as metrics tags
-	tags := pod.Annotations
-	if tags == nil {
-		tags = map[string]string{}
+	tags := map[string]string{}
+
+	// add annotation as metrics tags, subject to include/exclude filters
+	for k, v := range pod.Annotations {
+		if models.ShouldPassFilters(p.podAnnotationIncludeFilter, p.podAnnotationExcludeFilter, k) {
+			tags[k] = v
+		}
 	}
 
 	tags["pod_name"] = pod.Name
@@ -382,9 +386,11 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 	tags[podNamespace] = pod.Namespace
 
-	// add labels as metrics tags
+	// add labels as metrics tags, subject to include/exclude filters
 	for k, v := range pod.Labels {
-		tags[k] = v
+		if models.ShouldPassFilters(p.podLabelIncludeFilter, p.podLabelExcludeFilter, k) {
+			tags[k] = v
+		}
 	}
 	podURL := p.AddressToURL(targetURL, targetURL.Hostname())
 

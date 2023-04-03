@@ -150,7 +150,7 @@ require (
 	github.com/safchain/ethtool v0.2.0
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
 	github.com/shirou/gopsutil/v3 v3.23.2
-	github.com/showwin/speedtest-go v1.4.2
+	github.com/showwin/speedtest-go v1.5.2
 	github.com/signalfx/golib/v3 v3.3.46
 	github.com/sirupsen/logrus v1.9.0
 	github.com/sleepinggenius2/gosmi v0.4.4

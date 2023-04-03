@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync/atomic"
 
 	"github.com/awnumar/memguard"
 
@@ -24,6 +25,8 @@ var secretStorePattern = regexp.MustCompile(`^\w+$`)
 // secretPattern is a regex to extract references to secrets stored
 // in a secret-store.
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
+
+var secretCount atomic.Int64
 
 // Secret safely stores sensitive data such as a password or token
 type Secret struct {
@@ -60,6 +63,9 @@ func (s *Secret) UnmarshalText(b []byte) error {
 
 // Initialize the secret content
 func (s *Secret) init(secret []byte) {
+	// Keep track of the number of secrets...
+	secretCount.Add(1)
+
 	// Remember if the secret is completely empty
 	s.notempty = len(secret) != 0
 
@@ -87,6 +93,9 @@ func (s *Secret) Destroy() {
 		lockbuf.Destroy()
 	}
 	s.enclave = nil
+
+	// Keep track of the number of secrets...
+	secretCount.Add(-1)
 }
 
 // Empty return if the secret is completely empty
