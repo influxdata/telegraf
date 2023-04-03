@@ -63,8 +63,9 @@ type MetadataIamToken struct {
 }
 
 const (
-	defaultRequestTimeout    = time.Second * 20
-	defaultEndpointURL       = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
+	defaultRequestTimeout = time.Second * 20
+	defaultEndpointURL    = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
+	//nolint:gosec // G101: Potential hardcoded credentials - false positive
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
