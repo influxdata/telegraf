@@ -1,6 +1,47 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.26.1 [2023-04-03]
+
+### Bugfixes
+
+- [#12880](https://github.com/influxdata/telegraf/pull/12880) `config` Return error on order set as string
+- [#12867](https://github.com/influxdata/telegraf/pull/12867) `inputs.ethtool` Check for nil
+- [#12935](https://github.com/influxdata/telegraf/pull/12935) `inputs.execd` Add option to set buffer size
+- [#12877](https://github.com/influxdata/telegraf/pull/12877) `inputs.internet_speed` Rename host tag to source
+- [#12918](https://github.com/influxdata/telegraf/pull/12918) `inputs.kubernetes` Apply timeout for the whole HTTP request
+- [#13006](https://github.com/influxdata/telegraf/pull/13006) `inputs.netflow` Use correct name in the build tag
+- [#13015](https://github.com/influxdata/telegraf/pull/13015) `inputs.procstat` Return tags of pids if lookup_error
+- [#12864](https://github.com/influxdata/telegraf/pull/12864) `inputs.prometheus` Correctly set timeout param
+- [#12907](https://github.com/influxdata/telegraf/pull/12907) `inputs.prometheus` Use set over add for custom headers
+- [#12961](https://github.com/influxdata/telegraf/pull/12961) `inputs.upsd` Include ups.real_power
+- [#12908](https://github.com/influxdata/telegraf/pull/12908) `outputs.graphite` Add custom regex to outputs
+- [#13012](https://github.com/influxdata/telegraf/pull/13012) `secrets` Add function to set a secret
+- [#13002](https://github.com/influxdata/telegraf/pull/13002) `secrets` Minimize secret holding time
+- [#12993](https://github.com/influxdata/telegraf/pull/12993) `secrets` Warn if OS limit for locked memory is too low
+- [#12919](https://github.com/influxdata/telegraf/pull/12919) `secrets` Handle array of secrets correctly
+- [#12835](https://github.com/influxdata/telegraf/pull/12835) `serializers.graphite` Allow for specifying regex to sanitize
+- [#12990](https://github.com/influxdata/telegraf/pull/12990) `systemd` Increase lock memory for service to 8192kb
+
+### Dependency Updates
+
+- [#12857](https://github.com/influxdata/telegraf/pull/12857) `deps` Bump github.com/antchfx/xpath from 1.2.3 to 1.2.4
+- [#12909](https://github.com/influxdata/telegraf/pull/12909) `deps` Bump github.com/apache/thrift from 0.16.0 to 0.18.1
+- [#12856](https://github.com/influxdata/telegraf/pull/12856) `deps` Bump github.com/Azure/azure-event-hubs-go/v3 from 3.3.20 to 3.4.0
+- [#12966](https://github.com/influxdata/telegraf/pull/12966) `deps` Bump github.com/Azure/go-autorest/autorest/azure/auth from 0.5.11 to 0.5.12
+- [#12964](https://github.com/influxdata/telegraf/pull/12964) `deps` Bump github.com/golang-jwt/jwt/v4 from 4.4.2 to 4.5.0
+- [#12967](https://github.com/influxdata/telegraf/pull/12967) `deps` Bump github.com/jhump/protoreflect from 1.8.3-0.20210616212123-6cc1efa697ca to 1.15.1
+- [#12855](https://github.com/influxdata/telegraf/pull/12855) `deps` Bump github.com/nats-io/nats.go from 1.19.0 to 1.24.0
+- [#12981](https://github.com/influxdata/telegraf/pull/12981) `deps` Bump github.com/opencontainers/runc from 1.1.4 to 1.1.5
+- [#12913](https://github.com/influxdata/telegraf/pull/12913) `deps` Bump github.com/pion/dtls/v2 from 2.2.4 to 2.2.6
+- [#12968](https://github.com/influxdata/telegraf/pull/12968) `deps` Bump github.com/rabbitmq/amqp091-go from 1.7.0 to 1.8.0
+- [#13017](https://github.com/influxdata/telegraf/pull/13017) `deps` Bump github.com/shirou/gopsutil from 3.23.2 to 3.23.3
+- [#12853](https://github.com/influxdata/telegraf/pull/12853) `deps` Bump github.com/Shopify/sarama from 1.37.2 to 1.38.1
+- [#12854](https://github.com/influxdata/telegraf/pull/12854) `deps` Bump github.com/sensu/sensu-go/api/core/v2 from 2.15.0 to 2.16.0
+- [#12911](https://github.com/influxdata/telegraf/pull/12911) `deps` Bump github.com/tidwall/gjson from 1.14.3 to 1.14.4
+- [#12912](https://github.com/influxdata/telegraf/pull/12912) `deps` Bump golang.org/x/net from 0.7.0 to 0.8.0
+- [#12910](https://github.com/influxdata/telegraf/pull/12910) `deps` Bump modernc.org/sqlite from 1.19.2 to 1.21.0
+
 ## v1.26.0 [2023-03-13]
 
 ### Important Changes
