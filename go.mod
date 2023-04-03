@@ -149,7 +149,7 @@ require (
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/safchain/ethtool v0.2.0
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
-	github.com/shirou/gopsutil/v3 v3.23.2
+	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/showwin/speedtest-go v1.4.2
 	github.com/signalfx/golib/v3 v3.3.46
 	github.com/sirupsen/logrus v1.9.0
@@ -388,6 +388,7 @@ require (
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e // indirect
+	github.com/shoenig/go-m1cpu v0.1.4 // indirect
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
 	github.com/signalfx/sapm-proto v0.7.2 // indirect
