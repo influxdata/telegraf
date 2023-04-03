@@ -89,6 +89,8 @@ type Config struct {
 	version      *semver.Version
 
 	Persister *persister.Persister
+
+	NumberSecrets uint64
 }
 
 // Ordered plugins used to keep the order in which they appear in a file
@@ -470,6 +472,9 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	if c.Agent.SnmpTranslator == "" {
 		c.Agent.SnmpTranslator = "netsnmp"
 	}
+
+	// Check if there is enough lockable memory for the secret
+	c.NumberSecrets = uint64(secretCount.Load())
 
 	// Let's link all secrets to their secret-stores
 	return c.LinkSecrets()

@@ -10,6 +10,7 @@ import (
 
 	"github.com/kardianos/service"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/sys/windows"
 
 	"github.com/influxdata/telegraf/logger"
 )
@@ -43,6 +44,16 @@ func cliFlags() []cli.Flag {
 			Usage: "run as console application (windows only)",
 		},
 	}
+}
+
+func getLockedMemoryLimit() uint64 {
+	handle := windows.CurrentProcess()
+
+	var min, max uintptr
+	var flag uint32
+	windows.GetProcessWorkingSetSizeEx(handle, &min, &max, &flag)
+
+	return uint64(max)
 }
 
 func (t *Telegraf) Run() error {
