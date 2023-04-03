@@ -19,10 +19,10 @@ func TestAzureSQLIntegration_Managed_ResourceStats_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMIResourceStats"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
@@ -53,10 +53,10 @@ func TestAzureSQLIntegration_Managed_ResourceGovernance_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMIResourceGovernance"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
@@ -95,10 +95,10 @@ func TestAzureSQLIntegration_Managed_DatabaseIO_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMIDatabaseIO"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
@@ -138,10 +138,10 @@ func TestAzureSQLIntegration_Managed_ServerProperties_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMIServerProperties"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
@@ -186,10 +186,10 @@ func TestAzureSQLIntegration_Managed_OsWaitStats_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMIOsWaitstats"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
@@ -224,10 +224,10 @@ func TestAzureSQLIntegration_Managed_MemoryClerks_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMIMemoryClerks"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
@@ -257,10 +257,10 @@ func TestAzureSQLIntegration_Managed_PerformanceCounters_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMIPerformanceCounters"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
@@ -293,10 +293,10 @@ func TestAzureSQLIntegration_Managed_Requests_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMIRequests"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
@@ -352,10 +352,10 @@ func TestAzureSQLIntegration_Managed_Schedulers_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_MI_CONNECTION_STRING")
-	serversList := []config.Secret{config.NewSecret([]byte(connectionString))}
+	sl := config.NewSecret([]byte(connectionString))
 
 	server := &SQLServer{
-		Servers:      serversList,
+		Servers:      []*config.Secret{&sl},
 		IncludeQuery: []string{"AzureSQLMISchedulers"},
 		AuthMethod:   "connection_string",
 		DatabaseType: "AzureSQLManagedInstance",
