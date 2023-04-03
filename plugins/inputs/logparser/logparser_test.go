@@ -141,7 +141,7 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 	input, err := os.ReadFile(filepath.Join(testdataDir, "test_a.log"))
 	require.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(emptydir, "test_a.log"), input, 0644)
+	err = os.WriteFile(filepath.Join(emptydir, "test_a.log"), input, 0640)
 	require.NoError(t, err)
 
 	require.NoError(t, acc.GatherError(logparser.Gather))

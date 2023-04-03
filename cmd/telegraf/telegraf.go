@@ -346,7 +346,7 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	if t.pidFile != "" {
-		f, err := os.OpenFile(t.pidFile, os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(t.pidFile, os.O_CREATE|os.O_WRONLY, 0640)
 		if err != nil {
 			log.Printf("E! Unable to create pidfile: %s", err)
 		} else {

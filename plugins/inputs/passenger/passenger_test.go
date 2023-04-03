@@ -26,6 +26,7 @@ func fakePassengerStatus(stat string) (string, error) {
 	}
 
 	tempFilePath := filepath.Join(os.TempDir(), "passenger-status"+fileExtension)
+	//nolint:gosec // G306: Expect WriteFile permissions to be 0640 or less - this file needs to be executed
 	if err := os.WriteFile(tempFilePath, []byte(content), 0700); err != nil {
 		return "", err
 	}
