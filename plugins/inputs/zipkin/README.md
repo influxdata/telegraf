@@ -32,8 +32,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
 [[inputs.zipkin]]
-  # path = "/api/v1/spans" # URL path for span data
-  # port = 9411 # Port on which Telegraf listens
+  ## URL path for span data
+  # path = "/api/v1/spans"
+
+  ## Port on which Telegraf listens
+  # port = 9411
+
+  ## Maximum duration before timing out read of the request
+  # read_timeout = "10s"
+  ## Maximum duration before timing out write of the response
+  # write_timeout = "10s"
 ```
 
 The plugin accepts spans in `JSON` or `thrift` if the `Content-Type` is
@@ -67,7 +75,7 @@ Traces are built by collecting all Spans that share a traceId.
 
 ### Tags
 
-- __"id":__               The 64 bit ID of the span.
+- __"id":__               The 64-bit ID of the span.
 - __"parent_id":__        An ID associated with a particular child span.  If there is no child span, the parent ID is set to ID.
 - __"trace_id":__        The 64 or 128-bit ID of a particular trace. Every span in a trace shares this ID. Concatenation of high and low and converted to hexadecimal.
 - __"name":__             Defines a span
@@ -103,7 +111,7 @@ SHOW TAG VALUES FROM "zipkin" WITH KEY = "service_name"
 
 - __Description:__  returns a list of all `distinct` endpoint service names.
 
--__Find spans with longest duration__-
+-__Find spans with the longest duration__-
 
 ```sql
 SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND "name" = 'my_span_name' AND time > now() - 20m GROUP BY "trace_id",time(30s) LIMIT 5
