@@ -25,16 +25,16 @@ var sampleConfig string
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []config.Secret `toml:"servers"`
-	QueryTimeout config.Duration `toml:"query_timeout"`
-	AuthMethod   string          `toml:"auth_method"`
-	QueryVersion int             `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
-	AzureDB      bool            `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
-	DatabaseType string          `toml:"database_type"`
-	IncludeQuery []string        `toml:"include_query"`
-	ExcludeQuery []string        `toml:"exclude_query"`
-	HealthMetric bool            `toml:"health_metric"`
-	Log          telegraf.Logger `toml:"-"`
+	Servers      []*config.Secret `toml:"servers"`
+	QueryTimeout config.Duration  `toml:"query_timeout"`
+	AuthMethod   string           `toml:"auth_method"`
+	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
+	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
+	DatabaseType string           `toml:"database_type"`
+	IncludeQuery []string         `toml:"include_query"`
+	ExcludeQuery []string         `toml:"exclude_query"`
+	HealthMetric bool             `toml:"health_metric"`
+	Log          telegraf.Logger  `toml:"-"`
 
 	pools       []*sql.DB
 	queries     MapQuery
@@ -450,7 +450,8 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 
 func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
-		s.Log.Warn("Warning: Server list is empty.")
+		srv := config.NewSecret([]byte(defaultServer))
+		s.Servers = append(s.Servers, &srv)
 	}
 
 	return nil
@@ -547,7 +548,6 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{
-			Servers:    []config.Secret{config.NewSecret([]byte(defaultServer))},
 			AuthMethod: "connection_string",
 		}
 	})
