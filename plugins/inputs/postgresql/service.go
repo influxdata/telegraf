@@ -102,18 +102,21 @@ var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)
 
 // Start starts the ServiceInput's service, whatever that may be
 func (p *Service) Start(telegraf.Accumulator) (err error) {
-	addr, err := p.Address.Get()
+	addrSecret, err := p.Address.Get()
 	if err != nil {
 		return fmt.Errorf("getting address failed: %w", err)
 	}
-	defer config.ReleaseSecret(addr)
+	addr := string(addrSecret)
+	defer config.ReleaseSecret(addrSecret)
 
-	if p.Address.Empty() || string(addr) == "localhost" {
-		addr = []byte("host=localhost sslmode=disable")
-		p.Address = config.NewSecret(addr)
+	if p.Address.Empty() || addr == "localhost" {
+		addr = "host=localhost sslmode=disable"
+		if err := p.Address.Set([]byte(addr)); err != nil {
+			return err
+		}
 	}
 
-	connConfig, err := pgx.ParseConfig(string(addr))
+	connConfig, err := pgx.ParseConfig(addr)
 	if err != nil {
 		return err
 	}
