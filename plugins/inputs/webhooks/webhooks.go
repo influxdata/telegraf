@@ -7,10 +7,12 @@ import (
 	"net"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/artifactory"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
@@ -24,6 +26,11 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const (
+	defaultReadTimeout  = 10 * time.Second
+	defaultWriteTimeout = 10 * time.Second
+)
+
 type Webhook interface {
 	Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger)
 }
@@ -33,7 +40,9 @@ func init() {
 }
 
 type Webhooks struct {
-	ServiceAddress string `toml:"service_address"`
+	ServiceAddress string          `toml:"service_address"`
+	ReadTimeout    config.Duration `toml:"read_timeout"`
+	WriteTimeout   config.Duration `toml:"write_timeout"`
 
 	Github      *github.GithubWebhook           `toml:"github"`
 	Filestack   *filestack.FilestackWebhook     `toml:"filestack"`
@@ -82,13 +91,24 @@ func (wb *Webhooks) AvailableWebhooks() []Webhook {
 }
 
 func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
+	if wb.ReadTimeout < config.Duration(time.Second) {
+		wb.ReadTimeout = config.Duration(defaultReadTimeout)
+	}
+	if wb.WriteTimeout < config.Duration(time.Second) {
+		wb.WriteTimeout = config.Duration(defaultWriteTimeout)
+	}
+
 	r := mux.NewRouter()
 
 	for _, webhook := range wb.AvailableWebhooks() {
 		webhook.Register(r, acc, wb.Log)
 	}
 
-	wb.srv = &http.Server{Handler: r}
+	wb.srv = &http.Server{
+		Handler:      r,
+		ReadTimeout:  time.Duration(wb.ReadTimeout),
+		WriteTimeout: time.Duration(wb.WriteTimeout),
+	}
 
 	ln, err := net.Listen("tcp", wb.ServiceAddress)
 	if err != nil {
