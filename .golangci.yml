@@ -88,6 +88,7 @@ linters-settings:
     # Available rules: https://github.com/securego/gosec#available-rules
     # Default: [] - means include all rules
     includes:
+      - G101
       - G102
       - G106
       - G107
@@ -238,6 +239,9 @@ issues:
 
     - path: cmd/telegraf/(main|printer).go
       text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
+
+    - path: _test\.go
+      text: "Potential hardcoded credentials"
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.
