@@ -211,6 +211,7 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
+	c.Agent.Quiet = t.quiet
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
 	c.SecretStoreFilters = t.secretstoreFilters
