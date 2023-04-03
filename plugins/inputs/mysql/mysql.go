@@ -105,12 +105,12 @@ func (m *Mysql) Init() error {
 
 	// Adapt the DSN string
 	for i, server := range m.Servers {
-		s, err := server.Get()
+		dsnSecret, err := server.Get()
 		if err != nil {
 			return fmt.Errorf("getting server %d failed: %w", i, err)
 		}
-		dsn := string(s)
-		config.ReleaseSecret(s)
+		dsn := string(dsnSecret)
+		config.ReleaseSecret(dsnSecret)
 		conf, err := mysql.ParseDSN(dsn)
 		if err != nil {
 			return fmt.Errorf("parsing %q failed: %w", dsn, err)
@@ -415,12 +415,12 @@ const (
 )
 
 func (m *Mysql) gatherServer(server *config.Secret, acc telegraf.Accumulator) error {
-	s, err := server.Get()
+	dsnSecret, err := server.Get()
 	if err != nil {
 		return err
 	}
-	dsn := string(s)
-	config.ReleaseSecret(s)
+	dsn := string(dsnSecret)
+	config.ReleaseSecret(dsnSecret)
 	servtag := getDSNTag(dsn)
 
 	db, err := sql.Open("mysql", dsn)

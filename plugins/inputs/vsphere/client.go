@@ -141,13 +141,14 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
 		password, err := vs.Password.Get()
 		if err != nil {
+			config.ReleaseSecret(username)
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
 		vSphereURL.User = url.UserPassword(string(username), string(password))
+		config.ReleaseSecret(username)
+		config.ReleaseSecret(password)
 	}
 
 	vs.Log.Debugf("Creating client: %s", vSphereURL.Host)

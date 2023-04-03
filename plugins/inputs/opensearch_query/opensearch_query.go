@@ -109,18 +109,19 @@ func (o *OpensearchQuery) newClient() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
 	password, err := o.Password.Get()
 	if err != nil {
+		config.ReleaseSecret(username)
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
 
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
 		Username:  string(username),
 		Password:  string(password),
 	}
+	config.ReleaseSecret(username)
+	config.ReleaseSecret(password)
 
 	if o.InsecureSkipVerify {
 		clientConfig.Transport = &http.Transport{

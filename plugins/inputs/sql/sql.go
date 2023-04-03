@@ -358,13 +358,14 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	var err error
 
 	// Connect to the database server
-	dsn, err := s.Dsn.Get()
+	dsnSecret, err := s.Dsn.Get()
 	if err != nil {
 		return fmt.Errorf("getting DSN failed: %w", err)
 	}
-	defer config.ReleaseSecret(dsn)
+	dsn := string(dsnSecret)
+	config.ReleaseSecret(dsnSecret)
 	s.Log.Debug("Connecting...")
-	s.db, err = dbsql.Open(s.driverName, string(dsn))
+	s.db, err = dbsql.Open(s.driverName, dsn)
 	if err != nil {
 		return err
 	}
@@ -472,12 +473,7 @@ func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Quer
 }
 
 func (s *SQL) checkDSN() error {
-	dsn, err := s.Dsn.Get()
-	if err != nil {
-		return fmt.Errorf("getting DSN failed: %w", err)
-	}
-	defer config.ReleaseSecret(dsn)
-	if len(dsn) == 0 {
+	if s.Dsn.Empty() {
 		return errors.New("missing data source name (DSN) option")
 	}
 	return nil
