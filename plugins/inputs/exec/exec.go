@@ -111,7 +111,7 @@ func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
 		buf.Truncate(i)
 	}
 	if didTruncate {
-		buf.WriteString("...") //nolint:revive // will always return nil or panic
+		buf.WriteString("...")
 	}
 	return buf
 }

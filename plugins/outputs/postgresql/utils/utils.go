@@ -71,10 +71,10 @@ func (l PGXLogger) Log(_ context.Context, level pgx.LogLevel, msg string, data m
 func GetTagID(metric telegraf.Metric) int64 {
 	hash := fnv.New64a()
 	for _, tag := range metric.TagList() {
-		hash.Write([]byte(tag.Key))   //nolint:revive // all Write() methods for hash in fnv.go returns nil err
-		hash.Write([]byte{0})         //nolint:revive // all Write() methods for hash in fnv.go returns nil err
-		hash.Write([]byte(tag.Value)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
-		hash.Write([]byte{0})         //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		hash.Write([]byte(tag.Key))
+		hash.Write([]byte{0})
+		hash.Write([]byte(tag.Value))
+		hash.Write([]byte{0})
 	}
 	// Convert to int64 as postgres does not support uint64
 	return int64(hash.Sum64())

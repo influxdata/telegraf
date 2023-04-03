@@ -346,20 +346,20 @@ func (a *AzureMonitor) send(body []byte) error {
 
 func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte("\n"))     //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte(m.Name()))
+	h.Write([]byte("\n"))
 	for _, tag := range m.TagList() {
 		if tag.Key == "" || tag.Value == "" {
 			continue
 		}
 
-		h.Write([]byte(tag.Key)) //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte("\n"))    //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(tag.Key))
+		h.Write([]byte("\n"))
 	}
 	b := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(b, uint64(m.Time().UnixNano()))
-	h.Write(b[:n])        //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte("\n")) //nolint:revive // from hash.go: "It never returns an error"
+	h.Write(b[:n])
+	h.Write([]byte("\n"))
 	return h.Sum64()
 }
 
@@ -553,10 +553,10 @@ func hashIDWithField(id uint64, fk string) uint64 {
 	h := fnv.New64a()
 	b := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(b, id)
-	h.Write(b[:n])        //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte("\n")) //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte(fk))   //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte("\n")) //nolint:revive // from hash.go: "It never returns an error"
+	h.Write(b[:n])
+	h.Write([]byte("\n"))
+	h.Write([]byte(fk))
+	h.Write([]byte("\n"))
 	return h.Sum64()
 }
 

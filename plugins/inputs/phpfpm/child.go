@@ -291,7 +291,7 @@ func (c *child) serveRequest(req *request, body io.ReadCloser) {
 	// some sort of abort request to the host, so the host
 	// can properly cut off the client sending all the data.
 	// For now just bound it a little and
-	io.CopyN(io.Discard, body, 100<<20) //nolint:errcheck,revive // ignore the returned error as we cannot do anything about it anyway
+	io.CopyN(io.Discard, body, 100<<20) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 	body.Close()
 
 	if !req.keepConn {

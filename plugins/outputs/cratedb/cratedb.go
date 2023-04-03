@@ -202,7 +202,7 @@ func escapeString(s string, quote string) string {
 // [1] https://github.com/influxdata/telegraf/pull/3210#discussion_r148411201
 func hashID(m telegraf.Metric) int64 {
 	h := sha512.New()
-	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte(m.Name()))
 	tags := m.Tags()
 	tmp := make([]string, 0, len(tags))
 	for k, v := range tags {
@@ -211,7 +211,7 @@ func hashID(m telegraf.Metric) int64 {
 	sort.Strings(tmp)
 
 	for _, s := range tmp {
-		h.Write([]byte(s)) //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(s))
 	}
 	sum := h.Sum(nil)
 

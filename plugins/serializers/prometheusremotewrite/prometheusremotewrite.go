@@ -239,7 +239,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		return nil, fmt.Errorf("unable to marshal protobuf: %w", err)
 	}
 	encoded := snappy.Encode(nil, data)
-	buf.Write(encoded) //nolint:revive // from buffer.go: "err is always nil"
+	buf.Write(encoded)
 	return buf.Bytes(), nil
 }
 
@@ -318,10 +318,10 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []prompb.Label {
 func MakeMetricKey(labels []prompb.Label) MetricKey {
 	h := fnv.New64a()
 	for _, label := range labels {
-		h.Write([]byte(label.Name))  //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte("\x00"))      //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte(label.Value)) //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte("\x00"))      //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(label.Name))
+		h.Write([]byte("\x00"))
+		h.Write([]byte(label.Value))
+		h.Write([]byte("\x00"))
 	}
 	return MetricKey(h.Sum64())
 }

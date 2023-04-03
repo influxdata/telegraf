@@ -90,13 +90,13 @@ func sanitize(name string, table Table) (string, bool) {
 		switch {
 		case i == 0:
 			if unicode.In(r, table.First) {
-				b.WriteRune(r) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+				b.WriteRune(r)
 			}
 		default:
 			if unicode.In(r, table.Rest) {
-				b.WriteRune(r) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+				b.WriteRune(r)
 			} else {
-				b.WriteString("_") //nolint:revive // from builder.go: "It returns the length of s and a nil error."
+				b.WriteString("_")
 			}
 		}
 	}
