@@ -95,10 +95,8 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 				"running":     0,
 				"result_code": 1,
 			}
-			tags := map[string]string{
-				"pid_finder": p.PidFinder,
-				"result":     "lookup_error",
-			}
+			tags["pid_finder"] = p.PidFinder
+			tags["result"] = "lookup_error"
 			acc.AddFields("procstat_lookup", fields, tags, now)
 			return err
 		}
