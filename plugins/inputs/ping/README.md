@@ -189,6 +189,6 @@ progress at <https://github.com/golang/go/issues/7175> and
 
 ## Example Output
 
-```shell
+```text
 ping,url=example.org average_response_ms=23.066,ttl=63,maximum_response_ms=24.64,minimum_response_ms=22.451,packets_received=5i,packets_transmitted=5i,percent_packet_loss=0,result_code=0i,standard_deviation_ms=0.809 1535747258000000000
 ```

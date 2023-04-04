@@ -150,7 +150,7 @@ Defaults!IPMITOOL !logfile, !syslog, !pam_session
 
 When retrieving stats from a remote server:
 
-```shell
+```text
 ipmi_sensor,server=10.20.2.203,name=uid_light value=0,status=1i 1517125513000000000
 ipmi_sensor,server=10.20.2.203,name=sys._health_led status=1i,value=0 1517125513000000000
 ipmi_sensor,server=10.20.2.203,name=power_supply_1,unit=watts status=1i,value=110 1517125513000000000
@@ -161,7 +161,7 @@ ipmi_sensor,server=10.20.2.203,name=fan_1,unit=percent status=1i,value=43.12 151
 
 When retrieving stats from the local machine (no server specified):
 
-```shell
+```text
 ipmi_sensor,name=uid_light value=0,status=1i 1517125513000000000
 ipmi_sensor,name=sys._health_led status=1i,value=0 1517125513000000000
 ipmi_sensor,name=power_supply_1,unit=watts status=1i,value=110 1517125513000000000
@@ -174,7 +174,7 @@ ipmi_sensor,name=fan_1,unit=percent status=1i,value=43.12 1517125513000000000
 
 When retrieving stats from the local machine (no server specified):
 
-```shell
+```text
 ipmi_sensor,name=uid_light,entity_id=23.1,status_code=ok,status_desc=ok value=0 1517125474000000000
 ipmi_sensor,name=sys._health_led,entity_id=23.2,status_code=ok,status_desc=ok value=0 1517125474000000000
 ipmi_sensor,entity_id=10.1,name=power_supply_1,status_code=ok,status_desc=presence_detected,unit=watts value=110 1517125474000000000

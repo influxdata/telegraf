@@ -378,7 +378,7 @@ cpu_usage_user{cpu="cpu3"} 1.5045135406226022
 
 ### Output
 
-```shell
+```text
 go_gc_duration_seconds,url=http://example.org:9273/metrics 1=0.001336611,count=14,sum=0.004527551,0=0.000057965,0.25=0.000083812,0.5=0.000286537,0.75=0.000365303 1505776733000000000
 go_goroutines,url=http://example.org:9273/metrics gauge=21 1505776695000000000
 cpu_usage_user,cpu=cpu0,url=http://example.org:9273/metrics gauge=1.513622603430151 1505776751000000000
@@ -389,7 +389,7 @@ cpu_usage_user,cpu=cpu3,url=http://example.org:9273/metrics gauge=1.522842639594
 
 ### Output (when metric_version = 2)
 
-```shell
+```text
 prometheus,quantile=1,url=http://example.org:9273/metrics go_gc_duration_seconds=0.005574303 1556075100000000000
 prometheus,quantile=0.75,url=http://example.org:9273/metrics go_gc_duration_seconds=0.0001046 1556075100000000000
 prometheus,quantile=0.5,url=http://example.org:9273/metrics go_gc_duration_seconds=0.0000719 1556075100000000000

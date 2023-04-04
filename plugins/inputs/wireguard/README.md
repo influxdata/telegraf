@@ -75,7 +75,7 @@ those printed by this command.
 
 ## Example Output
 
-```shell
+```text
 wireguard_device,host=WGVPN,name=wg0,type=linux_kernel firewall_mark=51820i,listen_port=58216i 1582513589000000000
 wireguard_device,host=WGVPN,name=wg0,type=linux_kernel peers=1i 1582513589000000000
 wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= allowed_ips=2i,persistent_keepalive_interval_ns=60000000000i,protocol_version=1i,allowed_peer_cidr=192.168.1.0/24,10.0.0.0/8 1582513589000000000

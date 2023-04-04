@@ -121,6 +121,6 @@ documentation][6].
 
 ## Example Output
 
-```shell
+```text
 haproxy,server=/run/haproxy/admin.sock,proxy=public,sv=FRONTEND,type=frontend http_response.other=0i,req_rate_max=1i,comp_byp=0i,status="OPEN",rate_lim=0i,dses=0i,req_rate=0i,comp_rsp=0i,bout=9287i,comp_in=0i,mode="http",smax=1i,slim=2000i,http_response.1xx=0i,conn_rate=0i,dreq=0i,ereq=0i,iid=2i,rate_max=1i,http_response.2xx=1i,comp_out=0i,intercepted=1i,stot=2i,pid=1i,http_response.5xx=1i,http_response.3xx=0i,http_response.4xx=0i,conn_rate_max=1i,conn_tot=2i,dcon=0i,bin=294i,rate=0i,sid=0i,req_tot=2i,scur=0i,dresp=0i 1513293519000000000
 ```

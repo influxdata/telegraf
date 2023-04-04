@@ -141,6 +141,6 @@ a successful connection.
 
 ## Example Output
 
-```shell
+```text
 http_response,method=GET,result=success,server=http://github.com,status_code=200 content_length=87878i,http_response_code=200i,response_time=0.937655534,result_code=0i,result_type="success" 1565839598000000000
 ```

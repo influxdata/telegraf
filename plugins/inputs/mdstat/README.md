@@ -59,9 +59,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
-$ telegraf --config ~/ws/telegraf.conf --input-filter mdstat --test
-* Plugin: mdstat, Collection 1
-> mdstat,ActivityState=active,Devices=sdm1\,sdn1,Name=md1 BlocksSynced=231299072i,BlocksSyncedFinishTime=0,BlocksSyncedPct=0,BlocksSyncedSpeed=0,BlocksTotal=231299072i,DisksActive=2i,DisksFailed=0i,DisksSpare=0i,DisksTotal=2i,DisksDown=0i 1617814276000000000
-> mdstat,ActivityState=active,Devices=sdm5\,sdn5,Name=md2 BlocksSynced=2996224i,BlocksSyncedFinishTime=0,BlocksSyncedPct=0,BlocksSyncedSpeed=0,BlocksTotal=2996224i,DisksActive=2i,DisksFailed=0i,DisksSpare=0i,DisksTotal=2i,DisksDown=0i 1617814276000000000
+```text
+mdstat,ActivityState=active,Devices=sdm1\,sdn1,Name=md1 BlocksSynced=231299072i,BlocksSyncedFinishTime=0,BlocksSyncedPct=0,BlocksSyncedSpeed=0,BlocksTotal=231299072i,DisksActive=2i,DisksFailed=0i,DisksSpare=0i,DisksTotal=2i,DisksDown=0i 1617814276000000000
+mdstat,ActivityState=active,Devices=sdm5\,sdn5,Name=md2 BlocksSynced=2996224i,BlocksSyncedFinishTime=0,BlocksSyncedPct=0,BlocksSyncedSpeed=0,BlocksTotal=2996224i,DisksActive=2i,DisksFailed=0i,DisksSpare=0i,DisksTotal=2i,DisksDown=0i 1617814276000000000
 ```

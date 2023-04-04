@@ -78,7 +78,7 @@ the KNX-specification or the "knx-go" project for the corresponding DPT.
 
 This section shows example output in Line Protocol format.
 
-```shell
+```text
 illumination,groupaddress=5/5/4,host=Hugin,source=1.1.12,unit=lux value=17.889999389648438 1582132674999013274
 temperature,groupaddress=5/5/1,host=Hugin,source=1.1.8,unit=°C value=17.799999237060547 1582132663427587361
 windowopen,groupaddress=1/0/1,host=Hugin,source=1.1.3 value=true 1582132630425581320
