@@ -82,13 +82,11 @@ Fields may vary depending on the plugin type
 
 ## Example Output
 
-```shell
-$ telegraf --config fluentd.conf --input-filter fluentd --test
-* Plugin: inputs.fluentd, Collection 1
-> fluentd,host=T440s,plugin_id=object:9f748c,plugin_category=input,plugin_type=dummy buffer_total_queued_size=0,buffer_queue_length=0,retry_count=0 1492006105000000000
-> fluentd,plugin_category=input,plugin_type=dummy,host=T440s,plugin_id=object:8da98c buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
-> fluentd,plugin_id=object:820190,plugin_category=input,plugin_type=monitor_agent,host=T440s retry_count=0,buffer_total_queued_size=0,buffer_queue_length=0 1492006105000000000
-> fluentd,plugin_id=object:c5e054,plugin_category=output,plugin_type=stdout,host=T440s buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
-> fluentd,plugin_type=s3,host=T440s,plugin_id=object:bd7a90,plugin_category=output buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
-> fluentd,plugin_id=output_td, plugin_category=output,plugin_type=tdlog, host=T440s buffer_available_buffer_space_ratios=100,buffer_queue_byte_size=0,buffer_queue_length=0,buffer_stage_byte_size=0,buffer_stage_length=0,buffer_total_queued_size=0,emit_count=0,emit_records=0,flush_time_count=0,retry_count=0,rollback_count=0,slow_flush_count=0,write_count=0 1651474085000000000
+```text
+fluentd,host=T440s,plugin_id=object:9f748c,plugin_category=input,plugin_type=dummy buffer_total_queued_size=0,buffer_queue_length=0,retry_count=0 1492006105000000000
+fluentd,plugin_category=input,plugin_type=dummy,host=T440s,plugin_id=object:8da98c buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
+fluentd,plugin_id=object:820190,plugin_category=input,plugin_type=monitor_agent,host=T440s retry_count=0,buffer_total_queued_size=0,buffer_queue_length=0 1492006105000000000
+fluentd,plugin_id=object:c5e054,plugin_category=output,plugin_type=stdout,host=T440s buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
+fluentd,plugin_type=s3,host=T440s,plugin_id=object:bd7a90,plugin_category=output buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
+fluentd,plugin_id=output_td, plugin_category=output,plugin_type=tdlog, host=T440s buffer_available_buffer_space_ratios=100,buffer_queue_byte_size=0,buffer_queue_length=0,buffer_stage_byte_size=0,buffer_stage_length=0,buffer_total_queued_size=0,emit_count=0,emit_records=0,flush_time_count=0,retry_count=0,rollback_count=0,slow_flush_count=0,write_count=0 1651474085000000000
 ```

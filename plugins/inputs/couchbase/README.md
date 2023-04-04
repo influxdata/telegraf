@@ -306,7 +306,7 @@ option:
 
 ## Example Output
 
-```shell
+```text
 couchbase_node,cluster=http://localhost:8091/,hostname=172.17.0.2:8091 memory_free=7705575424,memory_total=16558182400 1547829754000000000
 couchbase_bucket,bucket=beer-sample,cluster=http://localhost:8091/ quota_percent_used=27.09285736083984,ops_per_sec=0,disk_fetches=0,item_count=7303,disk_used=21662946,data_used=9325087,mem_used=28408920 1547829754000000000
 ```

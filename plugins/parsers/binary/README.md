@@ -330,9 +330,9 @@ the correct configuration by comparing the 3rd byte (containing
 the message type). This will lead to the following output
 
 ```text
-> metricA,address=383,failure=false count=42i,value=3.1415 1658835984000000000
-> metricB value=3737169374i 1658847037000000000
-> metricC x=2.718280076980591,y=0.0000000000000000000000000000000006626070178575745 1658835984000000000
+metricA,address=383,failure=false count=42i,value=3.1415 1658835984000000000
+metricB value=3737169374i 1658847037000000000
+metricC x=2.718280076980591,y=0.0000000000000000000000000000000006626070178575745 1658835984000000000
 ```
 
 where `metricB` uses the parsing time as timestamp due to missing

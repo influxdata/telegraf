@@ -174,6 +174,5 @@ SELECT * FROM "icinga2_services" WHERE state_code = 3 AND time > now() - 24h // 
 ## Example Output
 
 ```text
-$ ./telegraf -config telegraf.conf -input-filter icinga2 -test
 icinga2_hosts,display_name=router-fr.eqx.fr,check_command=hostalive-custom,host=test-vm,source=localhost,port=5665,scheme=https,state=ok name="router-fr.eqx.fr",state=0 1492021603000000000
 ```

@@ -136,5 +136,4 @@ redfish_power_voltages,source=test-hostname,name=CPU1MEM345,address=http://190.0
 redfish_power_voltages,source=test-hostname,name=CPU1MEM345,address=http://190.0.0.1,member_id="1"datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled" reading_volts=1,upper_threshold_critical=59,upper_threshold_fatal=64 1582114112000000000
 redfish_power_voltages,source=test-hostname,name=CPU1MEM347,address=http://190.0.0.1,member_id="2"datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled" reading_volts=1,upper_threshold_critical=59,upper_threshold_fatal=64 1582114112000000000
 redfish_power_voltages,source=test-hostname,name=PS1voltage1,address=http://190.0.0.1,member_id="12"datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled" reading_volts=208,upper_threshold_critical=59,upper_threshold_fatal=64 1582114112000000000
-
 ```

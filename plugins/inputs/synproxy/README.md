@@ -58,6 +58,6 @@ cat /proc/net/stat/synproxy
 
 This section shows example output in Line Protocol format.
 
-```shell
+```text
 synproxy,host=Filter-GW01,rack=filter-node1 conn_reopened=0i,cookie_invalid=235i,cookie_retrans=0i,cookie_valid=8814i,entries=0i,syn_received=8742i 1549550634000000000
 ```

@@ -93,6 +93,6 @@ Linux  FreeBSD  Darwin  meaning
 
 ## Example Output
 
-```shell
+```text
 processes blocked=8i,running=1i,sleeping=265i,stopped=0i,total=274i,zombie=0i,dead=0i,paging=0i,total_threads=687i 1457478636980905042
 ```

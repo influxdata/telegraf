@@ -120,7 +120,6 @@ SELECT mean(get_hits) / mean(cmd_get) as get_ratio, mean(get_misses) / mean(cmd_
 
 ## Example Output
 
-```shell
-$ ./telegraf --config telegraf.conf --input-filter memcached --test
+```text
 memcached,server=localhost:11211 accepting_conns=1i,auth_cmds=0i,auth_errors=0i,bytes=0i,bytes_read=7i,bytes_written=0i,cas_badval=0i,cas_hits=0i,cas_misses=0i,cmd_flush=0i,cmd_get=0i,cmd_set=0i,cmd_touch=0i,conn_yields=0i,connection_structures=3i,curr_connections=2i,curr_items=0i,decr_hits=0i,decr_misses=0i,delete_hits=0i,delete_misses=0i,evicted_active=0i,evicted_unfetched=0i,evictions=0i,expired_unfetched=0i,get_expired=0i,get_flushed=0i,get_hits=0i,get_misses=0i,hash_bytes=524288i,hash_is_expanding=0i,hash_power_level=16i,incr_hits=0i,incr_misses=0i,limit_maxbytes=67108864i,listen_disabled_num=0i,max_connections=1024i,reclaimed=0i,rejected_connections=0i,store_no_memory=0i,store_too_large=0i,threads=4i,total_connections=3i,total_items=0i,touch_hits=0i,touch_misses=0i,uptime=3i 1644771989000000000
 ```

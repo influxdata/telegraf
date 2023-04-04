@@ -59,7 +59,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
+```text
 filecount,directory=/var/cache/apt count=7i,size_bytes=7438336i 1530034445000000000
 filecount,directory=/tmp count=17i,size_bytes=28934786i 1530034445000000000
 ```

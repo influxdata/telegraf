@@ -92,7 +92,5 @@ See this [Proxmox docs example][1] for further details.
 ## Example Output
 
 ```text
-$ ./telegraf --config telegraf.conf --input-filter proxmox --test
-> proxmox,host=pxnode,node_fqdn=pxnode.example.com,vm_fqdn=vm1.example.com,vm_name=vm1,vm_type=lxc cpuload=0.147998116735236,disk_free=4461129728i,disk_total=5217320960i,disk_used=756191232i,disk_used_percentage=14,mem_free=1046827008i,mem_total=1073741824i,mem_used=26914816i,mem_used_percentage=2,status="running",swap_free=536698880i,swap_total=536870912i,swap_used=172032i,swap_used_percentage=0,uptime=1643793i 1595457277000000000
-> ...
+proxmox,host=pxnode,node_fqdn=pxnode.example.com,vm_fqdn=vm1.example.com,vm_name=vm1,vm_type=lxc cpuload=0.147998116735236,disk_free=4461129728i,disk_total=5217320960i,disk_used=756191232i,disk_used_percentage=14,mem_free=1046827008i,mem_total=1073741824i,mem_used=26914816i,mem_used_percentage=2,status="running",swap_free=536698880i,swap_total=536870912i,swap_used=172032i,swap_used_percentage=0,uptime=1643793i 1595457277000000000
 ```
