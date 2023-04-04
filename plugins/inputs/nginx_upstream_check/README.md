@@ -88,7 +88,6 @@ When run with:
 It produces:
 
 ```text
-* Plugin: nginx_upstream_check, Collection 1
-> nginx_upstream_check,host=node1,name=192.168.0.1:8080,port=0,type=http,upstream=my_backends,url=http://127.0.0.1:80/status?format\=json fall=0i,rise=100i,status="up",status_code=1i 1529088524000000000
-> nginx_upstream_check,host=node2,name=192.168.0.2:8080,port=0,type=http,upstream=my_backends,url=http://127.0.0.1:80/status?format\=json fall=100i,rise=0i,status="down",status_code=2i 1529088524000000000
+nginx_upstream_check,host=node1,name=192.168.0.1:8080,port=0,type=http,upstream=my_backends,url=http://127.0.0.1:80/status?format\=json fall=0i,rise=100i,status="up",status_code=1i 1529088524000000000
+nginx_upstream_check,host=node2,name=192.168.0.2:8080,port=0,type=http,upstream=my_backends,url=http://127.0.0.1:80/status?format\=json fall=100i,rise=0i,status="down",status_code=2i 1529088524000000000
 ```

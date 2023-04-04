@@ -76,7 +76,7 @@ Metrics are entirely based on the user's own configuration and settings.
 The following example shows all available algorithms configured with an
 additional two tags as well:
 
-```s
+```text
 mock_sensors,building=5A,site=FTC random=4.875966794516125,abc=50,wave=0,plus_one=0 1632170840000000000
 mock_sensors,building=5A,site=FTC random=5.738651873834452,abc=45.095549448434774,wave=5.877852522924732,plus_one=1 1632170850000000000
 mock_sensors,building=5A,site=FTC random=1.0429328917205203,abc=51.928560083072924,wave=9.510565162951535,plus_one=2 1632170860000000000

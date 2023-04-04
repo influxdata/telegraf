@@ -64,7 +64,6 @@ Each field with `_size` suffix indicates memory consumption in bytes.
 
 ## Example Output
 
-```shel
-slab
-kmalloc_1024_size=239927296i,kmalloc_512_size=5582848i 1651049129000000000
+```text
+slab kmalloc_1024_size=239927296i,kmalloc_512_size=5582848i 1651049129000000000
 ```

@@ -100,7 +100,7 @@ Please use the solution you see as most appropriate.
 
 ## Example Output
 
-```shell
+```text
 openntpd,remote=194.57.169.1,stratum=2,host=localhost tl=10i,poll=1007i,
 offset=2.295,jitter=3.896,delay=53.766,next=266i,wt=1i 1514454299000000000
 ```

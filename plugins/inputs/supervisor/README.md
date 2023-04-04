@@ -105,7 +105,7 @@ configuration file.
 
 ## Example Output
 
-```shell
+```text
 supervisor_processes,group=ExampleGroup,id=supervisor,port=9001,process=ExampleProcess,source=localhost state=20i,uptime=75958i 1659786637000000000
 supervisor_instance,id=supervisor,port=9001,source=localhost state=1i 1659786637000000000
 ```
