@@ -48,7 +48,7 @@ func (d *Docker) Get(key string) ([]byte, error) {
 }
 
 func (d *Docker) List() ([]string, error) {
-	var secrets []string
+	secrets := make([]string, 0)
 	secretFiles, err := os.ReadDir(dockerSecretsDir)
 	if err != nil {
 		return nil, errors.New("cannot read files under /run/secrets directory")
@@ -62,8 +62,8 @@ func (d *Docker) List() ([]string, error) {
 	return secrets, nil
 }
 
-func (d *Docker) Set(key, value string) error {
-	return nil
+func (d *Docker) Set(_, _ string) error {
+	return errors.New("secret-store does not support creating secrets")
 }
 
 // GetResolver returns a function to resolve the given key.
