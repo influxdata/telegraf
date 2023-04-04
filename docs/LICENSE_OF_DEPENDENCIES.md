@@ -156,6 +156,7 @@ following works:
 - github.com/google/go-github [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-github/blob/master/LICENSE)
 - github.com/google/go-querystring [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-querystring/blob/master/LICENSE)
 - github.com/google/gofuzz [Apache License 2.0](https://github.com/google/gofuzz/blob/master/LICENSE)
+- github.com/google/gopacket [BSD 3-Clause "New" or "Revised" License](https://github.com/google/gopacket/blob/master/LICENSE)
 - github.com/google/s2a-go [Apache License 2.0](https://github.com/google/s2a-go/blob/main/LICENSE.md)
 - github.com/google/uuid [BSD 3-Clause "New" or "Revised" License](https://github.com/google/uuid/blob/master/LICENSE)
 - github.com/googleapis/enterprise-certificate-proxy [Apache License 2.0](https://github.com/googleapis/enterprise-certificate-proxy/blob/main/LICENSE)
