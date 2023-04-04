@@ -29,7 +29,7 @@ func (f FileInfo) Update() error {
 	re := regexp.MustCompile(f.Regex)
 	newContents := re.ReplaceAll(b, []byte(f.Replace))
 
-	err = os.WriteFile(f.FileName, newContents, 0664)
+	err = os.WriteFile(f.FileName, newContents, 0640)
 	if err != nil {
 		return err
 	}

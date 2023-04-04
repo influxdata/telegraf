@@ -100,12 +100,23 @@ linters-settings:
       - G201
       - G202
       - G203
+      - G301
+      - G302
+      - G306
       - G401
       - G403
       - G501
       - G502
       - G503
       - G505
+    # To specify the configuration of rules.
+    config:
+      # Maximum allowed permissions mode for os.OpenFile and os.Chmod
+      # Default: "0600"
+      G302: "0640"
+      # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
+      # Default: "0600"
+      G306: "0640"
   lll:
     # Max line length, lines longer will be reported.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
