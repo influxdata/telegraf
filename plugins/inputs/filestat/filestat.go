@@ -2,7 +2,7 @@
 package filestat
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // G501: Blocklisted import crypto/md5: weak cryptographic primitive - md5 hash is what is desired in this case
 	_ "embed"
 	"fmt"
 	"io"
@@ -116,7 +116,7 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Read given file and calculate an md5 hash.
+// Read given file and calculate a md5 hash.
 func getMd5(file string) (string, error) {
 	of, err := os.Open(file)
 	if err != nil {
@@ -124,6 +124,7 @@ func getMd5(file string) (string, error) {
 	}
 	defer of.Close()
 
+	//nolint:gosec // G401: Use of weak cryptographic primitive - md5 hash is what is desired in this case
 	hash := md5.New()
 	_, err = io.Copy(hash, of)
 	if err != nil {

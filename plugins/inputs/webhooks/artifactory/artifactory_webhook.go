@@ -2,7 +2,7 @@ package artifactory
 
 import (
 	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // G505: Blocklisted import crypto/sha1: weak cryptographic primitive - sha1 hash is what is desired in this case
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
