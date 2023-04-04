@@ -636,3 +636,59 @@ func decodeCaptureTimeSemantics(b []byte) interface{} {
 	}
 	return "unassigned"
 }
+
+func decodeSflowIPVersion(v uint32) string {
+	switch v {
+	case 0:
+		return "unknown"
+	case 1:
+		return "IPv4"
+	case 2:
+		return "IPv6"
+	}
+	return strconv.FormatUint(uint64(v), 10)
+}
+
+func decodeSflowSourceInterface(t uint32) string {
+	switch t {
+	case 0:
+		return "in_snmp"
+	case 1:
+		return "in_vlan_id"
+	case 2:
+		return "in_phy_interface"
+	}
+	return ""
+}
+
+func decodeSflowHeaderProtocol(t uint32) string {
+	switch t {
+	case 1:
+		return "ETHERNET-ISO8023"
+	case 2:
+		return "ISO88024-TOKENBUS"
+	case 3:
+		return "ISO88025-TOKENRING"
+	case 4:
+		return "FDDI"
+	case 5:
+		return "FRAME-RELAY"
+	case 6:
+		return "X25"
+	case 7:
+		return "PPP"
+	case 8:
+		return "SMDS"
+	case 9:
+		return "AAL5"
+	case 10:
+		return "AAL5-IP"
+	case 11:
+		return "IPv4"
+	case 12:
+		return "IPv6"
+	case 13:
+		return "MPLS"
+	}
+	return "unassigned"
+}

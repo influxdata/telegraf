@@ -6,9 +6,10 @@ import (
 	"net"
 	"time"
 
+	"github.com/netsampler/goflow2/decoders/netflowlegacy"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/netsampler/goflow2/decoders/netflowlegacy"
 )
 
 // Decoder structure

@@ -86,6 +86,7 @@ require (
 	github.com/google/gnxi v0.0.0-20221016143401-2aeceb5a2901
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-github/v32 v32.1.0
+	github.com/google/gopacket v1.1.19
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.3.0
 	github.com/gopcua/opcua v0.3.7

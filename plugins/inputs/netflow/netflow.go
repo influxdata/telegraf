@@ -59,8 +59,10 @@ func (n *NetFlow) Init() error {
 		n.decoder = &netflowDecoder{Log: n.Log}
 	case "netflow v5":
 		n.decoder = &netflowv5Decoder{}
+	case "sflow", "sflow v5":
+		n.decoder = &sflowv5Decoder{}
 	default:
-		return fmt.Errorf("invalid protocol %q, only supports 'netflow v5', 'netflow v9' and 'ipfix'", n.Protocol)
+		return fmt.Errorf("invalid protocol %q, only supports 'sflow', 'netflow v5', 'netflow v9' and 'ipfix'", n.Protocol)
 	}
 	return n.decoder.Init()
 }
