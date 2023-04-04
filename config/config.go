@@ -443,6 +443,10 @@ func (c *Config) LoadConfig(path string) error {
 	}
 
 	for _, path := range paths {
+		if !c.Agent.Quiet {
+			log.Printf("I! Loading config: %s", path)
+		}
+
 		data, err := LoadConfigFile(path)
 		if err != nil {
 			return fmt.Errorf("error loading config file %s: %w", path, err)
@@ -700,7 +704,6 @@ func escapeEnv(value string) string {
 
 func LoadConfigFile(config string) ([]byte, error) {
 	if fetchURLRe.MatchString(config) {
-		log.Printf("I! Loading config url: %s", config)
 		u, err := url.Parse(config)
 		if err != nil {
 			return nil, err
@@ -715,7 +718,6 @@ func LoadConfigFile(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
-	log.Printf("I! Loading config file: %s", config)
 	buffer, err := os.ReadFile(config)
 	if err != nil {
 		return nil, err
