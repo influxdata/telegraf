@@ -15,11 +15,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
+	//"github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	//"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
-	"github.com/influxdata/telegraf/plugins/parsers/xpath"
+	//"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
 type ParserFunc func() (Parser, error)
@@ -156,23 +156,27 @@ type Config struct {
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 
+    /*
 	// Prometheus configuration
 	PrometheusIgnoreTimestamp bool `toml:"prometheus_ignore_timestamp"`
+    */
 
 	// Value configuration
 	ValueFieldName string `toml:"value_field_name"`
-
+    
+    /*
 	// XPath configuration
 	XPathPrintDocument bool   `toml:"xpath_print_document"`
 	XPathProtobufFile  string `toml:"xpath_protobuf_file"`
 	XPathProtobufType  string `toml:"xpath_protobuf_type"`
 	XPathConfig        []XPathConfig
+    */
 
 	// JSONPath configuration
 	JSONV2Config []JSONV2Config `toml:"json_v2"`
 }
 
-type XPathConfig xpath.Config
+// type XPathConfig xpath.Config
 
 type JSONV2Config struct {
 	json_v2.Config
@@ -261,14 +265,15 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
 		)
-	case "prometheus":
+	/*
+    case "prometheus":
 		parser, err = NewPrometheusParser(
 			config.DefaultTags,
 			config.PrometheusIgnoreTimestamp,
 		)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
+    case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
 		parser = &xpath.Parser{
 			Format:              config.DataFormat,
 			ProtobufMessageDef:  config.XPathProtobufFile,
@@ -277,6 +282,7 @@ func NewParser(config *Config) (Parser, error) {
 			DefaultTags:         config.DefaultTags,
 			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
 		}
+    */
 	case "json_v2":
 		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
@@ -384,6 +390,7 @@ func NewFormUrlencodedParser(
 	}, nil
 }
 
+/*
 func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (Parser, error) {
 	return &prometheus.Parser{
 		DefaultTags:     defaultTags,
@@ -407,6 +414,7 @@ func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config
 	}
 	return configs
 }
+*/
 
 func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
 	configs := make([]json_v2.Config, len(jsonv2config))
