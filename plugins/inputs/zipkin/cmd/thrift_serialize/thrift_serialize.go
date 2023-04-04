@@ -62,7 +62,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		if err := os.WriteFile(outFileName, raw, 0644); err != nil {
+		if err := os.WriteFile(outFileName, raw, 0640); err != nil {
 			log.Fatalf("%v", err)
 		}
 	case "thrift":
@@ -70,7 +70,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		if err := os.WriteFile(outFileName, raw, 0644); err != nil {
+		if err := os.WriteFile(outFileName, raw, 0640); err != nil {
 			log.Fatalf("%v", err)
 		}
 	default:
