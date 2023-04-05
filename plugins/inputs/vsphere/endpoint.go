@@ -1204,7 +1204,8 @@ func (e *Endpoint) collectChunk(
 			continue
 		}
 		buckets := make(map[string]metricEntry)
-		for _, v := range em.Value {
+		for i := range em.Value {
+			v := em.Value[i]
 			name := v.Name
 			t := map[string]string{
 				"vcenter": e.URL.Host,
