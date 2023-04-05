@@ -35,6 +35,10 @@ type PerformanceQuery interface {
 	IsVistaOrNewer() bool
 }
 
+type PerformanceQueryCreator interface {
+	NewPerformanceQuery(string) PerformanceQuery
+}
+
 // PdhError represents error returned from Performance Counters API
 type PdhError struct {
 	ErrorCode uint32
