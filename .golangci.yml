@@ -103,6 +103,8 @@ linters-settings:
       - G203
       - G301
       - G302
+      - G303
+      - G305
       - G306
       - G401
       - G403
