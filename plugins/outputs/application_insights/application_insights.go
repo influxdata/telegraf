@@ -5,8 +5,8 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
-	"unsafe"
 
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 
@@ -283,11 +283,9 @@ func toFloat64(value interface{}) (float64, error) {
 func toInt(value interface{}) (int, error) {
 	if !is32BitChecked {
 		is32BitChecked = true
-		var i int
-		if unsafe.Sizeof(i) == 4 {
+		is32Bit = false
+		if strconv.IntSize == 32 {
 			is32Bit = true
-		} else {
-			is32Bit = false
 		}
 	}
 

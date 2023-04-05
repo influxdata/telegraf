@@ -82,11 +82,13 @@ func parseBoolBytes(b []byte) (bool, error) {
 // It is unsafe, and is intended to prepare input to short-lived functions
 // that require strings.
 func unsafeBytesToString(in []byte) string {
+	//nolint:gosec // G103: Use of unsafe calls should be audited -> call audited
 	src := *(*reflect.SliceHeader)(unsafe.Pointer(&in))
 	dst := reflect.StringHeader{
 		Data: src.Data,
 		Len:  src.Len,
 	}
+	//nolint:gosec // G103: Use of unsafe calls should be audited -> call audited
 	s := *(*string)(unsafe.Pointer(&dst))
 	return s
 }

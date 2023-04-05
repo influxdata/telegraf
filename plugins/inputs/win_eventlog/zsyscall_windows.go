@@ -79,6 +79,7 @@ var (
 	procEvtUpdateBookmark        = modwevtapi.NewProc("EvtUpdateBookmark")
 )
 
+//nolint:gosec // G103: Use of unsafe calls should be audited -> calls audited
 func _EvtSubscribe(
 	session EvtHandle,
 	signalEvent uintptr,
@@ -113,6 +114,7 @@ func _EvtSubscribe(
 	return
 }
 
+//nolint:gosec // G103: Use of unsafe calls should be audited -> calls audited
 func _EvtRender(
 	context EvtHandle,
 	fragment EvtHandle,
@@ -157,6 +159,7 @@ func _EvtClose(object EvtHandle) (err error) {
 	return
 }
 
+//nolint:gosec // G103: Use of unsafe calls should be audited -> calls audited
 func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle, timeout uint32, flags uint32, numReturned *uint32) (err error) {
 	r1, _, e1 := syscall.Syscall6(
 		procEvtNext.Addr(),
@@ -178,6 +181,7 @@ func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle,
 	return
 }
 
+//nolint:gosec // G103: Use of unsafe calls should be audited -> calls audited
 func _EvtFormatMessage(
 	publisherMetadata EvtHandle,
 	event EvtHandle,
@@ -212,6 +216,7 @@ func _EvtFormatMessage(
 	return
 }
 
+//nolint:gosec // G103: Use of unsafe calls should be audited -> calls audited
 func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, logFilePath *uint16, locale uint32, flags uint32) (handle EvtHandle, err error) {
 	r0, _, e1 := syscall.Syscall6(
 		procEvtOpenPublisherMetadata.Addr(),
@@ -235,6 +240,7 @@ func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, log
 }
 
 func _EvtCreateBookmark(bookmarkXML *uint16) (EvtHandle, error) {
+	//nolint:gosec // G103: Use of unsafe calls should be audited -> call audited
 	r0, _, e1 := syscall.Syscall(procEvtCreateBookmark.Addr(), 1, uintptr(unsafe.Pointer(bookmarkXML)), 0, 0)
 	handle := EvtHandle(r0)
 	if handle != 0 {

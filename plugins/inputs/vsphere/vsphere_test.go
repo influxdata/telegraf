@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
@@ -222,8 +222,7 @@ func TestMaxQuery(t *testing.T) {
 
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
+	if strconv.IntSize < 64 {
 		return
 	}
 	m, s, err := createSim(0)
@@ -275,8 +274,7 @@ func TestFinder(t *testing.T) {
 
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
+	if strconv.IntSize < 64 {
 		return
 	}
 
@@ -399,8 +397,7 @@ func TestFolders(t *testing.T) {
 
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
+	if strconv.IntSize < 64 {
 		return
 	}
 
@@ -488,8 +485,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	} else {
 		// Don't run test on 32-bit machines due to bug in simulator.
 		// https://github.com/vmware/govmomi/issues/1330
-		var i int
-		if unsafe.Sizeof(i) < 8 {
+		if strconv.IntSize < 64 {
 			return
 		}
 
