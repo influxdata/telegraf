@@ -166,7 +166,7 @@ func Test(t *testing.T) {
 			var acc testutil.Accumulator
 			plugin := &DockerLogs{
 				Timeout:          config.Duration(time.Second * 5),
-				newClient:        func(string, string, *tls.Config) (Client, error) { return tt.client, nil },
+				newClient:        func(string, *tls.Config) (Client, error) { return tt.client, nil },
 				containerList:    make(map[string]context.CancelFunc),
 				IncludeSourceTag: true,
 			}
