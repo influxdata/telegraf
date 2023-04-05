@@ -13,7 +13,7 @@ import (
 )
 
 func collectSecrets(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
-	list, err := ki.client.getTlsSecrets(ctx)
+	list, err := ki.client.getTLSSecrets(ctx)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -63,8 +63,7 @@ func (ki *KubernetesInventory) gatherCertificates(r corev1.Secret, acc telegraf.
 	now := time.Now()
 
 	for resourceName, val := range r.Data {
-		switch resourceName {
-		case "tls.crt":
+		if resourceName == "tls.crt" {
 			block, _ := pem.Decode(val)
 			if block == nil {
 				return

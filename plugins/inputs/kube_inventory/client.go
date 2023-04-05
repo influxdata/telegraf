@@ -128,7 +128,7 @@ func (c *client) getResourceQuotas(ctx context.Context) (*corev1.ResourceQuotaLi
 	return c.CoreV1().ResourceQuotas(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getTlsSecrets(ctx context.Context) (*corev1.SecretList, error) {
+func (c *client) getTLSSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	//fieldSelector := metav1.FieldSelector{}
