@@ -481,6 +481,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}{
 		{"connection strategy startup", "startup"},
 		{"connection strategy defer", "defer"},
+		{"topic regexp", "startup"},
 	}
 
 	for _, tt := range tests {
@@ -514,6 +515,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 
 			t.Logf("rt: starting broker")
 			topic := "Test"
+			topicRegexp := "T*"
 			container := testutil.Container{
 				Name:         "telegraf-test-kafka-consumer",
 				Image:        "wurstmeister/kafka",
@@ -559,6 +561,14 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 				MaxUndeliveredMessages: 1,
 				ConnectionStrategy:     tt.connectionStrategy,
 			}
+			if tt.name == "topic regexp" {
+				t.Logf("rt: setting topic regexp and refresh")
+				input.Topics = nil
+				input.TopicRegexps = []string{topicRegexp}
+				timeInterval, _ := time.ParseDuration("5s")
+				interval := config.Duration(timeInterval)
+				input.TopicRefreshInterval = interval
+			}
 			parser := &influx.Parser{}
 			require.NoError(t, parser.Init())
 			input.SetParser(parser)
@@ -593,7 +603,7 @@ func TestExponentialBackoff(t *testing.T) {
 	max := 3
 
 	// get an unused port by listening on next available port, then closing it
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 	require.NoError(t, listener.Close())

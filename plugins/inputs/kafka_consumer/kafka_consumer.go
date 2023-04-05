@@ -5,6 +5,9 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"reflect"
+	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -41,6 +44,8 @@ type KafkaConsumer struct {
 	Offset                 string          `toml:"offset"`
 	BalanceStrategy        string          `toml:"balance_strategy"`
 	Topics                 []string        `toml:"topics"`
+	TopicRegexps           []string        `toml:"topic_regexps"`
+	TopicRefreshInterval   config.Duration `toml:"topic_refresh_interval"`
 	TopicTag               string          `toml:"topic_tag"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
 	ConnectionStrategy     string          `toml:"connection_strategy"`
@@ -56,6 +61,7 @@ type KafkaConsumer struct {
 	config          *sarama.Config
 
 	parser parsers.Parser
+	mu     sync.Mutex
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 }
@@ -170,6 +176,28 @@ func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	var err error
 
+	// If TopicRegexps is set, add matches to Topics
+	if len(k.TopicRegexps) > 0 {
+		if err := k.addTopicRegexps(); err != nil {
+			return err
+		}
+		// If, additionally, TopicRefreshInterval is set,
+		// schedule the refresh.
+		if k.TopicRefreshInterval != 0 {
+			tick := time.Duration(k.TopicRefreshInterval)
+			k.Log.Infof("refreshing topics every %s", tick.String())
+			ticker := time.NewTicker(tick)
+			go func() {
+				for range ticker.C {
+					k.Log.Infof("refreshing topics")
+					if err := k.addTopicRegexps(); err != nil {
+						k.Log.Errorf("topic refresh failed: %v", err)
+					}
+				}
+			}()
+		}
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	k.cancel = cancel
 
@@ -223,6 +251,80 @@ func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
 func (k *KafkaConsumer) Stop() {
 	k.cancel()
 	k.wg.Wait()
+}
+
+func (k *KafkaConsumer) addTopicRegexps() error {
+	// We instantiate a new generic Kafka client, so we can ask
+	// it for all the topics it knows about.  Then we build
+	// regexps from our strings, loop over those, loop over the
+	// topics, and if we find a match, add that topic to
+	// out topic set, which then we turn back into a list at the end.
+	var err error
+	var allTopics []string
+	var exists = struct{}{}
+	regexps := make([]regexp.Regexp, 0, len(k.TopicRegexps))
+
+	kafkaClient, err := sarama.NewClient(k.Brokers, k.config)
+	if err != nil {
+		return err
+	}
+	defer kafkaClient.Close()
+
+	allTopics, err := kafkaClient.Topics()
+	if err != nil {
+		return err
+	}
+	for _, r := range k.TopicRegexps {
+		re := regexp.MustCompile(r)
+		regexps = append(regexps, *re)
+	}
+	topicSet := make(map[string]bool, len(k.Topics))
+	for _, t := range k.Topics {
+		// Get our preexisting topics
+		topicSet[t] = true
+	}
+	var removeTopics []string
+	for k := range topicSet {
+		found := false
+		for _, t := range allTopics {
+			if t == k {
+				found = true
+				break
+			}
+		}
+		if !found {
+			removeTopics = append(removeTopics, k)
+		}
+	}
+	// Remove any topics no longer present on broker
+	for _, w := range removeTopics {
+		k.Log.Infof("topic '%s' no longer present; removing", w)
+		delete(topicSet, w)
+	}
+	// Add topics that have newly appeared on broker
+	for _, r := range regexps {
+		for _, t := range allTopics {
+			if _, ok := topicSet[t]; !ok && r.MatchString(t) {
+					k.Log.Infof("adding new topic %q", t)
+					topicSet[t] = exists
+				}
+			}
+		}
+	}
+	topicList := make([]string, 0, len(topicSet))
+	for t := range topicSet {
+		topicList = append(topicList, t)
+	}
+	sort.Strings(topicList) // k.Topics will have been sorted when it
+	// became k.Topics, because it was topicList first
+	if !reflect.DeepEqual(k.Topics, topicList) {
+		k.mu.Lock()
+		defer k.mu.Unlock()
+		k.Log.Infof("Updating known topics '%v' -> '%v'", k.Topics,
+			topicList)
+		k.Topics = topicList
+	}
+	return nil
 }
 
 // Message is an aggregate type binding the Kafka message and the session so

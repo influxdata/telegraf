@@ -6,17 +6,6 @@ and creates metrics using one of the supported [input data formats][].
 For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input
 plugin and use the old zookeeper connection method.
 
-## Service Input <!-- @/docs/includes/service_input.md -->
-
-This plugin is a service input. Normal plugins gather metrics determined by the
-interval setting. Service plugins start a service to listens and waits for
-metrics or events to occur. Service plugins have two key differences from
-normal plugins:
-
-1. The global or plugin specific `interval` setting may not apply
-2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
-   output for this plugin
-
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -45,6 +34,14 @@ to use them.
 
   ## Topics to consume.
   topics = ["telegraf"]
+
+  ## Topic regular expressions to consume.  Matches will be added to topics.
+  # topic_regexps = [ "*test", "metric[0-9A-z]*" ]
+
+  ## Topic discovery refresh interval.  If topic_regexps is set, then
+  ## every interval, topics will be rescanned to see if any new matches
+  ## are found.
+  # topic_refresh_interval = "60s"
 
   ## When set this tag will be added to all metrics with the topic as the value.
   # topic_tag = ""
