@@ -66,7 +66,7 @@ func parseSourceFile(t *testing.T, goPluginFile string, pluginCategory string) {
 
 func resolvePluginFromImports(t *testing.T, imports []*ast.ImportSpec) string {
 	// should contain one or more import statements
-	require.GreaterOrEqual(t, len(imports), 1)
+	require.NotEmpty(t, imports)
 
 	// trim the path surrounded by quotes
 	importPath := strings.Trim(imports[0].Path.Value, "\"")
@@ -89,8 +89,8 @@ func testBuildTags(t *testing.T, buildComment string, pluginCategory string, plu
 	require.Contains(t, tags, pluginCategory)
 
 	actual := getPluginBuildTag(tags, pluginCategory)
-	expected := fmt.Sprintf("%v.%v", pluginCategory, plugin)
-	require.Equal(t, expected, actual, fmt.Sprintf("build tag is invalid for %v", plugin))
+	expected := fmt.Sprintf("%s.%s", pluginCategory, plugin)
+	require.Equal(t, expected, actual, "invalid build tag")
 }
 
 // getPluginBuildTag takes a slice of tags and returns the build tag corresponding to this plugin type.
@@ -98,7 +98,7 @@ func testBuildTags(t *testing.T, buildComment string, pluginCategory string, plu
 // For ex ["!custom", "inputs", "inputs.docker"] returns "inputs.docker"
 func getPluginBuildTag(tags []string, pluginCategory string) string {
 	for _, tag := range tags {
-		if strings.HasPrefix(tag, fmt.Sprintf("%v.", pluginCategory)) {
+		if strings.HasPrefix(tag, fmt.Sprintf("%s.", pluginCategory)) {
 			return tag
 		}
 	}
