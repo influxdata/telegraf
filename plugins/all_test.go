@@ -2,6 +2,7 @@ package all
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,67 +33,82 @@ func Test_AllPlugins(t *testing.T) {
 
 func testPluginDirectory(t *testing.T, directory string) {
 	allDir := filepath.Join(directory, "all")
-	pluginCategory := directory
-	err := filepath.WalkDir(allDir, func(path string, d fs.DirEntry, walkErr error) error {
+	err := filepath.WalkDir(allDir, func(goPluginFile string, d fs.DirEntry, walkErr error) error {
 		require.NoError(t, walkErr)
 		if d.IsDir() || strings.HasSuffix(d.Name(), "_test.go") {
 			return nil
 		}
-
-		fset := token.NewFileSet()
-		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-		require.NoError(t, err)
-
-		for _, cg := range node.Comments {
-			for _, comm := range cg.List {
-				if !strings.HasPrefix(comm.Text, "//go:build") {
-					continue
-				}
-				testName := fmt.Sprintf("%v-%v", pluginCategory, strings.TrimSuffix(d.Name(), ".go"))
-				t.Run(testName, func(t *testing.T) {
-					tags := strings.Split(comm.Text, "||")
-					// tags might contain spaces and hence trim
-					tags = func(elems []string, transFormFunc func(string) string) []string {
-						result := make([]string, len(elems))
-						for i, t := range elems {
-							result[i] = strings.TrimPrefix(transFormFunc(t), "//go:build ")
-						}
-						return result
-					}(tags, strings.TrimSpace)
-
-					assert.Len(t, tags, 3)
-					assert.Contains(t, tags, "!custom")
-					assert.Contains(t, tags, pluginCategory)
-					plugin := getPlugin(tags, pluginCategory)
-					assert.Greater(t, len(plugin), 0)
-
-					// should contain one or more import statements
-					assert.GreaterOrEqual(t, len(node.Imports), 1)
-					// trim the path surrounded by quotes
-					importPath := strings.Trim(node.Imports[0].Path.Value, "\"")
-
-					// check if present in exceptionMap
-					exception, ok := exceptionMap[importPath]
-					if ok {
-						assert.Equal(t, plugin, exception)
-						return
-					}
-					check := strings.TrimSuffix(importPath, plugin)
-					// validate if check changed(Success), else fail
-					assert.NotEqual(t, importPath, check, fmt.Sprintf("build tag is invalid for %v", d.Name()))
-				})
-			}
-		}
+		parseSourceFile(t, goPluginFile, directory)
 		return nil
 	})
 	require.NoError(t, err)
 }
 
-func getPlugin(tags []string, pluginCategory string) string {
+func parseSourceFile(t *testing.T, goPluginFile string, pluginCategory string) {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, goPluginFile, nil, parser.ParseComments)
+	require.NoError(t, err)
+
+	for _, cg := range node.Comments {
+		for _, comm := range cg.List {
+			if !strings.HasPrefix(comm.Text, "//go:build") {
+				continue
+			}
+			file := filepath.Base(goPluginFile)
+			testName := fmt.Sprintf("%v-%v", pluginCategory, strings.TrimSuffix(file, ".go"))
+			t.Run(testName, func(t *testing.T) {
+				plugin := resolvePluginFromImports(t, node.Imports)
+				testBuildTags(t, comm.Text, pluginCategory, plugin)
+			})
+		}
+	}
+}
+
+func resolvePluginFromImports(t *testing.T, imports []*ast.ImportSpec) string {
+	// should contain one or more import statements
+	require.GreaterOrEqual(t, len(imports), 1)
+
+	// trim the path surrounded by quotes
+	importPath := strings.Trim(imports[0].Path.Value, "\"")
+
+	// check if present in exceptionMap
+	plugin, ok := exceptionMap[importPath]
+	if ok {
+		return plugin
+	}
+	return filepath.Base(importPath)
+}
+
+func testBuildTags(t *testing.T, buildComment string, pluginCategory string, plugin string) {
+	tags := strings.Split(buildComment, "||")
+	// tags might contain spaces and hence trim
+	tags = stringMap(tags, strings.TrimSpace)
+
+	require.Len(t, tags, 3)
+	require.Contains(t, tags, "!custom")
+	require.Contains(t, tags, pluginCategory)
+
+	actual := getPluginBuildTag(tags, pluginCategory)
+	expected := fmt.Sprintf("%v.%v", pluginCategory, plugin)
+	require.Equal(t, expected, actual, fmt.Sprintf("build tag is invalid for %v", plugin))
+}
+
+// getPluginBuildTag takes a slice of tags and returns the build tag corresponding to this plugin type.
+//
+// For ex ["!custom", "inputs", "inputs.docker"] returns "inputs.docker"
+func getPluginBuildTag(tags []string, pluginCategory string) string {
 	for _, tag := range tags {
 		if strings.HasPrefix(tag, fmt.Sprintf("%v.", pluginCategory)) {
-			return strings.TrimPrefix(tag, fmt.Sprintf("%v.", pluginCategory))
+			return tag
 		}
 	}
 	return ""
+}
+
+func stringMap(elems []string, transFormFunc func(string) string) []string {
+	result := make([]string, len(elems))
+	for i, elem := range elems {
+		result[i] = strings.TrimPrefix(transFormFunc(elem), "//go:build ")
+	}
+	return result
 }
