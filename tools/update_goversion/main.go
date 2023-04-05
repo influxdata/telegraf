@@ -160,7 +160,7 @@ func main() {
 		{
 			FileName: ".github/workflows/golangci-lint.yml",
 			Regex:    `go:\s*\[.*\].*`,
-			Replace:  fmt.Sprintf("go: [%s]", noPatchVersion),
+			Replace:  fmt.Sprintf("go: ['%s']", noPatchVersion),
 		},
 		{
 			FileName: ".github/workflows/govulncheck.yml",
