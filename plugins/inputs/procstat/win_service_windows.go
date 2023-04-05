@@ -39,7 +39,7 @@ func queryPidWithWinServiceName(winServiceName string) (uint32, error) {
 	}
 
 	buf = make([]byte, bytesNeeded)
-	//nolint:gosec // G103: Use of unsafe calls should be audited -> call audited
+	//nolint:gosec // G103: Use of unsafe calls should be audited
 	p = (*windows.SERVICE_STATUS_PROCESS)(unsafe.Pointer(&buf[0]))
 	if err := windows.QueryServiceStatusEx(srv.Handle, windows.SC_STATUS_PROCESS_INFO, &buf[0], uint32(len(buf)), &bytesNeeded); err != nil {
 		return 0, err

@@ -326,7 +326,7 @@ func (cols Columns) Keys() Columns {
 // alphabetically.
 func (cols Columns) Sorted() Columns {
 	newCols := append([]Column{}, cols...)
-	//nolint:gosec // G103: Use of unsafe calls should be audited -> call audited
+	//nolint:gosec // G103: Use of unsafe calls should be audited
 	(*utils.ColumnList)(unsafe.Pointer(&newCols)).Sort()
 	return newCols
 }
