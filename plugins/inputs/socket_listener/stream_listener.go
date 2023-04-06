@@ -82,6 +82,17 @@ func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode st
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {
+	addr := conn.RemoteAddr().String()
+	l.Lock()
+	if l.MaxConnections > 0 && len(l.connections) >= l.MaxConnections {
+		l.Unlock()
+		// Ignore the returned error as we cannot do anything about it anyway
+		_ = conn.Close()
+		return fmt.Errorf("unable to accept connection from %q: too many connections", addr)
+	}
+	l.connections[addr] = conn
+	l.Unlock()
+
 	if l.ReadBufferSize > 0 {
 		if rb, ok := conn.(hasSetReadBuffer); ok {
 			if err := rb.SetReadBuffer(l.ReadBufferSize); err != nil {
@@ -92,39 +103,26 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 		}
 	}
 
-	addr := conn.RemoteAddr().String()
-	if l.MaxConnections > 0 && len(l.connections) >= l.MaxConnections {
-		// Ignore the returned error as we cannot do anything about it anyway
-		_ = conn.Close()
-		l.Log.Infof("unable to accept connection from %q: too many connections", addr)
-		return nil
-	}
-
 	// Set keep alive handlings
 	if l.KeepAlivePeriod != nil {
 		tcpConn, ok := conn.(*net.TCPConn)
 		if !ok {
-			return fmt.Errorf("connection not a TCP connection (%T)", conn)
+			l.Log.Warnf("connection not a TCP connection (%T)", conn)
 		}
 		if *l.KeepAlivePeriod == 0 {
 			if err := tcpConn.SetKeepAlive(false); err != nil {
-				return fmt.Errorf("cannot set keep-alive: %w", err)
+				l.Log.Errorf("cannot set keep-alive: %w", err)
 			}
 		} else {
 			if err := tcpConn.SetKeepAlive(true); err != nil {
-				return fmt.Errorf("cannot set keep-alive: %w", err)
+				l.Log.Errorf("cannot set keep-alive: %w", err)
 			}
 			err := tcpConn.SetKeepAlivePeriod(time.Duration(*l.KeepAlivePeriod))
 			if err != nil {
-				return fmt.Errorf("cannot set keep-alive period: %w", err)
+				l.Log.Errorf("cannot set keep-alive period: %w", err)
 			}
 		}
 	}
-
-	// Store the connection mapped to its address
-	l.Lock()
-	l.connections[addr] = conn
-	l.Unlock()
 
 	return nil
 }
@@ -181,6 +179,7 @@ func (l *streamListener) listen(acc telegraf.Accumulator) {
 
 		if err := l.setupConnection(conn); err != nil {
 			acc.AddError(err)
+			continue
 		}
 
 		wg.Add(1)

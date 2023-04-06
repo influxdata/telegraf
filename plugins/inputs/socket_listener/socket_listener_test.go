@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -181,6 +182,12 @@ func TestSocketListener(t *testing.T) {
 			}, time.Second, 100*time.Millisecond, "did not receive metrics (%d)", acc.NMetrics())
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+
+			if sl, ok := plugin.listener.(*streamListener); ok {
+				assert.NotNil(t, sl.connections[client.LocalAddr().String()])
+			}
+
+			plugin.Stop()
 		})
 	}
 }
