@@ -5,7 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -60,8 +59,11 @@ type KafkaConsumer struct {
 	consumer        ConsumerGroup
 	config          *sarama.Config
 
+	topicClient     sarama.Client
+	regexps         []regexp.Regexp
+	allWantedTopics []string
+
 	parser parsers.Parser
-	mu     sync.Mutex
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 }
@@ -149,7 +151,119 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	k.config = cfg
+	if len(k.TopicRegexps) > 0 {
+		err := k.createTopicScanner()
+		if err != nil {
+			return fmt.Errorf("could not create client to match topics: %w", err)
+		}
+		k.compileTopicRegexps()
+		return (k.refreshTopics())
+	}
 	return nil
+}
+
+func (k *KafkaConsumer) createTopicScanner() error {
+	client, err := sarama.NewClient(k.Brokers, k.config)
+	if err != nil {
+		return err
+	}
+	k.topicClient = client
+	return nil
+}
+
+func (k *KafkaConsumer) compileTopicRegexps() {
+	// While we can add new topics matching extant regexps, we can't
+	// update that list on the fly.  We compile them once at startup.
+	// Changing them is a configuration change and requires a restart.
+
+	if len(k.TopicRegexps) == 0 {
+		// Nothing to do.
+		return
+	}
+	k.regexps = make([]regexp.Regexp, 0, len(k.TopicRegexps))
+	// Let's optimistically assume that all of them compile
+	for _, r := range k.TopicRegexps {
+		re, err := regexp.Compile(r)
+		if err == nil {
+			k.regexps = append(k.regexps, *re)
+			k.Log.Infof("Added regular expression '%s' to topics", r)
+		} else {
+			k.Log.Errorf("Regular expression '%s' did not compile: '%w'; not adding to topics", r, err)
+		}
+	}
+}
+
+func (k *KafkaConsumer) refreshTopics() error {
+	// We instantiate a new generic Kafka client, so we can ask
+	// it for all the topics it knows about.  Then we build
+	// regexps from our strings, loop over those, loop over the
+	// topics, and if we find a match, add that topic to
+	// out topic set, which then we turn back into a list at the end.
+
+	allDiscoveredTopics, err := k.topicClient.Topics()
+	if err != nil {
+		return err
+	}
+	extantTopicSet := make(map[string]bool, len(allDiscoveredTopics))
+	for _, t := range allDiscoveredTopics {
+		extantTopicSet[t] = true
+	}
+	// Even if a topic specified by a literal string (that is, k.Topics)
+	// does not appear in the topic list, we want to keep it around, in
+	// case it pops back up--it is not guaranteed to be matched by any
+	// of our regular expressions.  Therefore, we pretend that it's in
+	// extantTopicSet, even if it isn't.
+	//
+	// Assuming that literally-specified topics are usually in the topics
+	// present on the broker, this should not need a resizing (although if
+	// you have many topics that you don't care about, it will be too big)
+	wantedTopicSet := make(map[string]bool, len(allDiscoveredTopics))
+	for _, t := range k.Topics {
+		// Get our pre-specified topics
+		k.Log.Debugf("adding literally-specified topic %s", t)
+		wantedTopicSet[t] = true
+	}
+	for t := range extantTopicSet {
+		// Add topics that match regexps
+		for _, r := range k.regexps {
+			if r.MatchString(t) {
+				wantedTopicSet[t] = true
+				k.Log.Debugf("adding regexp-matched topic '%w' -> '%s'", r, k)
+				break
+			}
+		}
+	}
+	topicList := make([]string, 0, len(wantedTopicSet))
+	for t := range wantedTopicSet {
+		topicList = append(topicList, t)
+	}
+	sort.Strings(topicList)
+	k.replaceTopics(topicList)
+	return nil
+}
+
+func (k *KafkaConsumer) replaceTopics(newTopics []string) {
+	replace := true
+	// We're not just using reflect.DeepEqual because it's slow.
+	// This is pretty straightforward: we replace unless the old list
+	// and the new list have all the same members in the same order.  We
+	// keep them sorted internally for display purposes anyway.
+	if len(newTopics) == len(k.allWantedTopics) {
+		// Assume it's gonna be fine
+		replace = false
+		for i := range newTopics {
+			// We know these are sorted, so if any don't match,
+			// we want to replace the list.
+			if newTopics[i] != k.allWantedTopics[i] {
+				replace = true
+				break
+			}
+		}
+	}
+	if replace {
+		k.Log.Infof("updating topics: replacing '%w' with '%w'", k.allWantedTopics, newTopics)
+		k.allWantedTopics = newTopics
+	}
 }
 
 func (k *KafkaConsumer) create() error {
@@ -178,7 +292,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 
 	// If TopicRegexps is set, add matches to Topics
 	if len(k.TopicRegexps) > 0 {
-		if err := k.addTopicRegexps(); err != nil {
+		if err := k.refreshTopics(); err != nil {
 			return err
 		}
 		// If, additionally, TopicRefreshInterval is set,
@@ -189,8 +303,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			ticker := time.NewTicker(tick)
 			go func() {
 				for range ticker.C {
-					k.Log.Infof("refreshing topics")
-					if err := k.addTopicRegexps(); err != nil {
+					if err := k.refreshTopics(); err != nil {
 						k.Log.Errorf("topic refresh failed: %v", err)
 					}
 				}
@@ -229,7 +342,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
-			err := k.consumer.Consume(ctx, k.Topics, handler)
+			err := k.consumer.Consume(ctx, k.allWantedTopics, handler)
 			if err != nil {
 				acc.AddError(fmt.Errorf("consume: %w", err))
 				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
@@ -249,82 +362,11 @@ func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
 }
 
 func (k *KafkaConsumer) Stop() {
+	if k.topicClient != nil {
+		k.topicClient.Close()
+	}
 	k.cancel()
 	k.wg.Wait()
-}
-
-func (k *KafkaConsumer) addTopicRegexps() error {
-	// We instantiate a new generic Kafka client, so we can ask
-	// it for all the topics it knows about.  Then we build
-	// regexps from our strings, loop over those, loop over the
-	// topics, and if we find a match, add that topic to
-	// out topic set, which then we turn back into a list at the end.
-	var err error
-	var allTopics []string
-	var exists = struct{}{}
-	regexps := make([]regexp.Regexp, 0, len(k.TopicRegexps))
-
-	kafkaClient, err := sarama.NewClient(k.Brokers, k.config)
-	if err != nil {
-		return err
-	}
-	defer kafkaClient.Close()
-
-	allTopics, err := kafkaClient.Topics()
-	if err != nil {
-		return err
-	}
-	for _, r := range k.TopicRegexps {
-		re := regexp.MustCompile(r)
-		regexps = append(regexps, *re)
-	}
-	topicSet := make(map[string]bool, len(k.Topics))
-	for _, t := range k.Topics {
-		// Get our preexisting topics
-		topicSet[t] = true
-	}
-	var removeTopics []string
-	for k := range topicSet {
-		found := false
-		for _, t := range allTopics {
-			if t == k {
-				found = true
-				break
-			}
-		}
-		if !found {
-			removeTopics = append(removeTopics, k)
-		}
-	}
-	// Remove any topics no longer present on broker
-	for _, w := range removeTopics {
-		k.Log.Infof("topic '%s' no longer present; removing", w)
-		delete(topicSet, w)
-	}
-	// Add topics that have newly appeared on broker
-	for _, r := range regexps {
-		for _, t := range allTopics {
-			if _, ok := topicSet[t]; !ok && r.MatchString(t) {
-					k.Log.Infof("adding new topic %q", t)
-					topicSet[t] = exists
-				}
-			}
-		}
-	}
-	topicList := make([]string, 0, len(topicSet))
-	for t := range topicSet {
-		topicList = append(topicList, t)
-	}
-	sort.Strings(topicList) // k.Topics will have been sorted when it
-	// became k.Topics, because it was topicList first
-	if !reflect.DeepEqual(k.Topics, topicList) {
-		k.mu.Lock()
-		defer k.mu.Unlock()
-		k.Log.Infof("Updating known topics '%v' -> '%v'", k.Topics,
-			topicList)
-		k.Topics = topicList
-	}
-	return nil
 }
 
 // Message is an aggregate type binding the Kafka message and the session so

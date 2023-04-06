@@ -603,7 +603,7 @@ func TestExponentialBackoff(t *testing.T) {
 	max := 3
 
 	// get an unused port by listening on next available port, then closing it
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 	require.NoError(t, listener.Close())
