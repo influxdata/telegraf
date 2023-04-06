@@ -337,9 +337,9 @@ func PdhAddCounter(hQuery PDH_HQUERY, szFullCounterPath string, dwUserData uintp
 	ptxt, _ := syscall.UTF16PtrFromString(szFullCounterPath)
 	ret, _, _ := pdh_AddCounterW.Call(
 		uintptr(hQuery),
-		uintptr(unsafe.Pointer(ptxt)), //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(ptxt)), //nolint:gosec // G103: Valid use of unsafe call to pass ptxt
 		dwUserData,
-		uintptr(unsafe.Pointer(phCounter))) //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(phCounter))) //nolint:gosec // G103: Valid use of unsafe call to pass phCounter
 
 	return uint32(ret)
 }
@@ -361,9 +361,9 @@ func PdhAddEnglishCounter(hQuery PDH_HQUERY, szFullCounterPath string, dwUserDat
 	ptxt, _ := syscall.UTF16PtrFromString(szFullCounterPath)
 	ret, _, _ := pdh_AddEnglishCounterW.Call(
 		uintptr(hQuery),
-		uintptr(unsafe.Pointer(ptxt)), //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(ptxt)), //nolint:gosec // G103: Valid use of unsafe call to pass ptxt
 		dwUserData,
-		uintptr(unsafe.Pointer(phCounter))) //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(phCounter))) //nolint:gosec // G103: Valid use of unsafe call to pass phCounter
 
 	return uint32(ret)
 }
@@ -407,14 +407,14 @@ func PdhCollectQueryData(hQuery PDH_HQUERY) uint32 {
 // Converts the filetime structure to a GO time class and returns the native time.
 func PdhCollectQueryDataWithTime(hQuery PDH_HQUERY) (uint32, time.Time) {
 	var localFileTime FILETIME
-	//nolint:gosec // G103: Use of unsafe calls should be audited
+	//nolint:gosec // G103: Valid use of unsafe call to pass localFileTime
 	ret, _, _ := pdh_CollectQueryDataWithTime.Call(uintptr(hQuery), uintptr(unsafe.Pointer(&localFileTime)))
 
 	if ret == ERROR_SUCCESS {
 		var utcFileTime FILETIME
 		ret, _, _ := krn_LocalFileTimeToFileTime.Call(
-			uintptr(unsafe.Pointer(&localFileTime)), //nolint:gosec // G103: Use of unsafe calls should be audited
-			uintptr(unsafe.Pointer(&utcFileTime)))   //nolint:gosec // G103: Use of unsafe calls should be audited
+			uintptr(unsafe.Pointer(&localFileTime)), //nolint:gosec // G103: Valid use of unsafe call to pass localFileTime
+			uintptr(unsafe.Pointer(&utcFileTime)))   //nolint:gosec // G103: Valid use of unsafe call to pass utcFileTime
 
 		if ret == 0 {
 			return uint32(ERROR_FAILURE), time.Now()
@@ -440,8 +440,8 @@ func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, 
 	ret, _, _ := pdh_GetFormattedCounterValue.Call(
 		uintptr(hCounter),
 		uintptr(PDH_FMT_DOUBLE|PDH_FMT_NOCAP100),
-		uintptr(unsafe.Pointer(lpdwType)), //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(pValue)))   //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(lpdwType)), //nolint:gosec // G103: Valid use of unsafe call to pass lpdwType
+		uintptr(unsafe.Pointer(pValue)))   //nolint:gosec // G103: Valid use of unsafe call to pass pValue
 
 	return uint32(ret)
 }
@@ -487,9 +487,9 @@ func PdhGetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER, lpdwBufferSize *ui
 	ret, _, _ := pdh_GetFormattedCounterArrayW.Call(
 		uintptr(hCounter),
 		uintptr(PDH_FMT_DOUBLE|PDH_FMT_NOCAP100),
-		uintptr(unsafe.Pointer(lpdwBufferSize)),  //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(lpdwBufferCount)), //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(itemBuffer)))      //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(lpdwBufferSize)),  //nolint:gosec // G103: Valid use of unsafe call to pass lpdwBufferSize
+		uintptr(unsafe.Pointer(lpdwBufferCount)), //nolint:gosec // G103: Valid use of unsafe call to pass lpdwBufferCount
+		uintptr(unsafe.Pointer(itemBuffer)))      //nolint:gosec // G103: Valid use of unsafe call to pass itemBuffer
 
 	return uint32(ret)
 }
@@ -505,7 +505,7 @@ func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *PDH_HQUERY)
 	ret, _, _ := pdh_OpenQuery.Call(
 		szDataSource,
 		dwUserData,
-		uintptr(unsafe.Pointer(phQuery))) //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(phQuery))) //nolint:gosec // G103: Valid use of unsafe call to pass phQuery
 
 	return uint32(ret)
 }
@@ -546,11 +546,11 @@ func PdhExpandWildCardPath(szWildCardPath string, mszExpandedPathList *uint16, p
 	flags := uint32(0) // expand instances and counters
 	ret, _, _ := pdh_ExpandWildCardPathW.Call(
 		// search counters on local computer
-		uintptr(unsafe.Pointer(nil)),                 //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(ptxt)),                //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(mszExpandedPathList)), //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(pcchPathListLength)),  //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(&flags)))              //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(nil)),                 //nolint:gosec // G103: Valid use of unsafe call to pass nil
+		uintptr(unsafe.Pointer(ptxt)),                //nolint:gosec // G103: Valid use of unsafe call to pass ptxt
+		uintptr(unsafe.Pointer(mszExpandedPathList)), //nolint:gosec // G103: Valid use of unsafe call to pass mszExpandedPathList
+		uintptr(unsafe.Pointer(pcchPathListLength)),  //nolint:gosec // G103: Valid use of unsafe call to pass pcchPathListLength
+		uintptr(unsafe.Pointer(&flags)))              //nolint:gosec // G103: Valid use of unsafe call to pass flags
 
 	return uint32(ret)
 }
@@ -558,8 +558,7 @@ func PdhExpandWildCardPath(szWildCardPath string, mszExpandedPathList *uint16, p
 // PdhValidatePath validates a path. Will return ERROR_SUCCESS when ok, or PDH_CSTATUS_BAD_COUNTERNAME when the path is erroneous.
 func PdhValidatePath(path string) uint32 {
 	ptxt, _ := syscall.UTF16PtrFromString(path)
-	//nolint:gosec // G103: Use of unsafe calls should be audited
-	ret, _, _ := pdh_ValidatePathW.Call(uintptr(unsafe.Pointer(ptxt)))
+	ret, _, _ := pdh_ValidatePathW.Call(uintptr(unsafe.Pointer(ptxt))) //nolint:gosec // G103: Valid use of unsafe call to pass ptxt
 
 	return uint32(ret)
 }
@@ -590,8 +589,8 @@ func PdhGetCounterInfo(hCounter PDH_HCOUNTER, bRetrieveExplainText int, pdwBuffe
 	ret, _, _ := pdh_GetCounterInfoW.Call(
 		uintptr(hCounter),
 		uintptr(bRetrieveExplainText),
-		uintptr(unsafe.Pointer(pdwBufferSize)), //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(lpBuffer)))      //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(pdwBufferSize)), //nolint:gosec // G103: Valid use of unsafe call to pass pdwBufferSize
+		uintptr(unsafe.Pointer(lpBuffer)))      //nolint:gosec // G103: Valid use of unsafe call to pass lpBuffer
 
 	return uint32(ret)
 }
@@ -612,8 +611,8 @@ func PdhGetCounterInfo(hCounter PDH_HCOUNTER, bRetrieveExplainText int, pdwBuffe
 func PdhGetRawCounterValue(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_RAW_COUNTER) uint32 {
 	ret, _, _ := pdh_GetRawCounterValue.Call(
 		uintptr(hCounter),
-		uintptr(unsafe.Pointer(lpdwType)), //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(pValue)))   //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(lpdwType)), //nolint:gosec // G103: Valid use of unsafe call to pass lpdwType
+		uintptr(unsafe.Pointer(pValue)))   //nolint:gosec // G103: Valid use of unsafe call to pass pValue
 
 	return uint32(ret)
 }
@@ -637,8 +636,8 @@ func PdhGetRawCounterValue(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_
 func PdhGetRawCounterArray(hCounter PDH_HCOUNTER, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
 	ret, _, _ := pdh_GetRawCounterArrayW.Call(
 		uintptr(hCounter),
-		uintptr(unsafe.Pointer(lpdwBufferSize)),  //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(lpdwBufferCount)), //nolint:gosec // G103: Use of unsafe calls should be audited
-		uintptr(unsafe.Pointer(itemBuffer)))      //nolint:gosec // G103: Use of unsafe calls should be audited
+		uintptr(unsafe.Pointer(lpdwBufferSize)),  //nolint:gosec // G103: Valid use of unsafe call to pass lpdwBufferSize
+		uintptr(unsafe.Pointer(lpdwBufferCount)), //nolint:gosec // G103: Valid use of unsafe call to pass lpdwBufferCount
+		uintptr(unsafe.Pointer(itemBuffer)))      //nolint:gosec // G103: Valid use of unsafe call to pass itemBuffer
 	return uint32(ret)
 }

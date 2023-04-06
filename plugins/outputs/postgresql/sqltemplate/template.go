@@ -322,12 +322,10 @@ func (cols Columns) Keys() Columns {
 
 // Sorted returns a sorted copy of Columns.
 //
-// Columns are sorted so that they are in order as: [Time, Tags, Fields], with the columns within each group sorted
-// alphabetically.
+// Columns are sorted so that they are in order as: [Time, Tags, Fields], with the columns within each group sorted alphabetically.
 func (cols Columns) Sorted() Columns {
 	newCols := append([]Column{}, cols...)
-	//nolint:gosec // G103: Use of unsafe calls should be audited
-	(*utils.ColumnList)(unsafe.Pointer(&newCols)).Sort()
+	(*utils.ColumnList)(unsafe.Pointer(&newCols)).Sort() //nolint:gosec // G103: Valid use of unsafe call to speed up sorting
 	return newCols
 }
 

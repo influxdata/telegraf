@@ -129,8 +129,7 @@ func (m *PerformanceQueryImpl) GetCounterPath(counterHandle PDH_HCOUNTER) (strin
 		buff = make([]byte, bufSize)
 		bufSize = uint32(len(buff))
 		if ret = PdhGetCounterInfo(counterHandle, 0, &bufSize, &buff[0]); ret == ERROR_SUCCESS {
-			//nolint:gosec // G103: Use of unsafe calls should be audited
-			ci := (*PDH_COUNTER_INFO)(unsafe.Pointer(&buff[0]))
+			ci := (*PDH_COUNTER_INFO)(unsafe.Pointer(&buff[0])) //nolint:gosec // G103: Valid use of unsafe call to create PDH_COUNTER_INFO
 			return UTF16PtrToString(ci.SzFullPath), nil
 		}
 	}
@@ -181,7 +180,7 @@ func (m *PerformanceQueryImpl) GetFormattedCounterArrayDouble(hCounter PDH_HCOUN
 		buff := make([]byte, buffSize)
 
 		if ret = PdhGetFormattedCounterArrayDouble(hCounter, &buffSize, &itemCount, &buff[0]); ret == ERROR_SUCCESS {
-			//nolint:gosec // G103: Use of unsafe calls should be audited
+			//nolint:gosec // G103: Valid use of unsafe call to create PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
 			items := (*[1 << 20]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE)(unsafe.Pointer(&buff[0]))[:itemCount]
 			values := make([]CounterValue, 0, itemCount)
 			for _, item := range items {
@@ -205,7 +204,7 @@ func (m *PerformanceQueryImpl) GetRawCounterArray(hCounter PDH_HCOUNTER) ([]Coun
 		buff := make([]byte, buffSize)
 
 		if ret = PdhGetRawCounterArray(hCounter, &buffSize, &itemCount, &buff[0]); ret == ERROR_SUCCESS {
-			//nolint:gosec // G103: Use of unsafe calls should be audited
+			//nolint:gosec // G103: Valid use of unsafe call to create PDH_RAW_COUNTER_ITEM
 			items := (*[1 << 20]PDH_RAW_COUNTER_ITEM)(unsafe.Pointer(&buff[0]))[:itemCount]
 			values := make([]CounterValue, 0, itemCount)
 			for _, item := range items {
@@ -273,7 +272,7 @@ func UTF16PtrToString(s *uint16) string {
 	if s == nil {
 		return ""
 	}
-	//nolint:gosec // G103: Use of unsafe calls should be audited
+	//nolint:gosec // G103: Valid use of unsafe call to create string from Windows API LPTSTR (pointer to string)
 	return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
 }
 

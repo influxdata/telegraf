@@ -79,16 +79,15 @@ func parseBoolBytes(b []byte) (bool, error) {
 
 // unsafeBytesToString converts a []byte to a string without a heap allocation.
 //
-// It is unsafe, and is intended to prepare input to short-lived functions
-// that require strings.
+// It is unsafe, and is intended to prepare input to short-lived functions that require strings.
 func unsafeBytesToString(in []byte) string {
-	//nolint:gosec // G103: Use of unsafe calls should be audited
+	//nolint:gosec // G103: Valid use of unsafe call to convert []byte to SliceHeader (without a heap allocation)
 	src := *(*reflect.SliceHeader)(unsafe.Pointer(&in))
 	dst := reflect.StringHeader{
 		Data: src.Data,
 		Len:  src.Len,
 	}
-	//nolint:gosec // G103: Use of unsafe calls should be audited
+	//nolint:gosec // G103: Valid use of unsafe call to convert StringHeader to string (without a heap allocation)
 	s := *(*string)(unsafe.Pointer(&dst))
 	return s
 }
