@@ -54,9 +54,7 @@ func parseSourceFile(t *testing.T, goPluginFile string, pluginCategory string) {
 			if !strings.HasPrefix(comm.Text, "//go:build") {
 				continue
 			}
-			file := filepath.Base(goPluginFile)
-			testName := fmt.Sprintf("%v-%v", pluginCategory, strings.TrimSuffix(file, ".go"))
-			t.Run(testName, func(t *testing.T) {
+			t.Run(goPluginFile, func(t *testing.T) {
 				plugin := resolvePluginFromImports(t, node.Imports)
 				testBuildTags(t, comm.Text, pluginCategory, plugin)
 			})
