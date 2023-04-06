@@ -82,6 +82,10 @@ func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode st
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {
+	if c, ok := conn.(*tls.Conn); ok {
+		conn = c.NetConn()
+	}
+
 	if l.ReadBufferSize > 0 {
 		if rb, ok := conn.(hasSetReadBuffer); ok {
 			if err := rb.SetReadBuffer(l.ReadBufferSize); err != nil {
@@ -104,7 +108,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 	if l.KeepAlivePeriod != nil {
 		tcpConn, ok := conn.(*net.TCPConn)
 		if !ok {
-			return fmt.Errorf("connection not a TCP connection (%T)", conn)
+			return fmt.Errorf("cannot set keep-alive: not a TCP connection (%T)", conn)
 		}
 		if *l.KeepAlivePeriod == 0 {
 			if err := tcpConn.SetKeepAlive(false); err != nil {
