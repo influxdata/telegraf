@@ -283,10 +283,7 @@ func toFloat64(value interface{}) (float64, error) {
 func toInt(value interface{}) (int, error) {
 	if !is32BitChecked {
 		is32BitChecked = true
-		is32Bit = false
-		if strconv.IntSize == 32 {
-			is32Bit = true
-		}
+		is32Bit = strconv.IntSize == 32
 	}
 
 	// Out of all Golang numerical types Telegraf only uses int64, unit64 and float64 for fields

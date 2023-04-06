@@ -51,7 +51,7 @@ func GetFromSnapProcess(pid uint32) (uint32, uint32, string, error) {
 	}
 	defer windows.CloseHandle(snap)
 	var pe32 windows.ProcessEntry32
-	//nolint:gosec // G103: Use of unsafe calls should be audited
+	//nolint:gosec // G103: Valid use of unsafe calls to determine the size of the struct
 	pe32.Size = uint32(unsafe.Sizeof(pe32))
 	if err = windows.Process32First(snap, &pe32); err != nil {
 		return 0, 0, "", err
