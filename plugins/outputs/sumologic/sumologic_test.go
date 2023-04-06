@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf/testutil"
 	"io"
@@ -247,8 +248,18 @@ func TestContentType(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				gz, err := gzip.NewReader(r.Body)
 				require.NoError(t, err)
-				_, err = io.Copy(&body, gz)
+
+				for {
+					_, err = io.CopyN(&body, gz, 1024*1024)
+					if err != nil {
+						if errors.Is(err, io.EOF) {
+							err = nil
+						}
+						break
+					}
+				}
 				require.NoError(t, err)
+
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer ts.Close()

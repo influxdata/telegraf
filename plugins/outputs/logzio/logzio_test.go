@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -72,7 +73,15 @@ func TestWrite(t *testing.T) {
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
 
-		_, err = io.Copy(&body, gz)
+		for {
+			_, err = io.CopyN(&body, gz, 1024*1024)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
+				break
+			}
+		}
 		require.NoError(t, err)
 
 		var lm Metric

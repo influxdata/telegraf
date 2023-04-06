@@ -94,6 +94,7 @@ linters-settings:
       - G107
       - G108
       - G109
+      - G110
       - G111
       - G112
       - G114

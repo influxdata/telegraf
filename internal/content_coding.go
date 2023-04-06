@@ -255,10 +255,17 @@ func (d *ZlibDecoder) Decode(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = io.Copy(d.buf, r)
-	if err != nil && !errors.Is(err, io.EOF) {
-		return nil, err
+
+	for {
+		_, err = io.CopyN(d.buf, r, 1024*1024)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
 	}
+
 	err = r.Close()
 	if err != nil {
 		return nil, err
