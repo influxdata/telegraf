@@ -363,7 +363,7 @@ tls_key = "/run/telegraf-kubernetes-key"
 
 ### kuberntes node status `status`
 
-The node status ready can mean 3 different values. Ready is just one condition type for nodes. We can extend other condition types if requirement comes. Other conditionTypes are MemoryPressure, DiskPressure, PIDPressure and NetworkUnavailable
+The node status ready can mean 3 different values. Ready is just one condition type for nodes.
 
 | Tag value | Corresponding field value |  Meaning |
 | --------- | ------------------------- |  -------
