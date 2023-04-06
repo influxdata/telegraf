@@ -35,7 +35,7 @@ func TestNode(t *testing.T) {
 					nodeMeasurement,
 					map[string]string{},
 					map[string]interface{}{
-						"count": int64(0),
+						"node_count": int64(0),
 					},
 					time.Unix(0, 0),
 				),

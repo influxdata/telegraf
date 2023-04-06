@@ -88,7 +88,7 @@ func (ki *KubernetesInventory) gatherCertificates(r corev1.Secret, acc telegraf.
 				tags["verification"] = "invalid"
 				fields["verification_code"] = 1
 			}
-			acc.AddFields(secretMeasurement, fields, tags)
+			acc.AddFields(certificateMeasurement, fields, tags)
 		}
 	}
 }

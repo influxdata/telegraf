@@ -255,7 +255,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - allocatable_pods
     - status_condition
     - spec_unschedulable
-    - count
+    - node_count
 
 - kubernetes_persistentvolume
   - tags:
@@ -344,6 +344,33 @@ tls_key = "/run/telegraf-kubernetes-key"
     - used_memory_requests
     - used_pods
 
+- kubernetes_certificate
+  - tags:
+    - common_name
+    - signature_algorithm
+    - public_key_algorithm
+    - issuer_common_name
+    - san
+    - verification
+    - name
+    - namespace
+  - fields:
+    - age
+    - expiry
+    - startdate
+    - enddate
+    - verification_code
+
+### kuberntes node status `status`
+
+The node status ready can mean 3 different values. Ready is just one condition type for nodes. We can extend other condition types if requirement comes. Other conditionTypes are MemoryPressure, DiskPressure, PIDPressure and NetworkUnavailable
+
+| Tag value | Corresponding field value |  Meaning |
+| --------- | ------------------------- |  -------
+| ready     | 0                         |  NotReady|
+| ready     | 1                         |  Ready   |
+| ready     | 2                         |  Unknown |
+
 ### pv `phase_type`
 
 The persistentvolume "phase" is saved in the `phase` tag with a correlated
@@ -376,7 +403,7 @@ numeric field called `phase_type` corresponding with that tag value.
 kubernetes_configmap,configmap_name=envoy-config,namespace=default,resource_version=56593031 created=1544103867000000000i 1547597616000000000
 kubernetes_daemonset,daemonset_name=telegraf,selector_select1=s1,namespace=logging number_unavailable=0i,desired_number_scheduled=11i,number_available=11i,number_misscheduled=8i,number_ready=11i,updated_number_scheduled=11i,created=1527758699000000000i,generation=16i,current_number_scheduled=11i 1547597616000000000
 kubernetes_deployment,deployment_name=deployd,selector_select1=s1,namespace=default replicas_unavailable=0i,created=1544103082000000000i,replicas_available=1i 1547597616000000000
-kubernetes_node,host=vjain count=8i 1628918652000000000
+kubernetes_node,host=vjain node_count=8i 1628918652000000000
 kubernetes_node,condition=Ready,host=vjain,node_name=ip-172-17-0-2.internal,status=True status_condition=1i 1629177980000000000
 kubernetes_node,cluster_namespace=tools,condition=Ready,host=vjain,node_name=ip-172-17-0-2.internal,status=True allocatable_cpu_cores=4i,allocatable_memory_bytes=7186567168i,allocatable_millicpu_cores=4000i,allocatable_pods=110i,capacity_cpu_cores=4i,capacity_memory_bytes=7291424768i,capacity_millicpu_cores=4000i,capacity_pods=110i,spec_unschedulable=0i,status_condition=1i 1628918652000000000
 kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-high hard_cpu=1000i,hard_memory=214748364800i,hard_pods=10i,used_cpu=0i,used_memory=0i,used_pods=0i 1629110393000000000

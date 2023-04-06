@@ -83,11 +83,8 @@ func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.Contai
 		fields["phase_reason"] = phaseReason
 	}
 
-	tok := strings.Split(c.Image, ":")
-
 	tags := map[string]string{
 		"container_name": c.Name,
-		"image":          c.Image,
 		"namespace":      p.Namespace,
 		"node_name":      p.Spec.NodeName,
 		"pod_name":       p.Name,
@@ -95,9 +92,11 @@ func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.Contai
 		"state":          state,
 		"readiness":      readiness,
 	}
-	if len(tok) == 2 {
-		tags["version"] = tok[1]
+	splitImage := strings.Split(c.Image, ":")
+	if len(splitImage) == 2 {
+		tags["version"] = splitImage[1]
 	}
+	tags["image"] = splitImage[0]
 	for key, val := range p.Spec.NodeSelector {
 		if ki.selectorFilter.Match(key) {
 			tags["node_selector_"+key] = val
@@ -128,15 +127,15 @@ func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.Contai
 		conditionfields := map[string]interface{}{}
 		conditiontags := map[string]string{
 			"container_name": c.Name,
-			"image":          c.Image,
+			"image":          splitImage[0],
 			"status":         string(val.Status),
 			"namespace":      p.Namespace,
 			"node_name":      p.Spec.NodeName,
 			"pod_name":       p.Name,
 			"condition":      string(val.Type),
 		}
-		if len(tok) == 2 {
-			conditiontags["version"] = tok[1]
+		if len(splitImage) == 2 {
+			conditiontags["version"] = splitImage[1]
 		}
 		running := 0
 		podready := 0

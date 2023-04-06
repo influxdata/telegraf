@@ -162,7 +162,7 @@ var (
 	serviceMeasurement               = "kubernetes_service"
 	statefulSetMeasurement           = "kubernetes_statefulset"
 	resourcequotaMeasurement         = "kubernetes_resourcequota"
-	secretMeasurement                = "kubernetes_secret" //nolint:gosec // false positive
+	certificateMeasurement           = "kubernetes_certificate"
 )
 
 func init() {

@@ -25,7 +25,7 @@ func collectNodes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesI
 func (ki *KubernetesInventory) gatherNodeCount(count int, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{}
 	tags := map[string]string{}
-	fields["count"] = count
+	fields["node_count"] = count
 
 	acc.AddFields(nodeMeasurement, fields, tags)
 }
