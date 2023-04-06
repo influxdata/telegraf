@@ -3,6 +3,7 @@
 package procstat
 
 import (
+	"errors"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -34,7 +35,8 @@ func queryPidWithWinServiceName(winServiceName string) (uint32, error) {
 	var bytesNeeded uint32
 	var buf []byte
 
-	if err := windows.QueryServiceStatusEx(srv.Handle, windows.SC_STATUS_PROCESS_INFO, nil, 0, &bytesNeeded); err != windows.ERROR_INSUFFICIENT_BUFFER {
+	err = windows.QueryServiceStatusEx(srv.Handle, windows.SC_STATUS_PROCESS_INFO, nil, 0, &bytesNeeded)
+	if !errors.Is(err, windows.ERROR_INSUFFICIENT_BUFFER) {
 		return 0, err
 	}
 

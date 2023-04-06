@@ -31,7 +31,7 @@ type FakePerformanceQuery struct {
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
-	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
+	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path) //nolint:dogsled // only instance is needed for this helper function in tests
 	if inst == "" {
 		inst = "--"
 	}
@@ -71,7 +71,7 @@ func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (PDH_HCOUNT
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
 	} else {
-		return 0, errors.New(fmt.Sprintf("AddCounterToQuery: invalid counter path: %s", counterPath))
+		return 0, fmt.Errorf("AddCounterToQuery: invalid counter path: %q", counterPath)
 	}
 }
 
@@ -82,7 +82,7 @@ func (m *FakePerformanceQuery) AddEnglishCounterToQuery(counterPath string) (PDH
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
 	} else {
-		return 0, fmt.Errorf("AddEnglishCounterToQuery: invalid counter path: %s", counterPath)
+		return 0, fmt.Errorf("AddEnglishCounterToQuery: invalid counter path: %q", counterPath)
 	}
 }
 

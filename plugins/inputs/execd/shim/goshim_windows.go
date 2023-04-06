@@ -13,6 +13,7 @@ func listenForCollectMetricsSignals(ctx context.Context, collectMetricsPrompt ch
 	signal.Notify(collectMetricsPrompt, syscall.SIGHUP)
 
 	go func() {
+		//nolint:gosimple // for-select used on purpose
 		select {
 		case <-ctx.Done():
 			// context done. stop to signals to avoid pushing messages to a closed channel

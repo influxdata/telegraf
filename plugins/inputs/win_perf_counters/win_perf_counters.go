@@ -382,7 +382,8 @@ func (m *WinPerfCounters) ParseConfig() error {
 }
 
 func (m *WinPerfCounters) checkError(err error) error {
-	if pdhErr, ok := err.(*PdhError); ok {
+	var pdhErr *PdhError
+	if errors.As(err, &pdhErr) {
 		for _, ignoredErrors := range m.IgnoredErrors {
 			if PDHErrors[pdhErr.ErrorCode] == ignoredErrors {
 				return nil
@@ -466,7 +467,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 			if err != nil {
 				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
-					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+					return fmt.Errorf("error while getting value for counter %q: %w", metric.counterPath, err)
 				}
 				m.Log.Warnf("error while getting value for counter %q, instance: %s, will skip metric: %v", metric.counterPath, metric.instance, err)
 				continue
@@ -482,7 +483,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 			if err != nil {
 				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
-					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+					return fmt.Errorf("error while getting value for counter %q: %w", metric.counterPath, err)
 				}
 				m.Log.Warnf("error while getting value for counter %q, instance: %s, will skip metric: %v", metric.counterPath, metric.instance, err)
 				continue
@@ -555,7 +556,8 @@ func addCounterMeasurement(metric *counter, instanceName string, value interface
 }
 
 func isKnownCounterDataError(err error) bool {
-	if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
+	var pdhErr *PdhError
+	if errors.As(err, &pdhErr) && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
 		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_DENOMINATOR ||
 		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_VALUE ||
 		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA ||

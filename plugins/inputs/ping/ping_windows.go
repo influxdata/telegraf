@@ -12,11 +12,11 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
-	tags := map[string]string{"url": u}
+func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
+	tags := map[string]string{"url": host}
 	fields := map[string]interface{}{"result_code": 0}
 
-	args := p.args(u)
+	args := p.args(host)
 	totalTimeout := 60.0
 	if len(p.Arguments) == 0 {
 		totalTimeout = p.timeout() * float64(p.Count)
@@ -34,9 +34,9 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	if err != nil {
 		// fatal error
 		if pendingError != nil {
-			acc.AddError(fmt.Errorf("%s: %s", pendingError, u))
+			acc.AddError(fmt.Errorf("%w: %q", pendingError, host))
 		} else {
-			acc.AddError(fmt.Errorf("%s: %s", err, u))
+			acc.AddError(fmt.Errorf("%w: %q", err, host))
 		}
 
 		fields["result_code"] = 2
