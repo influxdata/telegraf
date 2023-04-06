@@ -18,7 +18,7 @@ import (
 // For ex, Pivot processor pkg github.com/influxdata/telegraf/plugins/processors/pivot maps directly to
 // the last element of the pkg i.e "pivot"
 // But in case of "aws_ec2" processor, the pkg is defined as "github.com/influxdata/telegraf/plugins/processors/aws/ec2".
-// This ensure package names are not tied with plugin names.
+// This ensures package names are not tied with plugin names.
 // it should be of the form <pkg-name>: <plugin-name>
 var exceptionMap = map[string]string{
 	"github.com/influxdata/telegraf/plugins/processors/aws/ec2": "aws_ec2",
@@ -38,7 +38,9 @@ func testPluginDirectory(t *testing.T, directory string) {
 		if d.IsDir() || strings.HasSuffix(d.Name(), "_test.go") {
 			return nil
 		}
-		parseSourceFile(t, goPluginFile, directory)
+		t.Run(goPluginFile, func(t *testing.T) {
+			parseSourceFile(t, goPluginFile, directory)
+		})
 		return nil
 	})
 	require.NoError(t, err)
@@ -54,10 +56,8 @@ func parseSourceFile(t *testing.T, goPluginFile string, pluginCategory string) {
 			if !strings.HasPrefix(comm.Text, "//go:build") {
 				continue
 			}
-			t.Run(goPluginFile, func(t *testing.T) {
-				plugin := resolvePluginFromImports(t, node.Imports)
-				testBuildTags(t, comm.Text, pluginCategory, plugin)
-			})
+			plugin := resolvePluginFromImports(t, node.Imports)
+			testBuildTags(t, comm.Text, pluginCategory, plugin)
 		}
 	}
 }
