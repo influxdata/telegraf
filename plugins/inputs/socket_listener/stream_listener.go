@@ -32,7 +32,7 @@ type streamListener struct {
 	Log             telegraf.Logger
 
 	listener    net.Listener
-	connections map[string]net.Conn
+	connections map[net.Conn]struct{}
 	path        string
 
 	wg sync.WaitGroup
@@ -123,7 +123,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 
 	// Store the connection mapped to its address
 	l.Lock()
-	l.connections[addr] = conn
+	l.connections[conn] = struct{}{}
 	l.Unlock()
 
 	return nil
@@ -134,7 +134,7 @@ func (l *streamListener) closeConnection(conn net.Conn) {
 	if err := conn.Close(); err != nil {
 		l.Log.Errorf("Cannot close connection to %q: %v", addr, err)
 	}
-	delete(l.connections, addr)
+	delete(l.connections, conn)
 }
 
 func (l *streamListener) addr() net.Addr {
@@ -147,7 +147,7 @@ func (l *streamListener) close() error {
 	}
 
 	l.Lock()
-	for _, conn := range l.connections {
+	for conn := range l.connections {
 		l.closeConnection(conn)
 	}
 	l.Unlock()
@@ -164,7 +164,7 @@ func (l *streamListener) close() error {
 }
 
 func (l *streamListener) listen(acc telegraf.Accumulator) {
-	l.connections = make(map[string]net.Conn)
+	l.connections = make(map[net.Conn]struct{})
 
 	l.wg.Add(1)
 	defer l.wg.Done()
