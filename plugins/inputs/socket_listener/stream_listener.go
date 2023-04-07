@@ -5,11 +5,13 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -131,7 +133,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 
 func (l *streamListener) closeConnection(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
-	if err := conn.Close(); err != nil {
+	if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
 		l.Log.Errorf("Cannot close connection to %q: %v", addr, err)
 	}
 	delete(l.connections, addr)
@@ -187,7 +189,9 @@ func (l *streamListener) listen(acc telegraf.Accumulator) {
 		go func(c net.Conn) {
 			defer wg.Done()
 			if err := l.read(acc, c); err != nil {
-				acc.AddError(err)
+				if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
+					acc.AddError(err)
+				}
 			}
 			l.Lock()
 			l.closeConnection(conn)
