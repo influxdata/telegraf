@@ -26,7 +26,7 @@ build()
     rm -f ${target}
 #    make LDFLAGS="-w -s" CGO_ENABLED=0 GOOS=linux GOARCH=${bld_arch} GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org
     make CGO_ENABLED=0 GOOS=linux GOARCH=${bld_arch} GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org
-    tar -cf ${target} telegraf
+    tar -cf ${target} telegraf MIT generic_MIT
     rm -f telegraf
 }
 
