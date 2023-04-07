@@ -243,7 +243,7 @@ func TestFatalPingGather(t *testing.T) {
 	}
 
 	err := acc.GatherError(p.Gather)
-	require.NoError(t, err)
+	require.Error(t, err)
 
 	require.True(t, acc.HasFloatField("ping", "errors"),
 		"Fatal ping should have packet measurements")
