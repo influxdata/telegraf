@@ -109,7 +109,6 @@ func TestOutOfInputRange(t *testing.T) {
 	val, ok = results[0].GetField("test2")
 	require.True(t, ok)
 	require.InEpsilon(t, float64(150), val, 1e-10)
-
 }
 
 func TestNoFiltersDefined(t *testing.T) {
@@ -160,5 +159,4 @@ func TestNoScalerDefined(t *testing.T) {
 	require.True(t, ok)
 	fmt.Printf("val %v\n", val)
 	require.InEpsilon(t, float64(2), val, 1e-10)
-
 }
