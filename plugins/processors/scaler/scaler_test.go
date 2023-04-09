@@ -52,7 +52,6 @@ func TestScaler(t *testing.T) {
 
 	results := s.Apply(m1, m2, m3, m4)
 
-
 	val, ok := results[0].GetField("test1")
 	require.True(t, ok)
 	require.InEpsilon(t, float64(50), val, 1e-10)
@@ -68,9 +67,6 @@ func TestScaler(t *testing.T) {
 	val, ok = results[1].GetField("test2")
 	require.True(t, ok)
 	require.InEpsilon(t, float64(25), val, 1e-10)
-
-
-
 
 	val, ok = results[2].GetField("test3")
 	require.True(t, ok)
@@ -148,9 +144,8 @@ func TestNoFiltersDefined(t *testing.T) {
 	require.InEpsilon(t, float64(2), val, 1e-10)
 }
 
-
 func TestNoScalerDefined(t *testing.T) {
-	s := Scaler{Log: testutil.Logger{},}
+	s := Scaler{Log: testutil.Logger{}}
 
 	err := s.Init()
 	require.NoError(t, err)
@@ -169,5 +164,4 @@ func TestNoScalerDefined(t *testing.T) {
 	fmt.Printf("val %v\n", val)
 	require.InEpsilon(t, float64(2), val, 1e-10)
 
-	
 }
