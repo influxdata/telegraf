@@ -1,11 +1,18 @@
 # Scaler Processor Plugin
 
-The scaler processor filters for a set of fields and scales the respective values from an input range in to a given output range according to this formula:
+The scaler processor filters for a set of fields,
+and scales the respective values from an input range into
+the given output range according to this formula:
 
-$$\textnormal{result}=(\textnormal{value}-\textnormal{input\_minimum})\cdot \frac{(\textnormal{\textnormal{output\_maximum}}-\textnormal{output\_minimum})}{(\textnormal{input\_maximum}-\textnormal{input\_minimum})} + \textnormal{output\_minimum}$$
+$$\textnormal{result}=(\textnormal{value}-\textnormal{input\_minimum})\cdot
+\frac{(\textnormal{\textnormal{output\_maximum}}-\textnormal{output\_minimum})}
+{(\textnormal{input\_maximum}-\textnormal{input\_minimum})} +
+\textnormal{output\_minimum}$$
 
-Nither the input, not the output values, are required to be in the respective ranges.
-However, it is required, that input_minimum and input_maximum do not have the same value.
+Nither the input, nor the output values
+are constrained into their respective ranges.
+However, it is required, that input_minimum and
+input_maximum do not have the same value.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

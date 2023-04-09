@@ -35,7 +35,7 @@ func (s *Scaler) Init() error {
 
 	// convert filter list to filter map for better performance
 	for i, element := range s.Scalings {
-		filter, err := filter.Compile(element.Fields)
+		fieldFilter, err := filter.Compile(element.Fields)
 
 		if err != nil {
 			s.Log.Errorf("Could not compile filter: %v\n", err)
@@ -43,7 +43,7 @@ func (s *Scaler) Init() error {
 		}
 
 		if element.InMax != element.InMin {
-			s.scalingMap[filter] = &s.Scalings[i]
+			s.scalingMap[fieldFilter] = &s.Scalings[i]
 		} else {
 			s.Log.Error("Found scaling with equal input_minimum and input_maximum. Skipping it.")
 		}
@@ -53,8 +53,8 @@ func (s *Scaler) Init() error {
 }
 
 // scale a float according to the input and output range
-func Scale(value float64, in_min float64, in_max float64, out_min float64, out_max float64) float64 {
-	return (value-in_min)*(out_max-out_min)/(in_max-in_min) + out_min
+func Scale(value float64, inMin float64, inMax float64, outMin float64, outMax float64) float64 {
+	return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
 }
 
 // convert a numeric value to float
@@ -80,12 +80,10 @@ func (s *Scaler) ScaleValues(metric telegraf.Metric) {
 	fields := metric.Fields()
 
 	for key := range fields {
-		for filter, scaling := range s.scalingMap {
-			if filter != nil && filter.Match(key) {
-
+		for currentFilter, scaling := range s.scalingMap {
+			if currentFilter != nil && currentFilter.Match(key) {
 				// This call will always succeed as we are only using the fields from this specific metric
 				value, _ := metric.GetField(key)
-
 				v, ok := toFloat(value)
 
 				if !ok {
@@ -103,9 +101,9 @@ func (s *Scaler) ScaleValues(metric telegraf.Metric) {
 	}
 }
 
-func (p *Scaler) Apply(in ...telegraf.Metric) []telegraf.Metric {
+func (s *Scaler) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
-		p.ScaleValues(metric)
+		s.ScaleValues(metric)
 	}
 	return in
 }

@@ -11,14 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newMetric(name string, tags map[string]string, fields map[string]interface{}) telegraf.Metric {
-	if tags == nil {
-		tags = map[string]string{}
-	}
+func newMetric(name string, fields map[string]interface{}) telegraf.Metric {
 	if fields == nil {
 		fields = map[string]interface{}{}
 	}
-	m := metric.New(name, tags, fields, time.Now())
+	m := metric.New(name, map[string]string{}, fields, time.Now())
 	return m
 }
 
@@ -45,10 +42,10 @@ func TestScaler(t *testing.T) {
 	err := s.Init()
 	require.NoError(t, err)
 
-	m1 := newMetric("Name1", nil, map[string]interface{}{"test1": int64(0), "test2": uint64(1)})
-	m2 := newMetric("Name2", nil, map[string]interface{}{"test1": float64(0.5), "test2": float32(-0.5)})
-	m3 := newMetric("Name3", nil, map[string]interface{}{"test3": int64(-3), "test4": uint64(0)})
-	m4 := newMetric("Name4", nil, map[string]interface{}{"test3": int64(-5), "test4": float32(-0.5)})
+	m1 := newMetric("Name1", map[string]interface{}{"test1": int64(0), "test2": uint64(1)})
+	m2 := newMetric("Name2", map[string]interface{}{"test1": float64(0.5), "test2": float32(-0.5)})
+	m3 := newMetric("Name3", map[string]interface{}{"test3": int64(-3), "test4": uint64(0)})
+	m4 := newMetric("Name4", map[string]interface{}{"test3": int64(-5), "test4": float32(-0.5)})
 
 	results := s.Apply(m1, m2, m3, m4)
 
@@ -101,7 +98,7 @@ func TestOutOfInputRange(t *testing.T) {
 	err := s.Init()
 	require.NoError(t, err)
 
-	m1 := newMetric("Name1", nil, map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
+	m1 := newMetric("Name1", map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
 
 	results := s.Apply(m1)
 
@@ -131,7 +128,7 @@ func TestNoFiltersDefined(t *testing.T) {
 	err := s.Init()
 	require.NoError(t, err)
 
-	m1 := newMetric("Name1", nil, map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
+	m1 := newMetric("Name1", map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
 
 	results := s.Apply(m1)
 
@@ -150,7 +147,7 @@ func TestNoScalerDefined(t *testing.T) {
 	err := s.Init()
 	require.NoError(t, err)
 
-	m1 := newMetric("Name1", nil, map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
+	m1 := newMetric("Name1", map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
 
 	results := s.Apply(m1)
 
