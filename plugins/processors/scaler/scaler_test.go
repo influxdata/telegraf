@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +42,8 @@ func TestScaler(t *testing.T) {
 		},
 	}
 
-	s.Init()
+	err := s.Init()
+	require.NoError(t, err)
 
 	m1 := newMetric("Name1", nil, map[string]interface{}{"test1": int64(0), "test2": uint64(1)})
 	m2 := newMetric("Name2", nil, map[string]interface{}{"test1": float64(0.5), "test2": float32(-0.5)})
@@ -100,7 +102,8 @@ func TestOutOfInputRange(t *testing.T) {
 		},
 	}
 
-	s.Init()
+	err := s.Init()
+	require.NoError(t, err)
 
 	m1 := newMetric("Name1", nil, map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
 
@@ -129,7 +132,8 @@ func TestNoFiltersDefined(t *testing.T) {
 		},
 	}
 
-	s.Init()
+	err := s.Init()
+	require.NoError(t, err)
 
 	m1 := newMetric("Name1", nil, map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
 
@@ -146,9 +150,10 @@ func TestNoFiltersDefined(t *testing.T) {
 
 
 func TestNoScalerDefined(t *testing.T) {
-	s := Scaler{}
+	s := Scaler{Log: testutil.Logger{},}
 
-	s.Init()
+	err := s.Init()
+	require.NoError(t, err)
 
 	m1 := newMetric("Name1", nil, map[string]interface{}{"test1": int64(-2), "test2": uint64(2)})
 
@@ -163,4 +168,6 @@ func TestNoScalerDefined(t *testing.T) {
 	require.True(t, ok)
 	fmt.Printf("val %v\n", val)
 	require.InEpsilon(t, float64(2), val, 1e-10)
+
+	
 }
