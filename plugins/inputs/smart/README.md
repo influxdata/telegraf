@@ -39,7 +39,7 @@ smartctl -s on <device>
 
 For NVMe disk type, plugin can use command line utility `nvme-cli`. It has a
 feature to easy access a vendor specific attributes.  This plugin supports
-nmve-cli version 1.5 and above (<https://github.com/linux-nvme/nvme-cli>).  In
+nvme-cli version 1.5 and above (<https://github.com/linux-nvme/nvme-cli>).  In
 case of `nvme-cli` absence NVMe vendor specific metrics will not be obtained.
 
 Vendor specific SMART metrics for NVMe disks may be reported from the following
