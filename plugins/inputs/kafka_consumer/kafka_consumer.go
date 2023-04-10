@@ -151,23 +151,25 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	k.config = cfg
-	if len(k.TopicRegexps) > 0 {
-		err := k.createTopicScanner()
-		if err != nil {
-			return fmt.Errorf("could not create client to match topics: %w", err)
-		}
-		k.compileTopicRegexps()
-		return (k.refreshTopics())
+
+	k.compileTopicRegexps()
+
+	if len(k.regexps) == 0 {
+		// There are no regexp-matched topics
+		k.allWantedTopics = k.Topics
 	}
+
 	return nil
 }
 
 func (k *KafkaConsumer) createTopicScanner() error {
-	client, err := sarama.NewClient(k.Brokers, k.config)
-	if err != nil {
-		return err
+	if k.topicClient == nil {
+		client, err := sarama.NewClient(k.Brokers, k.config)
+		if err != nil {
+			return err
+		}
+		k.topicClient = client
 	}
-	k.topicClient = client
 	return nil
 }
 
@@ -194,16 +196,28 @@ func (k *KafkaConsumer) compileTopicRegexps() {
 }
 
 func (k *KafkaConsumer) refreshTopics() error {
-	// We instantiate a new generic Kafka client, so we can ask
+	// We have instantiated a new generic Kafka client, so we can ask
 	// it for all the topics it knows about.  Then we build
 	// regexps from our strings, loop over those, loop over the
 	// topics, and if we find a match, add that topic to
 	// out topic set, which then we turn back into a list at the end.
 
+	if len(k.regexps) == 0 {
+		return nil
+	}
+	if k.topicClient == nil {
+		err := k.createTopicScanner()
+		if err != nil {
+			return fmt.Errorf("could not create client to match topics to regexps: %w", err)
+		}
+	}
+
 	allDiscoveredTopics, err := k.topicClient.Topics()
 	if err != nil {
 		return err
 	}
+	k.Log.Infof("discovered topics: %v", allDiscoveredTopics)
+
 	extantTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range allDiscoveredTopics {
 		extantTopicSet[t] = true
@@ -220,7 +234,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 	wantedTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range k.Topics {
 		// Get our pre-specified topics
-		k.Log.Debugf("adding literally-specified topic %s", t)
+		k.Log.Infof("adding literally-specified topic %s", t)
 		wantedTopicSet[t] = true
 	}
 	for t := range extantTopicSet {
@@ -228,7 +242,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 		for _, r := range k.regexps {
 			if r.MatchString(t) {
 				wantedTopicSet[t] = true
-				k.Log.Debugf("adding regexp-matched topic '%w' -> '%s'", r, k)
+				k.Log.Infof("adding regexp-matched topic '%v' -> '%s'", r, k)
 				break
 			}
 		}
@@ -248,6 +262,9 @@ func (k *KafkaConsumer) replaceTopics(newTopics []string) {
 	// This is pretty straightforward: we replace unless the old list
 	// and the new list have all the same members in the same order.  We
 	// keep them sorted internally for display purposes anyway.
+	// This is slower than just replacing the topic list every time,
+	// but it's nice to have a log of times when the topic list changes,
+	// so we're going to want to do that comparison anyway.
 	if len(newTopics) == len(k.allWantedTopics) {
 		// Assume it's gonna be fine
 		replace = false
@@ -261,7 +278,7 @@ func (k *KafkaConsumer) replaceTopics(newTopics []string) {
 		}
 	}
 	if replace {
-		k.Log.Infof("updating topics: replacing '%w' with '%w'", k.allWantedTopics, newTopics)
+		k.Log.Infof("updating topics: replacing '%v' with '%v'", k.allWantedTopics, newTopics)
 		k.allWantedTopics = newTopics
 	}
 }
