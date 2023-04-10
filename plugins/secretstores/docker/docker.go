@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"os"
+	"path/filepath"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/secretstores"
@@ -13,11 +14,9 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// mount directory created by Docker when using Docker Secrets
-const dockerSecretsDir string = "/run/secrets"
-
 type Docker struct {
-	ID string `toml:"id"`
+	ID   string `toml:"id"`
+	Path string `toml:"path"`
 }
 
 func (*Docker) SampleConfig() string {
@@ -29,33 +28,30 @@ func (d *Docker) Init() error {
 	if d.ID == "" {
 		return errors.New("id missing")
 	}
-	if _, err := os.Stat(dockerSecretsDir); os.IsNotExist(err) {
-		return errors.New("/run/secrets directory does not exist")
+	if d.Path == "" {
+		return errors.New("path missing")
+	}
+	if _, err := os.Stat(d.Path); os.IsNotExist(err) {
+		return errors.New("directory does not exist")
 	}
 	return nil
 }
 
 func (d *Docker) Get(key string) ([]byte, error) {
-	secretFile := dockerSecretsDir + "/" + key
+	secretFile := filepath.Join(d.Path, key)
 	value, err := os.ReadFile(secretFile)
 	if err != nil {
-		return nil, errors.New("cannot find the secret file under /run/secrets")
-	}
-	if string(value) == "" {
-		return nil, errors.New("the value of the secrets file is empty")
+		return nil, errors.New("cannot find the secrets file under the directory mentioned in path parameter")
 	}
 	return value, nil
 }
 
 func (d *Docker) List() ([]string, error) {
-	secrets := make([]string, 0)
-	secretFiles, err := os.ReadDir(dockerSecretsDir)
+	secretFiles, err := os.ReadDir(d.Path)
 	if err != nil {
-		return nil, errors.New("cannot read files under /run/secrets directory")
+		return nil, errors.New("cannot read files under the directory mentioned in path")
 	}
-	if len(secretFiles) == 0 {
-		return nil, errors.New("cannot find any secrets under /run/secrets")
-	}
+	secrets := make([]string, 0, len(secretFiles))
 	for _, entry := range secretFiles {
 		secrets = append(secrets, entry.Name())
 	}

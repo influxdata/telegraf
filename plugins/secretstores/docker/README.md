@@ -15,6 +15,12 @@ under the `/run/secrets` directory within the container.
   ## This id can later be used in plugins to reference the secrets
   ## in this secret-store via @{<id>:<secret_key>} (mandatory)
   id = "docker_secretstore"
+
+  ## Default Path to directory where docker stores the secrets file
+  ## Current implementation in docker compose v2 only allows the following
+  ## value for the path where the secrets are mounted at runtime
+  path = "/run/secrets"
+
 ```
 
 Each Secret mentioned within a Compose service's `secrets` parameter will be
