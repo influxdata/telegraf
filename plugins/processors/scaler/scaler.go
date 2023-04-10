@@ -78,8 +78,8 @@ func (s *Scaler) ScaleValues(metric telegraf.Metric) {
 	}
 
 	fields := metric.Fields()
-	for key := range fields {
-		for currentFilter, scaling := range s.scalingMap {
+	for currentFilter, scaling := range s.scalingMap {
+		for key := range fields {
 			if currentFilter != nil && currentFilter.Match(key) {
 				// This call will always succeed as we are only using the fields from this specific metric
 				value, _ := metric.GetField(key)
