@@ -36,17 +36,17 @@ func (s *Scaler) Init() error {
 	// convert filter list to filter map for better performance
 	for i, element := range s.Scalings {
 		fieldFilter, err := filter.Compile(element.Fields)
-
 		if err != nil {
 			s.Log.Errorf("Could not compile filter: %v\n", err)
 			return nil
 		}
 
-		if element.InMax != element.InMin {
-			s.scalingMap[fieldFilter] = &s.Scalings[i]
-		} else {
-			s.Log.Error("Found scaling with equal input_minimum and input_maximum. Skipping it.")
+		if element.InMax == element.InMin {
+		    s.Log.Error("Found scaling with equal input_minimum and input_maximum. Skipping it.")
+			continue
 		}
+		
+		s.scalingMap[fieldFilter] = &s.Scalings[i]
 	}
 
 	return nil
@@ -88,11 +88,11 @@ func (s *Scaler) ScaleValues(metric telegraf.Metric) {
 
 				if !ok {
 					metric.RemoveField(key)
-					s.Log.Errorf("error converting to float [%T]: %v\n", value, value)
+					s.Log.Errorf("error converting to float [%T]: %v\n", key, value)
 					continue
 				}
 
-				// replace filed with the new value (the name remains the same)
+				// replace field with the new value (the name remains the same)
 				metric.RemoveField(key)
 				res := Scale(v, scaling.InMin, scaling.InMax, scaling.OutMin, scaling.OutMax)
 				metric.AddField(key, res)
