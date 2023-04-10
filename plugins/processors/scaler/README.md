@@ -26,8 +26,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Scale values with a predefined range to a different output range.
 [[processors.scaler]]
-
-    # It is possible to define multiple different scalings that can be applied do different sets of fields
     ## It is possible to define multiple different scaling that can be applied
     ## do different sets of fields. Each scaling expects the following
     ## arguments:
@@ -45,7 +43,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     #    output_maximum = 100
     #    fields = ["temperature1", "temperature2"]
         
-
     ## Example: A second scaling. 
     # [processors.scaler.scaling]
     #    input_minimum = -2800
@@ -53,6 +50,3 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     #    output_minimum = -20
     #    output_maximum = 40
     #    fields = ["humidity1", "humidity2"]
-## Tags
-
-No tags are applied by this processor.
