@@ -65,7 +65,7 @@ func TestSetListGet(t *testing.T) {
 	// Generate the secrets files under the temporary directory
 	for fileName, secretContent := range secrets {
 		fname := filepath.Join(testdir, fileName)
-		err := os.WriteFile(fname, []byte(secretContent), 0644)
+		err := os.WriteFile(fname, []byte(secretContent), 0640)
 		require.NoError(t, err)
 	}
 
@@ -107,7 +107,7 @@ func TestResolver(t *testing.T) {
 
 	// simulate what docker does by generating the secret file
 	fname := filepath.Join(testdir, secretFileKey)
-	err = os.WriteFile(fname, []byte(secretVal), 0644)
+	err = os.WriteFile(fname, []byte(secretVal), 0640)
 	require.NoError(t, err)
 
 	// Get the resolver
@@ -137,7 +137,7 @@ func TestResolverInvalid(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	// simulate what docker does by generating the secret file
 	fname := filepath.Join(testdir, secretFileKey)
-	err = os.WriteFile(fname, []byte(secretVal), 0644)
+	err = os.WriteFile(fname, []byte(secretVal), 0640)
 	require.NoError(t, err)
 
 	// Get the resolver
@@ -165,7 +165,7 @@ func TestGetNonExistant(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	// simulate what docker does by generating the secret file
 	fname := filepath.Join(testdir, secretFileKey)
-	err = os.WriteFile(fname, []byte(secretVal), 0644)
+	err = os.WriteFile(fname, []byte(secretVal), 0640)
 	require.NoError(t, err)
 
 	// Get the resolver
