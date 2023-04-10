@@ -476,12 +476,15 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}
 
 	var tests = []struct {
-		name               string
-		connectionStrategy string
+		name                 string
+		connectionStrategy   string
+		topics               []string
+		topicRegexps         []string
+		topicRefreshInterval config.Duration
 	}{
-		{"connection strategy startup", "startup"},
-		{"connection strategy defer", "defer"},
-		{"topic regexp", "startup"},
+		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
+		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
+		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(5 * time.Second)},
 	}
 
 	for _, tt := range tests {
@@ -514,8 +517,6 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			defer zookeeper.Terminate()
 
 			t.Logf("rt: starting broker")
-			topic := "Test"
-			topicRegexp := "T*"
 			container := testutil.Container{
 				Name:         "telegraf-test-kafka-consumer",
 				Image:        "wurstmeister/kafka",
@@ -524,7 +525,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 					"KAFKA_ADVERTISED_HOST_NAME": "localhost",
 					"KAFKA_ADVERTISED_PORT":      "9092",
 					"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
-					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", topic),
+					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", "Test"),
 				},
 				Networks:   []string{networkName},
 				WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
@@ -546,7 +547,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			require.NoError(t, s.Init())
 			output.SetSerializer(s)
 			output.Brokers = brokers
-			output.Topic = topic
+			output.Topic = "Test"
 			output.Log = testutil.Logger{}
 
 			require.NoError(t, output.Init())
@@ -557,17 +558,10 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			input := KafkaConsumer{
 				Brokers:                brokers,
 				Log:                    testutil.Logger{},
-				Topics:                 []string{topic},
+				Topics:                 tt.topics,
+				TopicRegexps:           tt.topicRegexps,
 				MaxUndeliveredMessages: 1,
 				ConnectionStrategy:     tt.connectionStrategy,
-			}
-			if tt.name == "topic regexp" {
-				t.Logf("rt: setting topic regexp and refresh")
-				input.Topics = nil
-				input.TopicRegexps = []string{topicRegexp}
-				timeInterval, _ := time.ParseDuration("5s")
-				interval := config.Duration(timeInterval)
-				input.TopicRefreshInterval = interval
 			}
 			parser := &influx.Parser{}
 			require.NoError(t, parser.Init())

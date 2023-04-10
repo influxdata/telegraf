@@ -242,7 +242,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 		for _, r := range k.regexps {
 			if r.MatchString(t) {
 				wantedTopicSet[t] = true
-				k.Log.Infof("adding regexp-matched topic '%v' -> '%s'", r, k)
+				k.Log.Infof("adding regexp-matched topic '%s'", t)
 				break
 			}
 		}
