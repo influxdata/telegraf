@@ -42,10 +42,10 @@ func (s *Scaler) Init() error {
 		}
 
 		if element.InMax == element.InMin {
-		    s.Log.Error("Found scaling with equal input_minimum and input_maximum. Skipping it.")
+			s.Log.Error("Found scaling with equal input_minimum and input_maximum. Skipping it.")
 			continue
 		}
-		
+
 		s.scalingMap[fieldFilter] = &s.Scalings[i]
 	}
 
@@ -54,7 +54,7 @@ func (s *Scaler) Init() error {
 
 // scale a float according to the input and output range
 func Scale(value float64, inMin float64, inMax float64, outMin float64, outMax float64) float64 {
-	return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
+	return (value-inMin)*(outMax-outMin)/(inMax-inMin) + outMin
 }
 
 // convert a numeric value to float
@@ -78,7 +78,6 @@ func (s *Scaler) ScaleValues(metric telegraf.Metric) {
 	}
 
 	fields := metric.Fields()
-
 	for key := range fields {
 		for currentFilter, scaling := range s.scalingMap {
 			if currentFilter != nil && currentFilter.Match(key) {

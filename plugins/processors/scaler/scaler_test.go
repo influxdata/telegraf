@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func TestScaler(t *testing.T) {
 	s := Scaler{
 		Scalings: []Scaling{
@@ -90,7 +89,6 @@ func TestOutOfInputRange(t *testing.T) {
 	err := s.Init()
 	require.NoError(t, err)
 
-	
 	m1 := metric.New("Name1", map[string]string{}, map[string]interface{}{"test1": int64(-2), "test2": uint64(2)}, time.Now())
 
 	results := s.Apply(m1)
