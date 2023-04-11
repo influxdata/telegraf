@@ -380,3 +380,46 @@ func TestSuricataParse(t *testing.T) {
 		testutil.RequireMetricsEqual(t, tc.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 	}
 }
+
+func TestSuricataParseVersion2(t *testing.T) {
+	tests := []struct {
+		filename string
+		expected []telegraf.Metric
+	}{{
+		filename: "v2/flow.json",
+		expected: []telegraf.Metric{
+			testutil.MustMetric(
+				"suricata",
+				map[string]string{
+					"event_type": "flow",
+					"in_iface":   "eth1",
+					"proto":      "TCP",
+				},
+				map[string]interface{}{
+					"age":       float64(0),
+					"dest_ip":   "142.251.130.3",
+					"dest_port": int64(443),
+					"src_ip":    "192.168.0.121",
+					"src_port":  int64(50212),
+					"state":     "new",
+				},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	}
+
+	for _, tc := range tests {
+		data, err := os.ReadFile("testdata/" + tc.filename)
+		require.NoError(t, err)
+
+		s := Suricata{
+			Version: "2",
+			Log:     testutil.Logger{},
+		}
+		acc := testutil.Accumulator{}
+		require.NoError(t, s.parse(&acc, data))
+
+		testutil.RequireMetricsEqual(t, tc.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+	}
+}

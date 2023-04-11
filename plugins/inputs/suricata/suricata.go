@@ -12,8 +12,10 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -32,6 +34,7 @@ type Suricata struct {
 	Source    string `toml:"source"`
 	Delimiter string `toml:"delimiter"`
 	Alerts    bool   `toml:"alerts"`
+	Version   string `toml:"version"`
 
 	inputListener *net.UnixListener
 	cancel        context.CancelFunc
@@ -43,6 +46,26 @@ type Suricata struct {
 
 func (*Suricata) SampleConfig() string {
 	return sampleConfig
+}
+
+func (s *Suricata) Init() error {
+	if s.Source == "" {
+		s.Source = "/var/run/suricata-stats.sock"
+	}
+
+	if s.Delimiter == "" {
+		s.Delimiter = "_"
+	}
+
+	switch s.Version {
+	case "":
+		s.Version = "1"
+	case "1", "2":
+	default:
+		return fmt.Errorf("invalid version %q, use either 1 or 2", s.Version)
+	}
+
+	return nil
 }
 
 // Start initiates background collection of JSON data from the socket
@@ -223,6 +246,75 @@ func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]interf
 	}
 }
 
+func (s *Suricata) parseGeneric(acc telegraf.Accumulator, result map[string]interface{}) error {
+	eventType := ""
+	if _, ok := result["event_type"]; !ok {
+		return fmt.Errorf("unable to determine event type of message: %s", result)
+	}
+	value, err := internal.ToString(result["event_type"])
+	if err != nil {
+		return fmt.Errorf("unable to convert event type %q to string: %w", result["event_type"], err)
+	}
+	eventType = value
+
+	timestamp := time.Now()
+	if val, ok := result["timestamp"]; ok {
+		value, err := internal.ToString(val)
+		if err != nil {
+			return fmt.Errorf("unable to convert timestamp %q to string: %w", val, err)
+		}
+		timestamp, err = time.Parse("2006-01-02T15:04:05.999999-0700", value)
+		if err != nil {
+			return fmt.Errorf("unable to parse timestamp %q: %w", val, err)
+		}
+	}
+
+	// Make sure the event key exists first
+	if _, ok := result[eventType].(map[string]interface{}); !ok {
+		return fmt.Errorf("unable to find key %q in %s", eventType, result)
+	}
+
+	fields := make(map[string]interface{})
+	for k, v := range result[eventType].(map[string]interface{}) {
+		err := flexFlatten(fields, k, v, s.Delimiter)
+		if err != nil {
+			s.Log.Debugf("Flattening %q failed: %v", eventType, err)
+			continue
+		}
+	}
+
+	tags := map[string]string{
+		"event_type": eventType,
+	}
+
+	// best effort to gather these tags and fields, if errors are encountered
+	// we ignore and move on
+	for _, key := range []string{"proto", "out_iface", "in_iface"} {
+		if val, ok := result[key]; ok {
+			if convertedVal, err := internal.ToString(val); err == nil {
+				tags[key] = convertedVal
+			}
+		}
+	}
+	for _, key := range []string{"src_ip", "dest_ip"} {
+		if val, ok := result[key]; ok {
+			if convertedVal, err := internal.ToString(val); err == nil {
+				fields[key] = convertedVal
+			}
+		}
+	}
+	for _, key := range []string{"src_port", "dest_port"} {
+		if val, ok := result[key]; ok {
+			if convertedVal, err := internal.ToInt64(val); err == nil {
+				fields[key] = convertedVal
+			}
+		}
+	}
+
+	acc.AddFields("suricata", fields, tags, timestamp)
+	return nil
+}
+
 func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) error {
 	// initial parsing
 	var result map[string]interface{}
@@ -230,18 +322,21 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) error {
 	if err != nil {
 		return err
 	}
-	// check for presence of relevant stats or alert
-	_, ok := result["stats"]
-	_, ok2 := result["alert"]
-	if !ok && !ok2 {
+
+	if s.Version == "2" {
+		return s.parseGeneric(acc, result)
+	}
+
+	// Version 1 parsing of stats and optionally alerts
+	if _, ok := result["stats"]; ok {
+		s.parseStats(acc, result)
+	} else if _, ok := result["alert"]; ok && s.Alerts {
+		s.parseAlert(acc, result)
+	} else {
 		s.Log.Debugf("Invalid input without 'stats' or 'alert' object: %v", result)
 		return fmt.Errorf("input does not contain 'stats' or 'alert' object")
 	}
-	if ok {
-		s.parseStats(acc, result)
-	} else if ok2 && s.Alerts {
-		s.parseAlert(acc, result)
-	}
+
 	return nil
 }
 
@@ -253,9 +348,6 @@ func (s *Suricata) Gather(_ telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("suricata", func() telegraf.Input {
-		return &Suricata{
-			Source:    "/var/run/suricata-stats.sock",
-			Delimiter: "_",
-		}
+		return &Suricata{}
 	})
 }
