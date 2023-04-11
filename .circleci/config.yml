@@ -505,7 +505,7 @@ jobs:
           password: $QUAY_RSIGN_PASSWORD
     steps:
       - add_ssh_keys:
-          fingerpints:
+          fingerprints:
             - 3b:c0:fe:a0:8a:93:33:69:de:22:ac:20:a6:ed:6b:e5
       - attach_workspace:
           at: .
