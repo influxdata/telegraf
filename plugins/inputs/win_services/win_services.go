@@ -7,7 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -33,7 +33,7 @@ func (e *ServiceError) Error() string {
 func IsPermission(err error) bool {
 	var serviceErr *ServiceError
 	if errors.As(err, &serviceErr) {
-		return os.IsPermission(serviceErr.Err)
+		return errors.Is(serviceErr, fs.ErrPermission)
 	}
 	return false
 }

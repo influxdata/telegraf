@@ -73,8 +73,7 @@ func TestPingGather(t *testing.T) {
 		pingHost: mockHostPinger,
 	}
 
-	err := acc.GatherError(p.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,

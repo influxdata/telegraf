@@ -28,9 +28,8 @@ func TestListIntegration(t *testing.T) {
 	winServices := &WinServices{
 		ServiceNames: KnownServices,
 	}
-	err = winServices.Init()
-	require.NoError(t, err)
 
+	require.NoError(t, winServices.Init())
 	services, err := winServices.listServices(scmgr)
 	require.NoError(t, err)
 	require.Len(t, services, 2, "Different number of services")
@@ -53,8 +52,8 @@ func TestEmptyListIntegration(t *testing.T) {
 	winServices := &WinServices{
 		ServiceNames: []string{},
 	}
-	err = winServices.Init()
-	require.NoError(t, err)
+
+	require.NoError(t, winServices.Init())
 	services, err := winServices.listServices(scmgr)
 	require.NoError(t, err)
 	require.Condition(t, func() bool { return len(services) > 20 }, "Too few service")
