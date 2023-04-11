@@ -46,10 +46,12 @@ func NewUDPClient(config UDPConfig) (*udpClient, error) {
 
 	serializer := config.Serializer
 	if serializer == nil {
-		s := influx.NewSerializer()
-		serializer = s
+		serializer = &influx.Serializer{UintSupport: true}
+		if err := serializer.Init(); err != nil {
+			return nil, err
+		}
 	}
-	serializer.SetMaxLineBytes(size)
+	serializer.MaxLineBytes = size
 
 	dialer := config.Dialer
 	if dialer == nil {

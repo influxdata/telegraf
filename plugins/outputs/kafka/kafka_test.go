@@ -13,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -72,7 +72,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
 	}
 
-	s := serializers.NewInfluxSerializer()
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
 	k := &Kafka{
 		Brokers:      brokers,
 		Topic:        "Test",
@@ -330,7 +332,8 @@ func TestTopicTag(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.plugin.Log = testutil.Logger{}
 
-			s := serializers.NewInfluxSerializer()
+			s := &influx.Serializer{}
+			require.NoError(t, s.Init())
 			tt.plugin.SetSerializer(s)
 
 			err := tt.plugin.Connect()

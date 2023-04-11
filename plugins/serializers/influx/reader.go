@@ -23,7 +23,7 @@ func NewReader(metrics []telegraf.Metric, serializer *Serializer) io.Reader {
 		metrics:    metrics,
 		serializer: serializer,
 		offset:     0,
-		buf:        bytes.NewBuffer(make([]byte, 0, serializer.maxLineBytes)),
+		buf:        bytes.NewBuffer(make([]byte, 0, serializer.MaxLineBytes)),
 	}
 }
 
