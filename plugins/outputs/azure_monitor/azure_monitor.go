@@ -278,11 +278,10 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	}
 
 	var body []byte //nolint:prealloc // There is no point in guessing the final capacity of this slice
-	for i := range azmetrics {
-		m := azmetrics[i]
+	for _, m := range azmetrics {
 		// Azure Monitor accepts new batches of points in new-line delimited
 		// JSON, following RFC 4288 (see https://github.com/ndjson/ndjson-spec).
-		jsonBytes, err := json.Marshal(&m)
+		jsonBytes, err := json.Marshal(m)
 		if err != nil {
 			return err
 		}
