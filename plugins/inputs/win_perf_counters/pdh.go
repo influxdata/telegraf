@@ -546,8 +546,8 @@ func PdhExpandWildCardPath(szWildCardPath string, mszExpandedPathList *uint16, p
 	flags := uint32(0) // expand instances and counters
 	ret, _, _ := pdh_ExpandWildCardPathW.Call(
 		// search counters on local computer
-		uintptr(unsafe.Pointer(nil)),                 //nolint:gosec // G103: Valid use of unsafe call to pass nil
-		uintptr(unsafe.Pointer(ptxt)),                //nolint:gosec // G103: Valid use of unsafe call to pass ptxt
+		0,
+		uintptr(unsafe.Pointer(ptxt)), //nolint:gosec // G103: Valid use of unsafe call to pass ptxt
 		uintptr(unsafe.Pointer(mszExpandedPathList)), //nolint:gosec // G103: Valid use of unsafe call to pass mszExpandedPathList
 		uintptr(unsafe.Pointer(pcchPathListLength)),  //nolint:gosec // G103: Valid use of unsafe call to pass pcchPathListLength
 		uintptr(unsafe.Pointer(&flags)))              //nolint:gosec // G103: Valid use of unsafe call to pass flags
