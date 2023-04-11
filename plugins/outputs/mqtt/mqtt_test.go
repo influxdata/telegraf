@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/mqtt"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -49,7 +49,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	container := launchTestContainer(t)
 	defer container.Terminate()
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
-	s := serializers.NewInfluxSerializer()
+	s := &influxSerializer.Serializer{}
+	require.NoError(t, s.Init())
 	m := &MQTT{
 		MqttConfig: mqtt.MqttConfig{
 			Servers:   []string{url},
@@ -79,7 +80,9 @@ func TestConnectAndWriteIntegrationMQTTv3(t *testing.T) {
 	defer container.Terminate()
 
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
-	s := serializers.NewInfluxSerializer()
+	s := &influxSerializer.Serializer{}
+	require.NoError(t, s.Init())
+
 	m := &MQTT{
 		MqttConfig: mqtt.MqttConfig{
 			Servers:   []string{url},
@@ -109,7 +112,10 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 	container := launchTestContainer(t)
 	defer container.Terminate()
 
-	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
+	url := fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
+	s := &influxSerializer.Serializer{}
+	require.NoError(t, s.Init())
+
 	m := &MQTT{
 		MqttConfig: mqtt.MqttConfig{
 			Servers:   []string{url},
@@ -117,7 +123,7 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 			KeepAlive: 30,
 			Timeout:   config.Duration(5 * time.Second),
 		},
-		serializer: serializers.NewInfluxSerializer(),
+		serializer: s,
 		Log:        testutil.Logger{Name: "mqttv5-integration-test"},
 	}
 
@@ -151,7 +157,8 @@ func TestIntegrationMQTTv3(t *testing.T) {
 	// Setup the parser / serializer pair
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
-	serializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	// Setup the plugin
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
@@ -265,7 +272,9 @@ func TestMQTTv5Properties(t *testing.T) {
 			}
 
 			// Setup the metric serializer
-			serializer := serializers.NewInfluxSerializer()
+			serializer := &influxSerializer.Serializer{}
+			require.NoError(t, serializer.Init())
+
 			plugin.SetSerializer(serializer)
 
 			// Verify that we can connect to the MQTT broker
@@ -300,7 +309,8 @@ func TestIntegrationMQTTLayoutNonBatch(t *testing.T) {
 	// Setup the parser / serializer pair
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
-	serializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	// Setup the plugin
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
@@ -386,7 +396,8 @@ func TestIntegrationMQTTLayoutBatch(t *testing.T) {
 	// Setup the parser / serializer pair
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
-	serializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	// Setup the plugin
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
@@ -858,7 +869,9 @@ func TestMQTTTopicGenerationTemplateIsValid(t *testing.T) {
 }
 
 func TestGenerateTopicName(t *testing.T) {
-	s := serializers.NewInfluxSerializer()
+	s := &influxSerializer.Serializer{}
+	require.NoError(t, s.Init())
+
 	m := &MQTT{
 		MqttConfig: mqtt.MqttConfig{
 			Servers:   []string{"tcp://localhost:1883"},

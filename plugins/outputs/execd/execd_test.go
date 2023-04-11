@@ -18,14 +18,15 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 var now = time.Date(2020, 6, 30, 16, 16, 0, 0, time.UTC)
 
 func TestExternalOutputWorks(t *testing.T) {
-	influxSerializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -34,7 +35,7 @@ func TestExternalOutputWorks(t *testing.T) {
 		Command:      []string{exe, "-testoutput"},
 		Environment:  []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
 		RestartDelay: config.Duration(5 * time.Second),
-		serializer:   influxSerializer,
+		serializer:   serializer,
 		Log:          testutil.Logger{},
 	}
 
@@ -71,7 +72,8 @@ func TestExternalOutputWorks(t *testing.T) {
 }
 
 func TestPartiallyUnserializableThrowError(t *testing.T) {
-	influxSerializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -81,7 +83,7 @@ func TestPartiallyUnserializableThrowError(t *testing.T) {
 		Environment:              []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
 		RestartDelay:             config.Duration(5 * time.Second),
 		IgnoreSerializationError: false,
-		serializer:               influxSerializer,
+		serializer:               serializer,
 		Log:                      testutil.Logger{},
 	}
 
@@ -107,7 +109,8 @@ func TestPartiallyUnserializableThrowError(t *testing.T) {
 }
 
 func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
-	influxSerializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -117,7 +120,7 @@ func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
 		Environment:              []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
 		RestartDelay:             config.Duration(5 * time.Second),
 		IgnoreSerializationError: true,
-		serializer:               influxSerializer,
+		serializer:               serializer,
 		Log:                      testutil.Logger{},
 	}
 

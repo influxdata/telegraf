@@ -68,9 +68,10 @@ func (s *selection) Filter(p packageCollection) *packageCollection {
 		enabled.packages[category] = categoryEnabledPackages
 	}
 
-	// Make sure we update the list of default parsers used by
+	// Make sure we update the list of default parsers and serializers used by
 	// the remaining packages
 	enabled.FillDefaultParsers()
+	enabled.FillDefaultSerializers()
 
 	// If the user did not configure any parser, we want to include
 	// the default parsers if any to preserve a functional set of
@@ -86,6 +87,21 @@ func (s *selection) Filter(p packageCollection) *packageCollection {
 			}
 		}
 		enabled.packages["parsers"] = parsers
+	}
+
+	// If the user did not configure any serializer, we want to include
+	// the default one if any to preserve a functional set of plugins.
+	if len(enabled.packages["serializers"]) == 0 && len(enabled.defaultSerializers) > 0 {
+		var serializers []packageInfo
+		for _, pkg := range p.packages["serializers"] {
+			for _, name := range enabled.defaultSerializers {
+				if pkg.Plugin == name {
+					serializers = append(serializers, pkg)
+					break
+				}
+			}
+		}
+		enabled.packages["serializers"] = serializers
 	}
 
 	return &enabled
