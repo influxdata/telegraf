@@ -3,6 +3,7 @@
 package execd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -20,7 +21,9 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 	case "STDIN":
 		if osStdin, ok := e.process.Stdin.(*os.File); ok {
 			if err := osStdin.SetWriteDeadline(time.Now().Add(1 * time.Second)); err != nil {
-				return fmt.Errorf("error writing dealine: %w", err)
+				if !errors.Is(err, os.ErrNoDeadline) {
+					return fmt.Errorf("setting write deadline failed: %w", err)
+				}
 			}
 		}
 		if _, err := io.WriteString(e.process.Stdin, "\n"); err != nil {

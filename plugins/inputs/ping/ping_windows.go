@@ -34,9 +34,9 @@ func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
 	if err != nil {
 		// fatal error
 		if pendingError != nil {
-			acc.AddError(fmt.Errorf("%w: %q", pendingError, host))
+			acc.AddError(fmt.Errorf("%q: %w", host, pendingError))
 		} else {
-			acc.AddError(fmt.Errorf("%w: %q", err, host))
+			acc.AddError(fmt.Errorf("%q: %w", host, err))
 		}
 
 		fields["result_code"] = 2
@@ -88,7 +88,7 @@ func (p *Ping) args(url string) []string {
 func processPingOutput(out string) (int, int, int, int, int, int, error) {
 	// So find a line contain 3 numbers except reply lines
 	var stats, aproxs []string = nil, nil
-	err := errors.New("Fatal error processing ping output")
+	err := errors.New("fatal error processing ping output")
 	stat := regexp.MustCompile(`=\W*(\d+)\D*=\W*(\d+)\D*=\W*(\d+)`)
 	aprox := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
 	tttLine := regexp.MustCompile(`TTL=\d+`)

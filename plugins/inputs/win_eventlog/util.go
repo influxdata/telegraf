@@ -8,9 +8,7 @@ package win_eventlog
 import (
 	"bytes"
 	"encoding/xml"
-	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -98,7 +96,7 @@ func UnrollXMLFields(data []byte, fieldsUsage map[string]int, separator string) 
 	for {
 		var node xmlnode
 		err := dec.Decode(&node)
-		if errors.Is(err, io.EOF) || err != nil {
+		if err != nil {
 			break
 		}
 
