@@ -24,11 +24,6 @@ func TestInitFail(t *testing.T) {
 			plugin:   &Docker{},
 			expected: "id missing",
 		},
-		{
-			name:     "invalid path",
-			plugin:   &Docker{ID: "test"},
-			expected: "path missing",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -36,6 +31,15 @@ func TestInitFail(t *testing.T) {
 			require.ErrorContains(t, err, tt.expected)
 		})
 	}
+}
+
+func TestPathNonExistant(t *testing.T) {
+	plugin := &Docker{
+		ID:   "default_test",
+		Path: "non/existent/path",
+	}
+	err := plugin.Init()
+	require.Error(t, err)
 }
 
 func TestSetListGet(t *testing.T) {
@@ -170,5 +174,5 @@ func TestGetNonExistant(t *testing.T) {
 
 	// Get the resolver
 	_, err = plugin.Get("foo")
-	require.EqualError(t, err, "cannot find the secrets file under the directory mentioned in path parameter")
+	require.ErrorContains(t, err, "cannot read the secret's value under the directory", err)
 }

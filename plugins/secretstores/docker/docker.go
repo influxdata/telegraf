@@ -4,6 +4,7 @@ package docker
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -29,10 +30,15 @@ func (d *Docker) Init() error {
 		return errors.New("id missing")
 	}
 	if d.Path == "" {
-		return errors.New("path missing")
+		// setting the default directory for Docker Secrets
+		// if no explicit path mentioned in configuration
+		d.Path = "/run/secrets"
 	}
 	if _, err := os.Stat(d.Path); os.IsNotExist(err) {
-		return errors.New("directory does not exist")
+		// if there is no /run/secrets directory for default Path value
+		// this implies that there are no secrets.
+		// Or for any explicit path definitions for that matter.
+		return fmt.Errorf("directory %s does not exist", d.Path)
 	}
 	return nil
 }
@@ -41,7 +47,7 @@ func (d *Docker) Get(key string) ([]byte, error) {
 	secretFile := filepath.Join(d.Path, key)
 	value, err := os.ReadFile(secretFile)
 	if err != nil {
-		return nil, errors.New("cannot find the secrets file under the directory mentioned in path parameter")
+		return nil, fmt.Errorf("cannot read the secret's value under the directory: %w", err)
 	}
 	return value, nil
 }
@@ -49,7 +55,7 @@ func (d *Docker) Get(key string) ([]byte, error) {
 func (d *Docker) List() ([]string, error) {
 	secretFiles, err := os.ReadDir(d.Path)
 	if err != nil {
-		return nil, errors.New("cannot read files under the directory mentioned in path")
+		return nil, fmt.Errorf("cannot read files under the directory: %w", err)
 	}
 	secrets := make([]string, 0, len(secretFiles))
 	for _, entry := range secretFiles {
