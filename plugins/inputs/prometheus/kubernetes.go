@@ -134,7 +134,11 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 	}
 
 	if informerfactory == nil {
-		informerfactory = informers.NewSharedInformerFactory(clientset, resyncinterval)
+		var informerOptions []informers.SharedInformerOption
+		if p.PodNamespace != "" {
+			informerOptions = append(informerOptions, informers.WithNamespace(p.PodNamespace))
+		}
+		informerfactory = informers.NewSharedInformerFactoryWithOptions(clientset, resyncinterval, informerOptions...)
 	}
 
 	p.nsStore = informerfactory.Core().V1().Namespaces().Informer().GetStore()
