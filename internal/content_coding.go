@@ -225,10 +225,13 @@ func (d *GzipDecoder) Decode(data []byte, maxDecodedSize int64) ([]byte, error) 
 	}
 	d.buf.Reset()
 
-	_, err = io.CopyN(d.buf, d.reader, maxDecodedSize)
+	n, err := io.CopyN(d.buf, d.reader, maxDecodedSize)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
+	} else if n == maxDecodedSize {
+		return nil, fmt.Errorf("size of decoded data must be smaller than allowed size: '%d'", maxDecodedSize)
 	}
+
 	err = d.reader.Close()
 	if err != nil {
 		return nil, err
@@ -257,9 +260,11 @@ func (d *ZlibDecoder) Decode(data []byte, maxDecodedSize int64) ([]byte, error) 
 		return nil, err
 	}
 
-	_, err = io.CopyN(d.buf, r, maxDecodedSize)
+	n, err := io.CopyN(d.buf, r, maxDecodedSize)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
+	} else if n == maxDecodedSize {
+		return nil, fmt.Errorf("size of decoded data must be smaller than allowed size: '%d'", maxDecodedSize)
 	}
 
 	err = r.Close()
@@ -281,7 +286,7 @@ func (*IdentityDecoder) SetEncoding(string) {}
 func (*IdentityDecoder) Decode(data []byte, maxDecodedSize int64) ([]byte, error) {
 	size := int64(len(data))
 	if size > maxDecodedSize {
-		return nil, fmt.Errorf("size of decoded data %q will be bigger than allowed size %q", size, maxDecodedSize)
+		return nil, fmt.Errorf("size of decoded data '%d' will be bigger than allowed size '%q'", size, maxDecodedSize)
 	}
 	return data, nil
 }

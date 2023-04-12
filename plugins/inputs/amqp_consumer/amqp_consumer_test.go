@@ -23,6 +23,7 @@ func TestAutoEncoding(t *testing.T) {
 	a.deliveries = make(map[telegraf.TrackingID]amqp091.Delivery)
 	a.parser = parser
 	a.decoder, err = internal.NewContentDecoder("auto")
+	a.MaxDecodedSize = defaultMaxDecodedSize
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}

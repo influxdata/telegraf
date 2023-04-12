@@ -73,11 +73,13 @@ func TestWrite(t *testing.T) {
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
 
-		_, err = io.CopyN(&body, gz, 500*1024*1024)
+		var maxDecodedSize int64 = 500 * 1024 * 1024
+		n, err := io.CopyN(&body, gz, maxDecodedSize)
 		if errors.Is(err, io.EOF) {
 			err = nil
 		}
 		require.NoError(t, err)
+		require.NotEqualf(t, n, maxDecodedSize, "size of decoded data must be smaller than allowed size: '%d'", maxDecodedSize)
 
 		var lm Metric
 		err = json.Unmarshal(body.Bytes(), &lm)

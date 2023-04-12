@@ -152,11 +152,11 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 		}
 	}
 
-	config := amqp.Config{
+	amqpConfig := amqp.Config{
 		TLSClientConfig: tlsCfg,
 		SASL:            auth, // if nil, it will be PLAIN
 	}
-	return &config, nil
+	return &amqpConfig, nil
 }
 
 // Start satisfies the telegraf.ServiceInput interface
