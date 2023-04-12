@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -92,11 +93,11 @@ func (a *AutoDecoder) SetEncoding(encoding string) {
 	a.encoding = encoding
 }
 
-func (a *AutoDecoder) Decode(data []byte) ([]byte, error) {
+func (a *AutoDecoder) Decode(data []byte, maxDecodedSize int64) ([]byte, error) {
 	if a.encoding == "gzip" {
-		return a.gzip.Decode(data)
+		return a.gzip.Decode(data, maxDecodedSize)
 	}
-	return a.identity.Decode(data)
+	return a.identity.Decode(data, maxDecodedSize)
 }
 
 func NewAutoContentDecoder() *AutoDecoder {
@@ -199,7 +200,7 @@ func (*IdentityEncoder) Encode(data []byte) ([]byte, error) {
 // ContentDecoder removes a wrapper encoding from byte buffers.
 type ContentDecoder interface {
 	SetEncoding(string)
-	Decode([]byte) ([]byte, error)
+	Decode([]byte, int64) ([]byte, error)
 }
 
 // GzipDecoder decompresses buffers with gzip compression.
@@ -217,14 +218,14 @@ func NewGzipDecoder() *GzipDecoder {
 
 func (*GzipDecoder) SetEncoding(string) {}
 
-func (d *GzipDecoder) Decode(data []byte) ([]byte, error) {
+func (d *GzipDecoder) Decode(data []byte, maxDecodedSize int64) ([]byte, error) {
 	err := d.reader.Reset(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
 	}
 	d.buf.Reset()
 
-	_, err = d.buf.ReadFrom(d.reader)
+	_, err = io.CopyN(d.buf, d.reader, maxDecodedSize)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
 	}
@@ -247,7 +248,7 @@ func NewZlibDecoder() *ZlibDecoder {
 
 func (*ZlibDecoder) SetEncoding(string) {}
 
-func (d *ZlibDecoder) Decode(data []byte) ([]byte, error) {
+func (d *ZlibDecoder) Decode(data []byte, maxDecodedSize int64) ([]byte, error) {
 	d.buf.Reset()
 
 	b := bytes.NewBuffer(data)
@@ -256,14 +257,9 @@ func (d *ZlibDecoder) Decode(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	for {
-		_, err = io.CopyN(d.buf, r, 1024*1024)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return nil, err
-		}
+	_, err = io.CopyN(d.buf, r, maxDecodedSize)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
 	}
 
 	err = r.Close()
@@ -282,6 +278,10 @@ func NewIdentityDecoder() *IdentityDecoder {
 
 func (*IdentityDecoder) SetEncoding(string) {}
 
-func (*IdentityDecoder) Decode(data []byte) ([]byte, error) {
+func (*IdentityDecoder) Decode(data []byte, maxDecodedSize int64) ([]byte, error) {
+	size := int64(len(data))
+	if size > maxDecodedSize {
+		return nil, fmt.Errorf("size of decoded data %q will be bigger than allowed size %q", size, maxDecodedSize)
+	}
 	return data, nil
 }

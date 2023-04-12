@@ -73,14 +73,9 @@ func TestWrite(t *testing.T) {
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
 
-		for {
-			_, err = io.CopyN(&body, gz, 1024*1024)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					err = nil
-				}
-				break
-			}
+		_, err = io.CopyN(&body, gz, 500*1024*1024)
+		if errors.Is(err, io.EOF) {
+			err = nil
 		}
 		require.NoError(t, err)
 

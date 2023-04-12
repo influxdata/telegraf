@@ -23,6 +23,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const defaultMaxDecodedSize = 500 * 1024 * 1024 //500MB
+
 type listener interface {
 	listen(acc telegraf.Accumulator)
 	addr() net.Addr
@@ -45,6 +47,7 @@ type SocketListener struct {
 	KeepAlivePeriod      *config.Duration `toml:"keep_alive_period"`
 	SocketMode           string           `toml:"socket_mode"`
 	ContentEncoding      string           `toml:"content_encoding"`
+	MaxDecodedSize       config.Size      `toml:"max_decoded_size"`
 	SplittingStrategy    string           `toml:"splitting_strategy"`
 	SplittingDelimiter   string           `toml:"splitting_delimiter"`
 	SplittingLength      int              `toml:"splitting_length"`
@@ -159,6 +162,10 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("parsing address failed: %w", err)
 	}
 
+	if sl.MaxDecodedSize <= 0 {
+		sl.MaxDecodedSize = defaultMaxDecodedSize
+	}
+
 	switch u.Scheme {
 	case "tcp", "tcp4", "tcp6":
 		ssl := &streamListener{
@@ -195,8 +202,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 	case "udp", "udp4", "udp6":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:       sl.ContentEncoding,
+			MaxDecodedSize: int64(sl.MaxDecodedSize),
+			Parser:         sl.parser,
 		}
 		if err := psl.setupUDP(u, ifname, int(sl.ReadBufferSize)); err != nil {
 			return err
@@ -204,8 +212,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.listener = psl
 	case "ip", "ip4", "ip6":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:       sl.ContentEncoding,
+			MaxDecodedSize: int64(sl.MaxDecodedSize),
+			Parser:         sl.parser,
 		}
 		if err := psl.setupIP(u); err != nil {
 			return err
@@ -213,8 +222,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.listener = psl
 	case "unixgram":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:       sl.ContentEncoding,
+			MaxDecodedSize: int64(sl.MaxDecodedSize),
+			Parser:         sl.parser,
 		}
 		if err := psl.setupUnixgram(u, sl.SocketMode); err != nil {
 			return err

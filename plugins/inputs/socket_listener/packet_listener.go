@@ -15,6 +15,7 @@ import (
 
 type packetListener struct {
 	Encoding       string
+	MaxDecodedSize int64
 	SocketMode     string
 	ReadBufferSize int
 	Parser         telegraf.Parser
@@ -36,7 +37,7 @@ func (l *packetListener) listen(acc telegraf.Accumulator) {
 			break
 		}
 
-		body, err := l.decoder.Decode(buf[:n])
+		body, err := l.decoder.Decode(buf[:n], l.MaxDecodedSize)
 		if err != nil {
 			acc.AddError(fmt.Errorf("unable to decode incoming packet: %w", err))
 		}

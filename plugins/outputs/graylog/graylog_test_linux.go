@@ -152,15 +152,9 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 		}
 
 		bufW := bytes.NewBuffer(nil)
-
-		for {
-			_, err = io.CopyN(bufW, r, 1024*1024)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				return err
-			}
+		_, err = io.CopyN(bufW, r, 500*1024*1024)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return nil, err
 		}
 
 		err = r.Close()
