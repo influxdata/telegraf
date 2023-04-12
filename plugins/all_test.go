@@ -35,7 +35,7 @@ func testPluginDirectory(t *testing.T, directory string) {
 	allDir := filepath.Join(directory, "all")
 	err := filepath.WalkDir(allDir, func(goPluginFile string, d fs.DirEntry, walkErr error) error {
 		require.NoError(t, walkErr)
-		if d.IsDir() || strings.HasSuffix(d.Name(), "_test.go") {
+		if d.IsDir() || strings.HasSuffix(d.Name(), "_test.go") || strings.EqualFold(d.Name(), "all.go") {
 			return nil
 		}
 		t.Run(goPluginFile, func(t *testing.T) {
@@ -51,14 +51,19 @@ func parseSourceFile(t *testing.T, goPluginFile string, pluginCategory string) {
 	node, err := parser.ParseFile(fset, goPluginFile, nil, parser.ParseComments)
 	require.NoError(t, err)
 
+	foundGoBuild := false
 	for _, cg := range node.Comments {
 		for _, comm := range cg.List {
 			if !strings.HasPrefix(comm.Text, "//go:build") {
 				continue
 			}
+			foundGoBuild = true
 			plugin := resolvePluginFromImports(t, node.Imports)
 			testBuildTags(t, comm.Text, pluginCategory, plugin)
 		}
+	}
+	if !foundGoBuild {
+		require.Fail(t, fmt.Sprintf("%s does not contain go:build. Ensure that there no whitespaces between %q %q", goPluginFile, "//", "go:build"))
 	}
 }
 
