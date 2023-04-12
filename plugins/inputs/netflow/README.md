@@ -132,4 +132,8 @@ netflow,source=127.0.0.1,version=NetFlowV9 protocol="tcp",src="192.168.119.100",
 ### sFlow v5
 
 ```text
+netflow,source=127.0.0.1,version=sFlowV5 out_errors=0i,out_bytes=3946i,status="up",in_unknown_protocol=4294967295i,out_unicast_packets_total=29i,agent_subid=100000i,interface_type=6i,in_unicast_packets_total=28i,out_dropped_packets=0i,in_bytes=3910i,in_broadcast_packets_total=4294967295i,ip_version="IPv4",agent_ip="192.168.119.184",in_snmp=3i,in_errors=0i,promiscuous=0i,interface=3i,in_mcast_packets_total=4294967295i,in_dropped_packets=0i,sys_uptime=12414i,seq_number=2i,speed=1000000000i,out_mcast_packets_total=4294967295i,out_broadcast_packets_total=4294967295i 12414000000
+netflow,source=127.0.0.1,version=sFlowV5 sys_uptime=17214i,agent_ip="192.168.119.184",agent_subid=100000i,seq_number=2i,in_phy_interface=1i,ip_version="IPv4" 17214000000
+netflow,source=127.0.0.1,version=sFlowV5 in_errors=0i,out_unicast_packets_total=36i,interface=3i,in_broadcast_packets_total=4294967295i,ip_version="IPv4",speed=1000000000i,out_bytes=4408i,out_mcast_packets_total=4294967295i,status="up",in_snmp=3i,in_mcast_packets_total=4294967295i,out_broadcast_packets_total=4294967295i,promiscuous=0i,in_bytes=5568i,out_dropped_packets=0i,sys_uptime=22014i,agent_subid=100000i,in_unknown_protocol=4294967295i,interface_type=6i,in_dropped_packets=0i,in_unicast_packets_total=37i,out_errors=0i,agent_ip="192.168.119.184",seq_number=3i 22014000000
+
 ```
