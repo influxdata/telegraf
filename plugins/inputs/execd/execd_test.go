@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -206,9 +206,12 @@ func TestMain(m *testing.M) {
 
 func runCounterProgram() error {
 	envMetricName := os.Getenv("METRIC_NAME")
-	i := 0
-	serializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	if err := serializer.Init(); err != nil {
+		return err
+	}
 
+	i := 0
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		m := metric.New(envMetricName,

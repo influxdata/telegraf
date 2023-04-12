@@ -21,7 +21,7 @@ import (
 	kafkaOutput "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -540,7 +540,8 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			output, ok := creator().(*kafkaOutput.Kafka)
 			require.True(t, ok)
 
-			s := serializers.NewInfluxSerializer()
+			s := &influxSerializer.Serializer{}
+			require.NoError(t, s.Init())
 			output.SetSerializer(s)
 			output.Brokers = brokers
 			output.Topic = topic
