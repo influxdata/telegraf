@@ -112,6 +112,7 @@ linters-settings:
       - G502
       - G503
       - G505
+      - G601
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
