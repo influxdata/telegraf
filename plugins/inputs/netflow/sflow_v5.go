@@ -146,6 +146,9 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 func decodeFlowRecords(records []sflow.FlowRecord) (map[string]interface{}, error) {
 	fields := make(map[string]interface{})
 	for _, r := range records {
+		if r.Data == nil {
+			continue
+		}
 		switch record := r.Data.(type) {
 		case sflow.SampledHeader:
 			fields["l2_protocol"] = decodeSflowHeaderProtocol(record.Protocol)
@@ -198,7 +201,7 @@ func decodeFlowRecords(records []sflow.FlowRecord) (map[string]interface{}, erro
 				fields["bgp_next_as"] = record.ASPath[0]
 			}
 		default:
-			return nil, fmt.Errorf("unhandled record type %T", r)
+			return nil, fmt.Errorf("unhandled flow record type %T", r.Data)
 		}
 	}
 	return fields, nil
@@ -325,6 +328,9 @@ func decodeRawHeaderSample(record *sflow.SampledHeader) (map[string]interface{},
 
 func decodeCounterRecords(records []sflow.CounterRecord) (map[string]interface{}, error) {
 	for _, r := range records {
+		if r.Data == nil {
+			continue
+		}
 		switch record := r.Data.(type) {
 		case sflow.IfCounters:
 			fields := map[string]interface{}{
@@ -371,7 +377,7 @@ func decodeCounterRecords(records []sflow.CounterRecord) (map[string]interface{}
 			}
 			return fields, nil
 		default:
-			return nil, fmt.Errorf("unhandled record type %T", r)
+			return nil, fmt.Errorf("unhandled counter record type %T", r.Data)
 		}
 	}
 	return nil, nil
