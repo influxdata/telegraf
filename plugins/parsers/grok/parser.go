@@ -387,7 +387,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if err != nil {
 			return nil, err
 		}
-		metrics = append(metrics, m)
+		if m != nil {
+			metrics = append(metrics, m)
+		}
 		return metrics, nil
 	}
 
