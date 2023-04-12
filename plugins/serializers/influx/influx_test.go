@@ -14,7 +14,7 @@ import (
 var tests = []struct {
 	name        string
 	maxBytes    int
-	typeSupport FieldTypeSupport
+	uintSupport bool
 	input       telegraf.Metric
 	output      []byte
 	errReason   string
@@ -132,7 +132,7 @@ var tests = []struct {
 			time.Unix(0, 0),
 		),
 		output:      []byte("cpu value=42u 0\n"),
-		typeSupport: UintSupport,
+		uintSupport: true,
 	},
 	{
 		name: "uint field max value",
@@ -145,7 +145,7 @@ var tests = []struct {
 			time.Unix(0, 0),
 		),
 		output:      []byte("cpu value=18446744073709551615u 0\n"),
-		typeSupport: UintSupport,
+		uintSupport: true,
 	},
 	{
 		name: "uint field no uint support",
@@ -481,10 +481,11 @@ var tests = []struct {
 func TestSerializer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			serializer := NewSerializer()
-			serializer.SetMaxLineBytes(tt.maxBytes)
-			serializer.SetFieldSortOrder(SortFields)
-			serializer.SetFieldTypeSupport(tt.typeSupport)
+			serializer := &Serializer{
+				MaxLineBytes: tt.maxBytes,
+				SortFields:   true,
+				UintSupport:  tt.uintSupport,
+			}
 			output, err := serializer.Serialize(tt.input)
 			if tt.errReason != "" {
 				require.Error(t, err)
@@ -498,9 +499,10 @@ func TestSerializer(t *testing.T) {
 func BenchmarkSerializer(b *testing.B) {
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
-			serializer := NewSerializer()
-			serializer.SetMaxLineBytes(tt.maxBytes)
-			serializer.SetFieldTypeSupport(tt.typeSupport)
+			serializer := &Serializer{
+				MaxLineBytes: tt.maxBytes,
+				UintSupport:  tt.uintSupport,
+			}
 			for n := 0; n < b.N; n++ {
 				output, err := serializer.Serialize(tt.input)
 				_ = err
@@ -522,8 +524,9 @@ func TestSerialize_SerializeBatch(t *testing.T) {
 
 	metrics := []telegraf.Metric{m, m}
 
-	serializer := NewSerializer()
-	serializer.SetFieldSortOrder(SortFields)
+	serializer := &Serializer{
+		SortFields: true,
+	}
 	output, err := serializer.SerializeBatch(metrics)
 	require.NoError(t, err)
 	require.Equal(t, []byte("cpu value=42 0\ncpu value=42 0\n"), output)

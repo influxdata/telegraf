@@ -155,7 +155,10 @@ func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
 	}
 
 	if cfg.Serializer == nil {
-		cfg.Serializer = influx.NewSerializer()
+		cfg.Serializer = &influx.Serializer{}
+		if err := cfg.Serializer.Init(); err != nil {
+			return nil, err
+		}
 	}
 
 	var transport *http.Transport

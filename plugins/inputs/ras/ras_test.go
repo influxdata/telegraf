@@ -13,8 +13,8 @@ import (
 
 func TestUpdateCounters(t *testing.T) {
 	ras := newRas()
-	for _, mce := range testData {
-		ras.updateCounters(&mce)
+	for i := range testData {
+		ras.updateCounters(&testData[i])
 	}
 
 	require.Equal(t, 1, len(ras.cpuSocketCounters), "Should contain counters only for single socket")
@@ -94,8 +94,8 @@ func TestMultipleSockets(t *testing.T) {
 			MciStatusMsg: overflow,
 		},
 	}
-	for _, mce := range testData {
-		ras.updateCounters(&mce)
+	for i := range testData {
+		ras.updateCounters(&testData[i])
 	}
 	require.Equal(t, 4, len(ras.cpuSocketCounters), "Should contain counters for four sockets")
 

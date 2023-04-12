@@ -113,7 +113,10 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 
 	serializer := cfg.Serializer
 	if serializer == nil {
-		serializer = influx.NewSerializer()
+		serializer = &influx.Serializer{}
+		if err := serializer.Init(); err != nil {
+			return nil, err
+		}
 	}
 
 	var transport *http.Transport

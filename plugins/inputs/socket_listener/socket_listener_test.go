@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -181,6 +183,16 @@ func TestSocketListener(t *testing.T) {
 			}, time.Second, 100*time.Millisecond, "did not receive metrics (%d)", acc.NMetrics())
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+
+			plugin.Stop()
+
+			if _, ok := plugin.listener.(*streamListener); ok {
+				// Verify that plugin.Stop() closed the client's connection
+				_ = client.SetReadDeadline(time.Now().Add(time.Second))
+				buf := []byte{1}
+				_, err = client.Read(buf)
+				assert.Equal(t, err, io.EOF)
+			}
 		})
 	}
 }

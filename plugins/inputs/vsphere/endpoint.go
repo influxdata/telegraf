@@ -1218,7 +1218,7 @@ func (e *Endpoint) collectChunk(
 				e.log.Errorf("MOID %s not found in cache. Skipping", moid)
 				continue
 			}
-			e.populateTags(objectRef, resourceType, res, t, &v)
+			e.populateTags(objectRef, resourceType, res, t, v)
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
@@ -1280,7 +1280,7 @@ func (e *Endpoint) collectChunk(
 	return count, latestSample, nil
 }
 
-func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resourceKind, t map[string]string, v *performance.MetricSeries) {
+func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resourceKind, t map[string]string, v performance.MetricSeries) {
 	// Map name of object.
 	if resource.pKey != "" {
 		t[resource.pKey] = objectRef.name

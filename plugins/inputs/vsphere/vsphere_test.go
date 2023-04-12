@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
@@ -220,12 +219,6 @@ func TestMaxQuery(t *testing.T) {
 		t.Skip("Skipping long test in short mode")
 	}
 
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
 	m, s, err := createSim(0)
 	require.NoError(t, err)
 	defer m.Remove()
@@ -271,13 +264,6 @@ func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, exp
 func TestFinder(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long test in short mode")
-	}
-
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
 	}
 
 	m, s, err := createSim(0)
@@ -397,13 +383,6 @@ func TestFolders(t *testing.T) {
 		t.Skip("Skipping long test in short mode")
 	}
 
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
-
 	m, s, err := createSim(1)
 	require.NoError(t, err)
 	defer m.Remove()
@@ -486,13 +465,6 @@ func testCollection(t *testing.T, excludeClusters bool) {
 		v.Username = config.NewSecret([]byte(username))
 		v.Password = config.NewSecret([]byte(password))
 	} else {
-		// Don't run test on 32-bit machines due to bug in simulator.
-		// https://github.com/vmware/govmomi/issues/1330
-		var i int
-		if unsafe.Sizeof(i) < 8 {
-			return
-		}
-
 		m, s, err := createSim(0)
 		require.NoError(t, err)
 		defer m.Remove()
