@@ -62,9 +62,7 @@ func parseSourceFile(t *testing.T, goPluginFile string, pluginCategory string) {
 			testBuildTags(t, comm.Text, pluginCategory, plugin)
 		}
 	}
-	if !foundGoBuild {
-		require.Fail(t, fmt.Sprintf("%s does not contain go:build. Ensure that there no whitespaces between %q %q", goPluginFile, "//", "go:build"))
-	}
+	require.Truef(t, foundGoBuild, "%s does not contain go:build tag", goPluginFile)
 }
 
 func resolvePluginFromImports(t *testing.T, imports []*ast.ImportSpec) string {
