@@ -68,8 +68,8 @@ func TestGatherErrorsIntegration(t *testing.T) {
 		ServiceNames: InvalidServices,
 		mgrProvider:  &MgProvider{},
 	}
-	err := ws.Init()
-	require.NoError(t, err)
+
+	require.NoError(t, ws.Init())
 	require.Len(t, ws.ServiceNames, 3, "Different number of services")
 	var acc testutil.Accumulator
 	require.NoError(t, ws.Gather(&acc))
