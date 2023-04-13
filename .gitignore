@@ -17,5 +17,6 @@ resource.syso
 versioninfo.json
 vscode.sh
 issues.json
+test.json
 /.config
 /.clusters
