@@ -23,6 +23,7 @@ type PS interface {
 	NetProto() ([]net.ProtoCountersStat, error)
 	DiskIO(names []string) (map[string]disk.IOCountersStat, error)
 	VMStat() (*mem.VirtualMemoryStat, error)
+	VMStatEx() (*mem.VirtualMemoryExStat, error)
 	SwapStat() (*mem.SwapMemoryStat, error)
 	NetConnections() ([]net.ConnectionStat, error)
 	NetConntrack(perCPU bool) ([]net.ConntrackStat, error)
@@ -208,6 +209,10 @@ func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error
 
 func (s *SystemPS) VMStat() (*mem.VirtualMemoryStat, error) {
 	return mem.VirtualMemory()
+}
+
+func (s *SystemPS) VMStatEx() (*mem.VirtualMemoryExStat, error) {
+	return mem.VirtualMemoryEx()
 }
 
 func (s *SystemPS) SwapStat() (*mem.SwapMemoryStat, error) {
