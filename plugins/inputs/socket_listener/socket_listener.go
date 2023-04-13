@@ -143,7 +143,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 	var ifname string
 	ifregex := regexp.MustCompile(`%([\w\.]+)`)
 	if matches := ifregex.FindStringSubmatch(sl.ServiceAddress); len(matches) == 2 {
-		ifname := matches[1]
+		ifname = matches[1]
 		sl.ServiceAddress = strings.Replace(sl.ServiceAddress, "%"+ifname, "", 1)
 	}
 
