@@ -160,6 +160,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	return m.connect()
 }
 func (m *MQTTConsumer) connect() error {
+	m.Log.Debug("connecting to server")
 	m.state = Connecting
 	m.client = m.clientFactory(m.opts)
 	// AddRoute sets up the function for handling messages.  These need to be
@@ -266,6 +267,7 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		return err
 	}
 
+	m.Log.Debugf("message parsed (size: %d) (metrics: %d)\n", len(metrics), payloadBytes)
 	for _, metric := range metrics {
 		if m.topicTagParse != "" {
 			metric.AddTag(m.topicTagParse, msg.Topic())
@@ -273,6 +275,7 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		for _, p := range m.TopicParsing {
 			values := strings.Split(msg.Topic(), "/")
 			if !compareTopics(p.SplitTopic, values) {
+				m.Log.Debug("compare topics false, ignoring metric")
 				continue
 			}
 
