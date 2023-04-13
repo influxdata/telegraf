@@ -57,6 +57,7 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/denisenkom/go-mssqldb v0.12.3
+	github.com/devopsext/tools v0.9.0
 	github.com/digitalocean/go-libvirt v0.0.0-20220811165305-15feff002086
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/djherbis/times v1.5.0
@@ -197,6 +198,7 @@ require (
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
+	github.com/devopsext/utils v0.2.0 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.6.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gosimple/slug v1.1.1 // indirect

@@ -7,19 +7,18 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	"text/template"
 	"time"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/araddon/dateparse"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	toolsRender "github.com/devopsext/tools/render"
 )
 
 // PrometheusHttpMetric struct
@@ -27,7 +26,7 @@ type PrometheusHttpMetric struct {
 	Name      string `toml:"name"`
 	Query     string `toml:"query"`
 	Transform string `toml:"transform"`
-	template  *template.Template
+	template  *toolsRender.TextTemplate
 	Duration  config.Duration   `toml:"duration"`
 	From      string            `toml:"from"`
 	Step      string            `toml:"step"`
@@ -36,7 +35,7 @@ type PrometheusHttpMetric struct {
 	Interval  config.Duration   `toml:"interval"`
 	Tags      map[string]string `toml:"tags"`
 	UniqueBy  []string          `toml:"unique_by"`
-	templates map[string]*template.Template
+	templates map[string]*toolsRender.TextTemplate
 	uniques   map[uint64]bool
 }
 
@@ -134,18 +133,18 @@ func (p *PrometheusHttp) getMetricPeriod(m *PrometheusHttpMetric) *PrometheusHtt
 	}
 }
 
-func (p *PrometheusHttp) getTemplateValue(t *template.Template, value float64) (float64, error) {
+func (p *PrometheusHttp) getTemplateValue(t *toolsRender.TextTemplate, value float64) (float64, error) {
 
 	if t == nil {
 		return value, nil
 	}
 
-	var b strings.Builder
-	err := t.Execute(&b, value)
+	b, err := t.RenderObject(value)
 	if err != nil {
 		return value, err
 	}
-	v := b.String()
+	v := strings.TrimSpace(string(b))
+
 	f, err := strconv.ParseFloat(v, 64)
 	if err != nil {
 		return value, err
@@ -153,19 +152,18 @@ func (p *PrometheusHttp) getTemplateValue(t *template.Template, value float64) (
 	return f, nil
 }
 
-func (p *PrometheusHttp) setExtraMetricTag(t *template.Template, tags map[string]string) string {
+func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, tags map[string]string) string {
 
 	if t == nil {
 		return ""
 	}
 
-	var b strings.Builder
-	err := t.Execute(&b, &tags)
+	b, err := t.RenderObject(&tags)
 	if err != nil {
 		p.Log.Errorf("%s failed to execute template: %v", p.Name, err)
 		return ""
 	}
-	r := b.String()
+	r := strings.TrimSpace(string(b))
 	// simplify <no value> => empty string
 	return strings.ReplaceAll(r, "<no value>", "")
 }
@@ -331,50 +329,32 @@ func (p *PrometheusHttp) gatherMetrics(ds PrometheusHttpDatasource) error {
 	return nil
 }
 
-func (p *PrometheusHttp) fRegexFindSubmatch(regex string, s string) []string {
-	r := regexp.MustCompile(regex)
-	return r.FindStringSubmatch(s)
-}
-
-func (p *PrometheusHttp) fIfDef(o interface{}, def interface{}) interface{} {
+func (p *PrometheusHttp) fIfSome(o interface{}, def interface{}) interface{} {
 	if o == nil {
 		return def
 	}
 	return o
 }
 
-func (p *PrometheusHttp) fIfElse(o interface{}, vars []interface{}) interface{} {
-
-	if len(vars) == 0 {
-		return o
-	}
-	for k, v := range vars {
-		if k%2 == 0 {
-			if o == v && len(vars) > k+1 {
-				return vars[k+1]
-			}
-		}
-	}
-	return o
-}
-
-func (p *PrometheusHttp) getDefaultTemplate(name, value string) *template.Template {
+func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.TextTemplate {
 
 	if value == "" {
 		return nil
 	}
 
-	funcs := sprig.TxtFuncMap()
-	funcs["regexFindSubmatch"] = p.fRegexFindSubmatch
-	funcs["ifDef"] = p.fIfDef
-	funcs["ifElse"] = p.fIfElse
+	funcs := make(map[string]any)
+	funcs["ifSome"] = p.fIfSome
 
-	t, err := template.New(fmt.Sprintf("%s_template", name)).Funcs(funcs).Parse(value)
+	tpl, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
+		Name:    fmt.Sprintf("%s_template", name),
+		Content: value,
+		Funcs:   funcs,
+	}, nil)
 	if err != nil {
 		p.Log.Error(err)
 		return nil
 	}
-	return t
+	return tpl
 }
 
 func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
@@ -386,7 +366,7 @@ func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 		m.template = p.getDefaultTemplate(m.Name, m.Transform)
 	}
 	if len(m.Tags) > 0 {
-		m.templates = make(map[string]*template.Template)
+		m.templates = make(map[string]*toolsRender.TextTemplate)
 	}
 	for k, v := range m.Tags {
 		m.templates[k] = p.getDefaultTemplate(fmt.Sprintf("%s_%s", m.Name, k), v)
@@ -435,14 +415,6 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var ds PrometheusHttpDatasource = nil
-	/*switch p.Version {
-	case "v1":
-		ds = NewPrometheusHttpV1(p.Name, p.Log, context.Background(), p.URL, int(p.Timeout), p.Step, p.Params)
-	}
-
-	if ds == nil {
-		return fmt.Errorf("%s no datasource found for %s", p.Name, p.Version)
-	}*/
 	// Gather data
 	err := p.gatherMetrics(ds)
 	if err != nil {
