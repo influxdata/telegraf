@@ -33,12 +33,12 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.51.2
-          args: --timeout 20m0s --verbose --out-${NO_FUTURE}format tab
+          args: --timeout 30m0s --verbose --out-${NO_FUTURE}format tab
       - name: golangci-lint windows
         if: runner.os == 'Windows'
         uses: golangci/golangci-lint-action@v3
         env:
           nofuture: out-format
         with:
-          version: v1.51.2
-          args: --timeout 20m0s --verbose --%nofuture% tab
+          version: v1.52.2
+          args: --timeout 30m0s --verbose --%nofuture% tab
