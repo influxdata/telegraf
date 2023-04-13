@@ -92,6 +92,15 @@ func (m *MockPS) VMStat() (*mem.VirtualMemoryStat, error) {
 	return r0, r1
 }
 
+func (m *MockPS) VMStatEx() (*mem.VirtualMemoryExStat, error) {
+	ret := m.Called()
+
+	r0 := ret.Get(0).(*mem.VirtualMemoryExStat)
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
+
 func (m *MockPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	ret := m.Called()
 

@@ -65,7 +65,7 @@ func (ms *MemStats) Gather(acc telegraf.Accumulator) error {
 		fields["wired"] = vm.Wired
 	case "linux":
 		fields["active"] = vm.Active
-		fields["anon_pages"] = vmex.ActiveAnon+vmex.InactiveAnon
+		fields["anon_pages"] = vmex.ActiveAnon + vmex.InactiveAnon
 		fields["buffered"] = vm.Buffers
 		fields["cached"] = vm.Cached
 		fields["commit_limit"] = vm.CommitLimit
