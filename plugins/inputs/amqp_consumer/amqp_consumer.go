@@ -57,7 +57,7 @@ type AMQPConsumer struct {
 	tls.ClientConfig
 
 	ContentEncoding      string      `toml:"content_encoding"`
-	maxDecompressionSize config.Size `toml:"max_decompression_size"`
+	MaxDecompressionSize config.Size `toml:"max_decompression_size"`
 	Log                  telegraf.Logger
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
@@ -115,8 +115,8 @@ func (a *AMQPConsumer) Init() error {
 		a.MaxUndeliveredMessages = 1000
 	}
 
-	if a.maxDecompressionSize <= 0 {
-		a.maxDecompressionSize = internal.DefaultMaxDecompressionSize
+	if a.MaxDecompressionSize <= 0 {
+		a.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
 	}
 
 	return nil
@@ -418,7 +418,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 	}
 
 	a.decoder.SetEncoding(d.ContentEncoding)
-	body, err := a.decoder.Decode(d.Body, int64(a.maxDecompressionSize))
+	body, err := a.decoder.Decode(d.Body, int64(a.MaxDecompressionSize))
 	if err != nil {
 		onError()
 		return err
