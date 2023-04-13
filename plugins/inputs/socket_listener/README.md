@@ -92,7 +92,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Maximum size of decoded packet.
   ## Acceptable units are B, KiB, KB, MiB, MB...
   ## Without quotes and units, interpreted as size in bytes.
-  # max_decoded_size = "500MB"
+  # max_decompression_size = "500MB"
 
   ## Message splitting strategy and corresponding settings for stream sockets
   ## (tcp, tcp4, tcp6, unix or unixpacket). The setting is ignored for packet

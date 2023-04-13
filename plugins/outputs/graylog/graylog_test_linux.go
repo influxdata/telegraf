@@ -151,13 +151,13 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 			return err
 		}
 
-		var maxDecodedSize int64 = 500 * 1024 * 1024
+		var maxDecompressionSize int64 = 500 * 1024 * 1024
 		bufW := bytes.NewBuffer(nil)
-		written, err := io.CopyN(bufW, r, maxDecodedSize)
+		written, err := io.CopyN(bufW, r, maxDecompressionSize)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return err
-		} else if written == maxDecodedSize {
-			return fmt.Errorf("size of decoded data must be smaller than allowed size: '%d'", maxDecodedSize)
+		} else if written == maxDecompressionSize {
+			return fmt.Errorf("size of decoded data exceeds allowed size %d", maxDecompressionSize)
 		}
 
 		err = r.Close()

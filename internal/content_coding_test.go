@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const maxDecodedSize = 1024
+const maxDecompressionSize = 1024
 
 func TestGzipEncodeDecode(t *testing.T) {
 	enc := NewGzipEncoder()
@@ -17,7 +17,7 @@ func TestGzipEncodeDecode(t *testing.T) {
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
 
-	actual, err := dec.Decode(payload, maxDecodedSize)
+	actual, err := dec.Decode(payload, maxDecompressionSize)
 	require.NoError(t, err)
 
 	require.Equal(t, "howdy", string(actual))
@@ -30,7 +30,7 @@ func TestGzipReuse(t *testing.T) {
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
 
-	actual, err := dec.Decode(payload, maxDecodedSize)
+	actual, err := dec.Decode(payload, maxDecompressionSize)
 	require.NoError(t, err)
 
 	require.Equal(t, "howdy", string(actual))
@@ -38,7 +38,7 @@ func TestGzipReuse(t *testing.T) {
 	payload, err = enc.Encode([]byte("doody"))
 	require.NoError(t, err)
 
-	actual, err = dec.Decode(payload, maxDecodedSize)
+	actual, err = dec.Decode(payload, maxDecompressionSize)
 	require.NoError(t, err)
 
 	require.Equal(t, "doody", string(actual))
@@ -51,7 +51,7 @@ func TestZlibEncodeDecode(t *testing.T) {
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
 
-	actual, err := dec.Decode(payload, maxDecodedSize)
+	actual, err := dec.Decode(payload, maxDecompressionSize)
 	require.NoError(t, err)
 
 	require.Equal(t, "howdy", string(actual))
@@ -65,7 +65,7 @@ func TestZlibEncodeDecodeWithTooLargeMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = dec.Decode(payload, 3)
-	require.ErrorContains(t, err, "size of decoded data must be smaller than allowed size: '3'")
+	require.ErrorContains(t, err, "size of decoded data exceeds allowed size 3")
 }
 
 func TestIdentityEncodeDecode(t *testing.T) {
@@ -75,7 +75,7 @@ func TestIdentityEncodeDecode(t *testing.T) {
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
 
-	actual, err := dec.Decode(payload, maxDecodedSize)
+	actual, err := dec.Decode(payload, maxDecompressionSize)
 	require.NoError(t, err)
 
 	require.Equal(t, "howdy", string(actual))

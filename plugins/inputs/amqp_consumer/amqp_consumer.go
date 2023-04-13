@@ -24,8 +24,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const defaultMaxDecodedSize = 500 * 1024 * 1024 //500MB
-
 type empty struct{}
 type semaphore chan empty
 
@@ -58,9 +56,9 @@ type AMQPConsumer struct {
 	AuthMethod string
 	tls.ClientConfig
 
-	ContentEncoding string      `toml:"content_encoding"`
-	MaxDecodedSize  config.Size `toml:"max_decoded_size"`
-	Log             telegraf.Logger
+	ContentEncoding      string      `toml:"content_encoding"`
+	maxDecompressionSize config.Size `toml:"max_decompression_size"`
+	Log                  telegraf.Logger
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
 
@@ -117,8 +115,8 @@ func (a *AMQPConsumer) Init() error {
 		a.MaxUndeliveredMessages = 1000
 	}
 
-	if a.MaxDecodedSize <= 0 {
-		a.MaxDecodedSize = defaultMaxDecodedSize
+	if a.maxDecompressionSize <= 0 {
+		a.maxDecompressionSize = internal.DefaultMaxDecompressionSize
 	}
 
 	return nil
@@ -420,7 +418,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 	}
 
 	a.decoder.SetEncoding(d.ContentEncoding)
-	body, err := a.decoder.Decode(d.Body, int64(a.MaxDecodedSize))
+	body, err := a.decoder.Decode(d.Body, int64(a.maxDecompressionSize))
 	if err != nil {
 		onError()
 		return err
