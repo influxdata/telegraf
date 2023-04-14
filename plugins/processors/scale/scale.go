@@ -37,13 +37,13 @@ type Scale struct {
 }
 
 func (s *Scaling) Init() error {
-	filter, err := filter.Compile(s.Fields)
+	scalingFilter, err := filter.Compile(s.Fields)
 
 	if err != nil {
 		return fmt.Errorf("could not compile filter: %w", err)
 	}
 
-	s.fieldFilter = filter
+	s.fieldFilter = scalingFilter
 
 	if s.InMax == s.InMin {
 		return fmt.Errorf("minumum and maximum are equal for fields %s", strings.Join(s.Fields, ","))
@@ -60,13 +60,12 @@ func (s *Scale) Init() error {
 
 	allFields := make(map[string]bool, len(s.Scalings[0].Fields))
 	for i := range s.Scalings {
-
 		for _, field := range s.Scalings[i].Fields {
-			if _, ok := allFields[field]; !ok {
-				allFields[field] = true
-			} else {
+			if _, ok := allFields[field]; ok {
 				return fmt.Errorf("filter field '%s' use twice in scalings", field)
 			}
+
+			allFields[field] = true
 		}
 
 		if res := s.Scalings[i].Init(); res != nil {
@@ -83,8 +82,8 @@ func (s *Scaling) Process(value float64) float64 {
 
 // handle the scaling process
 func (s *Scale) ScaleValues(metric telegraf.Metric) {
-
 	fields := metric.FieldList()
+
 	for _, scaling := range s.Scalings {
 		for _, field := range fields {
 			if !scaling.fieldFilter.Match(field.Key) {

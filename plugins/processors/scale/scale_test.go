@@ -37,16 +37,48 @@ func TestScaler(t *testing.T) {
 				},
 			},
 			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": int64(0), "test2": uint64(1)}, time.Unix(0, 0)),
-				testutil.MustMetric("Name2", map[string]string{}, map[string]interface{}{"test1": "0.5", "test2": float32(-0.5)}, time.Unix(0, 0)),
-				testutil.MustMetric("Name3", map[string]string{}, map[string]interface{}{"test3": int64(-3), "test4": uint64(0)}, time.Unix(0, 0)),
-				testutil.MustMetric("Name4", map[string]string{}, map[string]interface{}{"test3": int64(-5), "test4": float32(-0.5)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": int64(0),
+						"test2": uint64(1),
+					}, time.Unix(0, 0)),
+				testutil.MustMetric("Name2", map[string]string{},
+					map[string]interface{}{
+						"test1": "0.5",
+						"test2": float32(-0.5),
+					}, time.Unix(0, 0)),
+				testutil.MustMetric("Name3", map[string]string{},
+					map[string]interface{}{
+						"test3": int64(-3),
+						"test4": uint64(0),
+					}, time.Unix(0, 0)),
+				testutil.MustMetric("Name4", map[string]string{},
+					map[string]interface{}{
+						"test3": int64(-5),
+						"test4": float32(-0.5),
+					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": float64(50), "test2": float64(100)}, time.Unix(0, 0)),
-				testutil.MustMetric("Name2", map[string]string{}, map[string]interface{}{"test1": float64(75), "test2": float32(25)}, time.Unix(0, 0)),
-				testutil.MustMetric("Name3", map[string]string{}, map[string]interface{}{"test3": float64(4.2), "test4": float64(9)}, time.Unix(0, 0)),
-				testutil.MustMetric("Name4", map[string]string{}, map[string]interface{}{"test3": float64(1), "test4": float64(8.2)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": float64(50),
+						"test2": float64(100),
+					}, time.Unix(0, 0)),
+				testutil.MustMetric("Name2", map[string]string{},
+					map[string]interface{}{
+						"test1": float64(75),
+						"test2": float32(25),
+					}, time.Unix(0, 0)),
+				testutil.MustMetric("Name3", map[string]string{},
+					map[string]interface{}{
+						"test3": float64(4.2),
+						"test4": float64(9),
+					}, time.Unix(0, 0)),
+				testutil.MustMetric("Name4", map[string]string{},
+					map[string]interface{}{
+						"test3": float64(1),
+						"test4": float64(8.2),
+					}, time.Unix(0, 0)),
 			},
 		},
 		{
@@ -63,10 +95,20 @@ func TestScaler(t *testing.T) {
 				},
 			},
 			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": int64(0), "test2": uint64(1), "test3": int64(1)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": int64(0),
+						"test2": uint64(1),
+						"test3": int64(1),
+					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": float64(50), "test2": float64(100), "test3": int64(1)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": float64(50),
+						"test2": float64(100),
+						"test3": int64(1),
+					}, time.Unix(0, 0)),
 			},
 		},
 		{
@@ -83,10 +125,18 @@ func TestScaler(t *testing.T) {
 				},
 			},
 			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": int64(-2), "test2": uint64(2)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": int64(-2),
+						"test2": uint64(2),
+					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": float64(-50), "test2": float64(150)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": float64(-50),
+						"test2": float64(150),
+					}, time.Unix(0, 0)),
 			},
 		},
 		{
@@ -103,10 +153,16 @@ func TestScaler(t *testing.T) {
 				},
 			},
 			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": int64(0)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": int64(0),
+					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": float64(50)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": float64(50),
+					}, time.Unix(0, 0)),
 			},
 		},
 	}
@@ -144,10 +200,18 @@ func TestErrorCases(t *testing.T) {
 				},
 			},
 			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": int64(0), "test2": uint64(1)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": int64(0),
+						"test2": uint64(1),
+					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": float64(50), "test2": float64(100)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": float64(50),
+						"test2": float64(100),
+					}, time.Unix(0, 0)),
 			},
 		},
 		{
@@ -171,20 +235,40 @@ func TestErrorCases(t *testing.T) {
 				},
 			},
 			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": int64(0), "test2": uint64(1), "test3": int64(1)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": int64(0),
+						"test2": uint64(1),
+						"test3": int64(1),
+					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": float64(50), "test2": float64(100), "test3": int64(1)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": float64(50),
+						"test2": float64(100),
+						"test3": int64(1),
+					}, time.Unix(0, 0)),
 			},
 		},
 		{
 			name:  "No scalings",
 			scale: &Scale{Log: testutil.Logger{}},
 			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": int64(0), "test2": uint64(1), "test3": int64(1)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": int64(0),
+						"test2": uint64(1),
+						"test3": int64(1),
+					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": float64(50), "test2": float64(100), "test3": int64(1)}, time.Unix(0, 0)),
+				testutil.MustMetric("Name1", map[string]string{},
+					map[string]interface{}{
+						"test1": float64(50),
+						"test2": float64(100),
+						"test3": int64(1),
+					}, time.Unix(0, 0)),
 			},
 		},
 	}
