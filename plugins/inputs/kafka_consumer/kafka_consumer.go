@@ -62,6 +62,7 @@ type KafkaConsumer struct {
 	topicClient     sarama.Client
 	regexps         []regexp.Regexp
 	allWantedTopics []string
+	ticker          time.Ticker
 
 	parser parsers.Parser
 	wg     sync.WaitGroup
@@ -308,7 +309,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		if k.TopicRefreshInterval != 0 {
 			tick := time.Duration(k.TopicRefreshInterval)
 			k.Log.Infof("refreshing topics every %s", tick.String())
-			ticker := time.NewTicker(tick)
+			k.ticker := time.NewTicker(tick)
 			go func() {
 				for range ticker.C {
 					if err := k.refreshTopics(); err != nil {
@@ -372,6 +373,9 @@ func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
 func (k *KafkaConsumer) Stop() {
 	if k.topicClient != nil {
 		k.topicClient.Close()
+	}
+	if k.ticker != nil {
+		k.ticker.Stop()
 	}
 	k.cancel()
 	k.wg.Wait()
