@@ -1,5 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
-package scaler
+package Scale
 
 import (
 	_ "embed"
@@ -16,7 +16,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-func (*Scaler) SampleConfig() string {
+func (*Scale) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -31,7 +31,7 @@ type Scaling struct {
 	fieldFilter filter.Filter
 }
 
-type Scaler struct {
+type Scale struct {
 	Scalings []Scaling       `toml:"scaling"`
 	Log      telegraf.Logger `toml:"-"`
 }
@@ -53,7 +53,7 @@ func (s *Scaling) Init() error {
 	return nil
 }
 
-func (s *Scaler) Init() error {
+func (s *Scale) Init() error {
 	if s.Scalings == nil {
 		return fmt.Errorf("no valid scalings defined. Skipping scaling")
 	}
@@ -82,7 +82,7 @@ func (s *Scaling) Process(value float64) float64 {
 }
 
 // handle the scaling process
-func (s *Scaler) ScaleValues(metric telegraf.Metric) {
+func (s *Scale) ScaleValues(metric telegraf.Metric) {
 
 	fields := metric.FieldList()
 	for _, scaling := range s.Scalings {
@@ -103,7 +103,7 @@ func (s *Scaler) ScaleValues(metric telegraf.Metric) {
 	}
 }
 
-func (s *Scaler) Apply(in ...telegraf.Metric) []telegraf.Metric {
+func (s *Scale) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		s.ScaleValues(metric)
 	}
@@ -111,7 +111,7 @@ func (s *Scaler) Apply(in ...telegraf.Metric) []telegraf.Metric {
 }
 
 func init() {
-	processors.Add("scaler", func() telegraf.Processor {
-		return &Scaler{}
+	processors.Add("scale", func() telegraf.Processor {
+		return &Scale{}
 	})
 }

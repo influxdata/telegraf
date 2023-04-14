@@ -1,4 +1,4 @@
-package scaler
+package Scale
 
 import (
 	"testing"
@@ -12,13 +12,13 @@ import (
 func TestScaler(t *testing.T) {
 	tests := []struct {
 		name     string
-		scaler   *Scaler
+		scale    *Scale
 		inputs   []telegraf.Metric
 		expected []telegraf.Metric
 	}{
 		{
 			name: "Field Scaling",
-			scaler: &Scaler{
+			scale: &Scale{
 				Scalings: []Scaling{
 					{
 						InMin:  -1,
@@ -51,7 +51,7 @@ func TestScaler(t *testing.T) {
 		},
 		{
 			name: "Ignored Fileds",
-			scaler: &Scaler{
+			scale: &Scale{
 				Scalings: []Scaling{
 					{
 						InMin:  -1,
@@ -71,7 +71,7 @@ func TestScaler(t *testing.T) {
 		},
 		{
 			name: "Out of range tests",
-			scaler: &Scaler{
+			scale: &Scale{
 				Scalings: []Scaling{
 					{
 						InMin:  -1,
@@ -91,7 +91,7 @@ func TestScaler(t *testing.T) {
 		},
 		{
 			name: "Missing field Fileds",
-			scaler: &Scaler{
+			scale: &Scale{
 				Scalings: []Scaling{
 					{
 						InMin:  -1,
@@ -113,32 +113,26 @@ func TestScaler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.scaler.Log = testutil.Logger{}
+			tt.scale.Log = testutil.Logger{}
 
-			require.NoError(t, tt.scaler.Init())
-			actual := tt.scaler.Apply(tt.inputs...)
+			require.NoError(t, tt.scale.Init())
+			actual := tt.scale.Apply(tt.inputs...)
 
 			testutil.RequireMetricsEqual(t, tt.expected, actual)
 		})
 	}
 }
 
-func TestNoScalerDefined(t *testing.T) {
-	s := Scaler{Log: testutil.Logger{}}
-
-	require.Error(t, s.Init())
-}
-
 func TestErrorCases(t *testing.T) {
 	tests := []struct {
 		name     string
-		scaler   *Scaler
+		scale    *Scale
 		inputs   []telegraf.Metric
 		expected []telegraf.Metric
 	}{
 		{
 			name: "Duplicate filter fields in one scaling",
-			scaler: &Scaler{
+			scale: &Scale{
 				Scalings: []Scaling{
 					{
 						InMin:  -1,
@@ -158,7 +152,7 @@ func TestErrorCases(t *testing.T) {
 		},
 		{
 			name: "Duplicate filter fields in multiple scalings",
-			scaler: &Scaler{
+			scale: &Scale{
 				Scalings: []Scaling{
 					{
 						InMin:  -1,
@@ -184,8 +178,8 @@ func TestErrorCases(t *testing.T) {
 			},
 		},
 		{
-			name:   "No scalings",
-			scaler: &Scaler{Log: testutil.Logger{}},
+			name:  "No scalings",
+			scale: &Scale{Log: testutil.Logger{}},
 			inputs: []telegraf.Metric{
 				testutil.MustMetric("Name1", map[string]string{}, map[string]interface{}{"test1": int64(0), "test2": uint64(1), "test3": int64(1)}, time.Unix(0, 0)),
 			},
@@ -197,9 +191,9 @@ func TestErrorCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.scaler.Log = testutil.Logger{}
+			tt.scale.Log = testutil.Logger{}
 
-			require.Error(t, tt.scaler.Init())
+			require.Error(t, tt.scale.Init())
 		})
 	}
 }

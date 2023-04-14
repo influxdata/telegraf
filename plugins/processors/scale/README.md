@@ -1,6 +1,6 @@
-# Scaler Processor Plugin
+# Scale Processor Plugin
 
-The scaler processor filters for a set of fields,
+The scale processor filters for a set of fields,
 and scales the respective values from an input range into
 the given output range according to this formula:
 
@@ -29,7 +29,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Scale values with a predefined range to a different output range.
-[[processors.scaler]]
+[[processors.scale]]
     ## It is possible to define multiple different scaling that can be applied
     ## do different sets of fields. Each scaling expects the following
     ## arguments:
@@ -40,7 +40,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##   - fields: a list of field names (or filters) to apply this scaling to
     
     ## Example: Define a scaling
-    # [processors.scaler.scaling]
+    # [processors.scale.scaling]
     #    input_minimum = 0
     #    input_maximum = 1
     #    output_minimum = 0
@@ -49,7 +49,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     
     ## Multiple scalings can be defined simoultaniously
     ## Example: A second scaling. 
-    # [processors.scaler.scaling]
+    # [processors.scale.scaling]
     #    input_minimum = -2800
     #    input_maximum = 100
     #    output_minimum = -20
