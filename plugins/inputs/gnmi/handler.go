@@ -116,23 +116,32 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
+
 	// Check if jnpr_extension option is set
 	if h.jnprExtension {
-		// If extension is present
+		// If extension is present - iter on each extension to find EID_JUNIPER_TELEMETRY_HEADER
 		if len(extension) > 0 {
-			currentExt := extension[0].GetRegisteredExt().Msg
-			if currentExt != nil {
-				juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeader{}
-				// unmarshal extention
-				result := proto.Unmarshal(currentExt, juniperHeader)
-				if result == nil {
-					// Add only relevant Tags from the extension header.
-					// These are requiered for aggregation
-					prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
-					prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
-					prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
+			for _, ext := range extension {
+				currentExt := ext.GetRegisteredExt().Msg
+				idExt := ext.GetRegisteredExt().Id
+
+				// Juniper Telemetry header
+				//EID_JUNIPER_TELEMETRY_HEADER = 1;
+				if currentExt != nil && idExt == 1 {
+					juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeader{}
+					// unmarshal extention
+					result := proto.Unmarshal(currentExt, juniperHeader)
+					if result == nil {
+						// Add only relevant Tags from the extension header.
+						// These are requiered for aggregation
+						prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
+						prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
+						prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
+					}
+					break
 				}
 			}
+
 		}
 	}
 	if response.Update.Prefix != nil {
