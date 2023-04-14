@@ -152,11 +152,12 @@ func (k *KafkaConsumer) Init() error {
 
 	k.config = cfg
 
-	k.compileTopicRegexps()
-
-	if len(k.regexps) == 0 {
-		// There are no regexp-matched topics
+	if len(k.TopicRegexps) == 0 {
 		k.allWantedTopics = k.Topics
+	} else {
+		if err := k.compileTopicRegexps(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -190,7 +191,7 @@ func (k *KafkaConsumer) compileTopicRegexps() {
 			k.regexps = append(k.regexps, *re)
 			k.Log.Infof("Added regular expression '%s' to topics", r)
 		} else {
-			k.Log.Errorf("Regular expression '%s' did not compile: '%w'; not adding to topics", r, err)
+			return fmt.Errorf("regular expression %q did not compile: '%w", r, err)
 		}
 	}
 }
@@ -216,7 +217,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 	if err != nil {
 		return err
 	}
-	k.Log.Infof("discovered topics: %v", allDiscoveredTopics)
+	k.Log.Debugf("discovered topics: %v", allDiscoveredTopics)
 
 	extantTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range allDiscoveredTopics {
