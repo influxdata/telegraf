@@ -90,6 +90,7 @@ When the [internal][] input is enabled:
   - fields:
     - files_processed - How many files have been processed (counter)
     - files_dropped - How many files have been dropped (counter)
+    - files_queue - How many files to be processed (gauge)
 
 ## Example Output
 

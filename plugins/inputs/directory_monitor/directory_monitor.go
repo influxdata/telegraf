@@ -60,6 +60,7 @@ type DirectoryMonitor struct {
 	parserFunc          parsers.ParserFunc
 	filesProcessed      selfstat.Stat
 	filesDropped        selfstat.Stat
+	filesQueued         selfstat.Stat
 	waitGroup           *sync.WaitGroup
 	acc                 telegraf.TrackingAccumulator
 	sem                 *semaphore.Weighted
@@ -174,6 +175,9 @@ func (monitor *DirectoryMonitor) Monitor() {
 
 		// We've finished reading the file and moved it away, delete it from files in use.
 		monitor.filesInUse.Delete(filePath)
+
+		// Keep track of how many files still to process
+		monitor.filesQueued.Set(int64(len(monitor.filesToProcess)))
 	}
 }
 
@@ -409,6 +413,7 @@ func (monitor *DirectoryMonitor) Init() error {
 	}
 	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", tags)
 	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", tags)
+	monitor.filesQueued = selfstat.Register("directory_monitor", "files_queue", tags)
 
 	// If an error directory should be used but has not been configured yet, create one ourselves.
 	if monitor.ErrorDirectory != "" {
