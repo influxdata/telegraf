@@ -140,7 +140,6 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 					break
 				}
 			}
-
 		}
 	}
 	if response.Update.Prefix != nil {
