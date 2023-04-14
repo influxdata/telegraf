@@ -24,6 +24,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Required. Name of PubSub topic to publish metrics to.
   topic = "my-topic"
 
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
+
   ## Required. Data format to consume.
   ## Each data format has its own unique set of configuration options.
   ## Read more about them here:
@@ -60,6 +65,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Optional. If true, published PubSub message data will be base64-encoded.
   # base64_data = false
+
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  ## Please note that when send_batched = false each pubsub message contains only
+  ## a single metric, it is recommended to use compression with batch format
+  ## for best results.
+  # content_encoding = "identity"
 
   ## Optional. PubSub attributes to add to metrics.
   # [outputs.cloud_pubsub.attributes]

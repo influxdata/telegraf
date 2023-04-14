@@ -35,6 +35,7 @@ type PubSub struct {
 	PublishNumGoroutines  int             `toml:"publish_num_go_routines"`
 	PublishTimeout        config.Duration `toml:"publish_timeout"`
 	Base64Data            bool            `toml:"base64_data"`
+	ContentEncoding       string          `toml:"content_encoding"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -45,6 +46,7 @@ type PubSub struct {
 
 	serializer     serializers.Serializer
 	publishResults []publishResult
+	encoder        internal.ContentEncoder
 }
 
 func (*PubSub) SampleConfig() string {
@@ -62,6 +64,12 @@ func (ps *PubSub) Connect() error {
 
 	if ps.Project == "" {
 		return fmt.Errorf(`"project" is required`)
+	}
+
+	var err error
+	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
+	if err != nil {
+		return err
 	}
 
 	if ps.stubTopic == nil {
@@ -173,6 +181,11 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			b = []byte(encoded)
 		}
 
+		b, err = ps.encoder.Encode(b)
+		if err != nil {
+			return nil, err
+		}
+
 		msg := &pubsub.Message{Data: b}
 		if ps.Attributes != nil {
 			msg.Attributes = ps.Attributes
@@ -191,6 +204,12 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 		if ps.Base64Data {
 			encoded := base64.StdEncoding.EncodeToString(b)
 			b = []byte(encoded)
+		}
+
+		b, err = ps.encoder.Encode(b)
+		if err != nil {
+			ps.Log.Debugf("could not encode metric: %v", err)
+			continue
 		}
 
 		msg := &pubsub.Message{

@@ -49,7 +49,8 @@ type PubSub struct {
 
 	Base64Data bool `toml:"base64_data"`
 
-	Log telegraf.Logger
+	Log             telegraf.Logger
+	ContentEncoding string `toml:"content_encoding"`
 
 	sub     subscription
 	stubSub func() subscription
@@ -60,8 +61,10 @@ type PubSub struct {
 	wg     *sync.WaitGroup
 	acc    telegraf.TrackingAccumulator
 
-	undelivered map[telegraf.TrackingID]message
-	sem         semaphore
+	undelivered  map[telegraf.TrackingID]message
+	sem          semaphore
+	gzipDecoder  internal.ContentDecoder
+	decoderMutex sync.Mutex
 }
 
 func (*PubSub) SampleConfig() string {
@@ -88,6 +91,12 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 
 	if ps.Project == "" {
 		return fmt.Errorf(`"project" is required`)
+	}
+
+	var err error
+	ps.gzipDecoder, err = internal.NewContentDecoder("gzip")
+	if err != nil {
+		return err
 	}
 
 	ps.sem = make(semaphore, ps.MaxUndeliveredMessages)
@@ -171,30 +180,35 @@ func (ps *PubSub) startReceiver(parentCtx context.Context) error {
 
 // onMessage handles parsing and adding a received message to the accumulator.
 func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
+	defer msg.Ack()
 	if ps.MaxMessageLen > 0 && len(msg.Data()) > ps.MaxMessageLen {
 		msg.Ack()
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
-	var data []byte
+	// This function is called concurrently, but the decoder cannot.
+	ps.decoderMutex.Lock()
+	data, err := ps.gzipDecoder.Decode(msg.Data())
+	ps.decoderMutex.Unlock()
+	if err != nil {
+		// This means that the means was not encoding by gzip. Continue with original msg data
+		data = msg.Data()
+	}
+
 	if ps.Base64Data {
-		strData, err := base64.StdEncoding.DecodeString(string(msg.Data()))
+		strData, err := base64.StdEncoding.DecodeString(string(data))
 		if err != nil {
 			return fmt.Errorf("unable to base64 decode message: %w", err)
 		}
 		data = strData
-	} else {
-		data = msg.Data()
 	}
 
 	metrics, err := ps.parser.Parse(data)
 	if err != nil {
-		msg.Ack()
-		return err
+		return fmt.Errorf("unable to parse decoded message: %v", err)
 	}
 
 	if len(metrics) == 0 {
-		msg.Ack()
 		return nil
 	}
 

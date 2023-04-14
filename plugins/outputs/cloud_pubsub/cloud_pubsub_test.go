@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -133,6 +134,7 @@ func TestPubSub_WriteBase64Single(t *testing.T) {
 	settings.CountThreshold = 1
 	ps, topic, metrics := getTestResources(t, settings, testMetrics)
 	ps.Base64Data = true
+	topic.Base64Data = true
 
 	err := ps.Write(metrics)
 	if err != nil {
@@ -140,7 +142,7 @@ func TestPubSub_WriteBase64Single(t *testing.T) {
 	}
 
 	for _, testM := range testMetrics {
-		verifyMetricPublished(t, testM.m, topic.published, true /* base64encoded */)
+		verifyMetricPublished(t, testM.m, topic.published, true /* base64encoded */, false /* gzipEncoded */)
 	}
 }
 
@@ -163,11 +165,67 @@ func TestPubSub_Error(t *testing.T) {
 	}
 }
 
-func verifyRawMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message) *pubsub.Message {
-	return verifyMetricPublished(t, m, published, false)
+func TestPubSub_WriteGzipSingle(t *testing.T) {
+	testMetrics := []testMetric{
+		{testutil.TestMetric("value_1", "test"), false /*return error */},
+		{testutil.TestMetric("value_2", "test"), false},
+	}
+
+	settings := pubsub.DefaultPublishSettings
+	settings.CountThreshold = 1
+	ps, topic, metrics := getTestResources(t, settings, testMetrics)
+	topic.ContentEncoding = "gzip"
+	ps.ContentEncoding = "gzip"
+	var err error
+	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
+	if err != nil {
+		t.Fatalf("got unexpected error: %v", err)
+	}
+
+	err = ps.Write(metrics)
+	if err != nil {
+		t.Fatalf("got unexpected error: %v", err)
+	}
+
+	for _, testM := range testMetrics {
+		verifyMetricPublished(t, testM.m, topic.published, false /* base64encoded */, true /* Gzipencoded */)
+	}
 }
 
-func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message, base64Encoded bool) *pubsub.Message {
+func TestPubSub_WriteGzipAndBase64Single(t *testing.T) {
+	testMetrics := []testMetric{
+		{testutil.TestMetric("value_1", "test"), false /*return error */},
+		{testutil.TestMetric("value_2", "test"), false},
+	}
+
+	settings := pubsub.DefaultPublishSettings
+	settings.CountThreshold = 1
+	ps, topic, metrics := getTestResources(t, settings, testMetrics)
+	topic.ContentEncoding = "gzip"
+	topic.Base64Data = true
+	ps.ContentEncoding = "gzip"
+	ps.Base64Data = true
+	var err error
+	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
+	if err != nil {
+		t.Fatalf("got unexpected error: %v", err)
+	}
+
+	err = ps.Write(metrics)
+	if err != nil {
+		t.Fatalf("got unexpected error: %v", err)
+	}
+
+	for _, testM := range testMetrics {
+		verifyMetricPublished(t, testM.m, topic.published, true /* base64encoded */, true /* Gzipencoded */)
+	}
+}
+
+func verifyRawMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message) *pubsub.Message {
+	return verifyMetricPublished(t, m, published, false, false)
+}
+
+func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message, base64Encoded bool, gzipEncoded bool) *pubsub.Message {
 	p := influx.Parser{}
 	err := p.Init()
 	if err != nil {
@@ -180,8 +238,18 @@ func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string
 	}
 
 	data := psMsg.Data
+
+	if gzipEncoded {
+		decoder, _ := internal.NewContentDecoder("gzip")
+		var err error
+		data, err = decoder.Decode(data)
+		if err != nil {
+			t.Fatalf("Unable to decode expected gzip encoded message: %s", err)
+		}
+	}
+
 	if base64Encoded {
-		v, err := base64.StdEncoding.DecodeString(string(psMsg.Data))
+		v, err := base64.StdEncoding.DecodeString(string(data))
 		if err != nil {
 			t.Fatalf("Unable to decode expected base64-encoded message: %s", err)
 		}
@@ -190,7 +258,7 @@ func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string
 
 	parsed, err := p.Parse(data)
 	if err != nil {
-		t.Fatalf("could not parse influxdb metric from published message: %s", string(psMsg.Data))
+		t.Fatalf("could not parse influxdb metric from published message: %s", string(data))
 	}
 	if len(parsed) > 1 {
 		t.Fatalf("expected only one influxdb metric per published message, got %d", len(published))
