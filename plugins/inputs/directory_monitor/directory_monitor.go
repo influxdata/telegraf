@@ -404,8 +404,11 @@ func (monitor *DirectoryMonitor) Init() error {
 		}
 	}
 
-	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", map[string]string{})
-	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", map[string]string{})
+	tags := map[string]string{
+		"directory": monitor.Directory,
+	}
+	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", tags)
+	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", tags)
 
 	// If an error directory should be used but has not been configured yet, create one ourselves.
 	if monitor.ErrorDirectory != "" {
