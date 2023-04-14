@@ -915,7 +915,7 @@ func TestNotification(t *testing.T) {
 				Redial:        config.Duration(1 * time.Second),
 				Subscriptions: []Subscription{
 					{
-						Name:             "name",
+						Name:             "type",
 						Origin:           "openconfig-platform",
 						Path:             "/components/component[name=CHASSIS0:FPC0]/state",
 						SubscriptionMode: "sample",
@@ -944,15 +944,6 @@ func TestNotification(t *testing.T) {
 									{
 										Path: &gnmiLib.Path{
 											Elem: []*gnmiLib.PathElem{
-												{Name: "name"},
-											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_StringVal{StringVal: "FPC0"},
-										},
-									},
-									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
 												{Name: "type"},
 											}},
 										Val: &gnmiLib.TypedValue{
@@ -962,23 +953,19 @@ func TestNotification(t *testing.T) {
 								},
 							},
 						},
-						Extension: []*gnmiExt.Extension{&gnmiExt.Extension{
+						Extension: []*gnmiExt.Extension{{
 							Ext: &gnmiExt.Extension_RegisteredExt{
 								RegisteredExt: &gnmiExt.RegisteredExtension{
 									// Juniper Telemetry header
 									//EID_JUNIPER_TELEMETRY_HEADER = 1;
 									Id: 1,
-									Msg: func(jnprExt jnprHeader.GnmiJuniperTelemetryHeader) []byte {
-										msg, ok := jnprExt.ProtoReflect().(proto.Message)
-										if !ok {
-											return nil
-										}
-										b, err := proto.Marshal(msg)
+									Msg: func(jnprExt *jnprHeader.GnmiJuniperTelemetryHeader) []byte {
+										b, err := proto.Marshal(jnprExt)
 										if err != nil {
 											return nil
 										}
 										return b
-									}(jnprHeader.GnmiJuniperTelemetryHeader{ComponentId: 15, SubComponentId: 1, Component: "PICD"}),
+									}(&jnprHeader.GnmiJuniperTelemetryHeader{ComponentId: 15, SubComponentId: 1, Component: "PICD"}),
 								},
 							},
 						}},
@@ -999,7 +986,6 @@ func TestNotification(t *testing.T) {
 					},
 					map[string]interface{}{
 						"type": "LINECARD",
-						"name": "FPC0",
 					},
 					time.Unix(0, 0),
 				),

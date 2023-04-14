@@ -124,7 +124,6 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			for _, ext := range extension {
 				currentExt := ext.GetRegisteredExt().Msg
 				idExt := ext.GetRegisteredExt().Id
-
 				// Juniper Telemetry header
 				//EID_JUNIPER_TELEMETRY_HEADER = 1;
 				if currentExt != nil && idExt == 1 {
