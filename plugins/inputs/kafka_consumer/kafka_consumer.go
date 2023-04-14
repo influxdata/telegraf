@@ -62,7 +62,7 @@ type KafkaConsumer struct {
 	topicClient     sarama.Client
 	regexps         []regexp.Regexp
 	allWantedTopics []string
-	ticker          time.Ticker
+	ticker          *time.Ticker
 
 	parser parsers.Parser
 	wg     sync.WaitGroup
@@ -185,6 +185,7 @@ func (k *KafkaConsumer) compileTopicRegexps() error {
 			return fmt.Errorf("regular expression %q did not compile: '%w", r, err)
 		}
 	}
+	return nil
 }
 
 func (k *KafkaConsumer) refreshTopics() error {
@@ -196,12 +197,6 @@ func (k *KafkaConsumer) refreshTopics() error {
 
 	if len(k.regexps) == 0 {
 		return nil
-	}
-	if k.topicClient == nil {
-		err := k.createTopicScanner()
-		if err != nil {
-			return fmt.Errorf("could not create client to match topics to regexps: %w", err)
-		}
 	}
 
 	allDiscoveredTopics, err := k.topicClient.Topics()
@@ -309,9 +304,9 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		if k.TopicRefreshInterval != 0 {
 			tick := time.Duration(k.TopicRefreshInterval)
 			k.Log.Infof("refreshing topics every %s", tick.String())
-			k.ticker := time.NewTicker(tick)
+			k.ticker = time.NewTicker(tick)
 			go func() {
-				for range ticker.C {
+				for range k.ticker.C {
 					if err := k.refreshTopics(); err != nil {
 						k.Log.Errorf("topic refresh failed: %v", err)
 					}
