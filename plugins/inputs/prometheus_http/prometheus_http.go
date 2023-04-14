@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"io/ioutil"
 	"math"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -39,6 +42,13 @@ type PrometheusHttpMetric struct {
 	uniques   map[uint64]bool
 }
 
+// PrometheusHttpFile
+type PrometheusHttpFile struct {
+	Name string `toml:"name"`
+	File string `toml:"file"`
+	Type string `toml:"type"`
+}
+
 // PrometheusHttpPeriod struct
 type PrometheusHttpPeriod struct {
 	duration config.Duration
@@ -58,9 +68,11 @@ type PrometheusHttp struct {
 	Params        string                  `toml:"params"`
 	Prefix        string                  `toml:"prefix"`
 	SkipEmptyTags bool                    `toml:"skip_empty_tags"`
+	Files         []*PrometheusHttpFile   `toml:"file"`
 
-	Log telegraf.Logger `toml:"-"`
-	acc telegraf.Accumulator
+	Log   telegraf.Logger `toml:"-"`
+	acc   telegraf.Accumulator
+	files map[string]interface{}
 }
 
 type PrometheusHttpPushFunc = func(when time.Time, tags map[string]string, stamp time.Time, value float64)
@@ -152,13 +164,30 @@ func (p *PrometheusHttp) getTemplateValue(t *toolsRender.TextTemplate, value flo
 	return f, nil
 }
 
+func (p *PrometheusHttp) mergeMaps(maps ...map[string]interface{}) map[string]interface{} {
+
+	r := make(map[string]interface{})
+	for _, m := range maps {
+		for k, v := range m {
+			r[k] = v
+		}
+	}
+	return r
+}
+
 func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, tags map[string]string) string {
 
 	if t == nil {
 		return ""
 	}
 
-	b, err := t.RenderObject(&tags)
+	tgs := make(map[string]interface{}, len(tags))
+	for k, v := range tags {
+		tgs[k] = v
+	}
+
+	m := p.mergeMaps(p.files, tgs)
+	b, err := t.RenderObject(&m)
 	if err != nil {
 		p.Log.Errorf("%s failed to execute template: %v", p.Name, err)
 		return ""
@@ -329,12 +358,12 @@ func (p *PrometheusHttp) gatherMetrics(ds PrometheusHttpDatasource) error {
 	return nil
 }
 
-func (p *PrometheusHttp) fIfSome(o interface{}, def interface{}) interface{} {
+/*func (p *PrometheusHttp) fIfSome(o interface{}, def interface{}) interface{} {
 	if o == nil {
 		return def
 	}
 	return o
-}
+}*/
 
 func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.TextTemplate {
 
@@ -343,13 +372,14 @@ func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.Tex
 	}
 
 	funcs := make(map[string]any)
-	funcs["ifSome"] = p.fIfSome
+	//funcs["ifSome"] = p.fIfSome
 
 	tpl, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
 		Name:    fmt.Sprintf("%s_template", name),
 		Content: value,
 		Funcs:   funcs,
 	}, nil)
+
 	if err != nil {
 		p.Log.Error(err)
 		return nil
@@ -374,6 +404,67 @@ func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 	if m.uniques == nil {
 		m.uniques = make(map[uint64]bool)
 	}
+}
+
+func (p *PrometheusHttp) readJson(bytes []byte) (interface{}, error) {
+
+	var v interface{}
+	err := json.Unmarshal(bytes, &v)
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+func (p *PrometheusHttp) readToml(bytes []byte) (interface{}, error) {
+
+	return nil, fmt.Errorf("toml is not implemented")
+}
+
+func (p *PrometheusHttp) readYaml(bytes []byte) (interface{}, error) {
+
+	return nil, fmt.Errorf("yaml is not implemented")
+}
+
+func (p *PrometheusHttp) readFiles() map[string]interface{} {
+
+	r := make(map[string]interface{})
+	for _, v := range p.Files {
+
+		if _, err := os.Stat(v.File); err == nil {
+
+			p.Log.Debugf("read file: %s", v.File)
+
+			bytes, err := ioutil.ReadFile(v.File)
+			if err != nil {
+				p.Log.Error(err)
+				continue
+			}
+
+			tp := strings.Replace(filepath.Ext(v.File), ".", "", 1)
+			if v.Type != "" {
+				tp = v.Type
+			}
+
+			var obj interface{}
+			switch {
+			case tp == "json":
+				obj, err = p.readJson(bytes)
+			case tp == "toml":
+				obj, err = p.readToml(bytes)
+			case tp == "yaml":
+				obj, err = p.readYaml(bytes)
+			default:
+				obj, err = p.readJson(bytes)
+			}
+			if err != nil {
+				p.Log.Error(err)
+				continue
+			}
+			r[v.Name] = obj
+		}
+	}
+	return r
 }
 
 // Gather is called by telegraf when the plugin is executed on its interval.
@@ -412,6 +503,10 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 
 	for _, m := range p.Metrics {
 		p.setDefaultMetric(m)
+	}
+
+	if len(p.Files) > 0 {
+		p.files = p.readFiles()
 	}
 
 	var ds PrometheusHttpDatasource = nil
