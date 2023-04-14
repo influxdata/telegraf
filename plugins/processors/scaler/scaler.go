@@ -3,9 +3,13 @@ package scaler
 
 import (
 	_ "embed"
+	"fmt"
+
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -22,80 +26,79 @@ type Scaling struct {
 	OutMin float64  `toml:"output_minimum"`
 	OutMax float64  `toml:"output_maximum"`
 	Fields []string `toml:"fields"`
+
+	factor      float64
+	fieldFilter filter.Filter
 }
 
 type Scaler struct {
-	Scalings   []Scaling       `toml:"scaling"`
-	Log        telegraf.Logger `toml:"-"`
-	scalingMap map[filter.Filter]*Scaling
+	Scalings []Scaling       `toml:"scaling"`
+	Log      telegraf.Logger `toml:"-"`
+}
+
+func (s *Scaling) Init() error {
+	filter, err := filter.Compile(s.Fields)
+
+	if err != nil {
+		return fmt.Errorf("could not compile filter: %w", err)
+	}
+
+	s.fieldFilter = filter
+
+	if s.InMax == s.InMin {
+		return fmt.Errorf("minumum and maximum are equal for fields %s", strings.Join(s.Fields, ","))
+	}
+
+	s.factor = (s.OutMax - s.OutMin) / (s.InMax - s.InMin)
+	return nil
 }
 
 func (s *Scaler) Init() error {
-	s.scalingMap = make(map[filter.Filter]*Scaling)
-
-	// convert filter list to filter map for better performance
-	for i, element := range s.Scalings {
-		fieldFilter, err := filter.Compile(element.Fields)
-		if err != nil {
-			s.Log.Errorf("Could not compile filter: %v\n", err)
-			return nil
-		}
-
-		if element.InMax == element.InMin {
-			s.Log.Error("Found scaling with equal input_minimum and input_maximum. Skipping it.")
-			continue
-		}
-
-		s.scalingMap[fieldFilter] = &s.Scalings[i]
+	if s.Scalings == nil {
+		return fmt.Errorf("no valid scalings defined. Skipping scaling")
 	}
 
+	allFields := make(map[string]bool, len(s.Scalings[0].Fields))
+	for i := range s.Scalings {
+
+		for _, field := range s.Scalings[i].Fields {
+			if _, ok := allFields[field]; !ok {
+				allFields[field] = true
+			} else {
+				return fmt.Errorf("filter field '%s' use twice in scalings", field)
+			}
+		}
+
+		if res := s.Scalings[i].Init(); res != nil {
+			return res
+		}
+	}
 	return nil
 }
 
 // scale a float according to the input and output range
-func Scale(value float64, inMin float64, inMax float64, outMin float64, outMax float64) float64 {
-	return (value-inMin)*(outMax-outMin)/(inMax-inMin) + outMin
-}
-
-// convert a numeric value to float
-func toFloat(v interface{}) (float64, bool) {
-	switch value := v.(type) {
-	case int64:
-		return float64(value), true
-	case uint64:
-		return float64(value), true
-	case float64:
-		return value, true
-	}
-	return 0.0, false
+func (s *Scaling) Process(value float64) float64 {
+	return (value-s.InMin)*s.factor + s.OutMin
 }
 
 // handle the scaling process
 func (s *Scaler) ScaleValues(metric telegraf.Metric) {
-	if s.Scalings == nil || s.scalingMap == nil || len(s.scalingMap) == 0 {
-		s.Log.Errorf("No valid scalings defined. Skipping scaling")
-		return
-	}
 
-	fields := metric.Fields()
-	for currentFilter, scaling := range s.scalingMap {
-		for key := range fields {
-			if currentFilter != nil && currentFilter.Match(key) {
-				// This call will always succeed as we are only using the fields from this specific metric
-				value, _ := metric.GetField(key)
-				v, ok := toFloat(value)
-
-				if !ok {
-					metric.RemoveField(key)
-					s.Log.Errorf("error converting to float [%T]: %v\n", key, value)
-					continue
-				}
-
-				// replace field with the new value (the name remains the same)
-				metric.RemoveField(key)
-				res := Scale(v, scaling.InMin, scaling.InMax, scaling.OutMin, scaling.OutMax)
-				metric.AddField(key, res)
+	fields := metric.FieldList()
+	for _, scaling := range s.Scalings {
+		for _, field := range fields {
+			if !scaling.fieldFilter.Match(field.Key) {
+				continue
 			}
+
+			v, err := internal.ToFloat64(field.Value)
+			if err != nil {
+				s.Log.Errorf("error converting '%v' to float: %v\n", field.Key, err)
+				continue
+			}
+
+			// replace field with the new value (the name remains the same)
+			field.Value = scaling.Process(v)
 		}
 	}
 }
