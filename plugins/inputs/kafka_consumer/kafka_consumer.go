@@ -179,11 +179,10 @@ func (k *KafkaConsumer) compileTopicRegexps() error {
 	k.regexps = make([]regexp.Regexp, 0, len(k.TopicRegexps))
 	for _, r := range k.TopicRegexps {
 		re, err := regexp.Compile(r)
-		if err == nil {
-			k.regexps = append(k.regexps, *re)
-		} else {
+		if err != nil {
 			return fmt.Errorf("regular expression %q did not compile: '%w", r, err)
 		}
+		k.regexps = append(k.regexps, *re)
 	}
 	return nil
 }
