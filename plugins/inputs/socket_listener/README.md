@@ -89,6 +89,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## "identity" to apply no encoding.
   # content_encoding = "identity"
 
+  ## Maximum size of decoded packet.
+  ## Acceptable units are B, KiB, KB, MiB, MB...
+  ## Without quotes and units, interpreted as size in bytes.
+  # max_decompression_size = "500MB"
+
   ## Message splitting strategy and corresponding settings for stream sockets
   ## (tcp, tcp4, tcp6, unix or unixpacket). The setting is ignored for packet
   ## listeners such as udp.
