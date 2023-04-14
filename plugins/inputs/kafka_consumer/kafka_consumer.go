@@ -244,14 +244,23 @@ func (k *KafkaConsumer) refreshTopics() error {
 }
 
 func (k *KafkaConsumer) replaceTopics(newTopics []string) {
-	replace := true
-	// We're not just using reflect.DeepEqual because it's slow.
+	// From a functional standpoint, we could just replace the list
+	// each time.
+	//
+	// This is a little slower, but the motivation is that we'd like
+	// to log the event when the topic list changes, because it means
+	// we detected a change in our matched topics (either new topics
+	// appeared, or old ones went away).
+	//
+	// reflect.DeepEqual is said to be slow, so we implement our own
+	// list-detection change.
+	//
 	// This is pretty straightforward: we replace unless the old list
 	// and the new list have all the same members in the same order.  We
-	// keep them sorted internally for display purposes anyway.
-	// This is slower than just replacing the topic list every time,
-	// but it's nice to have a log of times when the topic list changes,
-	// so we're going to want to do that comparison anyway.
+	// keep them sorted internally for display purposes anyway, so we
+	// can make the decision as soon as we know the lists' lengths differ
+	// or we find a different topic than before at a given index.
+	replace := true
 	if len(newTopics) == len(k.allWantedTopics) {
 		// Assume it's gonna be fine
 		replace = false
