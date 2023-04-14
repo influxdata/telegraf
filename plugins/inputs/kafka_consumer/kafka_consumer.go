@@ -158,38 +158,28 @@ func (k *KafkaConsumer) Init() error {
 		if err := k.compileTopicRegexps(); err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-func (k *KafkaConsumer) createTopicScanner() error {
-	if k.topicClient == nil {
+		// We have regexps, so we're going to need a client to ask
+		// the broker for topics
 		client, err := sarama.NewClient(k.Brokers, k.config)
 		if err != nil {
 			return err
 		}
 		k.topicClient = client
 	}
+
 	return nil
 }
 
-func (k *KafkaConsumer) compileTopicRegexps() {
+func (k *KafkaConsumer) compileTopicRegexps() error {
 	// While we can add new topics matching extant regexps, we can't
 	// update that list on the fly.  We compile them once at startup.
 	// Changing them is a configuration change and requires a restart.
 
-	if len(k.TopicRegexps) == 0 {
-		// Nothing to do.
-		return
-	}
 	k.regexps = make([]regexp.Regexp, 0, len(k.TopicRegexps))
-	// Let's optimistically assume that all of them compile
 	for _, r := range k.TopicRegexps {
 		re, err := regexp.Compile(r)
 		if err == nil {
 			k.regexps = append(k.regexps, *re)
-			k.Log.Infof("Added regular expression '%s' to topics", r)
 		} else {
 			return fmt.Errorf("regular expression %q did not compile: '%w", r, err)
 		}
@@ -235,7 +225,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 	wantedTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range k.Topics {
 		// Get our pre-specified topics
-		k.Log.Infof("adding literally-specified topic %s", t)
+		k.Log.Debugf("adding literally-specified topic %s", t)
 		wantedTopicSet[t] = true
 	}
 	for t := range extantTopicSet {
@@ -243,7 +233,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 		for _, r := range k.regexps {
 			if r.MatchString(t) {
 				wantedTopicSet[t] = true
-				k.Log.Infof("adding regexp-matched topic '%s'", t)
+				k.Log.Debugf("adding regexp-matched topic '%s'", t)
 				break
 			}
 		}
