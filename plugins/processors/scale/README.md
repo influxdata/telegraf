@@ -10,8 +10,6 @@ the given output range according to this formula:
 \text{output\_minimum}
 ```
 
-The input fields are expected to be numeric.
-Strings representing a single numer are also allowed.
 Input fields are converted to floating point values.
 If the conversion fails, those fields are ignored.
 
