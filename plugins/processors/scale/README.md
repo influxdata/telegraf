@@ -60,6 +60,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```
 
 ## Example
+
 ```diff
 - temperature, cpu=25
 + temperature, cpu=75.0
