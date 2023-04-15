@@ -4,7 +4,6 @@ package Scale
 import (
 	_ "embed"
 	"fmt"
-
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -36,18 +35,20 @@ type Scale struct {
 	Log      telegraf.Logger `toml:"-"`
 }
 
-func (s *Scaling) Init() error {
-	scalingFilter, err := filter.Compile(s.Fields)
+func (s *Scaling) init() error {
+	if s.InMax == s.InMin {
+		return fmt.Errorf("input minimum and maximum are equal for fields %s", strings.Join(s.Fields, ","))
+	}
 
+	if s.OutMax == s.OutMin {
+		return fmt.Errorf("output minimum and maximum are equal for fields %s", strings.Join(s.Fields, ","))
+	}
+
+	scalingFilter, err := filter.Compile(s.Fields)
 	if err != nil {
 		return fmt.Errorf("could not compile filter: %w", err)
 	}
-
 	s.fieldFilter = scalingFilter
-
-	if s.InMax == s.InMin {
-		return fmt.Errorf("minumum and maximum are equal for fields %s", strings.Join(s.Fields, ","))
-	}
 
 	s.factor = (s.OutMax - s.OutMin) / (s.InMax - s.InMin)
 	return nil
@@ -55,33 +56,35 @@ func (s *Scaling) Init() error {
 
 func (s *Scale) Init() error {
 	if s.Scalings == nil {
-		return fmt.Errorf("no valid scalings defined. Skipping scaling")
+		return fmt.Errorf("no valid scalings defined")
 	}
 
-	allFields := make(map[string]bool, len(s.Scalings[0].Fields))
+	allFields := make(map[string]bool)
 	for i := range s.Scalings {
 		for _, field := range s.Scalings[i].Fields {
-			if _, ok := allFields[field]; ok {
-				return fmt.Errorf("filter field '%s' use twice in scalings", field)
+			// only generate a warning for the first duplicate field filter
+			if warn, ok := allFields[field]; ok && warn {
+				s.Log.Warnf("filter field '%s' use twice in scalings", field)
+				allFields[field] = false
+			} else {
+				allFields[field] = true
 			}
-
-			allFields[field] = true
 		}
 
-		if res := s.Scalings[i].Init(); res != nil {
-			return res
+		if err := s.Scalings[i].init(); err != nil {
+			return fmt.Errorf("scaling %d: %w", i+1, err)
 		}
 	}
 	return nil
 }
 
 // scale a float according to the input and output range
-func (s *Scaling) Process(value float64) float64 {
+func (s *Scaling) process(value float64) float64 {
 	return (value-s.InMin)*s.factor + s.OutMin
 }
 
 // handle the scaling process
-func (s *Scale) ScaleValues(metric telegraf.Metric) {
+func (s *Scale) scaleValues(metric telegraf.Metric) {
 	fields := metric.FieldList()
 
 	for _, scaling := range s.Scalings {
@@ -92,19 +95,19 @@ func (s *Scale) ScaleValues(metric telegraf.Metric) {
 
 			v, err := internal.ToFloat64(field.Value)
 			if err != nil {
-				s.Log.Errorf("error converting '%v' to float: %v\n", field.Key, err)
+				s.Log.Errorf("error converting %q to float: %w\n", field.Key, err)
 				continue
 			}
 
-			// replace field with the new value (the name remains the same)
-			field.Value = scaling.Process(v)
+			// scale the field values using the defined scaler
+			field.Value = scaling.process(v)
 		}
 	}
 }
 
 func (s *Scale) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
-		s.ScaleValues(metric)
+		s.scaleValues(metric)
 	}
 	return in
 }

@@ -181,95 +181,44 @@ func TestScaler(t *testing.T) {
 
 func TestErrorCases(t *testing.T) {
 	tests := []struct {
-		name     string
-		scale    *Scale
-		inputs   []telegraf.Metric
-		expected []telegraf.Metric
+		name             string
+		scale            *Scale
+		expectedErrorMsg string
 	}{
 		{
-			name: "Duplicate filter fields in one scaling",
+			name: "Same input range values",
 			scale: &Scale{
 				Scalings: []Scaling{
 					{
-						InMin:  -1,
+						InMin:  1,
 						InMax:  1,
 						OutMin: 0,
 						OutMax: 100,
-						Fields: []string{"test", "test"},
+						Fields: []string{"test"},
 					},
 				},
 			},
-			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{},
-					map[string]interface{}{
-						"test1": int64(0),
-						"test2": uint64(1),
-					}, time.Unix(0, 0)),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{},
-					map[string]interface{}{
-						"test1": float64(50),
-						"test2": float64(100),
-					}, time.Unix(0, 0)),
-			},
+			expectedErrorMsg: "input minimum and maximum are equal for fields test",
 		},
 		{
-			name: "Duplicate filter fields in multiple scalings",
+			name: "Same input range values",
 			scale: &Scale{
 				Scalings: []Scaling{
 					{
-						InMin:  -1,
+						InMin:  0,
 						InMax:  1,
-						OutMin: 0,
+						OutMin: 100,
 						OutMax: 100,
-						Fields: []string{"test1", "test2"},
-					},
-					{
-						InMin:  -1,
-						InMax:  1,
-						OutMin: 0,
-						OutMax: 100,
-						Fields: []string{"test1", "test3"},
+						Fields: []string{"test"},
 					},
 				},
 			},
-			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{},
-					map[string]interface{}{
-						"test1": int64(0),
-						"test2": uint64(1),
-						"test3": int64(1),
-					}, time.Unix(0, 0)),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{},
-					map[string]interface{}{
-						"test1": float64(50),
-						"test2": float64(100),
-						"test3": int64(1),
-					}, time.Unix(0, 0)),
-			},
+			expectedErrorMsg: "output minimum and maximum are equal for fields test",
 		},
 		{
-			name:  "No scalings",
-			scale: &Scale{Log: testutil.Logger{}},
-			inputs: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{},
-					map[string]interface{}{
-						"test1": int64(0),
-						"test2": uint64(1),
-						"test3": int64(1),
-					}, time.Unix(0, 0)),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("Name1", map[string]string{},
-					map[string]interface{}{
-						"test1": float64(50),
-						"test2": float64(100),
-						"test3": int64(1),
-					}, time.Unix(0, 0)),
-			},
+			name:             "No scalings",
+			scale:            &Scale{Log: testutil.Logger{}},
+			expectedErrorMsg: "no valid scalings defined",
 		},
 	}
 
@@ -277,7 +226,7 @@ func TestErrorCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.scale.Log = testutil.Logger{}
 
-			require.Error(t, tt.scale.Init())
+			require.Error(t, tt.scale.Init(), tt.expectedErrorMsg)
 		})
 	}
 }
