@@ -32,37 +32,38 @@
 
 package win_perf_counters
 
-// Union specialization for double values
+// PDH_FMT_COUNTERVALUE_DOUBLE is an union specialization for double values
 type PDH_FMT_COUNTERVALUE_DOUBLE struct {
 	CStatus     uint32
 	DoubleValue float64
 }
 
-// Union specialization for 64 bit integer values
+// PDH_FMT_COUNTERVALUE_LARGE is a union specialization for 64-bit integer values
 type PDH_FMT_COUNTERVALUE_LARGE struct {
 	CStatus    uint32
 	LargeValue int64
 }
 
-// Union specialization for long values
+// PDH_FMT_COUNTERVALUE_LONG is a union specialization for long values
 type PDH_FMT_COUNTERVALUE_LONG struct {
 	CStatus   uint32
 	LongValue int32
 	padding   [4]byte
 }
 
+// PDH_FMT_COUNTERVALUE_ITEM_DOUBLE is a union specialization for double values, used by PdhGetFormattedCounterArrayDouble
 type PDH_FMT_COUNTERVALUE_ITEM_DOUBLE struct {
 	SzName   *uint16
 	FmtValue PDH_FMT_COUNTERVALUE_DOUBLE
 }
 
-// Union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
+// PDH_FMT_COUNTERVALUE_ITEM_LARGE is n union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
 type PDH_FMT_COUNTERVALUE_ITEM_LARGE struct {
 	SzName   *uint16 // pointer to a string
 	FmtValue PDH_FMT_COUNTERVALUE_LARGE
 }
 
-// Union specialization for long values, used by PdhGetFormattedCounterArrayLong()
+// PDH_FMT_COUNTERVALUE_ITEM_LONG is n union specialization for long values, used by PdhGetFormattedCounterArrayLong()
 type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
 	SzName   *uint16 // pointer to a string
 	FmtValue PDH_FMT_COUNTERVALUE_LONG
@@ -72,7 +73,8 @@ type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
 type PDH_COUNTER_INFO struct {
 	//Size of the structure, including the appended strings, in bytes.
 	DwLength uint32
-	//Counter type. For a list of counter types, see the Counter Types section of the <a "href=http://go.microsoft.com/fwlink/p/?linkid=84422">Windows Server 2003 Deployment Kit</a>.
+	//Counter type. For a list of counter types,
+	//see the Counter Types section of the <a "href=http://go.microsoft.com/fwlink/p/?linkid=84422">Windows Server 2003 Deployment Kit</a>.
 	//The counter type constants are defined in Winperf.h.
 	DwType uint32
 	//Counter version information. Not used.
@@ -100,8 +102,8 @@ type PDH_COUNTER_INFO struct {
 	//Null-terminated string that contains the name of the object instance specified in the counter path. Is NULL, if the path does not specify an instance.
 	//The string follows this structure in memory.
 	SzInstanceName *uint16 // pointer to a string
-	//Null-terminated string that contains the name of the parent instance specified in the counter path. Is NULL, if the path does not specify a parent instance.
-	//The string follows this structure in memory.
+	//Null-terminated string that contains the name of the parent instance specified in the counter path.
+	//Is NULL, if the path does not specify a parent instance. The string follows this structure in memory.
 	SzParentInstance *uint16 // pointer to a string
 	//Instance index specified in the counter path. Is 0, if the path does not specify an instance index.
 	DwInstanceIndex uint32 // pointer to a string
@@ -113,10 +115,11 @@ type PDH_COUNTER_INFO struct {
 	DataBuffer [1]uint32 // pointer to an extra space
 }
 
-// The PDH_RAW_COUNTER structure returns the data as it was collected from the counter provider. No translation, formatting, or other interpretation is performed on the data
+// The PDH_RAW_COUNTER structure returns the data as it was collected from the counter provider.
+// No translation, formatting, or other interpretation is performed on the data
 type PDH_RAW_COUNTER struct {
-	// Counter status that indicates if the counter value is valid. Check this member before using the data in a calculation or displaying its value. For a list of possible values,
-	// see https://docs.microsoft.com/windows/desktop/PerfCtrs/checking-pdh-interface-return-values
+	// Counter status that indicates if the counter value is valid. Check this member before using the data in a calculation or displaying its value.
+	// For a list of possible values, see https://docs.microsoft.com/windows/desktop/PerfCtrs/checking-pdh-interface-return-values
 	CStatus uint32
 	// Local time for when the data was collected
 	TimeStamp FILETIME
