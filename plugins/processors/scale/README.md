@@ -4,14 +4,16 @@ The scale processor filters for a set of fields,
 and scales the respective values from an input range into
 the given output range according to this formula:
 
-$$\textnormal{result}=(\textnormal{value}-\textnormal{input\_minimum})\cdot
-\frac{(\textnormal{\textnormal{output\_maximum}}-\textnormal{output\_minimum})}
-{(\textnormal{input\_maximum}-\textnormal{input\_minimum})} +
-\textnormal{output\_minimum}$$
+```math
+\text{result}=(\text{value}-\text{input\_minimum})\cdot\frac{(\text{output\_maximum}-\text{output\_minimum})}
+{(\text{input\_maximum}-\text{input\_minimum})} +
+\text{output\_minimum}
+```
 
 The input fields are expected to be numeric.
 Strings representing a single numer are also allowed.
-The scaled result will always be a floating point value.
+Input fields are converted to floating point values.
+If the conversion fails, those fields are ignored.
 
 **Please note:** Neither the input nor the output values
 are clipped to their respective ranges!
@@ -47,11 +49,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     #    output_maximum = 100
     #    fields = ["temperature1", "temperature2"]
     
-    ## Multiple scalings can be defined simoultaniously
+    ## Multiple scalings can be defined simultaneously
     ## Example: A second scaling. 
     # [processors.scale.scaling]
-    #    input_minimum = -2800
-    #    input_maximum = 100
-    #    output_minimum = -20
-    #    output_maximum = 40
-    #    fields = ["humidity1", "humidity2"]
+    #    input_minimum = 0
+    #    input_maximum = 50
+    #    output_minimum = 50
+    #    output_maximum = 100
+    #    fields = ["humidity*"]
+```
+
+## Example
+```diff
+- temperature, cpu=25
++ temperature, cpu=75.0
+```
