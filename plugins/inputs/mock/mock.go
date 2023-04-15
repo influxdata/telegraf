@@ -4,8 +4,8 @@ package mock
 import (
 	_ "embed"
 	"math"
-	"math/rand"
-	"time"
+
+	"github.com/chanxuehong/rand"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -25,7 +25,6 @@ type Mock struct {
 	SineWave []*sineWave `toml:"sine_wave"`
 
 	counter int64
-	rand    *rand.Rand
 }
 
 type constant struct {
@@ -66,7 +65,6 @@ func (*Mock) SampleConfig() string {
 }
 
 func (m *Mock) Init() error {
-	m.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	return nil
 }
 
@@ -96,7 +94,7 @@ func (m *Mock) Gather(acc telegraf.Accumulator) error {
 // Generate random value between min and max, inclusively
 func (m *Mock) generateRandomFloat64(fields map[string]interface{}) {
 	for _, random := range m.Random {
-		fields[random.Name] = random.Min + m.rand.Float64()*(random.Max-random.Min)
+		fields[random.Name] = random.Min + rand.Float64()*(random.Max-random.Min)
 	}
 }
 
@@ -126,7 +124,7 @@ func (m *Mock) generateStockPrice(fields map[string]interface{}) {
 		if stock.latest == 0.0 {
 			stock.latest = stock.Price
 		} else {
-			noise := 2 * (m.rand.Float64() - 0.5)
+			noise := 2 * (rand.Float64() - 0.5)
 			stock.latest = stock.latest + (stock.latest * stock.Volatility * noise)
 
 			// avoid going below zero

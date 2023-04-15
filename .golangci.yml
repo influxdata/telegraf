@@ -109,6 +109,7 @@ linters-settings:
       - G306
       - G401
       - G403
+      - G404
       - G501
       - G502
       - G503
@@ -257,13 +258,13 @@ issues:
         - govet
 
     - path: cmd/telegraf/(main|printer).go
-      text: "Error return value of `outputBuffer.Write` is not checked"
-
-    - path: cmd/telegraf/(main|printer).go
-      text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
+      text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
     - path: _test\.go
-      text: "Potential hardcoded credentials"
+      text: "Potential hardcoded credentials" #gosec:G101
+
+    - path: _test\.go
+      text: "Use of weak random number generator" #gosec:G404
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.

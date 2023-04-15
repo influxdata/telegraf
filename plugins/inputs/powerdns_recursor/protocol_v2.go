@@ -2,11 +2,12 @@ package powerdns_recursor
 
 import (
 	"fmt"
-	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/chanxuehong/rand"
 
 	"github.com/influxdata/telegraf"
 )

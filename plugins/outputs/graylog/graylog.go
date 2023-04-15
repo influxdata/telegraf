@@ -4,7 +4,6 @@ package graylog
 import (
 	"bytes"
 	"compress/zlib"
-	"crypto/rand"
 	"crypto/tls"
 	_ "embed"
 	"encoding/binary"
@@ -17,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/chanxuehong/rand"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"

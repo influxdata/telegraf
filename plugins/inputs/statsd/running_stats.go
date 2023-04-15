@@ -2,8 +2,9 @@ package statsd
 
 import (
 	"math"
-	"math/rand"
 	"sort"
+
+	"github.com/chanxuehong/rand"
 )
 
 const defaultPercentileLimit = 1000

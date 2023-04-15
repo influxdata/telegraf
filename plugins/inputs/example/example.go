@@ -4,8 +4,9 @@ package example
 import (
 	_ "embed"
 	"fmt"
-	"math/rand"
 	"time"
+
+	"github.com/chanxuehong/rand"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"

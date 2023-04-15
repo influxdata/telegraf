@@ -51,6 +51,7 @@ require (
 	github.com/blues/jsonata-go v1.5.4
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/caio/go-tdigest v3.1.0+incompatible
+	github.com/chanxuehong/rand v0.0.0-20211009035549-2f07823e8e99
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df
 	github.com/coocood/freecache v1.2.3
 	github.com/coreos/go-semver v0.3.1
