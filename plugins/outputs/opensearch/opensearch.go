@@ -5,23 +5,25 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
-
-	"github.com/olivere/elastic"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/opensearch-project/opensearch-go/v2"
+	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
+	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
 )
 
 //go:embed sample.conf
@@ -41,19 +43,19 @@ type Opensearch struct {
 	IndexName           string          `toml:"index_name"`
 	ManageTemplate      bool            `toml:"manage_template"`
 	OverwriteTemplate   bool            `toml:"overwrite_template"`
-	Password            string          `toml:"password"`
+	Password            config.Secret   `toml:"password"`
 	TemplateName        string          `toml:"template_name"`
 	Timeout             config.Duration `toml:"timeout"`
 	URLs                []string        `toml:"urls"`
 	UsePipeline         string          `toml:"use_pipeline"`
-	Username            string          `toml:"username"`
+	Username            config.Secret   `toml:"username"`
 	Log                 telegraf.Logger `toml:"-"`
 	pipelineName        string
 	pipelineTagKeys     []string
 	tagKeys             []string
 	httpconfig.HTTPClientConfig
 
-	client *elastic.Client
+	osClient *opensearch.Client
 }
 
 //go:embed telegrafTemplate.json
@@ -67,67 +69,97 @@ func (*Opensearch) SampleConfig() string {
 	return sampleConfig
 }
 
-func (a *Opensearch) Connect() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
+func (o *Opensearch) Init() error {
+	if o.URLs == nil || o.IndexName == "" {
+		return fmt.Errorf("opensearch urls or index_name is not defined")
+	}
+
+	// Determine if we should process NaN and inf values
+	valOptions := []string{"", "none", "drop", "replace"}
+	if err := choice.Check(o.FloatHandling, valOptions); err != nil {
+		return fmt.Errorf("invalid float_handling type %q", o.FloatHandling)
+	}
+
+	if o.FloatHandling == "" {
+		o.FloatHandling = "none"
+	}
+
+	o.IndexName, o.tagKeys = o.GetReplacementKeys(o.IndexName, ".Tag", "%s")
+	o.pipelineName, o.pipelineTagKeys = o.GetReplacementKeys(o.UsePipeline, "", "%s")
+
+	return nil
+}
+
+func init() {
+	outputs.Add("opensearch", func() telegraf.Output {
+		return &Opensearch{
+			Timeout:             config.Duration(time.Second * 5),
+			HealthCheckInterval: config.Duration(time.Second * 10),
+			HealthCheckTimeout:  config.Duration(time.Second * 1),
+		}
+	})
+}
+
+func (o *Opensearch) Connect() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 	defer cancel()
 
-	var clientOptions []elastic.ClientOptionFunc
-
-	ctxt := context.Background()
-	httpclient, err := a.HTTPClientConfig.CreateClient(ctxt, a.Log)
+	err := o.newClient()
 	if err != nil {
-		return err
+		o.Log.Errorf("error creating OpenSearch client: %w", err)
 	}
 
-	osURL, err := url.Parse(a.URLs[0])
-	if err != nil {
-		return fmt.Errorf("parsing URL failed: %v", err)
-	}
-
-	clientOptions = append(clientOptions,
-		elastic.SetHttpClient(httpclient),
-		elastic.SetSniff(a.EnableSniffer),
-		elastic.SetScheme(osURL.Scheme),
-		elastic.SetURL(a.URLs...),
-		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
-		elastic.SetHealthcheckTimeout(time.Duration(a.HealthCheckTimeout)),
-		elastic.SetGzip(a.EnableGzip),
-	)
-
-	if a.Username != "" && a.Password != "" {
-		clientOptions = append(clientOptions,
-			elastic.SetBasicAuth(a.Username, a.Password),
-		)
-	}
-
-	if a.AuthBearerToken != "" {
-		clientOptions = append(clientOptions,
-			elastic.SetHeaders(http.Header{
-				"Authorization": []string{fmt.Sprintf("Bearer %s", a.AuthBearerToken)},
-			}),
-		)
-	}
-
-	if time.Duration(a.HealthCheckInterval) == 0 {
-		clientOptions = append(clientOptions,
-			elastic.SetHealthcheck(false),
-		)
-		a.Log.Debug("Disabling health check")
-	}
-
-	a.client, err = elastic.NewClient(clientOptions...)
-	if err != nil {
-		return err
-	}
-
-	if a.ManageTemplate {
-		err := a.manageTemplate(ctx)
+	if o.ManageTemplate {
+		err := o.manageTemplate(ctx)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (o *Opensearch) newClient() error {
+	username, err := o.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	defer config.ReleaseSecret(username)
+	password, err := o.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+	defer config.ReleaseSecret(password)
+
+	clientConfig := opensearch.Config{
+		Addresses: o.URLs,
+		Username:  string(username),
+		Password:  string(password),
+	}
+
+	if o.InsecureSkipVerify {
+		clientConfig.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
+
+	header := http.Header{}
+
+	if o.EnableGzip {
+		header.Add("Content-Encoding", "gzip")
+		header.Add("Content-Type", "application/json")
+		header.Add("Accept-Encoding", "gzip")
+	}
+	if o.AuthBearerToken != ""{
+		header.Add("Authorization", "Bearer " + o.AuthBearerToken)
+	}
+
+	clientConfig.Header = header
+
+	client, err := opensearch.NewClient(clientConfig)
+	o.osClient = client
+
+	return err
 }
 
 // getPointID generates a unique ID for a Metric Point
@@ -142,32 +174,56 @@ func getPointID(m telegraf.Metric) string {
 	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
 }
 
-func (a *Opensearch) Write(metrics []telegraf.Metric) error {
-	bulkRequest := a.client.Bulk()
+func (o *Opensearch) Write(metrics []telegraf.Metric) error {
+	
+	bulkIndxr, err := opensearchutil.NewBulkIndexer(opensearchutil.BulkIndexerConfig{
+		Client:     o.osClient,
+		NumWorkers: 4,      // The number of worker goroutines (default: number of CPUs)
+		FlushBytes: 5e+6,   // The flush threshold in bytes (default: 5M)
+	})
+	if err != nil {
+		return fmt.Errorf("ERROR while intantiating Opensearch NewBulkIndexer: %s", err)
+	}
+	
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
+	defer cancel()
+
+
+	onSucc := func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
+		fmt.Printf("Indexed to Opensearch with status- [%d] Result- %s DocumentID- %s \n", res.Status, res.Result, res.DocumentID)
+	}
+	onFail := func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem, err error) {
+		if err != nil {
+			fmt.Printf("ERROR while Opensearch bulkIndexing: %s \n", err)
+		} else {
+			fmt.Printf("ERROR while Opensearch bulkIndexing: %s: %s \n", res.Error.Type, res.Error.Reason)
+		}
+	}
 
 	for _, metric := range metrics {
 		var name = metric.Name()
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.tagKeys, metric.Tags())
+		indexName := o.GetIndexName(o.IndexName, metric.Time(), o.tagKeys, metric.Tags())
 
 		// Handle NaN and inf field-values
 		fields := make(map[string]interface{})
 		for k, value := range metric.Fields() {
 			v, ok := value.(float64)
-			if !ok || a.FloatHandling == "none" || !(math.IsNaN(v) || math.IsInf(v, 0)) {
+			if !ok || o.FloatHandling == "none" || !(math.IsNaN(v) || math.IsInf(v, 0)) {
 				fields[k] = value
 				continue
 			}
-			if a.FloatHandling == "drop" {
+			if o.FloatHandling == "drop" {
 				continue
 			}
 
 			if math.IsNaN(v) || math.IsInf(v, 1) {
-				fields[k] = a.FloatReplacement
+				fields[k] = o.FloatReplacement
 			} else {
-				fields[k] = -a.FloatReplacement
+				fields[k] = -o.FloatReplacement
 			}
 		}
 
@@ -178,57 +234,64 @@ func (a *Opensearch) Write(metrics []telegraf.Metric) error {
 		m["tag"] = metric.Tags()
 		m[name] = fields
 
-		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
-
-		if a.ForceDocumentID {
-			id := getPointID(metric)
-			br.Id(id)
+		body, err := json.Marshal(m)
+		if err != nil {
+			return fmt.Errorf("failed to marshal body: %w", err)
 		}
 
-		if a.UsePipeline != "" {
-			if pipelineName := a.getPipelineName(a.pipelineName, a.pipelineTagKeys, metric.Tags()); pipelineName != "" {
-				br.Pipeline(pipelineName)
+		bulkIndxrItem := opensearchutil.BulkIndexerItem{
+			Action: "index",
+			Index: indexName,
+			Body:      strings.NewReader(string(body)),
+			OnSuccess: onSucc,
+			OnFailure: onFail,
+		}
+		if o.ForceDocumentID {
+			bulkIndxrItem.DocumentID = getPointID(metric)
+		}
+
+		if o.UsePipeline != "" {
+			if pipelineName := o.getPipelineName(o.pipelineName, o.pipelineTagKeys, metric.Tags()); pipelineName != "" {
+				//TODO BulkIndexer supports pipeline at config level not metric level
 			}
 		}
 
-		bulkRequest.Add(br)
+		bulkIndxr.Add(ctx, bulkIndxrItem)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
-	defer cancel()
-
-	res, err := bulkRequest.Do(ctx)
-
-	if err != nil {
+	
+	if err := bulkIndxr.Close(ctx); err != nil {
 		return fmt.Errorf("error sending bulk request to Opensearch: %s", err)
 	}
 
-	if res.Errors {
-		for id, err := range res.Failed() {
-			a.Log.Errorf(
-				"Opensearch indexing failure, id: %d, error: %s, caused by: %s, %s",
-				id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"],
-			)
-			break
-		}
-		return fmt.Errorf("opensearch failed to index %d metrics", len(res.Failed()))
+	
+	// Report the indexer statistics
+	stats := bulkIndxr.Stats()
+	if stats.NumAdded < uint64(len(metrics)) {
+		return fmt.Errorf("Opensearch indexed [%d] documents with [%d] errors", stats.NumAdded, stats.NumFailed)
+	} else {
+		fmt.Printf("Opensearch successfully indexed [%d] documents", stats.NumFlushed)
 	}
 
 	return nil
 }
 
-func (a *Opensearch) manageTemplate(ctx context.Context) error {
-	if a.TemplateName == "" {
+func (o *Opensearch) manageTemplate(ctx context.Context) error {
+	if o.TemplateName == "" {
 		return fmt.Errorf("opensearch template_name configuration not defined")
 	}
 
-	templateExists, errExists := a.client.IndexTemplateExists(a.TemplateName).Do(ctx)
-
-	if errExists != nil {
-		return fmt.Errorf("opensearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
+	tempReq := opensearchapi.CatTemplatesRequest{
+		Name: o.TemplateName,
 	}
 
-	templatePattern := a.IndexName
+	resp, errExists := tempReq.Do(ctx, o.osClient.Transport)
+	if errExists != nil {
+		return fmt.Errorf("opensearch template check failed, template name: %s, error: %s", o.TemplateName, errExists)
+	}
+
+	templateExists := resp.Body != http.NoBody
+	templatePattern := o.IndexName
 
 	if strings.Contains(templatePattern, "%") {
 		templatePattern = templatePattern[0:strings.Index(templatePattern, "%")]
@@ -242,7 +305,7 @@ func (a *Opensearch) manageTemplate(ctx context.Context) error {
 		return fmt.Errorf("template cannot be created for dynamic index names without an index prefix")
 	}
 
-	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
+	if (o.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
 		tp := templatePart{
 			TemplatePattern: templatePattern + "*",
 		}
@@ -253,20 +316,25 @@ func (a *Opensearch) manageTemplate(ctx context.Context) error {
 		if err := t.Execute(&tmpl, tp); err != nil {
 			return err
 		}
-		_, errCreateTemplate := a.client.IndexPutTemplate(a.TemplateName).BodyString(tmpl.String()).Do(ctx)
 
-		if errCreateTemplate != nil {
-			return fmt.Errorf("opensearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
+		indexTempReq := opensearchapi.IndicesPutTemplateRequest{
+			Name: o.TemplateName,
+			Body: strings.NewReader(tmpl.String()),
+		}
+		indexTempResp, errCreateTemplate := indexTempReq.Do(ctx, o.osClient.Transport)
+		
+		if errCreateTemplate != nil || indexTempResp.StatusCode != 200 {
+			return fmt.Errorf("opensearch failed to create index template %s : %s", o.TemplateName, errCreateTemplate)
 		}
 
-		a.Log.Debugf("Template %s created or updated\n", a.TemplateName)
+		o.Log.Debugf("Template %s created or updated\n", o.TemplateName)
 	} else {
-		a.Log.Debug("Found existing Opensearch template. Skipping template management")
+		o.Log.Debug("Found existing Opensearch template. Skipping template management")
 	}
 	return nil
 }
 
-func (a *Opensearch) GetReplacementKeys(indexName string, key string, replacement string) (string, []string) {
+func (o *Opensearch) GetReplacementKeys(indexName string, key string, replacement string) (string, []string) {
 	tagKeys := []string{}
 	startKey := "{{" + key
 	startTag := strings.Index(indexName, startKey)
@@ -293,29 +361,29 @@ func (a *Opensearch) GetReplacementKeys(indexName string, key string, replacemen
 	return indexName, tagKeys
 }
 
-func (a *Opensearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
+func (o *Opensearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
 	tagValues := []interface{}{}
 
 	for _, key := range tagKeys {
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
 		} else {
-			a.Log.Debugf("Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
-			tagValues = append(tagValues, a.DefaultTagValue)
+			o.Log.Debugf("Tag '%s' not found, using '%s' on index name instead\n", key, o.DefaultTagValue)
+			tagValues = append(tagValues, o.DefaultTagValue)
 		}
 	}
 
 	indexName = fmt.Sprintf(indexName, tagValues...)
 
 	if strings.Contains(indexName, "{{.Time.Format") {
-		updatedIndexName, dateStrArr := a.GetReplacementKeys(indexName, ".Time.Format", "%DATE%")
+		updatedIndexName, dateStrArr := o.GetReplacementKeys(indexName, ".Time.Format", "%DATE%")
 		indexName = strings.Replace(updatedIndexName, "%DATE%", eventTime.UTC().Format(dateStrArr[0]), 1)
 	}
 
 	return indexName
 }
 
-func (a *Opensearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
+func (o *Opensearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
 	if !strings.Contains(pipelineInput, "%") || len(tagKeys) == 0 {
 		return pipelineInput
 	}
@@ -327,44 +395,13 @@ func (a *Opensearch) getPipelineName(pipelineInput string, tagKeys []string, met
 			tagValues = append(tagValues, value)
 			continue
 		}
-		a.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
-		return a.DefaultPipeline
+		o.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
+		return o.DefaultPipeline
 	}
 	return fmt.Sprintf(pipelineInput, tagValues...)
 }
 
-func (a *Opensearch) Close() error {
-	a.client = nil
-	return nil
-}
-
-func init() {
-	outputs.Add("opensearch", func() telegraf.Output {
-		return &Opensearch{
-			Timeout:             config.Duration(time.Second * 5),
-			HealthCheckInterval: config.Duration(time.Second * 10),
-			HealthCheckTimeout:  config.Duration(time.Second * 1),
-		}
-	})
-}
-
-func (a *Opensearch) Init() error {
-	if a.URLs == nil || a.IndexName == "" {
-		return fmt.Errorf("opensearch urls or index_name is not defined")
-	}
-
-	// Determine if we should process NaN and inf values
-	valOptions := []string{"", "none", "drop", "replace"}
-	if err := choice.Check(a.FloatHandling, valOptions); err != nil {
-		return fmt.Errorf("invalid float_handling type %q", a.FloatHandling)
-	}
-
-	if a.FloatHandling == "" {
-		a.FloatHandling = "none"
-	}
-
-	a.IndexName, a.tagKeys = a.GetReplacementKeys(a.IndexName, ".Tag", "%s")
-	a.pipelineName, a.pipelineTagKeys = a.GetReplacementKeys(a.UsePipeline, "", "%s")
-
+func (o *Opensearch) Close() error {
+	o.osClient = nil
 	return nil
 }
