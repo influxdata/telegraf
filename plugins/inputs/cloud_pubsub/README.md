@@ -105,6 +105,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Content encoding for message payloads, can be set to "gzip" or
   ## "identity" to apply no encoding.
   # content_encoding = "identity"
+
+  ## Maximum size of decoded message.
+  ## Acceptable units are B, KiB, KB, MiB, MB...
+  ## Without quotes and units, interpreted as size in bytes.
+  # max_decompression_size = "500MB"
 ```
 
 ### Multiple Subscriptions and Topics

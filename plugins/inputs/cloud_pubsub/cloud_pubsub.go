@@ -49,8 +49,9 @@ type PubSub struct {
 
 	Base64Data bool `toml:"base64_data"`
 
-	ContentEncoding string          `toml:"content_encoding"`
-	Log             telegraf.Logger `toml:"-"`
+	ContentEncoding      string          `toml:"content_encoding"`
+	MaxDecompressionSize config.Size     `toml:"max_decompression_size"`
+	Log                  telegraf.Logger `toml:"-"`
 
 	sub     subscription
 	stubSub func() subscription
@@ -92,6 +93,11 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 	if ps.Project == "" {
 		return fmt.Errorf(`"project" is required`)
 	}
+
+	if ps.MaxDecompressionSize <= 0 {
+		ps.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
+	}
+
 	var err error
 	ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding)
 	if err != nil {
@@ -185,10 +191,10 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 
 	// This function is called concurrently, but the decoder cannot.
 	ps.decoderMutex.Lock()
-	b, err := ps.decoder.Decode(msg.Data())
+	b, err := ps.decoder.Decode(msg.Data(), int64(ps.MaxDecompressionSize))
 	if err != nil {
 		ps.decoderMutex.Unlock()
-		return fmt.Errorf("unable to decode message: %v", err)
+		return fmt.Errorf("unable to decode message: %w", err)
 	}
 	var data []byte
 	if ps.ContentEncoding == "gzip" {
@@ -209,7 +215,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	metrics, err := ps.parser.Parse(data)
 	if err != nil {
 		msg.Ack()
-		return fmt.Errorf("unable to parse decoded message: %v", err)
+		return fmt.Errorf("unable to parse decoded message: %w", err)
 	}
 
 	if len(metrics) == 0 {

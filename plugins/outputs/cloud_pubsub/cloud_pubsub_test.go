@@ -241,7 +241,7 @@ func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string
 	if gzipEncoded {
 		decoder, _ := internal.NewContentDecoder("gzip")
 		var err error
-		data, err = decoder.Decode(data)
+		data, err = decoder.Decode(data, internal.DefaultMaxDecompressionSize)
 		if err != nil {
 			t.Fatalf("Unable to decode expected gzip encoded message: %s", err)
 		}

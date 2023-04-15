@@ -56,11 +56,12 @@ type (
 
 		published map[string]*pubsub.Message
 
-		bundler         *bundler.Bundler
-		bLock           sync.Mutex
-		bundleCount     int
-		Base64Data      bool
-		ContentEncoding string
+		bundler              *bundler.Bundler
+		bLock                sync.Mutex
+		bundleCount          int
+		Base64Data           bool
+		ContentEncoding      string
+		MaxDecompressionSize int64
 	}
 )
 
@@ -71,10 +72,11 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 
 	metrics := make([]telegraf.Metric, 0, len(testM))
 	t := &stubTopic{
-		T:               tT,
-		ReturnErr:       make(map[string]bool),
-		published:       make(map[string]*pubsub.Message),
-		ContentEncoding: "identity",
+		T:                    tT,
+		ReturnErr:            make(map[string]bool),
+		published:            make(map[string]*pubsub.Message),
+		ContentEncoding:      "identity",
+		MaxDecompressionSize: internal.DefaultMaxDecompressionSize,
 	}
 
 	for _, tm := range testM {
@@ -192,9 +194,8 @@ func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
 	err := p.Init()
 	require.NoError(t, err)
 
-	d := msg.Data
 	decoder, _ := internal.NewContentDecoder(t.ContentEncoding)
-	d, err := decoder.Decode(d)
+	d, err := decoder.Decode(msg.Data, t.MaxDecompressionSize)
 	if err != nil {
 		t.Errorf("unable to decode message: %v", err)
 	}

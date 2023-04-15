@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gotest.tools/assert"
 
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -117,7 +117,8 @@ func TestRunBase64(t *testing.T) {
 func TestRunGzipDecode(t *testing.T) {
 	subID := "sub-run-gzip"
 
-	testParser, _ := parsers.NewInfluxParser()
+	testParser := &influx.Parser{}
+	require.NoError(t, testParser.Init())
 
 	sub := &stubSub{
 		id:       subID,
@@ -136,6 +137,7 @@ func TestRunGzipDecode(t *testing.T) {
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		ContentEncoding:        "gzip",
+		MaxDecompressionSize:   internal.DefaultMaxDecompressionSize,
 		decoder:                decoder,
 	}
 
@@ -150,8 +152,7 @@ func TestRunGzipDecode(t *testing.T) {
 	}
 
 	testTracker := &testTracker{}
-	enc, err := internal.NewGzipEncoder()
-	require.NoError(t, err)
+	enc := internal.NewGzipEncoder()
 	gzippedMsg, err := enc.Encode([]byte(msgInflux))
 	require.NoError(t, err)
 	msg := &testMsg{
