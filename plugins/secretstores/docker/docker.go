@@ -40,6 +40,8 @@ func (d *Docker) Init() error {
 		// this implies that there are no secrets.
 		// Or for any explicit path definitions for that matter.
 		return fmt.Errorf("directory %s does not exist", d.Path)
+	} else if os.IsPermission(err) {
+		return fmt.Errorf("permission denied to access secrets directory")
 	}
 	return nil
 }
