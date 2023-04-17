@@ -212,6 +212,8 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 	if err != nil {
 		monitor.Log.Errorf("Error while reading file: '" + filePath + "'. " + err.Error())
 		monitor.filesDropped.Incr(1)
+		// Backward compatibility
+		selfstat.Register("directory_monitor", "files_dropped", nil).Incr(1)
 		if monitor.ErrorDirectory != "" {
 			monitor.moveFile(filePath, monitor.ErrorDirectory)
 		}
@@ -221,6 +223,8 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 	// File is finished, move it to the 'finished' directory.
 	monitor.moveFile(filePath, monitor.FinishedDirectory)
 	monitor.filesProcessed.Incr(1)
+	// Backward compatibility
+	selfstat.Register("directory_monitor", "files_processed", nil).Incr(1)
 }
 
 func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
