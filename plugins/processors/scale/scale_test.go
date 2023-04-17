@@ -225,8 +225,7 @@ func TestErrorCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.scale.Log = testutil.Logger{}
-
-			require.Error(t, tt.scale.Init(), tt.expectedErrorMsg)
+			require.ErrorContains(t, tt.scale.Init(), tt.expectedErrorMsg)
 		})
 	}
 }

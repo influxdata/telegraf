@@ -3,6 +3,7 @@ package Scale
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -46,7 +47,7 @@ func (s *Scaling) init() error {
 
 	scalingFilter, err := filter.Compile(s.Fields)
 	if err != nil {
-		return fmt.Errorf("could not compile filter: %w", err)
+		return fmt.Errorf("could not compile fields filter: %w", err)
 	}
 	s.fieldFilter = scalingFilter
 
@@ -54,9 +55,14 @@ func (s *Scaling) init() error {
 	return nil
 }
 
+// scale a float according to the input and output range
+func (s *Scaling) process(value float64) float64 {
+	return (value-s.InMin)*s.factor + s.OutMin
+}
+
 func (s *Scale) Init() error {
 	if s.Scalings == nil {
-		return fmt.Errorf("no valid scalings defined")
+		return errors.New("no valid scalings defined")
 	}
 
 	allFields := make(map[string]bool)
@@ -64,7 +70,7 @@ func (s *Scale) Init() error {
 		for _, field := range s.Scalings[i].Fields {
 			// only generate a warning for the first duplicate field filter
 			if warn, ok := allFields[field]; ok && warn {
-				s.Log.Warnf("filter field '%s' use twice in scalings", field)
+				s.Log.Warnf("filter field %q used twice in scalings", field)
 				allFields[field] = false
 			} else {
 				allFields[field] = true
@@ -76,11 +82,6 @@ func (s *Scale) Init() error {
 		}
 	}
 	return nil
-}
-
-// scale a float according to the input and output range
-func (s *Scaling) process(value float64) float64 {
-	return (value-s.InMin)*s.factor + s.OutMin
 }
 
 // handle the scaling process
