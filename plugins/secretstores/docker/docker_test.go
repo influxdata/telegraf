@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -35,43 +34,50 @@ func TestInitFail(t *testing.T) {
 
 func TestPathNonExistant(t *testing.T) {
 	plugin := &Docker{
-		ID:   "default_test",
+		ID:   "non_existent_path_test",
 		Path: "non/existent/path",
 	}
 	err := plugin.Init()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "directory non/existent/path does not exist")
 }
 
-func TestSetListGet(t *testing.T) {
+func TestSetNotAvailable(t *testing.T) {
+	testdir, err := filepath.Abs("testdata")
+	require.NoError(t, err, "testdata cannot be found")
+
+	plugin := &Docker{
+		ID:   "set_path_test",
+		Path: testdir,
+	}
+	err = plugin.Init()
+	require.NoError(t, err)
+
+	// Try to Store the secrets, which this plugin should not let
+	secret := map[string]string{
+		"secret-file-1": "TryToSetThis",
+	}
+	for k, v := range secret {
+		require.ErrorContains(t, plugin.Set(k, v), "secret-store does not support creating secrets")
+	}
+}
+
+func TestListGet(t *testing.T) {
+	// secret files name and their content to compare under the `testdata` directory
 	secrets := map[string]string{
-		"secret-file-1": "I won't tell",
-		"secret_file_2": "secret",
+		"secret-file-1": "IWontTell",
+		"secret_file_2": "SuperDuperSecret!23",
 		"secretFile":    "foobar",
 	}
 
-	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "docker-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir, err := filepath.Abs("testdata")
+	require.NoError(t, err, "testdata cannot be found")
 
 	// Initialize the plugin
 	plugin := &Docker{
-		ID:   "test",
+		ID:   "test_list_get",
 		Path: testdir,
 	}
 	require.NoError(t, plugin.Init())
-
-	// Try to Store the secrets, which this plugin should not let
-	for k, v := range secrets {
-		require.ErrorContains(t, plugin.Set(k, v), "secret-store does not support creating secrets")
-	}
-
-	// Generate the secrets files under the temporary directory
-	for fileName, secretContent := range secrets {
-		fname := filepath.Join(testdir, fileName)
-		err := os.WriteFile(fname, []byte(secretContent), 0640)
-		require.NoError(t, err)
-	}
 
 	// List the Secrets
 	keys, err := plugin.List()
@@ -83,7 +89,6 @@ func TestSetListGet(t *testing.T) {
 	}
 
 	// Get the secrets
-	require.Len(t, keys, len(secrets))
 	for _, k := range keys {
 		value, err := plugin.Get(k)
 		require.NoError(t, err)
@@ -94,28 +99,23 @@ func TestSetListGet(t *testing.T) {
 }
 
 func TestResolver(t *testing.T) {
-	secretFileKey := "secret-file"
-	secretVal := "I won't tell"
+	// Secret Value Name to Resolve
+	secretFileName := "secret-file-1"
+	// Secret Value to Resolve To
+	secretVal := "IWontTell"
 
-	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "docker-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir, err := filepath.Abs("testdata")
+	require.NoError(t, err, "testdata cannot be found")
 
 	// Initialize the plugin
 	plugin := &Docker{
-		ID:   "test",
+		ID:   "test_resolver",
 		Path: testdir,
 	}
 	require.NoError(t, plugin.Init())
 
-	// simulate what docker does by generating the secret file
-	fname := filepath.Join(testdir, secretFileKey)
-	err = os.WriteFile(fname, []byte(secretVal), 0640)
-	require.NoError(t, err)
-
 	// Get the resolver
-	resolver, err := plugin.GetResolver(secretFileKey)
+	resolver, err := plugin.GetResolver(secretFileName)
 	require.NoError(t, err)
 	require.NotNil(t, resolver)
 	s, dynamic, err := resolver()
@@ -125,54 +125,36 @@ func TestResolver(t *testing.T) {
 }
 
 func TestResolverInvalid(t *testing.T) {
-	secretFileKey := "secret_file_1"
-	secretVal := "I won't tell"
-
-	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "docker-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir, err := filepath.Abs("testdata")
+	require.NoError(t, err, "testdata cannot be found")
 
 	// Initialize the plugin
 	plugin := &Docker{
-		ID:   "test",
+		ID:   "test_invalid_resolver",
 		Path: testdir,
 	}
 	require.NoError(t, plugin.Init())
-	// simulate what docker does by generating the secret file
-	fname := filepath.Join(testdir, secretFileKey)
-	err = os.WriteFile(fname, []byte(secretVal), 0640)
-	require.NoError(t, err)
 
 	// Get the resolver
 	resolver, err := plugin.GetResolver("foo")
 	require.NoError(t, err)
 	require.NotNil(t, resolver)
 	_, _, err = resolver()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "cannot read the secret's value under the directory:")
 }
 
 func TestGetNonExistant(t *testing.T) {
-	secretFileKey := "secretFile"
-	secretVal := "I won't tell"
-
-	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "docker-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir, err := filepath.Abs("testdata")
+	require.NoError(t, err, "testdata cannot be found")
 
 	// Initialize the plugin
 	plugin := &Docker{
-		ID:   "test",
+		ID:   "test_nonexistent_get",
 		Path: testdir,
 	}
 	require.NoError(t, plugin.Init())
-	// simulate what docker does by generating the secret file
-	fname := filepath.Join(testdir, secretFileKey)
-	err = os.WriteFile(fname, []byte(secretVal), 0640)
-	require.NoError(t, err)
 
 	// Get the resolver
 	_, err = plugin.Get("foo")
-	require.ErrorContains(t, err, "cannot read the secret's value under the directory", err)
+	require.ErrorContains(t, err, "cannot read the secret's value under the directory")
 }
