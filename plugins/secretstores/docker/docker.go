@@ -16,8 +16,9 @@ import (
 var sampleConfig string
 
 type Docker struct {
-	ID   string `toml:"id"`
-	Path string `toml:"path"`
+	ID      string `toml:"id"`
+	Path    string `toml:"path"`
+	Dynamic bool   `toml:"dynamic"`
 }
 
 func (*Docker) SampleConfig() string {
@@ -44,7 +45,13 @@ func (d *Docker) Init() error {
 }
 
 func (d *Docker) Get(key string) ([]byte, error) {
-	secretFile := filepath.Join(d.Path, key)
+	secretFile, err := filepath.Abs(filepath.Join(d.Path, key))
+	if err != nil {
+		return nil, err
+	}
+	if filepath.Dir(secretFile) != d.Path {
+		return nil, fmt.Errorf("directory traversal detected for key %q", key)
+	}
 	value, err := os.ReadFile(secretFile)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read the secret's value under the directory: %w", err)
@@ -72,7 +79,7 @@ func (d *Docker) Set(_, _ string) error {
 func (d *Docker) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	resolver := func() ([]byte, bool, error) {
 		s, err := d.Get(key)
-		return s, false, err
+		return s, d.Dynamic, err
 	}
 	return resolver, nil
 }
