@@ -59,6 +59,17 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example
 
+The example below uses these scaling values:
+
+```toml
+[processors.scale.scaling]
+    input_minimum = 0
+    input_maximum = 50
+    output_minimum = 50
+    output_maximum = 100
+    fields = ["cpu"]
+```
+
 ```diff
 - temperature, cpu=25
 + temperature, cpu=75.0
