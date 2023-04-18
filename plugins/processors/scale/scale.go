@@ -1,5 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
-package Scale
+package scale
 
 import (
 	_ "embed"
