@@ -55,6 +55,10 @@ type VSphere struct {
 	DatastoreMetricExclude      []string
 	DatastoreInclude            []string
 	DatastoreExclude            []string
+	VSANMetricInclude           []string `toml:"vsan_metric_include"`
+	VSANMetricExclude           []string `toml:"vsan_metric_exclude"`
+	VSANMetricSkipVerify        bool     `toml:"vsan_metric_skip_verify"`
+	VSANClusterInclude          []string `toml:"vsan_cluster_include"`
 	Separator                   string
 	CustomAttributeInclude      []string
 	CustomAttributeExclude      []string
@@ -62,15 +66,14 @@ type VSphere struct {
 	IPAddresses                 []string
 	MetricLookback              int
 	DisconnectedServersBehavior string
-
-	MaxQueryObjects         int
-	MaxQueryMetrics         int
-	CollectConcurrency      int
-	DiscoverConcurrency     int
-	ForceDiscoverOnInit     bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
-	ObjectDiscoveryInterval config.Duration
-	Timeout                 config.Duration
-	HistoricalInterval      config.Duration
+	MaxQueryObjects             int
+	MaxQueryMetrics             int
+	CollectConcurrency          int
+	DiscoverConcurrency         int
+	ForceDiscoverOnInit         bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
+	ObjectDiscoveryInterval     config.Duration
+	Timeout                     config.Duration
+	HistoricalInterval          config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -155,38 +158,40 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters: []string{},
-
-			DatacenterInstances:       false,
-			DatacenterMetricInclude:   nil,
-			DatacenterMetricExclude:   nil,
-			DatacenterInclude:         []string{"/*"},
-			ClusterInstances:          false,
-			ClusterMetricInclude:      nil,
-			ClusterMetricExclude:      nil,
-			ClusterInclude:            []string{"/*/host/**"},
-			HostInstances:             true,
-			HostMetricInclude:         nil,
-			HostMetricExclude:         nil,
-			HostInclude:               []string{"/*/host/**"},
-			ResourcePoolInstances:     false,
-			ResourcePoolMetricInclude: nil,
-			ResourcePoolMetricExclude: nil,
-			ResourcePoolInclude:       []string{"/*/host/**"},
-			VMInstances:               true,
-			VMMetricInclude:           nil,
-			VMMetricExclude:           nil,
-			VMInclude:                 []string{"/*/vm/**"},
-			DatastoreInstances:        false,
-			DatastoreMetricInclude:    nil,
-			DatastoreMetricExclude:    nil,
-			DatastoreInclude:          []string{"/*/datastore/**"},
-			Separator:                 "_",
-			CustomAttributeInclude:    []string{},
-			CustomAttributeExclude:    []string{"*"},
-			UseIntSamples:             true,
-			IPAddresses:               []string{},
-
+			Vcenters:                    []string{},
+			DatacenterInstances:         false,
+			DatacenterMetricInclude:     nil,
+			DatacenterMetricExclude:     nil,
+			DatacenterInclude:           []string{"/*"},
+			ClusterInstances:            false,
+			ClusterMetricInclude:        nil,
+			ClusterMetricExclude:        nil,
+			ClusterInclude:              []string{"/*/host/**"},
+			HostInstances:               true,
+			HostMetricInclude:           nil,
+			HostMetricExclude:           nil,
+			HostInclude:                 []string{"/*/host/**"},
+			ResourcePoolInstances:       false,
+			ResourcePoolMetricInclude:   nil,
+			ResourcePoolMetricExclude:   nil,
+			ResourcePoolInclude:         []string{"/*/host/**"},
+			VMInstances:                 true,
+			VMMetricInclude:             nil,
+			VMMetricExclude:             nil,
+			VMInclude:                   []string{"/*/vm/**"},
+			DatastoreInstances:          false,
+			DatastoreMetricInclude:      nil,
+			DatastoreMetricExclude:      nil,
+			DatastoreInclude:            []string{"/*/datastore/**"},
+			VSANMetricInclude:           nil,
+			VSANMetricExclude:           []string{"*"},
+			VSANMetricSkipVerify:        false,
+			VSANClusterInclude:          []string{"/*/host/**"},
+			Separator:                   "_",
+			CustomAttributeInclude:      []string{},
+			CustomAttributeExclude:      []string{"*"},
+			UseIntSamples:               true,
+			IPAddresses:                 []string{},
 			MaxQueryObjects:             256,
 			MaxQueryMetrics:             256,
 			CollectConcurrency:          1,
