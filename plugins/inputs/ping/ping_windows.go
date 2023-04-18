@@ -34,9 +34,9 @@ func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
 	if err != nil {
 		// fatal error
 		if pendingError != nil {
-			acc.AddError(fmt.Errorf("%q: %w", host, pendingError))
+			acc.AddError(fmt.Errorf("%s: %w", host, pendingError))
 		} else {
-			acc.AddError(fmt.Errorf("%q: %w", host, err))
+			acc.AddError(fmt.Errorf("%s: %w", host, err))
 		}
 
 		fields["result_code"] = 2
