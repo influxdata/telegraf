@@ -13,23 +13,8 @@ func TestSampleConfig(t *testing.T) {
 }
 
 func TestInitFail(t *testing.T) {
-	tests := []struct {
-		name     string
-		plugin   *Docker
-		expected string
-	}{
-		{
-			name:     "invalid id",
-			plugin:   &Docker{},
-			expected: "id missing",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.plugin.Init()
-			require.ErrorContains(t, err, tt.expected)
-		})
-	}
+	plugin := &Docker{}
+	require.ErrorContains(t, plugin.Init(), "id missing")
 }
 
 func TestPathNonExistant(t *testing.T) {
@@ -37,8 +22,7 @@ func TestPathNonExistant(t *testing.T) {
 		ID:   "non_existent_path_test",
 		Path: "non/existent/path",
 	}
-	err := plugin.Init()
-	require.ErrorContains(t, err, "directory non/existent/path does not exist")
+	require.ErrorContains(t, plugin.Init(), "directory non/existent/path does not exist")
 }
 
 func TestSetNotAvailable(t *testing.T) {
@@ -49,8 +33,7 @@ func TestSetNotAvailable(t *testing.T) {
 		ID:   "set_path_test",
 		Path: testdir,
 	}
-	err = plugin.Init()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
 
 	// Try to Store the secrets, which this plugin should not let
 	secret := map[string]string{
@@ -83,9 +66,10 @@ func TestListGet(t *testing.T) {
 	keys, err := plugin.List()
 	require.NoError(t, err)
 	require.Len(t, keys, len(secrets))
-	for _, k := range keys {
-		_, found := secrets[k]
-		require.True(t, found)
+	// check if the returned array from List() is the same
+	// as the name of secret files
+	for secretFileName := range secrets {
+		require.Contains(t, keys, secretFileName)
 	}
 
 	// Get the secrets
@@ -93,7 +77,7 @@ func TestListGet(t *testing.T) {
 		value, err := plugin.Get(k)
 		require.NoError(t, err)
 		v, found := secrets[k]
-		require.True(t, found)
+		require.Truef(t, found, "unexpected secret requested that was not found: %q", secrets[k])
 		require.Equal(t, v, string(value))
 	}
 }
