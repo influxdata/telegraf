@@ -1,4 +1,4 @@
-package Scale
+package scale
 
 import (
 	"testing"
