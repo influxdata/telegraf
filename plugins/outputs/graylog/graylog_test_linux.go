@@ -7,6 +7,7 @@ import (
 	"compress/zlib"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -150,11 +151,15 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 			return err
 		}
 
+		var maxDecompressionSize int64 = 500 * 1024 * 1024
 		bufW := bytes.NewBuffer(nil)
-		_, err = io.Copy(bufW, r)
-		if err != nil {
+		written, err := io.CopyN(bufW, r, maxDecompressionSize)
+		if err != nil && !errors.Is(err, io.EOF) {
 			return err
+		} else if written == maxDecompressionSize {
+			return fmt.Errorf("size of decoded data exceeds allowed size %d", maxDecompressionSize)
 		}
+
 		err = r.Close()
 		if err != nil {
 			return err
