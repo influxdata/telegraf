@@ -43,6 +43,7 @@ services:
   telegraf:
     image: docker.io/telegraf:latest
     container_name: dockersecret_telegraf
+    user: "${USERID}" # Required to access the /run/secrets directory in container
     secrets:
       - secret_for_plugin
     volumes:
@@ -58,6 +59,8 @@ as the `docker-compose.yml`. An example of the `.env` file can be as follows:
 
 ```env
 TELEGRAF_PLUGIN_CREDENTIAL=superSecretStuff
+# determine this value by executing `id -u` in terminal
+USERID=1000
 ```
 
 ### Referencing Secret within a Plugin
