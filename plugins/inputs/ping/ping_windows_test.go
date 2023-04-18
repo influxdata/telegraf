@@ -375,5 +375,5 @@ func TestPingBinary(t *testing.T) {
 	}
 	err := acc.GatherError(p.Gather)
 	require.Error(t, err)
-	require.EqualValues(t, "\"www.google.com\": fatal error processing ping output", err.Error())
+	require.EqualValues(t, "www.google.com: fatal error processing ping output", err.Error())
 }
