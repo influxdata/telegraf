@@ -77,7 +77,7 @@ func TestListGet(t *testing.T) {
 		value, err := plugin.Get(k)
 		require.NoError(t, err)
 		v, found := secrets[k]
-		require.Truef(t, found, "unexpected secret requested that was not found: %q", secrets[k])
+		require.Truef(t, found, "unexpected secret requested that was not found: %q", k)
 		require.Equal(t, v, string(value))
 	}
 }
