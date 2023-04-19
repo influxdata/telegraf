@@ -125,6 +125,11 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, erro
 		return nil, err
 	}
 
+	serializer := &influx.Serializer{UintSupport: true}
+	if err := serializer.Init(); err != nil {
+		return nil, err
+	}
+
 	httpConfig := &HTTPConfig{
 		URL:              address,
 		Token:            i.Token,
@@ -138,7 +143,7 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, erro
 		UserAgent:        i.UserAgent,
 		ContentEncoding:  i.ContentEncoding,
 		TLSConfig:        tlsConfig,
-		Serializer:       i.newSerializer(),
+		Serializer:       serializer,
 		Log:              i.Log,
 	}
 
@@ -148,15 +153,6 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, erro
 	}
 
 	return c, nil
-}
-
-func (i *InfluxDB) newSerializer() *influx.Serializer {
-	serializer := influx.NewSerializer()
-	if i.UintSupport {
-		serializer.SetFieldTypeSupport(influx.UintSupport)
-	}
-
-	return serializer
 }
 
 func init() {

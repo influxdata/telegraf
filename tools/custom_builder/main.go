@@ -19,6 +19,7 @@ var categories = []string{
 	"parsers",
 	"processors",
 	"secretstores",
+	"serializers",
 }
 
 const description = `

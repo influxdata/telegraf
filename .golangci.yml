@@ -90,10 +90,12 @@ linters-settings:
     includes:
       - G101
       - G102
+      - G103
       - G106
       - G107
       - G108
       - G109
+      - G110
       - G111
       - G112
       - G114
@@ -111,6 +113,7 @@ linters-settings:
       - G502
       - G503
       - G505
+      - G601
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
