@@ -45,7 +45,7 @@ type PrometheusHttpMetric struct {
 // PrometheusHttpFile
 type PrometheusHttpFile struct {
 	Name string `toml:"name"`
-	File string `toml:"file"`
+	Path string `toml:"path"`
 	Type string `toml:"type"`
 }
 
@@ -175,22 +175,25 @@ func (p *PrometheusHttp) mergeMaps(maps ...map[string]interface{}) map[string]in
 	return r
 }
 
-func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, tags map[string]string) string {
+func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, valueTags, metricTags map[string]string) string {
 
 	if t == nil {
 		return ""
 	}
 
-	tgs := make(map[string]interface{}, len(tags))
-	for k, v := range tags {
+	tgs := make(map[string]interface{})
+	for k, v := range valueTags {
 		tgs[k] = v
 	}
 
 	m := p.mergeMaps(p.files, tgs)
+	m["values"] = valueTags
+	m["tags"] = metricTags
+
 	b, err := t.RenderObject(&m)
 	if err != nil {
 		p.Log.Errorf("%s failed to execute template: %v", p.Name, err)
-		return ""
+		return err.Error()
 	}
 	r := strings.TrimSpace(string(b))
 	// simplify <no value> => empty string
@@ -204,7 +207,7 @@ func (p *PrometheusHttp) getExtraMetricTags(tags map[string]string, m *Prometheu
 	}
 	tgs := make(map[string]string)
 	for v, t := range m.templates {
-		s := p.setExtraMetricTag(t, tags)
+		s := p.setExtraMetricTag(t, tags, m.Tags)
 		if s != "" {
 			tgs[v] = s
 		}
@@ -358,12 +361,23 @@ func (p *PrometheusHttp) gatherMetrics(ds PrometheusHttpDatasource) error {
 	return nil
 }
 
-/*func (p *PrometheusHttp) fIfSome(o interface{}, def interface{}) interface{} {
-	if o == nil {
-		return def
+func (p *PrometheusHttp) fRenderMetricTag(template string, obj interface{}) interface{} {
+
+	t, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
+		Content: template,
+	}, nil)
+	if err != nil {
+		p.Log.Error(err)
+		return err
 	}
-	return o
-}*/
+
+	b, err := t.RenderObject(obj)
+	if err != nil {
+		p.Log.Error(err)
+		return err
+	}
+	return string(b)
+}
 
 func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.TextTemplate {
 
@@ -372,7 +386,7 @@ func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.Tex
 	}
 
 	funcs := make(map[string]any)
-	//funcs["ifSome"] = p.fIfSome
+	funcs["renderMetricTag"] = p.fRenderMetricTag
 
 	tpl, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
 		Name:    fmt.Sprintf("%s_template", name),
@@ -431,17 +445,17 @@ func (p *PrometheusHttp) readFiles() map[string]interface{} {
 	r := make(map[string]interface{})
 	for _, v := range p.Files {
 
-		if _, err := os.Stat(v.File); err == nil {
+		if _, err := os.Stat(v.Path); err == nil {
 
-			p.Log.Debugf("read file: %s", v.File)
+			p.Log.Debugf("read file: %s", v.Path)
 
-			bytes, err := ioutil.ReadFile(v.File)
+			bytes, err := ioutil.ReadFile(v.Path)
 			if err != nil {
 				p.Log.Error(err)
 				continue
 			}
 
-			tp := strings.Replace(filepath.Ext(v.File), ".", "", 1)
+			tp := strings.Replace(filepath.Ext(v.Path), ".", "", 1)
 			if v.Type != "" {
 				tp = v.Type
 			}
@@ -470,11 +484,19 @@ func (p *PrometheusHttp) readFiles() map[string]interface{} {
 // Gather is called by telegraf when the plugin is executed on its interval.
 func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 
-	// Set default values
-	//if p.Duration == 0 => should be last value
-	//if p.Duration == 0 {
-	//	p.Duration = config.Duration(time.Second) * 5
-	//}
+	p.acc = acc
+
+	var ds PrometheusHttpDatasource = nil
+	// Gather data
+	err := p.gatherMetrics(ds)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *PrometheusHttp) Init() error {
 
 	if p.Name == "" {
 		p.Name = "unknown"
@@ -491,7 +513,6 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 	if p.Prefix == "" {
 		p.Prefix = "prometheus_http"
 	}
-	p.acc = acc
 
 	if len(p.Metrics) == 0 {
 		err := fmt.Errorf("%s no metrics found", p.Name)
@@ -507,13 +528,6 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 
 	if len(p.Files) > 0 {
 		p.files = p.readFiles()
-	}
-
-	var ds PrometheusHttpDatasource = nil
-	// Gather data
-	err := p.gatherMetrics(ds)
-	if err != nil {
-		return err
 	}
 
 	return nil
