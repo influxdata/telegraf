@@ -58,14 +58,6 @@ func (ps *PubSub) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (ps *PubSub) Connect() error {
-	if ps.Topic == "" {
-		return fmt.Errorf(`"topic" is required`)
-	}
-
-	if ps.Project == "" {
-		return fmt.Errorf(`"project" is required`)
-	}
-
 	var err error
 	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
 	if err != nil {
@@ -252,6 +244,26 @@ func (ps *PubSub) waitForResults(ctx context.Context, cancel context.CancelFunc)
 
 	wg.Wait()
 	return pErr
+}
+
+func (ps *PubSub) Init() error {
+	if ps.Topic == "" {
+		return fmt.Errorf(`"topic" is required`)
+	}
+
+	if ps.Project == "" {
+		return fmt.Errorf(`"project" is required`)
+	}
+
+	if ps.ContentEncoding == "" {
+		ps.ContentEncoding = "identity"
+	}
+
+	if ps.ContentEncoding != "gzip" && ps.ContentEncoding != "identity" {
+		return fmt.Errorf(`invalid value for "content_encoding"`)
+	}
+
+	return nil
 }
 
 func init() {

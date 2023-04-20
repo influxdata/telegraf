@@ -22,10 +22,7 @@ func TestPubSub_WriteSingle(t *testing.T) {
 	settings.CountThreshold = 1
 	ps, topic, metrics := getTestResources(t, settings, testMetrics)
 
-	err := ps.Write(metrics)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
+	require.NoError(t, ps.Write(metrics))
 
 	for _, testM := range testMetrics {
 		verifyRawMetricPublished(t, testM.m, topic.published)
@@ -44,10 +41,7 @@ func TestPubSub_WriteWithAttribute(t *testing.T) {
 		"foo2": "bar2",
 	}
 
-	err := ps.Write(metrics)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
+	require.NoError(t, ps.Write(metrics))
 
 	for _, testM := range testMetrics {
 		msg := verifyRawMetricPublished(t, testM.m, topic.published)
@@ -66,10 +60,7 @@ func TestPubSub_WriteMultiple(t *testing.T) {
 
 	ps, topic, metrics := getTestResources(t, settings, testMetrics)
 
-	err := ps.Write(metrics)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
+	require.NoError(t, ps.Write(metrics))
 
 	for _, testM := range testMetrics {
 		verifyRawMetricPublished(t, testM.m, topic.published)
@@ -90,10 +81,7 @@ func TestPubSub_WriteOverCountThreshold(t *testing.T) {
 
 	ps, topic, metrics := getTestResources(t, settings, testMetrics)
 
-	err := ps.Write(metrics)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
+	require.NoError(t, ps.Write(metrics))
 
 	for _, testM := range testMetrics {
 		verifyRawMetricPublished(t, testM.m, topic.published)
@@ -113,10 +101,7 @@ func TestPubSub_WriteOverByteThreshold(t *testing.T) {
 
 	ps, topic, metrics := getTestResources(t, settings, testMetrics)
 
-	err := ps.Write(metrics)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
+	require.NoError(t, ps.Write(metrics))
 
 	for _, testM := range testMetrics {
 		verifyRawMetricPublished(t, testM.m, topic.published)
@@ -135,10 +120,8 @@ func TestPubSub_WriteBase64Single(t *testing.T) {
 	ps, topic, metrics := getTestResources(t, settings, testMetrics)
 	ps.Base64Data = true
 	topic.Base64Data = true
-	err := ps.Write(metrics)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
+
+	require.NoError(t, ps.Write(metrics))
 
 	for _, testM := range testMetrics {
 		verifyMetricPublished(t, testM.m, topic.published, true /* base64encoded */, false /* gzipEncoded */)
@@ -156,12 +139,8 @@ func TestPubSub_Error(t *testing.T) {
 	ps, _, metrics := getTestResources(t, settings, testMetrics)
 
 	err := ps.Write(metrics)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if err.Error() != errMockFail {
-		t.Fatalf("expected fake error, got %v", err)
-	}
+	require.Error(t, err)
+	require.ErrorContains(t, err, errMockFail)
 }
 
 func TestPubSub_WriteGzipSingle(t *testing.T) {
@@ -177,14 +156,9 @@ func TestPubSub_WriteGzipSingle(t *testing.T) {
 	ps.ContentEncoding = "gzip"
 	var err error
 	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
 
-	err = ps.Write(metrics)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, ps.Write(metrics))
 
 	for _, testM := range testMetrics {
 		verifyMetricPublished(t, testM.m, topic.published, false /* base64encoded */, true /* Gzipencoded */)
@@ -206,14 +180,9 @@ func TestPubSub_WriteGzipAndBase64Single(t *testing.T) {
 	ps.Base64Data = true
 	var err error
 	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
 
-	err = ps.Write(metrics)
-	if err != nil {
-		t.Fatalf("got unexpected error: %v", err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, ps.Write(metrics))
 
 	for _, testM := range testMetrics {
 		verifyMetricPublished(t, testM.m, topic.published, true /* base64encoded */, true /* Gzipencoded */)
@@ -226,10 +195,8 @@ func verifyRawMetricPublished(t *testing.T, m telegraf.Metric, published map[str
 
 func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message, base64Encoded bool, gzipEncoded bool) *pubsub.Message {
 	p := influx.Parser{}
-	err := p.Init()
-	if err != nil {
-		t.Fatalf("unexpected parsing error: %v", err)
-	}
+	require.NoError(t, p.Init())
+
 	v, _ := m.GetField("value")
 	psMsg, ok := published[v.(string)]
 	if !ok {

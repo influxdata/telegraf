@@ -50,18 +50,18 @@ type (
 		ReturnErr map[string]bool
 		parsers.Parser
 		*testing.T
+		Base64Data           bool
+		ContentEncoding      string
+		MaxDecompressionSize int64
 
 		stopped bool
 		pLock   sync.Mutex
 
 		published map[string]*pubsub.Message
 
-		bundler              *bundler.Bundler
-		bLock                sync.Mutex
-		bundleCount          int
-		Base64Data           bool
-		ContentEncoding      string
-		MaxDecompressionSize int64
+		bundler     *bundler.Bundler
+		bLock       sync.Mutex
+		bundleCount int
 	}
 )
 
@@ -97,6 +97,8 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 		PublishTimeout:        config.Duration(settings.Timeout),
 		ContentEncoding:       "identity",
 	}
+
+	require.NoError(tT, ps.Init())
 	ps.encoder, _ = internal.NewContentEncoder(ps.ContentEncoding)
 	ps.SetSerializer(s)
 

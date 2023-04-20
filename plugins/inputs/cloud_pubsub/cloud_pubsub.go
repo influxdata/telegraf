@@ -86,18 +86,6 @@ func (ps *PubSub) SetParser(parser parsers.Parser) {
 // Two goroutines are started - one pulling for the subscription, one
 // receiving delivery notifications from the accumulator.
 func (ps *PubSub) Start(ac telegraf.Accumulator) error {
-	if ps.Subscription == "" {
-		return fmt.Errorf(`"subscription" is required`)
-	}
-
-	if ps.Project == "" {
-		return fmt.Errorf(`"project" is required`)
-	}
-
-	if ps.MaxDecompressionSize <= 0 {
-		ps.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
-	}
-
 	var err error
 	ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding)
 	if err != nil {
@@ -309,6 +297,30 @@ func (ps *PubSub) getGCPSubscription(subID string) (subscription, error) {
 		MaxOutstandingBytes:    ps.MaxOutstandingBytes,
 	}
 	return &gcpSubscription{s}, nil
+}
+
+func (ps *PubSub) Init() error {
+	if ps.Subscription == "" {
+		return fmt.Errorf(`"subscription" is required`)
+	}
+
+	if ps.Project == "" {
+		return fmt.Errorf(`"project" is required`)
+	}
+
+	if ps.ContentEncoding == "" {
+		ps.ContentEncoding = "identity"
+	}
+
+	if ps.ContentEncoding != "gzip" && ps.ContentEncoding != "identity" {
+		return fmt.Errorf(`invalid value for "content_encoding"`)
+	}
+
+	if ps.MaxDecompressionSize <= 0 {
+		ps.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
+	}
+
+	return nil
 }
 
 func init() {

@@ -43,14 +43,11 @@ func TestRunParse(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
 
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
@@ -92,14 +89,11 @@ func TestRunBase64(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
 
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
@@ -142,14 +136,11 @@ func TestRunGzipDecode(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
 
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	enc := internal.NewGzipEncoder()
@@ -192,13 +183,11 @@ func TestRunInvalidMessages(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
@@ -243,13 +232,11 @@ func TestRunOverlongMessages(t *testing.T) {
 		MaxMessageLen: 1,
 	}
 
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
@@ -294,14 +281,12 @@ func TestRunErrorInSubscriber(t *testing.T) {
 		RetryReceiveDelaySeconds: 1,
 	}
 
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
 
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+	require.NotNil(t, ps.sub)
+
 	acc.WaitError(1)
 	require.Regexp(t, fakeErrStr, acc.Errors[0])
 }
