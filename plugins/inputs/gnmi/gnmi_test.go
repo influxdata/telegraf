@@ -909,10 +909,10 @@ func TestNotification(t *testing.T) {
 		{
 			name: "Juniper Extension",
 			plugin: &GNMI{
-				Log:           testutil.Logger{},
-				Encoding:      "proto",
-				JnprExtension: true,
-				Redial:        config.Duration(1 * time.Second),
+				Log:            testutil.Logger{},
+				Encoding:       "proto",
+				VendorSpecific: []string{"jnpr_extension"},
+				Redial:         config.Duration(1 * time.Second),
 				Subscriptions: []Subscription{
 					{
 						Name:             "type",
