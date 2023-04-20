@@ -29,30 +29,22 @@ type handler struct {
 	tagsubs            []TagSubscription
 	maxMsgSize         int
 	emptyNameWarnShown bool
-	jnprExtension      bool
+	vendorExt          []string
 	tagStore           *tagStore
 	trace              bool
 	log                telegraf.Logger
 }
 
-func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger, addConf AdditionalConf) *handler {
-	// parse vendor specific and set vendor specific variables
-	// Current supported vendor specific option is jnpr_extension
-	jnprext := false
-	for _, val := range addConf.VendorExt {
-		if val == "jnpr_extension" {
-			jnprext = true
-		}
-	}
+func newHandler(addr string, confHandler ConfigHandler) *handler {
 	return &handler{
-		address:       addr,
-		aliases:       aliases,
-		tagsubs:       subs,
-		maxMsgSize:    maxsize,
-		jnprExtension: jnprext,
-		tagStore:      newTagStore(subs),
-		trace:         addConf.Trace,
-		log:           l,
+		address:    addr,
+		aliases:    confHandler.aliases,
+		tagsubs:    confHandler.subs,
+		maxMsgSize: confHandler.maxsize,
+		vendorExt:  confHandler.vendorExt,
+		tagStore:   newTagStore(confHandler.subs),
+		trace:      confHandler.trace,
+		log:        confHandler.l,
 	}
 }
 
@@ -138,8 +130,15 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			// Juniper Telemetry header
 			//EID_JUNIPER_TELEMETRY_HEADER = 1;
 			case 1:
+				decodeExt := false
+				for _, jnprExt := range h.vendorExt {
+					if jnprExt == "jnpr_extension" {
+						decodeExt = true
+						break
+					}
+				}
 				// Decode it only if user requested it
-				if h.jnprExtension {
+				if decodeExt {
 					juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeader{}
 					// unmarshal extention
 					err := proto.Unmarshal(currentExt, juniperHeader)
@@ -152,6 +151,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 					prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
 					prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
 				}
+
 			default:
 				continue
 			}

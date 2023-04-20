@@ -91,10 +91,14 @@ type TagSubscription struct {
 	Elements []string
 }
 
-// Allow to convey additionnal configuration elements to limit the number of arguments (lint)
-type AdditionalConf struct {
-	Trace     bool
-	VendorExt []string
+// Allow to convey additionnal configuration elements
+type ConfigHandler struct {
+	aliases   map[string]string
+	subs      []TagSubscription
+	maxsize   int
+	l         telegraf.Logger
+	trace     bool
+	vendorExt []string
 }
 
 func (*GNMI) SampleConfig() string {
@@ -194,8 +198,15 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			addConf := AdditionalConf{Trace: c.Trace, VendorExt: c.VendorSpecific}
-			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log, addConf)
+			confHandler := ConfigHandler{
+				aliases:   c.internalAliases,
+				subs:      c.TagSubscriptions,
+				maxsize:   int(c.MaxMsgSize),
+				l:         c.Log,
+				trace:     c.Trace,
+				vendorExt: c.VendorSpecific,
+			}
+			h := newHandler(addr, confHandler)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
