@@ -125,36 +125,33 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
 
-	// check if there are exceptions
-	if len(extension) != 0 {
-		// iter on each extension
-		for _, ext := range extension {
-			currentExt := ext.GetRegisteredExt().Msg
-			if currentExt == nil {
-				break
-			}
-			// extension ID
-			switch ext.GetRegisteredExt().Id {
-			// Juniper Telemetry header
-			//EID_JUNIPER_TELEMETRY_HEADER = 1;
-			case 1:
-				// Decode it only if user requested it
-				if h.jnprExtension {
-					juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeader{}
-					// unmarshal extention
-					err := proto.Unmarshal(currentExt, juniperHeader)
-					if err != nil {
-						break
-					}
-					// Add only relevant Tags from the juniper extension header.
-					// These are requiered for aggregation
-					prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
-					prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
-					prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
+	// iter on each extension
+	for _, ext := range extension {
+		currentExt := ext.GetRegisteredExt().Msg
+		if currentExt == nil {
+			break
+		}
+		// extension ID
+		switch ext.GetRegisteredExt().Id {
+		// Juniper Telemetry header
+		//EID_JUNIPER_TELEMETRY_HEADER = 1;
+		case 1:
+			// Decode it only if user requested it
+			if h.jnprExtension {
+				juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeader{}
+				// unmarshal extention
+				err := proto.Unmarshal(currentExt, juniperHeader)
+				if err != nil {
+					break
 				}
-			default:
-				continue
+				// Add only relevant Tags from the juniper extension header.
+				// These are requiered for aggregation
+				prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
+				prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
+				prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
 			}
+		default:
+			continue
 		}
 	}
 
