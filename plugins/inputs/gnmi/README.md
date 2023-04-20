@@ -71,7 +71,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # target = ""
 
   ## Vendor specific options
-  ## This defines what vendor specific options to load. 
+  ## This defines what vendor specific options to load.
   ## * Juniper Extension (jnpr_extension): some sensors are directly managed by
   ##   Linecard, which adds the Juniper GNMI Extension Header. Enabling this
   ##   allows the decoding of the Extension header if present.
