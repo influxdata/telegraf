@@ -134,9 +134,8 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			if currentExt == nil {
 				break
 			}
-			// retrieve extension ID
-			idExt := ext.GetRegisteredExt().Id
-			switch idExt {
+			// extension ID
+			switch ext.GetRegisteredExt().Id {
 			// Juniper Telemetry header
 			//EID_JUNIPER_TELEMETRY_HEADER = 1;
 			case 1:
