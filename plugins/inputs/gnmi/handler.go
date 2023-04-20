@@ -35,15 +35,24 @@ type handler struct {
 	log                telegraf.Logger
 }
 
-func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger, bContainer BoolContainer) *handler {
+func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger, addConf AdditionalConf) *handler {
+	// parse vendor specific set vendor specific flag
+	// Current supported vendor specific is jnpr_extension
+	jnprext := false
+	for _, val := range addConf.VendorExt {
+		switch val {
+		case "jnpr_extension":
+			jnprext = true
+		}
+	}
 	return &handler{
 		address:       addr,
 		aliases:       aliases,
 		tagsubs:       subs,
 		maxMsgSize:    maxsize,
-		jnprExtension: bContainer.JnprExt,
+		jnprExtension: jnprext,
 		tagStore:      newTagStore(subs),
-		trace:         bContainer.Trace,
+		trace:         addConf.Trace,
 		log:           l,
 	}
 }
@@ -117,31 +126,38 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
 
-	// Check if jnpr_extension option is set
-	if h.jnprExtension {
-		// If extension is present - iter on each extension to find EID_JUNIPER_TELEMETRY_HEADER
-		if len(extension) > 0 {
-			for _, ext := range extension {
-				currentExt := ext.GetRegisteredExt().Msg
-				idExt := ext.GetRegisteredExt().Id
-				// Juniper Telemetry header
-				//EID_JUNIPER_TELEMETRY_HEADER = 1;
-				if currentExt != nil && idExt == 1 {
+	// check if there are exceptions
+	if len(extension) != 0 {
+		// iter on each extension
+		for _, ext := range extension {
+			currentExt := ext.GetRegisteredExt().Msg
+			if currentExt == nil {
+				break
+			}
+			// retrieve extension ID
+			idExt := ext.GetRegisteredExt().Id
+			switch idExt {
+			// Juniper Telemetry header
+			//EID_JUNIPER_TELEMETRY_HEADER = 1;
+			case 1:
+				// Decode it only if user requested it
+				if h.jnprExtension {
 					juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeader{}
 					// unmarshal extention
-					result := proto.Unmarshal(currentExt, juniperHeader)
-					if result == nil {
-						// Add only relevant Tags from the extension header.
-						// These are requiered for aggregation
-						prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
-						prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
-						prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
+					err := proto.Unmarshal(currentExt, juniperHeader)
+					if err != nil {
+						break
 					}
-					break
+					// Add only relevant Tags from the juniper extension header.
+					// These are requiered for aggregation
+					prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
+					prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
+					prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
 				}
 			}
 		}
 	}
+
 	if response.Update.Prefix != nil {
 		var err error
 		if prefix, prefixAliasPath, err = handlePath(response.Update.Prefix, prefixTags, h.aliases, ""); err != nil {

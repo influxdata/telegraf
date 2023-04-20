@@ -47,7 +47,7 @@ type GNMI struct {
 	Prefix           string            `toml:"prefix"`
 	Target           string            `toml:"target"`
 	UpdatesOnly      bool              `toml:"updates_only"`
-	JnprExtension    bool              `toml:"jnpr_extension"`
+	VendorSpecific   []string          `toml:"vendor_specific"`
 	Username         string            `toml:"username"`
 	Password         string            `toml:"password"`
 	Redial           config.Duration   `toml:"redial"`
@@ -91,10 +91,10 @@ type TagSubscription struct {
 	Elements []string
 }
 
-// Allow to convey boolean variable to limit the number of arguments (lint)
-type BoolContainer struct {
-	Trace   bool
-	JnprExt bool
+// Allow to convey additionnal configuration elements to limit the number of arguments (lint)
+type AdditionalConf struct {
+	Trace     bool
+	VendorExt []string
 }
 
 func (*GNMI) SampleConfig() string {
@@ -194,8 +194,8 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			bContainer := BoolContainer{Trace: c.Trace, JnprExt: c.JnprExtension}
-			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log, bContainer)
+			addConf := AdditionalConf{Trace: c.Trace, VendorExt: c.VendorSpecific}
+			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log, addConf)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
