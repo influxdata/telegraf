@@ -36,8 +36,8 @@ type handler struct {
 }
 
 func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger, addConf AdditionalConf) *handler {
-	// parse vendor specific set vendor specific flag
-	// Current supported vendor specific is jnpr_extension
+	// parse vendor specific and set vendor specific variables
+	// Current supported vendor specific option is jnpr_extension
 	jnprext := false
 	for _, val := range addConf.VendorExt {
 		switch val {
