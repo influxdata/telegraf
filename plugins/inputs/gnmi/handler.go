@@ -40,8 +40,7 @@ func newHandler(addr string, aliases map[string]string, subs []TagSubscription, 
 	// Current supported vendor specific option is jnpr_extension
 	jnprext := false
 	for _, val := range addConf.VendorExt {
-		switch val {
-		case "jnpr_extension":
+		if val == "jnpr_extension" {
 			jnprext = true
 		}
 	}
@@ -153,6 +152,8 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 					prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
 					prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
 				}
+			default:
+				continue
 			}
 		}
 	}
