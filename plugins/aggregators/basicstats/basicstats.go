@@ -33,6 +33,7 @@ type configuredStats struct {
 	nonNegativeDiff bool
 	rate            bool
 	nonNegativeRate bool
+	percentChange   bool
 	interval        bool
 }
 
@@ -191,6 +192,9 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 				if b.statsConfig.rate {
 					fields[k+"_rate"] = v.rate
 				}
+				if b.statsConfig.percentChange {
+					fields[k+"_percent_change"] = v.diff / v.LAST
+				}
 				if b.statsConfig.nonNegativeRate && v.diff >= 0 {
 					fields[k+"_non_negative_rate"] = v.rate
 				}
@@ -235,6 +239,8 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.rate = true
 		case "non_negative_rate":
 			parsed.nonNegativeRate = true
+		case "percent_change":
+			parsed.percentChange = true
 		case "interval":
 			parsed.interval = true
 		default:
@@ -258,6 +264,7 @@ func (b *BasicStats) getConfiguredStats() {
 			nonNegativeDiff: false,
 			rate:            false,
 			nonNegativeRate: false,
+			percentChange:   false,
 		}
 	} else {
 		b.statsConfig = b.parseStats()
