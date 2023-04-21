@@ -42,6 +42,13 @@ func MockMetrics() []telegraf.Metric {
 	return metrics
 }
 
+func MockMetricsWithValue(value float64) []telegraf.Metric {
+	metrics := make([]telegraf.Metric, 0)
+	// Create a new point batch
+	metrics = append(metrics, TestMetric(value))
+	return metrics
+}
+
 // TestMetric Returns a simple test point:
 //
 //	measurement -> "test1" or name
