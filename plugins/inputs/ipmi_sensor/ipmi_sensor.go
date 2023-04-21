@@ -58,7 +58,7 @@ func (m *Ipmi) Init() error {
 	if m.Path == "" {
 		path, err := exec.LookPath(cmd)
 		if err != nil {
-			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+			return fmt.Errorf("looking up %q failed: %w", cmd, err)
 		}
 		m.Path = path
 	}
@@ -129,7 +129,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 			cmd := execCommand(name, dumpOpts...)
 			out, err := internal.CombinedOutputTimeout(cmd, time.Duration(m.Timeout))
 			if err != nil {
-				return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
+				return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
 			}
 		}
 		opts = append(opts, "-S")
@@ -148,7 +148,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	out, err := internal.CombinedOutputTimeout(cmd, time.Duration(m.Timeout))
 	timestamp := time.Now()
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
+		return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
 	}
 	if m.MetricVersion == 2 {
 		return m.parseV2(acc, hostname, out, timestamp)

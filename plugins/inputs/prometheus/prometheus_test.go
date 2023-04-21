@@ -78,6 +78,65 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
 }
 
+func TestPrometheusCustomHeader(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.Header.Get("accept"))
+		switch r.Header.Get("accept") {
+		case "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3":
+			_, err := fmt.Fprintln(w, "proto 15 1490802540000")
+			require.NoError(t, err)
+		case "text/plain":
+			_, err := fmt.Fprintln(w, "plain 42 1490802380000")
+			require.NoError(t, err)
+		default:
+			_, err := fmt.Fprintln(w, "other 44 1490802420000")
+			require.NoError(t, err)
+		}
+	}))
+	defer ts.Close()
+
+	tests := []struct {
+		name                    string
+		headers                 map[string]string
+		expectedMeasurementName string
+	}{
+		{
+			"default",
+			map[string]string{},
+			"proto",
+		},
+		{
+			"plain text",
+			map[string]string{
+				"accept": "text/plain",
+			},
+			"plain",
+		},
+		{
+			"other",
+			map[string]string{
+				"accept": "fakeACCEPTitem",
+			},
+			"other",
+		},
+	}
+
+	for _, test := range tests {
+		p := &Prometheus{
+			Log:         testutil.Logger{},
+			URLs:        []string{ts.URL},
+			URLTag:      "url",
+			HTTPHeaders: test.headers,
+		}
+		err := p.Init()
+		require.NoError(t, err)
+
+		var acc testutil.Accumulator
+		require.NoError(t, acc.GatherError(p.Gather))
+		require.Equal(t, test.expectedMeasurementName, acc.Metrics[0].Measurement)
+	}
+}
+
 func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintln(w, sampleTextFormat)
@@ -189,11 +248,11 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
 	var acc testutil.Accumulator
 
 	err = acc.GatherError(p.Gather)
-	errMessage := fmt.Sprintf("error making HTTP request to %s/metrics: Get \"%s/metrics\": "+
+	errMessage := fmt.Sprintf("error making HTTP request to \"%s/metrics\": Get \"%s/metrics\": "+
 		"context deadline exceeded (Client.Timeout exceeded while awaiting headers)", ts.URL, ts.URL)
 	errExpected := errors.New(errMessage)
-	require.Equal(t, errExpected, err)
 	require.Error(t, err)
+	require.Equal(t, errExpected.Error(), err.Error())
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) {
@@ -205,13 +264,13 @@ func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) 
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:     testutil.Logger{},
-		URLs:    []string{ts.URL},
-		URLTag:  "url",
-		Timeout: config.Duration(time.Second * 5),
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
 	}
 	err := p.Init()
 	require.NoError(t, err)
+	p.client.Timeout = time.Second * 5
 
 	var acc testutil.Accumulator
 
@@ -235,18 +294,18 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:     testutil.Logger{},
-		URLs:    []string{ts.URL},
-		URLTag:  "url",
-		Timeout: config.Duration(time.Second * 5),
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
 	}
 	err := p.Init()
 	require.NoError(t, err)
+	p.client.Timeout = time.Second * 5
 
 	var acc testutil.Accumulator
 
 	err = acc.GatherError(p.Gather)
-	require.ErrorContains(t, err, "error making HTTP request to "+ts.URL+"/metrics")
+	require.ErrorContains(t, err, "error making HTTP request to \""+ts.URL+"/metrics\"")
 }
 
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {

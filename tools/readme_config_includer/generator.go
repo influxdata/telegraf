@@ -54,7 +54,8 @@ func extractIncludeBlock(txt []byte, includesEx *regexp.Regexp, root string) *in
 		}
 		include := filepath.FromSlash(string(inc[1]))
 		// Make absolute paths relative to the include-root if any
-		if filepath.IsAbs(include) {
+		// Check original value to avoid platform specific slashes
+		if filepath.IsAbs(string(inc[1])) {
 			if root == "" {
 				log.Printf("Ignoring absolute include %q without include root...", include)
 				continue

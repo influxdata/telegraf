@@ -2,13 +2,13 @@ package serializers
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
@@ -17,6 +17,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
+
+// Creator is the function to create a new serializer
+type Creator func() Serializer
+
+// Serializers contains the registry of all known serializers (following the new style)
+var Serializers = map[string]Creator{}
+
+// Add adds a serializer to the registry. Usually this function is called in the plugin's init function
+func Add(name string, creator Creator) {
+	Serializers[name] = creator
+}
 
 // SerializerOutput is an interface for output plugins that are able to
 // serialize telegraf metrics into arbitrary data formats.
@@ -43,6 +54,12 @@ type Serializer interface {
 	// a byte buffer.  This method is not required to be suitable for use with
 	// line oriented framing.
 	SerializeBatch(metrics []telegraf.Metric) ([]byte, error)
+}
+
+// SerializerCompatibility is an interface for backward-compatible initialization of serializers
+type SerializerCompatibility interface {
+	// InitFromConfig sets the serializers internal variables from the old-style config
+	InitFromConfig(config *Config) error
 }
 
 // Config is a struct that covers the data types needed for all serializer types,
@@ -74,6 +91,9 @@ type Config struct {
 
 	// Character for separating metric name and field for Graphite tags
 	GraphiteSeparator string `toml:"graphite_separator"`
+
+	// Regex string
+	GraphiteStrictRegex string `toml:"graphite_strict_sanitize_regex"`
 
 	// Maximum line length in bytes; influx format only
 	InfluxMaxLineBytes int `toml:"influx_max_line_bytes"`
@@ -149,12 +169,11 @@ func NewSerializer(config *Config) (Serializer, error) {
 	switch config.DataFormat {
 	case "csv":
 		serializer, err = NewCSVSerializer(config)
-	case "influx":
-		serializer, err = NewInfluxSerializerConfig(config), nil
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(
 			config.Prefix,
 			config.Template,
+			config.GraphiteStrictRegex,
 			config.GraphiteTagSupport,
 			config.GraphiteTagSanitizeMode,
 			config.GraphiteSeparator,
@@ -182,7 +201,20 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "msgpack":
 		serializer, err = NewMsgpackSerializer(), nil
 	default:
-		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
+		creator, found := Serializers[config.DataFormat]
+		if !found {
+			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
+		}
+
+		// Try to create new-style serializers the old way...
+		serializer := creator()
+		p, ok := serializer.(SerializerCompatibility)
+		if !ok {
+			return nil, fmt.Errorf("serializer for %q cannot be created the old way", config.DataFormat)
+		}
+		err := p.InitFromConfig(config)
+
+		return serializer, err
 	}
 	return serializer, err
 }
@@ -258,31 +290,17 @@ func NewNowSerializer() (Serializer, error) {
 	return nowmetric.NewSerializer()
 }
 
-func NewInfluxSerializerConfig(config *Config) Serializer {
-	var sort influx.FieldSortOrder
-	if config.InfluxSortFields {
-		sort = influx.SortFields
-	}
-
-	var typeSupport influx.FieldTypeSupport
-	if config.InfluxUintSupport {
-		typeSupport = typeSupport + influx.UintSupport
-	}
-
-	s := influx.NewSerializer()
-	s.SetMaxLineBytes(config.InfluxMaxLineBytes)
-	s.SetFieldSortOrder(sort)
-	s.SetFieldTypeSupport(typeSupport)
-	return s
-}
-
-func NewInfluxSerializer() Serializer {
-	return influx.NewSerializer()
-}
-
-func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitizeMode string, separator string, templates []string) (Serializer, error) {
+//nolint:revive //argument-limit conditionally more arguments allowed
+func NewGraphiteSerializer(
+	prefix,
+	template string,
+	strictRegex string,
+	tagSupport bool,
+	tagSanitizeMode string,
+	separator string,
+	templates []string,
+) (Serializer, error) {
 	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
-
 	if err != nil {
 		return nil, err
 	}
@@ -299,13 +317,22 @@ func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitize
 		separator = "."
 	}
 
+	strictAllowedChars := regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	if strictRegex != "" {
+		strictAllowedChars, err = regexp.Compile(strictRegex)
+		if err != nil {
+			return nil, fmt.Errorf("invalid regex provided %q: %w", strictRegex, err)
+		}
+	}
+
 	return &graphite.GraphiteSerializer{
-		Prefix:          prefix,
-		Template:        template,
-		TagSupport:      tagSupport,
-		TagSanitizeMode: tagSanitizeMode,
-		Separator:       separator,
-		Templates:       graphiteTemplates,
+		Prefix:             prefix,
+		Template:           template,
+		StrictAllowedChars: strictAllowedChars,
+		TagSupport:         tagSupport,
+		TagSanitizeMode:    tagSanitizeMode,
+		Separator:          separator,
+		Templates:          graphiteTemplates,
 	}, nil
 }
 

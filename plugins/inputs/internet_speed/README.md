@@ -35,6 +35,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Caches the closest server location
   # cache = false
 
+  ## Number of concurrent connections
+  ## By default or set to zero, the number of CPU cores is used. Use this to
+  ## reduce the impact on system performance or to increase the connections on
+  ## faster connections to ensure the fastest speed.
+  # connections = 0
+
+  ## Test mode
+  ## By default, a single sever is used for testing. This may work for most,
+  ## however, setting to "multi" will reach out to multiple servers in an
+  ## attempt to get closer to ideal internet speeds.
+  # test_mode = "single"
+
   ## Server ID exclude filter
   ## Allows the user to exclude or include specific server IDs received by
   ## speedtest-go. Values in the exclude option will be skipped over. Values in
@@ -62,11 +74,12 @@ And the following tags:
 
 | Name      | tag name  |
 | --------- | --------- |
-| Host      | host      |
+| Source    | source    |
 | Server ID | server_id |
+| Test Mode | test_mode |
 
 ## Example Output
 
-```sh
-internet_speed,host=speedtest02.z4internet.com:8080,server_id=54619 download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810 1675458921000000000
+```text
+internet_speed,source=speedtest02.z4internet.com:8080,server_id=54619,test_mode=single download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810 1675458921000000000
 ```

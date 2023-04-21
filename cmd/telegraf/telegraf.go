@@ -38,6 +38,7 @@ type GlobalFlags struct {
 	watchConfig string
 	pidFile     string
 	plugindDir  string
+	password    string
 	test        bool
 	debug       bool
 	once        bool
@@ -81,6 +82,11 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	t.secretstoreFilters = f.secretstore
 	t.GlobalFlags = g
 	t.WindowFlags = w
+
+	// Set global password
+	if g.password != "" {
+		config.Password = config.NewSecret([]byte(g.password))
+	}
 }
 
 func (t *Telegraf) ListSecretStores() ([]string, error) {
@@ -205,6 +211,7 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
+	c.Agent.Quiet = t.quiet
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
 	c.SecretStoreFilters = t.secretstoreFilters
@@ -309,6 +316,18 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 		log.Printf("W! Deprecated secretstores: %d and %d options", count[0], count[1])
 	}
 
+	// Compute the amount of locked memory needed for the secrets
+	required := 2 * c.NumberSecrets * uint64(os.Getpagesize())
+	available := getLockedMemoryLimit()
+	if required > available {
+		required /= 1024
+		available /= 1024
+		log.Printf("I! Found %d secrets...", c.NumberSecrets)
+		msg := fmt.Sprintf("Insufficient lockable memory %dkb when %dkb is required.", available, required)
+		msg += " Please increase the limit for Telegraf in your Operating System!"
+		log.Printf("W! " + color.RedString(msg))
+	}
+
 	ag := agent.NewAgent(c)
 
 	// Notify systemd that telegraf is ready
@@ -328,7 +347,7 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	if t.pidFile != "" {
-		f, err := os.OpenFile(t.pidFile, os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(t.pidFile, os.O_CREATE|os.O_WRONLY, 0640)
 		if err != nil {
 			log.Printf("E! Unable to create pidfile: %s", err)
 		} else {

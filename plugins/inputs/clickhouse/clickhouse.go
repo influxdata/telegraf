@@ -127,7 +127,7 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 		}
 	}
 
-	for _, conn := range connects {
+	for i := range connects {
 		metricsFuncs := []func(acc telegraf.Accumulator, conn *connect) error{
 			ch.tables,
 			ch.zookeeper,
@@ -141,13 +141,13 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 		}
 
 		for _, metricFunc := range metricsFuncs {
-			if err := metricFunc(acc, &conn); err != nil {
+			if err := metricFunc(acc, &connects[i]); err != nil {
 				acc.AddError(err)
 			}
 		}
 
 		for metric := range commonMetrics {
-			if err := ch.commonMetrics(acc, &conn, metric); err != nil {
+			if err := ch.commonMetrics(acc, &connects[i], metric); err != nil {
 				acc.AddError(err)
 			}
 		}

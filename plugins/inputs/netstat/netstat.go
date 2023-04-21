@@ -25,7 +25,7 @@ func (*NetStats) SampleConfig() string {
 func (ns *NetStats) Gather(acc telegraf.Accumulator) error {
 	netconns, err := ns.PS.NetConnections()
 	if err != nil {
-		return fmt.Errorf("error getting net connections info: %s", err)
+		return fmt.Errorf("error getting net connections info: %w", err)
 	}
 	counts := make(map[string]int)
 	counts["UDP"] = 0

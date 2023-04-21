@@ -25,16 +25,16 @@ var sampleConfig string
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []config.Secret `toml:"servers"`
-	QueryTimeout config.Duration `toml:"query_timeout"`
-	AuthMethod   string          `toml:"auth_method"`
-	QueryVersion int             `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
-	AzureDB      bool            `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
-	DatabaseType string          `toml:"database_type"`
-	IncludeQuery []string        `toml:"include_query"`
-	ExcludeQuery []string        `toml:"exclude_query"`
-	HealthMetric bool            `toml:"health_metric"`
-	Log          telegraf.Logger `toml:"-"`
+	Servers      []*config.Secret `toml:"servers"`
+	QueryTimeout config.Duration  `toml:"query_timeout"`
+	AuthMethod   string           `toml:"auth_method"`
+	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
+	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
+	DatabaseType string           `toml:"database_type"`
+	IncludeQuery []string         `toml:"include_query"`
+	ExcludeQuery []string         `toml:"exclude_query"`
+	HealthMetric bool             `toml:"health_metric"`
+	Log          telegraf.Logger  `toml:"-"`
 
 	pools       []*sql.DB
 	queries     MapQuery
@@ -202,26 +202,28 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var healthMetrics = make(map[string]*HealthMetric)
 
 	for i, pool := range s.pools {
+		dnsSecret, err := s.Servers[i].Get()
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+		dsn := string(dnsSecret)
+		config.ReleaseSecret(dnsSecret)
+
 		for _, query := range s.queries {
 			wg.Add(1)
-			go func(pool *sql.DB, query Query, serverIndex int) {
+			go func(pool *sql.DB, query Query, dsn string) {
 				defer wg.Done()
-				dsn, err := s.Servers[serverIndex].Get()
-				if err != nil {
-					acc.AddError(err)
-					return
-				}
-				defer config.ReleaseSecret(dsn)
-				queryError := s.gatherServer(pool, query, acc, string(dsn))
+				queryError := s.gatherServer(pool, query, acc, dsn)
 
 				if s.HealthMetric {
 					mutex.Lock()
-					s.gatherHealth(healthMetrics, string(dsn), queryError)
+					s.gatherHealth(healthMetrics, dsn, queryError)
 					mutex.Unlock()
 				}
 
 				acc.AddError(queryError)
-			}(pool, query, i)
+			}(pool, query, dsn)
 		}
 	}
 
@@ -277,7 +279,7 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			// get token from in-memory cache variable or from Azure Active Directory
 			tokenProvider, err := s.getTokenProvider()
 			if err != nil {
-				acc.AddError(fmt.Errorf("error creating AAD token provider for system assigned Azure managed identity : %s", err.Error()))
+				acc.AddError(fmt.Errorf("error creating AAD token provider for system assigned Azure managed identity: %w", err))
 				continue
 			}
 
@@ -290,7 +292,7 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			connector, err := mssql.NewAccessTokenConnector(string(dsn), tokenProvider)
 			config.ReleaseSecret(dsn)
 			if err != nil {
-				acc.AddError(fmt.Errorf("error creating the SQL connector : %s", err.Error()))
+				acc.AddError(fmt.Errorf("error creating the SQL connector: %w", err))
 				continue
 			}
 
@@ -326,9 +328,10 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 		serverName, databaseName := getConnectionIdentifiers(connectionString)
 
 		// Error msg based on the format in SSMS. SQLErrorClass() is another term for severity/level: http://msdn.microsoft.com/en-us/library/dd304156.aspx
-		if sqlerr, ok := err.(mssql.Error); ok {
+		var sqlErr mssql.Error
+		if errors.As(err, &sqlErr) {
 			return fmt.Errorf("query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
-				serverName, databaseName, sqlerr.SQLErrorNumber(), sqlerr.SQLErrorClass(), sqlerr.SQLErrorState(), sqlerr.SQLErrorLineNo(), err)
+				serverName, databaseName, sqlErr.SQLErrorNumber(), sqlErr.SQLErrorClass(), sqlErr.SQLErrorState(), sqlErr.SQLErrorLineNo(), err)
 		}
 
 		return fmt.Errorf("query %s failed for server: %s and database: %s with Error: %w", query.ScriptName, serverName, databaseName, err)
@@ -449,7 +452,8 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 
 func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
-		s.Log.Warn("Warning: Server list is empty.")
+		srv := config.NewSecret([]byte(defaultServer))
+		s.Servers = append(s.Servers, &srv)
 	}
 
 	return nil
@@ -546,7 +550,6 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{
-			Servers:    []config.Secret{config.NewSecret([]byte(defaultServer))},
 			AuthMethod: "connection_string",
 		}
 	})

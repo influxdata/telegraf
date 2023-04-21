@@ -4,6 +4,7 @@ package processes
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -200,7 +201,8 @@ func readProcFile(filename string) ([]byte, error) {
 
 		// Reading from /proc/<PID> fails with ESRCH if the process has
 		// been terminated between open() and read().
-		if perr, ok := err.(*os.PathError); ok && perr.Err == syscall.ESRCH {
+		var perr *os.PathError
+		if errors.As(err, &perr) && errors.Is(perr.Err, syscall.ESRCH) {
 			return nil, nil
 		}
 

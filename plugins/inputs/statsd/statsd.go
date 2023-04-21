@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -13,8 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -519,7 +518,7 @@ func (s *Statsd) parser() error {
 					}
 				default:
 					if err := s.parseStatsdLine(line); err != nil {
-						if errors.Cause(err) != errParsing {
+						if !errors.Is(err, errParsing) {
 							// Ignore parsing errors but error out on
 							// everything else...
 							return err
@@ -869,7 +868,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 	// connection cleanup function
 	defer func() {
 		s.wg.Done()
-		conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		conn.Close()
 
 		// Add one connection potential back to channel when this one closes
 		s.accept <- true
@@ -901,8 +900,8 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
-			b.Write(scanner.Bytes()) //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
-			b.WriteByte('\n')        //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
+			b.Write(scanner.Bytes())
+			b.WriteByte('\n')
 
 			select {
 			case s.in <- input{Buffer: b, Time: time.Now(), Addr: remoteIP}:
@@ -921,7 +920,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
-	conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+	conn.Close()
 	s.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	s.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
@@ -945,9 +944,14 @@ func (s *Statsd) Stop() {
 	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
 	if s.isUDP() {
-		s.UDPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		if s.UDPlistener != nil {
+			s.UDPlistener.Close()
+		}
 	} else {
-		s.TCPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		if s.TCPlistener != nil {
+			s.TCPlistener.Close()
+		}
+
 		// Close all open TCP connections
 		//  - get all conns from the s.conns map and put into slice
 		//  - this is so the forget() function doesnt conflict with looping
@@ -959,7 +963,7 @@ func (s *Statsd) Stop() {
 		}
 		s.cleanup.Unlock()
 		for _, conn := range conns {
-			conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+			conn.Close()
 		}
 	}
 	s.Unlock()

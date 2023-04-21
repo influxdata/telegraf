@@ -184,7 +184,7 @@ Using the [MariaDB sample database][maria-sample] and the configuration
 
 Telegraf will output the following metrics
 
-```shell
+```text
 nation,host=Hugin,name=John guest_id=1i 1611332164000000000
 nation,host=Hugin,name=Jane guest_id=2i 1611332164000000000
 nation,host=Hugin,name=Jean guest_id=3i 1611332164000000000

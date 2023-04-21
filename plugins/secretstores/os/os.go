@@ -4,6 +4,7 @@
 package os
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 
@@ -13,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type OS struct {
 	ID         string        `toml:"id"`

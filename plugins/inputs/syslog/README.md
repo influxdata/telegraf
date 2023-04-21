@@ -10,6 +10,17 @@ Syslog messages should be formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424) (syslog protocol) or
 [RFC 3164](https://tools.ietf.org/html/rfc3164) (BSD syslog protocol).
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -226,7 +237,7 @@ to port 514.
 
 Here is example output of this plugin:
 
-```shell
+```text
 syslog,appname=docker-compose,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643706396113000i,version=1i 1624643706400667198
 syslog,appname=tailscaled,facility=daemon,host=bb8,hostname=dev,location=home,severity=info,source=10.0.0.15 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643706403394000i,version=1i 1624643706407850408
 syslog,appname=docker-compose,facility=daemon,host=bb8,hostname=droplet,location=home,severity=info,source=10.0.0.12 facility_code=3i,message="<redacted>",severity_code=6i,timestamp=1624643706675853000i,version=1i 1624643706679251683

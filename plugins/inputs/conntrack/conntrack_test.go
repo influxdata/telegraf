@@ -50,7 +50,7 @@ func TestDefaultsUsed(t *testing.T) {
 	dfltFiles = []string{fname}
 
 	count := 1234321
-	require.NoError(t, os.WriteFile(tmpFile.Name(), []byte(strconv.Itoa(count)), 0660))
+	require.NoError(t, os.WriteFile(tmpFile.Name(), []byte(strconv.Itoa(count)), 0640))
 	c := &Conntrack{}
 	require.NoError(t, c.Init())
 	acc := &testutil.Accumulator{}
@@ -80,8 +80,8 @@ func TestConfigsUsed(t *testing.T) {
 
 	count := 1234321
 	max := 9999999
-	require.NoError(t, os.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0660))
-	require.NoError(t, os.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0660))
+	require.NoError(t, os.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0640))
+	require.NoError(t, os.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0640))
 	c := &Conntrack{}
 	require.NoError(t, c.Init())
 	acc := &testutil.Accumulator{}

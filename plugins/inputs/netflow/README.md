@@ -15,6 +15,17 @@ Definitions for IPFIX are according to [IANA assignement document][IPFIX doc].
 [ASA extensions]:   https://www.cisco.com/c/en/us/td/docs/security/asa/special/netflow/asa_netflow.html
 [IPFIX doc]:        https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-nat-type
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -83,7 +94,7 @@ examples
 
 ### Netflow v5
 
-```shell
+```text
 netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="140.82.121.3",src_port=443u,dst="192.168.119.100",dst_port=55516u,flows=8u,in_bytes=87477u,in_packets=78u,first_switched=86400660u,last_switched=86403316u,tcp_flags="...PA...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
 netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="140.82.121.6",src_port=443u,dst="192.168.119.100",dst_port=36408u,flows=8u,in_bytes=5009u,in_packets=21u,first_switched=86400447u,last_switched=86403267u,tcp_flags="...PA...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
 netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="140.82.112.22",src_port=443u,dst="192.168.119.100",dst_port=39638u,flows=8u,in_bytes=925u,in_packets=6u,first_switched=86400324u,last_switched=86403214u,tcp_flags="...PA...",engine_type="19",engine_id="0x56",sys_uptime=90003000u,src_tos="0x00",bgp_src_as=0u,bgp_dst_as=0u,src_mask=0u,dst_mask=0u,in_snmp=0u,out_snmp=0u,next_hop="0.0.0.0",seq_number=0u,sampling_interval=0u
@@ -96,7 +107,7 @@ netflow,source=127.0.0.1,version=NetFlowV5 protocol="tcp",src="192.168.119.100",
 
 ### Netflow v9
 
-```shell
+```text
 netflow,source=127.0.0.1,version=NetFlowV9 protocol="tcp",src="140.82.121.3",src_port=443u,dst="192.168.119.100",dst_port=55516u,in_bytes=87477u,in_packets=78u,flow_start_ms=1666350478660u,flow_end_ms=1666350481316u,tcp_flags="...PA...",engine_type="17",engine_id="0x01",icmp_type=0u,icmp_code=0u,fwd_status="unknown",fwd_reason="unknown",src_tos="0x00"
 netflow,source=127.0.0.1,version=NetFlowV9 protocol="tcp",src="140.82.121.6",src_port=443u,dst="192.168.119.100",dst_port=36408u,in_bytes=5009u,in_packets=21u,flow_start_ms=1666350478447u,flow_end_ms=1666350481267u,tcp_flags="...PA...",engine_type="17",engine_id="0x01",icmp_type=0u,icmp_code=0u,fwd_status="unknown",fwd_reason="unknown",src_tos="0x00"
 netflow,source=127.0.0.1,version=NetFlowV9 protocol="tcp",src="140.82.112.22",src_port=443u,dst="192.168.119.100",dst_port=39638u,in_bytes=925u,in_packets=6u,flow_start_ms=1666350478324u,flow_end_ms=1666350481214u,tcp_flags="...PA...",engine_type="17",engine_id="0x01",icmp_type=0u,icmp_code=0u,fwd_status="unknown",fwd_reason="unknown",src_tos="0x00"
@@ -109,7 +120,7 @@ netflow,source=127.0.0.1,version=NetFlowV9 protocol="tcp",src="192.168.119.100",
 
 ### IPFIX
 
-```shell
+```text
 netflow,source=127.0.0.1,version=IPFIX protocol="tcp",vlan_src=0u,src_tos="0x00",flow_end_ms=1666345513807u,src="192.168.119.100",dst="44.233.90.52",src_port=51008u,total_bytes_exported=0u,flow_end_reason="end of flow",flow_start_ms=1666345513807u,in_total_bytes=52u,in_total_packets=1u,dst_port=443u
 netflow,source=127.0.0.1,version=IPFIX src_tos="0x00",src_port=54330u,rev_total_bytes_exported=0u,last_switched=9u,vlan_src=0u,flow_start_ms=1666345513807u,in_total_packets=1u,flow_end_reason="end of flow",flow_end_ms=1666345513816u,in_total_bytes=40u,dst_port=443u,src="192.168.119.100",dst="104.17.240.92",total_bytes_exported=0u,protocol="tcp"
 netflow,source=127.0.0.1,version=IPFIX flow_start_ms=1666345513807u,flow_end_ms=1666345513977u,src="192.168.119.100",dst_port=443u,total_bytes_exported=0u,last_switched=170u,src_tos="0x00",in_total_bytes=40u,dst="44.233.90.52",src_port=51024u,protocol="tcp",flow_end_reason="end of flow",in_total_packets=1u,rev_total_bytes_exported=0u,vlan_src=0u

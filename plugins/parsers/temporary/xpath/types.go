@@ -1,6 +1,10 @@
 package xpath
 
-import "github.com/influxdata/telegraf/filter"
+import (
+	"time"
+
+	"github.com/influxdata/telegraf/filter"
+)
 
 // Config definition for backward compatibility ONLY.
 // We need this here to avoid cyclic dependencies. However, we need
@@ -11,6 +15,7 @@ type Config struct {
 	Selection    string            `toml:"metric_selection"`
 	Timestamp    string            `toml:"timestamp"`
 	TimestampFmt string            `toml:"timestamp_format"`
+	Timezone     string            `toml:"timezone"`
 	Tags         map[string]string `toml:"tags"`
 	Fields       map[string]string `toml:"fields"`
 	FieldsInt    map[string]string `toml:"fields_int"`
@@ -27,4 +32,5 @@ type Config struct {
 	TagNameExpand bool   `toml:"tag_name_expansion"`
 
 	FieldsHexFilter filter.Filter
+	Location        *time.Location
 }

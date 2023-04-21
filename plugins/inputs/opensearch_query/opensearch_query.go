@@ -12,12 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opensearch-project/opensearch-go/v2"
+	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	influxtls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/opensearch-project/opensearch-go/v2"
-	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 )
 
 //go:embed sample.conf
@@ -108,18 +109,19 @@ func (o *OpensearchQuery) newClient() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
 	password, err := o.Password.Get()
 	if err != nil {
+		config.ReleaseSecret(username)
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
 
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
 		Username:  string(username),
 		Password:  string(password),
 	}
+	config.ReleaseSecret(username)
+	config.ReleaseSecret(password)
 
 	if o.InsecureSkipVerify {
 		clientConfig.Transport = &http.Transport{
@@ -143,7 +145,7 @@ func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := o.osAggregationQuery(acc, agg)
 			if err != nil {
-				acc.AddError(fmt.Errorf("opensearch query aggregation %s: %s ", agg.MeasurementName, err))
+				acc.AddError(fmt.Errorf("opensearch query aggregation %q: %w ", agg.MeasurementName, err))
 			}
 		}(agg)
 	}
@@ -212,7 +214,7 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 		return nil, err
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("Opensearch SearchRequest failure: [%d] %s", resp.StatusCode, resp.Status())
+		return nil, fmt.Errorf("opensearch SearchRequest failure: [%d] %s", resp.StatusCode, resp.Status())
 	}
 	defer resp.Body.Close()
 

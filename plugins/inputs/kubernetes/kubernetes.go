@@ -47,7 +47,7 @@ type Kubernetes struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	RoundTripper http.RoundTripper
+	httpClient *http.Client
 }
 
 const (
@@ -244,16 +244,22 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	if k.RoundTripper == nil {
+
+	if k.httpClient == nil {
 		if k.ResponseTimeout < config.Duration(time.Second) {
 			k.ResponseTimeout = config.Duration(time.Second * 5)
 		}
-		k.RoundTripper = &http.Transport{
-			TLSHandshakeTimeout:   5 * time.Second,
-			TLSClientConfig:       tlsCfg,
-			ResponseHeaderTimeout: time.Duration(k.ResponseTimeout),
+		k.httpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsCfg,
+			},
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+			Timeout: time.Duration(k.ResponseTimeout),
 		}
 	}
+
 	if k.BearerToken != "" {
 		token, err := os.ReadFile(k.BearerToken)
 		if err != nil {
@@ -263,9 +269,9 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
 	req.Header.Add("Accept", "application/json")
-	resp, err = k.RoundTripper.RoundTrip(req)
+	resp, err = k.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return fmt.Errorf("error making HTTP request to %q: %w", url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -274,7 +280,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
-		return fmt.Errorf(`Error parsing response: %s`, err)
+		return fmt.Errorf("error parsing response: %w", err)
 	}
 
 	return nil

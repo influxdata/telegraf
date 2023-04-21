@@ -27,6 +27,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/persister"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -50,6 +51,9 @@ var (
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
+
+	// Password specified via command-line
+	Password Secret
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -83,6 +87,10 @@ type Config struct {
 
 	Deprecations map[string][]int64
 	version      *semver.Version
+
+	Persister *persister.Persister
+
+	NumberSecrets uint64
 }
 
 // Ordered plugins used to keep the order in which they appear in a file
@@ -243,6 +251,12 @@ type AgentConfig struct {
 	// Method for translating SNMP objects. 'netsnmp' to call external programs,
 	// 'gosmi' to use the built-in library.
 	SnmpTranslator string `toml:"snmp_translator"`
+
+	// Name of the file to load the state of plugins from and store the state to.
+	// If uncommented and not empty, this file will be used to save the state of
+	// stateful plugins on termination of Telegraf. If the file exists on start,
+	// the state in the file will be restored for the plugins.
+	Statefile string `toml:"statefile"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -367,7 +381,7 @@ func getDefaultConfigPath() ([]string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
-	etcfolder := "/etc/telegraf/telegraf.conf.d"
+	etcfolder := "/etc/telegraf/telegraf.d"
 
 	if runtime.GOOS == "windows" {
 		programFiles := os.Getenv("ProgramFiles")
@@ -375,16 +389,14 @@ func getDefaultConfigPath() ([]string, error) {
 			programFiles = `C:\Program Files`
 		}
 		etcfile = programFiles + `\Telegraf\telegraf.conf`
-		etcfolder = programFiles + `\Telegraf\telegraf.conf.d\`
+		etcfolder = programFiles + `\Telegraf\telegraf.d\`
 	}
 
 	for _, path := range []string{envfile, homefile} {
 		if isURL(path) {
-			log.Printf("I! Using config url: %s", path)
 			return []string{path}, nil
 		}
 		if _, err := os.Stat(path); err == nil {
-			log.Printf("I! Using config file: %s", path)
 			return []string{path}, nil
 		}
 	}
@@ -393,16 +405,12 @@ func getDefaultConfigPath() ([]string, error) {
 	// populated and return them all.
 	confFiles := []string{}
 	if _, err := os.Stat(etcfile); err == nil {
-		log.Printf("I! Using config file: %s", etcfile)
 		confFiles = append(confFiles, etcfile)
 	}
 	if _, err := os.Stat(etcfolder); err == nil {
 		files, err := WalkDirectory(etcfolder)
 		if err != nil {
 			log.Printf("W! unable walk %q: %s", etcfolder, err)
-		}
-		for _, file := range files {
-			log.Printf("I! Using config file: %s", file)
 		}
 		confFiles = append(confFiles, files...)
 	}
@@ -435,6 +443,10 @@ func (c *Config) LoadConfig(path string) error {
 	}
 
 	for _, path := range paths {
+		if !c.Agent.Quiet {
+			log.Printf("I! Loading config: %s", path)
+		}
+
 		data, err := LoadConfigFile(path)
 		if err != nil {
 			return fmt.Errorf("error loading config file %s: %w", path, err)
@@ -464,6 +476,9 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	if c.Agent.SnmpTranslator == "" {
 		c.Agent.SnmpTranslator = "netsnmp"
 	}
+
+	// Check if there is enough lockable memory for the secret
+	c.NumberSecrets = uint64(secretCount.Load())
 
 	// Let's link all secrets to their secret-stores
 	return c.LinkSecrets()
@@ -520,6 +535,13 @@ func (c *Config) LoadConfigData(data []byte) error {
 			RemovalIn: "2.0.0",
 			Notice:    "Use 'gosmi' instead",
 		})
+	}
+
+	// Setup the persister if requested
+	if c.Agent.Statefile != "" {
+		c.Persister = &persister.Persister{
+			Filename: c.Agent.Statefile,
+		}
 	}
 
 	if len(c.UnusedFields) > 0 {
@@ -930,12 +952,41 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 		}
 	}
 
-	conf := c.buildParser(parentname, table)
 	if err := c.toml.UnmarshalTable(table, parser); err != nil {
 		return nil, err
 	}
 
+	conf := &models.ParserConfig{
+		Parent:     parentname,
+		DataFormat: dataformat,
+	}
 	running := models.NewRunningParser(parser, conf)
+	err := running.Init()
+	return running, err
+}
+
+func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.RunningSerializer, error) {
+	var dataformat string
+	c.getFieldString(table, "data_format", &dataformat)
+	if dataformat == "" {
+		dataformat = "influx"
+	}
+
+	creator, ok := serializers.Serializers[dataformat]
+	if !ok {
+		return nil, fmt.Errorf("undefined but requested serializer: %s", dataformat)
+	}
+	serializer := creator()
+
+	if err := c.toml.UnmarshalTable(table, serializer); err != nil {
+		return nil, err
+	}
+
+	conf := &models.SerializerConfig{
+		Parent:     parentname,
+		DataFormat: dataformat,
+	}
+	running := models.NewRunningSerializer(serializer, conf)
 	err := running.Init()
 	return running, err
 }
@@ -962,25 +1013,28 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
-	processorConfig, err := c.buildProcessor(name, table)
-	if err != nil {
-		return err
-	}
-
 	// Setup the processor running before the aggregators
-	processorBefore, hasParser, err := c.setupProcessor(processorConfig.Name, creator, table)
+	processorBeforeConfig, err := c.buildProcessor("processors", name, table)
 	if err != nil {
 		return err
 	}
-	rf := models.NewRunningProcessor(processorBefore, processorConfig)
+	processorBefore, hasParser, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
+	if err != nil {
+		return err
+	}
+	rf := models.NewRunningProcessor(processorBefore, processorBeforeConfig)
 	c.fileProcessors = append(c.fileProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Setup another (new) processor instance running after the aggregator
-	processorAfter, _, err := c.setupProcessor(processorConfig.Name, creator, table)
+	processorAfterConfig, err := c.buildProcessor("aggprocessors", name, table)
 	if err != nil {
 		return err
 	}
-	rf = models.NewRunningProcessor(processorAfter, processorConfig)
+	processorAfter, _, err := c.setupProcessor(processorAfterConfig.Name, creator, table)
+	if err != nil {
+		return err
+	}
+	rf = models.NewRunningProcessor(processorAfter, processorAfterConfig)
 	c.fileAggProcessors = append(c.fileAggProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Check the number of misses against the threshold
@@ -1045,6 +1099,18 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
 		return nil
 	}
+
+	// For inputs with parsers we need to compute the set of
+	// options that is not covered by both, the parser and the input.
+	// We achieve this by keeping a local book of missing entries
+	// that counts the number of misses. In case we have a parser
+	// for the input both need to miss the entry. We count the
+	// missing entries at the end.
+	missThreshold := 0
+	missCount := make(map[string]int)
+	c.setLocalMissingTomlFieldTracker(missCount)
+	defer c.resetMissingTomlFieldTracker()
+
 	creator, ok := outputs.Outputs[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1058,12 +1124,34 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 
 	// If the output has a SetSerializer function, then this means it can write
 	// arbitrary types of output, so build the serializer and set it.
-	if t, ok := output.(serializers.SerializerOutput); ok {
-		serializer, err := c.buildSerializer(table)
-		if err != nil {
-			return err
+	if t, ok := output.(telegraf.SerializerPlugin); ok {
+		missThreshold = 1
+		if serializer, err := c.addSerializer(name, table); err == nil {
+			t.SetSerializer(serializer)
+		} else {
+			missThreshold = 0
+			// Fallback to the old way of instantiating the parsers.
+			serializer, err := c.buildSerializerOld(table)
+			if err != nil {
+				return err
+			}
+			t.SetSerializer(serializer)
 		}
-		t.SetSerializer(serializer)
+	} else if t, ok := output.(serializers.SerializerOutput); ok {
+		// Keep the old interface for backward compatibility
+		// DEPRECATED: Please switch your plugin to telegraf.Serializers
+		missThreshold = 1
+		if serializer, err := c.addSerializer(name, table); err == nil {
+			t.SetSerializer(serializer)
+		} else {
+			missThreshold = 0
+			// Fallback to the old way of instantiating the parsers.
+			serializer, err := c.buildSerializerOld(table)
+			if err != nil {
+				return err
+			}
+			t.SetSerializer(serializer)
+		}
 	}
 
 	outputConfig, err := c.buildOutput(name, table)
@@ -1085,8 +1173,19 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		}
 	}
 
+	// Check the number of misses against the threshold
+	for key, count := range missCount {
+		if count <= missThreshold {
+			continue
+		}
+		if err := c.missingTomlField(nil, key); err != nil {
+			return err
+		}
+	}
+
 	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
+
 	return nil
 }
 
@@ -1180,10 +1279,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		}
 	}
 
-	rp := models.NewRunningInput(input, pluginConfig)
-	rp.SetDefaultTags(c.Tags)
-	c.Inputs = append(c.Inputs, rp)
-
 	// Check the number of misses against the threshold
 	for key, count := range missCount {
 		if count <= missCountThreshold {
@@ -1193,6 +1288,10 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return err
 		}
 	}
+
+	rp := models.NewRunningInput(input, pluginConfig)
+	rp.SetDefaultTags(c.Tags)
+	c.Inputs = append(c.Inputs, rp)
 
 	return nil
 }
@@ -1235,28 +1334,16 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 	if err != nil {
 		return conf, err
 	}
-	return conf, nil
-}
 
-// buildParser parses Parser specific items from the ast.Table,
-// builds the filter and returns a
-// models.ParserConfig to be inserted into models.RunningParser
-func (c *Config) buildParser(name string, tbl *ast.Table) *models.ParserConfig {
-	var dataFormat string
-	c.getFieldString(tbl, "data_format", &dataFormat)
-
-	conf := &models.ParserConfig{
-		Parent:     name,
-		DataFormat: dataFormat,
-	}
-
-	return conf
+	// Generate an ID for the plugin
+	conf.ID, err = generatePluginID("aggregators."+name, tbl)
+	return conf, err
 }
 
 // buildProcessor parses Processor specific items from the ast.Table,
 // builds the filter and returns a
 // models.ProcessorConfig to be inserted into models.RunningProcessor
-func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
 
 	c.getFieldInt64(tbl, "order", &conf.Order)
@@ -1271,7 +1358,10 @@ func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorC
 	if err != nil {
 		return conf, err
 	}
-	return conf, nil
+
+	// Generate an ID for the plugin
+	conf.ID, err = generatePluginID(category+"."+name, tbl)
+	return conf, err
 }
 
 // buildFilter builds a Filter
@@ -1339,13 +1429,16 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	if err != nil {
 		return cp, err
 	}
-	return cp, nil
+
+	// Generate an ID for the plugin
+	cp.ID, err = generatePluginID("inputs."+name, tbl)
+	return cp, err
 }
 
-// buildSerializer grabs the necessary entries from the ast.Table for creating
+// buildSerializerOld grabs the necessary entries from the ast.Table for creating
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
-func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error) {
+func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error) {
 	sc := &serializers.Config{TimestampUnits: 1 * time.Second}
 
 	c.getFieldString(tbl, "data_format", &sc.DataFormat)
@@ -1366,9 +1459,10 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
+
+	c.getFieldString(tbl, "graphite_strict_sanitize_regex", &sc.GraphiteStrictRegex)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
 	c.getFieldString(tbl, "graphite_tag_sanitize_mode", &sc.GraphiteTagSanitizeMode)
-
 	c.getFieldString(tbl, "graphite_separator", &sc.GraphiteSeparator)
 
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
@@ -1427,7 +1521,9 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 		return nil, c.firstErr()
 	}
 
-	return oc, nil
+	// Generate an ID for the plugin
+	oc.ID, err = generatePluginID("outputs."+name, tbl)
+	return oc, err
 }
 
 func (c *Config) missingTomlField(_ reflect.Type, key string) error {
@@ -1456,6 +1552,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "prefix", "template", "templates",
 		"carbon2_format", "carbon2_sanitize_replace_char",
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
+		"graphite_strict_sanitize_regex",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
 		"json_timestamp_format", "json_timestamp_units", "json_transformation",
@@ -1486,6 +1583,7 @@ func (c *Config) setLocalMissingTomlFieldTracker(counter map[string]int) {
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Aggregator)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Processor)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Parser)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.Serializer)(nil)).Elem())
 
 		c, ok := counter[key]
 		if !root {
@@ -1580,6 +1678,8 @@ func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) 
 					return
 				}
 				*target = i
+			} else {
+				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting int", fieldName))
 			}
 		}
 	}

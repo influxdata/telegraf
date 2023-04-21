@@ -488,7 +488,8 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 				// Our callback always wraps errors in a walkError.
 				// If this error isn't a walkError, we know it's not
 				// from the callback
-				if _, ok := err.(*walkError); !ok {
+				var walkErr *walkError
+				if !errors.As(err, &walkErr) {
 					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
 				}
 			}

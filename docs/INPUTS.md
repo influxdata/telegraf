@@ -15,7 +15,7 @@ and submit new inputs.
   themselves.  See below for a quick example.
 - To be available within Telegraf itself, plugins must register themselves
   using a file in `github.com/influxdata/telegraf/plugins/inputs/all` named
-  according to the plugin name. Make sure your also add build-tags to
+  according to the plugin name. Make sure you also add build-tags to
   conditionally build the plugin.
 - Each plugin requires a file called `sample.conf` containing the sample
   configuration  for the plugin in TOML format.

@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	nut "github.com/robbiet480/go.nut"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	nut "github.com/robbiet480/go.nut"
 )
 
 //go:embed sample.conf
@@ -96,6 +97,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"nominal_input_voltage":   "input.voltage.nominal",
 		"nominal_power":           "ups.realpower.nominal",
 		"output_voltage":          "output.voltage",
+		"real_power":              "ups.realpower",
 		"ups_delay_shutdown":      "ups.delay.shutdown",
 		"ups_delay_start":         "ups.delay.start",
 	}
@@ -113,7 +115,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		// Force expected float values to actually being float (e.g. if delivered as int)
 		float, err := internal.ToFloat64(metrics[rawValue])
 		if err != nil {
-			acc.AddError(fmt.Errorf("converting %s=%v failed: %v", rawValue, metrics[rawValue], err))
+			acc.AddError(fmt.Errorf("converting %s=%v failed: %w", rawValue, metrics[rawValue], err))
 			continue
 		}
 		fields[key] = float
@@ -121,7 +123,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 
 	val, err := internal.ToString(metrics["ups.firmware"])
 	if err != nil {
-		acc.AddError(fmt.Errorf("converting ups.firmware=%v failed: %v", metrics["ups.firmware"], err))
+		acc.AddError(fmt.Errorf("converting ups.firmware=%q failed: %w", metrics["ups.firmware"], err))
 	} else {
 		fields["firmware"] = val
 	}

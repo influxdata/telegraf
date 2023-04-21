@@ -136,7 +136,7 @@ func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 		go func(baseUrl string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			if err := k.gatherKibanaStatus(baseUrl, acc); err != nil {
-				acc.AddError(fmt.Errorf("[url=%s]: %s", baseUrl, err))
+				acc.AddError(fmt.Errorf("[url=%s]: %w", baseUrl, err))
 				return
 			}
 		}(serv, acc)

@@ -14,6 +14,15 @@ type TagFilter struct {
 	filter filter.Filter
 }
 
+func (tf *TagFilter) Compile() error {
+	f, err := filter.Compile(tf.Values)
+	if err != nil {
+		return err
+	}
+	tf.filter = f
+	return nil
+}
+
 // Filter containing drop/pass and tagdrop/tagpass rules
 type Filter struct {
 	NameDrop       []string
@@ -79,15 +88,14 @@ func (f *Filter) Compile() error {
 		return fmt.Errorf("error compiling 'taginclude', %w", err)
 	}
 
-	for i := range f.TagDropFilters {
-		f.TagDropFilters[i].filter, err = filter.Compile(f.TagDropFilters[i].Values)
-		if err != nil {
+	for i := 0; i < len(f.TagDropFilters); i++ {
+		if err := f.TagDropFilters[i].Compile(); err != nil {
 			return fmt.Errorf("error compiling 'tagdrop', %w", err)
 		}
 	}
-	for i := range f.TagPassFilters {
-		f.TagPassFilters[i].filter, err = filter.Compile(f.TagPassFilters[i].Values)
-		if err != nil {
+
+	for i := 0; i < len(f.TagPassFilters); i++ {
+		if err := f.TagPassFilters[i].Compile(); err != nil {
 			return fmt.Errorf("error compiling 'tagpass', %w", err)
 		}
 	}
@@ -153,64 +161,13 @@ func (f *Filter) shouldNamePass(key string) bool {
 // shouldFieldPass returns true if the metric should pass, false if it should drop
 // based on the drop/pass filter parameters
 func (f *Filter) shouldFieldPass(key string) bool {
-	if f.fieldPassFilter != nil && f.fieldDropFilter != nil {
-		return f.fieldPassFilter.Match(key) && !f.fieldDropFilter.Match(key)
-	} else if f.fieldPassFilter != nil {
-		return f.fieldPassFilter.Match(key)
-	} else if f.fieldDropFilter != nil {
-		return !f.fieldDropFilter.Match(key)
-	}
-	return true
+	return ShouldPassFilters(f.fieldPassFilter, f.fieldDropFilter, key)
 }
 
 // shouldTagsPass returns true if the metric should pass, false if it should drop
 // based on the tagdrop/tagpass filter parameters
 func (f *Filter) shouldTagsPass(tags []*telegraf.Tag) bool {
-	pass := func(f *Filter) bool {
-		for _, pat := range f.TagPassFilters {
-			if pat.filter == nil {
-				continue
-			}
-			for _, tag := range tags {
-				if tag.Key == pat.Name {
-					if pat.filter.Match(tag.Value) {
-						return true
-					}
-				}
-			}
-		}
-		return false
-	}
-
-	drop := func(f *Filter) bool {
-		for _, pat := range f.TagDropFilters {
-			if pat.filter == nil {
-				continue
-			}
-			for _, tag := range tags {
-				if tag.Key == pat.Name {
-					if pat.filter.Match(tag.Value) {
-						return false
-					}
-				}
-			}
-		}
-		return true
-	}
-
-	// Add additional logic in case where both parameters are set.
-	// see: https://github.com/influxdata/telegraf/issues/2860
-	if f.TagPassFilters != nil && f.TagDropFilters != nil {
-		// return true only in case when tag pass and won't be dropped (true, true).
-		// in case when the same tag should be passed and dropped it will be dropped (true, false).
-		return pass(f) && drop(f)
-	} else if f.TagPassFilters != nil {
-		return pass(f)
-	} else if f.TagDropFilters != nil {
-		return drop(f)
-	}
-
-	return true
+	return ShouldTagsPass(f.TagPassFilters, f.TagDropFilters, tags)
 }
 
 // filterFields removes fields according to fieldpass/fielddrop.
@@ -251,4 +208,63 @@ func (f *Filter) filterTags(metric telegraf.Metric) {
 	for _, key := range filterKeys {
 		metric.RemoveTag(key)
 	}
+}
+
+func ShouldPassFilters(include filter.Filter, exclude filter.Filter, key string) bool {
+	if include != nil && exclude != nil {
+		return include.Match(key) && !exclude.Match(key)
+	} else if include != nil {
+		return include.Match(key)
+	} else if exclude != nil {
+		return !exclude.Match(key)
+	}
+	return true
+}
+
+func ShouldTagsPass(passFilters []TagFilter, dropFilters []TagFilter, tags []*telegraf.Tag) bool {
+	pass := func(tpf []TagFilter) bool {
+		for _, pat := range tpf {
+			if pat.filter == nil {
+				continue
+			}
+			for _, tag := range tags {
+				if tag.Key == pat.Name {
+					if pat.filter.Match(tag.Value) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+
+	drop := func(tdf []TagFilter) bool {
+		for _, pat := range tdf {
+			if pat.filter == nil {
+				continue
+			}
+			for _, tag := range tags {
+				if tag.Key == pat.Name {
+					if pat.filter.Match(tag.Value) {
+						return false
+					}
+				}
+			}
+		}
+		return true
+	}
+
+	// Add additional logic in case where both parameters are set.
+	// see: https://github.com/influxdata/telegraf/issues/2860
+	if passFilters != nil && dropFilters != nil {
+		// return true only in case when tag pass and won't be dropped (true, true).
+		// in case when the same tag should be passed and dropped it will be dropped (true, false).
+		return pass(passFilters) && drop(dropFilters)
+	} else if passFilters != nil {
+		return pass(passFilters)
+	} else if dropFilters != nil {
+		return drop(dropFilters)
+	}
+
+	return true
 }

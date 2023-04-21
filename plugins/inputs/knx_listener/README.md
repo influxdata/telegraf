@@ -5,6 +5,17 @@ This plugin connects to the KNX bus via a KNX-IP interface.
 Information about supported KNX message datapoint types can be found at the
 underlying "knx-go" project site (<https://github.com/vapourismo/knx-go>).
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -67,7 +78,7 @@ the KNX-specification or the "knx-go" project for the corresponding DPT.
 
 This section shows example output in Line Protocol format.
 
-```shell
+```text
 illumination,groupaddress=5/5/4,host=Hugin,source=1.1.12,unit=lux value=17.889999389648438 1582132674999013274
 temperature,groupaddress=5/5/1,host=Hugin,source=1.1.8,unit=°C value=17.799999237060547 1582132663427587361
 windowopen,groupaddress=1/0/1,host=Hugin,source=1.1.3 value=true 1582132630425581320

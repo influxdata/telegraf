@@ -1,6 +1,6 @@
 # Webhooks Input Plugin
 
-This is a Telegraf service plugin that start an http server and register
+This is a Telegraf service plugin that start a http server and register
 multiple webhook listeners.
 
 ```sh
@@ -14,6 +14,17 @@ the settings to match your environment. Once that is complete:
 cp config.conf.new /etc/telegraf/telegraf.conf
 sudo service telegraf start
 ```
+
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -31,6 +42,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.webhooks]]
   ## Address and port to host Webhook listener on
   service_address = ":1619"
+
+  ## Maximum duration before timing out read of the request
+  # read_timeout = "10s"
+  ## Maximum duration before timing out write of the response
+  # write_timeout = "10s"
 
   [inputs.webhooks.filestack]
     path = "/filestack"

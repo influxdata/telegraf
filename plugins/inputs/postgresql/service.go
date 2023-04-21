@@ -102,18 +102,21 @@ var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)
 
 // Start starts the ServiceInput's service, whatever that may be
 func (p *Service) Start(telegraf.Accumulator) (err error) {
-	addr, err := p.Address.Get()
+	addrSecret, err := p.Address.Get()
 	if err != nil {
-		return fmt.Errorf("getting address failed: %v", err)
+		return fmt.Errorf("getting address failed: %w", err)
 	}
-	defer config.ReleaseSecret(addr)
+	addr := string(addrSecret)
+	defer config.ReleaseSecret(addrSecret)
 
-	if p.Address.Empty() || string(addr) == "localhost" {
-		addr = []byte("host=localhost sslmode=disable")
-		p.Address = config.NewSecret(addr)
+	if p.Address.Empty() || addr == "localhost" {
+		addr = "host=localhost sslmode=disable"
+		if err := p.Address.Set([]byte(addr)); err != nil {
+			return err
+		}
 	}
 
-	connConfig, err := pgx.ParseConfig(string(addr))
+	connConfig, err := pgx.ParseConfig(addr)
 	if err != nil {
 		return err
 	}
@@ -143,7 +146,7 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 
 // Stop stops the services and closes any necessary channels and connections
 func (p *Service) Stop() {
-	p.DB.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+	p.DB.Close()
 }
 
 var kvMatcher, _ = regexp.Compile(`(password|sslcert|sslkey|sslmode|sslrootcert)=\S+ ?`)
@@ -156,7 +159,7 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 
 	addr, err := p.Address.Get()
 	if err != nil {
-		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %v", err)
+		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %w", err)
 	}
 	defer config.ReleaseSecret(addr)
 

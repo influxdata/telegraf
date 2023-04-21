@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -72,8 +73,13 @@ func TestWrite(t *testing.T) {
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
 
-		_, err = io.Copy(&body, gz)
+		var maxDecompressionSize int64 = 500 * 1024 * 1024
+		n, err := io.CopyN(&body, gz, maxDecompressionSize)
+		if errors.Is(err, io.EOF) {
+			err = nil
+		}
 		require.NoError(t, err)
+		require.NotEqualf(t, n, maxDecompressionSize, "size of decoded data exceeds allowed size %d", maxDecompressionSize)
 
 		var lm Metric
 		err = json.Unmarshal(body.Bytes(), &lm)

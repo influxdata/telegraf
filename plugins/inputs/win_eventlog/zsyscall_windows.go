@@ -75,6 +75,8 @@ var (
 	procEvtNext                  = modwevtapi.NewProc("EvtNext")
 	procEvtFormatMessage         = modwevtapi.NewProc("EvtFormatMessage")
 	procEvtOpenPublisherMetadata = modwevtapi.NewProc("EvtOpenPublisherMetadata")
+	procEvtCreateBookmark        = modwevtapi.NewProc("EvtCreateBookmark")
+	procEvtUpdateBookmark        = modwevtapi.NewProc("EvtUpdateBookmark")
 )
 
 func _EvtSubscribe(
@@ -92,8 +94,8 @@ func _EvtSubscribe(
 		8,
 		uintptr(session),
 		uintptr(signalEvent),
-		uintptr(unsafe.Pointer(channelPath)),
-		uintptr(unsafe.Pointer(query)),
+		uintptr(unsafe.Pointer(channelPath)), //nolint:gosec // G103: Valid use of unsafe call to pass channelPath
+		uintptr(unsafe.Pointer(query)),       //nolint:gosec // G103: Valid use of unsafe call to pass query
 		uintptr(bookmark),
 		uintptr(context),
 		uintptr(callback),
@@ -127,9 +129,9 @@ func _EvtRender(
 		uintptr(fragment),
 		uintptr(flags),
 		uintptr(bufferSize),
-		uintptr(unsafe.Pointer(buffer)),
-		uintptr(unsafe.Pointer(bufferUsed)),
-		uintptr(unsafe.Pointer(propertyCount)),
+		uintptr(unsafe.Pointer(buffer)),        //nolint:gosec // G103: Valid use of unsafe call to pass buffer
+		uintptr(unsafe.Pointer(bufferUsed)),    //nolint:gosec // G103: Valid use of unsafe call to pass bufferUsed
+		uintptr(unsafe.Pointer(propertyCount)), //nolint:gosec // G103: Valid use of unsafe call to pass propertyCount
 		0,
 		0,
 	)
@@ -161,10 +163,10 @@ func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle,
 		6,
 		uintptr(resultSet),
 		uintptr(eventArraySize),
-		uintptr(unsafe.Pointer(eventArray)),
+		uintptr(unsafe.Pointer(eventArray)), //nolint:gosec // G103: Valid use of unsafe call to pass eventArray
 		uintptr(timeout),
 		uintptr(flags),
-		uintptr(unsafe.Pointer(numReturned)),
+		uintptr(unsafe.Pointer(numReturned)), //nolint:gosec // G103: Valid use of unsafe call to pass numReturned
 	)
 	if r1 == 0 {
 		if e1 != 0 {
@@ -197,8 +199,8 @@ func _EvtFormatMessage(
 		uintptr(values),
 		uintptr(flags),
 		uintptr(bufferSize),
-		uintptr(unsafe.Pointer(buffer)),
-		uintptr(unsafe.Pointer(bufferUsed)),
+		uintptr(unsafe.Pointer(buffer)),     //nolint:gosec // G103: Valid use of unsafe call to pass buffer
+		uintptr(unsafe.Pointer(bufferUsed)), //nolint:gosec // G103: Valid use of unsafe call to pass bufferUsed
 	)
 	if r1 == 0 {
 		if e1 != 0 {
@@ -215,8 +217,8 @@ func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, log
 		procEvtOpenPublisherMetadata.Addr(),
 		5,
 		uintptr(session),
-		uintptr(unsafe.Pointer(publisherIdentity)),
-		uintptr(unsafe.Pointer(logFilePath)),
+		uintptr(unsafe.Pointer(publisherIdentity)), //nolint:gosec // G103: Valid use of unsafe call to pass publisherIdentity
+		uintptr(unsafe.Pointer(logFilePath)),       //nolint:gosec // G103: Valid use of unsafe call to pass logFilePath
 		uintptr(locale),
 		uintptr(flags),
 		0,
@@ -230,4 +232,28 @@ func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, log
 		}
 	}
 	return
+}
+
+func _EvtCreateBookmark(bookmarkXML *uint16) (EvtHandle, error) {
+	//nolint:gosec // G103: Valid use of unsafe call to pass bookmarkXML
+	r0, _, e1 := syscall.Syscall(procEvtCreateBookmark.Addr(), 1, uintptr(unsafe.Pointer(bookmarkXML)), 0, 0)
+	handle := EvtHandle(r0)
+	if handle != 0 {
+		return handle, nil
+	}
+	if e1 != 0 {
+		return handle, errnoErr(e1)
+	}
+	return handle, syscall.EINVAL
+}
+
+func _EvtUpdateBookmark(bookmark, event EvtHandle) error {
+	r0, _, e1 := syscall.Syscall(procEvtUpdateBookmark.Addr(), 2, uintptr(bookmark), uintptr(event), 0)
+	if r0 != 0 {
+		return nil
+	}
+	if e1 != 0 {
+		return errnoErr(e1)
+	}
+	return syscall.EINVAL
 }

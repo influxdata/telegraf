@@ -158,7 +158,7 @@ func (p *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumula
 		importMetric(bytes.NewReader(fpmOutput), acc, addr)
 		return nil
 	}
-	return fmt.Errorf("unable parse phpfpm status, error: %v %v", string(fpmErr), err)
+	return fmt.Errorf("unable parse phpfpm status, error: %s; %w", string(fpmErr), err)
 }
 
 // Gather stat using http protocol
@@ -262,7 +262,7 @@ func globUnixSocket(address string) ([]string, error) {
 	pattern, status := unixSocketPaths(address)
 	glob, err := globpath.Compile(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("could not compile glob %q: %v", pattern, err)
+		return nil, fmt.Errorf("could not compile glob %q: %w", pattern, err)
 	}
 	paths := glob.Match()
 	if len(paths) == 0 {

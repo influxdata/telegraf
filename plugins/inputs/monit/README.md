@@ -239,7 +239,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
+```text
 monit_file,monitoring_mode=active,monitoring_status=monitored,pending_action=none,platform_name=Linux,service=rsyslog_pid,source=xyzzy.local,status=running,version=5.20.0 mode=644i,monitoring_mode_code=0i,monitoring_status_code=1i,pending_action_code=0i,size=3i,status_code=0i 1579735047000000000
 monit_process,monitoring_mode=active,monitoring_status=monitored,pending_action=none,platform_name=Linux,service=rsyslog,source=xyzzy.local,status=running,version=5.20.0 children=0i,cpu_percent=0,cpu_percent_total=0,mem_kb=3148i,mem_kb_total=3148i,mem_percent=0.2,mem_percent_total=0.2,monitoring_mode_code=0i,monitoring_status_code=1i,parent_pid=1i,pending_action_code=0i,pid=318i,status_code=0i,threads=4i 1579735047000000000
 monit_program,monitoring_mode=active,monitoring_status=initializing,pending_action=none,platform_name=Linux,service=echo,source=xyzzy.local,status=running,version=5.20.0 monitoring_mode_code=0i,monitoring_status_code=2i,pending_action_code=0i,program_started=0i,program_status=0i,status_code=0i 1579735047000000000

@@ -4,6 +4,7 @@ package haproxy
 import (
 	_ "embed"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -85,8 +86,7 @@ func (h *haproxy) Gather(acc telegraf.Accumulator) error {
 }
 
 func (h *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
-	var network string
-	var address string
+	var network, address string
 	if strings.HasPrefix(addr, "tcp://") {
 		network = "tcp"
 		address = strings.TrimPrefix(addr, "tcp://")
@@ -96,15 +96,13 @@ func (h *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) erro
 	}
 
 	c, err := net.Dial(network, address)
-
 	if err != nil {
-		return fmt.Errorf("could not connect to '%s://%s': %s", network, address, err)
+		return fmt.Errorf("could not connect to '%s://%s': %w", network, address, err)
 	}
 
 	_, errw := c.Write([]byte("show stat\n"))
-
 	if errw != nil {
-		return fmt.Errorf("could not write to socket '%s://%s': %s", network, address, errw)
+		return fmt.Errorf("could not write to socket '%s://%s': %w", network, address, errw)
 	}
 
 	return h.importCsvResult(c, acc, address)
@@ -212,7 +210,7 @@ func (h *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 
 	for {
 		row, err := csvr.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

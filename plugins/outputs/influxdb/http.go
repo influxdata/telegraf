@@ -155,7 +155,10 @@ func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
 	}
 
 	if cfg.Serializer == nil {
-		cfg.Serializer = influx.NewSerializer()
+		cfg.Serializer = &influx.Serializer{}
+		if err := cfg.Serializer.Init(); err != nil {
+			return nil, err
+		}
 	}
 
 	var transport *http.Transport
@@ -494,14 +497,14 @@ func (c *httpClient) addHeaders(req *http.Request) error {
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
 		password, err := c.config.Password.Get()
 		if err != nil {
+			config.ReleaseSecret(username)
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-
 		req.SetBasicAuth(string(username), string(password))
+		config.ReleaseSecret(username)
+		config.ReleaseSecret(password)
 	}
 
 	for header, value := range c.config.Headers {

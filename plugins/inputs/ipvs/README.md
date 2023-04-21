@@ -18,6 +18,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Collect virtual and real server stats from Linux IPVS
+# This plugin ONLY supports Linux
 [[inputs.ipvs]]
   # no configuration
 ```
@@ -80,7 +81,7 @@ configure a virtual server using `ipvsadm`.
 
 Virtual server is configured using `fwmark` and backed by 2 real servers:
 
-```shell
+```text
 ipvs_virtual_server,address=172.18.64.234,address_family=inet,netmask=32,port=9000,protocol=tcp,sched=rr bytes_in=0i,bytes_out=0i,pps_in=0i,pps_out=0i,cps=0i,connections=0i,pkts_in=0i,pkts_out=0i 1541019340000000000
 ipvs_real_server,address=172.18.64.220,address_family=inet,port=9000,virtual_address=172.18.64.234,virtual_port=9000,virtual_protocol=tcp active_connections=0i,inactive_connections=0i,pkts_in=0i,bytes_out=0i,pps_out=0i,connections=0i,pkts_out=0i,bytes_in=0i,pps_in=0i,cps=0i 1541019340000000000
 ipvs_real_server,address=172.18.64.219,address_family=inet,port=9000,virtual_address=172.18.64.234,virtual_port=9000,virtual_protocol=tcp active_connections=0i,inactive_connections=0i,pps_in=0i,pps_out=0i,connections=0i,pkts_in=0i,pkts_out=0i,bytes_in=0i,bytes_out=0i,cps=0i 1541019340000000000
@@ -89,7 +90,7 @@ ipvs_real_server,address=172.18.64.219,address_family=inet,port=9000,virtual_add
 Virtual server is configured using `proto+addr+port` and backed by 2 real
 servers:
 
-```shell
+```text
 ipvs_virtual_server,address_family=inet,fwmark=47,netmask=32,sched=rr cps=0i,connections=0i,pkts_in=0i,pkts_out=0i,bytes_in=0i,bytes_out=0i,pps_in=0i,pps_out=0i 1541019340000000000
 ipvs_real_server,address=172.18.64.220,address_family=inet,port=9000,virtual_fwmark=47 inactive_connections=0i,pkts_out=0i,bytes_out=0i,pps_in=0i,cps=0i,active_connections=0i,pkts_in=0i,bytes_in=0i,pps_out=0i,connections=0i 1541019340000000000
 ipvs_real_server,address=172.18.64.219,address_family=inet,port=9000,virtual_fwmark=47 cps=0i,active_connections=0i,inactive_connections=0i,connections=0i,pkts_in=0i,bytes_out=0i,pkts_out=0i,bytes_in=0i,pps_in=0i,pps_out=0i 1541019340000000000

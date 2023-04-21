@@ -67,7 +67,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return err
 	}
-	buffer.Write(serializedMetrics) //nolint:revive // from buffer.go: "err is always nil"
+	buffer.Write(serializedMetrics)
 
 	if buffer.Len() <= 0 {
 		return nil
@@ -141,7 +141,7 @@ func (c *CommandRunner) truncate(buf bytes.Buffer) string {
 		buf.Truncate(i)
 	}
 	if didTruncate {
-		buf.WriteString("...") //nolint:revive // from buffer.go: "err is always nil"
+		buf.WriteString("...")
 	}
 	return buf.String()
 }

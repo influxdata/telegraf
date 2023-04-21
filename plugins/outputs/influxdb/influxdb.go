@@ -169,10 +169,15 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *InfluxDB) udpClient(address *url.URL) (Client, error) {
+	serializer := &influx.Serializer{UintSupport: true}
+	if err := serializer.Init(); err != nil {
+		return nil, err
+	}
+
 	udpConfig := &UDPConfig{
 		URL:            address,
 		MaxPayloadSize: int(i.UDPPayload),
-		Serializer:     i.newSerializer(),
+		Serializer:     serializer,
 		Log:            i.Log,
 	}
 
@@ -187,6 +192,11 @@ func (i *InfluxDB) udpClient(address *url.URL) (Client, error) {
 func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
+		return nil, err
+	}
+
+	serializer := &influx.Serializer{UintSupport: true}
+	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +218,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, proxy *url.
 		RetentionPolicyTag:        i.RetentionPolicyTag,
 		ExcludeRetentionPolicyTag: i.ExcludeRetentionPolicyTag,
 		Consistency:               i.WriteConsistency,
-		Serializer:                i.newSerializer(),
+		Serializer:                serializer,
 		Log:                       i.Log,
 	}
 
@@ -226,15 +236,6 @@ func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, proxy *url.
 	}
 
 	return c, nil
-}
-
-func (i *InfluxDB) newSerializer() *influx.Serializer {
-	serializer := influx.NewSerializer()
-	if i.InfluxUintSupport {
-		serializer.SetFieldTypeSupport(influx.UintSupport)
-	}
-
-	return serializer
 }
 
 func init() {

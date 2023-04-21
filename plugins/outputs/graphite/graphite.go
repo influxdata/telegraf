@@ -25,6 +25,7 @@ type Graphite struct {
 	GraphiteTagSupport      bool   `toml:"graphite_tag_support"`
 	GraphiteTagSanitizeMode string `toml:"graphite_tag_sanitize_mode"`
 	GraphiteSeparator       string `toml:"graphite_separator"`
+	GraphiteStrictRegex     string `toml:"graphite_strict_sanitize_regex"`
 	// URL is only for backwards compatibility
 	Servers   []string        `toml:"servers"`
 	Prefix    string          `toml:"prefix"`
@@ -165,7 +166,15 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteTagSanitizeMode, g.GraphiteSeparator, g.Templates)
+	s, err := serializers.NewGraphiteSerializer(
+		g.Prefix,
+		g.Template,
+		g.GraphiteStrictRegex,
+		g.GraphiteTagSupport,
+		g.GraphiteTagSanitizeMode,
+		g.GraphiteSeparator,
+		g.Templates,
+	)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ import (
 	kafkaOutput "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -540,7 +540,8 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			output, ok := creator().(*kafkaOutput.Kafka)
 			require.True(t, ok)
 
-			s := serializers.NewInfluxSerializer()
+			s := &influxSerializer.Serializer{}
+			require.NoError(t, s.Init())
 			output.SetSerializer(s)
 			output.Brokers = brokers
 			output.Topic = topic
@@ -592,7 +593,7 @@ func TestExponentialBackoff(t *testing.T) {
 	max := 3
 
 	// get an unused port by listening on next available port, then closing it
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 	require.NoError(t, listener.Close())

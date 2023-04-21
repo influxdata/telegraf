@@ -16,6 +16,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Monitor wifi signal strength and quality
+# This plugin ONLY supports Linux
 [[inputs.wireless]]
   ## Sets 'proc' directory path
   ## If not specified, then default is /proc
@@ -43,6 +44,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 This section shows example output in Line Protocol format.
 
-```shell
+```text
 wireless,host=example.localdomain,interface=wlan0 misc=0i,frag=0i,link=60i,level=-50i,noise=-256i,nwid=0i,crypt=0i,retry=1525i,missed_beacon=0i,status=0i 1519843022000000000
 ```

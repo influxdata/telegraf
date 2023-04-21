@@ -6,6 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -69,7 +70,7 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 // Stop causes the plugin to cease collecting JSON data from the socket provided
 // to Suricata.
 func (s *Suricata) Stop() {
-	s.inputListener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+	s.inputListener.Close()
 	if s.cancel != nil {
 		s.cancel()
 	}
@@ -116,7 +117,7 @@ func (s *Suricata) handleServerConnection(ctx context.Context, acc telegraf.Accu
 			// we want to handle EOF as an opportunity to wait for a new
 			// connection -- this could, for example, happen when Suricata is
 			// restarted while Telegraf is running.
-			if err != io.EOF {
+			if !errors.Is(err, io.EOF) {
 				acc.AddError(err)
 				return
 			}

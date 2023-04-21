@@ -14,6 +14,17 @@ For an introduction to AMQP see:
 - [amqp - concepts](https://www.rabbitmq.com/tutorials/amqp-concepts.html)
 - [rabbitmq: getting started](https://www.rabbitmq.com/getstarted.html)
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -99,6 +110,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## - Use "identity" to apply no encoding
   ## - Use "auto" determine the encoding using the ContentEncoding header
   # content_encoding = "identity"
+
+  ## Maximum size of decoded message.
+  ## Acceptable units are B, KiB, KB, MiB, MB...
+  ## Without quotes and units, interpreted as size in bytes.
+  # max_decompression_size = "500MB"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

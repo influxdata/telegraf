@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -106,9 +107,21 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
 	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
+	if err := a.initPlugins(); err != nil {
 		return err
+	}
+
+	if a.Config.Persister != nil {
+		log.Printf("D! [agent] Initializing plugin states")
+		if err := a.initPersister(); err != nil {
+			return err
+		}
+		if err := a.Config.Persister.Load(); err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			log.Print("I! [agent] State file does not exist... Skip restoring states...")
+		}
 	}
 
 	startTime := time.Now()
@@ -183,6 +196,13 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	wg.Wait()
 
+	if a.Config.Persister != nil {
+		log.Printf("D! [agent] Persisting plugin states")
+		if err := a.Config.Persister.Store(); err != nil {
+			return err
+		}
+	}
+
 	log.Printf("D! [agent] Stopped Successfully")
 	return err
 }
@@ -223,6 +243,80 @@ func (a *Agent) initPlugins() error {
 			return fmt.Errorf("could not initialize output %s: %w", output.LogName(), err)
 		}
 	}
+	return nil
+}
+
+// initPersister initializes the persister and registers the plugins.
+func (a *Agent) initPersister() error {
+	if err := a.Config.Persister.Init(); err != nil {
+		return err
+	}
+
+	for _, input := range a.Config.Inputs {
+		plugin, ok := input.Input.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := input.LogName()
+		id := input.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register input %s: %w", name, err)
+		}
+	}
+
+	for _, processor := range a.Config.Processors {
+		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := processor.LogName()
+		id := processor.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register processor %s: %w", name, err)
+		}
+	}
+
+	for _, aggregator := range a.Config.Aggregators {
+		plugin, ok := aggregator.Aggregator.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := aggregator.LogName()
+		id := aggregator.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register aggregator %s: %w", name, err)
+		}
+	}
+
+	for _, processor := range a.Config.AggProcessors {
+		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := processor.LogName()
+		id := processor.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register aggregating processor %s: %w", name, err)
+		}
+	}
+
+	for _, output := range a.Config.Outputs {
+		plugin, ok := output.Output.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := output.LogName()
+		id := output.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register output %s: %w", name, err)
+		}
+	}
+
 	return nil
 }
 
@@ -673,7 +767,6 @@ func (a *Agent) push(
 		select {
 		case <-time.After(until):
 			aggregator.Push(acc)
-			break
 		case <-ctx.Done():
 			aggregator.Push(acc)
 			return
@@ -682,7 +775,7 @@ func (a *Agent) push(
 }
 
 // startOutputs calls Connect on all outputs and returns the source channel.
-// If an error occurs calling Connect all stared plugins have Close called.
+// If an error occurs calling Connect, all started plugins have Close called.
 func (a *Agent) startOutputs(
 	ctx context.Context,
 	outputs []*models.RunningOutput,
@@ -868,9 +961,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s := influx.NewSerializer()
-		s.SetFieldSortOrder(influx.SortFields)
-
+		s := &influx.Serializer{SortFields: true}
 		for metric := range src {
 			octets, err := s.Serialize(metric)
 			if err == nil {

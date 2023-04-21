@@ -281,7 +281,7 @@ func (c *X509Cert) sourcesToURLs() error {
 			source = reDriveLetter.ReplaceAllString(source, "$1")
 			g, err := globpath.Compile(source)
 			if err != nil {
-				return fmt.Errorf("could not compile glob %v: %v", source, err)
+				return fmt.Errorf("could not compile glob %q: %w", source, err)
 			}
 			c.globpaths = append(c.globpaths, g)
 		} else {
@@ -290,7 +290,7 @@ func (c *X509Cert) sourcesToURLs() error {
 			}
 			u, err := url.Parse(source)
 			if err != nil {
-				return fmt.Errorf("failed to parse cert location - %s", err.Error())
+				return fmt.Errorf("failed to parse cert location: %w", err)
 			}
 			c.locations = append(c.locations, u)
 		}
@@ -430,7 +430,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		defer smtpConn.Text.EndResponse(id)
 		_, _, err = smtpConn.Text.ReadResponse(220)
 		if err != nil {
-			return nil, nil, fmt.Errorf("did not get 220 after STARTTLS: %s", err.Error())
+			return nil, nil, fmt.Errorf("did not get 220 after STARTTLS: %w", err)
 		}
 
 		tlsConn := tls.Client(ipConn, downloadTLSCfg)

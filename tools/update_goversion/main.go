@@ -29,7 +29,7 @@ func (f FileInfo) Update() error {
 	re := regexp.MustCompile(f.Regex)
 	newContents := re.ReplaceAll(b, []byte(f.Replace))
 
-	err = os.WriteFile(f.FileName, newContents, 0664)
+	err = os.WriteFile(f.FileName, newContents, 0640)
 	if err != nil {
 		return err
 	}
@@ -163,6 +163,11 @@ func main() {
 			Replace:  fmt.Sprintf("$1: '%s'", noPatchVersion),
 		},
 		{
+			FileName: ".github/workflows/govulncheck.yml",
+			Regex:    `(go-version).*`,
+			Replace:  fmt.Sprintf("$1: '%s'", noPatchVersion),
+		},
+		{
 			FileName: "go.mod",
 			Regex:    `(go)\s(\d.\d*)`,
 			Replace:  fmt.Sprintf("$1 %s", noPatchVersion),
@@ -171,6 +176,11 @@ func main() {
 			FileName: "Makefile",
 			Regex:    `(quay\.io\/influxdb\/telegraf-ci):(\d.\d*.\d)`,
 			Replace:  fmt.Sprintf("$1:%s", version),
+		},
+		{
+			FileName: "README.md",
+			Regex:    `(Telegraf requires Go version) (\d.\d*)`,
+			Replace:  fmt.Sprintf("$1 %s", noPatchVersion),
 		},
 		{
 			FileName: "scripts/ci.docker",

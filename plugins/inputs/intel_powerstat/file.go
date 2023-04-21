@@ -32,7 +32,7 @@ func (fs *fileServiceImpl) getCPUInfoStats() (map[string]*cpuInfo, error) {
 	path := "/proc/cpuinfo"
 	cpuInfoFile, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("error while reading %s, err: %v", path, err)
+		return nil, fmt.Errorf("error while reading %q: %w", path, err)
 	}
 	defer cpuInfoFile.Close()
 
@@ -142,7 +142,7 @@ func (fs *fileServiceImpl) readFileAtOffsetToUint64(reader io.ReaderAt, offset i
 
 	_, err := reader.ReadAt(buffer, offset)
 	if err != nil {
-		return 0, fmt.Errorf("error on reading file at offset %d, err: %v", offset, err)
+		return 0, fmt.Errorf("error on reading file at offset %d: %w", offset, err)
 	}
 
 	return binary.LittleEndian.Uint64(buffer), nil

@@ -44,6 +44,7 @@ to use them.
   # client_id = "clientid"
   # client_secret = "secret"
   # token_url = "https://indentityprovider/oauth2/v1/token"
+  # audience = ""
   # scopes = ["urn:opc:idm:__myscopes__"]
 
   ## Goole API Auth
@@ -104,6 +105,11 @@ to use them.
   #region = "us-east-1"
 
   ## Amazon Credentials
+  ## Amazon Credentials are not built unless the following aws_service
+  ## setting is set to a non-empty string. It may need to match the name of
+  ## the service output to as well
+  #aws_service = "execute-api"
+
   ## Credentials are loaded in the following order
   ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
   ## 2) Assumed credentials via STS if role_arn is specified

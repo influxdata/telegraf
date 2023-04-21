@@ -171,28 +171,34 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			return fmt.Errorf("unknown privacy protocol %q", s.PrivProtocol)
 		}
 
-		secname, err := s.SecName.Get()
+		secnameSecret, err := s.SecName.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		privPasswd, err := s.PrivPassword.Get()
+		secname := string(secnameSecret)
+		config.ReleaseSecret(secnameSecret)
+
+		privPasswdSecret, err := s.PrivPassword.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		authPasswd, err := s.AuthPassword.Get()
+		privPasswd := string(privPasswdSecret)
+		config.ReleaseSecret(privPasswdSecret)
+
+		authPasswdSecret, err := s.AuthPassword.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
+		authPasswd := string(authPasswdSecret)
+		config.ReleaseSecret(authPasswdSecret)
+
 		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
-			UserName:                 string(secname),
+			UserName:                 secname,
 			PrivacyProtocol:          privacyProtocol,
-			PrivacyPassphrase:        string(privPasswd),
-			AuthenticationPassphrase: string(authPasswd),
+			PrivacyPassphrase:        privPasswd,
+			AuthenticationPassphrase: authPasswd,
 			AuthenticationProtocol:   authenticationProtocol,
 		}
-		config.ReleaseSecret(secname)
-		config.ReleaseSecret(privPasswd)
-		config.ReleaseSecret(authPasswd)
 	}
 
 	// wrap the handler, used in unit tests

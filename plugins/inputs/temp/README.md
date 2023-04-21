@@ -41,7 +41,7 @@ wmic /namespace:\\root\wmi PATH MSAcpi_ThermalZoneTemperature
 
 ## Example Output
 
-```shell
+```text
 temp,sensor=coretemp_physicalid0_crit temp=100 1531298763000000000
 temp,sensor=coretemp_physicalid0_critalarm temp=0 1531298763000000000
 temp,sensor=coretemp_physicalid0_input temp=100 1531298763000000000

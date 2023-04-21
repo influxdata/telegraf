@@ -16,6 +16,28 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func BenchmarkRemoteWrite(b *testing.B) {
+	batch := make([]telegraf.Metric, 1000)
+	for i := range batch {
+		batch[i] = testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"host": "example.org",
+				"C":    "D",
+				"A":    "B",
+			},
+			map[string]interface{}{
+				"time_idle": 42.0,
+			},
+			time.Unix(0, 0),
+		)
+	}
+	s := NewSerializer(FormatConfig{})
+	for n := 0; n < b.N; n++ {
+		_, _ = s.SerializeBatch(batch)
+	}
+}
+
 func TestRemoteWriteSerialize(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -23,6 +45,36 @@ func TestRemoteWriteSerialize(t *testing.T) {
 		metric   telegraf.Metric
 		expected []byte
 	}{
+		// the only way that we can produce an empty metric name is if the
+		// metric is called "prometheus" and has no fields.
+		{
+			name: "empty name is skipped",
+			metric: testutil.MustMetric(
+				"prometheus",
+				map[string]string{
+					"host": "example.org",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+			expected: []byte(``),
+		},
+		{
+			name: "empty labels are skipped",
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"": "example.org",
+				},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []byte(`
+cpu_time_idle 42
+`),
+		},
 		{
 			name: "simple",
 			metric: testutil.MustMetric(

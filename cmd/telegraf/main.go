@@ -23,6 +23,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	_ "github.com/influxdata/telegraf/plugins/secretstores/all"
+	_ "github.com/influxdata/telegraf/plugins/serializers/all"
 )
 
 type TelegrafConfig interface {
@@ -224,6 +225,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			watchConfig: cCtx.String("watch-config"),
 			pidFile:     cCtx.String("pidfile"),
 			plugindDir:  cCtx.String("plugin-directory"),
+			password:    cCtx.String("password"),
 			test:        cCtx.Bool("test"),
 			debug:       cCtx.Bool("debug"),
 			once:        cCtx.Bool("once"),
@@ -280,6 +282,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.StringFlag{
 					Name:  "pidfile",
 					Usage: "file to write our pid to",
+				},
+				&cli.StringFlag{
+					Name:  "password",
+					Usage: "password to unlock secret-stores",
 				},
 				//
 				// Bool flags
@@ -362,7 +368,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	}
 
 	// Make sure we safely erase secrets
-	memguard.CatchInterrupt()
 	defer memguard.Purge()
 
 	return app.Run(args)

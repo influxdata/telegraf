@@ -168,15 +168,14 @@ func (m *MQTTConsumer) connect() error {
 	subscribeToken := m.client.SubscribeMultiple(topics, m.recvMessage)
 	subscribeToken.Wait()
 	if subscribeToken.Error() != nil {
-		m.acc.AddError(fmt.Errorf("subscription error: topics: %s: %v",
-			strings.Join(m.Topics[:], ","), subscribeToken.Error()))
+		m.acc.AddError(fmt.Errorf("subscription error: topics %q: %w", strings.Join(m.Topics[:], ","), subscribeToken.Error()))
 	}
 	return nil
 }
 func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 	// Should already be disconnected, but make doubly sure
 	m.client.Disconnect(5)
-	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
+	m.acc.AddError(fmt.Errorf("connection lost: %w", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
 	m.state = Disconnected
 }

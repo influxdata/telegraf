@@ -128,7 +128,7 @@ func (*IntelPMU) SampleConfig() string {
 func (i *IntelPMU) Init() error {
 	err := checkFiles(i.EventListPaths, i.fileInfo)
 	if err != nil {
-		return fmt.Errorf("error during event definitions paths validation: %v", err)
+		return fmt.Errorf("error during event definitions paths validation: %w", err)
 	}
 
 	reader, err := newReader(i.EventListPaths)
@@ -152,22 +152,22 @@ func (i *IntelPMU) initialization(parser entitiesParser, resolver entitiesResolv
 
 	err := parser.parseEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("error during parsing configuration sections: %v", err)
+		return fmt.Errorf("error during parsing configuration sections: %w", err)
 	}
 
 	err = resolver.resolveEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("error during events resolving: %v", err)
+		return fmt.Errorf("error during events resolving: %w", err)
 	}
 
 	err = i.checkFileDescriptors()
 	if err != nil {
-		return fmt.Errorf("error during file descriptors checking: %v", err)
+		return fmt.Errorf("error during file descriptors checking: %w", err)
 	}
 
 	err = activator.activateEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("error during events activation: %v", err)
+		return fmt.Errorf("error during events activation: %w", err)
 	}
 	return nil
 }
@@ -175,11 +175,11 @@ func (i *IntelPMU) initialization(parser entitiesParser, resolver entitiesResolv
 func (i *IntelPMU) checkFileDescriptors() error {
 	coreFd, err := estimateCoresFd(i.CoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to estimate number of core events file descriptors: %v", err)
+		return fmt.Errorf("failed to estimate number of core events file descriptors: %w", err)
 	}
 	uncoreFd, err := estimateUncoreFd(i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to estimate nubmer of uncore events file descriptors: %v", err)
+		return fmt.Errorf("failed to estimate nubmer of uncore events file descriptors: %w", err)
 	}
 	if coreFd > math.MaxUint64-uncoreFd {
 		return fmt.Errorf("requested number of file descriptors exceeds uint64")
@@ -213,7 +213,7 @@ func (i *IntelPMU) Gather(acc telegraf.Accumulator) error {
 	}
 	coreMetrics, uncoreMetrics, err := i.entitiesReader.readEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to read entities events values: %v", err)
+		return fmt.Errorf("failed to read entities events values: %w", err)
 	}
 
 	for id, m := range coreMetrics {
@@ -275,7 +275,7 @@ func newReader(files []string) (*ia.JSONFilesReader, error) {
 	for _, file := range files {
 		err := reader.AddFiles(file)
 		if err != nil {
-			return nil, fmt.Errorf("failed to add files to reader: %v", err)
+			return nil, fmt.Errorf("failed to add files to reader: %w", err)
 		}
 	}
 	return reader, nil

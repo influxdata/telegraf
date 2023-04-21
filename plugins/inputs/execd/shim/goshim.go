@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -69,7 +70,7 @@ func (s *Shim) AddInput(input telegraf.Input) error {
 	if p, ok := input.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
-			return fmt.Errorf("failed to init input: %s", err)
+			return fmt.Errorf("failed to init input: %w", err)
 		}
 	}
 
@@ -103,7 +104,10 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 	collectMetricsPrompt := make(chan os.Signal, 1)
 	listenForCollectMetricsSignals(ctx, collectMetricsPrompt)
 
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	if err := serializer.Init(); err != nil {
+		return fmt.Errorf("creating serializer failed: %w", err)
+	}
 
 	for _, input := range s.Inputs {
 		wrappedInput := inputShim{Input: input}
@@ -113,7 +117,7 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 
 		if serviceInput, ok := input.(telegraf.ServiceInput); ok {
 			if err := serviceInput.Start(acc); err != nil {
-				return fmt.Errorf("failed to start input: %s", err)
+				return fmt.Errorf("failed to start input: %w", err)
 			}
 		}
 		gatherPromptCh := make(chan empty, 1)
@@ -150,11 +154,11 @@ loop:
 			}
 			b, err := serializer.Serialize(m)
 			if err != nil {
-				return fmt.Errorf("failed to serialize metric: %s", err)
+				return fmt.Errorf("failed to serialize metric: %w", err)
 			}
 			// Write this to stdout
 			if _, err := fmt.Fprint(s.stdout, string(b)); err != nil {
-				return fmt.Errorf("failed to write %q to stdout: %s", string(b), err)
+				return fmt.Errorf("failed to write %q to stdout: %w", string(b), err)
 			}
 		}
 	}

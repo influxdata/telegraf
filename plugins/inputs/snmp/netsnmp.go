@@ -46,8 +46,9 @@ func execCmd(arg0 string, args ...string) ([]byte, error) {
 
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
-		if err, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("%s: %w", bytes.TrimRight(err.Stderr, "\r\n"), err)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, fmt.Errorf("%s: %w", bytes.TrimRight(exitErr.Stderr, "\r\n"), err)
 		}
 		return nil, err
 	}
@@ -194,7 +195,8 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
 	} else {
 		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
-		if err, ok := err.(*exec.Error); ok && err.Err == exec.ErrNotFound {
+		var execErr *exec.Error
+		if errors.As(err, &execErr) && errors.Is(execErr, exec.ErrNotFound) {
 			// Silently discard error if snmptranslate not found and we have a numeric OID.
 			// Meaning we can get by without the lookup.
 			return "", oid, oid, "", nil

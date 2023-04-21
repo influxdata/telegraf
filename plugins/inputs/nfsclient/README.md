@@ -182,7 +182,7 @@ as it changes occasionally.
 
 For basic metrics showing server-wise read and write data.
 
-```shell
+```text
 nfsstat,mountpoint=/NFS,operation=READ,serverexport=1.2.3.4:/storage/NFS ops=600i,retrans=1i,bytes=1207i,rtt=606i,exe=607i 1612651512000000000
 nfsstat,mountpoint=/NFS,operation=WRITE,serverexport=1.2.3.4:/storage/NFS bytes=1407i,rtt=706i,exe=707i,ops=700i,retrans=1i 1612651512000000000
 
@@ -194,7 +194,7 @@ Additionally, per-OP metrics are collected, with examples for READ, LOOKUP, and
 NULL shown.  Please refer to `/proc/self/mountstats` for a list of supported NFS
 operations, as it changes as it changes periodically.
 
-```shell
+```text
 nfs_bytes,mountpoint=/home,serverexport=nfs01:/vol/home directreadbytes=0i,directwritebytes=0i,normalreadbytes=42648757667i,normalwritebytes=0i,readpages=10404603i,serverreadbytes=42617098139i,serverwritebytes=0i,writepages=0i 1608787697000000000
 nfs_events,mountpoint=/home,serverexport=nfs01:/vol/home attrinvalidates=116i,congestionwait=0i,datainvalidates=65i,delay=0i,dentryrevalidates=5911243i,extendwrite=0i,inoderevalidates=200378i,pnfsreads=0i,pnfswrites=0i,setattrtrunc=0i,shortreads=0i,shortwrites=0i,sillyrenames=0i,vfsaccess=7203852i,vfsflush=117405i,vfsfsync=0i,vfsgetdents=3368i,vfslock=0i,vfslookup=740i,vfsopen=157281i,vfsreadpage=16i,vfsreadpages=86874i,vfsrelease=155526i,vfssetattr=0i,vfsupdatepage=0i,vfswritepage=0i,vfswritepages=215514i 1608787697000000000
 nfs_xprt_tcp,mountpoint=/home,serverexport=nfs01:/vol/home backlogutil=0i,badxids=0i,bind_count=1i,connect_count=1i,connect_time=0i,idle_time=0i,inflightsends=15659826i,rpcreceives=2173896i,rpcsends=2173896i 1608787697000000000

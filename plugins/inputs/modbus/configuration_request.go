@@ -102,9 +102,12 @@ func (c *ConfigurationPerRequest) Check() error {
 		for fidx, f := range def.Fields {
 			// Check the input type for all fields except the bit-field ones.
 			// We later need the type (even for omitted fields) to determine the length.
-			if def.RegisterType == cHoldingRegisters || def.RegisterType == cInputRegisters {
+			if def.RegisterType == "holding" || def.RegisterType == "input" {
 				switch f.InputType {
-				case "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64", "FLOAT32", "FLOAT64":
+				case "":
+				case "INT8L", "INT8H", "INT16", "INT32", "INT64":
+				case "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
+				case "FLOAT16", "FLOAT32", "FLOAT64":
 				default:
 					return fmt.Errorf("unknown register data-type %q for field %q", f.InputType, f.Name)
 				}
@@ -120,11 +123,17 @@ func (c *ConfigurationPerRequest) Check() error {
 				return fmt.Errorf("empty field name in request for slave %d", def.SlaveID)
 			}
 
-			// Check fields only relevant for non-bit register types
-			if def.RegisterType == cHoldingRegisters || def.RegisterType == cInputRegisters {
-				// Check output type
+			// Check output type
+			if def.RegisterType == "holding" || def.RegisterType == "input" {
 				switch f.OutputType {
 				case "", "INT64", "UINT64", "FLOAT64":
+				default:
+					return fmt.Errorf("unknown output data-type %q for field %q", f.OutputType, f.Name)
+				}
+			} else {
+				// Bit register types can only be UINT64 or BOOL
+				switch f.OutputType {
+				case "", "UINT16", "BOOL":
 				default:
 					return fmt.Errorf("unknown output data-type %q for field %q", f.OutputType, f.Name)
 				}
@@ -139,7 +148,7 @@ func (c *ConfigurationPerRequest) Check() error {
 			// Check for duplicate field definitions
 			id, err := c.fieldID(seed, def, f)
 			if err != nil {
-				return fmt.Errorf("cannot determine field id for %q: %v", f.Name, err)
+				return fmt.Errorf("cannot determine field id for %q: %w", f.Name, err)
 			}
 			if seenFields[id] {
 				return fmt.Errorf("field %q duplicated in measurement %q (slave %d/%q)", f.Name, f.Measurement, def.SlaveID, def.RegisterType)
@@ -230,7 +239,7 @@ func (c *ConfigurationPerRequest) initFields(fieldDefs []requestFieldDefinition,
 	for _, def := range fieldDefs {
 		f, err := c.newFieldFromDefinition(def, typed, byteOrder)
 		if err != nil {
-			return nil, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
+			return nil, fmt.Errorf("initializing field %q failed: %w", def.Name, err)
 		}
 		fields = append(fields, f)
 	}
@@ -255,6 +264,14 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 		address:     def.Address,
 		length:      fieldLength,
 		omit:        def.Omit,
+	}
+
+	// Handle type conversions for coil and discrete registers
+	if !typed {
+		f.converter, err = determineUntypedConverter(def.OutputType)
+		if err != nil {
+			return field{}, err
+		}
 	}
 
 	// No more processing for un-typed (coil and discrete registers) or omitted fields

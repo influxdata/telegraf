@@ -1,13 +1,10 @@
 package powerdns
 
 import (
-	"net"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 )
-
-type statServer struct{}
 
 var metrics = "corrupt-packets=0,deferred-cache-inserts=0,deferred-cache-lookup=0," +
 	"dnsupdate-answers=0,dnsupdate-changes=0,dnsupdate-queries=0," +
@@ -43,26 +40,6 @@ var intOverflowMetrics = "corrupt-packets=18446744073709550195,deferred-cache-in
 	"udp-queries=0,udp4-answers=1,udp4-queries=1,udp6-answers=0,udp6-queries=0," +
 	"key-cache-size=0,latency=26,meta-cache-size=0,qsize-q=0," +
 	"signature-cache-size=0,sys-msec=2889,uptime=86317,user-msec=2167,"
-
-func (s statServer) serverSocket(l net.Listener) {
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			return
-		}
-
-		go func(c net.Conn) {
-			buf := make([]byte, 1024)
-			n, _ := c.Read(buf)
-
-			data := buf[:n]
-			if string(data) == "show * \n" {
-				c.Write([]byte(metrics)) //nolint:errcheck,revive // ignore the returned error as we need to close the socket anyway
-				c.Close()                //nolint:revive // ignore the returned error as we cannot do anything about it anyway
-			}
-		}(conn)
-	}
-}
 
 func TestPowerdnsParseMetrics(t *testing.T) {
 	p := &Powerdns{

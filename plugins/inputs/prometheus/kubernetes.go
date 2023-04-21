@@ -13,6 +13,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -50,26 +53,26 @@ func loadConfig(kubeconfigPath string) (*rest.Config, error) {
 func (p *Prometheus) startK8s(ctx context.Context) error {
 	config, err := loadConfig(p.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("failed to get rest.Config from %v - %v", p.KubeConfig, err)
+		return fmt.Errorf("failed to get rest.Config from %q: %w", p.KubeConfig, err)
 	}
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		u, err := user.Current()
 		if err != nil {
-			return fmt.Errorf("failed to get current user - %v", err)
+			return fmt.Errorf("failed to get current user: %w", err)
 		}
 
 		kubeconfig := filepath.Join(u.HomeDir, ".kube/config")
 
 		config, err = loadConfig(kubeconfig)
 		if err != nil {
-			return fmt.Errorf("failed to get rest.Config from %v - %v", kubeconfig, err)
+			return fmt.Errorf("failed to get rest.Config from %q: %w", kubeconfig, err)
 		}
 
 		client, err = kubernetes.NewForConfig(config)
 		if err != nil {
-			return fmt.Errorf("failed to get kubernetes client - %v", err)
+			return fmt.Errorf("failed to get kubernetes client: %w", err)
 		}
 	}
 
@@ -132,8 +135,14 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 	}
 
 	if informerfactory == nil {
-		informerfactory = informers.NewSharedInformerFactory(clientset, resyncinterval)
+		var informerOptions []informers.SharedInformerOption
+		if p.PodNamespace != "" {
+			informerOptions = append(informerOptions, informers.WithNamespace(p.PodNamespace))
+		}
+		informerfactory = informers.NewSharedInformerFactoryWithOptions(clientset, resyncinterval, informerOptions...)
 	}
+
+	p.nsStore = informerfactory.Core().V1().Namespaces().Informer().GetStore()
 
 	podinformer := informerfactory.Core().V1().Pods()
 	podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -240,7 +249,7 @@ func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 	// Will have expected type errors for some parts of corev1.Pod struct for some unused fields
 	// Instead have nil checks for every used field in case of incorrect decoding
 	if err := json.NewDecoder(resp.Body).Decode(&cadvisorPodsResponse); err != nil {
-		return fmt.Errorf("decoding response failed: %v", err)
+		return fmt.Errorf("decoding response failed: %w", err)
 	}
 	pods := cadvisorPodsResponse.Items
 
@@ -301,12 +310,46 @@ func podHasMatchingFieldSelector(pod *corev1.Pod, fieldSelector fields.Selector)
 	return fieldSelector.Matches(fieldsSet)
 }
 
+// Get corev1.Namespace object by name
+func getNamespaceObject(name string, p *Prometheus) *corev1.Namespace {
+	if p.nsStore == nil { // can happen in tests
+		return nil
+	}
+	nsObj, exists, err := p.nsStore.GetByKey(name)
+	if err != nil {
+		p.Log.Errorf("Err fetching namespace '%s': %v", name, err)
+		return nil
+	} else if !exists {
+		return nil // can't happen
+	}
+	ns, ok := nsObj.(*corev1.Namespace)
+	if !ok {
+		p.Log.Errorf("[BUG] received unexpected object: %v", nsObj)
+		return nil
+	}
+	return ns
+}
+
+func namespaceAnnotationMatch(nsName string, p *Prometheus) bool {
+	ns := getNamespaceObject(nsName, p)
+	if ns == nil {
+		// in case of errors or other problems let it through
+		return true
+	}
+
+	tags := make([]*telegraf.Tag, 0, len(ns.Annotations))
+	for k, v := range ns.Annotations {
+		tags = append(tags, &telegraf.Tag{Key: k, Value: v})
+	}
+	return models.ShouldTagsPass(p.nsAnnotationPass, p.nsAnnotationDrop, tags)
+}
+
 /*
  * If a namespace is specified and the pod doesn't have that namespace, return false
  * Else return true
  */
 func podHasMatchingNamespace(pod *corev1.Pod, p *Prometheus) bool {
-	return !(p.PodNamespace != "" && pod.Namespace != p.PodNamespace)
+	return p.PodNamespace == "" || pod.Namespace == p.PodNamespace
 }
 
 func podReady(pod *corev1.Pod) bool {
@@ -331,10 +374,13 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 
 	p.Log.Debugf("will scrape metrics from %q", targetURL.String())
-	// add annotation as metrics tags
-	tags := pod.Annotations
-	if tags == nil {
-		tags = map[string]string{}
+	tags := map[string]string{}
+
+	// add annotation as metrics tags, subject to include/exclude filters
+	for k, v := range pod.Annotations {
+		if models.ShouldPassFilters(p.podAnnotationIncludeFilter, p.podAnnotationExcludeFilter, k) {
+			tags[k] = v
+		}
 	}
 
 	tags["pod_name"] = pod.Name
@@ -344,9 +390,11 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 	tags[podNamespace] = pod.Namespace
 
-	// add labels as metrics tags
+	// add labels as metrics tags, subject to include/exclude filters
 	for k, v := range pod.Labels {
-		tags[k] = v
+		if models.ShouldPassFilters(p.podLabelIncludeFilter, p.podLabelExcludeFilter, k) {
+			tags[k] = v
+		}
 	}
 	podURL := p.AddressToURL(targetURL, targetURL.Hostname())
 
@@ -361,6 +409,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 		Address:     targetURL.Hostname(),
 		OriginalURL: targetURL,
 		Tags:        tags,
+		Namespace:   pod.GetNamespace(),
 	}
 }
 

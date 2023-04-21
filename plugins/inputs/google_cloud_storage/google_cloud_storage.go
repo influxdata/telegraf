@@ -6,6 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -82,7 +83,7 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 	for {
 		attrs, err := it.Next()
 
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			gcs.Log.Infof("Iterated all the keys")
 			break
 		}
@@ -96,8 +97,8 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 
 		if !gcs.shoudIgnore(name) {
 			if err := gcs.processMeasurementsInObject(name, bucket, acc); err != nil {
-				gcs.Log.Errorf("Could not process object: %v in bucket: %v", name, bucketName, err)
-				acc.AddError(fmt.Errorf("COULD NOT PROCESS OBJECT: %v IN BUCKET: %v", name, err))
+				gcs.Log.Errorf("Could not process object %q in bucket %q: %v", name, bucketName, err)
+				acc.AddError(fmt.Errorf("COULD NOT PROCESS OBJECT %q IN BUCKET %q: %w", name, bucketName, err))
 			}
 		}
 

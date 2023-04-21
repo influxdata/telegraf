@@ -75,7 +75,7 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 		go func(url string) {
 			defer wg.Done()
 			if err := h.gatherURL(acc, url); err != nil {
-				acc.AddError(fmt.Errorf("[url=%s]: %s", url, err))
+				acc.AddError(fmt.Errorf("[url=%s]: %w", url, err))
 			}
 		}(u)
 	}
@@ -157,17 +157,17 @@ func (h *HTTP) gatherURL(
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reading body failed: %v", err)
+		return fmt.Errorf("reading body failed: %w", err)
 	}
 
 	// Instantiate a new parser for the new data to avoid trouble with stateful parsers
 	parser, err := h.parserFunc()
 	if err != nil {
-		return fmt.Errorf("instantiating parser failed: %v", err)
+		return fmt.Errorf("instantiating parser failed: %w", err)
 	}
 	metrics, err := parser.Parse(b)
 	if err != nil {
-		return fmt.Errorf("parsing metrics failed: %v", err)
+		return fmt.Errorf("parsing metrics failed: %w", err)
 	}
 
 	for _, metric := range metrics {
@@ -187,13 +187,13 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 
 	username, err := h.Username.Get()
 	if err != nil {
-		return fmt.Errorf("getting username failed: %v", err)
+		return fmt.Errorf("getting username failed: %w", err)
 	}
 	defer config.ReleaseSecret(username)
 
 	password, err := h.Password.Get()
 	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
+		return fmt.Errorf("getting password failed: %w", err)
 	}
 	defer config.ReleaseSecret(password)
 

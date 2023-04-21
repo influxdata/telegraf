@@ -5,6 +5,7 @@ import (
 	"bufio"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -52,7 +53,7 @@ func (n *NginxPlus) Gather(acc telegraf.Accumulator) error {
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address %q: %w", u, err))
+			acc.AddError(fmt.Errorf("unable to parse address %q: %w", u, err))
 			continue
 		}
 
@@ -91,7 +92,7 @@ func (n *NginxPlus) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	resp, err := n.client.Get(addr.String())
 
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
+		return fmt.Errorf("error making HTTP request to %q: %w", addr.String(), err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -273,7 +274,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	dec := json.NewDecoder(r)
 	status := &Status{}
 	if err := dec.Decode(status); err != nil {
-		return fmt.Errorf("Error while decoding JSON response")
+		return errors.New("error while decoding JSON response")
 	}
 	status.Gather(tags, acc)
 	return nil

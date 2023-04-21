@@ -36,12 +36,13 @@ Pull requests welcome.
 - [libvirt](https://gitlab.com/warrenio/tools/telegraf-input-libvirt) - Gather libvirt domain stats, based on a historical Telegraf implementation [libvirt](https://libvirt.org/)
 - [bacnet](https://github.com/JurajMarcin/telegraf-bacnet) - Gather statistics from BACnet devices, with support for device discovery and Change of Value subscriptions
 - [tado](https://github.com/zoeimogen/tado-telegraf-plugin) - Gather zone temperature settings and current temperature/humidity readings from Tado
+- [homekit](https://github.com/hdecarne-github/homekit-telegraf-plugin) - Gather smart home statistics from [HomeKit](https://en.wikipedia.org/wiki/HomeKit) devices via Home Hub automation
 
 ## Outputs
 
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
 - [firehose](https://github.com/muhlba91/telegraf-output-kinesis-data-firehose) - Sends metrics in batches to Amazon Kinesis Data Firehose.
-- [playfabinsights](https://github.com/dgkanatsios/telegraftoplayfabinsights) - Sends metrics to [Azure PlayFab Insights](https://learn.microsoft.com/en-us/gaming/playfab/features/insights/).
+- [playfab](https://github.com/dgkanatsios/telegraftoplayfab) - Sends metrics to [Azure PlayFab](https://learn.microsoft.com/en-us/gaming/playfab/).
 
 ## Processors
 
