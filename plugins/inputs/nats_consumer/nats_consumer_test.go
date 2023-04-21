@@ -501,6 +501,11 @@ func (p *FakeParser) SetDefaultTags(map[string]string) {
 type FakeJetStreamContext struct {
 }
 
+func (f FakeJetStreamContext) StreamNameBySubject(string, ...nats.JSOpt) (string, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (f FakeJetStreamContext) Publish(string, []byte, ...nats.PubOpt) (*nats.PubAck, error) {
 	panic("implement me")
 }
