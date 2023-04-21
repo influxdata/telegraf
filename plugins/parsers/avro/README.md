@@ -32,7 +32,7 @@ The message is supposed to be encoded as follows:
   avro_schema_registry = "http://localhost:8081"
 
   ## Schema string; exactly one of schema registry and schema must be set
-  #avro_schema = """
+  #avro_schema = '''
   #        {
   #          "type":"record",
   #          "name":"Value",
@@ -52,7 +52,7 @@ The message is supposed to be encoded as follows:
   #              }
   #          ]
   #      }
-  #"""
+  #'''
 
   ## Measurement string; if not set, determine measurement name from
   ## schema (as "<namespace>.<name>")
@@ -72,7 +72,7 @@ The message is supposed to be encoded as follows:
   ## If avro_timestamp is specified, avro_timestamp_format must be set
   ## to one of 'unix', 'unix_ms', 'unix_us', or 'unix_ns'
   # avro_timestamp_format = "unix"
-  
+
   ## Used to separate parts of array structures.  As above, the default
   ## is the empty string, so a=["a", "b"] becomes a0="a", a1="b".
   ## If this were set to "_", then it would be a_0="a", a_1="b".
