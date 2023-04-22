@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
@@ -35,16 +36,26 @@ type handler struct {
 	log                telegraf.Logger
 }
 
-func newHandler(addr string, confHandler ConfigHandler) *handler {
+// Allow to convey additionnal configuration elements
+type configHandler struct {
+	aliases       map[string]string
+	subscriptions []TagSubscription
+	maxSize       int
+	log           telegraf.Logger
+	trace         bool
+	vendorExt     []string
+}
+
+func newHandler(addr string, confHandler configHandler) *handler {
 	return &handler{
 		address:    addr,
 		aliases:    confHandler.aliases,
-		tagsubs:    confHandler.subs,
-		maxMsgSize: confHandler.maxsize,
+		tagsubs:    confHandler.subscriptions,
+		maxMsgSize: confHandler.maxSize,
 		vendorExt:  confHandler.vendorExt,
-		tagStore:   newTagStore(confHandler.subs),
+		tagStore:   newTagStore(confHandler.subscriptions),
 		trace:      confHandler.trace,
-		log:        confHandler.l,
+		log:        confHandler.log,
 	}
 }
 
@@ -130,19 +141,13 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			// Juniper Telemetry header
 			//EID_JUNIPER_TELEMETRY_HEADER = 1;
 			case 1:
-				decodeExt := false
-				for _, jnprExt := range h.vendorExt {
-					if jnprExt == "jnpr_extension" {
-						decodeExt = true
-						break
-					}
-				}
 				// Decode it only if user requested it
-				if decodeExt {
-					juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeader{}
+				if choice.Contains("juniper_header", h.vendorExt) {
+					juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeaderExtension{}
 					// unmarshal extention
 					err := proto.Unmarshal(currentExt, juniperHeader)
 					if err != nil {
+						h.log.Errorf("unmarshal gnmi Juniper Header extention failed: %v", err)
 						break
 					}
 					// Add only relevant Tags from the juniper extension header.

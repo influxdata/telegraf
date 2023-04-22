@@ -911,7 +911,7 @@ func TestNotification(t *testing.T) {
 			plugin: &GNMI{
 				Log:            testutil.Logger{},
 				Encoding:       "proto",
-				VendorSpecific: []string{"jnpr_extension"},
+				VendorSpecific: []string{"juniper_header"},
 				Redial:         config.Duration(1 * time.Second),
 				Subscriptions: []Subscription{
 					{
@@ -959,13 +959,13 @@ func TestNotification(t *testing.T) {
 									// Juniper Telemetry header
 									//EID_JUNIPER_TELEMETRY_HEADER = 1;
 									Id: 1,
-									Msg: func(jnprExt *jnprHeader.GnmiJuniperTelemetryHeader) []byte {
+									Msg: func(jnprExt *jnprHeader.GnmiJuniperTelemetryHeaderExtension) []byte {
 										b, err := proto.Marshal(jnprExt)
 										if err != nil {
 											return nil
 										}
 										return b
-									}(&jnprHeader.GnmiJuniperTelemetryHeader{ComponentId: 15, SubComponentId: 1, Component: "PICD"}),
+									}(&jnprHeader.GnmiJuniperTelemetryHeaderExtension{ComponentId: 15, SubComponentId: 1, Component: "PICD"}),
 								},
 							},
 						}},
