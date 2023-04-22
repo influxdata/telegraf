@@ -72,7 +72,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Vendor specific options
   ## This defines what vendor specific options to load.
-  ## * Juniper Extension Header (juniper_header):some sensors are directly managed by
+  ## * Juniper Extension Header (juniper_header): some sensors are directly managed by
   ##   Linecard, which adds the Juniper GNMI Extension Header. Enabling this
   ##   allows the decoding of the Extension header if present.
   # vendor_specific = []
