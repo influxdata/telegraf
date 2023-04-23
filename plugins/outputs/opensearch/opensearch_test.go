@@ -347,7 +347,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:              urls,
-		IndexName:         `{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:         `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        false,
 		ManageTemplate:    true,
@@ -648,7 +648,7 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:           urls,
-		IndexName:      `{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:      `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     true,
 		ManageTemplate: false,
@@ -683,8 +683,8 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:           urls,
-		IndexName:      `{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}`,
-		Timeout:        config.Duration(time.Second * 5),
+		IndexName:      `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		Timeout:        config.Duration(time.Second * 500),
 		EnableGzip:     false,
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
@@ -718,7 +718,7 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:            urls,
-		IndexName:       `{{.Tag "host"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:         config.Duration(time.Second * 5),
 		EnableGzip:      false,
 		ManageTemplate:  false,

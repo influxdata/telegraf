@@ -175,20 +175,14 @@ func getPointID(m telegraf.Metric) string {
 }
 
 func (o *Opensearch) Write(metrics []telegraf.Metric) error {
-	
-	bulkIndxr, err := opensearchutil.NewBulkIndexer(opensearchutil.BulkIndexerConfig{
-		Client:     o.osClient,
-		NumWorkers: 4,      // The number of worker goroutines (default: number of CPUs)
-		FlushBytes: 5e+6,   // The flush threshold in bytes (default: 5M)
-	})
-	if err != nil {
-		return fmt.Errorf("ERROR while intantiating Opensearch NewBulkIndexer: %s", err)
+	// get indexers based on unique pipeline values
+	indexers := getTargetIndexers(metrics, o)
+	if len(indexers) == 0 {
+		return fmt.Errorf("failed to instantiate opensearch bulkindexer")
 	}
 	
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5000000000))
 	defer cancel()
-
 
 	onSucc := func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
 		fmt.Printf("Indexed to Opensearch with status- [%d] Result- %s DocumentID- %s \n", res.Status, res.Result, res.DocumentID)
@@ -252,29 +246,71 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 
 		if o.UsePipeline != "" {
 			if pipelineName := o.getPipelineName(o.pipelineName, o.pipelineTagKeys, metric.Tags()); pipelineName != "" {
-				//TODO BulkIndexer supports pipeline at config level not metric level
+				if indexers[pipelineName] != nil {
+					indexers[pipelineName].Add(ctx, bulkIndxrItem)
+					continue
+				}
 			}
 		}
-
-		bulkIndxr.Add(ctx, bulkIndxrItem)
+		
+		indexers["default"].Add(ctx, bulkIndxrItem)
 	}
 
-	
-	if err := bulkIndxr.Close(ctx); err != nil {
-		return fmt.Errorf("error sending bulk request to Opensearch: %s", err)
-	}
+	for _, bulkIndxr := range indexers {
+		if err := bulkIndxr.Close(ctx); err != nil {
+			return fmt.Errorf("error sending bulk request to Opensearch: %s", err)
+		}
 
-	
-	// Report the indexer statistics
-	stats := bulkIndxr.Stats()
-	if stats.NumAdded < uint64(len(metrics)) {
-		return fmt.Errorf("Opensearch indexed [%d] documents with [%d] errors", stats.NumAdded, stats.NumFailed)
-	} else {
-		fmt.Printf("Opensearch successfully indexed [%d] documents", stats.NumFlushed)
+		// Report the indexer statistics
+		stats := bulkIndxr.Stats()
+		if stats.NumAdded < uint64(len(metrics)) {
+			return fmt.Errorf("Opensearch indexed [%d] documents with [%d] errors", stats.NumAdded, stats.NumFailed)
+		} else {
+			fmt.Printf("Opensearch successfully indexed [%d] documents\n", stats.NumAdded)
+		}
 	}
 
 	return nil
 }
+
+
+// BulkIndexer supports pipeline at config level so seperate indexer instance for each unique pipeline
+func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string]opensearchutil.BulkIndexer {
+	var indexers = make(map[string]opensearchutil.BulkIndexer)
+	
+	if osInst.UsePipeline != "" {
+		for _, metric := range metrics {
+			if pipelineName := osInst.getPipelineName(osInst.pipelineName, osInst.pipelineTagKeys, metric.Tags()); pipelineName != "" {
+				// BulkIndexer supports pipeline at config level not metric level
+				if _, ok := indexers[osInst.pipelineName]; ok {
+					continue
+				}
+				indexers[pipelineName] = createBulkIndexer(osInst, pipelineName)
+			}
+		}
+	} 
+
+	indexers["default"] = createBulkIndexer(osInst, "")
+	return indexers
+}
+
+func createBulkIndexer(osInst *Opensearch, pipelineName string) opensearchutil.BulkIndexer{
+	var bulkIndexerConfig = opensearchutil.BulkIndexerConfig{
+		Client:     osInst.osClient,
+		NumWorkers: 4,      // The number of worker goroutines (default: number of CPUs)
+		FlushBytes: 5e+6,   // The flush threshold in bytes (default: 5M)
+	}
+	if pipelineName != "" {
+		bulkIndexerConfig.Pipeline = pipelineName
+	}
+
+	bulkIndxr, err := opensearchutil.NewBulkIndexer(bulkIndexerConfig)
+	if err != nil {
+		fmt.Printf("ERROR while intantiating Opensearch NewBulkIndexer: %s", err)
+	}
+	return bulkIndxr
+}
+
 
 func (o *Opensearch) manageTemplate(ctx context.Context) error {
 	if o.TemplateName == "" {
