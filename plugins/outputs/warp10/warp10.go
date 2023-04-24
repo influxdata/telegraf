@@ -198,7 +198,38 @@ func boolToString(inputBool bool) string {
 	return strconv.FormatBool(inputBool)
 }
 
+/*
+Warp10 supports Infinity/-Infinity/NaN
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// Infinity
+'>
+PARSE
+
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// -Infinity
+'>
+PARSE
+
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// NaN
+'>
+PARSE
+*/
 func floatToString(inputNum float64) string {
+	switch {
+	case math.IsNaN(inputNum):
+		return "NaN"
+	case math.IsInf(inputNum, -1):
+		return "-Infinity"
+	case math.IsInf(inputNum, 1):
+		return "Infinity"
+	}
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
