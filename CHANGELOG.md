@@ -1,6 +1,31 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.26.2 [2023-04-24]
+
+### Bugfixes
+
+- [#13020](https://github.com/influxdata/telegraf/pull/13020) `agent` Pass quiet flag earlier
+- [#13063](https://github.com/influxdata/telegraf/pull/13063) `inputs.prometheus` Add namespace option in k8s informer factory
+- [#13059](https://github.com/influxdata/telegraf/pull/13059) `inputs.socket_listener` Fix tracking of unix sockets
+- [#13078](https://github.com/influxdata/telegraf/pull/13078) `parsers.grok` Fix nil metric for multiline inputs
+- [#13092](https://github.com/influxdata/telegraf/pull/13092) `processors.lookup` Fix tracking metrics
+
+### Dependency Updates
+
+- [#13106](https://github.com/influxdata/telegraf/pull/13106) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.13.15 to 1.13.20
+- [#13072](https://github.com/influxdata/telegraf/pull/13072) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch from 1.21.6 to 1.25.9
+- [#13107](https://github.com/influxdata/telegraf/pull/13107) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.15.13 to 1.20.9
+- [#13027](https://github.com/influxdata/telegraf/pull/13027) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.15.19 to 1.17.8
+- [#13069](https://github.com/influxdata/telegraf/pull/13069) `deps` Bump github.com/aws/aws-sdk-go-v2/service/sts from 1.18.5 to 1.18.9
+- [#13105](https://github.com/influxdata/telegraf/pull/13105) `deps` Bump github.com/docker/docker from 23.0.0 to 23.0.4
+- [#13024](https://github.com/influxdata/telegraf/pull/13024) `deps` Bump github.com/openconfig/gnmi from 0.0.0-20220920173703-480bf53a74d2 to 0.9.1
+- [#13026](https://github.com/influxdata/telegraf/pull/13026) `deps` Bump github.com/prometheus/common from 0.41.0 to 0.42.0
+- [#13025](https://github.com/influxdata/telegraf/pull/13025) `deps` Bump github.com/safchain/ethtool from 0.2.0 to 0.3.0
+- [#13023](https://github.com/influxdata/telegraf/pull/13023) `deps` Bump github.com/tinylib/msgp from 1.1.6 to 1.1.8
+- [#13071](https://github.com/influxdata/telegraf/pull/13071) `deps` Bump github.com/vishvananda/netns from 0.0.2 to 0.0.4
+- [#13070](https://github.com/influxdata/telegraf/pull/13070) `deps` Bump github.com/wavefronthq/wavefront-sdk-go from 0.11.0 to 0.12.0
+
 ## v1.26.1 [2023-04-03]
 
 ### Bugfixes
