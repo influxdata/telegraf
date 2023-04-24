@@ -222,18 +222,15 @@ PARSE
 PARSE
 */
 func floatToString(inputNum float64) string {
-	var retv string
-	switch inputNum {
-	case math.NaN():
-		retv = "NaN"
-	case math.Inf(-1):
-		retv = "-Infinity"
-	case math.Inf(1):
-		retv = "Infinity"
-	default:
-		retv = strconv.FormatFloat(inputNum, 'f', 6, 64)
+	switch {
+	case math.IsNaN(inputNum):
+		return "NaN"
+	case math.IsInf(inputNum, -1):
+		return "-Infinity"
+	case math.IsInf(inputNum, 1):
+		return "Infinity"
 	}
-	return retv
+	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
 // Close close
