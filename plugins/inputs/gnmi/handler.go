@@ -138,7 +138,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			}
 			// extension ID
 			switch ext.GetRegisteredExt().Id {
-			// Juniper Telemetry header
+			// Juniper Header extention
 			//EID_JUNIPER_TELEMETRY_HEADER = 1;
 			case 1:
 				// Decode it only if user requested it
@@ -147,10 +147,10 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 					// unmarshal extention
 					err := proto.Unmarshal(currentExt, juniperHeader)
 					if err != nil {
-						h.log.Errorf("unmarshal gnmi Juniper Header extention failed: %v", err)
+						h.log.Errorf("unmarshal gnmi Juniper Header extention failed: %w", err)
 						break
 					}
-					// Add only relevant Tags from the juniper extension header.
+					// Add only relevant Tags from the Juniper Header extention.
 					// These are requiered for aggregation
 					prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
 					prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())

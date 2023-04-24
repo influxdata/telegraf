@@ -956,7 +956,7 @@ func TestNotification(t *testing.T) {
 						Extension: []*gnmiExt.Extension{{
 							Ext: &gnmiExt.Extension_RegisteredExt{
 								RegisteredExt: &gnmiExt.RegisteredExtension{
-									// Juniper Telemetry header
+									// Juniper Header Extension
 									//EID_JUNIPER_TELEMETRY_HEADER = 1;
 									Id: 1,
 									Msg: func(jnprExt *jnprHeader.GnmiJuniperTelemetryHeaderExtension) []byte {
