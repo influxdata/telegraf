@@ -388,11 +388,15 @@ jobs:
           command: |
             aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/releases/ \
               --exclude "*" \
-              --include "*.deb" \
-              --include "*.rpm" \
-              --include "*.tar.gz" \
-              --include "*.zip" \
-              --include "*.asc" \
+              --include "telegraf*.DIGESTS" \
+              --include "telegraf*.digests" \
+              --include "telegraf*.asc" \
+              --include "telegraf*.deb" \
+              --include "telegraf*.dmg" \
+              --include "telegraf*.rpm" \
+              --include "telegraf*.tar.gz" \
+              --include "telegraf*.zip" \
+              --dryrun \
               --acl public-read
   docker-nightly:
     machine:
@@ -496,7 +500,7 @@ jobs:
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
-  package-sign-linux:
+  package-sign:
     circleci_ip_ranges: true
     docker:
       - image: quay.io/influxdb/rsign:latest
@@ -510,15 +514,37 @@ jobs:
       - attach_workspace:
           at: .
       - run: |
-          for target in ./dist/*
+          cd dist
+
+          # Generate the *.DIGESTS files. This must be done before the signing
+          # step so that the *.DIGEST files are also signed.
+          for target in *
+          do
+            sha256sum "${target}" > "${target}.DIGESTS"
+          done
+
+          for target in *
           do
             case "${target}"
             in
               # rsign is shipped on Alpine Linux which uses "busybox ash" instead
               # of bash. ash is somewhat more posix compliant and is missing some
               # extensions and niceties from bash.
-              *.deb|*.rpm|*.tar.gz|*.zip)
+              *.deb|*.dmg|*.rpm|*.tar.gz|*.zip|*.DIGESTS)
                 rsign "${target}"
+              ;;
+            esac
+          done
+
+          for target in *
+          do
+            case "${target}"
+            in
+              *.deb|*.dmg|*.rpm|*.tar.gz|*.zip)
+                # Combine the metadata from the *.DIGESTS and *.asc files into one
+                # listing. Since the gpg signature contains multiple lines which
+                # must be preserved, it is base64 encoded.
+                printf '%s %s %s\n' "${target}" "$(awk '{ print $1 }' "${target}.DIGESTS")" "$(base64 -w 0 <"${target}.asc")" >>"telegraf-${CIRCLE_TAG}-digests"
               ;;
             esac
           done
@@ -703,7 +729,7 @@ workflows:
                 only: /.*/
               branches:
                 ignore: /.*/
-      - 'package-sign-linux':
+      - 'package-sign':
           requires:
             - 'i386-package'
             - 'ppc64le-package'
@@ -715,6 +741,8 @@ workflows:
             - 'mips-package'
             - 'arm64-package'
             - 'armhf-package'
+            - 'package-sign-mac'
+            - 'package-sign-windows'
           filters:
             tags:
               only: /.*/
@@ -734,7 +762,7 @@ workflows:
             - 'riscv64-package'
             - 'package-sign-mac'
             - 'package-sign-windows'
-            - 'package-sign-linux'
+            - 'package-sign'
            filters:
             tags:
               only: /.*/
