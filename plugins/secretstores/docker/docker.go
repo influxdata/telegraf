@@ -35,13 +35,11 @@ func (d *Docker) Init() error {
 		// if no explicit path mentioned in configuration
 		d.Path = "/run/secrets"
 	}
-	if _, err := os.Stat(d.Path); os.IsNotExist(err) {
+	if _, err := os.Stat(d.Path); err != nil {
 		// if there is no /run/secrets directory for default Path value
 		// this implies that there are no secrets.
 		// Or for any explicit path definitions for that matter.
-		return fmt.Errorf("directory %s does not exist", d.Path)
-	} else if os.IsPermission(err) {
-		return fmt.Errorf("permission denied to access secrets directory")
+		return fmt.Errorf("accessing directory %q failed: %w", d.Path, err)
 	}
 	return nil
 }
