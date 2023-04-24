@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
 	"github.com/stretchr/testify/require"
@@ -24,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
