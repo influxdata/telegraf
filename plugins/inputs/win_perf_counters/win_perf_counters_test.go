@@ -232,14 +232,22 @@ type FakePerformanceQueryCreator struct {
 func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string) PerformanceQuery {
 	var ret PerformanceQuery
 	var ok bool
-	ret = nil
 	if ret, ok = m.fakeQueries[computer]; !ok {
 		panic(fmt.Errorf("query for %s not found", computer))
 	}
 	return ret
 }
 
-func createPerfObject(computer string, measurement string, object string, instances []string, counters []string, failOnMissing bool, includeTotal bool, useRawValues bool) []perfobject {
+func createPerfObject(
+	computer string,
+	measurement string,
+	object string,
+	instances []string,
+	counters []string,
+	failOnMissing bool,
+	includeTotal bool,
+	useRawValues bool,
+) []perfobject {
 	PerfObject := perfobject{
 		ObjectName:    object,
 		Instances:     instances,
@@ -250,11 +258,11 @@ func createPerfObject(computer string, measurement string, object string, instan
 		IncludeTotal:  includeTotal,
 		UseRawValues:  useRawValues,
 	}
+
 	if computer != "" {
 		PerfObject.Sources = []string{computer}
 	}
-	perfObjects := []perfobject{PerfObject}
-	return perfObjects
+	return []perfobject{PerfObject}
 }
 
 func createCounterMap(counterPaths []string, values []float64, status []uint32) map[string]testCounter {
@@ -1348,11 +1356,7 @@ func TestGatherError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long taking test in short mode")
 	}
-	var err error
-	expectedError := "error during collecting data on host 'localhost': error while getting value for counter \\O(I)\\C: The information passed is not valid.\r\n"
-	if testing.Short() {
-		t.Skip("Skipping long taking test in short mode")
-	}
+
 	measurement := "test"
 	perfObjects := createPerfObject("", measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
 	cp1 := "\\O(I)\\C"
@@ -1371,26 +1375,24 @@ func TestGatherError(t *testing.T) {
 			},
 		},
 	}
+
+	expectedError := "error during collecting data on host 'localhost': error while getting value for counter \\O(I)\\C: " +
+		"The information passed is not valid.\r\n"
 	var acc1 testutil.Accumulator
-	err = m.Gather(&acc1)
-	require.NoError(t, err)
+	require.NoError(t, m.Gather(&acc1))
 	require.Len(t, acc1.Errors, 1)
 	require.Equal(t, expectedError, acc1.Errors[0].Error())
 
 	m.UseWildcardsExpansion = true
-	err = m.cleanQueries()
-	require.NoError(t, err)
+	require.NoError(t, m.cleanQueries())
+
 	m.lastRefreshed = time.Time{}
-
 	var acc2 testutil.Accumulator
-
-	err = m.Gather(&acc2)
-	require.NoError(t, err)
+	require.NoError(t, m.Gather(&acc2))
 	require.Len(t, acc2.Errors, 1)
 	require.Equal(t, expectedError, acc2.Errors[0].Error())
 
-	err = m.cleanQueries()
-	require.NoError(t, err)
+	require.NoError(t, m.cleanQueries())
 }
 
 func TestGatherInvalidDataIgnore(t *testing.T) {
@@ -1728,7 +1730,10 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 		Object:                perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
+				counters: createCounterMap(
+					append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...),
+					[]float64{0, 0, 1.1, 1.2, 1.3, 1.4},
+					[]uint32{0, 0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\C1": {cps1[0], cps1[2]},
 					"\\O(*)\\C2": {cps1[1], cps1[3]},
@@ -1923,7 +1928,10 @@ func TestGatherRaw(t *testing.T) {
 		Object:                perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 2.2, 3.3, 4.4}, []uint32{0, 0, 0, 0, 0, 0}),
+				counters: createCounterMap(
+					append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...),
+					[]float64{0, 0, 1.1, 2.2, 3.3, 4.4},
+					[]uint32{0, 0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\C1": {cps1[0], cps1[2]},
 					"\\O(*)\\C2": {cps1[1], cps1[3]},

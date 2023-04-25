@@ -10,13 +10,15 @@ import (
 	"unsafe"
 )
 
-// PerformanceQuery is abstraction for PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
+// CounterValue is abstraction for PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
 type CounterValue struct {
 	InstanceName string
 	Value        interface{}
 }
 
 // PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
+//
+//nolint:interfacebloat // conditionally allow to contain more methods
 type PerformanceQuery interface {
 	Open() error
 	Close() error

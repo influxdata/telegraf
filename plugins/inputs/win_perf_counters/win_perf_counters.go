@@ -165,7 +165,17 @@ func (m *WinPerfCounters) hostname() string {
 	return m.cachedHostname
 }
 
-func newCounter(counterHandle PDH_HCOUNTER, counterPath string, computer string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) *counter {
+func newCounter(
+	counterHandle PDH_HCOUNTER,
+	counterPath string,
+	computer string,
+	objectName string,
+	instance string,
+	counterName string,
+	measurement string,
+	includeTotal bool,
+	useRawValue bool,
+) *counter {
 	measurementName := sanitizedChars.Replace(measurement)
 	if measurementName == "" {
 		measurementName = "win_perf_counters"
@@ -364,7 +374,8 @@ func (m *WinPerfCounters) ParseConfig() error {
 
 					counterPath = formatPath(computer, objectname, instance, counter)
 
-					err := m.AddItem(counterPath, computer, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
+					err := m.AddItem(counterPath, computer, objectname, instance, counter,
+						PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
 							m.Log.Errorf("invalid counterPath %q: %s", counterPath, err.Error())
