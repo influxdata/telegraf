@@ -278,7 +278,7 @@ func newReader(log telegraf.Logger, files []string) (*ia.JSONFilesReader, error)
 		if err != nil {
 			var deprecatedFormatError *ia.DeprecatedFormatError
 			if errors.As(err, &deprecatedFormatError) {
-				log.Warnf("%v. Consider using perfmon event file in updated format", deprecatedFormatError)
+				log.Warnf("%v. See the perfmon repo for updated event files", deprecatedFormatError)
 				continue
 			}
 			return nil, fmt.Errorf("failed to add files to reader: %w", err)
