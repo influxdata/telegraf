@@ -311,11 +311,15 @@ func New() telegraf.Input {
 	}
 }
 
-func (c *GNMI) init() error {
+func init() {
 	inputs.Add("gnmi", New)
 	// Backwards compatible alias:
 	inputs.Add("cisco_telemetry_gnmi", New)
+}
 
+func (c *GNMI) Init() error {
+
+	// Check vendor_specific options configured by user
 	if err := choice.CheckSlice(c.VendorSpecific, supportedExtensions); err != nil {
 		return fmt.Errorf("Unsupported vendor_specific option': %w", err)
 	}
