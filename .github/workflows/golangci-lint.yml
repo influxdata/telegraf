@@ -32,7 +32,7 @@ jobs:
         if: runner.os != 'Windows'
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.51.2
+          version: v1.52.2
           args: --timeout 30m0s --verbose --out-${NO_FUTURE}format tab
       - name: golangci-lint windows
         if: runner.os == 'Windows'
