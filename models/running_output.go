@@ -139,7 +139,10 @@ func (r *RunningOutput) ID() string {
 // AddMetric adds a metric to the output.
 // Takes ownership of metric
 func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
-	if ok := r.Config.Filter.Select(metric); !ok {
+	ok, err := r.Config.Filter.Select(metric)
+	if err != nil {
+		r.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
 		r.metricFiltered(metric)
 		return
 	}
