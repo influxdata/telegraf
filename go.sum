@@ -1013,8 +1013,6 @@ github.com/google/addlicense v0.0.0-20200906110928-a0294312aa76/go.mod h1:EMjYTR
 github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.0.1 h1:gK4Kx5IaGY9CD5sPJ36FHiBJ6ZXl0kilRiiCj+jdYp4=
-github.com/google/cel-go v0.14.0 h1:LFobwuUDslWUHdQ48SXVXvQgPH2X1XVhsgOGNioAEZ4=
-github.com/google/cel-go v0.14.0/go.mod h1:YzWEoI07MC/a/wj9in8GeVatqfypkldgBlwXh9bCwqY=
 github.com/google/cel-go v0.14.1-0.20230424164844-d39523c445fc h1:jd+stC3Fqf9kaqgCLOdm4Da/AN3txPTlmLB6tStXAcU=
 github.com/google/cel-go v0.14.1-0.20230424164844-d39523c445fc/go.mod h1:YzWEoI07MC/a/wj9in8GeVatqfypkldgBlwXh9bCwqY=
 github.com/google/flatbuffers v1.11.0/go.mod h1:1AeVuKshWv4vARoZatz6mlQ0JxURH0Kv5+zNeJKJCa8=
