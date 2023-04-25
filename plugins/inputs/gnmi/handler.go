@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const EID_JUNIPER_TELEMETRY_HEADER = 1
+const eidJuniperTelemetryHeader = 1
 
 type handler struct {
 	address            string
@@ -142,7 +142,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			switch ext.GetRegisteredExt().Id {
 			// Juniper Header extention
 			//EID_JUNIPER_TELEMETRY_HEADER = 1;
-			case EID_JUNIPER_TELEMETRY_HEADER:
+			case eidJuniperTelemetryHeader:
 				// Decode it only if user requested it
 				if choice.Contains("juniper_header", h.vendorExt) {
 					juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeaderExtension{}
