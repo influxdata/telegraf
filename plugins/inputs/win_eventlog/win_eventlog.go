@@ -11,6 +11,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -120,7 +121,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 	for {
 		events, err := w.fetchEvents(w.subscription)
 		if err != nil {
-			if err == ERROR_NO_MORE_ITEMS {
+			if errors.Is(err, ERROR_NO_MORE_ITEMS) {
 				break
 			}
 			w.Log.Errorf("Error getting events: %v", err)
@@ -334,7 +335,7 @@ func (w *WinEventLog) fetchEventHandles(subsHandle EvtHandle) ([]EvtHandle, erro
 
 	err := _EvtNext(subsHandle, eventsNumber, &eventHandles[0], 0, 0, &evtReturned)
 	if err != nil {
-		if err == ERROR_INVALID_OPERATION && evtReturned == 0 {
+		if errors.Is(err, ERROR_INVALID_OPERATION) && evtReturned == 0 {
 			return nil, ERROR_NO_MORE_ITEMS
 		}
 		return nil, err
@@ -428,7 +429,7 @@ func (w *WinEventLog) renderLocalMessage(event Event, eventHandle EvtHandle) (Ev
 	if err != nil {
 		return event, nil //nolint:nilerr // We can return event without most values
 	}
-	defer _EvtClose(publisherHandle)
+	defer _EvtClose(publisherHandle) //nolint:errcheck // Ignore error returned during Close
 
 	// Populating text values
 	keywords, err := formatEventString(EvtFormatMessageKeyword, eventHandle, publisherHandle)
@@ -493,7 +494,7 @@ func formatEventString(
 	var bufferUsed uint32
 	err := _EvtFormatMessage(publisherHandle, eventHandle, 0, 0, 0, messageFlag,
 		0, nil, &bufferUsed)
-	if err != nil && err != ERROR_INSUFFICIENT_BUFFER {
+	if err != nil && !errors.Is(err, ERROR_INSUFFICIENT_BUFFER) {
 		return "", err
 	}
 
