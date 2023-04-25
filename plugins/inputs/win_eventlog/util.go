@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -97,12 +96,10 @@ func UnrollXMLFields(data []byte, fieldsUsage map[string]int, separator string) 
 	for {
 		var node xmlnode
 		err := dec.Decode(&node)
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
 			break
 		}
+
 		var parents []string
 		walkXML([]xmlnode{node}, parents, separator, func(node xmlnode, parents []string, separator string) bool {
 			innerText := strings.TrimSpace(node.Text)

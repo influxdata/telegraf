@@ -12,11 +12,11 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
-	tags := map[string]string{"url": u}
+func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
+	tags := map[string]string{"url": host}
 	fields := map[string]interface{}{"result_code": 0}
 
-	args := p.args(u)
+	args := p.args(host)
 	totalTimeout := 60.0
 	if len(p.Arguments) == 0 {
 		totalTimeout = p.timeout() * float64(p.Count)
@@ -34,9 +34,9 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	if err != nil {
 		// fatal error
 		if pendingError != nil {
-			acc.AddError(fmt.Errorf("%s: %s", pendingError, u))
+			acc.AddError(fmt.Errorf("%s: %w", host, pendingError))
 		} else {
-			acc.AddError(fmt.Errorf("%s: %s", err, u))
+			acc.AddError(fmt.Errorf("%s: %w", host, err))
 		}
 
 		fields["result_code"] = 2
@@ -88,7 +88,7 @@ func (p *Ping) args(url string) []string {
 func processPingOutput(out string) (int, int, int, int, int, int, error) {
 	// So find a line contain 3 numbers except reply lines
 	var stats, aproxs []string = nil, nil
-	err := errors.New("Fatal error processing ping output")
+	err := errors.New("fatal error processing ping output")
 	stat := regexp.MustCompile(`=\W*(\d+)\D*=\W*(\d+)\D*=\W*(\d+)`)
 	aprox := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
 	tttLine := regexp.MustCompile(`TTL=\d+`)

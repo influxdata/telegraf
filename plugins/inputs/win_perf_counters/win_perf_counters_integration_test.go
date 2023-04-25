@@ -3,13 +3,15 @@
 package win_perf_counters
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestWinPerformanceQueryImplIntegration(t *testing.T) {
@@ -107,7 +109,8 @@ func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	farr, err := query.GetFormattedCounterArrayDouble(hCounter)
-	if phderr, ok := err.(*PdhError); ok && phderr.ErrorCode != PDH_INVALID_DATA && phderr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
+	var phdErr *PdhError
+	if errors.As(err, &phdErr) && phdErr.ErrorCode != PDH_INVALID_DATA && phdErr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
 		time.Sleep(time.Second)
 		farr, err = query.GetFormattedCounterArrayDouble(hCounter)
 	}
