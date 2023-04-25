@@ -22,9 +22,11 @@ type eventLogger struct {
 	logger *eventlog.Log
 }
 
-func (t *eventLogger) Write(b []byte) (n int, err error) {
+func (t *eventLogger) Write(b []byte) (int, error) {
+	var err error
+
 	loc := prefixRegex.FindIndex(b)
-	n = len(b)
+	n := len(b)
 	if loc == nil {
 		err = t.logger.Info(1, string(b))
 	} else if n > 2 { //skip empty log messages
@@ -39,7 +41,7 @@ func (t *eventLogger) Write(b []byte) (n int, err error) {
 		}
 	}
 
-	return
+	return n, err
 }
 
 type eventLoggerCreator struct {

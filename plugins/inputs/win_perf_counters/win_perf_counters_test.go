@@ -31,7 +31,7 @@ type FakePerformanceQuery struct {
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
-	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
+	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path) //nolint:dogsled // only instance is needed for this helper function in tests
 	if inst == "" {
 		inst = "--"
 	}
@@ -58,7 +58,7 @@ func (m *FakePerformanceQuery) Open() error {
 
 func (m *FakePerformanceQuery) Close() error {
 	if !m.openCalled {
-		return errors.New("CloSe: uninitialized query")
+		return errors.New("in Close: uninitialized query")
 	}
 	m.openCalled = false
 	return nil
@@ -66,23 +66,23 @@ func (m *FakePerformanceQuery) Close() error {
 
 func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
 	if !m.openCalled {
-		return 0, errors.New("AddCounterToQuery: uninitialized query")
+		return 0, errors.New("in AddCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
 	} else {
-		return 0, errors.New(fmt.Sprintf("AddCounterToQuery: invalid counter path: %s", counterPath))
+		return 0, fmt.Errorf("in AddCounterToQuery: invalid counter path: %q", counterPath)
 	}
 }
 
 func (m *FakePerformanceQuery) AddEnglishCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
 	if !m.openCalled {
-		return 0, errors.New("AddEnglishCounterToQuery: uninitialized query")
+		return 0, errors.New("in AddEnglishCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
 	} else {
-		return 0, fmt.Errorf("AddEnglishCounterToQuery: invalid counter path: %s", counterPath)
+		return 0, fmt.Errorf("in AddEnglishCounterToQuery: invalid counter path: %q", counterPath)
 	}
 }
 
@@ -92,20 +92,20 @@ func (m *FakePerformanceQuery) GetCounterPath(counterHandle PDH_HCOUNTER) (strin
 			return counter.path, nil
 		}
 	}
-	return "", fmt.Errorf("GetCounterPath: invalid handle: %d", counterHandle)
+	return "", fmt.Errorf("in GetCounterPath: invalid handle: %q", counterHandle)
 }
 
 func (m *FakePerformanceQuery) ExpandWildCardPath(counterPath string) ([]string, error) {
 	if e, ok := m.expandPaths[counterPath]; ok {
 		return e, nil
 	} else {
-		return []string{}, fmt.Errorf("ExpandWildCardPath: invalid counter path: %s", counterPath)
+		return []string{}, fmt.Errorf("in ExpandWildCardPath: invalid counter path: %q", counterPath)
 	}
 }
 
 func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle PDH_HCOUNTER) (float64, error) {
 	if !m.openCalled {
-		return 0, errors.New("GetFormattedCounterValueDouble: uninitialized query")
+		return 0, errors.New("in GetFormattedCounterValueDouble: uninitialized query")
 	}
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
@@ -115,12 +115,12 @@ func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle PDH_
 			return counter.value, nil
 		}
 	}
-	return 0, fmt.Errorf("GetFormattedCounterValueDouble: invalid handle: %d", counterHandle)
+	return 0, fmt.Errorf("in GetFormattedCounterValueDouble: invalid handle: %q", counterHandle)
 }
 
 func (m *FakePerformanceQuery) GetRawCounterValue(counterHandle PDH_HCOUNTER) (int64, error) {
 	if !m.openCalled {
-		return 0, errors.New("GetRawCounterValue: uninitialised query")
+		return 0, errors.New("in GetRawCounterValue: uninitialised query")
 	}
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
@@ -130,7 +130,7 @@ func (m *FakePerformanceQuery) GetRawCounterValue(counterHandle PDH_HCOUNTER) (i
 			return int64(counter.value), nil
 		}
 	}
-	return 0, fmt.Errorf("GetRawCounterValue: invalid handle: %d", counterHandle)
+	return 0, fmt.Errorf("in GetRawCounterValue: invalid handle: %q", counterHandle)
 }
 
 func (m *FakePerformanceQuery) findCounterByPath(counterPath string) *testCounter {
@@ -153,7 +153,7 @@ func (m *FakePerformanceQuery) findCounterByHandle(counterHandle PDH_HCOUNTER) *
 
 func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
 	if !m.openCalled {
-		return nil, errors.New("GetFormattedCounterArrayDouble: uninitialized query")
+		return nil, errors.New("in GetFormattedCounterArrayDouble: uninitialized query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
@@ -167,21 +167,21 @@ func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUN
 						}
 						counters = append(counters, *counter.ToCounterValue(false))
 					} else {
-						return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %s", p)
+						return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q", p)
 					}
 				}
 				return counters, nil
 			} else {
-				return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %d", hCounter)
+				return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q", hCounter)
 			}
 		}
 	}
-	return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %d, no paths found", hCounter)
+	return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q, no paths found", hCounter)
 }
 
 func (m *FakePerformanceQuery) GetRawCounterArray(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
 	if !m.openCalled {
-		return nil, errors.New("GetRawCounterArray: uninitialised query")
+		return nil, errors.New("in GetRawCounterArray: uninitialised query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
@@ -195,28 +195,28 @@ func (m *FakePerformanceQuery) GetRawCounterArray(hCounter PDH_HCOUNTER) ([]Coun
 						}
 						counters = append(counters, *counter.ToCounterValue(true))
 					} else {
-						return nil, fmt.Errorf("GetRawCounterArray: invalid counter : %s", p)
+						return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q", p)
 					}
 				}
 				return counters, nil
 			} else {
-				return nil, fmt.Errorf("GetRawCounterArray: invalid counter : %d", hCounter)
+				return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q", hCounter)
 			}
 		}
 	}
-	return nil, fmt.Errorf("GetRawCounterArray: invalid counter : %d, no paths found", hCounter)
+	return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q, no paths found", hCounter)
 }
 
 func (m *FakePerformanceQuery) CollectData() error {
 	if !m.openCalled {
-		return errors.New("CollectData: uninitialized query")
+		return errors.New("in CollectData: uninitialized query")
 	}
 	return nil
 }
 
 func (m *FakePerformanceQuery) CollectDataWithTime() (time.Time, error) {
 	if !m.openCalled {
-		return time.Now(), errors.New("CollectData: uninitialized query")
+		return time.Now(), errors.New("in CollectDataWithTime: uninitialized query")
 	}
 	return MetricTime, nil
 }
@@ -232,14 +232,22 @@ type FakePerformanceQueryCreator struct {
 func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string) PerformanceQuery {
 	var ret PerformanceQuery
 	var ok bool
-	ret = nil
 	if ret, ok = m.fakeQueries[computer]; !ok {
-		panic(fmt.Errorf("query for %s not found", computer))
+		panic(fmt.Errorf("query for %q not found", computer))
 	}
 	return ret
 }
 
-func createPerfObject(computer string, measurement string, object string, instances []string, counters []string, failOnMissing bool, includeTotal bool, useRawValues bool) []perfobject {
+func createPerfObject(
+	computer string,
+	measurement string,
+	object string,
+	instances []string,
+	counters []string,
+	failOnMissing bool,
+	includeTotal bool,
+	useRawValues bool,
+) []perfobject {
 	PerfObject := perfobject{
 		ObjectName:    object,
 		Instances:     instances,
@@ -250,11 +258,11 @@ func createPerfObject(computer string, measurement string, object string, instan
 		IncludeTotal:  includeTotal,
 		UseRawValues:  useRawValues,
 	}
+
 	if computer != "" {
 		PerfObject.Sources = []string{computer}
 	}
-	perfObjects := []perfobject{PerfObject}
-	return perfObjects
+	return []perfobject{PerfObject}
 }
 
 func createCounterMap(counterPaths []string, values []float64, status []uint32) map[string]testCounter {
@@ -1348,11 +1356,7 @@ func TestGatherError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long taking test in short mode")
 	}
-	var err error
-	expectedError := "error during collecting data on host 'localhost': error while getting value for counter \\O(I)\\C: The information passed is not valid.\r\n"
-	if testing.Short() {
-		t.Skip("Skipping long taking test in short mode")
-	}
+
 	measurement := "test"
 	perfObjects := createPerfObject("", measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
 	cp1 := "\\O(I)\\C"
@@ -1371,26 +1375,24 @@ func TestGatherError(t *testing.T) {
 			},
 		},
 	}
+
+	expectedError := "error during collecting data on host 'localhost': error while getting value for counter \\O(I)\\C: " +
+		"The information passed is not valid.\r\n"
 	var acc1 testutil.Accumulator
-	err = m.Gather(&acc1)
-	require.NoError(t, err)
+	require.NoError(t, m.Gather(&acc1))
 	require.Len(t, acc1.Errors, 1)
 	require.Equal(t, expectedError, acc1.Errors[0].Error())
 
 	m.UseWildcardsExpansion = true
-	err = m.cleanQueries()
-	require.NoError(t, err)
+	require.NoError(t, m.cleanQueries())
+
 	m.lastRefreshed = time.Time{}
-
 	var acc2 testutil.Accumulator
-
-	err = m.Gather(&acc2)
-	require.NoError(t, err)
+	require.NoError(t, m.Gather(&acc2))
 	require.Len(t, acc2.Errors, 1)
 	require.Equal(t, expectedError, acc2.Errors[0].Error())
 
-	err = m.cleanQueries()
-	require.NoError(t, err)
+	require.NoError(t, m.cleanQueries())
 }
 
 func TestGatherInvalidDataIgnore(t *testing.T) {
@@ -1728,7 +1730,10 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 		Object:                perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
+				counters: createCounterMap(
+					append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...),
+					[]float64{0, 0, 1.1, 1.2, 1.3, 1.4},
+					[]uint32{0, 0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\C1": {cps1[0], cps1[2]},
 					"\\O(*)\\C2": {cps1[1], cps1[3]},
@@ -1923,7 +1928,10 @@ func TestGatherRaw(t *testing.T) {
 		Object:                perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 2.2, 3.3, 4.4}, []uint32{0, 0, 0, 0, 0, 0}),
+				counters: createCounterMap(
+					append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...),
+					[]float64{0, 0, 1.1, 2.2, 3.3, 4.4},
+					[]uint32{0, 0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\C1": {cps1[0], cps1[2]},
 					"\\O(*)\\C2": {cps1[1], cps1[3]},
