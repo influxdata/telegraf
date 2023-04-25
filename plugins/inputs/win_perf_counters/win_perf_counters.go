@@ -24,7 +24,7 @@ type WinPerfCounters struct {
 	PrintValid                 bool `toml:"PrintValid"`
 	PreVistaSupport            bool `toml:"PreVistaSupport" deprecated:"1.7.0;determined dynamically"`
 	UsePerfCounterTime         bool
-	Object                     []perfobject
+	Object                     []perfObject
 	CountersRefreshInterval    config.Duration
 	UseWildcardsExpansion      bool
 	LocalizeWildcardsExpansion bool
@@ -50,7 +50,7 @@ type hostCountersInfo struct {
 	timestamp time.Time
 }
 
-type perfobject struct {
+type perfObject struct {
 	Sources       []string
 	ObjectName    string
 	Counters      []string
@@ -71,13 +71,13 @@ type counter struct {
 	measurement   string
 	includeTotal  bool
 	useRawValue   bool
-	counterHandle PDH_HCOUNTER
+	counterHandle pdhCounterHandle
 }
 
 type instanceGrouping struct {
 	name       string
 	instance   string
-	objectname string
+	objectName string
 }
 
 type fieldGrouping map[instanceGrouping]map[string]interface{}
@@ -88,7 +88,9 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 // extractCounterInfoFromCounterPath gets object name, instance name (if available) and counter name from counter path
 // General Counter path pattern is: \\computer\object(parent/instance#index)\counter
 // parent/instance#index part is skipped in single instance objects (e.g. Memory): \\computer\object\counter
-func extractCounterInfoFromCounterPath(counterPath string) (string, string, string, string, error) {
+//
+//nolint:revive //function-result-limit conditionally 5 return results allowed
+func extractCounterInfoFromCounterPath(counterPath string) (computer string, object string, instance string, counter string, err error) {
 	leftComputerBorderIndex := -1
 	rightObjectBorderIndex := -1
 	leftObjectBorderIndex := -1
@@ -129,7 +131,6 @@ func extractCounterInfoFromCounterPath(counterPath string) (string, string, stri
 		return "", "", "", "", errors.New("cannot parse object from: " + counterPath)
 	}
 
-	var computer, object, instance, counter string
 	if leftComputerBorderIndex > -1 {
 		// validate there is leading \\ and not empty computer (\\\O)
 		if leftComputerBorderIndex != 1 || leftComputerBorderIndex == leftObjectBorderIndex-1 {
@@ -165,8 +166,9 @@ func (m *WinPerfCounters) hostname() string {
 	return m.cachedHostname
 }
 
+//nolint:revive //argument-limit conditionally more arguments allowed for helper function
 func newCounter(
-	counterHandle PDH_HCOUNTER,
+	counterHandle pdhCounterHandle,
 	counterPath string,
 	computer string,
 	objectName string,
@@ -188,10 +190,11 @@ func newCounter(
 		includeTotal, useRawValue, counterHandle}
 }
 
+//nolint:revive //argument-limit conditionally more arguments allowed
 func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, counterName, measurement string, includeTotal bool, useRawValue bool) error {
 	origCounterPath := counterPath
 	var err error
-	var counterHandle PDH_HCOUNTER
+	var counterHandle pdhCounterHandle
 
 	sourceTag := computer
 	if computer == "localhost" {
@@ -330,12 +333,12 @@ func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, c
 
 const emptyInstance = "------"
 
-func formatPath(computer, objectname, instance, counter string) string {
+func formatPath(computer, objectName, instance, counter string) string {
 	path := ""
 	if instance == emptyInstance {
-		path = fmt.Sprintf(`\%s\%s`, objectname, counter)
+		path = fmt.Sprintf(`\%s\%s`, objectName, counter)
 	} else {
-		path = fmt.Sprintf(`\%s(%s)\%s`, objectname, instance, counter)
+		path = fmt.Sprintf(`\%s(%s)\%s`, objectName, instance, counter)
 	}
 	if computer != "" && computer != "localhost" {
 		path = fmt.Sprintf(`\\%s%s`, computer, path)
@@ -370,11 +373,10 @@ func (m *WinPerfCounters) ParseConfig() error {
 					m.Log.Warnf("Missing 'Instances' param for object %q", PerfObject.ObjectName)
 				}
 				for _, instance := range PerfObject.Instances {
-					objectname := PerfObject.ObjectName
+					objectName := PerfObject.ObjectName
+					counterPath = formatPath(computer, objectName, instance, counter)
 
-					counterPath = formatPath(computer, objectname, instance, counter)
-
-					err := m.AddItem(counterPath, computer, objectname, instance, counter,
+					err := m.AddItem(counterPath, computer, objectName, instance, counter,
 						PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
@@ -500,7 +502,6 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 				continue
 			}
 			for _, cValue := range counterValues {
-
 				if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.InstanceName) {
 					// If you are using a multiple instance identifier such as "w3wp#1"
 					// phd.dll returns only the first 2 characters of the identifier.
@@ -515,7 +516,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 	}
 	for instance, fields := range collectedFields {
 		var tags = map[string]string{
-			"objectname": instance.objectname,
+			"objectname": instance.objectName,
 		}
 		if len(instance.instance) > 0 {
 			tags["instance"] = instance.instance
@@ -526,7 +527,6 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 		acc.AddFields(instance.name, fields, tags, hostCounterInfo.timestamp)
 	}
 	return nil
-
 }
 
 func (m *WinPerfCounters) cleanQueries() error {
@@ -568,11 +568,11 @@ func addCounterMeasurement(metric *counter, instanceName string, value interface
 
 func isKnownCounterDataError(err error) bool {
 	var pdhErr *PdhError
-	if errors.As(err, &pdhErr) && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
-		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_DENOMINATOR ||
-		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_VALUE ||
-		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA ||
-		pdhErr.ErrorCode == PDH_NO_DATA) {
+	if errors.As(err, &pdhErr) && (pdhErr.ErrorCode == PdhInvalidData ||
+		pdhErr.ErrorCode == PdhCalcNegativeDenominator ||
+		pdhErr.ErrorCode == PdhCalcNegativeValue ||
+		pdhErr.ErrorCode == PdhCstatusInvalidData ||
+		pdhErr.ErrorCode == PdhNoData) {
 		return true
 	}
 	return false
