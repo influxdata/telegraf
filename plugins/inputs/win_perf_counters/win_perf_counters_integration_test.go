@@ -420,7 +420,7 @@ func TestWinPerfCountersConfigError2Integration(t *testing.T) {
 		Log:          testutil.Logger{},
 	}
 
-	require.Error(t, m.ParseConfig())
+	require.NoError(t, m.ParseConfig())
 	var acc testutil.Accumulator
 	require.Error(t, m.Gather(&acc))
 }

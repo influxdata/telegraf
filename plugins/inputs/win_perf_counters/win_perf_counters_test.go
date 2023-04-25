@@ -1358,8 +1358,8 @@ func TestGatherError(t *testing.T) {
 		},
 	}
 
-	expectedError := "error during collecting data on host 'localhost': error while getting value for counter \\O(I)\\C: " +
-		"The information passed is not valid.\r\n"
+	expectedError := fmt.Sprintf("error during collecting data on host %q: error while getting value for counter %q: "+
+		"The information passed is not valid.\r\n", "localhost", "\\O(I)\\C")
 	var acc1 testutil.Accumulator
 	require.NoError(t, m.Gather(&acc1))
 	require.Len(t, acc1.Errors, 1)
