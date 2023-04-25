@@ -127,12 +127,13 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		for _, event := range events {
+		for i := range events {
 			// Prepare fields names usage counter
 			var fieldsUsage = map[string]int{}
 
 			tags := map[string]string{}
 			fields := map[string]interface{}{}
+			event := events[i]
 			evt := reflect.ValueOf(&event).Elem()
 			timeStamp := time.Now()
 			// Walk through all fields of Event struct to process System tags or fields
@@ -403,17 +404,16 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 		return event, err
 	}
 
-	err = xml.Unmarshal([]byte(eventXML), &event)
+	err = xml.Unmarshal(eventXML, &event)
 	if err != nil {
-		// We can return event without most text values,
-		// that way we will not loose information
+		//nolint:nilerr // We can return event without most text values, that way we will not lose information
 		// This can happen when processing Forwarded Events
 		return event, nil
 	}
 
 	// Do resolve local messages the usual way, while using built-in information for events forwarded by WEC.
 	// This is a safety measure as the underlying Windows-internal EvtFormatMessage might segfault in cases
-	// where the publisher (i.e. the remote machine which forwared the event) is unavailable e.g. due to
+	// where the publisher (i.e. the remote machine which forwarded the event) is unavailable e.g. due to
 	// a reboot. See https://github.com/influxdata/telegraf/issues/12328 for the full story.
 	if event.RenderingInfo == nil {
 		return w.renderLocalMessage(event, eventHandle)
@@ -426,7 +426,7 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 func (w *WinEventLog) renderLocalMessage(event Event, eventHandle EvtHandle) (Event, error) {
 	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
 	if err != nil {
-		return event, nil
+		return event, nil //nolint:nilerr // We can return event without most values
 	}
 	defer _EvtClose(publisherHandle)
 

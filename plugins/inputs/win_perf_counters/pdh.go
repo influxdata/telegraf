@@ -308,7 +308,7 @@ func init() {
 //	\\LogicalDisk(C:)\% Free Space
 //
 // To view all (internationalized...) counters on a system, there are three non-programmatic ways: perfmon utility,
-// the typeperf command, and the the registry editor. perfmon.exe is perhaps the easiest way, because it's basically a
+// the typeperf command, and the registry editor. perfmon.exe is perhaps the easiest way, because it's basically a
 // full implementation of the pdh.dll API, except with a GUI and all that. The registry setting also provides an
 // interface to the available counters, and can be found at the following key:
 //
@@ -376,7 +376,7 @@ func PdhCloseQuery(hQuery PDH_HQUERY) uint32 {
 	return uint32(ret)
 }
 
-// Collects the current raw data value for all counters in the specified query and updates the status
+// PdhCollectQueryData collects the current raw data value for all counters in the specified query and updates the status
 // code of each counter. With some counters, this function needs to be repeatedly called before the value
 // of the counter can be extracted with PdhGetFormattedCounterValue(). For example, the following code
 // requires at least two calls:
@@ -510,13 +510,13 @@ func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *PDH_HQUERY)
 	return uint32(ret)
 }
 
-// PdhExpandWildCardPath examines the specified computer or log file and returns those counter paths that match the given counter path which contains wildcard characters.
-// The general counter path format is as follows:
+// PdhExpandWildCardPath examines the specified computer or log file and returns those counter paths that match the given counter path
+// which contains wildcard characters. The general counter path format is as follows:
 //
 // \\computer\object(parent/instance#index)\counter
 //
-// The parent, instance, index, and counter components of the counter path may contain either a valid name or a wildcard character. The computer, parent, instance,
-// and index components are not necessary for all counters.
+// The parent, instance, index, and counter components of the counter path may contain either a valid name or a wildcard character.
+// The computer, parent, instance, and index components are not necessary for all counters.
 //
 // The following is a list of the possible formats:
 //
@@ -532,11 +532,13 @@ func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *PDH_HQUERY)
 // \object\counter
 // Use an asterisk (*) as the wildcard character, for example, \object(*)\counter.
 //
-// If a wildcard character is specified in the parent name, all instances of the specified object that match the specified instance and counter fields will be returned.
+// If a wildcard character is specified in the parent name, all instances of the specified object
+// that match the specified instance and counter fields will be returned.
 // For example, \object(*/instance)\counter.
 //
 // If a wildcard character is specified in the instance name, all instances of the specified object and parent object will be returned if all instance names
-// corresponding to the specified index match the wildcard character. For example, \object(parent/*)\counter. If the object does not contain an instance, an error occurs.
+// corresponding to the specified index match the wildcard character. For example, \object(parent/*)\counter.
+// If the object does not contain an instance, an error occurs.
 //
 // If a wildcard character is specified in the counter name, all counters of the specified object are returned.
 //
@@ -572,18 +574,23 @@ func PdhFormatError(msgId uint32) string {
 	return fmt.Sprintf("(pdhErr=%d) %s", msgId, err.Error())
 }
 
-// Retrieves information about a counter, such as data size, counter type, path, and user-supplied data values
+// PdhGetCounterInfo retrieves information about a counter, such as data size, counter type, path, and user-supplied data values
 // hCounter [in]
 // Handle of the counter from which you want to retrieve information. The PdhAddCounter function returns this handle.
 //
 // bRetrieveExplainText [in]
-// Determines whether explain text is retrieved. If you set this parameter to TRUE, the explain text for the counter is retrieved. If you set this parameter to FALSE, the field in the returned buffer is NULL.
+// Determines whether explain text is retrieved. If you set this parameter to TRUE, the explain text for the counter is retrieved.
+// If you set this parameter to FALSE, the field in the returned buffer is NULL.
 //
 // pdwBufferSize [in, out]
-// Size of the lpBuffer buffer, in bytes. If zero on input, the function returns PDH_MORE_DATA and sets this parameter to the required buffer size. If the buffer is larger than the required size, the function sets this parameter to the actual size of the buffer that was used. If the specified size on input is greater than zero but less than the required size, you should not rely on the returned size to reallocate the buffer.
+// Size of the lpBuffer buffer, in bytes. If zero on input, the function returns PDH_MORE_DATA and sets this parameter to the required buffer size.
+// If the buffer is larger than the required size, the function sets this parameter to the actual size of the buffer that was used.
+// If the specified size on input is greater than zero but less than the required size, you should not rely on the returned size to reallocate the buffer.
 //
 // lpBuffer [out]
-// Caller-allocated buffer that receives a PDH_COUNTER_INFO structure. The structure is variable-length, because the string data is appended to the end of the fixed-format portion of the structure. This is done so that all data is returned in a single buffer allocated by the caller. Set to NULL if pdwBufferSize is zero.
+// Caller-allocated buffer that receives a PDH_COUNTER_INFO structure.
+// The structure is variable-length, because the string data is appended to the end of the fixed-format portion of the structure.
+// This is done so that all data is returned in a single buffer allocated by the caller. Set to NULL if pdwBufferSize is zero.
 func PdhGetCounterInfo(hCounter PDH_HCOUNTER, bRetrieveExplainText int, pdwBufferSize *uint32, lpBuffer *byte) uint32 {
 	ret, _, _ := pdh_GetCounterInfoW.Call(
 		uintptr(hCounter),
@@ -594,7 +601,7 @@ func PdhGetCounterInfo(hCounter PDH_HCOUNTER, bRetrieveExplainText int, pdwBuffe
 	return uint32(ret)
 }
 
-// Returns the current raw value of the counter.
+// PdhGetRawCounterValue returns the current raw value of the counter.
 // If the specified counter instance does not exist, this function will return ERROR_SUCCESS
 // and the CStatus member of the PDH_RAW_COUNTER structure will contain PDH_CSTATUS_NO_INSTANCE.
 //
@@ -616,7 +623,7 @@ func PdhGetRawCounterValue(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_
 	return uint32(ret)
 }
 
-// Returns an array of raw values from the specified counter. Use this function when you want to retrieve the raw counter values
+// PdhGetRawCounterArray returns an array of raw values from the specified counter. Use this function when you want to retrieve the raw counter values
 // of a counter that contains a wildcard character for the instance name.
 // hCounter
 // Handle of the counter for whose current raw instance values you want to retrieve. The PdhAddCounter function returns this handle.
