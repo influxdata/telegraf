@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -35,6 +36,9 @@ Please open an issue on https://github.com/influxdata/telegraf including your
 device model and the following response data:
 %+v
 This message is only printed once.`
+
+// Currently supported GNMI Extensions
+var supportedExtensions = []string{"juniper_header"}
 
 // gNMI plugin instance
 type GNMI struct {
@@ -307,10 +311,15 @@ func New() telegraf.Input {
 	}
 }
 
-func init() {
+func (c *GNMI) init() error {
 	inputs.Add("gnmi", New)
 	// Backwards compatible alias:
 	inputs.Add("cisco_telemetry_gnmi", New)
+
+	if err := choice.CheckSlice(c.VendorSpecific, supportedExtensions); err != nil {
+		return fmt.Errorf("Unsupported vendor_specific option': %w", err)
+	}
+	return nil
 }
 
 func (s *Subscription) buildFullPath(c *GNMI) error {
