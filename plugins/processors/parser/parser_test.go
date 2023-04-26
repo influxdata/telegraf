@@ -653,7 +653,6 @@ func TestApply(t *testing.T) {
 			} else {
 				testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
 			}
-
 		})
 	}
 }
