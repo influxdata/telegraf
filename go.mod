@@ -165,7 +165,7 @@ require (
 	github.com/vapourismo/knx-go v0.0.0-20220829185957-fb5458a5389d
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.28.1-0.20220921224932-b4b508abf208
-	github.com/wavefronthq/wavefront-sdk-go v0.12.0
+	github.com/wavefronthq/wavefront-sdk-go v0.11.0
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/x448/float16 v0.8.4
 	github.com/xdg/scram v1.0.5
@@ -401,7 +401,7 @@ require (
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	github.com/vishvananda/netlink v1.2.1-beta.2 // indirect
-	github.com/vishvananda/netns v0.0.4
+	github.com/vishvananda/netns v0.0.2
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect

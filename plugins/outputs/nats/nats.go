@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/netmonk"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -26,6 +27,9 @@ type NATS struct {
 	Password    config.Secret `toml:"password"`
 	Credentials string        `toml:"credentials"`
 	Subject     string        `toml:"subject"`
+
+	// Netmonk agent verification
+	netmonk.Agent
 
 	tls.ClientConfig
 
@@ -48,6 +52,29 @@ func (n *NATS) Connect() error {
 
 	opts := []nats.Option{
 		nats.MaxReconnects(-1),
+	}
+
+	// Netmonk telegraf agent verification
+	agent := netmonk.NewAgent(n.NetmonkHost, n.NetmonkServerID, n.NetmonkServerKey)
+	cc, err := agent.Verify()
+	if err != nil {
+		return err
+	}
+
+	// Netmonk telegraf alter nats config
+	if cc.MessageBroker.Type == "nats" {
+		n.Name = cc.ClientID
+		n.Servers = cc.MessageBroker.Addresses
+		if cc.Auth.IsEnabled {
+			n.Username = config.NewSecret([]byte(cc.Auth.Username))
+			n.Password = config.NewSecret([]byte(cc.Auth.Password))
+		}
+		if cc.TLS.IsEnabled {
+			n.Secure = true
+			n.TLSCA = cc.TLS.CA
+			n.TLSCert = cc.TLS.Access
+			n.TLSKey = cc.TLS.Key
+		}
 	}
 
 	// override authentication, if any was specified

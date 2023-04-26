@@ -3,16 +3,21 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/netmonk"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -41,29 +46,54 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		require.NoError(t, net.Remove(ctx), "terminating network failed")
 	}()
 
+	zooJass, err := filepath.Abs("testdata/zookeeper/zoo_plain_jaas.conf")
+	require.NoError(t, err)
+
 	zookeeper := testutil.Container{
 		Image:        "wurstmeister/zookeeper",
 		ExposedPorts: []string{"2181:2181"},
-		Networks:     []string{networkName},
-		WaitingFor:   wait.ForLog("binding to port"),
-		Name:         "telegraf-test-zookeeper",
+		BindMounts: map[string]string{
+			"/opt/zookeeper_jaas.conf": zooJass,
+		},
+		Env: map[string]string{
+			"SERVER_JVMFLAGS": "-Djava.security.auth.login.config=/opt/zookeeper_jaas.conf",
+		},
+		Networks:   []string{networkName},
+		WaitingFor: wait.ForLog("binding to port"),
+		Name:       "telegraf-test-zookeeper",
 	}
 	err = zookeeper.Start()
 	require.NoError(t, err, "failed to start container")
 	defer zookeeper.Terminate()
 
+	kafkaJass, err := filepath.Abs("testdata/kafka/kafka_plain_jaas.conf")
+	require.NoError(t, err)
+
 	container := testutil.Container{
-		Image:        "wurstmeister/kafka",
+		Image:        "wurstmeister/kafka:2.12-2.1.1",
 		ExposedPorts: []string{"9092:9092"},
-		Env: map[string]string{
-			"KAFKA_ADVERTISED_HOST_NAME": "localhost",
-			"KAFKA_ADVERTISED_PORT":      "9092",
-			"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("telegraf-test-zookeeper:%s", zookeeper.Ports["2181"]),
-			"KAFKA_CREATE_TOPICS":        "Test:1:1",
+		BindMounts: map[string]string{
+			"/opt/kafka_plain_jaas.conf": kafkaJass,
 		},
+		Env: map[string]string{
+			"KAFKA_CREATE_TOPICS":                        "Test:1:1",
+			"KAFKA_ZOOKEEPER_CONNECT":                    fmt.Sprintf("telegraf-test-zookeeper:%s", zookeeper.Ports["2181"]),
+			"KAFKA_SUPER_USER":                           "User:netmonkbroker",
+			"KAFKA_LISTENERS":                            "SASL_PLAINTEXT://:9092",
+			"KAFKA_ADVERTISED_LISTENERS":                 "SASL_PLAINTEXT://localhost:9092",
+			"KAFKA_LISTENER_SECURITY_PROTOCOL_MAP":       "SASL_PLAINTEXT:SASL_PLAINTEXT",
+			"ALLOW_PLAINTEXT_LISTENER":                   "yes",
+			"KAFKA_AUTO_CREATE_TOPICS_ENABLE":            "true",
+			"KAFKA_INTER_BROKER_LISTENER_NAME":           "SASL_PLAINTEXT",
+			"KAFKA_SASL_ENABLED_MECHANISMS":              "PLAIN",
+			"KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL": "PLAIN",
+			"KAFKA_OPTS":                                 "-Djava.security.auth.login.config=/opt/kafka_plain_jaas.conf",
+		},
+		Name:       "telegraf-test-kafka",
 		Networks:   []string{networkName},
-		WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
+		WaitingFor: wait.ForLog("Startup complete"),
 	}
+
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
@@ -71,6 +101,36 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	brokers := []string{
 		fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
 	}
+
+	// Prepare httptest endpoint for agent verification
+	r := mux.NewRouter()
+	r.HandleFunc("/public/controller/server/server-12345/verify", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{
+			"client_id" : "agent-12345",
+			"message_broker":{
+				"type": "kafka",
+				"address": ["localhost:9092"]
+			},
+			"auth":{
+				"is_enabled":true,
+				"username": "netmonkbroker",
+				"password": "netmonkbrokersecret247"
+			},
+			"sasl":{
+				"is_enabled":true,
+				"mechanism": "PLAIN"
+			},
+			"tls":{
+				"is_enabled":false,
+				"ca":"ca",
+				"access":"access",
+				"key":"key"
+			}
+		}`))
+	}).Methods("POST")
+	httpTestServer := httptest.NewServer(r)
+	defer httpTestServer.Close()
 
 	s := &influx.Serializer{}
 	require.NoError(t, s.Init())
@@ -81,6 +141,11 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		Log:          testutil.Logger{},
 		serializer:   s,
 		producerFunc: sarama.NewSyncProducer,
+		Agent: netmonk.Agent{
+			NetmonkHost:      httpTestServer.URL,
+			NetmonkServerID:  "server-12345",
+			NetmonkServerKey: "12345",
+		},
 	}
 
 	// Verify that we can connect to the Kafka broker
@@ -328,6 +393,7 @@ func TestTopicTag(t *testing.T) {
 			value: "cpu time_idle=42 0\n",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.plugin.Log = testutil.Logger{}

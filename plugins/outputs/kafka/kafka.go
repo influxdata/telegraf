@@ -12,7 +12,9 @@ import (
 	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
+	"github.com/influxdata/telegraf/plugins/common/netmonk"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -37,6 +39,9 @@ type Kafka struct {
 	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
 	RoutingTag      string      `toml:"routing_tag"`
 	RoutingKey      string      `toml:"routing_key"`
+
+	// Netmonk agent verification
+	netmonk.Agent
 
 	proxy.Socks5ProxyConfig
 
@@ -127,13 +132,36 @@ func (k *Kafka) Init() error {
 	if err != nil {
 		return err
 	}
-	config := sarama.NewConfig()
+	conf := sarama.NewConfig()
 
-	if err := k.SetConfig(config, k.Log); err != nil {
+	// Netmonk telegraf agent verification
+	agent := netmonk.NewAgent(k.NetmonkHost, k.NetmonkServerID, k.NetmonkServerKey)
+	cc, err := agent.Verify()
+	if err != nil {
 		return err
 	}
 
-	k.saramaConfig = config
+	// Netmonk telegraf alter kafka config
+	if cc.MessageBroker.Type == "kafka" {
+		k.ClientID = cc.ClientID
+		k.Brokers = cc.MessageBroker.Addresses
+		if cc.Auth.IsEnabled && cc.SASL.IsEnabled {
+			k.WriteConfig.SASLAuth.SASLMechanism = cc.SASL.Mechanism
+			k.WriteConfig.SASLUsername = config.NewSecret([]byte(cc.Auth.Username))
+			k.WriteConfig.SASLPassword = config.NewSecret([]byte(cc.Auth.Password))
+		}
+		if cc.TLS.IsEnabled {
+			k.CA = cc.TLS.CA
+			k.Certificate = cc.TLS.Access
+			k.Key = cc.TLS.Key
+		}
+	}
+
+	if err := k.SetConfig(conf, k.Log); err != nil {
+		return err
+	}
+
+	k.saramaConfig = conf
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
@@ -143,13 +171,13 @@ func (k *Kafka) Init() error {
 	}
 
 	if k.Socks5ProxyEnabled {
-		config.Net.Proxy.Enable = true
+		conf.Net.Proxy.Enable = true
 
 		dialer, err := k.Socks5ProxyConfig.GetDialer()
 		if err != nil {
 			return fmt.Errorf("connecting to proxy server failed: %w", err)
 		}
-		config.Net.Proxy.Dialer = dialer
+		conf.Net.Proxy.Dialer = dialer
 	}
 
 	return nil
