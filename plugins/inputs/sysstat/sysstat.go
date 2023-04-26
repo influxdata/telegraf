@@ -32,14 +32,15 @@ var (
 	dfltActivities = []string{"DISK"}
 )
 
-const parseInterval = 1 // parseInterval is the interval (in seconds) where the parsing of the binary file takes place.
-
 type Sysstat struct {
 	// Sadc represents the path to the sadc collector utility.
 	Sadc string `toml:"sadc_path"`
 
 	// Force the execution time of sadc
 	SadcInterval config.Duration `toml:"sadc_interval"`
+
+	// Parse interval
+	ParseInterval config.Duration `toml:"parse_interval"`
 
 	// Sadf represents the path to the sadf cmd.
 	Sadf string `toml:"sadf_path"`
@@ -95,13 +96,17 @@ func (s *Sysstat) Init() error {
 		return fmt.Errorf("no path specified for %q", cmd)
 	}
 
+	if s.ParseInterval == 0 {
+		s.ParseInterval = config.Duration(1 * time.Second)
+	}
+
 	return nil
 }
 
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 	if time.Duration(s.SadcInterval) != 0 {
 		// Collect interval is calculated as interval - parseInterval
-		s.interval = int(time.Duration(s.SadcInterval).Seconds()) + parseInterval
+		s.interval = int(time.Duration(s.SadcInterval).Seconds()) + int(time.Duration(s.ParseInterval).Seconds())
 	}
 
 	if s.interval == 0 {
@@ -149,7 +154,7 @@ func (s *Sysstat) collect(tempfile string) error {
 	}
 
 	// collectInterval has to be smaller than the telegraf data collection interval
-	collectInterval := s.interval - parseInterval
+	collectInterval := s.interval - int(time.Duration(s.ParseInterval).Seconds())
 
 	// If true, interval is not defined yet and Gather is run for the first time.
 	if collectInterval <= 0 {
@@ -158,7 +163,7 @@ func (s *Sysstat) collect(tempfile string) error {
 
 	options = append(options, strconv.Itoa(collectInterval), "2", tempfile)
 	cmd := execCommand(s.Sadc, options...)
-	out, err := internal.CombinedOutputTimeout(cmd, time.Second*time.Duration(collectInterval+parseInterval))
+	out, err := internal.CombinedOutputTimeout(cmd, time.Second*time.Duration(collectInterval+int(time.Duration(s.ParseInterval).Seconds())))
 	if err != nil {
 		return fmt.Errorf("failed to run command %q: %w - %q", strings.Join(cmd.Args, " "), err, string(out))
 	}

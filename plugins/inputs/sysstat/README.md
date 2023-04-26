@@ -32,6 +32,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Path to the sadf command, if it is not in PATH
   # sadf_path = "/usr/bin/sadf"
 
+  ## Parse interval
+  ## This sets the amount of time to reserve for parsing the result of sadf
+  ## with sadc. Increase this if you find that parsing is taking too long after
+  ## collection and collection intervals are skipped.
+  # parse_interval = "1s"
+
+  ## sadc interval
+  ## When set this determines the amount of time to use to collect data. It is
+  ## best to leave this alone and change the plugin-level interval setting if
+  ## more time is required.
+  # sadc_interval = "0s"
+
   ## Activities is a list of activities, that are passed as argument to the
   ## sadc collector utility (e.g: DISK, SNMP etc...)
   ## The more activities that are added, the more data is collected.
