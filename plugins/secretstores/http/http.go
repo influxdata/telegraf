@@ -127,21 +127,22 @@ func (h *HTTP) download() error {
 	// Get the raw data form the URL
 	data, err := h.query()
 	if err != nil {
-		return fmt.Errorf("reading body failed: %v", err)
+		return fmt.Errorf("reading body failed: %w", err)
 	}
 
 	// Transform the data to the expected form if given
 	if h.transformer != nil {
 		out, err := h.transformer.EvalBytes(data)
 		if err != nil {
-			return fmt.Errorf("transforming data failed: %v", err)
+			return fmt.Errorf("transforming data failed: %w", err)
 		}
 		data = out
 	}
 
 	// Extract the data from the resulting data
 	if err := json.Unmarshal(data, &h.cache); err != nil {
-		if errors.Is(err, &json.UnmarshalTypeError{}) {
+		var terr *json.UnmarshalTypeError
+		if errors.As(err, &terr) {
 			return fmt.Errorf("%w; maybe missing or wrong data transformation", err)
 		}
 		return err
@@ -194,12 +195,12 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 	if !h.Username.Empty() && !h.Password.Empty() {
 		username, err := h.Username.Get()
 		if err != nil {
-			return fmt.Errorf("getting username failed: %v", err)
+			return fmt.Errorf("getting username failed: %w", err)
 		}
 		password, err := h.Password.Get()
 		if err != nil {
 			config.ReleaseSecret(username)
-			return fmt.Errorf("getting password failed: %v", err)
+			return fmt.Errorf("getting password failed: %w", err)
 		}
 		request.SetBasicAuth(string(username), string(password))
 		config.ReleaseSecret(username)
@@ -209,7 +210,7 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 	if !h.Token.Empty() {
 		token, err := h.Token.Get()
 		if err != nil {
-			return fmt.Errorf("getting token failed: %v", err)
+			return fmt.Errorf("getting token failed: %w", err)
 		}
 		bearer := "Bearer " + strings.TrimSpace(string(token))
 		config.ReleaseSecret(token)
