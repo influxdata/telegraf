@@ -22,11 +22,10 @@ to get more information on how to do this.
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 
-  ## Optional file with Bearer token
-  ## file content is added as an Authorization header
-  # bearer_token = "/path/to/file"
+  ## Optional Token for Bearer Authentication
+  # token = "your-token"
 
-  ## Optional HTTP Basic Auth Credentials
+  ## Optional Credentials for HTTP Basic Authentication
   # username = "username"
   # password = "pa$$word"
 
@@ -79,7 +78,7 @@ to get more information on how to do this.
 
   ## AES cipher parameters
   # [secretstores.http.aes]
-  #   ## Key and initialization-vector (IV) for the decryption.
+  #   ## Key (hex-encoded) and initialization-vector (IV) for the decryption.
   #   ## In case the key (and IV) is derived from a password, the values can
   #   ## be omitted.
   #   key = ""

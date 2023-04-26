@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/blues/jsonata-go"
@@ -28,7 +27,7 @@ type HTTP struct {
 	Headers            map[string]string `toml:"headers"`
 	Username           config.Secret     `toml:"username"`
 	Password           config.Secret     `toml:"password"`
-	BearerToken        string            `toml:"bearer_token"`
+	Token              config.Secret     `toml:"token"`
 	SuccessStatusCodes []int             `toml:"success_status_codes"`
 	Transformation     string            `toml:"transformation"`
 	Log                telegraf.Logger   `toml:"-"`
@@ -70,11 +69,10 @@ func (h *HTTP) Init() error {
 	// Setup the decryption infrastructure
 	h.decrypter, err = h.DecryptionConfig.CreateDecrypter()
 	if err != nil {
-		return err
+		return fmt.Errorf("creating decryptor failed: %w", err)
 	}
 
-	// Download and parse the credentials
-	return h.download()
+	return nil
 }
 
 // Get searches for the given key and return the secret
@@ -113,6 +111,11 @@ func (h *HTTP) List() ([]string, error) {
 
 // GetResolver returns a function to resolve the given key.
 func (h *HTTP) GetResolver(key string) (telegraf.ResolveFunc, error) {
+	// Download and parse the credentials
+	if err := h.download(); err != nil {
+		return nil, err
+	}
+
 	resolver := func() ([]byte, bool, error) {
 		s, err := h.Get(key)
 		return s, false, err
@@ -137,22 +140,20 @@ func (h *HTTP) download() error {
 	}
 
 	// Extract the data from the resulting data
-	return json.Unmarshal(data, &h.cache)
+	if err := json.Unmarshal(data, &h.cache); err != nil {
+		if errors.Is(err, &json.UnmarshalTypeError{}) {
+			return fmt.Errorf("%w; maybe missing or wrong data transformation", err)
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (h *HTTP) query() ([]byte, error) {
 	request, err := http.NewRequest(http.MethodGet, h.URL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request failed: %w", err)
-	}
-
-	if h.BearerToken != "" {
-		token, err := os.ReadFile(h.BearerToken)
-		if err != nil {
-			return nil, fmt.Errorf("reading bearer file failed: %w", err)
-		}
-		bearer := "Bearer " + strings.Trim(string(token), "\n")
-		request.Header.Set("Authorization", bearer)
 	}
 
 	for k, v := range h.Headers {
@@ -190,19 +191,31 @@ func (h *HTTP) query() ([]byte, error) {
 }
 
 func (h *HTTP) setRequestAuth(request *http.Request) error {
-	username, err := h.Username.Get()
-	if err != nil {
-		return fmt.Errorf("getting username failed: %v", err)
-	}
-	defer config.ReleaseSecret(username)
-	password, err := h.Password.Get()
-	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
-	}
-	defer config.ReleaseSecret(password)
-	if len(username) != 0 || len(password) != 0 {
+	if !h.Username.Empty() && !h.Password.Empty() {
+		username, err := h.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %v", err)
+		}
+		password, err := h.Password.Get()
+		if err != nil {
+			config.ReleaseSecret(username)
+			return fmt.Errorf("getting password failed: %v", err)
+		}
 		request.SetBasicAuth(string(username), string(password))
+		config.ReleaseSecret(username)
+		config.ReleaseSecret(password)
 	}
+
+	if !h.Token.Empty() {
+		token, err := h.Token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %v", err)
+		}
+		bearer := "Bearer " + strings.TrimSpace(string(token))
+		config.ReleaseSecret(token)
+		request.Header.Set("Authorization", bearer)
+	}
+
 	return nil
 }
 

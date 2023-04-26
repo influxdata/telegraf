@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -32,9 +33,15 @@ func (c *DecryptionConfig) CreateDecrypter() (Decrypter, error) {
 	return nil, fmt.Errorf("unknown cipher %q", c.Cipher)
 }
 
-func PKCS7Trimming(in []byte) []byte {
+func PKCS7Trimming(in []byte) ([]byte, error) {
 	// 'count' number of bytes where padded to the end of the clear-text
 	// each containing the value of 'count'
+	if len(in) == 0 {
+		return nil, errors.New("empty value to trim")
+	}
 	count := int(in[len(in)-1])
-	return in[:len(in)-count]
+	if len(in) < count {
+		return nil, fmt.Errorf("length %d shorten than trim value %d", len(in), count)
+	}
+	return in[:len(in)-count], nil
 }
