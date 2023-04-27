@@ -169,7 +169,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *InfluxDB) udpClient(address *url.URL) (Client, error) {
-	serializer := &influx.Serializer{UintSupport: true}
+	serializer := &influx.Serializer{}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, proxy *url.
 		return nil, err
 	}
 
-	serializer := &influx.Serializer{UintSupport: true}
+	serializer := &influx.Serializer{}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
