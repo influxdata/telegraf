@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
+	cryptoRand "crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
+	"math/rand"
 	"os"
 	"os/exec"
 	"runtime"
@@ -16,8 +18,6 @@ import (
 	"syscall"
 	"time"
 	"unicode"
-
-	"github.com/chanxuehong/rand"
 
 	"github.com/influxdata/telegraf/internal/choice"
 )
@@ -90,7 +90,7 @@ func ReadLines(filename string) ([]string, error) {
 // RandomString returns a random string of alphanumeric characters
 func RandomString(n int) (string, error) {
 	var bytes = make([]byte, n)
-	_, err := rand.Read(bytes)
+	_, err := cryptoRand.Read(bytes)
 	if err != nil {
 		return "", err
 	}
@@ -141,7 +141,7 @@ func RandomDuration(max time.Duration) time.Duration {
 		return 0
 	}
 
-	return time.Duration(rand.Int63n(max.Nanoseconds()))
+	return time.Duration(rand.Int63n(max.Nanoseconds())) //nolint:gosec // G404: not security critical
 }
 
 // SleepContext sleeps until the context is closed or the duration is reached.

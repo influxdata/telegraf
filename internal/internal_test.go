@@ -3,14 +3,13 @@ package internal
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
 	"io"
 	"log"
 	"os/exec"
 	"regexp"
 	"testing"
 	"time"
-
-	"github.com/chanxuehong/rand"
 
 	"github.com/stretchr/testify/require"
 )

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/chanxuehong/rand"
+	"github.com/google/uuid"
 
 	"github.com/influxdata/telegraf"
 )
@@ -20,8 +20,7 @@ import (
 // The `data` field contains a list of commands to execute with
 // the \n character after every command.
 func (p *PowerdnsRecursor) gatherFromV1Server(address string, acc telegraf.Accumulator) error {
-	randomNumber := rand.Int63()
-	recvSocket := filepath.Join(p.SocketDir, fmt.Sprintf("pdns_recursor_telegraf%d", randomNumber))
+	recvSocket := filepath.Join(p.SocketDir, fmt.Sprintf("pdns_recursor_telegraf%s", uuid.New().String()))
 
 	laddr, err := net.ResolveUnixAddr("unixgram", recvSocket)
 	if err != nil {

@@ -2,11 +2,12 @@
 package example
 
 import (
+	"crypto/rand"
 	_ "embed"
 	"fmt"
+	"math"
+	"math/big"
 	"time"
-
-	"github.com/chanxuehong/rand"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -82,14 +83,14 @@ func (m *Example) Init() error {
 
 // Gather defines what data the plugin will gather.
 func (m *Example) Gather(acc telegraf.Accumulator) error {
-	// Imagine some completely arbitrary error occuring here
+	// Imagine some completely arbitrary error occurring here
 	if m.NumberFields > 10 {
 		return fmt.Errorf("too many fields")
 	}
 
-	// For illustration we gather three metrics in one go
+	// For illustration, we gather three metrics in one go
 	for run := 0; run < 3; run++ {
-		// Imagine an error occurs here but you want to keep the other
+		// Imagine an error occurs here, but you want to keep the other
 		// metrics, then you cannot simply return, as this would drop
 		// all later metrics. Simply accumulate errors in this case
 		// and ignore the metric.
@@ -102,11 +103,15 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 		fields := map[string]interface{}{"count": m.count}
 		for i := int64(1); i < m.NumberFields; i++ {
 			name := fmt.Sprintf("field%d", i)
-			value := 0.0
+			var err error
+			value := big.NewInt(0)
 			if m.EnableRandomVariable {
-				value = rand.Float64()
+				value, err = rand.Int(rand.Reader, big.NewInt(math.MaxUint32))
+				if err != nil {
+					return err
+				}
 			}
-			fields[name] = value
+			fields[name] = float64(value.Int64())
 		}
 
 		// Construct the tags
