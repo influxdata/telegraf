@@ -62,10 +62,9 @@ type PubSub struct {
 	wg     *sync.WaitGroup
 	acc    telegraf.TrackingAccumulator
 
-	undelivered  map[telegraf.TrackingID]message
-	sem          semaphore
-	decoder      internal.ContentDecoder
-	decoderMutex sync.Mutex
+	undelivered map[telegraf.TrackingID]message
+	sem         semaphore
+	decoder     internal.ContentDecoder
 }
 
 func (*PubSub) SampleConfig() string {
@@ -225,19 +224,14 @@ func (ps *PubSub) decompressData(data []byte) ([]byte, error) {
 		return data, nil
 	}
 
-	ps.decoderMutex.Lock()
-
 	data, err := ps.decoder.Decode(data, int64(ps.MaxDecompressionSize))
 	if err != nil {
-		ps.decoderMutex.Unlock()
 		return nil, err
 	}
 
 	decompressedData := make([]byte, len(data))
 	copy(decompressedData, data)
 	data = decompressedData
-
-	ps.decoderMutex.Unlock()
 
 	return data, nil
 }
