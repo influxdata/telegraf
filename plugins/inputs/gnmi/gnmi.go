@@ -320,7 +320,7 @@ func init() {
 func (c *GNMI) Init() error {
 	// Check vendor_specific options configured by user
 	if err := choice.CheckSlice(c.VendorSpecific, supportedExtensions); err != nil {
-		return fmt.Errorf("Unsupported vendor_specific option': %w", err)
+		return fmt.Errorf("unsupported vendor_specific option: %w", err)
 	}
 	return nil
 }
