@@ -25,6 +25,7 @@ type FileCount struct {
 	Directories    []string
 	Name           string
 	Recursive      bool
+	FileTimestamp  bool
 	RegularOnly    bool
 	FollowSymlinks bool
 	Size           config.Size
@@ -290,6 +291,7 @@ func NewFileCount() *FileCount {
 		Directories:    []string{},
 		Name:           "*",
 		Recursive:      true,
+		FileTimestamp:  true,
 		RegularOnly:    true,
 		FollowSymlinks: false,
 		Size:           config.Size(0),
