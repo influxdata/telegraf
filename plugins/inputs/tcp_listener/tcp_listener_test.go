@@ -270,7 +270,7 @@ func TestRunParser(t *testing.T) {
 func TestRunParserInvalidMsg(t *testing.T) {
 	var testmsg = []byte("cpu_load_short")
 
-	logger := &testutil.CaptureLogger{}
+	logger := &testutil.CaptureLogger{T: t}
 
 	listener, in := newTestTCPListener()
 	listener.Log = logger

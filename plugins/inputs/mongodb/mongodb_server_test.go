@@ -107,7 +107,7 @@ func TestSkipBehaviorIntegration(t *testing.T) {
 	}
 
 	m := &MongoDB{
-		Log:     &testutil.CaptureLogger{},
+		Log:     &testutil.CaptureLogger{T: t},
 		Servers: []string{unreachableMongoEndpoint},
 	}
 
@@ -129,7 +129,7 @@ func TestErrorBehaviorIntegration(t *testing.T) {
 	}
 
 	m := &MongoDB{
-		Log:                         &testutil.CaptureLogger{},
+		Log:                         &testutil.CaptureLogger{T: t},
 		Servers:                     []string{unreachableMongoEndpoint},
 		DisconnectedServersBehavior: "error",
 	}

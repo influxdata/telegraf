@@ -85,7 +85,7 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	}
 	readConfig.Groups = append(readConfig.Groups, g)
 
-	logger := &testutil.CaptureLogger{}
+	logger := &testutil.CaptureLogger{T: t}
 	readClient, err := readConfig.CreateReadClient(logger)
 	require.NoError(t, err)
 	err = readClient.Connect()

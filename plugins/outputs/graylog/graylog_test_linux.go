@@ -397,7 +397,7 @@ func TestWriteTCPServerDownRetry(t *testing.T) {
 	dummy, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	logger := &testutil.CaptureLogger{}
+	logger := &testutil.CaptureLogger{T: t}
 	plugin := Graylog{
 		NameFieldNoPrefix: true,
 		Servers:           []string{"tcp://" + dummy.Addr().String()},
@@ -434,7 +434,7 @@ func TestWriteTCPRetryStopping(t *testing.T) {
 	dummy, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	logger := &testutil.CaptureLogger{}
+	logger := &testutil.CaptureLogger{T: t}
 	plugin := Graylog{
 		NameFieldNoPrefix: true,
 		Servers:           []string{"tcp://" + dummy.Addr().String()},

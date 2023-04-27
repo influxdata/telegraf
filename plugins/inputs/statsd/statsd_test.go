@@ -1814,7 +1814,7 @@ func TestUdp(t *testing.T) {
 }
 
 func TestUdpFillQueue(t *testing.T) {
-	logger := testutil.CaptureLogger{}
+	logger := testutil.CaptureLogger{T: t}
 	plugin := &Statsd{
 		Log:                    &logger,
 		Protocol:               "udp",

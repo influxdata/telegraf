@@ -1201,7 +1201,7 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 		),
 	}
 
-	logger := &testutil.CaptureLogger{}
+	logger := &testutil.CaptureLogger{T: t}
 	output := influxdb.InfluxDB{
 		URL:                  u.String(),
 		Database:             "telegraf",
