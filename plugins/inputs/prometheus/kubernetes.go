@@ -92,7 +92,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 				} else {
 					err = p.watchPod(ctx, client)
 					if err != nil {
-						p.Log.Errorf("Unable to monitor pod: %s", err.Error())
+						p.Log.Warnf("Error while attempting to watch pod: %s", err.Error())
 					}
 				}
 			}
@@ -191,16 +191,11 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		},
 	})
 
-	if err != nil {
-		<-ctx.Done()
-		return err
-	}
-
 	informerfactory.Start(ctx.Done())
 	informerfactory.WaitForCacheSync(wait.NeverStop)
 
 	<-ctx.Done()
-	return nil
+	return err
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
