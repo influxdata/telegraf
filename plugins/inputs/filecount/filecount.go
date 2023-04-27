@@ -148,11 +148,11 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			childCount[parent]++
 			childSize[parent] += file.Size()
 			if fc.FileTimestamp {
-				if oldestFileTimestamp[parent] > fileInfo.ModTime().UnixNano() {
-					oldestFileTimestamp[parent] = fileInfo.ModTime().UnixNano()
+				if oldestFileTimestamp[parent] > file.ModTime().UnixNano() {
+					oldestFileTimestamp[parent] = file.ModTime().UnixNano()
 				}
-				if newestFileTimestamp[parent] < fileInfo.ModTime().UnixNano() {
-					newestFileTimestamp[parent] = fileInfo.ModTime().UnixNano()
+				if newestFileTimestamp[parent] < file.ModTime().UnixNano() {
+					newestFileTimestamp[parent] = file.ModTime().UnixNano()
 				}
 			}
 		}
@@ -169,8 +169,8 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 				"size_bytes": childSize[path],
 			}
 			if fc.FileTimestamp {
-				tmpFields["oldest_file_timestamp"] = oldestFileTimestamp[path]
-				tmpFields["newest_file_timestamp"] = newestFileTimestamp[path]
+				gauge["oldest_file_timestamp"] = oldestFileTimestamp[path]
+				gauge["newest_file_timestamp"] = newestFileTimestamp[path]
 			}
 			acc.AddGauge("filecount", gauge,
 				map[string]string{
