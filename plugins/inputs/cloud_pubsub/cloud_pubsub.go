@@ -221,7 +221,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 }
 
 func (ps *PubSub) decompressData(data []byte) ([]byte, error) {
-	if ps.ContentEncoding == "" {
+	if ps.ContentEncoding == "identity" {
 		return data, nil
 	}
 
@@ -233,11 +233,9 @@ func (ps *PubSub) decompressData(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if ps.ContentEncoding == "gzip" {
-		gzipData := make([]byte, len(data))
-		copy(gzipData, data)
-		data = gzipData
-	}
+	decompressedData := make([]byte, len(data))
+	copy(decompressedData, data)
+	data = decompressedData
 
 	ps.decoderMutex.Unlock()
 
@@ -246,8 +244,7 @@ func (ps *PubSub) decompressData(data []byte) ([]byte, error) {
 
 func (ps *PubSub) decodeB64Data(data []byte) ([]byte, error) {
 	if ps.Base64Data {
-		data, err := base64.StdEncoding.DecodeString(string(data))
-		return data, err
+		return base64.StdEncoding.DecodeString(string(data))
 	}
 
 	return data, nil
@@ -331,8 +328,15 @@ func (ps *PubSub) Init() error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
-	if ps.ContentEncoding != "" && ps.ContentEncoding != "identity" && ps.ContentEncoding != "gzip" {
-		return fmt.Errorf(`invalid value for "content_encoding"`)
+	if ps.ContentEncoding == "" {
+		ps.ContentEncoding = "identity"
+	}
+
+	switch ps.ContentEncoding {
+	case "identity", "gzip":
+		// do nothing, encoding is valid
+	default:
+		return fmt.Errorf("invalid value for content_encoding")
 	}
 
 	if ps.MaxDecompressionSize <= 0 {

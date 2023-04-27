@@ -169,7 +169,9 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			return nil, err
 		}
 
-		b, err = ps.encodeData(b)
+		b = ps.encodeB64Data(b)
+
+		b, err = ps.compressData(b)
 		if err != nil {
 			return nil, err
 		}
@@ -189,9 +191,11 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			continue
 		}
 
-		b, err = ps.encodeData(b)
+		b = ps.encodeB64Data(b)
+
+		b, err = ps.compressData(b)
 		if err != nil {
-			ps.Log.Debugf("could not encode metric: %v", err)
+			ps.Log.Errorf("could not compress metric: %v", err)
 			continue
 		}
 
@@ -207,10 +211,18 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 	return msgs, nil
 }
 
-func (ps *PubSub) encodeData(data []byte) ([]byte, error) {
+func (ps *PubSub) encodeB64Data(data []byte) []byte {
 	if ps.Base64Data {
 		encoded := base64.StdEncoding.EncodeToString(data)
 		data = []byte(encoded)
+	}
+
+	return data
+}
+
+func (ps *PubSub) compressData(data []byte) ([]byte, error) {
+	if ps.ContentEncoding == "identity" {
+		return data, nil
 	}
 
 	data, err := ps.encoder.Encode(data)
@@ -218,11 +230,9 @@ func (ps *PubSub) encodeData(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if ps.ContentEncoding == "gzip" {
-		gzipData := make([]byte, len(data))
-		copy(gzipData, data)
-		data = gzipData
-	}
+	compressedData := make([]byte, len(data))
+	copy(compressedData, data)
+	data = compressedData
 
 	return data, nil
 }
@@ -261,8 +271,15 @@ func (ps *PubSub) Init() error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
-	if ps.ContentEncoding != "" && ps.ContentEncoding != "identity" && ps.ContentEncoding != "gzip" {
-		return fmt.Errorf(`invalid value for "content_encoding"`)
+	if ps.ContentEncoding == "" {
+		ps.ContentEncoding = "identity"
+	}
+
+	switch ps.ContentEncoding {
+	case "identity", "gzip":
+		// do nothing, encoding is valid
+	default:
+		return fmt.Errorf("invalid value for content_encoding")
 	}
 
 	return nil
