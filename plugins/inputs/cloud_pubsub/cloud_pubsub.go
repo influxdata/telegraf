@@ -177,33 +177,23 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
-	// This function is called concurrently, but the decoder cannot.
-	ps.decoderMutex.Lock()
-	b, err := ps.decoder.Decode(msg.Data(), int64(ps.MaxDecompressionSize))
-	if err != nil {
-		ps.decoderMutex.Unlock()
-		return fmt.Errorf("unable to decode message: %w", err)
-	}
 	var data []byte
-	if ps.ContentEncoding == "gzip" {
-		data = make([]byte, len(b))
-		copy(data, b)
-	} else {
-		data = b
+	var err error
+
+	data, err = ps.decompressData(msg.Data())
+	if err != nil {
+		return fmt.Errorf("unable to decompress %s message: %w", ps.ContentEncoding, err)
 	}
-	ps.decoderMutex.Unlock()
-	if ps.Base64Data {
-		strData, err := base64.StdEncoding.DecodeString(string(data))
-		if err != nil {
-			return fmt.Errorf("unable to base64 decode message: %w", err)
-		}
-		data = strData
+
+	data, err = ps.decodeB64Data(data)
+	if err != nil {
+		return fmt.Errorf("unable to decode base64 message: %w", err)
 	}
 
 	metrics, err := ps.parser.Parse(data)
 	if err != nil {
 		msg.Ack()
-		return fmt.Errorf("unable to parse decoded message: %w", err)
+		return fmt.Errorf("unable to parse message: %w", err)
 	}
 
 	if len(metrics) == 0 {
@@ -228,6 +218,39 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	ps.undelivered[id] = msg
 
 	return nil
+}
+
+func (ps *PubSub) decompressData(data []byte) ([]byte, error) {
+	if ps.ContentEncoding == "" {
+		return data, nil
+	}
+
+	ps.decoderMutex.Lock()
+
+	data, err := ps.decoder.Decode(data, int64(ps.MaxDecompressionSize))
+	if err != nil {
+		ps.decoderMutex.Unlock()
+		return nil, err
+	}
+
+	if ps.ContentEncoding == "gzip" {
+		gzipData := make([]byte, len(data))
+		copy(gzipData, data)
+		data = gzipData
+	}
+
+	ps.decoderMutex.Unlock()
+
+	return data, nil
+}
+
+func (ps *PubSub) decodeB64Data(data []byte) ([]byte, error) {
+	if ps.Base64Data {
+		data, err := base64.StdEncoding.DecodeString(string(data))
+		return data, err
+	}
+
+	return data, nil
 }
 
 func (ps *PubSub) waitForDelivery(parentCtx context.Context) {
@@ -308,11 +331,7 @@ func (ps *PubSub) Init() error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
-	if ps.ContentEncoding == "" {
-		ps.ContentEncoding = "identity"
-	}
-
-	if ps.ContentEncoding != "gzip" && ps.ContentEncoding != "identity" {
+	if ps.ContentEncoding != "" && ps.ContentEncoding != "identity" && ps.ContentEncoding != "gzip" {
 		return fmt.Errorf(`invalid value for "content_encoding"`)
 	}
 

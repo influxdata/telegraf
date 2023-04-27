@@ -169,14 +169,11 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			return nil, err
 		}
 
-		if ps.Base64Data {
-			encoded := base64.StdEncoding.EncodeToString(b)
-			b = []byte(encoded)
-		}
-		b, err = ps.encoder.Encode(b)
+		b, err = ps.encodeData(b)
 		if err != nil {
 			return nil, err
 		}
+
 		msg := &pubsub.Message{Data: b}
 		if ps.Attributes != nil {
 			msg.Attributes = ps.Attributes
@@ -192,25 +189,14 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			continue
 		}
 
-		if ps.Base64Data {
-			encoded := base64.StdEncoding.EncodeToString(b)
-			b = []byte(encoded)
-		}
-
-		b, err = ps.encoder.Encode(b)
+		b, err = ps.encodeData(b)
 		if err != nil {
 			ps.Log.Debugf("could not encode metric: %v", err)
 			continue
 		}
-		var data []byte
-		if ps.ContentEncoding == "gzip" {
-			data = make([]byte, len(b))
-			copy(data, b)
-		} else {
-			data = b
-		}
+
 		msg := &pubsub.Message{
-			Data: data,
+			Data: b,
 		}
 		if ps.Attributes != nil {
 			msg.Attributes = ps.Attributes
@@ -219,6 +205,26 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 	}
 
 	return msgs, nil
+}
+
+func (ps *PubSub) encodeData(data []byte) ([]byte, error) {
+	if ps.Base64Data {
+		encoded := base64.StdEncoding.EncodeToString(data)
+		data = []byte(encoded)
+	}
+
+	data, err := ps.encoder.Encode(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if ps.ContentEncoding == "gzip" {
+		gzipData := make([]byte, len(data))
+		copy(gzipData, data)
+		data = gzipData
+	}
+
+	return data, nil
 }
 
 func (ps *PubSub) waitForResults(ctx context.Context, cancel context.CancelFunc) error {
@@ -255,11 +261,7 @@ func (ps *PubSub) Init() error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
-	if ps.ContentEncoding == "" {
-		ps.ContentEncoding = "identity"
-	}
-
-	if ps.ContentEncoding != "gzip" && ps.ContentEncoding != "identity" {
+	if ps.ContentEncoding != "" && ps.ContentEncoding != "identity" && ps.ContentEncoding != "gzip" {
 		return fmt.Errorf(`invalid value for "content_encoding"`)
 	}
 
