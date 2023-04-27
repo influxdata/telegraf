@@ -130,38 +130,35 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
 
-	// check if there are exceptions
-	if len(extension) != 0 {
-		// iter on each extension
-		for _, ext := range extension {
-			currentExt := ext.GetRegisteredExt().Msg
-			if currentExt == nil {
-				break
-			}
-			// extension ID
-			switch ext.GetRegisteredExt().Id {
-			// Juniper Header extention
-			//EID_JUNIPER_TELEMETRY_HEADER = 1;
-			case eidJuniperTelemetryHeader:
-				// Decode it only if user requested it
-				if choice.Contains("juniper_header", h.vendorExt) {
-					juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeaderExtension{}
-					// unmarshal extention
-					err := proto.Unmarshal(currentExt, juniperHeader)
-					if err != nil {
-						h.log.Errorf("unmarshal gnmi Juniper Header extention failed: %w", err)
-						break
-					}
-					// Add only relevant Tags from the Juniper Header extention.
-					// These are requiered for aggregation
-					prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
-					prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
-					prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
+	// iter on each extension
+	for _, ext := range extension {
+		currentExt := ext.GetRegisteredExt().Msg
+		if currentExt == nil {
+			break
+		}
+		// extension ID
+		switch ext.GetRegisteredExt().Id {
+		// Juniper Header extention
+		//EID_JUNIPER_TELEMETRY_HEADER = 1;
+		case eidJuniperTelemetryHeader:
+			// Decode it only if user requested it
+			if choice.Contains("juniper_header", h.vendorExt) {
+				juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeaderExtension{}
+				// unmarshal extention
+				err := proto.Unmarshal(currentExt, juniperHeader)
+				if err != nil {
+					h.log.Errorf("unmarshal gnmi Juniper Header extention failed: %w", err)
+					break
 				}
-
-			default:
-				continue
+				// Add only relevant Tags from the Juniper Header extention.
+				// These are requiered for aggregation
+				prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
+				prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
+				prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
 			}
+
+		default:
+			continue
 		}
 	}
 
