@@ -1,0 +1,21 @@
+[Unit]
+Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Documentation=https://github.com/influxdata/telegraf
+After=syslog.target network.target
+ConditionFileIsExecutable=/usr/bin/netmonk-telegraf
+
+StartLimitBurst=5
+StartLimitIntervalSec=10
+
+[Service]
+ExecStart=/usr/bin/netmonk-telegraf "--config" $URL "--service" "netmonk-telegraf" "--config-directory" "/etc/netmonk-telegraf/netmonk-telegraf.d"
+ExecReload=/bin/kill -HUP \$MAINPID
+Restart=always
+RestartSec=60
+StandardOutput=/var/log/netmonk-telegraf/netmonk-telegraf.log
+StandardError=/var/log/netmonk-telegraf/netmonk-telegraf.log
+RestartForceExitStatus=SIGPIPE
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

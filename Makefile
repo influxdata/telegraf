@@ -257,14 +257,17 @@ install: $(buildbin)
 	@mkdir -pv $(DESTDIR)$(localstatedir)
 	@if [ $(GOOS) != "windows" ]; then mkdir -pv $(DESTDIR)$(sysconfdir)/logrotate.d; fi
 	@if [ $(GOOS) != "windows" ]; then mkdir -pv $(DESTDIR)$(localstatedir)/log/telegraf; fi
-	@if [ $(GOOS) != "windows" ]; then mkdir -pv $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d; fi
+	@if [ $(GOOS) != "windows" ]; then mkdir -pv $(DESTDIR)$(sysconfdir)/netmonk-telegraf/telegraf.d; fi
+	@if [ $(GOOS) != "windows" ]; then mkdir -pv $(DESTDIR)$(sysconfdir)/netmonk-telegraf/scripts; fi
 	@cp -fv $(buildbin) $(DESTDIR)$(bindir)
-	@if [ $(GOOS) != "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)$(sysconfdir)/telegraf/telegraf.conf$(conf_suffix); fi
+	@if [ $(GOOS) != "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)$(sysconfdir)/netmonk-telegraf/netmonk-telegraf.conf$(conf_suffix); fi
+	@if [ $(GOOS) != "windows" ]; then cp -frv etc/netmonk/linux/scripts $(DESTDIR)$(sysconfdir)/netmonk-telegraf; fi
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/logrotate.d/telegraf $(DESTDIR)$(sysconfdir)/logrotate.d; fi
-	@if [ $(GOOS) = "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)/telegraf.conf; fi
-	@if [ $(GOOS) = "linux" ]; then mkdir -pv $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
-	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/telegraf.service $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
-	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/init.sh $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
+	@if [ $(GOOS) = "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)/netmonk-telegraf.conf; fi
+	@if [ $(GOOS) = "windows" ]; then cp -frv etc/netmonk/windows/scripts $(DESTDIR); fi
+	@if [ $(GOOS) = "linux" ]; then mkdir -pv $(DESTDIR)$(prefix)/lib/netmonk-telegraf/scripts; fi
+	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/netmonk-telegraf.service $(DESTDIR)$(prefix)/lib/netmonk-telegraf/scripts; fi
+	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/init.sh $(DESTDIR)$(prefix)/lib/netmonk-telegraf/scripts; fi
 
 # Telegraf build per platform.  This improves package performance by sharing
 # the bin between deb/rpm/tar packages over building directly into the package
@@ -272,7 +275,7 @@ install: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	CGO_ENABLED=0 go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -o $(dir $@)netmonk-telegraf -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -479,6 +482,6 @@ windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 %.zip: export pkg := zip
 %.zip: export prefix := /
 
-%.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)-$(pkg)/telegraf-$(version)
-%.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)/telegraf$(EXEEXT)
+%.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)-$(pkg)/netmonk-telegraf-$(version)
+%.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)/netmonk-telegraf$(EXEEXT)
 %.deb %.rpm %.tar.gz %.zip: export LDFLAGS = -w -s
