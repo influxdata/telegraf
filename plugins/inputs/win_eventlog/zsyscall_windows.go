@@ -36,21 +36,18 @@ type EvtFormatMessageFlag uint32
 // EVT_FORMAT_MESSAGE_FLAGS enumeration
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385525(v=vs.85).aspx
 const (
-	//revive:disable:var-naming
-	// Format the event's message string.
+	// EvtFormatMessageEvent - Format the event's message string.
 	EvtFormatMessageEvent EvtFormatMessageFlag = iota + 1
-	// Format the message string of the level specified in the event.
+	// EvtFormatMessageLevel - Format the message string of the level specified in the event.
 	EvtFormatMessageLevel
-	// Format the message string of the task specified in the event.
+	// EvtFormatMessageTask - Format the message string of the task specified in the event.
 	EvtFormatMessageTask
-	// Format the message string of the task specified in the event.
+	// EvtFormatMessageOpcode - Format the message string of the task specified in the event.
 	EvtFormatMessageOpcode
-	// Format the message string of the keywords specified in the event. If the
-	// event specifies multiple keywords, the formatted string is a list of
-	// null-terminated strings. Increment through the strings until your pointer
-	// points past the end of the used buffer.
+	// EvtFormatMessageKeyword - Format the message string of the keywords specified in the event. If the
+	// event specifies multiple keywords, the formatted string is a list of null-terminated strings.
+	// Increment through the strings until your pointer points past the end of the used buffer.
 	EvtFormatMessageKeyword
-	//revive:enable:var-naming
 )
 
 // errnoErr returns common boxed Errno values, to prevent
@@ -88,21 +85,21 @@ func _EvtSubscribe(
 	context uintptr,
 	callback syscall.Handle,
 	flags EvtSubscribeFlag,
-) (handle EvtHandle, err error) {
-	r0, _, e1 := syscall.Syscall9(
+) (EvtHandle, error) {
+	r0, _, e1 := syscall.SyscallN(
 		procEvtSubscribe.Addr(),
-		8,
 		uintptr(session),
-		uintptr(signalEvent),
+		signalEvent,
 		uintptr(unsafe.Pointer(channelPath)), //nolint:gosec // G103: Valid use of unsafe call to pass channelPath
 		uintptr(unsafe.Pointer(query)),       //nolint:gosec // G103: Valid use of unsafe call to pass query
 		uintptr(bookmark),
-		uintptr(context),
+		context,
 		uintptr(callback),
 		uintptr(flags),
-		0,
 	)
-	handle = EvtHandle(r0)
+
+	var err error
+	handle := EvtHandle(r0)
 	if handle == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
@@ -110,7 +107,7 @@ func _EvtSubscribe(
 			err = syscall.EINVAL
 		}
 	}
-	return
+	return handle, err
 }
 
 func _EvtRender(
@@ -121,10 +118,9 @@ func _EvtRender(
 	buffer *byte,
 	bufferUsed *uint32,
 	propertyCount *uint32,
-) (err error) {
-	r1, _, e1 := syscall.Syscall9(
+) error {
+	r1, _, e1 := syscall.SyscallN(
 		procEvtRender.Addr(),
-		7,
 		uintptr(context),
 		uintptr(fragment),
 		uintptr(flags),
@@ -132,9 +128,9 @@ func _EvtRender(
 		uintptr(unsafe.Pointer(buffer)),        //nolint:gosec // G103: Valid use of unsafe call to pass buffer
 		uintptr(unsafe.Pointer(bufferUsed)),    //nolint:gosec // G103: Valid use of unsafe call to pass bufferUsed
 		uintptr(unsafe.Pointer(propertyCount)), //nolint:gosec // G103: Valid use of unsafe call to pass propertyCount
-		0,
-		0,
 	)
+
+	var err error
 	if r1 == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
@@ -142,11 +138,12 @@ func _EvtRender(
 			err = syscall.EINVAL
 		}
 	}
-	return
+	return err
 }
 
-func _EvtClose(object EvtHandle) (err error) {
-	r1, _, e1 := syscall.Syscall(procEvtClose.Addr(), 1, uintptr(object), 0, 0)
+func _EvtClose(object EvtHandle) error {
+	r1, _, e1 := syscall.SyscallN(procEvtClose.Addr(), uintptr(object))
+	var err error
 	if r1 == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
@@ -154,13 +151,12 @@ func _EvtClose(object EvtHandle) (err error) {
 			err = syscall.EINVAL
 		}
 	}
-	return
+	return err
 }
 
-func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle, timeout uint32, flags uint32, numReturned *uint32) (err error) {
-	r1, _, e1 := syscall.Syscall6(
+func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle, timeout uint32, flags uint32, numReturned *uint32) error {
+	r1, _, e1 := syscall.SyscallN(
 		procEvtNext.Addr(),
-		6,
 		uintptr(resultSet),
 		uintptr(eventArraySize),
 		uintptr(unsafe.Pointer(eventArray)), //nolint:gosec // G103: Valid use of unsafe call to pass eventArray
@@ -168,6 +164,8 @@ func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle,
 		uintptr(flags),
 		uintptr(unsafe.Pointer(numReturned)), //nolint:gosec // G103: Valid use of unsafe call to pass numReturned
 	)
+
+	var err error
 	if r1 == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
@@ -175,7 +173,7 @@ func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle,
 			err = syscall.EINVAL
 		}
 	}
-	return
+	return err
 }
 
 func _EvtFormatMessage(
@@ -188,20 +186,21 @@ func _EvtFormatMessage(
 	bufferSize uint32,
 	buffer *byte,
 	bufferUsed *uint32,
-) (err error) {
-	r1, _, e1 := syscall.Syscall9(
+) error {
+	r1, _, e1 := syscall.SyscallN(
 		procEvtFormatMessage.Addr(),
-		9,
 		uintptr(publisherMetadata),
 		uintptr(event),
 		uintptr(messageID),
 		uintptr(valueCount),
-		uintptr(values),
+		values,
 		uintptr(flags),
 		uintptr(bufferSize),
 		uintptr(unsafe.Pointer(buffer)),     //nolint:gosec // G103: Valid use of unsafe call to pass buffer
 		uintptr(unsafe.Pointer(bufferUsed)), //nolint:gosec // G103: Valid use of unsafe call to pass bufferUsed
 	)
+
+	var err error
 	if r1 == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
@@ -209,21 +208,21 @@ func _EvtFormatMessage(
 			err = syscall.EINVAL
 		}
 	}
-	return
+	return err
 }
 
-func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, logFilePath *uint16, locale uint32, flags uint32) (handle EvtHandle, err error) {
-	r0, _, e1 := syscall.Syscall6(
+func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, logFilePath *uint16, locale uint32, flags uint32) (EvtHandle, error) {
+	r0, _, e1 := syscall.SyscallN(
 		procEvtOpenPublisherMetadata.Addr(),
-		5,
 		uintptr(session),
 		uintptr(unsafe.Pointer(publisherIdentity)), //nolint:gosec // G103: Valid use of unsafe call to pass publisherIdentity
 		uintptr(unsafe.Pointer(logFilePath)),       //nolint:gosec // G103: Valid use of unsafe call to pass logFilePath
 		uintptr(locale),
 		uintptr(flags),
-		0,
 	)
-	handle = EvtHandle(r0)
+
+	var err error
+	handle := EvtHandle(r0)
 	if handle == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
@@ -231,12 +230,12 @@ func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, log
 			err = syscall.EINVAL
 		}
 	}
-	return
+	return handle, err
 }
 
 func _EvtCreateBookmark(bookmarkXML *uint16) (EvtHandle, error) {
 	//nolint:gosec // G103: Valid use of unsafe call to pass bookmarkXML
-	r0, _, e1 := syscall.Syscall(procEvtCreateBookmark.Addr(), 1, uintptr(unsafe.Pointer(bookmarkXML)), 0, 0)
+	r0, _, e1 := syscall.SyscallN(procEvtCreateBookmark.Addr(), uintptr(unsafe.Pointer(bookmarkXML)))
 	handle := EvtHandle(r0)
 	if handle != 0 {
 		return handle, nil
@@ -248,7 +247,7 @@ func _EvtCreateBookmark(bookmarkXML *uint16) (EvtHandle, error) {
 }
 
 func _EvtUpdateBookmark(bookmark, event EvtHandle) error {
-	r0, _, e1 := syscall.Syscall(procEvtUpdateBookmark.Addr(), 2, uintptr(bookmark), uintptr(event), 0)
+	r0, _, e1 := syscall.SyscallN(procEvtUpdateBookmark.Addr(), uintptr(bookmark), uintptr(event))
 	if r0 != 0 {
 		return nil
 	}

@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -36,6 +37,9 @@ device model and the following response data:
 %+v
 This message is only printed once.`
 
+// Currently supported GNMI Extensions
+var supportedExtensions = []string{"juniper_header"}
+
 // gNMI plugin instance
 type GNMI struct {
 	Addresses        []string          `toml:"addresses"`
@@ -47,6 +51,7 @@ type GNMI struct {
 	Prefix           string            `toml:"prefix"`
 	Target           string            `toml:"target"`
 	UpdatesOnly      bool              `toml:"updates_only"`
+	VendorSpecific   []string          `toml:"vendor_specific"`
 	Username         string            `toml:"username"`
 	Password         string            `toml:"password"`
 	Redial           config.Duration   `toml:"redial"`
@@ -187,7 +192,15 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log, c.Trace)
+			confHandler := configHandler{
+				aliases:       c.internalAliases,
+				subscriptions: c.TagSubscriptions,
+				maxSize:       int(c.MaxMsgSize),
+				log:           c.Log,
+				trace:         c.Trace,
+				vendorExt:     c.VendorSpecific,
+			}
+			h := newHandler(addr, confHandler)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
@@ -302,6 +315,14 @@ func init() {
 	inputs.Add("gnmi", New)
 	// Backwards compatible alias:
 	inputs.Add("cisco_telemetry_gnmi", New)
+}
+
+func (c *GNMI) Init() error {
+	// Check vendor_specific options configured by user
+	if err := choice.CheckSlice(c.VendorSpecific, supportedExtensions); err != nil {
+		return fmt.Errorf("unsupported vendor_specific option: %w", err)
+	}
+	return nil
 }
 
 func (s *Subscription) buildFullPath(c *GNMI) error {

@@ -113,7 +113,7 @@ easier.
 Intel PMU plugin, is only intended for use on **linux 64-bit** systems.
 
 Event definition JSON files for specific architectures can be found at
-[01.org](https://download.01.org/perfmon/).  A script to download the event
+[github](https://github.com/intel/perfmon).  A script to download the event
 definitions that are appropriate for your system (event_download.py) is
 available at [pmu-tools](https://github.com/andikleen/pmu-tools).  Please keep
 these files in a safe place on your system.
@@ -244,3 +244,10 @@ pmu_metric,cpu=0,event=L1D_PEND_MISS.PENDING_CYCLES,host=xyz raw=18767833i,scale
 ```
 
 [man]: https://man7.org/linux/man-pages/man2/perf_event_open.2.html
+
+## Changelog
+
+| Version | Description |
+| --- | --- |
+| v1.0.0 | Initial version |
+| v1.1.0 | Added support for [new perfmon event format](https://github.com/intel/perfmon/issues/22). Old event format is still accepted (warn message will be printed in the log) |
