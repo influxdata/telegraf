@@ -70,6 +70,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # prefix = ""
   # target = ""
 
+  ## Vendor specific options
+  ## This defines what vendor specific options to load.
+  ## * Juniper Header Extension (juniper_header): some sensors are directly managed by
+  ##   Linecard, which adds the Juniper GNMI Header Extension. Enabling this
+  ##   allows the decoding of the Extension header if present. Currently this knob
+  ##   adds component, component_id & sub_component_id as additionnal tags
+  # vendor_specific = []
+
   ## Define additional aliases to map encoding paths to measurement names
   # [inputs.gnmi.aliases]
   #   ifcounters = "openconfig:/interfaces/interface/state/counters"
