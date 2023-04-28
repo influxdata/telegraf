@@ -106,9 +106,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## "identity" to apply no encoding.
   # content_encoding = "identity"
 
-  ## Sets the maximum allowed size, in bytes, for a message 
-  ## payload when it's decompressed. Can be increased for larger payloads 
-  ## or reduced to protect against decompression bombs.
+  ## If content encoding is not "identity", sets the maximum allowed size, 
+  ## in bytes, for a message payload when it's decompressed. Can be increased 
+  ## for larger payloads or reduced to protect against decompression bombs.
   ## Acceptable units are B, KiB, KB, MiB, MB...
   # max_decompression_size = "500MB"
 ```
