@@ -164,7 +164,7 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 				"count":                 9,
 				"size_bytes":            5096,
 				"newest_file_timestamp": time.Unix(1450117505, 0).UnixNano(),
-				"oldest_file_timestamp": 0,
+				"oldest_file_timestamp": time.Unix(1292351105, 0).UnixNano(),
 			},
 			time.Unix(0, 0),
 			telegraf.Gauge,
