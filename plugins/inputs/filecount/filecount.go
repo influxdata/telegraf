@@ -146,10 +146,10 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			parent := filepath.Dir(path)
 			childCount[parent]++
 			childSize[parent] += file.Size()
-			if oldestFileTimestamp[parent] > file.ModTime().UnixNano() {
+			if oldestFileTimestamp[parent] == nil || oldestFileTimestamp[parent] > file.ModTime().UnixNano() {
 				oldestFileTimestamp[parent] = file.ModTime().UnixNano()
 			}
-			if newestFileTimestamp[parent] < file.ModTime().UnixNano() {
+			if newestFileTimestamp[parent] == nil || newestFileTimestamp[parent] < file.ModTime().UnixNano() {
 				newestFileTimestamp[parent] = file.ModTime().UnixNano()
 			}
 		}
@@ -176,10 +176,10 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		if fc.Recursive {
 			childCount[parent] += childCount[path]
 			childSize[parent] += childSize[path]
-			if oldestFileTimestamp[parent] > oldestFileTimestamp[path] {
+			if oldestFileTimestamp[parent] == nil || oldestFileTimestamp[parent] > oldestFileTimestamp[path] {
 				oldestFileTimestamp[parent] = oldestFileTimestamp[path]
 			}
-			if newestFileTimestamp[parent] < newestFileTimestamp[path] {
+			if newestFileTimestamp[parent] == nil || newestFileTimestamp[parent] < newestFileTimestamp[path] {
 				newestFileTimestamp[parent] = newestFileTimestamp[path]
 			}
 		}
