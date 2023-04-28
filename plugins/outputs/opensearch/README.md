@@ -290,7 +290,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 If you are using authentication within your Opensearch cluster, you need to
 create an account and create a role with at least the manage role in the Cluster
-Privileges category.  Otherwise, your account will not be able to connect to your
+Privileges category. Otherwise, your account will not be able to connect to your
 Opensearch cluster and send logs to your cluster.  After that, you need to
 add "create_index" and "write" permission to your specific index pattern.
 
