@@ -163,7 +163,7 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 			map[string]interface{}{
 				"count":                 9,
 				"size_bytes":            5096,
-				"newest_file_timestamp": 1450117505000000000,
+				"newest_file_timestamp": time.Unix(1450117505, 0).UnixNano(),
 				"oldest_file_timestamp": 0,
 			},
 			time.Unix(0, 0),
