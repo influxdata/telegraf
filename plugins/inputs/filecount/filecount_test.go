@@ -161,8 +161,8 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 				"directory": getTestdataDir(),
 			},
 			map[string]interface{}{
-				"count":      9,
-				"size_bytes": 5096,
+				"count":                 9,
+				"size_bytes":            5096,
 				"newest_file_timestamp": 1450117505000000000,
 				"oldest_file_timestamp": 0,
 			},
