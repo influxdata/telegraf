@@ -58,12 +58,6 @@ func (ps *PubSub) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (ps *PubSub) Connect() error {
-	var err error
-	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
-	if err != nil {
-		return err
-	}
-
 	if ps.stubTopic == nil {
 		return ps.initPubSubClient()
 	}
@@ -280,6 +274,14 @@ func (ps *PubSub) Init() error {
 		// do nothing, encoding is valid
 	default:
 		return fmt.Errorf("invalid value for content_encoding")
+	}
+
+	if ps.ContentEncoding != "identity" {
+		var err error
+		ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

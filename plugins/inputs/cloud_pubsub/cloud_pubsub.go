@@ -85,11 +85,6 @@ func (ps *PubSub) SetParser(parser parsers.Parser) {
 // Two goroutines are started - one pulling for the subscription, one
 // receiving delivery notifications from the accumulator.
 func (ps *PubSub) Start(ac telegraf.Accumulator) error {
-	var err error
-	ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding)
-	if err != nil {
-		return err
-	}
 	ps.sem = make(semaphore, ps.MaxUndeliveredMessages)
 	ps.acc = ac.WithTracking(ps.MaxUndeliveredMessages)
 
@@ -176,10 +171,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
-	var data []byte
-	var err error
-
-	data, err = ps.decompressData(msg.Data())
+	data, err := ps.decompressData(msg.Data())
 	if err != nil {
 		return fmt.Errorf("unable to decompress %s message: %w", ps.ContentEncoding, err)
 	}
@@ -331,6 +323,14 @@ func (ps *PubSub) Init() error {
 		// do nothing, encoding is valid
 	default:
 		return fmt.Errorf("invalid value for content_encoding")
+	}
+
+	if ps.ContentEncoding != "identity" {
+		var err error
+		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding)
+		if err != nil {
+			return err
+		}
 	}
 
 	if ps.MaxDecompressionSize <= 0 {
