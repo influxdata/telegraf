@@ -1,13 +1,15 @@
-# OpenTSDB
+# OpenTSDB Telnet Style Put Format Parser Plugin
 
-The `OpenTSDB` data format parses data in OpenTSDB's Telnet style put API format.  
-There are no additional configuration options for OpenTSDB. The metrics are parsed directly into Telegraf metrics.
+The `OpenTSDB` data format parses data in OpenTSDB's Telnet style put API
+format. There are no additional configuration options for OpenTSDB. The metrics
+are parsed directly into Telegraf metrics.
 
-For more detail of the format, see
-- http://opentsdb.net/docs/build/html/api_telnet/put.html
-- http://opentsdb.net/docs/build/html/user_guide/writing/index.html#data-specification
+For more detail on the format, see:
 
-### Configuration
+- [OpenTSDB Telnet "PUT" API guide](http://opentsdb.net/docs/build/html/api_telnet/put.html)
+- [OpenTSDB data specification](http://opentsdb.net/docs/build/html/user_guide/writing/index.html#data-specification)
+
+## Configuration
 
 ```toml
 [[inputs.file]]
@@ -20,8 +22,8 @@ For more detail of the format, see
   data_format = "opentsdb"
 ```
 
-### Example
+## Example
 
-```
+```opentsdb
 put sys.cpu.user 1356998400 42.5 host=webserver01 cpu=0
 ```

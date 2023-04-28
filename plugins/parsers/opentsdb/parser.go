@@ -10,33 +10,23 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // Parser encapsulates a OpenTSDB Parser.
-type OpenTSDBParser struct {
-	DefaultTags map[string]string
+type Parser struct {
+	DefaultTags map[string]string `toml:"-"`
 }
 
-func NewOpenTSDBParser() (*OpenTSDBParser, error) {
-	p := &OpenTSDBParser{}
-
-	return p, nil
-}
-
-func (p *OpenTSDBParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	metrics := make([]telegraf.Metric, 0)
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	var metrics []telegraf.Metric
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf))
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		// delete LF and CR
-		if line[len(line)-1] == '\n' {
-			line = line[:len(line)-1]
-		}
-		if line[len(line)-1] == '\r' {
-			line = line[:len(line)-1]
-		}
+		line = strings.TrimRight(line, "\r\n")
 
 		m, err := p.ParseLine(line)
 		if err != nil {
@@ -55,7 +45,7 @@ func (p *OpenTSDBParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 // ParseLine performs OpenTSDB parsing of a single line.
-func (p *OpenTSDBParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	// Break into fields ("put", name, timestamp, value, tag1, tag2, ..., tagN).
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
@@ -74,55 +64,55 @@ func (p *OpenTSDBParser) ParseLine(line string) (telegraf.Metric, error) {
 	// Parse value.
 	v, err := strconv.ParseFloat(valueStr, 64)
 	if err != nil {
-		return nil, fmt.Errorf(`field "%s" value: %s`, measurement, err)
+		return nil, fmt.Errorf("parsing field %q value failed: %w", measurement, err)
 	}
 
-	fieldValues := map[string]interface{}{}
-	fieldValues["value"] = v
+	fieldValues := map[string]interface{}{"value": v}
 
 	// Parse timestamp.
 	ts, err := strconv.ParseInt(tsStr, 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf(`field "%s" time: %s`, measurement, err)
+		return nil, fmt.Errorf("parsing field %q time failed: %w", measurement, err)
 	}
 
 	var timestamp time.Time
-	switch len(tsStr) {
-	case 10:
+	if ts < 1e12 {
 		// second resolution
 		timestamp = time.Unix(ts, 0)
-	case 13:
+	} else {
 		// millisecond resolution
-		timestamp = time.Unix(0, ts*1000)
-	default:
-		return nil, fmt.Errorf(`field "%s" time: "%s" time must be 10 or 13 chars`, measurement, tsStr)
+		timestamp = time.UnixMilli(ts)
 	}
 
-	// Split name and tags
-	tags := make(map[string]string)
+	tags := make(map[string]string, len(p.DefaultTags)+len(tagStrs))
+	for k, v := range p.DefaultTags {
+		tags[k] = v
+	}
+
 	for _, tag := range tagStrs {
 		tagValue := strings.Split(tag, "=")
 		if len(tagValue) != 2 {
 			continue
 		}
-		name = tagValue[0]
-		value = tagValue[1]
+
+		name := tagValue[0]
+		value := tagValue[1]
 		if name == "" || value == "" {
 			continue
 		}
-		tags[tagValue[0]] = tagValue[1]
-	}
-
-	// Set the default tags on the point if they are not already set
-	for k, v := range p.DefaultTags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
+		tags[name] = value
 	}
 
 	return metric.New(measurement, tags, fieldValues, timestamp), nil
 }
 
-func (p *OpenTSDBParser) SetDefaultTags(tags map[string]string) {
+func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
+}
+
+func init() {
+	parsers.Add("opentsdb",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{}
+		})
 }

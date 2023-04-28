@@ -10,11 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewOpenTSDBParser(t *testing.T) {
-	_, err := NewOpenTSDBParser()
-	require.NoError(t, err)
-}
-
 func TestParseLine(t *testing.T) {
 	testTime := time.Now()
 	testTimeSec := testTime.Round(time.Second)
@@ -96,8 +91,7 @@ func TestParseLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewOpenTSDBParser()
-			require.NoError(t, err)
+			p := &Parser{}
 
 			actual, err := p.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -201,8 +195,7 @@ func TestParse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewOpenTSDBParser()
-			require.NoError(t, err)
+			p := &Parser{}
 
 			actual, err := p.Parse(tt.input)
 			require.NoError(t, err)
@@ -271,8 +264,7 @@ func TestParse_DefaultTags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewOpenTSDBParser()
-			require.NoError(t, err)
+			p := &Parser{}
 			p.SetDefaultTags(tt.defaultTags)
 
 			actual, err := p.Parse(tt.input)
