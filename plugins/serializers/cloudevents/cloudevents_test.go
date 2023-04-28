@@ -105,7 +105,7 @@ func unmarshalEvents(messages [][]byte) ([]cloudevents.Event, error) {
 		// Check for batch settings
 		var es []cloudevents.Event
 		if err := json.Unmarshal(msg, &es); err != nil {
-			if _, ok := err.(*json.UnmarshalTypeError); !ok {
+			if errors.Is(err, &json.UnmarshalTypeError{}) {
 				return nil, fmt.Errorf("message %d: %w", i, err)
 			}
 			var e cloudevents.Event
@@ -189,10 +189,10 @@ func (*dummygen) NewV1() (uuid.UUID, error) {
 	if err != nil {
 		return uuid.UUID([16]byte{}), err
 	}
-	return uuid.UUID([]byte(id)), nil
+	return uuid.UUID(id), nil
 }
 
-func (*dummygen) NewV3(ns uuid.UUID, name string) uuid.UUID {
+func (*dummygen) NewV3(_ uuid.UUID, _ string) uuid.UUID {
 	return uuid.UUID([16]byte{})
 }
 
@@ -200,7 +200,7 @@ func (*dummygen) NewV4() (uuid.UUID, error) {
 	return uuid.UUID([16]byte{}), errors.New("wrong type")
 }
 
-func (*dummygen) NewV5(ns uuid.UUID, name string) uuid.UUID {
+func (*dummygen) NewV5(_ uuid.UUID, _ string) uuid.UUID {
 	return uuid.UUID([16]byte{})
 }
 

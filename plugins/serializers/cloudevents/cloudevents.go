@@ -67,11 +67,11 @@ func (s *Serializer) Init() error {
 
 func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
 	// Create the event that forms the envelop around the metric
-	event, err := s.createEvent(m)
+	evt, err := s.createEvent(m)
 	if err != nil {
 		return nil, err
 	}
-	return event.MarshalJSON()
+	return evt.MarshalJSON()
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
@@ -119,7 +119,9 @@ func (s *Serializer) batchMetrics(metrics []telegraf.Metric) ([]byte, error) {
 	evt.SetSource(s.Source)
 	evt.SetID(id.String())
 	evt.SetType(eventType)
-	evt.SetData(cloudevents.ApplicationJSON, data)
+	if err := evt.SetData(cloudevents.ApplicationJSON, data); err != nil {
+		return nil, fmt.Errorf("setting data failed: %w", err)
+	}
 	switch s.EventTime {
 	case "creation":
 		evt.SetTime(time.Now())
@@ -175,7 +177,9 @@ func (s *Serializer) createEvent(m telegraf.Metric) (*cloudevents.Event, error) 
 	evt.SetSource(source)
 	evt.SetID(id.String())
 	evt.SetType(eventType)
-	evt.SetData(cloudevents.ApplicationJSON, data)
+	if err := evt.SetData(cloudevents.ApplicationJSON, data); err != nil {
+		return nil, fmt.Errorf("setting data failed: %w", err)
+	}
 	switch s.EventTime {
 	case "creation":
 		evt.SetTime(time.Now())

@@ -26,7 +26,7 @@ are supported with the former being the default.
 
   ## Event source specifier
   ## This allows to overwrite the source header-field with the given value.
-	# cloudevents_source = "telegraf"
+  # cloudevents_source = "telegraf"
 
   ## Tag to use as event source specifier
   ## This allows to overwrite the source header-field with the value of the
@@ -34,14 +34,14 @@ are supported with the former being the default.
   ## are set, the this setting will take precedence. In case the specified tag
   ## value does not exist for a metric, the serializer will fallback to
   ## 'cloudevents_source'.
-	# cloudevents_source_tag = ""
+  # cloudevents_source_tag = ""
 
   ## Event-type specifier to overwrite the default value
   ## By default, events (and event batches) containing a single metric will
   ## set the event-type to 'com.influxdata.telegraf.metric' while events
   ## containing a batch of metrics will set the event-type to
   ## 'com.influxdata.telegraf.metric' (plural).
-	# cloudevents_event_type = ""
+  # cloudevents_event_type = ""
 
   ## Set time header of the event
   ## Supported values are:
@@ -51,7 +51,7 @@ are supported with the former being the default.
   ##   creation -- use timestamp of event creation
   ## For events containing only a single metric, earliest and latest are
   ## equivalent.
-	# cloudevents_event_time = "latest"
+  # cloudevents_event_time = "latest"
 
   ## Batch format of the output when running in batch mode
   ## If set to 'events' the resulting output will contain a list of events,
@@ -60,5 +60,5 @@ are supported with the former being the default.
   ##
   ## When set to 'metrics', a single event will be generated containing a list
   ## of metrics as payload. Use 'application/cloudevents+json' for this format.
-	# cloudevents_batch_format = "events"
+  # cloudevents_batch_format = "events"
 ```
