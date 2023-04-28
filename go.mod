@@ -261,6 +261,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cloudevents/sdk-go/v2 v2.14.0
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
 	github.com/containerd/containerd v1.6.18 // indirect
 	github.com/couchbase/gomemcached v0.1.3 // indirect
