@@ -283,8 +283,6 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
 	}
 
-	ctx := context.Background()
-
 	e := &Opensearch{
 		URLs:              urls,
 		IndexName:         `test-{{.Time.Format "2006-01-02"}}`,
@@ -296,7 +294,7 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 
-	err := e.manageTemplate(ctx)
+	err := e.Init()
 	require.Error(t, err)
 }
 
@@ -684,7 +682,7 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 	e := &Opensearch{
 		URLs:           urls,
 		IndexName:      `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
-		Timeout:        config.Duration(time.Second * 500),
+		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     false,
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
