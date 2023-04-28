@@ -25,7 +25,6 @@ type FileCount struct {
 	Directories    []string
 	Name           string
 	Recursive      bool
-	FileTimestamp  bool
 	RegularOnly    bool
 	FollowSymlinks bool
 	Size           config.Size
@@ -147,13 +146,11 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			parent := filepath.Dir(path)
 			childCount[parent]++
 			childSize[parent] += file.Size()
-			if fc.FileTimestamp {
-				if oldestFileTimestamp[parent] > file.ModTime().UnixNano() {
-					oldestFileTimestamp[parent] = file.ModTime().UnixNano()
-				}
-				if newestFileTimestamp[parent] < file.ModTime().UnixNano() {
-					newestFileTimestamp[parent] = file.ModTime().UnixNano()
-				}
+			if oldestFileTimestamp[parent] > file.ModTime().UnixNano() {
+				oldestFileTimestamp[parent] = file.ModTime().UnixNano()
+			}
+			if newestFileTimestamp[parent] < file.ModTime().UnixNano() {
+				newestFileTimestamp[parent] = file.ModTime().UnixNano()
 			}
 		}
 		if file.IsDir() && !fc.Recursive && !glob.HasSuperMeta {
@@ -168,10 +165,8 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 				"count":      childCount[path],
 				"size_bytes": childSize[path],
 			}
-			if fc.FileTimestamp {
-				gauge["oldest_file_timestamp"] = oldestFileTimestamp[path]
-				gauge["newest_file_timestamp"] = newestFileTimestamp[path]
-			}
+			gauge["oldest_file_timestamp"] = oldestFileTimestamp[path]
+			gauge["newest_file_timestamp"] = newestFileTimestamp[path]
 			acc.AddGauge("filecount", gauge,
 				map[string]string{
 					"directory": path,
@@ -291,7 +286,6 @@ func NewFileCount() *FileCount {
 		Directories:    []string{},
 		Name:           "*",
 		Recursive:      true,
-		FileTimestamp:  true,
 		RegularOnly:    true,
 		FollowSymlinks: false,
 		Size:           config.Size(0),
