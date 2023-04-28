@@ -5,7 +5,7 @@
         "source": "telegraf",
         "type": "com.influxdata.telegraf.metrics",
         "datacontenttype": "application/json",
-        "time": "2023-04-27T16:30:51Z.000000999",
+        "time": "2023-04-27T16:30:51.000000999Z",
         "data": [
             {
                 "fields": {
