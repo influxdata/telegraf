@@ -21,7 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
+	//"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -1449,6 +1449,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
+    /*
 	//for XPath parser family
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
@@ -1482,6 +1483,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 			}
 		}
 	}
+    */
 
 	//for JSONPath parser
 	if node, ok := tbl.Fields["json_v2"]; ok {
@@ -1610,9 +1612,11 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldStringSlice(tbl, "wavefront_source_override", &sc.WavefrontSourceOverride)
 	c.getFieldBool(tbl, "wavefront_use_strict", &sc.WavefrontUseStrict)
 
+    /*
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
 	c.getFieldBool(tbl, "prometheus_string_as_label", &sc.PrometheusStringAsLabel)
+    */
 
 	if c.hasErrs() {
 		return nil, c.firstErr()

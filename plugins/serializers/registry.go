@@ -12,8 +12,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
+	//"github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	//"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
@@ -104,7 +104,8 @@ type Config struct {
 	// Use Strict rules to sanitize metric and tag names from invalid characters for Wavefront
 	// When enabled forward slash (/) and comma (,) will be accepted
 	WavefrontUseStrict bool `toml:"wavefront_use_strict"`
-
+    
+    /*
 	// Include the metric timestamp on each sample.
 	PrometheusExportTimestamp bool `toml:"prometheus_export_timestamp"`
 
@@ -115,6 +116,7 @@ type Config struct {
 	// Output string fields as metric labels; when false string fields are
 	// discarded.
 	PrometheusStringAsLabel bool `toml:"prometheus_string_as_label"`
+    */
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -136,10 +138,12 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
+    /*
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
 	case "prometheusremotewrite":
 		serializer, err = NewPrometheusRemoteWriteSerializer(config)
+    */
 	case "msgpack":
 		serializer, err = NewMsgpackSerializer()
 	case "extr":
@@ -150,6 +154,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	return serializer, err
 }
 
+/*
 func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
 	sortMetrics := prometheusremotewrite.NoSortMetrics
 	if config.PrometheusExportTimestamp {
@@ -189,6 +194,7 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 		StringHandling:  stringAsLabels,
 	})
 }
+*/
 
 func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string) (Serializer, error) {
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride)
