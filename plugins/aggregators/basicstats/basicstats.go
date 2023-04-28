@@ -193,7 +193,7 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 					fields[k+"_rate"] = v.rate
 				}
 				if b.statsConfig.percentChange {
-					fields[k+"_percent_change"] = v.diff / v.LAST
+					fields[k+"_percent_change"] = v.diff / v.LAST * 100
 				}
 				if b.statsConfig.nonNegativeRate && v.diff >= 0 {
 					fields[k+"_non_negative_rate"] = v.rate

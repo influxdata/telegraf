@@ -550,10 +550,10 @@ func TestBasicStatsWithPctChange(t *testing.T) {
 	aggregator.Push(&acc)
 	expectedFields := map[string]interface{}{
 		"a_percent_change": float64(0),
-		"b_percent_change": float64(2),
-		"c_percent_change": float64(1),
-		"d_percent_change": float64(2),
-		"g_percent_change": float64(-0.6666666666666666),
+		"b_percent_change": float64(200),
+		"c_percent_change": float64(100),
+		"d_percent_change": float64(200),
+		"g_percent_change": float64(-66.66666666666666),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
