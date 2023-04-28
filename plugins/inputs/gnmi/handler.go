@@ -102,7 +102,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 	// Used to report the status of the TCP connection to the device. If the
 	// GNMI connection goes down, but TCP is still up this will still report
 	// connected until the TCP connection times out.
-	connectStat := selfstat.Register("gnmi_connection", "status", map[string]string{"source": h.address})
+	connectStat := selfstat.Register("gnmi", "grpc_connection_status", map[string]string{"source": h.address})
 	connectStat.Set(1)
 
 	defer h.log.Debugf("Connection to gNMI device %s closed", h.address)
