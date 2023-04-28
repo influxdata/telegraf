@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/persister"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -32,6 +33,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	_ "github.com/influxdata/telegraf/plugins/serializers/all" // Blank import to have all serializers for testing
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestReadBinaryFile(t *testing.T) {
@@ -512,6 +514,66 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 	} else {
 		require.Equal(t, "error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
 	}
+}
+
+func TestConfig_Filtering(t *testing.T) {
+	c := NewConfig()
+	require.NoError(t, c.LoadAll("./testdata/filter_metricpass.toml"))
+	require.Len(t, c.Processors, 1)
+
+	in := []telegraf.Metric{
+		metric.New(
+			"machine",
+			map[string]string{"state": "on"},
+			map[string]interface{}{"value": 42.0},
+			time.Date(2023, time.April, 23, 01, 15, 30, 0, time.UTC),
+		),
+		metric.New(
+			"machine",
+			map[string]string{"state": "off"},
+			map[string]interface{}{"value": 23.0},
+			time.Date(2023, time.April, 23, 23, 59, 01, 0, time.UTC),
+		),
+		metric.New(
+			"temperature",
+			map[string]string{},
+			map[string]interface{}{"value": 23.5},
+			time.Date(2023, time.April, 24, 02, 15, 30, 0, time.UTC),
+		),
+	}
+	expected := []telegraf.Metric{
+		metric.New(
+			"machine",
+			map[string]string{
+				"state":     "on",
+				"processed": "yes",
+			},
+			map[string]interface{}{"value": 42.0},
+			time.Date(2023, time.April, 23, 01, 15, 30, 0, time.UTC),
+		),
+		metric.New(
+			"machine",
+			map[string]string{"state": "off"},
+			map[string]interface{}{"value": 23.0},
+			time.Date(2023, time.April, 23, 23, 59, 01, 0, time.UTC),
+		),
+		metric.New(
+			"temperature",
+			map[string]string{
+				"processed": "yes",
+			},
+			map[string]interface{}{"value": 23.5},
+			time.Date(2023, time.April, 24, 02, 15, 30, 0, time.UTC),
+		),
+	}
+
+	plugin := c.Processors[0]
+	var acc testutil.Accumulator
+	for _, m := range in {
+		require.NoError(t, plugin.Add(m, &acc))
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 }
 
 func TestConfig_SerializerInterfaceNewFormat(t *testing.T) {
@@ -1434,11 +1496,13 @@ func (m *MockupProcessorPlugin) Stop() {
 func (m *MockupProcessorPlugin) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPlugin) Apply(_ ...telegraf.Metric) []telegraf.Metric {
-	return nil
-}
-func (m *MockupProcessorPlugin) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
-	return nil
+func (m *MockupProcessorPlugin) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	out := make([]telegraf.Metric, 0, len(in))
+	for _, m := range in {
+		m.AddTag("processed", "yes")
+		out = append(out, m)
+	}
+	return out
 }
 func (m *MockupProcessorPlugin) GetState() interface{} {
 	return m.state
