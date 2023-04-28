@@ -125,7 +125,7 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, erro
 		return nil, err
 	}
 
-	serializer := &influx.Serializer{}
+	serializer := &influx.Serializer{UintSupport: i.UintSupport}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
