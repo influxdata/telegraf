@@ -108,7 +108,8 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 			if m.EnableRandomVariable {
 				value, err = rand.Int(rand.Reader, big.NewInt(math.MaxUint32))
 				if err != nil {
-					return err
+					acc.AddError(err)
+					continue
 				}
 			}
 			fields[name] = float64(value.Int64())
