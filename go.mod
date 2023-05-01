@@ -95,7 +95,7 @@ require (
 	github.com/hashicorp/consul/api v1.18.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.3.3
+	github.com/influxdata/influxdb-observability/common v0.3.7
 	github.com/influxdata/influxdb-observability/influx2otel v0.3.3
 	github.com/influxdata/influxdb-observability/otel2influx v0.3.3
 	github.com/influxdata/line-protocol/v2 v2.2.1
@@ -424,7 +424,7 @@ require (
 	go.opentelemetry.io/collector/confmap v0.73.0 // indirect
 	go.opentelemetry.io/collector/consumer v0.73.0 // indirect
 	go.opentelemetry.io/collector/featuregate v0.73.0 // indirect
-	go.opentelemetry.io/collector/semconv v0.73.0 // indirect
+	go.opentelemetry.io/collector/semconv v0.76.0 // indirect
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.12.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.35.0 // indirect
