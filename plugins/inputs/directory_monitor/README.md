@@ -85,12 +85,16 @@ format of the file.
 When the [internal][] input is enabled:
 
 - internal_directory_monitor
-  - tags:
-    - directory - The monitored directory
   - fields:
     - files_processed - How many files have been processed (counter)
     - files_dropped - How many files have been dropped (counter)
-    - files_queue - How many files to be processed (gauge)
+- internal_directory_monitor
+  - tags:
+    - directory - The monitored directory
+  - fields:
+    - files_processed_per_dir - How many files have been processed (counter)
+    - files_dropped_per_dir - How many files have been dropped (counter)
+    - files_queue_per_dir - How many files to be processed (gauge)
 
 ## Example Output
 

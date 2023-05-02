@@ -59,8 +59,10 @@ type DirectoryMonitor struct {
 	context             context.Context
 	parserFunc          parsers.ParserFunc
 	filesProcessed      selfstat.Stat
+	filesProcessedDir   selfstat.Stat
 	filesDropped        selfstat.Stat
-	filesQueued         selfstat.Stat
+	filesDroppedDir     selfstat.Stat
+	filesQueuedDir      selfstat.Stat
 	waitGroup           *sync.WaitGroup
 	acc                 telegraf.TrackingAccumulator
 	sem                 *semaphore.Weighted
@@ -177,7 +179,7 @@ func (monitor *DirectoryMonitor) Monitor() {
 		monitor.filesInUse.Delete(filePath)
 
 		// Keep track of how many files still to process
-		monitor.filesQueued.Set(int64(len(monitor.filesToProcess)))
+		monitor.filesQueuedDir.Set(int64(len(monitor.filesToProcess)))
 	}
 }
 
@@ -212,8 +214,7 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 	if err != nil {
 		monitor.Log.Errorf("Error while reading file: '" + filePath + "'. " + err.Error())
 		monitor.filesDropped.Incr(1)
-		// Backward compatibility
-		selfstat.Register("directory_monitor", "files_dropped", nil).Incr(1)
+		monitor.filesDroppedDir.Incr(1)
 		if monitor.ErrorDirectory != "" {
 			monitor.moveFile(filePath, monitor.ErrorDirectory)
 		}
@@ -223,8 +224,7 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 	// File is finished, move it to the 'finished' directory.
 	monitor.moveFile(filePath, monitor.FinishedDirectory)
 	monitor.filesProcessed.Incr(1)
-	// Backward compatibility
-	selfstat.Register("directory_monitor", "files_processed", nil).Incr(1)
+	monitor.filesProcessedDir.Incr(1)
 }
 
 func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
@@ -415,9 +415,11 @@ func (monitor *DirectoryMonitor) Init() error {
 	tags := map[string]string{
 		"directory": monitor.Directory,
 	}
-	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", tags)
-	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", tags)
-	monitor.filesQueued = selfstat.Register("directory_monitor", "files_queue", tags)
+	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", map[string]string{})
+	monitor.filesDroppedDir = selfstat.Register("directory_monitor", "files_dropped_per_dir", tags)
+	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", map[string]string{})
+	monitor.filesProcessedDir = selfstat.Register("directory_monitor", "files_processed_per_dir", tags)
+	monitor.filesQueuedDir = selfstat.Register("directory_monitor", "files_queue_per_dir", tags)
 
 	// If an error directory should be used but has not been configured yet, create one ourselves.
 	if monitor.ErrorDirectory != "" {
