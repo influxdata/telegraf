@@ -142,7 +142,9 @@ func mergeWithTimestamp(base telegraf.Metric, metrics []telegraf.Metric) telegra
 			base.AddTag(tag.Key, tag.Value)
 		}
 		base.SetName(metric.Name())
-		base.SetTime(metric.Time())
+		if !metric.Time().IsZero() {
+			base.SetTime(metric.Time())
+		}
 	}
 	return base
 }
