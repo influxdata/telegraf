@@ -87,9 +87,35 @@ linters-settings:
     # To select a subset of rules to run.
     # Available rules: https://github.com/securego/gosec#available-rules
     # Default: [] - means include all rules
-    includes: [ G101, G102, G103, G106, G107, G108, G109, G110, G111, G112, G114, G201, G202, G203, G301, G302, G303, G305, G306,
-                G401, G403, G404, G501, G502, G503, G505, G601 ]
-    # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
+    includes:
+      - G101
+      - G102
+      - G103
+      - G106
+      - G107
+      - G108
+      - G109
+      - G110
+      - G111
+      - G112
+      - G114
+      - G201
+      - G202
+      - G203
+      - G301
+      - G302
+      - G303
+      - G305
+      - G306
+      - G401
+      - G403
+      - G404
+      - G501
+      - G502
+      - G503
+      - G505
+      - G601
+      # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
