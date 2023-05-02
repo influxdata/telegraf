@@ -66,7 +66,7 @@ func (*Mock) SampleConfig() string {
 }
 
 func (m *Mock) Init() error {
-	m.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	m.rand = rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // G404: not security critical
 	return nil
 }
 
