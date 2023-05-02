@@ -64,8 +64,8 @@ func TestTacacsLocal(t *testing.T) {
 			Mux:    true,
 		},
 	}
-	l, err := net.Listen("tcp", "localhost:49")
-	require.NoError(t, err, "local net listen failed to start listening on port 49")
+	l, err := net.Listen("tcp", "localhost:1049") // Use port 1049 instead of 49, so we are above 1023 for unix tests
+	require.NoError(t, err, "local net listen failed to start listening on port 1049")
 
 	srv := &tacplus.Server{
 		ServeConn: func(nc net.Conn) {
@@ -76,7 +76,7 @@ func TestTacacsLocal(t *testing.T) {
 	go func() { srv.Serve(l) }()
 
 	plugin := &Tacacs{
-		Servers:         []string{"localhost:49"},
+		Servers:         []string{"localhost:1049"},
 		Username:        config.NewSecret([]byte(`testusername`)),
 		Password:        config.NewSecret([]byte(`testpassword`)),
 		Secret:          config.NewSecret([]byte(`testsecret`)),
@@ -91,11 +91,11 @@ func TestTacacsLocal(t *testing.T) {
 		t.Errorf("acc.HasMeasurement: expected tacacs")
 	}
 	require.Equal(t, true, acc.HasTag("tacacs", "source"))
-	require.Equal(t, "localhost:49", acc.TagValue("tacacs", "source"))
+	require.Equal(t, "localhost:1049", acc.TagValue("tacacs", "source"))
 	require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"))
 
 	plugin = &Tacacs{
-		Servers:  []string{"localhost:49"},
+		Servers:  []string{"localhost:1049"},
 		Username: config.NewSecret([]byte(`testusername`)),
 		Password: config.NewSecret([]byte(`WRONGPASSWORD`)),
 		Secret:   config.NewSecret([]byte(`testsecret`)),
@@ -105,12 +105,12 @@ func TestTacacsLocal(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Gather(&acc2))
 	require.Len(t, acc2.Errors, 1)
-	require.ErrorContains(t, acc2.Errors[0], "second tacacs authentication continue password request to localhost:49 : Unexpected response code 2")
+	require.ErrorContains(t, acc2.Errors[0], "second tacacs authentication continue password request to localhost:1049 : Unexpected response code 2")
 	require.Equal(t, false, acc2.HasTag("tacacs", "source"))
 	require.Equal(t, false, acc2.HasInt64Field("tacacs", "responsetime_ms"))
 
 	plugin = &Tacacs{
-		Servers:  []string{"localhost:49"},
+		Servers:  []string{"localhost:1049"},
 		Username: config.NewSecret([]byte(`testusername`)),
 		Password: config.NewSecret([]byte(`testpassword`)),
 		Secret:   config.NewSecret([]byte(`WRONGSECRET`)),
@@ -120,7 +120,7 @@ func TestTacacsLocal(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Gather(&acc3))
 	require.Len(t, acc3.Errors, 1)
-	require.ErrorContains(t, acc3.Errors[0], "error on new tacacs authentication start request to localhost:49 : bad secret or packet")
+	require.ErrorContains(t, acc3.Errors[0], "error on new tacacs authentication start request to localhost:1049 : bad secret or packet")
 	require.Equal(t, false, acc3.HasTag("tacacs", "source"))
 	require.Equal(t, false, acc3.HasInt64Field("tacacs", "responsetime_ms"))
 
@@ -200,7 +200,7 @@ func TestTacacsIntegration(t *testing.T) {
 				Servers:         []string{tt.serverToTest},
 				Username:        config.NewSecret([]byte(`iosadmin`)),
 				Password:        config.NewSecret([]byte(tt.usedPassword)),
-				Secret:          config.NewSecret([]byte(`testsecret`)),
+				Secret:          config.NewSecret([]byte(`ciscotacacskey`)),
 				Log:             testutil.Logger{},
 			}
 			var acc testutil.Accumulator
@@ -212,6 +212,9 @@ func TestTacacsIntegration(t *testing.T) {
 			require.NoError(t, plugin.Gather(&acc))
 
 			if tt.expectSuccess {
+				if len(acc.Errors) > 0 {
+					t.Errorf("error occured in test where should be none, error was: %w", acc.Errors[0])
+				}
 				if !acc.HasMeasurement("tacacs") {
 					t.Errorf("acc.HasMeasurement: expected tacacs")
 				}

@@ -62,19 +62,19 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, server string) error {
 
 	secret, err := t.Secret.Get()
 	if err != nil {
-		return fmt.Errorf("getting secret failed: %v", err)
+		return fmt.Errorf("getting secret failed: %w", err)
 	}
 	defer config.ReleaseSecret(secret)
 
 	username, err := t.Username.Get()
 	if err != nil {
-		return fmt.Errorf("getting username failed: %v", err)
+		return fmt.Errorf("getting username failed: %w", err)
 	}
 	defer config.ReleaseSecret(username)
 
 	password, err := t.Password.Get()
 	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
+		return fmt.Errorf("getting password failed: %w", err)
 	}
 	defer config.ReleaseSecret(password)
 
