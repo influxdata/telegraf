@@ -125,7 +125,8 @@ func (n *NetFlow) read(acc telegraf.Accumulator) {
 		}
 		metrics, err := n.decoder.Decode(src.IP, buf[:count])
 		if err != nil {
-			acc.AddError(err)
+			errWithData := fmt.Errorf("%w; raw data: %s", err, hex.EncodeToString(buf[:count]))
+			acc.AddError(errWithData)
 			continue
 		}
 		for _, m := range metrics {
