@@ -73,7 +73,7 @@ type PdhCounterInfo struct {
 	//Size of the structure, including the appended strings, in bytes.
 	DwLength uint32
 	//Counter type. For a list of counter types, see the Counter Types section
-	//of the <a "href=http://go.microsoft.com/fwlink/p/?linkid=84422">Windows Server 2003 Deployment Kit</a>.
+	//of the Windows Server 2003 Deployment Kit (http://go.microsoft.com/fwlink/p/?linkid=84422).
 	//The counter type constants are defined in Winperf.h.
 	DwType uint32
 	//Counter version information. Not used.
