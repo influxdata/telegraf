@@ -115,6 +115,7 @@ linters-settings:
       - G503
       - G505
       - G601
+      # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
