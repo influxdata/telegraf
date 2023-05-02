@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/selfstat"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -79,11 +80,19 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 	}
 
 	h.log.Debugf("Connection to gNMI device %s established", h.address)
+
+	// Used to report the status of the TCP connection to the device. If the
+	// GNMI connection goes down, but TCP is still up this will still report
+	// connected until the TCP connection times out.
+	connectStat := selfstat.Register("gnmi", "grpc_connection_status", map[string]string{"source": h.address})
+	connectStat.Set(1)
+
 	defer h.log.Debugf("Connection to gNMI device %s closed", h.address)
 	for ctx.Err() == nil {
 		var reply *gnmiLib.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
 			if !errors.Is(err, io.EOF) && ctx.Err() == nil {
+				connectStat.Set(0)
 				return fmt.Errorf("aborted gNMI subscription: %w", err)
 			}
 			break
@@ -103,6 +112,8 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 			h.handleSubscribeResponseUpdate(acc, response)
 		}
 	}
+
+	connectStat.Set(0)
 	return nil
 }
 
