@@ -18,7 +18,7 @@ type testRequestHandler map[string]struct {
 	args     []string
 }
 
-func (t testRequestHandler) HandleAuthenStart(ctx context.Context, a *tacplus.AuthenStart, s *tacplus.ServerSession) *tacplus.AuthenReply {
+func (t testRequestHandler) HandleAuthenStart(_ context.Context, a *tacplus.AuthenStart, s *tacplus.ServerSession) *tacplus.AuthenReply {
 	user := a.User
 	for user == "" {
 		c, err := s.GetUser(context.Background(), "Username:")
@@ -41,14 +41,14 @@ func (t testRequestHandler) HandleAuthenStart(ctx context.Context, a *tacplus.Au
 	return &tacplus.AuthenReply{Status: tacplus.AuthenStatusFail}
 }
 
-func (t testRequestHandler) HandleAuthorRequest(ctx context.Context, a *tacplus.AuthorRequest, s *tacplus.ServerSession) *tacplus.AuthorResponse {
+func (t testRequestHandler) HandleAuthorRequest(_ context.Context, a *tacplus.AuthorRequest, _ *tacplus.ServerSession) *tacplus.AuthorResponse {
 	if u, ok := t[a.User]; ok {
 		return &tacplus.AuthorResponse{Status: tacplus.AuthorStatusPassAdd, Arg: u.args}
 	}
 	return &tacplus.AuthorResponse{Status: tacplus.AuthorStatusFail}
 }
 
-func (t testRequestHandler) HandleAcctRequest(ctx context.Context, a *tacplus.AcctRequest, s *tacplus.ServerSession) *tacplus.AcctReply {
+func (t testRequestHandler) HandleAcctRequest(_ context.Context, _ *tacplus.AcctRequest, _ *tacplus.ServerSession) *tacplus.AcctReply {
 	return &tacplus.AcctReply{Status: tacplus.AcctStatusSuccess}
 }
 
@@ -73,7 +73,10 @@ func TestTacacsLocal(t *testing.T) {
 		},
 	}
 
-	go func() { srv.Serve(l) }()
+	go func() {
+		err = srv.Serve(l)
+		require.NoError(t, err, "local srv.Serve failed to start serving on port 1049")
+	}()
 
 	plugin := &Tacacs{
 		Servers:         []string{"localhost:1049"},
@@ -213,7 +216,7 @@ func TestTacacsIntegration(t *testing.T) {
 
 			if tt.expectSuccess {
 				if len(acc.Errors) > 0 {
-					t.Errorf("error occured in test where should be none, error was: %w", acc.Errors[0])
+					t.Errorf("error occured in test where should be none, error was: %s", acc.Errors[0].Error())
 				}
 				if !acc.HasMeasurement("tacacs") {
 					t.Errorf("acc.HasMeasurement: expected tacacs")

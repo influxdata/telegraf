@@ -133,10 +133,9 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, server string) error {
 	if reply.Status != tacplus.AuthenStatusPass {
 		acc.AddFields("tacacs", fields, tags)
 		return fmt.Errorf("error on second tacacs authentication continue password request to %s : Unexpected response code %d", server, reply.Status)
-	} else {
-		fields["responsetime_ms"] = duration.Milliseconds()
 	}
 
+	fields["responsetime_ms"] = duration.Milliseconds()
 	acc.AddFields("tacacs", fields, tags)
 	return nil
 }
