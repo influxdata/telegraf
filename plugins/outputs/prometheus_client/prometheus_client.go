@@ -100,7 +100,7 @@ func (p *PrometheusClient) Init() error {
 	default:
 		fallthrough
 	case 1:
-		p.collector = v1.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.Log)
+		p.collector = v1.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.ExportTimestamp, p.Log)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
