@@ -314,23 +314,17 @@ func (ps *PubSub) Init() error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
-	if ps.ContentEncoding == "" {
-		ps.ContentEncoding = "identity"
-	}
-
 	switch ps.ContentEncoding {
-	case "identity", "gzip":
-		// do nothing, encoding is valid
-	default:
-		return fmt.Errorf("invalid value for content_encoding")
-	}
-
-	if ps.ContentEncoding != "identity" {
+	case "", "identity":
+		ps.ContentEncoding = "identity"
+	case "gzip":
 		var err error
 		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding)
 		if err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("invalid value %q for content_encoding", ps.ContentEncoding)
 	}
 
 	if ps.MaxDecompressionSize <= 0 {
