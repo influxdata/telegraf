@@ -61,10 +61,11 @@ type Collector struct {
 	expireTicker *time.Ticker
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel bool, logger telegraf.Logger) *Collector {
+func NewCollector(expire time.Duration, stringsAsLabel bool, exportTimestamp bool, logger telegraf.Logger) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
+		ExportTimestamp:    exportTimestamp,
 		Log:                logger,
 		fam:                make(map[string]*MetricFamily),
 	}
