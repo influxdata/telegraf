@@ -200,7 +200,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 	informerfactory.WaitForCacheSync(wait.NeverStop)
 
 	<-ctx.Done()
-	return err
+	return nil
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
