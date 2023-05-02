@@ -6,7 +6,6 @@ following works:
 - cloud.google.com/go [Apache License 2.0](https://github.com/googleapis/google-cloud-go/blob/master/LICENSE)
 - code.cloudfoundry.org/clock [Apache License 2.0](https://github.com/cloudfoundry/clock/blob/master/LICENSE)
 - collectd.org [MIT License](https://git.octo.it/?p=collectd.git;a=blob;f=COPYING;hb=HEAD)
-- github.com/99designs/go-keychain [MIT License](https://github.com/99designs/go-keychain/blob/master/LICENSE)
 - github.com/99designs/keyring [MIT License](https://github.com/99designs/keyring/blob/master/LICENSE)
 - github.com/Azure/azure-amqp-common-go [MIT License](https://github.com/Azure/azure-amqp-common-go/blob/master/LICENSE)
 - github.com/Azure/azure-event-hubs-go [MIT License](https://github.com/Azure/azure-event-hubs-go/blob/master/LICENSE)
@@ -43,8 +42,8 @@ following works:
 - github.com/antchfx/xmlquery [MIT License](https://github.com/antchfx/xmlquery/blob/master/LICENSE)
 - github.com/antchfx/xpath [MIT License](https://github.com/antchfx/xpath/blob/master/LICENSE)
 - github.com/antlr/antlr4/runtime/Go/antlr [BSD 3-Clause "New" or "Revised" License](https://github.com/antlr/antlr4/blob/master/LICENSE.txt)
-- github.com/apache/arrow/go [Apache License 2.0](https://github.com/apache/arrow/blob/main/LICENSE.txt)
 - github.com/apache/arrow/go/arrow [Apache License 2.0](https://github.com/apache/arrow/blob/master/LICENSE.txt)
+- github.com/apache/arrow/go [Apache License 2.0](https://github.com/apache/arrow/blob/main/LICENSE.txt)\
 - github.com/apache/iotdb-client-go [Apache License 2.0](https://github.com/apache/iotdb-client-go/blob/main/LICENSE)
 - github.com/apache/thrift [Apache License 2.0](https://github.com/apache/thrift/blob/master/LICENSE)
 - github.com/aristanetworks/glog [Apache License 2.0](https://github.com/aristanetworks/glog/blob/master/LICENSE)
