@@ -202,6 +202,8 @@ require (
 
 require google.golang.org/genproto v0.0.0-20230223222841-637eb2293923
 
+require github.com/boschrexroth/ctrlx-datalayer-golang v1.3.0
+
 require (
 	cloud.google.com/go v0.110.0 // indirect
 	cloud.google.com/go/compute v1.18.0 // indirect
