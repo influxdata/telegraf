@@ -15,16 +15,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-[[outputs.clarify]]
-## Credentials File (OAuth 2.0 from Clarify integration).
+## Credentials File (Oauth 2.0 from Clarify integration)
 credentials_file = "/path/to/clarify/credentials.json"
 
-## Clarify username password (Basic Auth from Clarify integration).
+## Clarify username password (Basic Auth from Clarify integration)
 username = "i-am-bob"
 password = "secret-password"
 
-## Tags to be included when generating the unique ID for a signal in Clarify.
-id_tags = ['sensor']
+## Timeout for Clarify operations
+# timeout = "20s"
+
+## Optional tags to be included when generating the unique ID for a signal in Clarify
+# id_tags = ['sensor']
 ```
 
 You can use either a credentials file or username/password.
@@ -52,7 +54,7 @@ Strings and invalid numbers are ignored.
 [clarifydoc]: https://docs.clarify.io
 [credentials]: https://docs.clarify.io/users/admin/integrations/credentials
 
-## Example parsing
+## Example
 
 The following input would be stored in Clarify with the values shown below:
 
