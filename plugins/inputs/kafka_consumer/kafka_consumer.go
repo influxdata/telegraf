@@ -63,6 +63,7 @@ type KafkaConsumer struct {
 	regexps         []regexp.Regexp
 	allWantedTopics []string
 	ticker          *time.Ticker
+	fingerprint     string
 
 	parser parsers.Parser
 	wg     sync.WaitGroup
