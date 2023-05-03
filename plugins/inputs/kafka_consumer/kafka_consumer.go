@@ -223,7 +223,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 		k.Log.Debugf("adding literally-specified topic %s", t)
 		wantedTopicSet[t] = true
 	}
-	for t := range extantTopicSet {
+	for _, t := range allDiscoveredTopics {
 		// Add topics that match regexps
 		for _, r := range k.regexps {
 			if r.MatchString(t) {
@@ -238,7 +238,12 @@ func (k *KafkaConsumer) refreshTopics() error {
 		topicList = append(topicList, t)
 	}
 	sort.Strings(topicList)
-	k.replaceTopics(topicList)
+	fingerprint := strings.Join(topicList, ";")
+	if fingerprint != k.fingerprint {
+		k.Log.Infof("updating topics: replacing '%v' with '%v'", k.allWantedTopics, topicList)
+	}
+	k.fingerprint = fingerprint
+	k.allWantedTopics = topicList
 	return nil
 }
 
