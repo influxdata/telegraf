@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"errors"
@@ -20,6 +21,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/compose-spec/compose-go/cli"
+	"github.com/compose-spec/compose-go/template"
+	"github.com/compose-spec/compose-go/utils"
 	"github.com/coreos/go-semver/semver"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -39,13 +43,6 @@ import (
 )
 
 var (
-	// envVarRe is a regex to find environment variables in the config file
-	envVarRe = regexp.MustCompile(`\${(\w+)}|\$(\w+)`)
-
-	envVarEscaper = strings.NewReplacer(
-		`"`, `\"`,
-		`\`, `\\`,
-	)
 	httpLoadConfigRetryInterval = 10 * time.Second
 
 	// fetchURLRe is a regex to determine whether the requested file should
@@ -71,6 +68,7 @@ type Config struct {
 	SecretStoreFilters []string
 
 	SecretStores map[string]telegraf.SecretStore
+	EnvFiles     []string
 
 	Agent       *AgentConfig
 	Inputs      []*models.RunningInput
@@ -486,7 +484,7 @@ func (c *Config) LoadAll(configFiles ...string) error {
 
 // LoadConfigData loads TOML-formatted config data
 func (c *Config) LoadConfigData(data []byte) error {
-	tbl, err := parseConfig(data)
+	tbl, err := parseConfig(data, c.EnvFiles)
 	if err != nil {
 		return fmt.Errorf("error parsing data: %w", err)
 	}
@@ -697,11 +695,6 @@ func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }
 
-// escapeEnv escapes a value for inserting into a TOML string.
-func escapeEnv(value string) string {
-	return envVarEscaper.Replace(value)
-}
-
 func LoadConfigFile(config string) ([]byte, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
@@ -780,32 +773,124 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 // parseConfig loads a TOML configuration from a provided path and
 // returns the AST produced from the TOML parser. When loading the file, it
 // will find environment variables and replace them.
-func parseConfig(contents []byte) (*ast.Table, error) {
+func parseConfig(contents []byte, envFiles []string) (*ast.Table, error) {
 	contents = trimBOM(contents)
+	var err error
+	contents, err = removeComments(contents)
+	if err != nil {
+		return nil, err
+	}
+	// Convert the output buffer to a byte slice
+	outputBytes, err := substituteEnvironment(contents, envFiles)
+	if err != nil {
+		return nil, err
+	}
+	//  fmt.Println(string(outputBytes))
+	return toml.Parse(outputBytes)
+}
 
-	parameters := envVarRe.FindAllSubmatch(contents, -1)
-	for _, parameter := range parameters {
-		if len(parameter) != 3 {
+func removeComments(contents []byte) ([]byte, error) {
+	scanner := bufio.NewScanner(bytes.NewReader(contents))
+
+	// Initialize buffer for modified TOML data
+	var output bytes.Buffer
+
+	// Keep track of whether current line is part of a multiline string
+	inMultiline := false
+
+	// Iterate over lines in the TOML data
+	for scanner.Scan() {
+		line := scanner.Bytes()
+
+		// Check if line contains a new multiline string
+		if bytes.Contains(line, []byte("'''")) || bytes.Contains(line, []byte(`"""`)) {
+			inMultiline = !inMultiline
+		}
+
+		// If line is part of a multiline string, write it to buffer as is
+		if inMultiline {
+			output.Write(line)
+			output.WriteByte('\n')
 			continue
 		}
 
-		var envVar []byte
-		if parameter[1] != nil {
-			envVar = parameter[1]
-		} else if parameter[2] != nil {
-			envVar = parameter[2]
+		// Check if line contains a comment character (#)
+		idx := bytes.IndexByte(line, '#')
+		// ignoring the case when a multiline string starts with # and ends in ''' or """
+		if idx >= 0 && !bytes.HasSuffix(bytes.TrimSpace(line), []byte("'''")) && !bytes.HasSuffix(bytes.TrimSpace(line), []byte(`"""`)) {
+			// Check if # is inside a string value, if true write it as is
+			if checkHashInsideString(line, idx) {
+				output.Write(line)
+				output.WriteByte('\n')
+			} else {
+				// Remove comment from line
+				line = line[:idx]
+				if len(bytes.TrimSpace(line)) > 0 {
+					output.Write(line)
+					output.WriteByte('\n')
+				}
+			}
 		} else {
-			continue
-		}
-
-		envVal, ok := os.LookupEnv(strings.TrimPrefix(string(envVar), "$"))
-		if ok {
-			envVal = escapeEnv(envVal)
-			contents = bytes.Replace(contents, parameter[0], []byte(envVal), 1)
+			// If line does not contain a comment, write it to buffer as is
+			output.Write(line)
+			output.WriteByte('\n')
 		}
 	}
 
-	return toml.Parse(contents)
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return output.Bytes(), nil
+}
+
+// checkHashInsideString checks if the comment character (#) is inside a string value.
+func checkHashInsideString(line []byte, idx int) bool {
+	// Initialize count of double quotes and single quotes
+	dq, sq := 0, 0
+
+	// Check all characters before the comment character
+	for i := 0; i < idx; i++ {
+		switch line[i] {
+		case '"':
+			// If double quote is not escaped, toggle count
+			if i == 0 || line[i-1] != '\\' {
+				dq++
+			}
+		case '\'':
+			// If single quote is not escaped, toggle count
+			if i == 0 || line[i-1] != '\\' {
+				sq++
+			}
+		}
+	}
+
+	// Check if comment character is inside a string
+	return dq%2 == 1 || sq%2 == 1
+}
+
+func substituteEnvironment(contents []byte, envFiles []string) ([]byte, error) {
+	envMap := utils.GetAsEqualsMap(os.Environ())
+	// envFiles has a higher precedence over os.Environ()
+	// but if envFile is non empty, then we use os.Environ() as a base
+	// to expand variables in the envFile itself
+	if len(envFiles) != 0 {
+		var err error
+		envMap, err = cli.GetEnvFromFile(envMap, ".", envFiles)
+		if err != nil {
+			return nil, err
+		}
+	}
+	retVal, err := template.Substitute(string(contents), func(k string) (string, bool) {
+		if v, ok := envMap[k]; ok {
+			return v, ok
+		}
+		return "", false
+	})
+	var invalidTmplError *template.InvalidTemplateError
+	if err != nil && !errors.As(err, &invalidTmplError) {
+		return nil, err
+	}
+	return []byte(retVal), nil
 }
 
 func (c *Config) addAggregator(name string, table *ast.Table) error {
