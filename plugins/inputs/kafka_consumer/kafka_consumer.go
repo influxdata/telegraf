@@ -65,10 +65,10 @@ type KafkaConsumer struct {
 	ticker          *time.Ticker
 	fingerprint     string
 
-	parser      parsers.Parser
-	topicLock   sync.Mutex
-	wg          sync.WaitGroup
-	cancel      context.CancelFunc
+	parser    parsers.Parser
+	topicLock sync.Mutex
+	wg        sync.WaitGroup
+	cancel    context.CancelFunc
 }
 
 type ConsumerGroup interface {
@@ -202,7 +202,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 
 	k.topicLock.Lock()
 	defer k.topicLock.Unlock()
-	
+
 	if len(k.regexps) == 0 {
 		return nil
 	}
