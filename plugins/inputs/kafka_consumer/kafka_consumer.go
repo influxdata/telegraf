@@ -65,9 +65,10 @@ type KafkaConsumer struct {
 	ticker          *time.Ticker
 	fingerprint     string
 
-	parser parsers.Parser
-	wg     sync.WaitGroup
-	cancel context.CancelFunc
+	parser      parsers.Parser
+	topicLock   sync.Mutex
+	wg          sync.WaitGroup
+	cancel      context.CancelFunc
 }
 
 type ConsumerGroup interface {
@@ -195,6 +196,13 @@ func (k *KafkaConsumer) refreshTopics() error {
 	// topics, and if we find a match, add that topic to
 	// out topic set, which then we turn back into a list at the end.
 
+	// We lock our internal mutex at the start of this function and
+	// defer its unlock until we leave; this provides synchronization
+	// so if we close the client, we aren't refreshing while closing.
+
+	k.topicLock.Lock()
+	defer k.topicLock.Unlock()
+	
 	if len(k.regexps) == 0 {
 		return nil
 	}
@@ -344,11 +352,14 @@ func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
 }
 
 func (k *KafkaConsumer) Stop() {
-	if k.topicClient != nil {
-		k.topicClient.Close()
-	}
 	if k.ticker != nil {
 		k.ticker.Stop()
+	}
+	// Lock so that a topic refresh cannot start while we are stopping.
+	k.topicLock.Lock()
+	defer k.topicLock.Unlock()
+	if k.topicClient != nil {
+		k.topicClient.Close()
 	}
 	k.cancel()
 	k.wg.Wait()
