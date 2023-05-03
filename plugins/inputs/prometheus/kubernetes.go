@@ -76,6 +76,13 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 		}
 	}
 
+	if !p.isNodeScrapeScope {
+		err = p.watchPod(ctx, client)
+		if err != nil {
+			p.Log.Warnf("Error while attempting to watch pod: %s", err.Error())
+		}
+	}
+
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -90,10 +97,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
 				} else {
-					err = p.watchPod(ctx, client)
-					if err != nil {
-						p.Log.Warnf("Error while attempting to watch pod: %s", err.Error())
-					}
+					<-ctx.Done()
 				}
 			}
 		}
@@ -193,8 +197,6 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 	informerfactory.Start(ctx.Done())
 	informerfactory.WaitForCacheSync(wait.NeverStop)
-
-	<-ctx.Done()
 	return err
 }
 
