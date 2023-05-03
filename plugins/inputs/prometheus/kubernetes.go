@@ -89,7 +89,10 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
 				} else {
-					p.watchPod(ctx, client)
+					err = p.watchPod(ctx, client)
+					if err != nil {
+						p.Log.Warnf("Error while attempting to watch pod: %s", err.Error())
+					}
 				}
 			}
 		}
@@ -124,7 +127,7 @@ var informerfactory informers.SharedInformerFactory
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
-func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clientset) {
+func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clientset) error {
 	var resyncinterval time.Duration
 
 	if p.CacheRefreshInterval != 0 {
@@ -144,7 +147,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 	p.nsStore = informerfactory.Core().V1().Namespaces().Informer().GetStore()
 
 	podinformer := informerfactory.Core().V1().Pods()
-	podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
 			newPod, ok := newObj.(*corev1.Pod)
 			if !ok {
@@ -191,6 +194,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 	informerfactory.WaitForCacheSync(wait.NeverStop)
 
 	<-ctx.Done()
+	return err
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
