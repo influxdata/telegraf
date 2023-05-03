@@ -187,6 +187,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.12.0
 	google.golang.org/api v0.111.0
+	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
@@ -199,8 +200,6 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.21.0
 )
-
-require google.golang.org/genproto v0.0.0-20230223222841-637eb2293923
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
