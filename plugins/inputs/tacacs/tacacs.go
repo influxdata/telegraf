@@ -23,6 +23,7 @@ type Tacacs struct {
 	RemAddr         string          `toml:"request_ip"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
+	client          tacplus.Client
 }
 
 //go:embed sample.conf
@@ -36,6 +37,8 @@ func (t *Tacacs) Init() error {
 	if len(t.Servers) == 0 {
 		t.Servers = []string{"127.0.0.1:49"}
 	}
+
+	t.client = tacplus.Client{}
 
 	return nil
 }
@@ -78,12 +81,9 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, server string) error {
 	}
 	defer config.ReleaseSecret(password)
 
-	// Create the tacacs client
-	client := &tacplus.Client{
-		Addr: server,
-		ConnConfig: tacplus.ConnConfig{
-			Secret: secret,
-		},
+	t.client.Addr = server
+	t.client.ConnConfig = tacplus.ConnConfig{
+		Secret: secret,
 	}
 
 	// Initialize the AuthStart data
@@ -105,7 +105,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, server string) error {
 	}
 
 	startTime := time.Now()
-	reply, session, err := client.SendAuthenStart(ctx, testAuthStart)
+	reply, session, err := t.client.SendAuthenStart(ctx, testAuthStart)
 	if err != nil {
 		return fmt.Errorf("error on new tacacs authentication start request to %s : %w", server, err)
 	}
