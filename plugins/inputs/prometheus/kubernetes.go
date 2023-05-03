@@ -368,9 +368,6 @@ func podReady(pod *corev1.Pod) bool {
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
-	if p.kubernetesPods == nil {
-		p.kubernetesPods = map[PodID]URLAndAddress{}
-	}
 	targetURL, err := getScrapeURL(pod, p)
 	if err != nil {
 		p.Log.Errorf("could not parse URL: %s", err)
