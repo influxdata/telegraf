@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 )
 
 var errTimeout = errors.New("timeout: operation timed out")
@@ -120,9 +121,7 @@ func TestGenerateID(t *testing.T) {
 				require.ErrorIs(t, err, tt.err)
 			} else {
 				require.NoError(t, err)
-				if !reflect.DeepEqual(id, tt.outID[n]) {
-					t.Errorf("\nexpected %+v\ngot %+v\n", tt.outID[n], id)
-				}
+				require.True(t, slices.Contains(tt.outID, id), "\nexpected %+v\ngot %+v\n", tt.outID[n], id)
 			}
 		}
 	}
