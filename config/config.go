@@ -785,7 +785,6 @@ func parseConfig(contents []byte, envFiles []string) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	//  fmt.Println(string(outputBytes))
 	return toml.Parse(outputBytes)
 }
 

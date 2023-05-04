@@ -1,9 +1,7 @@
 [[outputs.http]]
-    # escaping $
-    headers = { Authorization = "Token $$TOKEN",Content-Type = "application/json" }
+    headers = { Authorization = "Token $TOKEN",Content-Type = "application/json" }
     taginclude = ["org_id"]
 
 [[outputs.http]]
-    # escaping $
-    headers = { Authorization = "Token $$TOKEN",Content-Type = "application/json" }
+    headers = { Authorization = "Token $TOKEN",Content-Type = "application/json" }
     taginclude = ["org_id"]
