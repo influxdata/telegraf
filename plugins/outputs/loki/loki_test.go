@@ -121,8 +121,7 @@ func TestStatusCode(t *testing.T) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			err = tt.plugin.Connect()
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Connect())
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			tt.errFunc(t, err)
@@ -167,8 +166,7 @@ func TestContentType(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			err = tt.plugin.Connect()
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Connect())
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
@@ -226,7 +224,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				require.Len(t, s.Streams, 1)
 				require.Len(t, s.Streams[0].Logs, 1)
 				require.Len(t, s.Streams[0].Logs[0], 2)
-				require.Equal(t, map[string]string{"__name": "log", "key1": "value1"}, s.Streams[0].Labels)
+				require.Equal(t, map[string]string{"key1": "value1"}, s.Streams[0].Labels)
 				require.Equal(t, "123000000000", s.Streams[0].Logs[0][0])
 				require.Contains(t, s.Streams[0].Logs[0][1], "line=\"my log\"")
 				require.Contains(t, s.Streams[0].Logs[0][1], "field=\"3.14\"")
@@ -234,11 +232,60 @@ func TestContentEncodingGzip(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			})
 
-			err = tt.plugin.Connect()
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Connect())
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestMetricNameLabel(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name            string
+		metricNameLabel string
+	}{
+		{
+			name:            "no label",
+			metricNameLabel: "",
+		},
+		{
+			name:            "custom label",
+			metricNameLabel: "foobar",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				payload, err := io.ReadAll(r.Body)
+				require.NoError(t, err)
+
+				var s Request
+				require.NoError(t, json.Unmarshal(payload, &s))
+
+				switch tt.metricNameLabel {
+				case "":
+					require.Equal(t, map[string]string{"key1": "value1"}, s.Streams[0].Labels)
+				case "foobar":
+					require.Equal(t, map[string]string{"foobar": "log", "key1": "value1"}, s.Streams[0].Labels)
+				}
+
+				w.WriteHeader(http.StatusNoContent)
+			})
+
+			l := Loki{
+				Domain:          u.String(),
+				MetricNameLabel: tt.metricNameLabel,
+			}
+			require.NoError(t, l.Connect())
+			require.NoError(t, l.Write([]telegraf.Metric{getMetric()}))
 		})
 	}
 }
@@ -349,8 +396,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				}
 			})
 
-			err = tt.plugin.Connect()
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Connect())
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
@@ -375,8 +421,7 @@ func TestDefaultUserAgent(t *testing.T) {
 			Domain: u.String(),
 		}
 
-		err = client.Connect()
-		require.NoError(t, err)
+		require.NoError(t, client.Connect())
 
 		err = client.Write([]telegraf.Metric{getMetric()})
 		require.NoError(t, err)
@@ -404,7 +449,7 @@ func TestMetricSorting(t *testing.T) {
 			require.Len(t, s.Streams, 1)
 			require.Len(t, s.Streams[0].Logs, 2)
 			require.Len(t, s.Streams[0].Logs[0], 2)
-			require.Equal(t, map[string]string{"__name": "log", "key1": "value1"}, s.Streams[0].Labels)
+			require.Equal(t, map[string]string{"key1": "value1"}, s.Streams[0].Labels)
 			require.Equal(t, "456000000000", s.Streams[0].Logs[0][0])
 			require.Contains(t, s.Streams[0].Logs[0][1], "line=\"older log\"")
 			require.Contains(t, s.Streams[0].Logs[0][1], "field=\"3.14\"")
@@ -419,8 +464,7 @@ func TestMetricSorting(t *testing.T) {
 			Domain: u.String(),
 		}
 
-		err = client.Connect()
-		require.NoError(t, err)
+		require.NoError(t, client.Connect())
 
 		err = client.Write(getOutOfOrderMetrics())
 		require.NoError(t, err)
