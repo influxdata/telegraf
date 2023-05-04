@@ -27,11 +27,12 @@ var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project        string            `toml:"project"`
-	Namespace      string            `toml:"namespace"`
-	ResourceType   string            `toml:"resource_type"`
-	ResourceLabels map[string]string `toml:"resource_labels"`
-	Log            telegraf.Logger   `toml:"-"`
+	Project          string            `toml:"project"`
+	Namespace        string            `toml:"namespace"`
+	ResourceType     string            `toml:"resource_type"`
+	ResourceLabels   map[string]string `toml:"resource_labels"`
+	MetricTypePrefix string            `toml:"metric_type_prefix"`
+	Log              telegraf.Logger   `toml:"-"`
 
 	client       *monitoring.MetricClient
 	counterCache *counterCache
@@ -55,6 +56,14 @@ const (
 	errStringPointsTooOld      = "data points cannot be written more than 24h in the past"
 	errStringPointsTooFrequent = "one or more points were written more frequently than the maximum sampling period configured for the metric"
 )
+
+func (s *Stackdriver) Init() error {
+	if s.MetricTypePrefix == "" {
+		s.MetricTypePrefix = "custom.googleapis.com"
+	}
+
+	return nil
+}
 
 func (*Stackdriver) SampleConfig() string {
 	return sampleConfig
@@ -199,7 +208,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			// Prepare time series.
 			timeSeries := &monitoringpb.TimeSeries{
 				Metric: &metricpb.Metric{
-					Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key),
+					Type:   path.Join(s.MetricTypePrefix, s.Namespace, m.Name(), f.Key),
 					Labels: s.getStackdriverLabels(m.TagList()),
 				},
 				MetricKind: metricKind,
