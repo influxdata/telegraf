@@ -131,11 +131,38 @@ func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f *telegraf.Field, ts *monit
 	tsb[k] = s
 }
 
-// Write the metrics to Google Cloud Stackdriver.
+// Split metrics up by timestamp and send to Google Cloud Stackdriver
 func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
+	metricBatch := make(map[int64][]telegraf.Metric)
+	timestamps := []int64{}
+	for _, metric := range sorted(metrics) {
+		timestamp := metric.Time().UnixNano()
+		if existingSlice, ok := metricBatch[timestamp]; ok {
+			metricBatch[timestamp] = append(existingSlice, metric)
+		} else {
+			metricBatch[timestamp] = []telegraf.Metric{metric}
+			timestamps = append(timestamps, timestamp)
+		}
+	}
+
+	// sort the timestamps we collected
+	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
+
+	s.Log.Debugf("received %d metrics\n", len(metrics))
+	s.Log.Debugf("split into %d groups by timestamp\n", len(metricBatch))
+	for _, timestamp := range timestamps {
+		if err := s.sendBatch(metricBatch[timestamp]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Write the metrics to Google Cloud Stackdriver.
+func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 	ctx := context.Background()
 
-	batch := sorted(metrics)
 	buckets := make(timeSeriesBuckets)
 	for _, m := range batch {
 		for _, f := range m.FieldList() {
