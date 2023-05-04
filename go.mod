@@ -201,8 +201,6 @@ require (
 	modernc.org/sqlite v1.21.0
 )
 
-require google.golang.org/genproto v0.0.0-20230223222841-637eb2293923
-
 require github.com/boschrexroth/ctrlx-datalayer-golang v1.3.0
 
 require (
