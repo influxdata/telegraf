@@ -151,7 +151,7 @@ require (
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
 	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/showwin/speedtest-go v1.4.2
-	github.com/signalfx/golib/v3 v3.3.46
+	github.com/signalfx/golib/v3 v3.3.50
 	github.com/sirupsen/logrus v1.9.0
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.13
@@ -199,6 +199,8 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.21.0
 )
+
+require github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 
 require (
 	cloud.google.com/go v0.110.1 // indirect
@@ -399,7 +401,7 @@ require (
 	github.com/shoenig/go-m1cpu v0.1.4 // indirect
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
-	github.com/signalfx/sapm-proto v0.7.2 // indirect
+	github.com/signalfx/sapm-proto v0.12.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
