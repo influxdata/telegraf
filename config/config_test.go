@@ -111,7 +111,6 @@ func Test_envSub(t *testing.T) {
 	tests := []struct {
 		name         string
 		setEnv       func(*testing.T)
-		envFile      []string
 		contents     string
 		expected     string
 		wantErr      bool
@@ -181,18 +180,6 @@ func Test_envSub(t *testing.T) {
 			contents: "Should output ${NOT_SET:-${FALLBACK}}",
 			expected: "Should output my-fallback",
 		},
-		{
-			name: "env from file",
-			envFile: func(t *testing.T) []string {
-				tmp := t.TempDir()
-				env := filepath.Join(tmp, ".env")
-				err := os.WriteFile(env, []byte("envFile1=val1\nenvFile2=val2"), 0640)
-				require.NoError(t, err)
-				return []string{env}
-			}(t),
-			contents: "$envFile1 and $envFile2 come from envFile",
-			expected: "val1 and val2 come from envFile",
-		},
 	}
 
 	for _, tt := range tests {
@@ -200,7 +187,7 @@ func Test_envSub(t *testing.T) {
 			if tt.setEnv != nil {
 				tt.setEnv(t)
 			}
-			actual, err := substituteEnvironment([]byte(tt.contents), tt.envFile)
+			actual, err := substituteEnvironment([]byte(tt.contents))
 			if tt.wantErr {
 				require.ErrorContains(t, err, tt.errSubstring)
 				return

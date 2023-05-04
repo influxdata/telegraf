@@ -221,7 +221,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		g := GlobalFlags{
 			config:      cCtx.StringSlice("config"),
 			configDir:   cCtx.StringSlice("config-directory"),
-			dotEnvFile:  cCtx.StringSlice("env-file"),
 			testWait:    cCtx.Int("test-wait"),
 			watchConfig: cCtx.String("watch-config"),
 			pidFile:     cCtx.String("pidfile"),
@@ -260,10 +259,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.StringSliceFlag{
 					Name:  "config-directory",
 					Usage: "directory containing additional *.conf files",
-				},
-				&cli.StringSliceFlag{
-					Name:  "env-file",
-					Usage: ".env file path",
 				},
 				// Int flags
 				&cli.IntFlag{

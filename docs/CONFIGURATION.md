@@ -165,11 +165,6 @@ parsed:
   bucket = "replace_with_your_bucket_name"
 ```
 
-Telegraf also supports dotenv`(.env)` file which can be passed in the `--env-file` flag. Multiple file 
-paths can be passed via multiple flags and Telegraf will pick those values for environment substitution.
-**NOTE:** If `.env` files are passed, then Telegraf will only consider the files as a source of values.
-It will not consider the values fetched via `os.Environ()`. However, the `.env` file itself can reference values defined in the environment.
-
 ## Secret-store secrets
 
 Additional or instead of environment variables, you can use secret-stores

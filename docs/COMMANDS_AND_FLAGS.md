@@ -23,7 +23,6 @@ telegraf help
 Here are some commonly used flags that users should be aware of:
 
 * `--config-directory`: Read all config files from a directory
-* `--env-file`: Path to a `.env` file
 * `--debug`: Enable additional debug logging
 * `--once`: Run one collection and flush interval then exit
 * `--test`: Run only inputs, output to stdout, and exit

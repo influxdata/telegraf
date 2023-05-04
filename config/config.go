@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/compose-spec/compose-go/cli"
 	"github.com/compose-spec/compose-go/template"
 	"github.com/compose-spec/compose-go/utils"
 	"github.com/coreos/go-semver/semver"
@@ -68,7 +67,6 @@ type Config struct {
 	SecretStoreFilters []string
 
 	SecretStores map[string]telegraf.SecretStore
-	EnvFiles     []string
 
 	Agent       *AgentConfig
 	Inputs      []*models.RunningInput
@@ -484,7 +482,7 @@ func (c *Config) LoadAll(configFiles ...string) error {
 
 // LoadConfigData loads TOML-formatted config data
 func (c *Config) LoadConfigData(data []byte) error {
-	tbl, err := parseConfig(data, c.EnvFiles)
+	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("error parsing data: %w", err)
 	}
@@ -773,7 +771,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 // parseConfig loads a TOML configuration from a provided path and
 // returns the AST produced from the TOML parser. When loading the file, it
 // will find environment variables and replace them.
-func parseConfig(contents []byte, envFiles []string) (*ast.Table, error) {
+func parseConfig(contents []byte) (*ast.Table, error) {
 	contents = trimBOM(contents)
 	var err error
 	contents, err = removeComments(contents)
@@ -781,7 +779,7 @@ func parseConfig(contents []byte, envFiles []string) (*ast.Table, error) {
 		return nil, err
 	}
 	// Convert the output buffer to a byte slice
-	outputBytes, err := substituteEnvironment(contents, envFiles)
+	outputBytes, err := substituteEnvironment(contents)
 	if err != nil {
 		return nil, err
 	}
@@ -867,18 +865,8 @@ func checkHashInsideString(line []byte, idx int) bool {
 	return dq%2 == 1 || sq%2 == 1
 }
 
-func substituteEnvironment(contents []byte, envFiles []string) ([]byte, error) {
+func substituteEnvironment(contents []byte) ([]byte, error) {
 	envMap := utils.GetAsEqualsMap(os.Environ())
-	// envFiles has a higher precedence over os.Environ()
-	// but if envFile is non empty, then we use os.Environ() as a base
-	// to expand variables in the envFile itself
-	if len(envFiles) != 0 {
-		var err error
-		envMap, err = cli.GetEnvFromFile(envMap, ".", envFiles)
-		if err != nil {
-			return nil, err
-		}
-	}
 	retVal, err := template.Substitute(string(contents), func(k string) (string, bool) {
 		if v, ok := envMap[k]; ok {
 			return v, ok

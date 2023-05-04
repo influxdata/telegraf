@@ -34,7 +34,6 @@ var stop chan struct{}
 type GlobalFlags struct {
 	config      []string
 	configDir   []string
-	dotEnvFile  []string
 	testWait    int
 	watchConfig string
 	pidFile     string
@@ -216,7 +215,6 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
 	c.SecretStoreFilters = t.secretstoreFilters
-	c.EnvFiles = t.dotEnvFile
 
 	var configFiles []string
 
