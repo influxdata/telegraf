@@ -102,7 +102,9 @@ func (g *Graphite) Connect() error {
 		}
 	}
 
-	if len(g.failedServers) > 0 {
+	g.Log.Debugf("Successful connections: %d", len(conns))
+	if len(failedServers) > 0 {
+		g.Log.Debugf("Failed servers: %d", len(failedServers))
 		g.conns = append(g.conns, conns...)
 		g.failedServers = failedServers
 	} else {
