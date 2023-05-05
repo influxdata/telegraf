@@ -392,7 +392,13 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 		stmt, err := s.db.PrepareContext(ctx, q.Query)
 		cancel()
 		if err != nil {
-			return fmt.Errorf("preparing query %q failed: %w", q.Query, err)
+			// Some database drivers or databases do not support prepare
+			// statements and report an error here. However, we can still
+			// execute unprepared queries for those setups so do not bail-out
+			// here but simply do leave the `statement` with a `nil` value
+			// indicating no prepared statement.
+			s.Log.Warnf("preparing query %q failed: %s; falling back to unprepared query", q.Query, err)
+			continue
 		}
 		s.Queries[i].statement = stmt
 	}
@@ -450,14 +456,22 @@ func init() {
 }
 
 func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Query, tquery time.Time) error {
-	if q.statement == nil {
-		return fmt.Errorf("statement is nil for query %q", q.Query)
-	}
-
-	// Execute the query
-	rows, err := q.statement.QueryContext(ctx)
-	if err != nil {
-		return err
+	// Execute the query either prepared or unprepared
+	var rows *dbsql.Rows
+	if q.statement != nil {
+		// Use the previously prepared query
+		var err error
+		rows, err = q.statement.QueryContext(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Fallback to unprepared query
+		var err error
+		rows, err = s.db.Query(q.Query)
+		if err != nil {
+			return err
+		}
 	}
 	defer rows.Close()
 
