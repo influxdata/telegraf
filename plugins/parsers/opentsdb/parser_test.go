@@ -91,7 +91,7 @@ func TestParseLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Parser{}
+			p := &Parser{Log: testutil.Logger{}}
 
 			actual, err := p.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -191,11 +191,43 @@ func TestParse(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "mixed valid/invalid input",
+			input: []byte(
+				"version\r\n" +
+					"put sys.cpu.user " + strTimeSec + " 42.5 host=webserver01 cpu=7\r\n" +
+					"put sys.cpu.user " + strTimeSec + " 53.5 host=webserver02 cpu=3\r\n",
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"sys.cpu.user",
+					map[string]string{
+						"host": "webserver01",
+						"cpu":  "7",
+					},
+					map[string]interface{}{
+						"value": float64(42.5),
+					},
+					testTimeSec,
+				),
+				testutil.MustMetric(
+					"sys.cpu.user",
+					map[string]string{
+						"host": "webserver02",
+						"cpu":  "3",
+					},
+					map[string]interface{}{
+						"value": float64(53.5),
+					},
+					testTimeSec,
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Parser{}
+			p := &Parser{Log: testutil.Logger{}}
 
 			actual, err := p.Parse(tt.input)
 			require.NoError(t, err)
@@ -264,7 +296,7 @@ func TestParse_DefaultTags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Parser{}
+			p := &Parser{Log: testutil.Logger{}}
 			p.SetDefaultTags(tt.defaultTags)
 
 			actual, err := p.Parse(tt.input)

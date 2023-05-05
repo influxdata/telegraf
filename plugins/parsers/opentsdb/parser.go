@@ -3,6 +3,7 @@ package opentsdb
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,6 +17,7 @@ import (
 // Parser encapsulates a OpenTSDB Parser.
 type Parser struct {
 	DefaultTags map[string]string `toml:"-"`
+	Log         telegraf.Logger   `toml:"-"`
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -30,13 +32,17 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 		m, err := p.ParseLine(line)
 		if err != nil {
-			return nil, err
+			p.Log.Errorf("Error parsing %q as opentsdb: %s", line, err)
+
+			// Don't let one bad line spoil a whole batch. In particular, it may
+			// be a valid opentsdb telnet protocol command, like "version", that
+			// we don't support.
+			continue
 		}
 
-		if m != nil {
-			metrics = append(metrics, m)
-		}
+		metrics = append(metrics, m)
 	}
+
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
@@ -48,11 +54,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	// Break into fields ("put", name, timestamp, value, tag1, tag2, ..., tagN).
 	fields := strings.Fields(line)
-	if len(fields) == 0 {
-		return nil, nil
-	}
 	if len(fields) < 4 || fields[0] != "put" {
-		return nil, fmt.Errorf("received %q which doesn't have required fields", line)
+		return nil, errors.New("doesn't have required fields")
 	}
 
 	// decode the name and tags
