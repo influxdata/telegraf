@@ -41,7 +41,7 @@ jobs:
         env:
           ACTIONS_RUNNER_DEBUG: true
           ACTIONS_STEP_DEBUG: true
-          GL_DEBUG: "autogen_exclude,bin_salt,config_reader,enabled_linters,env,exclude_rules,exec,filename_unadjuster,goenv,linter,linters_context,lintersdb,loader,max_from_linter,max_same_issues,pkgcache,runner,severity_rules,skip_dirs,source_code,stopwatch,tab_printer,test,text_printer,goanalysis/analyze,goanalysis/issues/cache,goanalysis/memory,goanalysis/facts,goanalysis/cache,goanalysis/export,goanalysis/inherit"
+#          GL_DEBUG: "autogen_exclude,bin_salt,config_reader,enabled_linters,env,exclude_rules,exec,filename_unadjuster,goenv,linter,linters_context,lintersdb,loader,max_from_linter,max_same_issues,pkgcache,runner,severity_rules,skip_dirs,source_code,stopwatch,tab_printer,test,text_printer,goanalysis/analyze,goanalysis/issues/cache,goanalysis/memory,goanalysis/facts,goanalysis/cache,goanalysis/export,goanalysis/inherit"
         timeout-minutes: 60
         with:
           version: v1.52.2
@@ -54,7 +54,7 @@ jobs:
           nofuture: out-format
           ACTIONS_RUNNER_DEBUG: true
           ACTIONS_STEP_DEBUG: true
-          GL_DEBUG: "autogen_exclude,bin_salt,config_reader,enabled_linters,env,exclude_rules,exec,filename_unadjuster,goenv,linter,linters_context,lintersdb,loader,max_from_linter,max_same_issues,pkgcache,runner,severity_rules,skip_dirs,source_code,stopwatch,tab_printer,test,text_printer,goanalysis/analyze,goanalysis/issues/cache,goanalysis/memory,goanalysis/facts,goanalysis/cache,goanalysis/export,goanalysis/inherit"
+#          GL_DEBUG: "autogen_exclude,bin_salt,config_reader,enabled_linters,env,exclude_rules,exec,filename_unadjuster,goenv,linter,linters_context,lintersdb,loader,max_from_linter,max_same_issues,pkgcache,runner,severity_rules,skip_dirs,source_code,stopwatch,tab_printer,test,text_printer,goanalysis/analyze,goanalysis/issues/cache,goanalysis/memory,goanalysis/facts,goanalysis/cache,goanalysis/export,goanalysis/inherit"
         with:
           version: v1.52.2
           args: --timeout 60m0s --verbose --%nofuture% tab
