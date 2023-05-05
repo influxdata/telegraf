@@ -97,7 +97,10 @@ func (r *RunningInput) ID() string {
 }
 
 func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
-	if ok := r.Config.Filter.Select(metric); !ok {
+	ok, err := r.Config.Filter.Select(metric)
+	if err != nil {
+		r.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
 		r.metricFiltered(metric)
 		return nil
 	}

@@ -56,6 +56,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
+  ## Enable aggregation temporality adds temporality=delta or temporality=commulative tag, and
+  ## start_time field, which adds the start time of the metric accumulation.
+  ## You should use this when using OpenTelemetry output.
+  # enable_aggregation_temporality = false
+
   ## Percentiles to calculate for timing & histogram stats.
   percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
 

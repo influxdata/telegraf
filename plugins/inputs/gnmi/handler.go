@@ -12,13 +12,20 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
+	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
+	"github.com/influxdata/telegraf/selfstat"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+	gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
+
+const eidJuniperTelemetryHeader = 1
 
 type handler struct {
 	address            string
@@ -26,20 +33,32 @@ type handler struct {
 	tagsubs            []TagSubscription
 	maxMsgSize         int
 	emptyNameWarnShown bool
+	vendorExt          []string
 	tagStore           *tagStore
 	trace              bool
 	log                telegraf.Logger
 }
 
-func newHandler(addr string, aliases map[string]string, subs []TagSubscription, maxsize int, l telegraf.Logger, trace bool) *handler {
+// Allow to convey additionnal configuration elements
+type configHandler struct {
+	aliases       map[string]string
+	subscriptions []TagSubscription
+	maxSize       int
+	log           telegraf.Logger
+	trace         bool
+	vendorExt     []string
+}
+
+func newHandler(addr string, confHandler configHandler) *handler {
 	return &handler{
 		address:    addr,
-		aliases:    aliases,
-		tagsubs:    subs,
-		maxMsgSize: maxsize,
-		tagStore:   newTagStore(subs),
-		trace:      trace,
-		log:        l,
+		aliases:    confHandler.aliases,
+		tagsubs:    confHandler.subscriptions,
+		maxMsgSize: confHandler.maxSize,
+		vendorExt:  confHandler.vendorExt,
+		tagStore:   newTagStore(confHandler.subscriptions),
+		trace:      confHandler.trace,
+		log:        confHandler.log,
 	}
 }
 
@@ -79,11 +98,19 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 	}
 
 	h.log.Debugf("Connection to gNMI device %s established", h.address)
+
+	// Used to report the status of the TCP connection to the device. If the
+	// GNMI connection goes down, but TCP is still up this will still report
+	// connected until the TCP connection times out.
+	connectStat := selfstat.Register("gnmi", "grpc_connection_status", map[string]string{"source": h.address})
+	connectStat.Set(1)
+
 	defer h.log.Debugf("Connection to gNMI device %s closed", h.address)
 	for ctx.Err() == nil {
 		var reply *gnmiLib.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
 			if !errors.Is(err, io.EOF) && ctx.Err() == nil {
+				connectStat.Set(0)
 				return fmt.Errorf("aborted gNMI subscription: %w", err)
 			}
 			break
@@ -98,20 +125,53 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 				h.log.Debugf("update_%v: %s", t, string(buf))
 			}
 		}
-
 		if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
-			h.handleSubscribeResponseUpdate(acc, response)
+			h.handleSubscribeResponseUpdate(acc, response, reply.GetExtension())
 		}
 	}
+
+	connectStat.Set(0)
 	return nil
 }
 
 // Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
-func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update) {
+func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update, extension []*gnmiExt.Extension) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	prefixTags := make(map[string]string)
+
+	// iter on each extension
+	for _, ext := range extension {
+		currentExt := ext.GetRegisteredExt().Msg
+		if currentExt == nil {
+			break
+		}
+		// extension ID
+		switch ext.GetRegisteredExt().Id {
+		// Juniper Header extention
+		//EID_JUNIPER_TELEMETRY_HEADER = 1;
+		case eidJuniperTelemetryHeader:
+			// Decode it only if user requested it
+			if choice.Contains("juniper_header", h.vendorExt) {
+				juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeaderExtension{}
+				// unmarshal extention
+				err := proto.Unmarshal(currentExt, juniperHeader)
+				if err != nil {
+					h.log.Errorf("unmarshal gnmi Juniper Header extention failed: %w", err)
+					break
+				}
+				// Add only relevant Tags from the Juniper Header extention.
+				// These are requiered for aggregation
+				prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
+				prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
+				prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
+			}
+
+		default:
+			continue
+		}
+	}
 
 	if response.Update.Prefix != nil {
 		var err error

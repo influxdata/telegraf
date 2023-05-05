@@ -109,11 +109,13 @@ linters-settings:
       - G306
       - G401
       - G403
+      - G404
       - G501
       - G502
       - G503
       - G505
       - G601
+      # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
@@ -257,13 +259,13 @@ issues:
         - govet
 
     - path: cmd/telegraf/(main|printer).go
-      text: "Error return value of `outputBuffer.Write` is not checked"
-
-    - path: cmd/telegraf/(main|printer).go
-      text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
+      text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
     - path: _test\.go
-      text: "Potential hardcoded credentials"
+      text: "Potential hardcoded credentials" #gosec:G101
+
+    - path: _test\.go
+      text: "Use of weak random number generator" #gosec:G404
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.

@@ -3,6 +3,7 @@ package parser
 
 import (
 	_ "embed"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -18,6 +19,16 @@ type Parser struct {
 	ParseTags    []string        `toml:"parse_tags"`
 	Log          telegraf.Logger `toml:"-"`
 	parser       telegraf.Parser
+}
+
+func (p *Parser) Init() error {
+	switch p.Merge {
+	case "", "override", "override-with-timestamp":
+	default:
+		return fmt.Errorf("unrecognized merge value: %s", p.Merge)
+	}
+
+	return nil
 }
 
 func (*Parser) SampleConfig() string {
@@ -100,6 +111,8 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 		if p.Merge == "override" {
 			results = append(results, merge(newMetrics[0], newMetrics[1:]))
+		} else if p.Merge == "override-with-timestamp" {
+			results = append(results, mergeWithTimestamp(newMetrics[0], newMetrics[1:]))
 		} else {
 			results = append(results, newMetrics...)
 		}
@@ -116,6 +129,22 @@ func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
 			base.AddTag(tag.Key, tag.Value)
 		}
 		base.SetName(metric.Name())
+	}
+	return base
+}
+
+func mergeWithTimestamp(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
+	for _, metric := range metrics {
+		for _, field := range metric.FieldList() {
+			base.AddField(field.Key, field.Value)
+		}
+		for _, tag := range metric.TagList() {
+			base.AddTag(tag.Key, tag.Value)
+		}
+		base.SetName(metric.Name())
+		if !metric.Time().IsZero() {
+			base.SetTime(metric.Time())
+		}
 	}
 	return base
 }

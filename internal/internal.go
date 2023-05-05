@@ -118,16 +118,14 @@ func SnakeCase(in string) string {
 }
 
 // RandomSleep will sleep for a random amount of time up to max.
-// If the shutdown channel is closed, it will return before it has finished
-// sleeping.
+// If the shutdown channel is closed, it will return before it has finished sleeping.
 func RandomSleep(max time.Duration, shutdown chan struct{}) {
-	if max == 0 {
+	sleepDuration := RandomDuration(max)
+	if sleepDuration == 0 {
 		return
 	}
 
-	sleepns := rand.Int63n(max.Nanoseconds())
-
-	t := time.NewTimer(time.Nanosecond * time.Duration(sleepns))
+	t := time.NewTimer(time.Nanosecond * sleepDuration)
 	select {
 	case <-t.C:
 		return
@@ -143,9 +141,7 @@ func RandomDuration(max time.Duration) time.Duration {
 		return 0
 	}
 
-	sleepns := rand.Int63n(max.Nanoseconds())
-
-	return time.Duration(sleepns)
+	return time.Duration(rand.Int63n(max.Nanoseconds())) //nolint:gosec // G404: not security critical
 }
 
 // SleepContext sleeps until the context is closed or the duration is reached.

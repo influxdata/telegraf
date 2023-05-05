@@ -595,11 +595,11 @@ excluded from a Processor or Aggregator plugin, it is skips the plugin and is
 sent onwards to the next stage of processing.
 
 - **namepass**:
-An array of [glob pattern][] strings.  Only metrics whose measurement name matches
-a pattern in this list are emitted.
+An array of [glob pattern][] strings. Only metrics whose measurement name
+matches a pattern in this list are emitted.
 
 - **namedrop**:
-The inverse of `namepass`.  If a match is found the metric is discarded. This
+The inverse of `namepass`. If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `namepass` test.
 
 - **tagpass**:
@@ -619,6 +619,25 @@ is tested on metrics after they have passed the `tagpass` test.
 > plugin config options will be interpreted as part of the tagpass/tagdrop
 > tables. This limitation does not apply when using the inline table
 > syntax (`{...}`).
+
+- **metricpass**:
+A ["Common Expression Language"][CEL] (CEL) expression with boolean result where
+`true` will allow the metric to pass, otherwise the metric is discarded. This
+filter expression is more general compared to e.g. `namepass` and also allows
+for time-based filtering. An introduction to the CEL language can be found
+[here][CEL intro]. Further details, such as available functions and expressions,
+are provided in the [language definition][CEL lang] as well as in the
+[extension documentation][CEL ext].
+
+> NOTE: As CEL is an _interpreted_ languguage, this type of filtering is much
+> slower compared to `namepass`/`namedrop` and friends. So consider to use the
+> more restricted filter options where possible in case of high-throughput
+> scenarios.
+
+[CEL]:https://github.com/google/cel-go/tree/master
+[CEL intro]: https://codelabs.developers.google.com/codelabs/cel-go
+[CEL lang]: https://github.com/google/cel-spec/blob/master/doc/langdef.md
+[CEL ext]: https://github.com/google/cel-go/tree/master/ext#readme
 
 ### Modifiers
 

@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -49,6 +50,9 @@ type (
 		ReturnErr map[string]bool
 		parsers.Parser
 		*testing.T
+		Base64Data           bool
+		ContentEncoding      string
+		MaxDecompressionSize int64
 
 		stopped bool
 		pLock   sync.Mutex
@@ -68,9 +72,11 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 
 	metrics := make([]telegraf.Metric, 0, len(testM))
 	t := &stubTopic{
-		T:         tT,
-		ReturnErr: make(map[string]bool),
-		published: make(map[string]*pubsub.Message),
+		T:                    tT,
+		ReturnErr:            make(map[string]bool),
+		published:            make(map[string]*pubsub.Message),
+		ContentEncoding:      "identity",
+		MaxDecompressionSize: internal.DefaultMaxDecompressionSize,
 	}
 
 	for _, tm := range testM {
@@ -89,7 +95,11 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 		PublishByteThreshold:  settings.ByteThreshold,
 		PublishNumGoroutines:  settings.NumGoroutines,
 		PublishTimeout:        config.Duration(settings.Timeout),
+		ContentEncoding:       "identity",
 	}
+
+	require.NoError(tT, ps.Init())
+	ps.encoder, _ = internal.NewContentEncoder(ps.ContentEncoding)
 	ps.SetSerializer(s)
 
 	return ps, t, metrics
@@ -185,17 +195,22 @@ func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
 	p := influx.Parser{}
 	err := p.Init()
 	require.NoError(t, err)
-	metrics, err := p.Parse(msg.Data)
+
+	decoder, _ := internal.NewContentDecoder(t.ContentEncoding)
+	d, err := decoder.Decode(msg.Data, t.MaxDecompressionSize)
 	if err != nil {
-		// Just attempt to base64-decode first before returning error.
-		d, err := base64.StdEncoding.DecodeString(string(msg.Data))
+		t.Errorf("unable to decode message: %v", err)
+	}
+	if t.Base64Data {
+		strData, err := base64.StdEncoding.DecodeString(string(d))
 		if err != nil {
-			t.Errorf("unable to base64-decode potential test message: %v", err)
+			t.Errorf("unable to base64 decode message: %v", err)
 		}
-		metrics, err = p.Parse(d)
-		if err != nil {
-			t.Fatalf("unexpected parsing error: %v", err)
-		}
+		d = strData
+	}
+	metrics, err := p.Parse(d)
+	if err != nil {
+		t.Fatalf("unexpected parsing error: %v", err)
 	}
 
 	ids := make([]string, 0, len(metrics))

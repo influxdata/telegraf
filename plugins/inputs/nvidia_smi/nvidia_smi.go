@@ -118,6 +118,15 @@ func (s *SMI) genTagsFields() []metric {
 		setIfUsed("int", fields, "memory_total", gpu.Memory.Total)
 		setIfUsed("int", fields, "memory_used", gpu.Memory.Used)
 		setIfUsed("int", fields, "memory_free", gpu.Memory.Free)
+		setIfUsed("int", fields, "memory_reserved", gpu.Memory.Reserved)
+		setIfUsed("int", fields, "retired_pages_multiple_single_bit", gpu.RetiredPages.MultipleSingleBit.Count)
+		setIfUsed("int", fields, "retired_pages_double_bit", gpu.RetiredPages.DoubleBit.Count)
+		setIfUsed("str", fields, "retired_pages_blacklist", gpu.RetiredPages.PendingBlacklist)
+		setIfUsed("str", fields, "retired_pages_pending", gpu.RetiredPages.PendingRetirement)
+		setIfUsed("int", fields, "remapped_rows_correctable", gpu.RemappedRows.Correctable)
+		setIfUsed("int", fields, "remapped_rows_uncorrectable", gpu.RemappedRows.Uncorrectable)
+		setIfUsed("str", fields, "remapped_rows_pending", gpu.RemappedRows.Pending)
+		setIfUsed("str", fields, "remapped_rows_failure", gpu.RemappedRows.Failure)
 		setIfUsed("int", fields, "temperature_gpu", gpu.Temp.GPUTemp)
 		setIfUsed("int", fields, "utilization_gpu", gpu.Utilization.GPU)
 		setIfUsed("int", fields, "utilization_memory", gpu.Utilization.Memory)
@@ -168,14 +177,14 @@ func setIfUsed(t string, m map[string]interface{}, k, v string) {
 			}
 		}
 	case "int":
-		if val != "" {
+		if val != "" && val != "N/A" {
 			i, err := strconv.Atoi(val)
 			if err == nil {
 				m[k] = i
 			}
 		}
 	case "str":
-		if val != "" {
+		if val != "" && val != "N/A" {
 			m[k] = val
 		}
 	}
@@ -190,26 +199,49 @@ type SMI struct {
 
 // GPU defines the structure of the GPU portion of the smi output.
 type GPU []struct {
-	FanSpeed    string           `xml:"fan_speed"` // int
-	Memory      MemoryStats      `xml:"fb_memory_usage"`
-	PState      string           `xml:"performance_state"`
-	Temp        TempStats        `xml:"temperature"`
-	ProdName    string           `xml:"product_name"`
-	UUID        string           `xml:"uuid"`
-	ComputeMode string           `xml:"compute_mode"`
-	Utilization UtilizationStats `xml:"utilization"`
-	Power       PowerReadings    `xml:"power_readings"`
-	PCI         PCI              `xml:"pci"`
-	Encoder     EncoderStats     `xml:"encoder_stats"`
-	FBC         FBCStats         `xml:"fbc_stats"`
-	Clocks      ClockStats       `xml:"clocks"`
+	FanSpeed     string             `xml:"fan_speed"` // int
+	Memory       MemoryStats        `xml:"fb_memory_usage"`
+	RetiredPages MemoryRetiredPages `xml:"retired_pages"`
+	RemappedRows MemoryRemappedRows `xml:"remapped_rows"`
+	PState       string             `xml:"performance_state"`
+	Temp         TempStats          `xml:"temperature"`
+	ProdName     string             `xml:"product_name"`
+	UUID         string             `xml:"uuid"`
+	ComputeMode  string             `xml:"compute_mode"`
+	Utilization  UtilizationStats   `xml:"utilization"`
+	Power        PowerReadings      `xml:"power_readings"`
+	PCI          PCI                `xml:"pci"`
+	Encoder      EncoderStats       `xml:"encoder_stats"`
+	FBC          FBCStats           `xml:"fbc_stats"`
+	Clocks       ClockStats         `xml:"clocks"`
 }
 
 // MemoryStats defines the structure of the memory portions in the smi output.
 type MemoryStats struct {
-	Total string `xml:"total"` // int
-	Used  string `xml:"used"`  // int
-	Free  string `xml:"free"`  // int
+	Total    string `xml:"total"`    // int
+	Used     string `xml:"used"`     // int
+	Free     string `xml:"free"`     // int
+	Reserved string `xml:"reserved"` // int
+}
+
+// MemoryRetiredPages defines the structure of the retired pages portions in the smi output.
+type MemoryRetiredPages struct {
+	MultipleSingleBit struct {
+		Count string `xml:"retired_count"` // int
+	} `xml:"multiple_single_bit_retirement"`
+	DoubleBit struct {
+		Count string `xml:"retired_count"` // int
+	} `xml:"double_bit_retirement"`
+	PendingBlacklist  string `xml:"pending_blacklist"`  // Yes/No
+	PendingRetirement string `xml:"pending_retirement"` // Yes/No
+}
+
+// MemoryRemappedRows defines the structure of the remapped rows portions in the smi output.
+type MemoryRemappedRows struct {
+	Correctable   string `xml:"remapped_row_corr"`    // int
+	Uncorrectable string `xml:"remapped_row_unc"`     // int
+	Pending       string `xml:"remapped_row_pending"` // Yes/No
+	Failure       string `xml:"remapped_row_failure"` // Yes/No
 }
 
 // TempStats defines the structure of the temperature portion of the smi output.
