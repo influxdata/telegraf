@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/klauspost/compress/zstd"
 )
 
 const (
@@ -86,6 +87,38 @@ func TestFileExistingFiles(t *testing.T) {
 	validateFile(t, fh1.Name(), expExistFile)
 	validateFile(t, fh2.Name(), expExistFile)
 	validateFile(t, fh3.Name(), expExistFile)
+
+	err = f.Close()
+	require.NoError(t, err)
+}
+
+func TestFileNewCompressedFiles(t *testing.T) {
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	fh1 := tmpFile(t)
+	fh2 := tmpFile(t)
+	fh3 := tmpFile(t)
+  c := Compression{
+    Enabled: true,
+    Algorithm: "zstd",
+    Level: 3,
+  }
+	f := File{
+		Files:      []string{fh1, fh2, fh3},
+		serializer: s,
+    Compression: c,
+	}
+
+	err := f.Connect()
+	require.NoError(t, err)
+
+	err = f.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+
+	validateCompressedFile(t, fh1, expNewFile)
+	validateCompressedFile(t, fh2, expNewFile)
+	validateCompressedFile(t, fh3, expNewFile)
 
 	err = f.Close()
 	require.NoError(t, err)
@@ -205,6 +238,14 @@ func tmpFile(t *testing.T) string {
 
 func validateFile(t *testing.T, fileName, expS string) {
 	buf, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	require.Equal(t, expS, string(buf))
+}
+
+func validateCompressedFile(t *testing.T, fileName, expS string) {
+  var decoder, _ = zstd.NewReader(nil, zstd.WithDecoderConcurrency(0))
+	buf, err := os.ReadFile(fileName)
+  buf, _ = decoder.DecodeAll(buf, nil)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }
