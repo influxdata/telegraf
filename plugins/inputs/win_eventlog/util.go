@@ -19,7 +19,6 @@ import (
 
 // DecodeUTF16 to UTF8 bytes
 func DecodeUTF16(b []byte) ([]byte, error) {
-
 	if len(b)%2 != 0 {
 		return nil, fmt.Errorf("must have even length byte slice")
 	}
@@ -42,28 +41,28 @@ func DecodeUTF16(b []byte) ([]byte, error) {
 }
 
 // GetFromSnapProcess finds information about process by the given pid
-// Returns process parent pid, threads info handle and process name
-func GetFromSnapProcess(pid uint32) (uint32, uint32, string, error) {
+// Returns process name
+func GetFromSnapProcess(pid uint32) (string, error) {
 	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, pid)
 	if err != nil {
-		return 0, 0, "", err
+		return "", err
 	}
 	defer windows.CloseHandle(snap)
 	var pe32 windows.ProcessEntry32
 	pe32.Size = uint32(unsafe.Sizeof(pe32)) //nolint:gosec // G103: Valid use of unsafe call to determine the size of the struct
 	if err = windows.Process32First(snap, &pe32); err != nil {
-		return 0, 0, "", err
+		return "", err
 	}
 	for {
 		if pe32.ProcessID == pid {
 			szexe := windows.UTF16ToString(pe32.ExeFile[:])
-			return pe32.ParentProcessID, pe32.Threads, szexe, nil
+			return szexe, nil
 		}
 		if err = windows.Process32Next(snap, &pe32); err != nil {
 			break
 		}
 	}
-	return 0, 0, "", fmt.Errorf("couldn't find pid: %d", pid)
+	return "", fmt.Errorf("couldn't find pid: %d", pid)
 }
 
 type xmlnode struct {

@@ -93,7 +93,7 @@ func processPingOutput(out string) (int, int, int, int, int, int, error) {
 	aprox := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
 	tttLine := regexp.MustCompile(`TTL=\d+`)
 	lines := strings.Split(out, "\n")
-	var receivedReply int = 0
+	var receivedReply = 0
 	for _, line := range lines {
 		if tttLine.MatchString(line) {
 			receivedReply++
