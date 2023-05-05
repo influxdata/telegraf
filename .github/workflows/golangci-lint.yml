@@ -31,6 +31,8 @@ jobs:
       - uses: actions/checkout@v3
       - name: golangci-lint
         env:
+          ACTIONS_RUNNER_DEBUG: true
+          ACTIONS_STEP_DEBUG: true
           GOOS: ${{ matrix.GOOS }}
           GL_DEBUG: "autogen_exclude,bin_salt,config_reader,enabled_linters,env,exclude_rules,exec,filename_unadjuster,goenv,linter,linters_context,lintersdb,loader,max_from_linter,max_same_issues,pkgcache,runner,severity_rules,skip_dirs,source_code,stopwatch,tab_printer,test,text_printer,goanalysis/analyze,goanalysis/issues/cache,goanalysis/memory,goanalysis/facts,goanalysis/cache,goanalysis/export,goanalysis/inherit"
         uses: golangci/golangci-lint-action@v3
