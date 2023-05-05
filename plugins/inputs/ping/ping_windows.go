@@ -99,66 +99,76 @@ func (p *Ping) args(url string) []string {
 // It returns (<transmitted packets>, <received reply>, <received packet>, <average response>, <min response>, <max response>)
 func processPingOutput(out string) (statistics, error) {
 	// So find a line contain 3 numbers except reply lines
-	var stats, aproxs []string = nil, nil
+	var statsLine, aproxs []string = nil, nil
 	err := errors.New("fatal error processing ping output")
 	stat := regexp.MustCompile(`=\W*(\d+)\D*=\W*(\d+)\D*=\W*(\d+)`)
 	aprox := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
 	tttLine := regexp.MustCompile(`TTL=\d+`)
 	lines := strings.Split(out, "\n")
-	var receivedReply = 0
+	var replyReceived = 0
 	for _, line := range lines {
 		if tttLine.MatchString(line) {
-			receivedReply++
+			replyReceived++
 		} else {
-			if stats == nil {
-				stats = stat.FindStringSubmatch(line)
+			if statsLine == nil {
+				statsLine = stat.FindStringSubmatch(line)
 			}
-			if stats != nil && aproxs == nil {
+			if statsLine != nil && aproxs == nil {
 				aproxs = aprox.FindStringSubmatch(line)
 			}
 		}
 	}
 
+	stats := statistics{
+		packetsTransmitted: 0,
+		replyReceived:      0,
+		packetsReceived:    0,
+		roundTripTimeStats: roundTripTimeStats{
+			min: -1,
+			avg: -1,
+			max: -1,
+		},
+	}
+
 	// statsLine data should contain 4 members: entireExpression + ( Send, Receive, Lost )
-	if len(stats) != 4 {
-		return statistics{}, err
+	if len(statsLine) != 4 {
+		return stats, err
 	}
-	packetsTransmitted, err := strconv.Atoi(stats[1])
+	packetsTransmitted, err := strconv.Atoi(statsLine[1])
 	if err != nil {
-		return statistics{}, err
+		return stats, err
 	}
-	packetsReceived, err := strconv.Atoi(stats[2])
+	packetsReceived, err := strconv.Atoi(statsLine[2])
 	if err != nil {
-		return statistics{}, err
+		return stats, err
 	}
+
+	stats.packetsTransmitted = packetsTransmitted
+	stats.replyReceived = replyReceived
+	stats.packetsReceived = packetsReceived
 
 	// aproxs data should contain 4 members: entireExpression + ( min, max, avg )
 	if len(aproxs) != 4 {
-		return statistics{}, err
+		return stats, err
 	}
 	min, err := strconv.Atoi(aproxs[1])
 	if err != nil {
-		return statistics{}, err
+		return stats, err
 	}
 	max, err := strconv.Atoi(aproxs[2])
 	if err != nil {
-		return statistics{}, err
+		return stats, err
 	}
 	avg, err := strconv.Atoi(aproxs[3])
 	if err != nil {
 		return statistics{}, err
 	}
 
-	return statistics{
-		packetsTransmitted: packetsTransmitted,
-		replyReceived:      receivedReply,
-		packetsReceived:    packetsReceived,
-		roundTripTimeStats: roundTripTimeStats{
-			min: min,
-			avg: max,
-			max: avg,
-		},
-	}, err
+	stats.avg = avg
+	stats.min = min
+	stats.max = max
+
+	return stats, err
 }
 
 func (p *Ping) timeout() float64 {
