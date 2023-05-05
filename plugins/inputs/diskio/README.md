@@ -15,7 +15,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Read metrics about disk IO by device
-# This plugin ONLY supports Linux
 [[inputs.diskio]]
   ## By default, telegraf will gather stats for all devices including
   ## disk partitions.
