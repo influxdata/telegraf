@@ -74,16 +74,16 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Init() error {
-  if f.Compression.Enabled {
-	  err := ValidateCompressionAlgorithm(f.Compression.Algorithm)
-	  if err != nil {
-	  	return err
-	  }
-	  err = ValidateCompressionLevel(f.Compression.Algorithm, f.Compression.Level)
-	  if err != nil {
-	  	return err
-	  }
-  }
+	if f.Compression.Enabled {
+		err := ValidateCompressionAlgorithm(f.Compression.Algorithm)
+		if err != nil {
+			return err
+		}
+		err = ValidateCompressionLevel(f.Compression.Algorithm, f.Compression.Level)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -99,15 +99,15 @@ func TestFileNewCompressedFiles(t *testing.T) {
 	fh1 := tmpFile(t)
 	fh2 := tmpFile(t)
 	fh3 := tmpFile(t)
-  c := Compression{
-    Enabled: true,
-    Algorithm: "zstd",
-    Level: 3,
-  }
+	c := Compression{
+		Enabled:   true,
+		Algorithm: "zstd",
+		Level:     3,
+	}
 	f := File{
-		Files:      []string{fh1, fh2, fh3},
-		serializer: s,
-    Compression: c,
+		Files:       []string{fh1, fh2, fh3},
+		serializer:  s,
+		Compression: c,
 	}
 
 	err := f.Connect()
@@ -243,9 +243,9 @@ func validateFile(t *testing.T, fileName, expS string) {
 }
 
 func validateCompressedFile(t *testing.T, fileName, expS string) {
-  var decoder, _ = zstd.NewReader(nil, zstd.WithDecoderConcurrency(0))
+	var decoder, _ = zstd.NewReader(nil, zstd.WithDecoderConcurrency(0))
 	buf, err := os.ReadFile(fileName)
-  buf, _ = decoder.DecodeAll(buf, nil)
+	buf, _ = decoder.DecodeAll(buf, nil)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }

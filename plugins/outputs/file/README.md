@@ -19,6 +19,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
+  ## The supported compression algorithm is zstd. The supported levels are 1,3,7 and 11.
+  ## Default level is 3.
+  # [outputs.file.compression]
+  #   enabled = false
+  #   algorithm = "zstd"
+  #   level   = 3
   ## Use batch serialization format instead of line based delimiting.  The
   ## batch format allows for the production of non line based output formats and
   ## may more efficiently encode and write metrics.
