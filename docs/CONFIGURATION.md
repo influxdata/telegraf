@@ -59,14 +59,13 @@ the variable must be within quotes, e.g., `"${STR_VAR}"`, for numbers and boolea
 they should be unquoted, e.g., `${INT_VAR}`, `${BOOL_VAR}`.
 
 In addition to this, Telegraf also supports Shell parameter expansion for environment variables
-which allows syntax such as-
-```env
-${VARIABLE:-default} evaluates to default if VARIABLE is unset or empty in the environment.
-${VARIABLE-default} evaluates to default only if VARIABLE is unset in the environment.
+which allows syntax such as:
+
+- `${VARIABLE:-default}` evaluates to default if VARIABLE is unset or empty in the environment.
+- `${VARIABLE-default}` evaluates to default only if VARIABLE is unset in the environment.
 Similarly, the following syntax allows you to specify mandatory variables:
-${VARIABLE:?err} exits with an error message containing err if VARIABLE is unset or empty in the environment.
-${VARIABLE?err} exits with an error message containing err if VARIABLE is unset in the environment.
-```
+- `${VARIABLE:?err}` exits with an error message containing err if VARIABLE is unset or empty in the environment.
+- `${VARIABLE?err}` exits with an error message containing err if VARIABLE is unset in the environment.
 
 When using the `.deb` or `.rpm` packages, you can define environment variables
 in the `/etc/default/telegraf` file.
