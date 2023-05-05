@@ -150,6 +150,7 @@ require (
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/safchain/ethtool v0.3.0
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
 	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/showwin/speedtest-go v1.5.2
@@ -261,6 +262,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cloudevents/sdk-go/v2 v2.14.0
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
 	github.com/containerd/containerd v1.6.18 // indirect
 	github.com/couchbase/gomemcached v0.1.3 // indirect
