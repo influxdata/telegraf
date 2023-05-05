@@ -14,6 +14,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/gofrs/uuid/v5"
+	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -130,6 +131,28 @@ func checkEvents(messages [][]byte) error {
 	for i, e := range events {
 		if err := e.Validate(); err != nil {
 			return fmt.Errorf("event %d: %w", i, err)
+		}
+
+		// Do an additional schema validation
+		var schema *jsonschema.Schema
+		switch e.SpecVersion() {
+		case "0.3":
+			schema = jsonschema.MustCompile("testcases/cloudevents-v0.3-schema.json")
+		case "1.0":
+			schema = jsonschema.MustCompile("testcases/cloudevents-v1.0-schema.json")
+		default:
+			return fmt.Errorf("unhandled spec version %q in event %d", e.SpecVersion(), i)
+		}
+		serializedEvent, err := json.Marshal(e)
+		if err != nil {
+			return fmt.Errorf("serializing raw event %d: %w", i, err)
+		}
+		var rawEvent interface{}
+		if err := json.Unmarshal(serializedEvent, &rawEvent); err != nil {
+			return fmt.Errorf("deserializing raw event %d: %w", i, err)
+		}
+		if err := schema.Validate(rawEvent); err != nil {
+			return fmt.Errorf("validation of event %d: %w", i, err)
 		}
 	}
 	return nil
