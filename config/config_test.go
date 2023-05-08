@@ -87,7 +87,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 		TagPassFilters: []models.TagFilter{
 			{
 				Name:   "goodtag",
-				Values: []string{"mytag", "tagwith#value"},
+				Values: []string{"mytag", "tagwith#value", "TagWithMultilineSyntax"},
 			},
 		},
 	}

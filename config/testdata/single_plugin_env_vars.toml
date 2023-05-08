@@ -24,9 +24,13 @@
    ##### this input is provided to test multiline strings
   command = """
 Raw command which may or may not contain # in it
-# is unique"""
+# is unique""" # Multiline comment black starting with #
   [inputs.memcached.tagpass]
-    goodtag = ["mytag", "tagwith#value"]
+    goodtag = ["mytag", """tagwith#value""", 
+      # comment in between array items
+      # should ignore "quotes" in comments
+      '''TagWithMultilineSyntax''', ## ignore this comment
+    ] # hastag
   [inputs.memcached.tagdrop]
     badtag = ["othertag"]
  

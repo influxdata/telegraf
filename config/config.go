@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/tls"
 	"errors"
@@ -778,7 +777,6 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Convert the output buffer to a byte slice
 	outputBytes, err := substituteEnvironment(contents)
 	if err != nil {
 		return nil, err
@@ -787,82 +785,59 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 }
 
 func removeComments(contents []byte) ([]byte, error) {
-	scanner := bufio.NewScanner(bytes.NewReader(contents))
+	tomlReader := bytes.NewReader(contents)
+
+	// Initialize variables for tracking state
+	var inQuote, inComment bool
+	var quoteChar, prevChar byte
 
 	// Initialize buffer for modified TOML data
 	var output bytes.Buffer
 
-	// Keep track of whether current line is part of a multiline string
-	inMultiline := false
-
-	// Iterate over lines in the TOML data
-	for scanner.Scan() {
-		line := scanner.Bytes()
-
-		// Check if line contains a new multiline string
-		if bytes.Contains(line, []byte("'''")) || bytes.Contains(line, []byte(`"""`)) {
-			inMultiline = !inMultiline
-		}
-
-		// If line is part of a multiline string, write it to buffer as is
-		if inMultiline {
-			output.Write(line)
-			output.WriteByte('\n')
-			continue
-		}
-
-		// Check if line contains a comment character (#)
-		idx := bytes.IndexByte(line, '#')
-		// ignoring the case when a multiline string starts with # and ends in ''' or """
-		if idx >= 0 && !bytes.HasSuffix(bytes.TrimSpace(line), []byte("'''")) && !bytes.HasSuffix(bytes.TrimSpace(line), []byte(`"""`)) {
-			// Check if # is inside a string value, if true write it as is
-			if checkHashInsideString(line, idx) {
-				output.Write(line)
-				output.WriteByte('\n')
-			} else {
-				// Remove comment from line
-				line = line[:idx]
-				if len(bytes.TrimSpace(line)) > 0 {
-					output.Write(line)
-					output.WriteByte('\n')
-				}
+	buf := make([]byte, 1)
+	// Iterate over each character in the file
+	for {
+		_, err := tomlReader.Read(buf)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
 			}
-		} else {
-			// If line does not contain a comment, write it to buffer as is
-			output.Write(line)
-			output.WriteByte('\n')
+			return nil, err
 		}
-	}
+		char := buf[0]
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+		if inComment {
+			// If we're currently in a comment, check if this character ends the comment
+			if char == '\n' {
+				// End of line, comment is finished
+				inComment = false
+				_, _ = output.WriteRune('\n')
+			}
+		} else if inQuote {
+			// If we're currently in a quote, check if this character ends the quote
+			if char == quoteChar && prevChar != '\\' {
+				// End of quote, we're no longer in a quote
+				inQuote = false
+			}
+			output.WriteByte(char)
+		} else {
+			// Not in a comment or a quote
+			if char == '"' || char == '\'' {
+				// Start of quote
+				inQuote = true
+				quoteChar = char
+				output.WriteByte(char)
+			} else if char == '#' {
+				// Start of comment
+				inComment = true
+			} else {
+				// Not a comment or a quote, just output the character
+				output.WriteByte(char)
+			}
+			prevChar = char
+		}
 	}
 	return output.Bytes(), nil
-}
-
-// checkHashInsideString checks if the comment character (#) is inside a string value.
-func checkHashInsideString(line []byte, idx int) bool {
-	// Initialize count of double quotes and single quotes
-	dq, sq := 0, 0
-
-	// Check all characters before the comment character
-	for i := 0; i < idx; i++ {
-		switch line[i] {
-		case '"':
-			// If double quote is not escaped, toggle count
-			if i == 0 || line[i-1] != '\\' {
-				dq++
-			}
-		case '\'':
-			// If single quote is not escaped, toggle count
-			if i == 0 || line[i-1] != '\\' {
-				sq++
-			}
-		}
-	}
-
-	// Check if comment character is inside a string
-	return dq%2 == 1 || sq%2 == 1
 }
 
 func substituteEnvironment(contents []byte) ([]byte, error) {
