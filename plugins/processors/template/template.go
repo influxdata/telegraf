@@ -14,10 +14,10 @@ import (
 var sampleConfig string
 
 type TemplateProcessor struct {
-	Tag      string          `toml:"tag"`
-	Template string          `toml:"template"`
-	Log      telegraf.Logger `toml:"-"`
-	tmpl     *template.Template
+	Tag       string          `toml:"tag"`
+	Template  string          `toml:"template"`
+	Log       telegraf.Logger `toml:"-"`
+	tmplValue *template.Template
 }
 
 func (*TemplateProcessor) SampleConfig() string {
@@ -31,7 +31,7 @@ func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		newM := TemplateMetric{metric}
 
 		// supply TemplateMetric and Template from configuration to Template.Execute
-		err := r.tmpl.Execute(&b, &newM)
+		err := r.tmplValue.Execute(&b, &newM)
 		if err != nil {
 			r.Log.Errorf("failed to execute template: %v", err)
 			continue
@@ -43,10 +43,10 @@ func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 }
 
 func (r *TemplateProcessor) Init() error {
-	// create template
-	t, err := template.New("configured_template").Parse(r.Template)
+	var err error
 
-	r.tmpl = t
+	// create template
+	r.tmplValue, err = template.New("configured_template").Parse(r.Template)
 	return err
 }
 
