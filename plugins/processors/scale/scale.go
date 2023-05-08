@@ -30,7 +30,9 @@ type Scaling struct {
 	Fields []string `toml:"fields"`
 
 	fieldFilter filter.Filter
-	a, b, o     float64
+	scale       float64
+	shiftIn     float64
+	shiftOut    float64
 }
 
 type Scale struct {
@@ -39,7 +41,7 @@ type Scale struct {
 }
 
 func (s *Scaling) Init() error {
-	s.a, s.b, s.o = float64(1.0), float64(0.0), float64(0.0)
+	s.scale, s.shiftOut, s.shiftIn = float64(1.0), float64(0.0), float64(0.0)
 	allMinMaxSet := s.OutMax != nil && s.OutMin != nil && s.InMax != nil && s.InMin != nil
 	anyMinMaxSet := s.OutMax != nil || s.OutMin != nil || s.InMax != nil || s.InMin != nil
 	factorSet := s.Factor != nil || s.Offset != nil
@@ -58,15 +60,15 @@ func (s *Scaling) Init() error {
 			return fmt.Errorf("output minimum and maximum are equal for fields %s", strings.Join(s.Fields, ","))
 		}
 
-		s.a = (*s.OutMax - *s.OutMin) / (*s.InMax - *s.InMin)
-		s.b = *s.OutMin
-		s.o = *s.InMin
+		s.scale = (*s.OutMax - *s.OutMin) / (*s.InMax - *s.InMin)
+		s.shiftOut = *s.OutMin
+		s.shiftIn = *s.InMin
 	} else {
 		if s.Factor != nil {
-			s.a = *s.Factor
+			s.scale = *s.Factor
 		}
 		if s.Offset != nil {
-			s.b = *s.Offset
+			s.shiftOut = *s.Offset
 		}
 	}
 
@@ -81,7 +83,7 @@ func (s *Scaling) Init() error {
 
 // scale a float according to the input and output range
 func (s *Scaling) process(value float64) float64 {
-	return s.a*(value-s.o) + s.b
+	return s.scale*(value-s.shiftIn) + s.shiftOut
 }
 
 func (s *Scale) Init() error {
