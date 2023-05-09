@@ -19,12 +19,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
-  ## The supported compression algorithm is zstd. The supported levels are 1,3,7 and 11.
-  ## Default level is 3.
-  # [outputs.file.compression]
-  #   enabled = false
-  #   algorithm = "zstd"
-  #   level   = 3
   ## Use batch serialization format instead of line based delimiting.  The
   ## batch format allows for the production of non line based output formats and
   ## may more efficiently encode and write metrics.
@@ -47,4 +41,17 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
+
+  ## These options are for producing files that are compressed.
+  # [outputs.file.compression]
+
+  ## For enabling the compression. By default it's disabled.
+  #   enabled = false
+
+  ## For choosing the algoritmh. Supported algorithm is zstd. if "" it will default to zstd.
+  #   algorithm = "zstd"
+
+  ## For choosing a compression level.
+  ## zstd supports levels 1,3,7 and 11. Default is 3. If 0 specified it default to 3.
+  #   level   = 3
 ```

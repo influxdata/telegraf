@@ -20,6 +20,70 @@ const (
 		"test1,tag1=value1 value=1 1257894000000000000\n"
 )
 
+func TestInitErrors(t *testing.T) {
+	fh := createFile(t)
+
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+	var errorTests = []struct {
+		name string
+		a    bool
+		b    string
+		c    int
+	}{
+		{"wrong-algorithm", true, "asda", 1},
+		{"wrong-level", true, "zstd", 4},
+		{"wrong-level-and-algorithm", true, "asdas", 15},
+	}
+	var successTests = []struct {
+		name string
+		a    bool
+		b    string
+		c    int
+	}{
+		{"disabled", false, "", 0},
+		{"default", false, "zstd", 3},
+		{"enabled-0", true, "", 0},
+		{"enabled-1", true, "zstd", 1},
+		{"enabled-default", true, "zstd", 3},
+		{"enabled-7", true, "zstd", 7},
+		{"enabled-11", true, "zstd", 11},
+	}
+	for _, tt := range successTests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := Compression{
+				Enabled:   tt.a,
+				Algorithm: tt.b,
+				Level:     tt.c,
+			}
+			f := File{
+				Files:       []string{fh.Name()},
+				serializer:  s,
+				Compression: c,
+			}
+			err := f.Init()
+			require.NoError(t, err)
+		})
+	}
+
+	for _, tt := range errorTests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := Compression{
+				Enabled:   tt.a,
+				Algorithm: tt.b,
+				Level:     tt.c,
+			}
+			f := File{
+				Files:       []string{fh.Name()},
+				serializer:  s,
+				Compression: c,
+			}
+			err := f.Init()
+			require.Error(t, err)
+		})
+	}
+}
+
 func TestFileExistingFile(t *testing.T) {
 	fh := createFile(t)
 
@@ -245,7 +309,8 @@ func validateFile(t *testing.T, fileName, expS string) {
 func validateCompressedFile(t *testing.T, fileName, expS string) {
 	var decoder, _ = zstd.NewReader(nil, zstd.WithDecoderConcurrency(0))
 	buf, err := os.ReadFile(fileName)
-	buf, _ = decoder.DecodeAll(buf, nil)
+	require.NoError(t, err)
+	buf, err = decoder.DecodeAll(buf, nil)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }

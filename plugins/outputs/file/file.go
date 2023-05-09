@@ -23,6 +23,11 @@ var ValidCompressionAlgorithmLevels = map[string][]int{
 	"zstd": {1, 3, 7, 11},
 }
 
+const (
+	defaultCompressionAlgorithm = "zstd"
+	defaultCompressionLevel     = 3
+)
+
 type File struct {
 	Files               []string        `toml:"files"`
 	RotationInterval    config.Duration `toml:"rotation_interval"`
@@ -30,6 +35,7 @@ type File struct {
 	RotationMaxArchives int             `toml:"rotation_max_archives"`
 	UseBatchFormat      bool            `toml:"use_batch_format"`
 	Compression         Compression     `toml:"compression"`
+	Encoder             interface{}
 	Log                 telegraf.Logger `toml:"-"`
 
 	writer     io.Writer
@@ -74,6 +80,12 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Init() error {
+	if f.Compression.Algorithm == "" {
+		f.Compression.Algorithm = defaultCompressionAlgorithm
+	}
+	if f.Compression.Level == 0 {
+		f.Compression.Level = defaultCompressionLevel
+	}
 	if f.Compression.Enabled {
 		err := ValidateCompressionAlgorithm(f.Compression.Algorithm)
 		if err != nil {
@@ -92,6 +104,12 @@ func (f *File) Connect() error {
 
 	if len(f.Files) == 0 {
 		f.Files = []string{"stdout"}
+	}
+
+	if f.Compression.Enabled {
+		if f.Compression.Algorithm == "zstd" {
+			f.Encoder, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(f.Compression.Level)))
+		}
 	}
 
 	for _, file := range f.Files {
@@ -125,18 +143,12 @@ func (f *File) Close() error {
 
 func (f *File) Write(metrics []telegraf.Metric) error {
 	var writeErr error
-	var encoder interface{}
 
-	if f.Compression.Enabled {
-		if f.Compression.Algorithm == "zstd" {
-			encoder, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(f.Compression.Level)))
-		}
-	}
 	if f.UseBatchFormat {
 		octets, err := f.serializer.SerializeBatch(metrics)
 		if f.Compression.Enabled {
 			if f.Compression.Algorithm == "zstd" {
-				octets = CompressZstd(encoder.(*zstd.Encoder), octets)
+				octets = CompressZstd(f.Encoder.(*zstd.Encoder), octets)
 			}
 		}
 		if err != nil {
@@ -152,7 +164,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 			b, err := f.serializer.Serialize(metric)
 			if f.Compression.Enabled {
 				if f.Compression.Algorithm == "zstd" {
-					b = CompressZstd(encoder.(*zstd.Encoder), b)
+					b = CompressZstd(f.Encoder.(*zstd.Encoder), b)
 				}
 			}
 			if err != nil {
