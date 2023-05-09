@@ -25,6 +25,7 @@ type Clarify struct {
 	CredentialsFile string          `toml:"credentials_file"`
 	Timeout         config.Duration `toml:"timeout"`
 	IDTags          []string        `toml:"id_tags"`
+	ClarifyIDTag    string          `toml:"clarify_id_tag"`
 	Log             telegraf.Logger `toml:"-"`
 
 	client *clarify.Client
@@ -149,8 +150,11 @@ func normalizeID(id string) string {
 }
 
 func (c *Clarify) generateID(m telegraf.Metric, f *telegraf.Field) (string, error) {
-	var id string
-	cid, exist := m.GetTag("clarify_input_id")
+	var id, cid string
+	exist := false
+	if c.ClarifyIDTag != "" {
+		cid, exist = m.GetTag(c.ClarifyIDTag)
+	}
 	if exist && len(m.FieldList()) == 1 {
 		id = cid
 	} else {

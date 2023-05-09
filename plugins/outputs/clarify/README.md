@@ -15,6 +15,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
+## Configuration to publish Telegraf metrics to Clarify
+[[outputs.clarify]]
+
 ## Credentials File (Oauth 2.0 from Clarify integration)
 credentials_file = "/path/to/clarify/credentials.json"
 
@@ -26,7 +29,8 @@ password = "secret-password"
 # timeout = "20s"
 
 ## Optional tags to be included when generating the unique ID for a signal in Clarify
-# id_tags = ['sensor']
+# id_tags = []
+# clarify_id_tag = 'clarify_input_id'
 ```
 
 You can use either a credentials file or username/password.
@@ -38,8 +42,11 @@ credentials file will be used.
 Clarify signal names are formed by joining the Telegraf metric name and the
 field key with a `.` character. Telegraf tags are added to signal labels.
 
-If a tag named `clarify_input_id` is present as a tag and there is only one
-field present in the metric, this tag will be used as the inputID in Clarify.
+If you wish to specify a specific tag to use as the input id, set the config
+option `clarify_id_tag` to the tag containing the id to be used.
+If  `clarify_id_tag = 'clarify_input_id'` and this tag is present and there
+is only one field present in the metric, this tag will be used as the inputID
+in Clarify.
 
 If information from one or several tags is needed to uniquely identify a metric
 field, the id_tags array can be added to the config with the needed tag names.

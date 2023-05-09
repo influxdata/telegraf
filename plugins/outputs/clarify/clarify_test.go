@@ -52,8 +52,9 @@ func (m *MockHandler) Do(ctx context.Context, _ jsonrpc.Request, result any) err
 
 func TestGenerateID(t *testing.T) {
 	clfy := &Clarify{
-		Log:    testutil.Logger{},
-		IDTags: []string{"tag1", "tag2"},
+		Log:          testutil.Logger{},
+		IDTags:       []string{"tag1", "tag2"},
+		ClarifyIDTag: "clarify_input_id",
 	}
 	var idTests = []struct {
 		inMetric telegraf.Metric
@@ -129,8 +130,9 @@ func TestGenerateID(t *testing.T) {
 
 func TestProcessMetrics(t *testing.T) {
 	clfy := &Clarify{
-		Log:    testutil.Logger{},
-		IDTags: []string{"tag1", "tag2", "node_id"},
+		Log:          testutil.Logger{},
+		IDTags:       []string{"tag1", "tag2", "node_id"},
+		ClarifyIDTag: "clarify_input_id",
 	}
 	var idTests = []struct {
 		inMetric   telegraf.Metric
