@@ -35,7 +35,7 @@ type File struct {
 	RotationMaxArchives int             `toml:"rotation_max_archives"`
 	UseBatchFormat      bool            `toml:"use_batch_format"`
 	Compression         Compression     `toml:"compression"`
-	Encoder             interface{}
+	encoder             interface{}
 	Log                 telegraf.Logger `toml:"-"`
 
 	writer     io.Writer
@@ -49,7 +49,7 @@ type Compression struct {
 	Level     int    `toml:"level"`
 }
 
-func ValidateCompressionAlgorithm(algorithm string) error {
+func validateCompressionAlgorithm(algorithm string) error {
 	for validAlgorithm := range ValidCompressionAlgorithmLevels {
 		if algorithm == validAlgorithm {
 			return nil

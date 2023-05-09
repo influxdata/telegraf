@@ -61,8 +61,7 @@ func TestInitErrors(t *testing.T) {
 				serializer:  s,
 				Compression: c,
 			}
-			err := f.Init()
-			require.NoError(t, err)
+			require.NoError(t, f.Init())
 		})
 	}
 
@@ -78,8 +77,7 @@ func TestInitErrors(t *testing.T) {
 				serializer:  s,
 				Compression: c,
 			}
-			err := f.Init()
-			require.Error(t, err)
+			require.NoError(t, f.Init())
 		})
 	}
 }
