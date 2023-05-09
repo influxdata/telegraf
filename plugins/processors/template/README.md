@@ -60,7 +60,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```diff
 - cpu,level=debug,hostname=localhost time_idle=42,type=sensor
-+ cpu,level=debug,hostname=localhost,sensor=abc123xyz time_idle=42,type=sensor
++ cpu,level=debug,hostname=localhost,sensor=cpu time_idle=42,type=sensor
 ```
 
 ### Add measurement name as a tag
