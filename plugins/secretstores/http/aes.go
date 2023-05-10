@@ -44,7 +44,7 @@ func (a *AesEncryptor) Init() error {
 
 	var keylen int
 	switch cipherName {
-	case "aes", "aes128":
+	case "aes128":
 		keylen = 16
 	case "aes192":
 		keylen = 24
@@ -69,12 +69,8 @@ func (a *AesEncryptor) Init() error {
 	case "", "none":
 		// identity, no padding
 		a.trim = func(in []byte) ([]byte, error) { return in, nil }
-	case "pkcs5", "pkcs#5", "pkcs5padding", "pkcs#5padding":
-		// The implementation can handle both variants, so fallthrough to
-		// the PKCS#7 case
-		fallthrough
-	case "pkcs7", "pkcs#7", "pkcs7padding", "pkcs#7padding":
-		a.trim = PKCS7Trimming
+	case "pkcs#5", "pkcs#7":
+		a.trim = PKCS5or7Trimming
 	default:
 		return fmt.Errorf("unsupported padding %q", padding)
 	}
@@ -92,14 +88,12 @@ func (a *AesEncryptor) Init() error {
 		if err != nil {
 			return fmt.Errorf("generating key failed: %w", err)
 		}
-		if err := a.Key.Set([]byte(hex.EncodeToString(key))); err != nil {
-			return fmt.Errorf("setting key failed: %w", err)
-		}
+		a.Key.Destroy()
+		a.Key = key
 
-		if a.Vec.Empty() && len(iv) > 0 {
-			if err := a.Vec.Set(iv); err != nil {
-				return fmt.Errorf("setting IV failed: %w", err)
-			}
+		if a.Vec.Empty() && iv.Empty() {
+			a.Vec.Destroy()
+			a.Vec = iv
 		}
 	} else {
 		encodedKey, err := a.Key.Get()

@@ -55,8 +55,10 @@ to get more information on how to do this.
   # cookie_auth_password = "pa$$word"
   # cookie_auth_headers = { Content-Type = "application/json", X-MY-HEADER = "hello" }
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
-  ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
-  # cookie_auth_renewal = "5m"
+  ## When unset or set to zero the authentication will only happen once
+  ## and will never renew the cookie. Set to a suitable duration if you
+  ## require cookie renewal!
+  # cookie_auth_renewal = "0s"
 
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"

@@ -33,7 +33,7 @@ func (c *DecryptionConfig) CreateDecrypter() (Decrypter, error) {
 	return nil, fmt.Errorf("unknown cipher %q", c.Cipher)
 }
 
-func PKCS7Trimming(in []byte) ([]byte, error) {
+func PKCS5or7Trimming(in []byte) ([]byte, error) {
 	// 'count' number of bytes where padded to the end of the clear-text
 	// each containing the value of 'count'
 	if len(in) == 0 {

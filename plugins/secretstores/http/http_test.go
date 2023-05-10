@@ -207,7 +207,7 @@ func TestGetResolverErrors(t *testing.T) {
 
 func TestInitAESErrors(t *testing.T) {
 	cipher := AesEncryptor{
-		Variant: []string{"AES", "CBC", "PKCS#5", "superfluous"},
+		Variant: []string{"AES128", "CBC", "PKCS#5", "superfluous"},
 	}
 	require.ErrorContains(t, cipher.Init(), "too many variant elements")
 
@@ -225,22 +225,22 @@ func TestInitAESErrors(t *testing.T) {
 	require.ErrorContains(t, cipher.Init(), "unsupported AES cipher")
 
 	cipher = AesEncryptor{
-		Variant: []string{"aes", "foo"},
+		Variant: []string{"aes128", "foo"},
 	}
 	require.ErrorContains(t, cipher.Init(), "unsupported block mode")
 
 	cipher = AesEncryptor{
-		Variant: []string{"aes", "cbc", "bar"},
+		Variant: []string{"aes128", "cbc", "bar"},
 	}
 	require.ErrorContains(t, cipher.Init(), "unsupported padding")
 
 	cipher = AesEncryptor{
-		Variant: []string{"aes", "cbc", "none"},
+		Variant: []string{"aes128", "cbc", "none"},
 	}
 	require.ErrorContains(t, cipher.Init(), "either key or password has to be specified")
 
 	cipher = AesEncryptor{
-		Variant: []string{"aes", "cbc", "none"},
+		Variant: []string{"aes128", "cbc", "none"},
 		KDFConfig: KDFConfig{
 			Passwd: config.NewSecret([]byte("secret")),
 		},
