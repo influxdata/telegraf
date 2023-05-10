@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/klauspost/compress/zstd"
+	"github.com/klauspost/pgzip"
 )
 
 const (
@@ -27,39 +28,33 @@ func TestInitErrors(t *testing.T) {
 	require.NoError(t, s.Init())
 	var errorTests = []struct {
 		name string
-		a    bool
-		b    string
-		c    int
+		a    string
+		b    int
 	}{
-		{"wrong-algorithm", true, "asda", 1},
-		{"wrong-level", true, "zstd", 4},
-		{"wrong-level-and-algorithm", true, "asdas", 15},
+		{"wrong-algorithm", "asda", 1},
+		{"wrong-level", "zstd", 4},
+		{"wrong-level-and-algorithm", "asdas", 15},
 	}
 	var successTests = []struct {
 		name string
-		a    bool
-		b    string
-		c    int
+		a    string
+		b    int
 	}{
-		{"disabled", false, "", 0},
-		{"default", false, "zstd", 3},
-		{"enabled-0", true, "", 0},
-		{"enabled-1", true, "zstd", 1},
-		{"enabled-default", true, "zstd", 3},
-		{"enabled-7", true, "zstd", 7},
-		{"enabled-11", true, "zstd", 11},
+		{"disabled", "", 0},
+		{"default", "zstd", 3},
+		{"enabled-0", "", 0},
+		{"enabled-1", "zstd", 1},
+		{"enabled-default", "zstd", 3},
+		{"enabled-7", "zstd", 7},
+		{"enabled-11", "zstd", 11},
 	}
 	for _, tt := range successTests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := Compression{
-				Enabled:   tt.a,
-				Algorithm: tt.b,
-				Level:     tt.c,
-			}
 			f := File{
-				Files:       []string{fh.Name()},
-				serializer:  s,
-				Compression: c,
+				Files:                []string{fh.Name()},
+				serializer:           s,
+				CompressionAlgorithm: tt.a,
+				CompressionLevel:     tt.b,
 			}
 			require.NoError(t, f.Init())
 		})
@@ -67,17 +62,13 @@ func TestInitErrors(t *testing.T) {
 
 	for _, tt := range errorTests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := Compression{
-				Enabled:   tt.a,
-				Algorithm: tt.b,
-				Level:     tt.c,
-			}
 			f := File{
-				Files:       []string{fh.Name()},
-				serializer:  s,
-				Compression: c,
+				Files:                []string{fh.Name()},
+				serializer:           s,
+				CompressionAlgorithm: tt.a,
+				CompressionLevel:     tt.b,
 			}
-			require.NoError(t, f.Init())
+			require.Error(t, f.Init())
 		})
 	}
 }
@@ -154,22 +145,18 @@ func TestFileExistingFiles(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestFileNewCompressedFiles(t *testing.T) {
+func TestNewGzipCompressedFiles(t *testing.T) {
 	s := &influx.Serializer{}
 	require.NoError(t, s.Init())
 
 	fh1 := tmpFile(t)
 	fh2 := tmpFile(t)
 	fh3 := tmpFile(t)
-	c := Compression{
-		Enabled:   true,
-		Algorithm: "zstd",
-		Level:     3,
-	}
 	f := File{
-		Files:       []string{fh1, fh2, fh3},
-		serializer:  s,
-		Compression: c,
+		Files:                []string{fh1, fh2, fh3},
+		serializer:           s,
+		CompressionAlgorithm: "gzip",
+		CompressionLevel:     -1,
 	}
 
 	err := f.Connect()
@@ -178,9 +165,37 @@ func TestFileNewCompressedFiles(t *testing.T) {
 	err = f.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 
-	validateCompressedFile(t, fh1, expNewFile)
-	validateCompressedFile(t, fh2, expNewFile)
-	validateCompressedFile(t, fh3, expNewFile)
+	validateGzipCompressedFile(t, fh1, expNewFile)
+	validateGzipCompressedFile(t, fh2, expNewFile)
+	validateGzipCompressedFile(t, fh3, expNewFile)
+
+	err = f.Close()
+	require.NoError(t, err)
+}
+
+func TestNewZstdCompressedFiles(t *testing.T) {
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	fh1 := tmpFile(t)
+	fh2 := tmpFile(t)
+	fh3 := tmpFile(t)
+	f := File{
+		Files:                []string{fh1, fh2, fh3},
+		serializer:           s,
+		CompressionAlgorithm: "zstd",
+		CompressionLevel:     3,
+	}
+
+	err := f.Connect()
+	require.NoError(t, err)
+
+	err = f.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+
+	validateZstdCompressedFile(t, fh1, expNewFile)
+	validateZstdCompressedFile(t, fh2, expNewFile)
+	validateZstdCompressedFile(t, fh3, expNewFile)
 
 	err = f.Close()
 	require.NoError(t, err)
@@ -304,11 +319,22 @@ func validateFile(t *testing.T, fileName, expS string) {
 	require.Equal(t, expS, string(buf))
 }
 
-func validateCompressedFile(t *testing.T, fileName, expS string) {
+func validateZstdCompressedFile(t *testing.T, fileName, expS string) {
 	var decoder, _ = zstd.NewReader(nil, zstd.WithDecoderConcurrency(0))
 	buf, err := os.ReadFile(fileName)
 	require.NoError(t, err)
 	buf, err = decoder.DecodeAll(buf, nil)
+	require.NoError(t, err)
+	require.Equal(t, expS, string(buf))
+}
+
+func validateGzipCompressedFile(t *testing.T, fileName, expS string) {
+	buf, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	rfr, err := pgzip.NewReader(bytes.NewReader(buf))
+	require.NoError(t, err)
+	defer rfr.Close()
+	buf, err = io.ReadAll(rfr)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }

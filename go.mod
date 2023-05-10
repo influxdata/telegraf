@@ -203,6 +203,8 @@ require (
 	modernc.org/sqlite v1.21.0
 )
 
+require github.com/klauspost/pgzip v1.2.6
+
 require (
 	cloud.google.com/go v0.110.1 // indirect
 	cloud.google.com/go/compute v1.19.1 // indirect

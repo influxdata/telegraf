@@ -2,6 +2,7 @@
 package file
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/klauspost/compress/zstd"
+	gzip "github.com/klauspost/pgzip"
 )
 
 //go:embed sample.conf
@@ -21,32 +23,23 @@ var sampleConfig string
 
 var ValidCompressionAlgorithmLevels = map[string][]int{
 	"zstd": {1, 3, 7, 11},
+	"gzip": {-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 }
 
-const (
-	defaultCompressionAlgorithm = "zstd"
-	defaultCompressionLevel     = 3
-)
-
 type File struct {
-	Files               []string        `toml:"files"`
-	RotationInterval    config.Duration `toml:"rotation_interval"`
-	RotationMaxSize     config.Size     `toml:"rotation_max_size"`
-	RotationMaxArchives int             `toml:"rotation_max_archives"`
-	UseBatchFormat      bool            `toml:"use_batch_format"`
-	Compression         Compression     `toml:"compression"`
-	encoder             interface{}
-	Log                 telegraf.Logger `toml:"-"`
+	Files                []string        `toml:"files"`
+	RotationInterval     config.Duration `toml:"rotation_interval"`
+	RotationMaxSize      config.Size     `toml:"rotation_max_size"`
+	RotationMaxArchives  int             `toml:"rotation_max_archives"`
+	UseBatchFormat       bool            `toml:"use_batch_format"`
+	CompressionAlgorithm string          `toml:"compression_algorithm"`
+	CompressionLevel     int             `toml:"compression_level"`
+	encoder              interface{}
+	Log                  telegraf.Logger `toml:"-"`
 
 	writer     io.Writer
 	closers    []io.Closer
 	serializer serializers.Serializer
-}
-
-type Compression struct {
-	Enabled   bool   `toml:"enabled"`
-	Algorithm string `toml:"algorithm"`
-	Level     int    `toml:"level"`
 }
 
 func validateCompressionAlgorithm(algorithm string) error {
@@ -58,7 +51,7 @@ func validateCompressionAlgorithm(algorithm string) error {
 	return fmt.Errorf("unknown or unsupported algorithm provided: %s", algorithm)
 }
 
-func ValidateCompressionLevel(algorithm string, level int) error {
+func validateCompressionLevel(algorithm string, level int) error {
 	for _, validAlgorithmLevel := range ValidCompressionAlgorithmLevels[algorithm] {
 		if level == validAlgorithmLevel {
 			return nil
@@ -71,6 +64,32 @@ func CompressZstd(encoder *zstd.Encoder, src []byte) []byte {
 	return encoder.EncodeAll(src, make([]byte, 0, len(src)))
 }
 
+func CompressGzip(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+
+	_, err := gz.Write(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = gz.Flush(); err != nil {
+		return nil, err
+	}
+
+	if err = gz.Close(); err != nil {
+		return nil, err
+	}
+
+	compressedData := b.Bytes()
+
+	return compressedData, err
+}
+
+func closeZstdEncoder(encoder *zstd.Encoder) {
+	encoder.Close()
+}
+
 func (*File) SampleConfig() string {
 	return sampleConfig
 }
@@ -80,21 +99,22 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Init() error {
-	if f.Compression.Algorithm == "" {
-		f.Compression.Algorithm = defaultCompressionAlgorithm
-	}
-	if f.Compression.Level == 0 {
-		f.Compression.Level = defaultCompressionLevel
-	}
-	if f.Compression.Enabled {
-		err := ValidateCompressionAlgorithm(f.Compression.Algorithm)
-		if err != nil {
-			return err
+	if f.CompressionAlgorithm == "" {
+		return nil
+	} else if f.CompressionAlgorithm != "" && f.CompressionLevel == 0 {
+		if f.CompressionAlgorithm == "zstd" {
+			f.CompressionLevel = 3
+		} else if f.CompressionAlgorithm == "gzip" {
+			f.CompressionLevel = -1
 		}
-		err = ValidateCompressionLevel(f.Compression.Algorithm, f.Compression.Level)
-		if err != nil {
-			return err
-		}
+	}
+	err := validateCompressionAlgorithm(f.CompressionAlgorithm)
+	if err != nil {
+		return err
+	}
+	err = validateCompressionLevel(f.CompressionAlgorithm, f.CompressionLevel)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -106,12 +126,9 @@ func (f *File) Connect() error {
 		f.Files = []string{"stdout"}
 	}
 
-	if f.Compression.Enabled {
-		if f.Compression.Algorithm == "zstd" {
-			f.Encoder, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(f.Compression.Level)))
-		}
+	if f.CompressionAlgorithm == "zstd" {
+		f.encoder, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(f.CompressionLevel)))
 	}
-
 	for _, file := range f.Files {
 		if file == "stdout" {
 			writers = append(writers, os.Stdout)
@@ -127,6 +144,9 @@ func (f *File) Connect() error {
 		}
 	}
 	f.writer = io.MultiWriter(writers...)
+	if f.CompressionAlgorithm == "gzip" {
+		f.encoder, _ = gzip.NewWriterLevel(f.writer, f.CompressionLevel)
+	}
 	return nil
 }
 
@@ -138,6 +158,9 @@ func (f *File) Close() error {
 			err = errClose
 		}
 	}
+	if f.CompressionAlgorithm == "zstd" {
+		closeZstdEncoder(f.encoder.(*zstd.Encoder))
+	}
 	return err
 }
 
@@ -146,15 +169,19 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 
 	if f.UseBatchFormat {
 		octets, err := f.serializer.SerializeBatch(metrics)
-		if f.Compression.Enabled {
-			if f.Compression.Algorithm == "zstd" {
-				octets = CompressZstd(f.Encoder.(*zstd.Encoder), octets)
-			}
+		if f.CompressionAlgorithm == "zstd" {
+			octets = CompressZstd(f.encoder.(*zstd.Encoder), octets)
 		}
 		if err != nil {
 			f.Log.Errorf("Could not serialize metric: %v", err)
 		}
 
+		if f.CompressionAlgorithm == "gzip" {
+			octets, err = CompressGzip(octets)
+			if err != nil {
+				f.Log.Errorf("Error writing to file: %v", err)
+			}
+		}
 		_, err = f.writer.Write(octets)
 		if err != nil {
 			f.Log.Errorf("Error writing to file: %v", err)
@@ -162,15 +189,19 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 	} else {
 		for _, metric := range metrics {
 			b, err := f.serializer.Serialize(metric)
-			if f.Compression.Enabled {
-				if f.Compression.Algorithm == "zstd" {
-					b = CompressZstd(f.Encoder.(*zstd.Encoder), b)
-				}
+			if f.CompressionAlgorithm == "zstd" {
+				b = CompressZstd(f.encoder.(*zstd.Encoder), b)
 			}
 			if err != nil {
 				f.Log.Debugf("Could not serialize metric: %v", err)
 			}
 
+			if f.CompressionAlgorithm == "gzip" {
+				b, err = CompressGzip(b)
+				if err != nil {
+					f.Log.Errorf("Error writing to file: %v", err)
+				}
+			}
 			_, err = f.writer.Write(b)
 			if err != nil {
 				writeErr = fmt.Errorf("failed to write message: %w", err)
