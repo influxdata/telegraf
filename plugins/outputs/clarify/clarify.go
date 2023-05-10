@@ -38,7 +38,7 @@ const allowedIDRunes = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234
 //go:embed sample.conf
 var sampleConfig string
 
-func (c *Clarify) Connect() error {
+func (c *Clarify) Init() error {
 	// No blocking as it doesn't do any http requests, just sets up the necessarry Oauth2 client.
 	ctx := context.Background()
 	switch {
@@ -66,6 +66,10 @@ func (c *Clarify) Connect() error {
 		return nil
 	}
 	return fmt.Errorf("no Clarify credentials provided")
+}
+
+func (c *Clarify) Connect() error {
+	return nil
 }
 
 func toFloat64(v interface{}) (float64, error) {
