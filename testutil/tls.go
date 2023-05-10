@@ -77,7 +77,7 @@ func (p *pki) ClientCertAndKeyPath() string {
 }
 
 func (p *pki) ClientEncKeyPath() string {
-	return path.Join(p.keyPath, "clientkeyenc.pem")
+	return path.Join(p.keyPath, "clientenckey.pem")
 }
 
 func (p *pki) ClientCertAndEncKeyPath() string {
