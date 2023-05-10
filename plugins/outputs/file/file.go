@@ -2,7 +2,6 @@
 package file
 
 import (
-	"bytes"
 	_ "embed"
 	"fmt"
 	"io"
@@ -64,30 +63,27 @@ func CompressZstd(encoder *zstd.Encoder, src []byte) []byte {
 	return encoder.EncodeAll(src, make([]byte, 0, len(src)))
 }
 
-func CompressGzip(data []byte, level int) ([]byte, error) {
-	var b bytes.Buffer
-	gz, err := gzip.NewWriterLevel(&b, level)
+func CompressGzip(writer io.Writer, data []byte, level int) error {
+	gz, err := gzip.NewWriterLevel(writer, level)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = gz.Write(data)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err = gz.Flush(); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err = gz.Close(); err != nil {
-		return nil, err
+		return err
 	}
 
-	compressedData := b.Bytes()
-
-	return compressedData, err
+	return err
 }
 
 func closeZstdEncoder(encoder *zstd.Encoder) {
@@ -178,14 +174,15 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		}
 
 		if f.CompressionAlgorithm == "gzip" {
-			octets, err = CompressGzip(octets, f.CompressionLevel)
+			err = CompressGzip(f.writer, octets, f.CompressionLevel)
 			if err != nil {
 				f.Log.Errorf("Error writing to file: %v", err)
 			}
-		}
-		_, err = f.writer.Write(octets)
-		if err != nil {
-			f.Log.Errorf("Error writing to file: %v", err)
+		} else {
+			_, err = f.writer.Write(octets)
+			if err != nil {
+				f.Log.Errorf("Error writing to file: %v", err)
+			}
 		}
 	} else {
 		for _, metric := range metrics {
@@ -198,14 +195,15 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 			}
 
 			if f.CompressionAlgorithm == "gzip" {
-				b, err = CompressGzip(b, f.CompressionLevel)
+				err = CompressGzip(f.writer, b, f.CompressionLevel)
 				if err != nil {
 					f.Log.Errorf("Error writing to file: %v", err)
 				}
-			}
-			_, err = f.writer.Write(b)
-			if err != nil {
-				writeErr = fmt.Errorf("failed to write message: %w", err)
+			} else {
+				_, err = f.writer.Write(b)
+				if err != nil {
+					writeErr = fmt.Errorf("failed to write message: %w", err)
+				}
 			}
 		}
 	}
