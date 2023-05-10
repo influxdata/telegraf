@@ -41,7 +41,7 @@ func PKCS5or7Trimming(in []byte) ([]byte, error) {
 	}
 	count := int(in[len(in)-1])
 	if len(in) < count {
-		return nil, fmt.Errorf("length %d shorten than trim value %d", len(in), count)
+		return nil, fmt.Errorf("length %d shorter than trim value %d", len(in), count)
 	}
 	return in[:len(in)-count], nil
 }
