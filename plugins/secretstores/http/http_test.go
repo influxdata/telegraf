@@ -100,6 +100,24 @@ func TestCases(t *testing.T) {
 	}
 }
 
+func TestSampleConfig(t *testing.T) {
+	plugin := &HTTP{}
+	require.NotEmpty(t, plugin.SampleConfig())
+}
+
+func TestInit(t *testing.T) {
+	plugin := &HTTP{
+		DecryptionConfig: DecryptionConfig{
+			Cipher: "AES128/CBC/PKCS#5",
+			Aes: AesEncryptor{
+				Key: config.NewSecret([]byte("7465737474657374657374746573740a")),
+				Vec: config.NewSecret([]byte("7465737474657374657374746573740a")),
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+}
+
 func TestInitErrors(t *testing.T) {
 	plugin := &HTTP{Transformation: "{some: malformed"}
 	require.ErrorContains(t, plugin.Init(), "setting up data transformation failed")
@@ -205,57 +223,175 @@ func TestGetResolverErrors(t *testing.T) {
 	require.ErrorContains(t, err, "transforming data failed")
 }
 
-func TestInitAESErrors(t *testing.T) {
-	cipher := AesEncryptor{
-		Variant: []string{"AES128", "CBC", "PKCS#5", "superfluous"},
-	}
-	require.ErrorContains(t, cipher.Init(), "too many variant elements")
+func TestInvalidServerResponse(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer dummy.Close()
 
-	cipher = AesEncryptor{
-		Variant: []string{"rsa"},
-	}
-	require.ErrorContains(t, cipher.Init(), `requested AES but specified "rsa"`)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`[somerandomebytes`))
+	}))
+	defer server.Close()
 
-	cipher = AesEncryptor{}
-	require.ErrorContains(t, cipher.Init(), "please specify cipher")
-
-	cipher = AesEncryptor{
-		Variant: []string{"aes64"},
-	}
-	require.ErrorContains(t, cipher.Init(), "unsupported AES cipher")
-
-	cipher = AesEncryptor{
-		Variant: []string{"aes128", "foo"},
-	}
-	require.ErrorContains(t, cipher.Init(), "unsupported block mode")
-
-	cipher = AesEncryptor{
-		Variant: []string{"aes128", "cbc", "bar"},
-	}
-	require.ErrorContains(t, cipher.Init(), "unsupported padding")
-
-	cipher = AesEncryptor{
-		Variant: []string{"aes128", "cbc", "none"},
-	}
-	require.ErrorContains(t, cipher.Init(), "either key or password has to be specified")
-
-	cipher = AesEncryptor{
-		Variant: []string{"aes128", "cbc", "none"},
-		KDFConfig: KDFConfig{
-			Passwd: config.NewSecret([]byte("secret")),
+	plugin := &HTTP{
+		URL: server.URL,
+		DecryptionConfig: DecryptionConfig{
+			Cipher: "AES256/CBC/PKCS#5",
+			Aes: AesEncryptor{
+				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
+				Vec: config.NewSecret([]byte("asupersecretiv42")),
+			},
 		},
 	}
-	require.ErrorContains(t, cipher.Init(), "salt and iterations required for password-based-keys")
+	plugin.Timeout = config.Duration(200 * time.Millisecond)
+	require.NoError(t, plugin.Init())
 
-	cipher = AesEncryptor{
-		Variant: []string{"aes256"},
-		Key:     config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0")),
-	}
-	require.ErrorContains(t, cipher.Init(), "key length (128 bit) does not match cipher (256 bit)")
+	_, err = plugin.GetResolver("test")
+	require.Error(t, err)
+	var expectedErr *json.SyntaxError
+	require.ErrorAs(t, err, &expectedErr)
+}
 
-	cipher = AesEncryptor{
-		Variant: []string{"aes128"},
-		Key:     config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0")),
+func TestAdditionalHeaders(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer dummy.Close()
+
+	var actual http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		actual = r.Header.Clone()
+		if r.Host != "" {
+			actual.Add("host", r.Host)
+		}
+		_, _ = w.Write([]byte(`{"test": "aedMZXaLR246OHHjVtJKXQ=="}`))
+	}))
+	defer server.Close()
+
+	plugin := &HTTP{
+		URL: server.URL,
+		Headers: map[string]string{
+			"host": "a.host.com",
+			"foo":  "bar",
+		},
+		DecryptionConfig: DecryptionConfig{
+			Cipher: "AES256/CBC/PKCS#5",
+			Aes: AesEncryptor{
+				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
+				Vec: config.NewSecret([]byte("asupersecretiv42")),
+			},
+		},
 	}
-	require.ErrorContains(t, cipher.Init(), "'init_vector' has to be specified or derived from password")
+	plugin.Timeout = config.Duration(200 * time.Millisecond)
+	require.NoError(t, plugin.Init())
+
+	require.NoError(t, plugin.download())
+
+	secret, err := plugin.Get("test")
+	require.NoError(t, err)
+	require.Equal(t, "password-B", string(secret))
+
+	for k, v := range plugin.Headers {
+		av := actual.Get(k)
+		require.NotEmptyf(t, av, "header %q not found", k)
+		require.Equal(t, v, av, "mismatch for header %q", k)
+	}
+}
+
+func TestServerReturnCodes(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer dummy.Close()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/", "/200":
+			_, _ = w.Write([]byte(`{}`))
+		case "/201":
+			w.WriteHeader(201)
+		case "/300":
+			w.WriteHeader(300)
+			_, _ = w.Write([]byte(`{}`))
+		case "/401":
+			w.WriteHeader(401)
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+
+	plugin := &HTTP{
+		URL:                server.URL,
+		SuccessStatusCodes: []int{200, 300},
+	}
+	plugin.Timeout = config.Duration(200 * time.Millisecond)
+	require.NoError(t, plugin.Init())
+
+	// 200 and 300 should not return an error
+	require.NoError(t, plugin.download())
+	plugin.URL = server.URL + "/200"
+	require.NoError(t, plugin.download())
+	plugin.URL = server.URL + "/300"
+	require.NoError(t, plugin.download())
+
+	// other error codes should cause errors
+	plugin.URL = server.URL + "/201"
+	require.ErrorContains(t, plugin.download(), "received status code 201")
+	plugin.URL = server.URL + "/401"
+	require.ErrorContains(t, plugin.download(), "received status code 401")
+	plugin.URL = server.URL + "/somewhere"
+	require.ErrorContains(t, plugin.download(), "received status code 404")
+}
+
+func TestAuthenticationBasic(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer dummy.Close()
+
+	var header http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header = r.Header
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	plugin := &HTTP{
+		URL:                server.URL,
+		Username:           config.NewSecret([]byte("myuser")),
+		Password:           config.NewSecret([]byte("mypass")),
+		SuccessStatusCodes: []int{200, 300},
+	}
+	plugin.Timeout = config.Duration(200 * time.Millisecond)
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.download())
+
+	auth := header.Get("Authorization")
+	require.NotEmpty(t, auth)
+	require.Equal(t, "Basic bXl1c2VyOm15cGFzcw==", auth)
+}
+
+func TestAuthenticationTokenc(t *testing.T) {
+	dummy, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer dummy.Close()
+
+	var header http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header = r.Header
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	token := "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJUaWdlciIsImlhdCI6MTY4Mzc0OTEyMSwiZXhwIjoxNzE1Mjg1MTIxLCJhdWQiOiJ3d3cudGlnZXItb2YtdGVsZWdyYWYub3JnIiwic3ViIjoidGlnZXIgbWFuIn0.qvSeNu6rSdlh8rAdtdAajo9Jajfl56DZuPV9ouTPtuo"
+	plugin := &HTTP{
+		URL:                server.URL,
+		Token:              config.NewSecret([]byte(token)),
+		SuccessStatusCodes: []int{200, 300},
+	}
+	plugin.Timeout = config.Duration(200 * time.Millisecond)
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.download())
+
+	auth := header.Get("Authorization")
+	require.NotEmpty(t, auth)
+	require.Equal(t, "Bearer "+token, auth)
 }
