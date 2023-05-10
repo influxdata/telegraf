@@ -45,6 +45,46 @@ func TestClientConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "encrypted pkcs#8 key but missing password",
+			client: tls.ClientConfig{
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientEncPKCS8KeyPath(),
+			},
+			expNil: true,
+			expErr: true,
+		},
+		{
+			name: "encrypted pkcs#8 key and incorrect password",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientEncPKCS8KeyPath(),
+				TLSKeyPwd: "incorrect",
+			},
+			expNil: true,
+			expErr: true,
+		},
+		{
+			name: "success with encrypted pkcs#8 key and password set",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientEncPKCS8KeyPath(),
+				TLSKeyPwd: "changeme",
+			},
+		},
+		{
+			name: "success with encrypted pkcs#1 key and password set",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientEncKeyPath(),
+				TLSKeyPwd: "changeme",
+			},
+		},
+
+		{
 			name: "invalid ca",
 			client: tls.ClientConfig{
 				TLSCA:   pki.ClientKeyPath(),
