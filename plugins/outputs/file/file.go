@@ -66,7 +66,7 @@ func CompressZstd(encoder *zstd.Encoder, src []byte) []byte {
 
 func CompressGzip(data []byte, level int) ([]byte, error) {
 	var b bytes.Buffer
-	gz,err := gzip.NewWriterLevel(&b, level)
+	gz, err := gzip.NewWriterLevel(&b, level)
 
 	if err != nil {
 		return nil, err
