@@ -64,11 +64,15 @@ func CompressZstd(encoder *zstd.Encoder, src []byte) []byte {
 	return encoder.EncodeAll(src, make([]byte, 0, len(src)))
 }
 
-func CompressGzip(data []byte) ([]byte, error) {
+func CompressGzip(data []byte, level int) ([]byte, error) {
 	var b bytes.Buffer
-	gz := gzip.NewWriter(&b)
+	gz,err := gzip.NewWriterLevel(&b, level)
 
-	_, err := gz.Write(data)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = gz.Write(data)
 	if err != nil {
 		return nil, err
 	}
@@ -144,9 +148,6 @@ func (f *File) Connect() error {
 		}
 	}
 	f.writer = io.MultiWriter(writers...)
-	if f.CompressionAlgorithm == "gzip" {
-		f.encoder, _ = gzip.NewWriterLevel(f.writer, f.CompressionLevel)
-	}
 	return nil
 }
 
@@ -177,7 +178,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		}
 
 		if f.CompressionAlgorithm == "gzip" {
-			octets, err = CompressGzip(octets)
+			octets, err = CompressGzip(octets, f.CompressionLevel)
 			if err != nil {
 				f.Log.Errorf("Error writing to file: %v", err)
 			}
@@ -197,7 +198,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 			}
 
 			if f.CompressionAlgorithm == "gzip" {
-				b, err = CompressGzip(b)
+				b, err = CompressGzip(b, f.CompressionLevel)
 				if err != nil {
 					f.Log.Errorf("Error writing to file: %v", err)
 				}
