@@ -14,7 +14,7 @@ func TestAzureSQLIntegration_ArcManaged_DatabaseIO_Query(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	if os.Getenv("## Queries enabled by default for database_type = \"AzureArcSQLManagedInstance\" are -\n  ## AzureArcSQLMIDatabaseIO, AzureArcSQLMIServerProperties, AzureArcSQLMIOsWaitstats,\n  ## AzureArcSQLMIMemoryClerks, AzureArcSQLMIPerformanceCounters, AzureArcSQLMIRequests, AzureArcSQLMISchedulers") == "" {
+	if os.Getenv("AZURESQL_ARCMI_CONNECTION_STRING") == "" {
 		t.Skip("Missing environment variable AZURESQL_ARCMI_CONNECTION_STRING")
 	}
 
