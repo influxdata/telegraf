@@ -1,6 +1,9 @@
 # Tacacs Input Plugin
 
-The Tacacs plugin collects tacacs authentication response times.
+The Tacacs plugin collects successful tacacs authentication response times.
+It is primarily meant to monitor how long it takes for the server to fully
+handle an auth request, including all potential dependent calls (for example
+to AD servers, or other sources of truth for auth the tacacs server uses).
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -14,8 +17,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
+# Tacacs plugin collects successful tacacs authentication response times.
 [[inputs.tacacs]]
-  ## An array of Server IPs and ports to gather from. If none specified, defaults to localhost.
+  ## An array of Server IPs (or hostnames) and ports to gather from. If none specified, defaults to localhost.
   # servers = ["127.0.0.1:49"]
 
   ## Request source server IP, normally the server running telegraf.

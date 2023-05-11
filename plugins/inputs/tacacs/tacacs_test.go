@@ -83,6 +83,7 @@ func TestTacacsLocal(t *testing.T) {
 		Username:        config.NewSecret([]byte(`testusername`)),
 		Password:        config.NewSecret([]byte(`testpassword`)),
 		Secret:          config.NewSecret([]byte(`testsecret`)),
+		RemAddr:         "127.0.0.1",
 		ResponseTimeout: config.Duration(0),
 		Log:             testutil.Logger{},
 	}
@@ -98,11 +99,13 @@ func TestTacacsLocal(t *testing.T) {
 	require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"))
 
 	plugin = &Tacacs{
-		Servers:  []string{"localhost:1049"},
-		Username: config.NewSecret([]byte(`testusername`)),
-		Password: config.NewSecret([]byte(`WRONGPASSWORD`)),
-		Secret:   config.NewSecret([]byte(`testsecret`)),
-		Log:      testutil.Logger{},
+		Servers:         []string{"localhost:1049"},
+		Username:        config.NewSecret([]byte(`testusername`)),
+		Password:        config.NewSecret([]byte(`WRONGPASSWORD`)),
+		Secret:          config.NewSecret([]byte(`testsecret`)),
+		RemAddr:         "127.0.0.1",
+		ResponseTimeout: config.Duration(time.Second * 5),
+		Log:             testutil.Logger{},
 	}
 	var acc2 testutil.Accumulator
 	require.NoError(t, plugin.Init())
@@ -113,11 +116,13 @@ func TestTacacsLocal(t *testing.T) {
 	require.Equal(t, false, acc2.HasInt64Field("tacacs", "responsetime_ms"))
 
 	plugin = &Tacacs{
-		Servers:  []string{"localhost:1049"},
-		Username: config.NewSecret([]byte(`testusername`)),
-		Password: config.NewSecret([]byte(`testpassword`)),
-		Secret:   config.NewSecret([]byte(`WRONGSECRET`)),
-		Log:      testutil.Logger{},
+		Servers:         []string{"localhost:1049"},
+		Username:        config.NewSecret([]byte(`testusername`)),
+		Password:        config.NewSecret([]byte(`testpassword`)),
+		Secret:          config.NewSecret([]byte(`WRONGSECRET`)),
+		RemAddr:         "127.0.0.1",
+		ResponseTimeout: config.Duration(time.Second * 5),
+		Log:             testutil.Logger{},
 	}
 	var acc3 testutil.Accumulator
 	require.NoError(t, plugin.Init())
@@ -132,7 +137,8 @@ func TestTacacsLocal(t *testing.T) {
 		Username:        config.NewSecret([]byte(`testusername`)),
 		Password:        config.NewSecret([]byte(`testpassword`)),
 		Secret:          config.NewSecret([]byte(`testsecret`)),
-		ResponseTimeout: config.Duration(time.Nanosecond * 5),
+		RemAddr:         "127.0.0.1",
+		ResponseTimeout: config.Duration(time.Nanosecond * 1),
 		Log:             testutil.Logger{},
 	}
 	var acc4 testutil.Accumulator
@@ -164,13 +170,11 @@ func TestTacacsIntegration(t *testing.T) {
 
 	// Define the testset
 	var testset = []struct {
-		name               string
-		testingTimeout     config.Duration
-		expectedSource     string
-		expectedSourcePort string
-		serverToTest       string
-		expectSuccess      bool
-		usedPassword       string
+		name           string
+		testingTimeout config.Duration
+		serverToTest   string
+		expectSuccess  bool
+		usedPassword   string
 	}{
 		{
 			name:           "timeout_3s",
@@ -204,6 +208,7 @@ func TestTacacsIntegration(t *testing.T) {
 				Username:        config.NewSecret([]byte(`iosadmin`)),
 				Password:        config.NewSecret([]byte(tt.usedPassword)),
 				Secret:          config.NewSecret([]byte(`ciscotacacskey`)),
+				RemAddr:         "127.0.0.1",
 				Log:             testutil.Logger{},
 			}
 			var acc testutil.Accumulator
