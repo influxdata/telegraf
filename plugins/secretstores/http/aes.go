@@ -30,12 +30,12 @@ func (a *AesEncryptor) Init() error {
 		fallthrough
 	case 2:
 		mode = strings.ToLower(a.Variant[1])
-		fallthrough
-	case 1:
 		cipherName = strings.ToLower(a.Variant[0])
 		if !strings.HasPrefix(cipherName, "aes") {
 			return fmt.Errorf("requested AES but specified %q", cipherName)
 		}
+	case 1:
+		return errors.New("please specify cipher mode")
 	case 0:
 		return errors.New("please specify cipher")
 	default:
@@ -54,11 +54,7 @@ func (a *AesEncryptor) Init() error {
 		return fmt.Errorf("unsupported AES cipher %q", cipherName)
 	}
 
-	switch mode {
-	case "", "none": // pure AES
-		mode = "none"
-	case "cbc": // AES block mode
-	default:
+	if mode != "cbc" {
 		return fmt.Errorf("unsupported cipher mode %q", a.Variant[1])
 	}
 	a.mode = mode
@@ -90,7 +86,7 @@ func (a *AesEncryptor) Init() error {
 		a.Key.Destroy()
 		a.Key = key
 
-		if a.Vec.Empty() && iv.Empty() {
+		if a.Vec.Empty() && !iv.Empty() {
 			a.Vec.Destroy()
 			a.Vec = iv
 		}
@@ -122,6 +118,9 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 	if len(data)%aes.BlockSize != 0 {
 		return nil, fmt.Errorf("invalid data size %d", len(data))
 	}
+	if a.mode != "cbc" {
+		return nil, fmt.Errorf("unsupported cipher mode %q", a.mode)
+	}
 
 	// Setup the cipher and return the decoded data
 	encodedKey, err := a.Key.Get()
@@ -148,14 +147,6 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 	}
 	defer config.ReleaseSecret(iv)
 
-	switch a.mode {
-	case "none":
-		block.Decrypt(data, data)
-	case "cbc":
-		cipher.NewCBCDecrypter(block, iv).CryptBlocks(data, data)
-	default:
-		return nil, fmt.Errorf("unsupported block mode %q", a.mode)
-	}
-
+	cipher.NewCBCDecrypter(block, iv).CryptBlocks(data, data)
 	return a.trim(data)
 }

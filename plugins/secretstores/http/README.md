@@ -130,15 +130,12 @@ options are required.
 
 Currently the following AES ciphers are supported
 
-- `AES128`: plain AES with 128-bit key length
 - `AES128/CBC`: 128-bit key in _CBC_ block mode without padding
 - `AES128/CBC/PKCS#5`: 128-bit key in _CBC_ block mode with _PKCS#5_ padding
 - `AES128/CBC/PKCS#7`: 128-bit key in _CBC_ block mode with _PKCS#7_ padding
-- `AES192`: plain AES with 192-bit key length
 - `AES192/CBC`: 192-bit key in _CBC_ block mode without padding
 - `AES192/CBC/PKCS#5`: 192-bit key in _CBC_ block mode with _PKCS#5_ padding
 - `AES192/CBC/PKCS#7`: 192-bit key in _CBC_ block mode with _PKCS#7_ padding
-- `AES256`: plain AES with 256-bit key length
 - `AES256/CBC`: 256-bit key in _CBC_ block mode without padding
 - `AES256/CBC/PKCS#5`: 256-bit key in _CBC_ block mode with _PKCS#5_ padding
 - `AES256/CBC/PKCS#7`: 256-bit key in _CBC_ block mode with _PKCS#7_ padding
