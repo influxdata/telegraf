@@ -64,19 +64,19 @@ func (t *Tacacs) Init() error {
 func (t *Tacacs) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	for _, client := range t.clients {
+	for idx := range t.clients {
 		wg.Add(1)
-		go func(client tacplus.Client) {
+		go func(client *tacplus.Client) {
 			defer wg.Done()
 			acc.AddError(t.pollServer(acc, client))
-		}(client)
+		}(&t.clients[idx])
 	}
 
 	wg.Wait()
 	return nil
 }
 
-func (t *Tacacs) pollServer(acc telegraf.Accumulator, client tacplus.Client) error {
+func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) error {
 	// Create the fields for this metric
 	tags := map[string]string{"source": client.Addr}
 	fields := make(map[string]interface{})
