@@ -99,6 +99,10 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Init() error {
+	if len(f.Files) == 0 {
+		f.Files = []string{"stdout"}
+	}
+
 	if f.CompressionAlgorithm == "" {
 		return nil
 	} else if f.CompressionLevel == 0 {
@@ -116,9 +120,6 @@ func (f *File) Init() error {
 	err = validateCompressionLevel(f.CompressionAlgorithm, f.CompressionLevel)
 	if err != nil {
 		return err
-	}
-	if len(f.Files) == 0 {
-		f.Files = []string{"stdout"}
 	}
 
 	return nil
