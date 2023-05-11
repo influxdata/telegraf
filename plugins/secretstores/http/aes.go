@@ -58,9 +58,8 @@ func (a *AesEncryptor) Init() error {
 	case "", "none": // pure AES
 		mode = "none"
 	case "cbc": // AES block mode
-	case "cfb", "ctr", "ofb": // AES stream mode
 	default:
-		return fmt.Errorf("unsupported block mode %q", a.Variant[1])
+		return fmt.Errorf("unsupported cipher mode %q", a.Variant[1])
 	}
 	a.mode = mode
 
@@ -154,12 +153,6 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 		block.Decrypt(data, data)
 	case "cbc":
 		cipher.NewCBCDecrypter(block, iv).CryptBlocks(data, data)
-	case "cfb":
-		cipher.NewCFBDecrypter(block, iv).XORKeyStream(data, data)
-	case "ctr":
-		cipher.NewCTR(block, iv).XORKeyStream(data, data)
-	case "ofb":
-		cipher.NewOFB(block, iv).XORKeyStream(data, data)
 	default:
 		return nil, fmt.Errorf("unsupported block mode %q", a.mode)
 	}
