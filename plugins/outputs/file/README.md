@@ -42,12 +42,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
-  ## For enabling the compression specify the algorithm. By default it's disabled.
-  ## Supported algorithms are zstd and gzip. if empty then compression will be disabled and files will be plain line protocol.
+  ## For enabling the compression specify the algorithm. If empty, compression will be disabled and files will be plain text.
+  ## Supported algorithms are "zstd" and "gzip".
   # compression_algorithm = ""
 
-  ## For choosing a compression level per algorithm.
-  ## zstd supports levels 1,3,7 and 11. Default is 3.
-  ## gzip supports a range from -3 to 9. Default is -1. If 0 specified it default to -1.
-  # compression_level = 3
+  ## For choosing a compression level.
+  ## zstd supports levels 1,3,7 and 11. If specified 0, it defaults to 3.
+  ## gzip supports a range from -3 to 9. If specified 0, it defaults to -1.
+  # compression_level = 0
 ```

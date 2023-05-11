@@ -21,24 +21,25 @@ const (
 		"test1,tag1=value1 value=1 1257894000000000000\n"
 )
 
-func TestInitErrors(t *testing.T) {
+func TestCompressionConfigErrors(t *testing.T) {
 	fh := createFile(t)
 
 	s := &influx.Serializer{}
 	require.NoError(t, s.Init())
 	var errorTests = []struct {
-		name string
-		a    string
-		b    int
+		name      string
+		algorithm string
+		level     int
+		expected  string
 	}{
-		{"wrong-algorithm", "asda", 1},
-		{"wrong-level", "zstd", 4},
-		{"wrong-level-and-algorithm", "asdas", 15},
+		{"wrong-algorithm", "asda", 1, "unknown or unsupported algorithm provided: asda"},
+		{"wrong-level", "zstd", 4, "unsupported compression level provided: 4. only [1 3 7 11] are supported"},
+		{"wrong-level-and-algorithm", "asdas", 15, "unknown or unsupported algorithm provided: asdas"},
 	}
 	var successTests = []struct {
-		name string
-		a    string
-		b    int
+		name      string
+		algorithm string
+		level     int
 	}{
 		{"disabled", "", 0},
 		{"default", "zstd", 3},
@@ -53,8 +54,8 @@ func TestInitErrors(t *testing.T) {
 			f := File{
 				Files:                []string{fh.Name()},
 				serializer:           s,
-				CompressionAlgorithm: tt.a,
-				CompressionLevel:     tt.b,
+				CompressionAlgorithm: tt.algorithm,
+				CompressionLevel:     tt.level,
 			}
 			require.NoError(t, f.Init())
 		})
@@ -65,10 +66,10 @@ func TestInitErrors(t *testing.T) {
 			f := File{
 				Files:                []string{fh.Name()},
 				serializer:           s,
-				CompressionAlgorithm: tt.a,
-				CompressionLevel:     tt.b,
+				CompressionAlgorithm: tt.algorithm,
+				CompressionLevel:     tt.level,
 			}
-			require.Error(t, f.Init())
+			require.ErrorContains(t, f.Init(), tt.expected)
 		})
 	}
 }
@@ -159,18 +160,15 @@ func TestNewGzipCompressedFiles(t *testing.T) {
 		CompressionLevel:     -1,
 	}
 
-	err := f.Connect()
-	require.NoError(t, err)
+	require.NoError(t, f.Connect())
 
-	err = f.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, f.Write(testutil.MockMetrics()))
 
 	validateGzipCompressedFile(t, fh1, expNewFile)
 	validateGzipCompressedFile(t, fh2, expNewFile)
 	validateGzipCompressedFile(t, fh3, expNewFile)
 
-	err = f.Close()
-	require.NoError(t, err)
+	require.NoError(t, f.Close())
 }
 
 func TestNewZstdCompressedFiles(t *testing.T) {
@@ -187,18 +185,15 @@ func TestNewZstdCompressedFiles(t *testing.T) {
 		CompressionLevel:     3,
 	}
 
-	err := f.Connect()
-	require.NoError(t, err)
+	require.NoError(t, f.Connect())
 
-	err = f.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, f.Write(testutil.MockMetrics()))
 
 	validateZstdCompressedFile(t, fh1, expNewFile)
 	validateZstdCompressedFile(t, fh2, expNewFile)
 	validateZstdCompressedFile(t, fh3, expNewFile)
 
-	err = f.Close()
-	require.NoError(t, err)
+	require.NoError(t, f.Close())
 }
 
 func TestFileNewFiles(t *testing.T) {
