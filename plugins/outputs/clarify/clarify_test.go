@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
-	"reflect"
 	"testing"
 	"time"
 
@@ -38,12 +37,13 @@ type MockHandler struct {
 func (m *MockHandler) Do(ctx context.Context, _ jsonrpc.Request, result any) error {
 	err := json.Unmarshal([]byte(m.jsonResult), result)
 	if m.sleep > 0 {
-		timer1 := time.NewTimer(m.sleep)
+		timer := time.NewTimer(m.sleep)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return errTimeout
-		case <-timer1.C:
-			timer1.Stop()
+		case <-timer.C:
+			timer.Stop()
 			return nil
 		}
 	}
@@ -281,12 +281,8 @@ func TestProcessMetrics(t *testing.T) {
 	}
 	for _, tt := range idTests {
 		of, os := clfy.processMetrics([]telegraf.Metric{tt.inMetric})
-		if !reflect.DeepEqual(of, tt.outFrame) {
-			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outFrame, of)
-		}
-		if !reflect.DeepEqual(os, tt.outSignals) {
-			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outSignals, os)
-		}
+		require.EqualValues(t, tt.outFrame, of)
+		require.EqualValues(t, tt.outSignals, os)
 	}
 }
 

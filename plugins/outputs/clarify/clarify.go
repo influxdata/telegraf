@@ -33,13 +33,17 @@ type Clarify struct {
 
 var errIDTooLong = errors.New("id too long (>128)")
 
+const defaultTimeout = config.Duration(20 * time.Second)
 const allowedIDRunes = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_:.#+/`
 
 //go:embed sample.conf
 var sampleConfig string
 
 func (c *Clarify) Init() error {
-	// No blocking as it doesn't do any http requests, just sets up the necessarry Oauth2 client.
+	if c.Timeout <= 0 {
+		c.Timeout = defaultTimeout
+	}
+	// Not blocking as it doesn't do any http requests, just sets up the necessarry Oauth2 client.
 	ctx := context.Background()
 	switch {
 	case c.CredentialsFile != "":
@@ -80,11 +84,11 @@ func (c *Clarify) Write(metrics []telegraf.Metric) error {
 	defer cancel()
 
 	if _, err := c.client.Insert(frame).Do(ctx); err != nil {
-		return err
+		return fmt.Errorf("inserting failed %w", err)
 	}
 
 	if _, err := c.client.SaveSignals(signals).Do(ctx); err != nil {
-		return err
+		return fmt.Errorf("saving signals failed %w", err)
 	}
 
 	return nil
@@ -140,14 +144,13 @@ func normalizeID(id string) string {
 }
 
 func (c *Clarify) generateID(m telegraf.Metric, f *telegraf.Field) (string, error) {
-	var id, cid string
-	exist := false
+	var id string
 	if c.ClarifyIDTag != "" {
-		cid, exist = m.GetTag(c.ClarifyIDTag)
+		if cid, exist := m.GetTag(c.ClarifyIDTag); exist && len(m.FieldList()) == 1 {
+			id = cid
+		}
 	}
-	if exist && len(m.FieldList()) == 1 {
-		id = cid
-	} else {
+	if id == "" {
 		parts := make([]string, 0, len(c.IDTags)+2)
 		parts = append(parts, m.Name(), f.Key)
 
@@ -177,7 +180,7 @@ func (c *Clarify) Close() error {
 func init() {
 	outputs.Add("clarify", func() telegraf.Output {
 		return &Clarify{
-			Timeout: config.Duration(20 * time.Second),
+			Timeout: defaultTimeout,
 		}
 	})
 }

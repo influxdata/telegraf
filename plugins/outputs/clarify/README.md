@@ -17,7 +17,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 ## Configuration to publish Telegraf metrics to Clarify
 [[outputs.clarify]]
-
 ## Credentials File (Oauth 2.0 from Clarify integration)
 credentials_file = "/path/to/clarify/credentials.json"
 
@@ -57,10 +56,6 @@ E.g:
 Clarify only supports values that can be converted to floating point numbers.
 Strings and invalid numbers are ignored.
 
-[clarify]: https://clarify.io
-[clarifydoc]: https://docs.clarify.io
-[credentials]: https://docs.clarify.io/users/admin/integrations/credentials
-
 ## Example
 
 The following input would be stored in Clarify with the values shown below:
@@ -85,3 +80,7 @@ temperature,host=demo.clarifylocal,sensor=TC0P value=49 1682670910000000000
   }
 }
 ```
+
+[clarify]: https://clarify.io
+[clarifydoc]: https://docs.clarify.io
+[credentials]: https://docs.clarify.io/users/admin/integrations/credentials
