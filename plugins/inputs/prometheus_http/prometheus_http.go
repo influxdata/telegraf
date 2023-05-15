@@ -186,9 +186,10 @@ func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, valueTag
 		tgs[k] = v
 	}
 
-	m := p.mergeMaps(p.files, tgs)
+	m := tgs
 	m["values"] = valueTags
 	m["tags"] = metricTags
+	m["files"] = p.files
 
 	b, err := t.RenderObject(&m)
 	if err != nil {
