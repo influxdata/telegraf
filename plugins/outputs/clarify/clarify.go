@@ -72,20 +72,6 @@ func (c *Clarify) Connect() error {
 	return nil
 }
 
-func toFloat64(v interface{}) (float64, error) {
-	var value float64
-	switch v := v.(type) {
-	case bool:
-		value = float64(0)
-		if v {
-			value = float64(1)
-		}
-		return value, nil
-	default:
-		return internal.ToFloat64(v)
-	}
-}
-
 func (c *Clarify) Write(metrics []telegraf.Metric) error {
 	frame, signals := c.processMetrics(metrics)
 
@@ -110,7 +96,7 @@ func (c *Clarify) processMetrics(metrics []telegraf.Metric) (views.DataFrame, ma
 
 	for _, m := range metrics {
 		for _, f := range m.FieldList() {
-			value, err := toFloat64(f.Value)
+			value, err := internal.ToFloat64(f.Value)
 			if err != nil {
 				c.Log.Warnf("Unable to add field `%s` for metric `%s` due to error '%v', skipping", f.Key, m.Name(), err)
 				continue
