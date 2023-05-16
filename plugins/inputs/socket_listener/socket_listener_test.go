@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -137,7 +136,7 @@ func TestSocketListener(t *testing.T) {
 			}
 
 			// Setup plugin according to test specification
-			logger := &CaptureLogger{}
+			logger := &testutil.CaptureLogger{}
 			plugin := &SocketListener{
 				Log:             logger,
 				ServiceAddress:  proto + "://" + serverAddr,
