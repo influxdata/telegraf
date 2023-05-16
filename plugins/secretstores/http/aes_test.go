@@ -95,7 +95,7 @@ func TestAESNoPadding(t *testing.T) {
 	}
 }
 
-func TestKDF(t *testing.T) {
+func TestAESKDF(t *testing.T) {
 	expected := "my $ecret-Passw0rd"
 	iv := hex.EncodeToString([]byte("asupersecretiv42"))
 	tests := []struct {
