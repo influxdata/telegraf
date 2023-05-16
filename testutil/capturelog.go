@@ -34,7 +34,7 @@ type CaptureLogger struct {
 	sync.Mutex
 }
 
-func (l *CaptureLogger) log(msg Entry) {
+func (l *CaptureLogger) print(msg Entry) {
 	l.Lock()
 	l.messages = append(l.messages, msg)
 	l.Unlock()
@@ -42,11 +42,11 @@ func (l *CaptureLogger) log(msg Entry) {
 }
 
 func (l *CaptureLogger) logf(level byte, format string, args ...any) {
-	l.log(Entry{level, l.Name, fmt.Sprintf(format, args...)})
+	l.print(Entry{level, l.Name, fmt.Sprintf(format, args...)})
 }
 
 func (l *CaptureLogger) loga(level byte, args ...any) {
-	l.log(Entry{level, l.Name, fmt.Sprint(args...)})
+	l.print(Entry{level, l.Name, fmt.Sprint(args...)})
 }
 
 // Errorf logs an error message, patterned after log.Printf.
