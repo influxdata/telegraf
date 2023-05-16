@@ -111,15 +111,15 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 		}
 		if *l.KeepAlivePeriod == 0 {
 			if err := tcpConn.SetKeepAlive(false); err != nil {
-				l.Log.Errorf("cannot set keep-alive: %w", err)
+				l.Log.Warnf("Cannot set keep-alive: %w", err)
 			}
 		} else {
 			if err := tcpConn.SetKeepAlive(true); err != nil {
-				l.Log.Errorf("cannot set keep-alive: %w", err)
+				l.Log.Warnf("Cannot set keep-alive: %w", err)
 			}
 			err := tcpConn.SetKeepAlivePeriod(time.Duration(*l.KeepAlivePeriod))
 			if err != nil {
-				l.Log.Errorf("cannot set keep-alive period: %w", err)
+				l.Log.Warnf("Cannot set keep-alive period: %w", err)
 			}
 		}
 	}
@@ -130,7 +130,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 func (l *streamListener) closeConnection(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	if err := conn.Close(); err != nil {
-		l.Log.Errorf("Cannot close connection to %q: %v", addr, err)
+		l.Log.Warnf("Cannot close connection to %q: %v", addr, err)
 	}
 	delete(l.connections, addr)
 }
