@@ -20,10 +20,8 @@ var imagesRPM = []string{
 }
 
 var imagesDEB = []string{
-	"debian/buster",
 	"debian/bullseye",
 	"debian/bookworm",
-	"ubuntu/bionic",
 	"ubuntu/focal",
 	"ubuntu/jammy",
 }

@@ -34,7 +34,7 @@ type streamListener struct {
 	Log             telegraf.Logger
 
 	listener    net.Listener
-	connections map[string]net.Conn
+	connections map[net.Conn]struct{}
 	path        string
 
 	wg sync.WaitGroup
@@ -84,6 +84,10 @@ func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode st
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {
+	if c, ok := conn.(*tls.Conn); ok {
+		conn = c.NetConn()
+	}
+
 	if l.ReadBufferSize > 0 {
 		if rb, ok := conn.(hasSetReadBuffer); ok {
 			if err := rb.SetReadBuffer(l.ReadBufferSize); err != nil {
@@ -106,7 +110,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 	if l.KeepAlivePeriod != nil {
 		tcpConn, ok := conn.(*net.TCPConn)
 		if !ok {
-			return fmt.Errorf("connection not a TCP connection (%T)", conn)
+			return fmt.Errorf("cannot set keep-alive: not a TCP connection (%T)", conn)
 		}
 		if *l.KeepAlivePeriod == 0 {
 			if err := tcpConn.SetKeepAlive(false); err != nil {
@@ -125,7 +129,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 
 	// Store the connection mapped to its address
 	l.Lock()
-	l.connections[addr] = conn
+	l.connections[conn] = struct{}{}
 	l.Unlock()
 
 	return nil
@@ -136,7 +140,7 @@ func (l *streamListener) closeConnection(conn net.Conn) {
 	if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
 		l.Log.Errorf("Cannot close connection to %q: %v", addr, err)
 	}
-	delete(l.connections, addr)
+	delete(l.connections, conn)
 }
 
 func (l *streamListener) addr() net.Addr {
@@ -149,7 +153,7 @@ func (l *streamListener) close() error {
 	}
 
 	l.Lock()
-	for _, conn := range l.connections {
+	for conn := range l.connections {
 		l.closeConnection(conn)
 	}
 	l.Unlock()
@@ -166,7 +170,7 @@ func (l *streamListener) close() error {
 }
 
 func (l *streamListener) listen(acc telegraf.Accumulator) {
-	l.connections = make(map[string]net.Conn)
+	l.connections = make(map[net.Conn]struct{})
 
 	l.wg.Add(1)
 	defer l.wg.Done()

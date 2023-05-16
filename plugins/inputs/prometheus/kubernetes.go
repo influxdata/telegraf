@@ -76,6 +76,13 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 		}
 	}
 
+	if !p.isNodeScrapeScope {
+		err = p.watchPod(ctx, client)
+		if err != nil {
+			p.Log.Warnf("Error while attempting to watch pod: %s", err.Error())
+		}
+	}
+
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -90,7 +97,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
 				} else {
-					p.watchPod(ctx, client)
+					<-ctx.Done()
 				}
 			}
 		}
@@ -125,7 +132,7 @@ var informerfactory informers.SharedInformerFactory
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
-func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clientset) {
+func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clientset) error {
 	var resyncinterval time.Duration
 
 	if p.CacheRefreshInterval != 0 {
@@ -135,13 +142,17 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 	}
 
 	if informerfactory == nil {
-		informerfactory = informers.NewSharedInformerFactory(clientset, resyncinterval)
+		var informerOptions []informers.SharedInformerOption
+		if p.PodNamespace != "" {
+			informerOptions = append(informerOptions, informers.WithNamespace(p.PodNamespace))
+		}
+		informerfactory = informers.NewSharedInformerFactoryWithOptions(clientset, resyncinterval, informerOptions...)
 	}
 
 	p.nsStore = informerfactory.Core().V1().Namespaces().Informer().GetStore()
 
 	podinformer := informerfactory.Core().V1().Pods()
-	podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
 			newPod, ok := newObj.(*corev1.Pod)
 			if !ok {
@@ -186,8 +197,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 	informerfactory.Start(ctx.Done())
 	informerfactory.WaitForCacheSync(wait.NeverStop)
-
-	<-ctx.Done()
+	return err
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
@@ -358,9 +368,6 @@ func podReady(pod *corev1.Pod) bool {
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
-	if p.kubernetesPods == nil {
-		p.kubernetesPods = map[PodID]URLAndAddress{}
-	}
 	targetURL, err := getScrapeURL(pod, p)
 	if err != nil {
 		p.Log.Errorf("could not parse URL: %s", err)

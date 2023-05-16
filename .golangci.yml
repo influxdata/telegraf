@@ -90,10 +90,12 @@ linters-settings:
     includes:
       - G101
       - G102
+      - G103
       - G106
       - G107
       - G108
       - G109
+      - G110
       - G111
       - G112
       - G114
@@ -107,10 +109,13 @@ linters-settings:
       - G306
       - G401
       - G403
+      - G404
       - G501
       - G502
       - G503
       - G505
+      - G601
+      # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
@@ -241,7 +246,7 @@ issues:
     # revive:var-naming
     - don't use an underscore in package name
     # EXC0001 errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
-    - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close.*|.*Flush|.*Disconnect|.*Clear|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
     # EXC0013 revive: Annoying issue about not having a comment. The rare codebase has such comments
     - package comment should be of the form "(.+)...
     # EXC0015 revive: Annoying issue about not having a comment. The rare codebase has such comments
@@ -254,13 +259,13 @@ issues:
         - govet
 
     - path: cmd/telegraf/(main|printer).go
-      text: "Error return value of `outputBuffer.Write` is not checked"
-
-    - path: cmd/telegraf/(main|printer).go
-      text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
+      text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
     - path: _test\.go
-      text: "Potential hardcoded credentials"
+      text: "Potential hardcoded credentials" #gosec:G101
+
+    - path: _test\.go
+      text: "Use of weak random number generator" #gosec:G404
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.

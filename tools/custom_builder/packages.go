@@ -27,16 +27,18 @@ var packageFilter = filter.MustCompile([]string{
 })
 
 type packageInfo struct {
-	Category      string
-	Plugin        string
-	Path          string
-	Tag           string
-	DefaultParser string
+	Category          string
+	Plugin            string
+	Path              string
+	Tag               string
+	DefaultParser     string
+	DefaultSerializer string
 }
 
 type packageCollection struct {
-	packages       map[string][]packageInfo
-	defaultParsers []string
+	packages           map[string][]packageInfo
+	defaultParsers     []string
+	defaultSerializers []string
 }
 
 // Define the package exceptions
@@ -100,7 +102,8 @@ func (p *packageCollection) collectPackagesForCategory(category string) error {
 			}
 
 			// Extract potential default parsers for input and processor packages
-			var defaultParser string
+			// as well as serializers for the output package
+			var defaultParser, defaultSerializer string
 			switch category {
 			case "inputs", "processors":
 				var err error
@@ -108,17 +111,24 @@ func (p *packageCollection) collectPackagesForCategory(category string) error {
 				if err != nil {
 					log.Printf("Getting default parser for %s.%s failed: %v", category, name, err)
 				}
+			case "outputs":
+				var err error
+				defaultSerializer, err = extractDefaultSerializer(path)
+				if err != nil {
+					log.Printf("Getting default serializer for %s.%s failed: %v", category, name, err)
+				}
 			}
 
 			for _, plugin := range registeredNames {
 				path := filepath.Join("plugins", category, element.Name())
 				tag := category + "." + element.Name()
 				entries = append(entries, packageInfo{
-					Category:      category,
-					Plugin:        plugin,
-					Path:          filepath.ToSlash(path),
-					Tag:           tag,
-					DefaultParser: defaultParser,
+					Category:          category,
+					Plugin:            plugin,
+					Path:              filepath.ToSlash(path),
+					Tag:               tag,
+					DefaultParser:     defaultParser,
+					DefaultSerializer: defaultSerializer,
 				})
 			}
 		}
@@ -148,6 +158,26 @@ func (p *packageCollection) FillDefaultParsers() {
 	}
 }
 
+func (p *packageCollection) FillDefaultSerializers() {
+	// Make sure we ignore all empty-named parsers which indicate
+	// that there is no parser used by the plugin.
+	serializers := map[string]bool{"": true}
+
+	// Iterate over all plugins that may have parsers and collect
+	// the defaults
+	p.defaultSerializers = make([]string, 0)
+	for _, category := range []string{"outputs"} {
+		for _, pkg := range p.packages[category] {
+			name := pkg.DefaultSerializer
+			if seen := serializers[name]; seen {
+				continue
+			}
+			p.defaultSerializers = append(p.defaultSerializers, name)
+			serializers[name] = true
+		}
+	}
+}
+
 func (p *packageCollection) CollectAvailable() error {
 	p.packages = make(map[string][]packageInfo)
 
@@ -158,6 +188,7 @@ func (p *packageCollection) CollectAvailable() error {
 	}
 
 	p.FillDefaultParsers()
+	p.FillDefaultSerializers()
 
 	return nil
 }
@@ -323,6 +354,38 @@ func extractDefaultParser(pluginDir string) (string, error) {
 	if filepath.Base(pluginDir) == "exec" {
 		return "json", nil
 	}
+
+	// Walk all config files in the package directory
+	elements, err := os.ReadDir(pluginDir)
+	if err != nil {
+		return "", err
+	}
+
+	for _, element := range elements {
+		path := filepath.Join(pluginDir, element.Name())
+		if element.IsDir() || filepath.Ext(element.Name()) != ".conf" {
+			continue
+		}
+
+		// Read the config and search for a "data_format" entry
+		file, err := os.Open(path)
+		if err != nil {
+			return "", err
+		}
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			match := re.FindStringSubmatch(scanner.Text())
+			if len(match) == 2 {
+				return match[1], nil
+			}
+		}
+	}
+
+	return "", nil
+}
+
+func extractDefaultSerializer(pluginDir string) (string, error) {
+	re := regexp.MustCompile(`^\s*#?\s*data_format\s*=\s*"(.*)"\s*$`)
 
 	// Walk all config files in the package directory
 	elements, err := os.ReadDir(pluginDir)

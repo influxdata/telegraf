@@ -68,7 +68,7 @@ func TestWmi_Gather(t *testing.T) {
 	var logger = new(testutil.Logger)
 	var acc = new(testutil.Accumulator)
 	plugin := Wmi{Queries: []Query{testQuery}, Log: logger}
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Gather(acc))
 	// no errors in accumulator
 	require.Empty(t, acc.Errors)

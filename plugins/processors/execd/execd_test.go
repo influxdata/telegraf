@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -152,7 +152,8 @@ func TestMain(m *testing.M) {
 func runCountMultiplierProgram() {
 	fieldName := os.Getenv("FIELD_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
-	serializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	_ = serializer.Init() // this should always succeed
 
 	for {
 		m, err := parser.Next()

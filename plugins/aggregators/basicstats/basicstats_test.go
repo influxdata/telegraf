@@ -536,6 +536,31 @@ func TestBasicStatsWithNonNegativeRate(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
 }
+
+func TestBasicStatsWithPctChange(t *testing.T) {
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"percent_change"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+	expectedFields := map[string]interface{}{
+		"a_percent_change": float64(0),
+		"b_percent_change": float64(200),
+		"c_percent_change": float64(100),
+		"d_percent_change": float64(200),
+		"g_percent_change": float64(-66.66666666666666),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
 func TestBasicStatsWithInterval(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"interval"}

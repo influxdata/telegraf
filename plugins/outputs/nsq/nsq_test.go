@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -29,7 +29,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	defer container.Terminate()
 
 	server := []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])}
-	s := serializers.NewInfluxSerializer()
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
 	n := &NSQ{
 		Server:     server[0],
 		Topic:      "telegraf",

@@ -281,7 +281,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	for _, m := range azmetrics {
 		// Azure Monitor accepts new batches of points in new-line delimited
 		// JSON, following RFC 4288 (see https://github.com/ndjson/ndjson-spec).
-		jsonBytes, err := json.Marshal(&m)
+		jsonBytes, err := json.Marshal(m)
 		if err != nil {
 			return err
 		}

@@ -20,7 +20,9 @@ func TestFilter_ApplyEmpty(t *testing.T) {
 		map[string]string{},
 		map[string]interface{}{"value": int64(1)},
 		time.Now())
-	require.True(t, f.Select(m))
+	selected, err := f.Select(m)
+	require.NoError(t, err)
+	require.True(t, selected)
 }
 
 func TestFilter_ApplyTagsDontPass(t *testing.T) {
@@ -41,7 +43,9 @@ func TestFilter_ApplyTagsDontPass(t *testing.T) {
 		map[string]string{"cpu": "cpu-total"},
 		map[string]interface{}{"value": int64(1)},
 		time.Now())
-	require.False(t, f.Select(m))
+	selected, err := f.Select(m)
+	require.NoError(t, err)
+	require.False(t, selected)
 }
 
 func TestFilter_ApplyDeleteFields(t *testing.T) {
@@ -59,7 +63,9 @@ func TestFilter_ApplyDeleteFields(t *testing.T) {
 			"value2": int64(2),
 		},
 		time.Now())
-	require.True(t, f.Select(m))
+	selected, err := f.Select(m)
+	require.NoError(t, err)
+	require.True(t, selected)
 	f.Modify(m)
 	require.Equal(t, map[string]interface{}{"value2": int64(2)}, m.Fields())
 }
@@ -79,7 +85,9 @@ func TestFilter_ApplyDeleteAllFields(t *testing.T) {
 			"value2": int64(2),
 		},
 		time.Now())
-	require.True(t, f.Select(m))
+	selected, err := f.Select(m)
+	require.NoError(t, err)
+	require.True(t, selected)
 	f.Modify(m)
 	require.Len(t, m.FieldList(), 0)
 }
@@ -465,11 +473,122 @@ func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
 		TagDropFilters: filterDrop,
 		TagPassFilters: filterPass,
 	}
-
 	require.NoError(t, f.Compile())
 
 	for i, tag := range inputData {
 		require.Equal(t, f.shouldTagsPass(tag), expectedResult[i])
+	}
+}
+
+func TestFilter_MetricPass(t *testing.T) {
+	m := testutil.MustMetric("cpu",
+		map[string]string{
+			"host":   "Hugin",
+			"source": "myserver@mycompany.com",
+			"status": "ok",
+		},
+		map[string]interface{}{
+			"value":  15.0,
+			"id":     "24cxnwr3480k",
+			"on":     true,
+			"count":  18,
+			"errors": 29,
+			"total":  129,
+		},
+		time.Date(2023, time.April, 24, 23, 30, 15, 42, time.UTC),
+	)
+
+	var tests = []struct {
+		name       string
+		expression string
+		expected   bool
+	}{
+		{
+			name:     "empty",
+			expected: true,
+		},
+		{
+			name:       "exact name match (pass)",
+			expression: `name == "cpu"`,
+			expected:   true,
+		},
+		{
+			name:       "exact name match (fail)",
+			expression: `name == "test"`,
+			expected:   false,
+		},
+		{
+			name:       "case-insensitive tag match",
+			expression: `tags.host.lowerAscii() == "hugin"`,
+			expected:   true,
+		},
+		{
+			name:       "regexp tag match",
+			expression: `tags.source.matches("^[0-9a-zA-z-_]+@mycompany.com$")`,
+			expected:   true,
+		},
+		{
+			name:       "match field value",
+			expression: `fields.count > 10`,
+			expected:   true,
+		},
+		{
+			name:       "match timestamp year",
+			expression: `time.getFullYear() == 2023`,
+			expected:   true,
+		},
+		{
+			name:       "now",
+			expression: `now() > time`,
+			expected:   true,
+		},
+		{
+			name:       "arithmetics",
+			expression: `fields.count + fields.errors < fields.total`,
+			expected:   true,
+		},
+		{
+			name:       "arithmetics",
+			expression: `fields.count + fields.errors < fields.total`,
+			expected:   true,
+		},
+		{
+			name:       "logical expression",
+			expression: `(name.startsWith("t") || fields.on) && "id" in fields && fields.id.contains("nwr")`,
+			expected:   true,
+		},
+		{
+			name:       "python-style logical expression",
+			expression: `(name.startsWith("t") or fields.on) and "id" in fields and fields.id.contains("nwr")`,
+			expected:   true,
+		},
+		{
+			name:       "time arithmetics",
+			expression: `time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
+			expected:   true,
+		},
+		{
+			name:       "complex field filtering",
+			expression: `fields.exists(f, type(fields[f]) in [int, uint, double] and fields[f] > 20.0)`,
+			expected:   true,
+		},
+		{
+			name:       "complex field filtering (exactly one)",
+			expression: `fields.exists_one(f, type(fields[f]) in [int, uint, double] and fields[f] > 20.0)`,
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := Filter{
+				MetricPass: tt.expression,
+			}
+			require.NoError(t, f.Compile())
+			selected, err := f.Select(m)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, selected)
+		})
 	}
 }
 
@@ -503,13 +622,68 @@ func BenchmarkFilter(b *testing.B) {
 				time.Unix(0, 0),
 			),
 		},
+		{
+			name: "metric filter exact name",
+			filter: Filter{
+				MetricPass: `name == "cpu"`,
+			},
+			metric: testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "metric filter regexp",
+			filter: Filter{
+				MetricPass: `name.matches("^c[a-z]*$")`,
+			},
+			metric: testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "metric filter time",
+			filter: Filter{
+				MetricPass: `time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
+			},
+			metric: testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "metric filter complex",
+			filter: Filter{
+				MetricPass: `"source" in tags` +
+					` and fields.exists(f, type(fields[f]) in [int, uint, double] and fields[f] > 20.0)` +
+					` and time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
+			},
+			metric: testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
 	}
 
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			require.NoError(b, tt.filter.Compile())
 			for n := 0; n < b.N; n++ {
-				tt.filter.Select(tt.metric)
+				_, err := tt.filter.Select(tt.metric)
+				require.NoError(b, err)
 			}
 		})
 	}

@@ -5,6 +5,7 @@ package intel_pmu
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -131,7 +132,7 @@ func (i *IntelPMU) Init() error {
 		return fmt.Errorf("error during event definitions paths validation: %w", err)
 	}
 
-	reader, err := newReader(i.EventListPaths)
+	reader, err := newReader(i.Log, i.EventListPaths)
 	if err != nil {
 		return err
 	}
@@ -270,11 +271,16 @@ func (i *IntelPMU) Stop() {
 	}
 }
 
-func newReader(files []string) (*ia.JSONFilesReader, error) {
+func newReader(log telegraf.Logger, files []string) (*ia.JSONFilesReader, error) {
 	reader := ia.NewFilesReader()
 	for _, file := range files {
 		err := reader.AddFiles(file)
 		if err != nil {
+			var deprecatedFormatError *ia.DeprecatedFormatError
+			if errors.As(err, &deprecatedFormatError) {
+				log.Warnf("%v. See the perfmon repo for updated event files", deprecatedFormatError)
+				continue
+			}
 			return nil, fmt.Errorf("failed to add files to reader: %w", err)
 		}
 	}

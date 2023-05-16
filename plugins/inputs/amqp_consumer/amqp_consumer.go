@@ -14,6 +14,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -55,8 +56,9 @@ type AMQPConsumer struct {
 	AuthMethod string
 	tls.ClientConfig
 
-	ContentEncoding string `toml:"content_encoding"`
-	Log             telegraf.Logger
+	ContentEncoding      string      `toml:"content_encoding"`
+	MaxDecompressionSize config.Size `toml:"max_decompression_size"`
+	Log                  telegraf.Logger
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
 
@@ -113,6 +115,10 @@ func (a *AMQPConsumer) Init() error {
 		a.MaxUndeliveredMessages = 1000
 	}
 
+	if a.MaxDecompressionSize <= 0 {
+		a.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
+	}
+
 	return nil
 }
 
@@ -144,11 +150,11 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 		}
 	}
 
-	config := amqp.Config{
+	amqpConfig := amqp.Config{
 		TLSClientConfig: tlsCfg,
 		SASL:            auth, // if nil, it will be PLAIN
 	}
-	return &config, nil
+	return &amqpConfig, nil
 }
 
 // Start satisfies the telegraf.ServiceInput interface
@@ -412,7 +418,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 	}
 
 	a.decoder.SetEncoding(d.ContentEncoding)
-	body, err := a.decoder.Decode(d.Body)
+	body, err := a.decoder.Decode(d.Body, int64(a.MaxDecompressionSize))
 	if err != nil {
 		onError()
 		return err

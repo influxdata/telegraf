@@ -22,7 +22,7 @@ type SASLAuth struct {
 	SASLGSSAPIKeyTabPath         string `toml:"sasl_gssapi_key_tab_path"`
 	SASLGSSAPIRealm              string `toml:"sasl_gssapi_realm"`
 
-	// OAUTHBEARER config. experimental. undoubtedly this is not good enough.
+	// OAUTHBEARER config
 	SASLAccessToken config.Secret `toml:"sasl_access_token"`
 }
 

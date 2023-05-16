@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/smithy-go"
+	"github.com/coocood/freecache"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -29,21 +30,30 @@ type AwsEc2Processor struct {
 	ImdsTags         []string        `toml:"imds_tags"`
 	EC2Tags          []string        `toml:"ec2_tags"`
 	Timeout          config.Duration `toml:"timeout"`
+	CacheTTL         config.Duration `toml:"cache_ttl"`
 	Ordered          bool            `toml:"ordered"`
 	MaxParallelCalls int             `toml:"max_parallel_calls"`
 	Log              telegraf.Logger `toml:"-"`
+	TagCacheSize     int             `toml:"tag_cache_size"`
+	LogCacheStats    bool            `toml:"log_cache_stats"`
 
-	imdsClient  *imds.Client
-	imdsTagsMap map[string]struct{}
-	ec2Client   *ec2.Client
-	parallel    parallel.Parallel
-	instanceID  string
+	tagCache *freecache.Cache
+
+	imdsClient          *imds.Client
+	imdsTagsMap         map[string]struct{}
+	ec2Client           *ec2.Client
+	parallel            parallel.Parallel
+	instanceID          string
+	cancelCleanupWorker context.CancelFunc
 }
 
 const (
 	DefaultMaxOrderedQueueSize = 10_000
 	DefaultMaxParallelCalls    = 10
 	DefaultTimeout             = 10 * time.Second
+	DefaultCacheTTL            = 0 * time.Hour
+	DefaultCacheSize           = 1000
+	DefaultLogCacheStats       = false
 )
 
 var allowedImdsTags = map[string]struct{}{
@@ -71,6 +81,29 @@ func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) er
 	return nil
 }
 
+func (r *AwsEc2Processor) logCacheStatistics(ctx context.Context) {
+	if r.tagCache == nil {
+		return
+	}
+
+	ticker := time.NewTicker(30 * time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			r.Log.Debugf("cache: size=%d hit=%d miss=%d full=%d\n",
+				r.tagCache.EntryCount(),
+				r.tagCache.HitCount(),
+				r.tagCache.MissCount(),
+				r.tagCache.EvacuateCount(),
+			)
+			r.tagCache.ResetStatistics()
+		}
+	}
+}
+
 func (r *AwsEc2Processor) Init() error {
 	r.Log.Debug("Initializing AWS EC2 Processor")
 	if len(r.EC2Tags) == 0 && len(r.ImdsTags) == 0 {
@@ -91,6 +124,18 @@ func (r *AwsEc2Processor) Init() error {
 }
 
 func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
+	r.tagCache = freecache.NewCache(r.TagCacheSize)
+	if r.LogCacheStats {
+		ctx, cancel := context.WithCancel(context.Background())
+		r.cancelCleanupWorker = cancel
+		go r.logCacheStatistics(ctx)
+	}
+
+	r.Log.Debugf("cache: size=%d\n", r.TagCacheSize)
+	if r.CacheTTL > 0 {
+		r.Log.Debugf("cache timeout: seconds=%d\n", int(time.Duration(r.CacheTTL).Seconds()))
+	}
+
 	ctx := context.Background()
 	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -114,7 +159,7 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 
 		r.ec2Client = ec2.NewFromConfig(cfg)
 
-		// Chceck if instance is allowed to call DescribeTags.
+		// Check if instance is allowed to call DescribeTags.
 		_, err = r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
 			DryRun: aws.Bool(true),
 		})
@@ -141,45 +186,103 @@ func (r *AwsEc2Processor) Stop() {
 	if r.parallel != nil {
 		r.parallel.Stop()
 	}
+	r.cancelCleanupWorker()
 }
 
-func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
+func (r *AwsEc2Processor) LookupIMDSTags(metric telegraf.Metric) telegraf.Metric {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
 	defer cancel()
 
-	// Add IMDS Instance Identity Document tags.
-	if len(r.imdsTagsMap) > 0 {
-		iido, err := r.imdsClient.GetInstanceIdentityDocument(
-			ctx,
-			&imds.GetInstanceIdentityDocumentInput{},
-		)
-		if err != nil {
-			r.Log.Errorf("Error when calling GetInstanceIdentityDocument: %v", err)
-			return []telegraf.Metric{metric}
-		}
+	var tagsNotFound []string
 
-		for tag := range r.imdsTagsMap {
-			if v := getTagFromInstanceIdentityDocument(iido, tag); v != "" {
-				metric.AddTag(tag, v)
+	for tag := range r.imdsTagsMap {
+		val, err := r.tagCache.Get([]byte(tag))
+		if err != nil {
+			tagsNotFound = append(tagsNotFound, tag)
+		} else {
+			metric.AddTag(tag, string(val))
+		}
+	}
+
+	if len(tagsNotFound) == 0 {
+		return metric
+	}
+
+	iido, err := r.imdsClient.GetInstanceIdentityDocument(
+		ctx,
+		&imds.GetInstanceIdentityDocumentInput{},
+	)
+
+	if err != nil {
+		r.Log.Errorf("Error when calling GetInstanceIdentityDocument: %v", err)
+		return metric
+	}
+
+	for _, tag := range tagsNotFound {
+		if v := getTagFromInstanceIdentityDocument(iido, tag); v != "" {
+			metric.AddTag(tag, v)
+			expiration := int(time.Duration(r.CacheTTL).Seconds())
+			err = r.tagCache.Set([]byte(tag), []byte(v), expiration)
+			if err != nil {
+				r.Log.Errorf("Error when setting IMDS tag cache value: %v", err)
 			}
 		}
 	}
 
-	// Add EC2 instance tags.
-	if len(r.EC2Tags) > 0 {
-		dto, err := r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
-			Filters: createFilterFromTags(r.instanceID, r.EC2Tags),
-		})
-		if err != nil {
-			r.Log.Errorf("Error during EC2 DescribeTags: %v", err)
-			return []telegraf.Metric{metric}
-		}
+	return metric
+}
 
-		for _, tag := range r.EC2Tags {
-			if v := getTagFromDescribeTags(dto, tag); v != "" {
-				metric.AddTag(tag, v)
+func (r *AwsEc2Processor) LookupEC2Tags(metric telegraf.Metric) telegraf.Metric {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
+	defer cancel()
+
+	var tagsNotFound []string
+
+	for _, tag := range r.EC2Tags {
+		val, err := r.tagCache.Get([]byte(tag))
+		if err != nil {
+			tagsNotFound = append(tagsNotFound, tag)
+		} else {
+			metric.AddTag(tag, string(val))
+		}
+	}
+
+	if len(tagsNotFound) == 0 {
+		return metric
+	}
+
+	dto, err := r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
+		Filters: createFilterFromTags(r.instanceID, r.EC2Tags),
+	})
+
+	if err != nil {
+		r.Log.Errorf("Error during EC2 DescribeTags: %v", err)
+		return metric
+	}
+
+	for _, tag := range r.EC2Tags {
+		if v := getTagFromDescribeTags(dto, tag); v != "" {
+			metric.AddTag(tag, v)
+			expiration := int(time.Duration(r.CacheTTL).Seconds())
+			err = r.tagCache.Set([]byte(tag), []byte(v), expiration)
+			if err != nil {
+				r.Log.Errorf("Error when setting EC2Tags tag cache value: %v", err)
 			}
 		}
+	}
+
+	return metric
+}
+
+func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
+	// Add IMDS Instance Identity Document tags.
+	if len(r.imdsTagsMap) > 0 {
+		metric = r.LookupIMDSTags(metric)
+	}
+
+	// Add EC2 instance tags.
+	if len(r.EC2Tags) > 0 {
+		metric = r.LookupEC2Tags(metric)
 	}
 
 	return []telegraf.Metric{metric}
@@ -194,7 +297,9 @@ func init() {
 func newAwsEc2Processor() *AwsEc2Processor {
 	return &AwsEc2Processor{
 		MaxParallelCalls: DefaultMaxParallelCalls,
+		TagCacheSize:     DefaultCacheSize,
 		Timeout:          config.Duration(DefaultTimeout),
+		CacheTTL:         config.Duration(DefaultCacheTTL),
 		imdsTagsMap:      make(map[string]struct{}),
 	}
 }

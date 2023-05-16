@@ -1,0 +1,30 @@
+{
+    "timestamp": "2023-04-07T00:21:07.805683+0800",
+    "event_type": "stats",
+    "stats": {
+        "uptime": 160,
+        "capture": {
+            "kernel_packets": 522,
+            "kernel_drops": 0,
+            "errors": 0
+        },
+        "flow": {
+            "memcap": 0,
+            "tcp": 15,
+            "udp": 13,
+            "wrk": {
+                "spare_sync_avg": 100,
+                "spare_sync": 11
+            },
+            "mgr": {
+                "full_hash_pass": 1,
+                "closed_pruned": 0,
+                "new_pruned": 0
+            },
+            "spare": 10100,
+            "emerg_mode_entered": 0,
+            "emerg_mode_over": 0,
+            "memuse": 9965056
+        }
+    }
+}

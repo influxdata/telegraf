@@ -17,6 +17,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
+type unwrappableMetric interface{ Unwrap() telegraf.Metric }
+
 //go:embed sample.conf
 var sampleConfig string
 
@@ -64,7 +66,14 @@ func (p *Processor) Init() error {
 
 func (p *Processor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	out := make([]telegraf.Metric, 0, len(in))
-	for _, m := range in {
+	for _, raw := range in {
+		var m telegraf.Metric
+		if wm, ok := raw.(unwrappableMetric); ok {
+			m = wm.Unwrap()
+		} else {
+			m = raw
+		}
+
 		var buf bytes.Buffer
 		if err := p.tmpl.Execute(&buf, m); err != nil {
 			p.Log.Errorf("generating key failed: %v", err)
