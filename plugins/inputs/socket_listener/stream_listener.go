@@ -86,7 +86,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 		conn = c.NetConn()
 	}
 
-  addr := conn.RemoteAddr().String()
+	addr := conn.RemoteAddr().String()
 	l.Lock()
 	if l.MaxConnections > 0 && len(l.connections) >= l.MaxConnections {
 		l.Unlock()
@@ -94,7 +94,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 		_ = conn.Close()
 		return fmt.Errorf("unable to accept connection from %q: too many connections", addr)
 	}
-	l.connections[addr] = conn
+	l.connections[conn] = struct{}{}
 	l.Unlock()
 
 	if l.ReadBufferSize > 0 {
