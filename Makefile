@@ -120,7 +120,7 @@ embed_readme_%:
 .PHONY: config
 config:
 	@echo "generating default config"
-	go run ./cmd/telegraf config > etc/telegraf.conf
+	# go run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
 docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
