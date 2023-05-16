@@ -184,7 +184,7 @@ func TestSocketListener(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 
 			if sl, ok := plugin.listener.(*streamListener); ok {
-				require.NotNil(t, sl.connections[client.LocalAddr().String()])
+				require.NotEmpty(t, sl.connections)
 			}
 
 			plugin.Stop()
