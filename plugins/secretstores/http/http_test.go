@@ -139,7 +139,7 @@ func TestGetErrors(t *testing.T) {
 			Cipher: "AES256/CBC/PKCS#5",
 			Aes: AesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("asupersecretiv42")),
+				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
 		},
 	}
@@ -165,7 +165,7 @@ func TestResolver(t *testing.T) {
 			Cipher: "AES256/CBC/PKCS#5",
 			Aes: AesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("asupersecretiv42")),
+				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
 		},
 	}
@@ -206,7 +206,7 @@ func TestGetResolverErrors(t *testing.T) {
 			Cipher: "AES256/CBC/PKCS#5",
 			Aes: AesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("asupersecretiv42")),
+				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
 		},
 	}
@@ -239,7 +239,7 @@ func TestInvalidServerResponse(t *testing.T) {
 			Cipher: "AES256/CBC/PKCS#5",
 			Aes: AesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("asupersecretiv42")),
+				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
 		},
 	}
@@ -277,7 +277,7 @@ func TestAdditionalHeaders(t *testing.T) {
 			Cipher: "AES256/CBC/PKCS#5",
 			Aes: AesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("asupersecretiv42")),
+				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
 		},
 	}

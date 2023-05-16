@@ -111,6 +111,16 @@ func (a *AesEncryptor) Init() error {
 		return errors.New("'init_vector' has to be specified or derived from password")
 	}
 
+	encodedIV, err := a.Vec.Get()
+	if err != nil {
+		return fmt.Errorf("getting IV failed: %w", err)
+	}
+	ivlen := len(encodedIV)
+	config.ReleaseSecret(encodedIV)
+	if ivlen != 2*aes.BlockSize {
+		return errors.New("init vector size must match block size")
+	}
+
 	return nil
 }
 
@@ -141,11 +151,16 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 	}
 
 	// Setup the block/stream cipher and decode the data
-	iv, err := a.Vec.Get()
+	encodedIV, err := a.Vec.Get()
 	if err != nil {
 		return nil, fmt.Errorf("getting initialization-vector failed: %w", err)
 	}
-	defer config.ReleaseSecret(iv)
+	iv := make([]byte, hex.DecodedLen(len(encodedIV)))
+	if _, err := hex.Decode(iv, encodedIV); err != nil {
+		config.ReleaseSecret(encodedIV)
+		return nil, fmt.Errorf("decoding init vector failed: %w", err)
+	}
+	config.ReleaseSecret(encodedIV)
 
 	cipher.NewCBCDecrypter(block, iv).CryptBlocks(data, data)
 	return a.trim(data)
