@@ -20,3 +20,4 @@ issues.json
 test.json
 /.config
 /.clusters
+/cmd/telegraf/__debug_bin
