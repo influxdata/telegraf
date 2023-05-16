@@ -113,7 +113,7 @@ func (l *CaptureLogger) Errors() []string {
 	return l.filter(LevelError)
 }
 
-func (l *CaptureLogger) Warns() []string {
+func (l *CaptureLogger) Warnings() []string {
 	return l.filter(LevelWarn)
 }
 
