@@ -13,14 +13,17 @@ import (
 	"time"
 
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+	gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -898,6 +901,91 @@ func TestNotification(t *testing.T) {
 						"temperature/critical_high_threshold": float64(94),
 						"temperature/warning_status":          false,
 						"name":                                "CPU On-board",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "Juniper Extension",
+			plugin: &GNMI{
+				Log:            testutil.Logger{},
+				Encoding:       "proto",
+				VendorSpecific: []string{"juniper_header"},
+				Redial:         config.Duration(1 * time.Second),
+				Subscriptions: []Subscription{
+					{
+						Name:             "type",
+						Origin:           "openconfig-platform",
+						Path:             "/components/component[name=CHASSIS0:FPC0]/state",
+						SubscriptionMode: "sample",
+						SampleInterval:   config.Duration(1 * time.Second),
+					},
+				},
+			},
+			server: &MockServer{
+				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+						return err
+					}
+					response := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
+								Timestamp: 1668771585733542546,
+								Prefix: &gnmiLib.Path{
+									Elem: []*gnmiLib.PathElem{
+										{Name: "openconfig-platform:components"},
+										{Name: "component", Key: map[string]string{"name": "CHASSIS0:FPC0"}},
+										{Name: "state"},
+									},
+									Target: "OC-YANG",
+								},
+								Update: []*gnmiLib.Update{
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{Name: "type"},
+											}},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_StringVal{StringVal: "LINECARD"},
+										},
+									},
+								},
+							},
+						},
+						Extension: []*gnmiExt.Extension{{
+							Ext: &gnmiExt.Extension_RegisteredExt{
+								RegisteredExt: &gnmiExt.RegisteredExtension{
+									// Juniper Header Extension
+									//EID_JUNIPER_TELEMETRY_HEADER = 1;
+									Id: 1,
+									Msg: func(jnprExt *jnprHeader.GnmiJuniperTelemetryHeaderExtension) []byte {
+										b, err := proto.Marshal(jnprExt)
+										if err != nil {
+											return nil
+										}
+										return b
+									}(&jnprHeader.GnmiJuniperTelemetryHeaderExtension{ComponentId: 15, SubComponentId: 1, Component: "PICD"}),
+								},
+							},
+						}},
+					}
+					return server.Send(response)
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"type",
+					map[string]string{
+						"path":             "openconfig-platform:/components/component/state",
+						"source":           "127.0.0.1",
+						"name":             "CHASSIS0:FPC0",
+						"component_id":     "15",
+						"sub_component_id": "1",
+						"component":        "PICD",
+					},
+					map[string]interface{}{
+						"type": "LINECARD",
 					},
 					time.Unix(0, 0),
 				),

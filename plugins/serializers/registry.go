@@ -9,7 +9,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
@@ -18,6 +17,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
+
+// Creator is the function to create a new serializer
+type Creator func() Serializer
+
+// Serializers contains the registry of all known serializers (following the new style)
+var Serializers = map[string]Creator{}
+
+// Add adds a serializer to the registry. Usually this function is called in the plugin's init function
+func Add(name string, creator Creator) {
+	Serializers[name] = creator
+}
 
 // SerializerOutput is an interface for output plugins that are able to
 // serialize telegraf metrics into arbitrary data formats.
@@ -44,6 +54,12 @@ type Serializer interface {
 	// a byte buffer.  This method is not required to be suitable for use with
 	// line oriented framing.
 	SerializeBatch(metrics []telegraf.Metric) ([]byte, error)
+}
+
+// SerializerCompatibility is an interface for backward-compatible initialization of serializers
+type SerializerCompatibility interface {
+	// InitFromConfig sets the serializers internal variables from the old-style config
+	InitFromConfig(config *Config) error
 }
 
 // Config is a struct that covers the data types needed for all serializer types,
@@ -153,8 +169,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 	switch config.DataFormat {
 	case "csv":
 		serializer, err = NewCSVSerializer(config)
-	case "influx":
-		serializer, err = NewInfluxSerializerConfig(config), nil
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(
 			config.Prefix,
@@ -187,7 +201,20 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "msgpack":
 		serializer, err = NewMsgpackSerializer(), nil
 	default:
-		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
+		creator, found := Serializers[config.DataFormat]
+		if !found {
+			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
+		}
+
+		// Try to create new-style serializers the old way...
+		serializer := creator()
+		p, ok := serializer.(SerializerCompatibility)
+		if !ok {
+			return nil, fmt.Errorf("serializer for %q cannot be created the old way", config.DataFormat)
+		}
+		err := p.InitFromConfig(config)
+
+		return serializer, err
 	}
 	return serializer, err
 }
@@ -261,28 +288,6 @@ func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimet
 
 func NewNowSerializer() (Serializer, error) {
 	return nowmetric.NewSerializer()
-}
-
-func NewInfluxSerializerConfig(config *Config) Serializer {
-	var sort influx.FieldSortOrder
-	if config.InfluxSortFields {
-		sort = influx.SortFields
-	}
-
-	var typeSupport influx.FieldTypeSupport
-	if config.InfluxUintSupport {
-		typeSupport = typeSupport + influx.UintSupport
-	}
-
-	s := influx.NewSerializer()
-	s.SetMaxLineBytes(config.InfluxMaxLineBytes)
-	s.SetFieldSortOrder(sort)
-	s.SetFieldTypeSupport(typeSupport)
-	return s
-}
-
-func NewInfluxSerializer() Serializer {
-	return influx.NewSerializer()
 }
 
 //nolint:revive //argument-limit conditionally more arguments allowed

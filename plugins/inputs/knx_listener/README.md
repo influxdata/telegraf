@@ -52,6 +52,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   addresses = ["5/5/3"]
 ```
 
+### Related tools
+
+- [knx-telegraf-config-generator](https://github.com/svsool/knx-telegraf-config-generator) generates configuration from KNX project file
+
 ### Measurement configurations
 
 Each measurement contains only one datapoint-type (DPT) and assigns a list of

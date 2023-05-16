@@ -1167,3 +1167,19 @@ func TestTrimRegression(t *testing.T) {
 	)
 	require.Equal(t, expected, actual)
 }
+
+func TestMultilineNilMetric(t *testing.T) {
+	buf, err := os.ReadFile("./testdata/test_multiline.log")
+	require.NoError(t, err)
+
+	p := &Parser{
+		Measurement: "multiline",
+		Patterns:    []string{`%{TIMESTAMP_ISO8601:timestamp:ts-rfc3339} Info%{MULTILINEDATA:text}`},
+		Multiline:   true,
+		Log:         testutil.Logger{},
+	}
+	require.NoError(t, p.Compile())
+	actual, err := p.Parse(buf)
+	require.NoError(t, err)
+	require.Empty(t, actual)
+}

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -20,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/persister"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -29,6 +31,9 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/plugins/serializers"
+	_ "github.com/influxdata/telegraf/plugins/serializers/all" // Blank import to have all serializers for testing
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestReadBinaryFile(t *testing.T) {
@@ -508,6 +513,244 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 		)
 	} else {
 		require.Equal(t, "error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
+	}
+}
+
+func TestConfig_Filtering(t *testing.T) {
+	c := NewConfig()
+	require.NoError(t, c.LoadAll("./testdata/filter_metricpass.toml"))
+	require.Len(t, c.Processors, 1)
+
+	in := []telegraf.Metric{
+		metric.New(
+			"machine",
+			map[string]string{"state": "on"},
+			map[string]interface{}{"value": 42.0},
+			time.Date(2023, time.April, 23, 01, 15, 30, 0, time.UTC),
+		),
+		metric.New(
+			"machine",
+			map[string]string{"state": "off"},
+			map[string]interface{}{"value": 23.0},
+			time.Date(2023, time.April, 23, 23, 59, 01, 0, time.UTC),
+		),
+		metric.New(
+			"temperature",
+			map[string]string{},
+			map[string]interface{}{"value": 23.5},
+			time.Date(2023, time.April, 24, 02, 15, 30, 0, time.UTC),
+		),
+	}
+	expected := []telegraf.Metric{
+		metric.New(
+			"machine",
+			map[string]string{
+				"state":     "on",
+				"processed": "yes",
+			},
+			map[string]interface{}{"value": 42.0},
+			time.Date(2023, time.April, 23, 01, 15, 30, 0, time.UTC),
+		),
+		metric.New(
+			"machine",
+			map[string]string{"state": "off"},
+			map[string]interface{}{"value": 23.0},
+			time.Date(2023, time.April, 23, 23, 59, 01, 0, time.UTC),
+		),
+		metric.New(
+			"temperature",
+			map[string]string{
+				"processed": "yes",
+			},
+			map[string]interface{}{"value": 23.5},
+			time.Date(2023, time.April, 24, 02, 15, 30, 0, time.UTC),
+		),
+	}
+
+	plugin := c.Processors[0]
+	var acc testutil.Accumulator
+	for _, m := range in {
+		require.NoError(t, plugin.Add(m, &acc))
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func TestConfig_SerializerInterfaceNewFormat(t *testing.T) {
+	formats := []string{
+		"carbon2",
+		"csv",
+		"graphite",
+		"influx",
+		"json",
+		"msgpack",
+		"nowmetric",
+		"prometheus",
+		"prometheusremotewrite",
+		"splunkmetric",
+		"wavefront",
+	}
+
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/serializers_new.toml"))
+	require.Len(t, c.Outputs, len(formats))
+
+	cfg := serializers.Config{}
+	override := map[string]struct {
+		param map[string]interface{}
+		mask  []string
+	}{}
+
+	expected := make([]telegraf.Serializer, 0, len(formats))
+	for _, format := range formats {
+		formatCfg := &cfg
+		formatCfg.DataFormat = format
+
+		logger := models.NewLogger("serializers", format, "test")
+
+		var serializer telegraf.Serializer
+		if creator, found := serializers.Serializers[format]; found {
+			serializer = creator()
+		} else {
+			var err error
+			serializer, err = serializers.NewSerializer(formatCfg)
+			require.NoErrorf(t, err, "No serializer for format %q", format)
+		}
+
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(serializer))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
+			}
+		}
+		models.SetLoggerOnPlugin(serializer, logger)
+		if s, ok := serializer.(telegraf.Initializer); ok {
+			require.NoError(t, s.Init())
+		}
+		expected = append(expected, serializer)
+	}
+	require.Len(t, expected, len(formats))
+
+	actual := make([]interface{}, 0)
+	for _, plugin := range c.Outputs {
+		output, ok := plugin.Output.(*MockupOutputPluginSerializerNew)
+		require.True(t, ok)
+		// Get the parser set with 'SetParser()'
+		if p, ok := output.Serializer.(*models.RunningSerializer); ok {
+			actual = append(actual, p.Serializer)
+		} else {
+			actual = append(actual, output.Serializer)
+		}
+	}
+	require.Len(t, actual, len(formats))
+
+	for i, format := range formats {
+		// Determine the underlying type of the serializer
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreTypes(sync.Mutex{}, regexp.Regexp{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
+		if settings, found := override[format]; found {
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
+		}
+
+		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetSerializer() for %q", format)
+	}
+}
+
+func TestConfig_SerializerInterfaceOldFormat(t *testing.T) {
+	formats := []string{
+		"carbon2",
+		"csv",
+		"graphite",
+		"influx",
+		"json",
+		"msgpack",
+		"nowmetric",
+		"prometheus",
+		"prometheusremotewrite",
+		"splunkmetric",
+		"wavefront",
+	}
+
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/serializers_old.toml"))
+	require.Len(t, c.Outputs, len(formats))
+
+	cfg := serializers.Config{}
+	override := map[string]struct {
+		param map[string]interface{}
+		mask  []string
+	}{}
+
+	expected := make([]telegraf.Serializer, 0, len(formats))
+	for _, format := range formats {
+		formatCfg := &cfg
+		formatCfg.DataFormat = format
+
+		logger := models.NewLogger("serializers", format, "test")
+
+		var serializer serializers.Serializer
+		if creator, found := serializers.Serializers[format]; found {
+			serializer = creator()
+		} else {
+			var err error
+			serializer, err = serializers.NewSerializer(formatCfg)
+			require.NoErrorf(t, err, "No serializer for format %q", format)
+		}
+
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(serializer))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
+			}
+		}
+		models.SetLoggerOnPlugin(serializer, logger)
+		if s, ok := serializer.(telegraf.Initializer); ok {
+			require.NoError(t, s.Init())
+		}
+		expected = append(expected, serializer)
+	}
+	require.Len(t, expected, len(formats))
+
+	actual := make([]interface{}, 0)
+	for _, plugin := range c.Outputs {
+		output, ok := plugin.Output.(*MockupOutputPluginSerializerOld)
+		require.True(t, ok)
+		// Get the parser set with 'SetParser()'
+		if p, ok := output.Serializer.(*models.RunningSerializer); ok {
+			actual = append(actual, p.Serializer)
+		} else {
+			actual = append(actual, output.Serializer)
+		}
+	}
+	require.Len(t, actual, len(formats))
+
+	for i, format := range formats {
+		// Determine the underlying type of the serializer
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreTypes(sync.Mutex{}, regexp.Regexp{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
+		if settings, found := override[format]; found {
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
+		}
+
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetSerializer() for %q", format)
 	}
 }
 
@@ -1253,11 +1496,13 @@ func (m *MockupProcessorPlugin) Stop() {
 func (m *MockupProcessorPlugin) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPlugin) Apply(_ ...telegraf.Metric) []telegraf.Metric {
-	return nil
-}
-func (m *MockupProcessorPlugin) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
-	return nil
+func (m *MockupProcessorPlugin) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	out := make([]telegraf.Metric, 0, len(in))
+	for _, m := range in {
+		m.AddTag("processed", "yes")
+		out = append(out, m)
+	}
+	return out
 }
 func (m *MockupProcessorPlugin) GetState() interface{} {
 	return m.state
@@ -1338,6 +1583,47 @@ func (m *MockupOuputPlugin) SampleConfig() string {
 	return "Mockup test output plugin"
 }
 func (m *MockupOuputPlugin) Write(_ []telegraf.Metric) error {
+	return nil
+}
+
+/*** Mockup OUTPUT plugin for serializer testing to avoid cyclic dependencies ***/
+type MockupOutputPluginSerializerOld struct {
+	Serializer serializers.Serializer
+}
+
+func (m *MockupOutputPluginSerializerOld) SetSerializer(s serializers.Serializer) {
+	m.Serializer = s
+}
+func (*MockupOutputPluginSerializerOld) Connect() error {
+	return nil
+}
+func (*MockupOutputPluginSerializerOld) Close() error {
+	return nil
+}
+func (*MockupOutputPluginSerializerOld) SampleConfig() string {
+	return "Mockup test output plugin"
+}
+func (*MockupOutputPluginSerializerOld) Write(_ []telegraf.Metric) error {
+	return nil
+}
+
+type MockupOutputPluginSerializerNew struct {
+	Serializer telegraf.Serializer
+}
+
+func (m *MockupOutputPluginSerializerNew) SetSerializer(s telegraf.Serializer) {
+	m.Serializer = s
+}
+func (*MockupOutputPluginSerializerNew) Connect() error {
+	return nil
+}
+func (*MockupOutputPluginSerializerNew) Close() error {
+	return nil
+}
+func (*MockupOutputPluginSerializerNew) SampleConfig() string {
+	return "Mockup test output plugin"
+}
+func (*MockupOutputPluginSerializerNew) Write(_ []telegraf.Metric) error {
 	return nil
 }
 
@@ -1456,5 +1742,11 @@ func init() {
 	})
 	outputs.Add("http", func() telegraf.Output {
 		return &MockupOuputPlugin{}
+	})
+	outputs.Add("serializer_test_new", func() telegraf.Output {
+		return &MockupOutputPluginSerializerNew{}
+	})
+	outputs.Add("serializer_test_old", func() telegraf.Output {
+		return &MockupOutputPluginSerializerOld{}
 	})
 }

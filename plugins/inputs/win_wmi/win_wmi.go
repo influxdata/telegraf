@@ -5,6 +5,7 @@ package win_wmi
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"runtime"
 	"strings"
@@ -110,8 +111,8 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 
 	// init COM
 	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
-		oleCode := err.(*ole.OleError).Code()
-		if oleCode != ole.S_OK && oleCode != sFalse {
+		var oleCode *ole.OleError
+		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != sFalse {
 			return err
 		}
 	}

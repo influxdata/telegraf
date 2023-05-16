@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
@@ -133,16 +132,15 @@ func defaultVSphere() *VSphere {
 		DatacenterInclude:         []string{"/**"},
 		ClientConfig:              itls.ClientConfig{InsecureSkipVerify: true},
 
-		MaxQueryObjects:             256,
-		MaxQueryMetrics:             256,
-		ObjectDiscoveryInterval:     config.Duration(time.Second * 300),
-		Timeout:                     config.Duration(time.Second * 20),
-		ForceDiscoverOnInit:         true,
-		DiscoverConcurrency:         1,
-		CollectConcurrency:          1,
-		Separator:                   ".",
-		HistoricalInterval:          config.Duration(time.Second * 300),
-		DisconnectedServersBehavior: "error",
+		MaxQueryObjects:         256,
+		MaxQueryMetrics:         256,
+		ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+		Timeout:                 config.Duration(time.Second * 20),
+		ForceDiscoverOnInit:     true,
+		DiscoverConcurrency:     1,
+		CollectConcurrency:      1,
+		Separator:               ".",
+		HistoricalInterval:      config.Duration(time.Second * 300),
 	}
 }
 
@@ -220,12 +218,6 @@ func TestMaxQuery(t *testing.T) {
 		t.Skip("Skipping long test in short mode")
 	}
 
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
 	m, s, err := createSim(0)
 	require.NoError(t, err)
 	defer m.Remove()
@@ -271,13 +263,6 @@ func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, exp
 func TestFinder(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long test in short mode")
-	}
-
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
 	}
 
 	m, s, err := createSim(0)
@@ -397,13 +382,6 @@ func TestFolders(t *testing.T) {
 		t.Skip("Skipping long test in short mode")
 	}
 
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
-
 	m, s, err := createSim(1)
 	require.NoError(t, err)
 	defer m.Remove()
@@ -435,12 +413,46 @@ func TestFolders(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
-func TestCollectionWithClusterMetrics(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping long test in short mode")
-	}
+func TestVsanCmmds(t *testing.T) {
+	m, s, err := createSim(0)
+	require.NoError(t, err)
+	defer m.Remove()
+	defer s.Close()
 
-	testCollection(t, false)
+	v := defaultVSphere()
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, s.URL, v)
+	require.NoError(t, err)
+
+	f := Finder{c}
+	var clusters []mo.ClusterComputeResource
+	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, []string{}, &clusters)
+	require.NoError(t, err)
+
+	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
+	_, err = getCmmdsMap(ctx, c.Client.Client, clusterObj)
+	require.Error(t, err)
+}
+
+func TestVsanTags(t *testing.T) {
+	host := "5b860329-3bc4-a76c-48b6-246e963cfcc0"
+	disk := "52ee3be1-47cc-b50d-ecab-01af0f706381"
+	ssdDisk := "52f26fc8-0b9b-56d8-3a32-a9c3bfbc6148"
+	ssd := "52173131-3384-bb63-4ef8-c00b0ce7e3e7"
+	hostname := "sc2-hs1-b2801.eng.vmware.com"
+	devName := "naa.55cd2e414d82c815:2"
+	var cmmds = map[string]CmmdsEntity{
+		disk:    {UUID: disk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 1.}},
+		ssdDisk: {UUID: ssdDisk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 0., SsdUUID: ssd}},
+		host:    {UUID: host, Type: "HOSTNAME", Owner: host, Content: CmmdsContent{Hostname: hostname}},
+	}
+	tags := populateCMMDSTags(make(map[string]string), "capacity-disk", disk, cmmds)
+	require.Equal(t, 2, len(tags))
+	tags = populateCMMDSTags(make(map[string]string), "cache-disk", ssdDisk, cmmds)
+	require.Equal(t, 3, len(tags))
+	tags = populateCMMDSTags(make(map[string]string), "host-domclient", host, cmmds)
+	require.Equal(t, 1, len(tags))
 }
 
 func TestCollectionNoClusterMetrics(t *testing.T) {
@@ -486,13 +498,6 @@ func testCollection(t *testing.T, excludeClusters bool) {
 		v.Username = config.NewSecret([]byte(username))
 		v.Password = config.NewSecret([]byte(password))
 	} else {
-		// Don't run test on 32-bit machines due to bug in simulator.
-		// https://github.com/vmware/govmomi/issues/1330
-		var i int
-		if unsafe.Sizeof(i) < 8 {
-			return
-		}
-
 		m, s, err := createSim(0)
 		require.NoError(t, err)
 		defer m.Remove()

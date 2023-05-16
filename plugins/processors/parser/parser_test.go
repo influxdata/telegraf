@@ -603,6 +603,31 @@ func TestApply(t *testing.T) {
 					time.Unix(0, 0)),
 			},
 		},
+		{
+			name:        "override with timestamp",
+			parseFields: []string{"value"},
+			merge:       "override-with-timestamp",
+			parser: &json.Parser{
+				TimeKey:    "timestamp",
+				TimeFormat: "2006-01-02 15:04:05",
+			},
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{
+					"value": `{"timestamp": "2020-06-27 19:43:40", "value": 42.1}`,
+				},
+				time.Unix(0, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"myname",
+					map[string]string{},
+					map[string]interface{}{
+						"value": float64(42.1),
+					},
+					time.Unix(1593287020, 0)),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -621,9 +646,20 @@ func TestApply(t *testing.T) {
 
 			output := plugin.Apply(tt.input)
 			t.Logf("Testing: %s", tt.name)
-			testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
+
+			// check timestamp when using with-timestamp merge type
+			if tt.merge == "override-with-timestamp" {
+				testutil.RequireMetricsEqual(t, tt.expected, output)
+			} else {
+				testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
+			}
 		})
 	}
+}
+
+func TestInvalidMerge(t *testing.T) {
+	plugin := Parser{Merge: "fake"}
+	require.Error(t, plugin.Init())
 }
 
 func TestBadApply(t *testing.T) {

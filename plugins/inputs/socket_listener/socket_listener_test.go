@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -187,6 +188,14 @@ func TestSocketListener(t *testing.T) {
 			}
 
 			plugin.Stop()
+
+			if _, ok := plugin.listener.(*streamListener); ok {
+				// Verify that plugin.Stop() closed the client's connection
+				_ = client.SetReadDeadline(time.Now().Add(time.Second))
+				buf := []byte{1}
+				_, err = client.Read(buf)
+				require.Equal(t, err, io.EOF)
+			}
 		})
 	}
 }

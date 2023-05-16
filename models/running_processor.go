@@ -87,7 +87,10 @@ func (rp *RunningProcessor) Start(acc telegraf.Accumulator) error {
 }
 
 func (rp *RunningProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
-	if ok := rp.Config.Filter.Select(m); !ok {
+	ok, err := rp.Config.Filter.Select(m)
+	if err != nil {
+		rp.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
 		// pass downstream
 		acc.AddMetric(m)
 		return nil

@@ -73,7 +73,7 @@ func TestPingGather(t *testing.T) {
 		pingHost: mockHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,
@@ -118,7 +118,9 @@ func TestBadPingGather(t *testing.T) {
 		pingHost: mockErrorHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
 	tags := map[string]string{"url": "www.amazon.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,
@@ -176,7 +178,9 @@ func TestLossyPingGather(t *testing.T) {
 		pingHost: mockLossyHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 9,
@@ -237,7 +241,9 @@ func TestFatalPingGather(t *testing.T) {
 		pingHost: mockFatalHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.Error(t, err)
+
 	require.True(t, acc.HasFloatField("ping", "errors"),
 		"Fatal ping should have packet measurements")
 	require.False(t, acc.HasInt64Field("ping", "packets_transmitted"),
@@ -283,7 +289,8 @@ func TestUnreachablePingGather(t *testing.T) {
 		pingHost: mockUnreachableHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
@@ -331,7 +338,8 @@ func TestTTLExpiredPingGather(t *testing.T) {
 		pingHost: mockTTLExpiredPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
@@ -365,5 +373,7 @@ func TestPingBinary(t *testing.T) {
 			return "", nil
 		},
 	}
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.Error(t, err)
+	require.EqualValues(t, "www.google.com: fatal error processing ping output", err.Error())
 }

@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.20.2'
+      - image: 'quay.io/influxdb/telegraf-ci:1.20.4'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -379,6 +379,25 @@ jobs:
               --include "*.rpm" \
               --include "*.zip" \
               --acl public-read
+  release:
+    executor: telegraf-ci
+    steps:
+      - attach_workspace:
+          at: '/build'
+      - run:
+          command: |
+            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/releases/ \
+              --exclude "*" \
+              --include "telegraf*.DIGESTS" \
+              --include "telegraf*.digests" \
+              --include "telegraf*.asc" \
+              --include "telegraf*.deb" \
+              --include "telegraf*.dmg" \
+              --include "telegraf*.rpm" \
+              --include "telegraf*.tar.gz" \
+              --include "telegraf*.zip" \
+              --dryrun \
+              --acl public-read
   docker-nightly:
     machine:
       image: ubuntu-2004:current
@@ -481,6 +500,60 @@ jobs:
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
+  package-sign:
+    circleci_ip_ranges: true
+    docker:
+      - image: quay.io/influxdb/rsign:latest
+        auth:
+          username: $QUAY_RSIGN_USERNAME
+          password: $QUAY_RSIGN_PASSWORD
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - 3b:c0:fe:a0:8a:93:33:69:de:22:ac:20:a6:ed:6b:e5
+      - attach_workspace:
+          at: .
+      - run: |
+          cd dist
+
+          # Generate the *.DIGESTS files. This must be done before the signing
+          # step so that the *.DIGEST files are also signed.
+          for target in *
+          do
+            sha256sum "${target}" > "${target}.DIGESTS"
+          done
+
+          for target in *
+          do
+            case "${target}"
+            in
+              # rsign is shipped on Alpine Linux which uses "busybox ash" instead
+              # of bash. ash is somewhat more posix compliant and is missing some
+              # extensions and niceties from bash.
+              *.deb|*.dmg|*.rpm|*.tar.gz|*.zip|*.DIGESTS)
+                rsign "${target}"
+              ;;
+            esac
+          done
+
+          for target in *
+          do
+            case "${target}"
+            in
+              *.deb|*.dmg|*.rpm|*.tar.gz|*.zip)
+                # Combine the metadata from the *.DIGESTS and *.asc files into one
+                # listing. Since the gpg signature contains multiple lines which
+                # must be preserved, it is base64 encoded.
+                printf '%s %s %s\n' "${target}" "$(awk '{ print $1 }' "${target}.DIGESTS")" "$(base64 -w 0 <"${target}.asc")" >>"telegraf-${CIRCLE_TAG}-digests"
+              ;;
+            esac
+          done
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - dist
+      - store_artifacts:
+          path: ./dist
 
 workflows:
   version: 2
@@ -656,6 +729,25 @@ workflows:
                 only: /.*/
               branches:
                 ignore: /.*/
+      - 'package-sign':
+          requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 'riscv64-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'arm64-package'
+            - 'armhf-package'
+            - 'package-sign-mac'
+            - 'package-sign-windows'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
       - 'package-consolidate':
            requires:
             - 'i386-package'
@@ -670,12 +762,20 @@ workflows:
             - 'riscv64-package'
             - 'package-sign-mac'
             - 'package-sign-windows'
+            - 'package-sign'
            filters:
             tags:
               only: /.*/
             branches:
               ignore: /.*/
-
+      - 'release':
+          requires:
+            - 'package-consolidate'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
   nightly:
     when:
       equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
