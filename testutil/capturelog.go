@@ -127,3 +127,9 @@ func (l *CaptureLogger) LastError() string {
 	}
 	return ""
 }
+
+func (l *CaptureLogger) Clear() {
+	l.Lock()
+	defer l.Unlock()
+	l.messages = make([]Entry, 0)
+}

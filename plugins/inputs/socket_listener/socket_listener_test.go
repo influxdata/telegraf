@@ -12,12 +12,10 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -31,61 +29,6 @@ import (
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
-
-type TestLogger struct {
-	T    *testing.T
-	Logs []string
-	mtx  sync.Mutex
-}
-
-func (t *TestLogger) logf(format string, args ...any) {
-	msg := fmt.Sprintf(format, args...)
-	t.mtx.Lock()
-	t.Logs = append(t.Logs, msg)
-	t.mtx.Unlock()
-	t.T.Logf(format, args...)
-}
-
-func (t *TestLogger) log(prefix string, args ...any) {
-	args = append([]any{prefix}, args...)
-	msg := fmt.Sprint(args...)
-	t.mtx.Lock()
-	t.Logs = append(t.Logs, msg)
-	t.mtx.Unlock()
-	t.T.Log(args...)
-}
-
-func (t *TestLogger) Errorf(format string, args ...interface{}) {
-	t.logf("E! "+format, args...)
-}
-
-func (t *TestLogger) Error(args ...interface{}) {
-	t.log("E!", args...)
-}
-
-func (t *TestLogger) Debugf(format string, args ...interface{}) {
-	t.logf("D! "+format, args...)
-}
-
-func (t *TestLogger) Debug(args ...interface{}) {
-	t.log("D!", args...)
-}
-
-func (t *TestLogger) Warnf(format string, args ...interface{}) {
-	t.logf(format, args...)
-}
-
-func (t *TestLogger) Warn(args ...interface{}) {
-	t.log("W!", args...)
-}
-
-func (t *TestLogger) Infof(format string, args ...interface{}) {
-	t.logf("I! "+format, args...)
-}
-
-func (t *TestLogger) Info(args ...interface{}) {
-	t.log("I!", args...)
-}
 
 func TestSocketListener(t *testing.T) {
 	messages := [][]byte{
@@ -193,9 +136,9 @@ func TestSocketListener(t *testing.T) {
 			}
 
 			// Setup plugin according to test specification
-			log := &TestLogger{T: t}
+			logger := &testutil.CaptureLogger{}
 			plugin := &SocketListener{
-				Log:             log,
+				Log:             logger,
 				ServiceAddress:  proto + "://" + serverAddr,
 				ContentEncoding: tt.encoding,
 				ReadBufferSize:  tt.buffersize,
@@ -221,8 +164,8 @@ func TestSocketListener(t *testing.T) {
 			// Create a noop client
 			// Server is async, so verify no errors at the end.
 			client, err := createClient(plugin.ServiceAddress, addr, tlsCfg)
-			assert.NoError(t, err)
-			_ = client.Close()
+			require.NoError(t, err)
+			require.NoError(t, client.Close())
 
 			// Setup the client for submitting data
 			client, err = createClient(plugin.ServiceAddress, addr, tlsCfg)
@@ -254,6 +197,8 @@ func TestSocketListener(t *testing.T) {
 
 			plugin.Stop()
 
+			// Make sure we clear out old messages
+			logger.Clear()
 			if _, ok := plugin.listener.(*streamListener); ok {
 				// Verify that plugin.Stop() closed the client's connection
 				_ = client.SetReadDeadline(time.Now().Add(time.Second))
@@ -261,6 +206,9 @@ func TestSocketListener(t *testing.T) {
 				_, err = client.Read(buf)
 				require.Equal(t, err, io.EOF)
 			}
+
+			require.Empty(t, logger.Errors())
+			require.Empty(t, logger.Warnings())
 		})
 	}
 }
