@@ -369,7 +369,7 @@ func TestAuthenticationBasic(t *testing.T) {
 	require.Equal(t, "Basic bXl1c2VyOm15cGFzcw==", auth)
 }
 
-func TestAuthenticationTokenc(t *testing.T) {
+func TestAuthenticationToken(t *testing.T) {
 	dummy, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	defer dummy.Close()
@@ -381,7 +381,7 @@ func TestAuthenticationTokenc(t *testing.T) {
 	}))
 	defer server.Close()
 
-	token := "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJUaWdlciIsImlhdCI6MTY4Mzc0OTEyMSwiZXhwIjoxNzE1Mjg1MTIxLCJhdWQiOiJ3d3cudGlnZXItb2YtdGVsZWdyYWYub3JnIiwic3ViIjoidGlnZXIgbWFuIn0.qvSeNu6rSdlh8rAdtdAajo9Jajfl56DZuPV9ouTPtuo"
+	token := "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJUaWdlciIsImlhdCI6M..."
 	plugin := &HTTP{
 		URL:                server.URL,
 		Token:              config.NewSecret([]byte(token)),
