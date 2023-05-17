@@ -248,7 +248,7 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			if err != nil {
 				return fmt.Errorf("prepare failed: %w", err)
 			}
-			defer stmt.Close() //nolint:revive // We cannot do anything about a failing close.
+			defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
 
 			_, err = stmt.Exec(values...)
 			if err != nil {

@@ -257,6 +257,6 @@ func main() {
 	}
 	defer file.Close()
 	if _, err := output.WriteTo(file); err != nil {
-		log.Fatalf("Writing output file failed: %v", err)
+		log.Panicf("Writing output file failed: %v", err)
 	}
 }
