@@ -22,12 +22,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # A ctrlX Data Layer server sent event input plugin
 [[inputs.ctrlx_datalayer]]
-   ## Hostname or IP address of ctrlX CORE
-   ##  example: hostname = "localhost"        # Telegraf is running directly on the device
-   ##           hostname = "192.168.1.1"      # Connect to ctrlX CORE remote via IP
-   ##           hostname = "host.example.com" # Connect to ctrlX CORE remote via hostname
-   ##           hostname = "10.0.2.2:8443"    # Connect to ctrlX CORE Virtual from development environment
-   hostname = "localhost"
+   ## Hostname or IP address of the ctrlX CORE Data Layer server
+   ##  example: server = "localhost"        # Telegraf is running directly on the device
+   ##           server = "192.168.1.1"      # Connect to ctrlX CORE remote via IP
+   ##           server = "host.example.com" # Connect to ctrlX CORE remote via hostname
+   ##           server = "10.0.2.2:8443"    # Connect to ctrlX CORE Virtual from development environment
+   server = "localhost"
 
    ## Authentication credentials
    username = "boschrexroth"
@@ -134,12 +134,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-All measurements are tagged with the hostname of the device and the
+All measurements are tagged with the server address of the device and the
 corresponding node address as defined in the ctrlX Data Layer.
 
 - measurement name
   - tags:
-    - `ctrlx_host` (ctrlX host where the metrics are gathered from)
+    - `server` (ctrlX Data Layer server where the metrics are gathered from)
     - `host` (The host where the telegraf agent is running)
     - `node` (Address of the ctrlX Data Layer node)
   - fields:

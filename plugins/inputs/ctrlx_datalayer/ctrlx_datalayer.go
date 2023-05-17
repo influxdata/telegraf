@@ -40,7 +40,7 @@ var sampleConfig string
 
 // CtrlXDataLayer encapsulated the configuration as well as the state of this plugin.
 type CtrlXDataLayer struct {
-	Hostname string `toml:"hostname"`
+	Server   string `toml:"server"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
@@ -160,8 +160,8 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *Subscription) (tele
 
 	// default tags
 	tags := map[string]string{
-		"node":       em.Node,
-		"ctrlx_host": c.Hostname,
+		"node":   em.Node,
+		"server": c.Server,
 	}
 
 	// add tags of subscription if user has defined
@@ -262,7 +262,7 @@ func (c *CtrlXDataLayer) Init() error {
 	// Generate valid communication url based on configured hostname
 	u := url.URL{
 		Scheme: "https",
-		Host:   c.Hostname,
+		Host:   c.Server,
 	}
 	c.url = u.String()
 	_, err := url.Parse(c.url)
