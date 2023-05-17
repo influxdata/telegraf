@@ -174,7 +174,7 @@ require (
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.5.4
 	go.mongodb.org/mongo-driver v1.11.2
-	go.opentelemetry.io/collector/pdata v1.0.0-rc7
+	go.opentelemetry.io/collector/pdata v1.0.0-rcv0011
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.35.0
 	go.opentelemetry.io/otel/sdk/metric v0.37.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
@@ -443,7 +443,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/exp v0.0.0-20230307190834-24139beb5833
 	golang.org/x/time v0.3.0 // indirect
