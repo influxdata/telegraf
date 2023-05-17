@@ -31,7 +31,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Go template used to create the tag value of the output. In order to
   ## ease TOML escaping requirements, you should use single quotes around
-  ## the# template string.
+  ## the template string.
   template = '{{ .Tag "hostname" }}.{{ .Tag "level" }}'
 ```
 
