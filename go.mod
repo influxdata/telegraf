@@ -201,9 +201,8 @@ require (
 	k8s.io/client-go v0.26.2
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.21.0
+	github.com/boschrexroth/ctrlx-datalayer-golang v1.3.0
 )
-
-require github.com/boschrexroth/ctrlx-datalayer-golang v1.3.0
 
 require (
 	cloud.google.com/go v0.110.1 // indirect
