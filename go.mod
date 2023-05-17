@@ -177,11 +177,11 @@ require (
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
 	golang.org/x/crypto v0.8.0
 	golang.org/x/mod v0.10.0
-	golang.org/x/net v0.9.0
+	golang.org/x/net v0.10.0
 	golang.org/x/oauth2 v0.7.0
 	golang.org/x/sync v0.2.0
 	golang.org/x/sys v0.8.0
-	golang.org/x/term v0.7.0
+	golang.org/x/term v0.8.0
 	golang.org/x/text v0.9.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.12.0
