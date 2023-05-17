@@ -26,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[processors.template]]
   ## Go template used to create the tag name of the output. In order to
   ## ease TOML escaping requirements, you should use single quotes around
-  ## the# template string.
+  ## the template string.
   tag = "topic"
 
   ## Go template used to create the tag value of the output. In order to
