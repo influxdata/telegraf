@@ -191,6 +191,10 @@ func TestSocketListener(t *testing.T) {
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 
+			if sl, ok := plugin.listener.(*streamListener); ok {
+				require.NotEmpty(t, sl.connections)
+			}
+
 			plugin.Stop()
 
 			if _, ok := plugin.listener.(*streamListener); ok {
