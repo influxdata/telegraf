@@ -63,32 +63,32 @@ func (ki *KubernetesInventory) gatherCertificates(r corev1.Secret, acc telegraf.
 	now := time.Now()
 
 	for resourceName, val := range r.Data {
-		if resourceName == "tls.crt" {
-			block, _ := pem.Decode(val)
-			if block == nil {
-				return
-			}
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return
-			}
-			fields := getFields(cert, now)
-			tags := getTags(cert)
-			tags["name"] = r.Name
-			tags["namespace"] = r.Namespace
-			opts := x509.VerifyOptions{
-				Intermediates: x509.NewCertPool(),
-				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-			}
-			_, err = cert.Verify(opts)
-			if err == nil {
-				tags["verification"] = "valid"
-				fields["verification_code"] = 0
-			} else {
-				tags["verification"] = "invalid"
-				fields["verification_code"] = 1
-			}
-			acc.AddFields(certificateMeasurement, fields, tags)
+		if resourceName != "tls.crt" {
+			continue
 		}
+		block, _ := pem.Decode(val)
+		if block == nil {
+			return
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return
+		}
+		fields := getFields(cert, now)
+		tags := getTags(cert)
+		tags["name"] = r.Name
+		tags["namespace"] = r.Namespace
+		opts := x509.VerifyOptions{
+			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		}
+		_, err = cert.Verify(opts)
+		if err == nil {
+			tags["verification"] = "valid"
+			fields["verification_code"] = 0
+		} else {
+			tags["verification"] = "invalid"
+			fields["verification_code"] = 1
+		}
+		acc.AddFields(certificateMeasurement, fields, tags)
 	}
 }

@@ -23,9 +23,8 @@ func collectNodes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesI
 }
 
 func (ki *KubernetesInventory) gatherNodeCount(count int, acc telegraf.Accumulator) {
-	fields := map[string]interface{}{}
+	fields := map[string]interface{}{"node_count": count}
 	tags := map[string]string{}
-	fields["node_count"] = count
 
 	acc.AddFields(nodeMeasurement, fields, tags)
 }
@@ -64,9 +63,10 @@ func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulato
 
 	for _, val := range n.Status.Conditions {
 		conditionfields := map[string]interface{}{}
-		conditiontags := map[string]string{}
-		conditiontags["status"] = string(val.Status)
-		conditiontags["condition"] = string(val.Type)
+		conditiontags := map[string]string{
+			"status":    string(val.Status),
+			"condition": string(val.Type),
+		}
 		for k, v := range tags {
 			conditiontags[k] = v
 		}
