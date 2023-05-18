@@ -247,6 +247,24 @@ SELECT
 EXEC sp_executesql @SqlStatement
 `
 
+const SQLServerForceEncryption = `
+SET DEADLOCK_PRIORITY -10;
+
+DECLARE 
+@ForceEncryption INT
+,@SqlStatement AS nvarchar(max)
+
+SET @SqlStatement = N'
+EXEC xp_instance_regread 
+	@rootkey = 'HKEY_LOCAL_MACHINE', 
+	@key = 'SOFTWARE\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib', 
+	@value_name = 'ForceEncryption',
+	@value = @ForceEncryption OUTPUT
+SELECT @ForceEncryption AS ForceEncryption'
+
+EXEC sp_executesql @SqlStatement
+`
+
 const sqlServerSchedulers string = `
 SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/

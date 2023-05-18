@@ -130,6 +130,7 @@ func (s *SQLServer) initQueries() error {
 	} else if s.DatabaseType == typeAzureArcSQLManagedInstance {
 		queries["AzureArcSQLMIDatabaseIO"] = Query{ScriptName: "AzureArcSQLMIDatabaseIO", Script: sqlAzureArcMIDatabaseIO, ResultByRow: false}
 		queries["AzureArcSQLMIServerProperties"] = Query{ScriptName: "AzureArcSQLMIServerProperties", Script: sqlAzureArcMIProperties, ResultByRow: false}
+		queries["SQLServerForceEncryption"] = Query{ScriptName: "SQLServerForceEncryption", Script: SQLServerForceEncryption, ResultByRow: false}
 		queries["AzureArcSQLMIOsWaitstats"] = Query{ScriptName: "AzureArcSQLMIOsWaitstats", Script: sqlAzureArcMIOsWaitStats, ResultByRow: false}
 		queries["AzureArcSQLMIMemoryClerks"] = Query{ScriptName: "AzureArcSQLMIMemoryClerks", Script: sqlAzureArcMIMemoryClerks, ResultByRow: false}
 		queries["AzureArcSQLMIPerformanceCounters"] =
