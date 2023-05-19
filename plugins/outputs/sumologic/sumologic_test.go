@@ -95,7 +95,7 @@ func TestMethod(t *testing.T) {
 			})
 
 			serializer := &carbon2.Serializer{
-				Format: string(carbon2.Carbon2FormatFieldSeparate),
+				Format: "field_separate",
 			}
 			require.NoError(t, serializer.Init())
 
@@ -174,7 +174,7 @@ func TestStatusCode(t *testing.T) {
 			})
 
 			serializer := &carbon2.Serializer{
-				Format: string(carbon2.Carbon2FormatFieldSeparate),
+				Format: "field_separate",
 			}
 			require.NoError(t, serializer.Init())
 
@@ -202,7 +202,7 @@ func TestContentType(t *testing.T) {
 					contentTypeHeader: carbon2ContentType,
 				}
 				serializer := &carbon2.Serializer{
-					Format: string(carbon2.Carbon2FormatFieldSeparate),
+					Format: "field_separate",
 				}
 				require.NoError(t, serializer.Init())
 				s.SetSerializer(serializer)
@@ -218,7 +218,7 @@ func TestContentType(t *testing.T) {
 					contentTypeHeader: carbon2ContentType,
 				}
 				serializer := &carbon2.Serializer{
-					Format: string(carbon2.Carbon2FormatMetricIncludesField),
+					Format: "metric_includes_field",
 				}
 				require.NoError(t, serializer.Init())
 				s.SetSerializer(serializer)
@@ -325,7 +325,7 @@ func TestContentEncodingGzip(t *testing.T) {
 			})
 
 			serializer := &carbon2.Serializer{
-				Format: string(carbon2.Carbon2FormatFieldSeparate),
+				Format: "field_separate",
 			}
 			require.NoError(t, serializer.Init())
 
@@ -360,7 +360,7 @@ func TestDefaultUserAgent(t *testing.T) {
 		}
 
 		serializer := &carbon2.Serializer{
-			Format: string(carbon2.Carbon2FormatFieldSeparate),
+			Format: "field_separate",
 		}
 		require.NoError(t, serializer.Init())
 
@@ -611,7 +611,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			})
 
 			serializer := &carbon2.Serializer{
-				Format: string(carbon2.Carbon2FormatFieldSeparate),
+				Format: "field_separate",
 			}
 			require.NoError(t, serializer.Init())
 
@@ -646,7 +646,7 @@ func TestTryingToSendEmptyMetricsDoesntFail(t *testing.T) {
 	plugin.URL = u.String()
 
 	serializer := &carbon2.Serializer{
-		Format: string(carbon2.Carbon2FormatFieldSeparate),
+		Format: "field_separate",
 	}
 	require.NoError(t, serializer.Init())
 	plugin.SetSerializer(serializer)
