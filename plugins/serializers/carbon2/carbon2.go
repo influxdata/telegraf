@@ -8,27 +8,35 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 const sanitizedChars = "!@#$%^&*()+`'\"[]{};<>,?/\\|="
 
 type Serializer struct {
-	Format              string `toml:"carbon2_format"`
-	SanitizeReplaceChar string `toml:"carbon2_sanitize_replace_char"`
+	Format              string          `toml:"carbon2_format"`
+	SanitizeReplaceChar string          `toml:"carbon2_sanitize_replace_char"`
+	Log                 telegraf.Logger `toml:"-"`
 
 	sanitizeReplacer *strings.Replacer
 }
 
 func (s *Serializer) Init() error {
+	if s.SanitizeReplaceChar == "" {
+		s.SanitizeReplaceChar = ":"
+	}
+
 	if len(s.SanitizeReplaceChar) > 1 {
 		return errors.New("sanitize replace char has to be a singular character")
 	}
 
-	if s.SanitizeReplaceChar == "" {
-		s.SanitizeReplaceChar = ":"
+	// Create replacer to replacing all characters requiring sanitization with the user-specified replacement
+	pairs := make([]string, 0, 2*len(sanitizedChars))
+	for _, c := range sanitizedChars {
+		pairs = append(pairs, string(c), s.SanitizeReplaceChar)
 	}
-	s.sanitizeReplacer = createSanitizeReplacer(sanitizedChars, rune(s.SanitizeReplaceChar[0]))
+	s.sanitizeReplacer = strings.NewReplacer(pairs...)
 
 	switch s.Format {
 	case "":
@@ -59,11 +67,27 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 	var m bytes.Buffer
 
 	for fieldName, fieldValue := range metric.Fields() {
-		if isString(fieldValue) {
+		if _, ok := fieldValue.(string); ok {
 			continue
 		}
 
 		name := s.sanitizeReplacer.Replace(metric.Name())
+
+		var value string
+		if v, ok := fieldValue.(bool); ok {
+			if v {
+				value = "1"
+			} else {
+				value = "0"
+			}
+		} else {
+			var err error
+			value, err = internal.ToString(fieldValue)
+			if err != nil {
+				s.Log.Warnf("Cannot convert %v (%T) to string", fieldValue, fieldValue)
+				continue
+			}
+		}
 
 		switch s.Format {
 		case "field_separate":
@@ -83,7 +107,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 			m.WriteString(" ")
 		}
 		m.WriteString(" ")
-		m.WriteString(formatValue(fieldValue))
+		m.WriteString(value)
 		m.WriteString(" ")
 		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10))
 		m.WriteString("\n")
@@ -103,47 +127,6 @@ func serializeMetricIncludeField(name, fieldName string) string {
 		strings.ReplaceAll(name, " ", "_"),
 		strings.ReplaceAll(fieldName, " ", "_"),
 	)
-}
-
-func formatValue(fieldValue interface{}) string {
-	switch v := fieldValue.(type) {
-	case bool:
-		// Print bools as 0s and 1s
-		return fmt.Sprintf("%d", bool2int(v))
-	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
-
-func isString(v interface{}) bool {
-	switch v.(type) {
-	case string:
-		return true
-	default:
-		return false
-	}
-}
-
-func bool2int(b bool) int {
-	// Slightly more optimized than a usual if ... return ... else return ... .
-	// See: https://0x0f.me/blog/golang-compiler-optimization/
-	var i int
-	if b {
-		i = 1
-	} else {
-		i = 0
-	}
-	return i
-}
-
-// createSanitizeReplacer creates string replacer replacing all provided
-// characters with the replaceChar.
-func createSanitizeReplacer(sanitizedChars string, replaceChar rune) *strings.Replacer {
-	sanitizeCharPairs := make([]string, 0, 2*len(sanitizedChars))
-	for _, c := range sanitizedChars {
-		sanitizeCharPairs = append(sanitizeCharPairs, string(c), string(replaceChar))
-	}
-	return strings.NewReplacer(sanitizeCharPairs...)
 }
 
 func init() {
