@@ -253,6 +253,11 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
+	exitCode := 0
+	defer func() {
+		os.Exit(exitCode)
+	}()
+
 	cfg.Servers = []string{lis.Addr().String()}
 
 	var opts []grpc.ServerOption
@@ -262,5 +267,6 @@ func TestMain(m *testing.M) {
 		grpcServer.Serve(lis) //nolint:errcheck // ignore the returned error as the tests will fail anyway
 	}()
 	defer grpcServer.Stop()
-	os.Exit(m.Run())
+
+	exitCode = m.Run()
 }
