@@ -5,6 +5,7 @@ import (
 	"context"
 	ntls "crypto/tls"
 	_ "embed"
+	"sort"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
@@ -121,7 +122,35 @@ func (o *OpenTelemetry) Close() error {
 	return nil
 }
 
+// Split metrics up by timestamp and send to Google Cloud Stackdriver
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
+	metricBatch := make(map[int64][]telegraf.Metric)
+	timestamps := []int64{}
+	for _, metric := range sorted(metrics) {
+		timestamp := metric.Time().UnixNano()
+		if existingSlice, ok := metricBatch[timestamp]; ok {
+			metricBatch[timestamp] = append(existingSlice, metric)
+		} else {
+			metricBatch[timestamp] = []telegraf.Metric{metric}
+			timestamps = append(timestamps, timestamp)
+		}
+	}
+
+	// sort the timestamps we collected
+	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
+
+	o.Log.Debugf("received %d metrics\n", len(metrics))
+	o.Log.Debugf("split into %d groups by timestamp\n", len(metricBatch))
+	for _, timestamp := range timestamps {
+		if err := o.sendBatch(metricBatch[timestamp]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	batch := o.metricsConverter.NewBatch()
 	for _, metric := range metrics {
 		var vType common.InfluxMetricValueType
@@ -168,6 +197,20 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	defer cancel()
 	_, err := o.metricsServiceClient.Export(ctx, md, o.callOptions...)
 	return err
+}
+
+// Sorted returns a copy of the metrics in time ascending order.  A copy is
+// made to avoid modifying the input metric slice since doing so is not
+// allowed.
+func sorted(metrics []telegraf.Metric) []telegraf.Metric {
+	batch := make([]telegraf.Metric, 0, len(metrics))
+	for i := len(metrics) - 1; i >= 0; i-- {
+		batch = append(batch, metrics[i])
+	}
+	sort.Slice(batch, func(i, j int) bool {
+		return batch[i].Time().Before(batch[j].Time())
+	})
+	return batch
 }
 
 const (
