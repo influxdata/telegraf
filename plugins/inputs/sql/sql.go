@@ -397,21 +397,13 @@ func (s *SQL) ping() error {
 	err := s.db.PingContext(ctx)
 	cancel()
 	if err != nil {
-		if s.DisconnectedServersBehavior == "error" {
-			return fmt.Errorf("unable to connect to database: %w", err)
-		}
-		s.Log.Errorf("unable to connect to database: %s", err)
-		return nil
+		return fmt.Errorf("unable to connect to database: %w", err)
 	}
 	s.serverConnected = true
 	return nil
 }
 
 func (s *SQL) prepareStatements() bool {
-	if !s.serverConnected {
-		s.Log.Debug("connection to server not established yet, skipping prepare statement")
-		return false
-	}
 	// Prepare the statements
 	for i, q := range s.Queries {
 		s.Log.Debugf("Preparing statement %q...", q.Query)
@@ -438,9 +430,14 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	}
 
 	if err := s.ping(); err != nil {
-		return err
+		if s.DisconnectedServersBehavior == "error" {
+			return err
+		}
+		s.Log.Errorf("unable to connect to database: %s", err)
 	}
-	_ = s.prepareStatements()
+    if s.serverConnected {
+        s.prepareStatements()
+    }
 
 	return nil
 }
@@ -464,19 +461,14 @@ func (s *SQL) Stop() {
 }
 
 func (s *SQL) Gather(acc telegraf.Accumulator) error {
-	statementsPrepared := true
 	// during plugin startup, it is possible that the server was not reachable.
 	// we try pinging the server in this collection cycle.
 	// we are only concerned with `prepareStatements` function to complete(return true), just once.
 	if !s.serverConnected {
 		if err := s.ping(); err != nil {
-			acc.AddError(err)
+			return err
 		}
-		statementsPrepared = s.prepareStatements()
-	}
-	// no need to proceed if statements are not prepared
-	if !statementsPrepared {
-		return nil
+		s.prepareStatements()
 	}
 
 	var wg sync.WaitGroup
