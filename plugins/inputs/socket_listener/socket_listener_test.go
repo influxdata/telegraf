@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -137,8 +136,9 @@ func TestSocketListener(t *testing.T) {
 			}
 
 			// Setup plugin according to test specification
+			logger := &testutil.CaptureLogger{}
 			plugin := &SocketListener{
-				Log:             &testutil.Logger{},
+				Log:             logger,
 				ServiceAddress:  proto + "://" + serverAddr,
 				ContentEncoding: tt.encoding,
 				ReadBufferSize:  tt.buffersize,
@@ -159,9 +159,16 @@ func TestSocketListener(t *testing.T) {
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
-			// Setup the client for submitting data
 			addr := plugin.listener.addr()
+
+			// Create a noop client
+			// Server is async, so verify no errors at the end.
 			client, err := createClient(plugin.ServiceAddress, addr, tlsCfg)
+			require.NoError(t, err)
+			require.NoError(t, client.Close())
+
+			// Setup the client for submitting data
+			client, err = createClient(plugin.ServiceAddress, addr, tlsCfg)
 			require.NoError(t, err)
 
 			// Send the data with the correct encoding
@@ -184,15 +191,24 @@ func TestSocketListener(t *testing.T) {
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 
+			if sl, ok := plugin.listener.(*streamListener); ok {
+				require.NotEmpty(t, sl.connections)
+			}
+
 			plugin.Stop()
 
+			// Make sure we clear out old messages
+			logger.Clear()
 			if _, ok := plugin.listener.(*streamListener); ok {
 				// Verify that plugin.Stop() closed the client's connection
 				_ = client.SetReadDeadline(time.Now().Add(time.Second))
 				buf := []byte{1}
 				_, err = client.Read(buf)
-				assert.Equal(t, err, io.EOF)
+				require.Equal(t, err, io.EOF)
 			}
+
+			require.Empty(t, logger.Errors())
+			require.Empty(t, logger.Warnings())
 		})
 	}
 }

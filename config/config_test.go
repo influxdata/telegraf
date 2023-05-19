@@ -704,8 +704,10 @@ func TestConfig_SerializerInterfaceNewFormat(t *testing.T) {
 
 		var serializer telegraf.Serializer
 		if creator, found := serializers.Serializers[format]; found {
+			t.Logf("new-style %q", format)
 			serializer = creator()
 		} else {
+			t.Logf("old-style %q", format)
 			var err error
 			serializer, err = serializers.NewSerializer(formatCfg)
 			require.NoErrorf(t, err, "No serializer for format %q", format)
@@ -793,8 +795,10 @@ func TestConfig_SerializerInterfaceOldFormat(t *testing.T) {
 
 		var serializer serializers.Serializer
 		if creator, found := serializers.Serializers[format]; found {
+			t.Logf("new-style %q", format)
 			serializer = creator()
 		} else {
+			t.Logf("old-style %q", format)
 			var err error
 			serializer, err = serializers.NewSerializer(formatCfg)
 			require.NoErrorf(t, err, "No serializer for format %q", format)

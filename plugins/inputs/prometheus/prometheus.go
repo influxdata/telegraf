@@ -224,6 +224,8 @@ func (p *Prometheus) Init() error {
 		"Accept":     acceptHeader,
 	}
 
+	p.kubernetesPods = map[PodID]URLAndAddress{}
+
 	return nil
 }
 

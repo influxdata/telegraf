@@ -2,6 +2,7 @@ package kube_inventory
 
 import (
 	"context"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -91,6 +92,11 @@ func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.Contai
 		"state":          state,
 		"readiness":      readiness,
 	}
+	splitImage := strings.Split(c.Image, ":")
+	if len(splitImage) == 2 {
+		tags["version"] = splitImage[1]
+	}
+	tags["image"] = splitImage[0]
 	for key, val := range p.Spec.NodeSelector {
 		if ki.selectorFilter.Match(key) {
 			tags["node_selector_"+key] = val
@@ -115,6 +121,38 @@ func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.Contai
 		case "memory":
 			fields["resource_limits_memory_bytes"] = ki.convertQuantity(val.String(), 1)
 		}
+	}
+
+	for _, val := range p.Status.Conditions {
+		conditionfields := map[string]interface{}{}
+		conditiontags := map[string]string{
+			"container_name": c.Name,
+			"image":          splitImage[0],
+			"status":         string(val.Status),
+			"namespace":      p.Namespace,
+			"node_name":      p.Spec.NodeName,
+			"pod_name":       p.Name,
+			"condition":      string(val.Type),
+		}
+		if len(splitImage) == 2 {
+			conditiontags["version"] = splitImage[1]
+		}
+		running := 0
+		podready := 0
+		if val.Status == "True" {
+			if val.Type == "Ready" {
+				podready = 1
+			}
+			running = 1
+		} else if val.Status == "Unknown" {
+			if val.Type == "Ready" {
+				podready = 0
+			}
+			running = 2
+		}
+		conditionfields["status_condition"] = running
+		conditionfields["ready"] = podready
+		acc.AddFields(podContainerMeasurement, conditionfields, conditiontags)
 	}
 
 	acc.AddFields(podContainerMeasurement, fields, tags)

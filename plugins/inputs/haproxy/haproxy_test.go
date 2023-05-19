@@ -134,7 +134,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 		}
 
 		sockets[i] = sock
-		defer sock.Close() //nolint:revive // done on purpose, closing will be executed properly
+		defer sock.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
 
 		s := statServer{}
 		go s.serverSocket(sock)

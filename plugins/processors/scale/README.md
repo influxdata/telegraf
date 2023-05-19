@@ -10,11 +10,18 @@ the given output range according to this formula:
 \text{output\_minimum}
 ```
 
-Input fields are converted to floating point values.
-If the conversion fails, those fields are ignored.
+Alternatively, you can apply a factor and offset to the input according to
+this formula
 
-**Please note:** Neither the input nor the output values
-are clipped to their respective ranges!
+```math
+\text{result}=\text{factor} \cdot \text{value} + \text{offset}
+```
+
+Input fields are converted to floating point values if possible. Otherwise,
+fields that cannot be converted are ignored and keep their original value.
+
+**Please note:** Neither the input nor the output values are clipped to their
+                 respective ranges!
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -37,24 +44,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##   - input_maximum: Maximum expected input value
     ##   - output_minimum: Minimum desired output value
     ##   - output_maximum: Maximum desired output value
+    ## alternatively you can specify a scaling with factor and offset
+    ##   - factor: factor to scale the input value with
+    ##   - offset: additive offset for value after scaling
     ##   - fields: a list of field names (or filters) to apply this scaling to
-    
-    ## Example: Define a scaling
+
+    ## Example: Scaling with minimum and maximum values
     # [processors.scale.scaling]
     #    input_minimum = 0
     #    input_maximum = 1
     #    output_minimum = 0
     #    output_maximum = 100
     #    fields = ["temperature1", "temperature2"]
-    
-    ## Multiple scalings can be defined simultaneously
-    ## Example: A second scaling. 
+
+    ## Example: Scaling with factor and offset
     # [processors.scale.scaling]
-    #    input_minimum = 0
-    #    input_maximum = 50
-    #    output_minimum = 50
-    #    output_maximum = 100
-    #    fields = ["humidity*"]
+    #    factor = 10.0
+    #    offset = -5.0
+    #    fields = ["voltage*"]
 ```
 
 ## Example
