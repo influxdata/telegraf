@@ -1452,8 +1452,6 @@ func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error)
 	c.getFieldString(tbl, "prefix", &sc.Prefix)
 	c.getFieldString(tbl, "template", &sc.Template)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
-	c.getFieldString(tbl, "carbon2_format", &sc.Carbon2Format)
-	c.getFieldString(tbl, "carbon2_sanitize_replace_char", &sc.Carbon2SanitizeReplaceChar)
 	c.getFieldBool(tbl, "csv_column_prefix", &sc.CSVPrefix)
 	c.getFieldBool(tbl, "csv_header", &sc.CSVHeader)
 	c.getFieldString(tbl, "csv_separator", &sc.CSVSeparator)
@@ -1552,7 +1550,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",
-		"carbon2_format", "carbon2_sanitize_replace_char",
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
 		"graphite_strict_sanitize_regex",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",

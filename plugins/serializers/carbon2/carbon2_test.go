@@ -37,8 +37,10 @@ func TestSerializeMetricFloat(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(string(tc.format), func(t *testing.T) {
-			s, err := NewSerializer(string(tc.format), DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			s := &Serializer{
+				Format: string(tc.format),
+			}
+			require.NoError(t, s.Init())
 
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
@@ -74,8 +76,10 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(string(tc.format), func(t *testing.T) {
-			s, err := NewSerializer(string(tc.format), DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			s := &Serializer{
+				Format: string(tc.format),
+			}
+			require.NoError(t, s.Init())
 
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
@@ -111,8 +115,10 @@ func TestSerializeWithSpaces(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(string(tc.format), func(t *testing.T) {
-			s, err := NewSerializer(string(tc.format), DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			s := &Serializer{
+				Format: string(tc.format),
+			}
+			require.NoError(t, s.Init())
 
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
@@ -148,8 +154,10 @@ func TestSerializeMetricInt(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(string(tc.format), func(t *testing.T) {
-			s, err := NewSerializer(string(tc.format), DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			s := &Serializer{
+				Format: string(tc.format),
+			}
+			require.NoError(t, s.Init())
 
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
@@ -185,8 +193,10 @@ func TestSerializeMetricString(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(string(tc.format), func(t *testing.T) {
-			s, err := NewSerializer(string(tc.format), DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			s := &Serializer{
+				Format: string(tc.format),
+			}
+			require.NoError(t, s.Init())
 
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
@@ -241,8 +251,10 @@ func TestSerializeMetricBool(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(string(tc.format), func(t *testing.T) {
-			s, err := NewSerializer(string(tc.format), DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			s := &Serializer{
+				Format: string(tc.format),
+			}
+			require.NoError(t, s.Init())
 
 			buf, err := s.Serialize(tc.metric)
 			require.NoError(t, err)
@@ -284,8 +296,10 @@ metric=cpu_value  42 0
 
 	for _, tc := range testcases {
 		t.Run(string(tc.format), func(t *testing.T) {
-			s, err := NewSerializer(string(tc.format), DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			s := &Serializer{
+				Format: string(tc.format),
+			}
+			require.NoError(t, s.Init())
 
 			buf, err := s.SerializeBatch(metrics)
 			require.NoError(t, err)
@@ -312,9 +326,8 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 				}
 				return metric.New("cpu=1", nil, fields, now)
 			},
-			format:      Carbon2FormatFieldSeparate,
-			expected:    fmt.Sprintf("metric=cpu:1 field=usage_idle  91.5 %d\n", now.Unix()),
-			replaceChar: DefaultSanitizeReplaceChar,
+			format:   Carbon2FormatFieldSeparate,
+			expected: fmt.Sprintf("metric=cpu:1 field=usage_idle  91.5 %d\n", now.Unix()),
 		},
 		{
 			metricFunc: func() telegraf.Metric {
@@ -334,9 +347,8 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 				}
 				return metric.New("cpu=1=tmp$custom", nil, fields, now)
 			},
-			format:      Carbon2FormatFieldSeparate,
-			expected:    fmt.Sprintf("metric=cpu:1:tmp:custom field=usage_idle  91.5 %d\n", now.Unix()),
-			replaceChar: DefaultSanitizeReplaceChar,
+			format:   Carbon2FormatFieldSeparate,
+			expected: fmt.Sprintf("metric=cpu:1:tmp:custom field=usage_idle  91.5 %d\n", now.Unix()),
 		},
 		{
 			metricFunc: func() telegraf.Metric {
@@ -345,9 +357,8 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 				}
 				return metric.New("cpu=1=tmp$custom%namespace", nil, fields, now)
 			},
-			format:      Carbon2FormatFieldSeparate,
-			expected:    fmt.Sprintf("metric=cpu:1:tmp:custom:namespace field=usage_idle  91.5 %d\n", now.Unix()),
-			replaceChar: DefaultSanitizeReplaceChar,
+			format:   Carbon2FormatFieldSeparate,
+			expected: fmt.Sprintf("metric=cpu:1:tmp:custom:namespace field=usage_idle  91.5 %d\n", now.Unix()),
 		},
 		{
 			metricFunc: func() telegraf.Metric {
@@ -356,9 +367,8 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 				}
 				return metric.New("cpu=1=tmp$custom%namespace", nil, fields, now)
 			},
-			format:      Carbon2FormatMetricIncludesField,
-			expected:    fmt.Sprintf("metric=cpu:1:tmp:custom:namespace_usage_idle  91.5 %d\n", now.Unix()),
-			replaceChar: DefaultSanitizeReplaceChar,
+			format:   Carbon2FormatMetricIncludesField,
+			expected: fmt.Sprintf("metric=cpu:1:tmp:custom:namespace_usage_idle  91.5 %d\n", now.Unix()),
 		},
 		{
 			metricFunc: func() telegraf.Metric {
@@ -388,12 +398,15 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 		t.Run(string(tc.format), func(t *testing.T) {
 			m := tc.metricFunc()
 
-			s, err := NewSerializer(string(tc.format), tc.replaceChar)
+			s := &Serializer{
+				Format:              string(tc.format),
+				SanitizeReplaceChar: tc.replaceChar,
+			}
+			err := s.Init()
 			if tc.expectedErr {
 				require.Error(t, err)
 				return
 			}
-
 			require.NoError(t, err)
 
 			buf, err := s.Serialize(m)

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type format string
@@ -24,38 +25,39 @@ var formats = map[format]struct{}{
 	Carbon2FormatMetricIncludesField: {},
 }
 
-const (
-	DefaultSanitizeReplaceChar = ":"
-	sanitizedChars             = "!@#$%^&*()+`'\"[]{};<>,?/\\|="
-)
+const sanitizedChars = "!@#$%^&*()+`'\"[]{};<>,?/\\|="
 
 type Serializer struct {
+	Format              string `toml:"carbon2_format"`
+	SanitizeReplaceChar string `toml:"carbon2_sanitize_replace_char"`
+
 	metricsFormat    format
 	sanitizeReplacer *strings.Replacer
 }
 
-func NewSerializer(metricsFormat string, sanitizeReplaceChar string) (*Serializer, error) {
-	if sanitizeReplaceChar == "" {
-		sanitizeReplaceChar = DefaultSanitizeReplaceChar
-	} else if len(sanitizeReplaceChar) > 1 {
-		return nil, errors.New("sanitize replace char has to be a singular character")
+func (s *Serializer) Init() error {
+	if len(s.SanitizeReplaceChar) > 1 {
+		return errors.New("sanitize replace char has to be a singular character")
 	}
 
-	var f = format(metricsFormat)
+	if s.SanitizeReplaceChar == "" {
+		s.SanitizeReplaceChar = ":"
+	}
+	s.sanitizeReplacer = createSanitizeReplacer(sanitizedChars, rune(s.SanitizeReplaceChar[0]))
+
+	var f = format(s.Format)
 
 	if _, ok := formats[f]; !ok {
-		return nil, fmt.Errorf("unknown carbon2 format: %s", f)
+		return fmt.Errorf("unknown carbon2 format: %s", f)
 	}
 
 	// When unset, default to field separate.
 	if f == carbon2FormatFieldEmpty {
 		f = Carbon2FormatFieldSeparate
 	}
+	s.metricsFormat = f
 
-	return &Serializer{
-		metricsFormat:    f,
-		sanitizeReplacer: createSanitizeReplacer(sanitizedChars, rune(sanitizeReplaceChar[0])),
-	}, nil
+	return nil
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -173,4 +175,20 @@ func createSanitizeReplacer(sanitizedChars string, replaceChar rune) *strings.Re
 		sanitizeCharPairs = append(sanitizeCharPairs, string(c), string(replaceChar))
 	}
 	return strings.NewReplacer(sanitizeCharPairs...)
+}
+
+func init() {
+	serializers.Add("carbon2",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.Format = cfg.Carbon2Format
+	s.SanitizeReplaceChar = cfg.Carbon2SanitizeReplaceChar
+
+	return nil
 }
