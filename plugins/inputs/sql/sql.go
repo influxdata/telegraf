@@ -403,7 +403,7 @@ func (s *SQL) ping() error {
 	return nil
 }
 
-func (s *SQL) prepareStatements() bool {
+func (s *SQL) prepareStatements() {
 	// Prepare the statements
 	for i, q := range s.Queries {
 		s.Log.Debugf("Preparing statement %q...", q.Query)
@@ -421,7 +421,6 @@ func (s *SQL) prepareStatements() bool {
 		}
 		s.Queries[i].statement = stmt
 	}
-	return true
 }
 
 func (s *SQL) Start(_ telegraf.Accumulator) error {
@@ -435,9 +434,9 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 		}
 		s.Log.Errorf("unable to connect to database: %s", err)
 	}
-    if s.serverConnected {
-        s.prepareStatements()
-    }
+	if s.serverConnected {
+		s.prepareStatements()
+	}
 
 	return nil
 }
