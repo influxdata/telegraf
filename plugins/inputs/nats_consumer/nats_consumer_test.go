@@ -40,7 +40,7 @@ func TestStartStop(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
+	plugin.Stop()
 }
 
 func TestSendReceive(t *testing.T) {
