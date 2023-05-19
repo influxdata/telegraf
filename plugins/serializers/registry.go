@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -185,8 +184,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric, config.SplunkmetricOmitEventTag), nil
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
-	case "carbon2":
-		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(
 			config.Prefix,
@@ -276,10 +273,6 @@ func NewJSONSerializer(config *Config) (Serializer, error) {
 		NestedFieldsInclude: config.JSONNestedFieldInclude,
 		NestedFieldsExclude: config.JSONNestedFieldExclude,
 	})
-}
-
-func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {
-	return carbon2.NewSerializer(carbon2format, carbon2SanitizeReplaceChar)
 }
 
 func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) Serializer {
