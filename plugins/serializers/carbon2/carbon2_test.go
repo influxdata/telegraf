@@ -36,9 +36,9 @@ func TestSerializeMetricFloat(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(string(tc.format), func(t *testing.T) {
+		t.Run(tc.format, func(t *testing.T) {
 			s := &Serializer{
-				Format: string(tc.format),
+				Format: tc.format,
 			}
 			require.NoError(t, s.Init())
 
@@ -75,9 +75,9 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(string(tc.format), func(t *testing.T) {
+		t.Run(tc.format, func(t *testing.T) {
 			s := &Serializer{
-				Format: string(tc.format),
+				Format: tc.format,
 			}
 			require.NoError(t, s.Init())
 
@@ -114,9 +114,9 @@ func TestSerializeWithSpaces(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(string(tc.format), func(t *testing.T) {
+		t.Run(tc.format, func(t *testing.T) {
 			s := &Serializer{
-				Format: string(tc.format),
+				Format: tc.format,
 			}
 			require.NoError(t, s.Init())
 
@@ -153,9 +153,9 @@ func TestSerializeMetricInt(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(string(tc.format), func(t *testing.T) {
+		t.Run(tc.format, func(t *testing.T) {
 			s := &Serializer{
-				Format: string(tc.format),
+				Format: tc.format,
 			}
 			require.NoError(t, s.Init())
 
@@ -192,9 +192,9 @@ func TestSerializeMetricString(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(string(tc.format), func(t *testing.T) {
+		t.Run(tc.format, func(t *testing.T) {
 			s := &Serializer{
-				Format: string(tc.format),
+				Format: tc.format,
 			}
 			require.NoError(t, s.Init())
 
@@ -250,9 +250,9 @@ func TestSerializeMetricBool(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(string(tc.format), func(t *testing.T) {
+		t.Run(tc.format, func(t *testing.T) {
 			s := &Serializer{
-				Format: string(tc.format),
+				Format: tc.format,
 			}
 			require.NoError(t, s.Init())
 
@@ -295,9 +295,9 @@ metric=cpu_value  42 0
 	}
 
 	for _, tc := range testcases {
-		t.Run(string(tc.format), func(t *testing.T) {
+		t.Run(tc.format, func(t *testing.T) {
 			s := &Serializer{
-				Format: string(tc.format),
+				Format: tc.format,
 			}
 			require.NoError(t, s.Init())
 
@@ -395,11 +395,11 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(string(tc.format), func(t *testing.T) {
+		t.Run(tc.format, func(t *testing.T) {
 			m := tc.metricFunc()
 
 			s := &Serializer{
-				Format:              string(tc.format),
+				Format:              tc.format,
 				SanitizeReplaceChar: tc.replaceChar,
 			}
 			err := s.Init()
