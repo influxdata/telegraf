@@ -20,6 +20,7 @@ type Serializer struct {
 	Log                 telegraf.Logger `toml:"-"`
 
 	sanitizeReplacer *strings.Replacer
+	template         string
 }
 
 func (s *Serializer) Init() error {
@@ -39,11 +40,11 @@ func (s *Serializer) Init() error {
 	s.sanitizeReplacer = strings.NewReplacer(pairs...)
 
 	switch s.Format {
-	case "":
-		// default value
+	case "", "field_separate":
 		s.Format = "field_separate"
-	case "field_separate", "metric_includes_field":
-		// valid choices, do nothing
+		s.template = "metric=%s field=%s "
+	case "metric_includes_field":
+		s.template = "metric=%s_%s "
 	default:
 		return fmt.Errorf("unknown carbon2 format: %s", s.Format)
 	}
@@ -89,13 +90,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 			}
 		}
 
-		switch s.Format {
-		case "field_separate":
-			m.WriteString(serializeMetricFieldSeparate(name, fieldName))
-		case "metric_includes_field":
-			m.WriteString(serializeMetricIncludeField(name, fieldName))
-		}
-
+		m.WriteString(fmt.Sprintf(s.template, strings.ReplaceAll(name, " ", "_"), strings.ReplaceAll(fieldName, " ", "_")))
 		for _, tag := range metric.TagList() {
 			m.WriteString(strings.ReplaceAll(tag.Key, " ", "_"))
 			m.WriteString("=")
@@ -113,20 +108,6 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 		m.WriteString("\n")
 	}
 	return m.Bytes()
-}
-
-func serializeMetricFieldSeparate(name, fieldName string) string {
-	return fmt.Sprintf("metric=%s field=%s ",
-		strings.ReplaceAll(name, " ", "_"),
-		strings.ReplaceAll(fieldName, " ", "_"),
-	)
-}
-
-func serializeMetricIncludeField(name, fieldName string) string {
-	return fmt.Sprintf("metric=%s_%s ",
-		strings.ReplaceAll(name, " ", "_"),
-		strings.ReplaceAll(fieldName, " ", "_"),
-	)
 }
 
 func init() {
