@@ -154,7 +154,7 @@ pattern to allow monitoring of any CloudWatch Metric.
 Omitting or specifying a value of `'*'` for a dimension value configures all
 available metrics that contain a dimension with the specified name to be
 retrieved. If specifying >1 dimension, then the metric must contain *all* the
-configured dimensions where the the value of the wildcard dimension is ignored.
+configured dimensions where the value of the wildcard dimension is ignored.
 
 Example:
 
