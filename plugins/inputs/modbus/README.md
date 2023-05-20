@@ -148,7 +148,6 @@ with N decimal places'.
 
 (FLOAT32 is deprecated and should not be used. UFIXED provides the same conversion from unsigned values).
 
-## Trouble shooting
 ---
 
 ### `request` configuration style
