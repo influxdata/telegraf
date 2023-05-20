@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/influxdata/telegraf"
 	"math"
+	"reflect"
 	"strings"
 	"time"
 	"unicode"
@@ -220,18 +221,31 @@ func createItem(metric telegraf.Metric) map[string]interface{} {
 				itemKey = ""
 			}
 
-			myMap, myIndex, err := splitKey(item, itemKey, fKey)
+			myMap, myIndex, isArray, err := splitKey(item, itemKey, fKey)
 			if err != nil {
 				continue
 			}
-			myMap[myIndex] = fValue
+
+			if isArray == true {
+
+				rt := reflect.TypeOf(myMap[myIndex])
+				if rt.Kind() != reflect.Slice {
+					// Make it a slice
+					myMap[myIndex] = make([]interface{}, 0)
+				}
+				
+				myMap[myIndex] = append(myMap[myIndex].([]interface{}), fValue)
+
+			} else {
+				myMap[myIndex] = fValue
+			}
 
 		} else if id == minStr || id == maxStr || id == avgStr || id == oldStr || id == newStr {
 
 			// Found _min,_max,_avg or _old,_new field.
 			itemKey := ""
 
-			myMap, myIndex, err := splitKey(item, itemKey, fKey)
+			myMap, myIndex, _, err := splitKey(item, itemKey, fKey)
 			if err != nil {
 				continue
 			}
@@ -324,7 +338,7 @@ func buildMap(startMap map[string]interface{}, startKey string, s []string, numK
 			// i.e. car_tag=Ford and engine_car_tag=F150.
 			// Once we create..
 			//    {tags:{car: Ford}}
-			// We cannot create a
+			//"ab" We cannot create a
 			//    {tags:{car:{engine:F150}}}
 			// because the top level "car" element is already assigned the value "Ford" and thus
 			// cannot contain any subvalues.
@@ -344,21 +358,34 @@ func buildMap(startMap map[string]interface{}, startKey string, s []string, numK
 
 // Split key into tokens and build nested map based on elements of fKey
 // Top level map is passed along with that maps name. i.e. input["keys"] or input["tags"]
-func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (
-	map[string]interface{}, string, error) {
+func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (map[string]interface{}, string, bool, error) {
 
-	// Split fInput into tokens.  Already removed type, _key, _min, _max, etc.
+	// topMap - Current items array items[]
+	// topMapName - Top map name
+	// fKey - Current key string i.e. j_foo_bar, k_foo_bar
+	isArray := false
+
+	// Split fKey into tokens.  Already removed type, _key, _min, _max, etc.
 	// i.e.           rtrId   // 1 level
 	//             name_vrd   // 2-level
 	//      value1_opt1_vrf   // 3-level
 
 	// Accounts for keeping _ in name vs nesting.
 	// i.e. foo/_bar:100 --> foo_bar:100
-	//      foo_bar:100 --> {foo:{bar:100}}
+	//      foo_bar:100 --> {bar:{foo:100}}
 	fKey = strings.ReplaceAll(fKey, "/_", "/")
 
 	// Returns an array of strings
+	// i.e. j_foo_bar --> [j foo bar]
 	s := strings.Split(fKey, "_")
+
+	// Check if this is an array @j_foo_bar.  First letter of first
+	// element is @ sign.
+	if strings.HasPrefix(s[0], "@") {
+		isArray = true
+		// Get rid of array identifier @xxx_
+		s = s[1:]
+	}
 
 	// Convert / to _
 	for i, _ := range s {
@@ -375,7 +402,7 @@ func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (
 	}
 
 	// Allocate map if not there.
-	// i.e. topMap["keys"]
+	// i.e. topMap["keys"] or topMap["tags"]
 	if _, found := topMap[topMapName]; !found {
 		topMap[topMapName] = make(map[string]interface{})
 	}
@@ -384,10 +411,10 @@ func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (
 
 	if len(s) <= 0 {
 		// This is okay for a top level data element.. i.e.psuTemp_min=100
-		return topMap, topMapName, nil
+		return topMap, topMapName, isArray, nil
 	}
 
 	myMap, myIndex, err := buildMap(topMap, topMapName, s, numKeys)
 
-	return myMap, myIndex, err
+	return myMap, myIndex, isArray, err
 }
