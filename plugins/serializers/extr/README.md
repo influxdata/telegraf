@@ -42,7 +42,7 @@ The `extr` output data format converts metrics into JSON documents, performing t
         --> "x_foo_bar"=21
         --> "y_foo_bar"=33
 
-- To specify an array, precede the fieldKey with @<uniquevalue>_.  The <uniquevalue> string can be anything, as long as it makes the metric unique.
+- To specify an array, precede the fieldKey with @uniquevalue_.  The uniquevalue string can be anything, as long as it makes the metric unique.
         @1_sysCap_lldp=11,@xx_sysCap_lldp=43,@abc_sysCap=87
         --> {"lldp":{"sysCap":[11,43,87]}}
 
