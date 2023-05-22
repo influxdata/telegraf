@@ -51,6 +51,16 @@ test -d $LOG_DIR || mkdir -p $LOG_DIR
 chown -R -L telegraf:telegraf $LOG_DIR
 chmod 755 $LOG_DIR
 
+STATE_DIR=/var/lib/telegraf
+test -d $STATE_DIR || mkdir -p $STATE_DIR
+chown -R -L root:telegraf $STATE_DIR
+chmod 770 $STATE_DIR
+
+STATE_FILE=$STATE_DIR/statefile
+test -f $STATE_FILE || touch $STATE_FILE
+chown -R -L root:telegraf $STATE_FILE
+chmod 770 $STATE_FILE
+
 if [ -d /run/systemd/system ]; then
     install_systemd /lib/systemd/system/telegraf.service
     # if and only if the service was already running then restart
