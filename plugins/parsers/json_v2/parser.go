@@ -26,7 +26,7 @@ type Parser struct {
 
 	// **** The struct fields bellow this comment are used for processing indvidual configs ****
 
-	// measurementName is the the name of the current config used in each line protocol
+	// measurementName is the name of the current config used in each line protocol
 	measurementName string
 
 	// **** Specific for object configuration ****

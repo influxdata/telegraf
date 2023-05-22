@@ -655,7 +655,7 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 	err = f.Close()
 	require.NoError(t, err)
 
-	// Write json file to process into a subdirectory in the the 'process' directory.
+	// Write json file to process into a subdirectory in the 'process' directory.
 	err = os.Mkdir(filepath.Join(processDirectory, "sub"), os.ModePerm)
 	require.NoError(t, err)
 	f, err = os.Create(filepath.Join(processDirectory, "sub", testJSONFile))
