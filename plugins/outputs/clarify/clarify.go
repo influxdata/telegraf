@@ -32,6 +32,7 @@ type Clarify struct {
 }
 
 var errIDTooLong = errors.New("id too long (>128)")
+var errCredentials = errors.New("only credentials_file OR username/password can be specified")
 
 const defaultTimeout = config.Duration(20 * time.Second)
 const allowedIDRunes = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_:.#+/`
@@ -47,6 +48,9 @@ func (c *Clarify) Init() error {
 	ctx := context.Background()
 	switch {
 	case c.CredentialsFile != "":
+		if !c.Username.Empty() || !c.Password.Empty() {
+			return errCredentials
+		}
 		creds, err := clarify.CredentialsFromFile(c.CredentialsFile)
 		if err != nil {
 			return err
@@ -64,12 +68,12 @@ func (c *Clarify) Init() error {
 			return fmt.Errorf("getting password failed: %w", err)
 		}
 		creds := clarify.BasicAuthCredentials(string(username), string(password))
-		c.client = creds.Client(ctx)
 		config.ReleaseSecret(username)
 		config.ReleaseSecret(password)
+		c.client = creds.Client(ctx)
 		return nil
 	}
-	return fmt.Errorf("no Clarify credentials provided")
+	return errors.New("no credentials provided")
 }
 
 func (c *Clarify) Connect() error {
@@ -84,11 +88,11 @@ func (c *Clarify) Write(metrics []telegraf.Metric) error {
 	defer cancel()
 
 	if _, err := c.client.Insert(frame).Do(ctx); err != nil {
-		return fmt.Errorf("inserting failed %w", err)
+		return fmt.Errorf("inserting failed: %w", err)
 	}
 
 	if _, err := c.client.SaveSignals(signals).Do(ctx); err != nil {
-		return fmt.Errorf("saving signals failed %w", err)
+		return fmt.Errorf("saving signals failed: %w", err)
 	}
 
 	return nil
@@ -102,12 +106,12 @@ func (c *Clarify) processMetrics(metrics []telegraf.Metric) (views.DataFrame, ma
 		for _, f := range m.FieldList() {
 			value, err := internal.ToFloat64(f.Value)
 			if err != nil {
-				c.Log.Warnf("Unable to add field `%s` for metric `%s` due to error '%v', skipping", f.Key, m.Name(), err)
+				c.Log.Warnf("Skipping field %q of metric %q: %s", f.Key, m.Name(), err.Error())
 				continue
 			}
 			id, err := c.generateID(m, f)
 			if err != nil {
-				c.Log.Warnf("Unable to add field `%s` for metric `%s` due to error '%v', skipping", f.Key, m.Name(), err)
+				c.Log.Warnf("Skipping field %q of metric %q: %s", f.Key, m.Name(), err.Error())
 				continue
 			}
 			ts := fields.AsTimestamp(m.Time())

@@ -300,3 +300,19 @@ func TestTimeout(t *testing.T) {
 	err := clfy.Write(metrics)
 	require.ErrorIs(t, err, errTimeout)
 }
+
+func TestInit(t *testing.T) {
+	username := config.NewSecret([]byte("user"))
+
+	clfy := &Clarify{
+		Log:     testutil.Logger{},
+		Timeout: config.Duration(1 * time.Millisecond),
+		client: clarify.NewClient("c8bvu9fqfsjctpv7b6fg", &MockHandler{
+			sleep:      6 * time.Millisecond,
+			jsonResult: validResponse,
+		}),
+		Username:        username,
+		CredentialsFile: "file",
+	}
+	require.ErrorIs(t, clfy.Init(), errCredentials)
+}
