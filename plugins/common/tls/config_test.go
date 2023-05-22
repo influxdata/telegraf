@@ -45,6 +45,14 @@ func TestClientConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "success with unencrypted pkcs#8 key",
+			client: tls.ClientConfig{
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientPKCS8KeyPath(),
+			},
+		},
+		{
 			name: "encrypted pkcs#8 key but missing password",
 			client: tls.ClientConfig{
 				TLSCA:   pki.CACertPath(),
@@ -82,6 +90,8 @@ func TestClientConfig(t *testing.T) {
 				TLSKey:    pki.ClientEncKeyPath(),
 				TLSKeyPwd: "changeme",
 			},
+			expNil: true,
+			expErr: true,
 		},
 
 		{

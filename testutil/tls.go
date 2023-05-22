@@ -80,6 +80,10 @@ func (p *pki) ClientEncKeyPath() string {
 	return path.Join(p.keyPath, "clientenckey.pem")
 }
 
+func (p *pki) ClientPKCS8KeyPath() string {
+	return path.Join(p.keyPath, "clientkey.pkcs8.pem")
+}
+
 func (p *pki) ClientEncPKCS8KeyPath() string {
 	return path.Join(p.keyPath, "clientenckey.pkcs8.pem")
 }

@@ -81,6 +81,7 @@ cp ./private/clientkey.pem ./private/clientenckey.pem &&
 ssh-keygen -p -f ./private/clientenckey.pem -m PEM -N 'changeme' &&
 # Generate a pkcs#8 encrypted private key using pkcs#5 v2.0 algorithm
 openssl pkcs8 -topk8 -v2 des3 -in ./private/clientkey.pem -out ./private/clientenckey.pkcs8.pem -passout pass:changeme &&
+openssl pkcs8 -topk8 -in clientenckey.pem -passin pass:changeme -nocrypt -out clientkey.pkcs8.pem &&
 
 # Combine crt and key to create pem formatted keyfile
 cat ./certs/clientcert.pem ./private/clientkey.pem > ./private/client.pem &&
