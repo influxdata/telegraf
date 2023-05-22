@@ -122,7 +122,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 		for _, point := range w.buildMetrics(m) {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
-				if strings.Contains(err.Error(), "buffer full, dropping line") {
+				if isRetryable(err) {
 					// The internal buffer in the Wavefront SDK is full. To prevent data loss,
 					// we flush the buffer (which is a blocking operation) and try again.
 					w.Log.Debug("SDK buffer overrun, forcibly flushing the buffer")
