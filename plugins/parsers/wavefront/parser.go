@@ -215,10 +215,6 @@ func (p *PointParser) reset(buf []byte) {
 	p.buf.n = 0
 }
 
-func (p *Parser) InitFromConfig(_ *parsers.Config) error {
-	return p.Init()
-}
-
 func init() {
 	parsers.Add("wavefront",
 		func(_ string) telegraf.Parser {

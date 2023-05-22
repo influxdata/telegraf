@@ -59,12 +59,6 @@ type Parser interface {
 	SetDefaultTags(tags map[string]string)
 }
 
-// ParserCompatibility is an interface for backward-compatible initialization of new parsers
-type ParserCompatibility interface {
-	// InitFromConfig sets the parser internal variables from the old-style config
-	InitFromConfig(config *Config) error
-}
-
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
@@ -192,18 +186,5 @@ type Config struct {
 // NewParser returns a Parser interface based on the given config.
 // DEPRECATED: Please instantiate the parser directly instead of using this function.
 func NewParser(config *Config) (Parser, error) {
-	creator, found := Parsers[config.DataFormat]
-	if !found {
-		return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
-	}
-
-	// Try to create new-style parsers the old way...
-	parser := creator(config.MetricName)
-	p, ok := parser.(ParserCompatibility)
-	if !ok {
-		return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
-	}
-	err := p.InitFromConfig(config)
-
-	return parser, err
+	return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
 }

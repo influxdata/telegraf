@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
-	_ "github.com/influxdata/telegraf/plugins/parsers/all"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -180,16 +180,19 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 }
 
 func createParser() parsers.Parser {
-	testParser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat:     "json",
-		MetricName:     "cpu",
-		JSONQuery:      "metrics",
-		TagKeys:        []string{"tags_datacenter", "tags_host"},
-		JSONTimeKey:    "timestamp",
-		JSONTimeFormat: "unix_ms",
-	})
+	p := &jsonparser.Parser{
+		MetricName: "cpu",
+		Query:      "metrics",
+		TagKeys:    []string{"tags_datacenter", "tags_host"},
+		TimeKey:    "timestamp",
+		TimeFormat: "unix_ms",
+		Strict:     true,
+	}
+	if err := p.Init(); err != nil {
+		panic(err)
+	}
 
-	return testParser
+	return p
 }
 
 func startGCSServer(t *testing.T) *httptest.Server {
