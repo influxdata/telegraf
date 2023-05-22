@@ -125,7 +125,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 				if strings.Contains(err.Error(), "buffer full, dropping line") {
 					// The internal buffer in the Wavefront SDK is full. To prevent data loss,
 					// we flush the buffer (which is a blocking operation) and try again.
-					w.Log.Debug("SDK buffer overrun. Forcibly flushing the buffer")
+					w.Log.Debug("SDK buffer overrun, forcibly flushing the buffer")
 					err = w.sender.Flush()
 					if err != nil {
 						return err
