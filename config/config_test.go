@@ -782,21 +782,13 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	require.NoError(t, c.LoadConfig("./testdata/parsers_new.toml"))
 	require.Len(t, c.Inputs, len(formats))
 
-	cfg := parsers.Config{
-		CSVHeaderRowCount:     42,
-		DropwizardTagPathsMap: make(map[string]string),
-		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
-		JSONStrict:            true,
-		MetricName:            "parser_test_new",
-	}
-
 	override := map[string]struct {
 		param map[string]interface{}
 		mask  []string
 	}{
 		"csv": {
 			param: map[string]interface{}{
-				"HeaderRowCount": cfg.CSVHeaderRowCount,
+				"HeaderRowCount": 42,
 			},
 			mask: []string{"TimeFunc", "ResetMode"},
 		},
@@ -810,15 +802,12 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
-		formatCfg := &cfg
-		formatCfg.DataFormat = format
-
-		logger := models.NewLogger("parsers", format, cfg.MetricName)
+		logger := models.NewLogger("parsers", format, "parser_test_new")
 
 		creator, found := parsers.Parsers[format]
 		require.Truef(t, found, "No parser for format %q", format)
 
-		parser := creator(formatCfg.MetricName)
+		parser := creator("parser_test_new")
 		if settings, found := override[format]; found {
 			s := reflect.Indirect(reflect.ValueOf(parser))
 			for key, value := range settings.param {
@@ -902,21 +891,13 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	require.NoError(t, c.LoadConfig("./testdata/parsers_old.toml"))
 	require.Len(t, c.Inputs, len(formats))
 
-	cfg := parsers.Config{
-		CSVHeaderRowCount:     42,
-		DropwizardTagPathsMap: make(map[string]string),
-		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
-		JSONStrict:            true,
-		MetricName:            "parser_test_old",
-	}
-
 	override := map[string]struct {
 		param map[string]interface{}
 		mask  []string
 	}{
 		"csv": {
 			param: map[string]interface{}{
-				"HeaderRowCount": cfg.CSVHeaderRowCount,
+				"HeaderRowCount": 42,
 			},
 			mask: []string{"TimeFunc", "ResetMode"},
 		},
@@ -930,15 +911,12 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
-		formatCfg := &cfg
-		formatCfg.DataFormat = format
-
-		logger := models.NewLogger("parsers", format, cfg.MetricName)
+		logger := models.NewLogger("parsers", format, "parser_test_old")
 
 		creator, found := parsers.Parsers[format]
 		require.Truef(t, found, "No parser for format %q", format)
 
-		parser := creator(formatCfg.MetricName)
+		parser := creator("parser_test_old")
 		if settings, found := override[format]; found {
 			s := reflect.Indirect(reflect.ValueOf(parser))
 			for key, value := range settings.param {
