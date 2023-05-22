@@ -13,6 +13,8 @@ import (
 )
 
 // Parse path to path-buffer and tag-field
+//
+//nolint:revive //function-result-limit conditionally 4 return results allowed
 func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[string]string, prefix string) (origin, path, alias string, err error) {
 	builder := bytes.NewBufferString(prefix)
 
