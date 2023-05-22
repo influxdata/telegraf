@@ -230,7 +230,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 		for _, r := range k.regexps {
 			if r.MatchString(t) {
 				wantedTopicSet[t] = true
-				k.Log.Debugf("adding regexp-matched topic '%s'", t)
+				k.Log.Debugf("adding regexp-matched topic %q", t)
 				break
 			}
 		}
@@ -242,7 +242,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 	sort.Strings(topicList)
 	fingerprint := strings.Join(topicList, ";")
 	if fingerprint != k.fingerprint {
-		k.Log.Infof("updating topics: replacing '%v' with '%v'", k.allWantedTopics, topicList)
+		k.Log.Infof("updating topics: replacing %q with %q", k.allWantedTopics, topicList)
 	}
 	k.topicLock.Lock()
 	k.fingerprint = fingerprint
