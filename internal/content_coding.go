@@ -3,10 +3,11 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
-	"compress/zlib"
 	"errors"
 	"fmt"
+	"github.com/klauspost/compress/zlib"
+	"github.com/klauspost/compress/zstd"
+	gzip "github.com/klauspost/pgzip"
 	"io"
 )
 
@@ -72,12 +73,14 @@ func (r *GzipReader) Read(b []byte) (int, error) {
 }
 
 // NewContentEncoder returns a ContentEncoder for the encoding type.
-func NewContentEncoder(encoding string) (ContentEncoder, error) {
+func NewContentEncoder(encoding string, level int) (ContentEncoder, error) {
 	switch encoding {
 	case "gzip":
-		return NewGzipEncoder(), nil
+		return NewGzipEncoder(level)
 	case "zlib":
-		return NewZlibEncoder(), nil
+		return NewZlibEncoder(level)
+	case "zstd":
+		return NewZstdEncoder(level)
 	case "identity", "":
 		return NewIdentityEncoder(), nil
 	default:
@@ -117,6 +120,8 @@ func NewContentDecoder(encoding string) (ContentDecoder, error) {
 		return NewGzipDecoder(), nil
 	case "zlib":
 		return NewZlibDecoder(), nil
+	case "zstd":
+		return NewZstdDecoder()
 	case "identity", "":
 		return NewIdentityDecoder(), nil
 	case "auto":
@@ -137,12 +142,13 @@ type GzipEncoder struct {
 	buf    *bytes.Buffer
 }
 
-func NewGzipEncoder() *GzipEncoder {
+func NewGzipEncoder(level int) (*GzipEncoder, error) {
 	var buf bytes.Buffer
+	w, err := gzip.NewWriterLevel(&buf, level)
 	return &GzipEncoder{
-		writer: gzip.NewWriter(&buf),
+		writer: w,
 		buf:    &buf,
-	}
+	}, err
 }
 
 func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
@@ -165,12 +171,13 @@ type ZlibEncoder struct {
 	buf    *bytes.Buffer
 }
 
-func NewZlibEncoder() *ZlibEncoder {
+func NewZlibEncoder(level int) (*ZlibEncoder, error) {
 	var buf bytes.Buffer
+	w, err := zlib.NewWriterLevel(&buf, level)
 	return &ZlibEncoder{
-		writer: zlib.NewWriter(&buf),
+		writer: w,
 		buf:    &buf,
-	}
+	}, err
 }
 
 func (e *ZlibEncoder) Encode(data []byte) ([]byte, error) {
@@ -186,6 +193,21 @@ func (e *ZlibEncoder) Encode(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	return e.buf.Bytes(), nil
+}
+
+type ZstdEncoder struct {
+	encoder *zstd.Encoder
+}
+
+func NewZstdEncoder(level int) (*ZstdEncoder, error) {
+	e, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(level)))
+	return &ZstdEncoder{
+		encoder: e,
+	}, err
+}
+
+func (e *ZstdEncoder) Encode(data []byte) ([]byte, error) {
+	return e.encoder.EncodeAll(data, make([]byte, 0, len(data))), nil
 }
 
 // IdentityEncoder is a null encoder that applies no transformation.
@@ -274,6 +296,23 @@ func (d *ZlibDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, e
 		return nil, err
 	}
 	return d.buf.Bytes(), nil
+}
+
+type ZstdDecoder struct {
+	decoder *zstd.Decoder
+}
+
+func NewZstdDecoder() (*ZstdDecoder, error) {
+	d, err := zstd.NewReader(nil, zstd.WithDecoderConcurrency(0))
+	return &ZstdDecoder{
+		decoder: d,
+	}, err
+}
+
+func (*ZstdDecoder) SetEncoding(string) {}
+
+func (d *ZstdDecoder) Decode(data []byte, _ int64) ([]byte, error) {
+	return d.decoder.DecodeAll(data, nil)
 }
 
 // IdentityDecoder is a null decoder that returns the input.

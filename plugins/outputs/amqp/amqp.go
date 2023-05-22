@@ -98,7 +98,7 @@ func (q *AMQP) Connect() error {
 	}
 
 	var err error
-	q.encoder, err = internal.NewContentEncoder(q.ContentEncoding)
+	q.encoder, err = internal.NewContentEncoder(q.ContentEncoding, 1)
 	if err != nil {
 		return err
 	}

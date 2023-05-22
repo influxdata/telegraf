@@ -165,7 +165,7 @@ func TestSocketListener(t *testing.T) {
 			require.NoError(t, err)
 
 			// Send the data with the correct encoding
-			encoder, err := internal.NewContentEncoder(tt.encoding)
+			encoder, err := internal.NewContentEncoder(tt.encoding, 1)
 			require.NoError(t, err)
 
 			for i, msg := range messages {

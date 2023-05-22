@@ -13,7 +13,8 @@ import (
 )
 
 func TestAutoEncoding(t *testing.T) {
-	enc := internal.NewGzipEncoder()
+	enc, err := internal.NewGzipEncoder(1)
+	require.NoError(t, err)
 	payload, err := enc.Encode([]byte(`measurementName fieldKey="gzip" 1556813561098000000`))
 	require.NoError(t, err)
 

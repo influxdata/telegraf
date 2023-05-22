@@ -155,7 +155,7 @@ func TestPubSub_WriteGzipSingle(t *testing.T) {
 	topic.ContentEncoding = "gzip"
 	ps.ContentEncoding = "gzip"
 	var err error
-	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
+	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding, 1)
 
 	require.NoError(t, err)
 	require.NoError(t, ps.Write(metrics))
@@ -179,7 +179,7 @@ func TestPubSub_WriteGzipAndBase64Single(t *testing.T) {
 	ps.ContentEncoding = "gzip"
 	ps.Base64Data = true
 	var err error
-	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
+	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding, 1)
 
 	require.NoError(t, err)
 	require.NoError(t, ps.Write(metrics))

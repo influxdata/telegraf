@@ -10,8 +10,47 @@ import (
 
 const maxDecompressionSize = 1024
 
+func TestZstdEncodeDecode(t *testing.T) {
+	enc, err := NewZstdEncoder(1)
+	require.NoError(t, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(t, err)
+
+	payload, err := enc.Encode([]byte("howdy"))
+	require.NoError(t, err)
+
+	actual, err := dec.Decode(payload, maxDecompressionSize)
+	require.NoError(t, err)
+
+	require.Equal(t, "howdy", string(actual))
+}
+
+func TestZstdReuse(t *testing.T) {
+	enc, err := NewZstdEncoder(1)
+	require.NoError(t, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(t, err)
+
+	payload, err := enc.Encode([]byte("howdy"))
+	require.NoError(t, err)
+
+	actual, err := dec.Decode(payload, maxDecompressionSize)
+	require.NoError(t, err)
+
+	require.Equal(t, "howdy", string(actual))
+
+	payload, err = enc.Encode([]byte("doody"))
+	require.NoError(t, err)
+
+	actual, err = dec.Decode(payload, maxDecompressionSize)
+	require.NoError(t, err)
+
+	require.Equal(t, "doody", string(actual))
+}
+
 func TestGzipEncodeDecode(t *testing.T) {
-	enc := NewGzipEncoder()
+	enc, err := NewGzipEncoder(-1)
+	require.NoError(t, err)
 	dec := NewGzipDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -24,7 +63,8 @@ func TestGzipEncodeDecode(t *testing.T) {
 }
 
 func TestGzipReuse(t *testing.T) {
-	enc := NewGzipEncoder()
+	enc, err := NewGzipEncoder(-1)
+	require.NoError(t, err)
 	dec := NewGzipDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -45,7 +85,8 @@ func TestGzipReuse(t *testing.T) {
 }
 
 func TestZlibEncodeDecode(t *testing.T) {
-	enc := NewZlibEncoder()
+	enc, err := NewZlibEncoder(-1)
+	require.NoError(t, err)
 	dec := NewZlibDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -58,7 +99,8 @@ func TestZlibEncodeDecode(t *testing.T) {
 }
 
 func TestZlibEncodeDecodeWithTooLargeMessage(t *testing.T) {
-	enc := NewZlibEncoder()
+	enc, err := NewZlibEncoder(-1)
+	require.NoError(t, err)
 	dec := NewZlibDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -97,7 +139,8 @@ func TestStreamIdentityDecode(t *testing.T) {
 }
 
 func TestStreamGzipDecode(t *testing.T) {
-	enc := NewGzipEncoder()
+	enc, err := NewGzipEncoder(-1)
+	require.NoError(t, err)
 	written, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
 
