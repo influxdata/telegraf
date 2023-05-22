@@ -346,34 +346,25 @@ func (s *Subscription) buildFullPath(c *GNMI) error {
 }
 
 func (s *Subscription) buildAlias(aliases map[string]string) error {
-	var err error
-	var gnmiLongPath, gnmiShortPath *gnmiLib.Path
-
 	// Build the subscription path without keys
-	if gnmiLongPath, err = parsePath(s.Origin, s.Path, ""); err != nil {
-		return err
-	}
-	if gnmiShortPath, err = parsePath("", s.Path, ""); err != nil {
+	gnmiPath, err := parsePath(s.Origin, s.Path, "")
+	if err != nil {
 		return err
 	}
 
-	longPath, _, err := handlePath(gnmiLongPath, nil, nil, "")
+	origin, spath, _, err := handlePath(gnmiPath, nil, nil, "")
 	if err != nil {
-		return fmt.Errorf("handling long-path failed: %w", err)
-	}
-	shortPath, _, err := handlePath(gnmiShortPath, nil, nil, "")
-	if err != nil {
-		return fmt.Errorf("handling short-path failed: %w", err)
+		return fmt.Errorf("handling path failed: %w", err)
 	}
 
 	// If the user didn't provide a measurement name, use last path element
 	name := s.Name
-	if len(name) == 0 {
-		name = path.Base(shortPath)
+	if name == "" {
+		name = path.Base(spath)
 	}
-	if len(name) > 0 {
-		aliases[longPath] = name
-		aliases[shortPath] = name
+	if name != "" {
+		aliases[origin+spath] = name
+		aliases[spath] = name
 	}
 	return nil
 }

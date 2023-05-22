@@ -13,7 +13,7 @@ import (
 )
 
 // Parse path to path-buffer and tag-field
-func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[string]string, prefix string) (pathBuffer string, aliasPath string, err error) {
+func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[string]string, prefix string) (origin, path, alias string, err error) {
 	builder := bytes.NewBufferString(prefix)
 
 	// Some devices do report the origin in the first path element
@@ -28,28 +28,25 @@ func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[stri
 
 	// Prefix with origin
 	if len(gnmiPath.Origin) > 0 {
-		if _, err := builder.WriteString(gnmiPath.Origin); err != nil {
-			return "", "", err
-		}
-		if _, err := builder.WriteRune(':'); err != nil {
-			return "", "", err
-		}
+		origin = gnmiPath.Origin + ":"
 	}
 
 	// Parse generic keys from prefix
 	for _, elem := range gnmiPath.Elem {
 		if len(elem.Name) > 0 {
 			if _, err := builder.WriteRune('/'); err != nil {
-				return "", "", err
+				return "", "", "", err
 			}
 			if _, err := builder.WriteString(elem.Name); err != nil {
-				return "", "", err
+				return "", "", "", err
 			}
 		}
 		name := builder.String()
 
-		if _, exists := aliases[name]; exists {
-			aliasPath = name
+		if _, exists := aliases[origin+name]; exists {
+			alias = origin + name
+		} else if _, exists := aliases[name]; exists {
+			alias = name
 		}
 
 		if tags != nil {
@@ -66,7 +63,7 @@ func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[stri
 		}
 	}
 
-	return builder.String(), aliasPath, nil
+	return origin, builder.String(), alias, nil
 }
 
 // equalPathNoKeys checks if two gNMI paths are equal, without keys

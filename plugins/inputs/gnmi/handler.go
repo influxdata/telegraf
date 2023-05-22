@@ -174,10 +174,12 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	}
 
 	if response.Update.Prefix != nil {
+		var origin string
 		var err error
-		if prefix, prefixAliasPath, err = handlePath(response.Update.Prefix, prefixTags, h.aliases, ""); err != nil {
+		if origin, prefix, prefixAliasPath, err = handlePath(response.Update.Prefix, prefixTags, h.aliases, ""); err != nil {
 			h.log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
 		}
+		prefix = origin + prefix
 	}
 
 	prefixTags["source"], _, _ = net.SplitHostPort(h.address)
@@ -287,7 +289,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 
 // HandleTelemetryField and add it to a measurement
 func (h *handler) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
-	gpath, aliasPath, err := handlePath(update.Path, tags, h.aliases, prefix)
+	_, gpath, aliasPath, err := handlePath(update.Path, tags, h.aliases, prefix)
 	if err != nil {
 		h.log.Errorf("handling path %q failed: %v", update.Path, err)
 	}
