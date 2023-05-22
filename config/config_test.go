@@ -758,7 +758,7 @@ func TestConfig_SerializerInterfaceOldFormat(t *testing.T) {
 	}
 }
 
-func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
+func TestConfig_ParserInterface(t *testing.T) {
 	formats := []string{
 		"collectd",
 		"csv",
@@ -859,115 +859,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 		}
 
 		// Do a manual comparision as require.EqualValues will also work on unexported fields
-		// that cannot be cleared or ignored.
-		diff := cmp.Diff(expected[i], actual[i], options...)
-		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
-		diff = cmp.Diff(expected[i], generated[i], options...)
-		require.Emptyf(t, diff, "Difference in SetParserFunc() for %q", format)
-	}
-}
-
-func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
-	formats := []string{
-		"collectd",
-		"csv",
-		"dropwizard",
-		"form_urlencoded",
-		"graphite",
-		"grok",
-		"influx",
-		"json",
-		"json_v2",
-		"logfmt",
-		"nagios",
-		"prometheus",
-		"prometheusremotewrite",
-		"value",
-		"wavefront",
-		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
-	}
-
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/parsers_old.toml"))
-	require.Len(t, c.Inputs, len(formats))
-
-	override := map[string]struct {
-		param map[string]interface{}
-		mask  []string
-	}{
-		"csv": {
-			param: map[string]interface{}{
-				"HeaderRowCount": 42,
-			},
-			mask: []string{"TimeFunc", "ResetMode"},
-		},
-		"xpath_protobuf": {
-			param: map[string]interface{}{
-				"ProtobufMessageDef":  "testdata/addressbook.proto",
-				"ProtobufMessageType": "addressbook.AddressBook",
-			},
-		},
-	}
-
-	expected := make([]telegraf.Parser, 0, len(formats))
-	for _, format := range formats {
-		logger := models.NewLogger("parsers", format, "parser_test_old")
-
-		creator, found := parsers.Parsers[format]
-		require.Truef(t, found, "No parser for format %q", format)
-
-		parser := creator("parser_test_old")
-		if settings, found := override[format]; found {
-			s := reflect.Indirect(reflect.ValueOf(parser))
-			for key, value := range settings.param {
-				v := reflect.ValueOf(value)
-				s.FieldByName(key).Set(v)
-			}
-		}
-		models.SetLoggerOnPlugin(parser, logger)
-		if p, ok := parser.(telegraf.Initializer); ok {
-			require.NoError(t, p.Init())
-		}
-		expected = append(expected, parser)
-	}
-	require.Len(t, expected, len(formats))
-
-	actual := make([]interface{}, 0)
-	generated := make([]interface{}, 0)
-	for _, plugin := range c.Inputs {
-		input, ok := plugin.Input.(*MockupInputPluginParserOld)
-		require.True(t, ok)
-		// Get the parser set with 'SetParser()'
-		if p, ok := input.Parser.(*models.RunningParser); ok {
-			actual = append(actual, p.Parser)
-		} else {
-			actual = append(actual, input.Parser)
-		}
-		// Get the parser set with 'SetParserFunc()'
-		g, err := input.ParserFunc()
-		require.NoError(t, err)
-		if rp, ok := g.(*models.RunningParser); ok {
-			generated = append(generated, rp.Parser)
-		} else {
-			generated = append(generated, g)
-		}
-	}
-	require.Len(t, actual, len(formats))
-
-	for i, format := range formats {
-		// Determine the underlying type of the parser
-		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
-		// Ignore all unexported fields and fields not relevant for functionality
-		options := []cmp.Option{
-			cmpopts.IgnoreUnexported(stype),
-			cmpopts.IgnoreTypes(sync.Mutex{}),
-			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
-		}
-		if settings, found := override[format]; found {
-			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
-		}
-
-		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected[i], actual[i], options...)
 		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
@@ -1340,25 +1231,6 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 	}
 }
 
-/*** Mockup INPUT plugin for (old) parser testing to avoid cyclic dependencies ***/
-type MockupInputPluginParserOld struct {
-	Parser     parsers.Parser
-	ParserFunc parsers.ParserFunc
-}
-
-func (m *MockupInputPluginParserOld) SampleConfig() string {
-	return "Mockup old parser test plugin"
-}
-func (m *MockupInputPluginParserOld) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser) {
-	m.Parser = parser
-}
-func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc) {
-	m.ParserFunc = f
-}
-
 /*** Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserNew struct {
 	Parser     telegraf.Parser
@@ -1672,9 +1544,6 @@ func init() {
 	// Register the mockup input plugin for the required names
 	inputs.Add("parser_test_new", func() telegraf.Input {
 		return &MockupInputPluginParserNew{}
-	})
-	inputs.Add("parser_test_old", func() telegraf.Input {
-		return &MockupInputPluginParserOld{}
 	})
 	inputs.Add("parser", func() telegraf.Input {
 		return &MockupInputPluginParserOnly{}

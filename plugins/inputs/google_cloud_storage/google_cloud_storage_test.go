@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -179,7 +179,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 	require.Equal(t, 0, len(emptyAcc.Metrics))
 }
 
-func createParser() parsers.Parser {
+func createParser() telegraf.Parser {
 	p := &jsonparser.Parser{
 		MetricName: "cpu",
 		Query:      "metrics",
