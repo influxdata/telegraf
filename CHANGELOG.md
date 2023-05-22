@@ -1,6 +1,8 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## next
+
 ### BREAKING API CHANGES
 
 - Removal of old-style parser creation
