@@ -47,12 +47,13 @@ to use them.
   topics = ["telegraf"]
 
   ## Topic regular expressions to consume.  Matches will be added to topics.
-  # topic_regexps = [ "*test", "metric[0-9A-z]*" ]
+  ## Example: topic_regexps = [ "*test", "metric[0-9A-z]*" ]
+  # topic_regexps = [ ]
 
   ## Topic discovery refresh interval.  If topic_regexps is set, then
   ## every interval, topics will be rescanned to see if any new matches
   ## are found.
-  # topic_refresh_interval = "60s"
+  # topic_refresh_interval = "0s"
 
   ## When set this tag will be added to all metrics with the topic as the value.
   # topic_tag = ""
