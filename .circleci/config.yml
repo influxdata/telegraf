@@ -396,7 +396,6 @@ jobs:
               --include "telegraf*.rpm" \
               --include "telegraf*.tar.gz" \
               --include "telegraf*.zip" \
-              --dryrun \
               --acl public-read
   docker-nightly:
     machine:
