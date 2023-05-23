@@ -54,7 +54,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If you are using CloudWatch cross-account observability, you can 
   ## set IncludeLinkedAccounts to true in a monitoring account 
   ## and collect metrics from the linked source accounts
-  # IncludeLinkedAccounts = false
+  # include_linked_accounts = false
   
   ## Endpoint to make request against, the correct endpoint is automatically
   ## determined and this option should only be set if you wish to override the
