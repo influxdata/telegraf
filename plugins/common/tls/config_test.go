@@ -83,7 +83,7 @@ func TestClientConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "success with encrypted pkcs#1 key and password set",
+			name: "error with encrypted pkcs#1 key and password set",
 			client: tls.ClientConfig{
 				TLSCA:     pki.CACertPath(),
 				TLSCert:   pki.ClientCertPath(),
