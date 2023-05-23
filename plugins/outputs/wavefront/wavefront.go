@@ -135,10 +135,10 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 						if isRetryable(err) {
 							return fmt.Errorf("wavefront sending error: %w", err)
 						}
-						w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
-						w.Log.Debugf("non-retryable metric data: %+v", point)
 					}
 				}
+				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
+				w.Log.Debugf("non-retryable metric data: %+v", point)
 			}
 		}
 	}
