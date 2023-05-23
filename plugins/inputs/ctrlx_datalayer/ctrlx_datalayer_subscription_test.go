@@ -10,20 +10,6 @@ import (
 )
 
 func TestSubscription_createRequest(t *testing.T) {
-	type fields struct {
-		Nodes             []Node
-		Tags              map[string]string
-		Measurement       string
-		PublishInterval   config.Duration
-		KeepaliveInterval config.Duration
-		ErrorInterval     config.Duration
-		SamplingInterval  config.Duration
-		QueueSize         uint
-		QueueBehaviour    string
-		DeadBandValue     float64
-		ValueChange       string
-		OutputJSONString  bool
-	}
 	type args struct {
 		id string
 	}
