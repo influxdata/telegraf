@@ -250,7 +250,8 @@ func TestSerializeMetricHostWithTagSupport(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -278,7 +279,8 @@ func TestSerializeValueField(t *testing.T) {
 	s := GraphiteSerializer{}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -305,7 +307,8 @@ func TestSerializeValueFieldWithTagSupport(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -332,7 +335,8 @@ func TestSerializeValueField2(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -358,7 +362,8 @@ func TestSerializeValueString(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	require.Equal(t, "", mS[0])
 }
@@ -381,7 +386,8 @@ func TestSerializeValueStringWithTagSupport(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	require.Equal(t, "", mS[0])
 }
@@ -404,7 +410,8 @@ func TestSerializeValueBoolean(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -435,7 +442,8 @@ func TestSerializeValueBooleanWithTagSupport(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -482,7 +490,8 @@ func TestSerializeFieldWithSpaces(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -509,7 +518,8 @@ func TestSerializeFieldWithSpacesWithTagSupport(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -536,7 +546,8 @@ func TestSerializeTagWithSpaces(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -563,7 +574,8 @@ func TestSerializeTagWithSpacesWithTagSupport(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -591,7 +603,8 @@ func TestSerializeTagWithSpacesWithTagSupportCompatibleSanitize(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -618,7 +631,8 @@ func TestSerializeValueField3(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -645,7 +659,8 @@ func TestSerializeValueField5(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -670,7 +685,8 @@ func TestSerializeMetricPrefix(t *testing.T) {
 	s := GraphiteSerializer{Prefix: "prefix"}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -702,7 +718,8 @@ func TestSerializeMetricPrefixWithTagSupport(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -732,7 +749,8 @@ func TestSerializeCustomRegex(t *testing.T) {
 	}
 	require.NoError(t, s.Init())
 
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
@@ -936,7 +954,8 @@ func TestClean(t *testing.T) {
 			require.NoError(t, s.Init())
 
 			m := metric.New(tt.metricName, tt.tags, tt.fields, now)
-			actual, _ := s.Serialize(m)
+			actual, err := s.Serialize(m)
+			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(actual))
 		})
 	}
