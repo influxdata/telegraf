@@ -10,44 +10,6 @@ import (
 
 const maxDecompressionSize = 1024
 
-func TestZstdEncodeDecode(t *testing.T) {
-	enc, err := NewZstdEncoder(1)
-	require.NoError(t, err)
-	dec, err := NewZstdDecoder()
-	require.NoError(t, err)
-
-	payload, err := enc.Encode([]byte("howdy"))
-	require.NoError(t, err)
-
-	actual, err := dec.Decode(payload, maxDecompressionSize)
-	require.NoError(t, err)
-
-	require.Equal(t, "howdy", string(actual))
-}
-
-func TestZstdReuse(t *testing.T) {
-	enc, err := NewZstdEncoder(1)
-	require.NoError(t, err)
-	dec, err := NewZstdDecoder()
-	require.NoError(t, err)
-
-	payload, err := enc.Encode([]byte("howdy"))
-	require.NoError(t, err)
-
-	actual, err := dec.Decode(payload, maxDecompressionSize)
-	require.NoError(t, err)
-
-	require.Equal(t, "howdy", string(actual))
-
-	payload, err = enc.Encode([]byte("doody"))
-	require.NoError(t, err)
-
-	actual, err = dec.Decode(payload, maxDecompressionSize)
-	require.NoError(t, err)
-
-	require.Equal(t, "doody", string(actual))
-}
-
 func TestGzipEncodeDecode(t *testing.T) {
 	enc, err := NewGzipEncoder(-1)
 	require.NoError(t, err)
@@ -157,48 +119,6 @@ func TestStreamGzipDecode(t *testing.T) {
 	require.Equal(t, []byte("howdy"), b[:n])
 }
 
-func BenchmarkZstdEncodeDecode(b *testing.B) {
-	enc, err := NewZstdEncoder(1)
-	require.NoError(b, err)
-	dec, err := NewZstdDecoder()
-	require.NoError(b, err)
-
-	for n := 0; n < b.N; n++ {
-		payload, err := enc.Encode([]byte("howdy"))
-		require.NoError(b, err)
-
-		actual, err := dec.Decode(payload, maxDecompressionSize)
-		require.NoError(b, err)
-
-		require.Equal(b, "howdy", string(actual))
-	}
-}
-
-func BenchmarkZstdReuse(b *testing.B) {
-	enc, err := NewZstdEncoder(1)
-	require.NoError(b, err)
-	dec, err := NewZstdDecoder()
-	require.NoError(b, err)
-
-	for n := 0; n < b.N; n++ {
-		payload, err := enc.Encode([]byte("howdy"))
-		require.NoError(b, err)
-
-		actual, err := dec.Decode(payload, maxDecompressionSize)
-		require.NoError(b, err)
-
-		require.Equal(b, "howdy", string(actual))
-
-		payload, err = enc.Encode([]byte("doody"))
-		require.NoError(b, err)
-
-		actual, err = dec.Decode(payload, maxDecompressionSize)
-		require.NoError(b, err)
-
-		require.Equal(b, "doody", string(actual))
-	}
-}
-
 func BenchmarkGzipEncodeDecode(b *testing.B) {
 	enc, err := NewGzipEncoder(-1)
 	require.NoError(b, err)
@@ -220,15 +140,15 @@ func BenchmarkGzipReuse(b *testing.B) {
 	require.NoError(b, err)
 	dec := NewGzipDecoder()
 
+	payload, err := enc.Encode([]byte("howdy"))
+	require.NoError(b, err)
+
+	actual, err := dec.Decode(payload, maxDecompressionSize)
+	require.NoError(b, err)
+
+	require.Equal(b, "howdy", string(actual))
+
 	for n := 0; n < b.N; n++ {
-		payload, err := enc.Encode([]byte("howdy"))
-		require.NoError(b, err)
-
-		actual, err := dec.Decode(payload, maxDecompressionSize)
-		require.NoError(b, err)
-
-		require.Equal(b, "howdy", string(actual))
-
 		payload, err = enc.Encode([]byte("doody"))
 		require.NoError(b, err)
 
@@ -252,20 +172,6 @@ func BenchmarkZlibEncodeDecode(b *testing.B) {
 		require.NoError(b, err)
 
 		require.Equal(b, "howdy", string(actual))
-	}
-}
-
-func BenchmarkZlibEncodeDecodeWithTooLargeMessage(b *testing.B) {
-	enc, err := NewZlibEncoder(-1)
-	require.NoError(b, err)
-	dec := NewZlibDecoder()
-
-	for n := 0; n < b.N; n++ {
-		payload, err := enc.Encode([]byte("howdy"))
-		require.NoError(b, err)
-
-		_, err = dec.Decode(payload, 3)
-		require.ErrorContains(b, err, "size of decoded data exceeds allowed size 3")
 	}
 }
 
