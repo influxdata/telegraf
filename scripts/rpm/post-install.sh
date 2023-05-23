@@ -32,7 +32,8 @@ chmod 755 $LOG_DIR
 
 STATE_DIR=/var/lib/telegraf
 test -d "$STATE_DIR" || {
-    mkdir -m 0770 -p "$STATE_DIR"
+    mkdir -p "$STATE_DIR"
+    chmod 770 "$STATE_DIR"
     chown root:telegraf "$STATE_DIR"
 }
 
