@@ -31,14 +31,17 @@ chown -R -L telegraf:telegraf $LOG_DIR
 chmod 755 $LOG_DIR
 
 STATE_DIR=/var/lib/telegraf
-test -d $STATE_DIR || mkdir -p $STATE_DIR
-chown -R -L root:telegraf $STATE_DIR
-chmod 770 $STATE_DIR
+test -d "$STATE_DIR" || {
+    mkdir -m 0770 -p "$STATE_DIR"
+    chown root:telegraf "$STATE_DIR"
+}
 
-STATE_FILE=$STATE_DIR/statefile
-test -f $STATE_FILE || touch $STATE_FILE
-chown -R -L root:telegraf $STATE_FILE
-chmod 770 $STATE_FILE
+STATE_FILE="$STATE_DIR/statefile"
+test -f "$STATE_FILE" || {
+    touch -h "$STATE_FILE"
+    chown root:telegraf "$STATE_FILE"
+    chmod 660 "$STATE_FILE"
+}
 
 # Set up systemd service - check if the systemd directory exists per:
 # https://www.freedesktop.org/software/systemd/man/sd_booted.html
