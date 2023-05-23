@@ -266,8 +266,7 @@ func (c *CtrlXDataLayer) Init() error {
 		Host:   c.Server,
 	}
 	c.url = u.String()
-	_, err := url.Parse(c.url)
-	if err != nil {
+	if _, err := url.Parse(c.url); err != nil {
 		return errors.New("invalid server address")
 	}
 
