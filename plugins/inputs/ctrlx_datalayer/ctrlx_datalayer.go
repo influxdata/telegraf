@@ -244,8 +244,7 @@ func (c *CtrlXDataLayer) Init() error {
 	for i := range c.Subscription {
 		sub := &c.Subscription[i]
 		sub.applyDefaultSettings()
-		err := choice.Check(sub.QueueBehaviour, queueBehaviours)
-		if err != nil {
+		if !choice.Contains(sub.QueueBehaviour, queueBehaviours) {
 			c.Log.Infof("The right queue behaviour values are %v", queueBehaviours)
 			return fmt.Errorf("subscription %d: setting 'queue_behaviour' %q is invalid", i, sub.QueueBehaviour)
 		}
