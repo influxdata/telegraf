@@ -88,7 +88,7 @@ func (c *CtrlXDataLayer) createSubscription(sub *Subscription) (string, error) {
 
 	resp, err := c.connection.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to do request to create sse subscription %d, error: %w", sub.index, err)
+		return "", fmt.Errorf("failed to do request to create sse subscription %d: %w", sub.index, err)
 	}
 	defer resp.Body.Close()
 
