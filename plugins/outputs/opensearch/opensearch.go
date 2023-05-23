@@ -53,8 +53,8 @@ type Opensearch struct {
 	pipelineName        string
 	pipelineTagKeys     []string
 	tagKeys             []string
-	onSucc 				func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
-	onFail 				func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
+	onSucc              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
+	onFail              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
 	httpconfig.HTTPClientConfig
 	osClient *opensearch.Client
 }
@@ -98,7 +98,6 @@ func (o *Opensearch) Init() error {
 			o.Log.Errorf("error while Opensearch bulkIndexing: %s: %s", res.Error.Type, res.Error.Reason)
 		}
 	}
-
 
 	if o.TemplateName == "" {
 		return fmt.Errorf("opensearch template_name configuration not defined")
@@ -167,8 +166,8 @@ func (o *Opensearch) newClient() error {
 		header.Add("Content-Type", "application/json")
 		header.Add("Accept-Encoding", "gzip")
 	}
-	if o.AuthBearerToken != ""{
-		header.Add("Authorization", "Bearer " + o.AuthBearerToken)
+	if o.AuthBearerToken != "" {
+		header.Add("Authorization", "Bearer "+o.AuthBearerToken)
 	}
 
 	clientConfig.Header = header
@@ -197,7 +196,7 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 	if len(indexers) == 0 {
 		return fmt.Errorf("failed to instantiate opensearch bulkindexer")
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5000000000))
 	defer cancel()
 
@@ -240,8 +239,8 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		bulkIndxrItem := opensearchutil.BulkIndexerItem{
-			Action: "index",
-			Index: indexName,
+			Action:    "index",
+			Index:     indexName,
 			Body:      strings.NewReader(string(body)),
 			OnSuccess: o.onSucc,
 			OnFailure: o.onFail,
@@ -282,11 +281,10 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-
 // BulkIndexer supports pipeline at config level so seperate indexer instance for each unique pipeline
 func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string]opensearchutil.BulkIndexer {
 	var indexers = make(map[string]opensearchutil.BulkIndexer)
-	
+
 	if osInst.UsePipeline != "" {
 		for _, metric := range metrics {
 			if pipelineName := osInst.getPipelineName(osInst.pipelineName, osInst.pipelineTagKeys, metric.Tags()); pipelineName != "" {
@@ -302,7 +300,7 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 				}
 			}
 		}
-	} 
+	}
 
 	bulkIndxr, err := createBulkIndexer(osInst, "")
 	if err != nil {
@@ -313,11 +311,11 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 	return indexers
 }
 
-func createBulkIndexer(osInst *Opensearch, pipelineName string) (opensearchutil.BulkIndexer, error){
+func createBulkIndexer(osInst *Opensearch, pipelineName string) (opensearchutil.BulkIndexer, error) {
 	var bulkIndexerConfig = opensearchutil.BulkIndexerConfig{
 		Client:     osInst.osClient,
-		NumWorkers: 4,      // The number of worker goroutines (default: number of CPUs)
-		FlushBytes: 5e+6,   // The flush threshold in bytes (default: 5M)
+		NumWorkers: 4,    // The number of worker goroutines (default: number of CPUs)
+		FlushBytes: 5e+6, // The flush threshold in bytes (default: 5M)
 	}
 	if pipelineName != "" {
 		bulkIndexerConfig.Pipeline = pipelineName
@@ -325,7 +323,6 @@ func createBulkIndexer(osInst *Opensearch, pipelineName string) (opensearchutil.
 
 	return opensearchutil.NewBulkIndexer(bulkIndexerConfig)
 }
-
 
 func (o *Opensearch) manageTemplate(ctx context.Context) error {
 	tempReq := opensearchapi.CatTemplatesRequest{
@@ -369,7 +366,7 @@ func (o *Opensearch) manageTemplate(ctx context.Context) error {
 			Body: strings.NewReader(tmpl.String()),
 		}
 		indexTempResp, errCreateTemplate := indexTempReq.Do(ctx, o.osClient.Transport)
-		
+
 		if errCreateTemplate != nil || indexTempResp.StatusCode != 200 {
 			return fmt.Errorf("opensearch failed to create index template %s : %w", o.TemplateName, errCreateTemplate)
 		}
