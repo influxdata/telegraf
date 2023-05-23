@@ -44,7 +44,6 @@ type KafkaConsumer struct {
 	BalanceStrategy        string          `toml:"balance_strategy"`
 	Topics                 []string        `toml:"topics"`
 	TopicRegexps           []string        `toml:"topic_regexps"`
-	TopicRefreshInterval   config.Duration `toml:"topic_refresh_interval"`
 	TopicTag               string          `toml:"topic_tag"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
 	ConnectionStrategy     string          `toml:"connection_strategy"`
@@ -280,20 +279,6 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		if err := k.refreshTopics(); err != nil {
 			return err
 		}
-		// If, additionally, TopicRefreshInterval is set,
-		// schedule the refresh.
-		if k.TopicRefreshInterval != 0 {
-			tick := time.Duration(k.TopicRefreshInterval)
-			k.Log.Infof("refreshing topics every %s", tick.String())
-			k.ticker = time.NewTicker(tick)
-			go func() {
-				for range k.ticker.C {
-					if err := k.refreshTopics(); err != nil {
-						k.Log.Errorf("topic refresh failed: %v", err)
-					}
-				}
-			}()
-		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -330,16 +315,6 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			// We need to copy allWantedTopics; the Consume() is
 			// long-running and we can easily deadlock if our
 			// topic-update-checker fires.
-			//
-			// This means we just get all the topics in play
-			// at the time Consume() starts.  That's better than
-			// nothing, but it means that we don't actually
-			// dynamically update what we're listening to.
-			//
-			// We probably need to signal this goroutine when we
-			// refresh our topics, and when we get that signal,
-			// stop the consumer, and then restart it with the
-			// new topic list.
 			topics := make([]string, len(k.allWantedTopics))
 			k.topicLock.Lock()
 			copy(topics, k.allWantedTopics)
