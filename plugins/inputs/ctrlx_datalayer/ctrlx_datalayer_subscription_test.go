@@ -234,9 +234,7 @@ func TestSubscription_addressList(t *testing.T) {
 			s := &Subscription{
 				Nodes: tt.fields.Nodes,
 			}
-			if got := s.addressList(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Subscription.addressList() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, s.addressList())
 		})
 	}
 }
