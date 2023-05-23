@@ -294,7 +294,6 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 				statFilter: statFilter,
 				accounts:   accounts,
 			})
-
 		}
 	} else {
 		metrics, accounts := c.fetchNamespaceMetrics()
@@ -405,7 +404,6 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					},
 				})
 			}
-
 		}
 	}
 

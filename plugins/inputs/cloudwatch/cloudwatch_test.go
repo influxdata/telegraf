@@ -61,7 +61,6 @@ func (m *mockGatherCloudWatchClient) GetMetricData(
 	params *cwClient.GetMetricDataInput,
 	_ ...func(*cwClient.Options),
 ) (*cwClient.GetMetricDataOutput, error) {
-
 	return &cwClient.GetMetricDataOutput{
 		MetricDataResults: []types.MetricDataResult{
 			{
@@ -262,7 +261,6 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 
 	require.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
 	require.True(t, acc.HasMeasurement("cloudwatch_aws_ec2"))
-
 }
 
 type mockSelectMetricsCloudWatchClient struct{}
