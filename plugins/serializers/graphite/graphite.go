@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 const DefaultTemplate = "host.tags.measurement.field"
@@ -38,20 +39,51 @@ type GraphiteTemplate struct {
 }
 
 type GraphiteSerializer struct {
-	Prefix             string              `json:"prefix"`
-	Template           string              `json:"template"`
-	StrictAllowedChars *regexp.Regexp      `json:"graphite_strict_sanitize_regex"`
-	TagSupport         bool                `json:"graphite_tag_support"`
-	TagSanitizeMode    string              `json:"graphite_tag_sanitize_mode"`
-	Separator          string              `json:"graphite_separator"`
-	Templates          []*GraphiteTemplate `json:"templates"`
+	Prefix          string   `toml:"prefix"`
+	Template        string   `toml:"template"`
+	StrictRegex     string   `toml:"graphite_strict_sanitize_regex"`
+	TagSupport      bool     `toml:"graphite_tag_support"`
+	TagSanitizeMode string   `toml:"graphite_tag_sanitize_mode"`
+	Separator       string   `toml:"graphite_separator"`
+	Templates       []string `toml:"templates"`
+
+	tmplts             []*GraphiteTemplate
+	strictAllowedChars *regexp.Regexp
+}
+
+func (s *GraphiteSerializer) Init() error {
+	graphiteTemplates, defaultTemplate, err := InitGraphiteTemplates(s.Templates)
+	if err != nil {
+		return err
+	}
+	s.tmplts = graphiteTemplates
+
+	if defaultTemplate != "" {
+		s.Template = defaultTemplate
+	}
+
+	if s.TagSanitizeMode == "" {
+		s.TagSanitizeMode = "strict"
+	}
+
+	if s.Separator == "" {
+		s.Separator = "."
+	}
+
+	if s.StrictRegex == "" {
+		s.strictAllowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	} else {
+		var err error
+		s.strictAllowedChars, err = regexp.Compile(s.StrictRegex)
+		if err != nil {
+			return fmt.Errorf("invalid regex provided %q: %w", s.StrictRegex, err)
+		}
+	}
+
+	return nil
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	if s.StrictAllowedChars == nil {
-		s.StrictAllowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
-	}
-
 	out := []byte{}
 
 	// Convert UnixNano to Unix timestamps
@@ -76,7 +108,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		}
 	default:
 		template := s.Template
-		for _, graphiteTemplate := range s.Templates {
+		for _, graphiteTemplate := range s.tmplts {
 			if graphiteTemplate.Filter.Match(metric.Name()) {
 				template = graphiteTemplate.Value
 				break
@@ -326,7 +358,7 @@ func (s *GraphiteSerializer) strictSanitize(value string) string {
 	// Apply rule to drop some chars to preserve backwards compatibility
 	value = dropChars.Replace(value)
 	// Replace any remaining illegal chars
-	return s.StrictAllowedChars.ReplaceAllLiteralString(value, "_")
+	return s.strictAllowedChars.ReplaceAllLiteralString(value, "_")
 }
 
 func compatibleSanitize(name string, value string) string {
@@ -334,4 +366,24 @@ func compatibleSanitize(name string, value string) string {
 	value = compatibleAllowedCharsValue.ReplaceAllLiteralString(value, "_")
 	value = compatibleLeadingTildeDrop.FindStringSubmatch(value)[1]
 	return name + "=" + value
+}
+
+func init() {
+	serializers.Add("graphite",
+		func() serializers.Serializer {
+			return &GraphiteSerializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *GraphiteSerializer) InitFromConfig(cfg *serializers.Config) error {
+	s.Prefix = cfg.Prefix
+	s.Templates = cfg.Templates
+	s.StrictRegex = cfg.GraphiteStrictRegex
+	s.TagSupport = cfg.GraphiteTagSupport
+	s.TagSanitizeMode = cfg.GraphiteTagSanitizeMode
+	s.Separator = cfg.GraphiteSeparator
+
+	return nil
 }

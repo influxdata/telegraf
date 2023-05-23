@@ -2,11 +2,9 @@ package serializers
 
 import (
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
@@ -165,16 +163,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
-	case "graphite":
-		serializer, err = NewGraphiteSerializer(
-			config.Prefix,
-			config.Template,
-			config.GraphiteStrictRegex,
-			config.GraphiteTagSupport,
-			config.GraphiteTagSanitizeMode,
-			config.GraphiteSeparator,
-			config.Templates,
-		)
 	case "json":
 		serializer, err = NewJSONSerializer(config)
 	case "splunkmetric":
@@ -274,52 +262,6 @@ func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimet
 
 func NewNowSerializer() (Serializer, error) {
 	return nowmetric.NewSerializer()
-}
-
-//nolint:revive //argument-limit conditionally more arguments allowed
-func NewGraphiteSerializer(
-	prefix,
-	template string,
-	strictRegex string,
-	tagSupport bool,
-	tagSanitizeMode string,
-	separator string,
-	templates []string,
-) (Serializer, error) {
-	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
-	if err != nil {
-		return nil, err
-	}
-
-	if defaultTemplate != "" {
-		template = defaultTemplate
-	}
-
-	if tagSanitizeMode == "" {
-		tagSanitizeMode = "strict"
-	}
-
-	if separator == "" {
-		separator = "."
-	}
-
-	strictAllowedChars := regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
-	if strictRegex != "" {
-		strictAllowedChars, err = regexp.Compile(strictRegex)
-		if err != nil {
-			return nil, fmt.Errorf("invalid regex provided %q: %w", strictRegex, err)
-		}
-	}
-
-	return &graphite.GraphiteSerializer{
-		Prefix:             prefix,
-		Template:           template,
-		StrictAllowedChars: strictAllowedChars,
-		TagSupport:         tagSupport,
-		TagSanitizeMode:    tagSanitizeMode,
-		Separator:          separator,
-		Templates:          graphiteTemplates,
-	}, nil
 }
 
 func NewMsgpackSerializer() Serializer {
