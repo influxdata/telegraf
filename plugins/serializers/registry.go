@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
@@ -166,8 +165,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
-	case "csv":
-		serializer, err = NewCSVSerializer(config)
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(
 			config.Prefix,
@@ -214,10 +211,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		return serializer, err
 	}
 	return serializer, err
-}
-
-func NewCSVSerializer(config *Config) (Serializer, error) {
-	return csv.NewSerializer(config.TimestampFormat, config.CSVSeparator, config.CSVHeader, config.CSVPrefix)
 }
 
 func NewPrometheusRemoteWriteSerializer(config *Config) Serializer {
