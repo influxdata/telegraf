@@ -94,21 +94,7 @@ func TestSubscription_createRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Subscription{
-				Nodes:             tt.fields.Nodes,
-				Tags:              tt.fields.Tags,
-				Measurement:       tt.fields.Measurement,
-				PublishInterval:   tt.fields.PublishInterval,
-				KeepaliveInterval: tt.fields.KeepaliveInterval,
-				ErrorInterval:     tt.fields.ErrorInterval,
-				SamplingInterval:  tt.fields.SamplingInterval,
-				QueueSize:         tt.fields.QueueSize,
-				QueueBehaviour:    tt.fields.QueueBehaviour,
-				DeadBandValue:     tt.fields.DeadBandValue,
-				ValueChange:       tt.fields.ValueChange,
-				OutputJSONString:  tt.fields.OutputJSONString,
-			}
-			got := s.createRequest(tt.args.id)
+			got := tt.fields.createRequest(tt.args.id)
 			require.Equal(t, tt.wantBody, got)
 		})
 	}
