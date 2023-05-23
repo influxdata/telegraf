@@ -93,7 +93,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - warning (integer)
 
 `passing`, `critical`, and `warning` are integer representations of the health
-check state. A value of `1` represents that the status was the state of the the
+check state. A value of `1` represents that the status was the state of the
 health check at this sample. `status` is string representation of the same
 state.
 

@@ -29,7 +29,7 @@ func (n *node) recursiveInsert(values []string, template *Template) {
 		return
 	}
 
-	// See if the the current element already exists in the tree. If so, insert the
+	// See if the current element already exists in the tree. If so, insert the
 	// into that sub-tree
 	for _, v := range n.children {
 		if v.value == values[0] {

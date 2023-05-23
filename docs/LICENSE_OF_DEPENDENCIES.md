@@ -87,6 +87,7 @@ following works:
 - github.com/cenkalti/backoff [MIT License](https://github.com/cenkalti/backoff/blob/master/LICENSE)
 - github.com/cespare/xxhash [MIT License](https://github.com/cespare/xxhash/blob/master/LICENSE.txt)
 - github.com/cisco-ie/nx-telemetry-proto [Apache License 2.0](https://github.com/cisco-ie/nx-telemetry-proto/blob/master/LICENSE)
+- github.com/clarify/clarify-go [Apache License 2.0](https://github.com/clarify/clarify-go/blob/master/LICENSE)
 - github.com/cloudevents/sdk-go [Apache License 2.0](https://github.com/cloudevents/sdk-go/blob/main/LICENSE)
 - github.com/compose-spec/compose-go [Apache License 2.0](https://github.com/compose-spec/compose-go/blob/master/LICENSE)
 - github.com/containerd/containerd [Apache License 2.0](https://github.com/containerd/containerd/blob/master/LICENSE)

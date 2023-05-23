@@ -3,7 +3,9 @@ package lookup
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -126,8 +128,15 @@ func TestCasesTracking(t *testing.T) {
 
 			inputRaw, err := testutil.ParseMetricsFromFile(inputFilename, parser)
 			require.NoError(t, err)
+
+			var mu sync.Mutex
+			delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+			notify := func(di telegraf.DeliveryInfo) {
+				mu.Lock()
+				defer mu.Unlock()
+				delivered = append(delivered, di)
+			}
 			input := make([]telegraf.Metric, 0, len(inputRaw))
-			notify := func(_ telegraf.DeliveryInfo) {}
 			for _, m := range inputRaw {
 				tm, _ := metric.WithTracking(m, notify)
 				input = append(input, tm)
@@ -153,6 +162,18 @@ func TestCasesTracking(t *testing.T) {
 			// Process expected metrics and compare with resulting metrics
 			actual := plugin.Apply(input...)
 			testutil.RequireMetricsEqual(t, expected, actual)
+
+			// Simulate output acknowledging delivery
+			for _, m := range input {
+				m.Accept()
+			}
+
+			// Check delivery
+			require.Eventuallyf(t, func() bool {
+				mu.Lock()
+				defer mu.Unlock()
+				return len(expected) == len(delivered)
+			}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 		})
 	}
 }

@@ -1499,10 +1499,6 @@ func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error)
 	c.getFieldString(tbl, "prefix", &sc.Prefix)
 	c.getFieldString(tbl, "template", &sc.Template)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
-	c.getFieldBool(tbl, "csv_column_prefix", &sc.CSVPrefix)
-	c.getFieldBool(tbl, "csv_header", &sc.CSVHeader)
-	c.getFieldString(tbl, "csv_separator", &sc.CSVSeparator)
-	c.getFieldString(tbl, "csv_timestamp_format", &sc.TimestampFormat)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
@@ -1597,7 +1593,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",
-		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
 		"graphite_strict_sanitize_regex",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
