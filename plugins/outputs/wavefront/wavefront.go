@@ -131,13 +131,13 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 					}
 					// Try again.
 					err = w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
-				}
-				if err != nil {
-					if isRetryable(err) {
-						return fmt.Errorf("wavefront sending error: %w", err)
-					}
-					w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
-					w.Log.Debugf("non-retryable metric data: %+v", point)
+				        if err != nil {
+					        if isRetryable(err) {
+						        return fmt.Errorf("wavefront sending error: %w", err)
+					        }
+					        w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
+					        w.Log.Debugf("non-retryable metric data: %+v", point)
+				        }
 				}
 			}
 		}
