@@ -1,6 +1,7 @@
 package netflow
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
@@ -113,6 +114,48 @@ func TestInit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMissingTemplate(t *testing.T) {
+	raw := "000a00bc646b84c000000000000000e7010500ac000000000001dbe100000000"
+	raw += "0000038a060018bdeac0a802c8000000000001bb6810f9f90000000000000000"
+	raw += "000157b8c40155f28a00005056b3e365005056b3a7f804646b8471646b84e600"
+	raw += "00018843fd5cf60000018843ff232e000000000000000e00000000000007bc00"
+	raw += "000005000009560000000300dc00000000000000000000000000000e3130342e"
+	raw += "31362e3234392e3234390e3130342e31362e3234392e323439000000"
+	msg, err := hex.DecodeString(raw)
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	var logger testutil.CaptureLogger
+	plugin := &NetFlow{
+		ServiceAddress: "udp://127.0.0.1:0",
+		Log:            &logger,
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Create a client without TLS
+	addr := plugin.conn.LocalAddr()
+	client, err := createClient(plugin.ServiceAddress, addr)
+	require.NoError(t, err)
+
+	// Write the message
+	_, err = client.Write(msg)
+	require.NoErrorf(t, err, "writing message failed: %v", err)
+	require.NoError(t, client.Close())
+
+	// We expect a warning here
+	require.Eventually(t, func() bool {
+		return len(logger.Warnings()) > 0
+	}, 3*time.Second, 100*time.Millisecond, "did not receive expected warnings")
+
+	var found bool
+	for _, w := range logger.Warnings() {
+		found = found || strings.Contains(w, "No info template 261 found for and domain id 231; skipping packet")
+	}
+	require.True(t, found, "warning not found")
 }
 
 func TestCases(t *testing.T) {
